@@ -1,7 +1,7 @@
 // MIT. Existing API launcher composed with the original SF30 seller service.
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readUpstreamBindings, compileUpstreamBindings, createUpstreamHandlers, validateUpstreamService } from './upstream.mjs';
+import { readUpstreamBindings, createUpstreamApplication } from './upstream.mjs';
 
 const USAGE = `Usage: node upstream-serve.mjs --config SELLER.json --upstreams BINDINGS.json
   [--port 8423] [--allow-loopback-upstream] [--check]
@@ -52,14 +52,12 @@ export async function main(args = process.argv.slice(2)) {
   try { options = parse(args); } catch (error) { error.cliMessage = error.message; throw error; }
   // Use the maintained original reader/runtime; no cloned configuration or payment engine.
   const {readSellerConfig,startSellerService} = await import('./serve.mjs');
-  let config,bindings,compiled,handlers;
+  let config,bindings,application;
   try {
     [config,bindings] = await Promise.all([readSellerConfig(options.configPath),readUpstreamBindings(options.upstreamPath)]);
     // Capture environment values once for a stable launch-time credential snapshot.
     const env = {...process.env};
-    compiled = compileUpstreamBindings(bindings,{allowLoopback:options.allowLoopback,env});
-    validateUpstreamService(config,compiled);
-    handlers = createUpstreamHandlers(bindings,{allowLoopback:options.allowLoopback,env});
+    application = createUpstreamApplication(config,bindings,{allowLoopback:options.allowLoopback,env});
     if (options.check) {
       const {compileSellerRoutes} = await import('./resource-server.mjs');
       const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : 'http://127.0.0.1:8423';
@@ -67,7 +65,7 @@ export async function main(args = process.argv.slice(2)) {
       // No handler is invoked and no placeholder origin is published by --check.
       compileSellerRoutes(config.routes.map(route => ({id:route.id,
         ...(route.offer ? {offer:route.offer} : {definition:{...route.definition,url:origin+route.path}}),
-        handler:route.handler ? handlers[route.handler] : () => { throw new Error('Validation does not invoke handlers'); },
+        handler:route.handler ? application.handlers[route.handler] : () => { throw new Error('Validation does not invoke handlers'); },
       })),{allowLocalhost:!config.publicOrigin});
     }
   } catch (error) {
@@ -75,7 +73,9 @@ export async function main(args = process.argv.slice(2)) {
     throw error;
   }
   if (options.check) {
-    process.stdout.write(JSON.stringify({status:'CONFIG_VALID',routes:config.routes.length,upstreamBindings:Object.keys(compiled).length}) + '\n');
+    const upstreams = application.snapshot().bindings;
+    process.stdout.write(JSON.stringify({status:'CONFIG_VALID',routes:config.routes.length,
+      upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length}) + '\n');
     return null;
   }
   let nativeFactory = null;
@@ -87,12 +87,14 @@ export async function main(args = process.argv.slice(2)) {
       facilitatorClient:new HTTPFacilitatorClient({url:options.facilitator}),
     });
   }
-  const session = await startSellerService({config,port:options.port,handlers,nativeFactory,
+  const session = await startSellerService({config:application.config,port:options.port,
+    handlers:application.handlers,nativeFactory,
     maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
+  session.upstreamSnapshot = application.snapshot;
   process.stdout.write(JSON.stringify({url:session.url,mode:session.mode,
     health:session.url + '/_seller/health',ready:session.url + '/_seller/ready',
     offers:session.url + '/_seller/offers',
-    upstreamBindings:Object.keys(compiled).length}) + '\n');
+    upstreamBindings:application.snapshot().bindings.length}) + '\n');
   for (const signal of ['SIGINT','SIGTERM']) process.once(signal,() => {
     session.close().then(() => { process.exitCode = 0; },() => { process.exitCode = 1; });
   });
