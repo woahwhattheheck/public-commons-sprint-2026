@@ -32,3 +32,5 @@ export { startDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/server
 export { createDuckdbWorkspace } from '../sf30-seller-sdk/duckdb/workspace/model.mjs';
 export { openS3MerchantWorkspace, validateS3MerchantDraft } from '../sf30-seller-sdk/s3/workspace/controller.mjs';
 export { startS3MerchantWorkspace } from '../sf30-seller-sdk/s3/workspace/server.mjs';
+
+export * as mpp from '../mpp-charge/index.mjs';
