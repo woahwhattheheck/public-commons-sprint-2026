@@ -1,4 +1,6 @@
+import { createSchedulePanel } from './schedules.mjs';
 const $ = id => document.getElementById(id);
+let schedulePanel;
 const state = { source: null, snapshot: null, target: null, plan: null, dirty: false, selected: null,
   detail: null, detailVersion: null, editorHash: null, query: null, offer: null, busy: false, refreshing: false,
   pageSize: 25, offsets: { plans: 0, runs: 0, history: 0 } };
@@ -38,6 +40,7 @@ async function action(callback) {
   finally { state.busy = false; buttons(); }
 }
 function buttons() {
+  schedulePanel?.update();
   const running = state.snapshot?.active, selected = state.detail?.run, candidate = selected?.data.candidate;
   $('plan-form').querySelector('button[type=submit]').disabled = state.busy || Boolean(running);
   $('extract').disabled = state.busy || !state.plan || state.dirty || Boolean(running);
@@ -229,7 +232,7 @@ async function refresh() {
     }
     pager('history', 'History');
     if (!state.selected && snapshot.runs.length) state.selected = snapshot.runs[0].id;
-    await loadRun(); buttons();
+    await loadRun(); await schedulePanel?.refresh(); buttons();
   } finally { state.refreshing = false; }
 }
 $('plan-form').addEventListener('input', inputChanged);
@@ -244,7 +247,7 @@ $('page-size').addEventListener('change', () => action(async () => {
   state.pageSize = Number($('page-size').value); state.offsets = { plans: 0, runs: 0, history: 0 }; await refresh();
 }));
 window.addEventListener('beforeunload', event => {
-  if (state.dirty) { event.preventDefault(); event.returnValue = ''; }
+  if (state.dirty || schedulePanel?.dirty) { event.preventDefault(); event.returnValue = ''; }
 });
 $('plan-form').addEventListener('submit', event => { event.preventDefault(); action(async () => {
   const saved = await api('/api/plans', planInput()); state.plan = saved.id; state.dirty = false; state.offsets.plans = 0;
@@ -286,5 +289,11 @@ $('buyer-prepare-form').addEventListener('submit', event => { event.preventDefau
   const link = node('a', 'Download', { href: url, download: 'dataset-buyer.json' }); document.body.append(link); link.click(); link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000); notice('Original buyer configuration downloaded and retained with this extraction.'); await refresh();
 }); });
+schedulePanel = createSchedulePanel({ api, action, notice, context: () => state,
+  async openRun(id) {
+    state.selected = id; state.detailVersion = null; state.offer = null;
+    await loadRun(true); renderLists();
+    $('candidate').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } });
 await action(async () => { await freshPlan(); await refresh(); });
 setInterval(() => refresh().catch(error => notice(error.message)), 4000);
