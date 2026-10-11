@@ -275,11 +275,23 @@ class Governor:
         """
         r=validate_request(request)
         digest=hashlib.sha256(canonical(r)).hexdigest()
+        return self.reservation_by_digest(r['request_id'],digest)
+
+    def reservation_by_digest(self,request_id:str,request_digest:str)->dict:
+        """Authenticate a retained original reservation ID/digest without a preimage.
+
+        This read does not establish omitted purchase terms or transaction
+        association. A trusted recovery caller must separately bind its frozen
+        operator inputs and independently verify the selected transfer.
+        """
+        if not isinstance(request_id,str) or not ID_PATTERN.fullmatch(request_id) or \
+                not isinstance(request_digest,str) or not re.fullmatch('[0-9a-f]{64}',request_digest):
+            raise Denied('invalid original reservation identity')
         self.db.execute('BEGIN')
         try:
-            row=self._audit().get(r['request_id'])
+            row=self._audit().get(request_id)
             if row is None:raise Denied('unknown reserved payment')
-            if not hmac.compare_digest(row['request_digest'],digest):
+            if not hmac.compare_digest(row['request_digest'],request_digest):
                 raise Denied('approved request differs from original reservation')
             self.db.execute('COMMIT')
             return row.copy()
