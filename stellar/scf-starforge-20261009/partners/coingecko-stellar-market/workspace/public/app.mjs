@@ -9,7 +9,7 @@ const draftJSON=x=>JSON.stringify(x,(_k,v)=>v instanceof File?{fileName:v.name,f
 const equal=(a,b)=>draftJSON(a)===draftJSON(b);
 const valueText=v=>v===null?"Not supplied":v===undefined?"Absent":typeof v==="object"?JSON.stringify(v):String(v);
 const displayDate=v=>v?new Date(v).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"medium"}):"—";
-const localInput=v=>{if(!v)return"";const d=new Date(v);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,19)};
+const localInput=v=>{if(!v)return"";const d=new Date(v);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,23)};
 const bytes=v=>Number(v||0).toLocaleString()+" B";
 const S={state:null,project:null,tab:"overview",panes:{sources:"captures",research:"snapshots"},tables:{},picked:{requests:new Set(),captures:new Set()},requestCache:null,modal:null,modalStack:[],renderId:0,jobTimer:null,busy:false,actor:localStorage.getItem("cg-market-operator")||"",projectId:localStorage.getItem("cg-market-project")||"",notice:""};
 const tabs=[["overview","Overview"],["requests","Requests"],["collections","Collections"],["sources","Sources"],["research","Research"],["provider","Provider"],["handover","Handover"],["history","History"]];
@@ -106,7 +106,7 @@ function fieldsHtml(fields,values){
     else if(f.type==="textarea"||f.type==="json")control=`<textarea ${common} rows="${f.rows||5}"${f.type==="json"?' class="code" spellcheck="false"':""}>${h(f.type==="json"&&typeof v==="object"?JSON.stringify(v,null,2):v)}</textarea>`;
     else if(f.type==="checkbox")control=`<input ${common} type="checkbox"${v?" checked":""}>`;
     else if(f.type==="file")control=`<input ${common} type="file"${f.accept?` accept="${attr(f.accept)}"`:""}>`;
-    else control=`<input ${common} type="${attr(f.type||"text")}" value="${attr(v)}"${f.type==="datetime-local"?' step="1"':""}${f.pattern?` pattern="${attr(f.pattern)}"`:""}${f.placeholder?` placeholder="${attr(f.placeholder)}"`:""}>`;
+    else control=`<input ${common} type="${attr(f.type||"text")}" value="${attr(v)}"${f.type==="datetime-local"?' step="any"':""}${f.pattern?` pattern="${attr(f.pattern)}"`:""}${f.placeholder?` placeholder="${attr(f.placeholder)}"`:""}>`;
     return `<label class="field ${f.wide?"wide":""} ${f.type==="checkbox"?"checkbox-field":""}" for="${id}"><span>${h(f.label)}</span>${control}${f.help?`<small>${h(f.help)}</small>`:""}</label>`;
   }).join("");
 }
@@ -346,20 +346,37 @@ async function probeForm({requestIds,collectionId}={}){
   ],initial:{name:"Original endpoint observations",target:"vendor",requestIds:chosen},save:(v,op)=>mutation(`/api/projects/${S.projectId}/probes`,v,{operation:op}),after:j=>jobDetail(j.id),submitLabel:"Start observations"});
 }
 async function importResponseForm(requestId){
-  const [requests,files]=await Promise.all([allRequests(),allItems("files")]),memo={};
-  openForm({title:"Import an original response",intro:"Keep the supplied response bytes and original HTTP metadata. The recorded source and time describe the uploaded material.",fields:[
+  const [requests,files]=await Promise.all([allRequests(),allItems("files")]),memo={},bodyMemo={};
+  openForm({title:"Import an original response",intro:"Keep the supplied response bytes and original HTTP metadata. When the headers and body were saved separately, select both files; the original byte count and hash are checked together.",fields:[
     {name:"name",label:"Source name",required:true,wide:true},
     {name:"requestId",label:"Saved request",type:"select",required:true,options:[["","Select a request"],...requests.map(r=>[r.id,r.name+" · "+endpointName(r.endpoint)])],wide:true},
     {name:"fileId",label:"Retained response file",type:"select",options:[["","Upload an original file below"],...files.map(f=>[f.id,f.name])],wide:true},
     {name:"sourceFile",label:"Original response / HTTP metadata JSON",type:"file",accept:".json,application/json",wide:true},
+    {name:"responseBodyFileId",label:"Retained original body, if separate",type:"select",options:[["","No separate body selected"],...files.map(f=>[f.id,f.name])],wide:true},
+    {name:"responseBodyFile",label:"Upload the separate original response body",type:"file",wide:true,help:"Use the original binary or JSON body saved alongside the HTTP metadata."},
     {name:"headersFileId",label:"Retained headers file, if separate",type:"select",options:[["","Included in original response / none"],...files.map(f=>[f.id,f.name])],wide:true},
     {name:"httpStatus",label:"Original HTTP status",type:"number",min:100,max:599,required:true},
     {name:"observedAt",label:"Original observation time (local)",type:"datetime-local",required:true},
     {name:"sourceUrl",label:"Original request URL",type:"url",required:true,wide:true}
   ],initial:{requestId:requestId||"",httpStatus:"200",observedAt:""},save:async(v,op)=>{
     const fileId=v.fileId||await retainFile(v.sourceFile,memo);
-    return mutation(`/api/projects/${S.projectId}/imports`,{name:v.name,requestId:v.requestId,fileId,httpStatus:Number(v.httpStatus),observedAt:new Date(v.observedAt).toISOString(),sourceUrl:v.sourceUrl,...(v.headersFileId?{headersFileId:v.headersFileId}:{})},{operation:op});
-  },after:c=>captureDetail(c.id)});
+    const responseBodyFileId=v.responseBodyFileId||(v.responseBodyFile?await retainFile(v.responseBodyFile,bodyMemo):"");
+    return mutation("/api/projects/"+S.projectId+"/imports",{name:v.name,requestId:v.requestId,fileId,httpStatus:Number(v.httpStatus),observedAt:new Date(v.observedAt).toISOString(),sourceUrl:v.sourceUrl,...(v.headersFileId?{headersFileId:v.headersFileId}:{}),...(responseBodyFileId?{responseBodyFileId}:{})},{operation:op});
+  },after:c=>captureDetail(c.id),onMount:()=>{
+    const originalEditor=S.modal,input=$("#editor [name=sourceFile]");
+    input.addEventListener("change",async()=>{
+      const file=input.files[0];if(!file||file.size>(S.state.limits?.uploadBytes||15000000))return;
+      let metadata;try{metadata=JSON.parse(await file.text())}catch{return}
+      if(S.modal!==originalEditor||input.files[0]!==file)return;
+      if(metadata&&typeof metadata.url==="string"&&metadata.headers&&Number.isInteger(metadata.status)){
+        $("#editor [name=httpStatus]").value=String(metadata.status);
+        $("#editor [name=sourceUrl]").value=metadata.url;
+        const observed=metadata.observed_at??metadata.observedAt;
+        if(typeof observed==="string"&&Number.isFinite(Date.parse(observed)))$("#editor [name=observedAt]").value=localInput(observed);
+        S.modal.dirty=true;
+      }
+    });
+  }});
 }
 
 
