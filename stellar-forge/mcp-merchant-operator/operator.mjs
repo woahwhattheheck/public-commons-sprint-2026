@@ -25,8 +25,8 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
 }
 export const MERCHANT_TOOLS = [
   tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
-  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant, prepared DuckDB package or configured S3 object package: exact source and dataset hashes, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
-  tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB package with its copied datasets, or pinned S3 object package. Does not activate, import application code, start a listener or make a payment.',
+  tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant, prepared DuckDB package, pinned S3 package or Stellar RPC merchant package: exact source and dataset hashes, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
+  tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB package with its copied datasets, pinned S3 objects or the original ten-file Stellar RPC merchant package. Does not activate, import application code, start a listener or make a payment.',
     { source: idSchema, id: idSchema, label: textSchema }, ['source', 'id']),
   tool('merchant_inspect', 'Inspect and verify one retained original release including complete terms, application hashes and native/challenge mode.', { id: idSchema }, ['id'], { readOnly: true, idempotent: true }),
   tool('merchant_compare', 'Compare a staged release against the active release or a named retained version. Returns exact payment, route and application changes with the selection generation.',
@@ -45,6 +45,8 @@ export const MERCHANT_TOOLS = [
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
   tool('merchant_client_export', 'Export the original JavaScript client, TypeScript declarations and OpenAPI for this running seller into a new named directory under the host-configured customer export root.',
     { instanceId: instanceSchema, id: idSchema }, ['instanceId', 'id']),
+  tool('merchant_operations', 'Open the original RPC merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
+    { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
   ...discoveryTools(tool),
   ...cacheControlTools(tool),
   ...fleetControlTools(tool),
@@ -62,14 +64,14 @@ function releaseView(release) {
   const { handlers, ...options } = runtime;
   return { ...rest, ...(rest.python ? { python: pythonSourceView(rest.python) } : {}),
     ...(rest.duckdb ? { duckdb: duckdbSourceView(rest.duckdb) } : {}),
-    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.s3) },
+    runtime: { ...options, applicationConfigured: Boolean(handlers || runtime.upstreams || rest.python || rest.duckdb || rest.s3 || rest.jsonrpc) },
     handlerEntry: handlerEntry ? { sha256: handlerEntry.sha256, bytes: handlerEntry.bytes, scope: handlerEntry.scope } : null };
 }
 function runtimeView(runtime) {
   const observed = runtime.observed;
   return { state: runtime.state, message: runtime.message ?? null,
     managerAlive: runtime.managerAlive ?? null, childAlive: runtime.childAlive ?? null,
-    observed: observed ? Object.fromEntries(['instanceId', 'releaseId', 'releaseDigest', 'selectionGeneration', 'listener',
+    observed: observed ? Object.fromEntries(['instanceId', 'releaseId', 'releaseDigest', 'selectionGeneration', 'listener', 'operations',
       'mode', 'phase', 'startedAt', 'readyAt', 'endedAt', 'exitCode', 'exitSignal'].filter(key => Object.hasOwn(observed, key)).map(key => [key, observed[key]])) : null };
 }
 function generation(value) {
@@ -158,6 +160,11 @@ export class MerchantReleaseOperator {
     switch (name) {
       case 'merchant_status': return this.status();
       case 'merchant_sources': return this.#sources(args.source);
+      case 'merchant_operations': {
+        const session = this.#owned(args.instanceId);
+        return { instanceId: session.observation.instanceId, releaseId: session.release.id,
+          available: Boolean(session.operations), operations: session.operations ? { ...session.operations } : null };
+      }
       case 'merchant_discovery_status': return this.#discovery.status(args);
       case 'merchant_discovery_review': return this.#discovery.review(args);
       case 'merchant_discovery_apply': return this.#discovery.apply(args);

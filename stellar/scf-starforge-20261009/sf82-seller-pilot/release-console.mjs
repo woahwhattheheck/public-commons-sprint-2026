@@ -44,6 +44,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
   closed.catch(() => {});
   const status = async () => ({ ...await releaseStatus(root),
     console: { managesRunningSeller: Boolean(managed), instanceId: managed?.observation.instanceId ?? null,
+      operations: managed?.operations ?? null,
       catalogConfigured: Boolean(catalogConnection()), busy, lastError } });
   const server = createServer(async (req, res) => {
     const reply = (code, type, data) => {
@@ -144,7 +145,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
           if (target.pathname === '/api/run' || target.pathname === '/api/restart') {
             if (managed) throw failure('This console already owns a seller. Use Restart selected.', 409);
             if (!Number.isSafeInteger(input.expectedGeneration)) throw failure('Current selection generation required.');
-            const session = await runActiveRelease(root, { expectedGeneration: input.expectedGeneration }); managed = session;
+            const session = await runActiveRelease(root, { expectedGeneration: input.expectedGeneration, operationsNavigationOrigin: url }); managed = session;
             session.completion.then(() => { if (managed === session) managed = null; }, error => {
               lastError = error.message; if (managed === session) managed = null;
             });

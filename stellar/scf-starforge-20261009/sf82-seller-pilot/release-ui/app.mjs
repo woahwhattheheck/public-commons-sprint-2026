@@ -11,6 +11,7 @@ const literal = value => value === null || value === undefined ? '—' : typeof 
 const quoted = value => "'" + value.replaceAll("'", "'\\''") + "'";
 function stageCommand(release) {
   const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
+  if (release?.jsonrpc) return command + ' --jsonrpc-package prepared-rpc-package';
   if (release?.s3) return command + ' --s3-package configured-s3-package';
   if (release?.duckdb) return command + ' --duckdb-package prepared-duckdb-package --duckdb-python ' + quoted(release.duckdb.interpreter);
   if (release?.python) return command + ' --python python-merchant.json';
@@ -168,13 +169,20 @@ function renderStatus(value) {
   $('#runtime').textContent = value.runtime.state.replaceAll('_', ' ');
   $('#listener').textContent = value.runtime.state === 'STOPPED' ? '—' : value.runtime.observed?.listener ?? '—';
   $('#mode').textContent = value.runtime.state === 'STOPPED' ? 'Ready to start a selected release' : value.runtime.observed?.mode ?? '—';
+  const operations = value.console.operations;
+  for (const [selector, target] of [['#operations-link', operations?.url], ['#availability-link', operations?.availabilityControl]]) {
+    const link = $(selector), visible = value.console.managesRunningSeller && typeof target === 'string' &&
+      /^http:\/\/127\.0\.0\.1:\d+(?:\/availability#[0-9a-f]{64})?$/.test(target);
+    link.hidden = !visible;
+    if (visible) link.href = target; else link.removeAttribute('href');
+  }
   $('#store').textContent = value.root;
   $('#stage-command').textContent = stageCommand(value.releases.find(release => release.id === (selected ?? value.state.active)));
   const list = $('#release-list'); list.replaceChildren();
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
@@ -201,6 +209,23 @@ function fieldPair(field, before, after) {
   }
   section.append(columns); return section;
 }
+function rpcRuntimeChange(before, after) {
+  const section = node('section', undefined, 'change'); section.append(node('h3', 'Stellar RPC configuration'));
+  const rows = [
+    ['Data network', before?.dataNetwork, after?.dataNetwork],
+    ['Payment network', before?.paymentNetwork, after?.paymentNetwork],
+    ['Selected methods', before?.methodCount, after?.methodCount],
+    ...Object.entries({ timeoutMs: 'Provider deadline (ms)', maxResponseBytes: 'Maximum response bytes',
+      maxInFlight: 'Provider concurrent reads', maxEventPage: 'Maximum events per request',
+      maxTransactionPage: 'Maximum transactions per request', maxLedgerKeys: 'Maximum ledger keys per request',
+      maxLedgerPage: 'Maximum ledgers per request' }).map(([key, label]) => [label, before?.limits?.[key], after?.limits?.[key]]),
+  ].filter(([, previous, next]) => previous !== next);
+  for (const [label, previous, next] of rows) section.append(fieldPair(label, previous, next));
+  if (!rows.length) section.append(node('p', 'The selected public limits and networks are unchanged. Review the changed products and source declaration.'));
+  const details = node('details'); details.append(node('summary', 'Retained source identity and complete declaration'),
+    fieldPair('Source declaration', before, after)); section.append(details);
+  return section;
+}
 function renderDiff(value) {
   comparison = value;
   $('#stage-command').textContent = stageCommand(value.after);
@@ -213,19 +238,30 @@ function renderDiff(value) {
     const item = node('div'); item.append(node('strong', String(count)), node('span', label)); summary.append(item);
   }
   const changes = $('#route-changes'); changes.replaceChildren();
+  const rpcReview = Boolean(value.before?.jsonrpc || value.after.jsonrpc);
   for (const change of value.changes) {
     const section = node('section', undefined, 'change'); section.append(node('h3', change.state + ' · ' + change.route));
     if (change.state !== 'CHANGED') {
       const route = change.after ?? change.before;
-      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', literal(route.payment)));
+      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', rpcReview ? terms(route.payment) : literal(route.payment)));
       if (route.upstream) section.append(node('small', 'Original upstream configuration and sharing policy'), node('pre', literal(route.upstream)));
     }
-    for (const field of change.fields) section.append(fieldPair(field.field, field.before, field.after));
+    for (const field of change.fields) {
+      if (rpcReview && ['application', 'requestContractSha256'].includes(field.field)) {
+        const details = node('details');
+        details.append(node('summary', field.field === 'application' ? 'Retained RPC execution changed' : 'RPC request or response contract changed'),
+          fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
+        section.append(details);
+      } else section.append(fieldPair(rpcReview && field.field === 'payment' ? 'Payment alternatives' : field.field,
+        rpcReview && field.field === 'payment' ? terms(field.before) : field.before,
+        rpcReview && field.field === 'payment' ? terms(field.after) : field.after));
+    }
     changes.append(section);
   }
   if (!value.changes.length) changes.append(node('p', 'Route offers, input contracts and application bindings match.', 'section-note'));
   const runtime = $('#runtime-changes'); runtime.replaceChildren();
-  for (const change of value.runtimeChanges) runtime.append(fieldPair('Runtime · ' + change.field, change.before, change.after));
+  for (const change of value.runtimeChanges) runtime.append(change.field === 'jsonrpc'
+    ? rpcRuntimeChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
   if (value.after.handlerEntry) runtime.append(node('p', 'Handler entry module is pinned. Its imported files and installed package dependencies are managed separately by the operator.', 'section-note'));
   $('#selection-actions').hidden = false;
   for (const button of document.querySelectorAll('.release-card')) button.setAttribute('aria-pressed', String(button.dataset.id === selected));

@@ -182,7 +182,7 @@ export async function prepareBuyerReview(options) {
     '--body-file', bodyPath, '--content-type', 'application/json']);
 }
 
-export async function startRpcCommand(plan, options, { env, stdout, stderr }) {
+export async function startRpcCommand(plan, options, { env, stdout, stderr, navigationOrigin = null }) {
   if (Boolean(options.facilitator) === Boolean(options['challenge-only']))
     throw new TypeError('Choose an explicit facilitator or --challenge-only');
   if (options['allow-local-facilitator'] && !options.facilitator || options.state && !options.facilitator)
@@ -219,6 +219,7 @@ export async function startRpcCommand(plan, options, { env, stdout, stderr }) {
   }
   const { startStellarRpcMerchant } = await import('./merchant.mjs');
   const merchant = await startStellarRpcMerchant({ plan, env, port, operationsPort, nativeFactory,
+    navigationOrigin,
     allowLoopbackUpstream: Boolean(options['allow-loopback-upstream']),
     availabilityDirectory: paths['availability-dir'], historyDirectory: paths['history-dir'],
     historyRetentionDays, deliveryOutbox, maxInFlight, drainGraceMs });
