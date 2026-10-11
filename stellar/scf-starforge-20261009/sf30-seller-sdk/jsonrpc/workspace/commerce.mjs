@@ -38,6 +38,7 @@ async function put(path, bytes) {
 }
 async function digest(path) { return sha256(await readPrivateFile(path, LIMIT)); }
 const headers = value => Object.fromEntries(Object.entries(value ?? {}).map(([key, item]) => [key.toLowerCase(), item]));
+const expectedTerms = value => ({ ...value, paymentFlow: value.paymentFlow ?? 'authorization' });
 const publicBuyer = buyer => ({ buyerActionId: buyer.buyerActionId, intentId: buyer.intentId,
   method: buyer.method, url: buyer.url, httpMethod: buyer.httpMethod, acceptIndex: buyer.acceptIndex,
   terms: buyer.terms, bodySha256: buyer.bodySha256, bodyBytes: buyer.bodyBytes,
@@ -170,10 +171,12 @@ async function inspectOriginal(directoryPath, bound, allowLoopbackUpstream) {
       job = original.session.buyers.find(item => item.operation.intentId === buyer.intentId);
     need(selected && job && selected.routeId === buyer.method && selected.method === buyer.httpMethod &&
       selected.url === buyer.url && selected.acceptIndex === buyer.acceptIndex && same(selected.originalTerms, buyer.terms) &&
+      (selected.paymentFlow ?? 'authorization') === (buyer.operation.expect.paymentFlow ?? 'authorization') &&
       selected.bodySha256 === buyer.bodySha256 && selected.bodyBytes === buyer.bodyBytes &&
       job.bodySha256 === buyer.bodySha256 && job.bodyBytes === buyer.bodyBytes &&
       job.operation.url === buyer.url && job.operation.method === buyer.httpMethod &&
-      same(job.operation.expect, buyer.operation.expect) && same(headers(job.operation.headers), buyer.commerceHeaders),
+      same(expectedTerms(job.operation.expect), expectedTerms(buyer.operation.expect)) &&
+      same(headers(job.operation.headers), buyer.commerceHeaders),
     'RPC_COMMERCE_PREPARED_BUYER_MISMATCH');
   }
   return { original, preparedSha256: await digest(join(directoryPath, 'prepared.json')),

@@ -203,6 +203,8 @@ check their actual supported ranges before initializing the operator.
    requests**. Review the exact intent, method, parameters hash, payment option,
    payer and shared total/daily budget. The native setup adds its original
    `Accept: application/json` header; the handoff retains both header maps.
+   An omitted payment flow uses the original operator's `authorization`
+   default when comparing the saved buyer with the prepared native request.
 4. Choose **Prepare native workspace**. The original initializer creates one
    operator workspace and one retained commerce session. Every selected intent
    is reserved to that preparation in the existing authoring database before
