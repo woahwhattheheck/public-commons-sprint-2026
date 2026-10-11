@@ -1,4 +1,5 @@
 /** SF32 read-only projection of one cached discovery record. MIT. */
+import { requiredQueryKeys } from './query-requirements.mjs';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 
 function immutableCopy(value) {
@@ -18,6 +19,9 @@ function immutableCopy(value) {
  * creates a quote, validates a payment option, approves or executes a call. */
 export function describeDiscoveredResource(record, { handle, allowedOrigin, expiresAt }) {
   const advertisedKeys = plain(record.input?.queryParams) ? Object.keys(record.input.queryParams) : [];
+  let requiredKeys=null, requiredKeysError=null;
+  try { requiredKeys=requiredQueryKeys(record.bazaar?.schema); }
+  catch(error) { requiredKeysError={code:error.code,message:error.message}; }
   return immutableCopy({
     handle,
     resource: record.resource,
@@ -38,6 +42,10 @@ export function describeDiscoveredResource(record, { handle, allowedOrigin, expi
       input: {
         container: 'query',
         advertisedKeys,
+        requiredKeys,
+        requiredKeysError,
+        requiredKeysSource: 'bazaar.schema.properties.input.properties.queryParams.required',
+        requiredKeysCheck: 'Presence in the final request URL only; fixed query values count. No defaults, type checks, refs or conditional schema evaluation.',
         valueType: 'string',
         maxKeys: 30,
         maxKeyLength: 100,
@@ -49,3 +57,4 @@ export function describeDiscoveredResource(record, { handle, allowedOrigin, expi
     },
   });
 }
+
