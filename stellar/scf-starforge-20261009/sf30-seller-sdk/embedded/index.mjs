@@ -8,6 +8,8 @@ import { requiresJsonBody } from '../http-methods.mjs';
 import { createSellerAvailability } from '../availability/gate.mjs';
 import { validateAvailabilityDirectory } from '../availability/store.mjs';
 
+export { streamingResponse } from '../stream-response.mjs';
+
 const contexts = new AsyncLocalStorage();
 const reserved = path => {
   const folded = path.replace(/[A-Z]/g, letter => letter.toLowerCase());
@@ -67,7 +69,7 @@ function bodyConsumed(req) {
 export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
   allowLocalhost = false, nativeFactory = null, contextFromRequest = () => undefined,
   documentation = true, maxInFlight = 64, drainGraceMs = 60000,
-  maxRequestBytes, maxResponseBytes, admissionTimeoutMs, handlerTimeoutMs,
+  maxRequestBytes, maxResponseBytes, maxStreamBytes, streamSpoolDirectory, admissionTimeoutMs, handlerTimeoutMs,
   requestTimeoutMs, availabilityDirectory } = {}) {
   if ((routes === undefined) === (suppliedCompiled === undefined))
     throw new TypeError('Choose original seller routes or one compiled seller');
@@ -102,7 +104,7 @@ export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
     if (nativeFactory && !nativeServer)
       throw new TypeError('Native factory did not return a resource server');
     resources = createSellerResourceHandler({ compiled, nativeServer,
-      ...Object.fromEntries(Object.entries({ maxRequestBytes, maxResponseBytes,
+      ...Object.fromEntries(Object.entries({ maxRequestBytes, maxResponseBytes, maxStreamBytes, streamSpoolDirectory,
         admissionTimeoutMs, handlerTimeoutMs, requestTimeoutMs }).filter(([, value]) => value !== undefined)),
     });
     mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';

@@ -1,8 +1,9 @@
 // MIT — Consume the original SF31 saved response, not seller payment claims.
 import { constants } from 'node:fs';
 import { open, link, unlink } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
+import { pathToFileURL } from 'node:url';
 import { absolute, need, BuyerError, syncDirectory } from './store.mjs';
 
 function freeze(value) {
@@ -119,15 +120,22 @@ export class VerifiedFile {
   }
 }
 
+class RetainedStreamFile extends VerifiedFile {
+  constructor(metadata) { super(); this.metadata = metadata; }
+  _metadata() { return this.metadata; }
+}
+
 export class BuyerResult extends VerifiedFile {
-  constructor(record, responseFile) {
+  constructor(record, responseFile, runtimeDirectory) {
     super();
     this.record = freeze(structuredClone(record));
     this.responseFile = freeze(structuredClone(responseFile));
+    this.runtimeDirectory = runtimeDirectory === undefined ? null : absolute(runtimeDirectory);
   }
   get native() { return this.record.native; }
   get status() { return this.native.status; }
   get delivery() { return this.native.responseFile ?? { status: 'NOT_REQUESTED' }; }
+  get stream() { return this.delivery.stream ?? null; }
   get ok() {
     return this.record.exitCode === 0 && !this.record.runtimeError &&
       Number.isInteger(this.native.httpStatus) && this.native.httpStatus >= 200 && this.native.httpStatus < 300 &&
@@ -145,5 +153,65 @@ export class BuyerResult extends VerifiedFile {
       Number.isSafeInteger(saved.bytes) && saved.bytes >= 0 && saved.bytes <= this.responseFile.maxBytes &&
       typeof saved.sha256 === 'string' && /^[a-f0-9]{64}$/.test(saved.sha256), 'RESPONSE_FILE_METADATA_INVALID');
     return saved;
+  }
+
+  async *_records(format, { allowPartial = false, maxRecordBytes, maxRecords, signal } = {}) {
+    need(typeof allowPartial === 'boolean' && (signal === undefined || signal instanceof AbortSignal),
+      'RESPONSE_STREAM_READ_OPTIONS_INVALID');
+    need(this.runtimeDirectory !== null, 'ORIGINAL_STREAM_RUNTIME_REQUIRED');
+    // Use the same codec as the selected original SF31 runtime. The standalone
+    // Node package carries no copied parser or alternate paid-response behavior.
+    let codec;
+    try { codec = await import(pathToFileURL(join(this.runtimeDirectory, '..',
+      'sf31-buyer-client', 'response-stream.mjs')).href); }
+    catch { throw new BuyerError('ORIGINAL_STREAM_RUNTIME_UNAVAILABLE'); }
+    const selected = this.responseFile?.stream;
+    need(selected === undefined || selected.format === format, 'RESPONSE_STREAM_FORMAT_MISMATCH');
+    let metadata, prefix;
+    if (this.delivery.status === 'SAVED') {
+      metadata = this._metadata(); prefix = metadata.bytes;
+      need(codec.responseStreamContentType(format, metadata.contentType), 'RESPONSE_STREAM_TYPE_MISMATCH');
+    } else {
+      const saved = this.delivery;
+      need(allowPartial && saved.status === 'FAILED' && saved.stream?.format === format,
+        'RESPONSE_NOT_SAVED');
+      need(this.responseFile && typeof saved.partialPath === 'string' &&
+        dirname(absolute(saved.partialPath)) === dirname(absolute(this.responseFile.destination)) &&
+        /^\.x402-response-[a-f0-9-]{36}\.partial$/.test(basename(saved.partialPath)) &&
+        Number.isSafeInteger(saved.bytes) && saved.bytes > 0 && saved.bytes <= this.responseFile.maxBytes &&
+        typeof saved.partialSha256 === 'string' && /^[a-f0-9]{64}$/.test(saved.partialSha256) &&
+        Number.isSafeInteger(saved.stream.lastCompleteByte) && saved.stream.lastCompleteByte >= 0 &&
+        saved.stream.lastCompleteByte <= saved.bytes, 'RESPONSE_PARTIAL_METADATA_INVALID');
+      metadata = { path: saved.partialPath, bytes: saved.bytes, sha256: saved.partialSha256 };
+      prefix = saved.stream.lastCompleteByte;
+    }
+    const file = new RetainedStreamFile(metadata);
+    const parser = codec.createResponseStreamParser({ ...selected, format,
+      ...(maxRecordBytes === undefined ? {} : {maxRecordBytes}),
+      ...(maxRecords === undefined ? {} : {maxRecords}) });
+    let consumed = 0;
+    try {
+      // chunks() verifies the entire retained hash before exposing any record,
+      // then verifies it again through consumption. For an incomplete response,
+      // parse only the original fully framed prefix and still verify the tail.
+      for await (const chunk of file.chunks({ signal })) {
+        const length = Math.min(chunk.byteLength, Math.max(0, prefix - consumed));
+        if (length) yield* parser.push(chunk.subarray(0, length));
+        consumed += chunk.byteLength;
+      }
+      yield* parser.finish();
+      need(parser.summary().complete, 'RESPONSE_STREAM_INCOMPLETE_RECORD');
+    } catch (error) {
+      if (error instanceof BuyerError) throw error;
+      throw new BuyerError(error?.code ?? 'RESPONSE_STREAM_READ_FAILED');
+    }
+  }
+
+  /** Standard SSE event records, from this original retained response only. */
+  async *events(options) { yield* this._records('sse', options); }
+
+  /** Native JSON values, decoded one complete NDJSON record at a time. */
+  async *ndjson(options) {
+    for await (const record of this._records('ndjson', options)) yield record.value;
   }
 }

@@ -1,0 +1,44 @@
+{
+  "schema": "stellar-forge.mongodb-merchant-plan.v1",
+  "publicOrigin": "https://merchant.example",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "amount": "10000",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "hpd_projects",
+      "path": "/reports/hpd-projects",
+      "method": "GET",
+      "query": "hpd_projects",
+      "serviceName": "Housing production records",
+      "description": "Official NYC HPD building-in-project records. Each row is one production event; fields retain canonical BSON types.",
+      "parameterDescriptions": {
+        "minimumUnits": "Minimum counted affordable units for a recorded project event.",
+        "constructionType": "Recorded production construction category."
+      },
+      "example": {
+        "minimumUnits": "20",
+        "constructionType": "Preservation"
+      }
+    },
+    {
+      "id": "hpd_totals",
+      "path": "/reports/hpd-totals",
+      "method": "POST",
+      "query": "hpd_totals",
+      "serviceName": "Housing production totals",
+      "description": "Recorded HPD production events, counted unit events and distinct recorded BBLs by construction category.",
+      "parameterDescriptions": {
+        "minimumUnits": "Minimum counted units for a recorded project event."
+      },
+      "example": {
+        "minimumUnits": "0"
+      }
+    }
+  ]
+}

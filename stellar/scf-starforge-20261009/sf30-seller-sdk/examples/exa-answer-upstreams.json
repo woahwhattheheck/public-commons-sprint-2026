@@ -1,0 +1,27 @@
+{
+  "schema": "stellar-forge.seller-upstreams.v1",
+  "bindings": {
+    "exaAnswer": {
+      "origin": "https://api.exa.ai",
+      "path": "/answer",
+      "method": "POST",
+      "query": [],
+      "requestHeaders": [],
+      "headerEnv": {"x-api-key": "EXA_API_KEY"},
+      "responseHeaders": [],
+      "responseMode": "sse",
+      "timeoutMs": 20000,
+      "maxInFlight": 8,
+      "stream": {
+        "maxBytes": 33554432,
+        "maxDurationMs": 120000,
+        "idleTimeoutMs": 30000
+      },
+      "availability": {
+        "failureThreshold": 3,
+        "resetAfterMs": 30000,
+        "maxResetAfterMs": 300000
+      }
+    }
+  }
+}

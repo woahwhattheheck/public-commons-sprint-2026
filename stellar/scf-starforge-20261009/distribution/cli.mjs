@@ -49,6 +49,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
+  mongodb                                    Inspect, author and operate fixed native BSON reports
+  mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   cube-workspace / cube-onboard              Author, review and export paid Cube reports

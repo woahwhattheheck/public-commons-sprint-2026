@@ -21,6 +21,7 @@ files through the [native workspace](NATIVE_WORKSPACE.md).
 | Use the existing SF88 native HTTP purchase and returned-file workflow | [Native workspace](NATIVE_WORKSPACE.md) |
 | Preserve and inspect quote history across restart | [Durable workspace](DURABILITY.md) |
 | Read, export and recover complete remote MCP results | [Result inbox and native Node API](RESULTS.md) |
+| Sell existing SQLite, PostgreSQL, DuckDB and ClickHouse query results over MCP | [Original data providers](DATA_TOOLS.md) |
 
 The local buyer's HTTP endpoint implements the MCP 2025-11-25 JSON response
 transport. The stdio launcher connects the same tools to a host subprocess.

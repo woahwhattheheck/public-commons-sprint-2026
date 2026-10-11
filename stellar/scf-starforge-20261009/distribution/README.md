@@ -211,6 +211,47 @@ Use `npx --no-install starforge cube-onboard` for the underlying capture, inspec
 workflow. See [Cube workspace](../sf102-cube-paid-query-adapter/workspace/README.md)
 for the full authoring and handoff flow.
 
+## MongoDB report workspace
+
+Use the original MongoDB driver to inspect collections, author fixed aggregation
+reports, preserve BSON values and operate the merchant from one retained browser
+workspace. The installed package exposes both the native command and browser:
+
+```sh
+npm install --ignore-scripts mongodb@7.7.0
+npx --no-install starforge doctor --feature mongodb
+npx --no-install starforge mongodb init --directory /private/mongodb-inputs
+npx --no-install starforge mongodb-workspace \
+  --state /private/mongodb-workspace \
+  --source /private/mongodb-inputs/source.json \
+  --plan /private/mongodb-inputs/merchant-plan.json
+```
+
+Edit the original source and plan for the merchant's database before opening the
+workspace. The source names a URI environment variable, database and TLS policy.
+Supply that variable through the existing host configuration; the browser retains
+its name. Use a read-only database role. Node 22.16+ and Linux are required by the
+native retained store; snapshot reads require a replica set or sharded MongoDB.
+
+Open the complete loopback URL printed by the command. Inspect actual collection
+metadata, sampled field types and indexes; define named fixed pipelines with
+typed public inputs; review every original payment option; run a saved report;
+download a complete merchant package; and operate the original seller and buyer
+handoff. Int64, Decimal128, ObjectId, Date, missing fields and explicit null retain
+their native meaning in canonical Extended JSON. Atomic prices remain strings.
+
+Saving commits the whole source and merchant plan as one native revision.
+Concurrent edits retain their original expected revision, and an operator can
+reopen an older version and save it as a new head. Reopen later with only
+`starforge mongodb-workspace --state /private/mongodb-workspace`.
+Prepared packages and exact GET/POST buyer requests remain attached to that state.
+
+The original application exports are `./seller/mongodb`, `/source`, `/prepare`,
+`/onboarding`, `/workspace` and `/buyer`. They expose the same implementations used
+by the CLI and browser. Full source, pipeline, package, buyer and operating guides
+are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
+The optional driver pin is derived from that component's own `package.json`.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -261,6 +302,8 @@ or automatically retry a request.
 | `starforge sheets-publisher` | Review and publish selected Sheet observations through the original retained dataset and buyer workflow |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
+| `starforge mongodb` | Inspect native collections, prepare fixed BSON reports and operate the original MongoDB seller |
+| `starforge mongodb-workspace` | Author, review, save and run MongoDB reports; export merchant packages and exact buyer requests |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
