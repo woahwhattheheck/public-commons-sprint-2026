@@ -4,6 +4,9 @@ const namesAllowed = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const reserved = new Set(['__proto__', 'prototype', 'constructor']);
 const literal = /^[A-Za-z0-9_.~-]+$/;
 const badTarget = () => Object.assign(new TypeError('INVALID_REQUEST_TARGET'), { status: 400 });
+// Native route regex uses /i without /u. Fold ASCII path literals only;
+// preserve the casing and contents of decoded dynamic path parameters.
+const asciiFold = value => value.replace(/[A-Z]/g, c => c.toLowerCase());
 
 function decodeSegment(segment) {
   let value;
@@ -21,7 +24,7 @@ function match(binding, rawPath) {
   for (let i = 0; i < values.length; i++) {
     const expected = binding.segments[i];
     if (expected.startsWith(':')) result[expected.slice(1)] = decodeSegment(values[i]);
-    else if (expected !== values[i]) return null;
+    else if (asciiFold(expected) !== asciiFold(values[i])) return null;
   }
   return result;
 }
@@ -108,7 +111,7 @@ export function orderServiceRoutes(routes) {
 export function selectServiceRoute(routes, rawPath, method) {
   let selectedPath, params;
   for (const route of routes) {
-    if (!route.binding.dynamic && route.path !== rawPath) continue;
+    if (!route.binding.dynamic && asciiFold(route.path) !== asciiFold(rawPath)) continue;
     const found = route.binding.dynamic ? match(route.binding, rawPath) : Object.create(null);
     if (found === null) continue;
     selectedPath = route.path; params = found; break;
