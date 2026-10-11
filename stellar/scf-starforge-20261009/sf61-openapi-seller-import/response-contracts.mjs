@@ -1,6 +1,7 @@
 // MIT. Import response promises into the existing SF30 upstream binding format.
 import { createOpenApiResolver } from './importer.mjs';
 import { compileResponseContract, RESPONSE_CONTRACT_SCHEMA } from '../sf30-seller-sdk/response-contract.mjs';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 
 const own = (value, key) => Object.hasOwn(value, key);
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -13,7 +14,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
  */
 export function compileOpenApiResponseContract(document, offer, { specSha256 } = {}) {
   if (!plain(document) || !/^3\.[01]\.\d+$/.test(document.openapi ?? '') ||
-      !plain(document.paths) || !plain(offer) || !['GET', 'HEAD', 'POST'].includes(offer.method) ||
+      !plain(document.paths) || !plain(offer) || !supportsSellerMethod(offer.method) ||
       !own(document.paths, offer.path)) fail('Original selected OpenAPI operation required');
   if (document.jsonSchemaDialect !== undefined &&
       !['https://json-schema.org/draft/2020-12/schema', 'https://spec.openapis.org/oas/3.1/dialect/base'].includes(document.jsonSchemaDialect))

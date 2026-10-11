@@ -7,8 +7,11 @@ import { createDeliveryReader, deliveryCsv, deliveryPrometheus } from './deliver
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
-export async function startSellerOperations(session, { port = 8424, recentLimit = 160, deliveryOutbox = null } = {}) {
+export async function startSellerOperations(session, { port = 8424, recentLimit = 160, deliveryOutbox = null, navigationOrigin = null } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
+  if (navigationOrigin !== null && (typeof navigationOrigin !== 'string' ||
+      !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(navigationOrigin) ||
+      Number(new URL(navigationOrigin).port)>65535)) throw new TypeError('navigationOrigin must be an explicit loopback workspace origin');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
@@ -18,6 +21,8 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
   const observer = observeSellerTraffic(session, { recentLimit });
+  const snapshot = () => ({ ...observer.snapshot(),
+    ...(typeof session.upstreamSnapshot === 'function' ? { upstreams: session.upstreamSnapshot() } : {}) });
   // The SAME outbox used by the merchant's original native settlement decorator.
   const readDelivery = deliveryOutbox ? createDeliveryReader(deliveryOutbox) : null;
   let allowedHosts = new Set(), allowedOrigins = new Set();
@@ -31,16 +36,28 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       res.end(req.method === 'HEAD' ? undefined : bytes);
     };
     try {
+      // An explicitly composed workspace may open HTML through a user click.
+      // Cross-origin API/export reads retain the original operator-only policy.
+      let referringOrigin = null;
+      try { if (req.headers.referer) referringOrigin = new URL(req.headers.referer).origin; } catch {}
+      const userNavigation = navigationOrigin !== null && referringOrigin === navigationOrigin &&
+        req.method === 'GET' && ['/', '/fulfillment'].includes(req.url) &&
+        req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document' &&
+        req.headers['sec-fetch-user'] === '?1';
       // Binding loopback alone does not stop hostile DNS names / browser cross-origin access.
       if (!allowedHosts.has(req.headers.host) ||
-          (req.headers.origin && !allowedOrigins.has(req.headers.origin)) ||
-          ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site'])) {
+          (!userNavigation && ((req.headers.origin && !allowedOrigins.has(req.headers.origin)) ||
+          ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site'])))) {
         return reply(403, 'text/plain', 'Operator origin required');
       }
       if (!['GET', 'HEAD'].includes(req.method)) return reply(405, 'text/plain', 'Read only', { allow: 'GET, HEAD' });
       if (req.url === '/api/snapshot' || req.url === '/export.json') {
-        return reply(200, 'application/json; charset=utf-8', JSON.stringify(observer.snapshot()),
+        return reply(200, 'application/json; charset=utf-8', JSON.stringify(snapshot()),
           req.url === '/export.json' ? { 'content-disposition': 'attachment; filename="seller-traffic.json"' } : {});
+      }
+      if (req.url === '/api/upstreams') {
+        if (typeof session.upstreamSnapshot !== 'function') return reply(404, 'text/plain', 'No upstream adapter attached');
+        return reply(200, 'application/json; charset=utf-8', JSON.stringify(session.upstreamSnapshot()));
       }
       if (req.url === '/export.csv') return reply(200, 'text/csv; charset=utf-8', trafficCsv(observer.snapshot()),
         { 'content-disposition': 'attachment; filename="seller-traffic.csv"' });

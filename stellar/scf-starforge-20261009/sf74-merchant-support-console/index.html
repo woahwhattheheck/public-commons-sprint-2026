@@ -8,10 +8,10 @@
   <script type="module" src="/console.mjs"></script>
 </head>
 <body>
-<header><div class="wrap header"><span class="mark" aria-hidden="true">✳</span><div><p class="eyebrow">Merchant workspace</p><h1>Take a route from diagnosis to handoff.</h1><p>Inspect browser access, review a repair, and prepare an internal workorder from the same merchant captures.</p></div><span class="local-badge">Local session</span></div></header>
+<header><div class="wrap header"><div><p class="eyebrow">Stellar · Merchant operations</p><h1>Merchant workspace</h1><p>Manage the case, inspect the route, and prepare the workorder.</p></div><span class="local-badge">Local workspace</span></div></header>
 <main class="wrap">
-  <nav class="workflow" aria-label="Workspace stages"><a href="#diagnose"><span>01</span> Diagnose a route</a><a href="#review"><span>02</span> Review changes</a><a href="#workorder"><span>03</span> Prepare workorder</a></nav>
-  <p class="boundary">Diagnostics are unpaid. Workorders remain internal until owner review; this workspace sends no messages, invoices, signatures or payments.</p>
+  <nav class="workflow" aria-label="Workspace stages"><a href="#cases"><span>01</span> Cases</a><a href="#diagnose"><span>02</span> Diagnose</a><a href="#review"><span>03</span> Review</a><a href="#workorder"><span>04</span> Workorder</a></nav>
+  <p class="boundary">Local case management and unpaid route diagnostics.</p>
   <section id="diagnose" class="card" aria-labelledby="diagnose-heading">
     <div class="section-heading"><div><p class="eyebrow">01 · Diagnose</p><h2 id="diagnose-heading">Inspect one merchant route</h2><p>Use the merchant's actual endpoint, facilitator and buyer settings.</p></div><span class="stage-hint">No probes until you choose Run</span></div>
     <form id="intake-form">
@@ -74,6 +74,6 @@
     <div id="workorder-output" hidden><h3 id="workorder-title"></h3><p id="workorder-summary"></p><div id="workorder-facts" class="scope"></div><div class="download-grid"><button id="download-workorder-html" type="button">Download readable workorder</button><button id="download-workorder-checklist" type="button" class="secondary">Download handoff checklist</button><button id="download-workorder-json" type="button" class="secondary">Download workorder JSON</button></div><p class="hint">The workorder carries the selected source references and repair review. Customer acceptance and payment remain separate owner decisions.</p><details class="source-details"><summary>Workorder source details</summary><pre id="raw-workorder" tabindex="0"></pre></details></div>
   </section>
 </main>
-<footer class="wrap">Merchant workspace · Local session only. Save the captures and documents you need before closing this tab.</footer>
+<footer class="wrap">Merchant workspace · Save case to retain work in your private case directory, or download a portable case file.</footer>
 </body>
 </html>
