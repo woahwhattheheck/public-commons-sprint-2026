@@ -277,10 +277,14 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     const url = new URL(session.url); url.pathname = '/migrations/'; url.searchParams.set('project', found.projectId);
     return { name, url: url.href, projectId: found.projectId, handoverDigest: found.digest };
   }
-  async function importHandover({ name, content, expectedSha256 }) {
-    if (typeof content !== 'string') throw new TypeError('Select the original compressed migration handover.');
-    const body = Buffer.from(content, 'base64');
-    if (body.toString('base64') !== content) throw new TypeError('The handover upload is not complete base64 data.');
+  async function importHandover({ name, content, body, expectedSha256 }) {
+    if (body === undefined) {
+      if (typeof content !== 'string') throw new TypeError('Select the original compressed migration handover.');
+      body = Buffer.from(content, 'base64');
+      if (body.toString('base64') !== content) throw new TypeError('The handover upload is not complete base64 data.');
+    } else if (!Buffer.isBuffer(body) || content !== undefined) {
+      throw new TypeError('Select one original binary migration handover.');
+    }
     const restored = await handovers.restore({ body, name, expectedSha256 });
     return { ...restored, open: await openReceivedWorkspace({ name }) };
   }
