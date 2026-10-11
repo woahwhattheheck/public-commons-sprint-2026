@@ -54,7 +54,7 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, filename, type]) => [path, { bytes: await readFile(new URL('./public/' + filename, import.meta.url)), type }])));
-  const tickets = new Map(), sockets = new Set(), downloads = new Set();
+  const tickets = new Map(), sockets = new Set(), downloadControllers = new Set();
   let origin, host, closing, closed = false;
   const server = createServer(async (req, res) => {
     const reply = (status, type, bytes, headers = {}) => {
@@ -79,24 +79,27 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         const value = params(url, ['ticket']), ticket = tickets.get(value.ticket);
         if (!ticket || ticket.expires < Date.now()) fail('OBJECT_WORKSPACE_DOWNLOAD_EXPIRED', 401);
         tickets.delete(value.ticket);
-        downloads.add(req.socket);
-        let saved;
+        const controller = new AbortController();
+        const disconnected = () => { if (!res.writableFinished) controller.abort(); };
+        downloadControllers.add(controller);
+        res.once('close', disconnected); req.once('aborted', disconnected);
+        if (res.destroyed || req.aborted) controller.abort();
+        let saved, failure;
         try {
-          if (ticket.kind === 'accounting') {
-            const output = await model.openAccountingExport(ticket.session);
-            try {
-              res.writeHead(200, { ...security, 'content-type': 'application/x-ndjson; charset=utf-8',
-                'content-disposition': 'attachment; filename="' + output.name + '"' });
-              await pipeline(Readable.from(output.body), res, { signal: output.signal });
-            } finally { output.finish(); }
-            return;
-          }
-          saved = await model.openDownload(ticket.session);
-          res.writeHead(200, { ...security, 'content-type': 'application/octet-stream',
-            'content-length': String(saved.bytes), 'content-disposition': 'attachment; filename="' + saved.name + '"',
-            'x-content-sha256': saved.sha256 });
-          await pipeline(saved.handle.createReadStream({ start: 0, autoClose: false }), res);
-        } finally { downloads.delete(req.socket); await saved?.handle.close(); }
+          const accounting = ticket.kind === 'accounting';
+          saved = accounting ? await model.openAccountingExport(ticket.session) :
+            await model.openDownload(ticket.session, { signal: controller.signal });
+          const signal = AbortSignal.any([saved.signal, controller.signal]); signal.throwIfAborted();
+          res.writeHead(200, { ...security,
+            'content-type': accounting ? 'application/x-ndjson; charset=utf-8' : 'application/octet-stream',
+            'content-disposition': 'attachment; filename="' + saved.name + '"',
+            ...(accounting ? {} : { 'content-length': String(saved.bytes), 'x-content-sha256': saved.sha256 }) });
+          await pipeline(Readable.from(saved.body, { objectMode: false, highWaterMark: 65536 }), res, { signal });
+        } catch (error) { failure = error; throw error; }
+        finally {
+          res.off('close', disconnected); req.off('aborted', disconnected);
+          downloadControllers.delete(controller); await saved?.finish(failure);
+        }
         return;
       }
       const supplied = Buffer.from(typeof req.headers['x-object-workspace-token'] === 'string' ? req.headers['x-object-workspace-token'] : '');
@@ -167,14 +170,13 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
     closed = true;
     closing = (async () => {
       const serverClosed = new Promise(resolveClosed => server.close(resolveClosed));
+      for (const controller of downloadControllers) controller.abort();
       await model.close(); tickets.clear();
       server.closeIdleConnections();
-      // Drain the native buyer first. Incomplete headers/bodies cannot then
-      // keep shutdown alive; an authorized file stream gets 15 seconds to end.
-      for (const socket of sockets) if (!downloads.has(socket)) socket.destroy();
-      const grace = setTimeout(() => { for (const socket of sockets) socket.destroy(); }, 15000);
-      grace.unref();
-      try { await serverClosed; } finally { clearTimeout(grace); }
+      // The native buyer and exact file reads have drained. Partial requests
+      // and disconnected download consumers cannot keep the listener alive.
+      for (const socket of sockets) socket.destroy();
+      await serverClosed;
     })();
     return closing;
   }
