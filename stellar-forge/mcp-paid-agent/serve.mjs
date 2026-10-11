@@ -17,6 +17,9 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
   const allowedClientOrigins = (environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean);
   const port = Number(environment.MCP_PORT ?? 3210);
   if (!Number.isSafeInteger(port) || port < 0 || port > 65535) throw new RangeError('Invalid MCP_PORT');
+  const timeoutMs = Number(environment.MCP_PROVIDER_TIMEOUT_MS ?? 8000);
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300000)
+    throw new RangeError('MCP_PROVIDER_TIMEOUT_MS must be 1..300000');
   let quoteStore, broker, server, operator;
   try {
     if (directory) {
@@ -30,9 +33,11 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
           (operator.close !== undefined && typeof operator.close !== 'function'))
         throw new TypeError('The trusted operator module must export approve and signPayment functions.');
     }
-    broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore,
+    broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore, timeoutMs,
       ...(operator ? { approve: operator.approve, signPayment: operator.signPayment,
-        agentCommerce: operator.agentCommerce ?? null } : {}) });
+        agentCommerce: operator.agentCommerce ?? null,
+        ...(operator.fetchImpl === undefined ? {} : {fetchImpl:operator.fetchImpl}),
+        remoteMcpPolicies: operator.remoteMcpPolicies ?? [] } : {}) });
     server = createServer(createMcpHttpHandler(broker, { bearerToken, allowedClientOrigins }));
     await new Promise((done, reject) => {
       server.once('error', reject);
