@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SFTP dataset workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<header class="page-header">
+  <div><p class="eyebrow">SF30 / SELLER TOOLS</p><h1>SFTP dataset workspace</h1>
+    <p class="subtitle">Inspect private files, define reports, and publish versioned datasets.</p></div>
+  <div class="revision-box"><strong id="revision-label">Opening workspace</strong><span id="draft-label">Loading saved configuration</span></div>
+</header>
+<main>
+  <div class="toolbar global-toolbar">
+    <p id="source-summary" class="summary">Private source workspace</p>
+    <div class="actions"><button id="reload" type="button">Load saved revision</button><button id="save" type="button" class="primary">Save revision</button></div>
+  </div>
+  <p id="notice" class="notice" role="status" aria-live="polite">Opening the retained workspace.</p>
+  <nav class="tabs" role="tablist" aria-label="Workspace sections">
+    <button id="tab-connection" role="tab" aria-controls="connection" aria-selected="true" data-tab="connection">Connection</button>
+    <button id="tab-reports" role="tab" aria-controls="reports" aria-selected="false" data-tab="reports">Files and reports</button>
+    <button id="tab-merchant" role="tab" aria-controls="merchant" aria-selected="false" data-tab="merchant">Merchant</button>
+    <button id="tab-products" role="tab" aria-controls="products" aria-selected="false" data-tab="products">Dataset products</button>
+  </nav>
+
+  <section id="connection" class="section" role="tabpanel" aria-labelledby="tab-connection">
+    <div class="section-heading"><div><h2>Private SFTP source</h2><p>Save the server identity and credential references before opening the file catalogue.</p></div></div>
+    <div class="panel form-grid">
+      <label class="span-2">Host<input id="host" autocomplete="off" placeholder="files.example.com" spellcheck="false"></label>
+      <label>Port<input id="port" type="number" min="1" max="65535" value="22"></label>
+      <label>Username<input id="username" autocomplete="off" placeholder="dataset-reader" spellcheck="false"></label>
+      <label class="span-2">Remote root<input id="root" value="/exports" autocomplete="off" spellcheck="false"><span class="help">The catalogue and each report stay within this directory.</span></label>
+      <label class="span-2">Trusted host key fingerprints<textarea id="host-pins" rows="3" placeholder="SHA256:…" spellcheck="false"></textarea><span class="help">One SHA256 fingerprint per line, supplied by your server operator. Multiple pins support a planned key rotation.</span></label>
+      <label>Authentication<select id="auth-method"><option value="privateKeyFileEnv">Private key file</option><option value="privateKeyEnv">Private key value</option><option value="passwordEnv">Password</option></select></label>
+      <label>Credential environment variable<input id="auth-env" value="SFTP_PRIVATE_KEY_FILE" autocomplete="off" spellcheck="false"><span class="help">Enter the variable name used when starting this workspace.</span></label>
+      <label class="span-2">Key passphrase variable <span class="optional">optional</span><input id="passphrase-env" autocomplete="off" spellcheck="false" placeholder="SFTP_KEY_PASSPHRASE"></label>
+      <details class="span-2"><summary>Transfer limits</summary><div class="form-grid inner">
+        <label>Maximum file bytes<input id="max-file-bytes" type="number" min="1" max="268435456" value="67108864"></label>
+        <label>Maximum row bytes<input id="max-row-bytes" type="number" min="128" max="8388608" value="1048576"></label>
+        <label>Transfer timeout (milliseconds)<input id="timeout-ms" type="number" min="1000" max="900000" value="300000"></label>
+        <label>Maximum directory entries<input id="max-directory-entries" type="number" min="1" max="100000" value="10000"></label>
+      </div></details>
+    </div>
+    <div class="split">
+      <section class="panel"><h3>Launch environment</h3><div id="environment-status"><p class="help">Save the source to inspect its environment references.</p></div></section>
+      <section class="panel"><h3>Saved revisions</h3><p class="help">Load an earlier revision into the draft, then save it as a new revision.</p><div id="history" class="history"></div></section>
+    </div>
+  </section>
+
+  <section id="reports" class="section" role="tabpanel" aria-labelledby="tab-reports" hidden>
+    <div class="section-heading"><div><h2>Remote files</h2><p>Browse the saved source and capture a complete file before selecting its fields.</p></div></div>
+    <section class="panel">
+      <div class="toolbar"><label class="grow">Folder within the remote root<input id="folder-path" placeholder="Leave empty for the remote root" spellcheck="false"></label><div class="actions align-end"><button id="folder-up" type="button">Up one folder</button><button id="browse" type="button">Browse files</button></div></div>
+      <p id="catalogue-summary" class="help">The file catalogue opens from a saved source revision.</p>
+      <div id="catalogue" class="table-wrap empty">No catalogue loaded.</div>
+      <div id="catalogue-pages" class="actions top-space"></div>
+    </section>
+    <section class="panel">
+      <div class="form-grid compact-grid">
+        <label class="span-2">File path<input id="sample-path" placeholder="reports/dataset.csv" spellcheck="false"></label>
+        <label>File format<select id="sample-format"><option value="csv">CSV</option><option value="json">JSON</option><option value="ndjson">NDJSON</option></select></label>
+        <label>JSON records pointer<input id="records-pointer" placeholder="/data/records" spellcheck="false"><span class="help">Leave empty for a top-level array.</span></label>
+      </div>
+      <div class="toolbar"><p class="help">The preview shows up to 20 records from a complete retained capture.</p><button id="sample" type="button">Capture and inspect file</button></div>
+      <p id="sample-summary" class="help">Select a file in the catalogue or enter its path.</p>
+      <div id="sample-table" class="table-wrap empty">No file captured.</div>
+      <div class="actions top-space"><button id="use-sample" type="button" disabled>Use captured fields in report</button></div>
+    </section>
+    <div class="section-heading"><div><h2>Saved report definitions</h2><p>Choose output fields and their scalar types. Each dataset product keeps the selected report and source revision.</p></div><button id="new-report" type="button">New report</button></div>
+    <section class="panel">
+      <label>Report<select id="report-select"><option value="">New report</option></select></label>
+      <div class="form-grid inner">
+        <label>Report key<input id="report-name" placeholder="preservation" spellcheck="false"><span class="help">Letters, digits, and underscores; start with a letter.</span></label>
+        <label>Source file<input id="report-path" placeholder="reports/preservation.csv" spellcheck="false"></label>
+        <label>Format<select id="report-format"><option value="csv">CSV</option><option value="json">JSON</option><option value="ndjson">NDJSON</option></select></label>
+        <label>JSON records pointer<input id="report-pointer" spellcheck="false"></label>
+      </div>
+      <div class="toolbar top-space"><h3>Output fields</h3><button id="add-column" type="button">Add field</button></div>
+      <div class="table-wrap"><table class="mapping-table"><thead><tr><th>Output name</th><th>Source pointer</th><th>Type</th><th>Nullable</th><th>Missing field</th><th>Action</th></tr></thead><tbody id="mapping"></tbody></table></div>
+      <details class="top-space"><summary>Parameters, filters, and file revision</summary>
+        <div class="form-grid inner">
+          <label>Parameters<textarea id="report-parameters" rows="7" spellcheck="false">{}</textarea><span class="help">Named input objects with type, required, default, and optional enum.</span></label>
+          <label>Row filters<textarea id="report-where" rows="7" spellcheck="false">[]</textarea><span class="help">Each filter names a column, operator, and declared parameter.</span></label>
+          <label class="span-2">Required file SHA256 <span class="optional">optional</span><input id="report-hash" spellcheck="false"><span class="help">Leave empty to allow refreshed source files. Set a hash when the report must use a specific source file.</span></label>
+        </div>
+      </details>
+      <div class="actions top-space"><button id="keep-report" type="button">Keep report in draft</button><button id="remove-report" type="button">Remove report from draft</button></div>
+    </section>
+  </section>
+
+  <section id="merchant" class="section" role="tabpanel" aria-labelledby="tab-merchant" hidden>
+    <div class="section-heading"><div><h2>Merchant and payment terms</h2><p>Each dataset product retains these terms alongside its selected source revision.</p></div></div>
+    <section class="panel">
+      <label class="check"><input id="merchant-enabled" type="checkbox">Configure paid dataset publication</label>
+      <div id="merchant-fields" hidden>
+        <div class="form-grid inner">
+          <label>Public HTTPS origin<input id="public-origin" placeholder="https://data.example.com" spellcheck="false"></label>
+          <label>Service name<input id="service-name" value="SFTP datasets"></label>
+          <label class="span-2">Description<input id="merchant-description" value="Retained dataset from a private SFTP report"></label>
+          <label class="span-2">Tags<input id="merchant-tags" value="sftp, dataset"><span class="help">Comma-separated labels used in the seller’s offer.</span></label>
+        </div>
+        <div class="toolbar top-space"><h3>Payment alternatives</h3><button id="add-payment" type="button">Add payment choice</button></div>
+        <p class="help">Atomic amounts are kept as exact decimal text. Every advertised choice and its extra terms are retained.</p>
+        <div id="payments"></div>
+      </div>
+    </section>
+  </section>
+
+  <section id="products" class="section" role="tabpanel" aria-labelledby="tab-products" hidden>
+    <div class="section-heading"><div><h2>Dataset products</h2><p>Create a product from a saved report, then extract, review, publish, and schedule it in its publication console.</p></div><button id="refresh-products" type="button">Refresh products</button></div>
+    <section class="panel">
+      <div class="form-grid">
+        <label>Saved report<select id="product-report"><option value="">Save a report first</option></select></label>
+        <label>Public resource path<input id="product-path" value="/datasets/report" spellcheck="false"></label>
+      </div>
+      <div class="toolbar top-space"><p id="product-source" class="help">Products use the currently saved source and merchant revision.</p><button id="create-product" class="primary" type="button">Create dataset product</button></div>
+    </section>
+    <div class="product-layout">
+      <aside class="panel product-list"><h3>Publications</h3><div id="publication-list" class="selection-list"><p class="help">No dataset products yet.</p></div></aside>
+      <section id="publication-detail" class="panel" hidden>
+        <div class="section-heading"><div><h3 id="publication-title">Dataset product</h3><p id="publication-binding" class="help"></p></div><a id="publication-console" class="button primary" target="sftp-publication" rel="noreferrer">Open publication console</a></div>
+        <dl id="publication-summary" class="facts"></dl>
+        <div class="actions"><button id="start-seller" type="button">Start dataset seller</button><button id="stop-seller" type="button">Stop seller and pause refresh</button><a id="seller-docs" class="button" target="sftp-seller" rel="noreferrer" hidden>Seller documentation</a></div>
+        <p id="publication-hint" class="help top-space"></p>
+        <h3 class="top-space">Retained runs</h3><div id="publication-runs" class="table-wrap empty">No extraction runs yet.</div>
+        <section id="run-detail" class="subpanel top-space" hidden>
+          <h4 id="run-title">Candidate</h4><p id="run-summary" class="help"></p><div id="run-files" class="actions"></div>
+          <div id="run-preview" class="table-wrap top-space"></div>
+          <div class="form-grid inner"><label>First-page query<input id="buyer-query" value="limit=10" spellcheck="false"><span class="help">The selected run’s retained snapshot is added automatically.</span></label><div class="actions align-end"><button id="load-offer" type="button">Load buyer payment choices</button></div></div>
+          <div id="buyer-review" hidden>
+            <p id="buyer-resource" class="code-line"></p><div id="buyer-offers" class="top-space"></div>
+            <div class="form-grid inner"><label>Payment choice<select id="buyer-choice"></select></label><label>Buyer intent ID<input id="buyer-intent" spellcheck="false" placeholder="sftp-purchase-20261011"></label></div>
+            <button id="prepare-buyer" class="primary top-space" type="button">Prepare retained-snapshot buyer</button>
+          </div>
+        </section>
+        <h3 class="top-space">Prepared buyers</h3><div id="buyers" class="selection-list"><p class="help">Prepare a buyer from a retained publication run.</p></div>
+      </section>
+    </div>
+  </section>
+</main>
+<footer><span id="workspace-location"></span><span>Private loopback workspace</span></footer>
+</body>
+</html>
