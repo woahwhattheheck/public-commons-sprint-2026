@@ -16,8 +16,13 @@ export function createSellerServiceConfig(imported, bindings) {
     if (!plain(binding) || typeof binding.method !== 'string' || typeof binding.path !== 'string' ||
         !/^[A-Za-z0-9_-]{1,64}$/.test(binding.id ?? '') ||
         own(binding, 'handler') === own(binding, 'response') ||
-        (own(binding, 'handler') && !/^[A-Za-z_$][\w$]{0,127}$/.test(binding.handler))) {
+        (own(binding, 'handler') && (typeof binding.handler !== 'string' ||
+          !/^[A-Za-z_$][\w$]{0,127}$/.test(binding.handler)))) {
       throw new TypeError('Each binding requires method, path, id and exactly one handler or response');
+    }
+    if (own(binding, 'admit') && (typeof binding.admit !== 'string' ||
+        !/^[A-Za-z_$][\w$]{0,127}$/.test(binding.admit))) {
+      throw new TypeError('Optional admission binding must name one trusted export');
     }
     const key = binding.method.toUpperCase() + ' ' + binding.path;
     if (keyed.has(key)) throw new TypeError('Duplicate service binding: ' + key);
@@ -30,11 +35,15 @@ export function createSellerServiceConfig(imported, bindings) {
     const path = offer.seller.extensions?.bazaar?.routeTemplate ?? new URL(offer.seller.resource.url).pathname;
     if (path.startsWith('/_seller/')) throw new TypeError('Imported path overlaps seller inspection endpoints');
     return { id: binding.id, path, offer: structuredClone(offer.seller),
+      ...(own(binding, 'admit') ? { admit: binding.admit } : {}),
       ...(own(binding, 'handler') ? { handler: binding.handler } : { response: structuredClone(binding.response) }) };
   });
   // Reuse the actual runtime preflight; do not translate schemas or silently
   // select a payment alternative. No handler is invoked during compilation.
-  const compiled = compileSellerRoutes(routes.map(route => ({ ...route, handler: async () => {} })));
+  const compiled = compileSellerRoutes(routes.map(route => ({ ...route, handler: async () => {},
+    // Preflight only checks callback shape. Runtime resolves the named export;
+    // never import or invoke application code while exporting a service config.
+    ...(own(route, 'admit') ? { admit: () => true } : {}) })));
   return { schema: 'stellar-forge.seller-service.v1',
     publicOrigin: new URL(compiled.routes[0].offer.resource.url).origin, routes };
 }
