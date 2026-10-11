@@ -1,5 +1,9 @@
 # Direct merchant operator workflow
 
+## Local provider workspace
+
+The [complete operator desk](workspace/GUIDE.md) adds retained source intake, exact offer/cap preparation, original terminal actions, useful-output review, private handover and complete encrypted same-path recovery around these native functions. Launch it with `node workspace/cli.mjs serve --state ABS_PRIVATE_DIRECTORY --profiles ABS_HOST_PROFILES_JSON` from this directory. Existing commands below remain available and share the case coordinator with the desk.
+
 An external merchant can give an operator an HTTPS resource before it has a
 catalog listing. This command carries that original offer into a complete private
 buyer workspace and saved request. It joins the existing SF85 capture, SF84
