@@ -156,7 +156,7 @@ or automatically retry a request.
 | `starforge dataset` | SF30 dataset API compilation |
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
-| `starforge duckdb-workbench` | Actual DuckDB/Parquet schemas to selected queries, private previews and retained merchant packages |
+| `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge openapi-workspace` | Select an API contract, prepare the merchant and use its native operator workflow |
@@ -973,47 +973,63 @@ bundled source guides cover application bindings and current Node requirements.
 
 ### Build a DuckDB or Parquet merchant
 
-The DuckDB workbench begins with actual local files and generates the original
-source declaration. Use Linux with `flock`, and select an existing Python 3.10+
-environment containing the pinned DuckDB dependency. To create that environment
-from the installed application's directory:
+The DuckDB merchant workspace begins with actual local files and generates the
+original source declaration. Use the distribution's supported Node runtime and
+an existing Python 3.10+ environment containing the pinned DuckDB dependency. To
+create that environment from the installed application's directory:
 
 ```sh
 python3 -m venv /private/duckdb-env
 /private/duckdb-env/bin/python -m pip install -r \
   node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/requirements.txt
-npx --no-install starforge duckdb-workbench \
-  --workspace /private/merchant-workbench \
+npx --no-install starforge duckdb-workspace \
+  --workspace /private/merchant-workspace \
   --data-dir /private/merchant-data \
   --database warehouse.duckdb \
   --parquet exports/events.parquet \
   --python /private/duckdb-env/bin/python
 ```
 
-For Parquet alone, omit `--database` and repeat `--parquet` for each approved
-file. Existing native declarations use `--source /private/data/source.json`.
-The source directory must allow private metadata writes; selected datasets must
-be stable regular files under that directory. The workbench creates a private
-workspace and retains its original Linux lease while open.
+`duckdb-workbench` is a compatible command alias for this same workspace.
+`--state` and `--workspace` select the same private saved directory. For Parquet
+alone, omit `--database` and repeat `--parquet` for each approved file. Existing
+native declarations use `--source /private/data/source.json`. The data directory
+must permit private metadata writes; selected datasets remain stable regular
+files under that directory. The workspace retains its SQLite ownership lock
+while open.
 
-Open the printed local URL. Inspect real schemas, select public columns, add
-typed filters and ordering, then preview actual query results. Enter complete
-merchant payment terms, save and review the draft, and prepare a named version.
-The original preparation service copies the selected data, performs native
-preflight and exports the original API/client. Inspect, start and stop that
-package from the same browser. Reopen with `--workspace` and `--python`; the
-saved data selection, draft and packages remain available. Add the original
-`--facilitator HTTPS_URL` option for payment-enabled sessions.
+Open the printed local URL. **Build a query** inspects actual schemas, selects
+buyer-visible columns and adds typed filters and ordering through the original
+native query author. Keep the query, preview actual rows, configure merchant
+routes and payment terms, and save an immutable merchant/query revision. Review
+the exact public choices and prepare the original merchant package, including
+copied data and generated API/client files. Inspect, start and stop the merchant
+from the same browser.
 
-The [complete workbench guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workbench/README.md)
-is also included under the same `source/` path. It documents the query contract,
-limits, version lifecycle and application API. The package includes the fixed
-native worker, schema helper, browser assets and shared lease implementation.
-Applications can import `startDuckdbWorkbench` from
-`@tokenjunkielabs/starforge-merchant/seller/duckdb/workbench` and the non-HTTP
-model from `seller/duckdb/workbench/model`. Source, configuration, merchant,
-preparation, catalog and query-authoring modules have matching DuckDB subpaths
-in the package export map.
+Reopen with the saved directory and Python environment; the retained source
+selection, draft and packages remain available:
+
+```sh
+npx --no-install starforge duckdb-workspace \
+  --workspace /private/merchant-workspace \
+  --python /private/duckdb-env/bin/python
+```
+
+Add the original `--facilitator HTTPS_URL` option for native payment-enabled
+sessions. On Linux, `--availability-dir /private/merchant-availability` enables
+the original durable product pause/resume panel and its `flock` ownership.
+**Product availability** opens that authenticated original panel beside the
+existing operations console. Keep this directory when restarting the merchant
+to retain its availability decisions.
+
+The [complete operator guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/README.md)
+is included under the same `source/` path. Applications can import
+`startDuckdbWorkspace` from
+`@tokenjunkielabs/starforge-merchant/seller/duckdb/workspace` and
+`createDuckdbWorkspace` from `seller/duckdb/workspace/model`. Existing
+`startDuckdbWorkbench` and `openDuckdbWorkbench` application exports remain at
+their original paths. Source, configuration, merchant, preparation, catalog and
+query-authoring modules keep their maintained DuckDB export paths.
 
 `doctor` reports optional feature availability and fails only for the requested
 feature or native dependency group. It resolves modules without importing them

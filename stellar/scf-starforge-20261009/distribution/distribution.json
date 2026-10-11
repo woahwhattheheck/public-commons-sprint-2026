@@ -117,7 +117,8 @@
     "duckdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/start.mjs",
     "duckdb-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/inspect.mjs",
     "duckdb-prepare": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/prepare-cli.mjs",
-    "duckdb-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workbench/server.mjs",
+    "duckdb-workbench": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/cli.mjs",
+    "duckdb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/cli.mjs",
     "cube-workspace": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/workspace/server.mjs",
     "cube-onboard": "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/onboarding/cli.mjs",
     "inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
@@ -285,7 +286,9 @@
     "./merchant/accounting": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/reconcile.mjs",
     "./merchant/accounting-workspace": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs",
     "./catalog/workspace": "./source/stellar/scf-starforge-20261009/sf60-durable-catalog-transaction/workspace.mjs",
-    "./buyer/object-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs"
+    "./buyer/object-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs",
+    "./seller/duckdb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/server.mjs",
+    "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs"
   },
   "nativePeers": {
     "@x402/core": {
