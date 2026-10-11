@@ -26,6 +26,7 @@ async function review(c) {
     serviceId:c.operator?.service ?? null,
     signerFilename:c.signerModule ? basename(c.signerModule) : null,
     responseFile:download ? { ...download, prepared:false } : null,
+    preparedFrom:c.preparedFrom ?? null,
     next:'Execute an original approved single operation using the private operator module'
   });
 }
@@ -40,8 +41,13 @@ async function discover(c) {
 }
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n');
+    process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
+      '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json\n');
     return;
+  }
+  if (args[0] === '--prepare') {
+    const { prepare } = await import('./prepare.mjs');
+    return print(await prepare(args.slice(1)));
   }
   need((args.length === 3 || args.length === 5 && args[3] === '--response-out') &&
     ['--review','--discover','--execute'].includes(args[0]) &&
