@@ -64,8 +64,10 @@ does not maintain another setting allowlist or stream compiler.
 need work. Choose a new name for each snapshot. **Reopen review** restores its
 exact source and decisions and regenerates the current native comparison against
 the same verified saved base. Review snapshots live under
-`OUTPUT/contract-revisions/`; the directory is mode 0700 and each create-only JSON
-file is mode 0600. The base merchant package remains the original input.
+`OUTPUT/.contract-revisions/`; the directory is mode 0700 and each create-only JSON
+file is mode 0600. This reserved folder cannot be a merchant package name, so a
+review snapshot cannot add files to an existing package. The base merchant package
+remains the original input.
 
 Copy the original base package alongside retained reviews when moving their
 parent directory. A saved candidate is independently portable through the
