@@ -52,8 +52,8 @@ function table(headers,rows){
   return element('div',{class:'table-wrap'},element('table',{},element('thead',{},element('tr',{},headers.map(h=>element('th',{scope:'col'},h)))),element('tbody',{},rows)));
 }
 const receivedTime=edition=>edition?.resources?.timeline?.receivedAt||edition?.receivedAt||edition?.capturedAt||edition?.finishedAt||edition?.completedAt;
-function sourceLine(edition){
-  return element('div',{class:'source-strip'},element('a',{href:'https://www.tomorrow.io/',target:'_blank',rel:'noopener noreferrer'},'Powered by Tomorrow.io'),edition?.id?element('code',{},edition.id):null,edition?.rawAvailability?badge(edition.rawAvailability):null);
+function sourceLine(edition,availability=edition?.rawAvailability){
+  return element('div',{class:'source-strip'},element('a',{href:'https://www.tomorrow.io/',target:'_blank',rel:'noopener noreferrer'},'Powered by Tomorrow.io'),edition?.id?element('code',{},edition.id):null,availability?badge(availability):null);
 }
 const nativeUnits={temperature:{metric:'°C',imperial:'°F'},windSpeed:{metric:'m/s',imperial:'mph'},windGust:{metric:'m/s',imperial:'mph'},precipitationIntensity:{metric:'mm/hr',imperial:'in/hr'},precipitationProbability:{metric:'%',imperial:'%'},humidity:{metric:'%',imperial:'%'}};
 function unitFor(name,units){const declared=state.workspace?.plan?.fieldUnits?.[name]??nativeUnits[name];return typeof declared==='string'?declared:(declared?.[units]??'');}
@@ -386,7 +386,7 @@ function renderPlan(){
 function appendMap(section,detail,edition,work){
   if(detail.tile?.available)section.append(element('div',{class:'map-layout'},
     element('img',{class:'map-tile',src:'/api/editions/'+encodeURIComponent(edition.id)+'/tile',alt:'Native '+(work.tile?.field||'weather')+' map tile for '+(work.location?.label||'the selected point')}),
-    element('div',{},element('h3',{},'Native map tile'),element('p',{class:'small'},(work.tile?.field||'Selected layer')+' · '+(work.tile?.time||'Saved tile time')),element('p',{class:'help'},'The map is a source image. Decisions above use the native timeline values.'),sourceLine(edition))));
+    element('div',{},element('h3',{},'Native map tile'),element('p',{class:'small'},(work.tile?.field||'Selected layer')+' · '+(work.tile?.time||'Saved tile time')),element('p',{class:'help'},'The map is a source image. Decisions above use the native timeline values.'),sourceLine(edition,'Map image available'))));
   else if(work.tile){
     const resource=edition.resources?.tile;
     const outcome=resource?.state==='FAILED'?'Request failed'+(resource.status?' · HTTP '+resource.status:''):
