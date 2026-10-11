@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { initReleaseStore, readReleaseState } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 import { readReleaseWorkspace, inspectUpstreamConfiguration } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-upstreams.mjs';
 import { readReleaseCatalogConfig } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-catalog.mjs';
+import { readFacilitatorProfiles } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-facilitator.mjs';
 import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/importer.mjs';
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
@@ -312,7 +313,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'pricingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'pricingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -324,6 +325,8 @@ export async function readMerchantConfig(path) {
     releaseStore: hostPath(raw.releaseStore, base), exportsDirectory: hostPath(raw.exportsDirectory, base), sources,
     catalog: raw.catalogConnection === undefined ? null
       : await readReleaseCatalogConfig(hostPath(raw.catalogConnection, base)),
+    facilitators: raw.facilitatorConnection === undefined ? null
+      : await readFacilitatorProfiles(hostPath(raw.facilitatorConnection, base)),
     support: raw.supportConnection === undefined ? null
       : await readSupportConfiguration(hostPath(raw.supportConnection, base)),
     receiving: raw.receivingConnection === undefined ? null
@@ -343,7 +346,7 @@ export async function readMerchantConfig(path) {
   if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support, receiving, pythonWorkspaces, pricing, releaseStore }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, pricing, releaseStore }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime }, process.cwd(), 'initial');
@@ -357,6 +360,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   const preview = await inspectMerchantSource(source);
   const catalogConnection = catalog === undefined ? undefined : hostPath(catalog, process.cwd());
   if (catalogConnection) await readReleaseCatalogConfig(catalogConnection);
+  const facilitatorConnection = facilitators === undefined ? undefined : hostPath(facilitators, process.cwd());
+  if (facilitatorConnection) await readFacilitatorProfiles(facilitatorConnection);
   const planFile = fleetPlan === undefined ? undefined : hostPath(fleetPlan, process.cwd());
   if (planFile) await readFleetReleasePlan(planFile);
   const accountingConfig = accounting === undefined ? null : await readAccountingConfig(accounting);
@@ -377,6 +382,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   await writePrivate(path, { schema: CONFIG_SCHEMA, name,
     releaseStore: existingReleaseStore ?? './releases', exportsDirectory: './customer-exports',
     ...(catalogConnection ? { catalogConnection } : {}),
+    ...(facilitatorConnection ? { facilitatorConnection } : {}),
     ...(accountingConfig ? { accounting: accountingConfig } : {}),
     ...(supportConnection ? { supportConnection } : {}),
     ...(receivingConnection ? { receivingConnection } : {}),
@@ -396,7 +402,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), pricingConfigured: Boolean(pricingConnection),
+    catalogConfigured: Boolean(catalogConnection), facilitatorsConfigured: Boolean(facilitatorConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection), pricingConfigured: Boolean(pricingConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
