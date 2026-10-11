@@ -6,6 +6,7 @@ import { createInterface } from 'node:readline/promises';
 import { createNativeBuyerSigner, loadNativeSdk } from
   '../../stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs';
 import { validateMcpInvocation, requireMcpChallenge } from './remote-mcp.mjs';
+import {createNativeMcpReconciler} from './payment-reconciliation.mjs';
 
 const fail = code => { throw Object.assign(new Error(code), {code}); };
 const atomic = value => typeof value === 'string' && /^[1-9][0-9]{0,38}$/.test(value) &&
@@ -45,7 +46,8 @@ export function createTerminalMcpApproval() {
  * adapter does not replace an operator's aggregate budget or reconciliation.
  */
 export async function createNativeMcpOperator({ payer, signer, rpcUrl, limits,
-  approveQuote = () => false, sdk } = {}) {
+  approveQuote = () => false, sdk, reconciliationRpcUrl, reconciliationFetchImpl,
+  reconciliationHttpsProxyEnv } = {}) {
   if (typeof payer !== 'string' || !/^[GC][A-Z2-7]{55}$/.test(payer) || !plain(signer) ||
       signer.address !== payer || typeof signer.signAuthEntry !== 'function' ||
       typeof approveQuote !== 'function' || !plain(limits)) fail('MCP_NATIVE_OPERATOR_INVALID');
@@ -56,6 +58,9 @@ export async function createNativeMcpOperator({ payer, signer, rpcUrl, limits,
       !atomic(fixed.maxAtomic) || !Number.isInteger(fixed.maxTimeoutSeconds) ||
       fixed.maxTimeoutSeconds < 1 || fixed.maxTimeoutSeconds > 86400) fail('MCP_NATIVE_LIMITS_INVALID');
   sdk ??= await loadNativeSdk();
+  const reconcilePayment = createNativeMcpReconciler({payer, network:fixed.network,
+    rpcUrl:reconciliationRpcUrl ?? rpcUrl, fetchImpl:reconciliationFetchImpl,
+    httpsProxyEnv:reconciliationHttpsProxyEnv});
   const approved = new Map();
   let closed = false;
   function binding(quote) {
@@ -84,6 +89,7 @@ export async function createNativeMcpOperator({ payer, signer, rpcUrl, limits,
     return {invocation, accepted, intent, expected};
   }
   return Object.freeze({
+    reconcilePayment,
     readiness:Object.freeze({provider:'ORIGINAL_X402_STELLAR', payer, network:fixed.network,
       asset:fixed.asset, payTo:fixed.payTo, maxAtomic:fixed.maxAtomic, sdkVersions:sdk.versions}),
     async approve(quote) {

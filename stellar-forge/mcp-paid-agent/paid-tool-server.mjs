@@ -14,6 +14,7 @@ import { ExactStellarScheme } from '@x402/stellar/exact/server';
 import { declareDiscoveryExtension, bazaarResourceServerExtension } from '@x402/extensions/bazaar';
 import { createNativeFacilitator } from '../../stellar/scf-starforge-20261009/native-facilitator/runtime.mjs';
 import { validateConfig } from '../../stellar/scf-starforge-20261009/native-facilitator/config.mjs';
+import {createSettlementReceiptCapture} from './payment-receipt.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const requireValue = (value, code) => { if (!value) throw Object.assign(new Error(code), {code}); };
@@ -110,7 +111,8 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
   }
 
   const facilitator = await createNativeFacilitator(policy, {environment});
-  const resourceServer = new x402ResourceServer(facilitator);
+  const settlementReceipts = createSettlementReceiptCapture(facilitator);
+  const resourceServer = new x402ResourceServer(settlementReceipts.client);
   resourceServer.register(policy.network, new ExactStellarScheme());
   resourceServer.registerExtension(bazaarResourceServerExtension);
   const sessions = new Map(), records = new Set(), activeCalls = new Set();
@@ -188,7 +190,8 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
         record.activeCalls++;
         record.touched = Date.now();
         // Reserve before yielding: two concurrent requests cannot both take the last slot.
-        const work = Promise.resolve().then(async () => {
+        const observedSettlement = {};
+        const work = Promise.resolve().then(() => settlementReceipts.run(observedSettlement, async () => {
           const context = {toolName:entry.descriptor.name, signal:extra.signal};
           if (entry.admit) {
             const admission = await entry.admit(copy(args), context);
@@ -208,16 +211,19 @@ export async function startNativePaidToolServer({facilitatorConfig, environment 
             if (!checked.success) return toolError('MCP_HANDLER_RESULT_INVALID');
             return boundedJson(checked.data, maxResultBytes, 'MCP_HANDLER_RESULT_TOO_LARGE');
           })(args, extra);
-        });
+        }));
         activeCalls.add(work);
         try {
-          const result = await work;
+          const result = settlementReceipts.attach(await work, observedSettlement);
           const challenge = result.isError && result.structuredContent?.x402Version === 2;
           if (challenge) counters.challenges++;
           if (result.isError && (!challenge || extra._meta?.['x402/payment'])) counters.toolErrors++;
           if (result._meta?.['x402/payment-response']?.success === true) counters.settlements++;
           return result;
-        } catch { counters.toolErrors++; return toolError('MCP_TOOL_EXECUTION_FAILED'); }
+        } catch {
+          counters.toolErrors++;
+          return settlementReceipts.attach(toolError('MCP_TOOL_EXECUTION_FAILED'), observedSettlement);
+        }
         finally { activeCalls.delete(work); record.activeCalls--; record.touched = Date.now(); }
       });
       records.add(record);

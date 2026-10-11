@@ -437,6 +437,7 @@
     "./seller/allium": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/explorer.mjs",
     "./seller/allium/workspace": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/model.mjs",
     "./seller/allium/workspace/server": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/server.mjs",
+    "./buyer/mcp/payment-reconciliation": "./source/stellar-forge/mcp-paid-agent/payment-reconciliation.mjs",
     "./buyer/node/agents": {
       "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/operation.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/operation.mjs"
