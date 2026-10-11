@@ -42,11 +42,14 @@ const reject = reason => Object.freeze({ cacheable: false, ttlMs: 0, reason });
  * The merchant TTL is an upper bound, not permission to override origin policy.
  * Date/Age/response-delay arithmetic follows RFC 9111 sections 4.2.1 and 4.2.3.
  */
-export function upstreamFreshness(result, { ttlMs, requestTime, responseTime, now = Date.now(), authenticated = false } = {}) {
+export function upstreamFreshness(result, { ttlMs, requestTime, responseTime, now = Date.now(), authenticated = false,
+  hasSetCookie = false, policyFieldsComplete = true } = {}) {
   if (!Number.isSafeInteger(ttlMs) || ttlMs < 1 ||
       ![requestTime, responseTime, now].every(Number.isFinite) ||
       responseTime < requestTime || now < responseTime) return reject('INVALID_CLOCK_OR_TTL');
   if (result?.status !== 200) return reject('STATUS_NOT_CACHEABLE');
+  if (!policyFieldsComplete) return reject('ORIGIN_POLICY_INCOMPLETE');
+  if (hasSetCookie) return reject('ORIGIN_SESSION_RESPONSE');
   const headers = result.headers ?? {}, directives = cacheDirectives(headers['cache-control']);
   if (!directives) return reject('INVALID_CACHE_CONTROL');
   if (['no-store', 'private', 'no-cache'].some(name => directives.has(name))) return reject('ORIGIN_REQUIRES_FRESH_REQUEST');

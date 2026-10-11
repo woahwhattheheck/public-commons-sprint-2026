@@ -65,6 +65,12 @@ cookies, forwarding information and undeclared headers do not reach the source.
 Server-side credentials remain in the existing merchant handler configuration.
 Admission receives the original isolated context so existing access checks work.
 
+For an existing HTTP API, use the [upstream adapter and complete application
+example](./UPSTREAM.md). It composes the original source transport, freezes each
+credential generation and honors origin Date/Age/Expires and session policies.
+Its handler is already cached; bind it directly with the original seller entrypoint
+shown in that guide rather than wrapping it in a second cache.
+
 Choose every header that the shared result depends on, for example
 `"varyHeaders": ["accept-language"]`. A merchant-specific tenant header can be
 declared when original admission authenticates it. Handlers that depend on a
@@ -124,7 +130,8 @@ node response-cache/control.mjs invalidate \
 
 Omit `--route` to invalidate every configured cache. Invalidation advances the
 cache generation: a read already in flight can finish for its existing buyer,
-but cannot populate the newly invalidated cache. Status contains counters and
+but cannot populate the newly invalidated cache. Requests arriving after
+invalidation start a new read. Status contains counters and
 budgets, without request identities, response data or source credentials. The
 Unix socket requires a directory owned by the process user with mode 0700 and is
 created with mode 0600. An existing socket path is never overwritten. No operator

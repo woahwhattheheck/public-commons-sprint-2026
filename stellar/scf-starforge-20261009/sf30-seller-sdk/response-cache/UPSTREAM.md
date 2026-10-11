@@ -113,6 +113,12 @@ before returning the application result unless the operator explicitly included
 one in their original `responseHeaders`. Private `cacheMetadata` timestamps reach
 the cache policy hook only; they are neither stored nor delivered to a buyer.
 
+The original transport also supplies two opt-in policy booleans: `hasSetCookie`
+and `policyFieldsComplete`. A response carrying a session cookie cannot be shared,
+although the cookie value is always stripped. A present origin freshness field
+that cannot survive the original forwarding contract, including a dropped or
+oversized field or ambiguous Date/Age/Expires values, also prevents reuse.
+
 Only complete, validated HTTP 200 results are reusable. Origin `private`,
 `no-store`, `no-cache`, `Pragma:no-cache`, malformed policy, or `Vary:*` disables
 reuse. The existing cache also retains its own stricter response restrictions.
