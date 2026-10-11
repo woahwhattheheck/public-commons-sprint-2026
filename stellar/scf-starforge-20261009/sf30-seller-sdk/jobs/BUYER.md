@@ -4,6 +4,64 @@
 
 The original SF30 purchase remains the entry point. Its response identifies the job; the original SF98 settlement activates execution. This client uses the resulting job identity and private capability for status and output retrieval.
 
+## Purchase the handoff through the original SF88 buyer
+
+The merchant handoff supplies the exact paid URL, headers, request body, order reference, and offered terms. Use those fields with the original buyer and your existing private operator profile. The handoff URL includes `sf98_order`; `orderReference` binds that same job to the buyer's reviewed resource.
+
+This example runs from `sf30-seller-sdk` and imports the existing sibling SF88 client. Set `runtimeDirectory` to the absolute SF88 directory in your selected installation. The operator profile supplies the configured operator, trusted signer, payer, and any original buyer transport.
+
+```js
+import { readFile } from 'node:fs/promises';
+import { Buyer } from '../sf88-operator-buyer-cli/node/index.mjs';
+import { createJobBuyer } from './jobs/buyer.mjs';
+
+const handoff = JSON.parse(await readFile('/srv/buyer/handoffs/monthly-report.json', 'utf8'));
+const profile = JSON.parse(await readFile('/srv/buyer/operator-profile.json', 'utf8'));
+const nativeBuyer = new Buyer({
+  runtimeDirectory: '/srv/forge/sf88-operator-buyer-cli',
+  stateDirectory: '/srv/buyer/operations',
+  operatorProfile: profile,
+});
+const purchase = handoff.purchase;
+const payment = purchase.payment;
+const intentId = 'monthly-report-purchase-2026-10';
+const operation = await nativeBuyer.fromRequest({
+  intentId,
+  url: purchase.url,
+  method: purchase.method,
+  headers: { ...purchase.headers, 'content-type': 'application/json' },
+  orderReference: purchase.orderReference,
+  body: JSON.stringify(purchase.body),
+  expect: {
+    scheme: payment.scheme,
+    network: payment.network,
+    asset: payment.asset,
+    payTo: payment.payTo,
+    maxAtomic: payment.amount,
+    maxTimeoutSeconds: payment.maxTimeoutSeconds,
+    ...(payment.extra?.paymentFlow === undefined
+      ? {} : { paymentFlow: payment.extra.paymentFlow }),
+  },
+}, { responseFile: { maxBytes: 65536, timeoutMs: 30000 } });
+
+const review = await operation.review();
+console.log(review.native);
+const result = await operation.execute({ review });
+const jobBuyer = await createJobBuyer({
+  directory: '/srv/buyer/jobs/monthly-report',
+  result,
+  handoff,
+  transport: profile.buyerTransport,
+});
+await jobBuyer.wait({ deadlineMs: 900000, pollMs: 2000 });
+const delivery = await jobBuyer.download({
+  destination: '/srv/buyer/results/monthly-report.json',
+});
+console.log(delivery);
+```
+
+`fromRequest` creates one durable original purchase intent and performs the existing offline review. `execute` uses its original operator and signer path; the returned saved HTTP 202 is imported directly. On process recovery, reopen `nativeBuyer.operation(intentId)` and call its `recover()` to obtain the retained `BuyerResult`. Pass that result and the same handoff to `createJobBuyer`, or use `openJobBuyer` when its private state already exists. Keep the original intent ID and state directory across retries so the customer resumes the original purchase and job.
+
 ## Retain the accepted purchase
 
 Keep the private handoff returned by the merchant's create operation and the actual saved response from the original paid POST. The handoff supplies the claim token and anticipated job identity. The response supplies the accepted job body. Both must refer to the same job, function, input hash, and URLs.
