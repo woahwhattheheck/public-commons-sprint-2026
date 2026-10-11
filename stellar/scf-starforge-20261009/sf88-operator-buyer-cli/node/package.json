@@ -1,0 +1,11 @@
+{
+  "name": "@stellar-forge/native-buyer",
+  "version": "0.1.0",
+  "description": "Durable Node applications using the original Stellar Forge SF88 buyer runtime",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "exports": { ".": { "types": "./index.d.mts", "import": "./index.mjs" } },
+  "files": ["*.mjs", "index.d.mts", "README.md", "examples"],
+  "sideEffects": false
+}

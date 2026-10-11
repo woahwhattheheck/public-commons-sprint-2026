@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
 import { buyerTransport, config, operation, responseFile, bytes, need } from './config.mjs';
+import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
@@ -58,12 +59,13 @@ async function main(args) {
     if (result.status === 'SETUP_REQUIRED') process.exitCode = 1;
     return print(result);
   }
-  let c, operatorEnvironment;
+  let c, operatorEnvironment, evidenceRpcEndpoint;
   if (['--review-workspace', '--execute-workspace'].includes(args[0])) {
     const {openWorkspace} = await import('./workspace.mjs');
     const workspace = await openWorkspace(args.slice(1), {execute:args[0] === '--execute-workspace'});
     c = workspace.config;
     operatorEnvironment = workspace.operatorEnvironment;
+    evidenceRpcEndpoint = selectTestnetEvidenceEndpoint(workspace.manifest.signer.rpcUrl);
     if (args[0] === '--review-workspace') return review(c);
   } else {
   need((args.length === 3 || args.length === 5 && args[3] === '--response-out') &&
@@ -90,7 +92,8 @@ async function main(args) {
   process.on('SIGTERM', onTerminate);
   try {
     const { execute } = await import('./execute.mjs');
-    return await execute(c, { signal:controller.signal, environment:operatorEnvironment });
+    return await execute(c, { signal:controller.signal, environment:operatorEnvironment,
+      evidenceRpcEndpoint });
   } finally {
     process.off('SIGINT', onInterrupt);
     process.off('SIGTERM', onTerminate);

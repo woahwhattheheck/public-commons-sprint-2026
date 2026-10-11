@@ -57,7 +57,11 @@ node stellar/scf-starforge-20261009/merchant-fleet-gateway/control.mjs \
 
 Preparation reads the original seller configs and compiler, validates the manifest and port ownership, and compares changed sellers' actual health and complete original offers. It rejects a changed seller configuration on a port that still belongs to the published or draining prior configuration. Limits-only changes can reuse a seller port because the original native configuration is unchanged. Unchanged merchants retain their existing routing; their availability is not used to block another merchant's live preparation. A failure leaves the current revision and routing in place.
 
-The returned candidate identifies its exact base revision, changed/added/removed authorities, merchant modes, limits, route counts, source digest and expiry. Review it with the manifest and original seller configuration you supplied. Preparation stores an immutable private copy of the complete manifest and complete parsed seller configs. It keeps handler/admission names, imported offers and authorization declarations, original environment-variable references and other configuration fields. The original reader resolves responseFile and responseAsset paths before retention. Secret values belong in the original seller's environment; the gateway does not load them. This snapshot is gateway routing/configuration state, not an application, asset-data, credential or seller-process backup.
+The returned candidate identifies its exact base revision, changed/added/removed authorities, merchant modes, limits, route counts, source digest and expiry. Its merchant `routeDetails` expose each original compiled route's ID, method, public URL, optional dynamic template/MIME, and complete ordered `paymentChoices`. Amounts remain the original atomic-unit strings; scheme, network, asset, recipient, timeout and any other original public payment fields retain their exact values. Compare serving and prepared terms in the operator workspace before activation. Current and retired merchant summaries use the same public view, so a draining request's original generation remains distinguishable from the new terms.
+
+`routeDetailsState: "COMPLETE"` means the merchant's entire route list is present. Public route details have a shared 256 KiB budget within the control client's existing 1 MiB response limit, with current and prepared merchants first, then draining and older generations. A complete merchant list that exceeds the remaining budget is omitted with `routeDetailsState: "STATUS_LIMIT"`; no partial route or payment choice is shown. Inspect that original seller's private `http://127.0.0.1:PORT/_seller/offers` from the operator host for its full public offers. This projection uses only compiled public offers; source paths, handler names, admission configuration and environment references remain in private retained configuration.
+
+Preparation stores an immutable private copy of the complete manifest and complete parsed seller configs. It keeps handler/admission names, imported offers and authorization declarations, original environment-variable references and other configuration fields. The original reader resolves responseFile and responseAsset paths before retention. Secret values belong in the original seller's environment; the gateway does not load them. This snapshot is gateway routing/configuration state; retain application code, asset data and original seller deployment separately.
 
 There is one current candidate, valid for 15 minutes. A subsequent successful prepare replaces it; a failed prepare leaves the prior candidate intact. Preparing does not expose the new merchant or change any payment route.
 
@@ -79,6 +83,25 @@ Activation reopens and hash-checks the retained source, checks changed original 
 Each already admitted request keeps the exact tenant object, seller port and limits captured before body collection and forwarding. That includes an upload whose body has not yet arrived. New admissions use the new generation. Capacity is shared by merchant authority across current and retiring generations, so an update cannot double the merchant's configured accepted-request budget. A lower new limit can temporarily refuse new work with 503 while older work finishes. Other merchants continue independently.
 
 Status shows current counters, total active requests for each authority, and prior generations as `DRAINING` or `DRAINED`. Keep an original seller instance running until every generation using that port is drained. There is no payment retry, request replay, forced seller termination or transfer of an in-flight request to a replacement process. A direct operator restart or modification of an old backend can still interrupt its requests; the gateway does not control that process.
+
+### Compose an owned original seller release
+
+An in-process original release operator can call
+`gateway.withRetiredPort(port, expectedRevision, () => originalSession.close())`
+after it verifies that it owns that exact original SF82 session. The gateway
+validates the integer port and current revision, rejects any use by the current
+fleet, prepared candidate or admitted work in a retired generation, and holds
+the same mutation guard while the original close callback completes. Other
+merchant requests keep serving; another control client cannot activate that
+port between the drain check and the close. The callback closes the caller's
+original session handle and must not wait for another gateway mutation.
+
+This is a native JavaScript interface; HTTP control continues exposing only
+status, prepare, activate and rollback. The gateway receives no process ID,
+command or seller credential. Gateway shutdown waits for an outstanding native
+operation and both HTTP listeners before releasing its state lease. The
+release operator retains its own release mapping and starts the selected
+original seller again before requesting a later rollback to that port.
 
 ### Restart from retained state and roll back
 

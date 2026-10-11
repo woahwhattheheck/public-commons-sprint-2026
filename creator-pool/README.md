@@ -104,6 +104,14 @@ resume-signing, and never invents a hash.
 
 See `backend/API-CONTRACT.md` for the exact wire format.
 
+## Record the product workflow
+
+The [native demo recorder](demo/README.md) captures the complete sponsor and
+two-creator lifecycle through the original UI, including both review confirmations,
+the refresh-preserved creator draft, the unused-budget refund and a reward claim
+after closure. It produces a continuous WEBM, timed captions, original state
+checkpoints and an MP4 conversion path using the existing local launcher.
+
 ## Sponsor launch planner
 
 Open **New campaign** from the Sponsor view. The creation drawer now

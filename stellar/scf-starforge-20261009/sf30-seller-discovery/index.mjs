@@ -29,7 +29,10 @@ function copy(value) {
   return obj;
 }
 function assertTree(value, depth = 0, counter = { n: 0 }) {
-  if (++counter.n > 2_000 || depth > 12) fail('Discovery JSON complexity exceeded');
+  // JSON Schema properties/compositions add two JSON levels per schema level,
+  // before the Bazaar/payment envelope. Keep the transport budget large enough
+  // for the original validator's 16 schema levels; byte/node limits still apply.
+  if (++counter.n > 2_000 || depth > 40) fail('Discovery JSON complexity exceeded');
   if (Array.isArray(value)) { for (const part of value) assertTree(part, depth + 1, counter); return; }
   if (!plain(value)) return;
   for (const [key, item] of Object.entries(value)) {
