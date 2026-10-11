@@ -22,6 +22,7 @@ files through the [native workspace](NATIVE_WORKSPACE.md).
 | Acquire, resume, assemble and read a complete original S3 object | [Native MCP object acquisition](OBJECTS.md) |
 | Preserve and inspect quote history across restart | [Durable workspace](DURABILITY.md) |
 | Read, export and recover complete remote MCP results | [Result inbox and native Node API](RESULTS.md) |
+| Inspect an original Stellar transaction and retain failed-settlement details | [Payment inspection and recovery](PAYMENT_RECOVERY.md) |
 | Sell existing SQLite, PostgreSQL, DuckDB, ClickHouse, MySQL and MongoDB results over MCP | [Original data providers](DATA_TOOLS.md) |
 
 The local buyer's HTTP endpoint implements the MCP 2025-11-25 JSON response
@@ -44,6 +45,7 @@ described in [REMOTE_MCP.md](REMOTE_MCP.md) before using native remote tools.
 | `bazaar_results` | Page through complete saved native MCP results and their original receipts. |
 | `bazaar_read_result` | Read verified bytes from one saved result, with explicit range continuation. |
 | `bazaar_recover_result` | Restore an original local completion from its result file and manifest. |
+| `bazaar_reconcile_payment` | Inspect the original transaction through the host's Stellar verifier and retain its observation on that quote. |
 | `sf43_discover_review_and_pay` | Use the separately configured original SF43/SF88 native buyer workspace. |
 
 Search performs a discovery GET. Describe and preview use the cached result;
@@ -90,7 +92,9 @@ and all discovery and HTTP merchant redirects are rejected.
 
 For paid execution, set an absolute `MCP_OPERATOR_MODULE` path and a durable
 `MCP_STATE_DIR`. That trusted JavaScript module exports `approve`, `signPayment`
-and optionally `close`, `fetchImpl`, `remoteMcpPolicies` and `agentCommerce`.
+and optionally `close`, `fetchImpl`, `remoteMcpPolicies`, `reconcilePayment` and `agentCommerce`.
+A module that exports only `reconcilePayment` can inspect existing paid history
+without connecting approval or signing. See [PAYMENT_RECOVERY.md](PAYMENT_RECOVERY.md).
 Its code and credentials belong to the operator; paths and credentials never
 arrive through MCP tool arguments. Set `MCP_PROVIDER_TIMEOUT_MS=120000` for a
 native purchase that needs signing, verification and settlement time. The allowed
