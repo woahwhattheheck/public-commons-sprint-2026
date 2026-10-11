@@ -4,6 +4,7 @@ import { request as httpsRequest } from 'node:https';
 import { BlockList, isIP } from 'node:net';
 import { checkServerIdentity } from 'node:tls';
 import { Readable } from 'node:stream';
+import { MAX_REQUEST_BODY_BYTES } from './request-body.mjs';
 import { parseExplicitProxy, oneShotConnectAgent } from '../sf85-live-402-capture/proxy-connect.mjs';
 
 const denied4 = new BlockList();
@@ -96,7 +97,7 @@ function requestData(init) {
   if (init.body != null) {
     if (typeof init.body !== 'string' && !(init.body instanceof Uint8Array)) fail('NONREPLAYABLE_BODY');
     body = Buffer.from(init.body);
-    if (body.length > 1_048_576 || ['GET','HEAD'].includes(method)) fail('BAD_REQUEST_BODY');
+    if (body.length > MAX_REQUEST_BODY_BYTES || ['GET','HEAD'].includes(method)) fail('BAD_REQUEST_BODY');
   }
   const headers = new Headers(init.headers);
   // A caller may supply PAYMENT-SIGNATURE only via SF31's approved retry;
