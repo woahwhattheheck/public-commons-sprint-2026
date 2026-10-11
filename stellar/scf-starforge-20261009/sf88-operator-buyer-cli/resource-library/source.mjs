@@ -8,6 +8,10 @@ function publicUrl(value) {
   catch { return ''; }
 }
 export async function readSource(config) {
+  if (config.kind === 'collection') {
+    const {readCollectionSource} = await import('./collection-package.mjs');
+    return readCollectionSource(config);
+  }
   let records, bytes;
   if (config.kind === 'inbox') {
     const {openQueue} = await import('../queue.mjs');
