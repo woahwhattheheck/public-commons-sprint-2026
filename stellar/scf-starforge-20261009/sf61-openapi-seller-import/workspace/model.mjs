@@ -7,6 +7,8 @@ import { importOpenApi, createOpenApiResolver } from '../importer.mjs';
 import { createSellerServiceConfig } from '../service-config.mjs';
 import { run as compileSeller } from '../cli.mjs';
 import { compileUpstreamBindings, validateUpstreamService } from '../../sf30-seller-sdk/upstream.mjs';
+import { supportsSellerMethod } from '../../sf30-seller-sdk/http-methods.mjs';
+import { compileOpenApiResponseContract } from '../response-contracts.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -17,7 +19,6 @@ const sha = v => createHash('sha256').update(v).digest('hex');
 const json = v => JSON.stringify(v, null, 2) + '\n';
 const fail = m => { throw new TypeError(m); };
 const methods = ['get', 'head', 'post', 'put', 'patch', 'delete', 'options'];
-const supported = new Set(['GET', 'HEAD', 'POST']);
 const forbidden = new Set(['__proto__', 'prototype', 'constructor']);
 const sourceRoot = fileURLToPath(new URL('../../', import.meta.url));
 const shell = s => "'" + String(s).replaceAll("'", "'\\''") + "'";
@@ -71,10 +72,10 @@ export function inspectOpenApi(specText) {
       const op = item[method], servers = op.servers ?? item.servers ?? spec.servers ?? [];
       const security = op.security ?? spec.security ?? [];
       operations.push({ method:method.toUpperCase(), path, summary:op.summary ?? op.operationId ?? '',
-        supported:supported.has(method.toUpperCase()),
+        supported:supportsSellerMethod(method.toUpperCase()),
         servers:Array.isArray(servers) ? servers.map((s,i) => ({index:i, url:s?.url ?? '', variables:Boolean(s?.variables)})) : [],
         security:Array.isArray(security) ? security.map(s => plain(s) ? Object.keys(s) : []) : [],
-        error:supported.has(method.toUpperCase()) ? null : 'Use the trusted-handler seller for this HTTP method' });
+        error:supportsSellerMethod(method.toUpperCase()) ? null : 'Use the trusted-handler seller for this HTTP method' });
     }
   }
   if (operations.length > 2000) fail('Workspace supports at most 2,000 described operations');
@@ -107,9 +108,11 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','timeoutMs','maxResponseBytes','maxInFlight'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
-    if (!supported.has(method)) fail(key + ': declarative upstreams support GET, HEAD and POST');
+    if (!supportsSellerMethod(method)) fail(key + ': declarative upstreams support GET, HEAD, DELETE, POST, PUT and PATCH');
+    if (row.enforceResponseContract !== undefined && typeof row.enforceResponseContract !== 'boolean') fail(key + ': response contract choice must be boolean');
+    if (row.enforceResponseContract === true && (row.responseMode ?? 'json') !== 'json') fail(key + ': response contracts require JSON response format');
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
     seen.add(key);
     const id = row.id ?? 'route_' + sha(key).slice(0,12);
@@ -139,7 +142,10 @@ export function prepareMerchant(specText, plan) {
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
       ...(row.timeoutMs !== undefined ? {timeoutMs:row.timeoutMs} : {}),
       ...(row.maxResponseBytes !== undefined ? {maxResponseBytes:row.maxResponseBytes} : {}),
-      ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {})};
+      ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {}),
+      ...(row.requestHeaders !== undefined ? {requestHeaders:structuredClone(row.requestHeaders)} : {}),
+      ...(row.cache !== undefined ? {cache:structuredClone(row.cache)} : {}),
+      ...(row.availability !== undefined ? {availability:structuredClone(row.availability)} : {})};
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
       backendAuthentication:auth, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
   }
@@ -147,14 +153,21 @@ export function prepareMerchant(specText, plan) {
   for (let i=0; i<imported.offers.length; i++) {
     const offer = imported.offers[i], binding = upstreams.bindings[bindings[i].id];
     binding.query = Object.keys(offer.seller.extensions.bazaar.schema.properties.input.properties.queryParams?.properties ?? {});
+    if (plan.operations[i].enforceResponseContract === true) binding.responseContract = compileOpenApiResponseContract(spec,offer,{specSha256:sha(specText)});
     routes.push({id:bindings[i].id, method:offer.method, path:offer.path, publicUrl:offer.seller.resource.url,
       publicPath:service.routes[i].path, upstream:binding.origin + binding.path, amountAtomic:selections[i].accepts[0].amount,
-      network:plan.payment.network, query:binding.query, environment:Object.values(binding.headerEnv)});
+      network:plan.payment.network, query:binding.query, environment:Object.values(binding.headerEnv),
+      responseContract:Boolean(binding.responseContract),sharedRead:binding.cache?.shareAcrossBuyers === true});
   }
   // Validate environment REFERENCES only. The original launcher reads actual values.
   const compiled = compileUpstreamBindings(upstreams, {allowLoopback:plan.allowLoopbackUpstream === true,
     env:Object.fromEntries([...envNames].map(name => [name, 'SET_IN_LAUNCH_ENVIRONMENT']))});
   validateUpstreamService(service, compiled);
+  for (const route of routes) {
+    route.cache = compiled[route.id].cache;
+    route.availability = compiled[route.id].availability;
+    route.requestHeaders = [...compiled[route.id].requestHeaders];
+  }
   return {facade, selections, bindings, upstreams, imported, service, transformations,
     preview:{title:titleOf(spec), sourceSha256:sha(specText), routes,
       environment:[...envNames].sort(), credentialValuesChecked:false, allowLoopbackUpstream:plan.allowLoopbackUpstream === true}};
@@ -228,6 +241,9 @@ export async function savePackage({specText, plan, parent, name}) {
     '', 'The seller listens on loopback. Route your HTTPS gateway to it while preserving the public paths.',
     'Challenge-only mode returns native payment challenges but does not verify or settle payments.',
     'Inspect the operations URL printed at startup. Stop with Ctrl-C. Resume the same compiled directory.',
+    'Optional shared read policies are retained in upstreams.json. Each delivery still uses the original native payment lifecycle.',
+    'The API workspace shows live cache counts and can invalidate a selected binding for the exact managed runtime.',
+    'Cached bodies stay in process memory. Restart starts empty; backend credentials and response policy are checked by the original transport.',
     '', '## Explicit facade adaptation', '',
     'Original server URLs remain in original-openapi.json. Selected facade operations use your declared public seller server.',
     'Supported backend security is satisfied by operator header environment references and removed only from the generated public facade.',

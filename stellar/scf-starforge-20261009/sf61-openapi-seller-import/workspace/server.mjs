@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. Loopback workspace for the original SF61/SF82/SF96 merchant runtime.
 import { createServer } from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -28,8 +28,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   if (!Number.isInteger(port) || port<0 || port>65535) throw new TypeError('Port must be 0–65535');
   const token = randomBytes(32).toString('hex');
   let origin, active=null, busy=false, shuttingDown=false, mutationDone=Promise.resolve();
+  const cacheView = () => {
+    const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
+    return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
+      policy:row.cachePolicy,activity:row.cache,source:{started:row.started,inFlight:row.inFlight},availability:row.availability ?? null}));
+  };
   const view = () => active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
-    operations:active.session.operationsDashboard, state:'RUNNING'} : {state:'STOPPED'};
+    operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView()} : {state:'STOPPED'};
   async function list() {
     const entries = (await readdir(output,{withFileTypes:true})).filter(e=>e.isDirectory()).sort((a,b)=>a.name.localeCompare(b.name)).slice(0,200);
     const values=[];
@@ -76,7 +81,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
-      if (!['/api/save','/api/start','/api/stop'].includes(pathname)) return send(404,{error:'Not found'});
+      if (!['/api/save','/api/start','/api/stop','/api/cache/invalidate'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -88,6 +93,14 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         }
         if (pathname==='/api/stop') {
           if (active) { await active.session.close(); active=null; }
+          return send(200,view());
+        }
+        if (pathname==='/api/cache/invalidate') {
+          if (Object.keys(body).some(key=>!['runtimeId','binding'].includes(key)) ||
+              typeof body.runtimeId!=='string' || typeof body.binding!=='string') return send(400,{error:'Select one cached binding in the current runtime'});
+          if (!active || body.runtimeId!==active.runtimeId) return send(409,{error:'The managed runtime changed. Refresh its cache status before invalidating.'});
+          if (!cacheView().some(row=>row.binding===body.binding)) return send(404,{error:'This runtime has no matching cached binding'});
+          active.session.session.invalidateUpstreamCache(body.binding);
           return send(200,view());
         }
         packageName(body.name);
@@ -116,7 +129,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           return original;
         }});
         if (shuttingDown) {await session.close();return send(503,{error:'Workspace stopped during startup'});}
-        active={name:body.name,session};
+        active={name:body.name,session,runtimeId:randomUUID()};
         return send(200,view());
       } finally {busy=false;finishMutation();}
     } catch(error) {

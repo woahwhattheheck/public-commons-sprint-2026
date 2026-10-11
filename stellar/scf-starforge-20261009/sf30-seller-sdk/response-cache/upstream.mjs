@@ -31,7 +31,8 @@ export function createCachedUpstream(options, cacheOptions) {
   if (Object.hasOwn(cacheOptions, 'handler') || Object.hasOwn(cacheOptions, 'storagePolicy') || Object.hasOwn(cacheOptions, 'bypassRequest')) {
     throw new TypeError('Upstream factory owns handler and HTTP cache policy hooks');
   }
-  const { headers = {}, lookup, onResult, ...serializable } = options;
+  const { headers = {}, lookup, onResult, invokeSource, ...serializable } = options;
+  if (invokeSource !== undefined && typeof invokeSource !== 'function') throw new TypeError('invokeSource must be a trusted source function');
   const fixed = structuredClone(serializable);
   if (lookup !== undefined) fixed.lookup = lookup;
   if (onResult !== undefined) fixed.onResult = onResult;
@@ -79,7 +80,7 @@ export function createCachedUpstream(options, cacheOptions) {
       totals.sourceStarted++; totals.sourceInFlight++; generation.active++;
       const requestTime = Date.now();
       try {
-        const result = await original(context);
+        const result = await (invokeSource ? invokeSource(original, context) : original(context));
         totals.sourceCompleted++;
         if (result.status >= 400) totals.sourceFailed++;
         if (Buffer.isBuffer(result.body)) totals.sourceResponseBytes += result.body.length;
