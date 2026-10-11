@@ -173,6 +173,8 @@ def compare(request):
     report_hash = hashlib.sha256()
     byte_count = emitted = positions = 0
     offsets = []
+    page_offsets = {kind: [] for kind in counts}
+    page_counts = {kind: 0 for kind in counts}
     with tempfile.TemporaryDirectory(prefix="sf30-workbook-comparison-") as directory:
         os.chmod(directory, 0o700)
         db_path = os.path.join(directory, "join.sqlite")
@@ -244,6 +246,12 @@ def compare(request):
                              {"maxReportBytes": maximum, "rowsCompared": sum(counts.values())})
                     if emitted % 256 == 0:
                         offsets.append({"ordinal": emitted, "offset": byte_count})
+                    views = [kind] + (["moved"] if moved and kind != "moved" else [])
+                    for view in views:
+                        logical = page_counts[view]
+                        if logical % 256 == 0:
+                            page_offsets[view].append({"logical": logical, "ordinal": emitted, "offset": byte_count})
+                        page_counts[view] += 1
                     output.write(raw)
                     report_hash.update(raw)
                     byte_count += len(raw)
@@ -254,7 +262,8 @@ def compare(request):
             "complete": True, "keys": keys, "columns": fields, "counts": counts,
             "positionsChanged": positions, "fieldCounts": field_counts,
             "rows": emitted, "rowBytes": byte_count, "rowsSha256": report_hash.hexdigest(),
-            "rowOffsets": offsets, "baselineProjection": baseline, "targetProjection": target}
+            "rowOffsets": offsets, "pageOffsets": page_offsets,
+            "baselineProjection": baseline, "targetProjection": target}
 
 def main():
     if sys.version_info < (3, 10):
