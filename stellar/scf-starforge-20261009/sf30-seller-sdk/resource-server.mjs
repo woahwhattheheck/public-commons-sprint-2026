@@ -87,8 +87,7 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
     const accepted = offer.accepts[0];
     nativeRoutes[key] = {
       // Native x402 uses the trusted adapter URL when resource is omitted.
-      // Never freeze dynamic requests to the documentation sample resource.
-      ...(!binding.dynamic ? { resource: offer.resource.url } : {}),
+      // Fixed paths can carry queries too; bind every request to its exact URL.
       description: offer.resource.description,
       mimeType: offer.resource.mimeType,
       ...(offer.resource.serviceName ? { serviceName: offer.resource.serviceName } : {}),
@@ -225,14 +224,16 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       if (!route) return simple(405, 'METHOD_NOT_ALLOWED', { allow: selected.allow.join(', ') });
       const target = new URL(req.url, route.offer.resource.url);
       if (target.hash || target.pathname !== rawPath) return simple(400, 'INVALID_REQUEST_TARGET');
+      if (target.href.length > 2048) return simple(414, 'REQUEST_TARGET_TOO_LONG');
       let requestOffer = route.offer;
-      if (route.binding.dynamic) {
-        if (target.href.length > 2048) return simple(414, 'REQUEST_TARGET_TOO_LONG');
+      if (route.binding.dynamic || target.href !== route.offer.resource.url) {
         requestOffer = structuredClone(route.offer);
         requestOffer.resource.url = target.href;
-        requestOffer.extensions.bazaar.info.input.pathParams = { ...pathParams };
-        if (!validateBazaarExtension(requestOffer.extensions.bazaar).ok)
-          return simple(400, 'PATH_PARAMETERS_REJECTED');
+        if (route.binding.dynamic) {
+          requestOffer.extensions.bazaar.info.input.pathParams = { ...pathParams };
+          if (!validateBazaarExtension(requestOffer.extensions.bazaar).ok)
+            return simple(400, 'PATH_PARAMETERS_REJECTED');
+        }
         // Enforce the same header limit before entering either runtime mode.
         paymentRequiredResponse(requestOffer);
       }
