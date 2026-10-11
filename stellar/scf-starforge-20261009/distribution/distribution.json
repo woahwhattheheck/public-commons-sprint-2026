@@ -311,7 +311,9 @@
     "mercury-feed": "stellar/mercury-event-operations/starforge-feed/cli.mjs",
     "buyer-expenses": "stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/cli.mjs",
     "weather-operations": "stellar/scf-starforge-20261009/partners/open-meteo-operations/cli.mjs",
-    "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs"
+    "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs",
+    "opendatasoft": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
+    "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -662,7 +664,14 @@
     "./partners/open-meteo/analysis": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/analysis.mjs",
     "./partners/open-meteo/reports": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/exports.mjs",
     "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
-    "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs"
+    "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs",
+    "./seller/opendatasoft": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/source.mjs",
+    "./seller/opendatasoft/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/capture.mjs",
+    "./seller/opendatasoft/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/declaration.mjs",
+    "./seller/opendatasoft/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/workspace/server.mjs",
+    "./seller/opendatasoft/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/engine.mjs",
+    "./seller/opendatasoft/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/model.mjs",
+    "./seller/opendatasoft/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/publisher/release.mjs"
   },
   "nativePeers": {
     "@x402/core": {
