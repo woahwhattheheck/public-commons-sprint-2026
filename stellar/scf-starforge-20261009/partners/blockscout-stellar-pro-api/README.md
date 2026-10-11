@@ -41,7 +41,8 @@ and explicit atomic price for each configured chain. The public merchant
 origin must use HTTPS. The data route remains
 `/{chain_id}/api/v2/tokens/{address_hash}`; an address is exactly `0x` followed by
 40 hexadecimal characters. A query string or request body is rejected before
-payment.
+payment. The original route schema returns HTTP 400 for invalid input; the
+additional token-identity admission returns HTTP 422 for invalid token semantics.
 
 The plan's `payment.network` is `stellar:testnet` or `stellar:pubnet`. Its
 `chains[].chainId` identifies the indexed EVM data, such as Base `8453`.
