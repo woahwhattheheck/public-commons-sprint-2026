@@ -11,13 +11,16 @@ import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 import {scenarioList, DEFAULT_SCENARIO} from './scenarios.mjs';
 import {createSessionStore, parseView, parseSpeed, parseCount, resumeCursor, delayMs} from './live_sessions.mjs';
 import {createMatchArchiveStore, MAX_PACKAGE_BYTES, MAX_REVIEW_BYTES} from './match_archive.mjs';
+import {createCoachComparison} from './coach_review.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 const FIXTURE = JSON.parse(await readFile(join(ROOT, 'data', 'events.json'), 'utf8'));
 validateFixture(FIXTURE);
-const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8'};
-const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/style.css': 'style.css'};
+const TYPES = {'/':'text/html; charset=utf-8', '/app.js':'text/javascript; charset=utf-8', '/archive.js':'text/javascript; charset=utf-8', '/style.css':'text/css; charset=utf-8',
+  '/coach-review':'text/html; charset=utf-8', '/coach-review.js':'text/javascript; charset=utf-8', '/coach-review.css':'text/css; charset=utf-8'};
+const ROUTES = {'/': 'index.html', '/app.js': 'app.js', '/archive.js': 'archive.js', '/style.css': 'style.css',
+  '/coach-review':'coach-review.html', '/coach-review.js':'coach-review.js', '/coach-review.css':'coach-review.css'};
 const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.
 const foundryAdmission = createFoundryAdmission();
@@ -160,6 +163,10 @@ export const server = createServer(async (req, res) => {
     if (req.method === 'POST' && path === '/api/sessions') {
       const body = objectBody(await getJSON(req));
       return send(res, 201, sessions.create(body.scenario ?? DEFAULT_SCENARIO, body.seed));
+    }
+    if (req.method === 'POST' && path === '/api/coach-review') {
+      return send(res, 200, await createCoachComparison(await archives(),
+        objectBody(await getJSON(req, 16384)), req.headers['x-counterpress-library']));
     }
     const parts = path.split('/');
     if (path === '/api/archives' || path.startsWith('/api/archives/')) {

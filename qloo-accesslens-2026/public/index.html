@@ -1,12 +1,44 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#112d37"><title>AccessLens — Cultural taste, access first</title><link rel="stylesheet" href="/style.css"></head><body>
-<a class="skip" href="#main">Skip to planner</a><header><div class="mark">AL<span>•</span></div><span>ACCESSLENS / CULTURE × ACCESS</span><span class="chip" id="mode">Checking evidence mode…</span></header>
-<main id="main"><section class="hero"><p class="eyebrow">CULTURAL PROGRAMMING WITH BOUNDARIES</p><h1>Great taste means<br><em>everyone gets in.</em></h1><p class="lede">An explainable planner that combines Qloo artist-to-place affinity with your venue’s independently audited access, space and budget constraints. No invented accessibility facts.</p></section>
-<div class="workspace"><section class="panel"><div class="section-num">01 / WHAT YOU'RE PLANNING</div><form id="planner"><label for="artist">An artist your group loves</label><input id="artist" name="artist" maxlength="90" required value="Nina Simone" autocomplete="off"><p class="hint">Live mode searches Qloo for an exact artist. Demo mode uses a fictional affinity ranking.</p>
-<label for="city">Destination city (optional)</label><input id="city" name="city" maxlength="180" placeholder="Example City" autocomplete="address-level2"><p class="hint">Matches the city in the operator's venue catalog. Leave blank to consider all audited cities. City is a hard constraint; no nearby-city substitutes.</p>
-<div class="twocol"><div><label for="groupSize">Group size</label><input id="groupSize" type="number" min="1" max="1000" step="1" value="45" required></div><div><label for="budgetUSD">Per-person ceiling, USD</label><input id="budgetUSD" type="number" min="0" max="20000" step="1" value="25" required></div></div>
-<fieldset><legend>Non-negotiable access requirements</legend><label class="check"><input type="checkbox" name="required" value="step_free" checked><span>Step-free venue entry</span></label><label class="check"><input type="checkbox" name="required" value="low_sensory" checked><span>Low-sensory setting</span></label><label class="check"><input type="checkbox" name="required" value="accessible_toilet" checked><span>Accessible toilet</span></label></fieldset>
-<button type="submit" id="submit">Build an accessible shortlist <span aria-hidden="true">→</span></button></form></section>
-<section class="panel results" aria-live="polite" aria-atomic="false"><div class="section-num">02 / DECISION RECEIPT</div><div id="result"><p class="placeholder">Your shortlist will appear here, with every constraint checked and every rejected venue accounted for.</p></div></section></div>
-<section class="ethics"><span>DESIGNED TO ABSTAIN</span><p>No Qloo result or no independently verified venue match means no recommendation. A step-free venue is not a verified accessible route. Always confirm operator-supplied details directly before booking.</p></section>
-</main><footer>AccessLens · Open-source hackathon candidate · Distinct Qloo and venue-audit data origins · <a href="https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide" rel="noopener noreferrer" target="_blank">Qloo documentation ↗</a></footer><script type="module" src="/app.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#202020"><title>AccessLens · Venue planner</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<a class="skip" href="#main">Skip to workspace</a>
+<header><a class="brand" href="/" aria-label="AccessLens home"><strong>AL</strong><span>AccessLens<small>GROUP VENUE PLANNING</small></span></a><span id="mode" class="badge">Connecting…</span></header>
+<nav aria-label="Workspace"><button type="button" data-view="planner" aria-current="page">Planner</button><button type="button" data-view="catalog">Venue catalog <span id="catalog-count"></span></button><button type="button" data-view="saved">Saved plans <span id="saved-count"></span></button></nav>
+<main id="main">
+<p id="status" class="notice" role="status">Loading the planning workspace…</p>
+<section id="view-planner" class="view">
+<div class="page-heading"><div><h1>Plan a group outing</h1><p>Choose cultural fit, then check the venue information your group needs.</p></div><span id="catalog-summary" class="muted"></span></div>
+<div class="workspace">
+<aside class="panel planning-inputs"><h2>1. Set the requirements</h2>
+<form id="planner">
+<label for="artist">Music artist</label><input id="artist" maxlength="90" minlength="2" required value="Nina Simone" autocomplete="off"><p class="hint">This query is sent to Qloo in live mode. Group details remain in this browser.</p>
+<label for="city">Destination city</label><input id="city" maxlength="180" list="cities" placeholder="All catalog cities" autocomplete="off"><datalist id="cities"></datalist><p class="hint">A city is an exact constraint. Leave blank to compare all catalog cities.</p>
+<div class="two-col"><div><label for="groupSize">People</label><input id="groupSize" type="number" min="1" max="1000" step="1" required value="45"></div><div><label for="budgetUSD">USD per person</label><input id="budgetUSD" type="number" min="0" max="20000" step="1" required value="25"></div></div>
+<fieldset><legend>Required venue features</legend>
+<label class="check"><input type="checkbox" name="required" value="step_free" checked>Step-free entry</label><label class="check"><input type="checkbox" name="required" value="low_sensory" checked>Low-sensory setting</label><label class="check"><input type="checkbox" name="required" value="accessible_toilet" checked>Accessible toilet</label>
+</fieldset>
+<div id="excluded-controls"></div>
+<button id="submit" class="primary" type="submit" disabled>Find matching venues</button>
+<p id="freshness" class="hint">Qloo orders cultural affinity. Venue access, capacity and prices come from the independent catalog.</p>
+</form></aside>
+<div class="planning-output">
+<section class="panel"><div class="section-heading"><h2>2. Compare options</h2><span id="result-count" class="badge">No plan yet</span></div><div id="result"><p class="empty">Set your requirements and find matching venues. You can compare up to three options and choose one for your plan.</p></div></section>
+<section id="comparison-panel" class="panel" hidden><h2>Side-by-side comparison</h2><div id="comparison" class="table-scroll" tabindex="0" aria-label="Venue comparison table"></div></section>
+<section id="selection-panel" class="panel" hidden><h2>3. Keep the selected plan</h2><div id="selection"></div>
+<div class="save-controls"><label for="plan-name">Plan name</label><input id="plan-name" maxlength="80" value="Group outing"><div class="actions"><button type="button" id="save-plan" class="primary">Save in this browser</button><button type="button" id="export-plan">Export JSON</button><button type="button" id="print-plan">Print selected plan</button></div><p class="hint">Saving keeps the catalog and group requirements on this device. Exported files include those details. Reopened plans must be checked again before a new selection is saved.</p></div></section>
+</div></div>
+</section>
 
+<section id="view-catalog" class="view" hidden>
+<div class="page-heading"><div><h1>Venue catalog</h1><p>Review independent venue information and canonical Qloo identities before planning.</p></div><button type="button" id="export-catalog">Export current catalog</button></div>
+<div class="catalog-layout"><section class="panel"><h2>Load and review</h2><p class="hint">Import stays in this browser. The active catalog changes only when you apply the reviewed file.</p><label for="catalog-file">Choose a JSON catalog</label><input id="catalog-file" type="file" accept=".json,application/json"><label for="catalog-text">Or paste and correct catalog JSON</label><textarea id="catalog-text" rows="11" spellcheck="false" placeholder="An array of venue records, or a catalog with a venues field"></textarea><div class="actions"><button type="button" id="review-catalog">Review catalog</button><button type="button" id="apply-catalog" class="primary" disabled>Apply reviewed catalog</button><button type="button" id="catalog-template">Download blank template</button></div><div id="catalog-review" class="review"></div><p class="hint">Use null for an unknown access feature, price or capacity. An unknown required fact cannot qualify. Qloo identity search never fills in these facts.</p></section>
+<section class="panel"><h2>Current venue records</h2><p id="catalog-origin" class="hint"></p><div id="catalog-table" class="table-scroll" tabindex="0" aria-label="Current venue records"></div></section></div>
+<section id="resolve-panel" class="panel" hidden><h2>Resolve the venue identity</h2><p id="resolve-context"></p><form id="resolve-form"><div class="search-row"><label for="place-query">Venue search sent to Qloo</label><input id="place-query" minlength="2" maxlength="180" required><button type="submit" id="resolve-search">Search places</button></div></form><p class="hint">Compare the provider name, address and canonical ID. Select only the actual venue in your record; names alone can be ambiguous.</p><div id="resolve-results"></div></section>
+</section>
+
+<section id="view-saved" class="view" hidden><div class="page-heading"><div><h1>Saved plans</h1><p>Local snapshots of a selected venue, its sources, and the group requirements at that time.</p></div><label class="file-button" for="saved-file">Import saved plan<input id="saved-file" type="file" accept=".json,application/json"></label></div><div id="saved-list"></div><p class="hint">An old snapshot is historical. Reopening loads its inputs and catalog; the planner retrieves current affinity and checks the venue dates again.</p></section>
+</main>
+<footer><strong>AccessLens</strong><span>Venue features do not establish a travel route, available booking, or current event suitability. Confirm arrangements before attending.</span><a href="https://docs.qloo.com/reference/qloo-llm-hackathon-developer-guide" target="_blank" rel="noopener noreferrer">Qloo integration</a></footer>
+<script type="module" src="/app.js"></script>
+</body></html>

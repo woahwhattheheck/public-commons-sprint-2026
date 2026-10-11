@@ -1,7 +1,8 @@
 # Python applications for the Stellar Forge buyer
 
-Version 0.2.0 adds original native-workspace execution and approved-file customer
-applications. Existing 0.1.0 installations can upgrade to this version normally.
+Version 0.3.0 completes original workspace accounting and retained purchase history,
+following 0.2.0's native-workspace execution and approved-file applications.
+Existing installations can upgrade normally.
 
 Installable Python 3.11+ package for Linux and macOS. A Python application can discover an existing catalog, select one exact advertised offer, review its native payment terms, execute through the original SF88 buyer, and consume the saved JSON, CSV or binary response. The original SF31 wire client, SF81/SF62 operator approval, SF36 reservation ledger, signer and SF82 outcome handling all remain the execution path.
 
@@ -163,7 +164,77 @@ it does not guess that a partial file is complete. The same operation's existing
 `recover()` retains the separate original buyer outcome.
 
 `examples/buy_file.py` provides explicit prepare, review, purchase, download and
-local CSV-consumption actions against this complete application workflow.
+local CSV-consumption actions, followed by original accounting and history.
+
+## Finish the original purchase's accounting
+
+A completed payment attempt can leave its original spending reservation awaiting
+the existing native transfer observer. The Python application now finishes that
+same operation from its retained workspace, attempt and evidence:
+
+```python
+operation = buyer.operation("approved-file-482")
+accounting = operation.finalize()
+print(accounting.status)               # original SF36 outcome
+print(accounting.actual_atomic_units)  # original integer token units
+print(accounting.receipt)              # original network/transaction reference
+print(accounting.merchant)             # separate native merchant-event state
+```
+
+This calls the **same original validated finalizer as the private inbox**. It
+checks the saved configuration and request body against the permanent Python
+attempt, then matches the complete approved request, workspace, evidence and
+authenticated SF36 reservation. Original Node components open the workspace in
+accounting mode; wallet prerequisites and signing are not invoked. The three
+accounting keys enter only the original worker environment, never Python API
+results, history files or the separate observer.
+
+Original SF86 chooses the explicitly configured supported RPC and the
+workspace's original transport. Its official decoder and exact transfer checks
+remain in use. The observer's result finalizes the existing SF36 ledger; a saved
+Python view does not replace it. The [original finalization guide](../FINALIZATION.md)
+describes supported networks, RPC custody and outcomes. This application does not
+choose a new provider or reinterpret a local file as payment.
+
+`finalize` requires an existing attempted operation imported from a native
+workspace. It can run after the wallet environment is removed and after the
+workspace's new-spending cap has been reduced. It never clears the permanent
+purchase attempt, opens a wallet, signs, pays or retries the merchant request.
+Configurations imported through the earlier `from_config` interface retain the
+original [SF36 worker](../../sf36-spend-governor/FINALIZATION.md) route; they do not
+gain an inferred workspace association.
+
+| Accounting status | Application action |
+| --- | --- |
+| `FINALIZED` | Use the original actual units and canonical receipt in the purchase history. |
+| `IDEMPOTENT_FINALIZED` | The original ledger already finalized this same request and reused its receipt. |
+| `NOT_FINALIZED` | Inspect the native reason and original evidence; run the same accounting action after fixing the cause. |
+| `WORKER_ERROR` or `NATIVE_ACCOUNTING_RESULT_UNAVAILABLE` | Inspect the retained run and original ledger, then rerun this accounting action to recover its result. |
+
+Each explicit accounting run keeps bounded original stdout/stderr under a private
+`accounting-runs` directory, separate from the purchase output. The latest
+`accounting.json` is a replaceable display record. A failed later observation
+retains `last_finalized` explicitly; it never downgrades the original ledger.
+If saving the view fails after accounting succeeds, the returned record reports
+`viewStatus: SAVE_FAILED` and retains the actual original result. Repeating the
+same command reconstructs the view through the original idempotent ledger path.
+
+If the buyer host also holds the merchant's actual original SF98 outbox, pass
+`outbox="/private/merchant/outbox"` and `merchant_route="original-route-id"`
+together. Remote merchant events remain on the merchant's host. Financial
+finalization and completed product bytes retain their own outcomes.
+
+```python
+# These are local reads: no Node subprocess, keys, wallet, RPC or merchant call.
+accounting = operation.recover_finalization()
+history = buyer.history(destination="/private/customer/purchase-history.json")
+```
+
+Recovery also reads complete native output left by an interrupted Python parent,
+retaining `PROCESS_EXIT_NOT_RECORDED`. It never turns a missing or partial result
+into a finalized purchase. History joins the exact request and native purchase
+outcome, original accounting view, and separate delivered product. The exported
+JSON is private and create-only; choose a new destination for a later export.
 
 ## Discover and select without copying payment terms by hand
 
@@ -249,15 +320,18 @@ stellar-forge-buyer --state /private/data-buyer review approved-file-482
 stellar-forge-buyer --state /private/data-buyer execute approved-file-482
 stellar-forge-buyer --state /private/data-buyer retrieve-file approved-file-482 --out /private/customer/report-482.csv
 stellar-forge-buyer --state /private/data-buyer recover-file approved-file-482
+stellar-forge-buyer --state /private/data-buyer finalize approved-file-482
+stellar-forge-buyer --state /private/data-buyer recover-finalization approved-file-482
+stellar-forge-buyer --state /private/data-buyer history --out /private/customer/purchase-history.json
 ```
 
-`prepare`, `configure` and `inspect` are also available via `--help`. The `execute` command prints the original review and enters original terminal approval; it is the sole payment-execution command. `retrieve-file` performs only the separately requested entitlement download. `examples/buy_dataset.py` demonstrates the ordinary response application and separate restart recovery.
+`prepare`, `configure` and `inspect` are also available via `--help`. The `execute` command prints the original review and enters original terminal approval; it is the sole payment-execution command. `retrieve-file` performs only the separately requested entitlement download. `finalize` reconciles the existing reservation through the original workspace and worker. `recover-finalization` and `history` read retained local results. `examples/buy_dataset.py` demonstrates the ordinary response application and separate restart recovery.
 
 ## Operational contract
 
 - Dependencies: Python 3.11+, POSIX file locking, Node version required by the original checkout, and existing native seller/buyer dependencies. No hosted workflow is started by installation or execution.
 - Stable application errors are `BuyerError.code`; exceptions expose neither raw signer output nor environment values. `NativeError.operation` identifies retained recovery state.
 - Original runtime source is required at `stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs`. API calls use an argument array with `shell=False`; no shell interpolation is involved.
-- Workspace and approved-file applications additionally require the original `python/bridge.mjs`, its shared queue/workspace source, and original `sf101-merchant-receiver/` checkout/retrieval source. The current complete source distribution supplies these; the Python wheel still does not bundle Node or a signer.
+- Workspace and approved-file applications additionally require the original `python/bridge.mjs`, its shared queue/workspace source, and original `sf101-merchant-receiver/` checkout/retrieval source. Accounting consumes the same original `finalization.mjs`, SF36 worker and SF86 observer as the inbox. The current complete source distribution supplies these; the Python wheel still does not bundle Node or a signer.
 - Local state includes source/configuration, request body, original evidence and downloaded data. Store it outside public repositories and supply the existing operator's policy/signer configuration.
 - Original settlement and merchant limits are preserved. This integration performs no grant submission, production-wallet provisioning, outbound customer contact or new remote hosting.

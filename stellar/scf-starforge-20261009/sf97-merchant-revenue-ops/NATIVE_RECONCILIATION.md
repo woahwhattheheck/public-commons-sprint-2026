@@ -1,6 +1,6 @@
 # SF97 native settlement-to-merchant reconciliation
 
-**Original seller traffic × original SF98 native settlement events × merchant delivery state.** This is a read-only commercial operations integration, not another x402 seller, ledger, payment verifier or dashboard backend. The existing SF97 analyzer prices merchant targets and HTTP 2xx counterfactuals. This companion joins the actual SF98 native-success journal and callback-delivery journal, filters events by the original SF30 session observation window, checks exact route/method/network/atomic amount/asset/recipient identity across every configured payment choice, and exports an owner-private operational view.
+**Original seller traffic × original SF98 native settlement events × merchant delivery state.** This is a read-only commercial operations integration, not another x402 seller, ledger, payment verifier or dashboard backend. The existing SF97 analyzer prices merchant targets and HTTP 2xx counterfactuals. This companion joins the actual SF98 native-success journal and callback-delivery journal, filters events by the original SF30 process capture or retained session/day/route coverage, checks exact route/method/network/atomic amount/asset/recipient identity across every configured payment choice, and exports an owner-private operational view.
 
 ## One source-native operator journey
 
@@ -22,8 +22,8 @@ Open /private/reviews/sf97-native-001/native-ops.html locally. The output direct
 
 ## What is actually counted
 
-- Original SF97 report has the **actual original seller HTTP traffic**, a known mode and actual source session timestamps; its owner-entered USD quote is **not** a payment.
-- Original SF98 events.ndjson contains original SDK processSettlement-success events with immutable IDs, route, original assetDigest, method, network and atomic amount. Current events also carry `recipientDigest`, the SHA-256 of the selected original `payTo`. An event is included in the observation-window column only when its original at timestamp falls within SF97 observedFrom..observedUntil. Outbox events outside that window are counted separately, not silently converted into demand for this session.
+- Original SF97 report has the **actual original seller HTTP traffic**, actual modes and source session timestamps; its owner-entered USD quote is **not** a payment. A retained period preserves every matching session rather than inventing a single process identity.
+- Original SF98 events.ndjson contains original SDK processSettlement-success events with immutable IDs, route, original assetDigest, method, network and atomic amount. Current events also carry `recipientDigest`, the SHA-256 of the selected original `payTo`. For a process report, the original event time must fall within SF97 observedFrom..observedUntil. For a retained period it must also match the selected day and actual saved session/route coverage described below. Out-of-scope events are counted separately.
 - Every included native event is matched to a complete configured option by route ID, method, Stellar network, original amountAtomic, SHA-256(original payment asset), and recorded recipient digest. All six maintained SF30 methods (`GET`, `HEAD`, `DELETE`, `POST`, `PUT`, `PATCH`) use the original `supportsSellerMethod` helper. Testnet and pubnet notices can coexist in one journal and report. This view does not assign independent chain status to either network.
 - Original SF98 deliveries.ndjson is interpreted by last recorded state per event: DELIVERED means the *sender received HTTP 2xx from the merchant inbox*, RETRY/REQUEUE/unattempted means callback pending, and EXHAUSTED requires explicit operator repair. HTTP webhook acceptance does **not** prove the merchant fulfilled an order.
 - The report deliberately leaves recognized revenue and independent chain settlement status unasserted. An original SDK success plus an HMAC delivery acknowledgment is not a bank deposit, customer acceptance, Stellar ledger finality or legally enforceable invoice.
@@ -41,8 +41,50 @@ Matching uses the recorded recipient when available. Older original journals can
 | `AMBIGUOUS_LEGACY_OPTIONS` | An older event could belong to multiple offered recipients. | Unassigned; candidate option IDs are exported. |
 | `OPTION_TERMS_MISMATCH` | A recorded recipient or other payment field differs, or no option matches. | Unassigned; event identity and callback state remain visible. |
 | `MISSING_ROUTE_TERMS` | The native event belongs to a route absent from this source report. | Unassigned. |
+| `HISTORICAL_ROUTE_VARIANT` | Saved session coverage identifies an older method/path for that route. | Unassigned; the current route quote is not applied. |
+| `AMBIGUOUS_ROUTE_VARIANTS` | Saved coverage could refer to both current and older method/path variants. | Unassigned; the source does not identify one current variant. |
 
 A wrong recorded recipient never falls back to the first alternative or to legacy matching. Multiple recipients with the same network, asset and amount remain distinguishable for new events. Existing events and delivery journals are read in place; the companion does not replace missing recipient data. Use the retained configuration and original merchant order records to investigate historical mismatches. Updated SF98 records selected-recipient digests for subsequent native events.
+
+## Retained period and session coverage
+
+Create the same SF97 report from the original operations history export, then use this companion unchanged:
+
+```sh
+node "$R/analyze.mjs" \
+  --config /private/merchant/seller.json \
+  --terms /private/merchant/pricing.json \
+  --history /private/captures/original-history.json \
+  --native-outbox /private/merchant/sf98-outbox \
+  --output /private/reviews/merchant-retained-period
+```
+
+The original live `/history.json` or `/api/history` endpoint can be selected with `--ops-url`, including its `from`, `to` and optional `routeId` parameters. The [period reporting guide](README.md#review-a-retained-period-across-seller-restarts) gives the complete operator workflow and pricing semantics. Existing process reports and legacy single-payment reports remain supported.
+
+A report with `observationKind: "DURABLE_HISTORY"` contains its normalized original `usageHistory`. The companion validates that source through the original history normalizer, checks the session/mode identity and route HTTP counters, and then uses the retained coverage for each event:
+
+1. Select the actual effective retained UTC dates and optional route filter.
+2. Require a saved day and an actual original session interval containing the event time. A quiet gap between stopped/restarted sessions remains a gap even if both sessions occurred on the same day.
+3. Match the original route ID and method to the saved day. Modern exports also specify the exact session/day route keys, so an old path is not confused with a new path sharing the same route ID.
+4. Apply the existing complete payment-option and selected-recipient matching only when that coverage identifies the current route variant. Retain older or ambiguous variants as unassigned events.
+
+The exported exclusions make the decision reviewable:
+
+| `excludedEvents[].reason` | Meaning |
+| --- | --- |
+| `OUTSIDE_SELECTED_PERIOD` | Event date falls outside the actual effective retained date range. |
+| `OUTSIDE_ROUTE_SELECTION` | A route-filtered history export selected a different route. |
+| `NO_SAVED_DAY` | The original export has no saved observations for that UTC day. |
+| `SESSION_GAP` | No selected original session interval contains the event time. |
+| `NO_SAVED_ROUTE_COVERAGE` | A session exists, but the selected saved day does not cover that event's route and method. |
+
+These events remain in the original outbox. The report preserves their IDs, dates and reasons, and excludes them from route/option sums. `outsideObservationWindow` continues to count all excluded events; period results also expose `outsideSelectedPeriod`, `outsideRouteSelection` and `outsideSavedCoverage`. The envelope `observedFrom..observedUntil` is descriptive, not a continuous coverage claim.
+
+Included period events add `coverageBasis`, `observedSessionIds`, `observedSessionModes` and `usageRouteKeys`. Overlapping observed sessions can be listed without counting an event twice. Modes remain tied to the actual candidate sessions: a native notice falling only within challenge-only coverage is visible for source correlation even when the overall period is `MIXED`.
+
+Modern original history exports add per-session `retainedDays` under `coverageFormat: "stellar-forge.seller-usage-day-routes.v1"`. For earlier exports, the companion uses the original session intervals and retained day route variants. It labels that basis `LEGACY_SESSION_AND_DAY`, and keeps ambiguous current/old variants unassigned. It does not infer missing per-session membership from total request counts. Re-exporting the still-retained original history through the current operations listener provides the additional membership directly from the original saved records, without replaying traffic or payments.
+
+The native HTML shows saved session intervals and states, exclusion reasons, and each event's coverage basis alongside the existing option cards and callback states. `usageSummary` retains the selected range, modes, session details and exclusions in the native JSON. An interrupted checkpoint describes only what the original observer saved; absence from its coverage does not establish that no later native payment occurred.
 
 ### Report and operator view
 

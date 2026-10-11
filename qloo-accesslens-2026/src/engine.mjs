@@ -15,11 +15,13 @@ export function normalizeRequest(body) {
   if (!Array.isArray(required) || required.length > 3 || required.some(x => !['step_free','low_sensory','accessible_toilet'].includes(x)) || new Set(required).size !== required.length) throw new Error('invalid accessibility requirements');
   const city = body.city === undefined ? '' : body.city;
   if (typeof city !== 'string' || city.length > 180 || /[\x00-\x1f\x7f]/.test(city)) throw new Error('city must be at most 180 readable characters');
+  const excludedVenueIds=body.excludedVenueIds ?? [];
+  if (!Array.isArray(excludedVenueIds) || excludedVenueIds.length>80 || excludedVenueIds.some(id=>typeof id!=='string'||!id.trim()||id.length>180) || new Set(excludedVenueIds).size!==excludedVenueIds.length) throw new Error('invalid excluded venue IDs');
   // Omitted or blank city preserves the original all-audited-cities behavior.
-  return {artist:artist.trim(),groupSize,budgetUSD,required,...(city.trim()?{city:city.normalize('NFC').trim()}: {})};
+  return {artist:artist.trim(),groupSize,budgetUSD,required,...(city.trim()?{city:city.normalize('NFC').trim()}: {}),...(excludedVenueIds.length?{excludedVenueIds:[...excludedVenueIds]}:{})};
 }
 
-export function planAuditedVenues(rawCatalog, rawRequest, affinity,
+export function screenAuditedVenues(rawCatalog, rawRequest, affinity,
     {mode='fixture', auditAsOfUTC=new Date().toISOString().slice(0,10), maxAuditAgeDays=180}={}) {
   const asOfDay = auditUtcDay(auditAsOfUTC);
   if (!Number.isSafeInteger(maxAuditAgeDays) || maxAuditAgeDays < 1 || maxAuditAgeDays > 365) {
@@ -29,19 +31,31 @@ export function planAuditedVenues(rawCatalog, rawRequest, affinity,
   const request = normalizeRequest(rawRequest);
   const ids = affinity?.rankedPlaceIds;
   if (!Array.isArray(ids) || ids.some(id=>typeof id!=='string')) throw new Error('missing provider-ranked place IDs');
-  const ranks = new Map(ids.map((id, index) => [id,index]).filter(([id], i, entries) => entries.findIndex(x=>x[0]===id)===i));
+  const ranks = new Map();
+  ids.forEach((id,index)=>{if(!ranks.has(id))ranks.set(id,index);});
   const screened = catalog.map(v=>{
     const reasons=[];
+    if (request.excludedVenueIds?.includes(v.id)) reasons.push('excluded_by_group');
     if (request.city && cityKey(v.city) !== cityKey(request.city)) reasons.push('outside_requested_city');
     const ageDays = asOfDay - auditUtcDay(v.audit_date);
     if (ageDays < 0) reasons.push('audit_dated_in_future');
     else if (ageDays > maxAuditAgeDays) reasons.push('audit_older_than_policy_window');
-    if (v.capacity<request.groupSize) reasons.push('insufficient_audited_capacity');
-    if (v.cost_usd>request.budgetUSD) reasons.push('above_person_budget');
-    for(const key of request.required) if(!v[key]) reasons.push('fails_'+key);
+    if (v.capacity===null) reasons.push('capacity_unknown');
+    else if (v.capacity<request.groupSize) reasons.push('insufficient_audited_capacity');
+    if (v.cost_usd===null) reasons.push('price_unknown');
+    else if (v.cost_usd>request.budgetUSD) reasons.push('above_person_budget');
+    for(const key of request.required) if(v[key]!==true) reasons.push((v[key]===null?'unknown_':'fails_')+key);
     if(!ranks.has(v.qloo_id)) reasons.push('absent_from_qloo_affinity_response');
     return {venue:v, reasons, affinityRank:ranks.has(v.qloo_id)?ranks.get(v.qloo_id)+1:null};
   });
+  return {catalog,request,screened,affinity,auditAsOfUTC,maxAuditAgeDays,mode};
+}
+
+export function planAuditedVenues(rawCatalog,rawRequest,affinity,options={}) {
+  return planFromScreening(screenAuditedVenues(rawCatalog,rawRequest,affinity,options));
+}
+
+export function planFromScreening({catalog,request,screened,affinity,auditAsOfUTC,maxAuditAgeDays,mode}) {
   const eligible=screened.filter(v=>v.reasons.length===0).sort((a,b)=>a.affinityRank-b.affinityRank||a.venue.name.localeCompare(b.venue.name));
   const picks=eligible.slice(0,3).map(({venue,affinityRank})=>({
     name:venue.name,city:venue.city,operatorVenueId:venue.id,qlooPlaceId:venue.qloo_id,
@@ -55,7 +69,7 @@ export function planAuditedVenues(rawCatalog, rawRequest, affinity,
     schema:'accesslens-plan/v1',status:picks.length?'RECOMMENDATIONS':'ABSTAIN_NO_VERIFIED_FIT',
     providerEvidence:mode==='live'?'LIVE_QLOO_RESPONSE':'SYNTHETIC_OFFLINE_FIXTURE',
     artist:request.artist,artistEntityId:affinity.artist?.id??null,
-    ...(request.city?{city:request.city}:{}),
+    ...(request.city?{city:request.city}:{}),...(request.excludedVenueIds?{excludedVenueIds:request.excludedVenueIds}:{}),
     hardRequirements:request.required,groupSize:request.groupSize,budgetUSD:request.budgetUSD,
     operatorAuditPolicy:{asOfUTC:auditAsOfUTC,maxAgeDays:maxAuditAgeDays},
     recommended:picks,shortlistCount:eligible.length,consideredCount:catalog.length,nearMisses,

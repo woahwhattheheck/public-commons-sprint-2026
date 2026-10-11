@@ -22,23 +22,31 @@ export function auditUtcDay(dateString) {
 
 export function validateCatalog(rows) {
   if (!Array.isArray(rows) || rows.length === 0 || rows.length > 80) throw new Error('catalog must contain 1–80 audited venues');
-  const seen = new Set();
+  const seen = new Set(), operatorIds = new Set();
   return rows.map((v, idx) => {
     if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error(`venue ${idx} is invalid`);
     for (const k of ['id','qloo_id','name','city','audit_source','audit_date']) {
       if (typeof v[k] !== 'string' || !v[k].trim() || v[k].length > 180) throw new Error(`venue ${idx} missing ${k}`);
     }
     if (seen.has(v.qloo_id)) throw new Error('duplicate Qloo place ID');
+    if (operatorIds.has(v.id)) throw new Error('duplicate operator venue ID');
     seen.add(v.qloo_id);
+    operatorIds.add(v.id);
     for (const k of ['step_free','low_sensory','accessible_toilet']) {
-      if (typeof v[k] !== 'boolean') throw new Error(`venue ${idx} missing audited ${k}`);
+      if (v[k] !== null && typeof v[k] !== 'boolean') throw new Error(`venue ${idx} ${k} must be true, false or null (unknown)`);
     }
-    if (!Number.isSafeInteger(v.capacity) || v.capacity < 1 || v.capacity > 100000) throw new Error(`venue ${idx} invalid capacity`);
-    if (typeof v.cost_usd !== 'number' || !Number.isFinite(v.cost_usd) || v.cost_usd < 0 || v.cost_usd > 100000) throw new Error(`venue ${idx} invalid cost`);
+    if (v.capacity !== null && (!Number.isSafeInteger(v.capacity) || v.capacity < 1 || v.capacity > 100000)) throw new Error(`venue ${idx} invalid capacity`);
+    if (v.cost_usd !== null && (typeof v.cost_usd !== 'number' || !Number.isFinite(v.cost_usd) || v.cost_usd < 0 || v.cost_usd > 100000)) throw new Error(`venue ${idx} invalid cost`);
     try { auditUtcDay(v.audit_date); } catch { throw new Error(`venue ${idx} invalid audit date`); }
+    if (v.record_kind !== undefined && !['operator_audit','published_information'].includes(v.record_kind)) throw new Error(`venue ${idx} invalid record kind`);
+    if (v.source_url !== undefined) {
+      let url; try {url = new URL(v.source_url);} catch {throw new Error(`venue ${idx} invalid source URL`);}
+      if (!['http:','https:'].includes(url.protocol) || url.username || url.password || url.href.length > 2000) throw new Error(`venue ${idx} invalid source URL`);
+    }
     return Object.freeze({id:v.id,qloo_id:v.qloo_id,name:v.name,city:v.city,capacity:v.capacity,
       step_free:v.step_free,low_sensory:v.low_sensory,accessible_toilet:v.accessible_toilet,
-      cost_usd:v.cost_usd,audit_source:v.audit_source,audit_date:v.audit_date});
+      cost_usd:v.cost_usd,audit_source:v.audit_source,audit_date:v.audit_date,
+      ...(v.record_kind?{record_kind:v.record_kind}:{}),...(v.source_url?{source_url:v.source_url}:{})});
   });
 }
 

@@ -18,6 +18,7 @@ import { initializeWorkspace, openWorkspace } from '../sf88-operator-buyer-cli/w
 import { config as readBuyer, operation, execution, responseFile, buyerTransport } from '../sf88-operator-buyer-cli/config.mjs';
 import { validateNativeSignerConfiguration } from '../sf88-operator-buyer-cli/native-signer.mjs';
 import { absolute, parseJson, readPrivateFile } from '../sf103-native-buyer-signer/operator.mjs';
+import { preparePythonCommerce, describePythonCommerce } from './commerce-python.mjs';
 
 const SCHEMA = 'stellar-forge.commerce-setup.v1';
 const SNAPSHOT = 'stellar-forge.prepared-commerce.v1';
@@ -27,6 +28,8 @@ const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const json = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const commerceCli = fileURLToPath(new URL('./commerce-cli.mjs', import.meta.url));
+const commerceConsole = fileURLToPath(new URL('./commerce-console.mjs', import.meta.url));
+const pythonMerchantCli = fileURLToPath(new URL('../sf30-seller-sdk/python/merchant.mjs', import.meta.url));
 const buyerCli = fileURLToPath(new URL('../sf88-operator-buyer-cli/cli.mjs', import.meta.url));
 const thisCli = fileURLToPath(import.meta.url);
 function need(ok, code) { if (!ok) throw Object.assign(new Error(code), { code }); }
@@ -98,15 +101,20 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const input = fields(parseJson(source),
     ['schema','seller','operator','purchases','operationsPort'], 'COMMERCE_SETUP_FIELDS_INVALID');
   need(input.schema === SCHEMA, 'COMMERCE_SETUP_SCHEMA_INVALID');
-  const seller = fields(input.seller, ['config','handlers','facilitatorConfig','port'],
+  const seller = fields(input.seller, ['config','python','handlers','facilitatorConfig','port'],
     'COMMERCE_SETUP_SELLER_INVALID');
-  absolute(seller.config); absolute(seller.facilitatorConfig);
+  need([seller.config, seller.python].filter(Boolean).length === 1,
+    'COMMERCE_SETUP_ONE_MERCHANT_CONFIGURATION_REQUIRED');
+  need(!seller.python || seller.handlers === undefined, 'COMMERCE_SETUP_PYTHON_USES_ORIGINAL_HANDLERS');
+  const sellerPath = seller.python ?? seller.config;
+  absolute(sellerPath); absolute(seller.facilitatorConfig);
   // Validate the original private bytes before its readers resolve response paths.
-  const sellerBytes = await readPrivateFile(seller.config, 1048576);
+  const sellerBytes = await readPrivateFile(sellerPath, 1048576);
   const facilitatorBytes = await readPrivateFile(seller.facilitatorConfig);
-  const merchant = await readSellerConfig(seller.config);
+  const python = seller.python ? await preparePythonCommerce(seller.python) : null;
+  const merchant = python?.compiled.service ?? await readSellerConfig(seller.config);
   const facilitator = await readFacilitator(seller.facilitatorConfig);
-  need(sha(await readPrivateFile(seller.config, 1048576)) === sha(sellerBytes) &&
+  need(sha(await readPrivateFile(sellerPath, 1048576)) === sha(sellerBytes) &&
     sha(await readPrivateFile(seller.facilitatorConfig)) === sha(facilitatorBytes),
   'COMMERCE_SETUP_SOURCE_CHANGED_DURING_REVIEW');
   need(facilitator.network === 'stellar:testnet', 'COMMERCE_SETUP_TESTNET_REQUIRED');
@@ -120,7 +128,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     'COMMERCE_SETUP_ADVERTISED_TERMS_OUTSIDE_FACILITATOR');
   }
   const handlers = seller.handlers === undefined ? null : await regularSource(seller.handlers);
-  need(handlers || !merchant.routes.some(route => route.handler || route.admit),
+  need(python || handlers || !merchant.routes.some(route => route.handler || route.admit),
     'COMMERCE_SETUP_HANDLER_MODULE_REQUIRED');
   const operator = fields(input.operator,
     ['actor','service','python','payer','secretEnv','signerProvider','httpsProxyEnv','totalAtomic','dailyAtomic'],
@@ -211,6 +219,7 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   const planned = selections.reduce((sum, item) => sum + BigInt(item.draft.operation.expect.maxAtomic), 0n);
   const summary = {schema:SCHEMA, state:'CONFIGURATION_REVIEWED', directory,
     publicOrigin:merchant.publicOrigin, network:facilitator.network,
+    ...(python ? {python:describePythonCommerce(python)} : {}),
     payer:operator.payer, asset:first.asset, recipient:first.payTo, buyerTransport:transport,
     sharedBudget:{maxSingleAtomic:String(single), totalAtomic:String(total), dailyAtomic:String(daily),
       selectedTotalAtomic:String(planned), allSelectionsFitTotal:planned <= total},
@@ -220,10 +229,12 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       originalTerms:item.originalOffer.accepts[item.acceptIndex], bodyBytes:item.bodyBytes,
       bodySha256:item.bodySha256, responseFile:item.draft.responseFile ?? null})),
     signingMaterialLoaded:false, paymentAttempts:0};
-  return {summary, merchant, facilitator, operator, selections, maximum, handlers,
+  return {summary, merchant, facilitator, operator, selections, maximum, handlers, python,
     sellerPort:port(seller.port, 8423), operationsPort:port(input.operationsPort, 0),
-    source:{configFile, configSha256:sha(source), sellerFile:seller.config,
+    source:{configFile, configSha256:sha(source), sellerFile:sellerPath,
       sellerSha256:sha(sellerBytes), facilitatorFile:seller.facilitatorConfig,
+      ...(python ? {pythonApplication:python.compiled.options.application,
+        pythonApplicationSha256:python.applicationSha256} : {}),
       facilitatorSha256:sha(facilitatorBytes)}};
 }
 
@@ -232,7 +243,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
   const reviewed = await reviewCommerceSetup({configFile, directory});
   await privateDirectory(dirname(directory));
   const {initializeCommerce, bindMerchantPurchase} = await import('./commerce.mjs');
-  const {summary, merchant, facilitator, operator, selections, maximum, handlers} = reviewed;
+  const {summary, merchant, facilitator, operator, selections, maximum, handlers, python} = reviewed;
   const compiled = compileMerchant(merchant);
   // Reuse the session's own offer selection rules before creating any workspace.
   for (const item of selections) need(bindMerchantPurchase(compiled, item.draft).acceptIndex === item.acceptIndex,
@@ -253,6 +264,7 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
       await retain(join(directory, 'buyers', item.key + '-review.json'), item.draft);
     }
     await retain(join(directory, 'seller.json'), merchant);
+    if (python) await retain(join(directory, 'python.json'), python.declaration);
     await retain(join(directory, 'facilitator.json'), facilitator);
     const workspace = join(directory, 'operator');
     const args = ['--config', join(directory, 'buyers', maximum.key + '-review.json'), '--dir', workspace,
@@ -274,11 +286,14 @@ export async function prepareCommerceSetup({configFile, directory}, {environment
     }
     const planFile = join(directory, 'commerce-plan.json');
     await retain(planFile, {schema:'stellar-forge.commerce-plan.v1',
-      seller:{config:join(directory, 'seller.json'), facilitatorConfig:join(directory, 'facilitator.json'),
+      seller:{...(python ? {python:join(directory, 'python.json')} : {config:join(directory, 'seller.json')}),
+        facilitatorConfig:join(directory, 'facilitator.json'),
         port:reviewed.sellerPort, ...(handlers ? {handlers:handlers.path} : {})},
       operationsPort:reviewed.operationsPort, buyers});
     const session = join(directory, 'session');
-    await initializeCommerce({planFile, directory:session});
+    const initializedSession = await initializeCommerce({planFile, directory:session});
+    need(!python || initializedSession.python?.applicationSha256 === python.applicationSha256,
+      'COMMERCE_SETUP_PYTHON_SOURCE_CHANGED');
     await retain(join(directory, 'prepared.json'), {
       schema:SNAPSHOT, createdAt:new Date().toISOString(), directory, session, workspace,
       planFile, source:reviewed.source, files:captured, handlers,
@@ -320,6 +335,9 @@ export async function inspectCommerceSetup(directory) {
       inspect:[process.execPath, thisCli, 'inspect', '--directory', directory],
       diagnose:[process.execPath, buyerCli, '--diagnose-workspace', '--dir', record.workspace],
       start:[process.execPath, commerceCli, 'start', '--directory', record.session],
+      console:[process.execPath, commerceConsole, 'start', '--directory', record.session],
+      ...(record.summary.python ? {diagnosePython:[process.execPath, pythonMerchantCli,
+        'diagnose', '--config', join(record.session, 'python.json')]} : {}),
     }};
 }
 

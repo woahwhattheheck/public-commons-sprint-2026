@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { open, stat } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
-import { checkStellarTestnetTransaction, createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
+import { checkStellarTransaction, createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
 import { captureBuyerResult, captureBuyerError, aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { sf81ReconciliationRecord } from '../sf82-chain-transfer-reconcile/record.mjs';
 
@@ -62,7 +62,7 @@ function reservationMetadata(raw) {
 
 /**
  * Invoke original SF81 exactly once; feed original SF31 result to SF52, and a
- * genuine compatible testnet receipt to ORIGINAL SF43 RPC/SEP-41 verification.
+ * compatible network-bound receipt to ORIGINAL SF43 RPC/SEP-41 verification.
  *
  * buyer: the trusted host's existing OperatorApprovedBuyer (no new approval).
  * call:  exact existing SF81 call options, including trusted signer and intentId.
@@ -136,19 +136,19 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
       }
     }
     // Seller receipt alone cannot prove a transfer. SF43 queries ORIGINAL
-    // Stellar testnet RPC and validates a canonical transfer event when present.
+    // Stellar RPC for the approved network and validates its transfer event.
     const terms = base.buyer.requirement, receipt = base.buyer.receipt;
-    if (trustedPayer && terms?.network === 'stellar:testnet' &&
-        receipt?.success === true && receipt.network === 'stellar:testnet' &&
+    if (trustedPayer && ['stellar:testnet','stellar:pubnet'].includes(terms?.network) &&
+        receipt?.success === true && receipt.network === terms.network &&
         /^[0-9a-f]{64}$/.test(receipt.transaction || '')) {
       let decoder = decodeContractEvent;
       if (!decoder) {
         try { decoder = await createOfficialEventDecoder(); }
         catch { decoder = undefined; } // SF43 still checks tx inclusion; never claims a matched transfer.
       }
-      chain = await checkStellarTestnetTransaction({
+      chain = await checkStellarTransaction({
         receipt: { ...receipt, payer: trustedPayer },
-        expected: { network:'stellar:testnet', asset:terms.asset, payTo:terms.payTo,
+        expected: { network:terms.network, asset:terms.asset, payTo:terms.payTo,
           amount:terms.amount, payer:trustedPayer },
         ...(decoder ? {decodeContractEvent:decoder} : {}),
         ...(rpcEndpoint !== undefined ? {rpcEndpoint} : {}),
@@ -162,7 +162,7 @@ export async function executeWithEvidence({buyer, call, outputDir, trustedPayer,
     schema:'scf82.checkout-evidence.v1', intentId:call.intentId, observedAt,
     operatorReservation:reservationMetadata(result?.operatorReservation ?? error?.operatorReservation),
     observation, report, bodyCapture, reconciliation,
-    notes:'Independent testnet proof is credited only by original SF43. No seller receipt, HTTP response, or local simulator equals a payment, customer, grant or revenue claim.',
+    notes:'Original SF43 observes the approved network, transaction and exact SEP-41 transfer. HTTP delivery and original SF36 accounting are recorded separately.',
   };
   // Create-only terminal evidence. Never overwrite/release reservations after
   // crashed sends, lost replies, partial writes or duplicate intent collisions.

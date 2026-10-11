@@ -42,6 +42,7 @@ export function createSellerLifecycle(server, {
   let active = 0, admitted = 0, completed = 0, disconnected = 0;
   let overloaded = 0, drainingRejected = 0, forced = false;
   let closePromise, closeProgress;
+  const idleWaiters = new Set();
 
   function handle(req, res, run) {
     if (typeof run !== 'function') throw new TypeError('Resource handler required');
@@ -62,6 +63,7 @@ export function createSellerLifecycle(server, {
       released = true;
       active--;
       completed++;
+      if (active === 0) { for (const resolve of idleWaiters) resolve(); idleWaiters.clear(); }
       if (state === 'DRAINING' && active === 0) server.closeIdleConnections?.();
       closeProgress?.();
     }
@@ -126,5 +128,8 @@ export function createSellerLifecycle(server, {
     return closePromise;
   }
 
-  return Object.freeze({ handle, snapshot, close });
+  // A forced socket drain can end close() before native dispatch finishes.
+  // Resource owners may await actual quiescence without changing that deadline.
+  const whenIdle = () => active === 0 ? Promise.resolve() : new Promise(resolve => idleWaiters.add(resolve));
+  return Object.freeze({ handle, snapshot, close, whenIdle });
 }
