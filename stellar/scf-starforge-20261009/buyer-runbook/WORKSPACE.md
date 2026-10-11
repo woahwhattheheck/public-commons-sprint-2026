@@ -44,6 +44,86 @@ The existing run remains at its original path; the workspace retains a reference
 to it. Previously registered runs remain available after later restarts. One
 `--run` path can be registered per invocation.
 
+## Receive a private merchant request
+
+The same workspace can receive the complete private buyer request exported by
+the original merchant API workspace. The file carries the exact operation ticket,
+body bytes, ordinary request headers, stable intent, public URL and discovery
+document. It contains no receiver operator, signer or filesystem settings.
+
+Declare this machine's operator once in an existing private `0600` JSON file:
+
+```json
+{
+  "schema": "stellar-forge.buyer-runbook-operator.v1",
+  "actor": "buyer-team",
+  "service": "merchant-api",
+  "payer": "YOUR_STELLAR_G_ACCOUNT",
+  "python": "/usr/bin/python3",
+  "maxTotalAtomic": "1000000",
+  "maxDailyAtomic": "250000",
+  "secretEnv": "STELLAR_SECRET"
+}
+```
+
+Replace the payer with the receiver's real Stellar account and use its existing
+Python executable. Atomic amounts are positive integer strings. The two maximums
+limit each new request's local spending policy; they do not form a shared fleet
+budget. Use `signerProvider` with an absolute trusted SEP-43 provider path instead
+of `secretEnv` when applicable. Optional `rpc` and `httpsProxyEnv` follow the
+original SF88 workspace configuration. The preset contains an environment name,
+never a wallet key. The receiver supplies its wallet key through that environment
+when executing, or uses its existing local provider.
+
+```sh
+node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
+  --state /private/acquisitions/workspace \
+  --configs /private/acquisitions/buyer-configs \
+  --operator-settings /private/acquisitions/local-operator.json
+```
+
+The settings path is retained and may be omitted on reopen. An existing workspace
+can attach its first local settings file with the same flag. Its selected config
+directory and settings path remain fixed. Changes to the contents of that local
+preset require a new review before preparing a request; already prepared buyers
+keep their original local policy and identity.
+
+1. Choose **Receive merchant request** and upload the original complete file
+   (up to 4 MiB). The workspace retains its exact bytes privately. Uploading that
+   identical file again opens the same retained request.
+2. Inspect the public request, ticket expiry, exact body and ordinary headers.
+   **Download exact body** returns the original bytes, including multipart or
+   binary input. The private request attachment retains the original transfer.
+3. Explicitly choose a supported payment option from its original discovery.
+   Set a total and daily atomic budget. The daily amount must cover the selected
+   request ceiling and fit inside the total and the declared local limits.
+4. Choose **Save request review**, inspect the recipient, asset, network, payer
+   and budgets, then **Prepare local buyer**. This invokes original native
+   handoff import and `initializeWorkspace`, including the original Python
+   spending ledger. It creates a private operator beside the retained inputs.
+5. Choose **Add to acquisition plan**. The ordinary SF88 config appears in the
+   existing source directory as `received-<request-sha256>.json`. Continue with
+   the original save, review and acquisition initialization below. Existing
+   editable plan rows are preserved; an initialized plan starts a new draft.
+
+Preparation does not load a wallet or send a payment. The original buyer owns
+live terms and terminal approval when the acquisition executes. Each received
+stable intent is bound to one local prepared request. The workspace publishes
+the ordinary source config only after native setup is complete, and records the
+ready reference last. Repeating preparation after an interrupted final publication
+adopts that same completed operator and ledger. Incomplete native attempts retain
+their owned input paths; a retry uses a new setup generation. It never rewrites an
+existing operator, request body, ticket or spending ledger.
+
+Received source configs reference the private intake and native operator files
+under this workspace. Keep that workspace and the original source directory at
+their same paths. The acquisition still executes its pinned config snapshot.
+For an intake-owned config, the workspace opens its original native operator in
+accounting mode, checks the source identity and loads its three retained Governor
+keys only into the original buyer child's environment. A missing key file fails
+preflight before an attempt starts; restore local setup and retry the untouched
+operation. Other selected configurations retain their original environment path.
+
 ## Arrange and review a plan
 
 1. Choose **New acquisition plan** and give it a stable plan ID and title.
@@ -151,10 +231,11 @@ plan. Create-only file publication retains byte identity across interrupted and
 concurrent continuations. Existing CLI callers retain their original behavior.
 
 The browser entrypoint is `startRunbookWorkspace({directory,configsDirectory,
-runs,port})` from `workspace.mjs`. It returns `{url,server,model,close}`. The
+operatorSettings,runs,port})` from `workspace.mjs`. It returns `{url,server,model,close}`. The
 existing `buyer-runbook` package alias continues to target `cli.mjs`; the new
 `workspace` subcommand is available through that alias. Include the complete
-buyer-runbook component so `workspace-ui/index.html`, `app.mjs` and `style.css`
+buyer-runbook component so `handoff-intake.mjs`, `workspace-ui/index.html`,
+`app.mjs`, `intake.mjs` and `style.css`
 travel with the model and server. Its original sibling dependencies remain the
 same native buyer and runbook components. There is no new package dependency.
 
@@ -162,3 +243,11 @@ The loopback server checks Host, Origin and browser fetch context. Mutations use
 the current workspace session header and a JSON body. Reports and resource bytes
 are served as attachments. Workspace state, commercial terms and original
 results are private operator files.
+
+The read-only native `inspectOperationHandoff` API supplies the receive page's
+payment choices through the original `prepareReview`. It exposes request and
+ticket metadata without the bearer. Intake mutations share the original runbook
+metadata lease and workspace shutdown queue. `executeRunbook` accepts an optional
+trusted `environmentForOperation(op)` function; it resolves after original input
+preflight and before the durable started record. This callback is code supplied
+by the local workspace, never a manifest field or a received setting.
