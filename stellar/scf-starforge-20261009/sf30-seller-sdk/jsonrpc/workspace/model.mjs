@@ -8,6 +8,8 @@ import { exampleRequest, admitRequest } from '../stellar.mjs';
 import { createStellarRpcApplication } from '../application.mjs';
 import { preparePackage, prepareBuyerReview, startRpcCommand } from '../cli.mjs';
 import { openRpcWorkspaceStore, WorkspaceError, sha256, json, operationId, revisionNumber } from './store.mjs';
+import { readCommerceProfile, commerceProfileView, bindCommerceBuyers, reviewRpcCommerce,
+  readRpcCommerceReview, prepareRpcCommerce, inspectRpcCommerce, openRpcCommerce } from './commerce.mjs';
 
 export { WorkspaceError };
 const TEXT_LIMIT = 131072;
@@ -86,7 +88,8 @@ function changes(before, after, prefix = '') {
 
 /** Host options and environment are fixed at launch; browser drafts contain public declarations. */
 export async function createRpcWorkspace({ directory, create = false, planFile,
-  env = process.env, runtimeOptions = null, allowLoopbackUpstream = false, navigationOrigin = null } = {}) {
+  env = process.env, runtimeOptions = null, commerceProfileFile = null,
+  allowLoopbackUpstream = false, navigationOrigin = null } = {}) {
   if (typeof directory !== 'string' || !directory || resolve(directory) === '/')
     throw new WorkspaceError('PRIVATE_WORKSPACE_DIRECTORY_REQUIRED');
   const root = resolve(directory);
@@ -101,10 +104,11 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
     const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
     initial = { bytes, plan: decodePlan(text), hash: sha256(bytes) };
   }
+  const commerceProfile = await readCommerceProfile(commerceProfileFile, { navigationOrigin });
   const store = await openRpcWorkspaceStore(root);
-  let merchant = null, queue = Promise.resolve(), queued = 0, closing = false, closePromise;
+  let merchant = null, commerceRuntime = null, queue = Promise.resolve(), queued = 0, closing = false, closePromise;
   try {
-    for (const name of ['actions', 'availability', 'history']) {
+    for (const name of ['actions', 'availability', 'history', 'commerce']) {
       const path = join(root, name);
       await mkdir(path, { recursive: true, mode: 0o700 });
       if (await realpath(path) !== path || !(await lstat(path)).isDirectory())
@@ -162,7 +166,36 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
     return { ...saved, launchMode: runtimeOptions?.facilitator ? 'NATIVE' : runtimeOptions?.['challenge-only'] ? 'CHALLENGE' : 'OFFLINE',
       ...(merchant ? { seller: merchant.url, docs: merchant.url + '/_seller/docs',
         operations: merchant.operations.url, availability: merchant.operations.availabilityControlUrl,
-        snapshot: merchant.application.snapshot() } : {}) };
+        snapshot: merchant.application.snapshot() } : {}),
+      ...(commerceRuntime ? { ...commerceRuntime.snapshot(), kind: 'COMMERCE' } : {}) };
+  }
+  function inputFields(input, names) {
+    if (!plain(input) || Object.keys(input).some(key => !names.includes(key)))
+      throw new WorkspaceError('RPC_COMMERCE_ACTION_INVALID');
+  }
+  async function boundBuyers(input) {
+    const { saved, review } = selected(input), { record, folder } = await retainedPackage(input.packageId);
+    if (record.revision !== saved.revision) throw new WorkspaceError('PACKAGE_REVISION_MISMATCH', 409);
+    if (!Array.isArray(input.buyerActionIds) || input.buyerActionIds.length < 1 || input.buyerActionIds.length > 64)
+      throw new WorkspaceError('RPC_COMMERCE_BUYERS_REQUIRED');
+    const actions = input.buyerActionIds.map(id => store.action(operationId(id)));
+    return bindCommerceBuyers({ root, saved, review, record, folder, actions });
+  }
+  async function preparedCommerce(id) {
+    const record = store.getCommerce(operationId(id));
+    if (!record) throw new WorkspaceError('RPC_COMMERCE_PREPARATION_NOT_FOUND', 404);
+    const { source, buyers } = record.binding;
+    const bound = await boundBuyers({ revision: source.revision, reviewId: source.reviewId,
+      packageId: source.packageId, buyerActionIds: buyers.map(item => item.buyerActionId) });
+    const result = await inspectRpcCommerce({ root, workspaceId: store.workspaceId,
+      record, bound, profile: commerceProfile, allowLoopbackUpstream });
+    return { record, bound, result };
+  }
+  async function clearClosedCommerce() {
+    if (!commerceRuntime) return;
+    if (!['STOPPED', 'FAILED'].includes(commerceRuntime.state))
+      throw new WorkspaceError('MERCHANT_ALREADY_RUNNING', 409, 'Drain the current commerce session before opening another merchant.');
+    await commerceRuntime.close(); commerceRuntime = null;
   }
   async function action(input, kind, request, fn) {
     const started = store.beginAction({ id: input.operationId, kind, revision: input.revision, request });
@@ -177,7 +210,8 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
       return { workspaceId: store.workspaceId, directory: root, latest, drafts: store.drafts(),
         packages: store.packages(), actions: store.actions(), runtime: runtime(),
         review: compiledReview(latest), methods: METHODS, limits: LIMITS, networks: Object.keys(NETWORKS),
-        runtimeConfigured: runtimeOptions !== null, closing, queued };
+        runtimeConfigured: runtimeOptions !== null, commerceProfile: commerceProfileView(commerceProfile),
+        commercePreparations: store.commercePreparations(), closing, queued };
     },
     review({ revision }) { return compiledReview(draft(revision)); },
     compare({ before, after }) {
@@ -250,6 +284,80 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
         });
       });
     },
+    commerceBuyers(input) { return store.commerceBuyers(input); },
+    commercePreparations(input) { return store.commercePreparations(input); },
+    commerceReview(input) {
+      return enqueue(async () => {
+        inputFields(input, ['operationId', 'revision', 'reviewId', 'packageId', 'buyerActionIds', 'existingId']);
+        const bound = await boundBuyers(input), buyerActionIds = bound.buyers.map(item => item.buyerActionId);
+        return action(input, 'commerce-review', { reviewId: bound.source.reviewId,
+          packageId: bound.source.packageId, buyerActionIds, existingId: input.existingId ?? null }, () =>
+          reviewRpcCommerce({ root, workspaceId: store.workspaceId, id: input.operationId,
+            profile: commerceProfile, bound, existingId: input.existingId ?? null, allowLoopbackUpstream }));
+      });
+    },
+    commercePrepare(input) {
+      return enqueue(async () => {
+        inputFields(input, ['operationId', 'revision', 'reviewId', 'commerceReviewId', 'reviewSha256']);
+        const { saved, review } = selected(input), reviewed = store.action(operationId(input.commerceReviewId));
+        if (reviewed?.kind !== 'commerce-review' || reviewed.state !== 'COMPLETE' ||
+          reviewed.revision !== saved.revision || reviewed.request.reviewId !== review.reviewId ||
+          reviewed.result.reviewSha256 !== input.reviewSha256)
+          throw new WorkspaceError('RPC_COMMERCE_REVIEW_CHANGED', 409);
+        const bound = await boundBuyers({ ...reviewed.request, revision: saved.revision });
+        return action(input, 'commerce-prepare', { commerceReviewId: reviewed.id, reviewSha256: input.reviewSha256 }, async () => {
+          const prior = store.getCommerce(reviewed.id);
+          if (prior?.state === 'READY') { await preparedCommerce(prior.id); return prior; }
+          const retained = await readRpcCommerceReview({ root, workspaceId: store.workspaceId, reviewAction: reviewed,
+            expectedReviewSha256: input.reviewSha256, bound, profile: commerceProfile, allowLoopbackUpstream });
+          store.reserveCommerce({ id: reviewed.id, revision: saved.revision, packageId: bound.source.packageId,
+            directory: retained.preparedDirectory, binding: retained.binding, reviewSha256: retained.reviewSha256 });
+          try {
+            const result = await prepareRpcCommerce({ retained, bound, allowLoopbackUpstream, environment: { ...env } });
+            return store.finishCommerce(reviewed.id, result);
+          } catch (cause) { store.finishCommerce(reviewed.id, null, codeOf(cause)); throw cause; }
+        });
+      });
+    },
+    commerceInspect(input) {
+      return enqueue(async () => {
+        inputFields(input, ['operationId', 'revision', 'reviewId', 'preparationId']);
+        const { saved, review } = selected(input), retained = await preparedCommerce(input.preparationId);
+        if (retained.record.revision !== saved.revision || retained.record.binding.source.reviewId !== review.reviewId)
+          throw new WorkspaceError('RPC_COMMERCE_PREPARATION_REVIEW_MISMATCH', 409);
+        return action(input, 'commerce-inspect', { preparationId: retained.record.id }, async () => retained.result);
+      });
+    },
+    commerceOpen(input) {
+      return enqueue(async () => {
+        inputFields(input, ['operationId', 'revision', 'reviewId', 'preparationId']);
+        if (!commerceProfile) throw new WorkspaceError('RPC_COMMERCE_PROFILE_REQUIRED', 409);
+        const { saved, review } = selected(input), retained = await preparedCommerce(input.preparationId);
+        if (retained.record.revision !== saved.revision || retained.record.binding.source.reviewId !== review.reviewId)
+          throw new WorkspaceError('RPC_COMMERCE_PREPARATION_REVIEW_MISMATCH', 409);
+        const prior = store.action(input.operationId);
+        if (prior?.kind === 'commerce-open' && prior.request.preparationId === retained.record.id)
+          return action(input, 'commerce-open', { preparationId: retained.record.id }, async () => null);
+        if (merchant) throw new WorkspaceError('MERCHANT_ALREADY_RUNNING', 409, 'Drain the current merchant before opening commerce.');
+        await clearClosedCommerce();
+        return action(input, 'commerce-open', { preparationId: retained.record.id }, async () => {
+          const instanceId = randomUUID(), startedAt = new Date().toISOString(), base = {
+            instanceId, kind: 'COMMERCE', preparationId: retained.record.id, packageId: retained.record.packageId,
+            revision: retained.record.revision, startedAt };
+          store.setRuntime({ ...base, state: 'STARTING' });
+          try {
+            commerceRuntime = await openRpcCommerce({ directory: retained.record.directory, profile: commerceProfile,
+              environment: env, onState(state, extra) {
+                if (store.runtime().instanceId === instanceId) store.setRuntime({ ...base, state, ...extra,
+                  ...(['STOPPED', 'FAILED'].includes(state) ? { endedAt: new Date().toISOString() } : {}) });
+              } });
+            return store.setRuntime({ ...base, state: 'RUNNING', mode: commerceRuntime.session.seller.mode });
+          } catch (cause) {
+            store.setRuntime({ ...base, state: 'FAILED', endedAt: new Date().toISOString(), error: codeOf(cause) }); throw cause;
+          }
+        });
+      });
+    },
     start(input) {
       return enqueue(async () => {
         if (!runtimeOptions) throw new WorkspaceError('RUNTIME_NOT_CONFIGURED', 409,
@@ -259,6 +367,7 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
         const prior = store.action(input.operationId);
         if (merchant && (!prior || prior.result?.instanceId !== store.runtime().instanceId))
           throw new WorkspaceError('MERCHANT_ALREADY_RUNNING', 409, 'Drain the current merchant before starting another version.');
+        await clearClosedCommerce();
         return action(input, 'start', { reviewId: review.reviewId, packageId: record.id }, async () => {
           const instanceId = randomUUID(), startedAt = new Date().toISOString();
           store.setRuntime({ state: 'STARTING', instanceId, packageId: record.id, revision: record.revision, startedAt });
@@ -286,9 +395,10 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
         const current = store.runtime();
         if (typeof instanceId !== 'string' || current.instanceId !== instanceId)
           throw new WorkspaceError('MERCHANT_INSTANCE_CHANGED', 409);
-        if (!merchant) return runtime();
+        if (!merchant && !commerceRuntime) return runtime();
         store.setRuntime({ ...current, state: 'STOPPING' });
-        try { await merchant.close(); merchant = null;
+        try { if (commerceRuntime) { await commerceRuntime.close(); commerceRuntime = null; }
+          if (merchant) { await merchant.close(); merchant = null; }
           store.setRuntime({ ...current, state: 'STOPPED', endedAt: new Date().toISOString() }); }
         catch (cause) { store.setRuntime({ ...current, state: 'FAILED', endedAt: new Date().toISOString(), error: codeOf(cause) }); throw cause; }
         return runtime();
@@ -311,6 +421,14 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
         return { bytes: Buffer.from(json(kind === 'plan' ? saved.plan : compiledReview(saved))), name: kind + '-r' + saved.revision + '.json' };
       }
       if (kind === 'action') return { bytes: Buffer.from(json(model.action(id))), name: 'rpc-action-' + id + '.json' };
+      if (kind === 'commerce') {
+        const action = model.action(id);
+        if (action.kind !== 'commerce-review' || action.state !== 'COMPLETE')
+          throw new WorkspaceError('RPC_COMMERCE_REVIEW_NOT_READY', 409);
+        const bytes = await privateFile(join(root, 'commerce', action.id, 'handoff.json'));
+        if (sha256(bytes) !== action.result.reviewSha256) throw new WorkspaceError('RPC_COMMERCE_REVIEW_CHANGED', 409);
+        return { bytes, name: 'rpc-commerce-' + id + '.json' };
+      }
       let folder, files;
       if (kind === 'package') {
         const retained = await retainedPackage(id); folder = retained.folder; files = retained.record.summary.files;
@@ -332,10 +450,11 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
       return closePromise = (async () => {
         await queue;
         try {
-          if (merchant) {
+          if (merchant || commerceRuntime) {
             const current = store.runtime();
             store.setRuntime({ ...current, state: 'STOPPING' });
-            await merchant.close(); merchant = null;
+            if (commerceRuntime) { await commerceRuntime.close(); commerceRuntime = null; }
+            if (merchant) { await merchant.close(); merchant = null; }
             store.setRuntime({ ...current, state: 'STOPPED', endedAt: new Date().toISOString() });
           }
         } finally { store.close(); }
@@ -344,3 +463,4 @@ export async function createRpcWorkspace({ directory, create = false, planFile,
   };
   return model;
 }
+
