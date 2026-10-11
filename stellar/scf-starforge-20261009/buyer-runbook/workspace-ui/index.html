@@ -12,6 +12,7 @@
   <div class="layout">
     <aside class="sidebar" aria-label="Runbook navigation">
       <button id="new-draft" class="primary full">New acquisition plan</button>
+      <button id="open-clients" class="request-entry full">Receive customer SDK <span id="client-count" class="badge">0</span></button>
       <button id="open-requests" class="request-entry full">Receive merchant request <span id="request-count" class="badge">0</span></button>
       <button id="open-paid-files" class="request-entry full">Receive paid file order <span id="file-order-count" class="badge">0</span></button>
       <button id="open-recovery" class="request-entry full">Back up acquisitions</button>
@@ -21,7 +22,55 @@
     </aside>
     <main id="main" tabindex="-1">
       <div id="notice" role="status" aria-live="polite" hidden></div>
-      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-clients">Receive customer SDK</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="clients-panel" hidden>
+        <div class="page-heading"><div><p class="eyebrow">CUSTOMER SDK RECEIVING</p><h1>Receive an API and prepare a request</h1><p class="muted">Keep the merchant’s original SDK, review its operations and payment options, then add your selected request to an acquisition.</p></div></div>
+        <form id="client-upload-form" class="panel">
+          <label>Original customer SDK files<input id="client-upload" type="file" multiple required></label>
+          <p class="muted">Extract the merchant’s archive and select client-export.json plus its five named files. For an interrupted upload, select the missing files again. Existing bytes remain unchanged.</p>
+          <button id="upload-client" class="primary" type="submit">Receive original files</button><p id="client-upload-progress" class="muted" role="status"></p>
+        </form>
+        <p id="client-errors" class="muted" role="status"></p>
+        <section><div class="section-heading"><h2>Retained customer SDKs</h2></div><div id="client-list" class="received-requests"></div></section>
+        <article id="client-detail" hidden>
+          <div class="section-heading"><h2 id="client-title" class="wrap"></h2><span id="client-state" class="badge"></span></div>
+          <dl id="client-summary" class="detail-grid"></dl>
+          <details class="panel"><summary>Original files and completion receipt</summary><p class="muted">Each download is checked against this retained receipt. Source modules stay as files in this receiving workspace.</p><div id="client-files" class="table-wrap"></div></details>
+          <section id="client-operation-area" hidden>
+            <p id="client-origin-note" class="muted" hidden></p>
+            <label>Merchant operation<select id="client-operation"><option value="">Choose an operation</option></select></label>
+            <div id="client-operation-detail" hidden>
+              <h3>Original payment options</h3><p class="muted">Amounts are exact atomic strings. Scroll the table to inspect every asset, recipient and option detail.</p><div id="client-options" class="table-wrap"></div>
+              <details class="panel"><summary>Complete request parameters and body schema</summary><pre id="client-schema"></pre></details>
+              <form id="client-request-form" class="panel">
+                <h3>Configure this request</h3>
+                <label>Stable intent ID<input id="client-intent" maxlength="128" pattern="[A-Za-z0-9._:-]{1,128}" required autocomplete="off"></label>
+                <p class="muted">Use one ID for this intended operation. Reopening a retained request preserves its original identity and buyer.</p>
+                <div id="client-path-inputs" class="fields two"></div>
+                <label>Query parameters · JSON object<textarea id="client-query" rows="4" spellcheck="false">{}</textarea></label>
+                <p class="muted">Use string values, or arrays of strings for repeated parameters. A decimal such as "0.1234000" keeps its exact text.</p>
+                <label id="client-omit-label" class="check"><input id="client-omit-body" type="checkbox">Omit this optional request body</label>
+                <div id="client-body-area">
+                  <div id="client-json-area"><label>Exact JSON body<textarea id="client-json-body" rows="9" spellcheck="false"></textarea></label><p class="muted">This text becomes the retained UTF-8 request body without numeric reserialization.</p></div>
+                  <div id="client-multipart-area" hidden>
+                    <label>Multipart input<select id="client-form-mode"><option value="fields">Fields and selected files</option><option value="wire">Already encoded body</option></select></label>
+                    <div id="client-form-builder">
+                      <label>Form fields · JSON object<textarea id="client-form-fields" rows="5" spellcheck="false">{}</textarea></label>
+                      <p class="muted">Use arrays for repeated values. Select each file’s declared field below. The original form encoder prepares the body once and retains it for retries.</p>
+                      <div id="client-form-files"></div><button id="client-add-file" class="quiet" type="button">Add a file part</button>
+                    </div>
+                    <div id="client-form-wire" hidden><label>Exact encoded multipart body<input id="client-multipart-file" type="file"></label><label>Original Content-Type including boundary<input id="client-multipart-type" maxlength="256" placeholder="multipart/form-data; boundary=…"></label></div>
+                  </div>
+                </div>
+                <p id="client-body-limit" class="muted"></p>
+                <details id="client-ticket-area"><summary>Operation ticket supplied by the merchant</summary><p class="muted">Attach the original ticket only when this merchant operation uses one. Ordinary API requests do not acquire a ticket here.</p><label>Original operation-ticket.json<input id="client-ticket" type="file" accept=".json,application/json"></label><label>Original ticket header, if specified (lowercase)<input id="client-ticket-header" maxlength="128" placeholder="Original buyer default"></label></details>
+                <button id="compose-client-request" class="primary" type="submit">Retain request and review payment</button>
+              </form>
+            </div>
+          </section>
+          <section><div class="section-heading"><h3>Requests prepared from this SDK</h3></div><div id="client-request-list" class="received-requests"></div></section>
+        </article>
+      </section>
       <section id="paid-files-panel" hidden>
         <div class="page-heading"><div><p class="eyebrow">CUSTOMER FILE ORDERS</p><h1>Receive and acquire a file</h1><p class="muted">Open the merchant’s file handoff, prepare your local buyer, then follow the order through the existing acquisition plan.</p></div></div>
         <form id="file-upload-form" class="panel"><label>Merchant file-order handoff<input id="file-handoff-upload" type="file" accept=".json,.handoff,application/json" required></label><p class="muted">Choose the original purchase handoff from the merchant, up to 128 KiB. Your claim token stays in the environment of the process running this workspace.</p><button id="upload-file-order" class="primary" type="submit">Upload and inspect order</button></form>
@@ -43,7 +92,7 @@
       </section>
       <section id="requests-panel" hidden>
         <div class="page-heading"><div><p class="eyebrow">MERCHANT REQUESTS</p><h1>Receive and prepare a request</h1><p class="muted">Retain the merchant’s exact request, choose its payment option, and prepare a buyer on this machine.</p></div></div>
-        <form id="request-upload-form" class="panel"><label>Private merchant request file<input id="request-upload" type="file" accept=".json,.handoff,application/json" required></label><p class="muted">Use the complete buyer request downloaded by the merchant. Keep this file private; it contains the operation ticket. <span id="request-size-limit"></span></p><button id="upload-request" class="primary" type="submit">Upload and inspect request</button></form>
+        <form id="request-upload-form" class="panel"><label>Private merchant request file<input id="request-upload" type="file" accept=".json,.handoff,application/json" required></label><p class="muted">Use the complete buyer request downloaded by the merchant or retained from a customer SDK. Keep this file private; it can contain request bytes and an operation ticket. <span id="request-size-limit"></span></p><button id="upload-request" class="primary" type="submit">Upload and inspect request</button></form>
         <div id="request-operator" class="panel"></div>
         <p id="request-errors" class="muted" role="status"></p>
         <section><div class="section-heading"><h2>Retained requests</h2></div><div id="received-request-list" class="received-requests"></div></section>
@@ -56,6 +105,7 @@
           <form id="request-review-form" class="panel">
             <h3>Payment option and local budget</h3><p class="muted">These limits apply to this prepared request. The buyer still reviews live terms and asks for approval in the operator terminal.</p>
             <label>Merchant payment option<select id="request-option" required><option value="">Choose a payment option</option></select></label>
+            <div id="request-option-terms" class="table-wrap"></div>
             <div class="fields two request-budgets"><label>Total budget · atomic<input id="request-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="request-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
             <button type="submit">Save request review</button><p id="request-review-changed" class="muted" hidden>Your choices changed. Save a new review before preparing the buyer.</p>
           </form>

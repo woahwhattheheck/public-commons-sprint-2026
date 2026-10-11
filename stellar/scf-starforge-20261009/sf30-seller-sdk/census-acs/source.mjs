@@ -72,8 +72,11 @@ export async function readCensusSource(sourceFile, { verifyFiles = true } = {}) 
   sourceFile = resolve(sourceFile);
   const original = await readPrivate(sourceFile, 262144), declaration = json(original);
   if (!exactly(declaration, ['schema', 'capture', 'captureSha256']) || declaration.schema !== SOURCE_SCHEMA ||
-      ![MANIFEST_PATH, 'capture/' + MANIFEST_PATH].includes(declaration.capture) || !HASH.test(declaration.captureSha256)) fail('CENSUS_SOURCE_INVALID');
-  const root = declaration.capture.startsWith('capture/') ? join(dirname(sourceFile), 'capture') : dirname(sourceFile);
+      typeof declaration.capture !== 'string' || !declaration.capture.endsWith(MANIFEST_PATH) || !HASH.test(declaration.captureSha256)) fail('CENSUS_SOURCE_INVALID');
+  const prefix = declaration.capture.slice(0, -MANIFEST_PATH.length);
+  if (prefix && !prefix.endsWith('/')) fail('CENSUS_CAPTURE_PATH_INVALID');
+  if (prefix) safeMember(prefix.slice(0, -1));
+  const root = resolve(dirname(sourceFile), prefix || '.');
   if (await realpath(root) !== root) fail('CENSUS_SOURCE_DIRECTORY_SYMLINK');
   const manifestPath = await memberPath(root, MANIFEST_PATH);
   const manifestBytes = await readPrivate(manifestPath, 8 * 1024 * 1024);

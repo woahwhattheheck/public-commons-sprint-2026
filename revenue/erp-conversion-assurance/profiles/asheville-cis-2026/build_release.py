@@ -23,6 +23,7 @@ SOURCE_FILES = [
     "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/build_release.py",
     "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/cli.mjs",
     "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/collections.mjs",
+    "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/continue-practice.mjs",
     "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/engine.mjs",
     "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/extension.mjs",
     "revenue/erp-conversion-assurance/profiles/asheville-cis-2026/ezreader-contracts.json",
