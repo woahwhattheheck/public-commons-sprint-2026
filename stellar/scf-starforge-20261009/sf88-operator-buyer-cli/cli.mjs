@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
 import { buyerTransport, config, operation, responseFile, bytes, need } from './config.mjs';
-import { selectTestnetEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
+import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
@@ -65,7 +65,7 @@ async function main(args) {
     const workspace = await openWorkspace(args.slice(1), {execute:args[0] === '--execute-workspace'});
     c = workspace.config;
     operatorEnvironment = workspace.operatorEnvironment;
-    evidenceRpcEndpoint = selectTestnetEvidenceEndpoint(workspace.manifest.signer.rpcUrl);
+    evidenceRpcEndpoint = selectStellarEvidenceEndpoint(workspace.manifest.network,workspace.manifest.signer.rpcUrl);
     if (args[0] === '--review-workspace') return review(c);
   } else {
   need((args.length === 3 || args.length === 5 && args[3] === '--response-out') &&

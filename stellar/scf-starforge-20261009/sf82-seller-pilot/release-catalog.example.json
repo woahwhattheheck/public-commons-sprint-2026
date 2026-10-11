@@ -1,0 +1,7 @@
+{
+  "schema": "stellar-forge.seller-release-catalog.v1",
+  "directory": "/private/merchant/catalog",
+  "sellerId": "merchant-1",
+  "sourceURL": "https://merchant.example/_seller/offers",
+  "keyFile": "/private/merchant/existing-seller-ed25519.pem"
+}

@@ -7,6 +7,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { ethers } from 'ethers';
+import { performance } from 'node:perf_hooks';
+import { createChainSnapshotReader, ChainSnapshotError } from './lib/chain-snapshot.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const MODE = process.env.CP_MODE === 'public' ? 'public' : 'local';
@@ -100,6 +102,9 @@ async function chainNow() { return BigInt((await provider.getBlock('latest')).ti
 async function readCampaign(id, now) {
   if (now === undefined) now = await chainNow();
   const c = await pool.getCampaign(BigInt(id));
+  return campaignView(id, c, now);
+}
+function campaignView(id, c, now) {
   if (c.sponsor === ethers.ZeroAddress) return null;
   const meta = db.campaigns[String(id)];
   const ok = !!meta && meta.metaHash === c.metaHash;
@@ -118,6 +123,9 @@ async function readCampaign(id, now) {
 }
 async function readSubmission(id) {
   const s = await pool.getSubmission(BigInt(id));
+  return submissionView(id, s);
+}
+function submissionView(id, s) {
   if (s.status === 0n) return null;
   const meta = db.submissions[String(id)];
   const ok = !!meta && meta.contentHash === s.contentHash;
@@ -127,14 +135,6 @@ async function readSubmission(id) {
     status: SUB_STATUS[Number(s.status)] || 'unknown'
   };
 }
-async function readLedger() {
-  const logs = await pool.queryFilter('*', Number(dep.deployBlock || 0));
-  return logs.filter((l) => l.fragment).map((l) => ({
-    id: `${l.transactionHash}:${l.index}`, txHash: l.transactionHash, logIndex: l.index, blockNumber: l.blockNumber, event: l.eventName,
-    args: Object.fromEntries(l.fragment.inputs.map((inp, i) => [inp.name, String(l.args[i])]))
-  }));
-}
-
 // ---------- transaction journal ----------
 const chainReason = (e) => (e && e.revert && e.revert.args && e.revert.args[0]) || (e && e.reason) || (e && e.shortMessage) || 'execution reverted';
 function events(r) {
@@ -336,35 +336,37 @@ async function hReconcile(body) {
 }
 
 let asset = null;
+const snapshotReader = createChainSnapshotReader({ provider, pool, token, deployment: dep, getActors: () => actors });
 async function buildState() {
-  const blk = await provider.getBlock('latest');
-  const now = BigInt(blk.timestamp);
-  const cc = Number(await pool.campaignCount()), sc = Number(await pool.submissionCount());
-  const ledger = await readLedger();
-  const txBySub = {}, txByCampaign = {};
-  for (const e of ledger) {
-    if (e.args.submissionId) (txBySub[e.args.submissionId] ||= {})[e.event] = e.txHash;
-    else if (e.args.campaignId) ((txByCampaign[e.args.campaignId] ||= {})[e.event] ||= []).push(e.txHash);
-  }
-  const campaigns = [];
-  for (let i = cc; i >= 1; i--) { const c = await readCampaign(String(i), now); c.txs = txByCampaign[c.id] || {}; campaigns.push(c); }
-  const submissions = [];
-  for (let i = sc; i >= 1; i--) { const s = await readSubmission(String(i)); s.txs = txBySub[s.id] || {}; submissions.push(s); }
-  let balances = null;
-  if (actors) { balances = {}; for (const [k, a] of Object.entries(actors)) balances[k] = (await token.balanceOf(a)).toString(); }
-  const operations = Object.entries(db.ops).filter(([, o]) => o.status !== 'done').map(([id, o]) => ({
-    operationId: id, kind: o.kind, status: o.sendingStep ? 'unknown_send_state' : o.status, txHashes: o.txs.map((t) => t.hash), error: o.error || null
-  }));
-  return {
-    mode: MODE,
-    network: { name: dep.network || (MODE === 'local' ? 'Local Ganache EVM (development only)' : 'unconfigured'), chainId: String(dep.chainId) },
-    asset, decimals: asset.decimals,
-    contracts: { pool: dep.poolAddress, token: dep.tokenAddress },
-    actors, actorNotice: actors ? 'Local demo actors (unlocked Ganache accounts). Not authentication.' : null,
-    balances, poolBalanceAtomic: (await token.balanceOf(dep.poolAddress)).toString(),
-    blockNumber: blk.number, blockTime: new Date(Number(now) * 1000).toISOString(),
-    campaigns, submissions, ledger, operations
-  };
+  const snapshot = await snapshotReader.read();
+  const now = BigInt(snapshot.block.timestamp);
+  const campaigns = snapshot.campaigns.map(({ id, value }) => {
+    const campaign = campaignView(id, value, now);
+    if (!campaign) throw new ChainSnapshotError('chain_snapshot_unavailable', 'A campaign was missing from the selected block');
+    return { ...campaign, txs: snapshot.txByCampaign[id] || {} };
+  });
+  const submissions = snapshot.submissions.map(({ id, value }) => {
+    const submission = submissionView(id, value);
+    if (!submission) throw new ChainSnapshotError('chain_snapshot_unavailable', 'A submission was missing from the selected block');
+    return { ...submission, txs: snapshot.txBySub[id] || {} };
+  });
+  // Local reconciliation can attach metadata without advancing the chain. Join
+  // it and the current operation journal on every response, outside the cache.
+  const operations = Object.entries(db.ops).filter(([, op]) => op.status !== 'done').map(([id, op]) => ({
+    operationId: id, kind: op.kind, status: op.sendingStep ? 'unknown_send_state' : op.status,
+    txHashes: op.txs.map(tx => tx.hash), error: op.error || null
+  }));
+  return {
+    mode: MODE,
+    network: { name: dep.network || (MODE === 'local' ? 'Local Ganache EVM (development only)' : 'unconfigured'), chainId: String(dep.chainId) },
+    asset, decimals: asset.decimals,
+    contracts: { pool: dep.poolAddress, token: dep.tokenAddress },
+    actors, actorNotice: actors ? 'Local demo actors (unlocked Ganache accounts). Not authentication.' : null,
+    balances: snapshot.balances, poolBalanceAtomic: snapshot.poolBalanceAtomic,
+    blockNumber: snapshot.block.number, blockHash: snapshot.block.hash,
+    blockTime: new Date(Number(now) * 1000).toISOString(),
+    campaigns, submissions, ledger: snapshot.ledger, operations
+  };
 }
 
 const routes = [
@@ -430,12 +432,19 @@ const server = http.createServer(async (req, res) => {
       if (!rt) fail(404, 'not_found');
       const body = req.method === 'POST' ? await readBody(req) : {};
       const m = url.pathname.match(rt[1]);
+      const started = performance.now();
       const out = req.method === 'POST' ? await serial(() => rt[2](m, body)) : await rt[2](m, body);
+      if (req.method === 'GET' && out?.blockHash) {
+        res.setHeader('Server-Timing', `state;dur=${(performance.now() - started).toFixed(2)}`);
+        res.setHeader('X-CreatorPool-Block', String(out.blockNumber));
+        res.setHeader('X-CreatorPool-Block-Hash', out.blockHash);
+      }
       return send(res, out && out.status === 'wallet_signature_required' ? 202 : 200, out);
     }
     return serveStatic(url.pathname, res, req.method);
   } catch (e) {
     if (e instanceof HttpError) return send(res, e.status, { error: e.code, detail: e.detail ?? null });
+    if (e instanceof ChainSnapshotError) return send(res, 503, { error: e.code, detail: e.message });
     console.error('internal error:', (e && (e.shortMessage || e.code)) || 'unknown');
     return send(res, 500, { error: 'internal_error' });
   }

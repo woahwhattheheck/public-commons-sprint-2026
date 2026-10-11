@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Object downloads · Stellar Forge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">STELLAR FORGE / BUYER</p><h1>Object downloads</h1></div>
+    <div class="connection"><span id="connection">Connecting</span><span class="local">LOCAL WORKSPACE</span></div>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <main class="layout">
+    <aside class="sidebar">
+      <div class="section-heading"><h2>Downloads</h2><button id="new-download" class="small">New</button></div>
+      <div id="session-list" class="session-list" aria-label="Saved downloads"></div>
+      <button id="refresh-list" class="quiet wide">Refresh saved sessions</button>
+      <p class="sidebar-note">Sessions and completed files remain available when you reopen this workspace.</p>
+    </aside>
+    <div class="content">
+      <section id="setup" class="panel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">NEW DOWNLOAD</p><h2>Select a merchant object</h2></div><button id="close-setup" class="quiet small">Close</button></div>
+        <p class="intro">Choose a configured product, review its complete byte plan and set the maximum allocation for this download.</p>
+        <form id="setup-form">
+          <label class="full">Merchant product<select id="product" required></select></label>
+          <div id="product-summary" class="product-summary"></div>
+          <div class="form-grid">
+            <label>Session name<input id="session-name" maxlength="64" pattern="[A-Za-z0-9][A-Za-z0-9_\-]{0,63}" autocomplete="off" required><small>Letters, numbers, hyphens and underscores.</small></label>
+            <label>Bytes per request<input id="chunk-bytes" type="number" min="1" step="1" required></label>
+            <label>Whole-download cap<input id="total-cap" type="text" inputmode="numeric" pattern="[0-9]+" required><small>Atomic units of the selected asset.</small></label>
+          </div>
+          <button id="review-selection" class="primary" type="submit">Review download plan</button>
+        </form>
+        <section id="selection-review" class="review" hidden>
+          <div class="section-heading"><h3>Reviewed download plan</h3><span class="badge">OFFLINE SETUP</span></div>
+          <dl id="review-terms" class="detail-grid"></dl>
+          <p class="note">Creating a session saves the reviewed plan. Each paid request receives its original approval prompt in the terminal when you start the download.</p>
+          <button id="create-session" class="primary">Create this session</button>
+        </section>
+      </section>
+      <section id="empty" class="empty panel">
+        <p class="eyebrow">DOWNLOAD WORKSPACE</p><h2>Your file, from selection to delivery</h2>
+        <p>Select a saved download or start a new one. Review the merchant's object and native payment terms, retain each completed part, and assemble the exact file.</p>
+        <button id="empty-new" class="primary">New download</button>
+      </section>
+      <section id="session" hidden>
+        <div class="session-header"><div><p class="eyebrow" id="session-id"></p><h2 id="session-title"></h2><p id="session-source" class="source-url"></p></div><span id="session-status" class="badge"></span></div>
+        <div class="metrics">
+          <div><span>Verified parts</span><strong id="parts-value">—</strong></div>
+          <div><span>Delivered bytes</span><strong id="bytes-value">—</strong></div>
+          <div><span>Whole-download cap</span><strong id="cap-value">—</strong><small>Atomic units</small></div>
+          <div><span>Attempt allocations</span><strong id="allocated-value">—</strong><small>Maximum caps, by original attempt</small></div>
+        </div>
+        <div class="progress-track"><div id="progress-bar"></div></div>
+        <p id="session-explanation" class="session-explanation"></p>
+        <div class="actions">
+          <button id="run" class="primary">Start download</button>
+          <button id="stop">Stop download</button>
+          <button id="recover">Recover saved results</button>
+          <button id="refresh">Refresh and verify</button>
+        </div>
+        <section class="panel terms-panel">
+          <details><summary>Selected object and payment terms</summary><dl id="session-terms" class="detail-grid"></dl></details>
+        </section>
+        <section class="panel delivery-panel">
+          <div class="section-heading"><div><p class="eyebrow">COMPLETE FILE</p><h3>Assemble and download</h3></div><span id="assembly-status" class="muted"></span></div>
+          <p id="assembly-description"></p>
+          <div id="assembly-digest" class="digest" hidden></div>
+          <div class="actions"><button id="assemble" class="primary">Assemble file</button><button id="download">Download completed file</button></div>
+        </section>
+        <section class="panel chunks-panel">
+          <div class="section-heading"><h3>Request history</h3><span id="last-inspection" class="muted"></span></div>
+          <div class="filters"><label>Find a part<input id="chunk-query" type="search" placeholder="Part, offset, intent or digest" maxlength="160"></label><label>State<select id="chunk-filter"><option value="all">All states</option><option value="VERIFIED">Verified</option><option value="QUEUED">Queued</option><option value="RECONCILIATION_REQUIRED">Needs reconciliation</option></select></label></div>
+          <div class="table-scroll"><table><thead><tr><th>Part</th><th>Byte range</th><th>State</th><th>Original outcome</th><th>SHA-256 / detail</th></tr></thead><tbody id="chunk-rows"></tbody></table></div>
+          <div class="pagination"><span id="page-label"></span><div><button id="previous" class="small">Previous</button><button id="next" class="small">Next</button></div></div>
+        </section>
+        <div class="exports"><span>Keep an original record</span><button id="export-html" class="quiet">Download HTML report</button><button id="export-json" class="quiet">Download JSON</button></div>
+      </section>
+    </div>
+  </main>
+  <dialog id="confirmation">
+    <form method="dialog"><h2 id="confirmation-title"></h2><p id="confirmation-copy"></p><dl id="confirmation-details" class="detail-grid"></dl><p class="note" id="confirmation-note"></p><div class="actions"><button id="confirmation-cancel" type="button">Cancel</button><button id="confirmation-accept" type="button" class="primary">Continue</button></div></form>
+  </dialog>
+</body>
+</html>

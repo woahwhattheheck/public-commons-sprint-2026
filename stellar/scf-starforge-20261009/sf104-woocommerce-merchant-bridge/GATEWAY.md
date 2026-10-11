@@ -29,10 +29,35 @@ HPOS use the same Woo order APIs. The order coordination lock uses MySQL or
 MariaDB `GET_LOCK` on the existing WordPress connection; no background lock
 service or additional database is required.
 
+The plugin requires PHP 8.0 or later. The complete classic checkout, native
+payment recovery, Woo download release and Store API checkout paths have been
+exercised with WordPress 7.1.3, WooCommerce 11.2.1, PHP 8.3.6 and MariaDB 10.11.14
+([installed runtime outcome, 2026-10-11](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791736569280039)).
+Use the PHP version supported by the installed WooCommerce release and a
+database connection that implements the named locks above.
+
 Retain the merchant's existing `SF98_WEBHOOK_SECRET` in `wp-config.php` and the
 same private value in the seller/delivery process environment. It authenticates
 both the original settlement notice and the new internal admission request.
 WordPress and the seller must have their actual HTTPS origins configured.
+
+Enable pretty permalinks in **Settings → Permalinks** and configure the web
+server's WordPress rewrites so the configured `/wp-json/` endpoints reach
+WordPress. A fresh installation using plain permalinks does not serve those
+paths. After activation and secret configuration, this request checks the
+actual admission route without creating an order or reservation:
+
+```sh
+curl --silent --show-error --include --request POST \
+  --header 'Content-Type: application/json' --data '{}' \
+  https://shop.merchant.example/wp-json/stellar-forge/v1/checkout-admission
+```
+
+Expect HTTP `401` with the JSON status `INVALID_SIGNATURE_OR_TIMESTAMP`: this
+request deliberately contains no signature. An HTML page, redirect or missing
+route means the WordPress/ingress routing needs correction before starting the
+native seller. Preserve the raw request body and `x-sf98-*` headers through that
+ingress; they are inputs to the existing signature check.
 
 In **WooCommerce → Settings → Payments**, enable **Stellar x402 digital
 checkout**. Its label and concise buyer instructions are editable. The gateway
