@@ -73,6 +73,11 @@ function expected(input) {
     throw fault('SOCRATA_PUBLICATION_REVIEW', 'Use the displayed original snapshot and revision.', 400);
   return { expectedSnapshot: input.expectedSnapshot, expectedRevision: input.expectedRevision };
 }
+function generation(value) {
+  if (!Number.isSafeInteger(value) || value < 0)
+    throw fault('SOCRATA_RELEASE_REVIEW', 'Use the displayed original release generation.', 400);
+  return value;
+}
 function queryText(value) {
   if (typeof value !== 'string' || value.length > 8192) throw fault('SOCRATA_QUERY_REQUIRED', 'Supply the original query string.', 400);
   return value.replace(/^\?/, '');
@@ -341,9 +346,17 @@ export async function openSocrataPublisher({ directory } = {}) {
     if (action === 'publisher.buyer.account') return native.accountDatasetSession(acquisition, { workspace: binding.workspaceDirectory, finalize: true });
     if (action === 'publisher.buyer.export') {
       const manifest = join(root, 'acquisition-manifest.json'), delivery = join(root, 'delivery');
+      const report = await native.inspectDatasetSession(acquisition);
       if (await absent(manifest)) await native.exportDatasetManifest(acquisition, manifest);
-      if (await absent(delivery)) await native.deliverDatasetSession(acquisition, delivery);
-      return { id: input.id, manifest, delivery, report: await native.inspectDatasetSession(acquisition) };
+      else {
+        const retained = await readJson(manifest, 16 * MiB);
+        if (retained.status !== 'COMPLETE' || retained.sessionId !== report.sessionId ||
+            retained.configurationSha256 !== report.configurationSha256 || retained.snapshot !== report.snapshot ||
+            !equal(retained.pageFiles, report.pages.map(page => page.responsePath)))
+          throw fault('SOCRATA_ACQUISITION_EXPORT_CHANGED', 'The retained export differs from its original completed acquisition.');
+      }
+      const exported = await native.deliverDatasetSession(acquisition, delivery);
+      return { id: input.id, manifest, delivery, exported, report };
     }
     throw fault('SOCRATA_PUBLISHER_ACTION', 'Choose an original buyer continuation.', 400);
   }
@@ -368,19 +381,35 @@ export async function openSocrataPublisher({ directory } = {}) {
         only(input, ['draftId','id','label','runtime']);
         const selected = await savedCandidate(input.draftId);
         const packageDirectory = join(packagesDirectory, selected.record.socrata.packageKey);
+        const runtime = input.runtime ?? { port: 0 };
+        only(runtime, ['port','facilitator','allowLocalFacilitator']);
+        let prior;
+        try { prior = await inspectRelease(releaseDirectory, input.id); }
+        catch (error) { if (error.code !== 'ENOENT') throw error; }
+        if (prior) {
+          const prepared = await prepareDatasetRelease(packageDirectory);
+          const selectedRuntime = { port: runtime.port ?? 8423,
+            ...(runtime.facilitator === undefined ? {} : { facilitator: new URL(runtime.facilitator.trim()).href.replace(/\/$/, '') }),
+            ...(runtime.allowLocalFacilitator === undefined ? {} : { allowLocalFacilitator: runtime.allowLocalFacilitator }) };
+          if (!equal(prior.dataset, prepared.dataset) || prior.label !== (input.label ?? input.id).trim() ||
+              !equal(prior.runtime, selectedRuntime))
+            throw fault('SOCRATA_RELEASE_ID_USED', 'This release ID belongs to different retained source or runtime settings.');
+          return prior;
+        }
         return stageRelease(releaseDirectory, { id: input.id, label: input.label,
-          datasetPackage: packageDirectory, runtime: input.runtime ?? { port: 0 } });
+          datasetPackage: packageDirectory, runtime });
       }
       case 'publisher.release.inspect':
         only(input, ['id']); return inspectRelease(releaseDirectory, input.id);
       case 'publisher.release.activate':
-        only(input, ['id','expectedGeneration']); return activateRelease(releaseDirectory, input.id, { expectedGeneration: input.expectedGeneration });
+        only(input, ['id','expectedGeneration']); return activateRelease(releaseDirectory, input.id, { expectedGeneration: generation(input.expectedGeneration) });
       case 'publisher.release.rollback':
-        only(input, ['expectedGeneration']); return rollbackRelease(releaseDirectory, { expectedGeneration: input.expectedGeneration });
+        only(input, ['expectedGeneration']); return rollbackRelease(releaseDirectory, { expectedGeneration: generation(input.expectedGeneration) });
       case 'publisher.release.start':
         only(input, ['expectedGeneration']);
-        if (ownedRelease) return { state: 'RUNNING', status: await releaseStatus(releaseDirectory) };
-        ownedRelease = await runActiveRelease(releaseDirectory, { expectedGeneration: input.expectedGeneration, handleSignals: false });
+        generation(input.expectedGeneration);
+        if (ownedRelease) { const status = await releaseStatus(releaseDirectory); return { state: status.runtime.state, status }; }
+        ownedRelease = await runActiveRelease(releaseDirectory, { expectedGeneration: generation(input.expectedGeneration), handleSignals: false });
         const started = ownedRelease;
         void started.completion.finally(() => { if (ownedRelease === started) ownedRelease = null; }).catch(() => {});
         return { state: 'RUNNING', status: await releaseStatus(releaseDirectory) };
@@ -418,6 +447,19 @@ export async function openSocrataPublisher({ directory } = {}) {
       filename: 'buyer-request.json', contentType: 'application/json' };
     if (kind === 'session-manifest') return { bytes: await bytes(join(sessionsDirectory, id, 'acquisition-manifest.json'), 16 * MiB),
       filename: 'acquisition-manifest.json', contentType: 'application/json' };
+    const delivered = { 'session-csv': ['dataset.csv','text/csv; charset=utf-8'],
+      'session-jsonl': ['dataset.jsonl','application/x-ndjson'], 'session-review': ['review.html','text/html; charset=utf-8'] }[kind];
+    if (delivered) {
+      const manifest = await readJson(join(sessionsDirectory, id, 'delivery', 'manifest.json'), 16 * MiB);
+      const binding = await readJson(join(sessionsDirectory, id, 'binding.json'));
+      const expectedOutput = manifest.outputs?.[delivered[0]];
+      const content = await bytes(join(sessionsDirectory, id, 'delivery', delivered[0]), 128 * MiB);
+      if (manifest.schema !== 'stellar-forge.buyer-delivery-manifest.v1' ||
+          manifest.dataset?.snapshot !== binding.snapshot || expectedOutput?.bytes !== content.length ||
+          expectedOutput?.sha256 !== sha(content))
+        throw fault('SOCRATA_DELIVERY_CHANGED', 'Reopen the original completed data room before downloading this output.');
+      return { bytes: content, filename: delivered[0], contentType: delivered[1] };
+    }
     throw fault('SOCRATA_EXPORT_KIND', 'Choose a retained dataset, review or buyer export.', 400);
   }
   const close = () => closePromise ??= (async () => {

@@ -96,7 +96,7 @@ The first session action prepares the original SF88 dataset session. **Acquire p
 
 **Recover session** inspects the same page attempts and retained responses. **Acquire pages** continues the next eligible page of that same session. A completed session reopens as complete. **Account recorded pages** applies the existing native finalization function to the existing attempts.
 
-**Export completed acquisition** writes the original SF88 acquisition manifest and original SF100 data room. Its pages remain in their acquired order with the snapshot, query and response hashes. The server's download route exposes the completed manifest; the data-room directory is also returned for the host's normal delivery workflow.
+**Export completed acquisition** writes the original SF88 acquisition manifest and original SF100 data room. Its pages remain in their acquired order with the snapshot, query and response hashes. The server's download routes expose the completed manifest, CSV, JSONL and review page; the original data-room directory is also returned for the host's normal delivery workflow.
 
 ## Host API
 
@@ -125,7 +125,7 @@ Import openSocrataPublisher from the maintained ./seller/socrata/publisher expor
 | publisher.buyer.account | {id} |
 | publisher.buyer.export | {id} |
 
-readExport accepts draft-csv, draft-review, buyer-config and session-manifest with their retained original UUID. It returns {bytes,filename,contentType}. Host signing settings remain in the original operator workspace.
+readExport accepts draft-csv, draft-review, buyer-config, session-manifest, session-csv, session-jsonl and session-review with their retained original UUID. It returns {bytes,filename,contentType}. Host signing settings remain in the original operator workspace.
 
 ## Retained operating files
 

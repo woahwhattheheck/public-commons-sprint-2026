@@ -1,0 +1,16 @@
+EVALUATE
+SELECTCOLUMNS(
+    'OffenseCells',
+    "source_record_id", 'OffenseCells'[Source Row],
+    "year", 'OffenseCells'[Year],
+    "jurisdiction_id", 'OffenseCells'[Jurisdiction ID],
+    "offense_id", 'OffenseCells'[Offense ID],
+    "group", 'OffenseCells'[Group],
+    "value", 'OffenseCells'[Value],
+    "value_state", 'OffenseCells'[Value State],
+    "raw_value", 'OffenseCells'[Raw Value],
+    "page", 'OffenseCells'[Page],
+    "is_detail_leaf", 'OffenseCells'[Is Detail Leaf],
+    "is_regional_group_component", 'OffenseCells'[Regional Group Component]
+)
+ORDER BY [source_record_id]

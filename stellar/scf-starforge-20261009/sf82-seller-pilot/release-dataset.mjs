@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { loadDatasetConfig } from '../sf30-seller-sdk/dataset-handler.mjs';
 import { datasetQueryParameters } from '../sf30-seller-sdk/dataset-cli.mjs';
+import { compileHttpSellerOffer } from '../sf30-seller-sdk/seller.mjs';
 import { readSellerConfig } from '../sf30-seller-sdk/serve.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../sf30-seller-sdk/dataset-refresh/versions.mjs';
@@ -99,7 +100,15 @@ export async function prepareDatasetRelease(packageDirectory) {
       binding.sourceSha256 !== hash(retained['source.json']))
     fail('The dataset edition or its provenance differs from the reviewed release.');
   parse(retained['source.json']);
-  const service = await readSellerConfig(join(directory, 'seller.json'));
+  const original = await readSellerConfig(join(directory, 'seller.json'));
+  if (original.routes.length !== 1 || Object.keys(original).some(key => !['schema','publicOrigin','routes'].includes(key)) ||
+      original.routes.some(route => Object.keys(route).some(key => !['id','path','definition','offer','handler','admit'].includes(key))))
+    fail('Use the original configured dataset service and its query bindings.');
+  const service = { ...original, routes: original.routes.map(route => {
+    const { definition, ...selected } = route;
+    return { ...selected, offer: definition
+      ? compileHttpSellerOffer({ ...definition, url: original.publicOrigin + route.path }) : route.offer };
+  }) };
   if (!retained['seller.json'].equals(await bytes(join(directory, 'seller.json'))))
     fail('Seller terms changed during dataset release preparation.');
   bindService(service, description);

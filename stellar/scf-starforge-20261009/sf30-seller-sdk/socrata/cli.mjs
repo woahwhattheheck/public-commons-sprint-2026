@@ -3,8 +3,7 @@
 import {readFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
-import {openSocrataWorkspace} from './workspace.mjs';
-import {startSocrataWorkspace} from './server.mjs';
+import {openSocrataOperator, startSocrataWorkspace} from './server.mjs';
 
 const HELP = [
   'Socrata dataset workspace',
@@ -20,13 +19,20 @@ const HELP = [
   '  capture.start     capture.advance capture.pause  capture.resume  capture.import',
   '  mapping.save      edition.build   edition.activate  dataset.query',
   '  merchant.configure  package.export  package.import',
+  '  publisher.status  publisher.prepare  publisher.preview  publisher.reviewDraft',
+  '  publisher.publish  publisher.activateSnapshot  publisher.collect',
+  '  publisher.release.stage  publisher.release.inspect  publisher.release.activate',
+  '  publisher.release.rollback  publisher.release.start  publisher.release.stop',
+  '  publisher.buyer.review  publisher.buyer.prepare  publisher.buyer.session',
+  '  publisher.buyer.run  publisher.buyer.recover  publisher.buyer.account  publisher.buyer.export',
   '',
   'Payloads are JSON objects. --input reads one UTF-8 JSON file; --json reads a literal.',
   'An omitted payload is {}. capture.advance fetches one page unless pages is supplied.',
   'The local browser can pause between pages and resume the same retained capture.',
   'SOCRATA_APP_TOKEN is the default optional provider credential environment variable.',
   'Only the browser session URL carries its private local session token.',
-  'See README.md for the complete source-to-merchant and package recovery workflow.'
+  'publisher.release.start keeps its original release process alive until Ctrl+C.',
+  'See README.md and PUBLISHING.md for source, publication, buyer and recovery workflows.'
 ].join('\n');
 
 function parse(args) {
@@ -83,11 +89,28 @@ export async function main(args = process.argv.slice(2)) {
     payload = JSON.parse(text);
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) throw new TypeError('The action payload must be a JSON object.');
   }
-  const workspace = await openSocrataWorkspace({directory, appToken});
+  const workspace = await openSocrataOperator({directory, appToken});
   let result, originalError;
   try {
     result = options.command === 'status' ? await workspace.state() : await workspace.act(options.action, payload);
   } catch (error) { originalError = error; }
+  if (!originalError && options.action === 'publisher.release.start') {
+    let app;
+    try { app = await startSocrataWorkspace({directory,operator:workspace}); }
+    catch (error) { try { await workspace.close(); } catch {} throw error; }
+    console.log(JSON.stringify(result, null, 2));
+    console.log('The original seller is running. Manage this same operator at:\n' + app.url + '\nKeep this session URL private. Stop with Ctrl+C.');
+    let stopping;
+    const stop = () => stopping ??= (async () => {
+      let failure;
+      try { await app.close(); } catch (error) { failure = error; }
+      try { await workspace.close(); } catch (error) { if (!failure) failure = error; }
+      if (failure) throw failure;
+    })();
+    const signal = () => stop().catch(error => { console.error('Socrata workspace: ' + error.message); process.exitCode = 1; });
+    process.once('SIGINT', signal); process.once('SIGTERM', signal);
+    return {result,url:app.url,close:stop};
+  }
   try { await workspace.close(); } catch (error) { if (!originalError) originalError = error; }
   if (originalError) throw originalError;
   console.log(JSON.stringify(result, null, 2));
