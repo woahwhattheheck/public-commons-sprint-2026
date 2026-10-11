@@ -29,7 +29,8 @@
     "stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery",
     "stellar/scf-starforge-20261009/sf103-native-buyer-signer",
     "stellar/scf-starforge-20261009/native-facilitator",
-    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile"
+    "stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile",
+    "stellar/scf-starforge-20261009/sf101-merchant-receiver"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -64,7 +65,10 @@
     "inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
     "native-signer": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs",
     "facilitator": "stellar/scf-starforge-20261009/native-facilitator/cli.mjs",
-    "commerce": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs"
+    "commerce": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs",
+    "merchant-desk": "stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/cli.mjs",
+    "paid-file-checkout": "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
+    "paid-file-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -101,7 +105,11 @@
     "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "./commerce": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
     "./buyer/native-signer": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs",
-    "./facilitator": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs"
+    "./facilitator": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs",
+    "./seller/merchant-desk": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/server.mjs",
+    "./seller/merchant-desk/workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/workspace.mjs",
+    "./seller/paid-file": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
+    "./buyer/paid-file": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs"
   },
   "nativePeers": {
     "@x402/core": {
@@ -124,7 +132,8 @@
   "excludeFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/exercise.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/demo-database.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/exercise.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/exercise.mjs",
+    "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.journey.mjs"
   ],
   "featurePeers": {
     "postgres": {

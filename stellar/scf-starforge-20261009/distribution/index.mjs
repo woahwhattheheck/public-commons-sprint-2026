@@ -15,3 +15,5 @@ export { initReleaseStore, stageRelease, readReleaseState, listReleases, inspect
   compareReleases, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from '../sf82-seller-pilot/releases.mjs';
 export { startReleaseConsole } from '../sf82-seller-pilot/release-console.mjs';
 export { initializeQueue, openQueue, saveQueueReport } from '../sf88-operator-buyer-cli/queue.mjs';
+export { startMerchantDesk } from '../sf101-merchant-receiver/desk/server.mjs';
+export { initializeDeskWorkspace, openDeskWorkspace, inspectDeskWorkspace } from '../sf101-merchant-receiver/desk/workspace.mjs';
