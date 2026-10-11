@@ -167,7 +167,7 @@ next cursor.
 Run `status` first. It reconstructs state from retained records, including
 partial/unreadable started or result files. The presence of a recorded attempt
 prevents an automatic repeat even if its JSON is incomplete. Ordinary completed
-runs release their execution lock. For a crashed local owner, use the PID shown
+runs release their execution lease. For a crashed local owner, use the PID shown
 by status:
 
 ```sh
@@ -181,7 +181,31 @@ node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs execute \
 
 Replace the example PID with that exact dead owner. `unlock` verifies the local
 host and process; it also checks recorded unfinished child processes. Linux
-process-start and boot tokens distinguish reused PIDs. It never removes attempts.
+process-start and boot tokens distinguish reused PIDs. It records an immutable
+release marker for the captured lease generation and never removes attempts or
+ownership records. Repeating the same recovery can report `alreadyReleased:true`.
+When `/proc` is unavailable or describes a different PID namespace, liveness uses
+process signaling without trusting those unrelated process-start tokens.
+An old delayed unlock can only release its old generation, even after a newer
+execution starts. Concurrent acquisitions create the same next numbered lease
+exclusively, so one succeeds and the others report `RUNBOOK_EXECUTION_LOCK_EXISTS`.
+Retry after the active owner finishes or recover its actual dead owner.
+
+The private `.execution-leases/` directory retains small numbered ownership and
+release records. Complete records are synced before an atomic create-only hard
+link publishes them. Use reliable local storage on one host with hard-link
+support. Do not delete these records while using the runbook; they provide the
+ordering that keeps old recovery actions separate from new execution. The
+permanent `.execution-lock.json` index also makes the earlier CLI refuse a new
+execution instead of starting a competing lock protocol.
+
+An existing v1 runbook's complete `.execution-lock.json` is recognized as lease
+generation `0`. The same explicit `unlock --owner-pid ...` validates that owner
+and its unfinished child processes, then writes its release marker; its original
+lock file remains intact. The next execution uses generation `1`. Use the updated
+CLI for all subsequent execute/recover/unlock commands, including legacy recovery.
+An unreadable old lock is reported without guessing an owner or deleting records.
+
 `recover` imports a complete matching original SF88 stdout summary into a separate
 create-only recovery record. It records that the original exit status was not
 observed, preserves any partial original result and makes no buyer call. Where
@@ -215,3 +239,11 @@ buyer, signed request, chain payment or hosted Actions is used in that check.
 Source lineage: original SF88 `config.mjs` / `cli.mjs` / `execute.mjs`, SF81
 `bridge.mjs`, SF82 checkout evidence and original SF31 response-file writer.
 Existing seller, dataset, deployment, accounting and grant modules are unchanged.
+
+The separate focused local recovery check is
+`node stellar/scf-starforge-20261009/buyer-runbook/test/lease-recovery.test.mjs`.
+It pauses two real unlock processes after each captures a killed owner's lease,
+releases that lease, acquires a new one and resumes both old unlocks. It also
+contends for the next generation and recovers a complete legacy v1 owner record.
+Original attempt bytes remain intact; the existing recovery function reports its
+retained incomplete result. This check performs no native buyer execution.

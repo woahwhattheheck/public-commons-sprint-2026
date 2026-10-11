@@ -61,7 +61,7 @@ or mismatched terms produce the existing journal warning and no event. The
 already successful native resource response is still returned. Event schema,
 retry behavior and deduplication remain compatible with existing journals.
 
-There is **no background webhook sender**. From the merchant's trusted environment, set a fresh HMAC key (32+ bytes) through private environment storage, never in config or CLI output:
+The original sender supports a one-shot drain and an opt-in [continuous delivery service](./SERVICE.md). On a Linux merchant host with Node 22+ and util-linux `flock`, set a fresh HMAC key (32+ bytes) through private environment storage, never in config or CLI output:
 
 \`\`\`sh
 node stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs status \
@@ -75,7 +75,7 @@ node stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs drain \
   --limit 20
 \`\`\`
 
-\`drain\` is the **only** command that sends HTTP. It requires an exact public HTTPS domain, checks every resolver answer for public unicast and pins the chosen address in the Node HTTPS connection with the original hostname used for TLS verification. No redirects, querystring secrets, credentials in URLs, private/loopback or mixed public/private DNS targets. Node 22's \`lookup({all:true})\` callback shape is supported. A 2xx HTTP response records webhook **acceptance**, not completed downstream work or Stellar settlement independently validated by this consumer.
+\`drain\` and the explicitly started continuous worker send HTTP through the same original signed transport. It requires an exact public HTTPS domain, checks every resolver answer for public unicast and pins the chosen address in the Node HTTPS connection with the original hostname used for TLS verification. No redirects, querystring secrets, credentials in URLs, private/loopback or mixed public/private DNS targets. Node 22's \`lookup({all:true})\` callback shape is supported. A 2xx HTTP response records webhook **acceptance**, not completed downstream work or Stellar settlement independently validated by this consumer.
 
 Delivery body schema \`stellar-forge.sf98.webhook.v1\`: \`eventId\`, \`occurredAt\`, \`routeId\`, \`method\`, \`network\`, \`amountAtomic\`, \`assetDigest\`, optional \`orderReference\`, and \`settlement: ORIGINAL_NATIVE_SUCCESS\`. The receiver must calculate HMAC SHA-256 over \`x-sf98-timestamp + "." + raw request body\`, compare it in constant time with \`x-sf98-signature: sha256=HEX\`, enforce a short timestamp window, and atomically deduplicate \`idempotency-key\` (same \`eventId\`) before any side effect. The sender intentionally does **not** include raw transaction or buyer details. Verify the merchant's own original order/payment authority before irreversible shipping/transfer; a valid HMAC only authenticates this adapter's report.
 
@@ -87,7 +87,7 @@ node stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs requeue \
   --id ORIGINAL_64_HEX_EVENT_ID
 \`\`\`
 
-Receiver may accept a POST and crash before local fulfillment. Sender may similarly crash after receiver acceptance but before writing \`DELIVERED\`. Therefore this is **at-least-once delivery** with a mandatory receiver idempotency key, not exactly-once economic execution. Two operators must not drain the same directory concurrently; use one worker per merchant outbox. The source logs are append-only NDJSON, private directory 0700 and files 0600. They must remain outside a public repo/site. An operator should back them up and protect them against local user compromise.
+Receiver may accept a POST and crash before local fulfillment. Sender may similarly crash after receiver acceptance but before writing \`DELIVERED\`. Therefore this is **at-least-once delivery** with a mandatory receiver idempotency key, not exactly-once economic execution. The continuous worker, manual drain, and manual requeue share one kernel delivery lock per merchant outbox; a competing sender fails with `SF98_DELIVERY_BUSY`. The existing seller can continue appending original events. See [SERVICE.md](./SERVICE.md) for installation, status, shutdown and crash recovery. The source logs are append-only NDJSON, private directory 0700 and files 0600. They must remain outside a public repo/site. An operator should back them up and protect them against local user compromise.
 
 ## Merchant rollout
 
