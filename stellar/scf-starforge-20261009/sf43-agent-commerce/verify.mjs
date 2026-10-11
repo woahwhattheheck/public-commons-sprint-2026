@@ -1,22 +1,24 @@
-// MIT — SF-43. Independently inspect a real Stellar TESTNET x402 receipt.
+// MIT — SF-43. Independently inspect a real Stellar x402 receipt on its approved network.
 // Read-only RPC calls; neither this module nor its caller may infer a paid sale
 // from HTTP status 200 or a seller-generated PAYMENT-RESPONSE header alone.
 import {createRequire} from 'node:module';
-const RPC = 'https://soroban-testnet.stellar.org';
-// Public testnet providers listed by Stellar; never take an endpoint from a receipt.
-// https://developers.stellar.org/docs/data/apis/rpc/providers
-const PUBLIC_TESTNET_RPC = new Set([RPC, 'https://soroban-rpc.testnet.stellar.gateway.fm']);
-const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
-function publicTestnetEndpoint(value) {
-  if (typeof value !== 'string') return null;
-  let url;
-  try { url = new URL(value); } catch { return null; }
-  return !url.username && !url.password && !url.search && !url.hash &&
-    url.pathname === '/' && PUBLIC_TESTNET_RPC.has(url.origin) ? url.origin : null;
+import {NETWORKS, LOCAL_RPC, networkProfile, resolveRpcEndpoint} from '../sf86-rpc-transfer-reconcile/terms.mjs';
+/** Select the approved network's public observation provider. An operator's
+ * private signer RPC keeps that network's default public observation path. */
+export function selectStellarEvidenceEndpoint(network, preferred) {
+  const profile=networkProfile(network);
+  let preferredUrl;
+  try { preferredUrl=new URL(preferred).href; } catch {}
+  if (preferredUrl && Object.entries(NETWORKS).some(([key,value]) => key !== network &&
+      value.rpcEndpoints.some(endpoint => new URL(endpoint).href === preferredUrl)))
+    return resolveRpcEndpoint(network,preferred); // Refuse an explicitly wrong network.
+  try { return resolveRpcEndpoint(network,preferred); }
+  catch { return profile.defaultRpc; }
 }
-/** Prefer a supported public workspace RPC; private signer RPCs retain SDF evidence. */
+/** Existing testnet selection API retains its original default behavior. */
 export function selectTestnetEvidenceEndpoint(preferred) {
-  return publicTestnetEndpoint(preferred) ?? RPC;
+  try { return resolveRpcEndpoint('stellar:testnet',preferred); }
+  catch { return NETWORKS['stellar:testnet'].defaultRpc; }
 }
 const HASH = /^[0-9a-f]{64}$/;
 const AMOUNT = /^[1-9][0-9]*$/;
@@ -63,17 +65,14 @@ export function parseExactTestnetTerms(challenge, maxAtomic) {
 }
 
 async function callRpc(method, params, fetchImpl, endpoint) {
-  const publicEndpoint = publicTestnetEndpoint(endpoint);
-  if (publicEndpoint === null && !/^http:\/\/127\.0\.0\.1:[0-9]+\/$/.test(endpoint))
-    throw new TypeError('Only supported public Stellar testnet RPC or explicit loopback for focused tests');
-  const response = await fetchImpl(publicEndpoint ?? endpoint, {
+  const response = await fetchImpl(endpoint, {
     method:'POST', headers:{'content-type':'application/json'}, redirect:'error',
     body:JSON.stringify({jsonrpc:'2.0',id:'sf43-'+method,method,params}),
     signal: AbortSignal.timeout(15000),
   });
-  if (!response.ok) throw new Error('TESTNET_RPC_HTTP_'+response.status);
+  if (!response.ok) throw new Error('STELLAR_RPC_HTTP_'+response.status);
   const body = await response.json();
-  if (!plain(body) || body.error || !plain(body.result)) throw new Error('TESTNET_RPC_INVALID_'+method);
+  if (!plain(body) || body.error || !plain(body.result)) throw new Error('STELLAR_RPC_INVALID_'+method);
   return body.result;
 }
 
@@ -82,14 +81,14 @@ async function callRpc(method, params, fetchImpl, endpoint) {
  * a proof of a specific SEP-41 transfer amount. Token transfer proof is separately
  * derived from actual RPC contract events decoded with Stellar SDK.
  */
-export async function checkStellarTestnetTransaction({ receipt, expected, fetchImpl = fetch,
-  rpcEndpoint=RPC, decodeContractEvent, maxEventPages = 12 } = {}) {
-  if (!plain(receipt) || !plain(expected) || receipt.network !== 'stellar:testnet' ||
-      expected.network !== 'stellar:testnet' || receipt.success !== true ||
+export async function checkStellarTransaction({ receipt, expected, fetchImpl = fetch,
+  rpcEndpoint, decodeContractEvent, maxEventPages = 12 } = {}) {
+  if (!plain(receipt) || !plain(expected) || !Object.hasOwn(NETWORKS, expected.network) ||
+      receipt.network !== expected.network || receipt.success !== true ||
       typeof receipt.transaction !== 'string' || !HASH.test(receipt.transaction))
     return failure('RECEIPT_NETWORK_SUCCESS_OR_HASH_INVALID');
   if (typeof expected.asset !== 'string' || !/^C[A-Z2-7]{55}$/.test(expected.asset) ||
-      typeof expected.payTo !== 'string' || !/^G[A-Z2-7]{55}$/.test(expected.payTo) ||
+      typeof expected.payTo !== 'string' || !/^[GC][A-Z2-7]{55}$/.test(expected.payTo) ||
       !sorobanAmount(expected.amount))
     return failure('TERMS_INVALID');
   // The fee-paying transaction source is the facilitator; the actual token
@@ -103,22 +102,24 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
   if(expected.payer!==undefined &&
       (typeof expected.payer!=='string' || !PAYER.test(expected.payer) || expected.payer!==receipt.payer))
     return failure('EXPECTED_PAYER_MISMATCH');
-  if (publicTestnetEndpoint(rpcEndpoint) !== null && publicTestnetEndpoint(rpcEndpoint) !== RPC) {
-    let network;
-    try { network = await callRpc('getNetwork', {}, fetchImpl, rpcEndpoint); }
-    catch (error) { return failure('RPC_NETWORK_LOOKUP_FAILED', {detail:error.message}); }
-    if (network.passphrase !== TESTNET_PASSPHRASE)
-      return failure('RPC_TESTNET_NETWORK_MISMATCH');
-  }
+  const profile=networkProfile(expected.network);
   let tx;
-  try { tx=await callRpc('getTransaction',{hash:receipt.transaction},fetchImpl,rpcEndpoint); }
+  try {
+    rpcEndpoint=resolveRpcEndpoint(expected.network,rpcEndpoint,{allowLocal:true});
+    if (!LOCAL_RPC.test(rpcEndpoint)) {
+      const network=await callRpc('getNetwork',{},fetchImpl,rpcEndpoint);
+      if (network.passphrase !== profile.passphrase)
+        return failure('RPC_NETWORK_PASSPHRASE_MISMATCH');
+    }
+    tx=await callRpc('getTransaction',{hash:receipt.transaction},fetchImpl,rpcEndpoint);
+  }
   catch (error) { return failure('RPC_TRANSACTION_LOOKUP_FAILED',{detail:error.message}); }
   if (tx.status !== 'SUCCESS' || tx.txHash !== receipt.transaction ||
       !Number.isSafeInteger(tx.ledger) || tx.ledger <= 0) {
     return failure(tx.status === 'NOT_FOUND' ? 'RPC_TRANSACTION_NOT_FOUND' : 'RPC_TRANSACTION_NOT_SUCCESS',
       {reportedStatus:tx.status??null});
   }
-  const inclusion={ network:'stellar:testnet', transaction:tx.txHash, ledger:tx.ledger,
+  const inclusion={ network:expected.network, transaction:tx.txHash, ledger:tx.ledger,
     proof:'INDEPENDENT_STELLAR_RPC_GET_TRANSACTION_SUCCESS' };
   if (typeof decodeContractEvent !== 'function')
     return {status:'TX_INCLUDED_TRANSFER_UNVERIFIED',...inclusion,reason:'NO_SOROBAN_EVENT_DECODER'};
@@ -140,7 +141,7 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
         const decoded=await decodeContractEvent(event);
         if (decoded?.name === 'transfer' && decoded.from === receipt.payer &&
             decoded.to === expected.payTo && String(decoded.amount) === expected.amount) {
-          return {status:'TOKEN_TRANSFER_MATCHED_TESTNET',...inclusion,
+          return {status:profile.chainStatus,...inclusion,
             contractId:expected.asset,payer:receipt.payer,
             recipient:expected.payTo,amountAtomic:expected.amount,
             eventId:event.id??null,proof:'RPC_TX_AND_SEP41_TRANSFER_EVENT_MATCH'};
@@ -156,6 +157,13 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
   }
   return {status:'TX_INCLUDED_TRANSFER_UNVERIFIED',...inclusion,
     reason:sawTargetTx?'NO_MATCHING_SEP41_TRANSFER':'TOKEN_TRANSFER_NOT_INDEXED'};
+}
+
+/** Retain the original testnet-only API for callers that explicitly require it. */
+export async function checkStellarTestnetTransaction(options = {}) {
+  if (options.receipt?.network !== 'stellar:testnet' || options.expected?.network !== 'stellar:testnet')
+    return failure('RECEIPT_NETWORK_SUCCESS_OR_HASH_INVALID');
+  return checkStellarTransaction(options);
 }
 
 /** Parse official Stellar SDK scValToNative transfer data. Legacy SEP-41
