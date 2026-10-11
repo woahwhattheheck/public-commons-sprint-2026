@@ -34,6 +34,14 @@ const messages = {
   REQUEST_ALREADY_PREPARED:'This request already has a local buyer configuration. Open the prepared request to continue.',
   REQUEST_BUDGET_OUTSIDE_OPERATOR_LIMITS:'The daily budget must cover this request and fit within both the total budget and the local operator limits.',
   REQUEST_OPERATOR_SETUP_CHANGED:'The retained buyer configuration or operator keys need local attention before this operation can start.',
+  PAID_FILE_MERCHANT_ORDER_CHANGED:'This merchant order already has a different retained promise. Open the original order and ask the merchant to reconcile its order reference.',
+  PAID_FILE_REVIEW_CHANGED:'This file-order review changed. Reopen the order and use its current saved review.',
+  PAID_FILE_ALREADY_PREPARING:'This order already has a retained buyer setup. Reopen it to resume or use that buyer.',
+  PAID_FILE_OPERATOR_CHANGED:'The retained buyer source changed. Restore this order’s original operator and source configuration.',
+  PAID_FILE_TRANSPORT_CHANGED:'This order’s buyer transport changed. Restore the transport selected in its saved local review.',
+  PAID_FILE_CLAIM_ENVS_CHANGED:'Reopen with the same declared claim environment names, or omit --claim-envs to reuse them.',
+  PAID_FILE_SELECTED_REQUEST_CHANGED:'The selected order or acquisition changed. Refresh the acquisition before retrieving its file.',
+  PAID_FILE_DOWNLOAD_CHANGED:'The saved customer file changed. Inspect the original transfer and restore the promised file bytes.',
   RUNBOOK_ACCOUNTING_WORKSPACE_REQUIRED:'Select the existing SF88 operator workspace for this operation. Requests received here reuse their retained original operator automatically.',
   RUNBOOK_ACCOUNTING_ORIGINAL_WORKSPACE_REQUIRED:'That workspace has a different original payer, ledger, transport or payment terms. Select this request’s original operator workspace.',
   RUNBOOK_ACCOUNTING_ORIGINAL_ATTEMPT_REQUIRED:'This operation needs its original recorded buyer attempt before accounting can finish.',
@@ -47,6 +55,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/app.mjs','app.mjs','text/javascript; charset=utf-8'],
     ['/intake.mjs','intake.mjs','text/javascript; charset=utf-8'],
+    ['/paid-files.mjs','paid-files.mjs','text/javascript; charset=utf-8'],
     ['/accounting.mjs','accounting.mjs','text/javascript; charset=utf-8'],
     ['/recovery.mjs','recovery.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
@@ -95,7 +104,23 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
-        let match = /^\/api\/requests\/(request-[a-f0-9]{64})$/.exec(url.pathname);
+        let match = /^\/api\/paid-files\/(file-[a-f0-9]{64})$/.exec(url.pathname);
+        if(match)return json(200,await model.paidFile(match[1]));
+        match = /^\/files\/paid-files\/(file-[a-f0-9]{64})\/handoff$/.exec(url.pathname);
+        if(match) {
+          const result=await model.paidFileAttachment(match[1]);
+          return reply(200,'application/json',result.bytes,{'content-disposition':`attachment; filename="${result.name}"`});
+        }
+        match = new RegExp('^/files/'+key+'/paid-files/([A-Za-z0-9][A-Za-z0-9_-]{0,63})$').exec(url.pathname);
+        if(match) {
+          const result=await model.downloadPaidFile(match[1],match[2]);
+          res.writeHead(200,{...headers,'content-type':'application/octet-stream','content-length':String(result.bytes),
+            'content-disposition':`attachment; filename="${result.name}"`,'x-content-sha256':result.sha256});
+          if(req.method==='HEAD'){await result.file.close();return res.end();}
+          try {await pipeline(result.file.createReadStream({start:0,autoClose:true}),res);}
+          finally {await result.file.close().catch(()=>{});}return;
+        }
+        match = /^\/api\/requests\/(request-[a-f0-9]{64})$/.exec(url.pathname);
         if (match) return json(200,await model.request(match[1]));
         match = /^\/files\/requests\/(request-[a-f0-9]{64})\/(body|handoff)$/.exec(url.pathname);
         if (match) {
@@ -141,12 +166,16 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
       if (url.pathname === '/api/requests/upload') return json(200,await model.receiveRequest(input));
       if (url.pathname === '/api/requests/review') return json(200,await model.reviewRequest(input));
       if (url.pathname === '/api/requests/prepare') return json(200,await model.prepareRequest(input));
+      if (url.pathname === '/api/paid-files/upload') return json(200,await model.receivePaidFile(input));
+      if (url.pathname === '/api/paid-files/review') return json(200,await model.reviewPaidFile(input));
+      if (url.pathname === '/api/paid-files/prepare') return json(200,await model.preparePaidFile(input));
       if (url.pathname === '/api/drafts/save') return json(200,await model.save(input));
       if (url.pathname === '/api/drafts/initialize') return json(200,await model.initialize(input));
       const actions = {'/api/runs/execute':'execute','/api/runs/cancel':'cancel','/api/runs/recover':'recover',
-        '/api/runs/unlock':'unlock','/api/runs/finalize':'finalize','/api/runs/accounting-workspace':'bindAccounting'};
+        '/api/runs/unlock':'unlock','/api/runs/finalize':'finalize','/api/runs/accounting-workspace':'bindAccounting',
+        '/api/runs/retrieve-file':'retrievePaidFile','/api/runs/reset-file-transfer':'resetPaidFile'};
       const action = actions[url.pathname];
-      if (action) return json(['execute','finalize'].includes(action) ? 202 : 200,await model[action](input));
+      if (action) return json(['execute','finalize','retrievePaidFile','resetPaidFile'].includes(action) ? 202 : 200,await model[action](input));
       throw fault('NOT_FOUND',404);
     })().catch(error => {
       if (res.headersSent) { if (!res.writableEnded) res.destroy(); return; }

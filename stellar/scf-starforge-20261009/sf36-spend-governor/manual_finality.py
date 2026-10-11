@@ -198,7 +198,8 @@ def check_completion(payload, binding, row):
 
 
 def finalize_manual(governor, source_path, source, payer, *, node, ledger, policy,
-                    rpc_endpoint=None, expected_request_sha=None, rpc_proxy_url=None, verify_only=False):
+                    rpc_endpoint=None, expected_request_sha=None, rpc_proxy_url=None, verify_only=False,
+                    use_system_ca=False):
     require(expected_request_sha == source.get('requestSha256'), 'MANUAL_SELECTED_DIGEST_MISMATCH')
     binding, terms, row, directory = source_context(source_path, source, governor, payer, ledger, policy)
     completion_path = directory / 'recovery.json'
@@ -217,7 +218,8 @@ def finalize_manual(governor, source_path, source, payer, *, node, ledger, polic
         require(endpoint in profile['rpcEndpoints'], 'RPC_ENDPOINT_NOT_ALLOWED')
         native = run_adapter(node, {'action': 'observe-manual', 'expected': terms,
             'transaction': binding['transaction'], 'rpcEndpoint': endpoint,
-            **({'rpcProxyUrl': rpc_proxy_url} if rpc_proxy_url is not None else {})})
+            **({'rpcProxyUrl': rpc_proxy_url} if rpc_proxy_url is not None else {})},
+            use_system_ca=use_system_ca)
         proof = native.get('proof', {})
         require(native.get('schema') == 'stellar-forge.sf36.manual-observation.v1' and
                 native.get('origin') == 'OPERATOR_SELECTED_TRANSACTION_ORIGINAL_SF43' and

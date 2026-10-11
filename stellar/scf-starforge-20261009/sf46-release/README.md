@@ -1,5 +1,20 @@
 # SF46 — original-source release assembly
 
+## Install a maintained merchant package
+
+The [managed package guide](MANAGED_PACKAGE.md) uses the original merchant
+distribution directly: inspect its exact manifest, prepare a portable SF46
+release, or install it into the existing versioned home. `starforge installation`
+provides staging, activation, rollback and original merchant commands through
+the same installed `forge.mjs` lifecycle. It retains `source/`, the package's
+original metadata and optional dependency declarations.
+
+`starforge installation adopt-runtime` also composes a completed original
+runtime with this lifecycle. Its source, profile and lockfile bind a distinct
+release identity; the selected source uses the retained dependency directory.
+See [runtime adoption](MANAGED_PACKAGE.md#adopt-a-completed-runtime) for staging,
+runtime inspection and rollback through the existing home.
+
 ## Portable product distribution
 
 The [portable release guide](DISTRIBUTION.md) provides committed-source packaging,

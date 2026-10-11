@@ -1,5 +1,10 @@
 # Sell private S3 objects through the original SF30 seller
 
+For saved source and price editing, native object inspection, original package
+preparation and the retained merchant lifecycle in one local application, open
+the [S3 merchant workspace](workspace/README.md). Its browser and library API use
+the same original S3 source, compiler and SF82 release store described below.
+
 This adapter makes an existing private object store usable as a paid file or data
 product. It uses the official AWS SDK to retrieve operator-selected objects and
 returns their bytes through the existing SF30 handler interface. The original

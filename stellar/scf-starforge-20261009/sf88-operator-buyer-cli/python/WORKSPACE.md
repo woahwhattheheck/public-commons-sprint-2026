@@ -1,5 +1,10 @@
 # Customer data-analysis workspace
 
+For complete query files beyond an analysis preview, use the **Exports** tab
+and the [complete query export workflow](WORKSPACE_EXPORTS.md). It joins the
+original reviewed query, native streaming writer, cancellation, retained file
+downloads and portable reopen in this same workspace.
+
 Use an acquired dataset in a local browser, keep saved analyses and their actual results, and reopen the complete analytical database after restart. The workspace uses the original Python `DatasetAcquisition`, `DatasetDelivery` and `DatasetDatabase`. It imports completed native deliveries; it does not execute an acquisition or financial operation.
 
 The Data tab selects original deliveries, reviews retained versions and scalar types, downloads the original manifest, and selects the version served by a named SQL view. The Changes tab compares acquired versions, retains complete row/schema differences and applies an explicitly reviewed candidate. The Analysis tab saves parameterized SQL and its revisions, executes it against a reviewed selection, pages retained results and exports JSON or CSV. Activity reopens imports, analyses and consistent database backups.
@@ -271,3 +276,165 @@ python -m stellar_forge_buyer.analysis_workspace \
 For embedding, import `AnalysisWorkspace` and `serve` from `stellar_forge_buyer.analysis_workspace`. The controller exposes `register_source`, `save_query`, `saved_query`, `start`, `job`, `export_result`, `state` and `close`. `serve` returns the standard server, private control-file path and local capability URL. Call `server.server_close()` and `workspace.close()` after stopping the server; ordinary shutdown waits for its already dispatched analytical work.
 
 The original standalone database API remains available. `DatasetDatabase.view_bindings()` returns the current view identities; pass that list as `expected_views` to `query` when a caller has reviewed them. `QueryResult.views` and `QueryResult.read_tables` identify the actual read transaction. `manifest_bytes(version_id)` returns the verified original manifest bytes, while the existing `manifest()` returns its parsed object.
+
+
+## Use retained API responses in the same customer database
+
+The **API responses** tab connects original JSON, CSV and typed stream results
+to the existing Data, Changes, Analysis, Reports and Backup workflow. It reads
+retained files; it does not send a provider request, create a quote, authorize
+payment, finalize accounting, or acquire another page.
+
+The local operator registers the original source before starting the server.
+The browser uses that source's name and registration revision and never submits
+a filesystem path. Use a distinct name for each response you want to retain.
+
+### Register an original response
+
+An existing SF88 buyer response uses the same original configuration and result
+record that the original **read_retained_response()** accepts:
+
+~~~sh
+python -m stellar_forge_buyer.analysis_workspace \
+  --database /private/customer-analysis --checkout /private/stellar-forge \
+  response --name regional_sales --input-kind buyer --format json \
+  --config /private/buyer/config.json --result /private/buyer/result.json
+~~~
+
+For CSV, use **--format csv**. A standalone original SF31 response-file writer
+can instead use **--input-kind sf31**: **--config** is its exact response-file
+writer options object, including destination and maxBytes, and **--result**
+is its returned SAVED receipt, including path, bytes and SHA-256. Both remain
+private local files. An incomplete stream uses the original typed export
+described below; a partial file is never relabeled SAVED by this command.
+
+An original native MCP result keeps its original quote and invocation binding:
+
+~~~sh
+python -m stellar_forge_buyer.analysis_workspace \
+  --database /private/customer-analysis --checkout /private/stellar-forge \
+  response --name paid_sales --input-kind mcp \
+  --manifest /private/mcp-buyer/results/ORIGINAL_QUOTE_ID.meta.json
+~~~
+
+This calls the original McpResultStore in read-only mode and consumes its
+original file(quote) / VerifiedFile interface. It opens no quote database
+and makes no recovery or purchase call. The source manifest keeps the original
+quote ID, invocation hash, native result classification and recorded payment
+response. A server-confirmed payment remains that original classification; an
+analytical import does not add a settlement or independently verify one.
+
+An existing Python StreamDelivery needs no checkout or Node process:
+
+~~~sh
+python -m stellar_forge_buyer.analysis_workspace \
+  --database /private/customer-analysis \
+  response --name game_records --input-kind stream \
+  --stream-export /private/buyer/stream-exports/ORIGINAL_REQUEST_SHA
+~~~
+
+Register the complete original export directory containing manifest.json,
+source.json and records.jsonl. This binds the original export request,
+original response identity and completion state, then uses the original
+StreamDelivery.records() reader. NDJSON values and SSE event framing stay
+native. An export of valid events from an aborted response remains incomplete.
+
+An unchanged registration is idempotent. Replacing a source alias requires its
+current **--expected-revision**; previous response registrations remain retained
+for the jobs that used them. Start the same server afterward:
+
+~~~sh
+python -m stellar_forge_buyer.analysis_workspace \
+  --database /private/customer-analysis --checkout /private/stellar-forge \
+  serve --open
+~~~
+
+The existing source command with **--session** and **--room** remains unchanged.
+
+### Choose the useful table
+
+1. In **API responses**, select the registered source and choose **Inspect
+   retained records**. The UI shows its native classification, format,
+   response byte count, original SHA-256 and transport completion.
+2. Select the record collection. JSON Pointer **/structuredContent/rows** selects
+   rows from a native MCP structured result; **/rows** selects a root result's
+   rows. An empty pointer selects the root array or one root object. CSV and
+   typed stream exports already define their sequence of records.
+3. Choose **Read fields from this collection** and edit the column mapping.
+   A pointer such as **/players/white/rating** selects a nested scalar. For SSE,
+   choose **Parse each data value as JSON** explicitly to use pointers such as
+   **/data/meta/domain**; event ID, event type and original record index remain
+   available alongside data.
+4. Choose **Preview all mapped records**. The background action walks every
+   retained row, verifies the selected fields and conversions, and retains the
+   complete count and projected-byte digest. The displayed sample contains at
+   most 25 rows and 256 KiB; it is labeled as a sample.
+5. Review the source scope and choose **Import reviewed projection**. A native
+   partial stream or a selected provider result marked **truncated: true**
+   requires the visible incomplete-scope checkbox. The choice and original
+   incomplete state remain in the imported manifest and report sources.
+6. In **Data**, select the resulting immutable version for a SQL view, or use
+   **Review changes** against an existing view first. Save SQL and assemble
+   customer reports through the original tabs.
+
+The importer does not assume that every JSON property is a row. It does not
+silently flatten arrays, drop invalid rows, deduplicate records, normalize
+currency strings, convert blank CSV fields to NULL, or infer that a missing
+provider truncation flag proves an exhaustive provider result.
+
+| Mapping type | Stored value |
+| --- | --- |
+| Native scalar | Original JSON scalar type; every CSV cell remains text. Numeric and exact decimal strings remain text. |
+| Text | Strings stay exact; other scalar values become their JSON text representation. |
+| Integer | An existing integer or canonical signed decimal text within SQLite's signed 64-bit range. No fractional truncation. |
+| Number | Explicit conversion to a finite floating-point number; use Native or Text for exact decimal strings. |
+| Boolean | JSON booleans or exact text true / false; stored as SQLite 1 / 0 with boolean provenance. |
+| JSON text | Explicit canonical JSON representation for a selected object, array or scalar. |
+
+JSON null remains SQL NULL for every mapping type. A missing pointer fails the
+whole projection by default, identifying the original row and selected column.
+Choosing **Use NULL** explicitly retains per-column missing-to-NULL counts.
+Columns have no SQLite affinity, so later insertion does not silently coerce
+numeric-looking text. Case-insensitive SQL column collisions are rejected.
+CSV headers must be unique and every row must have the exact header width.
+
+### Identity, review and recovery
+
+The source is a hash-bound native response. The table is a derived analytical
+projection with schema **stellar-forge.response-table-manifest.v1**. It is never
+an SF100 delivery or merchant snapshot. Its manifest retains the original
+response and input-file hashes, native source classification, precise mapping,
+completion and provider declarations, missing-value policy, record count and
+projected-row digest.
+
+Preview and import are original durable workspace jobs. Import rereads the
+original source, reconstructs the entire projection and requires the exact
+reviewed preview hash. Changed bytes, metadata or mappings require another
+preview. New jobs use the current registered source revision; repeating a
+completed request ID returns that original job and never imports today's
+replacement under an old review.
+
+Both dataset-room imports and response projections use the same original
+SQLite row transaction, scalar handling, immutable version identities and
+view revision checks. A failed projection/import leaves previous tables and
+selected views intact. Saved SQL results retain their actual source versions
+from the same SQLite read snapshot. Reports retain these source identities and
+completion scopes with their published rows; exports do not requery providers.
+
+A database backup retains imported rows, exact analytical manifests,
+registrations and their histories, previews/import jobs, saved SQL, comparisons,
+report rows and publications. After restoring to a new private directory,
+ordinary analysis and regenerated report exports work without wallet keys,
+the original checkout or external response files. A new projection still needs
+the corresponding original native files: configuration/result plus response
+file, native MCP metadata/result, or all three original typed-export files.
+Those external files are not copied into the database backup. Re-register a
+moved source explicitly rather than editing historical paths or manifests.
+
+Limits are explicit failures, never silent truncation: structured JSON is at
+most 32 MiB; a retained input at most 256 MiB; a projection at most 1,000,000
+rows, 128 MiB, 256 selected columns, 2 MiB per mapped row and 120 seconds.
+Existing original readers can impose a stricter native file limit. Large
+integers outside signed 64-bit range can be retained as Text; exact decimal
+strings can remain Native text. The customer's selected provider-query scope
+is distinct from transport completion and from analytical query row limits.

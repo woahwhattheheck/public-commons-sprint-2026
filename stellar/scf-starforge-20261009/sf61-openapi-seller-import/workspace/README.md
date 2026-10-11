@@ -1,5 +1,7 @@
 # API merchant workspace
 
+Declared finite SSE and NDJSON routes use the same workspace, saved merchant package and native seller. The [streaming workflow](STREAMING.md) covers explicit payment flow, source limits, generated customer review, and opening the existing commerce console for approval and retained output.
+
 A local merchant setup application connecting an OpenAPI-described backend to
 the original SF61 compiler, SF30 native upstream seller, SF82 saved pilot and
 SF96 operations dashboard. It supports configure → review → save → run → check →

@@ -8,6 +8,7 @@ import {prepareBuyerResponseFile} from '../../stellar/scf-starforge-20261009/sf3
 import {VerifiedFile} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/result.mjs';
 import {mcpJson, mcpResultContent, validateMcpInvocation, validateMcpResult, MCP_RESPONSE_BYTES} from './remote-mcp.mjs';
 import {quoteSnapshot} from './quote-store.mjs';
+import {paymentResponseSummary} from './payment-receipt.mjs';
 
 export const MCP_RESULT_REPRESENTATION = 'MCP_CALL_TOOL_RESULT_JSON';
 const MANIFEST_SCHEMA = 'stellar-forge.mcp-result.v1';
@@ -63,10 +64,12 @@ async function retainedResult(quote, bytes) {
     : {bytes:original?.bodyBytes, sha256:original?.bodySha256, truncated:original?.truncated === true};
   need(expected.sha256 === sha(preview.body) && expected.bytes === Buffer.byteLength(preview.body) &&
     expected.truncated === preview.truncated, 'MCP_RETAINED_RESULT_MISMATCH');
-  const known = quote.result?.paymentResponse, receipt = result?._meta?.['x402/payment-response'];
+  const known = quote.result?.paymentResponse, receipt = paymentResponseSummary(result?._meta?.['x402/payment-response']);
   if (known) need(known.success === (receipt?.success === true) &&
     ['network','transaction','payer'].every(name => (known[name] ?? null) === (receipt?.[name] ?? null)),
     'MCP_RETAINED_RECEIPT_MISMATCH');
+  if (known) need(['errorReason','errorMessage','truncatedFields'].every(name =>
+    !Object.hasOwn(known, name) || same(known[name], receipt?.[name])), 'MCP_RETAINED_RECEIPT_MISMATCH');
   return result;
 }
 
@@ -91,6 +94,26 @@ function completedQuote(quote, completion) {
     signedRequestDispatched:completion.signedRequestDispatched,
     updatedAt:Math.max(quote.updatedAt, completion.updatedAt),
     result:structuredClone(completion.result), failure:completion.failure ?? null};
+}
+
+/** Keep the current independent observation across an older local completion.
+ * Mutates only the detached restored quote. A recovered original receipt can
+ * supersede an operator-supplied reference without losing that earlier report.
+ */
+export function retainPaymentObservation(restored, current) {
+  const observation = current.result?.reconciliation;
+  if (!observation && !current.result?.supersededReconciliation) return restored;
+  restored.result ??= {};
+  if (current.result?.supersededReconciliation && !restored.result.supersededReconciliation)
+    restored.result.supersededReconciliation = structuredClone(current.result.supersededReconciliation);
+  if (observation) {
+    const receiptHash = restored.result.paymentResponse?.transaction;
+    if (receiptHash && String(receiptHash).toLowerCase() !== observation.transaction.toLowerCase()) {
+      restored.result.supersededReconciliation = structuredClone(observation);
+      delete restored.result.reconciliation;
+    } else restored.result.reconciliation = structuredClone(observation);
+  }
+  return restored;
 }
 
 function requireOutcome(quote, result) {
@@ -269,7 +292,9 @@ export class McpResultStore {
     const saved = {...this.#reservation(quote), ...prior, status:'SAVED', path, bytes:bytes.length,
       sha256:sha(bytes), manifestStatus:manifest ? 'SAVED' : 'MISSING',
       capturedAt:prior?.capturedAt ?? new Date().toISOString(), recovered:true};
-    restored.result = {...restored.result, content:mcpResultContent(result), responseFile:saved};
+    restored.result = {...restored.result, content:mcpResultContent(result), responseFile:saved,
+      ...(restored.result.paidAttempted ? {paymentResponse:paymentResponseSummary(result?._meta?.['x402/payment-response'])} : {})};
+    retainPaymentObservation(restored, quote);
     if (!manifest) {
       let writer;
       try {
@@ -307,7 +332,7 @@ export async function importRetainedMcpResult({quoteStore, resultStore, quoteId,
     if (!quote.result?.content || !RESULT_STATES.has(quote.status)) {
       // The full original host completion repairs an older database snapshot.
       // No approval, signer, merchant or ledger is called by this import.
-      quote = restored;
+      quote = retainPaymentObservation(restored, quote);
       quote.result.content = mcpResultContent(result);
       delete quote.result.responseFile;
       quote.updatedAt = Date.now(); quoteStore.save(quote);

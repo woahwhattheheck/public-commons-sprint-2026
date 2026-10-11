@@ -28,7 +28,7 @@
       <fieldset><legend>3. API and payment terms</legend>
         <div class="grid"><label>Query / route name <input id="query-name" pattern="[A-Za-z][A-Za-z0-9_]{0,47}" maxlength="48" required></label><label>Resource path <input id="route-path" placeholder="/data/orders" required></label></div>
         <label>Description <input id="description" maxlength="512" required></label>
-        <label>Public HTTPS origin <input id="public-origin" placeholder="https://data.your-company.example"><small>Leave blank for the original local onboarding service.</small></label>
+        <label>Public HTTPS origin <input id="public-origin" placeholder="https://data.your-company.example"><small>Required for a retained release. Leave blank only for a local onboarding package; its origin must be set before retaining it.</small></label>
         <div class="grid"><label>Stellar network <select id="network"><option value="stellar:testnet">Testnet</option><option value="stellar:pubnet">Public network</option></select></label><label>Price in atomic units <input id="amount" inputmode="numeric" pattern="[1-9][0-9]*" placeholder="10000" required><small>Use the asset's exact atomic-unit amount.</small></label></div>
         <label>Existing asset identifier <input id="asset" maxlength="128" required></label>
         <label>Existing receiving account <input id="pay-to" maxlength="128" required></label>
@@ -37,6 +37,28 @@
     </form>
     <section id="review" hidden><h2>Package review</h2><p id="review-files" class="muted"></p><h3>Fixed parameterized query</h3><pre id="sql"></pre><details><summary>Database source configuration</summary><pre id="source-json"></pre></details><details><summary>Original seller configuration</summary><pre id="seller-json"></pre></details><h3>Run from your existing checkout</h3><pre id="run"></pre><p class="muted">Database credentials remain in the configured environment variable. Exporting creates files; the seller starts when you run its command.</p></section>
     <section id="saved" hidden><h2>Merchant package exported</h2><p id="saved-path"></p><pre id="saved-run"></pre><p>Use the original seller's facilitator option when enabling its native payment runtime. Keep database privileges and approved payment terms under your normal operator control.</p></section>
+    <section id="release-workspace" aria-labelledby="release-heading">
+      <div class="section-heading"><div><p class="eyebrow">Saved packages and merchant releases</p><h2 id="release-heading">Release handoff</h2></div><button id="exports-refresh" type="button">Refresh saved packages</button></div>
+      <p id="release-connection">Loading saved exports…</p>
+      <p class="muted">Each export retains its exact file hashes. Stage a saved package to compare, select, start or roll back its query configuration in Seller releases. Database contents remain live.</p>
+      <div class="table-scroll"><table><thead><tr><th>Exported package</th><th>Public origin</th><th>Retained releases</th><th>Action</th></tr></thead><tbody id="retained-exports"></tbody></table></div>
+      <div class="actions"><button id="exports-previous" type="button">Previous</button><span id="exports-page" class="muted"></span><button id="exports-next" type="button">Next</button></div>
+      <div id="release-selection" hidden>
+        <h3>Selected saved package</h3><p id="release-export-path"></p><p id="release-origin"></p>
+        <details><summary>Exact exported file identities</summary><div class="table-scroll"><table><thead><tr><th>File</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody id="release-export-files"></tbody></table></div></details>
+        <div id="release-contract"></div>
+        <form id="release-stage-form">
+          <div class="grid"><label>Release ID <input id="release-id" pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" required></label><label>Release label (optional) <input id="release-label" maxlength="240"></label></div>
+          <div class="grid"><label>Seller port (0 chooses a free port) <input id="release-port" type="number" min="0" max="65535" value="8423" required></label><label>Facilitator URL (optional) <input id="release-facilitator" type="url" placeholder="https://facilitator.example" autocomplete="off" spellcheck="false"></label></div>
+          <label class="check-label"><input id="release-local-facilitator" type="checkbox">Enable the specified loopback HTTP facilitator</label>
+          <p class="muted">Without a facilitator the seller serves payment challenges. Staging preserves the package; selection and start are separate actions in Seller releases.</p>
+          <button id="release-stage" type="submit" disabled>Stage saved package</button>
+        </form>
+        <p id="release-result" role="status" aria-live="polite"></p>
+      </div>
+      <div class="actions"><button id="release-console" type="button">Open Seller releases</button><a id="release-console-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Continue in Seller releases</a></div>
+      <p id="release-ownership" class="muted">The same release store preserves selections and history across workspace restarts. A console opened here and any seller it starts belong to this workspace process.</p>
+    </section>
   </section>
 </main><script type="module" src="/app.mjs"></script>
 </body></html>

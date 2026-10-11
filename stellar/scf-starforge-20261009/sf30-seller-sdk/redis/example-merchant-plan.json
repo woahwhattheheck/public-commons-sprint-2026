@@ -1,0 +1,58 @@
+{
+  "schema": "stellar-forge.redis-merchant-plan.v1",
+  "publicOrigin": "https://redis-merchant.example",
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "UNVERIFIED_DEMO_ASSET",
+    "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+    "amount": "10000",
+    "maxTimeoutSeconds": 60
+  },
+  "routes": [
+    {
+      "id": "availability",
+      "path": "/availability",
+      "method": "GET",
+      "query": "availability",
+      "serviceName": "Catalog availability",
+      "description": "Current catalog availability from the merchant's selected Redis record.",
+      "tags": ["redis", "catalog"],
+      "example": {},
+      "parameterDescriptions": {}
+    },
+    {
+      "id": "catalog",
+      "path": "/catalog",
+      "method": "GET",
+      "query": "catalog",
+      "serviceName": "Regional catalog",
+      "description": "Selected product fields and exact atomic price for a reviewed catalog region.",
+      "tags": ["redis", "catalog"],
+      "example": { "region": "north" },
+      "parameterDescriptions": { "region": "Reviewed catalog region; defaults to north." }
+    },
+    {
+      "id": "leaderboard",
+      "path": "/rankings",
+      "method": "GET",
+      "query": "leaderboard",
+      "serviceName": "Daily product ranking",
+      "description": "A page of the merchant's selected sorted-set members and their Redis score strings.",
+      "tags": ["redis", "ranking"],
+      "example": { "offset": "0" },
+      "parameterDescriptions": { "offset": "Zero-based sorted-set rank; use the returned nextInput for the following page." }
+    },
+    {
+      "id": "events",
+      "path": "/events",
+      "method": "GET",
+      "query": "events",
+      "serviceName": "Catalog event feed",
+      "description": "Projected catalog events after the selected Redis stream ID.",
+      "tags": ["redis", "events"],
+      "example": { "after": "-" },
+      "parameterDescriptions": { "after": "Exclusive Redis stream ID; use - for the first page and returned nextInput to continue." }
+    }
+  ]
+}

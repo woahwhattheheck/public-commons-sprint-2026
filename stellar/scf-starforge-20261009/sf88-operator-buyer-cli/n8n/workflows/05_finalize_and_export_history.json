@@ -1,0 +1,125 @@
+{
+  "name": "Starforge — finalize and export history",
+  "active": false,
+  "nodes": [
+    {
+      "id": "06456984-1b32-4d75-8a15-7d4ccc0e4c8b",
+      "name": "Start selected operation",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "3821546f-e558-405f-8a5d-622aaa3680e6",
+      "name": "Select original intent",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bc748c31-0980-4640-99ab-afa81d4ca99f",
+              "name": "intentId",
+              "value": "",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    },
+    {
+      "id": "8304ac3b-d493-4b2b-9cf1-7ec765f9343c",
+      "name": "Finalize original reservation",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "operation": "finalize",
+        "intentId": "={{ $json.intentId }}",
+        "merchantRoute": "",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "f6081526-eb97-4ed7-8833-11b8a5a54ab2",
+      "name": "Export native inbox history",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        720,
+        240
+      ],
+      "parameters": {
+        "operation": "report",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    }
+  ],
+  "connections": {
+    "Start selected operation": {
+      "main": [
+        [
+          {
+            "node": "Select original intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select original intent": {
+      "main": [
+        [
+          {
+            "node": "Finalize original reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finalize original reservation": {
+      "main": [
+        [
+          {
+            "node": "Export native inbox history",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

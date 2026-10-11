@@ -11,9 +11,13 @@ import os
 import tempfile
 import uuid
 import zipfile
+import survey
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+from delivery import apply_delivery_action, delivery_for, public_delivery
+from delivery_export import delivery_files, file_manifest, full_report, zip_bytes
 
 try:
     import fcntl
@@ -83,6 +87,12 @@ def load_state(root: Path) -> dict:
     value = read_json(root / "workspace.json")
     if value.get("schema") != SCHEMA or not isinstance(value.get("revision"), int):
         raise ValueError("Not a Bologna assessment workspace")
+    value.setdefault("streetPlans", [{"streetKey": key, "street": labels, "status": "UNREVIEWED",
+                                     "fields": {name: {"value": "", "source": ""} for name in STREET_FIELDS},
+                                     "reviewer": None, "reviewedAt": None} for key, labels in PRIORITY.items()])
+    value.setdefault("roadmap", {"targetYear": 2030, "sumpAlignmentYear": 2027, "milestones": [],
+                                "interpretation": "Analyst-supplied progression and derogation criteria."})
+    value["delivery"] = delivery_for(value)
     return value
 
 
@@ -214,6 +224,14 @@ def apply_action(root: Path, payload: dict):
     action = payload.get("action")
 
     def operation(state):
+        if isinstance(action, str) and action.startswith("survey."):
+            return survey.apply(state, payload)
+        if isinstance(action, str) and action.startswith("interviews."):
+            from interviews import apply_interview_action
+            return apply_interview_action(state, payload)
+        delivery_result = apply_delivery_action(state, payload)
+        if delivery_result is not None:
+            return delivery_result
         if action == "reviewDecision":
             decision = next((x for x in state["decisions"] if x["id"] == payload.get("id")), None)
             if not decision:
@@ -294,7 +312,11 @@ def apply_action(root: Path, payload: dict):
         if action == "publish":
             name = checked_text(payload.get("name"), "Publication name", 200)
             frozen = report_payload(state)
-            publication = {"id": str(uuid.uuid4()), "name": name, "createdAt": utc_now(),
+            frozen["workspaceRevision"] = state["revision"] + 1
+            frozen["interviews"]["workspaceRevision"] = frozen["workspaceRevision"]
+            frozen["survey"]["analysis"]["workspaceRevision"] = frozen["workspaceRevision"]
+            frozen["snapshotAt"] = utc_now()
+            publication = {"id": str(uuid.uuid4()), "name": name, "createdAt": frozen["snapshotAt"],
                            "workspaceRevision": state["revision"] + 1, "reportSha256": sha256(canonical(frozen)), "report": frozen}
             state["publications"].append(publication)
             return {"event": "REPORT_PUBLISHED", "id": publication["id"], "sha256": publication["reportSha256"]}
@@ -304,22 +326,25 @@ def apply_action(root: Path, payload: dict):
 
 
 def survey_summary(state: dict) -> dict:
-    responses = state["survey"]["responses"]
-    roles = {}
-    for row in responses:
-        roles[row["role"]] = roles.get(row["role"], 0) + 1
-    count = len(responses)
-    return {"responses": count, "targetMin": state["survey"]["targetMin"], "targetMax": state["survey"]["targetMax"],
-            "targetReached": count >= state["survey"]["targetMin"], "roles": roles,
-            "interpretation": state["survey"]["interpretation"]}
+    analysis = survey.analyze(state)
+    return {"responses": analysis["includedCompleted"], "receivedResponses": analysis["received"],
+            "targetMin": analysis["targetMin"], "targetMax": analysis["targetMax"],
+            "targetReached": analysis["targetReached"], "targetCohort": analysis["targetCohort"],
+            "roles": {row["code"]: row["count"] for row in analysis["tables"]["role"]["rows"]},
+            "interpretation": state["survey"]["interpretation"], "analysis": analysis}
 
 
 def report_payload(state: dict) -> dict:
-    return {"schema": "bologna-urban-logistics-report/v1", "source": state["source"], "baseline": state["baseline"],
-            "datedObservations": state["datedObservations"], "decisions": state["decisions"], "assumptions": state["assumptions"],
-            "streetPlans": state["streetPlans"], "roadmap": state["roadmap"],
-            "scenarios": state["scenarios"], "survey": survey_summary(state), "workspaceRevision": state["revision"],
-            "boundary": "Analyst evidence for prime review; not a current-condition claim or formal planning judgment."}
+    delivery = public_delivery(state)
+    delivery.pop("history", None)
+    return {"schema": "bologna-urban-logistics-report/v2", "source": copy.deepcopy(state["source"]),
+            "baseline": copy.deepcopy(state["baseline"]), "datedObservations": copy.deepcopy(state["datedObservations"]),
+            "decisions": copy.deepcopy(state["decisions"]), "assumptions": copy.deepcopy(state["assumptions"]),
+            "scenarios": copy.deepcopy(state["scenarios"]), "survey": survey_summary(state),
+            "interviews": __import__("interviews").analyze(state),
+            "streetPlans": copy.deepcopy(state["streetPlans"]), "roadmap": copy.deepcopy(state["roadmap"]),
+            "workspaceRevision": state["revision"], "snapshotAt": state["updatedAt"], "delivery": delivery,
+            "boundary": "Source-linked analytical material with separate analyst review and municipal decision records."}
 
 
 def baseline_csv(state: dict) -> bytes:
@@ -353,35 +378,57 @@ def roadmap_csv(state: dict) -> bytes:
 
 
 def report_html(state: dict) -> bytes:
-    report = report_payload(state)
-    street_rows = "".join(f"<tr><td>{html.escape(v['it'])}</td><td>{v['points']}</td><td>{v['spaces']}</td></tr>" for v in state["baseline"]["streets"].values())
-    decisions = "".join(f"<li><strong>{html.escape(x['subject'])}</strong>: {html.escape(x['relationship'])} — {html.escape(x['note'])}</li>" for x in state["decisions"])
-    scenarios = "".join(f"<section><h3>{html.escape(x['name']['it'])} / {html.escape(x['name']['en'])}</h3><p>{html.escape(x['purpose'])}</p><ul>" +
-                        "".join(f"<li>{html.escape(k)}: {html.escape(v['rating'])} — {html.escape(v['note'])}</li>" for k, v in x["criteria"].items()) + "</ul></section>" for x in state["scenarios"])
-    body = f"""<!doctype html><html lang='it'><meta charset='utf-8'><title>Bologna urban logistics assessment</title>
-<style>body{{font:15px system-ui;max-width:980px;margin:40px auto;padding:0 24px;color:#152029}}table{{border-collapse:collapse;width:100%}}th,td{{padding:8px;border:1px solid #bdc7cd;text-align:left}}small{{color:#52616b}}@media print{{body{{margin:0;max-width:none}}}}</style>
-<h1>Bologna urban logistics assessment</h1><p><strong>IT/EN analyst handoff</strong> · workspace revision {state['revision']}</p>
-<p>{html.escape(report['boundary'])}</p><h2>Baseline datato / Dated baseline</h2>
-<table><thead><tr><th>Strada / Street</th><th>Punti / Points</th><th>Stalli registrati / Recorded spaces</th></tr></thead><tbody>{street_rows}</tbody></table>
-<small>Snapshot processed 30 June 2022; these are not present-day capacity or utilization claims.</small>
-<h2>Decisioni / Decisions</h2><ul>{decisions}</ul><h2>Scenari / Scenarios</h2>{scenarios}
-<h2>Consultazione / Survey</h2><p>{report['survey']['responses']} responses; target {report['survey']['targetMin']}–{report['survey']['targetMax']}; target reached: {str(report['survey']['targetReached']).lower()}.</p>
-</html>"""
-    return body.encode("utf-8")
+    return full_report(report_payload(state))
 
 
-def export_workspace(root: Path, out: Path) -> dict:
+def selected_report(state: dict, publication_id: str | None = None) -> dict:
+    if publication_id is None:
+        return report_payload(state)
+    publication = next((p for p in state["publications"] if p["id"] == publication_id), None)
+    if publication is None:
+        raise ValueError("Unknown retained publication")
+    report = publication["report"]
+    if sha256(canonical(report)) != publication["reportSha256"]:
+        raise ValueError("Retained publication digest mismatch")
+    return copy.deepcopy(report)
+
+
+def export_parts(root: Path, publication_id: str | None = None):
     state = load_state(root)
+    report = selected_report(state, publication_id)
+    files = {"baseline.csv": baseline_csv(report), "observations.geojson": geojson(report),
+             "report.json": canonical(report), **delivery_files(report)}
+    if "streetPlans" in report and "roadmap" in report:
+        files["roadmap.csv"] = roadmap_csv(report)
+    if "interviews" in report:
+        analysis = report["interviews"]
+        frozen_state = {"revision": analysis["workspaceRevision"], "baseline": report["baseline"], "scenarios": report["scenarios"]}
+        files.update(__import__("interviews").export_files(frozen_state, analysis))
+    if report.get("survey", {}).get("analysis"):
+        files.update(survey.export_tables(report["survey"]["analysis"]))
+    manifest = file_manifest(report, files, publication_id)
+    files["manifest.json"] = canonical(manifest)
+    return manifest, files
+
+
+def export_workspace(root: Path, out: Path, publication_id: str | None = None) -> dict:
+    manifest, files = export_parts(root, publication_id)
     out.mkdir(parents=True, exist_ok=True)
-    files = {"baseline.csv": baseline_csv(state), "observations.geojson": geojson(state), "roadmap.csv": roadmap_csv(state),
-             "report.json": canonical(report_payload(state)), "report.html": report_html(state)}
-    manifest = {"schema": "bologna-urban-logistics-export/v1", "createdAt": utc_now(), "workspaceRevision": state["revision"],
-                "sourceSha256": state["source"]["compressedSha256"], "files": []}
     for name, data in files.items():
         write_atomic(out / name, data, 0o600)
-        manifest["files"].append({"name": name, "bytes": len(data), "sha256": sha256(data)})
-    write_atomic(out / "manifest.json", canonical(manifest), 0o600)
     return manifest
+
+
+def download_workspace(root: Path, format_name: str, publication_id: str | None = None):
+    _, files = export_parts(root, publication_id)
+    if format_name == "zip":
+        return zip_bytes(files), "application/zip", "bologna-delivery.zip"
+    names = {"report": "report.html", "framework": "framework.html", "learning": "learning.html",
+             "factsheet": "factsheet.html", "cesf": "cesf.html", "survey": "survey-it.html"}
+    if format_name not in names:
+        raise ValueError("Unknown download format")
+    name = names[format_name]
+    return files[name], "text/html; charset=utf-8", name
 
 
 def backup_workspace(root: Path, archive: Path) -> dict:
