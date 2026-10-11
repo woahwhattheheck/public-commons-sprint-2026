@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Python merchant workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/browser.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to workspace</a>
+  <header class="masthead">
+    <div class="masthead-title"><span class="eyebrow">STELLAR FORGE</span><h1>Python merchant workspace</h1></div>
+    <div class="masthead-state"><span id="workspace-name">Opening workspace…</span><span id="revision-label" class="badge">Loading</span></div>
+  </header>
+  <div class="toolbar">
+    <div id="save-state" class="muted" role="status" aria-live="polite">Loading the retained application.</div>
+    <div class="button-row"><button id="refresh-workspace" type="button">Refresh saved state</button><button id="save-draft" class="primary" type="button" disabled>Save revision</button></div>
+  </div>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <div id="recovery" class="notice" hidden></div>
+  <nav class="tabs" aria-label="Workspace sections">
+    <button type="button" data-tab="overview" aria-current="page">Overview</button>
+    <button type="button" data-tab="source">Application</button>
+    <button type="button" data-tab="functions">Functions &amp; terms</button>
+    <button type="button" data-tab="preview">Try a function</button>
+    <button type="button" data-tab="releases">Releases</button>
+    <button type="button" data-tab="history">History &amp; handoff</button>
+  </nav>
+  <main id="main" tabindex="-1">
+    <section id="panel-overview" class="panel" aria-label="Overview"></section>
+    <section id="panel-source" class="panel" aria-label="Application" hidden></section>
+    <section id="panel-functions" class="panel" aria-label="Functions and terms" hidden></section>
+    <section id="panel-preview" class="panel" aria-label="Try a function" hidden></section>
+    <section id="panel-releases" class="panel" aria-label="Releases" hidden></section>
+    <section id="panel-history" class="panel" aria-label="History and handoff" hidden></section>
+  </main>
+  <footer><span>Local application authoring and retained releases</span><span id="connection-state">Connecting</span></footer>
+  <dialog id="discard-dialog">
+    <form method="dialog">
+      <h2>Keep your current edits?</h2>
+      <p id="discard-detail">There are unsaved changes in this browser. Loading another revision replaces this local draft.</p>
+      <div class="button-row"><button value="cancel" autofocus>Keep editing</button><button value="discard" class="primary">Discard draft and load</button></div>
+    </form>
+  </dialog>
+  <noscript><p class="notice">Enable JavaScript to operate this local workspace. The existing Python merchant CLI remains available.</p></noscript>
+</body>
+</html>
+
