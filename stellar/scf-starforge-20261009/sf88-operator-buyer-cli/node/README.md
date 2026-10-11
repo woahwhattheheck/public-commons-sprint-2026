@@ -444,6 +444,22 @@ attempt markers must not be interchanged. Filesystem durability assumes a local
 filesystem supporting atomic hard links and fsync; network/distributed filesystems
 require their own validation.
 
+## Use an existing native operator workspace
+
+`buyer.fromWorkspace(directory, { configuration, intentId, responseFile, requestTimeoutMs })`
+adopts the original SF88 workspace directly. Its operator, private evidence, signer,
+transport and payment limits remain bound by the original inbox checks; workspace
+keys are loaded only inside the original native child. An optional authored
+configuration selects another explicit request under that same operator and budget.
+The default Buyer profile does not replace workspace authority.
+
+Preparation and review remain offline. Execute checks current native setup and the
+controlling terminal before recording an attempt, then uses the original workspace
+execution and manifest-selected evidence RPC. Recovery only reads the retained
+result, including when the workspace is temporarily absent. For full setup, request
+adoption, inbox/accounting handoff and original recovery, see [WORKSPACE.md](WORKSPACE.md)
+and [examples/workspace_customer.mjs](examples/workspace_customer.mjs).
+
 ## Whole customer workspace backup and restore
 
 `buyer.workspaceRecovery()` includes the existing Node application state alongside

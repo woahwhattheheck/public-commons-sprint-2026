@@ -8,6 +8,7 @@ const HELP = `GoldRush customer workflow (Node 22+)
   request --release DIR --operation balances|transfers --inputs INPUTS.json
     --intent STABLE_ID --accept INDEX --max-atomic DECIMAL --out NEW_CONFIG.json
     [--payment-flow authorization|upfront] [--source-root CHECKOUT]
+  prepare --state PRIVATE_DIRECTORY --workspace OPERATOR_DIRECTORY [--config CONFIG.json] [--source-root CHECKOUT]
   prepare --config CONFIG.json --state PRIVATE_DIRECTORY [--profile OPERATOR_PROFILE.json] [--source-root CHECKOUT]
   review|execute|recover --state PRIVATE_DIRECTORY --intent STABLE_ID [--source-root CHECKOUT]
   next-page --state PRIVATE_DIRECTORY --intent PREVIOUS_ID --next-intent NEW_ID
@@ -83,7 +84,7 @@ export async function main(args = process.argv.slice(2)) {
   if (!args.length || args[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
   const action = args[0], allowed = {
     request: ['--release','--operation','--inputs','--intent','--accept','--max-atomic','--payment-flow','--out','--source-root'],
-    prepare: ['--config','--state','--profile','--source-root'],
+    prepare: ['--config','--workspace','--state','--profile','--source-root'],
     review: ['--state','--intent','--source-root'], execute: ['--state','--intent','--source-root'], recover: ['--state','--intent','--source-root'],
     'next-page': ['--state','--intent','--next-intent','--max-atomic','--out','--source-root'],
   };
@@ -96,9 +97,15 @@ export async function main(args = process.argv.slice(2)) {
     const buyer = new Buyer({ runtimeDirectory: nativePath(root, 'sf88-operator-buyer-cli'),
       stateDirectory: resolve(required(options, '--state')),
       ...(options.has('--profile') ? { operatorProfile: resolve(options.get('--profile')) } : {}) });
+    if (action === 'prepare' && options.has('--workspace') && options.has('--profile'))
+      throw new TypeError('An explicit workspace supplies its own original operator profile');
+    const capture = { responseFile: { maxBytes: 1048576, timeoutMs: 30000,
+      expectedContentType: 'application/json' }, requestTimeoutMs: 90000 };
     const operation = action === 'prepare'
-      ? await buyer.fromConfig(resolve(required(options, '--config')), { responseFile: {
-        maxBytes: 1048576, timeoutMs: 30000, expectedContentType: 'application/json' }, requestTimeoutMs: 90000 })
+      ? options.has('--workspace')
+        ? await buyer.fromWorkspace(resolve(options.get('--workspace')), {
+          ...capture, configuration: options.has('--config') ? resolve(options.get('--config')) : undefined })
+        : await buyer.fromConfig(resolve(required(options, '--config')), capture)
       : buyer.operation(required(options, '--intent'));
     if (action === 'prepare' || action === 'review') output = await operation.review();
     else if (action === 'next-page') {
