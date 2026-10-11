@@ -14,6 +14,7 @@ import {absolute, need, object, digest, now, privateDirectory, readBytes, readJs
 
 export const CONFIG_SCHEMA = 'stellar-forge.sf104.merchant-operator.v1';
 export const ORDER_SCHEMA = 'stellar-forge.sf104.merchant-order.v1';
+export const REFUND_ORDER_SCHEMA = 'stellar-forge.sf104.merchant-refunds.v1';
 export const INPUT_SCHEMA = 'stellar-forge.sf104.merchant-review-input.v1';
 export const REVIEW_SCHEMA = 'stellar-forge.sf104.merchant-review.v1';
 export const RELEASE_SCHEMA = 'stellar-forge.sf104.merchant-release.v1';
@@ -70,9 +71,9 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
   need(fetchImpl === undefined || typeof fetchImpl === 'function', 'WOO_OPERATOR_FETCH_INVALID');
   const transport = fetchImpl ?? (config.allowLocal ? fetch : createPublicHttpsFetch({timeoutMs:config.timeoutMs}));
   const authorization = 'Basic ' + Buffer.from(username + ':' + password).toString('base64');
-  const request = async (order, body) => {
+  const request = async (order, body, suffix = body ? '/release' : '', validate = validateOrder) => {
     need(reference(order), 'WOO_OPERATOR_ORDER_REQUIRED');
-    const response = await transport(config.restUrl + order + (body ? '/release' : ''), {
+    const response = await transport(config.restUrl + order + suffix, {
       method:body ? 'POST' : 'GET', redirect:'manual', signal:AbortSignal.timeout(config.timeoutMs),
       headers:{authorization, accept:'application/json', ...(body ? {'content-type':'application/json'} : {})},
       ...(body ? {body:JSON.stringify(body)} : {}),
@@ -82,9 +83,14 @@ export function createMerchantClient(config, {env = process.env, fetchImpl} = {}
     if (response.status === 401 || response.status === 403) need(false, 'WOO_OPERATOR_AUTH_REFUSED');
     if (body) return {httpStatus:response.status, response:value};
     need(response.status === 200, safeCode(value.status, 'WOO_OPERATOR_ORDER_READ_FAILED'));
-    return validateOrder(value, config, order);
+    return validate(value, config, order);
   };
-  return Object.freeze({inspect:order => request(order), release:(order, body) => request(order, body)});
+  return Object.freeze({
+    inspect:order => request(order), release:(order, body) => request(order, body),
+    inspectRefunds:order => request(order, undefined, '/refunds', validateRefundOrder),
+    prepareRefund:(order, body) => request(order, body, '/refunds/prepare'),
+    applyRefund:(order, body) => request(order, body, '/refunds/apply'),
+  });
 }
 
 export function validateOrder(snapshot, config, order) {
@@ -92,6 +98,21 @@ export function validateOrder(snapshot, config, order) {
     snapshot.orderReference === order && HASH.test(snapshot.revision) && HASH.test(snapshot.identitySha256) &&
     object(snapshot.content) && object(snapshot.content.identity) && object(snapshot.content.order), 'WOO_OPERATOR_ORDER_INVALID');
   need(snapshot.content.identity.orderReference === order, 'WOO_OPERATOR_ORDER_IDENTITY_MISMATCH');
+  return snapshot;
+}
+
+/** Same authenticated transport as payment review; native bindings are checked
+ * by refund-operator before a refund is prepared or applied. */
+export function validateRefundOrder(snapshot, config, order) {
+  need(object(snapshot) && snapshot.schema === REFUND_ORDER_SCHEMA && snapshot.siteUrl === config.siteUrl &&
+    snapshot.orderReference === order && HASH.test(snapshot.revision) && HASH.test(snapshot.identitySha256) &&
+    typeof snapshot.observedAt === 'string' && object(snapshot.originalPayment) && object(snapshot.order) &&
+    Array.isArray(snapshot.refunds) && Array.isArray(snapshot.adjustments), 'WOO_REFUND_ORDER_INVALID');
+  const money = snapshot.order;
+  need(typeof money.currency === 'string' && /^[A-Z0-9]{3,12}$/.test(money.currency) &&
+    Number.isSafeInteger(money.priceDecimals) && money.priceDecimals >= 0 && money.priceDecimals <= 6 &&
+    ['total', 'refundedTotal', 'remainingTotal'].every(key => typeof money[key] === 'string') &&
+    typeof money.status === 'string', 'WOO_REFUND_ORDER_MONEY_INVALID');
   return snapshot;
 }
 

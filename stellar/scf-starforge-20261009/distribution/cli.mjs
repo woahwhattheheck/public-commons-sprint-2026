@@ -20,19 +20,37 @@ const help = `Starforge merchant toolkit
   starforge runtime-profile --help
   starforge runtime-install --help
   starforge runtime-workspace --help
+  starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  weather-operations                        Operate weather sources, decisions, frozen reports and original recovery
+  usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
+  webhook-feed                              Receive signed webhooks and sell reviewed event feeds
+  buyer-event-feed                          Collect, recover and export original paid event pages
+  mercury-feed                              Operate original Mercury events, paid feeds and joined recovery
+  mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
+  valyu-merchant                            Configure and operate the native research search merchant
+  valyu-research                            Save queries, operate purchases, compare research and export editions
+  arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
+  arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
+  sftp                                      Inspect, capture and resume pinned private report files
+  sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
+  sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
   provider-operator                          Original external-provider capture, case and terminal workflow
   provider-workspace                         Retained provider desk, host profiles and complete case recovery
   runtime-profile                            Select exact dependencies for an original release
   runtime-install                            Install, resume, run, upgrade and recover a customer runtime
   runtime-workspace                          Review, install and recover runtimes in a private browser workspace
+  runtime-transfer                           Transfer exact source, profile and public package cache offline
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
   chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
+  jobs                                      Prepare and operate durable paid application jobs
+  jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
+  supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -50,21 +68,30 @@ Native commands (arguments pass unchanged to the maintained implementation):
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
+  merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
+  merchant-recovery-remote                  Upload, list, retrieve and restore retained off-host snapshots
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
+  research-dossiers                         Retain research questions, evidence, findings and portable reports
+  research-workspace                        Open the private research dossier operator workspace
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  merchant-order-recovery                    Snapshot and restore original orders, usage and paid files
   paid-file-purchase Prepare and retrieve an approved customer order
+  api-pass                                  Sell and operate purchased API allowances on original orders
+  api-pass-client                           Use an allowance, inspect usage and recover an original response
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
@@ -73,6 +100,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
+  ckan                                       Discover, capture and operate retained CKAN data merchants
+  ckan-publisher                             Review and publish complete DataStore editions and buyer handoffs
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
@@ -81,7 +110,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
-  openapi-workspace                          Prepare and operate a merchant from its API contract
+  openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  oauth-connection                           Authorize, review, renew and disconnect an existing provider grant
+  openapi postman                            Review collections, retain source and create merchant packages
+  openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
@@ -90,7 +122,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sqlite-publisher                           Review and publish retained SQLite data products
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
-  dataset-publisher                          Publish CSV versions and prepare original buyer acquisition
+  dataset-publisher                          Publish retained CSV/workbook selections and prepare buyer acquisition
+  workbook                                   Inspect sources, review mappings and adopt complete workbook editions
+  workbook-customer                          Receive published workbooks through the original buyer and Analysis
+  workbook-receive                            Complete retained workbook receiving and full SQL export
   buyer-dataset                              Acquire, resume and deliver a complete selected dataset
   buyer-dataset-workspace                    Review and operate original datasets in the browser
   catalog-serve / catalog                     Host and operate live seller discovery
@@ -107,12 +142,15 @@ Native commands (arguments pass unchanged to the maintained implementation):
   allium-explorer / allium-workspace          Acquire, review and operate retained Allium data products
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
+  merchant-fleet-host                         Install, run and recover the managed multi-merchant Linux service
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
+  merchant-customer-statements               Retain customer statements with original payments and API usage
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
+  merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases

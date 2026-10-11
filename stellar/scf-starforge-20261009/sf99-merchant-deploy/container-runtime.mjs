@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { checkBundle } from './host.mjs';
+import { checkOAuthHostConnections } from '../sf30-seller-sdk/oauth-connections/deployment.mjs';
 import { atomicJSON, jsonFile, regular, privateDirectory } from './maintenance-system.mjs';
 import { acquireDeliveryLease, inspectDeliveryLease } from '../sf98-merchant-delivery/delivery-lock.mjs';
 
@@ -408,6 +409,7 @@ export async function startContainer(bundle, { readersOnly = false, startupTimeo
     maintenance = await readMaintenanceMarker(p);
     need(readersOnly || !maintenance, 'MERCHANT_MAINTENANCE_ACTIVE');
     const env = await environment(p);
+    if (services.some(service => service.role === 'seller')) await checkOAuthHostConnections(p, { env });
     await reservePorts(p);
     const deadline = Date.now() + startupTimeoutSeconds * 1000;
     for (const service of services) {

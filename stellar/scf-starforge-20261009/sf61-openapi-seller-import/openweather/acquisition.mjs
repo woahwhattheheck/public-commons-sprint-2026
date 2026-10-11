@@ -130,7 +130,7 @@ export function createAcquirer(store,{fetchImpl=globalThis.fetch,env=process.env
   const run=jobId=>{
     if(closing)fail('SERVER_CLOSING','The application is closing',409);
     if(running.has(jobId))return running.get(jobId);
-    const work=(async()=>{
+    const work=Promise.resolve().then(async()=>{
       try{
         while(!closing&&['READY','RUNNING'].includes(jobOf(store.snapshot(),jobId).state)){if(!await serialStep(jobId))break;}
       }catch(e){
@@ -140,7 +140,7 @@ export function createAcquirer(store,{fetchImpl=globalThis.fetch,env=process.env
         });
       }finally{running.delete(jobId);}
       return jobOf(store.snapshot(),jobId);
-    })();running.set(jobId,work);return work;
+    });running.set(jobId,work);return work;
   };
   const resume=async(jobId,{extraPages=0,acknowledgeUnknown=false,background=false}={})=>{
     await recover();
@@ -155,7 +155,7 @@ export function createAcquirer(store,{fetchImpl=globalThis.fetch,env=process.env
       job.state='READY';job.reason=null;job.stopRequested=false;return job;
     });const work=run(jobId);return background?jobOf(store.snapshot(),jobId):work;
   };
-  const stop=jobId=>store.transaction(s=>{const job=jobOf(s,jobId);job.stopRequested=true;if(!running.has(jobId)){job.state='PAUSED';job.reason='Stopped by operator';job.stopRequested=false;}return job;});
+  const stop=jobId=>store.transaction(s=>{const job=jobOf(s,jobId);if(!job.cursor)return job;job.stopRequested=true;if(!running.has(jobId)){job.state='PAUSED';job.reason='Stopped by operator';job.stopRequested=false;}return job;});
   return {recover,run,resume,stop,running:()=>[...running.keys()],close:async()=>{closing=true;await Promise.allSettled([...running.values()]);}};
 }
 export async function dataset(store,jobId,{conflicts='reject'}={}){

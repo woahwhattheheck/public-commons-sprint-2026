@@ -1,6 +1,6 @@
 # Retained data publication through merchant MCP
 
-Operate the original PostgreSQL, SQLite, MySQL, MongoDB or Google Sheets publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
+Operate the original PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets, SFTP or ArcGIS publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
 
 ## Start from the public SQLite example
 
@@ -315,3 +315,106 @@ The native controller keeps asynchronous extraction/refresh ownership after a to
 
 Directory paths and SQLite file locations stay in host configuration. MCP views preserve original hashes and source/operation identity while omitting those local paths. Public candidate rows and their native schema are returned unchanged. Original publisher storage, source, conflict and recovery codes remain actionable in errors.
 
+
+## Private SFTP file publications
+
+The [SFTP merchant](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/README.md)
+adds the original `openSftpPublisher` source driver. Configure a host key
+fingerprint and an authentication environment reference, inspect the remote
+folder and review an explicit CSV, JSON or NDJSON report. Its source declaration
+fixes the remote path, JSON record pointer, public scalar projections and permitted
+typed comparisons. The operator workspace can create a publication bound to just
+one saved report and complete merchant payment choices.
+
+The maintained `sftp` runtime group installs the pinned `ssh2@1.17.0` dependency.
+The merchant process needs Node 22.5 or later, the original Linux `flock` workspace
+lease and the original seller/buyer dependencies. The source adapter uses the
+Node SSH client; a merchant connecting to an existing SFTP server does not need
+a local SSH daemon.
+
+Prepare or reopen the native publication with `starforge sftp-publisher`, then
+close that browser before opening the same original workspace through MCP.
+In the existing publisher connection file, bind the retained directory:
+
+```json
+{
+  "schema": "stellar-forge.merchant-publisher-connection.v1",
+  "workspaces": {
+    "private_reports": {
+      "kind": "sftp",
+      "label": "Reviewed private SFTP reports",
+      "directory": "/private/reports/publication"
+    }
+  }
+}
+```
+
+The directory must contain its original
+`stellar-forge.sftp-publisher-workspace.v1` identity. Supply the declared key or
+password environment reference to the MCP host process. A key-file environment
+value is an absolute path to its private 0600 file.
+
+Use the same `merchant_publisher_open`, source inspection, plan, extraction,
+candidate, review, publication and buyer tools described above. Source inspection
+retains the selected path/format/pointers, declared types and parameters.
+Every extraction captures the complete remote file, verifies any reviewed
+`expectedSha256`, and retains its pinned host identity, before/after observations
+and full received-byte digest. A resumed transfer compares every retained prefix
+byte before continuing. Typed row projection consumes only that completed capture.
+
+Public extraction budgets cover every matching row, independently of buyer page
+limits. Integer columns require mathematically integral source tokens in the safe
+integer range; Text retains large numeric identifiers and exact decimal lexemes.
+Nullable and missing fields follow the explicitly reviewed source mapping.
+Omitted optional parameters omit their associated conditions.
+
+The native recurrence tools operate this same publisher and its original
+schedule. Each occurrence captures a fresh file edition and retains its own
+candidate and capture identity. A complete equal dataset uses the original
+unchanged-version behavior. Earlier versions stay with their original pinned
+buyers. Close and reopen the exact native instance; all plans, source bindings,
+transfers, published versions, schedule state and buyer handoffs stay in its
+original private directory.
+
+## ArcGIS layers and GIS receiving
+
+A host-declared `kind: "arcgis"` opens the original
+[sf30 ArcGIS publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/README.md).
+Its workspace schema is `stellar-forge.arcgis-publisher-workspace.v1`.
+Complete the source's capture/import and `source-create` commands, then initialize
+the original publisher directory before binding it in this connection file:
+
+```json
+{
+  "schema": "stellar-forge.merchant-publisher-connection.v1",
+  "workspaces": {
+    "neighborhoods": {
+      "label": "Reviewed neighborhood dataset",
+      "kind": "arcgis",
+      "directory": "publisher"
+    }
+  }
+}
+```
+
+The existing source tool returns the exact query, field types, source hash and
+`serviceQuery` descriptor. Save the selected columns with those native types and
+order extraction by the first object-ID column ascending. The optional
+attributes/geometry/spatial-reference JSON projections retain native values and
+Esri coordinates. Source credentials are environment references in the private
+capture configuration, never agent arguments.
+
+The same publisher tools inspect/extract/review/publish the candidate, control
+recurrence and prepare the original snapshot-pinned SF88 buyer. A saved ArcGIS
+source pins a completed capture; scheduled extractions reuse that exact
+observation. Capture a new source edition and save a newly reviewed plan to
+change the observed provider data. The scheduler does not silently issue new
+ArcGIS requests.
+
+Prepare the small public receiving declaration with `arcgis receiving-plan`
+for the retained candidate. Give it to the buyer with the current merchant
+handoff. After the ORIGINAL SF100 delivery is finalized, `arcgis receive`
+converts its exact typed JSONL to an Esri FeatureSet while verifying the original
+page chain, selected dataset snapshot, fields, object IDs, scalar values and CRS.
+The existing buyer owns each payment intent and page acquisition; conversion
+opens no network connection and makes no payment inference.
