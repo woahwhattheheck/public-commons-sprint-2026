@@ -96,7 +96,7 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency','stream'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','querySerialization','timeoutMs','maxResponseBytes','maxRequestBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','oauth2','idempotency','stream'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     const stream = merchantStreamPolicy(row, method);
@@ -148,6 +148,7 @@ export function prepareMerchant(specText, plan) {
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
       requestBody:requestBodySummary(requestBody),
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
+      querySerializationOverrides:structuredClone(row.querySerialization ?? {}),
       responseMode:row.responseMode??'json',paymentFlow:plan.payment.paymentFlow??'authorization',
       backendAuthentication:authentication.authentication, publicAuthentication:'native x402', securityAlternative:row.securityAlternative ?? 0});
   }
