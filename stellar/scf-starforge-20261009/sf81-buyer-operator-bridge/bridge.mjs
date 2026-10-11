@@ -1,6 +1,8 @@
 // MIT. Trusted operator-host composition of original SF31 + SF62/SF54/SF59/SF36.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { open } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
@@ -17,6 +19,20 @@ export class OperatorBridgeError extends Error {
     this.intentId = intentId;
     this.reservationState = 'CHECK_NATIVE_LEDGER_DO_NOT_RELEASE_OR_RETRY';
     this.paymentSent = false;
+  }
+}
+
+/** Check the actual approval device without reading input or requesting consent. */
+export async function checkOperatorTerminal(intentId) {
+  try {
+    // A tool may allocate a TTY stream without making it the controlling TTY.
+    // SF62 opens this same device, independent of the subprocess stdin pipe.
+    const terminal = await open('/dev/tty', constants.O_RDWR | (constants.O_NOCTTY ?? 0));
+    try {
+      if (!(await terminal.stat()).isCharacterDevice()) throw new Error('not a terminal');
+    } finally { await terminal.close(); }
+  } catch {
+    throw new OperatorBridgeError('OPERATOR_CONTROLLING_TERMINAL_REQUIRED', intentId);
   }
 }
 
@@ -52,6 +68,8 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
     const digest = sha256(raw);
     terminalBusy = true;
     try {
+      await checkOperatorTerminal(intent?.intentId);
+      if (signal?.aborted) throw fail('OPERATOR_ABORTED');
       return await new Promise((resolve, reject) => {
         let child, timer, killTimer, failure, done = false, size = 0;
         const chunks = [];
