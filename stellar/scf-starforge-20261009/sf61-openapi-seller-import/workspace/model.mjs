@@ -16,6 +16,7 @@ import { parseOpenApiSource } from '../source-document.mjs';
 import { openApiRequestBody, requestBodySummary } from '../request-body.mjs';
 import { openApiResponseStreams } from '../response-stream.mjs';
 import { merchantPaymentRequirements, merchantStreamPolicy } from './stream-plan.mjs';
+import { requirePostmanHeaderReferences } from '../postman/collection.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -119,6 +120,7 @@ export function prepareMerchant(specText, plan) {
       if (typeof name !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(name)) fail(key + ': use environment names, never credential values');
       envNames.add(name);
     }
+    requirePostmanHeaderReferences(op,headers);
     let authentication;
     try { authentication = prepareBackendAuthentication(spec,op,row,backend,{allowLoopback:plan.allowLoopbackUpstream===true,sourceSha256:sha(specText)}); }
     catch(e) { fail(key + ': ' + e.message); }
@@ -279,7 +281,7 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
   await mkdir(folder, {mode:0o700});
   for (const [file,content] of Object.entries(files)) await writeFile(join(folder,file), content, {flag:'wx',mode:0o600});
   await compileSeller(['--spec',join(folder,'facade-openapi.json'),'--config',join(folder,'selections.json'),
-    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')]);
+    '--service-bindings',join(folder,'route-bindings.json'),'--out',join(folder,'compiled')],{report:false});
   await mkdir(join(folder,'support'), {mode:0o700});
   await writeFile(join(folder,'merchant-package.json'), manifestBytes, {flag:'wx',mode:0o600});
   const args = ['node',join(sourceRoot,'sf96-seller-pilot-ops/pilot-ops.mjs'),'start','--ops-port','0','--support-parent',join(folder,'support'),'--',
@@ -295,7 +297,7 @@ export async function savePackage({specText, plan, parent, name, sourceRevision}
     'For native facilitator mode, replace --challenge-only with --facilitator YOUR_AUTHORIZED_HTTPS_FACILITATOR.',
     'Supply environment variables in the launcher process: ' + (prepared.preview.environment.join(', ') || '(none)') + '.',
     'Authorization variables contain the complete header value, including Bearer or Basic when required.',
-    'Environment values are never stored in this package. After moving the package, adjust command paths.',
+    'The compiler adds environment-variable references only. Supplied source files may already contain private values; keep the complete package private. After moving the package, adjust command paths.',
     'Authorization-code routes retain the exact reviewed grant ID, public source/profile and environment references. Provision that approved private connection on the receiving host; its directory and token values are never copied into this package.',
     'Renewal preserves the grant identity. After reconnecting or selecting another grant, reselect it in the API workspace and save a new compiled package. Existing package references do not silently switch grants.',
     'The workspace operator workflow and native connection setup are documented in sf61-openapi-seller-import/workspace/AUTHORIZATION_CONNECTIONS.md.',
