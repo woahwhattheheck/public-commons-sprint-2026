@@ -366,6 +366,12 @@ function projectCapture(document, source, capture, issues, side) {
     return found.value;
   };
   let rows = [], entries = [], schema = null, metadata = {}, legacy = false, rowPath = [], singletonRow = false;
+  const nativeTotals = {};
+  if (capture.paging !== undefined) {
+    if (!object(capture.paging) || Object.keys(capture.paging).some(key => !['page', 'firstPage', 'totalRows', 'totalPages', 'pageSize'].includes(key)))
+      throw new TypeError('Retain only the original page, firstPage, totalRows, totalPages and pageSize metadata.');
+    Object.assign(nativeTotals, capture.paging);
+  }
   if (legacyImport || fileImport) {
     legacy = true;
     if (!object(projection) || projection.schemaVersion !== 'blockworks-legacy-projection/v1')
@@ -398,11 +404,17 @@ function projectCapture(document, source, capture, issues, side) {
     if (projection.metadataPointer !== undefined) metadata = pick(document, projection.metadataPointer, 'metadata', false) ?? {};
     if (projection.totalRowsPointer !== undefined) {
       const total = plain(pick(document, projection.totalRowsPointer, 'total rows'));
+      if (own(nativeTotals, 'totalRows') && !same(nativeTotals.totalRows, total)) throw new TypeError('The captured paging total differs from its original total-row field.');
+      nativeTotals.totalRows = total;
       const count = kind === 'tabular' ? rows.length : entries.reduce((n, entry) => n + entry.points.length, 0);
       if (!Number.isSafeInteger(total) || total < 0 || count !== total)
         problem(issues, 'EXPORT_SOURCE_TOTAL', path, 'The declared whole export differs from its original total-row field.', 'error', { side, details: { originalTotalRows: total, receivedRows: count } });
     }
-    if (projection.totalPagesPointer !== undefined) pick(document, projection.totalPagesPointer, 'total pages');
+    if (projection.totalPagesPointer !== undefined) {
+      const total = plain(pick(document, projection.totalPagesPointer, 'total pages'));
+      if (own(nativeTotals, 'totalPages') && !same(nativeTotals.totalPages, total)) throw new TypeError('The captured page total differs from its original total-page field.');
+      nativeTotals.totalPages = total;
+    }
   } else {
     if (!object(document) || !own(document, 'data')) throw new TypeError('The original response has no data envelope.');
     if (own(document, 'error') && document.error !== null && document.error !== '') throw new TypeError('The original response contains a provider error.');
@@ -427,7 +439,7 @@ function projectCapture(document, source, capture, issues, side) {
   }
   if (kind === 'tabular' || kind === 'catalog') {
     if (!Array.isArray(rows) || !rows.every(object)) throw new TypeError('The original projected rows must be objects.');
-    return { rows, entries: [], schema, metadata, legacy,
+    return { rows, entries: [], schema, metadata, nativeTotals, legacy,
       samples: rows.map((row, index) => ({ row, entity: row.entity, point: null, schema: null, legacy,
         location: { captureId: capture.id, row: index, pointer: pointer(singletonRow ? rowPath : [...rowPath, index]) } })) };
   }
@@ -454,7 +466,7 @@ function projectCapture(document, source, capture, issues, side) {
         location: { captureId: capture.id, series: seriesIndex, seriesKey: cell(entry.key), point: pointIndex, pointer: pointer([...entry.pointsPath, pointIndex]) } });
     }
   }
-  return { rows: [], entries, schema, metadata, legacy, samples };
+  return { rows: [], entries, schema, metadata, nativeTotals, legacy, samples };
 }
 function validDate(value) { try { rfcSeconds(value); return true; } catch { return false; } }
 function inspectSource(source, side, issues) {
@@ -531,14 +543,31 @@ function inspectSource(source, side, issues) {
       problem(issues, 'CAPTURE_MANIFEST_BINDING', base + '/manifest/captures', 'The supplied captures differ from the retained manifest population.', 'error', { side });
     for (const captured of source.captures) if (captured.metadata && declared.has(captured.metadata.id)) {
       const original = declared.get(captured.metadata.id);
-      for (const field of ['sha256', 'bytes', 'status', 'accepted']) if (!same(original[field], captured.metadata[field]))
+      for (const field of ['sha256', 'bytes', 'status', 'accepted', 'paging', 'request', 'capturedAt', 'provenance']) if (!same(original[field], captured.metadata[field]))
         problem(issues, 'CAPTURE_MANIFEST_CHANGED', base + '/manifest/captures/' + captured.metadata.id, 'Capture ' + field + ' differs from its manifest.', 'error', { side });
     }
   }
   if (result.legacyImport) {
     const coverage = result.coverage;
-    if (coverage.kind !== 'declared-export' || coverage.complete !== true || !text(coverage.declaredBy) || !validDate(coverage.declaredAt) || !text(coverage.reference) || !text(coverage.note))
-      problem(issues, 'EXPORT_DECLARATION', base + '/manifest/coverage', 'Retain the complete-export declaration, reviewer, actual date, reference and scope note.', 'error', { side });
+    if (coverage.kind === 'declared-export') {
+      if (coverage.complete !== true || !text(coverage.declaredBy) || !validDate(coverage.declaredAt) || !text(coverage.reference) || !text(coverage.note))
+        problem(issues, 'EXPORT_DECLARATION', base + '/manifest/coverage', 'Retain the complete-export declaration, reviewer, actual date, reference and scope note.', 'error', { side });
+    } else if (coverage.kind === 'native-response') {
+      const totals = projected[0]?.nativeTotals ?? {}, totalRows = totals.totalRows, totalPages = totals.totalPages;
+      const onePage = totalPages === undefined || (Number.isSafeInteger(totalPages) && totalPages >= 0 && totalPages <= 1);
+      const pageKnown = totals.page === undefined || (Number.isSafeInteger(totals.page) && totals.page >= 0 && totals.page === (totals.firstPage ?? 1));
+      const firstKnown = totals.firstPage === undefined || [0, 1].includes(totals.firstPage);
+      const sizeKnown = totals.pageSize === undefined || (Number.isSafeInteger(totals.pageSize) && totals.pageSize >= 0);
+      if (projected.length !== 1 || !Number.isSafeInteger(totalRows) || totalRows < 0 || totalRows !== result.samples.length ||
+          !onePage || !pageKnown || !firstKnown || !sizeKnown || (totalPages === 0 && result.samples.length > 0) || coverage.complete !== true)
+        problem(issues, 'LEGACY_NATIVE_COVERAGE', base + '/manifest/coverage', 'A native-response population needs one original complete response, matching original totalRows and a coherent single native page.', 'error', { side,
+          details: { captures: projected.length, originalTotals: totals, receivedRows: result.samples.length } });
+      for (const [field, original] of Object.entries(totals)) if (!same(coverage[field], original))
+        problem(issues, 'LEGACY_NATIVE_TOTALS_CHANGED', base + '/manifest/coverage/' + field, 'Coverage differs from the original retained paging metadata or explicitly selected source total.', 'error', { side,
+          details: { original, returned: coverage[field] ?? null } });
+    } else problem(issues, 'EXPORT_COVERAGE_KIND', base + '/manifest/coverage', 'Use the complete original native-response totals or the reviewed declared-export coverage.', 'error', { side });
+    if (coverage.receivedRows !== undefined && coverage.receivedRows !== result.samples.length)
+      problem(issues, 'EXPORT_POPULATION_CHANGED', base + '/manifest/coverage/receivedRows', 'The retained legacy coverage count differs from its original projected population.', 'error', { side });
   }
   if (['tabular', 'catalog'].includes(result.kind)) {
     if (!Array.isArray(native.rows) || !same(plain(result.rows), native.rows))
@@ -687,7 +716,8 @@ function population(prepared, source, originalSource, mapping, issues) {
           problem(issues, 'WINDOW_COVERAGE', base, 'The original extraction does not cover the complete requested comparison window.', 'error', { side, details: { covered: plain(covered), requested: mapping.window } });
       } catch (error) { problem(issues, 'WINDOW_COVERAGE_INVALID', base, error.message, 'error', { side }); }
     } else if (source.legacyImport) {
-      problem(issues, 'DECLARED_EXPORT_WINDOW', base, 'The selected window relies on the retained complete-export declaration; no provider window totals are asserted.', 'warning', { side });
+      if (source.coverage.kind === 'declared-export') problem(issues, 'DECLARED_EXPORT_WINDOW', base, 'The selected window relies on the retained complete-export declaration; no provider window totals are asserted.', 'warning', { side });
+      else problem(issues, 'LEGACY_NATIVE_WINDOW_UNSTATED', base, 'Native totals cover the complete retained response; review the selected UTC window against the original request because no extraction window is stated.', 'warning', { side });
     } else problem(issues, 'WINDOW_UNRESOLVED', base, 'Retain explicit start/end or the source-resolved window; relative-now or bounds-only input is insufficient for exact window alignment.', 'error', { side });
   }
   const schemaViews = new Set(), identityOrigins = new Map();
@@ -758,7 +788,8 @@ function prepare(input) {
   if (baselineInterval !== undefined && candidateInterval !== undefined && baselineInterval !== candidateInterval)
     problem(issues, 'GRANULARITY_MISMATCH', '/sources', 'Original observation granularities differ; align the selected extracts before comparing. No resampling is implicit.', 'error',
       { details: { baseline: baselineInterval, candidate: candidateInterval } });
-  const selectedContract = sources.contract?.sha256, acquisitionContract = sources.candidate?.manifest?.sourceHash ?? sources.candidate?.manifest?.source?.sha256;
+  // Only an explicit acquisition sourceHash identifies the provider contract. A legacy import source.sha256 identifies its original response bytes.
+  const selectedContract = sources.contract?.sha256, acquisitionContract = sources.candidate?.manifest?.sourceHash;
   if (selectedContract && acquisitionContract && selectedContract !== acquisitionContract)
     problem(issues, 'CANDIDATE_CONTRACT_CHANGED', '/sources/contract', 'The selected provider contract differs from the candidate acquisition source.');
   const binding = {
@@ -780,7 +811,7 @@ function prepare(input) {
   const sourceViews = Object.fromEntries(SIDES.map(side => [side, {
     id: sources[side]?.manifest?.id ?? null, schema: sources[side]?.manifest?.schema ?? null,
     kind: sides[side].kind, digest: sides[side].digest, complete: sides[side].complete,
-    coverage: plain(sides[side].coverage), coverageKind: sides[side].legacyImport ? 'declared-export' : 'provider-capture',
+    coverage: plain(sides[side].coverage), coverageKind: sides[side].legacyImport ? sides[side].coverage.kind : 'provider-capture',
     request: sources[side]?.manifest?.request ?? null, captures: sides[side].captures,
     records: populations[side].original, selectedRecords: populations[side].selected, excludedRecords: populations[side].excluded,
     invalidKeys: populations[side].invalid, fields: populations[side].fields
@@ -856,6 +887,7 @@ export function compareMappedResults({ mapping, sources, reviewId } = {}) {
   const measures = prepared.parsed.measures.map(measure => ({ id: measure.definition.id, interpretation: measure.definition.interpretation,
     baselineUnit: measure.definition.baseline.unit, candidateUnit: measure.definition.candidate.unit,
     baselineDimensions: measure.definition.baseline.dimensions, candidateDimensions: measure.definition.candidate.dimensions,
+    conversion: measure.definition.conversion, tolerance: measure.definition.tolerance,
     exact: 0, withinTolerance: 0, different: 0, bothNull: 0, bothAbsent: 0, uncomparable: 0 }));
   for (const identity of [...identities].sort()) {
     const left = baseline.get(identity)?.[0], right = candidate.get(identity)?.[0];
@@ -889,6 +921,6 @@ export function compareMappedResults({ mapping, sources, reviewId } = {}) {
   if (inconclusive) problem(issues, 'VALUES_INCONCLUSIVE', '/comparison', 'Retain the absent or uncomparable values shown in the full comparison; no complete numeric equivalence is established.', 'warning');
   const result = { schemaVersion: COMPARISON_SCHEMA, engineVersion: ENGINE_VERSION, mappingId: mapping.id,
     reviewId: review.reviewId, status, ready: true, equivalent: status === 'equivalent' ? true : status === 'different' ? false : null,
-    summary, measures, coverage: review.sources, window: mapping.window ?? null, calculation: review.calculation, rows, issues };
+    summary, measures, decisions: mapping.decisions ?? [], coverage: review.sources, window: mapping.window ?? null, calculation: review.calculation, rows, issues };
   return { ...result, comparisonId: sha256(stable(result)) };
 }
