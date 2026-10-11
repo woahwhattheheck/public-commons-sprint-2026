@@ -32,12 +32,17 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
     if (modulePath) {
       // Executable trusted host configuration, never a path from MCP or discovery.
       operator = await import(pathToFileURL(modulePath).href);
-      if (typeof operator.approve !== 'function' || typeof operator.signPayment !== 'function' ||
+      const pays = typeof operator.approve === 'function' && typeof operator.signPayment === 'function';
+      const readsOnly = operator.approve === undefined && operator.signPayment === undefined &&
+        typeof operator.reconcilePayment === 'function';
+      if ((!pays && !readsOnly) ||
+          (operator.reconcilePayment !== undefined && typeof operator.reconcilePayment !== 'function') ||
           (operator.close !== undefined && typeof operator.close !== 'function'))
-        throw new TypeError('The trusted operator module must export approve and signPayment functions.');
+        throw new TypeError('Export paired approve/signPayment functions, a read-only reconcilePayment function, or both.');
     }
     broker = new McpPaidToolBroker({ discoveryUrl, allowedResourceOrigins, quoteStore, resultStore, timeoutMs,
-      ...(operator ? { approve: operator.approve, signPayment: operator.signPayment,
+      ...(operator ? { ...(operator.signPayment ? {approve:operator.approve,signPayment:operator.signPayment} : {}),
+        reconcilePayment:operator.reconcilePayment ?? null,
         agentCommerce: operator.agentCommerce ?? null,
         ...(operator.fetchImpl === undefined ? {} : {fetchImpl:operator.fetchImpl}),
         remoteMcpPolicies: operator.remoteMcpPolicies ?? [] } : {}) });
@@ -67,7 +72,8 @@ export async function startMcpWorkspace({ environment = process.env } = {}) {
   let closing;
   return {
     broker, server, address, consoleUrl: `${address}/console/`,
-    durable: Boolean(quoteStore), paymentAdapterConnected: Boolean(operator),
+    durable: Boolean(quoteStore), paymentAdapterConnected: typeof operator?.signPayment === 'function',
+    paymentReconciliationConnected: typeof operator?.reconcilePayment === 'function',
     close() {
       if (closing) return closing;
       closing = (async () => {
