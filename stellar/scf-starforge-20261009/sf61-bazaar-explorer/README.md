@@ -51,7 +51,11 @@ If the real provider fails, the UI displays the error instead of inventing resul
 
 The browser sends native network, type, scheme and payTo filters. Blank query calls GET /discovery/resources using offset and limit; nonempty query calls GET /discovery/search using the original opaque cursor. The gateway accepts original resources, items, data.resources and data.items response wrappers but retains native row objects and their payment options. It never infers USD from atomic units.
 
-Each catalog card shows the resource URL as **text, not a clickable merchant request**, source descriptions, tool or HTTP method when declared, tags and individual offered terms. UI text is inserted using DOM textContent, never interpreted as untrusted markup. Optional export saves the actual observed page to local JSON with mode, observation timestamp and requested filters.
+Form edits are drafts until **Explore catalog** is submitted. They do not relabel the displayed offers or change the query attached to their export. The applied source-page filters remain visible beside the results. Previous and Next are disabled while drafts differ from that displayed page; submit Explore to start the new query, or choose **Restore displayed filters** to resume paging the existing query with its own cursor or offset.
+
+Explore can replace an in-flight request. The browser cancels its pending request and ignores delayed replies from superseded requests. If a request fails, the previously loaded page remains visible with an explicit failure status; its labels, pagination and export stay bound to the original applied query. When no page has loaded yet, there are no retained rows to display.
+
+Each catalog card shows the resource URL as **text, not a clickable merchant request**, source descriptions, tool or HTTP method when declared, tags and individual offered terms. UI text is inserted using DOM textContent, never interpreted as untrusted markup. Optional export saves the actual observed page to local JSON with mode, observation timestamp and the immutable query used to fetch that page, including its view, filters, limit and original cursor or offset. Unapplied form drafts are never substituted into that source-page record.
 
 CLI switches: --fixture (default), --local-upstream with an existing SF60 read-only local source, --upstream with an explicit public HTTPS facilitator, and --port for a local listener (0 means ephemeral).
 
@@ -66,4 +70,6 @@ CLI switches: --fixture (default), --local-upstream with an existing SF60 read-o
 
 There is no seller registration, ownership proof, money transfer, wallet signing, paid-origin invocation, facilitator verification/settlement, external customer contact, SCF interest/application submission, production deployment or guarantee that a listing is endorsed. SF30 seller SDK, SF41 live capture, SF45 recovery, SF46 release, SF53/SF57 reviewer evidence, SF58 gateway, SF60 catalog journal, and founder SCF application remain independently owned. This changes **none** of their source paths.
 
-No CI, paid hosted Actions or new test suites are added. For source-exact broad simulation, ask the existing SF41/Muse owner to use original captures, not UI observations.
+No CI or paid hosted Actions are added. For source-exact broad simulation, ask the existing SF41/Muse owner to use original captures, not UI observations.
+
+The query-state continuation preserves original PR633/PR640 authorship, source metadata and provider routing; only the existing UI and its guide change. Focused local check: `node --experimental-vm-modules --test stellar/scf-starforge-20261009/sf61-bazaar-explorer/test/query-snapshot.test.mjs`. It executes the shipped browser module with an HTML-derived minimal DOM and controlled native-page responses, covering draft/source separation, exact cursor/offset export, failed paging, replaced requests and edits made while loading. It does not exercise a rendered browser, a live facilitator or the unchanged server.

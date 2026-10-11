@@ -10,14 +10,8 @@ const exportButton = $('export');
 const pageInfo = $('page-info');
 const PAGE_SIZE = 25;
 const state = {
-  offset: 0,
-  cursor: null,
-  cursorHistory: [],
-  query: '',
-  page: 1,
-  report: null,
-  loading: false,
-  requestId: 0,
+  nav:null, request:null, report:null, loading:false,
+  requestId:0, controller:null, pending:null,
 };
 
 const el = (tag, className = '', value = null) => {
@@ -55,8 +49,9 @@ function addDetail(parent, name, value) {
 }
 
 function optionMatchesFilters(option) {
-  return ['network', 'scheme'].every(key => !$(key).value || option?.[key] === $(key).value) &&
-    (!$('payto').value.trim() || option?.payTo === $('payto').value.trim());
+  const filters = state.nav.filters;
+  return ['network', 'scheme'].every(key => !filters[key] || option?.[key] === filters[key]) &&
+    (!filters.payTo || option?.payTo === filters.payTo);
 }
 
 function renderOption(option, index) {
@@ -119,26 +114,58 @@ function renderResource(row, index) {
   return item;
 }
 
-function readFilters() {
-  const params = new URLSearchParams({ view: state.query ? 'search' : 'list',
-    limit: String(PAGE_SIZE) });
-  for (const key of ['network', 'type', 'scheme']) {
-    const value = $(key).value;
-    if (value) params.set(key, value);
-  }
-  const payTo = $('payto').value.trim();
-  if (payTo) params.set('payTo', payTo);
-  if (state.query) {
-    params.set('query', state.query);
-    if (state.cursor) params.set('cursor', state.cursor);
-  } else {
-    params.set('offset', String(state.offset));
-  }
+function draftFilters() {
+  return {query:$('query').value.trim(),network:$('network').value,
+    type:$('type').value,scheme:$('scheme').value,payTo:$('payto').value.trim()};
+}
+function sameFilters(a,b) {
+  return a && b && ['query','network','type','scheme','payTo'].every(key => a[key] === b[key]);
+}
+function firstPage(filters) {
+  return Object.freeze({filters:Object.freeze({...filters}),offset:0,cursor:null,
+    cursorHistory:Object.freeze([]),page:1});
+}
+function requestFor(nav) {
+  const {filters} = nav;
+  const params = new URLSearchParams({view:filters.query ? 'search' : 'list',limit:String(PAGE_SIZE)});
+  for (const key of ['network','type','scheme','payTo']) if (filters[key]) params.set(key,filters[key]);
+  if (filters.query) {
+    params.set('query',filters.query);
+    if (nav.cursor) params.set('cursor',nav.cursor);
+  } else params.set('offset',String(nav.offset));
   return params;
+}
+function nextCursor() {
+  const cursor = state.report?.pagination?.cursor;
+  return typeof cursor === 'string' && cursor.length > 0 && cursor.length <= 512 &&
+    !/[\u0000-\u001f\u007f]/.test(cursor) ? cursor : null;
+}
+function syncControls() {
+  const draft = draftFilters();
+  const nav = state.nav;
+  const dirty = !nav || !sameFilters(draft,nav.filters);
+  const target = state.pending?.filters ?? nav?.filters;
+  $('restore-filters').disabled = !nav || (!dirty && !state.loading);
+  $('filter-status').textContent = state.loading
+    ? (sameFilters(draft,target)
+      ? 'Loading the submitted filters. Explore catalog can replace this request.'
+      : 'Edits are not submitted. The in-flight request still uses its original filters.')
+    : !nav ? 'No source page loaded. Explore catalog to submit these filters.'
+      : dirty ? 'Unapplied filters. Explore catalog to apply them, or restore the displayed page filters.'
+      : 'Form matches the displayed page filters.';
+  const rows = state.report?.resources ?? [];
+  const total = Number.isSafeInteger(state.report?.pagination?.total) ? state.report.pagination.total : null;
+  const hasMore = nav && (nav.filters.query ? Boolean(nextCursor()) :
+    (total !== null ? nav.offset + rows.length < total : rows.length === PAGE_SIZE));
+  prev.disabled = state.loading || dirty || !nav ||
+    (nav.filters.query ? nav.cursorHistory.length === 0 : nav.offset === 0);
+  next.disabled = state.loading || dirty || !hasMore;
+  exportButton.disabled = state.loading || !rows.length;
+  form.setAttribute('aria-busy',String(state.loading));
 }
 
 function render(data) {
-  state.report = data;
+  const nav = state.nav;
   status.classList.remove('error');
   const rows = data.resources;
   const total = Number.isSafeInteger(data?.pagination?.total) ? data.pagination.total : null;
@@ -149,6 +176,9 @@ function render(data) {
     (data.observedAt ? new Date(data.observedAt).toLocaleString() : 'now') +
     ' · ' + (data.x402Version ? 'x402 v' + data.x402Version + ' · ' : '') +
     'no payment requests';
+  $('applied-filters').textContent = 'Displayed page filters — ' +
+    ['query','network','type','scheme','payTo'].map(key => key + ': ' +
+      (nav.filters[key] || (key === 'query' ? 'browse all' : 'all'))).join(' · ');
   results.replaceChildren();
   if (!rows.length) {
     const empty = el('div', 'empty');
@@ -157,111 +187,102 @@ function render(data) {
     results.append(empty);
   } else {
     rows.forEach((row, i) => results.append(renderResource(row, i +
-      (state.query ? (state.page - 1) * PAGE_SIZE : state.offset))));
+      (nav.filters.query ? (nav.page - 1) * PAGE_SIZE : nav.offset))));
   }
-  const nextCursor = data?.pagination?.cursor ?? null;
-  const hasMore = state.query ? Boolean(nextCursor) :
-    (total !== null ? state.offset + rows.length < total : rows.length === PAGE_SIZE);
-  prev.disabled = state.loading || (state.query ? state.cursorHistory.length === 0 : state.offset === 0);
-  next.disabled = state.loading || !hasMore;
-  pageInfo.textContent = 'Page ' + state.page + (state.query ? ' · cursor-paged' :
-    ' · offset ' + state.offset);
-  exportButton.disabled = !rows.length;
+  pageInfo.textContent = 'Page ' + nav.page + (nav.filters.query ? ' · cursor-paged' : ' · offset ' + nav.offset);
+  syncControls();
 }
 
-async function load() {
-  if (state.loading) return;
+async function load(nav) {
+  const requestId = ++state.requestId;
+  state.controller?.abort();
+  const controller = new AbortController();
+  state.controller = controller;
+  state.pending = nav;
   state.loading = true;
-  state.requestId++;
-  const requestId = state.requestId;
-  prev.disabled = true; next.disabled = true; exportButton.disabled = true;
+  // This immutable request is also the eventual export provenance. Draft form
+  // edits can neither change it nor combine their filters with this cursor.
+  const params = requestFor(nav);
+  const request = Object.freeze(Object.fromEntries(params));
+  syncControls();
   status.classList.remove('error');
-  status.textContent = 'Requesting the native discovery page…';
+  status.textContent = state.report ? 'Loading a new source page; the previous observed page remains below…' : 'Requesting the native discovery page…';
   try {
-    const response = await fetch('/api/discovery?' + readFilters(), {
-      method: 'GET', cache: 'no-store', credentials: 'omit',
+    const response = await fetch('/api/discovery?' + params, {
+      method:'GET',cache:'no-store',credentials:'omit',signal:controller.signal,
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.error +
       (data.reason ? ': ' + data.reason : data.sourceStatus ? ' (HTTP ' + data.sourceStatus + ')' : ''));
     if (!Array.isArray(data.resources)) throw new TypeError('Malformed source page');
     if (requestId !== state.requestId) return;
-    state.loading = false;
+    state.nav = nav; state.request = request; state.report = data;
+    state.loading = false; state.pending = null; state.controller = null;
     render(data);
   } catch (error) {
-    state.report = null;
-    state.loading = false;
-    results.replaceChildren();
-    count.textContent = '';
-    pageInfo.textContent = 'Page not loaded';
-    humanError('Discovery not available: ' + String(error.message).slice(0, 240));
+    if (requestId !== state.requestId) return;
+    state.loading = false; state.pending = null; state.controller = null;
+    if (state.report) render(state.report);
+    else {
+      results.replaceChildren();count.textContent='';pageInfo.textContent='Page not loaded';
+      $('applied-filters').textContent='No source page loaded.';
+    }
+    humanError('Discovery not available: ' + String(error.message).slice(0,240) +
+      (state.report ? ' Showing the previous observed page and its original filters.' : ''));
+    syncControls();
   }
 }
 
-function resetPage() {
-  state.offset = 0;
-  state.cursor = null;
-  state.cursorHistory = [];
-  state.page = 1;
-  state.query = $('query').value.trim();
-}
-
-form.addEventListener('submit', event => {
+form.addEventListener('input',syncControls);
+form.addEventListener('change',syncControls);
+form.addEventListener('submit',event => {
   event.preventDefault();
-  if (state.loading) return;
-  resetPage();
-  load();
+  return load(firstPage(draftFilters()));
 });
-$('clear').addEventListener('click', () => {
-  if (state.loading) return;
-  $('query').value = '';
-  $('network').value = 'stellar:testnet';
-  $('type').value = '';
-  $('scheme').value = '';
-  $('payto').value = '';
-  resetPage();
-  load();
+$('clear').addEventListener('click',() => {
+  $('query').value='';$('network').value='stellar:testnet';
+  $('type').value='';$('scheme').value='';$('payto').value='';
+  return load(firstPage(draftFilters()));
 });
-next.addEventListener('click', () => {
-  if (state.loading || !state.report) return;
-  if (state.query) {
-    const cursor = state.report?.pagination?.cursor;
-    if (typeof cursor !== 'string' || !cursor || cursor.length > 512) return;
-    state.cursorHistory.push(state.cursor);
-    state.cursor = cursor;
-  } else {
-    state.offset += PAGE_SIZE;
+$('restore-filters').addEventListener('click',() => {
+  if (!state.nav) return;
+  ++state.requestId;state.controller?.abort();
+  state.loading=false;state.pending=null;state.controller=null;
+  for (const [key,id] of [['query','query'],['network','network'],['type','type'],['scheme','scheme'],['payTo','payto']])
+    $(id).value=state.nav.filters[key];
+  render(state.report);
+  $('query').focus();
+});
+next.addEventListener('click',() => {
+  if (next.disabled || !state.nav || !state.report) return;
+  const nav=state.nav;
+  if (nav.filters.query) {
+    const cursor=nextCursor();if (!cursor) return;
+    return load(Object.freeze({...nav,cursor,cursorHistory:Object.freeze([...nav.cursorHistory,nav.cursor]),page:nav.page+1}));
   }
-  state.page++;
-  load();
+  return load(Object.freeze({...nav,offset:nav.offset+PAGE_SIZE,page:nav.page+1}));
 });
-prev.addEventListener('click', () => {
-  if (state.loading) return;
-  if (state.query) {
-    if (!state.cursorHistory.length) return;
-    state.cursor = state.cursorHistory.pop();
-  } else {
-    if (!state.offset) return;
-    state.offset = Math.max(0, state.offset - PAGE_SIZE);
+prev.addEventListener('click',() => {
+  if (prev.disabled || !state.nav) return;
+  const nav=state.nav;
+  if (nav.filters.query) {
+    const cursor=nav.cursorHistory.at(-1);
+    return load(Object.freeze({...nav,cursor,cursorHistory:Object.freeze(nav.cursorHistory.slice(0,-1)),page:Math.max(1,nav.page-1)}));
   }
-  state.page = Math.max(1, state.page - 1);
-  load();
+  return load(Object.freeze({...nav,offset:Math.max(0,nav.offset-PAGE_SIZE),page:Math.max(1,nav.page-1)}));
 });
-exportButton.addEventListener('click', () => {
-  if (!state.report?.resources?.length) return;
-  const text = JSON.stringify({
-    schema: 'scf61-observed-native-page-v1', observedAt: state.report.observedAt,
-    sourceMode: state.report.mode, view: state.report.view, filterRequest: Object.fromEntries(readFilters()),
-    readOnly: true, nativeProviderRows: state.report.resources,
-    pagination: state.report.pagination,
-    paidOrSettled: false,
-  }, null, 2) + '\n';
-  const blob = new Blob([text], { type: 'application/json' });
-  const target = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = target; a.download = 'bazaar-atlas-observed-page.json';
-  document.body.append(a); a.click(); a.remove();
-  URL.revokeObjectURL(target);
+exportButton.addEventListener('click',() => {
+  if (exportButton.disabled || !state.report?.resources?.length || !state.request) return;
+  const text=JSON.stringify({
+    schema:'scf61-observed-native-page-v1',observedAt:state.report.observedAt,
+    sourceMode:state.report.mode,view:state.report.view,filterRequest:state.request,
+    readOnly:true,nativeProviderRows:state.report.resources,
+    pagination:state.report.pagination,paidOrSettled:false,
+  },null,2)+'\n';
+  const blob=new Blob([text],{type:'application/json'});
+  const target=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=target;a.download='bazaar-atlas-observed-page.json';
+  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(target);
 });
 async function source() {
   try {
@@ -279,4 +300,4 @@ async function source() {
   }
 }
 await source();
-await load();
+await load(firstPage(draftFilters()));

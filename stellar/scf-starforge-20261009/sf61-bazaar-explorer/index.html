@@ -77,6 +77,8 @@
             <button class="secondary" type="button" id="clear">Reset</button>
           </div>
         </form>
+        <p class="status" id="filter-status" role="status" aria-live="polite">Edit filters, then Explore catalog to apply them.</p>
+        <button class="secondary" type="button" id="restore-filters" aria-describedby="filter-status" disabled>Restore displayed filters</button>
       </section>
 
       <section class="inventory" aria-labelledby="results-title">
@@ -90,6 +92,7 @@
           </div>
         </div>
         <p class="status" id="status" role="status" aria-live="polite">Loading catalog source…</p>
+        <p class="status source-url" id="applied-filters">Applied source page filters: no page loaded.</p>
         <div id="results" class="result-grid"></div>
         <div class="pager">
           <button class="secondary" id="prev" type="button" disabled>← Previous</button>
