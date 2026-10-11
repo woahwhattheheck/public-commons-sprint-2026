@@ -143,7 +143,7 @@ export async function stageMerchantRevision({parent,name,store,id,createStore=fa
   return {record,release:releaseCommands(project.folder,id,resolve(store))};
 }
 async function draftDirectory(parent,create=false) {
-  const directory=join(await privateParent(parent),'contract-revisions');
+  const directory=join(await privateParent(parent),'.contract-revisions');
   if(create)try{await mkdir(directory,{mode:0o700});}catch(error){if(error.code!=='EEXIST')throw error;}
   return privateParent(directory);
 }

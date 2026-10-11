@@ -136,7 +136,7 @@ export function createRevisionDesk({container,api,act,notice,onSaved}) {
     if(selected.size>4*1024*1024)throw new Error('OpenAPI source exceeds 4 MiB');
     source=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(await selected.arrayBuffer());
     controls=[];review=null;invalidate();sourceLabel.textContent=selected.name;
-    if(!baseName)throw new Error('Open a saved project first; the selected replacement file remains available.');
+    if(!baseName)throw new Error('Open a saved project, then select its replacement source file.');
     draw(await api('revisions/review',{baseName,specText:source,decisions:[],additions:[]}));
     notice('Replacement source loaded. Review the selected routes.');
   }));
