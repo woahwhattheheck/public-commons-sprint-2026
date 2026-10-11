@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SCF delivery planning</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main-content">Skip to planning workspace</a>
+<header class="masthead">
+  <div><p class="eyebrow">Stellar Forge · Grant operations</p><h1>SCF delivery planning</h1></div>
+  <div class="masthead-status"><span class="tag">Local planning</span><button id="sign-out" type="button" hidden>Close access</button></div>
+</header>
+<div id="message" role="status" aria-live="polite"></div>
+<section id="access-panel" class="access-panel" hidden>
+  <h2>Open your retained workspace</h2>
+  <p>Use the private link in <code>open-workspace.html</code>, or enter the access key from the same private workspace directory.</p>
+  <form id="access-form"><label for="access-key">Workspace access key</label><input id="access-key" type="password" autocomplete="off" required><button type="submit" class="primary">Open workspace</button></form>
+</section>
+<div id="workbench" hidden aria-busy="false">
+  <section class="planbar" aria-label="Planning scenarios">
+    <label for="plan-select">Saved plan<select id="plan-select"></select></label>
+    <div class="button-row"><button type="button" data-action="clone">Copy saved plan</button><button type="button" data-action="reload">Reopen saved</button><button type="button" data-action="import">Import scenario or workspace</button><button type="button" data-action="export">Export complete workspace</button></div>
+    <input id="import-file" type="file" accept=".json,.zip,application/json,application/zip" hidden>
+  </section>
+  <div class="shell">
+    <aside class="sidebar">
+      <nav id="sections" aria-label="Planning sections"></nav>
+      <div class="source-note"><p id="revision-label"></p><p>Source-bound scenario, native Decimal calculation, retained revisions.</p><a href="https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/stellar/scf_2026/sf47_budget_model" target="_blank" rel="noopener noreferrer">Original SF47 source</a></div>
+    </aside>
+    <main id="main-content" tabindex="-1"><div id="main-panel"></div></main>
+  </div>
+  <footer class="savebar">
+    <label for="change-note">Revision note<input id="change-note" type="text" maxlength="4000" placeholder="Describe this planning change"></label>
+    <div class="save-actions"><span id="draft-state"></span><button type="button" data-action="calculate">Calculate draft</button><button type="button" class="primary" data-action="save">Save revision</button></div>
+  </footer>
+</div>
+</body>
+</html>
