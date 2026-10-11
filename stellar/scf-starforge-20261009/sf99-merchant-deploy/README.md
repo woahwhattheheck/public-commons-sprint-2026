@@ -100,7 +100,7 @@ native payment terms and original outbox. It is not a generic seller attached to
 an unrelated receiver. The receiver initializes its existing schema idempotently
 before serving; enrollment remains the original explicit checkout operation.
 Use Python 3.11+ for the original checkout and receiver. Keep approved file bytes
-under `privateRoot`, or add their storage root to the recovery plan: the original
+under `privateRoot`, or include their storage root in a separate private recovery plan: the original
 order database retains their path and digest rather than the file contents.
 
 All buyer URLs use the checkout's original public origin. Caddy admits:
@@ -183,8 +183,10 @@ database/catalog writers, before the original encrypted snapshot command's
 `--quiesced` assertion. The original
 [encrypted recovery tool](../sf101-merchant-recovery/README.md) restores into a new
 directory; original outbox continuity/parity handles state comparison. Credentials
-stay under their existing separate recovery procedure. Add other owned source
-roots explicitly when the merchant's application requires them.
+stay under their existing separate recovery procedure. To include other owned
+roots, copy `recovery-plan.json` to a separate private path, edit that copy and
+pass its path to the original snapshot command. Keep the generated bundle intact
+so its installation preflight continues to match.
 
 Stage/select the next source through the existing
 [portable distribution](../sf46-release/DISTRIBUTION.md), generate against its
