@@ -172,8 +172,13 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
         throw fault('CANDIDATE_DATASET_CHANGED');
       return { manifest, dataset, configPath: join(path, 'dataset.json') };
     }
-    function startExtraction(planId) {
-      available(); const p = plan(planId), id = randomUUID(), controller = new AbortController();
+    function startExtraction(planId, { id = randomUUID() } = {}) {
+      available();
+      if (typeof id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id))
+        throw fault('EXTRACTION_ID_INVALID');
+      if (db.prepare('SELECT id FROM runs WHERE id=?').get(id))
+        throw fault('EXTRACTION_ALREADY_EXISTS', 'Continue the original retained extraction with this ID.', 409);
+      const p = plan(planId), controller = new AbortController();
       transaction(() => {
         const now = stamp(); db.prepare('INSERT INTO runs(id,plan,state,created,updated,data) VALUES(?,?,?,?,?,?)')
           .run(id, planId, 'EXTRACTING', now, now, JSON.stringify({ planDigest: p.data.digest, error: null }));
