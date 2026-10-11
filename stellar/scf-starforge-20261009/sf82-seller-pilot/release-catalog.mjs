@@ -104,8 +104,12 @@ async function collect(root, input, releaseId) {
       if (!revision || revision.sequence !== current.sequence) fail('RELEASE_CATALOG_HISTORY_MISMATCH');
     }
     const owned = !current || current.sellerId === config.sellerId;
-    const matches = Boolean(current && !current.retired && owned && revision.record.provenance.sourceSha256 === offer.sourceSha256);
-    const state = !current ? 'NOT_LISTED' : !owned ? 'OTHER_SELLER' : current.retired ? 'WITHDRAWN' : matches ? 'MATCHES' : 'DIFFERS';
+    const pinned = !current || hash(Buffer.from(current.signer, 'base64url')) === pin.publicKeySha256;
+    const matches = Boolean(current && !current.retired && owned && pinned &&
+      revision.record.provenance.sourceSha256 === offer.sourceSha256 &&
+      revision.record.provenance.sourceURL === config.sourceURL);
+    const state = !current ? 'NOT_LISTED' : !owned ? 'OTHER_SELLER' : !pinned ? 'SIGNER_CHANGED'
+      : current.retired ? 'WITHDRAWN' : matches ? 'MATCHES' : 'DIFFERS';
     rows.push({ routeId: offer.routeId, method: offer.method, url: offer.url, catalogKey: offer.catalogKey,
       sourceSha256: offer.sourceSha256, state, payment: structuredClone(offer.entry.accepts),
       before: current ? { ...current, state: current.retired ? 'WITHDRAWN' : 'ACTIVE',
@@ -143,6 +147,8 @@ function reviewOf(view, { action = 'publish', routeId, reason } = {}) {
   }
   if (changes.some(row => row.state === 'OTHER_SELLER'))
     fail('RELEASE_CATALOG_OTHER_SELLER', 'The existing listing belongs to a different catalog seller.');
+  if (changes.some(row => row.state === 'SIGNER_CHANGED'))
+    fail('RELEASE_CATALOG_SIGNER_CHANGED', 'The catalog pin differs from this listing’s original signer. Use its existing seller authority to update or withdraw it.');
   if (changes.some(row => row.before && row.before.sequence >= Number.MAX_SAFE_INTEGER))
     fail('RELEASE_CATALOG_SEQUENCE_LIMIT');
   const content = { schema: REVIEW, action, release: view.release, catalog: view.catalog,

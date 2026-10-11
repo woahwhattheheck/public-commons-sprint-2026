@@ -66,6 +66,13 @@ compares any two retained releases. It reports:
   digest, availability, durable-operation configuration, shared-result policy and
   source limits for upstream routes.
 
+OAuth API releases retain the original declared token endpoint, client environment
+references, scope and lifecycle settings. Staging and inspection use the original
+credential-reference reader with syntax-only values; they do not read merchant
+credentials or call the token endpoint. The original provider resolves current
+credentials when the retained release starts. Releases without OAuth retain their
+previous metadata shape.
+
 It does not print static customer response contents. Amounts remain their
 original atomic strings. The tool does not infer token decimals or convert
 prices to dollars.
