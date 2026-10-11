@@ -139,6 +139,8 @@ export class Buyer {
   readonly stateDirectory: string;
   constructor(options: BuyerOptions);
   ready(): Promise<this>;
+  /** Recovery of the original operator plus this existing application state. */
+  workspaceRecovery(): WorkspaceRecovery;
   operation(intentId: string): Operation;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
   fromOperationHandoff(file: string, options: {
@@ -472,4 +474,115 @@ export interface AccountingExport {
   readonly configurationSha256: string;
   readonly format: 'jsonl';
   readonly scope: 'COMPLETE_ORIGINAL_ACCOUNTING_VIEW';
+}
+
+/** Recovery uses the original native CLI; this constructor creates no application state. */
+export type WorkspaceRecoveryOptions = Pick<BuyerOptions,
+  'runtimeDirectory' | 'node' | 'environment' | 'timeoutMs' | 'cleanupGraceMs' | 'outputLimit'>;
+export type WorkspaceRecoveryOperation = 'inspect' | 'snapshot' | 'verify' | 'restore';
+export interface WorkspaceRecoverySelection {
+  directory: string;
+  stateRoot: string;
+  inboxes?: readonly string[];
+  include?: readonly string[];
+  signal?: AbortSignal;
+}
+export interface WorkspaceRecoverySnapshotOptions extends WorkspaceRecoverySelection {
+  output: string;
+  /** The caller has actually stopped writers; this does not stop them. */
+  quiesced: true;
+  /** Environment variable NAME only. Defaults to SF88_BACKUP_PASSPHRASE. */
+  passphraseEnv?: string;
+}
+export interface WorkspaceRecoveryArchiveOptions {
+  bundle: string;
+  passphraseEnv?: string;
+  /** Current trusted absolute interpreter; not an interpreter selected by the archive. */
+  python?: string;
+  expectedRecordSha256?: string;
+  signal?: AbortSignal;
+}
+export interface WorkspaceRecoveryPlan extends JsonObject {
+  schema: 'stellar-forge.sf88.workspace-recovery.v1';
+  stateRoot: string;
+  directory: string;
+  selected: string[];
+  include: string[];
+  missing: string[];
+  parentDirectories: string[];
+  network: string;
+  payer: string;
+  ledger: string;
+  policy: string;
+  keys: string;
+  python: string;
+  walletEnvironment: string | null;
+  walletEnvironmentExported: false;
+  restoreMode: 'ORIGINAL_CANONICAL_STATE_ROOT';
+  runtime: { path: string; retained: false }[];
+  inboxes: {
+    root: string;
+    jobs: { id: string; intentId: string; state: string; configSha256: string;
+      attemptId: string | null; finality: unknown }[];
+  }[];
+}
+export interface WorkspaceRecoveryRecord extends JsonObject {
+  schema: 'stellar-forge.sf88.workspace-recovery.v1';
+  recordSha256: string;
+  createdAt: string;
+  stateRoot: string;
+  directory: string;
+  network: string;
+  payer: string;
+  files: number;
+  bytes: number;
+  checkpoint: JsonObject;
+  inboxes: { root: string; jobs: number }[];
+  runtime: { path: string; retained: false }[];
+  walletEnvironmentExported: false;
+}
+export interface WorkspaceRecoverySnapshot extends WorkspaceRecoveryRecord {
+  status: 'BUYER_STATE_BACKUP_CREATED';
+  bundle: string;
+}
+export interface WorkspaceRecoveryVerification extends WorkspaceRecoveryRecord {
+  status: 'BUYER_STATE_BACKUP_VERIFIED';
+}
+export interface WorkspaceRecoveryRestore extends WorkspaceRecoveryRecord {
+  status: 'BUYER_STATE_RESTORED';
+  executionStarted: false;
+  originalStateRetained: true;
+}
+export type WorkspaceRecoveryNative = WorkspaceRecoveryPlan | WorkspaceRecoverySnapshot |
+  WorkspaceRecoveryVerification | WorkspaceRecoveryRestore;
+export interface WorkspaceRecoveryProcess {
+  readonly exitCode: number | null;
+  readonly exitSignal: string | null;
+  readonly errorCode: string | null;
+  readonly started: boolean;
+  readonly cleanupErrorCode: string | null;
+}
+export class WorkspaceRecoveryResult<T extends WorkspaceRecoveryNative = WorkspaceRecoveryNative> {
+  private constructor();
+  readonly operation: WorkspaceRecoveryOperation;
+  readonly native: Readonly<T> | null;
+  readonly process: WorkspaceRecoveryProcess;
+  /** Original completion was received. False does not assert that no state was published. */
+  readonly completionReported: boolean;
+  readonly ok: boolean;
+}
+export type WorkspaceRecoverySuccess<T extends WorkspaceRecoveryNative> =
+  WorkspaceRecoveryResult<T> & { readonly native: Readonly<T>; readonly completionReported: true; readonly ok: true };
+export class WorkspaceRecoveryError extends BuyerError {
+  readonly result: WorkspaceRecoveryResult;
+  constructor(code: string, result: WorkspaceRecoveryResult);
+}
+export class WorkspaceRecovery {
+  constructor(options: WorkspaceRecoveryOptions);
+  /** Reuses the Buyer runtime and includes its existing application directory in capture. */
+  static fromBuyer(buyer: Buyer): WorkspaceRecovery;
+  inspect(options: WorkspaceRecoverySelection): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryPlan>>;
+  snapshot(options: WorkspaceRecoverySnapshotOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoverySnapshot>>;
+  verify(options: WorkspaceRecoveryArchiveOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryVerification>>;
+  restore(options: WorkspaceRecoveryArchiveOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryRestore>>;
 }

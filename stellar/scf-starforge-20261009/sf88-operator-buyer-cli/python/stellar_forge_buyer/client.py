@@ -55,6 +55,11 @@ class Buyer:
         self.runtime = Runtime(checkout, node=node, environment=environment, timeout=timeout)
         self.state_dir = private_directory(Path(state_dir))
 
+    def workspace_recovery(self):
+        """Recover the original operator together with this existing application state."""
+        from .recovery import WorkspaceRecovery
+        return WorkspaceRecovery.from_buyer(self)
+
     def operation(self, intent_id: str):
         return Operation(self, intent(intent_id))
 
