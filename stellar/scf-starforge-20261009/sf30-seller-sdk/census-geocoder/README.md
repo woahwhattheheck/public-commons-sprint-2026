@@ -159,11 +159,11 @@ Reopen verifies every retained file and reloads the original dataset snapshot. E
 
 The original publisher owns the retained candidate store, dataset versions, authenticated controller, SF82 release store, original seller process and customer sessions. Its schemas retain their original names. The full shared lifecycle guide is [Socrata publisher operations](../socrata/PUBLISHING.md).
 
-1. Select the prepared candidate and **Review current snapshot / revision**.
-2. Inspect the actual candidate and current snapshot shown by the original publisher, then **Publish reviewed candidate**. The original expected-snapshot/revision checks remain authoritative.
-3. Enter a release ID, label and local port. Configure the original supported facilitator when native settlement is desired. A blank facilitator starts challenge-only behavior.
-4. **Stage original release**, select it, then **Activate at displayed generation**.
-5. **Start selected release**. The actual listener and original runtime state are displayed. The retained dataset release uses the original authenticated loopback control transport.
+1. Select the prepared candidate and **Preview selected candidate**. Preparing the first edition initializes the original version store with that exact snapshot; it already has an original initialization record.
+2. Enter a release ID, label and local port. Configure the original supported facilitator when native settlement is desired. A blank facilitator starts challenge-only behavior.
+3. **Stage original release**, select it, then **Activate at displayed generation**.
+4. **Start selected release**. The actual listener and original runtime state are displayed. The retained dataset release uses the original authenticated loopback control transport.
+5. For a subsequent reviewed edition with the same query contract, prepare its candidate into this same publisher. **Preview selected candidate** and **Preview current dataset**, then **Review current snapshot / revision** and **Publish reviewed candidate**. These actions use the running original controller and its expected-snapshot/revision checks. The first initialized snapshot can be confirmed as current through the same interface without creating another version.
 6. **Drain / stop release** closes only the seller owned by this publisher. **Roll back release selection** uses the original displayed generation; a running release that differs from the selection requires the original stop/start transition.
 
 The Census bridge does not change the current seller's data by editing its captured CSV in place. It submits the reviewed candidate through the original publication protocol. A stale review or failed publication remains in the original publisher's recoverable state; use **Recover original publication status** and the same candidate.

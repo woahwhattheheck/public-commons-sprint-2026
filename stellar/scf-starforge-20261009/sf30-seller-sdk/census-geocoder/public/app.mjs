@@ -133,7 +133,11 @@ function renderPublisher() {
   facts('publisher-facts', [['Publisher directory', pub?.directory], ['Current snapshot', current?.current],
     ['Revision', current?.revision], ['Release generation', release?.state?.generation], ['Selected release', release?.state?.active],
     ['Runtime', release?.runtime?.state], ['Listener', release?.runtime?.observed?.listener]]);
-  options('draft-selection', pub?.drafts?.candidates ?? [], item => item.name + ' · ' + item.dataset.rowCount + ' rows · ' + short(item.id));
+  options('draft-selection', pub?.drafts?.candidates ?? [], item => item.dataset.name + ' · ' + item.dataset.rowCount + ' rows · ' + short(item.id),
+    { selected: value('draft-selection') || pub?.drafts?.selectedDraftId });
+  $('publisher-order').textContent = pub?.target?.connected ?
+    'The original controller is running. Preview this candidate and the current dataset, then review the displayed snapshot and revision before publication.' :
+    'The first prepared edition initializes the retained version store. Stage, activate and start its release below; subsequent candidate publication uses that live original controller.';
   options('release-selection', release?.releases ?? [], item => item.label + ' · ' + item.id);
   options('buyer-selection', pub?.drafts?.buyers ?? [], item => item.intentId + ' · ' + short(item.id));
   options('session-selection', pub?.sessions ?? [], item => item.id + ' · ' + (item.report?.state ?? item.report?.status ?? item.error?.code ?? 'Retained'));
@@ -168,7 +172,20 @@ function renderControls() {
     $(id).disabled = busy || edition?.state !== 'COMPLETE';
   $('prepare-publisher').disabled = busy || edition?.state !== 'COMPLETE' || !edition.hasSeller;
   $('terms').hidden = !$('with-merchant').checked;
-  $('publish-draft').disabled = busy || !publicationReview;
+  const pub = publisher(), draftChosen = Boolean(value('draft-selection'));
+  $('preview-draft').disabled = busy || !draftChosen;
+  $('preview-current').disabled = busy || !pub?.target?.connected;
+  $('review-draft').disabled = busy || !draftChosen || !pub?.target?.connected;
+  $('publish-draft').disabled = busy || !publicationReview || !pub?.target?.connected;
+  $('stage-release').disabled = busy || !draftChosen;
+  $('activate-release').disabled = busy || !value('release-selection');
+  $('start-release').disabled = busy || !pub?.releases?.state?.active || pub?.ownsRelease === true;
+  $('stop-release').disabled = busy || pub?.ownsRelease !== true;
+  $('rollback-release').disabled = busy || !pub?.releases?.state?.previous;
+  $('review-buyer').disabled = busy || !pub?.target?.connected;
+  $('create-session').disabled = busy || !value('buyer-selection');
+  for (const id of ['run-session', 'recover-session', 'account-session', 'export-session'])
+    $(id).disabled = busy || !value('session-selection');
   $('prepare-buyer').disabled = busy || !buyerReview || !value('payment-option');
   $('download-buyer').disabled = busy || !value('buyer-selection');
   $('download-session').disabled = busy || !value('session-selection');
@@ -267,6 +284,15 @@ button('prepare-publisher', async () => {
 });
 button('open-publisher', () => perform('publisher.open'));
 button('refresh-publisher', () => perform('publisher.status'));
+button('preview-draft', async () => {
+  const result = await perform('publisher.preview', { target: 'draft:' + value('draft-selection'), query: value('publisher-query') });
+  $('publisher-preview').textContent = json(result.result);
+});
+button('preview-current', async () => {
+  const result = await perform('publisher.preview', { target: target()?.current, query: value('publisher-query') });
+  $('publisher-preview').textContent = json(result.result);
+});
+$('release-selection').addEventListener('change', renderControls);
 button('review-draft', async () => {
   const selected = { draftId: value('draft-selection'), expectedSnapshot: target()?.current, expectedRevision: target()?.revision };
   await perform('publisher.reviewDraft', selected); publicationReview = selected; renderControls();
