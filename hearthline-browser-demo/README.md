@@ -14,6 +14,10 @@ Open exactly `http://127.0.0.1:8790/`. The host accepts only its own loopback Ho
 
 Create mission → try before approval → approve → execute → restart MCP process → replay last execution. Then select the shopping handoff and repeat approval, execution and restart/replay. The UI exports the actual session evidence as JSON.
 
+The saved-mission chooser uses the existing MCP `hearthline_list_missions` and `hearthline_get_mission` tools. Reloading the page reopens the last viewed mission when available; the chooser lets you return to any other mission in this host's store. Refresh reads its current actions again. Reopening only reads stored state: it never creates a new plan, approves an action, or executes one. The browser remembers only the selected mission ID in session storage, with a graceful fallback if browser storage is unavailable.
+
+The selected action shows the actual reminder text or shopping quantities from its saved payload/output. Awaiting actions expose approval; approved actions expose separate execution using their stored operation ID; completed actions display their saved result. The latest completed operation can recover its original receipt after a reload through its original binding. Failed or uncertain operations prompt a read-only refresh before further action; they are not automatically retried. These missions survive browser reloads and an MCP-worker restart while the demo host remains running. A new host invocation still creates a separate temporary store.
+
 The host spawns the unchanged MCP implementation in a separate process. Restart stops that process and starts another process against the same dedicated temporary store. The UI checks PID transition, exact receipt replay and unchanged effect counters. Each host invocation creates its own demo store; it never loads a real household's state.
 
 ## Record an actual browser journey
