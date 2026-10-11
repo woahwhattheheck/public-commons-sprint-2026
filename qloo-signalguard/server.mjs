@@ -39,7 +39,7 @@ const server = http.createServer(async (req, res) => {
   try { url = new URL(req.url, `http://${req.headers.host || 'localhost'}`); }
   catch { return send(res, 400, { error: 'Malformed URL' }); }
   if (url.pathname === '/api/status')
-    return send(res, 200, { liveConfigured: !!process.env.QLOO_API_KEY, liveEndpoint: 'https://hackathon.api.qloo.com', demoLabel: 'SYNTHETIC – not Qloo evidence', apiCalls: 'GET /search and GET /v2/insights only', ...traffic.stats() });
+    return send(res, 200, { liveConfigured: !!process.env.QLOO_API_KEY, liveEndpoint: 'https://hackathon.api.qloo.com', demoLabel: 'SYNTHETIC – not Qloo evidence', apiCalls: 'GET /search; GET or POST /v2/insights', ...traffic.stats() });
   if (url.pathname === '/api/audit') {
     try {
       const mode = url.searchParams.get('mode');
@@ -48,11 +48,14 @@ const server = http.createServer(async (req, res) => {
         seed: url.searchParams.get('seed'),
         seedType: url.searchParams.get('seedType'),
         target: url.searchParams.get('target'),
+        ...(url.searchParams.has('selectedEntityId') ? {selectedEntityId:url.searchParams.get('selectedEntityId')} : {}),
       };
       // Reject malformed identifiers without allocating a live budget slot.
       if (typeof input.seed !== 'string' || input.seed.trim().length < 2 || input.seed.trim().length > 100 ||
         !['urn:entity:movie', 'urn:entity:book', 'urn:entity:artist'].includes(input.seedType) ||
-        !['urn:entity:movie', 'urn:entity:book', 'urn:entity:artist'].includes(input.target)) {
+        !['urn:entity:movie', 'urn:entity:book', 'urn:entity:artist'].includes(input.target) ||
+        (input.selectedEntityId !== undefined && (!input.selectedEntityId || input.selectedEntityId.length>160 ||
+          input.selectedEntityId !== input.selectedEntityId.trim() || /[\x00-\x1f\x7f]/.test(input.selectedEntityId)))) {
         return send(res, 400, { error: 'Enter a valid title (2–100 characters), seed type and target type' });
       }
       const provider = mode === 'demo' ? createDemoProvider() : createQlooProvider(process.env.QLOO_API_KEY);

@@ -46,6 +46,7 @@ export function normalizeCandidates(payload, expectedKind) {
     id: String(item.entity_id ?? item.id ?? item.entity?.entity_id ?? ''),
     name: String(item.name ?? item.entity?.name ?? ''),
     type: String(item.subtype ?? item.entity?.subtype ?? item.type ?? item.entity?.type ?? ''),
+    description: typeof item.properties?.description === 'string' ? item.properties.description.slice(0, 210) : '',
   })).filter(row => row.id && row.name));
 }
 
@@ -79,10 +80,13 @@ function segment(rows, baseline) {
   };
 }
 
-export async function audit({ seed, seedType, target }, provider) {
+export async function audit({ seed, seedType, target, selectedEntityId }, provider) {
   if (typeof seed !== 'string' || seed.trim().length < 2 || seed.trim().length > 100)
     throw new Error('Enter a seed title or artist name between 2 and 100 characters');
   if (!seedTypes.has(seedType) || !targets.has(target)) throw new Error('Unsupported Qloo entity category');
+  if (selectedEntityId !== undefined && (typeof selectedEntityId !== 'string' ||
+      !selectedEntityId || selectedEntityId.length > 160 || selectedEntityId !== selectedEntityId.trim() ||
+      /[\x00-\x1f\x7f]/.test(selectedEntityId))) throw new Error('Invalid selected Qloo entity ID');
   if (!provider || typeof provider.search !== 'function' || typeof provider.insights !== 'function')
     throw new Error('A search and insights provider is required');
 
@@ -91,8 +95,23 @@ export async function audit({ seed, seedType, target }, provider) {
   trace.push({ step: 'resolve', detail: 'Resolving the supplied title to a Qloo entity ID' });
   const candidates = normalizeCandidates(await provider.search(normalizedSeed, seedType), seedType);
   if (!candidates.length) return { status: 'abstained', reason: 'No matching Qloo entity ID was returned', trace };
-  const exact = candidates.find(c => c.name.toLowerCase() === normalizedSeed.toLowerCase());
-  const selected = exact ?? candidates[0];
+  const exact = candidates.filter(c => c.name.toLowerCase() === normalizedSeed.toLowerCase());
+  const selected = selectedEntityId === undefined
+    ? (exact.length === 1 ? exact[0] : null)
+    : candidates.find(c => c.id === selectedEntityId);
+  if (!selected) {
+    return { status:'needs_selection',
+      reason:selectedEntityId !== undefined
+        ? 'The selected ID is no longer in the current search results. Choose a current entity.'
+        : exact.length > 1
+          ? 'Several Qloo entities have this exact name. Choose the intended entity before an audit.'
+          : 'No unique exact-name match was found. Confirm an entity before an audit.',
+      candidates, trace,
+      evidence:'Search candidates only; no baseline or popularity probe has been requested.' };
+  }
+  trace.push({ step:'select', detail:selectedEntityId !== undefined
+    ? `Using the explicitly selected current Qloo entity ID ${selected.id}`
+    : 'One exact-name Qloo entity was returned' });
   trace.push({ step: 'baseline', detail: `Querying ${target} against a Qloo entity signal` });
   // A valid but empty ID-based baseline is not proof the exact resolved name
   // lacks Qloo evidence. Qloo documents its separate name-resolution signal
@@ -101,6 +120,12 @@ export async function audit({ seed, seedType, target }, provider) {
   let baselineSignal = 'entity-id';
   let signal = { entityId: selected.id };
   let baseline = normalizeInsights(await provider.insights({ target, ...signal, take: 15 }), target);
+  // A name-only resolver cannot preserve a user's explicit canonical-ID choice.
+  // Do not let the existing empty-ID recovery quietly select a different work.
+  if (!baseline.length && selectedEntityId !== undefined) return {
+    status:'abstained',seed:selected,lookup:'confirmed entity ID',trace,
+    reason:'The selected entity ID has no baseline. A name-only retry would lose the explicitly confirmed identity, so no alternative entity was substituted.',
+  };
   if (!baseline.length) {
     signal = { entityName: selected.name };
     trace.push({ step: 'resolve-name', detail: 'Empty Qloo entity-ID baseline; resolving the exact selected name as an Insights signal' });
@@ -153,7 +178,7 @@ export async function audit({ seed, seedType, target }, provider) {
   return {
     status: 'complete',
     seed: selected,
-    lookup: exact ? 'exact name' : 'best available name match',
+    lookup: selectedEntityId !== undefined ? 'confirmed entity ID' : 'exact name',
     baselineSignal,
     target,
     pivot,

@@ -3,7 +3,7 @@ import { createLiveBudget } from './live-budget.mjs';
 /**
  * In-process admission and de-duplication for the public competition demo.
  * This is deliberately conservative: each distinct LIVE audit can invoke Qloo
- * three times, and a public deployment must not turn one browser into an
+ * up to five times, and a public deployment must not turn one browser into an
  * unbounded upstream request amplifier. No queries or results are persisted.
  */
 export class TrafficError extends Error {
@@ -50,11 +50,12 @@ export function createAuditTraffic({
     };
   };
 
-  async function run({ mode, seed, seedType, target, remoteAddress, execute }) {
+  async function run({ mode, seed, seedType, target, selectedEntityId, remoteAddress, execute }) {
     if (!['live', 'demo'].includes(mode) || typeof execute !== 'function')
       throw new Error('Invalid audit request');
-    // All four fields are local inputs; no API credential is part of the key.
-    const key = JSON.stringify([mode, seed.trim().toLocaleLowerCase('en'), seedType, target]);
+    // The chosen canonical ID changes the audit, even for identical titles.
+    // Preserve exact effective search text too; case variants can resolve differently.
+    const key = JSON.stringify([mode, seed.trim(), seedType, target, selectedEntityId ?? null]);
     pruneCache();
     const cached = cache.get(key);
     if (cached) return { result: cached.result, delivery: 'cache' };
