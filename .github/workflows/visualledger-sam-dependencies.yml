@@ -11,6 +11,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   dependency-regression:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 4
     env:

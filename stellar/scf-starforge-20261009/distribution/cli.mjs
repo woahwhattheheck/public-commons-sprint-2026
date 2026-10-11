@@ -5,6 +5,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { constants } from 'node:os';
+import { createRequire } from 'node:module';
 import { createWorkspace, workspaceCommand } from './workspace.mjs';
 
 const specification = JSON.parse(await readFile(new URL('./distribution.json', import.meta.url), 'utf8'));
@@ -21,6 +22,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
+  import-headers  Import original operator HTTP headers
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
@@ -28,8 +30,17 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
+  merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
+  postgres-workspace                         Build a merchant API from database fields
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
+  commerce-console                           Browser workspace for a prepared commerce session
+  dataset-refresh                            Publish and select retained dataset versions
+  catalog-serve / catalog                     Host and operate live seller discovery
+  catalog-withdrawal                         Prepare, sign and apply seller withdrawals
+  checkout / purchase                        Enroll, purchase and retrieve a merchant file
+  buyer-object                               Acquire, resume and assemble an existing object
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator
@@ -54,17 +65,28 @@ function pairs(args, allowed) {
   return result;
 }
 export async function doctor({ requireNative = false, requiredFeatures = [] } = {}) {
-  if (!Array.isArray(requiredFeatures) || requiredFeatures.some(name => !Object.hasOwn(specification.featurePeers ?? {}, name)))
-    throw new TypeError('Unknown optional feature. Available: ' + Object.keys(specification.featurePeers ?? {}).join(', '));
+  const featurePeers = { ...specification.featurePeers }, featureResolvers = {};
+  for (const [group, path] of Object.entries(specification.runtimePackageManifests ?? {})) {
+    const filename = resolve(sourceRoot, path), manifest = JSON.parse(await readFile(filename, 'utf8'));
+    if (!manifest.dependencies || typeof manifest.dependencies !== 'object' || Array.isArray(manifest.dependencies) ||
+        !Object.keys(manifest.dependencies).length) throw new TypeError('Runtime dependencies missing: ' + path);
+    featurePeers[group] = Object.fromEntries(Object.entries(manifest.dependencies ?? {}).map(([name, version]) =>
+      [name, { version, probe: name }]));
+    // Match the original adapter's location, including a checkout that installed
+    // drivers in its postgres directory rather than at the distribution root.
+    featureResolvers[group] = createRequire(filename).resolve;
+  }
+  if (!Array.isArray(requiredFeatures) || requiredFeatures.some(name => !Object.hasOwn(featurePeers, name)))
+    throw new TypeError('Unknown optional feature. Available: ' + Object.keys(featurePeers).join(', '));
   const original = await release();
-  const inspectPeers = definitions => Object.entries(definitions).map(([name, value]) => {
+  const inspectPeers = (definitions, resolveModule = value => import.meta.resolve(value)) => Object.entries(definitions).map(([name, value]) => {
     let available = false;
-    try { import.meta.resolve(value.probe); available = true; } catch {}
+    try { resolveModule(value.probe); available = true; } catch {}
     return { name, requestedVersion: value.version, available };
   });
   const peers = inspectPeers(specification.nativePeers);
-  const features = Object.entries(specification.featurePeers ?? {}).map(([name, definitions]) => {
-    const dependencies = inspectPeers(definitions);
+  const features = Object.entries(featurePeers).map(([name, definitions]) => {
+    const dependencies = inspectPeers(definitions, featureResolvers[name]);
     return { name, available: dependencies.every(peer => peer.available), dependencies };
   });
   const python = spawnSync('python3', ['--version'], { encoding: 'utf8', timeout: 2000, windowsHide: true });

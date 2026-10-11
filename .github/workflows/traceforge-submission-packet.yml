@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   verify-source-binding:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -6,6 +6,8 @@ import { isAbsolute, join, resolve, dirname } from 'node:path';
 import { hostname } from 'node:os';
 import { config, execution, need, InputError } from './config.mjs';
 import { aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
+import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
+import { loadOperationTicket, operationTicketView, requireCurrentOperationTicket } from './operation-ticket.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.buyer-inbox.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -84,11 +86,11 @@ async function dependencySame(dependency, limit) {
   const current = await fingerprint(dependency.path, limit);
   need(current.sha256 === dependency.sha256 && current.bytes === dependency.bytes, 'INBOX_DEPENDENCY_CHANGED_REVIEW_REQUIRED');
 }
-async function workspaceEnvironment(cfg, path) {
+export async function workspaceEnvironment(cfg, path) {
   const {openWorkspace} = await import('./workspace.mjs');
   const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
-  const {op, owner} = execution(cfg);
-  const {op:workspaceOp, owner:workspaceOwner} = execution(workspace.config);
+  const {op, owner, transport} = execution(cfg);
+  const {op:workspaceOp, owner:workspaceOwner, transport:workspaceTransport} = execution(workspace.config);
   const signer = workspace.manifest.signer;
   // A selected workspace supplies operator keys, never replacement queue terms.
   need(['python','actor','service','policy','ledger'].every(key => owner[key] === workspaceOwner[key]) &&
@@ -96,6 +98,8 @@ async function workspaceEnvironment(cfg, path) {
     cfg.evidenceDir === workspace.config.evidenceDir &&
     cfg.trustedPayer === workspace.config.trustedPayer && cfg.trustedPayer === signer.expectedPayer,
     'INBOX_WORKSPACE_OPERATOR_MISMATCH');
+  need(JSON.stringify(transport) === JSON.stringify(workspaceTransport),
+    'INBOX_WORKSPACE_TRANSPORT_MISMATCH');
   need(['scheme','network','asset','payTo'].every(key => op.expect[key] === workspaceOp.expect[key]) &&
     ['network','asset','payTo'].every(key => op.expect[key] === signer[key]),
     'INBOX_WORKSPACE_TERMS_MISMATCH');
@@ -127,18 +131,25 @@ async function readRequest(root, intentId) {
     const body = await readFile(op.bodyFile, 1048576);
     need(body.length === request.bodyBytes && sha(body) === request.bodySha256, 'INBOX_BODY_CHANGED');
   } else need(op.bodyFile === undefined, 'INBOX_BODY_CHANGED');
-  return {id, directory, request, cfg};
+  let ticket = null;
+  if (request.operationTicket != null) {
+    need(op.ticketFile === join(directory, 'operation-ticket.json'), 'INBOX_TICKET_PATH_CHANGED');
+    ticket = await loadOperationTicket(op);
+    need(ticket && JSON.stringify({...ticket}) === JSON.stringify(request.operationTicket), 'INBOX_TICKET_CHANGED');
+  } else need(op.ticketFile === undefined, 'INBOX_TICKET_CHANGED');
+  return {id, directory, request, cfg, ticket};
 }
 function outcomeView(terminal) {
   if (!terminal) return null;
   return terminal.summary ?? null;
 }
 async function inspect(root, intentId) {
-  const {id, directory, request} = await readRequest(root, intentId);
-  const [attempt, terminal, recovery] = await Promise.all([
+  const {id, directory, request, ticket} = await readRequest(root, intentId);
+  const [attempt, terminal, recovery, finalization] = await Promise.all([
     optionalJson(join(directory, 'attempt.json')),
     optionalJson(join(directory, 'terminal.json')),
     optionalJson(join(directory, 'recovery.json')),
+    optionalJson(join(directory, 'finalization.json')),
   ]);
   if (attempt) need(attempt.schema === SCHEMA && attempt.intentId === intentId &&
     attempt.configSha256 === request.configSha256, 'INBOX_ATTEMPT_INVALID');
@@ -146,17 +157,21 @@ async function inspect(root, intentId) {
     terminal.intentId === intentId, 'INBOX_TERMINAL_INVALID');
   if (recovery) need(attempt && recovery.schema === SCHEMA && recovery.attemptId === attempt.id &&
     recovery.intentId === intentId, 'INBOX_RECOVERY_INVALID');
+  if (finalization) need(attempt && finalization.schema === 'stellar-forge.sf88.inbox-finalization.v1' &&
+    finalization.attemptId === attempt.id && finalization.intentId === intentId &&
+    finalization.configSha256 === request.configSha256, 'INBOX_FINALIZATION_VIEW_INVALID');
   const state = attempt?.kind === 'CANCELLED' ? 'CANCELLED' : recovery ? 'RECOVERED' :
     terminal ? 'ATTEMPT_RECORDED' : attempt ? 'RUNNING_OR_INTERRUPTED' : 'QUEUED';
   return {
     schema:SCHEMA, id, createdAt:request.createdAt, state,
     configSha256:request.configSha256, sourceConfigSha256:request.sourceConfigSha256,
     bodySha256:request.bodySha256, bodyBytes:request.bodyBytes,
+    operationTicket:operationTicketView(ticket),
     operation:request.operation, operator:request.operator,
     dependencies:request.dependencies, evidencePath:request.evidencePath,
     responseDestination:request.responseDestination,
     attempt, outcome:outcomeView(terminal), lastError:terminal?.error ?? null,
-    recovery, retry:'NO_AUTOMATIC_RETRY',
+    recovery, finalization, retry:'NO_AUTOMATIC_RETRY',
   };
 }
 
@@ -191,23 +206,27 @@ export async function openQueue(path) {
       const evidencePath = join(cfg.evidenceDir, id + '.json');
       const body = op.bodyFile === undefined ? null : await readFile(op.bodyFile, 1048576);
       const bodySha256 = body === null ? null : sha(body);
+      const ticket = await loadOperationTicket(op, {requireCurrent:true});
       const dependencies = {
         signer:await fingerprint(cfg.signerModule, 1048576),
         policy:await fingerprint(owner.policy, 1048576),
       };
       // The ledger is live original SF36 state; never snapshot or replace it.
       const pinned = {...cfg, operation:{...op,
-        ...(body === null ? {} : {bodyFile:join(destination, 'request-body.bin')})}};
+        ...(body === null ? {} : {bodyFile:join(destination, 'request-body.bin')}),
+        ...(ticket ? {ticketFile:join(destination, 'operation-ticket.json')} : {})}};
       const executionRaw = encoded(pinned);
       need(executionRaw.length <= 65536, 'INBOX_CONFIG_TOO_LARGE');
       const request = {
         schema:SCHEMA, id, createdAt:now(), sourceConfigSha256,
         configSha256:sha(executionRaw), bodySha256, bodyBytes:body?.length ?? 0,
+        operationTicket:ticket ? {...ticket} : null,
         operation:pinned.operation, operator:{actor:owner.actor, service:owner.service, ledger:owner.ledger},
         dependencies, evidencePath, responseDestination:download?.destination ?? null,
       };
       await createFile(join(stage, 'execution.json'), executionRaw);
       if (body !== null) await createFile(join(stage, 'request-body.bin'), body);
+      if (ticket) await createFile(join(stage, 'operation-ticket.json'), ticket.sourceBytes);
       await writeJson(join(stage, 'request.json'), request);
       await syncDirectory(stage);
       try { await rename(stage, destination); published = true; }
@@ -216,6 +235,7 @@ export async function openQueue(path) {
         const existing = await inspect(root, op.intentId);
         need(existing.configSha256 === request.configSha256 &&
           existing.sourceConfigSha256 === sourceConfigSha256 && existing.bodySha256 === bodySha256 &&
+          (existing.operationTicket?.sha256 ?? null) === (ticket?.sha256 ?? null) &&
           JSON.stringify(existing.dependencies) === JSON.stringify(dependencies), 'INBOX_INTENT_CONFLICT');
         return {...existing, disposition:'EXISTING_IDENTICAL_INTENT'};
       }
@@ -224,7 +244,7 @@ export async function openQueue(path) {
     } finally {
       if (!published) {
         // Only unpublished known intake files are removable; no attempt/outcome.
-        for (const name of ['source-config.json','execution.json','request-body.bin','request.json'])
+        for (const name of ['source-config.json','execution.json','request-body.bin','operation-ticket.json','request.json'])
           await unlink(join(stage, name)).catch(() => {});
         await rmdir(stage).catch(() => {});
       }
@@ -256,7 +276,7 @@ export async function openQueue(path) {
   async function run(intentId, {signal, workspace} = {}) {
     need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
     need(!signal?.aborted, 'OPERATOR_ABORTED');
-    const {directory, request, cfg} = await readRequest(root, intentId);
+    const {directory, request, cfg, ticket} = await readRequest(root, intentId);
     await ensureAbsent(join(directory, 'attempt.json'), 'INBOX_ATTEMPT_ALREADY_EXISTS');
     await dependencySame(request.dependencies.signer, 1048576);
     await dependencySame(request.dependencies.policy, 1048576);
@@ -265,10 +285,14 @@ export async function openQueue(path) {
     // Resolve/bind the actual operator workspace before claiming this attempt.
     // A wrong workspace or unavailable key file must leave the job QUEUED.
     const environment = workspace === undefined ? undefined : await workspaceEnvironment(cfg, workspace);
+    // A named managed proxy may change between processes; resolve it now,
+    // before the permanent attempt, without changing the saved origin/profile.
+    if (cfg.buyerTransport !== undefined) resolveBuyerProxy(cfg.buyerTransport);
     await privateDirectory(cfg.evidenceDir);
     await ensureAbsent(request.evidencePath, 'INBOX_ORIGINAL_EVIDENCE_ALREADY_EXISTS');
     if (request.responseDestination) await ensureAbsent(request.responseDestination, 'INBOX_RESPONSE_DESTINATION_EXISTS');
     need(!signal?.aborted, 'OPERATOR_ABORTED');
+    requireCurrentOperationTicket(ticket);
     // Permanent single-attempt claim. It is never expired, stolen or retried.
     const attempt = {schema:SCHEMA, kind:'EXECUTE', id:randomUUID(), intentId,
       configSha256:request.configSha256, startedAt:now(), pid:process.pid, host:hostname()};
@@ -279,6 +303,7 @@ export async function openQueue(path) {
       const {execute} = await import('./execute.mjs');
       loadedSigners.set(cfg.signerModule, request.dependencies.signer.sha256);
       summary = await execute(cfg, {signal, emitSummary:false,
+        operationTicketSha256:ticket?.sha256 ?? null,
         ...(environment === undefined ? {} : {environment})});
       need(object(summary) && summary.intentId === intentId &&
         summary.mode === 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT', 'INBOX_ORIGINAL_SUMMARY_INVALID');

@@ -4,6 +4,12 @@ A live, read-only operator surface for the **existing SF30 seller service**, wit
 
 For a one-command original native seller with the same SF98 fulfillment journal and live local operations, see [merchant launch](MERCHANT_LAUNCH.md).
 
+For durable merchant POST bindings, [merchant operation recovery](MERCHANT_OPERATIONS.md)
+adds stored-operation browse, detail and original ledger history to the same
+listener. Opt-in `--operation-controls` enables exact-generation reconciliation
+through the original bound handler and a private startup capability. Existing
+traffic, history, fulfillment and exports remain read-only.
+
 Upstream-backed sessions also expose optional [backend availability and recovery](../UPSTREAM_AVAILABILITY.md)
 in this same console. The original `/api/snapshot` and JSON export include an
 `upstreams` object; read-only `/api/upstreams` serves it separately. Binding names,
@@ -71,7 +77,7 @@ await existingSellerSession.close();
 await operations.close();
 ```
 
-`existingSellerSession` is the original `{server, compiled, mode, ...}`. All new source is in `operations/`; no modifications to seller compilation, admission, routing or payment code are needed. `observeSellerTraffic(session)` from `traffic.mjs` also provides `snapshot()` and `detach()` without a browser listener.
+`existingSellerSession` is the original `{server, compiled, mode, ...}`. Traffic observation needs no modifications to seller compilation, admission, routing or payment code. `observeSellerTraffic(session)` from `traffic.mjs` also provides `snapshot()` and `detach()` without a browser listener. Upstream merchant-operation browsing uses the running application's `operationControl`; see the dedicated guide for custom launcher composition.
 
 ## Seller capacity and readiness
 
@@ -133,6 +139,8 @@ GET /history.csv?from=2026-10-01&to=2026-10-11&routeId=example-route
 Omit `routeId` for all routes. History JSON uses `stellar-forge.seller-usage-history.v1` and includes the effective range, native totals/routes, retained daily counters, contributing sessions and storage status. `GET /api/snapshot` keeps the original live traffic schema and adds `usageHistory` storage metadata. History-disabled responses identify that state; they do not imply a zero-traffic saved history.
 
 Expand **Retained sessions** to see active, finalized and interrupted checkpoint state, start/save times and the saved in-flight count. A saved in-flight value belongs to that checkpoint and is never presented as the current live balance. An interrupted session has no confirmed final flush and may omit activity after its last checkpoint. The panel also reports failed checkpoints and unreadable sessions so an incomplete history is visible. Runtime checkpoint failures do not interrupt the live seller or its payment handling. An invalid explicitly configured history directory or a directory in use causes launcher startup to fail and closes the newly started seller; correct that startup configuration before launching again.
+
+Only one local writer may own a history directory. On Linux with accessible procfs, the private lock also retains the original process start identity, boot ID and procfs device, so a reused runtime PID after a container restart does not keep a dead writer locked. Recovery compares the original process in the same boot and procfs view and preserves its last saved session as interrupted. A live writer, a denied process read or a different host/procfs view keeps the directory owned. Older locks and systems without that process identity retain the existing PID check; clean shutdown releases their lock normally. The process identity stays in the private lock and is absent from usage exports.
 
 Daily starts and terminal outcomes use each event's own UTC date. A request crossing midnight can start in one day and finish in the next. Daily aggregation therefore has **no in-flight field**, and daily starts need not equal that day's completions. Recent individual outcome metadata, request targets, headers, bodies, wallets, receipts and credentials are not persisted. History exports have their own operator-managed lifetime.
 

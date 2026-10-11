@@ -8,7 +8,7 @@ import { config, operation, execution, InputError, need } from './config.mjs';
 import { execute } from './execute.mjs';
 import { createOperatorApproval } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
-import { canonical, digest, inspectDatasetPage, object } from './dataset-page.mjs';
+import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
 
 const VERSION = 'stellar-forge.sf88.dataset-session.v1';
 const MAX_ATOMIC = 170141183460469231731687303715884105727n;
@@ -97,15 +97,7 @@ function validateDefinition(value, directory) {
   execution(value.config);
   need(op.method === 'GET' && op.bodyFile === undefined && value.config.responseFile === undefined &&
     (value.config.captureBody === undefined || value.config.captureBody === false), 'DATASET_GET_CONFIG_REQUIRED');
-  const url = new URL(op.url), names = [...url.searchParams.keys()];
-  need(!url.searchParams.has('cursor') && new Set(names).size === names.length, 'DATASET_INITIAL_QUERY_INVALID');
-  // Reject unsupported query capabilities before an attempt can reach approval.
-  // The reviewed native SF100 exporter binds equality-query cursors only.
-  need(names.every(name => ['fields','limit'].includes(name) ||
-    /^where_[A-Za-z][A-Za-z0-9_]{0,47}$/.test(name) &&
-    !['where_constructor','where_prototype','where___proto__'].includes(name)),
-  'DATASET_UNSUPPORTED_QUERY_CAPABILITY');
-  need(names.filter(name => name.startsWith('where_')).length <= 8, 'DATASET_FILTER_LIMIT_EXCEEDED');
+  validateDatasetQuery(op.url, {initial:true});
   const l = value.limits;
   need(atomic(op.expect.maxAtomic) && atomic(l.maxTotalAtomic) &&
     BigInt(l.maxTotalAtomic) >= BigInt(op.expect.maxAtomic) &&

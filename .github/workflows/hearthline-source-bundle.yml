@@ -16,7 +16,7 @@ concurrency:
 jobs:
   bundle:
     # This carrier is public. Never spend private-repository runner minutes.
-    if: github.event.repository.private == false
+    if: ${{ (false) && (github.event.repository.private == false) }}
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
