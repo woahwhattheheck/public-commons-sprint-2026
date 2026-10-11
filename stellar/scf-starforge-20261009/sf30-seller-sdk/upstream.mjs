@@ -19,7 +19,8 @@ const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
-const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
+const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition',
+  'x-credits-remaining','x-ratelimit-limit','x-ratelimit-remaining','x-ratelimit-reset']);
 const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2','stream']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
