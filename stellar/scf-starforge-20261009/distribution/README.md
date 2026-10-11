@@ -16,13 +16,14 @@ Use Node 22.16 or later. From a new application directory, install the supplied
 `tokenjunkielabs-starforge-merchant-*.tgz` archive:
 
 ```sh
-npm install --ignore-scripts --offline /absolute/path/to/the-package.tgz
+npm install --ignore-scripts --offline --omit=optional /absolute/path/to/the-package.tgz
 npx --no-install starforge doctor
 ```
 
 This is a local npm-compatible source distribution. It is marked `private` to
 prevent an accidental registry publish; local installation and `npm pack` work
-normally. The archive does not fetch or install the optional payment packages.
+normally. This source-only installation omits optional packages. PostgreSQL
+drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
 ## Start a merchant workspace
@@ -111,6 +112,7 @@ or automatically retry a request.
 | `starforge upstream` | SF30 existing-API seller |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
+| `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |
@@ -208,11 +210,14 @@ shutdown and retained history, use the packaged
 ## Use existing database sources
 
 PostgreSQL support uses the original named-query integration. Install its
-optional driver in the application directory; it is independent of the native
-payment packages:
+production drivers in the application directory; they are independent of the
+native payment packages. Driver pins and the PostgreSQL feature metadata derive
+from the selected commit's original postgres/package.json, including pg-cursor.
+They are optional runtime dependencies of the archive; development dependencies
+are excluded:
 
 ```sh
-npm install --ignore-scripts pg@8.23.1
+npm install --ignore-scripts pg@8.23.1 pg-cursor@2.22.1
 npx --no-install starforge doctor --feature postgres
 npx --no-install starforge postgres-init --directory ./postgres-merchant
 npx --no-install starforge postgres-inspect \
@@ -227,6 +232,29 @@ values stay in the chosen environment variable. The original parameter binding,
 read-only queries, projection, result limits and pool behavior remain in force.
 Development-only PostgreSQL exercise and emulator sources are omitted from the
 installed runtime.
+
+For interactive merchant setup, configure the existing source connection policy
+and run the maintained workspace:
+
+```sh
+npx --no-install starforge postgres-workspace \
+  --source ./postgres-merchant/source.json --output ./merchant-packages
+```
+
+Select the actual table/view, public columns, typed filters, ordering and payment
+terms. Each reviewed export creates a fresh private source.json/service.json
+package and prints the original launch command. The same files also run through
+the installed command catalog:
+
+```sh
+npx --no-install starforge postgres \
+  --source /absolute/export/source.json --config /absolute/export/service.json
+```
+
+The source/workspace guides include the original role, certificate, capped-query
+and facilitator setup. `doctor --feature postgres` checks imports at the original
+adapter's path, including source checkouts with drivers installed in the postgres
+directory. It does not connect to the database or require payment SDK packages.
 
 SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;
