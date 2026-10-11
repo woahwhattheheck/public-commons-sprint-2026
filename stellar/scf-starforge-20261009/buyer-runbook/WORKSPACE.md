@@ -128,6 +128,16 @@ keys only into the original buyer child's environment. A missing key file fails
 preflight before an attempt starts; restore local setup and retry the untouched
 operation. Other selected configurations retain their original environment path.
 
+## Receive a paid-file order
+
+Choose **Receive paid file order** for an original SF101 purchase handoff. The
+same local operator preset prepares its native buyer and spending ledger. Review
+the file promise and budgets, select a host-declared claim environment name, then
+add the prepared order to an acquisition. Its operation row keeps the original
+purchase result, resumable entitled transfer and verified customer download
+together. See [PAID_FILES.md](PAID_FILES.md) for the full receiving and delivery
+workflow and the optional launcher flag `--claim-envs`.
+
 ## Arrange and review a plan
 
 1. Choose **New acquisition plan** and give it a stable plan ID and title.
