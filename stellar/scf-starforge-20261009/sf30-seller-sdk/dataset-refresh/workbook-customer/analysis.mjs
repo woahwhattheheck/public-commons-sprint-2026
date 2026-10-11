@@ -9,6 +9,7 @@ import { retainSame } from './packet.mjs';
 
 const INTAKE = 'stellar-forge.workbook-analysis-intake.v1';
 const RESULT = 'stellar-forge.workbook-analysis-result.v1';
+const RECOVERED_SELECTION = 'stellar-forge.workbook-analysis-selection-recovery.v1';
 const NAME = /^[A-Za-z][A-Za-z0-9_-]{0,63}$/;
 const ID = /^[a-f0-9]{32}$/;
 const HASH = /^[a-f0-9]{64}$/;
@@ -99,32 +100,104 @@ export class WorkbookAnalysis {
     need(registered.schema === 'stellar-forge.mcp-native-analysis.v1' &&
       registered.analysisWorkspace === this.alias && registered.operation === 'attach-dataset' &&
       registered.result?.name === plan.source && Number.isSafeInteger(registered.result.revision) &&
-      registered.result.revision > 0, 'WORKBOOK_ANALYSIS_SOURCE_RECEIPT_CHANGED');
-    let job = await this.call('import', {id:plan.id, source:registered.result.name,
-      source_revision:registered.result.revision, columns_text:plan.columnsText}, {signal});
+      registered.result.revision > 0 &&
+      registered.result.configuration_sha256 === plan.nativeSource.configurationSha256 &&
+      registered.result.session_id === plan.nativeSource.sessionId &&
+      registered.result.native_delivery?.sourceBindingSha256 === plan.nativeSource.sourceBindingSha256,
+    'WORKBOOK_ANALYSIS_SOURCE_RECEIPT_CHANGED');
+    // Original start(import) validates the CURRENT source before reopening an
+    // existing ID. Read the retained job first so later source revisions cannot
+    // strand this completed historical import or a lost initial response.
+    let job;
+    try { job = await this.call('job', {id:plan.id}, {signal}); }
+    catch (error) {
+      if (error.code !== 'ANALYSIS_JOB_NOT_FOUND') throw error;
+      job = await this.call('import', {id:plan.id, source:registered.result.name,
+        source_revision:registered.result.revision, columns_text:plan.columnsText}, {signal});
+    }
+    this._checkImport(plan, registered.result, job);
     progress?.(job);
-    if (wait && job.result?.status === 'RUNNING')
+    if (wait && job.result.status === 'RUNNING') {
       job = await this.waitJob(plan.id, {signal, progress});
-    need(job.result?.id === plan.id && job.result.kind === 'import',
-      'WORKBOOK_ANALYSIS_ORIGINAL_IMPORT_REQUIRED');
+      this._checkImport(plan, registered.result, job);
+    }
     let activation = null;
     if (plan.view !== null && job.result.status === 'COMPLETE') {
       const version = job.result.result?.version?.version_id;
       need(HASH.test(version ?? ''), 'WORKBOOK_ANALYSIS_IMPORTED_VERSION_REQUIRED');
-      const activationPath = join(directory, 'activation.json');
-      if (await exists(activationPath)) activation = await readJson(activationPath, 1048576);
-      else {
-        activation = await this.call('activate', {name:plan.view, version_id:version,
-          expected_revision:plan.expectedViewRevision}, {signal});
-        await retainSame(activationPath, jsonBytes(activation));
-      }
-      need(activation.schema === 'stellar-forge.mcp-native-analysis.v1' &&
-        activation.analysisWorkspace === this.alias && activation.operation === 'activate' &&
-        activation.result?.version?.version_id === version,
-      'WORKBOOK_ANALYSIS_SELECTION_RECEIPT_CHANGED');
+      activation = await this._selection(plan, version, directory, {signal});
     }
     return {schema:RESULT, id:plan.id, packetSha256:plan.packetSha256,
       analysisWorkspace:this.alias, source:clone(registered.result), job, activation};
+  }
+  _checkImport(plan, registered, response) {
+    const job = response?.result, selected = job?.request?.source;
+    let columns;
+    try { columns = JSON.parse(plan.columnsText); }
+    catch { need(false, 'WORKBOOK_ANALYSIS_COLUMN_MAPPING_INVALID'); }
+    need(object(columns) && Object.values(columns).every(value => typeof value === 'string'),
+      'WORKBOOK_ANALYSIS_COLUMN_MAPPING_INVALID');
+    need(response.schema === 'stellar-forge.mcp-native-analysis.v1' &&
+      response.analysisWorkspace === this.alias && ['job','import'].includes(response.operation) &&
+      job?.id === plan.id && job.kind === 'import' && job.request?.id === plan.id &&
+      object(selected) &&
+      ['name','revision','session_sha256','configuration_sha256','session_id','snapshot'].every(key =>
+        Object.hasOwn(registered,key) && selected[key] === registered[key]) &&
+      object(job.request.columns) && Object.keys(job.request.columns).length === Object.keys(columns).length &&
+      Object.keys(columns).every(key => Object.hasOwn(job.request.columns,key) &&
+        job.request.columns[key] === columns[key]),
+    'WORKBOOK_ANALYSIS_ORIGINAL_IMPORT_CHANGED');
+    // A manually registered source may lack native_delivery in the persisted
+    // source record; the original attach reply still carries the verified one.
+    if (selected.native_delivery !== undefined)
+      need(selected.native_delivery.sourceBindingSha256 === plan.nativeSource.sourceBindingSha256 &&
+        selected.native_delivery.manifestSha256 === registered.native_delivery.manifestSha256,
+      'WORKBOOK_ANALYSIS_IMPORTED_SOURCE_CHANGED');
+  }
+  async _selection(plan, version, directory, {signal}) {
+    const activationPath = join(directory, 'activation.json');
+    const recoveredPath = join(directory, 'activation-recovery.json');
+    let receipt;
+    if (await exists(activationPath)) receipt = await readJson(activationPath, 1048576);
+    else if (await exists(recoveredPath)) receipt = await readJson(recoveredPath, 1048576);
+    else {
+      try {
+        receipt = await this.call('activate', {name:plan.view, version_id:version,
+          expected_revision:plan.expectedViewRevision}, {signal});
+      } catch (error) {
+        if (signal?.aborted || !['DATASET_SQL_VIEW_CHANGED',
+          'MCP_ANALYSIS_REPLY_UNCERTAIN_REOPEN_ORIGINAL_JOB',
+          'MCP_ANALYSIS_CALL_INTERRUPTED_REOPEN_ORIGINAL_JOB'].includes(error.code)) throw error;
+        // A successful native CAS may outlive its final reply. Observe the
+        // original selected view; keep this as an observed-state receipt,
+        // distinct from an activation response. Other revisions stay conflicts.
+        const state = await this.call('state', {}, {signal});
+        const selected = state.result?.views?.find(view => view.name === plan.view);
+        if (!selected || selected.version_id !== version ||
+          ![plan.expectedViewRevision,plan.expectedViewRevision+1].includes(selected.revision)) throw error;
+        receipt = {schema:RECOVERED_SELECTION, analysisWorkspace:this.alias,
+          status:'ORIGINAL_SELECTION_OBSERVED', expectedRevision:plan.expectedViewRevision,
+          selected:clone(selected), state};
+        await retainSame(recoveredPath, jsonBytes(receipt));
+      }
+      if (receipt.schema !== RECOVERED_SELECTION)
+        await retainSame(activationPath, jsonBytes(receipt));
+    }
+    if (receipt.schema === RECOVERED_SELECTION) {
+      const selected = receipt.state?.result?.views?.find(view => view.name === plan.view);
+      need(receipt.analysisWorkspace === this.alias && receipt.status === 'ORIGINAL_SELECTION_OBSERVED' &&
+        receipt.expectedRevision === plan.expectedViewRevision &&
+        receipt.state?.schema === 'stellar-forge.mcp-native-analysis.v1' &&
+        receipt.state.analysisWorkspace === this.alias && receipt.state.operation === 'state' &&
+        selected?.version_id === version &&
+        [plan.expectedViewRevision,plan.expectedViewRevision+1].includes(selected.revision) &&
+        same(receipt.selected, selected), 'WORKBOOK_ANALYSIS_SELECTION_RECEIPT_CHANGED');
+    } else need(receipt.schema === 'stellar-forge.mcp-native-analysis.v1' &&
+      receipt.analysisWorkspace === this.alias && receipt.operation === 'activate' &&
+      receipt.result?.name === plan.view && receipt.result?.version?.version_id === version &&
+      [plan.expectedViewRevision,plan.expectedViewRevision+1].includes(receipt.result.revision),
+    'WORKBOOK_ANALYSIS_SELECTION_RECEIPT_CHANGED');
+    return receipt;
   }
   async waitJob(id, {signal, progress, intervalMs = 700} = {}) {
     need(ID.test(id ?? '') && Number.isSafeInteger(intervalMs) &&
@@ -149,7 +222,8 @@ export class WorkbookAnalysis {
         source:plan.source, expectedSourceRevision:plan.expectedSourceRevision,
         view:plan.view, expectedViewRevision:plan.expectedViewRevision,
         sourceRetained:await exists(join(this.directory, id, 'source.json')),
-        selectionRetained:await exists(join(this.directory, id, 'activation.json'))};
+        selectionRetained:await exists(join(this.directory, id, 'activation.json')) ||
+          await exists(join(this.directory, id, 'activation-recovery.json'))};
     }
   }
   async close() {
