@@ -4,6 +4,8 @@ import {readFile, writeFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {combine as recomputeSF70} from '../sf70-merchant-intake/run.mjs';
+import {eligibleIntake as recomputeSF72Eligibility, assessPreflight} from '../sf72-post-only-preflight/preflight.mjs';
 
 const SF70 = 'stellar-forge.merchant-intake.v1';
 const SF52 = 'stellar-forge.seller-visibility.v1';
@@ -59,6 +61,14 @@ export function validateIntake(report) {
     fail('Expected no-funds original SF70 safeguards');
   if (seller.sellerDiscovery.state==='CATALOG_NON_GET_ONLY'&&originals.browserReadiness!==null)
     fail('Original non-GET route cannot have a GET browser probe');
+  // Re-run the published SF70 decision logic on its retained native observation objects.
+  // A stored verdict cannot override the source-derived finding list and state.
+  const canonical=recomputeSF70({seller,browser:originals.browserReadiness,
+    error:originals.browserError,observedAt:report.observedAt,
+    config:{resourceUrl:scope.resource,catalogUrl:scope.catalog,origin:scope.buyerOrigin,
+      network:scope.network,payTo:scope.payTo,method:scope.intendedRetryMethod}});
+  if (report.state!==canonical.state || JSON.stringify(report.findings)!==JSON.stringify(canonical.findings))
+    fail('SF70 state/findings disagree with original native observation logic');
   return scope;
 }
 export function validatePost(post, intake, intakeSha) {
@@ -77,14 +87,26 @@ export function validatePost(post, intake, intakeSha) {
       post.operations.payments!==0||post.operations.signatures!==0||
       !Number.isInteger(post.operations.OPTIONS)||post.operations.OPTIONS<0||post.operations.OPTIONS>1)
     fail('SF72 contains prohibited or inconsistent request counts');
-  if (post.status==='POST_PREFLIGHT_READY_CHALLENGE_UNKNOWN' &&
-      (post.eligibility?.ok!==true||post.operations.OPTIONS!==1||post.findings?.length))
-    fail('SF72 readiness must follow one eligible preflight with no findings');
-  if (post.status==='PREFLIGHT_REMEDIATION' &&
-      (post.eligibility?.ok!==true||post.operations.OPTIONS!==1||!post.findings?.length))
-    fail('SF72 remediation must contain a genuine eligible preflight finding');
-  if (post.status==='INCONCLUSIVE'&&post.operations.OPTIONS!==0)
-    fail('Inconclusive SF72 should not have probed');
+  // Re-evaluate the original SF72 source gate and raw received OPTIONS headers.
+  // Never trust the caller's precomputed readiness status or finding list.
+  if (typeof post.credentialed!=='boolean') fail('Expected original SF72 credentialed flag');
+  const originalEligibility=recomputeSF72Eligibility(intake);
+  if (post.eligibility?.ok!==originalEligibility.ok ||
+      post.eligibility?.reason!==originalEligibility.reason)
+    fail('SF72 eligibility disagrees with original SF70 data');
+  if (!originalEligibility.ok) {
+    if (post.status!=='INCONCLUSIVE'||post.operations.OPTIONS!==0 || post.findings?.length)
+      fail('Ineligible SF72 preflight cannot produce browser readiness');
+  } else {
+    if (post.operations.OPTIONS!==1||!object(post.observed)||
+        !Number.isInteger(post.observed.optionsStatus)||!object(post.observed.optionsCors))
+      fail('Eligible SF72 requires genuine recorded OPTIONS status and CORS headers');
+    const canonical=assessPreflight({origin:b.buyerOrigin,credentialed:post.credentialed,
+      status:post.observed.optionsStatus,headers:post.observed.optionsCors});
+    if (canonical.status!==post.status||
+        JSON.stringify(canonical.findings)!==JSON.stringify(post.findings))
+      fail('SF72 status/findings disagree with actual recorded OPTIONS response');
+  }
 }
 function findingMap(list) {
   const m=new Map();
