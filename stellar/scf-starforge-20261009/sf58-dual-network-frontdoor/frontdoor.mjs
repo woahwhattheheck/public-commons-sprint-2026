@@ -158,17 +158,31 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
     if (!authorized(req.headers.authorization, inboundToken)) {
       json(res, 401, {error: 'UNAUTHORIZED'}); return;
     }
-    if (!((req.method === 'GET' && pathname === '/supported') ||
+    if (!((req.method === 'GET' && ['/supported', '/readyz'].includes(pathname)) ||
           (req.method === 'POST' && ['/verify', '/settle'].includes(pathname)))) {
       json(res, 404, {error: 'ROUTE_NOT_FOUND'}); return;
     }
-    if (inflight >= maxConcurrent) { json(res, 429, {error: 'BUSY'}); return; }
+    if (inflight >= maxConcurrent) {
+      json(res, pathname === '/readyz' ? 503 : 429, {error: pathname === '/readyz' ? 'NOT_READY' : 'BUSY'});
+      return;
+    }
     inflight++;
     try {
-      if (pathname === '/supported') {
+      if (pathname === '/supported' || pathname === '/readyz') {
+        // Read both original facilitator capabilities on EVERY readiness request.
+        // Reuse the same CAIP-family, network, scheme and signer validation as
+        // native /supported; never infer readiness from configuration alone.
         const peersResult = await Promise.all(NETWORKS.map(x => queryPeer(x, '/supported')));
         if (peersResult.some(x => x.status !== 200)) throw new HttpError(502, 'UPSTREAM_SUPPORTED_FAILED');
-        json(res, 200, combineSupported(peersResult.map(x => x.data)));
+        const supported = combineSupported(peersResult.map(x => x.data));
+        if (pathname === '/readyz') {
+          // A small operator signal, not an upstream inventory or ledger proof.
+          json(res, 200, {status: 'ready', networks: NETWORKS.map(network => ({
+            network, schemes: supported.kinds.filter(kind => kind.network === network).map(kind => kind.scheme)
+          }))});
+        } else {
+          json(res, 200, supported);
+        }
         return;
       }
       const type = req.headers['content-type'] ?? '';
@@ -189,7 +203,8 @@ export function makeFrontdoor({upstreams, inboundToken = null, allowLoopbackHttp
       const code = controlled ? err.code : isTimeout ? 'UPSTREAM_TIMEOUT' : 'UPSTREAM_UNAVAILABLE';
       const status = controlled ? err.status : isTimeout ? 504 : 502;
       // An expired inbound socket has been terminated. Do not write after close.
-      if (!res.destroyed) json(res, status, {error: code});
+      if (!res.destroyed) json(res, pathname === '/readyz' ? 503 : status,
+        {error: pathname === '/readyz' ? 'NOT_READY' : code});
     } finally { inflight--; }
   });
 }
