@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.csv-dataset.v1",
+  "name": "Demonstration inventory — fictional data",
+  "file": "query-workspace-dataset.csv",
+  "columns": {
+    "sku": "string",
+    "category": "string",
+    "units": {"type": "integer", "nullable": true},
+    "unit_price": "number",
+    "available": "boolean",
+    "updated_at": "string"
+  },
+  "filters": ["category", "available", "units"],
+  "ranges": ["units", "unit_price", "updated_at"],
+  "sorts": ["sku", "units", "unit_price", "updated_at"],
+  "defaultLimit": 3,
+  "maxLimit": 100
+}

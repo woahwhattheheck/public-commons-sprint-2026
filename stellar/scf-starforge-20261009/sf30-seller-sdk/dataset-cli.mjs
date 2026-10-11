@@ -15,6 +15,28 @@ serve.mjs --config seller.json --handlers examples/dataset-application.mjs and s
 SF30_DATASET_CONFIG to the same absolute dataset configuration path.`;
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 
+/** Native seller docs and query workspace share the same configured capabilities. */
+export function datasetQueryParameters(description) {
+  return [
+    { name: 'fields', type: 'string', description: 'Comma-separated exposed columns, in output order; omit for all.',
+      example: description.columns[0].name },
+    { name: 'limit', type: 'integer', description: `Rows per page, from 1 to ${description.maxLimit}.`,
+      example: description.defaultLimit },
+    { name: 'cursor', type: 'string', description: 'Use page.nextCursor unchanged with the same filters, fields and sort; omit for the first page.', example: '' },
+    ...description.columns.filter(c => c.filterable).map(c => ({ name: `where_${c.name}`, type: 'string',
+      description: `Exact ${c.type} equality on ${c.name}.${c.nullable ? ' Empty value matches null.' : ''}`,
+      example: c.type === 'boolean' ? 'true' : ['integer', 'number'].includes(c.type) ? '0' : 'VALUE' })),
+    ...description.columns.filter(c => c.rangeFilterable).flatMap(c => [
+      ['gt', 'greater than'], ['gte', 'greater than or equal to'], ['lt', 'less than'], ['lte', 'less than or equal to'],
+    ].map(([op, relation]) => ({ name: `${op}_${c.name}`, type: 'string',
+      description: `${c.name} ${relation} this ${c.type} value; nulls never match.${c.type === 'string' ? ' UTF-16 code-unit ordering, not date parsing.' : ''}`,
+      example: c.type === 'string' ? 'VALUE' : '0' }))),
+    ...(description.columns.some(c => c.sortable) ? [{ name: 'sort', type: 'string',
+      description: `One enabled column (${description.columns.filter(c => c.sortable).map(c => c.name).join(', ')}); prefix - for descending. Nulls last; ties retain CSV order.`,
+      example: description.columns.find(c => c.sortable).name }] : []),
+  ];
+}
+
 export async function buildDatasetSellerConfig(dataset, { payment, origin, path = '/data' } = {}) {
   if (!object(payment) || Object.keys(payment).some(k => !['scheme', 'network', 'asset', 'amount', 'payTo', 'maxTimeoutSeconds'].includes(k)))
     throw new TypeError('Only public SF30 payment terms are accepted');
@@ -26,16 +48,7 @@ export async function buildDatasetSellerConfig(dataset, { payment, origin, path 
       path === '/_seller' || path.startsWith('/_seller/') || new URL(path, url).pathname !== path)
     throw new TypeError('path must be a fixed canonical application path');
   const description = dataset.describe();
-  const queryParameters = [
-    { name: 'fields', type: 'string', description: 'Comma-separated exposed columns, in output order; omit for all.',
-      example: description.columns[0].name },
-    { name: 'limit', type: 'integer', description: `Rows per page, from 1 to ${description.maxLimit}.`,
-      example: description.defaultLimit },
-    { name: 'cursor', type: 'string', description: 'Use page.nextCursor unchanged with the same filters and fields; omit for the first page.', example: '' },
-    ...description.columns.filter(c => c.filterable).map(c => ({ name: `where_${c.name}`, type: 'string',
-      description: `Exact ${c.type} equality on ${c.name}.${c.nullable ? ' Empty value matches null.' : ''}`,
-      example: c.type === 'boolean' ? 'true' : ['integer', 'number'].includes(c.type) ? '0' : 'VALUE' })),
-  ];
+  const queryParameters = datasetQueryParameters(description);
   const definition = { method: 'GET', description: `${description.name}: filtered CSV snapshot, one paid request per page.`,
     serviceName: 'CSV Dataset API', tags: ['dataset', 'csv'], payment, queryParameters,
     outputExample: { schema: 'stellar-forge.dataset-page.v1', rows: [],
