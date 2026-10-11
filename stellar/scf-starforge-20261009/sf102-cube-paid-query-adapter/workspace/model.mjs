@@ -1,6 +1,6 @@
 // MIT. Browser authoring over the original Cube metadata, plans and immutable workspaces.
-import { join, resolve } from 'node:path';
-import { readdir, unlink, rename, rm } from 'node:fs/promises';
+import { join, resolve, dirname, basename } from 'node:path';
+import { readdir, unlink, rename, rm, realpath } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { inspectCubeMetadata } from '../onboarding/metadata.mjs';
 import { compileCubeMerchantPlan, PLAN_SCHEMA } from '../onboarding/plan.mjs';
@@ -11,6 +11,7 @@ import { exportCubePackage, openCubePackage, inspectCubePackage,
 import { privateDirectory, readBytes, writeNew, newDirectory, syncDirectory,
   parse, json, sha256, fileBinding, readBoundFiles } from '../onboarding/files.mjs';
 import { openCubeEditions } from './editions.mjs';
+import { acquirePrivateDirectoryWriter } from '../../sf30-seller-sdk/operations/history.mjs';
 
 const SCHEMA = 'stellar-forge.cube-browser-workspace.v1';
 const ID = /^[a-z][a-z0-9-]{0,79}$/;
@@ -31,7 +32,19 @@ const emptyPlan = () => ({ schema: PLAN_SCHEMA, serviceName: '', publicOrigin: '
 /** Create once from a real saved /meta response; reopen without the original input paths. */
 export async function openCubeWorkbench({ directory, metadataPath, planPath } = {}) {
   if (typeof directory !== 'string' || !directory) throw new TypeError('Supply a private workspace directory');
-  const root = resolve(directory);
+  const requested = resolve(directory);
+  const root = join(await realpath(dirname(requested)), basename(requested));
+  // Own even a new target before reading or initializing its first snapshot.
+  // Canonical parents collapse path aliases without changing the source format.
+  const writerDirectory = join(dirname(root), '.cube-workbench-writer-' + sha256(Buffer.from(root)).slice(0, 32));
+  try { await newDirectory(writerDirectory); } catch (error) { if (error.code !== 'EEXIST') throw error; }
+  await privateDirectory(writerDirectory);
+  const writer = await acquirePrivateDirectoryWriter(writerDirectory);
+  try { return await openOwnedCubeWorkbench({ root, metadataPath, planPath, writer }); }
+  catch (error) { await writer.release().catch(() => {}); throw error; }
+}
+
+async function openOwnedCubeWorkbench({ root, metadataPath, planPath, writer }) {
   let exists = true;
   try { await privateDirectory(root); }
   catch (error) { if (error.code !== 'ENOENT') throw error; exists = false; }
@@ -67,12 +80,21 @@ export async function openCubeWorkbench({ directory, metadataPath, planPath } = 
   const initialPlan = originals['initial-plan.json'] ? parse(originals['initial-plan.json'], 'Merchant plan') : emptyPlan();
   const members = catalog.cubes.flatMap(cube => [...cube.measures, ...cube.dimensions, ...cube.segments]);
   let editions, defaultId = 'original', defaultMetadata = metadata, defaultCatalog = catalog,
-    defaultPlan = initialPlan, defaultVersion = null, defaultDigest = manifest.files['cube-meta.json'].sha256, busy = false;
+    defaultPlan = initialPlan, defaultVersion = null, defaultDigest = manifest.files['cube-meta.json'].sha256,
+    busy = false, closing = false, drain = Promise.resolve(), closePromise;
   const mutate = async operation => {
+    if (closing) throw Object.assign(new Error('This workspace writer has closed'), { status: 409 });
     if (busy) throw Object.assign(new Error('Another workspace change is still completing'), { status: 409 });
     busy = true;
-    try { return await operation(); } finally { busy = false; }
+    const pending = Promise.resolve().then(operation);
+    drain = pending.catch(() => {});
+    try { return await pending; } finally { busy = false; }
   };
+  const close = () => closePromise ??= (async () => {
+    closing = true;
+    await drain;
+    await writer.release();
+  })();
   const versionPath = value => join(root, 'versions', id(value));
   const exportPath = value => join(root, 'exports', id(value));
   const probePath = value => join(root, 'probes', id(value));
@@ -214,7 +236,7 @@ export async function openCubeWorkbench({ directory, metadataPath, planPath } = 
     createdAt: manifest.createdAt, inspectVersion, createVersion });
   await editions.restoreActive(); await refreshDefault();
   return {
-    root, manifest, preview, previewFor, listVersions, inspectVersion, inspectExport, download, metadataInfo, metadataMembers,
+    root, manifest, close, preview, previewFor, listVersions, inspectVersion, inspectExport, download, metadataInfo, metadataMembers,
     save: (...args) => mutate(() => save(...args)), exportVersion: (...args) => mutate(() => exportVersion(...args)),
     probe: (...args) => mutate(() => probe(...args)), buyer: (...args) => mutate(() => buyer(...args)),
     listMetadata: editions.listMetadata, refreshImpact: editions.impact, inspectRefresh: editions.inspectReview,
