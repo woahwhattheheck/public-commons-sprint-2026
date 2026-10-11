@@ -5,9 +5,13 @@ import { constants } from 'node:fs';
 import { mkdir, open, realpath, stat, lstat, readdir, rm } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { compileHttpSellerOffer, normalizeSellerPaymentOptions } from '../sf30-seller-sdk/seller.mjs';
+import { compileServicePath } from '../sf30-seller-sdk/route-path.mjs';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 
 const SCHEMA = 'stellar-forge.sf102.seller-recovery.v1';
 const CONFIG_SCHEMA = 'stellar-forge.seller-service.v1';
+const PAYMENT_IDENTITY = 'stellar-forge.sf102.ordered-payment-options.v1';
 const MAX_CONFIG = 1024 * 1024, MAX_ASSET = 1024 * 1024, MAX_REMOTE = 2 * 1024 * 1024;
 const LIMIT_ROUTES = 64;
 const own = (x, k) => Object.prototype.hasOwnProperty.call(x, k);
@@ -24,7 +28,8 @@ const usage = `Usage:
 
 Works with existing SF30 static inline JSON and responseFile JSON routes. Full payment
 identity and publicOrigin remain unchanged. Live probe compares the ORIGINAL seller
-/_seller/offers and /_seller/health on two loopback hosts; it sends no paid request.
+/_seller/offers and /_seller/health on two loopback hosts against the saved config.
+Payment drift returns structured diagnostics and CLI exit 2; no paid request is sent.
 Dynamic handler routes need their original application code and are deliberately not packaged.`;
 
 function argumentsOf(args) {
@@ -65,6 +70,7 @@ function validateConfig(config) {
   if (!obj(config) || config.schema !== CONFIG_SCHEMA || !Array.isArray(config.routes) ||
       !config.routes.length || config.routes.length > LIMIT_ROUTES) bad('Original SF30 seller-service.v1 config required');
   const ids = new Set();
+  const publicOrigin = configuredOrigin(config);
   for (const route of config.routes) {
     if (!obj(route) || typeof route.id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(route.id) ||
         ids.has(route.id) || typeof route.path !== 'string' || !route.path.startsWith('/') ||
@@ -72,11 +78,36 @@ function validateConfig(config) {
         (own(route, 'definition') === own(route, 'offer')) ||
         ['response', 'responseFile', 'handler'].filter(k => own(route, k)).length !== 1) bad('Unsupported or invalid SF30 route');
     if (own(route, 'handler')) bad(`Route ${route.id} uses an application handler; package its trusted app separately, not as a static snapshot`);
+    if (own(route,'definition')) {
+      if (!obj(route.definition) || own(route.definition,'url') || route.path.includes(':'))
+        bad(`Route ${route.id} must use its original fixed definition path and publicOrigin`);
+    } else {
+      if (!obj(route.offer) || !publicOrigin ||
+          new URL(route.offer.resource?.url).origin !== publicOrigin ||
+          compileServicePath(route.offer).path !== route.path)
+        bad(`Imported route ${route.id} must match its configured publicOrigin and service path`);
+    }
+    if (!supportsSellerMethod(routeMethod(route))) bad(`Unsupported original seller method: ${route.id}`);
     ids.add(route.id);
   }
-  if (config.publicOrigin !== undefined &&
-      (typeof config.publicOrigin !== 'string' || !config.publicOrigin.startsWith('https://'))) bad('Invalid original publicOrigin');
   return config;
+}
+function configuredOrigin(config) {
+  if (config.publicOrigin === undefined) return null;
+  const raw=config.publicOrigin;
+  if (typeof raw!=='string') bad('Invalid original publicOrigin');
+  const u=new URL(raw);
+  if (u.protocol!=='https:'||u.username||u.password||u.search||u.hash||u.pathname!=='/'||
+      u.origin!==raw.replace(/\/$/,'')) bad('Invalid original publicOrigin');
+  return u.origin;
+}
+function routeMethod(route) {
+  return own(route,'definition') ? String(route.definition?.method??'').toUpperCase()
+    : route.offer?.extensions?.bazaar?.info?.input?.method;
+}
+function routePayments(route) {
+  return normalizeSellerPaymentOptions(own(route,'definition') ? route.definition
+    : {paymentOptions:route.offer?.accepts});
 }
 function safeDirName(path) {
   if (typeof path !== 'string' || !path || path === '.' || path === '..' || path.includes('/') || path.includes('\\')) bad('Invalid bundle member name');
@@ -95,11 +126,19 @@ async function privateFile(path, bytes) {
   try { await handle.writeFile(bytes); await handle.sync(); }
   finally { await handle.close(); }
 }
-function routeBrief(config) {
+function legacyRouteBrief(config) {
   return config.routes.map(route => ({ id: route.id, path: route.path,
     method: (route.offer?.extensions?.bazaar?.info?.input?.method ?? route.definition?.method ?? null),
     paymentHash: hash(Buffer.from(stable(route.offer?.accepts?.[0] ?? route.definition?.payment ?? null))),
   }));
+}
+function routeBrief(config) {
+  return config.routes.map(route => {
+    const options=routePayments(route);
+    return {id:route.id,path:route.path,method:routeMethod(route),
+      paymentHash:hash(Buffer.from(stable(options))),paymentOptionCount:options.length,
+      optionHashes:options.map(option=>hash(Buffer.from(stable(option))))};
+  });
 }
 
 export async function pack(configPath, outputPath) {
@@ -126,11 +165,12 @@ export async function pack(configPath, outputPath) {
   }
   const sellerBytes = Buffer.from(JSON.stringify(rebased, null, 2) + '\n');
   if (sellerBytes.length > MAX_CONFIG) bad('Staged seller config too large');
+  const routes = routeBrief(config);
   const manifest = {
     schema: SCHEMA, createdAt: new Date().toISOString(),
     sellerSchema: CONFIG_SCHEMA, originalConfigSha256: hash(raw),
     sellerConfigSha256: hash(sellerBytes), publicOrigin: config.publicOrigin ?? null,
-    routes: routeBrief(config), assets,
+    paymentIdentity: PAYMENT_IDENTITY, routes, assets,
     note: 'Only the original SF30 seller may validate/pay/settle. No wallet or facilitator state included.',
   };
   const entries = new Map([['seller.json', sellerBytes],
@@ -143,7 +183,9 @@ export async function pack(configPath, outputPath) {
     await rm(dest, { recursive: true, force: true });
     throw e;
   }
-  return { bundle: dest, routes: manifest.routes.length, assets: assets.length, configSha256: manifest.sellerConfigSha256 };
+  return { bundle: dest, routes: manifest.routes.length, assets: assets.length,
+    paymentOptions:routes.reduce((n,r)=>n+r.paymentOptionCount,0),paymentIdentity:PAYMENT_IDENTITY,
+    configSha256: manifest.sellerConfigSha256 };
 }
 
 export async function verify(bundlePath) {
@@ -156,7 +198,11 @@ export async function verify(bundlePath) {
   const sellerBytes = await regularBytes(join(root, 'seller.json'), MAX_CONFIG);
   if (hash(sellerBytes) !== manifest.sellerConfigSha256) bad('Seller config hash mismatch');
   const config = validateConfig(parseJson(sellerBytes, 'seller.json'));
-  if (stable(routeBrief(config)) !== stable(manifest.routes) ||
+  if (own(manifest,'paymentIdentity') && manifest.paymentIdentity!==PAYMENT_IDENTITY)
+    bad('Unsupported seller payment identity format');
+  const modernRoutes=routeBrief(config);
+  const expectedRoutes=own(manifest,'paymentIdentity')?modernRoutes:legacyRouteBrief(config);
+  if (stable(expectedRoutes) !== stable(manifest.routes) ||
       (config.publicOrigin ?? null) !== manifest.publicOrigin) bad('Seller terms or route identity drift');
   if (!(await lstat(join(root, 'assets'))).isDirectory()) bad('Unsafe assets directory');
   const expected = new Set(['seller.json', 'manifest.json']), assetIds = new Set();
@@ -182,11 +228,13 @@ export async function verify(bundlePath) {
   for (const file of await readdir(join(root, 'assets'))) {
     if (!expected.has(`assets/${file}`)) bad(`Unexpected asset: ${file}`);
   }
-  return { root, manifest, config, routes: config.routes.length, assets: manifest.assets.length };
+  return { root, manifest, config, routes: config.routes.length, assets: manifest.assets.length,
+    paymentOptions:modernRoutes.reduce((n,r)=>n+r.paymentOptionCount,0),
+    paymentIdentity:manifest.paymentIdentity??'LEGACY_ROUTE_FINGERPRINT' };
 }
 
 export async function restore(bundlePath, destPath) {
-  const { root, manifest } = await verify(bundlePath), dest = resolve(destPath);
+  const { root, manifest, paymentOptions, paymentIdentity } = await verify(bundlePath), dest = resolve(destPath);
   if (dest === root || isInside(root, dest) || isInside(dest, root)) bad('Restore destination must be separate from bundle');
   await createPrivateDir(dest);
   try {
@@ -195,11 +243,12 @@ export async function restore(bundlePath, destPath) {
     await privateFile(join(dest, 'RECOVERY-SOURCE.json'), Buffer.from(JSON.stringify({
       schema: 'stellar-forge.sf102.restored-source.v1',
       recoveredAt: new Date().toISOString(), sellerConfigSha256: manifest.sellerConfigSha256,
+      paymentIdentity, paymentOptions,
       note: 'Use the original SF30 server with this config. HTTPS proxy, facilitator, wallet and app deployment are managed separately.',
     }, null, 2) + '\n'));
   } catch (e) { await rm(dest, { recursive: true, force: true }); throw e; }
   return { restored: dest, config: join(dest, 'seller.json'), assets: manifest.assets.length,
-    publicOrigin: manifest.publicOrigin };
+    publicOrigin: manifest.publicOrigin, paymentIdentity, paymentOptions };
 }
 
 function loopbackUrl(value) {
@@ -220,37 +269,157 @@ async function getJson(origin, path) {
     return parseJson(bytes, path);
   } finally { clearTimeout(timer); }
 }
-function simplifyHealth(health) {
-  if (!obj(health) || typeof health.mode !== 'string' || !Array.isArray(health.routes)) bad('Invalid original SF30 health response');
-  return { mode: health.mode, routes: health.routes.map(route => ({
-    id: route.id, url: route.url, method: route.method,
-  })).sort((a,b) => String(a.id).localeCompare(String(b.id))) };
+function expectedOffer(config, route, listenerOrigin) {
+  const publicOrigin=configuredOrigin(config);
+  if (own(route,'offer')) return structuredClone(route.offer);
+  // These are the actual endpoint origin and original compiler used by SF30,
+  // not a placeholder resource or a second seller implementation.
+  return compileHttpSellerOffer({...route.definition,url:(publicOrigin??listenerOrigin)+route.path},
+    {allowLocalhost:publicOrigin===null});
+}
+function changedKeys(expected, observed) {
+  if (!obj(expected)||!obj(observed)) return ['value'];
+  return [...new Set([...Object.keys(expected),...Object.keys(observed)])]
+    .filter(key=>stable(expected[key])!==stable(observed[key])).map(key=>key.slice(0,96)).slice(0,32);
+}
+function offerDrift(expected, observed) {
+  const drift=[];
+  if (!obj(observed)) return [{code:'INVALID_LIVE_OFFER'}];
+  for (const field of ['x402Version','error','resource','extensions']) {
+    if (stable(expected[field])!==stable(observed[field]))
+      drift.push({code:'OFFER_METADATA_DRIFT',field,
+        changedFields:changedKeys(expected[field],observed[field])});
+  }
+  const otherKeys=[...new Set([...Object.keys(expected),...Object.keys(observed)])]
+    .filter(key=>!['x402Version','error','resource','extensions','accepts'].includes(key));
+  if (otherKeys.some(key=>stable(expected[key])!==stable(observed[key])))
+    drift.push({code:'OFFER_ADDITIONAL_FIELDS_DRIFT'});
+  if (!Array.isArray(observed.accepts)) return [...drift,{code:'INVALID_LIVE_PAYMENT_OPTIONS'}];
+  if (expected.accepts.length!==observed.accepts.length)
+    drift.push({code:'PAYMENT_OPTION_COUNT_DRIFT',expectedCount:expected.accepts.length,observedCount:observed.accepts.length});
+  for (let i=0;i<Math.min(expected.accepts.length,observed.accepts.length);i++) {
+    if (stable(expected.accepts[i])===stable(observed.accepts[i])) continue;
+    drift.push({code:'PAYMENT_OPTION_DRIFT',optionIndex:i+1,
+      changedFields:changedKeys(expected.accepts[i],observed.accepts[i]),
+      expectedSha256:hash(Buffer.from(stable(expected.accepts[i]))),
+      observedSha256:hash(Buffer.from(stable(observed.accepts[i])))});
+  }
+  return drift;
+}
+async function captureEndpoint(endpoint, origin) {
+  const reads=await Promise.allSettled([
+    getJson(origin,'/_seller/health'),getJson(origin,'/_seller/offers'),
+  ]);
+  const result={endpoint,origin,errors:[]};
+  for (const [index,key] of ['health','offers'].entries()) {
+    if (reads[index].status==='fulfilled') result[key]=reads[index].value;
+    else result.errors.push({endpoint,code:'SOURCE_READ_FAILED',surface:key,
+      reason:['TimeoutError','AbortError'].includes(reads[index].reason?.name)?'DEADLINE':'HTTP_OR_JSON_SOURCE'});
+  }
+  return result;
+}
+function compareEndpoint(config, source) {
+  const drift=[...source.errors], rows=[];
+  const add=(code,details={})=>drift.push({endpoint:source.endpoint,code,...details});
+  const health=source.health, offers=source.offers;
+  const mode=['CHALLENGE_ONLY','NATIVE_X402'].includes(health?.mode)?health.mode:null;
+  const summary={endpoint:source.endpoint,mode,matchedRoutes:0,routes:rows,
+    offersSha256:offers===undefined?null:hash(Buffer.from(stable(offers)))};
+  if (!obj(health)||!Array.isArray(health.routes)) {
+    if (health!==undefined) add('INVALID_LIVE_HEALTH');
+    return {summary,drift};
+  }
+  if (!mode) add('INVALID_LIVE_MODE');
+  if (!Array.isArray(offers)) {
+    if (offers!==undefined) add('INVALID_LIVE_OFFERS');
+    return {summary,drift};
+  }
+  if (health.routes.length!==config.routes.length)
+    add('HEALTH_ROUTE_COUNT_DRIFT',{expectedCount:config.routes.length,observedCount:health.routes.length});
+  if (offers.length!==config.routes.length)
+    add('OFFER_ROUTE_COUNT_DRIFT',{expectedCount:config.routes.length,observedCount:offers.length});
+  const healthById=new Map(),usedOffers=new Set();
+  for (const route of health.routes) {
+    if (!obj(route)||typeof route.id!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(route.id)||
+        typeof route.url!=='string'||!supportsSellerMethod(route.method)) {
+      add('INVALID_LIVE_HEALTH_ROUTE'); continue;
+    }
+    const values=healthById.get(route.id)??[]; values.push(route); healthById.set(route.id,values);
+  }
+  let advertisedOrigin=source.origin;
+  if (configuredOrigin(config)===null) {
+    // An SSH-forwarded probe port can differ from the actual local listener.
+    // Only definition-only configs can omit a fixed public origin, and then
+    // every advertised URL must use one actual canonical loopback origin.
+    const origins=new Set();
+    for (const values of healthById.values()) for (const route of values) {
+      try {
+        const u=new URL(route.url);
+        if (u.username||u.password||u.search||u.hash||u.href!==route.url) throw new Error();
+        origins.add(loopbackUrl(u.origin));
+      } catch { add('INVALID_DEFINITION_LOCAL_ORIGIN',{routeId:route.id}); }
+    }
+    if (origins.size!==1) add('INCONSISTENT_DEFINITION_LOCAL_ORIGINS',{count:origins.size});
+    else advertisedOrigin=[...origins][0];
+    summary.definitionListenerOrigin=origins.size===1?advertisedOrigin:null;
+  }
+  for (const route of config.routes) {
+    const expected=expectedOffer(config,route,advertisedOrigin), before=drift.length;
+    const row={routeId:route.id,method:routeMethod(route),paymentOptionCount:expected.accepts.length,
+      expectedOfferSha256:hash(Buffer.from(stable(expected))),observedOfferSha256:null,matched:false};
+    rows.push(row);
+    const metadata=healthById.get(route.id)??[];
+    if (metadata.length!==1) {
+      add(metadata.length?'DUPLICATE_LIVE_ROUTE':'MISSING_LIVE_ROUTE',{routeId:route.id}); continue;
+    }
+    const observed=metadata[0], healthFields=[];
+    if (observed.method!==row.method) healthFields.push('method');
+    if (observed.url!==expected.resource.url) healthFields.push('url');
+    if ((observed.routeTemplate??null)!==(expected.extensions.bazaar.routeTemplate??null)) healthFields.push('routeTemplate');
+    if (healthFields.length) add('HEALTH_ROUTE_IDENTITY_DRIFT',{routeId:route.id,changedFields:healthFields});
+    const candidates=offers.map((offer,index)=>({offer,index})).filter(({offer})=>
+      obj(offer)&&offer.resource?.url===observed.url&&
+      offer.extensions?.bazaar?.info?.input?.method===observed.method);
+    if (candidates.length!==1) {
+      add(candidates.length?'AMBIGUOUS_LIVE_OFFER':'MISSING_LIVE_OFFER',{routeId:route.id,candidateCount:candidates.length}); continue;
+    }
+    const {offer,index}=candidates[0];
+    if (usedOffers.has(index)) add('LIVE_OFFER_SHARED_BY_ROUTES',{routeId:route.id});
+    usedOffers.add(index);
+    row.observedOfferSha256=hash(Buffer.from(stable(offer)));
+    for (const detail of offerDrift(expected,offer)) add(detail.code,{routeId:route.id,...detail});
+    row.matched=before===drift.length;
+  }
+  for (const id of healthById.keys()) {
+    if (!config.routes.some(route=>route.id===id)) add('UNEXPECTED_LIVE_ROUTE',{routeId:id});
+  }
+  if (usedOffers.size!==offers.length) add('UNASSIGNED_LIVE_OFFERS',{count:offers.length-usedOffers.size});
+  summary.matchedRoutes=rows.filter(row=>row.matched).length;
+  return {summary,drift};
 }
 export async function probe(bundlePath, currentUrl, standbyUrl) {
-  const { config, manifest } = await verify(bundlePath);
+  const { config, manifest, paymentOptions, paymentIdentity } = await verify(bundlePath);
   const current = loopbackUrl(currentUrl), standby = loopbackUrl(standbyUrl);
   if (current === standby) bad('Current and standby must be different listeners');
-  const [aH, aO, bH, bO] = await Promise.all([
-    getJson(current, '/_seller/health'), getJson(current, '/_seller/offers'),
-    getJson(standby, '/_seller/health'), getJson(standby, '/_seller/offers'),
+  const sources = await Promise.all([
+    captureEndpoint('current',current),captureEndpoint('standby',standby),
   ]);
-  const hA = simplifyHealth(aH), hB = simplifyHealth(bH);
-  if (!Array.isArray(aO) || !Array.isArray(bO) || aO.length !== config.routes.length ||
-      bO.length !== config.routes.length) bad('Route count differs from recovered config');
-  if (stable(hA) !== stable(hB)) bad('Current and standby original seller route/health mismatch');
-  if (stable(aO) !== stable(bO)) bad('Original native offer/payment identity differs at standby');
-  const routeIds = hA.routes.map(x => x.id).sort();
-  if (stable(routeIds) !== stable(manifest.routes.map(x => x.id).sort())) bad('Live route identities differ from recovered bundle');
-  if (!['CHALLENGE_ONLY', 'NATIVE_X402'].includes(hA.mode)) bad('Unrecognized original SF30 payment mode');
-  if (manifest.publicOrigin) {
-    for (const route of config.routes) {
-      const expectedUrl = manifest.publicOrigin + route.path;
-      if (!hA.routes.some(x => x.id === route.id && x.url === expectedUrl)) bad(`Live seller URL differs from packaged payment identity: ${route.id}`);
-    }
+  const comparisons=sources.map(source=>compareEndpoint(config,source));
+  const drift=comparisons.flatMap(item=>item.drift);
+  if (comparisons[0].summary.mode!==comparisons[1].summary.mode) {
+    drift.push({endpoint:'pair',code:'SELLER_MODE_DRIFT',
+      currentMode:comparisons[0].summary.mode,standbyMode:comparisons[1].summary.mode});
   }
-  return { cutoverParity: true, mode: hA.mode, routeCount: routeIds.length,
-    offersSha256: hash(Buffer.from(stable(aO))), sellerConfigSha256: manifest.sellerConfigSha256,
-    publicOrigin: manifest.publicOrigin, note: 'Metadata parity only; proxy, settlement, backend and data cutover remain operator tasks.' };
+  const result={cutoverParity:drift.length===0,mode:comparisons[0].summary.mode,
+    routeCount:config.routes.length,paymentOptions,paymentIdentity,
+    offersSha256:comparisons[0].summary.offersSha256,
+    standbyOffersSha256:comparisons[1].summary.offersSha256,
+    sellerConfigSha256:manifest.sellerConfigSha256,publicOrigin:manifest.publicOrigin,
+    originBinding:configuredOrigin(config)?'SAVED_PUBLIC_ORIGIN':'DEFINITION_LISTENER_ORIGINS',
+    endpoints:comparisons.map(item=>item.summary),drift,
+    note:'Both original seller metadata snapshots are checked against the saved config; proxy, settlement, backend and data cutover remain operator tasks.'};
+  if (drift.length) throw Object.assign(new Error('SF102_CUTOVER_DRIFT'),{code:'SF102_CUTOVER_DRIFT',report:result});
+  return result;
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -259,11 +428,15 @@ export async function main(args = process.argv.slice(2)) {
   const result = command === 'pack' ? await pack(options['--config'], options['--out']) :
     command === 'verify' ? (() => verify(options['--bundle']).then(r => ({
       verified: true, routes: r.routes, assets: r.assets, configSha256: r.manifest.sellerConfigSha256,
+      paymentOptions:r.paymentOptions,paymentIdentity:r.paymentIdentity,
     })))() :
     command === 'restore' ? restore(options['--bundle'], options['--to']) :
     probe(options['--bundle'], options['--current'], options['--standby']);
   console.log(JSON.stringify(await result));
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(e => { console.error(e.message); process.exitCode = 1; });
+  main().catch(e => {
+    if (e.code==='SF102_CUTOVER_DRIFT') console.log(JSON.stringify(e.report));
+    console.error(e.message); process.exitCode = e.code==='SF102_CUTOVER_DRIFT'?2:1;
+  });
 }
