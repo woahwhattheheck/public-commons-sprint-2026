@@ -659,6 +659,7 @@ or automatically retry a request.
 | `starforge merchant-host` | Generate original Caddy/systemd merchant services, inspect installed operation and run encrypted maintenance/cutover |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
+| `starforge buyer-agent` | Run, pause and resume the original buyer with SQLite LangGraph checkpoints or four LangChain tools; [installed agent guide](NODE_AGENTS.md) |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
 | `starforge delivery-workspace` | Configure receiver revisions, operate the original worker and recover selected exhausted events |
