@@ -328,7 +328,9 @@
     "blockscout": "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/cli.mjs",
     "opendatasoft": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
     "huwise": "stellar/scf-starforge-20261009/sf30-seller-sdk/opendatasoft/cli.mjs",
-    "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs"
+    "water-quality": "stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/cli.mjs",
+    "usaspending-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/cli.mjs",
+    "usaspending-dossier": "stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier-cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -718,7 +720,12 @@
     "./seller/water-quality/samples": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/samples.mjs",
     "./seller/water-quality/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/analysis.mjs",
     "./seller/water-quality/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/project.mjs",
-    "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs"
+    "./seller/water-quality/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/wqx-water-quality/workspace.mjs",
+    "./research/usaspending": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/workspace.mjs",
+    "./research/usaspending/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/merchant.mjs",
+    "./research/usaspending/source-import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/source-import.mjs",
+    "./research/usaspending/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/server.mjs",
+    "./buyer/usaspending/dossier": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending/dossier.mjs"
   },
   "nativePeers": {
     "@x402/core": {
