@@ -47,6 +47,7 @@ export async function startClickHouseWorkspace({ model, port = 8443, ...options 
   };
   const actions = { '/api/save': 'save', '/api/open': 'open', '/api/checkout': 'checkout',
     '/api/review': 'review', '/api/preview': 'preview', '/api/prepare': 'prepare',
+    '/api/stage-release': 'stageMerchantRelease', '/api/release-console': 'openReleaseConsole', '/api/close-release-console': 'closeReleaseConsole',
     '/api/release': 'release', '/api/run': 'run', '/api/stop': 'stop', '/api/export': 'exportClient' };
   const server = createServer((req, res) => {
     Promise.resolve().then(async () => {
@@ -167,6 +168,9 @@ export async function main(args = process.argv.slice(2)) {
     port: integer('--port', 8443, 0, 65535), sellerPort: integer('--seller-port', 0, 0, 65535),
     operationsPort: integer('--operations-port', 0, 0, 65535),
     maxInFlight: integer('--max-in-flight', 64, 1, 1024), drainGraceMs: integer('--drain-grace-ms', 60000, 1000, 300000), nativeFactory,
+    releaseRuntime: { port: integer('--seller-port', 0, 0, 65535),
+      ...(options.has('--facilitator') ? { facilitator: options.get('--facilitator') } : {}),
+      ...(options.has('--allow-local-facilitator') ? { allowLocalFacilitator: true } : {}) },
   });
   console.log(JSON.stringify({ workspace: session.url, state: session.model.stateDirectory }));
   for (const signal of ['SIGINT', 'SIGTERM'])
