@@ -1,0 +1,42 @@
+{
+  "name": "n8n-nodes-starforge-buyer",
+  "version": "0.1.0",
+  "description": "Customer workflows over the original Starforge reviewed buyer inbox and verified responses",
+  "license": "MIT",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22"
+  },
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "author": {
+    "name": "TokenJunkie Labs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026.git",
+    "directory": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n"
+  },
+  "files": [
+    "nodes",
+    "credentials",
+    "lib",
+    "workflows",
+    "workflow.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "credentials/StarforgeBuyerWorkspace.credentials.js"
+    ],
+    "nodes": [
+      "nodes/StarforgeBuyer/StarforgeBuyer.node.js"
+    ]
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
