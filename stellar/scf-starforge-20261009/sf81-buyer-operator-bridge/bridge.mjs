@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
+import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 
 const helper = fileURLToPath(new URL('./approve.py', import.meta.url));
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -120,7 +121,7 @@ export function createOperatorApproval({ python, actor, service, policy, ledger,
 /** One stable operation ID, original wire client, original signer, no blind retries. */
 export class OperatorApprovedBuyer {
   #buyer; #approve;
-  constructor({ operator, fetchImpl = globalThis.fetch } = {}) {
+  constructor({ operator, fetchImpl = createPublicHttpsFetch() } = {}) {
     this.#buyer = new X402BuyerClient({ fetchImpl });
     this.#approve = createOperatorApproval(operator);
   }
