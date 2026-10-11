@@ -188,16 +188,25 @@ export async function status(input = HERE) {
       previousReleaseId: release.active.previousReleaseId, releases } : {}) };
 }
 export async function doctor(input = HERE) {
-  const release = await selected(input), packages = [];
-  for (const [name, expected] of Object.entries(release.manifest.runtime.nativePackages)) {
-    let installed = null;
-    try { installed = (await jsonFile(join(release.root, 'node_modules', name, 'package.json'))).version; }
-    catch (error) { if (error.code !== 'ENOENT') throw error; }
-    packages.push({ name, requested: expected, installed, state: installed === expected ? 'MATCH' : installed ? 'VERSION_DIFFERS' : 'NOT_INSTALLED' });
+  const release = await selected(input);
+  async function inspectPackages(declarations) {
+    const result = [];
+    for (const [name, expected] of Object.entries(declarations ?? {})) {
+      let installed = null;
+      try { installed = (await jsonFile(join(release.root, 'node_modules', name, 'package.json'))).version; }
+      catch (error) { if (error.code !== 'ENOENT') throw error; }
+      result.push({ name, requested: expected, installed,
+        state: installed === expected ? 'MATCH' : installed ? 'VERSION_DIFFERS' : 'NOT_INSTALLED' });
+    }
+    return result;
   }
+  const packages = await inspectPackages(release.manifest.runtime.nativePackages);
+  const adapterPackages = await inspectPackages(release.manifest.runtime.adapterPackages);
   return { node: process.version, nodeReady: Number(process.versions.node.split('.')[0]) >= 22,
     releaseId: release.id, sourceVerified: true, standardLibraryCommands: 'AVAILABLE', nativePackages: packages,
     nativeSdkInstalled: packages.every(pkg => pkg.state === 'MATCH'),
+    adapterPackages, postgresDriversInstalled: adapterPackages.some(pkg => pkg.name === 'pg') &&
+      adapterPackages.every(pkg => pkg.state === 'MATCH'),
     note: 'SDK presence does not configure or authorize facilitator, signer, network or merchant operations.' };
 }
 export async function runNative(name, args, input = HERE) {

@@ -24,9 +24,18 @@
     "stellar/scf-starforge-20261009/sf89-live-request-admission",
     "stellar/scf-starforge-20261009/sf93-seller-support-bundle",
     "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff",
-    "stellar/scf-starforge-20261009/sf96-seller-pilot-ops"
+    "stellar/scf-starforge-20261009/sf96-seller-pilot-ops",
+    "stellar/scf-starforge-20261009/sf98-merchant-delivery",
+    "stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery",
+    "stellar/scf-starforge-20261009/sf103-native-buyer-signer",
+    "stellar/scf-starforge-20261009/native-facilitator"
   ],
-  "supportFiles": ["stellar-forge/payment-auto-catalog/schema-validation.mjs"],
+  "supportFiles": [
+    "stellar-forge/payment-auto-catalog/schema-validation.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE.md"
+  ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
@@ -37,7 +46,23 @@
     "buyer": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs",
     "capture": "stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs",
     "handoff": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/handoff.mjs",
-    "support": "stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs"
+    "support": "stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
+    "client": "stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",
+    "releases": "stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs",
+    "buyer-inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
+    "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/start.mjs",
+    "postgres-init": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/create-example.mjs",
+    "postgres-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/inspect.mjs",
+    "sqlite-init": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/create-example.mjs",
+    "sqlite-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/inspect.mjs",
+    "merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/merchant-launch.mjs",
+    "delivery": "stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs",
+    "dataset-delivery": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-dataset-cli.mjs",
+    "postgres-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+    "inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
+    "native-signer": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs",
+    "facilitator": "stellar/scf-starforge-20261009/native-facilitator/cli.mjs",
+    "commerce": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-cli.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -58,12 +83,56 @@
     "./operator": "./source/stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
     "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "./package.json": "./package.json",
-    "./manifest.json": "./manifest.json"
+    "./manifest.json": "./manifest.json",
+    "./seller/developer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer-portal.mjs",
+    "./seller/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-generator.mjs",
+    "./seller/client-export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs",
+    "./seller/releases": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs",
+    "./seller/release-console": "./source/stellar/scf-starforge-20261009/sf82-seller-pilot/release-console.mjs",
+    "./seller/postgres": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/source.mjs",
+    "./seller/postgres/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/config.mjs",
+    "./seller/sqlite": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/source.mjs",
+    "./seller/sqlite/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/config.mjs",
+    "./buyer/inbox": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs",
+    "./seller/delivery": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/outbox.mjs",
+    "./buyer/dataset": "./source/stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery/deliver.mjs",
+    "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+    "./commerce": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
+    "./buyer/native-signer": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs",
+    "./facilitator": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs"
   },
   "nativePeers": {
-    "@x402/core": {"version": "2.28.0", "probe": "@x402/core/server"},
-    "@x402/stellar": {"version": "2.28.0", "probe": "@x402/stellar/exact/server"},
-    "@x402/extensions": {"version": "2.28.0", "probe": "@x402/extensions/bazaar"},
-    "@stellar/stellar-sdk": {"version": "^16.3.0", "probe": "@stellar/stellar-sdk"}
+    "@x402/core": {
+      "version": "2.28.0",
+      "probe": "@x402/core/server"
+    },
+    "@x402/stellar": {
+      "version": "2.28.0",
+      "probe": "@x402/stellar/exact/server"
+    },
+    "@x402/extensions": {
+      "version": "2.28.0",
+      "probe": "@x402/extensions/bazaar"
+    },
+    "@stellar/stellar-sdk": {
+      "version": "^16.3.0",
+      "probe": "@stellar/stellar-sdk"
+    }
+  },
+  "excludeFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/exercise.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/demo-database.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/exercise.mjs"
+  ],
+  "featurePeers": {
+    "postgres": {
+      "pg": {
+        "version": "8.23.1",
+        "probe": "pg"
+      }
+    }
+  },
+  "runtimePackageManifests": {
+    "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
   }
 }
