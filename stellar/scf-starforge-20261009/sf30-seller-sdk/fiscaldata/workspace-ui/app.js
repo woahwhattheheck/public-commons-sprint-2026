@@ -307,13 +307,26 @@ function renderCompareFields(){
         (field.unit===other.unit&&field.scale===other.scale?'':' / '+other.unit+' × '+other.scale))));
   }):el('p',{class:'muted small'},'Shared fields reviewed as measures will appear here.'));
 }
+function creationRetry(item,kind){
+  return item.status!=='READY'&&item.creation?.action&&item.creation?.payload?
+    btn(item.status==='BUILDING'?'Resume creation':'Retry creation',kind+'-retry',item.id):null;
+}
 function renderComparisons(){
-  update('comparisons-list',state.comparisons,()=>state.comparisons.length?table(['Comparison','Rows added','Rows removed','Rows changed','Created','Actions'],
-    [...state.comparisons].reverse().map(item=>[item.name,count(item.summary.added),count(item.summary.removed),
-      count(item.summary.changed),stamp(item.createdAt),btn('Inspect changes','comparison-open',item.id)])):
+  update('comparisons-list',state.comparisons,()=>state.comparisons.length?table(['Comparison','State','Rows added','Rows removed','Rows changed','Created','Actions'],
+    [...state.comparisons].reverse().map(item=>[
+      el('div',{},el('strong',{},item.name),item.error?el('p',{class:'muted small'},item.error.message):null),
+      badge(item.status),item.summary?count(item.summary.added):'—',item.summary?count(item.summary.removed):'—',
+      item.summary?count(item.summary.changed):'—',stamp(item.createdAt),
+      el('div',{class:'downloads'},btn('Inspect changes','comparison-open',item.id,item.status!=='READY'),creationRetry(item,'comparison'))])):
     empty('Create a comparison to inspect changes between reviewed editions.'));
 }
 async function openComparison(id,offset=0){
+  const retained=state.comparisons.find(item=>item.id===id);
+  if(retained&&retained.status!=='READY'){
+    $('comparison-detail-panel').hidden=true;
+    notice(retained.error?.message||'This comparison is still being created. Its saved action can resume from the comparison list.');
+    return;
+  }
   const request=++ui.detailRequests.comparison;
   const detail=await action('comparisons.get',{id,offset,limit:50,changesOnly:$('changes-only').checked});
   if(request!==ui.detailRequests.comparison)return;
@@ -329,12 +342,14 @@ async function openComparison(id,offset=0){
   $('comparison-files').replaceChildren(files('comparison',id,detail.files));
 }
 function exportCard(item,merchant=false){
+  const ready=item.status==='READY';
   return el('article',{class:'export-item'},el('div',{class:'export-heading'},
-    el('div',{},el('strong',{},item.kind[0].toUpperCase()+item.kind.slice(1)+' export'),
+    el('div',{},el('strong',{},item.kind[0].toUpperCase()+item.kind.slice(1)+' export'),' ',badge(item.status),
       el('p',{class:'muted'},stamp(item.createdAt)+' · source '+short(item.sourceId)),
-      el('p',{class:'mono muted'},'SHA256 '+item.sha256)),
-    merchant?btn('Prepare publisher','publisher-prepare',item.id):null),
-    files('export',item.id,item.files));
+      ready?el('p',{class:'mono muted'},'SHA256 '+item.sha256):null,
+      item.error?el('p',{class:'muted small'},item.error.message):null),
+    el('div',{class:'downloads'},merchant?btn('Prepare publisher','publisher-prepare',item.id,!ready):null,creationRetry(item,'export'))),
+    ready?files('export',item.id,item.files):null);
 }
 function renderExports(){
   update('exports-list',state.exports,()=>state.exports.length?[...state.exports].reverse().map(item=>exportCard(item)):
@@ -663,6 +678,13 @@ document.addEventListener('click',event=>{
       await task(verb==='cancel'?'Cancelling capture':verb==='pause'?'Pausing capture':'Resuming original capture',async()=>{
         await action('captures.'+verb,{id});if(ui.capture?.id===id)await openCapture(id,ui.captureOffset);
       },button);return;
+    }
+    if(kind==='comparison-retry'||kind==='export-retry'){
+      const item=(kind==='comparison-retry'?state.comparisons:state.exports).find(row=>row.id===id);
+      if(!item?.creation)throw new Error('Refresh this saved action before resuming it.');
+      if(item.status==='READY')return;
+      await task(kind==='comparison-retry'?'Resuming comparison':'Resuming export',
+        ()=>action(item.creation.action,item.creation.payload),button);return;
     }
     if(kind==='publisher-prepare'){await task('Preparing dataset publisher',()=>action('publisher.prepare',{exportId:id}),button);return;}
     if(['buyer-run','buyer-recover','buyer-account','buyer-export'].includes(kind)){
