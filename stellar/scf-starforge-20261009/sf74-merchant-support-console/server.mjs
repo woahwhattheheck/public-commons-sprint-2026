@@ -15,6 +15,8 @@ const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/console.mjs': ['console.mjs', 'text/javascript; charset=utf-8'],
   '/terms-editor.mjs': ['terms-editor.mjs', 'text/javascript; charset=utf-8'],
+  '/workspace-file.mjs': ['workspace-file.mjs', 'text/javascript; charset=utf-8'],
+  '/workspace-files.mjs': ['workspace-files.mjs', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const ROOT = new URL('.', import.meta.url);
