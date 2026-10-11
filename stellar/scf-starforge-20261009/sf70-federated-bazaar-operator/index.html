@@ -26,11 +26,12 @@
     <form id="filters" class="toolbar">
       <label>Search observations<input id="query" type="search" autocomplete="off" placeholder="Name, seller URL, description…"></label>
       <label>Provider<select id="provider"><option value="">Both source catalogs</option><option value="vellar">Vellar only</option><option value="periplo">Periplo only</option></select></label>
+      <label>Declared operation<select id="operation"><option value="">All native operations</option><option value="GET">HTTP GET</option><option value="POST">HTTP POST</option><option value="HEAD">HTTP HEAD</option><option value="MCP">MCP tools</option><option value="OTHER">Other declared methods</option><option value="UNDECLARED">Method not declared</option></select></label>
       <button id="refresh" type="button">Refresh genuine GETs</button>
     </form>
     <p id="matches" class="match" aria-live="polite"></p>
     <section id="results" class="cards" aria-label="Source-backed resource advertisements"></section>
   </main>
-  <footer>Every source retains its own GET status, coverage, and payment option tuple. No wallet, signing, payments, analytics, or remote assets.</footer>
+  <footer>SF71 operation-aware handoffs preserve each source's native method, capture status and payment option tuple. Copying does not invoke a seller. No wallet, signing, payments, analytics, or remote assets.</footer>
 </body>
 </html>
