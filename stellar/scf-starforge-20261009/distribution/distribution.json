@@ -257,7 +257,9 @@
     "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs",
     "routescan-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/cli.mjs",
     "routescan-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace-cli.mjs",
-    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
+    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs",
+    "provider-operator": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs",
+    "provider-workspace": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -496,7 +498,11 @@
     "./seller/routescan/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/project.mjs",
     "./seller/routescan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace.mjs",
     "./seller/routescan/backup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/backup.mjs",
-    "./buyer/n8n/workflows": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
+    "./buyer/n8n/workflows": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs",
+    "./buyer/provider-operator": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator.mjs",
+    "./buyer/provider-workspace": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/model.mjs",
+    "./buyer/provider-workspace/server": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/server.mjs",
+    "./buyer/provider-workspace/recovery": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/archive.mjs"
   },
   "nativePeers": {
     "@x402/core": {
