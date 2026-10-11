@@ -20,6 +20,7 @@ const help = `Starforge merchant toolkit
 Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
+  getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -37,6 +38,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
+  merchant-host                             Install, observe and recover the original Linux merchant group
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   dataset-delivery Export a saved buyer dataset
@@ -56,6 +58,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
+  clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
@@ -88,11 +91,13 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
+  python-workspace                           Author Python sources, run private previews and operate native releases
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
   graphql-onboarding / graphql-merchant      Prepare approved queries and run the original GraphQL seller
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
+  graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
 
 Optional feature groups: ${[...new Set([

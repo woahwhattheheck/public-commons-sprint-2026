@@ -15,7 +15,36 @@ function nextAction(row) {
   const summary = row.result?.summary;
   if (summary?.error || summary?.evidenceError || summary?.responseFile?.status === 'FAILED')
     return 'Use the original buyer/evidence error and any saved or partial output below to resolve this operation. Other untouched jobs can continue. A file failure does not cancel a payment.';
-  return 'Use the returned resource and original evidence. Any independent transfer or reservation reconciliation remains in the existing SF82/SF86 and SF36 tools.';
+  return row.accounting?.finalized?'Use the returned resource and retained original accounting receipt. A later accounting refresh reuses the same original ledger.':
+    'Refresh accounting in this acquisition or with the finalize command. Select this request’s existing original operator workspace if it was not received here.';
+}
+
+function accounting(row) {
+  const value=row.accounting,final=value?.finalized;
+  if(!value)return '';
+  return `<section class="result"><h3>Original accounting</h3><dl class="terms"><div><dt>Latest check</dt><dd>${code(value.outcome)} · ${escape(value.checkedAt??'Not checked')}</dd></div><div><dt>Original operator</dt><dd>${code(value.workspace)}</dd></div><div><dt>Finalized actual atomic units</dt><dd>${final?code(final.actualAtomicUnits):'Awaiting original finalization'}</dd></div><div><dt>Receipt</dt><dd>${code(final?.receipt)}</dd></div>${final?`<div><dt>Finalized request digest</dt><dd>${code(final.requestSha256)}</dd></div><div><dt>Receipt retained at</dt><dd>${escape(final.completedAt)}</dd></div>`:''}</dl>${value.lastError?`<p class="notice">Latest accounting condition: ${code(value.lastError)}. An earlier finalized receipt remains included when present.</p>`:''}${value.outcome==='NO_PAYMENT_REQUIRED'?'<p>This is the original unsigned response; it carries no ledger receipt or actual payment amount.</p>':''}</section>`;
+}
+
+/** Accounting CSV is a view of existing original results, one operation per row. */
+export function renderAccountingCSV(state) {
+  const cell=value=>{
+    let text=String(value??'');
+    if(/^[\s]*[=+@-]/.test(text))text="'"+text;
+    return '"'+text.replaceAll('"','""')+'"';
+  };
+  const rows=[['operation_id','label','intent_id','network','asset','request_ceiling_atomic',
+    'finalized_actual_atomic','receipt','finalized_request_sha256','receipt_completed_at',
+    'latest_accounting_outcome','latest_check_at','latest_error','buyer_state','buyer_status','delivery_status']];
+  for(const row of state.operations){const value=row.accounting,final=value?.finalized;
+    rows.push([row.id,row.label,row.intentId,row.acceptedCaps.network,row.acceptedCaps.asset,row.acceptedCaps.maxAtomic,
+      final?.actualAtomicUnits,final?.receipt,final?.requestSha256,final?.completedAt,value?.outcome,value?.checkedAt,
+      value?.lastError,row.state,row.result?.summary?.status,row.result?.summary?.responseFile?.status]);}
+  return rows.map(row=>row.map(cell).join(',')).join('\r\n')+'\r\n';
+}
+
+function accountingTotals(state) {
+  if(!state.accounting)return '';
+  return `<section class="panel"><h2>Accounting and receipts</h2><p class="muted">${escape(state.accounting.meaning)}</p><div class="table"><table><thead><tr><th>Network / asset</th><th>Finalized atomic units</th><th>Finalized</th><th>Unsigned</th><th>Unresolved</th><th>Untouched</th></tr></thead><tbody>${state.accounting.groups.map(group=>`<tr><td>${code(group.network)}<br>${code(group.asset)}</td><td>${code(group.finalizedActualAtomic)}</td><td>${group.finalizedOperations}</td><td>${group.unsignedOperations}</td><td>${group.unresolvedOperations}</td><td>${group.unattemptedOperations}</td></tr>`).join('')}</tbody></table></div></section>`;
 }
 
 function job(row) {
@@ -31,6 +60,7 @@ function job(row) {
   ${summary ? `<div class="result"><h3>Original buyer result</h3><dl class="terms"><div><dt>Buyer / HTTP status</dt><dd>${code(summary.status)} / ${code(summary.httpStatus)}</dd></div><div><dt>Native process exit</dt><dd>${row.result.recovered ? 'Recovered result; process exit not observed' : code(row.result.exitCode)}</dd></div><div><dt>Local file</dt><dd>${code(delivery?.status ?? 'NOT_REQUESTED')}${delivery?.bytes !== undefined ? ` · ${escape(delivery.bytes)} bytes` : ''}</dd></div><div><dt>Native evidence</dt><dd>${code(summary.evidencePath)}</dd></div><div><dt>Saved output</dt><dd>${code(delivery?.path ?? delivery?.destination)}</dd></div><div><dt>Partial output</dt><dd>${code(delivery?.partialPath)}</dd></div></dl>
   ${row.downloadName && delivery?.status === 'SAVED' ? `<p><a href="downloads/${encodeURIComponent(row.downloadName)}" download="${escape(row.downloadName)}">Download ${escape(row.downloadName)}</a></p>` : ''}
   <details><summary>Original SF88 summary</summary><pre>${json(summary)}</pre></details></div>` : ''}
+  ${accounting(row)}
   <details><summary>Input lineage and attempt records</summary><pre>${json({sourceConfig:row.sourceConfig, snapshot:row.config, body:row.body, headers:row.headers, started:row.started, result:row.result ? {...row.result, summary:undefined} : null})}</pre></details>
   </article>`;
 }
@@ -46,6 +76,7 @@ export function renderReport(state) {
   <section class="stats" aria-label="Runbook counts"><div><strong>${operations.length}</strong><span>Explicit operations</span></div><div><strong>${untouched}</strong><span>Untouched operations</span></div><div><strong>${reported}</strong><span>Original buyer results</span></div><div><strong>${saved}</strong><span>Saved resource files</span></div></section>
   <section class="panel"><h2>Planned ceilings</h2><p class="muted">Each network and asset keeps its own atomic units. These sums do not reserve funds, approve a payment, or report available governor capacity.</p><div class="table"><table><thead><tr><th>Network</th><th>Asset</th><th>Operations</th><th>Sum of request ceilings</th></tr></thead><tbody>${plan.plannedMaximums.map(group => `<tr><td>${code(group.network)}</td><td>${code(group.asset)}</td><td>${group.operations}</td><td>${code(group.plannedMaximumAtomic)}</td></tr>`).join('')}</tbody></table></div></section>
   ${state.executionLock ? `<section class="panel"><h2>Execution owner</h2><p>${code(state.executionLock.host)} · PID ${code(state.executionLock.pid)} · ${state.executionLock.ownerRunning === true ? 'Process running' : state.executionLock.ownerRunning === false ? 'Process no longer running; use the documented stale-lock command' : 'Owner is on another host'}</p></section>` : ''}
+  ${accountingTotals(state)}
   ${operations.map(job).join('')}
   <footer>Generated from this runbook's original configurations and native SF88 outputs. Seller-reported settlement, HTTP delivery, saved files and independent chain verification remain separate in the original result. Started operations are never automatically executed again. The report contains private seller and operator context; share it deliberately.</footer>
   </main></body></html>`;

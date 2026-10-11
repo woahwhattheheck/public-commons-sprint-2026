@@ -42,7 +42,7 @@ const jobDelivery = job => savedDelivery(job?.rpcRecovery?.responseFile ?
   { responseFile: job.rpcRecovery.responseFile } : job?.outcome);
 async function savedFile(delivery) {
   if (!delivery.available) throw problem('The buyer has no saved response.', 404);
-  // The path comes solely from the original buyer's SAVED result. Browser
+  // The path comes solely from the original buyer's retained result. Browser
   // requests cannot supply a file path, destination, URL or response identity.
   let handle;
   try {
@@ -88,6 +88,18 @@ async function preview(delivery) {
   } finally { await handle.close(); }
 }
 
+async function download(delivery, res) {
+  const handle = await savedFile(delivery);
+  const filename = delivery.name.replace(/[^A-Za-z0-9_. -]/g, '_').slice(0, 120) || 'response.bin';
+  try {
+    res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': String(delivery.bytes),
+      'content-disposition': 'attachment; filename="' + filename + '"',
+      'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
+      'content-security-policy': CSP, 'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin' });
+    await pipeline(handle.createReadStream({ start: 0, autoClose: false }), res);
+  } finally { await handle.close(); }
+}
+
 /** Present the original commerce session; the original inbox owns durable state. */
 export async function startCommerceConsole(session, { port = 8426 } = {}) {
   for (const method of ['status', 'review', 'execute', 'cancel', 'recover', 'close'])
@@ -98,6 +110,8 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
+    ['/stream.mjs', 'stream.mjs', 'text/javascript; charset=utf-8'],
+    ['/stream.css', 'stream.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, {
     bytes: await readFile(new URL('./commerce-ui/' + file, import.meta.url)), type,
   }])));
@@ -163,7 +177,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         bodySha256: job.bodySha256, operatorId: job.operator.actor, serviceId: job.operator.service,
         signerFilename: basename(job.dependencies.signer.path) } : null,
       review: review ? { id: review.id, at: review.at, original: review.original } : null,
-      attempt, delivery: jobDelivery(job), rpcRecovery: job?.rpcRecovery ?? null,
+      attempt, delivery: jobDelivery(job), stream: job?.stream ?? null, rpcRecovery: job?.rpcRecovery ?? null,
       rpcAction: rpcActions.has(id) ? { state: rpcActions.get(id).running ? 'RUNNING' : 'FINISHED',
         operation: rpcActions.get(id).operation, result: rpcActions.get(id).result ?? null,
         error: rpcActions.get(id).error ?? null } : null,
@@ -176,13 +190,16 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           original.facilitator?.mode === 'NATIVE_X402_FACILITATOR',
         canExecute: Boolean(review) && runningSession && !action && !work && job.state === 'QUEUED' && original.seller.mode === 'NATIVE_X402',
         canCancel: runningSession && !action && !running && job?.state === 'QUEUED',
+        canInterrupt: runningSession && !action && running && typeof session.interrupt === 'function',
         canRecover: runningSession && !action && !work && ['RUNNING_OR_INTERRUPTED', 'REVIEW_REQUIRED'].includes(job?.state),
         canVerifyRpcPayment: runningSession && !action && !work && !rpcActions.get(id)?.running &&
           job?.rpcRecovery?.canVerify === true && typeof session.verifyRpcPayment === 'function',
         canRecoverRpcResponse: runningSession && !action && !work && !rpcActions.get(id)?.running &&
           job?.rpcRecovery?.canRecover === true && typeof session.recoverRpcResponse === 'function',
         canRetrieve: Boolean(job?.paidFile) && typeof session.retrieve === 'function' && runningSession && !action &&
-          !retrievals.get(id)?.running,
+          !retrievals.get(id)?.running && !['ACTIVE', 'REJECTED'].includes(job?.paidFile?.transfer?.status),
+        canResetTransfer: Boolean(job?.paidFile?.transfer?.canReset) && typeof session.resetTransfer === 'function' &&
+          runningSession && !action && !retrievals.get(id)?.running,
         canStop: runningSession },
       updatedAt: new Date().toISOString(),
     };
@@ -224,6 +241,34 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       const supplied = Buffer.from(req.headers['x-commerce-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes))
         throw problem('Reopen the complete operator URL printed by the commerce console command.', 401);
+      if (req.method === 'GET' && ['/api/stream-records', '/api/stream-answer', '/api/stream-file'].includes(target.pathname)) {
+        const fields = target.pathname === '/api/stream-records' ? ['intent','partial','offset','limit','query'] : ['intent','partial'];
+        if ([...target.searchParams.keys()].some(key => !fields.includes(key) || target.searchParams.getAll(key).length !== 1) ||
+            target.searchParams.has('partial') && target.searchParams.get('partial') !== '1')
+          throw problem('Select one original intent and its retained stream options.');
+        const intent = target.searchParams.get('intent');
+        await current(intent);
+        const options = { allowPartial:target.searchParams.get('partial') === '1' };
+        const method = target.pathname === '/api/stream-records' ? 'streamRecords' :
+          target.pathname === '/api/stream-answer' ? 'streamAnswer' : 'streamFile';
+        if (typeof session[method] !== 'function') throw problem('This session has no retained stream reader.', 409);
+        if (method === 'streamRecords') {
+          for (const key of ['offset','limit']) if (target.searchParams.has(key)) {
+            const value = target.searchParams.get(key);
+            if (!/^(0|[1-9][0-9]{0,6})$/.test(value)) throw problem('Stream page numbers must be positive integers or zero.');
+            options[key] = Number(value);
+          }
+          if (target.searchParams.has('query')) options.query = target.searchParams.get('query');
+        }
+        const reader = new AbortController(), abort = () => reader.abort();
+        res.once('close', abort);
+        try {
+          const result = await session[method](intent, { ...options, signal:reader.signal });
+          if (method === 'streamFile') await download(result, res);
+          else send(200, result);
+        } finally { res.removeListener('close', abort); }
+        return;
+      }
       if (req.method === 'GET' && ['/api/session', '/api/preview', '/api/delivery', '/api/product-preview', '/api/product-delivery'].includes(target.pathname)) {
         if ([...target.searchParams.keys()].some(key => key !== 'intent') || target.searchParams.getAll('intent').length > 1)
           throw problem('Only one exact intent selection is accepted.');
@@ -232,25 +277,17 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         const { job } = await current(intent);
         const delivery = target.pathname.startsWith('/api/product-') ? job.paidFile?.delivery ?? { available: false } : jobDelivery(job);
         if (['/api/preview', '/api/product-preview'].includes(target.pathname)) return send(200, await preview(delivery));
-        const handle = await savedFile(delivery);
-        const filename = delivery.name.replace(/[^A-Za-z0-9_. -]/g, '_').slice(0, 120) || 'response.bin';
-        try {
-          res.writeHead(200, { 'content-type': 'application/octet-stream', 'content-length': String(delivery.bytes),
-            'content-disposition': 'attachment; filename="' + filename + '"',
-            'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
-            'content-security-policy': CSP, 'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin' });
-          await pipeline(handle.createReadStream({ start: 0, autoClose: false }), res);
-        } finally { await handle.close(); }
+        await download(delivery, res);
         return;
       }
-      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/facilitator', '/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname))
+      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/interrupt', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve', '/api/reset-transfer', '/api/facilitator', '/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname))
         throw problem('Unknown commerce workspace action.', 404);
       if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
       const value = await input(req);
       const allowed = target.pathname === '/api/execute' ? ['intent', 'reviewId'] :
         ['/api/verify-rpc-payment', '/api/recover-rpc-response'].includes(target.pathname) ?
           ['intent', 'transaction', 'expectedRequestSha256', 'expectedAttemptId', 'expectedConfigSha256'] :
-        target.pathname === '/api/retrieve' ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
+        ['/api/retrieve', '/api/reset-transfer'].includes(target.pathname) ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
       if (Object.keys(value).some(key => !allowed.includes(key))) throw problem('Unknown operator action field.');
       if (target.pathname === '/api/stop') {
         void stopSession().catch(() => {});
@@ -288,14 +325,21 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           pending.promise = Promise.resolve().then(() => session[method](intent, selected))
             .then(result => { pending.result = result; }, error => { pending.error = commerceErrorCode(error); })
             .finally(() => { pending.running = false; });
-        } else if (target.pathname === '/api/retrieve') {
-          if (typeof session.retrieve !== 'function' || !job.paidFile) throw problem('This operation has no configured paid file.', 409);
+        } else if (['/api/retrieve', '/api/reset-transfer'].includes(target.pathname)) {
+          const method = target.pathname === '/api/retrieve' ? 'retrieve' : 'resetTransfer';
+          if (typeof session[method] !== 'function' || !job.paidFile) throw problem('This operation has no configured paid-file action.', 409);
           if (retrievals.get(intent)?.running) throw problem('This file is already being retrieved.', 409);
           if (value.configSha256 !== job.configSha256 || value.handoffSha256 !== job.paidFile.handoffSha256)
-            throw problem('The selected request or file handoff changed. Refresh before retrieving.', 409);
-          const file = { running: true }; retrievals.set(intent, file);
-          file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
-            error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+            throw problem('The selected request or file handoff changed. Refresh before changing its download.', 409);
+          if (method === 'resetTransfer') {
+            if (!job.paidFile.transfer?.canReset) throw problem('This order has no idle retained download to clear. Refresh its current state.', 409);
+            const result = await session.resetTransfer(intent);
+            retrievals.set(intent, { running: false, result });
+          } else {
+            const file = { running: true }; retrievals.set(intent, file);
+            file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
+              error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+          }
         } else if (target.pathname === '/api/review') {
           const result = await session.review(intent);
           if (result.exitCode !== 0 || result.original?.mode !== 'OFFLINE_REVIEW')
@@ -303,9 +347,14 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           const fresh = (await current(intent)).job;
           if (fingerprint(fresh) !== fingerprint(job)) throw problem('The prepared request changed during review. Review it again.', 409);
           reviews.set(intent, { id: randomUUID(), at: new Date().toISOString(), fingerprint: fingerprint(job), original: result.original });
+        } else if (target.pathname === '/api/interrupt') {
+          if (work?.intent !== intent || typeof session.interrupt !== 'function')
+            throw problem('This selected buyer is no longer active. Read its retained result.', 409);
+          await session.interrupt(intent);
+          if (work?.intent === intent) await work.promise;
         } else if (target.pathname === '/api/cancel') {
           if (job.state !== 'QUEUED' || work?.intent === intent)
-            throw problem('Only a queued request can be cancelled. Stop the owned session to interrupt its active buyer.', 409);
+            throw problem('Only a queued request can be cancelled. Use Interrupt this buyer for its active request.', 409);
           await session.cancel(intent); reviews.delete(intent);
         } else if (target.pathname === '/api/recover') {
           if (work) throw problem('Wait for the current buyer before reading interrupted-operation recovery.', 409);

@@ -13,6 +13,7 @@ import uuid
 
 from .errors import DeliveryError, NativeError, StateError
 from .result import AccountingResult, BuyerResult, FileDelivery, FileTransfer
+from .requests import MAX_REQUEST_BODY_BYTES, multipart_body
 from .runtime import Runtime
 from .storage import digest, dump, lock, parse, private_directory, read, sync_directory, write
 
@@ -55,6 +56,11 @@ class Buyer:
         self.runtime = Runtime(checkout, node=node, environment=environment, timeout=timeout)
         self.state_dir = private_directory(Path(state_dir))
 
+    def workspace_recovery(self):
+        """Recover the original operator together with this existing application state."""
+        from .recovery import WorkspaceRecovery
+        return WorkspaceRecovery.from_buyer(self)
+
     def operation(self, intent_id: str):
         return Operation(self, intent(intent_id))
 
@@ -88,12 +94,12 @@ class Buyer:
                 dump(Path(destination).expanduser().absolute(), result, exclusive=True)
             return result
 
-    def from_config(self, config_file, *, body: bytes | None = None):
+    def from_config(self, config_file, *, body: bytes | None = None, multipart=None):
         """Snapshot an existing private SF88 config and request body without a call."""
         config = file_json(config_file)
         op = self._new(intent(config.get("operation", {}).get("intentId")))
         with op._initializing():
-            op._store_config(config, body=body)
+            op._store_config(config, body=body, multipart=multipart)
         return op
 
     def from_operation_handoff(self, handoff_file, *, accept: int):
@@ -116,12 +122,12 @@ class Buyer:
             config["operation"]["intentId"] = intent(intent_id)
         return native["directory"], config
 
-    def from_workspace(self, directory, *, intent_id=None, body: bytes | None = None):
+    def from_workspace(self, directory, *, intent_id=None, body: bytes | None = None, multipart=None):
         """Snapshot the original validated workspace; its keys stay in Node."""
         workspace, config = self._workspace(directory, intent_id)
         op = self._new(intent(config["operation"]["intentId"]), workspace=workspace)
         with op._initializing():
-            op._store_config(config, body=body)
+            op._store_config(config, body=body, multipart=multipart)
         return op
 
     def from_paid_file(self, handoff_file, *, workspace, intent_id=None):
@@ -143,7 +149,7 @@ class Buyer:
         return op
 
     def prepare(self, discovery_file, *, row: int, accept: int, intent_id: str,
-                url: str, method="GET", body: bytes | None = None, headers=None):
+                url: str, method="GET", body: bytes | None = None, headers=None, multipart=None):
         """Select exact saved source terms using original SF88 --prepare."""
         if type(row) is not int or row < 0 or type(accept) is not int or accept < 0:
             raise StateError("EXPLICIT_SELECTION_INDEX_REQUIRED")
@@ -162,7 +168,7 @@ class Buyer:
                 mode="OFFLINE_CONFIG_PREPARED")
             dump(op.directory / "prepared.json", result, exclusive=True)
             config = file_json(op.config_path)
-            op._store_config(config, body=body)
+            op._store_config(config, body=body, multipart=multipart)
         return op
 
     def list_operations(self):
@@ -245,25 +251,35 @@ class Operation:
         if (self.directory / "attempt.json").exists():
             raise StateError("ATTEMPT_ALREADY_RECORDED_USE_RECOVER", operation=self)
 
-    def _store_config(self, config: dict, *, body=None):
+    def _store_config(self, config: dict, *, body=None, multipart=None):
         self._unattempted()
         request = config.get("operation")
         if not isinstance(request, dict) or request.get("intentId") != self.intent_id:
             raise StateError("OPERATION_ID_MISMATCH", operation=self)
+        if multipart is not None:
+            if body is not None:
+                raise StateError("CHOOSE_BODY_OR_MULTIPART")
+            body, request["headers"] = multipart_body(self, multipart, request.get("headers"))
         if body is not None and not isinstance(body, bytes):
             raise StateError("BODY_BYTES_REQUIRED")
+        supplied_body = body is not None
         if body is None and request.get("bodyFile"):
-            body = read(Path(request["bodyFile"]), 1_048_576)
+            body = read(Path(request["bodyFile"]), MAX_REQUEST_BODY_BYTES)
         if body is not None:
-            if len(body) > 1_048_576:
+            if len(body) > MAX_REQUEST_BODY_BYTES:
                 raise StateError("REQUEST_BODY_LIMIT")
+            if not supplied_body and any(key in request for key in ("bodyBytes", "bodySha256")):
+                if request.get("bodyBytes") != len(body) or request.get("bodySha256") != digest(body):
+                    raise StateError("REQUEST_BODY_CHANGED_SINCE_PREPARATION")
             path = self.directory / ("request." + digest(body) + ".body")
             try:
                 write(path, body, exclusive=True)
             except FileExistsError:
-                if read(path, 1_048_576) != body:
+                if read(path, MAX_REQUEST_BODY_BYTES) != body:
                     raise StateError("REQUEST_BODY_CHANGED") from None
             request["bodyFile"] = str(path)
+            request["bodyBytes"] = len(body)
+            request["bodySha256"] = digest(body)
         # Original workspace binds this directory to its ledger/operator. Keep
         # that native value; independent configurations retain the old behavior.
         if self._check().get("nativeWorkspace") is None:
@@ -299,11 +315,12 @@ class Operation:
         finally:
             candidate.unlink(missing_ok=True)
 
-    def configure(self, operator_profile, *, body=None, headers=None,
-                  max_response_bytes=None, response_timeout_ms=None):
+    def configure(self, operator_profile=None, *, body=None, headers=None, multipart=None,
+                  max_response_bytes=None, response_timeout_ms=None,
+                  request_timeout_ms=None, response_stream=None):
         """Attach trusted original operator PATHS/settings; secrets stay in env."""
-        profile = file_json(operator_profile) if isinstance(operator_profile, (str, os.PathLike)) else dict(operator_profile)
-        allowed = {"operator", "signerModule", "trustedPayer", "bodyCaptureTimeoutMs"}
+        profile = file_json(operator_profile) if isinstance(operator_profile, (str, os.PathLike)) else dict(operator_profile or {})
+        allowed = {"operator", "signerModule", "trustedPayer", "bodyCaptureTimeoutMs", "requestTimeoutMs"}
         if set(profile) - allowed:
             raise StateError("OPERATOR_PROFILE_FIELDS_INVALID")
         with lock(self.directory):
@@ -316,14 +333,18 @@ class Operation:
                 config["responseFile"]["maxBytes"] = max_response_bytes
             if response_timeout_ms is not None:
                 config["responseFile"]["timeoutMs"] = response_timeout_ms
-            self._store_config(config, body=body)
+            if request_timeout_ms is not None:
+                config["requestTimeoutMs"] = request_timeout_ms
+            if response_stream is not None:
+                config["responseFile"]["stream"] = dict(response_stream)
+            self._store_config(config, body=body, multipart=multipart)
         return self
 
     def _fingerprints(self):
         raw = read(self.config_path, 65536)
         config = parse(raw)
         path = config.get("operation", {}).get("bodyFile")
-        body = read(Path(path), 1_048_576) if path else b""
+        body = read(Path(path), MAX_REQUEST_BODY_BYTES) if path else b""
         return digest(raw), digest(body)
 
     def review(self) -> Review:
@@ -412,7 +433,9 @@ class Operation:
             raise StateError("RESULT_CONFIG_MISMATCH", operation=self)
         output = config.get("responseFile") or {}
         return BuyerResult(record, Path(output["destination"]) if output.get("destination") else None,
-                           output.get("maxBytes", 67_108_864))
+                           output.get("maxBytes", 67_108_864), _runtime=self.buyer.runtime,
+                           _response_file={"maxBytes": 67_108_864, **output},
+                           _operation_directory=self.directory)
 
     def recover(self) -> BuyerResult | None:
         """Read recorded output; never spawn a buyer or repeat an attempted call."""

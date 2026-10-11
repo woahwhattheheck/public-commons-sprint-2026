@@ -8,6 +8,7 @@ import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as readNativeConfig, execution, bytes, need } from '../sf88-operator-buyer-cli/config.mjs';
 import {MAX_REQUEST_BODY_BYTES,readRequestBody} from '../sf88-operator-buyer-cli/request-body.mjs';
+import {inspectAcquisitionAccounting,bindAcquisitionWorkspace,finalizeAcquisitionOperation} from './accounting.mjs';
 
 export const MANIFEST_SCHEMA = 'stellar-forge.buyer-runbook.v1';
 const PLAN_SCHEMA = 'stellar-forge.buyer-runbook-plan.v1';
@@ -616,16 +617,57 @@ export async function inspectRunbook(directory) {
     rows.push({...op, state:result?.state ?? (await attempted(plan.directory, op.id) ? 'INTERRUPTED_NO_RESULT' : 'UNATTEMPTED'),
       integrity, integrityError, started, result, lastError:result ? null : lastError });
   }
-  return {schema:'stellar-forge.buyer-runbook-status.v1', inspectedAt:now(), plan,
+  return inspectAcquisitionAccounting({schema:'stellar-forge.buyer-runbook-status.v1', inspectedAt:now(), plan,
     executionLock:executionLock ? {pid:executionLock.pid, generation:executionLock.generation, host:executionLock.host, startedAt:executionLock.startedAt,
       ownerRunning:executionLock.host === hostname() ? await alive(executionLock.pid, executionLock.processToken) : null} : null,
-    operations:rows};
+    operations:rows});
+}
+
+/** Select an existing original accounting workspace for one frozen operation. */
+export async function bindRunbookWorkspace(directory,{only,workspace}={}) {
+  const plan=await readPlan(directory),row=plan.operations.find(op=>op.id===only);
+  need(row,'UNKNOWN_JOB_ID');
+  const release=await acquireExecutionLease(plan.directory);
+  try {return await bindAcquisitionWorkspace(plan,row,workspace);}
+  finally {await release();}
+}
+
+/** Complete existing attempts serially through original SF88/SF36. The same
+ * immutable run lease excludes execution/recovery and other accounting owners. */
+export async function finalizeRunbook(directory,{only,workspace,workspaceForOperation,signal,
+  outbox,merchantRoute,onProgress=()=>{}}={}) {
+  need(signal===undefined||signal instanceof AbortSignal,'INVALID_ABORT_SIGNAL');
+  need(workspaceForOperation===undefined||typeof workspaceForOperation==='function',
+    'INVALID_ACCOUNTING_WORKSPACE_RESOLVER');
+  need(Boolean(outbox)===Boolean(merchantRoute),'OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER');
+  need(!outbox||only!==undefined,'RUNBOOK_OUTBOX_REQUIRES_SELECTED_OPERATION');
+  const plan=await readPlan(directory);
+  need(only===undefined||plan.operations.some(op=>op.id===only),'UNKNOWN_JOB_ID');
+  const release=await acquireExecutionLease(plan.directory),results=[];
+  try {
+    const state=await inspectRunbook(plan.directory);
+    need(runbookPlanDigest(state.plan)===runbookPlanDigest(plan),'FROZEN_PLAN_MISMATCH');
+    for(const row of state.operations) {
+      if(only!==undefined&&row.id!==only)continue;
+      if(signal?.aborted)break;
+      if(row.state==='UNATTEMPTED'){results.push({id:row.id,status:'UNATTEMPTED'});continue;}
+      onProgress({id:row.id,status:'CHECKING_ORIGINAL_ACCOUNTING'});
+      let result;
+      try {result=await finalizeAcquisitionOperation(plan,row,{workspace,workspaceForOperation,signal,outbox,merchantRoute});}
+      catch(error){result={id:row.id,status:'ACCOUNTING_PREFLIGHT_FAILED',code:codeOf(error)};}
+      results.push(result);onProgress({id:row.id,status:result.status,
+        ...(result.lastError||result.code?{code:result.lastError??result.code}:{}),viewStatus:result.viewStatus});
+    }
+  } finally {await release();}
+  return {schema:'stellar-forge.buyer-runbook-accounting-refresh.v1',results,interrupted:signal?.aborted===true};
 }
 
 export async function saveRunbookReport(directory) {
   const state = await inspectRunbook(directory);
-  const { renderReport } = await import('./report.mjs');
+  const { renderReport,renderAccountingCSV } = await import('./report.mjs');
   await replaceFile(join(state.plan.directory, 'status.json'), serialized(state));
   await replaceFile(join(state.plan.directory, 'report.html'), Buffer.from(renderReport(state)));
-  return {state, reportPath:join(state.plan.directory, 'report.html'), statusPath:join(state.plan.directory, 'status.json')};
+  await replaceFile(join(state.plan.directory,'accounting.csv'),Buffer.from(renderAccountingCSV(state)));
+  return {state, reportPath:join(state.plan.directory, 'report.html'), statusPath:join(state.plan.directory, 'status.json'),
+    accountingPath:join(state.plan.directory,'accounting.csv')};
 }

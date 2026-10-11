@@ -3,6 +3,8 @@
 Generate a complete Linux deployment from the merchant's **existing original
 configuration**. SF99 connects the original seller and operations interface,
 continuous SF98 delivery, and optional original SF101 paid-file checkout/receiver.
+It also deploys the original retained SF82 merchant with its existing signed
+discovery identity and writer, through the same installation and recovery flow.
 It writes Caddy configuration, systemd services and a target, a drift-checking
 manifest, an original encrypted-recovery plan and exact operating instructions.
 
@@ -70,6 +72,81 @@ and omit `facilitator` and `upstreams`. It uses the original seller/operations
 launcher. Native mode requires a facilitator and refuses known demonstration
 payment markers. The original SDK still establishes runtime payment compatibility;
 successful generation is a configuration result, not a settlement result.
+
+## Retained release and signed discovery
+
+Continue the merchant already prepared through the original
+[release console or CLI](../sf82-seller-pilot/RELEASES.md) and
+[discovery setup](../sf82-seller-pilot/DISCOVERY_SETUP.md). Stage the actual fixed
+seller port and intended facilitator in the original release, inspect its terms,
+and activate it. Put the returned current generation in this host plan:
+
+```json
+{
+  "schema": "stellar-forge.merchant-host.v1",
+  "merchant": "retained-merchant",
+  "serviceUser": "stellar-merchant",
+  "kind": "release",
+  "mode": "native",
+  "privateRoot": "/private/merchant/state",
+  "release": {
+    "store": "/private/merchant/state/releases",
+    "expectedGeneration": 1
+  },
+  "discovery": { "setup": "/private/merchant/state/discovery" },
+  "environmentFile": "/private/merchant/config/service.env",
+  "ports": { "discovery": 8473 }
+}
+```
+
+The release store and discovery setup are separate private descendants of
+`privateRoot`, owned by the declared service account. Use the actual generation;
+the generator reads its active release ID/digest and original immutable files.
+It refuses changed selections. `mode` must match the staged runtime; use
+`challenge` for an original challenge-only release. The seller port comes from
+that release. An optional `ports.seller` must match it exactly. Discovery is
+optional; omit both `discovery` and `ports.discovery` for a retained seller alone.
+
+This kind runs the original `release-cli.mjs run --expect` and
+`catalog-run --no-workspace` services. It retains the same source verifier,
+process ownership, runtime, native payment path, drain, cache controls and
+catalog writer. It does not create an operations listener or SF98 outbox;
+`ports.operations`, delivery settings and application/payment overrides therefore
+belong to the existing API or paid-file profiles. Original prepared Python and
+DuckDB releases retain their native application/query launchers. Trusted ESM
+handler entries must live in the selected immutable source release. Absolute
+upstream idempotency directories use the existing `kind: "api"` profile, whose
+original recovery already rebases those writable paths; this profile preserves
+immutable retained binding bytes during a move.
+
+The discovery service starts before the seller and closes after its drain. It
+never creates an identity or publishes automatically. The generated Caddy fragment
+exposes only original `GET /discovery/resources` and `GET /discovery/search` on
+the merchant's existing HTTPS origin. It translates browser headers to the
+selected loopback reader while the original private capability listener remains
+unexposed. The setup's exact offer-export path serves the original seller offers;
+custom paths receive an explicit GET alias. Paths colliding with paid routes or
+existing private interfaces are rejected. Public discovery retains the original
+filters, pagination, search and response bytes.
+
+Generate and install through the commands below. Its generated `RUNBOOK.md`
+contains the exact release, generation, seller identity/key pin, private paths,
+service group and original review/apply/withdraw commands. The smoke command
+also verifies the original retained process and offered terms, so an unrelated
+listener cannot satisfy it. Publication stays the existing explicit source- and
+catalog-head-bound operation. An unchanged restart creates no signatures or
+catalog writes. Use original cache status/invalidation with the current seller
+instance; no new cache or operator dashboard is introduced.
+
+For release upgrades, stop the group, use original diff/activate/rollback,
+update the host plan's generation, generate and install the next bundle, then
+review the existing listing against that running version. The original
+maintenance migration stops both components and backs up their complete private
+stores. Restore moves only the host plan's store/setup selections: retained
+release digests, signing key, public enrollment and catalog journal keep their
+original bytes. Use the returned next maintenance plan for subsequent backups.
+Native application environment paths and external database writers remain part
+of the original explicit host/environment recovery procedure.
 
 ## Approved-file merchant
 

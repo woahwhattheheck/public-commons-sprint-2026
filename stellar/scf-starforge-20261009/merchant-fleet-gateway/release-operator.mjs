@@ -11,6 +11,7 @@ import { startMerchantFleet, loadMerchantFleet } from './gateway.mjs';
 import { fleetControl } from './control.mjs';
 import { acquireStateLease } from './state-lease.mjs';
 import { openRolloutState } from './rollout-state.mjs';
+import { describeFleetOperations, readFleetOperations, validateFleetNavigationOrigin } from './release-operations.mjs';
 
 const SCHEMA = 'stellar-forge.fleet-release-plan.v1';
 const JOURNAL = 'stellar-forge.fleet-release-links.v1';
@@ -40,14 +41,14 @@ function pathValue(value, base) {
 }
 /** Share original source selectors and path rules with retained fleet setup. */
 export function normalizeFleetPackageSource(source, base) {
-  keys(source, ['workspace', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'runtime']);
-  const selected = ['workspace', 'python', 'duckdbPackage'].filter(key => source[key] !== undefined);
+  keys(source, ['workspace', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage', 'runtime']);
+  const selected = ['workspace', 'python', 'duckdbPackage', 's3Package', 'jsonrpcPackage'].filter(key => source[key] !== undefined);
   if (selected.length !== 1 || source.pythonRoot !== undefined && selected[0] !== 'python' ||
       source.duckdbPython !== undefined && selected[0] !== 'duckdbPackage')
     throw fail('FLEET_RELEASE_PACKAGE_SOURCE_REQUIRED', 400);
   const runtime = source.runtime ?? {};
   keys(runtime, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
-  if (selected[0] !== 'workspace' && runtime.allowLoopbackUpstream)
+  if (!['workspace', 'jsonrpcPackage'].includes(selected[0]) && runtime.allowLoopbackUpstream)
     throw fail('FLEET_RELEASE_PACKAGE_BINDINGS_OWNED', 400);
   const value = { [selected[0]]: pathValue(source[selected[0]], base) };
   if (source.pythonRoot !== undefined) value.pythonRoot = pathValue(source.pythonRoot, base);
@@ -57,7 +58,7 @@ export function normalizeFleetPackageSource(source, base) {
 /** Public aliases retain source type while all configured paths stay with the host. */
 export function describeFleetPackages(packages) {
   return Object.entries(packages).map(([name, source]) => ({ name,
-    kind: source.duckdbPackage !== undefined ? 'DUCKDB_PACKAGE' :
+    kind: source.jsonrpcPackage !== undefined ? 'JSONRPC_MERCHANT_PACKAGE' : source.s3Package !== undefined ? 'S3_OBJECT_PACKAGE' : source.duckdbPackage !== undefined ? 'DUCKDB_PACKAGE' :
       source.python !== undefined ? 'PYTHON_APPLICATION' : 'OPENAPI_WORKSPACE' }));
 }
 function privateDirectory(path) {
@@ -181,7 +182,9 @@ function portUse(native, port) {
 }
 
 /** Same-process lifecycle object. Native modules retain their source and process ownership. */
-export async function openFleetReleaseOperator({ planFile, directory, gatewayStateDirectory, expectedPlanDigest } = {}) {
+export async function openFleetReleaseOperator({ planFile, directory, gatewayStateDirectory, expectedPlanDigest,
+  operationsNavigationOrigin } = {}) {
+  validateFleetNavigationOrigin(operationsNavigationOrigin);
   const plan = await readFleetReleasePlan(planFile);
   if (expectedPlanDigest !== undefined && (typeof expectedPlanDigest !== 'string' ||
       !HEX.test(expectedPlanDigest) || plan.digest !== expectedPlanDigest))
@@ -285,7 +288,8 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
     if (running && !running.ended) {
       running.selectionGeneration = selected.generation; return running;
     }
-    const session = await runActiveRelease(slot.store, { expectedGeneration: selected.generation, handleSignals: false });
+    const session = await runActiveRelease(slot.store, { expectedGeneration: selected.generation, handleSignals: false,
+      ...(operationsNavigationOrigin ? { operationsNavigationOrigin } : {}) });
     const runtime = { descriptor: structuredClone(row), session, selectionGeneration: selected.generation, ended: false };
     owned.set(key, runtime);
     void session.completion.then(() => { runtime.ended = true; }, () => { runtime.ended = true; });
@@ -365,6 +369,7 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
           owned: Boolean(runtime && !runtime.ended), instanceId: runtime && !runtime.ended ? runtime.session.observation.instanceId : null,
           runningReleaseId: runtime && !runtime.ended ? runtime.descriptor.releaseId : null,
           runningDigest: runtime && !runtime.ended ? runtime.descriptor.releaseDigest : null,
+          operations: describeFleetOperations(closing ? null : runtime),
           state: runtime ? runtime.ended ? 'STOPPED' : 'RUNNING' : 'NOT_OWNED',
           serving: use.current, candidate: use.candidate, drainingRequests: use.active,
           canRetire: Boolean(runtime && !runtime.ended && !use.current && !use.candidate && use.active === 0 && !native.busy) });
@@ -382,6 +387,11 @@ export async function openFleetReleaseOperator({ planFile, directory, gatewaySta
   }
   const api = {
     planDigest: plan.digest, stateDirectory, gatewayStateDirectory: stateDirectory, get publicURL() { return gateway?.publicURL; }, status,
+    operations(input) {
+      assertOpen(); keys(input, ['tenant', 'slot', 'instanceId']);
+      const { key } = locate(input.tenant, input.slot);
+      return readFleetOperations(owned.get(key), input);
+    },
     async catalog({ tenant, slot }) {
       assertOpen(); const source = locate(tenant, slot).slot;
       const [selected, catalog] = await Promise.all([readReleaseState(source.store), listReleases(source.store)]);

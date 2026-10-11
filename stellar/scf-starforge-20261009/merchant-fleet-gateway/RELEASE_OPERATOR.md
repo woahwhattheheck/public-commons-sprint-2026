@@ -66,6 +66,8 @@ Plan fields:
 | `packages.NAME.pythonRoot` | Optional Python application directory to retain with that declaration |
 | `packages.NAME.duckdbPackage` | Original prepared DuckDB package directory with its retained data and plan |
 | `packages.NAME.duckdbPython` | Optional executable with DuckDB installed; a pathful relative value resolves from this plan |
+| `packages.NAME.s3Package` | Original configured S3 merchant directory with its source, service and object selection |
+| `packages.NAME.jsonrpcPackage` | Original prepared Stellar RPC package with its declared methods, networks and provider references |
 | `packages.NAME.runtime` | Original facilitator/local-upstream runtime choices for future staging |
 | `limits` | Original gateway admission, body, response and timeout limits for this merchant |
 
@@ -74,10 +76,10 @@ the actual store directories. Browser actions supply only registered tenant, slo
 and package names plus an original release ID. They never supply a path, handler
 module, executable, port override, credential or PID.
 
-Each package chooses exactly one of `workspace`, `python`, or `duckdbPackage`.
+Each package chooses exactly one of `workspace`, `python`, `duckdbPackage`, `s3Package`, or `jsonrpcPackage`.
 `pythonRoot` belongs to `python`; `duckdbPython` belongs to `duckdbPackage`.
-The Python and DuckDB packages supply their original application bindings.
-Use `allowLoopbackUpstream` for an API workspace that has those upstream bindings.
+The Python, DuckDB and S3 packages supply their original application bindings.
+Use `allowLoopbackUpstream` for an API workspace or Stellar RPC package with explicitly declared local upstreams.
 Existing workspace-only plans retain their normalized fields and plan digest.
 
 ### Operate Python and DuckDB merchants together
@@ -124,7 +126,7 @@ For the existing merchant MCP provider, configure this same fleet plan through
 `merchant_fleet_plan` and live fleet status include `packageSources` with each
 alias and source kind; the existing `packages` alias list stays compatible.
 `merchant_fleet_stage` accepts the same tenant, slot, package and release ID for
-all three source types. The host plan owns their source paths, interpreter choices,
+all five source types. The host plan owns their source paths, interpreter choices,
 fixed ports and runtime settings throughout the lifecycle.
 
 Native payment mode is selected by the original release runtime. To stage native

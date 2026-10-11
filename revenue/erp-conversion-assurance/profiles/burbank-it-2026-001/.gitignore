@@ -1,0 +1,7 @@
+reference/
+captures/
+private/
+*.burbank
+*.tar.gz
+*.zip
+__pycache__/

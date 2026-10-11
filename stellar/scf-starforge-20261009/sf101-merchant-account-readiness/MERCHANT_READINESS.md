@@ -1,5 +1,7 @@
 # Merchant receiving setup for Stellar asset contracts
 
+The [Merchant receiving desk](RECEIVING_DESK.md) provides the complete browser workflow over this same native evaluator: save the original seller configuration, inspect every payment choice and its exact receiving actions, compare or replay retained observations, and reopen or export the complete review. Start it through the existing `merchant-readiness workspace --directory /private/merchant/receiving-desk --port 8408` command.
+
 The merchant command opens the original SF30 seller configuration, retains the native compiled route order and every original payment choice in order, and checks the exact network, token contract, recipient and amount. It connects the original SF101 account evaluator to deployed StellarAssetContract state and exposes a receiving verifier for the original SF16 asset engine.
 
 The result answers a practical setup question: **can this account currently receive the amount this seller advertises, in this exact asset?** Each option retains its own result. Reserve and fee headroom appear separately because a sponsored recipient does not pay the sender's transaction fee.

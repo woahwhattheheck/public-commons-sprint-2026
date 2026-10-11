@@ -2,78 +2,121 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="dark">
-  <title>EvidenceForge · Retained Operation Desk</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Run an NVIDIA coding model on a declared Python task, inspect the actual checks and source change, and reopen the complete result.">
+  <title>EvidenceForge · Python repair workspace</title>
   <link rel="stylesheet" href="/runtime.css">
-  <script type="application/json" id="runtimeConfig">__CONFIG__</script>
-  <script type="module" src="/runtime.js"></script>
 </head>
 <body>
-<a class="skip-link" href="#operationWorkspace">Skip to operation workspace</a>
-<header class="site-header"><div class="shell masthead">
-  <div class="brand"><span class="brand-symbol" aria-hidden="true">E<span>F</span></span><div><p class="brand-name">EvidenceForge</p><p class="brand-caption">Retained operation desk</p></div></div>
-  <span class="mode-badge">Local controls · Read-only resume</span>
-</div></header>
-<main class="shell">
-  <section class="intro" aria-labelledby="pageHeading">
-    <div><p class="eyebrow">Source. Execution. Evidence.</p><h1 id="pageHeading">Keep the work<br class="wide-break"> behind every run in view.</h1></div>
-    <p class="intro-copy">Choose an existing workload or reopen a retained operation. Inspect its recorded journal, source change, and completed result without losing the operation identity.</p>
-  </section>
-  <p id="state" class="state" role="status" aria-live="polite" aria-atomic="true">Choose a local control or inspect a retained operation. Opening an operation does not dispatch another run.</p>
+<a class="skip-link" href="#main">Skip to workspace</a>
+<header class="masthead">
+  <a class="brand" href="#" id="brandHome" aria-label="EvidenceForge, new run"><span class="brand-mark" aria-hidden="true">EF</span><span><strong>EvidenceForge</strong><small>Python repair workspace</small></span></a>
+  <div class="runtime-status"><span class="status-dot" aria-hidden="true"></span><span id="connectionStatus">Local runtime</span></div>
+</header>
+<div class="shell">
+  <aside class="sidebar" aria-label="Retained work">
+    <button class="button primary full-width" id="newOperation" type="button"><span aria-hidden="true">+</span> New run</button>
+    <section class="history-panel" id="history">
+      <div class="section-heading"><h2>Retained runs</h2><button class="text-button" id="refreshRuns" type="button">Refresh</button></div>
+      <label for="historySearch" class="sr-only">Search retained runs</label><input id="historySearch" type="search" placeholder="Find an operation…" autocomplete="off">
+      <label for="historyTask" class="sr-only">Filter retained runs by workload</label><select id="historyTask"><option value="">All workloads</option></select>
+      <p class="small muted" id="runsStatus">Reading retained operations…</p>
+      <div id="runs" class="operation-list"></div>
+    </section>
+    <form class="open-operation" id="openForm">
+      <label for="operation">Open by operation ID</label>
+      <div class="input-action"><input id="operation" autocomplete="off" spellcheck="false" placeholder="Operation ID" maxlength="80" required><button id="load" class="button secondary" type="submit">Open</button></div>
+      <p class="small muted">An existing operation reopens its saved result. It does not run the model again.</p>
+    </form>
+    <div class="sidebar-foot"><span>Original focused executor</span><p>Three small Python workloads, with retained source, declared checks and reusable output.</p></div>
+  </aside>
 
-  <div class="desk">
-    <aside class="sidebar" aria-label="Run controls and retained operations">
-      <section class="panel control-panel" aria-labelledby="controlHeading">
-        <div class="panel-heading"><span class="section-index" aria-hidden="true">01</span><div><p class="eyebrow">New execution</p><h2 id="controlHeading">Choose a control run</h2></div></div>
-        <label for="task">Repository workload</label><select id="task" aria-describedby="goal"></select>
-        <label for="control">Control source</label><select id="control"><option value="corrected">Corrected control</option><option value="baseline">Defective baseline</option></select>
-        <p id="goal" class="task-goal">The selected workload’s goal will appear here.</p>
-        <button id="run" class="button primary full-width" type="button">Execute selected control</button>
-        <p class="control-note">Controls execute the selected workload’s actual Python computation in a fresh task copy. No model request is made.</p>
+  <main id="main" tabindex="-1">
+    <div id="state" class="notice" role="status" aria-live="polite" hidden></div>
+    <section id="setupPanel" class="workspace-panel">
+      <div class="page-heading"><div><p class="eyebrow">Run setup</p><h1>A failing module.<br>A change you can inspect.</h1><p class="lede">Give an NVIDIA model the original source and observed failures. Review the executed checks, compare the change and take the output with you.</p></div><span class="tag">Nebius Token Factory</span></div>
+      <form id="runForm">
+        <div class="form-grid">
+          <div><label for="task">Workload</label><select id="task" required></select></div>
+          <div><label for="mode">Execution</label><select id="mode"><option value="nebius">NVIDIA model · Nebius</option><option value="corrected">Corrected source · authored control</option><option value="baseline">Original source · defective control</option></select></div>
+        </div>
+        <div class="provider-panel" id="providerPanel">
+          <div class="model-field"><label for="model">Available NVIDIA model</label><div class="input-action"><select id="model"><option value="">Reading provider configuration…</option></select><button id="refreshProvider" class="button secondary" type="button">Refresh models</button></div></div>
+          <p id="providerStatus" class="small muted">Reading the server's provider configuration.</p>
+        </div>
+        <p class="control-description" id="modeDescription"></p>
+        <section class="task-context" aria-labelledby="taskTitle">
+          <div class="section-heading"><h2 id="taskTitle">Original workload</h2><span class="tag" id="taskCategory">Python</span></div>
+          <p id="goal" class="task-goal"></p>
+          <dl id="policyFacts" class="policy-facts"></dl>
+          <div class="source-toolbar" role="tablist" aria-label="Task source">
+            <button type="button" id="taskSourceTab" class="tab active" role="tab" aria-selected="true" aria-controls="taskSourcePanel" data-task-view="source">Original source</button>
+            <button type="button" id="taskChecksTab" class="tab" role="tab" aria-selected="false" aria-controls="taskChecksPanel" data-task-view="checks">Declared checker</button>
+          </div>
+          <div id="taskSourcePanel" role="tabpanel" aria-labelledby="taskSourceTab"><div class="code-caption"><code id="taskPath"></code><button id="copyTaskSource" class="text-button" type="button">Copy source</button></div><pre id="taskSource" class="code-block task-code" tabindex="0">Loading original task…</pre></div>
+          <div id="taskChecksPanel" role="tabpanel" aria-labelledby="taskChecksTab" hidden><p class="small muted">This original checker runs against the starting and final source. The model cannot edit it.</p><pre id="checkerSource" class="code-block task-code" tabindex="0"></pre><p id="checkerIdentity" class="small mono wrap muted"></p></div>
+        </section>
+        <details class="run-limits"><summary>Execution limits</summary><div class="form-grid"><div><label for="seconds">Whole run limit (seconds)</label><input id="seconds" type="number" min="5" max="120" step="1" value="120" required></div><div><label for="maximumTokens">Maximum output tokens</label><input id="maximumTokens" type="number" min="128" max="8192" step="1" value="4096" required></div></div><p class="small muted">One inference request per new model run. The original runner admits only the selected pure Python module and its declared checks.</p></details>
+        <div class="run-action"><button id="run" class="button primary" type="submit">Run NVIDIA model <span aria-hidden="true">↗</span></button><p id="runHelp" class="small muted">The API key stays in the runtime environment.</p></div>
+      </form>
+    </section>
+
+    <section id="operationPanel" class="workspace-panel" hidden>
+      <div class="operation-heading"><div><p class="eyebrow" id="operationMode">Retained operation</p><h1 id="operationTitle">Run in progress</h1></div><span id="journalState" class="tag">Preparing</span></div>
+      <div class="identity-row"><code id="currentOperation" class="wrap"></code><button id="copyOperation" class="text-button" type="button">Copy ID</button><button id="inspectCurrent" class="text-button" type="button">Refresh run</button></div>
+      <p id="operationMessage" class="operation-message"></p>
+      <p id="storageStatus" class="small muted"></p>
+      <ol id="progress" class="progress" aria-label="Run progress"></ol>
+      <div id="waitingPanel" class="waiting-panel"><h2 id="waitingHeading">Reading the retained operation</h2><p id="waitingDescription">The original journal will show how far the run reached.</p></div>
+
+      <section id="providerObservation" class="provider-observation" hidden>
+        <div class="section-heading"><h2>Retained model response</h2><button id="downloadProviderRecord" class="button secondary" type="button">Download API record</button></div>
+        <p id="providerObservationMessage" class="small muted"></p><dl id="providerObservationFacts" class="detail-list"></dl>
+        <details id="providerResponseDetails"><summary>Inspect the original API response</summary><button id="readProviderRecord" class="text-button" type="button">Read retained response</button><pre id="providerResponse" class="code-block journal-code" tabindex="0" hidden></pre></details>
       </section>
-
-      <section class="panel retained-panel" aria-labelledby="retainedHeading">
-        <div class="heading-row"><div><p class="eyebrow">Previously started</p><h2 id="retainedHeading">Retained operations</h2></div><button id="refreshRuns" class="button quiet" type="button">Refresh list</button></div>
-        <p id="runsStatus" class="muted">Reading the retained-operation index…</p>
-        <div id="runs" class="operation-list"><p class="empty-state">Retained operations will appear here.</p></div>
-        <div class="open-operation"><label for="operation">Open an operation by ID</label><div class="input-action"><input id="operation" type="text" maxlength="80" pattern="[A-Za-z0-9_-]{1,80}" placeholder="Retained operation ID" autocomplete="off" spellcheck="false"><button id="load" class="button secondary" type="button">Inspect</button></div><p class="muted">Reads the existing journal and result only.</p></div>
+      <section id="result" hidden>
+        <div class="result-heading"><div><h2 id="heading">Executed result</h2><p id="facts" class="small muted"></p></div><button id="downloadBundle" class="button secondary" type="button">Download run package</button></div>
+        <dl id="metrics" class="metrics"></dl>
+        <div class="result-tabs" role="tablist" aria-label="Run result">
+          <button id="tab-checks" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="pane-checks" data-tab="checks">Checks</button>
+          <button id="tab-source" class="tab" type="button" role="tab" aria-selected="false" aria-controls="pane-source" data-tab="source">Source change</button>
+          <button id="tab-plan" class="tab" type="button" role="tab" aria-selected="false" aria-controls="pane-plan" data-tab="plan">Model &amp; plan</button>
+          <button id="tab-compare" class="tab" type="button" role="tab" aria-selected="false" aria-controls="pane-compare" data-tab="compare">Compare runs</button>
+          <button id="tab-export" class="tab" type="button" role="tab" aria-selected="false" aria-controls="pane-export" data-tab="export">Use the output</button>
+        </div>
+        <section id="pane-checks" class="result-pane" role="tabpanel" aria-labelledby="tab-checks">
+          <div class="section-heading"><h3>Actual check results</h3><span id="checkCount" class="small muted"></span></div>
+          <p id="checkSummary" class="small muted"></p><div id="checkErrors"></div>
+          <div class="table-scroll"><table class="checks-table"><thead><tr><th>Declared case</th><th>Original source</th><th>Final source</th><th><span class="sr-only">Observed output</span></th></tr></thead><tbody id="checks"></tbody></table></div>
+        </section>
+        <section id="pane-source" class="result-pane" role="tabpanel" aria-labelledby="tab-source" hidden>
+          <div class="source-toolbar" role="tablist" aria-label="Source version"><button class="tab active" type="button" role="tab" aria-selected="true" data-source-view="patch">Unified patch</button><button class="tab" type="button" role="tab" aria-selected="false" data-source-view="after">Final source</button><button class="tab" type="button" role="tab" aria-selected="false" data-source-view="before">Original source</button><button id="copyDisplayedSource" class="text-button source-copy" type="button">Copy</button></div>
+          <div class="code-caption"><code id="sourceCaption"></code><span id="sourceLineCount" class="small muted"></span></div><pre id="patch" class="code-block patch-code" tabindex="0"></pre><p id="sourceIdentity" class="small mono wrap muted"></p>
+        </section>
+        <section id="pane-plan" class="result-pane" role="tabpanel" aria-labelledby="tab-plan" hidden>
+          <h3 id="planHeading">Executed plan</h3><p id="planSummary"></p><ol id="planSteps" class="plan-steps"></ol><h3 class="subheading">Provider record</h3><dl id="providerFacts" class="detail-list"></dl>
+        </section>
+        <section id="pane-compare" class="result-pane" role="tabpanel" aria-labelledby="tab-compare" hidden>
+          <div class="section-heading"><h3>Compare with a retained run</h3><button id="prepareControl" class="text-button" type="button">Prepare corrected control</button></div>
+          <p class="small muted">Align actual results for the same starting source, policy and original checker. Selecting a run only reads its saved result.</p>
+          <form id="compareForm"><label for="compareOperation">Comparison operation ID</label><div class="input-action"><input id="compareOperation" list="comparisonOptions" autocomplete="off" spellcheck="false" maxlength="80" placeholder="Paste or select an operation ID" required><datalist id="comparisonOptions"></datalist><button id="compareRun" class="button secondary" type="submit">Compare</button></div></form>
+          <p id="comparisonStatus" class="notice" hidden></p><div id="comparisonResult" hidden></div>
+        </section>
+        <section id="pane-export" class="result-pane" role="tabpanel" aria-labelledby="tab-export" hidden>
+          <h3>Take the change into your work</h3><p>The package contains this operation's exact retained source, patch, checks and provider record. Use the final module or apply the patch to the matching original source.</p>
+          <div class="download-actions"><button id="exportBundle" class="button primary" type="button">Download run package</button><button id="downloadSource" class="button secondary" type="button">Final Python source</button><button id="downloadPatch" class="button secondary" type="button">Unified patch</button><button id="downloadRun" class="button secondary" type="button">Result JSON</button></div>
+          <div id="useOutput" class="usage-panel"></div>
+          <div class="section-heading subheading"><h3>Package contents</h3><button id="refreshArtifacts" class="text-button" type="button">Refresh files</button></div><p id="artifactStatus" class="small muted"></p><div id="artifactList"></div>
+          <p class="small muted">These runs modify a disposable task copy. The original adapter supports the released pure Python workloads; your own repository and deployment remain separate.</p>
+        </section>
       </section>
-    </aside>
-
-    <div id="operationWorkspace" class="workspace" tabindex="-1">
-      <div class="workspace-heading"><div><p class="eyebrow">Inspect and continue</p><h2>Operation workspace</h2></div><span class="workspace-label">Keep the ID before a run starts</span></div>
-
-      <section id="operationPanel" class="panel identity-panel" aria-labelledby="identityHeading" hidden>
-        <div class="heading-row"><div><p class="eyebrow">Current operation</p><h2 id="identityHeading">Your resume point</h2></div><button id="copyOperation" class="button secondary" type="button">Copy ID</button></div>
-        <code id="currentOperation" class="current-operation"></code>
-        <p id="operationMessage" class="operation-message"></p>
-        <p id="storageStatus" class="storage-status">Browser resume status will appear here.</p>
-        <div class="operation-actions"><button id="inspectCurrent" class="button primary" type="button">Inspect current operation</button><button id="newOperation" class="button secondary" type="button">Choose a new run</button></div>
-      </section>
-
-      <section id="journalPanel" class="panel journal-panel" aria-labelledby="journalHeading" hidden>
-        <div class="heading-row"><div><p class="eyebrow">Recorded progress</p><h2 id="journalHeading">Operation journal</h2></div><span class="label journal-label">Journal state</span></div>
-        <p id="journalState" class="journal-state"></p>
-        <p class="section-note">A recorded journal state does not establish a verified completed result.</p>
-        <details class="journal-details" open><summary>Inspect recorded journal</summary><pre id="journal" class="code-block journal-code" tabindex="0" aria-label="Retained operation journal"></pre></details>
-      </section>
-
-      <section id="result" class="panel result-panel" aria-labelledby="heading" hidden>
-        <div class="heading-row result-heading"><div><p class="eyebrow">Verified retained envelope</p><h2 id="heading" tabindex="-1">Completed result</h2></div><button id="downloadRun" class="button secondary" type="button" disabled>Download run JSON</button></div>
-        <p id="facts" class="result-facts"></p>
-        <div class="table-heading"><h3>Named check results</h3><span>Actual baseline and final outcomes</span></div>
-        <div class="table-scroll" tabindex="0" aria-label="Baseline and final check outcomes"><table><thead><tr><th scope="col">Named check</th><th scope="col">Baseline</th><th scope="col">Final</th></tr></thead><tbody id="checks"></tbody></table></div>
-        <div class="diff-heading"><h3>Source change</h3><span class="label">Retained diff</span></div>
-        <pre id="patch" class="code-block patch-code" tabindex="0" aria-label="Source diff"></pre>
-        <details class="envelope-details"><summary>Inspect the complete run envelope</summary><pre id="envelope" class="code-block envelope-code" tabindex="0" aria-label="Complete verified run envelope"></pre></details>
-        <p class="integrity-note">Hash agreement checks retained bytes. It does not authenticate provider claims; inspect the original run evidence and provider observations.</p>
-      </section>
-
-      <aside class="resume-guide" aria-label="How operation resume works"><span class="guide-mark" aria-hidden="true">↳</span><div><h3>Reopen the operation you already started</h3><p>If a response is interrupted, keep its ID and inspect the retained journal. Opening or refreshing an operation reads existing data. Starting another control remains a separate, explicit action.</p></div></aside>
-    </div>
-  </div>
-</main>
-<footer class="shell site-footer"><span>EvidenceForge</span><p>Local workload execution and retained-run inspection · Provider-backed runs remain a separate CLI workflow.</p></footer>
+      <details class="journal-details"><summary>Operation journal and complete result</summary><h3>Journal</h3><pre id="journal" class="code-block journal-code" tabindex="0"></pre><div id="envelopeDetails" hidden><h3 class="subheading">Complete result</h3><pre id="envelope" class="code-block journal-code" tabindex="0"></pre></div></details>
+    </section>
+  </main>
+</div>
+<footer class="site-footer"><span>EvidenceForge</span><p>Nebius model plans, original Python checks, retained source changes.</p><span class="mono">Local workspace</span></footer>
+<script type="application/json" id="runtimeConfig">__CONFIG__</script>
+<script type="module" src="/runtime.js"></script>
 </body>
 </html>

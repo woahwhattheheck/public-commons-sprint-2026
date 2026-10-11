@@ -8,6 +8,7 @@ import { selectObjectDescription } from '../object-description.mjs';
 import { createObjectSession, inspectObjectSession, runObjectSession,
   recoverObjectSession, assembleObjectSession, accountObjectSession } from '../object-session.mjs';
 import { renderObjectReport } from '../object-report.mjs';
+import { openObjectReceiving } from './intake.mjs';
 
 const PROFILE = 'stellar-forge.sf88.object-workspace.v1';
 const SESSION = 'stellar-forge.sf88.object-session.v1';
@@ -108,11 +109,12 @@ const accountingIssue = entry => entry.viewStatus === 'SAVE_FAILED' ||
   !FINALIZED.has(entry.outcome) && !['NO_PAYMENT_REQUIRED', 'NOT_ATTEMPTED'].includes(entry.outcome);
 
 /** The profile contains trusted local references. Browser actions select IDs only. */
-export async function openObjectWorkspace({ stateDirectory, profilePath = null } = {}) {
+export async function openObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings } = {}) {
   const root = absolute(stateDirectory);
   await privateDirectory(root, true);
   const sessionsRoot = join(root, 'sessions'), outputsRoot = join(root, 'downloads'), inputsRoot = join(root, 'preparations');
   for (const path of [sessionsRoot, outputsRoot, inputsRoot]) await privateDirectory(path, true);
+  const receiving = await openObjectReceiving({ directory: join(root, 'received'), operatorSettings });
   let profiles = [];
   if (profilePath !== null) {
     const profile = json(await read(profilePath, 262144));
@@ -139,7 +141,13 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
   const finalizationIssues = new Map(), fileTransfers = new Map();
   let active = null, mutation = null, closed = false, closePromise;
   const sessionPath = id => join(sessionsRoot, slug(id));
-  const chooseProfile = id => profiles.find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
+  const allProfiles = async () => {
+    const values = [...profiles, ...await receiving.products()], counts = new Map();
+    for (const value of values) counts.set(value.id, (counts.get(value.id) ?? 0) + 1);
+    return values.map(value => counts.get(value.id) === 1 ? value :
+      { ...value, error: 'OBJECT_WORKSPACE_PRODUCT_DUPLICATE' });
+  };
+  const chooseProfile = async id => (await allProfiles()).find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
   const assertOpen = () => need(!closed, 'OBJECT_WORKSPACE_CLOSED', 409);
   const assertIdle = () => { assertOpen(); need(!active && !mutation, 'OBJECT_WORKSPACE_BUSY', 409); };
   const retain = (id, report) => {
@@ -183,6 +191,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
     return report;
   }
   async function selected(product, chunkBytes) {
+    if (product.error) fail(product.error, 409);
     const before = await read(product.configFile, 65536);
     const source = await config(product.configFile), { op } = execution(source);
     const selection = await selectObjectDescription({ descriptionPath: product.descriptionFile,
@@ -200,7 +209,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
         operatorWorkspace: product.workspace !== null, descriptionSha256: selection.selection.descriptionSha256 } };
   }
   async function products() {
-    return Promise.all(profiles.map(async product => {
+    return Promise.all((await allProfiles()).map(async product => {
       try { const value = await selected(product); return { ...value.public, plannedMaxAtomic: value.plannedMaxAtomic }; }
       catch (error) { return { id: product.id, label: product.label, error: workspaceError(error) }; }
     }));
@@ -211,7 +220,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
   }
   async function reviewSelection({ productId, sessionName, chunkBytes, maxTotalAtomic } = {}) {
     assertIdle(); slug(sessionName); positive(chunkBytes); atomic(maxTotalAtomic); trimReviews();
-    const value = await selected(chooseProfile(productId), chunkBytes);
+    const value = await selected(await chooseProfile(productId), chunkBytes);
     need(BigInt(value.plannedMaxAtomic) <= BigInt(maxTotalAtomic), 'OBJECT_TOTAL_BUDGET_INSUFFICIENT');
     const reviewId = randomUUID(), expires = Date.now() + 15 * 60 * 1000;
     reviews.set(reviewId, { ...value, sessionName, maxTotalAtomic, expires });
@@ -234,6 +243,9 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
     assertIdle(); const review = reviews.get(reviewId);
     need(review && review.expires > Date.now(), 'OBJECT_WORKSPACE_REVIEW_EXPIRED', 409);
     mutation = { kind: 'CREATE', session: review.sessionName };
+    try { return await createReviewed(review); } finally { mutation = null; }
+  }
+  async function createReviewed(review) {
     let temporary;
     try {
       // A lost successful response resolves to the same original directory.
@@ -256,8 +268,23 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
       retain(review.sessionName, report); return { session: review.sessionName, recoveredCreate: false };
     } finally {
       if (temporary) await unlink(temporary).catch(() => {});
-      mutation = null; await scan();
+      await scan();
     }
+  }
+  async function receivingMutation(kind, action) {
+    assertIdle(); mutation = { kind };
+    try { return await action(); } finally { mutation = null; }
+  }
+  async function createReceived(value) {
+    return receivingMutation('CREATE_RECEIVED_OBJECT', async () => {
+      const prepared = await receiving.provision(value), input = prepared.review;
+      const reviewed = await selected(prepared.product, input.chunkBytes);
+      need(JSON.stringify(reviewed.selection) === JSON.stringify(input.selected) &&
+        JSON.stringify(reviewed.public.terms) === JSON.stringify(input.terms) &&
+        reviewed.public.sourceUrl === input.sourceUrl, 'OBJECT_RECEIVING_REVIEW_CHANGED', 409);
+      const result = await createReviewed({ ...reviewed, sessionName: input.sessionName, maxTotalAtomic: input.maxTotalAtomic });
+      return { ...result, productId: prepared.product.id, nativeWorkspaceReopened: prepared.reopened };
+    });
   }
   function runView(work) {
     if (!work) return null;
@@ -595,5 +622,9 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
   }
   await scan();
   return { products, reviewSelection, create, view, refresh, run, stop, recover, assemble,
-    finalize, openAccountingExport, exportReport, openDownload, close };
+    finalize, openAccountingExport, exportReport, openDownload, close,
+    receivingState: () => { assertOpen(); return receiving.state(); },
+    receivingOptions: (id, objectId) => { assertOpen(); return receiving.options(id, objectId); },
+    receive: value => receivingMutation('RECEIVE_OBJECT', () => receiving.receive(value)),
+    reviewReceived: value => receivingMutation('REVIEW_RECEIVED_OBJECT', () => receiving.review(value)), createReceived };
 }

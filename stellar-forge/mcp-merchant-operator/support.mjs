@@ -13,6 +13,7 @@ import { importRuntimeHandoff, exportRuntimeHandoff, reviewRuntime, MAX_HANDOFF_
 import { termsDraftFromDocument, termsDocumentFromDraft } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/terms-editor.mjs';
 import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/server.mjs';
 import { failure, exact, identifier, writePrivate, privateSupportDirectory } from './config.mjs';
+import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const decode = bytes => new TextDecoder('utf-8', { fatal: true }).decode(bytes);
@@ -79,6 +80,15 @@ export function supportTools(tool) {
       { ...selected, exportId: alias, includeWorkorder: { type: 'boolean' } }, ['id', 'expectedRevision', 'exportId']),
     tool('merchant_support_export_status', 'Inspect a named support export and verify the retained original files against its completion manifest. Reconcile an interrupted export before choosing a new ID.',
       { exportId: alias }, ['exportId'], read),
+    tool('merchant_support_export_manifest', 'Read the original completion manifest and its exact file digest without rereading every exported payload. MANIFEST_RETAINED identifies the saved manifest; individual file retrieval verifies the original bytes. Includes this operator\'s active file reads.',
+      { exportId: alias }, ['exportId'], read),
+    tool('merchant_support_export_file', 'Retrieve a named original support export file in bounded base64 chunks. Pin the completion manifest and repeat the returned readId/expectedSha256 for continuation. After restart or expiry, omit readId and resume at the saved offset with the same digests. Does not regenerate an export.',
+      { exportId: alias, file: { enum: [...exportNames, 'support-export.json'] }, expectedManifestSha256: digest,
+        readId: uuid, expectedSha256: digest, offset: { type: 'integer', minimum: 0 },
+        limit: { type: 'integer', minimum: 1, maximum: MAX_RETAINED_CHUNK_BYTES } },
+      ['exportId', 'file', 'expectedManifestSha256'], read),
+    tool('merchant_support_export_file_release', 'Release this operator\'s unfinished verified support-file read. Its original export and case remain retained.',
+      { exportId: alias, readId: uuid }, ['exportId', 'readId'], { idempotent: true }),
   ];
 }
 function expected(value) {
@@ -156,12 +166,44 @@ async function caseView(record) {
 const exportNames = ['case.json', 'merchant-workspace.json', 'merchant-support.json', 'support.html',
   'owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'];
 
+/** Same original completion format for host verification and client persistence. */
+export function parseSupportExportManifest(bytes, exportId) {
+  identifier(exportId, 'Export ID');
+  if (bytes.length > 65000) throw failure('SUPPORT_EXPORT_INVALID', 'The original support export manifest is oversized.');
+  let manifest;
+  try { manifest = JSON.parse(decode(bytes)); }
+  catch { throw failure('SUPPORT_EXPORT_INVALID', 'The original support export manifest is not valid UTF-8 JSON.'); }
+  const invalid = () => { throw failure('SUPPORT_EXPORT_INVALID', 'The original support export manifest is inconsistent.'); };
+  if (manifest?.schema !== EXPORT_SCHEMA || manifest.exportId !== exportId || !Array.isArray(manifest.files) ||
+      manifest.files.length < 2 || manifest.files.length > exportNames.length || typeof manifest.workorderIncluded !== 'boolean' ||
+      !manifest.case || !new RegExp(uuid.pattern).test(manifest.case.id) || !new RegExp(digest.pattern).test(manifest.case.revision) ||
+      !new RegExp(digest.pattern).test(manifest.case.workspaceSha256) ||
+      manifest.case.supportSha256 !== null && !new RegExp(digest.pattern).test(manifest.case.supportSha256)) invalid();
+  const names = new Set();
+  for (const file of manifest.files) {
+    if (!file || !exportNames.includes(file.name) || names.has(file.name) ||
+        !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > MAX_HANDOFF_BYTES ||
+        typeof file.sha256 !== 'string' || !new RegExp(digest.pattern).test(file.sha256)) invalid();
+    names.add(file.name);
+  }
+  if (!names.has('case.json') || !names.has('merchant-workspace.json') ||
+      manifest.files.find(file => file.name === 'merchant-workspace.json').sha256 !== manifest.case.workspaceSha256 ||
+      ['merchant-support.json', 'support.html'].some(name => names.has(name) !== (manifest.case.supportSha256 !== null)) ||
+      ['owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'].some(name => names.has(name) !== manifest.workorderIncluded)) invalid();
+  return manifest;
+}
+function exportFileType(name) {
+  return name.endsWith('.json') ? 'application/json' : name.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/markdown; charset=utf-8';
+}
+
 export class MerchantSupport {
   #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close;
+  #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
   constructor(config) { this.#config = config; }
   get summary() {
     const value = this.#config.support;
     return { configured: Boolean(value), incidentsConfigured: Boolean(value?.incidentsDirectory),
+      fileReads: this.#reads.summary,
       watcher: { ownedInstanceId: this.#watch?.instanceId ?? null, state: this.#watch?.state ?? 'NOT_OWNED', lastExit: this.#lastWatchExit },
       profiles: Object.entries(value?.profiles ?? {}).map(([profile, entry]) => ({ profile, label: entry.label })),
       sources: value ? ['handoffs', 'workspaces'].flatMap(kind => Object.entries(value[kind]).map(([source, entry]) =>
@@ -316,22 +358,50 @@ export class MerchantSupport {
     identifier(exportId, 'Export ID'); const folder = join(this.#config.exportsDirectory, exportId);
     try { await privateSupportDirectory(folder); }
     catch (error) { if (error.code === 'ENOENT') return { exportId, state: 'NOT_FOUND' }; throw error; }
-    let manifest;
-    try { manifest = JSON.parse(decode(await readPrivateFile(join(folder, 'support-export.json'), 65000))); }
+    let value;
+    try { value = await this.#readExportManifest(exportId); }
     catch (error) { if (error.code === 'ENOENT') return { exportId, state: 'INCOMPLETE_OR_OTHER_EXPORT', action: 'Inspect this private directory locally; existing output is never overwritten.' }; throw error; }
-    if (manifest?.schema !== EXPORT_SCHEMA || manifest.exportId !== exportId || !Array.isArray(manifest.files) ||
-        manifest.files.length < 2 || manifest.files.length > exportNames.length || new Set(manifest.files.map(file => file.name)).size !== manifest.files.length)
-      throw failure('SUPPORT_EXPORT_INVALID', 'The original support export manifest is inconsistent.');
+    const { manifest } = value;
     for (const file of manifest.files) {
-      if (!exportNames.includes(file.name) || !Number.isSafeInteger(file.bytes) || file.bytes < 1 || file.bytes > MAX_HANDOFF_BYTES)
-        throw failure('SUPPORT_EXPORT_INVALID', 'The original support export file reference is invalid.');
       const bytes = await readPrivateFile(join(folder, file.name), MAX_HANDOFF_BYTES);
       if (bytes.length !== file.bytes || sha(bytes) !== expected(file.sha256)) throw failure('SUPPORT_EXPORT_CHANGED', 'A retained support export file differs from its original completion manifest.');
     }
     return { ...manifest, state: 'COMPLETE' };
   }
+  async #readExportManifest(exportId) {
+    identifier(exportId, 'Export ID');
+    const folder = await privateSupportDirectory(join(this.#config.exportsDirectory, exportId));
+    const bytes = await readPrivateFile(join(folder, 'support-export.json'), 65000);
+    return { folder, bytes, manifest: parseSupportExportManifest(bytes, exportId),
+      manifestFile: { name: 'support-export.json', contentType: 'application/json', bytes: bytes.length, sha256: sha(bytes) } };
+  }
+  async #exportManifest(exportId) {
+    const value = await this.#readExportManifest(exportId);
+    return { ...value.manifest, state: 'MANIFEST_RETAINED', manifestFile: value.manifestFile, fileReads: this.#reads.status(exportId) };
+  }
+  async #exportFile(args) {
+    const exportId = identifier(args.exportId, 'Export ID'), manifestSha256 = expected(args.expectedManifestSha256);
+    if (![...exportNames, 'support-export.json'].includes(args.file)) throw failure('INVALID_PARAMS', 'Choose a filename from the original support export manifest.');
+    if (args.readId !== undefined) caseId(args.readId);
+    return { exportId, manifestSha256, ...await this.#reads.read({ scope: exportId,
+      key: JSON.stringify([exportId, args.file, manifestSha256]), kind: 'support-export',
+      directory: join(this.#config.exportsDirectory, exportId), readId: args.readId, offset: args.offset,
+      limit: args.limit, expectedSha256: args.expectedSha256,
+      load: async () => {
+        const value = await this.#readExportManifest(exportId);
+        if (value.manifestFile.sha256 !== manifestSha256)
+          throw failure('SUPPORT_EXPORT_CHANGED', 'The retained completion manifest differs from the inspected export.');
+        const file = args.file === 'support-export.json' ? value.manifestFile : value.manifest.files.find(file => file.name === args.file);
+        if (!file) throw failure('SUPPORT_EXPORT_FILE_NOT_FOUND', 'This completed export does not contain that support file.');
+        const bytes = args.file === 'support-export.json' ? value.bytes : await readPrivateFile(join(value.folder, file.name), MAX_HANDOFF_BYTES);
+        if (bytes.length !== file.bytes || sha(bytes) !== file.sha256)
+          throw failure('SUPPORT_EXPORT_CHANGED', 'A retained support export file differs from its original completion manifest.');
+        return { bytes, name: file.name, type: exportFileType(file.name) };
+      } }) };
+  }
   async call(name, args) {
     this.#configured();
+    if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
       switch (name) {
@@ -414,6 +484,11 @@ export class MerchantSupport {
         }
         case 'merchant_case_export': return this.#export(args);
         case 'merchant_support_export_status': return this.#exportStatus(args.exportId);
+        case 'merchant_support_export_manifest': return this.#exportManifest(args.exportId);
+        case 'merchant_support_export_file': return this.#exportFile(args);
+        case 'merchant_support_export_file_release':
+          await this.#reads.release(identifier(args.exportId, 'Export ID'), caseId(args.readId));
+          return { exportId: args.exportId, readId: args.readId, released: true };
         default: throw failure('TOOL_NOT_FOUND', 'Unknown merchant support operation.');
       }
       })();
@@ -429,8 +504,10 @@ export class MerchantSupport {
     this.#closing = true;
     this.#close = (async () => {
       const handle = this.#watch;
-      if (!handle) return;
-      handle.state = 'STOPPING'; handle.controller.abort(); await handle.done;
+      const readsClosing = this.#reads.close();
+      try {
+        if (handle) { handle.state = 'STOPPING'; handle.controller.abort(); await handle.done; }
+      } finally { await readsClosing; }
     })();
     return this.#close;
   }

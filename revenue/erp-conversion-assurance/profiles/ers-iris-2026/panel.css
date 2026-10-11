@@ -1,0 +1,43 @@
+.iris-desk { --iris-line: #c5c5c5; --iris-muted: #555; color: #202020; min-width: 0; }
+.iris-desk * { box-sizing: border-box; }
+.iris-desk h2, .iris-desk h3, .iris-desk h4 { margin: 0 0 .65rem; line-height: 1.25; }
+.iris-desk p { max-width: 85ch; margin: .45rem 0 1rem; }
+.iris-desk .iris-status { padding: .8rem 1rem; border: 1px solid var(--iris-line); background: #f2f2f2; min-height: 3rem; margin: 1rem 0; overflow-wrap: anywhere; }
+.iris-desk .iris-layout { display: grid; grid-template-columns: 17rem minmax(0, 1fr); gap: 1.2rem; align-items: start; }
+.iris-desk .iris-layout > * { min-width: 0; }
+.iris-desk .iris-box { border: 1px solid var(--iris-line); padding: 1rem; margin-bottom: 1rem; background: #fff; min-width: 0; }
+.iris-desk .iris-row, .iris-desk .iris-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.iris-desk .iris-row > label { flex: 1 1 12rem; }
+.iris-desk label { display: grid; gap: .35rem; margin: .7rem 0; font-size: .9rem; font-weight: 600; }
+.iris-desk label.iris-check { display: flex; align-items: center; font-weight: 400; }
+.iris-desk input, .iris-desk select, .iris-desk textarea { color: #171717; background: #fff; border: 1px solid #777; border-radius: 0; min-width: 0; width: 100%; padding: .55rem; font: inherit; }
+.iris-desk input[type="checkbox"] { width: 1rem; height: 1rem; margin: 0; }
+.iris-desk input[type="file"] { max-width: 100%; font-size: .8rem; padding: .4rem; }
+.iris-desk textarea, .iris-desk code, .iris-desk pre { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .78rem; }
+.iris-desk textarea { resize: vertical; min-height: 6rem; tab-size: 2; }
+.iris-desk button { border: 1px solid #555; border-radius: 0; background: #f5f5f5; color: #171717; padding: .5rem .75rem; font: inherit; font-size: .85rem; cursor: pointer; min-height: 2.4rem; }
+.iris-desk button:hover { background: #e7e7e7; }
+.iris-desk button:focus-visible, .iris-desk input:focus-visible, .iris-desk select:focus-visible, .iris-desk textarea:focus-visible { outline: 2px solid #202020; outline-offset: 2px; }
+.iris-desk button:disabled { opacity: .55; cursor: wait; }
+.iris-desk button.iris-primary { color: #fff; background: #282828; }
+.iris-desk button.iris-primary:hover { background: #080808; }
+.iris-desk .iris-muted { color: var(--iris-muted); font-size: .85rem; }
+.iris-desk .iris-filing { border-bottom: 1px solid var(--iris-line); padding: .8rem 0; }
+.iris-desk .iris-filing:first-child { padding-top: 0; }
+.iris-desk .iris-filing button { width: 100%; text-align: left; overflow-wrap: anywhere; }
+.iris-desk .iris-filing[aria-current="true"] button { border-left: 4px solid #171717; font-weight: 700; }
+.iris-desk dl { display: grid; grid-template-columns: minmax(6rem, 10rem) minmax(0, 1fr); gap: .4rem .8rem; margin: .8rem 0; }
+.iris-desk dt { color: #555; font-size: .85rem; }
+.iris-desk dd { margin: 0; overflow-wrap: anywhere; font-size: .85rem; }
+.iris-desk .iris-table { width: 100%; overflow-x: auto; margin: .8rem 0; }
+.iris-desk table { width: 100%; border-collapse: collapse; font-size: .8rem; }
+.iris-desk th, .iris-desk td { text-align: left; vertical-align: top; border-bottom: 1px solid var(--iris-line); padding: .55rem; overflow-wrap: anywhere; }
+.iris-desk th { font-weight: 700; background: #f4f4f4; }
+.iris-desk td .iris-actions { min-width: 8rem; }
+.iris-desk pre { border: 1px solid var(--iris-line); background: #f6f6f6; padding: .8rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 30rem; overflow-y: auto; }
+.iris-desk details { margin: .8rem 0; border-top: 1px solid var(--iris-line); padding-top: .8rem; }
+.iris-desk summary { cursor: pointer; font-weight: 600; }
+.iris-desk .iris-digest { display: block; font-size: .72rem; color: #555; margin-top: .3rem; overflow-wrap: anywhere; }
+.iris-desk .iris-selection { border-left: 3px solid #333; padding-left: .8rem; margin: .8rem 0; }
+@media (max-width: 1000px) { .iris-desk .iris-layout { grid-template-columns: minmax(0, 1fr); } .iris-desk .iris-list { max-height: 18rem; overflow-y: auto; } }
+@media (max-width: 540px) { .iris-desk .iris-box { padding: .75rem; } .iris-desk dl { grid-template-columns: 1fr; gap: .15rem; } .iris-desk dd { margin-bottom: .55rem; } .iris-desk .iris-row { display: block; } .iris-desk .iris-actions button { flex: 1 1 9rem; } }

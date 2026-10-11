@@ -73,6 +73,34 @@ async function main() {
     result = await api.inspectDatasetSession(directory);
     need(result.status !== 'RUNNING', 'DATASET_SESSION_RUNNING_USE_STATUS');
     await bind(result); check(result);
+  } else if (command === 'accounting' || command === 'finalize') {
+    need(binding || command === 'accounting' && request.initializeAccounting === true &&
+      metadata.source.kind === 'attached', 'DATASET_INITIALIZE_OR_ATTACH_REQUIRED');
+    const definition = await readJson(join(directory, 'session.json'), 262144);
+    const selectedBinding = binding ?? {
+      sessionId:definition.config?.operation?.intentId, configurationSha256:definition.configurationSha256,
+      expectedSnapshot:definition.expectedSnapshot, limits:definition.limits,
+      workspaceDirectory:definition.workspaceDirectory ?? null};
+    need(definition.schema === 'stellar-forge.sf88.dataset-session.v1' && definition.directory === directory &&
+      definition.config?.operation?.intentId === selectedBinding.sessionId &&
+      digest(canonical(definition.config)) === selectedBinding.configurationSha256 &&
+      definition.configurationSha256 === selectedBinding.configurationSha256 &&
+      definition.expectedSnapshot === selectedBinding.expectedSnapshot &&
+      canonical(definition.limits) === canonical(selectedBinding.limits) &&
+      (definition.workspaceDirectory ?? null) === selectedBinding.workspaceDirectory,
+    'DATASET_APPLICATION_BINDING_CHANGED');
+    // Accounting does not inspect or require product pages. The original native
+    // entrypoint verifies the saved definition, attempts and financial evidence.
+    result = await api.accountDatasetSession(directory, {workspace:request.workspaceDirectory ?? undefined,
+      offset:request.offset, limit:request.limit, finalize:command === 'finalize', signal:controller.signal,
+      outbox:request.outboxDirectory ?? undefined, merchantRoute:request.merchantRoute ?? undefined});
+    need(result.schema === 'stellar-forge.sf88.session-accounting.v1' && result.kind === 'dataset' &&
+      result.directory === directory && result.sessionId === selectedBinding.sessionId &&
+      result.configurationSha256 === selectedBinding.configurationSha256, 'DATASET_ACCOUNTING_BINDING_CHANGED');
+    if (request.initializeAccounting === true) await bind(selectedBinding);
+    if (result.interrupted) process.exitCode = 130;
+    else if (command === 'finalize' && result.entries.some(entry =>
+      !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome))) process.exitCode = 2;
   } else {
     need(binding, 'DATASET_INITIALIZE_OR_ATTACH_REQUIRED');
     // Offline inspection checks the immutable original definition before a new run.

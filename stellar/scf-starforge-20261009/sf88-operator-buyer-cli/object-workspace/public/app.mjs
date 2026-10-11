@@ -8,6 +8,7 @@ let state = null, products = [], review = null, selected = null, page = 0, pendi
 let section = sessionStorage.getItem('starforge-object-workspace-view') === 'accounting' ? 'accounting' : 'delivery';
 let query = '', filter = 'all', generation = 0, pollTimer, queryTimer, confirmAction = null;
 let downloadWatchUntil = 0;
+let receiving = { sources: [], operator: null }, receivedChoices = [], receivedReview = null, receivingGeneration = 0;
 const readable = value => String(value ?? '').replace(/_/g, ' ').toLowerCase();
 const integer = value => value === null || value === undefined ? '—' : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const bytes = value => {
@@ -29,6 +30,10 @@ const messages = {
   OBJECT_WORKSPACE_RUN_CHANGED: 'That run has ended or changed. The current run was left unchanged.',
   OBJECT_WORKSPACE_ACCOUNTING_WORKSPACE_REQUIRED: 'This download has no saved native operator workspace. Its existing receipts remain readable; use the original accounting command with the matching workspace to finalize earlier attempts.',
   OBJECT_WORKSPACE_SESSION_CHANGED: 'The saved session identity changed. Reopen the workspace with the intended original session.',
+  OBJECT_RECEIVING_PRESET_CHANGED: 'The local operator preset changed after review. Review the received download with its current settings.',
+  OBJECT_RECEIVING_BUDGET_OUTSIDE_OPERATOR_LIMITS: 'The daily and whole-download caps must fit this host’s operator ceilings. Each request must also fit the daily cap.',
+  OBJECT_RECEIVING_SOURCE_CHANGED: 'The retained merchant files changed. Receive the original files again before preparing this object.',
+  REQUEST_OPERATOR_PRESET_REQUIRED: 'Launch this workspace with its private --operator-settings preset to prepare a new buyer.',
 };
 function notice(message = '', error = false) {
   $('notice').hidden = !message; $('notice').textContent = message; $('notice').classList.toggle('error', error);
@@ -238,6 +243,11 @@ function controls() {
     $(id).disabled = pending || !financial || !row.controls[key];
   $('accounting-previous').disabled = pending || !financial || row.pagination.page === 0;
   $('accounting-next').disabled = pending || !financial || row.pagination.page + 1 >= row.pagination.pages;
+  const receivingBusy = pending || Boolean(state?.active || state?.mutation);
+  $('receive-files').disabled = receivingBusy;
+  $('receive-review').disabled = receivingBusy || !receiving.operator || !receivedChoices.some(choice =>
+    !choice.error && choice.rowIndex + ':' + choice.acceptIndex === $('receive-offer').value);
+  $('receive-create').disabled = receivingBusy || !receivedReview;
 }
 function productChanged() {
   review = null; $('selection-review').hidden = true;
@@ -259,8 +269,130 @@ async function newDownload() {
     for (const product of products) { const option = element('option',product.label + (product.error ? ' · setup required' : '')); option.value = product.id; select.append(option); }
     if (!products.length) { const option = element('option','No product profile configured'); option.value = ''; select.append(option); }
     $('setup').hidden = false; $('session').hidden = true; $('empty').hidden = true; productChanged();
+    await loadReceiving();
+    $('receiving-panel').open = !products.some(product => !product.error);
   });
 }
+function clearReceivedReview() {
+  receivingGeneration++; receivedReview = null; $('received-review').hidden = true; controls();
+}
+function receivedSource() { return receiving.sources.find(item => item.id === $('receive-source').value); }
+function receivedObject() { return receivedSource()?.objects?.find(item => item.id === $('receive-object').value); }
+async function loadReceiving(sourceId = $('receive-source').value) {
+  receiving = await request('/api/receiving');
+  const operator = receiving.operator;
+  $('receiving-operator').textContent = operator ? operator.actor + ' / ' + operator.service +
+    ' · payer ' + operator.payer + ' · maximum ' + integer(operator.maxTotalAtomic) +
+    ' total / ' + integer(operator.maxDailyAtomic) + ' per UTC day' :
+    receiving.presetError ? 'Local operator setup: ' + readable(receiving.presetError) :
+    'To create a buyer, launch with a private --operator-settings preset. Saved downloads and already prepared products remain available.';
+  const select = $('receive-source'); select.replaceChildren();
+  for (const source of receiving.sources) {
+    const option = element('option', source.error ? 'Received files · ' + readable(source.error) :
+      source.descriptionName + ' / ' + source.catalogName);
+    option.value = source.id; option.disabled = Boolean(source.error); select.append(option);
+  }
+  if (receiving.sources.some(item => item.id === sourceId && !item.error)) select.value = sourceId;
+  if (!receiving.sources.length) { const option = element('option', 'Receive the merchant files first'); option.value = ''; select.append(option); }
+  await receivedSourceChanged();
+}
+async function receivedSourceChanged() {
+  clearReceivedReview(); const select = $('receive-object'); select.replaceChildren();
+  for (const item of receivedSource()?.objects ?? []) {
+    const option = element('option', item.name + (item.error ? ' · ' + readable(item.error) : ' · ' + bytes(item.bytes)));
+    option.value = item.id; option.disabled = Boolean(item.error); select.append(option);
+  }
+  const available = receivedSource()?.objects?.find(item => !item.error);
+  if (available) select.value = available.id;
+  await receivedObjectChanged();
+}
+async function receivedObjectChanged() {
+  clearReceivedReview(); const current = receivingGeneration, item = receivedObject();
+  const select = $('receive-offer'); select.replaceChildren(); receivedChoices = [];
+  const placeholder = element('option', 'Choose the exact resource and payment option'); placeholder.value = ''; select.append(placeholder);
+  if (!item || item.error) { $('receive-object-summary').textContent = ''; controls(); return; }
+  $('receive-object-summary').textContent = item.name + ' · ' + bytes(item.bytes) + ' · ' + item.path;
+  $('receive-chunk').value = String(item.chunkBytes); $('receive-chunk').max = String(item.chunkBytes);
+  $('receive-session').value = 'download-' + item.id.slice(0,32) + '-' + new Date().toISOString().slice(0,10);
+  $('receive-total').value = ''; $('receive-daily').value = '';
+  const result = await request('/api/receiving/options?' + new URLSearchParams({ id: receivedSource().id, objectId: item.id }));
+  if (current !== receivingGeneration) return;
+  receivedChoices = result.choices;
+  for (const choice of receivedChoices) {
+    const label = choice.error ? choice.url + ' · ' + readable(choice.error) :
+      choice.url + ' · ' + choice.terms.maxAtomic + ' atomic / request · ' + choice.terms.network + ' · ' + choice.terms.asset;
+    const option = element('option', label); option.value = choice.rowIndex + ':' + choice.acceptIndex;
+    option.disabled = Boolean(choice.error); select.append(option);
+  }
+  if (!receivedChoices.some(choice => !choice.error)) placeholder.textContent = 'No matching native chunk offer in these files';
+  controls();
+}
+function receivedOfferChanged() {
+  clearReceivedReview(); const item = receivedObject();
+  const choice = receivedChoices.find(value => value.rowIndex + ':' + value.acceptIndex === $('receive-offer').value);
+  if (!item || !choice || choice.error) return;
+  const chunks = Math.ceil(item.bytes / Number($('receive-chunk').value));
+  if (!Number.isSafeInteger(chunks) || chunks < 1) return;
+  const total = BigInt(choice.terms.maxAtomic) * BigInt(chunks);
+  $('receive-total').value = String(total);
+  const ceiling = receiving.operator?.maxDailyAtomic;
+  $('receive-daily').value = ceiling && BigInt(ceiling) < total ? ceiling : String(total);
+  $('receive-object-summary').textContent = item.name + ' · ' + bytes(item.bytes) + ' · ' + choice.url +
+    ' · recipient ' + choice.terms.payTo;
+}
+function fileBase64(file, maximum) {
+  if (!file || file.size < 1 || file.size > maximum) return Promise.reject(new Error('OBJECT_RECEIVING_FILE_TOO_LARGE'));
+  return new Promise((done, reject) => {
+    const reader = new FileReader(); reader.onerror = () => reject(new Error('OBJECT_RECEIVING_FILE_READ_FAILED'));
+    reader.onload = () => done(String(reader.result).slice(String(reader.result).indexOf(',') + 1));
+    reader.readAsDataURL(file);
+  });
+}
+$('receive-files-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    const description = $('receive-description').files[0], catalog = $('receive-catalog').files[0];
+    const descriptionBase64 = await fileBase64(description, 8 * 1048576), catalogBase64 = await fileBase64(catalog, 1048576);
+    const result = await request('/api/receiving/receive', { descriptionName: description.name, descriptionBase64,
+      catalogName: catalog.name, catalogBase64 });
+    await loadReceiving(result.id); notice('Merchant files retained. Choose the object, payment option and your limits.');
+  });
+};
+$('receive-source').onchange = () => action(receivedSourceChanged);
+$('receive-object').onchange = () => action(receivedObjectChanged);
+$('receive-offer').onchange = receivedOfferChanged;
+for (const id of ['receive-session','receive-chunk','receive-total','receive-daily']) $(id).oninput = clearReceivedReview;
+for (const id of ['receive-description','receive-catalog']) $(id).onchange = clearReceivedReview;
+$('receive-plan-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    clearReceivedReview(); const current = receivingGeneration;
+    const choice = receivedChoices.find(value => value.rowIndex + ':' + value.acceptIndex === $('receive-offer').value);
+    if (!choice || choice.error) throw new Error('EXPLICIT_SELECTION_INDEX_REQUIRED');
+    const result = await request('/api/receiving/review', { id: receivedSource().id, objectId: receivedObject().id,
+      rowIndex: choice.rowIndex, acceptIndex: choice.acceptIndex, chunkBytes: Number($('receive-chunk').value),
+      sessionName: $('receive-session').value, maxTotalAtomic: $('receive-total').value, dailyAtomic: $('receive-daily').value });
+    if (current !== receivingGeneration) return;
+    receivedReview = result;
+    details($('received-review-terms'), [['Session',result.sessionName],['File',result.filename],['Resource',result.sourceUrl],
+      ['Complete bytes',integer(result.bytes)],['Requests',integer(result.chunkCount)],['Bytes per request',integer(result.chunkBytes)],
+      ['First range',result.firstRange.offset + '–' + (result.firstRange.length - 1)],
+      ['Last range',result.lastRange.offset + '–' + (result.lastRange.offset + result.lastRange.length - 1)],
+      ['Payer',result.operator.payer],['Network',result.terms.network],['Scheme',result.terms.scheme],['Asset',result.terms.asset],
+      ['Recipient',result.terms.payTo],['Maximum per request',result.terms.maxAtomic + ' atomic units'],
+      ['Planned maximum',result.plannedMaxAtomic + ' atomic units'],['Whole-download cap',result.maxTotalAtomic + ' atomic units'],
+      ['Daily cap',result.dailyAtomic + ' atomic units'],['Content type',result.selected.expectedContentType],
+      ['Object snapshot',result.selected.expectedSnapshot],['Expected file SHA-256',result.selected.expectedSha256 ?? 'Not supplied'],
+      ['Description SHA-256',result.descriptionSha256],['Original offers SHA-256',result.catalogSha256]]);
+    $('received-review').hidden = false;
+  });
+};
+$('receive-create').onclick = () => action(async () => {
+  const created = await request('/api/receiving/create', { reviewId: receivedReview.reviewId });
+  selected = created.session; section = 'delivery'; page = 0; query = ''; filter = 'all';
+  $('chunk-query').value = ''; $('chunk-filter').value = 'all';
+  $('setup').hidden = true; review = null; clearReceivedReview();
+  notice(created.recoveredCreate ? 'Reopened the same private buyer and saved download.' :
+    'Your private buyer and reviewed download are ready. Start download when you are ready to approve its requests.');
+});
 function confirm({ title, copy, fields, note, button }, callback) {
   confirmAction = callback; $('confirmation-title').textContent = title; $('confirmation-copy').textContent = copy;
   details($('confirmation-details'),fields); $('confirmation-note').textContent = note;

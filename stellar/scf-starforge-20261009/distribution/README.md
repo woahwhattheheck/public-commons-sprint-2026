@@ -43,6 +43,26 @@ npx --no-install starforge doctor --feature schema
 The `schema` diagnostic checks local dependency resolution. Request matching
 continues through the maintained schema validator and pattern compiler.
 
+### OpenAPI YAML source support
+
+The original OpenAPI importer accepts JSON and YAML documents. Its included
+`sf61-openapi-seller-import/package.json` and lockfile pin `yaml` to `2.9.1`;
+the maintained archive declares that dependency in its `openapi` feature.
+If optional packages were omitted, install it in the same application directory:
+
+```sh
+npm install --ignore-scripts --save-exact yaml@2.9.1
+npx --no-install starforge doctor --feature openapi
+```
+
+The diagnostic resolves the dependency from the original parser's installed
+source directory. JSON input does not need the YAML engine. YAML import uses
+the original YAML 1.2 core parser with unique keys and bounded aliases. The
+workspace retains the exact source bytes in the prepared merchant; the terminal
+importer records its original input SHA-256 in the compiled manifest.
+The existing schema feature above supplies regular-expression matching when
+the selected contract requires it.
+
 ## Start a merchant workspace
 
 ```sh
@@ -88,23 +108,132 @@ The bundled upstream example points to an operator-owned loopback backend at
 port 8425. No backend is invented or started for it. Use the original upstream
 configuration and flags for your own HTTPS service.
 
-## Prepare an existing API in the browser
+## Prepare an existing API and hand a request to its buyer
 
-The original OpenAPI workspace can also prepare the merchant's native API
-configuration. Start it with an existing private parent for exported projects:
+Use the existing OpenAPI workspace on Linux with Node 22.16+ and util-linux
+`flock`. Install the YAML feature above for a YAML source, then start the
+workspace with an existing private parent for exported projects:
 
 ```sh
-mkdir -m 700 /private/merchant-projects
+export STARFORGE_PRIVATE="$PWD/starforge-private"
+install -d -m 700 "$STARFORGE_PRIVATE" "$STARFORGE_PRIVATE/merchant-projects"
 npx --no-install starforge openapi-workspace \
-  --out-parent /private/merchant-projects --port 0
+  --out-parent "$STARFORGE_PRIVATE/merchant-projects" --port 0
 ```
 
-Open the printed local URL and use the existing API contract, explicit operation
-selections and original application bindings. The workspace uses the maintained
-importer, seller lifecycle and request review modules. Its files and browser
-assets are included under
-`source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/`;
-the README there covers the complete preparation and operator lifecycle.
+Open the printed local URL. Import the provider's original OpenAPI 3.0 or 3.1
+document, select its actual operation and server, and review the original
+request and response contract. Set the merchant's public resource URL, method,
+network, asset, recipient and atomic price. Configure the existing application
+or upstream binding; private backend authentication stays in the selected
+environment references. Save the merchant project and use its existing managed
+seller controls to start, check, stop and reopen it.
+
+The terminal importer accepts a merchant-ready JSON or YAML contract with
+explicit selection and binding files. Its declared server must already name
+the exposed service, and selected operations must not require unresolved
+additional authentication:
+
+```sh
+npx --no-install starforge openapi \
+  --spec "$STARFORGE_PRIVATE/merchant-openapi.yaml" \
+  --config "$STARFORGE_PRIVATE/operation-selections.json" \
+  --service-bindings "$STARFORGE_PRIVATE/application-bindings.json" \
+  --upstream-bindings "$STARFORGE_PRIVATE/upstream-bindings.json" \
+  --out "$STARFORGE_PRIVATE/merchant-projects/prepared-api"
+```
+
+The output directory must be new. Use the original compiler's selection and
+binding formats described in the included
+`sf61-openapi-seller-import/README.md`; omit an optional bindings flag when that
+binding is not used. The compiler records the input digest, selected payment
+terms and supported response contracts in its original outputs.
+
+For a provider API that needs backend authentication or a different public
+merchant origin, use the workspace's explicit upstream binding. It retains the
+original provider source, authentication references and selected transformation,
+then compiles its emitted `facade-openapi.json`, `selections.json` and
+`route-bindings.json`. This is the saved package's merchant-facing contract;
+`upstreams.json` retains the original bound provider request. Keep the complete
+saved package together when reopening its seller.
+
+### Retain a file request and issue its original ticket
+
+For a source-declared multipart operation, select the local files and typed
+fields in the merchant workspace. Review the exact body length, digest and
+ordinary request headers before issuing its durable operation ticket. The
+selected body includes the original multipart boundary and framing. The native
+request ceiling is 16 MiB including framing, with the merchant binding's
+configured cap applied as well. If the source permits the entire body to be
+absent, that remains a distinct request with no body attachment.
+
+Enter the actual merchant operation ID, customer and expiry, then use
+**Download complete buyer request**. The private packet carries the original
+discovery, exact body and ordinary headers, operation ticket and request
+identity. Keep the packet private when handing it to the buyer. Reopening the
+saved merchant retains those same bytes; selecting different files creates a
+different request that needs its own review and ticket.
+
+The included
+`sf61-openapi-seller-import/workspace/FILE_INPUT.md` defines the supported
+multipart manifest and standalone body-preparation commands. The workspace
+keeps the existing seller and original buyer protocol throughout this flow.
+
+### Receive, review and reopen the acquisition
+
+Create an existing private directory for the receiver's source configurations.
+Declare its actual operator in a private `0600` JSON file using the
+`stellar-forge.buyer-runbook-operator.v1` format from the included
+`buyer-runbook/WORKSPACE.md`. That preset records the receiver's actor, service,
+public payer, Python executable, total and daily atomic limits, and either its
+wallet environment-variable name or trusted signer-provider path.
+
+```sh
+install -d -m 700 "$STARFORGE_PRIVATE/acquisitions" "$STARFORGE_PRIVATE/acquisitions/buyer-configs"
+npx --no-install starforge buyer-runbook workspace \
+  --state "$STARFORGE_PRIVATE/acquisitions/workspace" \
+  --configs "$STARFORGE_PRIVATE/acquisitions/buyer-configs" \
+  --operator-settings "$STARFORGE_PRIVATE/acquisitions/local-operator.json" \
+  --port 0
+```
+
+Choose **Receive merchant request** and open the original complete packet.
+Review the body, headers, ticket expiry and actual discovery payment options;
+choose the recipient, asset, network and atomic spending limits for this
+request. **Save request review** and **Prepare local buyer** use the original
+handoff importer and native operator initializer, including the Python spending
+ledger. **Add to acquisition plan**, **Save and review draft**, and
+**Initialize acquisition** retain the exact source configuration and body.
+This preparation creates the local buying workspace. Execution uses its
+existing native wallet, live terms, operator approval and payment lifecycle.
+
+For a terminal-only initial import, use the same packet with the original buyer:
+
+```sh
+npx --no-install starforge buyer --import-operation \
+  --file "$STARFORGE_PRIVATE/merchant-request.handoff.json" \
+  --dir "$STARFORGE_PRIVATE/acquisitions/imported-request" --accept 0
+npx --no-install starforge buyer \
+  --review --config "$STARFORGE_PRIVATE/acquisitions/imported-request/review.json"
+```
+
+Choose `--accept` from the actual discovery list before importing. The import
+directory must be new; use its emitted review configuration and the original
+buyer workspace setup for subsequent native operation.
+
+Stop the receiver and reopen it with the same original state path:
+
+```sh
+npx --no-install starforge buyer-runbook workspace \
+  --state "$STARFORGE_PRIVATE/acquisitions/workspace" --port 0
+```
+
+Use the same absolute `STARFORGE_PRIVATE` value when opening a new terminal.
+Its selected configuration directory and local operator preset are retained.
+Keep the merchant and receiver's private files at their original paths outside
+`node_modules` when updating the toolkit. An identical packet reopens the same
+retained request; the saved acquisition preserves its initialized snapshots,
+ledger and original operation identity.
 
 ## Sell selected Stellar RPC reads
 
@@ -188,6 +317,113 @@ provider, request, recovery and embedding guide. `./seller/jsonrpc` exports
 `createStellarRpcApplication` for existing trusted hosts. The whole SF30/SF61/SF88
 source and original `partners/getblock-stellar/product.mjs` request helper ship
 together. This product uses the existing upstream and native dependencies.
+
+## GetBlock Stellar merchant
+
+The installed `getblock-stellar` command includes the complete original partner
+product, application, CLI and guide. It prepares four selected priced operations:
+`getTransaction`, `getTransactions`, `getEvents` and `getLedgerEntries`. These
+return Stellar mainnet data; the merchant's payment network is a separate
+explicit selection in its public plan. This is the maintained integration, with
+the original SF61 compiler, SF30 native seller, SF82 releases and SF88 buyer.
+
+Create a private parent for generated packages, and fill the original
+plan template with the actual merchant origin, asset, recipient and every
+selected atomic-unit price before inspecting or preparing it:
+
+```sh
+mkdir -m 700 /private/getblock
+npx --no-install starforge getblock-stellar template > /private/getblock/plan.json
+chmod 600 /private/getblock/plan.json
+```
+
+After editing the plan:
+
+```sh
+npx --no-install starforge getblock-stellar inspect --plan /private/getblock/plan.json
+npx --no-install starforge getblock-stellar prepare \
+  --plan /private/getblock/plan.json --out /private/getblock/stellar-reads-v1
+```
+
+The output directory must be new and its parent must have mode `0700`.
+Preparation creates the actual original SF61 output in `compiled/`, public
+OpenAPI/selections/bindings, a trusted handler entry and a package-specific
+`RUN.md`. It makes no provider, facilitator, catalog or wallet request. Retain
+the package and this immutable installed source: its generated handler imports
+the original application module from this source location.
+
+The plan stores only the selected endpoint environment-variable name, normally
+`GETBLOCK_STELLAR_RPC_URL`. Supply its value through the existing operator
+secret manager or private service environment. Use the exact Stellar mainnet
+JSON-RPC endpoint selected in the GetBlock dashboard; the original application
+retains the path token privately and keeps it out of public offers and buyer
+artifacts. The original product guide documents its supported endpoint form.
+
+Diagnosis is an explicit provider operation:
+
+```sh
+npx --no-install starforge getblock-stellar diagnose \
+  --plan /private/getblock/stellar-reads-v1/plan.json
+```
+
+It calls `getNetwork`, then `getHealth` after the observed network matches
+Stellar mainnet. Use the returned actual ledger window or a preceding result's
+cursor for requests. OpenAPI input examples describe formats; they are not
+current chain observations. Preparation, staging and buyer review do not run
+diagnosis implicitly.
+
+Use the generated `RUN.md` for the original seller or native operations/outbox
+launcher. The installed original release store supports the same prepared
+inputs:
+
+```sh
+npx --no-install starforge releases init --store /private/getblock/releases
+npx --no-install starforge releases stage \
+  --store /private/getblock/releases --id stellar-reads-v1 \
+  --spec /private/getblock/stellar-reads-v1/openapi.json \
+  --config /private/getblock/stellar-reads-v1/selections.json \
+  --bindings /private/getblock/stellar-reads-v1/route-bindings.json \
+  --handlers /private/getblock/stellar-reads-v1/handlers.mjs
+npx --no-install starforge releases inspect \
+  --store /private/getblock/releases --id stellar-reads-v1
+npx --no-install starforge releases console \
+  --store /private/getblock/releases --port 8425
+```
+
+The stage example retains the original challenge profile. Select the actual
+`--facilitator` for native paid execution and install the existing native
+dependencies described below. Activate using the store's current generation,
+then operate the selected release from its original console or fleet. Changes
+to prices or methods use a new prepared package and release. An existing process
+retains its launch-time provider credential; stop and restart it after rotation.
+Keep the complete transitive installed source alongside the native entry and
+source inputs pinned by the release store.
+
+Write actual parameters into a private JSON file and prepare their original
+buyer review:
+
+```sh
+npx --no-install starforge getblock-stellar buyer \
+  --package /private/getblock/stellar-reads-v1 --method getEvents \
+  --body-file /private/getblock/events-request.json \
+  --intent-id getblock-events-001 --out /private/getblock/events-review.json
+npx --no-install starforge buyer \
+  --review --config /private/getblock/events-review.json
+```
+
+The command validates the selected method's params object and passes its exact
+body and original offer to SF88. Continue with the existing buyer workspace or
+selected signer; the buyer still obtains the live challenge and retains its
+original reservation, payment and recovery state. Each explicit next page is a
+separate purchase using the actual returned cursor. Reconcile an uncertain
+existing operation before creating another purchase for that request.
+
+The installed `partners/getblock-stellar/README.md` describes all four method
+contracts, admission, native response handling, credential rotation and complete
+operator lifecycle. `./partners/getblock-stellar` exports the original
+`prepareProduct` and request helpers; `./partners/getblock-stellar/application`
+exports `createGetBlockApplication` for the same trusted host integration.
+The component adds no new runtime dependency or payment engine.
 
 ## Cube report workspace
 
@@ -292,6 +528,7 @@ or automatically retry a request.
 | `starforge seller` | SF30 JSON or application seller |
 | `starforge upstream` | SF30 existing-API seller |
 | `starforge jsonrpc` | Prepare, diagnose, sell and operate selected Stellar RPC reads with original buyer review |
+| `starforge getblock-stellar` | Prepare a GetBlock Stellar read merchant, diagnose its selected provider and hand original releases/requests to seller and buyer |
 | `starforge upstream-operation` | Issue, inspect and reconcile an original merchant operation ticket |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
@@ -331,6 +568,7 @@ or automatically retry a request.
 | `starforge support-console` | Retained merchant cases, runtime follow-up and original native reconciliation |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
 | `starforge releases` | Stage, compare, select, run and roll back seller configurations; local operator console |
+| `starforge merchant-host` | Generate original Caddy/systemd merchant services, inspect installed operation and run encrypted maintenance/cutover |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
@@ -360,10 +598,12 @@ or automatically retry a request.
 | `starforge merchant-accounting-recovery` | Review and retain an original completed purchase, verification and delivered response |
 | `starforge s3` | Inspect selected object-store resources and export an original merchant configuration |
 | `starforge python-merchant` | Inspect, initialize and serve a Python merchant through the original runtime |
+| `starforge python-workspace` | Edit retained Python source revisions, run explicit private previews and operate original releases/customer handoff |
 | `starforge availability` | Inspect, pause and resume selected routes through the running seller's original control |
 | `starforge cube-onboarding` | Capture Cube metadata, prepare reviewed reports and export/run the original merchant package |
 | `starforge graphql-onboarding` / `graphql-merchant` | Prepare approved GraphQL queries and run their original paid seller |
 | `starforge graphql-workspace` | Review schemas, prepare query packages and operate the original merchant in its private browser |
+| `starforge graphql-deployment` | Prepare, inspect and stage an original GraphQL merchant or generate its existing Linux host installation |
 | `starforge woo-seller` / `woo-buyer` | Connect an existing WooCommerce product/order to original merchant and buyer checkout |
 
 For example, review an existing original buyer configuration without signing:
@@ -519,6 +759,98 @@ npx --no-install starforge paid-file-purchase inspect --handoff /private/custome
 The original checkout guide supplies the native facilitator, authenticated SF98
 delivery and existing receiver configuration for actual payment and file release.
 The desk's order view does not infer settlement or payment from enrollment.
+
+### Resume and recover the entitled file
+
+Keep the customer's original handoff, selected output path and current private
+claim-token environment variable. For retained interruption recovery, use Linux
+with the `flock` utility available. The destination's parent must already exist
+as the customer's private directory. The installed original command is:
+
+```sh
+npx --no-install starforge paid-file-purchase retrieve \
+  --handoff /private/customer/order.json \
+  --out /private/customer/downloads/report.bin \
+  --claim-env SF101_CLAIM_TOKEN --timeout-ms 30000
+```
+
+After a timeout, lost connection, Ctrl-C or process loss, repeat that **same
+command with the same handoff and destination**. The original SF101 transfer
+record retains the original writer's private prefix. The matching receiver
+returns the remaining range, and the original writer verifies the complete
+file's approved size and SHA-256 before publishing it. A completed local file
+is verified with zero merchant requests. Each new request uses the merchant's
+current entitlement, access deadline, suspension state and claim token.
+
+Read retained state locally with:
+
+```sh
+npx --no-install starforge paid-file-purchase transfer \
+  --handoff /private/customer/order.json \
+  --out /private/customer/downloads/report.bin
+```
+
+The result includes status, retained and expected bytes, attempt count, whether
+the saved prefix can resume, and the original record location. The completed
+file has its original `report.bin.sf101.json` receipt; transfer recovery uses
+`report.bin.sf101-transfer.json` beside it. Keep those records with the selected
+destination so reopening can recover the original generation. A live process
+keeps its file lock; wait for that download to finish or stop before another
+process uses the same output.
+
+For a deliberate fresh start after reviewing a rejected or interrupted prefix:
+
+```sh
+npx --no-install starforge paid-file-purchase reset-transfer \
+  --handoff /private/customer/order.json \
+  --out /private/customer/downloads/report.bin
+```
+
+That local action clears the original unfinished download. A later `retrieve`
+performs the fresh request for the same existing entitlement. Ordinary resume
+needs only the original `retrieve` command. If the merchant denies a retry,
+keep the retained prefix while its operator opens the existing `merchant-desk`,
+inspects the exact order, and checks access and **File health**. Restore the
+enrolled source when it changed, or configure the current claim token after a
+rotation, then repeat the customer's original retrieval.
+
+The original `commerce-console` provides the same recovery in **Purchased
+file**: retained byte count, **Resume download**, completed-partial local
+finish, and **Download progress and recovery**. **Discard retained download**
+clears an idle partial through the original transfer API. The foreground
+`commerce` console has `status`, `retrieve INTENT`, and `reset-transfer INTENT`.
+Both interfaces bind the original frozen handoff and saved destination.
+Reopen the same commerce session after loading a changed claim-token variable.
+
+Applications use the existing public purchase exports:
+
+```js
+import {
+  retrieveFile, inspectFileTransfer, resetFileTransfer,
+} from '@tokenjunkielabs/starforge-merchant/buyer/paid-file';
+
+const state = await inspectFileTransfer({handoff, destination});
+const result = await retrieveFile({handoff, destination, token, timeoutMs:30000});
+```
+
+`@tokenjunkielabs/starforge-merchant/buyer/purchase` resolves to that same
+original module. The maintained whole SF101 component includes
+`resumable-transfer.mjs`, `receiver.py`, `access.py`, `RESUMABLE_TRANSFERS.md`
+and `TRANSFER_SERVER.md`; the existing aliases forward all original arguments.
+For the merchant upgrade, install the matching receiver and access source,
+restart the original receiver with its retained state and secret, and preserve
+`Range`, `If-Match`, `If-Range`, `ETag`, `Content-Range`, `Content-Length` and
+identity bytes through its HTTPS proxy. Its health response identifies
+`stellar-forge.sf101.byte-ranges.v1`. The bundled SF101 guides give the exact
+server protocol and buyer state behavior; the original
+`sf66-demo-launcher/COMMERCE_PAID_FILES.md` covers the complete browser workflow.
+
+
+The matching [Python buyer guide](../sf88-operator-buyer-cli/python/README.md)
+provides the same retained download state and reset operations for the existing
+Python SDK and CLI. The joined source changes are the
+[original receiver and buyer transfer implementation](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1103)
+and [original Python consumer integration](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1118).
 
 ## Operate a multi-resource buyer runbook
 
@@ -890,6 +1222,84 @@ the host's private operator listener. The existing outbox API stays at
 expose the original worker and shared same-event recovery functions. Follow the
 included workspace guide for mounting, allowed origins and lifecycle ownership.
 
+## Deliver paid SSE and NDJSON streams
+
+The existing seller, upstream and operations commands support finite streamed
+responses. The original native payment flow determines when generation starts:
+authorization completes and validates the source before settlement; an explicitly
+offered and buyer-approved `upfront` flow settles before live generation. The
+same request owns the source, deadlines, backpressure, cancellation and cleanup.
+
+Embedded Node applications can return the original response descriptor through
+the installed public import:
+
+```js
+import { streamingResponse } from '@tokenjunkielabs/starforge-merchant/seller/streaming';
+
+export async function events(context) {
+  return streamingResponse({
+    format: 'sse',
+    body: generateApplicationEvents(context.signal),
+    maxBytes: 33554432,
+    maxDurationMs: 120000,
+    idleTimeoutMs: 30000,
+  });
+}
+```
+
+`generateApplicationEvents` is the application's async byte iterable and must
+stop its source when the original signal is aborted. It emits complete UTF-8 SSE
+records; NDJSON applications select `format: 'ndjson'`. Existing embedded hosts
+also receive `streamingResponse` from `seller/embedded`. The included
+`sf30-seller-sdk/STREAMING.md` defines the complete descriptor, source-close hook,
+payment-flow selection, limits and operator lifecycle.
+
+### Operate an Exa Answer customer deployment
+
+The installed source includes a fixed Exa Answer product and its independent
+buyer. Start from the supplied merchant configuration in your application:
+
+```sh
+SF_STREAM_SOURCE="$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009"
+EXA_ANSWER_HOME=/absolute/private/research-merchant
+install -d -m 700 "$EXA_ANSWER_HOME"
+cp "$SF_STREAM_SOURCE/sf30-seller-sdk/examples/exa-answer-service.json" "$EXA_ANSWER_HOME/service.json"
+cp "$SF_STREAM_SOURCE/sf30-seller-sdk/examples/exa-answer-upstreams.json" "$EXA_ANSWER_HOME/upstreams.json"
+```
+
+Set the merchant's actual HTTPS origin, Stellar network, asset, recipient and
+fixed atomic price in `service.json`. Configure the existing native dependencies
+and facilitator, and supply `EXA_API_KEY` through the merchant's private server
+environment. Its existing Exa account retains normal API usage billing.
+`EXA_FACILITATOR_URL` names the selected native facilitator. Then launch the
+original seller and operations workspace:
+
+```sh
+EXA_ANSWER_UPSTREAMS="$EXA_ANSWER_HOME/upstreams.json" \
+npx --no-install starforge operations \
+  --operations-port 8424 --history-dir "$EXA_ANSWER_HOME/history" -- \
+  --config "$EXA_ANSWER_HOME/service.json" \
+  --handlers "$SF_STREAM_SOURCE/sf30-seller-sdk/examples/exa-answer-handlers.mjs" \
+  --facilitator "$EXA_FACILITATOR_URL" --port 8423 \
+  --max-in-flight 16 --drain-grace-ms 180000
+```
+
+The merchant admits only the defined query input before native payment and
+creates the fixed private `/answer` request with the source model, streaming and
+text policy. The included `sf30-seller-sdk/EXA_ANSWER.md` covers configuration,
+deployment, customer acceptance, source billing and delivery recovery.
+
+The public `@tokenjunkielabs/starforge-merchant/buyer/node` import supplies the
+same `Buyer` and `BuyerResult` APIs. Select a reviewed `requestTimeoutMs` and
+`responseFile.stream` in the original operation; the Node client retains the
+capture inside its private operation directory. `result.events()` or
+`result.ndjson()` verifies and reads that saved output. After interruption,
+recover the same intent and explicitly select the complete-record prefix with
+`allowPartial`; its original payment and delivery state remain available.
+The included `sf88-operator-buyer-cli/node/STREAMS.md` explains these operations,
+and `node/examples/exa-answer.mjs` provides review, execution, answer/citation
+consumption and reopening in one runnable customer workflow.
+
 ## Give customers a usable client
 
 Save the running seller's OpenAPI document using its printed listener address,
@@ -1181,6 +1591,116 @@ approval and reconnect contracts are included in
 component includes its child host, which redirects application output and
 direct compiler stdout writes to stderr while keeping stdout for MCP messages.
 
+## Install and recover a merchant host
+
+The installed `merchant-host` command runs the original SF99 deployment and
+maintenance implementation. It supports the existing API seller, order-bound
+paid-file checkout/receiver/delivery group, and the retained seller with its
+existing signed discovery identity. Keep the selected toolkit installation
+immutable, with merchant state and secrets outside it. Generate this bundle on
+the intended Linux host: its runtime and source paths refer to that installation.
+
+Use the host's existing unprivileged merchant account, Node 22+, systemd, Caddy 2
+and util-linux `flock`. Python 3.11+ is also required by the paid-file profile and
+Python application releases. Native operation uses the original SDK dependencies
+and the merchant's actual facilitator and payment terms. The host generator
+does not install those system tools, provision credentials or execute payments.
+
+For a retained merchant, stage and activate its actual fixed seller port through
+`starforge releases`. Keep that store and the already prepared discovery setup
+as separate private directories under the same state root. Inspect the active
+generation and original public identity:
+
+```sh
+npx --no-install starforge releases status --store /private/merchant/state/releases
+npx --no-install starforge releases catalog-inspect \
+  --store /private/merchant/state/releases --setup /private/merchant/state/discovery
+```
+
+Save a private host plan using that exact generation and existing service
+account. This example assumes the retained release already selects native
+operation; use `challenge` when that original runtime is challenge-only:
+
+```json
+{
+  "schema": "stellar-forge.merchant-host.v1",
+  "merchant": "report-merchant",
+  "serviceUser": "stellar-merchant",
+  "kind": "release",
+  "mode": "native",
+  "privateRoot": "/private/merchant/state",
+  "release": {
+    "store": "/private/merchant/state/releases",
+    "expectedGeneration": 1
+  },
+  "discovery": { "setup": "/private/merchant/state/discovery" },
+  "environmentFile": "/private/merchant/config/service.env",
+  "ports": { "discovery": 8473 }
+}
+```
+
+The seller port, application, facilitator and lifecycle come from the retained
+release. Omit `discovery` and `ports.discovery` to install a retained seller
+alone. The original [host guide](../sf99-merchant-deploy/README.md) gives the API
+and paid-file plans and the supported retained-source settings.
+
+```sh
+npx --no-install starforge merchant-host inspect --plan /private/merchant/host.json
+npx --no-install starforge merchant-host generate \
+  --plan /private/merchant/host.json --out /private/deployments/report-001
+npx --no-install starforge merchant-host check --bundle /private/deployments/report-001
+```
+
+Read the generated `RUNBOOK.md`. It contains the exact account ownership,
+root-owned service-readable bundle permissions, original unit installation,
+existing Caddy import and reload, and component readiness commands. Stop a
+foreground console/MCP owner before starting the installed original service
+group. Configure the merchant's real DNS and HTTPS ingress using that runbook.
+After installing and starting its declared group, inspect local and public
+operation through the same command:
+
+```sh
+npx --no-install starforge merchant-host smoke --bundle /private/deployments/report-001
+npx --no-install starforge merchant-host smoke --bundle /private/deployments/report-001 --public
+```
+
+The retained profile checks original process/source identity and exposes only
+the original merchant route/method pairs, public documentation, discovery reads
+and exact offer export. Its generated runbook also gives original publication,
+withdrawal and private cache commands. Restart reopens the same signing key and
+catalog journal; an unchanged listing requires no new publication.
+
+The same original command carries encrypted backup and restored-state cutover:
+
+```sh
+npx --no-install starforge merchant-host maintenance template
+npx --no-install starforge merchant-host maintenance inspect --plan /private/merchant/maintenance.json
+npx --no-install starforge merchant-host maintenance backup \
+  --plan /private/merchant/maintenance.json --id before-upgrade
+npx --no-install starforge merchant-host maintenance migrate \
+  --plan /private/merchant/maintenance.json --id move-stores \
+  --destination /private/restored/report-001
+```
+
+Fill the original template with the actually installed bundle, imported Caddy
+fragment, declared writer units and private operation root. Provision its named
+passphrase through the private operator environment. Follow the included
+[maintenance guide](../sf99-merchant-deploy/MAINTENANCE.md) for retained
+`status`, `resume`, precommit `rollback`, external-writer templates and the
+returned next-generation plan. Migration pauses this merchant, drains its
+original components, verifies the encrypted snapshot and resumes the restored
+state while preserving other merchants on the shared proxy. The retained
+profile rebases the store/setup selections and preserves release, key and
+journal bytes. The existing API profile owns absolute upstream-idempotency
+path rebasing. Credentials keep their separate original recovery procedure.
+
+Applications that operate this same host workflow can import `prepare`,
+`generate` and `checkBundle` from `@tokenjunkielabs/starforge-merchant/merchant/host`,
+and `runMaintenance` from
+`@tokenjunkielabs/starforge-merchant/merchant/host-maintenance`.
+These are the original implementations used by the installed command and do
+not create another supervisor or recovery engine.
+
 ## Operate several merchants
 
 The fleet commands package the existing merchant gateway and its private
@@ -1334,7 +1854,45 @@ no ClickHouse JavaScript driver. Source configuration, complete examples and the
 query contract are included at
 `source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/README.md`.
 
-Start with its `examples/source.json` and `examples/merchant-plan.json`. In the
+For a retained browser workflow, set those source environment variables in the
+launching terminal and open a private workspace:
+
+    npx --no-install starforge clickhouse-workspace \
+      --state /private/clickhouse-workspace --port 8443
+
+Open the complete private URL printed by the original server. **Source & offers**
+loads the existing source and merchant-plan JSON files, edits approved SQL and
+typed input declarations, and retains both with every complete ordered payment
+option. Each save compares the revision actually opened by that editor; another
+window cannot silently replace current work. Actual connection values remain in
+the server environment.
+
+**Native review** displays the real ClickHouse version and zero-row result
+schema, the original typed parameter contract, bounded private previews and the
+compiled public offers. Review those queries and all payment terms, then choose
+**Prepare merchant**. The original preparer creates its normal service and
+generated client in an immutable retained folder attached to that revision and
+review. **Resume preparation** continues the same interrupted preparation.
+
+**Prepared merchants** starts and drains the original seller, opens its original
+customer API, operations and availability interfaces, and downloads the
+generated customer client or OpenAPI. The browser verifies each download's
+returned SHA-256. SQL, probe values, private source and credential references are
+excluded from the fixed customer archive. Restart the same workspace command to
+reopen saved revisions, reviews and prepared merchants; restarting does not
+automatically launch a seller.
+
+The existing native facilitator is selected with `--facilitator HTTPS_URL` and the
+same payment dependencies described below. The default serves the original
+402 challenges. The workspace needs the standard Linux flock and tar utilities;
+it adds no JavaScript driver or frontend build. Its complete guide is
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/workspace/README.md`.
+Embedding applications import `startClickHouseWorkspace` from
+`@tokenjunkielabs/starforge-merchant/seller/clickhouse/workspace`, or
+`createClickHouseWorkspace` from the adjacent `/model` package subpath.
+
+For direct command-line preparation, start with its `examples/source.json` and
+`examples/merchant-plan.json`. In the
 private source, select the database, approved named queries, public columns,
 typed parameters and actual preflight probes. The three `endpointEnv`, `userEnv`
 and `passwordEnv` names resolve through the host's existing secret setup.
@@ -2311,6 +2869,121 @@ facilitator options for native execution. Use the packaged
 preview interface. The `./seller/python` and `./seller/python/config` package
 subpaths expose the same runtime and configuration functions to applications.
 
+### Author and operate a Python merchant workspace
+
+Use Node 22.13 or later for the original workspace's built-in SQLite store and
+the Python interpreter selected by the merchant declaration. The existing SF30
+and SF82 source components include its browser, retained source model, private
+preview runner and native release lifecycle. No additional workspace dependency
+or browser build is required.
+
+Select the existing declaration and, when the application imports local helpers,
+its explicit source root. Keep the new workspace outside that source root:
+
+```sh
+npx --no-install starforge python-workspace create \
+  --workspace /private/python-authoring \
+  --config /private/application/merchant.json \
+  --python-root /private/application --label "Python merchant"
+npx --no-install starforge python-workspace serve \
+  --workspace /private/python-authoring --port 0
+```
+
+Open the printed operator URL. The browser binds to loopback and uses its native
+token and origin boundary. Create and import require new destination directories.
+Omitting `--python-root` captures only the original entry module. Selecting it
+retains the original permitted helpers/assets: at most 512 files and 32 MiB,
+with the original 8 MiB asset and 2 MiB entry limits.
+
+Use **Application** and **Functions & terms** to edit retained source, the entry
+module and complete raw declaration. The structured function editor preserves
+fields that do not have their own form controls. Saving creates an immutable
+revision with the expected current head; an intermediate declaration retains
+the original compiler diagnostic. Historical revisions remain read-only until
+an explicit restore creates another revision.
+
+**Try a function** executes the selected saved source with explicit input through
+the original Python workers. Private preview is application execution outside
+the customer payment request path. Its retained operation ID binds the exact
+revision, function and input; replay returns the same saved operation. Complete
+result bytes and native pool/shutdown details remain downloadable. Creating,
+editing, inspecting and staging source do not import the Python application.
+
+The equivalent terminal preview uses the saved revision ID from `status` or the
+browser and an existing JSON input file:
+
+```sh
+npx --no-install starforge python-workspace status --workspace /private/python-authoring
+npx --no-install starforge python-workspace preview \
+  --workspace /private/python-authoring --revision r-saved-revision-id \
+  --function summarize --input /private/summary-input.json \
+  --operation summary-preview-001 --out /private/new-summary-result.json
+```
+
+In **Releases**, stage a selected revision under a new native release ID, inspect
+its retained source, and compare it with another release or no previous release.
+Activate using the displayed original selection generation, then run the
+selected release. Activation selects source; restarting changes this console's
+owned running instance. The original generation, stop, drain and rollback
+semantics apply. The terminal stage and first-release comparison are:
+
+```sh
+npx --no-install starforge python-workspace stage \
+  --workspace /private/python-authoring --revision r-saved-revision-id \
+  --id python-001 --port 8423
+npx --no-install starforge python-workspace diff \
+  --workspace /private/python-authoring --to python-001
+```
+
+The example stages the original challenge profile. Select the actual native
+`--facilitator` when staging a merchant that should execute paid requests.
+Without one, its native runtime is `CHALLENGE_ONLY` and imports no Python app.
+The browser's customer handoff exports the original client from the owned
+running seller's `/_seller/openapi.json`; its JavaScript, declarations, OpenAPI,
+package metadata and guide remain retained under an explicit export name.
+
+The browser commits local drafts and exact pending mutations to IndexedDB under
+the immutable workspace ID. Reopening retains unsaved edits and source-bound
+preview outcomes. An unfinished preview whose owner ended becomes interrupted;
+it is not automatically executed again. Interrupting the foreground console or
+preview waits for its owned original workers and seller manager to close.
+
+Export the full history and reopen it at a new path:
+
+```sh
+npx --no-install starforge python-workspace export \
+  --workspace /private/python-authoring --out /private/python-handoff.json
+npx --no-install starforge python-workspace import \
+  --workspace /private/python-reopened --bundle /private/python-handoff.json
+npx --no-install starforge python-workspace serve \
+  --workspace /private/python-reopened --port 0
+```
+
+The original portable bundle retains raw declarations, source/output blobs,
+all revisions and previews, native release files and selection history, stage
+mappings and completed customer exports. Import verifies retained bytes and
+source hashes; the reopened runtime is stopped. Old absolute source paths are
+not refreshed on the new host. The existing 256 MiB bundle limit leaves all
+history available in the original local workspace if an export is too large.
+
+Applications can embed the same model and console through the maintained public
+entries:
+
+```js
+import { createWorkspace, openWorkspace, importWorkspace }
+  from '@tokenjunkielabs/starforge-merchant/seller/python/workspace';
+import { startPythonWorkspace }
+  from '@tokenjunkielabs/starforge-merchant/seller/python/workspace/server';
+
+const consoleServer = await startPythonWorkspace('/private/python-authoring', {port: 0});
+console.log(consoleServer.operatorUrl);
+// Await consoleServer.close() when the owning application shuts down.
+```
+
+The included `sf30-seller-sdk/python/workspace/README.md` documents the original
+source patches, complete CLI, retained operation states and HTTP API. The
+installed command forwards directly to that original entrypoint.
+
 ## Turn Cube reports into a merchant
 
 The installed `cube-onboarding` command uses the original Cube metadata capture,
@@ -2411,6 +3084,93 @@ The module also exports `readSubQueryMerchantBundle` and
 `compareSubQueryMerchantSchemas` for retained-package and in-memory schema review.
 The included `sf105-subquery-graphql-merchant/onboarding/REVISIONS.md` documents
 their exact arguments, return values, compatibility statuses and retained files.
+
+### Deploy the reviewed GraphQL merchant
+
+The installed `graphql-deployment` command uses the original deployment compiler
+over a complete reviewed merchant directory, including the `merchant/` output
+of the revision workflow. It reopens the original manifest and retained files,
+recompiles the served schema, queries and plan, and prepares the original SF82
+release inputs and SF99 host handoff. Use the same original pinned GraphQL
+dependency and `doctor --feature graphql` check described above.
+
+Prepare on the intended host or at its intended absolute source/configuration
+paths: the native release and host retain those paths. Use new destinations with
+existing parents:
+
+```sh
+npx --no-install starforge graphql-deployment prepare \
+  --merchant /private/graphql-revision/merchant \
+  --directory /private/graphql-deployment-001
+npx --no-install starforge graphql-deployment inspect \
+  --directory /private/graphql-deployment-001
+```
+
+An explicitly selected same-host HTTP GraphQL backend uses the original
+`--allow-loopback-upstream` preparation option. Preparation and inspection
+retain the original adapter identity, approved queries, exact ordered payment
+choices and credential names. They make no upstream request or credential-value
+read. The prepared directory includes the unchanged merchant package, named
+handler entry, original SF61 release inputs, source identity and `RUN.md`.
+
+Initialize a new original release store once, or use the existing operator
+store. Stage and inspect the same prepared source through installed commands:
+
+```sh
+npx --no-install starforge releases init --store /private/graphql-releases
+npx --no-install starforge graphql-deployment stage \
+  --directory /private/graphql-deployment-001 \
+  --store /private/graphql-releases --id graphql-001 --port 8423
+npx --no-install starforge releases inspect \
+  --store /private/graphql-releases --id graphql-001
+npx --no-install starforge releases diff \
+  --store /private/graphql-releases --to graphql-001
+npx --no-install starforge releases console \
+  --store /private/graphql-releases --port 8425
+```
+
+The example stages a challenge profile. Supply the actual selected
+`--facilitator` to stage the existing native merchant, and provide any named
+GraphQL credential in the launching environment. Use the original release
+console or fleet for selection, activation, run, stopping and rollback. Their
+current generation and instance ownership stay authoritative; a prepared
+deployment does not start another supervisor. All original ordered payment
+choices retain their atomic amount strings and complete native fields.
+
+For the original Linux host path, supply its normal host-settings JSON, then
+prepare the existing installation:
+
+```sh
+npx --no-install starforge graphql-deployment host \
+  --directory /private/graphql-deployment-001 \
+  --plan /private/graphql-host-settings.json \
+  --destination /private/graphql-host-001
+```
+
+The compiler supplies the inspected API config and handler paths to SF99.
+Select the native service user/group, private root, environment-file path,
+ports and actual facilitator in the host settings. If queries name a credential,
+the original host requires its private environment file before installation.
+Use the generated `installation/RUNBOOK.md` for the existing host check,
+service-account access, Caddy/systemd installation, lifecycle, recovery and
+public smoke workflow. Choose the release-store or host lifecycle appropriate
+to the installation; their ports must not overlap.
+
+The private GraphQL workspace includes the original browser deployment flow.
+Its retained merchant and deployment identities reopen through the same APIs.
+Applications can use the compiler's structured results through:
+
+```js
+import {
+  prepareSubQueryDeployment, inspectSubQueryDeployment,
+  stageSubQueryDeployment, prepareSubQueryHost,
+} from '@tokenjunkielabs/starforge-merchant/seller/graphql/deployment';
+```
+
+Use `sf105-subquery-graphql-merchant/deployment/README.md` for native host settings,
+exact returned paths/identities, preparation limits and release representation.
+The maintained package includes the original deployment compiler and browser
+source alongside their SF30, SF61, SF82 and SF99 dependencies.
 
 ## Connect a WooCommerce checkout
 
@@ -2579,6 +3339,11 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
   --out /absolute/new-release-directory --ref HEAD
 ```
 
+For partial-clone acquisition, cached batch reads, offline rebuilding and native
+phase progress, use the [release-building guide](BUILDING.md). The final receipt
+includes source acquisition counts and timing alongside the original archive
+identity.
+
 This packaging command needs Node, npm and Git. It reads only the chosen commit
 through Git, independently of modified or untracked worktree files. It copies
 explicit product components and their required shared schema/Python modules,
@@ -2645,6 +3410,58 @@ configuration review, `./merchant/recipient-readiness` for
 `AssetRegistry`. The reviewer evaluates the exact amount on every call and its
 `validate(terms, registry)` method returns the original SF16 accepted terms with
 the corresponding receiving result.
+
+### Keep receiving reviews in the operator browser
+
+Open the receiving desk with the existing installed command:
+
+```sh
+npx --no-install starforge merchant-readiness workspace \
+  --directory /private/merchant/receiving-desk --port 8408
+```
+
+The parent directory must exist. The command creates or reopens the same private
+receiving directory and prints its loopback browser URL. Save the merchant's actual
+seller JSON and its optional asset/RPC maps, inspect the compiled payment choices,
+and choose **Run live review**. Each option keeps its exact advertised amount,
+network, token, recipient and the original receiving action. Saved history supports
+comparison, offline replay of a completed capture, and complete JSON export/import.
+The installed `source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/RECEIVING_DESK.md`
+covers configuration, account actions, cancellation, retained captures and recovery.
+
+One process owns a receiving directory. Normal shutdown drains an accepted review
+and releases the original lease; queued requests resume when that directory reopens.
+Keep the private directory outside `node_modules` so installed source updates retain
+the merchant's configurations and history. Live reads use the existing optional
+Stellar SDK and operator-selected RPC environment. Replay consumes the original
+capture's resolved endpoints and response bytes after that environment is removed.
+
+An application can open the same standalone desk through its public server entry:
+
+```js
+import { startReceivingWorkspace } from
+  '@tokenjunkielabs/starforge-merchant/merchant/receiving-server';
+
+const receiving = await startReceivingWorkspace({
+  directory: '/private/merchant/receiving-desk',
+  port: 8408,
+  basePath: '/merchant/receiving',
+});
+console.log(receiving.url);
+// In the application's shutdown handler:
+await receiving.close();
+```
+
+For an existing operator listener,
+`@tokenjunkielabs/starforge-merchant/merchant/receiving-workspace` exports
+`openReceivingWorkspace`; the adjacent `merchant/receiving-server` entry exports
+`createReceivingWorkspaceHandler({workspace, origins, basePath, token})`. Pass that
+one controller to the handler, register the operator's exact allowed origins, and
+mount before body parsing so the handler owns its bounded JSON input. The handler
+returns `false` for paths outside its mount. The host retains the controller's
+lifetime and closes its original lease with `await workspace.close()` during
+shutdown. Controller integrations can retain IDs for profile creation, imports and
+review requests; equal retries recover the original saved objects.
 
 The existing facilitator command also provides RPC readiness and shared signer
 ownership from the same native implementation:

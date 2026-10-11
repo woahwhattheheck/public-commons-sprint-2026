@@ -6,6 +6,7 @@ import {lstat, mkdir, open, realpath, rename, unlink} from 'node:fs/promises';
 import {dirname, isAbsolute, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {config, execution, need, InputError} from './config.mjs';
+import {MAX_REQUEST_BODY_BYTES} from './request-body.mjs';
 import {openQueue} from './queue.mjs';
 import {openWorkspace} from './workspace.mjs';
 import {resolveBuyerProxy} from '../sf31-buyer-client/public-transport.mjs';
@@ -104,7 +105,7 @@ export async function finalizeOriginalAttempt({configurationPath,configSha256,in
   need(HASH.test(configSha256??'')&&typeof intentId==='string'&&
     /^[A-Za-z0-9._:-]{1,160}$/.test(intentId)&&
     (bodySha256===null||typeof bodySha256==='string'&&HASH.test(bodySha256))&&
-    Number.isSafeInteger(bodyBytes)&&bodyBytes>=0&&bodyBytes<=1_048_576&&
+    Number.isSafeInteger(bodyBytes)&&bodyBytes>=0&&bodyBytes<=MAX_REQUEST_BODY_BYTES&&
     (bodySha256!==null||bodyBytes===0)&&typeof attemptStartedAt==='string'&&
     Number.isFinite(Date.parse(attemptStartedAt)),'INBOX_ATTEMPT_METADATA_INVALID');
   need(Boolean(outbox)===Boolean(merchantRoute),'OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER');
