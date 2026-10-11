@@ -17,10 +17,12 @@ Open the exact printed browser URL. Select actual members, compose named reports
 review original offers, save/reopen versions and export original seller packages.
 Credentials stay in the launch environment. Probe reads one saved report example
 through the original Cube handler. Buyer preparation uses the original SF88 flow.
-The saved metadata snapshot remains fixed; use a new workspace for changed /meta.`;
+Use Schema refresh to capture/import changed /meta, review report decisions and
+save a new immutable version. Earlier versions, packages and buyer history remain.`;
 const assets = new Map([
   ['/', ['index.html', 'text/html; charset=utf-8']],
   ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+  ['/schema-refresh.mjs', ['schema-refresh.mjs', 'text/javascript; charset=utf-8']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
 ]);
 function json(res, status, value) {
@@ -28,13 +30,13 @@ function json(res, status, value) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'content-length': body.length });
   res.end(body);
 }
-async function requestBody(req) {
+async function requestBody(req, max = 1024 * 1024) {
   if (!/^application\/json(?:;\s*charset=utf-8)?$/i.test(req.headers['content-type'] ?? ''))
     throw Object.assign(new TypeError('Send application/json'), { status: 415 });
   const parts = []; let total = 0;
   for await (const part of req) {
     total += part.length;
-    if (total > 1024 * 1024) throw Object.assign(new RangeError('Merchant plan exceeds 1 MiB'), { status: 413 });
+    if (total > max) throw Object.assign(new RangeError('Request exceeds the permitted file size'), { status: 413 });
     parts.push(part);
   }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(parts))); }
@@ -49,7 +51,13 @@ const fields = (value, allowed) => {
 export async function startCubeWorkbench(options = {}) {
   const { port = 0, ...modelOptions } = options;
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('port must be 0–65535');
-  const model = await openCubeWorkbench(modelOptions), token = randomBytes(32).toString('base64url');
+  const model = await openCubeWorkbench(modelOptions);
+  try { return await listenCubeWorkbench(model, port); }
+  catch (error) { await model.close().catch(() => {}); throw error; }
+}
+
+async function listenCubeWorkbench(model, port) {
+  const token = randomBytes(32).toString('base64url');
   const tokenBytes = Buffer.from('Bearer ' + token);
   let origin, closing = false, pending = Promise.resolve();
   const mutate = operation => {
@@ -81,7 +89,8 @@ export async function startCubeWorkbench(options = {}) {
       let result;
       if (req.method === 'GET') {
         if (url.pathname === '/api/bootstrap') result = { ...model.bootstrap(), runtimeRoot: fileURLToPath(new URL('../../', import.meta.url)) };
-        else if (url.pathname === '/api/members') result = model.members({
+        else if (url.pathname === '/api/members') result = await model.metadataMembers({
+          metadataId: url.searchParams.get('metadataId') ?? undefined,
           query: url.searchParams.get('query') ?? '', kind: url.searchParams.get('kind') ?? '',
           cube: url.searchParams.get('cube') ?? '', offset: Number(url.searchParams.get('offset') ?? 0),
           limit: Number(url.searchParams.get('limit') ?? 100),
@@ -89,6 +98,14 @@ export async function startCubeWorkbench(options = {}) {
         else if (url.pathname === '/api/versions') result = await model.listVersions({
           before: url.searchParams.get('before') ?? '', limit: Number(url.searchParams.get('limit') ?? 20),
         });
+        else if (url.pathname === '/api/metadata') result = model.listMetadata({
+          offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 20),
+        });
+        else if (/^\/api\/metadata\/[a-z0-9-]+$/.test(url.pathname)) result = await model.metadataInfo(url.pathname.split('/').at(-1));
+        else if (url.pathname === '/api/refreshes') result = await model.listRefreshes({
+          offset: Number(url.searchParams.get('offset') ?? 0), limit: Number(url.searchParams.get('limit') ?? 20),
+        });
+        else if (/^\/api\/refreshes\/[a-z0-9-]+$/.test(url.pathname)) result = await model.inspectRefresh(url.pathname.split('/').at(-1));
         else if (/^\/api\/versions\/[a-z0-9-]+$/.test(url.pathname)) result = await model.inspectVersion(url.pathname.split('/').at(-1));
         else if (/^\/api\/exports\/[a-z0-9-]+$/.test(url.pathname)) result = await model.inspectExport(url.pathname.split('/').at(-1));
         else if (url.pathname.startsWith('/api/files/')) {
@@ -100,9 +117,21 @@ export async function startCubeWorkbench(options = {}) {
           res.end(file.bytes); return;
         } else return json(res, 404, { error: 'Not found' });
       } else {
-        const body = await requestBody(req);
-        if (url.pathname === '/api/review') { fields(body, ['plan']); result = model.preview(body.plan); }
-        else if (url.pathname === '/api/versions') { fields(body, ['plan']); result = await mutate(() => model.save(body.plan)); }
+        const body = await requestBody(req, url.pathname === '/api/metadata/import' ? 23 * 1024 * 1024 : 1024 * 1024);
+        if (url.pathname === '/api/review') { fields(body, ['plan', 'metadataId']); result = await model.previewFor(body.plan, body.metadataId); }
+        else if (url.pathname === '/api/versions') { fields(body, ['plan', 'metadataId']); result = await mutate(() => model.save(body.plan, { metadataId: body.metadataId })); }
+        else if (url.pathname === '/api/metadata/import') {
+          fields(body, ['name', 'label', 'base64']); result = await mutate(() => model.importMetadata(body));
+        } else if (url.pathname === '/api/metadata/capture') {
+          fields(body, ['baseVersion', 'label', 'metaPath']); result = await mutate(() => model.captureMetadata(body));
+        } else if (url.pathname === '/api/refresh/impact') {
+          fields(body, ['baseVersion', 'metadataId', 'query', 'offset', 'limit']); result = await model.refreshImpact(body);
+        } else if (url.pathname === '/api/refresh/review') {
+          fields(body, ['baseVersion', 'metadataId', 'operator', 'decisions', 'previousReview']);
+          result = await mutate(() => model.reviewRefresh(body));
+        } else if (url.pathname === '/api/refresh/apply') {
+          fields(body, ['reviewId', 'reviewSha256']); result = await mutate(() => model.applyRefresh(body));
+        }
         else if (url.pathname === '/api/export') { fields(body, ['version']); result = await mutate(() => model.exportVersion(body.version)); }
         else if (url.pathname === '/api/probe') { fields(body, ['version', 'reportId']); result = await mutate(() => model.probe(body.version, body.reportId)); }
         else if (url.pathname === '/api/buyer') {
@@ -126,7 +155,7 @@ export async function startCubeWorkbench(options = {}) {
     closing = true;
     const stopped = new Promise((done, fail) => server.close(error => error ? fail(error) : done()));
     server.closeIdleConnections();
-    await pending; await stopped;
+    try { await pending; await stopped; } finally { await model.close(); }
   })();
   return { server, model, origin, url: origin + '/#' + token, close };
 }

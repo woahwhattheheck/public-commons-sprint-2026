@@ -146,7 +146,7 @@ async function invoke(context,sourcePath,{signal,node=process.execPath,environme
     '--expected-request-sha',snapshot.expectedRequestSha256,
     ...(verifyOnly?['--verify-only']:['--rpc-endpoint',resolveRpcEndpoint(snapshot.expected.network,active.manifest.signer.rpcUrl)]),
     ...(rpcProxyUrl===undefined?[]:['--rpc-proxy-env','SF36_RPC_PROXY_URL'])];
-  const result=await runOriginalFinalityWorker(owner.python,args,privileged.operatorEnvironment,signal,rpcProxyUrl);
+  const result=await runOriginalFinalityWorker(owner.python,args,privileged.operatorEnvironment,signal,rpcProxyUrl,environment);
   need(FINALIZED.has(result.outcome),safeReason(result));
   return recoveryView(result,snapshot);
 }

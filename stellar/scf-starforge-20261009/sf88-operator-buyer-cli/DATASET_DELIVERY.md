@@ -104,3 +104,18 @@ native session instead of rescanning all prior pages for every append.
 The module API is `exportQueueDataset({root, intents, destination})` from
 `queue-dataset.mjs`. `readDatasetSelection(path)` reads the private CLI selection
 format. No environment keys are required for this export.
+
+## Installed source and private files
+
+The SF88 dataset delivery adapter also serves installed buyer clients. It reads
+the original SF100 CLI from the installed source tree and records the Git blob
+fingerprint of those bytes. Package managers may hardlink that public source
+file; an installed buyer can deliver, read, copy and reopen a retained dataset
+without copying the whole runtime into separate regular files first. The source
+must still be a regular file at its canonical path, within the source size limit.
+Symlink aliases are refused.
+
+Private acquisition pages, evidence, delivery markers and exported files keep
+their existing single-link and private-permission requirements. Sharing public
+package source does not change the custody of a customer's saved data. Reopening
+and copying a completed delivery use its retained pages and manifest.

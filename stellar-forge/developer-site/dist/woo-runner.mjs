@@ -13,7 +13,8 @@ const SCHEMA = 'stellar-forge.frontdoor-woo-packet.v1';
 const SOURCE = 'stellar/scf-starforge-20261009';
 const WOO = 'sf104-woocommerce-merchant-bridge';
 const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admission.php',
-  'merchant-console.php','merchant-console.js','merchant-console.css','OPERATIONS.md'];
+  'merchant-console.php','merchant-console.js','merchant-console.css','OPERATIONS.md',
+  'merchant-operator.php','NATIVE_REVIEW.md'];
 const ENTRIES = {seller:WOO + '/seller.mjs', buyer:WOO + '/buyer.mjs',
   operator:'sf88-operator-buyer-cli/cli.mjs', queue:'sf88-operator-buyer-cli/queue-cli.mjs',
   worker:'sf98-merchant-delivery/worker.mjs', status:'sf98-merchant-delivery/deliver.mjs'};

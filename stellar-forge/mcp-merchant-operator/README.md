@@ -17,10 +17,20 @@ the same authenticated HTTP transport as the existing SF32 buyer bridge.
 The seller runs on the operator's Linux or POSIX host. This starts the configured
 merchant service; a reverse proxy or deployment remains the host's existing
 configuration. Native payments use the original seller's configured facilitator
-and trusted application. The MCP tools never request a paid resource or accept
-wallet keys, handler paths, arbitrary file paths, target URLs or payment overrides
-as tool arguments. Owner-entered support terms may reference their existing
-consent and proposal records; those URLs are retained as text and never fetched.
+and trusted application. The host selects filesystem directories, executable
+modules, credentials and seller runtime settings. The S3 authoring tools edit
+the original source object selection, payment terms and public origin as saved
+revisions; the original source and offer compilers validate those fields.
+Other release operations select host-declared source aliases and retained IDs.
+Owner-entered support terms may reference their existing consent and proposal
+records; those URLs are retained as text.
+
+For a provider change on an already retained merchant, attach host-configured
+facilitator aliases, review the actual native payment requirements, and stage
+the same compiled source through the original release controls. The complete
+review survives reopen and is checked at native startup. See
+[Retained facilitator workflow](../../stellar/scf-starforge-20261009/sf82-seller-pilot/FACILITATORS.md)
+for the three MCP tools, console and CLI commands.
 
 ## Review pricing and retain seller changes
 
@@ -61,6 +71,17 @@ For an existing S3 file product, initialize with
 compares, starts and rolls back the original pinned whole-file or chunk seller.
 See [S3 releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/S3_RELEASES.md)
 for private source handling, object version behavior and the original buyer handoff.
+
+For a new or changing S3 product, use
+`init-s3-workspaces --dir NEW_OPERATOR_DIRECTORY --connection S3_CONNECTION.json`.
+The same MCP provider opens the original saved browser workspace, edits complete
+revisions, selects actual object metadata, prepares the native seller and stages
+it into the same SF82 release store. The existing compare, activate, start and
+rollback operations then apply. `download-s3` retrieves that release's exact
+`objects.json` and `offers.json` for the original object buyer, with file hashes
+checked before publication and complete files reused after interruption.
+See [S3_WORKSPACE.md](S3_WORKSPACE.md) for host setup, all 13 authoring tools,
+browser handoff and customer delivery.
 
 Use Node 22+ and the complete source checkout, or the installed Starforge package
 containing the `merchant-mcp` command. The merchant's existing OpenAPI document,
@@ -445,3 +466,4 @@ tools, host configuration, replay, comparison, export and browser handoff.
 ## Retained data publication
 
 The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
+
