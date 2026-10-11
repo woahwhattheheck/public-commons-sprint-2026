@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { OperatorApprovedBuyer } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
+import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { execution, bytes, need } from './config.mjs';
 
 const codeOf = (error, fallback) => {
@@ -25,7 +26,7 @@ const reservationOf = value => {
 export async function execute(cfg, { signal, emitSummary = true, environment = process.env } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
-  const { op, owner, download:responseFile } = execution(cfg);
+  const { op, owner, download:responseFile, transport } = execution(cfg);
   const directory = await stat(cfg.evidenceDir);
   need(directory.isDirectory() && (process.platform === 'win32' ||
     (directory.mode & 0o077) === 0), 'PRIVATE_EVIDENCE_DIRECTORY_REQUIRED');
@@ -44,7 +45,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     const sign = signer.sign ?? signer.default?.sign;
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
     const buyer = new OperatorApprovedBuyer({
-      operator: { ...owner, environment }
+      operator: { ...owner, environment },
+      ...(transport === null ? {} : {fetchImpl:createPublicHttpsFetch({trustedProxy:transport})})
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');
     const recordingBuyer = {
