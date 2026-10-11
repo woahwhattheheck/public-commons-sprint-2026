@@ -6,7 +6,6 @@ import {pathToFileURL,fileURLToPath} from 'node:url';
 import {readFile,readdir} from 'node:fs/promises';
 import {readOpenAlexMerchant,merchantOpenApi,merchantReview,json,sha256,fail} from './config.mjs';
 import {startOpenAlexMerchant,openAlexNativeFactory} from './merchant.mjs';
-import {createOpenAlexSource} from './source.mjs';
 import {exportSellerClient,inspectSellerClientExport,adoptSellerClientExport} from '../developer/client-export.mjs';
 import {generateSellerClient} from '../developer/client-generator.mjs';
 import {privateDirectory,readBytes,readJson,writeBytes,writeJson,exists} from '../../sf88-operator-buyer-cli/node/store.mjs';
@@ -75,20 +74,25 @@ export async function main(args=process.argv.slice(2)){
   }
   if(!v.workspace||!v['query-id']||!v['edition-id']||!v.product)fail('Use --workspace, --query-id, --edition-id and --product.');
   const {openResearchWorkspace}=await import('../../sf88-operator-buyer-cli/research/workspace.mjs');
-  const workspace=await openResearchWorkspace(resolve(v.workspace));let source;
+  const {openResearchRetrieval}=await import('../../sf88-operator-buyer-cli/research/retrieval.mjs');
+  const workspace=await openResearchWorkspace(resolve(v.workspace));let retrieval;
   try{
-    const query=await workspace.query(v['query-id']),product=compiled.products.find(p=>p.id===v.product);
+    let retained;
+    try{retained=await workspace.edition(v['edition-id'],{records:false});}
+    catch(error){
+      if(error.code!=='ENOENT'||await exists(join(workspace.root,'editions',v['edition-id'],'edition.json')))throw error;
+    }
+    if(retained&&retained.record.queryId!==v['query-id'])fail('This edition belongs to a different saved query.',409,'EDITION_QUERY_MISMATCH');
+    const query=retained?.query??await workspace.query(v['query-id']),product=compiled.products.find(p=>p.id===v.product);
     if(!product||product.kind!=='list'||product.entity!==query.entity)fail('Choose a list product matching this query entity.');
-    await workspace.createEdition({id:v['edition-id'],queryId:query.id,queryRevision:query.revision,label:query.label});
-    source=await createOpenAlexSource(compiled,{budgetDirectory:resolve(v['budget-dir'])});
+    if(!retained)await workspace.createEdition({id:v['edition-id'],queryId:query.id,queryRevision:query.revision,label:query.label});
+    retrieval=await openResearchRetrieval({merchantConfig:resolve(v.config),budgetDirectory:resolve(v['budget-dir']),productId:v.product});
+    if(!retrieval.acceptsEntity(query.entity))fail('Choose a list product matching this query entity.');
     const result=await workspace.gatherEdition({editionId:v['edition-id'],maxPages:v['max-pages']===undefined?Infinity:numeric(v['max-pages'],undefined,1000000),
-      fetchPage:async({request,signal})=>{
-        const response=await source.request(product.id,request.parameters,{signal});
-        if(response.status!==200){const error=response.body?.error??'OPENALEX_HTTP_'+response.status;fail('OpenAlex returned '+response.status+'. Inspect the current source budget and request.',response.status,error);}
-        return {bytes:response.body,source:{kind:'OPENALEX_API',url:response.source.url,retrievedAt:response.source.retrievedAt,headers:response.headers}};
-      },onPage:({page,edition})=>{process.stderr.write(json({editionId:edition.record.id,page:page.index,records:page.records,coverage:edition.coverage}));}});
-    process.stdout.write(json({record:result.record,query:result.query,coverage:result.coverage,budget:await source.budget.snapshot()}));
-  }finally{await source?.close();await workspace.close();}
+      fetchPage:retrieval.fetchPage,
+      onPage:({page,edition})=>{process.stderr.write(json({editionId:edition.record.id,page:page.index,records:page.records,coverage:edition.coverage}));}});
+    process.stdout.write(json({record:result.record,query:result.query,coverage:result.coverage,budget:(await retrieval.snapshot()).budget}));
+  }finally{try{await retrieval?.close();}finally{await workspace.close();}}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
   main().catch(error=>{process.stderr.write(json({error:error.code??'OPENALEX_COMMAND_FAILED',message:error.message}));process.exitCode=1;});
