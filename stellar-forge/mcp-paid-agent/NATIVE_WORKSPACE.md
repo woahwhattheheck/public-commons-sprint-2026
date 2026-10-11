@@ -28,6 +28,12 @@ method. Query values and an explicit UTF-8 body can vary between requests.
 GET, HEAD, POST, PUT, PATCH and DELETE use their original SF88/SF31 behavior.
 For a body-bearing route, set its trusted Content-Type in the original workspace
 configuration and pass each request body explicitly in the tool call.
+
+If the original workspace selects an explicit merchant CONNECT transport, the
+adapter keeps that exact buyerTransport profile in every queued request. Its
+origin and selected proxy environment name remain original operator settings;
+MCP arguments cannot replace them. Discovery uses the separately selected
+original catalog transport.
 Initialize this adapter from a source review configuration without a hidden
 bodyFile or orderReference.
 

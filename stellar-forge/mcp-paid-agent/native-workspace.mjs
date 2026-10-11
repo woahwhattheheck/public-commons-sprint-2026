@@ -73,10 +73,10 @@ function https(value) {
   return url;
 }
 function binding(workspace) {
-  const {op, owner} = execution(workspace.config);
+  const {op, owner, transport} = execution(workspace.config);
   return {network:op.expect.network, scheme:op.expect.scheme, asset:op.expect.asset,
     payTo:op.expect.payTo, payer:workspace.config.trustedPayer,
-    operator:owner, signerModule:workspace.config.signerModule,
+    operator:owner, buyerTransport:transport, signerModule:workspace.config.signerModule,
     evidenceDir:workspace.config.evidenceDir};
 }
 function sameBinding(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
@@ -317,6 +317,8 @@ export async function openNativeWorkspace(directory) {
       const cfg = {...selected.draft, operator:current.config.operator,
         signerModule:current.config.signerModule, evidenceDir:current.config.evidenceDir,
         trustedPayer:current.config.trustedPayer, captureBody:false,
+        ...(current.config.buyerTransport === undefined ? {} : {
+          buyerTransport:structuredClone(current.config.buyerTransport)}),
         responseFile:{destination:join(root, 'downloads', key + '.bin'), ...manifest.response}};
       execution(cfg);
       const raw = encoded(cfg);
