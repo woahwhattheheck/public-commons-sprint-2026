@@ -617,7 +617,11 @@
     "./seller/ckan/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/model.mjs",
     "./seller/ckan/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/model.mjs",
     "./seller/ckan/publisher/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/publisher/release.mjs",
-    "./seller/mercury-feed": "./source/stellar/mercury-event-operations/starforge-feed/index.mjs"
+    "./seller/mercury-feed": "./source/stellar/mercury-event-operations/starforge-feed/index.mjs",
+    "./mpp/customer": {
+      "types": "./source/stellar/scf-starforge-20261009/mpp-charge/customer/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/mpp-charge/customer/index.mjs"
+    }
   },
   "nativePeers": {
     "@x402/core": {
