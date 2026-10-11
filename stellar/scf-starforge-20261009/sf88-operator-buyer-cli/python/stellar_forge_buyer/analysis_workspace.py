@@ -32,6 +32,7 @@ from .datasets import DatasetAcquisition
 from .dataset_changes import DatasetChanges
 from .analysis_reports import AnalysisReports
 from .analysis_exports import AnalysisExports
+from .analysis_workbooks import AnalysisWorkbooks
 from ._analysis_export_http import send_export
 from .response_tables import AnalysisResponses
 from .errors import BuyerError, StateError
@@ -159,6 +160,8 @@ class AnalysisWorkspace:
             self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
             self.exports = AnalysisExports(self.database, identity=self.identity, read_job=self._job, parse_parameters=_parameters)
             self.exports.recover_completed()
+            self.workbooks = AnalysisWorkbooks(self.database, identity=self.identity, reports=self.reports)
+            self.workbooks.recover_completed()
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -170,6 +173,7 @@ class AnalysisWorkspace:
                 return
             self._closed = True
         self.exports.close()
+        self.workbooks.close()
         self._executor.shutdown(wait=True)
         os.close(self._owner)
 
@@ -240,8 +244,9 @@ class AnalysisWorkspace:
             jobs = [dict(row) for row in db.execute("SELECT sequence,id,kind,status,created_at,finished_at,error FROM sf_analysis_jobs ORDER BY sequence DESC LIMIT 30")]
             views = database._views(db)
             reports = AnalysisReports.state(db)
+            workbooks = AnalysisWorkbooks.state(db)
         return {"schema": _SCHEMA, "workspace_id": identity, "database": str(database.path),
-                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs, "reports": reports}
+                "can_import": can_import, "sources": sources, "queries": queries, "views": views, "jobs": jobs, "reports": reports, "workbooks": workbooks}
 
     def save_query(self, name, value, *, expected_revision):
         name, spec = _name(name), _query(value)
@@ -277,7 +282,7 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "query-export", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "workbook", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
@@ -292,6 +297,8 @@ class AnalysisWorkspace:
             spec["expected_views"] = request["expected_views"]
         elif kind == "query-export":
             spec.update(self.exports.prepare(request))
+        elif kind == "workbook":
+            spec.update(self.workbooks.prepare(request))
         elif kind == "report":
             spec.update(self.reports.prepare(request))
         elif kind == "report-export":
@@ -346,6 +353,9 @@ class AnalysisWorkspace:
 
     def _execute(self, job_id, kind, spec):
         try:
+            if kind == "workbook":
+                self.workbooks.run(job_id, spec)
+                return
             if kind == "query-export":
                 self.exports.run(job_id, spec)
                 return
@@ -429,6 +439,8 @@ class AnalysisWorkspace:
                 job["result"] = self.reports._report(db, job_id)
         elif job["kind"] == "query-export":
             job["progress"] = self.exports.progress(job_id)
+        elif job["kind"] == "workbook":
+            job["progress"] = self.workbooks.progress(job_id)
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -569,6 +581,13 @@ def serve(workspace, *, port=0):
             get = lambda key, default=None: query.get(key, [default])[0]
             parts = url.path.strip("/").split("/")
             if (self.command in {"GET", "HEAD"} and len(parts) == 4
+                    and parts[:2] == ["api", "workbook-runs"] and parts[3] == "file"):
+                if set(query) != {"name"}:
+                    raise StateError("ANALYSIS_WORKBOOK_FILE_REQUIRED")
+                with workspace.workbooks.download(parts[2], get("name")) as (stream, record):
+                    send_export(self, stream, record)
+                return
+            if (self.command in {"GET", "HEAD"} and len(parts) == 4
                     and parts[:2] == ["api", "query-exports"] and parts[3] == "file"):
                 if set(query) != {"name"}:
                     raise StateError("ANALYSIS_EXPORT_FILE_REQUIRED")
@@ -576,6 +595,27 @@ def serve(workspace, *, port=0):
                     send_export(self, stream, record)
                 return
             if self.command == "GET":
+                if url.path == "/api/workbook-sources":
+                    if set(query) - {"kind", "before", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.sources(kind=get("kind", "query-export"),
+                        before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
+                if url.path == "/api/workbook-runs":
+                    if set(query) - {"before", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.history(
+                        before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
+                if len(parts) == 3 and parts[:2] == ["api", "workbooks"]:
+                    if set(query) - {"revision"}:
+                        raise StateError("ANALYSIS_WORKBOOK_REVISION_REQUIRED")
+                    return self._reply(200, workspace.workbooks.definition(parts[2],
+                        revision=int(get("revision")) if get("revision") else None))
+                if len(parts) == 4 and parts[:2] == ["api", "workbooks"] and parts[3] == "preview":
+                    if set(query) - {"revision", "sheet", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PREVIEW_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.preview(parts[2],
+                        revision=int(get("revision")) if get("revision") else None,
+                        sheet=int(get("sheet", "0")), limit=int(get("limit", "20"))))
                 if url.path == "/api/state":
                     return self._reply(200, workspace.state())
                 if url.path == "/api/query-exports":
@@ -646,6 +686,10 @@ def serve(workspace, *, port=0):
                     return self._reply(200, workspace.responses.register(body.get("name"), "object",
                         session=body.get("session"), destination=body.get("destination"),
                         format=body.get("format", "json"), expected_revision=body.get("expected_revision", 0)))
+                if len(parts) == 3 and parts[:2] == ["api", "workbooks"]:
+                    return self._reply(200, workspace.workbooks.save(parts[2], body))
+                if len(parts) == 4 and parts[:2] == ["api", "workbook-runs"] and parts[3] == "cancel":
+                    return self._reply(200, workspace.workbooks.cancel(parts[2]))
                 if url.path == "/api/activate":
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
