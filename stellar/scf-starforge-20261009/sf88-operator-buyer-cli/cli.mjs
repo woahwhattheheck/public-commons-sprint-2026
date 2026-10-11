@@ -39,7 +39,7 @@ async function discover(c) {
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
     process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
-      '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--body-file /absolute/request.json] [--content-type application/json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
+      '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--response-out /absolute/product] [--body-file /absolute/request.json] [--content-type application/json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
     process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--https-proxy http://proxy.example:8080 | --https-proxy-env HTTPS_PROXY] [--total-atomic 1000] [--daily-atomic 1000]\n' +
       '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
     return;

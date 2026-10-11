@@ -1,7 +1,7 @@
 // MIT. Private revisioned drafts for the original SF105 merchant onboarding.
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, lstat, open, readFile, readdir, rename, rm, realpath } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
+import { mkdir, lstat, open, readFile, readdir, rename, rm, realpath, link } from 'node:fs/promises';
+import { dirname, join, resolve } from 'node:path';
 
 const SCHEMA = 'stellar-forge.graphql-workspace-draft.v1';
 const NAME = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
@@ -51,9 +51,27 @@ async function writePrivate(path, text) {
   const file = await open(path, 'wx', 0o600);
   try { await file.writeFile(text, 'utf8'); await file.sync(); } finally { await file.close(); }
 }
+async function syncDirectory(path) {
+  if (process.platform === 'win32') return;
+  const directory = await open(path, 'r');
+  try { await directory.sync(); } finally { await directory.close(); }
+}
+async function createPrivate(path, text) {
+  const temporary = path + '.' + randomUUID() + '.tmp';
+  try {
+    await writePrivate(temporary, text);
+    // A no-replace hard link publishes only complete bytes. A failed write can
+    // leave a private temporary file, never a poisoned immutable revision.
+    await link(temporary, path);
+    await syncDirectory(dirname(path));
+  } finally { await rm(temporary, { force: true }); }
+}
 async function replacePrivate(path, value) {
   const temporary = path + '.' + randomUUID() + '.tmp';
-  try { await writePrivate(temporary, json(value)); await rename(temporary, path); }
+  try {
+    await writePrivate(temporary, json(value)); await rename(temporary, path);
+    await syncDirectory(dirname(path));
+  }
   finally { await rm(temporary, { force: true }); }
 }
 function validateVersion(value, id) {
@@ -72,7 +90,7 @@ export async function openWorkspaceStore(directory) {
   const packages = await privateDir(join(root, 'packages'), true);
   const lock = join(root, 'writer.json'), nonce = randomUUID();
   const owner = { schema: 'stellar-forge.graphql-workspace-writer.v1', pid: process.pid, nonce };
-  try { await writePrivate(lock, json(owner)); }
+  try { await createPrivate(lock, json(owner)); }
   catch (error) {
     if (error.code !== 'EEXIST') throw error;
     const previous = await regular(lock, 4096);
@@ -84,7 +102,7 @@ export async function openWorkspaceStore(directory) {
       // Only remove the exact observed dead-process record; never a replaced lock.
       if ((await regular(lock, 4096)).nonce !== previous.nonce) fail('Workspace ownership changed; reopen it.', 409);
       await rm(lock);
-      await writePrivate(lock, json(owner));
+      await createPrivate(lock, json(owner));
     }
   }
   let busy = false, closed = false;
@@ -134,19 +152,20 @@ export async function openWorkspaceStore(directory) {
         catch (error) { if (error.code !== 'EEXIST') throw error; await privateDir(folder); }
       }
       const now = new Date().toISOString(), revision = expectedRevision + 1;
-      const value = { schema: SCHEMA, id, revision, createdAt: previous?.createdAt ?? now,
+      let value = { schema: SCHEMA, id, revision, createdAt: previous?.createdAt ?? now,
         updatedAt: now, inputDigest: inputDigest(draft), input: draft, exports: previous?.exports ?? [] };
       if (exportRecord) value.exports = [...value.exports, exportRecord];
       const path = join(folder, revision + '.json');
       // A process crash after a version write leaves an unreferenced immutable file.
       // Its exact bytes may be adopted; divergent content is never overwritten.
-      try { await writePrivate(path, json(value)); }
+      try { await createPrivate(path, json(value)); }
       catch (error) {
         if (error.code !== 'EEXIST') throw error;
         const orphan = validateVersion(await regular(path), id);
-        if (orphan.inputDigest !== value.inputDigest || json(orphan.exports) !== json(value.exports))
+        if (orphan.revision !== revision || json(draftInput(orphan.input)) !== json(draft) ||
+            json(orphan.exports) !== json(value.exports))
           fail('An interrupted save retained a different next revision; save this draft as a new project.', 409);
-        value.createdAt = orphan.createdAt; value.updatedAt = orphan.updatedAt;
+        value = orphan;
       }
       await replacePrivate(join(folder, 'head.json'), { id, revision, inputDigest: value.inputDigest });
       return { ...value, currentRevision: revision };
