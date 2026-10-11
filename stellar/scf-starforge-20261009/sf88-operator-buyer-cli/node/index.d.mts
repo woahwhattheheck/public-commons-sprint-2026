@@ -82,6 +82,9 @@ export class Buyer {
   ready(): Promise<this>;
   operation(intentId: string): Operation;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
+  fromOperationHandoff(file: string, options: {
+    accept: number; operatorProfile?: OperatorProfile | string; signal?: AbortSignal;
+  }): Promise<Operation>;
   fromRequest(request: NativeRequest, options?: Omit<ImportOptions, 'body'>): Promise<Operation>;
   call(request: NativeRequest): Promise<BuyerResult>;
   discover(catalog: JsonObject, options?: { destination?: string; signal?: AbortSignal }): Promise<JsonObject>;
