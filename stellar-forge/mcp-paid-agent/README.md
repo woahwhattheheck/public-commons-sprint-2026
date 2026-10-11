@@ -8,7 +8,12 @@ protocol-level sessions). It connects to the existing Bazaar `/discovery/search`
 handler rather than duplicating SF-23 ranking or the SF-26 marketplace binding.
 
 Tool names: `bazaar_search`, `bazaar_describe`, `bazaar_preview`, `bazaar_execute_approved`,
-`bazaar_status`, `bazaar_cancel`.
+`bazaar_status`, `bazaar_history`, `bazaar_cancel`.
+
+The existing broker supports a [durable operator workspace](DURABILITY.md):
+saved quote history, checkpoints before side effects, restart recovery,
+an operator-module launcher and private JSON/CSV/HTML inspection. It uses Node's
+built-in SQLite on Node 22.13+ or 24; memory-only embedding remains available.
 
 - Search: source-backed discovery GET and version-independent ephemeral resource handles.
 - Describe: original input examples/schema, output declaration and complete eligible
@@ -38,8 +43,9 @@ export MCP_CLIENT_ORIGINS=http://127.0.0.1:3000
 node stellar-forge/mcp-paid-agent/serve.mjs
 ```
 
-The standalone server intentionally cannot pay. To enable authorized paid calls,
-embed `McpPaidToolBroker` in an operator-controlled application and supply both
+The configuration above cannot pay. To connect authorized paid calls, use the
+durable launcher's `MCP_OPERATOR_MODULE` described in [DURABILITY.md](DURABILITY.md),
+or embed `McpPaidToolBroker` in an operator-controlled application and supply both
 `approve(quote)` and `signPayment({resource,accepted,paymentRequired})`, using a
 canonical Stellar x402 signer and real out-of-band authorization. Protect keys
 outside MCP and bound spend using SF-36. Do not send private keys in tool calls.
@@ -141,8 +147,11 @@ might execute a side effect before payment is even required.
 
 Discovery and paid endpoints need operational authentication, DNS/rebinding
 policy, API limits and independently verified seller/capability identity before
-production deployment. In-memory quote state is per process; production workers
-need shared idempotency state/transaction reconciliation and at-rest audit records.
+production deployment. Default in-memory quote state is per process. The optional
+durable workspace preserves the same quote identities across restarts and records
+dispatch before the signed request. It does not replace the original budget ledger
+or independent transaction reconciliation. Distributed workers still need a shared
+operation/approval coordinator; this workspace has one local writer.
 
 Canonical source contracts, retrieved October 10, 2026:
 - https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle
