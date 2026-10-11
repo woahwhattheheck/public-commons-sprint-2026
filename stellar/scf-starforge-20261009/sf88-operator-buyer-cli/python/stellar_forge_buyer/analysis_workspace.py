@@ -31,6 +31,8 @@ from . import _analysis_ui
 from .datasets import DatasetAcquisition
 from .dataset_changes import DatasetChanges
 from .analysis_reports import AnalysisReports
+from .analysis_exports import AnalysisExports
+from ._analysis_export_http import send_export
 from .response_tables import AnalysisResponses
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
@@ -155,6 +157,8 @@ class AnalysisWorkspace:
             self.changes = DatasetChanges(self.database)
             self.reports = AnalysisReports(self.database, encode_cell=_cell, parse_parameters=_parameters, changes=self.changes)
             self.responses = AnalysisResponses(self.database, checkout=self.checkout, node=self.node, encode_cell=_cell)
+            self.exports = AnalysisExports(self.database, identity=self.identity, read_job=self._job, parse_parameters=_parameters)
+            self.exports.recover_completed()
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -165,6 +169,7 @@ class AnalysisWorkspace:
             if self._closed:
                 return
             self._closed = True
+        self.exports.close()
         self._executor.shutdown(wait=True)
         os.close(self._owner)
 
@@ -267,7 +272,7 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "query-export", "backup", "compare", "change-export", "report", "report-export", "response-preview", "response-import"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
@@ -280,6 +285,8 @@ class AnalysisWorkspace:
             if not isinstance(request.get("expected_views"), list):
                 raise StateError("ANALYSIS_REVIEWED_VIEWS_REQUIRED")
             spec["expected_views"] = request["expected_views"]
+        elif kind == "query-export":
+            spec.update(self.exports.prepare(request))
         elif kind == "report":
             spec.update(self.reports.prepare(request))
         elif kind == "report-export":
@@ -334,6 +341,9 @@ class AnalysisWorkspace:
 
     def _execute(self, job_id, kind, spec):
         try:
+            if kind == "query-export":
+                self.exports.run(job_id, spec)
+                return
             if kind in {"response-preview", "response-import"}:
                 result = self.responses.execute(kind, spec)
             elif kind == "import":
@@ -412,6 +422,8 @@ class AnalysisWorkspace:
         elif job["kind"] == "report" and job["result"] is not None:
             with self.database._connection(readonly=True) as db:
                 job["result"] = self.reports._report(db, job_id)
+        elif job["kind"] == "query-export":
+            job["progress"] = self.exports.progress(job_id)
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -551,9 +563,21 @@ def serve(workspace, *, port=0):
                 raise StateError("ANALYSIS_QUERY_PARAMETERS_INVALID")
             get = lambda key, default=None: query.get(key, [default])[0]
             parts = url.path.strip("/").split("/")
+            if (self.command in {"GET", "HEAD"} and len(parts) == 4
+                    and parts[:2] == ["api", "query-exports"] and parts[3] == "file"):
+                if set(query) != {"name"}:
+                    raise StateError("ANALYSIS_EXPORT_FILE_REQUIRED")
+                with workspace.exports.download(parts[2], get("name")) as (stream, record):
+                    send_export(self, stream, record)
+                return
             if self.command == "GET":
                 if url.path == "/api/state":
                     return self._reply(200, workspace.state())
+                if url.path == "/api/query-exports":
+                    if set(query) - {"before", "limit"}:
+                        raise StateError("ANALYSIS_EXPORT_PAGE_INVALID")
+                    return self._reply(200, workspace.exports.history(
+                        before=int(get("before")) if get("before") else None, limit=int(get("limit", "25"))))
                 if len(parts) == 3 and parts[:2] == ["api", "response-source"]:
                     return self._reply(200, workspace.responses.describe(parts[2], int(get("revision", "0")),
                         collection=get("collection"), sse_data=get("sse_data", "text")))
@@ -606,6 +630,10 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if len(parts) == 4 and parts[:2] == ["api", "query-exports"] and parts[3] == "cancel":
+                    if body:
+                        raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
+                    return self._reply(200, workspace.exports.cancel(parts[2]))
                 if url.path == "/api/activate":
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":

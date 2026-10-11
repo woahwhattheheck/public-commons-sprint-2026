@@ -130,3 +130,24 @@ For continuous existing-evidence sweeps, use the original
 [SF36 worker](../sf36-spend-governor/FINALIZATION.md). Its existing ledger remains
 the progress record across restart. The inbox command completes one explicitly
 selected attempted intent at a time.
+
+## Use installed system certificate trust
+
+When an authorized deployment's HTTPS proxy presents a chain trusted by the
+operating system, the isolated observer can explicitly use that installed trust
+store. This does not add a CA, change an approved RPC endpoint or disable TLS
+hostname and certificate verification. Use Node 22.19+ or 24.6+ with its supported
+`--use-system-ca` option. Node's official deployment guidance is
+https://nodejs.org/learn/http/enterprise-network-configuration.
+
+Set `SF36_OBSERVER_USE_SYSTEM_CA=1` in the trusted operator process environment
+when invoking the existing finalizer, including through the Node or Python
+customer SDK. The shared original worker converts that exact selection into
+SF36's fixed `--node-use-system-ca` argument. The environment variable is not
+copied into the observer. Missing or `0` preserves default trust; other values
+are rejected as `INVALID_OBSERVER_SYSTEM_CA_OPTION`.
+
+This setting also reaches the original missing-receipt branch through the same
+worker. It is an operator runtime setting, separate from merchant packets,
+workspace payment terms, signer selection and transport approval. Saved
+configuration, evidence, reservations and receipt identities remain unchanged.

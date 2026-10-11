@@ -1,6 +1,6 @@
 {
   "name": "n8n-nodes-starforge-buyer",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Customer workflows over the original Starforge reviewed buyer inbox and verified responses",
   "license": "MIT",
   "type": "commonjs",

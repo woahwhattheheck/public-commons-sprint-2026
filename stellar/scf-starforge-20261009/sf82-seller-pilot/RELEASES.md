@@ -430,6 +430,21 @@ child after a manager crash is shown as an orphan rather than permitting a
 second seller to start over it. Use the recorded process and original terminal
 to recover it; the console does not kill arbitrary local PIDs.
 
+On Linux, install `flock` from util-linux. The manager and its seller inherit
+one open lifetime lock for the store. The kernel retains that lock while either
+process is alive and releases it when both have ended, including after an abrupt
+container exit. The next start can then reuse the retained release even when
+the new container has the same hostname and process numbers. Ordinary close,
+startup source checks, and the seller's original drain remain the same.
+
+Owner and runtime records also retain the manager and worker's Linux process
+birth identities. The worker sends its own identity over the existing private
+startup channel; the manager saves it before allowing application imports or
+listeners. Status uses the same original SF30 boot/procfs/start-time contract.
+Earlier numeric-only records retain their existing live-process protection.
+The permanent `.sf82-*.lock.lifetime` files are kernel lock inodes: leave them
+in place with the private store, including when the seller is stopped.
+
 An embedding fleet manager can call `runActiveRelease(store, { handleSignals:
 false })` to own its shutdown order: close gateway ingress, drain accepted
 gateway work, then await the returned session's `close()`. The default remains
@@ -457,6 +472,7 @@ route, payment and runtime comparison as releases in one store.
 | `releases/ID/runtime-readiness.json` | Original pilot's most recent startup observation |
 | `runtime.json` | Release-manager process identity, listener and exit observation |
 | `state.lock`, `run.lock` | Local operation/process ownership |
+| `.sf82-state.lock.lifetime`, `.sf82-run.lock.lifetime` | Permanent Linux lifetime lock files; automatically released when their owning processes end |
 
 New directories use mode 0700 and files use 0600 where supported. Selection
 and runtime records use flushed temporary writes and atomic replacement.
