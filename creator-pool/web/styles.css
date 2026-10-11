@@ -600,3 +600,16 @@ a.sub-tx:hover { text-decoration: underline; }
 .sponsor-ledger-footnote { border-top: 1px solid var(--line); padding-top: 8px; margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .reserve-preview { display: grid; gap: 7px; justify-items: start; flex: 1; min-width: 175px; }
 .reserve-preview-copy { margin: 0; color: var(--ink-2); font-size: 12px; line-height: 1.5; }
+
+
+/* Shared keyboard focus: visible on links and form fields, not only buttons. */
+#main a:focus-visible,
+#detailPanel :is(input,textarea,select,a[href]):focus-visible,
+.drawer :is(input,textarea,select,button,a[href]):focus-visible {
+  outline: 3px solid var(--clay-deep);
+  outline-offset: 2px;
+}
+@media (forced-colors: active) {
+  .campaign-card:focus-visible, .seg:focus-visible, .btn:focus-visible,
+  #main a:focus-visible, .drawer :focus-visible { outline-color: Highlight; }
+}
