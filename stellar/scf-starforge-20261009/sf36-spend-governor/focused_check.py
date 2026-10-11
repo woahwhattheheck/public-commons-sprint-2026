@@ -144,6 +144,8 @@ with tempfile.TemporaryDirectory() as p:
         'approved_request':r,'network':r['network'],'asset':asset,'reserved_atomic_units':'200'}}
     proof={'schema':'stellar-forge.sf86.rpc-reconciliation.v1',
       'verdict':'CHAIN_TRANSFER_MATCHED_RPC_TESTNET','source':'official-stellar-testnet-rpc',
+      'rpcEndpoint':finalize.NETWORKS[r['network']]['defaultRpc'],
+      'networkPassphrase':finalize.NETWORKS[r['network']]['passphrase'],
       'intentId':r['request_id'],'transaction':transaction,'network':r['network'],
       'asset':asset,'payer':PAYEE,'recipient':PAYEE,'atomicAmount':'200',
       'matchingTransfers':1,'ledger':123,'matchingEventId':'fixture:1'}
