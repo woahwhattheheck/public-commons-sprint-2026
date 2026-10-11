@@ -148,6 +148,8 @@
     "chainstack-stellar": "stellar/scf-starforge-20261009/partners/chainstack-stellar/cli.mjs",
     "chainstack-buyer": "stellar/scf-starforge-20261009/partners/chainstack-stellar/installed-buyer.mjs",
     "operations": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs",
+    "jobs": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/cli.mjs",
+    "jobs-buyer": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
     "dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-cli.mjs",
     "assets": "stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
     "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs",
@@ -321,6 +323,10 @@
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/streaming": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stream-response.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./seller/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/model.mjs",
+    "./seller/jobs/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/merchant.mjs",
+    "./seller/jobs/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/customer.mjs",
+    "./seller/jobs/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/workspace/server.mjs",
     "./seller/embedded": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.mjs"
@@ -337,6 +343,7 @@
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/response-file.mjs"
     },
+    "./buyer/jobs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/buyer.mjs",
     "./operator": "./source/stellar/scf-starforge-20261009/sf81-buyer-operator-bridge/bridge.mjs",
     "./support": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/bundle.mjs",
     "./merchant/incidents": "./source/stellar/scf-starforge-20261009/sf93-seller-support-bundle/watch.mjs",
