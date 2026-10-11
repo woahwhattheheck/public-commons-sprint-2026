@@ -164,7 +164,10 @@ function csktm_editor_values($post_id, $input) {
     foreach ($items as $fields) {
         if (!is_array($fields)) { csktm_fail('invalid_gis', 'Complete each map resource.'); }
         $id = strtolower(csktm_editor_text($fields['itemId'] ?? '', 'ArcGIS item ID', 32, true));
-        $url = csktm_editor_text($fields['url'] ?? '', 'Map URL', 2000, true);
+        $url = $fields['url'] ?? '';
+        if (!is_string($url) || $url === '' || strlen($url) > 2000 || preg_match('/[\x00-\x20\x7f]/', $url) || filter_var($url, FILTER_VALIDATE_URL) === false) {
+            csktm_fail('invalid_gis_url', 'Use the complete map URL, including its original encoded query values.');
+        }
         $parts = wp_parse_url($url);
         if (!preg_match('/^[a-f0-9]{32}$/D', $id) || isset($seen[$id]) || !is_array($parts) || ($parts['scheme'] ?? '') !== 'https' || isset($parts['user']) || isset($parts['pass']) || !preg_match('/(^|\.)(arcgis\.com|arcg\.is)$/iD', $parts['host'] ?? '')) {
             csktm_fail('invalid_gis', 'Each map needs a distinct ArcGIS item ID and a complete HTTPS ArcGIS URL.');
