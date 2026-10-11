@@ -30,7 +30,7 @@ export function previewContext(definition, values) {
 
 /** Embedding keeps nativeFactory and all actual payment authority with SF30. */
 export async function startPythonMerchant(compiled, { port = 8423, nativeFactory = null,
-  maxInFlight = 64, drainGraceMs = 60000, operationsPort, env } = {}) {
+  maxInFlight = 64, drainGraceMs = 60000, operationsPort, env, expectedApplicationSha256 } = {}) {
   let source = null, seller = null, operations = null, closing;
   async function close() {
     if (closing) return closing;
@@ -47,7 +47,7 @@ export async function startPythonMerchant(compiled, { port = 8423, nativeFactory
   }
   try {
     const handlers = Object.create(null);
-    if (nativeFactory) source = await createPythonSource(compiled, { env });
+    if (nativeFactory) source = await createPythonSource(compiled, { env, expectedApplicationSha256 });
     for (const name of Object.keys(compiled.functions)) {
       const route = source?.route(name);
       handlers[name] = route?.handler ?? (() => { throw new Error('CHALLENGE_ONLY'); });
