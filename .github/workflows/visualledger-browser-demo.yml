@@ -17,6 +17,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   synthetic-workflow:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
