@@ -261,11 +261,21 @@ async function mutate(path, body, { adopt = false, recovered = false } = {}) {
     updateToolbar(); renderCurrent();
   }
 }
+async function refreshSelectedPreview(next, { force = false } = {}) {
+  const id = previewDetail?.id;
+  if (!id) return;
+  const current = next.previews.find(item => item.id === id);
+  if (!current) { if (previewDetail?.id === id) previewDetail = null; return; }
+  if (!force && current.status === previewDetail.status && current.endedAt === previewDetail.endedAt) return;
+  const refreshed = await api('/api/preview?id=' + encodeURIComponent(id));
+  if (previewDetail?.id === id) previewDetail = refreshed;
+}
 async function refreshState({ adopt = false } = {}) {
   const wasClean = !dirty();
   const next = await api('/api/state');
   state = next;
-  if (!draft || adopt || wasClean && draft.base.id !== state.workspace.head) loadDraft(state.revision);
+  await refreshSelectedPreview(next, { force: true });
+  if (!draft || adopt || wasClean && !dirty() && draft.base.id !== state.workspace.head) loadDraft(state.revision);
   updateToolbar(); renderCurrent(); schedulePreviews(); showPending();
 }
 async function confirmDiscard() {
@@ -567,11 +577,7 @@ function schedulePreviews() {
     if (busy) { schedulePreviews(); return; }
     try {
       state = await api('/api/state'); updateToolbar();
-      if (previewDetail) {
-        const current = state.previews.find(item => item.id === previewDetail.id);
-        if (current && (current.status !== previewDetail.status || current.endedAt !== previewDetail.endedAt))
-          previewDetail = await api('/api/preview?id=' + encodeURIComponent(current.id));
-      }
+      await refreshSelectedPreview(state);
       if (tab === 'preview') {
         $('#preview-jobs')?.replaceChildren(renderPreviewJobs());
         $('#preview-detail')?.replaceChildren(renderPreviewDetail());
