@@ -107,3 +107,8 @@ The unmodified cognos2powerbi parser/IR/generator core is pinned to upstream com
 The schemas index pins 18 downloaded Microsoft JSON schemas by URL and SHA-256. The Report Server route also includes Microsoft’s original RDL 2016 XSD from microsoft/RdlMigration. The original licenses and source identities accompany both schema sets. Runtime schema validation works offline.
 
 The original public-data source is attributed separately. The working example does not imply agency affiliation or production-system access.
+
+
+## Complete operating example
+
+See [DEMONSTRATION.md](DEMONSTRATION.md) for the supplied public native files, complete browser workflow, full-data correction and encrypted recovery. The Report Server runner and original job/result packages travel with the release. Use [examples/sandag/SOLICITATION_SCOPE.md](examples/sandag/SOLICITATION_SCOPE.md) for the source-grounded ARJIS delivery scope.
