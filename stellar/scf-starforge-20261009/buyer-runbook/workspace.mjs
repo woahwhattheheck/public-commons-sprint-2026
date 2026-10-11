@@ -13,6 +13,14 @@ const messages = {
   RUNBOOK_REVIEW_CHANGED:'A selected config or body changed after review. Save and review a new draft revision.',
   CONTROLLING_TERMINAL_REQUIRED:'Start this workspace in the operator terminal. The original buyer asks for approval there.',
   WORKSPACE_EXECUTION_BUSY:'An acquisition is already running in this workspace.',
+  WORKSPACE_RECOVERY_BUSY:'This workspace is capturing or checking its recovery archive.',
+  RUNBOOK_RECOVERY_REVIEW_CHANGED:'The selected recovery state changed. Review the current operators and acquisitions again.',
+  RUNBOOK_RECOVERY_DEPENDENCY_OUTSIDE_ROOT:'Choose the original private parent containing the workspace, configurations, operator settings, operators and retained outputs.',
+  WORKSPACE_RECOVERY_UNSELECTED_OPERATOR_LEDGER:'An original operator ledger was not selected. Review the complete operator list before capture.',
+  WORKSPACE_RECOVERY_PASSPHRASE_REQUIRED:'Set the separate backup passphrase in the selected environment variable of the process that starts this workspace.',
+  WORKSPACE_RECOVERY_QUIESCED_SOURCE_REQUIRED:'Confirm that other programs writing these original operators are stopped. This workspace locks its own acquisitions during capture.',
+  WORKSPACE_RECOVERY_ARCHIVE_EXISTS:'That archive path already exists. Verify the retained archive or choose a new output path.',
+  WORKSPACE_RECOVERY_ARCHIVE_OVERLAPS_STATE:'Choose an archive destination outside the selected original state root.',
   RUNBOOK_EXECUTION_LOCK_EXISTS:'This acquisition has an execution owner. Inspect its current state before recovery.',
   EXECUTION_CHANGED_RELOAD:'That execution has finished or changed. Refresh the acquisition.',
   ACQUISITION_ALREADY_INITIALIZED:'This plan already has an acquisition. Open its saved run to continue.',
@@ -40,6 +48,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     ['/app.mjs','app.mjs','text/javascript; charset=utf-8'],
     ['/intake.mjs','intake.mjs','text/javascript; charset=utf-8'],
     ['/accounting.mjs','accounting.mjs','text/javascript; charset=utf-8'],
+    ['/recovery.mjs','recovery.mjs','text/javascript; charset=utf-8'],
     ['/style.css','style.css','text/css; charset=utf-8'],
   ].map(async ([path,name,type]) => [path,{type,bytes:await readFile(new URL('workspace-ui/' + name,import.meta.url))}])));
   let hosts = new Set(), origins = new Set(), closing = false;
@@ -126,6 +135,9 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
       const input = await body(url.pathname === '/api/requests/upload' ? 4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024 : 1024 * 1024);
+      if (url.pathname === '/api/recovery/review') return json(200,await model.inspectRecovery(input));
+      if (url.pathname === '/api/recovery/start') return json(202,await model.startRecovery(input));
+      if (url.pathname === '/api/recovery/cancel') return json(200,await model.cancelRecovery(input));
       if (url.pathname === '/api/requests/upload') return json(200,await model.receiveRequest(input));
       if (url.pathname === '/api/requests/review') return json(200,await model.reviewRequest(input));
       if (url.pathname === '/api/requests/prepare') return json(200,await model.prepareRequest(input));

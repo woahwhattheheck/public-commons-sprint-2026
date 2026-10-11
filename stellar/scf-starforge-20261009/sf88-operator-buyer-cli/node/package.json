@@ -6,6 +6,6 @@
   "license": "MIT",
   "engines": { "node": ">=22" },
   "exports": { ".": { "types": "./index.d.mts", "import": "./index.mjs" } },
-  "files": ["*.mjs", "index.d.mts", "README.md", "OBJECTS.md", "STREAMS.md", "ACCOUNTING.md", "RECOVERY.md", "examples"],
+  "files": ["*.mjs", "index.d.mts", "README.md", "OBJECTS.md", "STREAMS.md", "ACCOUNTING.md", "RECOVERY.md", "INBOX.md", "examples"],
   "sideEffects": false
 }

@@ -164,6 +164,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     interrupted:signal?.aborted === true,
     retry:'NO_AUTOMATIC_RETRY',
     ...(error ? {error:{code:codeOf(error,'NATIVE_BUYER_ERROR'),
+      ...(typeof error.operatorReason === 'string' && error.operatorReason.length <= 256 &&
+        !/[\u0000-\u001f\u007f]/.test(error.operatorReason) ? {operatorReason:error.operatorReason} : {}),
       paymentSent:typeof error.paymentSent === 'boolean' ? error.paymentSent : null}} : {}),
     ...(evidenceError ? {evidenceError:{code:codeOf(evidenceError,'EVIDENCE_FAILED_RECONCILE_ORIGINAL_LEDGER')}} : {}),
     ...(cleanupError ? {responseCleanupError:{code:codeOf(cleanupError,'RESPONSE_FILE_CLEANUP_FAILED'),

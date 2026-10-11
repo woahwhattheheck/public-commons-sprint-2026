@@ -311,3 +311,9 @@ metadata lease and workspace shutdown queue. `executeRunbook` accepts an optiona
 trusted `environmentForOperation(op)` function; it resolves after original input
 preflight and before the durable started record. This callback is code supplied
 by the local workspace, never a manifest field or a received setting.
+
+## Back up acquisitions
+
+Choose **Back up acquisitions** in the existing navigation. Review the common private parent containing the workspace, configurations, operator settings, retained original operators, imported runs and downloads. Stop the other processes writing that state, choose a new archive outside it, and enter the name of the passphrase environment variable already set in the server terminal. The workspace retains progress, native checkpoints, cancellation and the published backup selection.
+
+The same view verifies an existing archive and displays exact restore and reopen commands. Restore runs from the installed CLI after stopping the live workspace and requires its original state root to be absent or empty. See [the complete recovery workflow](RECOVERY.md); verification and restore do not execute a buyer or refresh accounting.
