@@ -194,7 +194,7 @@ export async function startDatasetRelease(directory, { runtime = { port: 0 }, na
         facilitatorClient: new HTTPFacilitatorClient({ url: options.facilitator.replace(/\/$/, '') }) });
     }
     session = await startVersionedDatasetSeller({ versions, config: snapshot.service,
-      port: options.port, nativeFactory, control: true });
+      port: options.port, nativeFactory, control: true, controlTransport: 'loopback' });
     return { ...session, dataset: snapshot.dataset, snapshot };
   } catch (error) { await session?.close().catch(() => {}); await versions.close().catch(() => {}); throw error; }
 }
