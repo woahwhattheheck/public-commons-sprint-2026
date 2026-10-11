@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Material Trace Workbench</title><link rel="stylesheet" href="/style.css"><script type="module" src="/ui.mjs"></script></head>
+<body>
+<header><div><p class="eyebrow">TRACE OPERATIONS</p><h1>Material Trace Workbench</h1></div><div id="session-controls"></div></header>
+<div id="notice" role="status" aria-live="polite"></div>
+<section id="login" class="login"><h2>Open the retained workspace</h2><p>Enter the access key from this installation’s private operator-access.json file.</p><form id="login-form"><label>Operator access key<input id="access-key" type="password" autocomplete="off" required></label><label>Reviewer name<input id="reviewer-name" autocomplete="name" maxlength="256" required></label><button>Open workspace</button></form></section>
+<main id="app" hidden></main>
+<footer>Local source imports · Retained corrections · Reproducible handoff</footer>
+</body></html>
+

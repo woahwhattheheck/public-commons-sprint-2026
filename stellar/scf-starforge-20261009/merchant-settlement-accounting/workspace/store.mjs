@@ -9,6 +9,8 @@ import {writeOriginalAccountingPack} from '../cli.mjs';
 import {acquireStateLease} from '../../merchant-fleet-gateway/state-lease.mjs';
 import {PricingWorkspace} from './pricing-workspace.mjs';
 import {PeriodWorkspace} from './period-workspace.mjs';
+import {AdjustmentWorkspace} from './adjustments-workspace.mjs';
+import {renderAdjustmentCsv,renderAdjustmentHtml} from '../adjustments.mjs';
 
 const SCHEMA='stellar-forge.merchant-accounting-workspace.v1';
 const now=()=>new Date().toISOString();
@@ -82,6 +84,9 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
   await privateDir(directory,{create:true});
   const lease=await acquireStateLease(directory);
   try{
+    let restoreMarker;
+    try{restoreMarker=await lstat(join(directory,'recovery-restore.json'));}catch(error){if(error.code!=='ENOENT')throw error;}
+    check(!restoreMarker,'WORKSPACE_RESTORE_INCOMPLETE','This workspace has an unfinished operating-state restore. Resume the same authenticated backup with merchant-accounting-workspace restore before reopening.',409);
     const statePath=join(directory,'workspace.json');
     const existing=await readBytes(statePath,32_000_000,{optional:true});
     let state;
@@ -98,7 +103,7 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
       state={schema:SCHEMA,revision:1,createdAt:now(),sources:{outboxDir,proofDir,termsFile},termsSelection:'source',termsImports:[],proofs:[],runs:[],notes:{},exports:[],history:[]};
     }
     let upgraded=false;
-    for(const name of ['recoveredEntries','recoveryPreviews','recoveryJobs','periodDefinitions','periodCloses'])if(!Array.isArray(state[name])){state[name]=[];upgraded=true;}
+    for(const name of ['recoveredEntries','recoveryPreviews','recoveryJobs','periodDefinitions','periodCloses','adjustments','adjustmentJobs'])if(!Array.isArray(state[name])){state[name]=[];upgraded=true;}
     if(state.periodSelection===undefined){state.periodSelection=null;upgraded=true;}
     if(state.recoveryCapturedAt===undefined){state.recoveryCapturedAt=null;upgraded=true;}
     if(recoveredDir!==undefined&&recoveredDir!==state.sources.recoveredDir){
@@ -115,12 +120,13 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
     for(const job of interruptedJobs){job.status='interrupted';job.completedAt=now();job.error='The process stopped during original transfer verification/import. Retry the retained review to recover an already imported entry or continue its original read-only verification.';}
     if(interruptedJobs.length){state.revision++;state.history.push({at:now(),actor:'workspace',action:'recovery_imports_interrupted',jobIds:interruptedJobs.map(job=>job.id)});}
     if(!existing||upgraded||interrupted.length||interruptedJobs.length)await durableJson(statePath,state);
-    return new AccountingWorkspace(directory,state,lease);
+    const workspace=new AccountingWorkspace(directory,state,lease);
+    await workspace.adjustments.init();return workspace;
   }catch(error){await lease.close();throw error;}
 }
 
 class AccountingWorkspace{
-  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.periods=new PeriodWorkspace(this);this.closing=false;this.closed=false;}
+  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.periods=new PeriodWorkspace(this);this.adjustments=new AdjustmentWorkspace(this);this.closing=false;this.closed=false;}
   async serial(work){check(!this.closed,'CLOSING','The workspace is closing.',503);const result=this.tail.then(async()=>{this.lease.assertHeld();const previous=structuredClone(this.state);try{return await work();}catch(error){this.state=previous;throw error;}});this.tail=result.catch(()=>{});return result;}
   async commit(action,actor,details={}){this.state.revision++;this.state.history.push({at:now(),actor,action,...details});check(this.state.history.length<=100_000&&Buffer.byteLength(json(this.state))<=32_000_000,'HISTORY_LIMIT','Archive this workspace and start a new one before adding further operator history.');await durableJson(join(this.directory,'workspace.json'),this.state);}
   expected(revision){check(Number.isSafeInteger(revision)&&revision===this.state.revision,'STALE_WORKSPACE','Saved workspace state changed. Refresh it before reapplying your retained draft.',409);}
@@ -133,7 +139,7 @@ class AccountingWorkspace{
       proofs:this.state.proofs,runs:this.state.runs,exports:this.state.exports,history:this.state.history.slice(-100).reverse(),
       recovery:{directory:this.state.sources.recoveredDir??null,capturedAt:this.state.recoveryCapturedAt,entries:this.state.recoveredEntries},
       recoveryPreviews:this.state.recoveryPreviews,recoveryJobs:this.state.recoveryJobs,
-      pricingImports:this.state.pricingImports??[],periods:this.periods.view(),accountantHandoffs:this.state.accountantHandoffs??[],
+      pricingImports:this.state.pricingImports??[],periods:this.periods.view(),accountantHandoffs:this.state.accountantHandoffs??[],adjustments:this.adjustments.view(),
       reviewCounts:Object.values(this.state.notes).reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})});
   }
   async connectRecovered({revision,directory,actor}){return this.serial(async()=>{
@@ -383,10 +389,15 @@ class AccountingWorkspace{
     const notes=report.exceptions.map(row=>({...row,id:exceptionId(row),review:noteFor(this.state,row)}));
     const reviewBytes=json({schema:'stellar-forge.merchant-exception-review.v1',runId,workspaceRevision:this.state.revision,exportedAt:now(),actor,exceptions:notes});
     await writeNew(join(folder,'review-notes.json'),reviewBytes);
+    const adjustments=await this.adjustments.snapshot(runId),adjustmentBytes=Buffer.from(json(adjustments)),adjustmentsSha256=hash(adjustmentBytes);
+    const adjustmentFiles={};
+    for(const [name,bytes] of Object.entries({'adjustments.json':adjustmentBytes,'adjustments.csv':renderAdjustmentCsv(adjustments),'adjustments.html':renderAdjustmentHtml(adjustments)})){
+      await writeNew(join(folder,name),bytes);adjustmentFiles[name]={sha256:hash(bytes),bytes:bytes.length};
+    }
     let retainedClose;
     if(close){
       const record={...close,runId,exportId:id,reportSha256:run.reportSha256,inputManifestSha256:run.inputManifestSha256,
-        reviewSnapshotRevision:this.state.revision,reviewNotesSha256:hash(reviewBytes),includeSources,
+        reviewSnapshotRevision:this.state.revision,reviewNotesSha256:hash(reviewBytes),adjustmentsSha256,adjustmentFiles,includeSources,
         reviewCounts:notes.reduce((counts,row)=>{counts[row.review.status]++;return counts;},{open:0,investigating:0,reviewed:0})};
       const bytes=json(record);await writeNew(join(folder,'period-close.json'),bytes);retainedClose={...record,closeSha256:hash(bytes)};
     }
@@ -401,6 +412,7 @@ class AccountingWorkspace{
     }
     const periodArgs=report.period?' --period-from '+report.period.from+' --period-until '+report.period.until:'';
     await writeNew(join(folder,'START.txt'),'Merchant settlement reconciliation\n\nOriginal accounting report/CSV/HTML and a snapshot of named operator exception notes. Review notes do not change native transfer classifications.\n'+
+      'adjustments.json, adjustments.csv and adjustments.html retain original gross payments, merchant cancellations, refund requests and independently verified reverse transfers at this export revision. Later adjustments remain in later exports.\n'+
       (report.period?'Recorded-activity UTC period: '+report.period.from+' inclusive to '+report.period.until+' exclusive. Native rows use capture time; recovered rows use import time. All captured sources participate in original verification and transaction-reuse checks before selection.\n':'')+
       (retainedClose?'period-close.json records the immutable close revision, period definition, original report identity, and frozen review counts, including open exceptions. Later source captures and reviews do not change this close.\n':'')+
       (includeSources?'Includes private original journal, terms, verification files, any captured original pricing report, and recovered entries with their retained response bytes.\n\nFrom the extracted archive, reproduce with the installed original CLI (replace absolute paths):\nnode /absolute/merchant-settlement-accounting/cli.mjs --outbox /absolute/extracted/sources/outbox --proof-dir /absolute/extracted/sources/proofs --terms /absolute/extracted/sources/terms.json --out /absolute/new-accounting-pack'+(parse(inputManifest,'input manifest').recoveredSource?' --recovered-dir /absolute/extracted/sources/recovered':'')+periodArgs+'\n':'Private original source bytes were not included.\n'));
@@ -408,7 +420,7 @@ class AccountingWorkspace{
     try{await new Promise((resolve,reject)=>{
       const child=spawn('tar',['-cf','-','-C',folder,'.'],{stdio:['ignore',handle.fd,'pipe']});let error='';child.stderr.on('data',chunk=>{if(error.length<4000)error+=chunk;});child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(new Error('Archive export failed: '+error)));});await handle.sync();}
     finally{await handle.close();}
-    const raw=await readBytes(archive,256_000_000),record={id,runId,name:run.name,createdAt:now(),actor,includeSources,bytes:raw.length,sha256:hash(raw),
+    const raw=await readBytes(archive,256_000_000),record={id,runId,name:run.name,createdAt:now(),actor,includeSources,bytes:raw.length,sha256:hash(raw),adjustmentsSha256,adjustmentFiles,adjustmentsRevision:adjustments.workspaceRevision,
       ...(retainedClose?{periodCloseId:retainedClose.id}:{})};
     this.state.exports.unshift(record);return {export:structuredClone(record),...(retainedClose?{close:retainedClose}:{})};
   }
@@ -430,5 +442,5 @@ class AccountingWorkspace{
     return {bytes:response.bytes,name:'recovered-response-'+recoveryId+'.bin',type};
   }
   async archive(id){check(typeof id==='string'&&idPattern.test(id),'INVALID_EXPORT','Choose an existing export.');const record=this.state.exports.find(item=>item.id===id);check(record,'EXPORT_NOT_FOUND','This review export was not found.',404);const bytes=await readBytes(join(this.directory,'exports',id+'.tar'),256_000_000);check(hash(bytes)===record.sha256,'EXPORT_CHANGED','The retained export changed.',409);return {bytes,name:'merchant-review-'+id+'.tar'};}
-  async close(){this.closing=true;for(const controller of this.recoveryControllers.values())controller.abort();await Promise.allSettled([...this.tasks]);await this.tail;this.closed=true;await this.lease.close();}
+  async close(){this.closing=true;this.adjustments.close();for(const controller of this.recoveryControllers.values())controller.abort();await Promise.allSettled([...this.tasks]);await this.tail;this.closed=true;await this.lease.close();}
 }

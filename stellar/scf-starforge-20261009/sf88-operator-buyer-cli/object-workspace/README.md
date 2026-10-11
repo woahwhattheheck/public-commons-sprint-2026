@@ -1,12 +1,12 @@
 # Object buyer workspace
 
-Select a merchant's large file, review its request plan, operate the original
+Select a merchant's whole or chunked file, review its request plan, operate the original
 buyer, retain completed parts through interruption, and download the assembled
 file from one private browser workspace. Complete the original purchase records,
 retain their native receipts and reopen them independently of the delivered file.
 
 This workspace uses the original `object-session.mjs`, `object-description.mjs`
-and `object-report.mjs` APIs. Each range remains an original SF88 inbox job with
+and `object-report.mjs` APIs. Each request remains an original SF88 inbox job with
 its original SF31 transport, SF81 terminal approval, SF36 spending ledger and
 SF82 outcome record. The workspace keeps presentation state in memory; the
 original object session and inbox retain the durable work.
@@ -40,7 +40,7 @@ of the selected asset. The example amounts are limits to replace, not a product
 price. Keep this preset mode `0600` outside the installation. It supports the
 same optional `signerProvider`, `rpc` and `httpsProxyEnv` as the original runbook;
 choose either `secretEnv` or `signerProvider`. Values are read on the host.
-The browser does not accept a signer module, credential, executable or private path.
+The receiving form does not accept a signer module, credential, executable or private path.
 
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs \
@@ -59,12 +59,12 @@ Open the complete printed URL and choose **New → Receive a merchant object**.
    S3 source configuration remains with the merchant.
 2. Choose the object and explicitly select its resource/payment alternative.
    The existing descriptor selector and `prepareReview` bind the exact HTTPS
-   route, method and payment terms. Whole-file-only entries remain unavailable
-   in this chunk acquisition application. Set the bytes per request, session
-   name, whole-download cap and daily cap. The total must cover every planned
-   chunk at its per-request maximum; both budgets must fit the local preset and
+   route, method and payment terms. A whole-file product uses one exact GET with
+   no range query; a chunked product exposes its bytes-per-request control.
+   Set the session name, whole-download cap and daily cap. The total must cover
+   every planned request at its per-request maximum; both budgets must fit the local preset and
    each request must fit the daily limit.
-3. **Review received download** shows the file, exact ranges, snapshot, optional
+3. **Review received download** shows the file, selected whole-response or exact-range plan, snapshot, optional
    whole-file hash, payer, network, asset, recipient and atomic limits. It retains
    the hashes of both original merchant files and the local preset. A changed
    preset or source invalidates an uncommitted review.
@@ -72,7 +72,7 @@ Open the complete printed URL and choose **New → Receive a merchant object**.
    and object-session constructor. It prepares every original inbox job and
    selects the saved session in the same browser. **Start download** remains the
    explicit next action, with the original terminal approval and spending checks
-   for each chunk. The existing File delivery, Purchase records, finalization
+   for each request. The existing File delivery, Purchase records, finalization
    and restart controls operate on that same session.
 
 The received source bytes remain unchanged in private state. The seller array
@@ -100,6 +100,89 @@ session name is not overwritten.
 The trusted product profile below remains useful for installations that already
 have reviewed native operator workspaces.
 
+## Back up and restore the complete buyer workspace
+
+**Backup and recovery** in the sidebar captures this same receiving and download
+application through original SF88 collection recovery and SF101 authenticated
+encryption. It retains merchant inputs, prepared products and native operator
+generations, committed SQLite journals, original object plans, inbox history,
+response parts and completed files. Empty whole files keep their zero-byte
+contents and one original request. Queued chunked downloads keep their untouched
+jobs; restoring state does not start them.
+
+Place the workspace, private preset, optional profile and all referenced native
+operators, tickets, evidence and completed files beneath one existing private
+state root. For example, use `/private/buyer-state/workspace` and
+`/private/buyer-state/operator.json`. Review lists the exact selected paths;
+unrelated siblings are not automatically included. Directories must be owned
+mode `0700`, files `0600`, without symbolic or hard links. The original engine
+permits 64 native operators, 9,500 filesystem entries, 2 GiB per file and less
+than 4 GiB total. This application reviews up to 512 original sessions. External
+Python, source CLI and signer-provider executables remain listed installation
+requirements.
+
+Set the separate backup passphrase in the launching terminal before opening the
+browser. Only its environment name enters the browser, never its value:
+
+```sh
+read -rsp 'Backup passphrase: ' SF88_BACKUP_PASSPHRASE
+export SF88_BACKUP_PASSPHRASE
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs --state /private/buyer-state/workspace --port 8438
+```
+
+1. Open **Backup and recovery**, enter the common state root, and choose
+   **Review backup contents**. Review the original sessions, whole/chunk plans,
+   native operators, merchant sources, selected paths, missing optional outputs
+   and runtime requirements. A changed startup profile or preset-path reference
+   requires reopening the workspace before review.
+2. Choose a new encrypted bundle directory outside that root, for example
+   `/private/backups/buyer-20261011`, with an existing private parent. Stop other
+   programs that write the selected state, acknowledge that condition, then
+   choose **Create encrypted backup**. The application holds original workspace
+   and intake metadata leases, each selected object-session lease and native
+   SQLite checkpoint holders. Original source comparisons remain active.
+3. Follow capture and encryption progress. **Stop recovery operation** cancels
+   this owned operation and drains its workers. The encrypted copy carries a
+   release for only its captured lease generations; live source ownership stays
+   held until the capture finishes.
+4. Keep the bundle path and record SHA-256 outside the captured root.
+   **Select this backup → Verify backup** authenticates the archive, original
+   session/configuration bindings and committed journals, including when source
+   state is absent. It uses the host's `/usr/bin/python3`; the CLI can also select
+   an explicit existing Python.
+
+The original journal-authentication keys are encrypted inside the bundle.
+Wallet environment values are excluded. Keep the bundle and its separate
+passphrase available to the intended restoring operator.
+
+### Restore and reopen
+
+Close the browser launcher and other writers. The existing `buyer-object
+backup-restore` command is printed for the selected backup. Its destination is
+the **original absolute state root**, which must be absent or an empty private
+directory. Preserve a populated root before deliberately making that location
+available. Restore does not merge into it or rewrite original paths.
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs backup-restore --bundle /private/backups/buyer-20261011 --expect ORIGINAL_RECORD_SHA256 --pass-env SF88_BACKUP_PASSPHRASE
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs --state /private/buyer-state/workspace --port 8438
+```
+
+Restore authenticates before publishing, then reopens the original operators,
+session plans, accounting pages and received-product identities. Its
+`reopened.urlCommand` includes the original profile when applicable. The browser
+prints a fresh private URL. Open **File delivery** to obtain saved bytes or
+continue only untouched jobs; open **Purchase records** for the original
+outcomes and receipts. Capture, verify and restore run no purchase, signature,
+payment or finalization.
+
+A published bundle remains complete if writing its local history later fails;
+`selectionRecordError` reports that separate condition. Restore likewise returns
+`reopenError`, `nativeReopenErrors`, `publicationSyncError` and `cleanupErrors`
+separately after publication. Preserve that result and resolve the named local
+issue instead of blindly repeating a completed operation. The CLI exits `2` for
+these post-publication conditions.
+
 ## Prepare the existing operator inputs
 
 Use Node 22 or newer on the operator's Linux/POSIX host. Set up the existing
@@ -117,13 +200,40 @@ Each configured product needs these existing files:
 The base buyer request must be a GET for the descriptor's exact path, with no
 query, body, response destination or order ticket. Its normal `buyerTransport`
 setting is retained for explicit proxy environments. Every generated chunk gets
-the original `offset` and `length` query and its own private destination.
+the original `offset` and `length` query and its own private destination. A whole
+product keeps the exact base URL and one original response destination.
 
 The configured original operator workspace must be compatible with that request's
 signer, payment terms, spending ledger and evidence directory. The original
 object initializer checks this binding. Its total and daily spending limits also
-apply during execution. See [OBJECTS.md](../OBJECTS.md) for the existing byte-range
-and budget contract.
+apply during execution. See [OBJECTS.md](../OBJECTS.md) for the original whole-file,
+byte-range and budget contracts.
+
+## Buy a whole-file product
+
+The original S3 `whole` entries, including report and versioned-file products,
+use the same receiving screen and trusted profile. Review shows **Whole file ·
+one GET**, the complete expected bytes, exact URL, HTTP 200 contract, selected
+snapshot and optional complete digest. The chunk-size field is hidden because
+the merchant fixes the complete response length.
+
+Start the original buyer once. Its saved native response must have HTTP 200,
+no Content-Range, the selected object snapshot and total length, and matching
+returned/local hashes. The original writer checks the complete expected length
+and any selected SHA-256 before publishing the response. Purchase records use
+that same one original intent and spending-ledger record.
+
+After verification, **Save whole file** creates the original private assembled
+output and its receipt. **Download completed file** uses the existing bounded,
+cancellable file stream. Reopen the same workspace for that file, original
+request history, receipt export and accounting even if the output has moved.
+Neither save nor download sends another merchant request.
+
+Zero-byte whole products follow this same one-request flow. Their progress reaches
+complete only after the original empty response and digest are verified; the
+history shows **Whole file**, not an invented negative byte range. A zero-byte
+file retains the selected quoted price and normal native approval. Existing
+chunked sessions retain their original range contracts and resume behavior.
 
 Create a private JSON profile referencing the reviewed inputs. The profile
 contains paths and public product labels. Keep it outside the installed package.

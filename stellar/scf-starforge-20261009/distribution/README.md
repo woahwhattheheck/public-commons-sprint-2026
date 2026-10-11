@@ -27,6 +27,71 @@ normally. This source-only installation omits optional packages. PostgreSQL
 drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
+### Prepare a complete customer runtime
+
+The maintained installer selects dependencies from the original archive and keeps
+its package intact. It creates a private runtime with exact versions, an npm lock,
+and explicit source/dependency roots for the original host and container tools:
+
+```sh
+starforge runtime-install prepare --dir /srv/starforge/runtimes/merchant-01 \
+  --archive /srv/starforge/downloads/original-merchant.tgz \
+  --sha256 ORIGINAL_ARCHIVE_SHA256 --native --feature postgres --operator
+starforge runtime-install install --dir /srv/starforge/runtimes/merchant-01
+starforge runtime-install run --dir /srv/starforge/runtimes/merchant-01 -- source
+```
+
+Choose the native and feature options required by that merchant. The same command
+supports interrupted-install continuation, fresh-directory upgrades, recovery,
+and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
+for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
+
+### Runtime installation workspace
+
+Use the private browser workspace to select an original archive, review its exact
+adapter dependencies, and prepare, install, inspect, compare, upgrade and recover
+customer runtimes through the same maintained installer:
+
+```sh
+starforge runtime-workspace init --workspace /srv/starforge/runtime-workspace
+starforge runtime-workspace attach --workspace /srv/starforge/runtime-workspace \
+  --runtime /srv/starforge/runtimes/merchant-01 --label "Merchant production"
+starforge runtime-workspace serve --workspace /srv/starforge/runtime-workspace
+```
+
+Open the private URL printed by `serve`. The workspace retains selected runtimes,
+reviewed profiles, operation progress and logs across browser and server restarts.
+Long-running installation operations continue independently of the browser. Its
+Deployment view exports the exact source/dependency roots, profile, original
+manifest and command needed by the existing managed-release and merchant-host
+workflows. The [complete runtime workspace guide](runtime-workspace/README.md)
+covers archive upload, selected adapters, local Node headers, recovery and handoff.
+
+### Versioned installation, upgrade and rollback
+
+Use `starforge installation` to put a selected maintained package into the
+original SF46 installation with durable `config/` and `state/` directories:
+
+```sh
+npx --no-install starforge installation inspect ./node_modules/@tokenjunkielabs/starforge-merchant
+npx --no-install starforge installation install ./node_modules/@tokenjunkielabs/starforge-merchant \
+  --home /absolute/private/starforge
+npx --no-install starforge installation status --home /absolute/private/starforge
+```
+
+The first release becomes active. Later package installs are staged for explicit
+activation, with the previous version available for rollback. The original
+package manifest, source paths, commands and package metadata travel together.
+The [managed package guide](../sf46-release/MANAGED_PACKAGE.md) covers manifest
+selection, direct Node usage, merchant launch, optional dependencies, retained
+portable preparation and interrupted-install recovery.
+
+For an existing completed original runtime, use `starforge installation
+adopt-runtime RUNTIME_DIRECTORY --home /absolute/private/starforge`. Its recorded
+profile and lockfile become part of the managed release identity, with dependencies
+retained at the original runtime location. The [runtime adoption guide](../sf46-release/MANAGED_PACKAGE.md#adopt-a-completed-runtime)
+covers profile-based staging, source-level runtime inspection and rollback.
+
 ### Schema pattern support
 
 Merchant request schemas that use regular-expression constraints load the
@@ -318,6 +383,68 @@ provider, request, recovery and embedding guide. `./seller/jsonrpc` exports
 source and original `partners/getblock-stellar/product.mjs` request helper ship
 together. This product uses the existing upstream and native dependencies.
 
+## Chainstack installed merchant and buyer
+
+The complete Chainstack partner installation is available through
+`starforge chainstack-stellar`. It composes the original three Stellar RPC
+products, private retained releases, actual provider observations, exact buyer
+requests, portable SDK handoff and native host export.
+
+```sh
+npx --no-install starforge chainstack-buyer paths
+npx --no-install starforge chainstack-stellar create \
+  --file /private/chainstack/installation.json \
+  --root /private/chainstack/merchant --release v1
+npx --no-install starforge chainstack-stellar activate \
+  --root /private/chainstack/merchant --release v1 --generation 0
+```
+
+The installed `chainstack-buyer node` and `chainstack-buyer python` commands
+locate the original SF88 runtime from this same package and forward review,
+execute, inspect and recover to the retained buyer adapters. Public APIs are
+`./partners/chainstack-stellar` and `./partners/chainstack-stellar/installed`.
+Follow [the complete installed Chainstack workflow](../partners/chainstack-stellar/INSTALLED.md)
+for selected provider configuration, method inputs, retained provider results,
+customer handoff, both buyer languages, release rollback and native host setup.
+
+## Routescan and n8n installed workflows
+
+The original Routescan merchant and its local workspace are included in the
+installed package. Use the same private project for its selected provider
+configuration, retained previews, quota accounting and merchant operation:
+
+```sh
+npx --no-install starforge routescan-merchant init \
+  --project /private/routescan --config /private/routescan-merchant.json
+npx --no-install starforge routescan-merchant status --project /private/routescan
+npx --no-install starforge routescan-workspace --project /private/routescan --port 0
+```
+
+The original APIs are exported as `./seller/routescan`,
+`./seller/routescan/project`, `./seller/routescan/workspace` and
+`./seller/routescan/backup`. Follow the
+[Routescan merchant guide](../sf30-seller-sdk/routescan/README.md) and
+[workspace guide](../sf30-seller-sdk/routescan/WORKSPACE.md) for provider setup,
+customer handoff and retained project recovery.
+
+The n8n workflow generator uses an existing buyer-workspace credential reference
+and the selected original intent:
+
+```sh
+npx --no-install starforge buyer-n8n-workflows --output /private/n8n-workflows \
+  --credential-name "Original Starforge buyer workspace" \
+  --intent ORIGINAL_ID --format binary
+```
+
+It writes six inactive workflow JSON files and their manifest into a new private
+directory. The workflows use the original SF88 workspace, buyer inbox and terminal
+execution paths for packet intake, review, response consumption, recovery,
+finalization and resuming an existing prepared intent. Import and configure the
+selected workflows in the receiving n8n installation using the
+[original n8n guide](../sf88-operator-buyer-cli/n8n/README.md).
+The `./buyer/n8n/workflows` API exports `createCustomerWorkflows` and
+`writeCustomerWorkflows`.
+
 ## GetBlock Stellar merchant
 
 The installed `getblock-stellar` command includes the complete original partner
@@ -482,11 +609,72 @@ reopen an older version and save it as a new head. Reopen later with only
 `starforge mongodb-workspace --state /private/mongodb-workspace`.
 Prepared packages and exact GET/POST buyer requests remain attached to that state.
 
+The same workspace's **Dataset publisher** tab captures an entire approved
+aggregation into a reviewed typed dataset. Select a saved report and its exact
+inputs, set extraction limits and deterministic order, inspect the retained
+candidate, publish it and start the original versioned seller. The existing
+refresh policy retains its baseline, row bounds and cadence. Customers can
+prepare the original buyer request pinned to a retained snapshot while later
+editions are published. The publisher retains collection, pipeline and declared
+read concern with the source revision; large BSON integers and decimals can be
+projected as exact strings. Explicitly alias `_id` for a public dataset column.
+
+Use `starforge mongodb-publisher` for the same publisher through its standalone
+CLI or browser, and `./seller/mongodb/publisher` for the native factory. The
+merchant MCP connection accepts `kind: "mongodb"` for that original private
+workspace. Its original publisher and scheduler retain ownership across CLI,
+browser and MCP reopen. The installed full SF30 component includes the Mongo
+publisher guide, both browser modules and the shared schedules interface.
+
 The original application exports are `./seller/mongodb`, `/source`, `/prepare`,
-`/onboarding`, `/workspace` and `/buyer`. They expose the same implementations used
+`/onboarding`, `/workspace`, `/publisher` and `/buyer`. They expose the same implementations used
 by the CLI and browser. Full source, pipeline, package, buyer and operating guides
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
+
+## Operate a retained Allium data product
+
+The Allium commands package the original Explorer acquisition and the same
+retained dataset, publisher and buyer workflow. Prepare the approved product
+JSON using the included
+[Allium operating guide](../partners/allium-explorer-pilot/workspace/OPERATING.md),
+then create a new private workspace:
+
+```sh
+npx --no-install starforge allium-workspace create \
+  --workspace /private/allium-product \
+  --product /private/approved-allium-product.json --name "Allium Stellar data"
+npx --no-install starforge allium-workspace serve \
+  --workspace /private/allium-product --port 8447
+```
+
+Open the complete private URL printed by the command. Review product and
+projection revisions, import the original saved Allium result or explicitly
+start/collect its approved saved query, and explore the typed retained rows.
+A native query uses the environment variable named by the product's
+`apiKeyEnv`; imported results and local dataset operations work offline.
+
+Select a completed acquisition and actual public merchant terms, publish its
+original versioned dataset, and open the same publisher for source review and
+original buyer preparation. The workspace owns its merchant and publisher
+processes. Browser export stops them and retains the complete source,
+product/acquisition history, versions and buyer records. After closing the
+server, the equivalent offline handoff is:
+
+```sh
+npx --no-install starforge allium-workspace export \
+  --workspace /private/allium-product --out /private/allium-product.json
+npx --no-install starforge allium-workspace import \
+  --workspace /private/reopened-allium-product --bundle /private/allium-product.json
+npx --no-install starforge allium-workspace serve \
+  --workspace /private/reopened-allium-product --port 8447
+```
+
+The new receiving directory opens stopped and retains the original source and
+typed snapshots. `allium-explorer inspect/import/start/collect/status/recover`
+exposes the underlying saved-query operator for terminal use. Application
+imports use `./seller/allium`, `./seller/allium/workspace` and
+`./seller/allium/workspace/server`.
 
 ## Native payment dependencies
 
@@ -541,6 +729,7 @@ or automatically retry a request.
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge mongodb` | Inspect native collections, prepare fixed BSON reports and operate the original MongoDB seller |
 | `starforge mongodb-workspace` | Author, review, save and run MongoDB reports; export merchant packages and exact buyer requests |
+| `starforge mongodb-publisher` | Capture complete native MongoDB snapshots, review and publish retained editions, and operate the original refresh policy |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
@@ -571,6 +760,7 @@ or automatically retry a request.
 | `starforge merchant-host` | Generate original Caddy/systemd merchant services, inspect installed operation and run encrypted maintenance/cutover |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
+| `starforge buyer-agent` | Run, pause and resume the original buyer with SQLite LangGraph checkpoints or four LangChain tools; [installed agent guide](NODE_AGENTS.md) |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
 | `starforge delivery-workspace` | Configure receiver revisions, operate the original worker and recover selected exhausted events |
@@ -579,8 +769,11 @@ or automatically retry a request.
 | `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
 | `starforge sqlite-init` / `sqlite-inspect` | Prepare and inspect an original SQLite named-query source |
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
+| `starforge allium-explorer` | Inspect an approved Allium product and import, run, collect or recover its original saved query |
+| `starforge allium-workspace` | Review retained Allium products/results, publish a versioned merchant, prepare its buyer and reopen a complete workspace |
 | `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
+| `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |
 | `starforge dataset-workspace` | Preview, refresh and select the retained dataset in its private browser workspace |
 | `starforge catalog-serve` / `catalog` | Host live seller discovery and operate its existing single writer |
 | `starforge catalog-withdrawal` | Prepare, sign and apply an existing seller withdrawal |
@@ -605,6 +798,7 @@ or automatically retry a request.
 | `starforge graphql-workspace` | Review schemas, prepare query packages and operate the original merchant in its private browser |
 | `starforge graphql-deployment` | Prepare, inspect and stage an original GraphQL merchant or generate its existing Linux host installation |
 | `starforge woo-seller` / `woo-buyer` | Connect an existing WooCommerce product/order to original merchant and buyer checkout |
+| `starforge woo-operator` | Retain native chain review, release the selected Woo order, recover and export |
 
 For example, review an existing original buyer configuration without signing:
 
@@ -1046,6 +1240,47 @@ command. The packaged `sf30-seller-sdk/dataset-refresh/WORKSPACE.md` and
 publication, acquisition and recovery flow. The `./seller/dataset-publisher`
 and `./buyer/dataset-acquisition` imports expose those original APIs.
 
+### Receive datasets in the browser
+
+The dataset customer workspace connects the original acquisition and data-room
+commands to a local browser. Use the original private buyer operator preset
+described in the bundled
+[dataset customer guide](../sf88-operator-buyer-cli/dataset-workspace/README.md).
+The preset supplies the payer, signer configuration, Python runtime and
+total/daily atomic ceilings. Launch the same maintained source with:
+
+```sh
+npx --no-install starforge buyer-dataset-workspace \
+  --state /private/customer-datasets \
+  --operator-settings /private/dataset-operator.json \
+  --analysis-python /absolute/path/to/python3 \
+  --analysis-checkout "$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source" \
+  --analysis-directory /private/customer-analysis \
+  --port 8439
+```
+
+Open the private local URL, upload the merchant's original offer JSON, choose
+its dataset query and review the exact terms and page/row/spend limits. Create
+the native acquisition, then continue it through the original terminal purchase
+approval. Progress, stopped-page recovery and purchase continuation use that
+same native session.
+
+After completion, open the original SF100 data room to preview typed rows and
+download its retained JSONL, CSV, review and manifest files. **Open analysis
+workspace** registers that exact completed session and room with the existing
+Python workspace before starting its server. Import the original delivery there
+to select editions, run saved SQL and publish the maintained reports. The
+launcher stops only its own analysis server before changing the registered
+source; it does not open a second owner against another live database.
+
+An existing completed acquisition can be attached with `--profile` using the
+guide's session/room profile. Restart with the same `--state` to retain reviews,
+acquisitions, delivered files and browser operation history. Keep the customer
+and analysis directories outside the installed package during upgrades. The
+three analysis options are optional as a group; file delivery works without
+them. The `./buyer/dataset-workspace` public import exposes
+`startDatasetWorkspace` from this same original server.
+
 ## Run live seller discovery
 
 The package also includes the catalog operator and its existing catalog,
@@ -1134,32 +1369,89 @@ embedding `./merchant/checkout` can read and compile its configuration through
 `./merchant/checkout/config`. Node native payment dependencies and the operator's
 actual settings are supplied as described above.
 
-Large object acquisition uses `starforge buyer-object --help` and the bundled
-`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/OBJECTS.md` guide.
-The operator selects an object from its description, reviews a whole-download
-atomic cap, and uses the existing buyer for each prepared range. Saved chunks,
-snapshot identity and attempts survive reopening; assembly streams the retained
-contiguous bytes into a new destination. The same command provides the offline
-report and exports. Application APIs are available through `./buyer/object` and
-`./buyer/object-description`.
+### Receive and buy merchant files
 
-### Operate large-file acquisition in the browser
+The installed Object Buyer receives the merchant's public `objects.json` and
+offers, prepares the customer's private native buyer, and operates the resulting
+whole-file or chunked acquisition. Obtain `s3/objects.json` and `offers.json`
+from the same selected S3 merchant release. The original seller's saved
+`/_seller/offers` array and native saved-discovery envelopes are also accepted.
 
-The original object workspace uses the existing merchant `objects.json`, exact
-buyer configuration and private SF88 workspace. Prepare the profile described
-in `sf88-operator-buyer-cli/object-workspace/README.md`, then launch:
+Use Node 22.16+, Python 3.11+ and util-linux `flock` on the operator's Linux host.
+Install the original [native payment dependencies](#native-payment-dependencies)
+in the same application directory. Declare the actual receiver in a private
+`0600` file using the existing `stellar-forge.buyer-runbook-operator.v1` preset
+from the installed
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/README.md`.
+It records the actor, service, public payer, absolute Python executable, total
+and daily atomic limits, and wallet environment name or trusted signer-provider
+path. The preset can also retain the original RPC and managed-proxy settings.
+Keep this file and the buyer state outside `node_modules`.
+
+Create the private parent in the installed application:
+
+```sh
+STARFORGE_OBJECT_PRIVATE="$PWD/private-objects"
+install -d -m 700 "$STARFORGE_OBJECT_PRIVATE"
+```
+
+Save the completed preset as `private-objects/operator.json` with mode `0600`,
+then launch the existing command:
 
 ```sh
 npx --no-install starforge buyer-object-workspace \
-  --state /private/download-workspace --profile /private/object-products.json --port 8438
+  --state "$STARFORGE_OBJECT_PRIVATE/workspace" \
+  --operator-settings "$STARFORGE_OBJECT_PRIVATE/operator.json" --port 8438
 ```
 
-Select the original product, review its range requests and spending limits,
-operate the retained acquisition, and preview/download the assembled file.
-Every range remains an original inbox job with its existing approval, ledger
-and native outcome. Restart uses the same state and original acquisition;
-completed parts remain available. The `./buyer/object-workspace` subpath exposes
-the original `startObjectWorkspace` API.
+Open the complete printed loopback URL and keep the terminal open. Choose
+**New → Receive a merchant object**, load the two public merchant files, and
+select the object and its exact offer. Review the recipient, network, asset,
+per-request maximum, complete request count, snapshot and total/daily limits.
+The selected limits must fit the receiver's preset.
+
+| Merchant delivery mode | Original request and saved result |
+| --- | --- |
+| Whole file, including an empty file | One exact GET with no range query; HTTP 200 without Content-Range; complete expected length, selected snapshot and SHA-256 |
+| Chunked file | Exact `offset`/`length` requests within the merchant's limit; retained contiguous ranges and original whole-object assembly |
+
+**Review received download** binds the original merchant files and local preset.
+**Create buyer and download** prepares the original operator, spending ledger,
+native request configurations and saved session. **Start download** then runs
+that session with the original terminal approval, live quote and payment
+workflow. Load the selected wallet or signer through the operator's normal
+private process environment before starting it. Whole-file mode uses the
+merchant's original whole-response limit; an empty file still has one reviewed
+request and its selected price.
+
+After native completion, use **Save whole file** or **Assemble file**, then
+**Download completed file**. The original response and final file retain their
+length, snapshot and digest checks. **Purchase records** shows each original
+request's financial status. **Finalize original purchases** operates those
+existing attempts; **Download all purchase records** streams their native
+accounting and receipts. Delivery and financial status remain separately visible.
+
+Stop the launcher with Ctrl+C and reopen the same state from the installed
+application, including after a package upgrade:
+
+```sh
+npx --no-install starforge buyer-object-workspace \
+  --state "$PWD/private-objects/workspace" --port 8438
+```
+
+The saved preset path, received files, prepared products, completed parts,
+original requests and purchase records reopen in place. Use the new printed
+browser URL after each launch. A completed file can be downloaded again from its
+retained assembly; its purchase records remain available if the delivered file
+has moved. A changed preset requires a fresh review for new preparation.
+
+For an already configured native buyer, the same command accepts
+`--profile /absolute/private/object-products.json` with the original product
+profile documented in `object-workspace/README.md`. Terminal acquisition,
+resume, assembly and exports remain available through
+`npx --no-install starforge buyer-object --help` and the installed `OBJECTS.md`.
+Applications use the maintained `./buyer/object`, `./buyer/object-description`
+and `./buyer/object-workspace` exports.
 
 ## Operate merchant delivery in the browser
 
@@ -2523,6 +2815,62 @@ regenerate them if that installation moves. The `./seller/s3` and
 configuration APIs. Importing them does not itself load the AWS client or access
 storage; opening the configured source uses its original provider.
 
+### Author and operate an object-store product
+
+Create or reopen the private S3 workspace through the installed command:
+
+```sh
+npx --no-install starforge s3 workspace \
+  --state /private/object-authoring --release-store /private/merchant-releases
+```
+
+The command prints its private loopback browser URL. Import the merchant's
+selected source and complete payment declaration, then edit object routes,
+descriptions, byte ranges and ordered payment options. Save a revision and
+choose **Review objects** to capture actual metadata through the original AWS
+provider. Preparing that review retains the selected object identities and
+original merchant files. Stage the package into the selected release store,
+then use its existing release console or fleet to compare, activate and run it.
+Keep the workspace and store outside `node_modules` so source updates preserve
+the merchant's saved work.
+
+The workspace retains drafts across reloads, detects concurrent saved revisions
+and resumes the same review or preparation after an interrupted response. Its
+customer handoff downloads the original `objects.json` and `offers.json` for
+the Object Buyer described above. The bundled
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/s3/workspace/README.md`
+contains the complete source, payment, native release and browser workflow.
+
+An application can open the same browser directly:
+
+```js
+import { startS3MerchantWorkspace } from
+  '@tokenjunkielabs/starforge-merchant/seller/s3/workspace/server';
+
+const objects = await startS3MerchantWorkspace({
+  directory: '/private/object-authoring',
+  releaseStore: '/private/merchant-releases',
+  port: 8413,
+});
+console.log(objects.url);
+// Close this workspace in the application's shutdown handler.
+await objects.close();
+```
+
+`./seller/s3/workspace` exposes `openS3MerchantWorkspace` and
+`validateS3MerchantDraft` for applications with their own interface. The main
+package import exports those functions and `startS3MerchantWorkspace` as well.
+
+An existing merchant MCP host can attach the same saved model using
+`s3WorkspaceConnection`; `starforge merchant-mcp init-s3-workspaces` initializes
+a new host from that connection. Its 13 S3 tools cover saved edits, actual
+object review, preparation, native release staging and customer-file delivery.
+`starforge merchant-mcp inspect-s3` reviews the selected release, and
+`starforge merchant-mcp download-s3` resumes its original buyer inputs using
+the existing authenticated MCP client. Use the bundled
+`source/stellar-forge/mcp-merchant-operator/S3_WORKSPACE.md` for the complete
+host connection, tool arguments, activation and download commands.
+
 ## Review merchant pricing and operations
 
 Use the original merchant pricing workspace, pricing importer and accounting
@@ -2574,6 +2922,35 @@ npx --no-install starforge revenue-report \
 For a session review, replace `--history` with that version's `--snapshot` file.
 The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
 describes history enablement, range selection, source retention and comparisons.
+
+### Turn a saved pricing review into a merchant price change
+
+In **Saved reviews**, choose **Prepare price change**, enter the explicit atomic
+amounts for the selected payment choices, and review every before-and-after term.
+Save a named decision to retain the new seller configuration, a local launch
+configuration with original file paths resolved, rebound merchant terms and the
+complete original pricing inputs. USD quotes and cost assumptions keep their
+entered values. Saved decisions reopen in the same pricing workspace.
+
+For an existing API merchant package, start the same command with
+`--source-package /private/merchant/original-api-package`. The decision then
+includes a complete updated package produced by the original compiler. Add
+`--release-store /private/merchant/releases` and, when configured,
+`--release-runtime /private/merchant/release-runtime.json` to **Stage retained
+release** from the saved decision. The original release console reviews,
+selects and starts that retained version. A repeated stage recovers its original
+release ID. The [pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md) covers
+the full source, export, staging and recovery workflow. Applications use
+`./merchant/revenue-model`, `./merchant/repricing` and
+`./merchant/repricing-source` for these same implementations.
+
+The original merchant MCP operator exposes this same workflow through its
+`merchant_pricing_*` tools. A host-declared pricing connection selects saved
+sources and release stores; `merchant-mcp init-pricing` connects an agent to the
+existing workspace. See the included
+[merchant pricing MCP guide](../../../stellar-forge/mcp-merchant-operator/PRICING.md)
+for commercial reviews, explicit amount decisions, retained downloads and
+release activation through the original operator.
 
 ## Operate merchant incidents and support cases
 
@@ -3193,11 +3570,13 @@ source alongside their SF30, SF61, SF82 and SF99 dependencies.
 
 The complete original bridge is included under
 `source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge`.
-Install its three PHP files together in one plugin directory on the merchant's
-existing WordPress/WooCommerce host: `starforge-sf98-woo.php`,
-`checkout-gateway.php` and `checkout-admission.php`. The plugin requires PHP 8.0+
-and the host's existing WordPress MySQL/MariaDB connection; it has no Composer
-or separate browser build dependency.
+Install its nine plugin files together on the merchant's existing
+WordPress/WooCommerce host: `starforge-sf98-woo.php`, `checkout-gateway.php`,
+`checkout-admission.php`, `merchant-console.php`, `merchant-console.js`,
+`merchant-console.css`, `merchant-operator.php`, `OPERATIONS.md` and
+`NATIVE_REVIEW.md`. The maintained Site packet copies this complete folder.
+The plugin requires PHP 8.0+ and the host's existing WordPress MySQL/MariaDB
+connection; it has no Composer or separate browser build dependency.
 
 Use its included `GATEWAY.md` to configure the original classic/Blocks checkout,
 map the actual product, and export that merchant route. Prepare and inspect it
@@ -3220,6 +3599,111 @@ into original SF88 review or its existing workspace. The original SF98 delivery
 worker and Woo merchant review remain the fulfillment flow. The full source
 guide includes those commands, retained order generations and recovery.
 `./seller/woocommerce` and `./buyer/woocommerce` expose the same original APIs.
+
+### Review the original transfer and complete the selected Woo order
+
+The installed `woo-operator` command joins a manager-authenticated WordPress
+order, its original SF98 outbox event, the successful native receipt and the
+existing SF86 Stellar transfer verifier. Save the operator config described in
+`sf104-woocommerce-merchant-bridge/NATIVE_REVIEW.md`, using the store's exact URL,
+private source outbox, review directory and existing Application Password
+environment names. Then run:
+
+```sh
+npx --no-install starforge woo-operator inspect \
+  --config /private/woo-operator.json --order 456
+npx --no-install starforge woo-operator review \
+  --config /private/woo-operator.json --id order-456-native --order 456 \
+  --record /private/original-native-record.json --payer G_TRUSTED_PAYER
+npx --no-install starforge woo-operator release \
+  --config /private/woo-operator.json --id order-456-native --confirm-order 456
+npx --no-install starforge woo-operator show \
+  --config /private/woo-operator.json --id order-456-native --live
+npx --no-install starforge woo-operator export \
+  --config /private/woo-operator.json --id order-456-native --out /private/order-456-handoff
+```
+
+Use the actual original native record and valid payer address. Review preserves
+the selected source before its read-only RPC work, so `resume` continues that
+same operation after interruption. Release rechecks the current order, invokes
+the original locked Woo controller and independently reads back the paid order,
+accepted event and retained review. `show`, `history` and `export` reopen saved
+work offline. The `./merchant/woocommerce` export exposes the same application
+functions. All nine plugin files, the CLI and their original dependencies ship
+from the selected package source.
+
+## Operate a Tenderly simulation merchant
+
+The complete Tenderly partner product includes provider configuration, the
+retained operation application, its industrial operator workspace, and the
+original Node and Python customer adapters. Its selected EVM network and
+seven public transaction fields remain bound to the merchant's plan.
+
+Use `starforge tenderly --help` for the original preparation and merchant
+lifecycle, `starforge tenderly-workspace --help` for the operator browser, and
+`starforge tenderly-customer --help` for customer selection, import, review,
+execution, status, recovery, export and analysis. Customer recovery opens the
+existing attempt and its saved file. The same customer can deliver its result
+directly to the analysis workspace:
+
+```sh
+starforge tenderly-customer analyze \
+  --runtime /absolute/installed/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --state /private/customer/purchases --intent EXISTING_INTENT \
+  --workspace /private/customer/tenderly-analysis --label 'Reviewed simulation'
+```
+
+Use the actual installed SF88 directory and retained customer intent. The whole
+`source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/`
+directory includes the original operator, preparation and customer guides,
+browser assets, and `customer/python/stellar_forge_tenderly` package.
+
+Stable application entries are `./partners/tenderly`, `/application`,
+`/preparation`, `/customer`, `/workspace` and `/workspace/server`, each under
+`@tokenjunkielabs/starforge-merchant`. They expose the maintained product,
+application, buyer preparation, native customer and operator workspace.
+
+## Analyze a completed Tenderly simulation
+
+Use the customer analysis workspace to receive the original merchant or buyer
+delivery, inspect execution records, compare retained results and save a review:
+
+```sh
+npx --no-install starforge tenderly-analysis serve \
+  --workspace /private/customer/tenderly-analysis --port 8468
+```
+
+Open the printed private loopback URL. Receive the portable `response.json`
+with its `simulation-request.json` and original `buyer-result.json`. The
+workspace verifies the supplied delivery metadata, retains the exact files and
+shows observed context, calls, state changes, assets and logs. Choose another
+capture to compare the recorded execution, then save notes and download its
+readable review. Each row links to the original provider JSON.
+
+The same command provides `receive`, `list`, `inspect`, `compare`, `review`
+and `export`. An export contains original inputs, analysis, four CSV tables,
+an HTML review and a manifest; an interrupted export resumes in the same
+directory. Keep this private workspace outside the installation.
+
+Applications can pass the existing customer result directly:
+
+```js
+import { receiveBuyerResult } from
+  '@tokenjunkielabs/starforge-merchant/buyer/tenderly-analysis';
+
+const capture = await receiveBuyerResult(customerResult.original, {
+  workspace: '/private/customer/tenderly-analysis',
+  request: customerResult.analysisRequest(),
+  label: 'Reviewed transaction',
+});
+```
+
+The adjacent `buyer/tenderly-analysis/server` entry exposes
+`startAnalysisWorkspace`; `buyer/tenderly-analysis/records` exposes the
+record analysis, comparison and CSV functions. These entries use the original
+Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
+receiving and portable-file guide is included at
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
 
 ## Embed in an application
 
@@ -3496,3 +3980,36 @@ processes on one Linux host. The original `OPERATIONS.md` under the installed
 ownership while already accepted SDK work completes. The existing
 `./facilitator` API retains its runtime entrypoints; `./facilitator/readiness`
 exposes the original RPC probe directly.
+
+## Prepare and receive the SCF grant delivery plan
+
+The maintained release includes the original SF47 scenario, Decimal calculator,
+private browser workspace and headless operator. Use Python 3.10 or newer on Linux alongside
+the package's Node launcher:
+
+```sh
+starforge grant-workspace --help
+starforge grant-workspace init --workspace /absolute/private/scf-planning
+starforge grant-workspace serve --workspace /absolute/private/scf-planning
+```
+
+The same workspace retains source identities, named plans, saved revisions,
+contributor capacity, package pricing, payment timing and the complete deployment
+acceptance plan. Close its browser server before running headless operations so
+the original process lock has one owner. `show`, `estimate`, `save`, `clone` and
+`restore` compose the original model, with explicit expected revisions and durable
+request IDs for saved operations. Omitted planning preserves the reviewed revision.
+
+Use `export` and `import-bundle` for the original complete browser-compatible ZIP;
+`export-all` and `import-all` group those unchanged native bundles for an entire
+saved-plan handover and resume each receiving import through the original request
+ledger. The receiving response maps original plan IDs to their new IDs while
+retaining the complete revision history, saved source and planning assumptions.
+Keep private workspaces and exports outside the installed source directory.
+
+The complete command, input, recovery and receiving guide is
+[SF47 headless planning and receiving](../../scf_2026/sf47_budget_model/workspace/CLI.md),
+installed at `source/stellar/scf_2026/sf47_budget_model/workspace/CLI.md`.
+The CLI also runs directly as `python3 .../workspace/cli.py`; `SF47_PYTHON` selects
+an explicit Python executable for the installed command. All financial calculation
+continues through the original `budget.py` and workspace model.

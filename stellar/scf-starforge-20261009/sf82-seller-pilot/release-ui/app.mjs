@@ -1,4 +1,8 @@
 import { bindDiscoveryControls } from './discovery.mjs';
+import { renderPostgresContract, renderPostgresComparison, bindPostgresStaging } from './postgres.mjs';
+import { bindFacilitatorControls, renderFacilitatorChange } from './facilitator.mjs';
+import { bindClientControls } from './client.mjs';
+import { bindReceivingControls } from './receiving.mjs';
 const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
@@ -12,8 +16,10 @@ const quoted = value => "'" + value.replaceAll("'", "'\\''") + "'";
 function stageCommand(release) {
   const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
   if (release?.clickhouse) return command + ' --clickhouse-package prepared-clickhouse-package';
+  if (release?.postgres) return command + ' --postgres-package prepared-postgres-package';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
   if (release?.jsonrpc) return command + ' --jsonrpc-package prepared-rpc-package';
+  if (release?.redis) return command + ' --redis-package prepared-redis-package';
   if (release?.mysql) return command + ' --mysql-package prepared-mysql-package';
   if (release?.s3) return command + ' --s3-package configured-s3-package';
   if (release?.duckdb) return command + ' --duckdb-package prepared-duckdb-package --duckdb-python ' + quoted(release.duckdb.interpreter);
@@ -21,17 +27,24 @@ function stageCommand(release) {
   return command + ' --spec openapi.json --config selections.json --bindings bindings.json';
 }
 function notice(message = '', error = false) { $('#notice').textContent = message; $('#notice').classList.toggle('error', error); }
-async function request(path, payload) {
-  const options = { headers: { 'x-release-token': token }, cache: 'no-store' };
+async function request(path, payload, { raw = false, blob = false, signal } = {}) {
+  const options = { headers: { 'x-release-token': token }, cache: 'no-store', ...(signal ? { signal } : {}) };
   if (payload !== undefined) { options.method = 'POST'; options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(payload); }
-  const response = await fetch(path, options), value = await response.json();
-  if (!response.ok) throw new Error(value.message ?? 'Operator action failed.');
-  return value;
+  const response = await fetch(path, options);
+  if (!response.ok) {
+    const value = await response.json().catch(() => ({}));
+    throw Object.assign(new Error(value.message ?? 'Operator action failed.'), { code: value.error, status: response.status });
+  }
+  return raw ? response : blob ? response.blob() : response.json();
 }
 function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
   discovery.buttons(blocked);
+  postgresStaging.buttons(blocked);
+  facilitator.buttons(blocked);
+  clients.buttons(blocked);
+  receiving.buttons(blocked);
   if (!snapshot || blocked) return;
   $('#activate').disabled = !comparison || selected === snapshot.state.active;
   $('#rollback').disabled = !snapshot.state.previous;
@@ -179,19 +192,20 @@ function renderStatus(value) {
     link.hidden = !visible;
     if (visible) link.href = target; else link.removeAttribute('href');
   }
-  for (const [selector, path] of [['#customer-docs', '/_seller/docs'], ['#customer-openapi', '/_seller/openapi.json']]) {
-    const link = $(selector), listener = value.runtime.observed?.listener;
-    const visible = value.console.managesRunningSeller && typeof listener === 'string' && /^http:\/\/127\.0\.0\.1:\d+$/.test(listener);
-    link.hidden = !visible;
-    if (visible) link.href = listener + path; else link.removeAttribute('href');
-  }
+  const listener = value.runtime.observed?.listener;
+  const explorer = $('#explorer-link');
+  const explorerVisible = value.runtime.state !== 'STOPPED' && typeof listener === 'string' && /^http:\/\/127\.0\.0\.1:\d+\/?$/.test(listener);
+  explorer.hidden = !explorerVisible;
+  if (explorerVisible) explorer.href = listener.replace(/\/$/, '') + '/_seller/docs'; else explorer.removeAttribute('href');
+  const openapi = $('#customer-openapi'); openapi.hidden = !explorerVisible;
+  if (explorerVisible) openapi.href = listener.replace(/\/$/, '') + '/_seller/openapi.json'; else openapi.removeAttribute('href');
   $('#store').textContent = value.root;
   $('#stage-command').textContent = stageCommand(value.releases.find(release => release.id === (selected ?? value.state.active)));
   const list = $('#release-list'); list.replaceChildren();
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.clickhouse ? 'ClickHouse · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.clickhouse ? 'ClickHouse · ' : release.postgres ? 'PostgreSQL live queries · ' : release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
@@ -200,7 +214,10 @@ function renderStatus(value) {
   const historyRows = $('#history'); historyRows.replaceChildren();
   for (const event of [...value.state.history].reverse().slice(0, 40)) {
     const row = node('tr'); row.append(node('td', date(event.at)), node('td', String(event.generation)),
-      node('td', (event.from ?? 'None') + ' → ' + event.to + ' (' + event.operation + ')'), node('td', event.reason)); historyRows.append(row);
+      node('td', (event.from ?? 'None') + ' → ' + event.to + ' (' + event.operation + ')'), node('td', event.reason));
+    if (event.receivingReview) row.lastElementChild.append(node('div',
+      'Receiving: ' + event.receivingReview.status.replaceAll('_', ' ') + ' · ' + date(event.receivingReview.completedAt)));
+    historyRows.append(row);
   }
   if (!value.state.history.length) { const row = node('tr'), cell = node('td', 'No selection changes yet.'); cell.colSpan = 4; row.append(cell); historyRows.append(row); }
   $('#process-description').textContent = value.runtime.state === 'RESTART_REQUIRED'
@@ -208,6 +225,10 @@ function renderStatus(value) {
     : value.console.managesRunningSeller ? 'This console owns the running seller. Closing the console command stops that seller.'
     : value.runtime.state !== 'STOPPED' ? 'Another manager owns this seller. Stop it from its original terminal or console before starting here.'
     : 'Start the selected seller release. Its prepared configuration, responses and application entry are checked first.';
+  const receivingReview = value.runtime.observed?.receivingReview;
+  if (receivingReview) $('#process-description').append(node('span',
+    ' Receiving review: ' + receivingReview.status.replaceAll('_', ' ') + ', completed ' +
+    date(receivingReview.completedAt) + ', profile prepared at selection ' + receivingReview.preparedGeneration + '.'));
   buttons();
 }
 function fieldPair(field, before, after) {
@@ -272,17 +293,23 @@ function renderDiff(value) {
   const rpcReview = Boolean(value.before?.jsonrpc || value.after.jsonrpc);
   const sqliteReview = Boolean(value.before?.sqlite || value.after.sqlite);
   const clickhouseReview = Boolean(value.before?.clickhouse || value.after.clickhouse);
+  const postgresReview = Boolean(value.before?.postgres || value.after.postgres);
   for (const change of value.changes) {
     const section = node('section', undefined, 'change'); section.append(node('h3', change.state + ' · ' + change.route));
     if (change.state !== 'CHANGED') {
       const route = change.after ?? change.before;
-      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', (rpcReview || sqliteReview || clickhouseReview) ? terms(route.payment) : literal(route.payment)));
+      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', (rpcReview || sqliteReview || postgresReview || clickhouseReview) ? terms(route.payment) : literal(route.payment)));
       if (route.upstream) section.append(node('small', 'Original upstream configuration and sharing policy'), node('pre', literal(route.upstream)));
     }
     for (const field of change.fields) {
       if (clickhouseReview && ['application', 'requestContractSha256'].includes(field.field)) {
         const details = node('details'); details.append(node('summary', field.field === 'application'
           ? 'Retained ClickHouse execution changed' : 'ClickHouse request or response contract changed'),
+          fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
+        section.append(details);
+      } else if (postgresReview && ['application', 'requestContractSha256'].includes(field.field)) {
+        const details = node('details'); details.append(node('summary', field.field === 'application'
+          ? 'PostgreSQL execution configuration changed' : 'PostgreSQL request or response contract changed'),
           fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
         section.append(details);
       } else if (sqliteReview && ['application', 'requestContractSha256'].includes(field.field)) {
@@ -295,9 +322,9 @@ function renderDiff(value) {
         details.append(node('summary', field.field === 'application' ? 'Retained RPC execution changed' : 'RPC request or response contract changed'),
           fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
         section.append(details);
-      } else section.append(fieldPair((rpcReview || sqliteReview || clickhouseReview) && field.field === 'payment' ? 'Payment alternatives' : field.field,
-        (rpcReview || sqliteReview || clickhouseReview) && field.field === 'payment' ? terms(field.before) : field.before,
-        (rpcReview || sqliteReview || clickhouseReview) && field.field === 'payment' ? terms(field.after) : field.after));
+      } else section.append(fieldPair((rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? 'Payment alternatives' : field.field,
+        (rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? terms(field.before) : field.before,
+        (rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? terms(field.after) : field.after));
     }
     changes.append(section);
   }
@@ -306,11 +333,27 @@ function renderDiff(value) {
   for (const change of value.runtimeChanges) runtime.append(change.field === 'jsonrpc'
     ? rpcRuntimeChange(change.before, change.after) : change.field === 'sqlite'
       ? sqliteRuntimeChange(change.before, change.after) : change.field === 'clickhouse'
-        ? clickhouseRuntimeChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+        ? clickhouseRuntimeChange(change.before, change.after) : change.field === 'postgres'
+        ? renderPostgresComparison(change.before, change.after) : change.field === 'facilitatorReview'
+          ? renderFacilitatorChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+  if (value.after.postgres) {
+    const detail = node('details', undefined, 'postgres-contract');
+    detail.append(node('summary', 'Candidate PostgreSQL contract · ' + value.after.id));
+    const body = node('div'); detail.append(body);
+    detail.addEventListener('toggle', () => {
+      if (detail.open && !body.childNodes.length) body.append(renderPostgresContract(value.after.postgres, value.after.routes));
+      else if (!detail.open) body.replaceChildren();
+    });
+    runtime.append(detail);
+  }
+  if (value.after.facilitatorReview && !value.runtimeChanges.some(change => change.field === 'facilitatorReview'))
+    runtime.append(renderFacilitatorChange(null, value.after.facilitatorReview));
   if (value.after.handlerEntry) runtime.append(node('p', 'Handler entry module is pinned. Its imported files and installed package dependencies are managed separately by the operator.', 'section-note'));
   $('#selection-actions').hidden = false;
   for (const button of document.querySelectorAll('.release-card')) button.setAttribute('aria-pressed', String(button.dataset.id === selected));
   discovery.selectRelease(value.after);
+  facilitator.selectRelease(value.after);
+  receiving.selectRelease(value.after, value.generation);
   buttons();
 }
 async function choose(releaseId) {
@@ -325,6 +368,8 @@ async function refresh() {
     const value = await request('/api/status'); renderStatus(value);
     await refreshCaches();
     await discovery.refresh();
+    await facilitator.refresh();
+    await clients.refresh();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
@@ -339,10 +384,14 @@ async function act(action) {
     instanceId: snapshot.console.instanceId, reason: $('#reason').value.trim() || 'Operator ' + action };
   if (action === 'activate') payload.id = selected;
   if (['run', 'restart'].includes(action)) payload.expectedGeneration = snapshot.state.generation;
+  const target = action === 'activate' ? selected : action === 'rollback' ? snapshot.state.previous : snapshot.state.active;
+  const receivingReview = ['activate', 'rollback', 'run', 'restart'].includes(action) ? receiving.selectionReference(target) : null;
+  if (receivingReview) payload.receiving = receivingReview;
   busy = true; buttons(); notice(action === 'run' || action === 'restart' ? 'Starting the selected seller release…' : 'Saving operator action…');
   try {
     const value = await request('/api/' + action, payload); renderStatus(value);
     await refreshCaches();
+    await clients.refresh();
     if (action === 'rollback') selected = value.state.active;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
     await refreshCatalog();
@@ -350,7 +399,20 @@ async function act(action) {
   } catch (error) { notice(error.message, true); }
   finally { busy = false; buttons(); }
 }
+const postgresStaging = bindPostgresStaging({ request, notice, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); }, onStaged: async result => {
+    selected = result.release.id; renderStatus(result.status);
+    renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
+    await refreshCatalog();
+  } });
 const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const facilitator = bindFacilitatorControls({ request, notice, refresh, choose,
+  isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const clients = bindClientControls({ request, getSnapshot: () => snapshot, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const receiving = bindReceivingControls({ request, notice, isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
 $('#refresh').addEventListener('click', () => { notice(); refresh(); });
 $('#activate').addEventListener('click', () => act('activate'));

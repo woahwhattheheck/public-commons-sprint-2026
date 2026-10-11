@@ -20,7 +20,11 @@ as native paid MCP tools. MySQL/MongoDB use their verified preparedDirectory and
 its embedded bindings. Other providers use sourceFile/serviceFile/bindingsFile.
 facilitatorFile selects the existing native facilitator; credentials stay in the
 original environment bindings. The original data source and result encodings apply.
-Guide: DATA_TOOLS.md. The original HTTP seller and prepared files are unchanged.`;
+Guide: DATA_TOOLS.md. The original HTTP seller and prepared files are unchanged.
+
+Portable MySQL product: starforge mcp-data mysql --help
+Review original query declarations and native terms, retain the complete private
+package, and hand its public customer tools to the buyer. Guide: MYSQL_PACKAGES.md.`;
 
 async function readJson(filename, limit = 262144) {
   const file = await open(filename, 'r');
@@ -124,6 +128,7 @@ export async function startDataMcpFile(filename, {environment = process.env} = {
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'mysql') return (await import('./mysql-package.mjs')).main(args.slice(1));
   if (args.length === 1 && args[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
   requireValue(args.length === 2 && args[0] === '--config', 'DATA_MCP_CONFIG_OPTION_REQUIRED');
   const server = await startDataMcpFile(args[1]);

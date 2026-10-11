@@ -1,5 +1,7 @@
 // MIT. Presentation and explicit operator actions over the original commerce session.
+import { createRequestView } from './request.mjs';
 import { createStreamPanel } from './stream.mjs';
+import { createRecoveryPanel } from './recovery.mjs';
 const byId = id => document.getElementById(id);
 const tokenKey = 'stellar-forge-commerce-token';
 const supplied = location.hash.slice(1);
@@ -8,6 +10,7 @@ if (/^[a-f0-9]{64}$/.test(supplied)) {
   history.replaceState(null, '', location.pathname);
 }
 const token = sessionStorage.getItem(tokenKey) ?? '';
+const requestView = createRequestView({ request, notice });
 let view, selectedIntent = '', previewIdentity, productIdentity, pending = false, selectionLoading = false, lastRequest = 0, refreshTimer;
 const selectionPath = path => path + (selectedIntent ? '?intent=' + encodeURIComponent(selectedIntent) : '');
 const readable = value => value === null || value === undefined ? '—' : String(value);
@@ -42,6 +45,8 @@ async function request(path, { method = 'GET', body, raw = false, signal } = {})
   return raw ? response : response.json();
 }
 const streamPanel = createStreamPanel({ host:byId('stream-workspace'), request, action });
+const recoveryPanel = createRecoveryPanel({ host:byId('recovery-workspace'), request, notice,
+  refreshSession:refresh });
 function link(container, title, value) {
   if (!value) return;
   let url;
@@ -68,7 +73,7 @@ function operationsAddress(container, value) {
 function render(next) {
   // Only a successful matching selection may unlock the selected operation.
   // An older preview/action callback or superseded refresh must not restore it.
-  if (selectionLoading && next.operation?.intentId !== selectedIntent) return;
+  if (selectionLoading && next.session?.state !== 'OFFLINE' && next.operation?.intentId !== selectedIntent) return;
   selectionLoading = false;
   view = next;
   const { session, seller, operation: op, review, attempt, delivery, controls } = next;
@@ -116,6 +121,7 @@ function render(next) {
   ]);
   text('request-headers', JSON.stringify(op?.headers ?? {}, null, 2));
   byId('request-details').hidden = !op;
+  requestView.render(op, controls);
   byId('review').disabled = pending || !controls.canReview;
   text('review-note', review ? 'The displayed operation is the current reviewed request.' : 'The operation comes from the prepared buyer configuration.');
   text('execution-state', attempt ? label(attempt.state) : review ? 'Ready to execute' : 'Awaiting review');
@@ -125,6 +131,7 @@ function render(next) {
     op?.state === 'CANCELLED' ? 'This request was cancelled before execution and remains in the inbox.' :
     op?.state === 'RUNNING_OR_INTERRUPTED' ? 'This intent has a permanent attempt. Recover its recorded result before deciding what further work is needed.' :
     attempt?.outcome ? 'The buyer result is retained below. This attempted intent will not be executed again.' :
+    seller.mode === 'OFFLINE' ? 'Restore the retained state and reopen the original session using Backup and recovery below.' :
     seller.mode !== 'NATIVE_X402' ? 'This merchant is in challenge-only mode. Configure its native facilitator to execute a purchase.' :
     'Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.');
   byId('execute').disabled = pending || !controls.canExecute;
@@ -139,7 +146,7 @@ function render(next) {
     ['Reservation', outcome.operatorReservation?.outcome],
     ['Error', outcome.error?.code ?? outcome.evidenceError?.code],
   ] : []);
-  text('outcome-message', attempt?.error ?? outcome?.error?.code ??
+  text('outcome-message', attempt?.error ?? outcome?.error?.operatorReason ?? outcome?.error?.code ??
     (outcome?.responseFile?.status === 'SAVED' ? 'The buyer saved the response. It is available in Delivery.' :
       outcome?.interrupted ? 'The buyer recorded an interrupted operation. Its recorded status appears above.' :
       'The recorded operation result is shown above.'));
@@ -325,11 +332,12 @@ async function refresh({ quiet = false } = {}) {
     const next = await request(selectionPath('/api/session'));
     if (order !== lastRequest) return;
     render(next);
+    if (next.recoveryEnabled) void recoveryPanel.refresh();
     if (!quiet && !pending) notice(null);
   } catch (error) { if (order === lastRequest) notice(error.message, true); }
   finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.rpcAction?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
+    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.recoveryBusy || view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.rpcAction?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
   }
 }
 async function action(name, body = {}) {

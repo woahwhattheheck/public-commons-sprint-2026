@@ -286,19 +286,23 @@ async function originalPreflight(cfg, environment) {
 }
 /** Trusted host seam: CLI always supplies the original SF88 execute function. */
 export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {},
-  environment = process.env, emitPageSummaries = true} = {}) {
+  environment = process.env, emitPageSummaries = true, workspace} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof executePage === 'function' && typeof onPage === 'function', 'DATASET_EXECUTOR_INVALID');
   need(typeof emitPageSummaries === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const release = await lock(directory);
   try {
     const definition = validateDefinition(await readJson(join(directory, 'session.json')), directory);
+    need(workspace === undefined || typeof workspace === 'string' && isAbsolute(workspace) &&
+      resolve(workspace) === workspace, 'DATASET_ABSOLUTE_WORKSPACE_REQUIRED');
+    need(workspace === undefined || definition.workspaceDirectory === undefined ||
+      workspace === definition.workspaceDirectory, 'DATASET_SAVED_WORKSPACE_MISMATCH');
     let report = await inspectUnlocked(directory);
     while (report.status === 'READY' && !signal?.aborted) {
       const index = report.completedPages + 1;
       const previous = report.pages.at(-1);
       const cfg = pageConfig(definition, index, previous?.nextCursor ?? null, BigInt(report.capAllocatedAtomic));
-      let operatorEnvironment = environment;
+      let operatorEnvironment = environment, evidenceRpcEndpoint;
       if (definition.workspaceDirectory !== undefined) {
         const {openWorkspace} = await import('./workspace.mjs');
         const workspace = await openWorkspace(['--dir', definition.workspaceDirectory],
@@ -306,6 +310,17 @@ export async function runDatasetSession(directory, {signal, executePage = execut
         need(digest(canonical(workspace.config)) === definition.configurationSha256,
           'DATASET_WORKSPACE_CHANGED_REVIEW_REQUIRED');
         if (executePage === execute) operatorEnvironment = workspace.operatorEnvironment;
+      }
+      if (workspace !== undefined && definition.workspaceDirectory === undefined) {
+        // Query-specific configs still use the selected original workspace's
+        // keys, current cap and evidence RPC. Keep executePage unchanged so its
+        // original terminal preflight remains before the durable attempt marker.
+        const queue = await import('./queue.mjs');
+        if (executePage === execute) {
+          const selected = await queue.workspaceExecution(definition.config, workspace);
+          operatorEnvironment = selected.environment;
+          evidenceRpcEndpoint = selected.evidenceRpcEndpoint;
+        } else await queue.workspaceConfiguration(workspace, {configuration:definition.config});
       }
       if (executePage === execute) await originalPreflight(cfg, operatorEnvironment);
       const dir = join(directory, 'pages', indexName(index));
@@ -321,7 +336,7 @@ export async function runDatasetSession(directory, {signal, executePage = execut
         capAtomic:cfg.operation.expect.maxAtomic, startedAt:new Date().toISOString()});
       try {
         const summary = await executePage(cfg, {signal, environment:operatorEnvironment,
-          emitSummary:emitPageSummaries});
+          emitSummary:emitPageSummaries, ...(evidenceRpcEndpoint === undefined ? {} : {evidenceRpcEndpoint})});
         await createJson(join(dir, 'result.json'), {schema:'stellar-forge.sf88.dataset-attempt-result.v1', summary});
       } catch (error) {
         await createJson(join(dir, 'failure.json'), {code:safeCode(error), at:new Date().toISOString()});

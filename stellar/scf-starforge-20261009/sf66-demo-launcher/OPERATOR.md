@@ -14,6 +14,11 @@ daily ceilings. Each individual request retains its selected original price.
 The original workspace currently binds one testnet asset and merchant recipient,
 so select purchases sharing those exact terms.
 
+For a private request downloaded from the original API merchant workspace, use
+[`requestFile` intake](COMMERCE_REQUESTS.md). It carries multipart files, fields,
+ordinary headers, operation tickets and optional body presence into this same
+session, with retained input inspection and download in the existing console.
+
 ## Inputs from the merchant and operator
 
 Use the same Node 22.16+ / Python 3.11+ installation as the
@@ -313,3 +318,12 @@ Do not generate a new intent to retry an uncertain payment. Reconcile the
 original request against its existing reservation and recorded transaction.
 To change merchant terms or request content, prepare a deliberate new setup
 while retaining the previous ledger and evidence for that reconciliation.
+
+## Operating-state backup and recovery
+
+Use the same commerce console to pause and drain its original runtime, review all
+retained sessions and operator journals, and create an encrypted backup through
+the existing recovery engine. Recovery mode starts with the original source
+state absent and restores the same intents, attempts and saved response files.
+See [COMMERCE_RECOVERY.md](COMMERCE_RECOVERY.md) for the host configuration,
+browser workflow, original-path restore and CLI commands.

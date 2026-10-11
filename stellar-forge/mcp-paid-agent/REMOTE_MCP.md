@@ -128,7 +128,7 @@ const operator = await createNativeMcpOperator({
   },
   approveQuote: createTerminalMcpApproval(),
 });
-export const {approve, signPayment, close} = operator;
+export const {approve, signPayment, reconcilePayment, close} = operator;
 ```
 
 Configure the existing workspace launcher:
@@ -164,6 +164,13 @@ preview with an explicit truncation flag. A durable workspace also retains the
 complete native `CallToolResult` JSON in its [result inbox](RESULTS.md).
 
 ## Status, cancellation and recovery
+
+The original native operator also exposes [read-only transaction inspection](PAYMENT_RECOVERY.md).
+`bazaar_reconcile_payment` reads a retained hash through the original SF86 verifier
+and stores its observation on the same quote. Failed settlement receipts retain
+their original failure code, payer, network and transaction metadata. An older
+result that lost its hash can use an explicitly labeled original operator
+reference. The browser console exposes the same workflow without another payment.
 
 `bazaar_status` returns the saved invocation, state and receipt metadata.
 `bazaar_history` and the existing [private reports](DURABILITY.md) include remote

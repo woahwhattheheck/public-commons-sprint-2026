@@ -9,6 +9,8 @@ import { createObjectSession, inspectObjectSession, runObjectSession,
   recoverObjectSession, assembleObjectSession, accountObjectSession } from '../object-session.mjs';
 import { renderObjectReport } from '../object-report.mjs';
 import { openObjectReceiving } from './intake.mjs';
+import { createObjectWorkspaceRecovery } from './recovery.mjs';
+import { acquireRunbookMetadataLease } from '../../buyer-runbook/runbook.mjs';
 
 const PROFILE = 'stellar-forge.sf88.object-workspace.v1';
 const SESSION = 'stellar-forge.sf88.object-session.v1';
@@ -77,6 +79,7 @@ function slug(value) {
 }
 function revision(report) {
   return sha(JSON.stringify([report.sessionId, report.configurationSha256, report.status,
+    report.deliveryMode ?? 'chunks',
     report.completeChunks, report.attemptedChunks, report.objectSha256, report.lock ?? null,
     report.stoppedChunk ?? null, report.chunks.map(row => [row.index, row.state, row.attemptId,
       row.sha256, row.evidenceSha256, row.originalOutcome, row.code]),
@@ -85,13 +88,14 @@ function revision(report) {
 function summary(id, report) {
   return { id, sessionId: report.sessionId, name: report.selection?.filename ?? id,
     objectId: report.selection?.objectId ?? null, createdAt: report.createdAt, status: report.status,
+    deliveryMode: report.deliveryMode ?? 'chunks',
     sourceUrl: report.sourceUrl,
     bytes: report.bytes, completeChunks: report.completeChunks, chunkCount: report.chunkCount,
     downloadedBytes: report.downloadedBytes, inspectedAt: report.inspectedAt ?? null };
 }
 function accountingRevision(record) {
   return sha(JSON.stringify([record.sessionId, record.configurationSha256,
-    record.workspace, record.terms, record.range.total]));
+    record.workspace, record.terms, record.range.total, record.deliveryMode ?? 'chunks']));
 }
 function accountingTotals(entries) {
   const value = { finalized: 0, unpaid: 0, unattempted: 0, attention: 0, actualAtomicUnits: '0' };
@@ -115,9 +119,10 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   const sessionsRoot = join(root, 'sessions'), outputsRoot = join(root, 'downloads'), inputsRoot = join(root, 'preparations');
   for (const path of [sessionsRoot, outputsRoot, inputsRoot]) await privateDirectory(path, true);
   const receiving = await openObjectReceiving({ directory: join(root, 'received'), operatorSettings });
-  let profiles = [];
+  let profiles = [], profileSha256 = null;
   if (profilePath !== null) {
-    const profile = json(await read(profilePath, 262144));
+    const rawProfile = await read(profilePath, 262144), profile = json(rawProfile);
+    profileSha256 = sha(rawProfile);
     need(object(profile) && profile.schema === PROFILE && Array.isArray(profile.products) &&
       profile.products.length <= 64 && Object.keys(profile).every(key => ['schema', 'products'].includes(key)),
     'OBJECT_WORKSPACE_PROFILE_INVALID');
@@ -139,7 +144,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   }
   const index = new Map(), reports = new Map(), reviews = new Map(), dispatches = new Map(), finalizations = new Map();
   const finalizationIssues = new Map(), fileTransfers = new Map();
-  let active = null, mutation = null, closed = false, closePromise;
+  let active = null, mutation = null, closed = false, closePromise, lastRecovery = null;
   const sessionPath = id => join(sessionsRoot, slug(id));
   const allProfiles = async () => {
     const values = [...profiles, ...await receiving.products()], counts = new Map();
@@ -148,6 +153,8 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       { ...value, error: 'OBJECT_WORKSPACE_PRODUCT_DUPLICATE' });
   };
   const chooseProfile = async id => (await allProfiles()).find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
+  const recovery = createObjectWorkspaceRecovery({ directory: root, profilePath, profileSha256,
+    products: allProfiles, receiving });
   const assertOpen = () => need(!closed, 'OBJECT_WORKSPACE_CLOSED', 409);
   const assertIdle = () => { assertOpen(); need(!active && !mutation, 'OBJECT_WORKSPACE_BUSY', 409); };
   const retain = (id, report) => {
@@ -171,6 +178,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
         index.set(entry.name, { id: entry.name, sessionId: definition.sessionId,
           name: definition.selection?.filename ?? entry.name, objectId: definition.selection?.objectId ?? null,
           sourceUrl: execution(definition.config).op.url,
+          deliveryMode: definition.deliveryMode ?? 'chunks',
           createdAt: definition.createdAt, status: 'NEEDS_INSPECTION', bytes: definition.bytes,
           chunkCount: definition.chunkCount, completeChunks: null, downloadedBytes: null, inspectedAt: null });
       } catch (error) {
@@ -198,11 +206,13 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       objectId: product.objectId, configPath: product.configFile, ...(chunkBytes ? { chunkBytes } : {}) });
     const after = await read(product.configFile, 65536);
     need(before.equals(after), 'OBJECT_WORKSPACE_INPUT_CHANGED', 409);
-    const chunks = Number((BigInt(selection.bytes) + BigInt(selection.chunkBytes) - 1n) / BigInt(selection.chunkBytes));
+    const chunks = selection.deliveryMode === 'whole' ? 1 :
+      Number((BigInt(selection.bytes) + BigInt(selection.chunkBytes) - 1n) / BigInt(selection.chunkBytes));
     need(chunks <= 100000, 'OBJECT_BYTE_PLAN_INVALID');
     return { product, source, selection, configurationSha256: sha(encode(source)), sourceSha256: sha(before),
       chunks, plannedMaxAtomic: (BigInt(op.expect.maxAtomic) * BigInt(chunks)).toString(),
       public: { id: product.id, label: product.label, objectId: product.objectId,
+        deliveryMode: selection.deliveryMode ?? 'chunks',
         filename: selection.selection.filename, bytes: selection.bytes, chunkBytes: selection.chunkBytes,
         chunkCount: chunks, snapshot: selection.expectedSnapshot, expectedSha256: selection.expectedSha256,
         contentType: selection.expectedContentType, sourceUrl: op.url, terms: op.expect,
@@ -219,20 +229,24 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     while (reviews.size >= 64) reviews.delete(reviews.keys().next().value);
   }
   async function reviewSelection({ productId, sessionName, chunkBytes, maxTotalAtomic } = {}) {
-    assertIdle(); slug(sessionName); positive(chunkBytes); atomic(maxTotalAtomic); trimReviews();
+    assertIdle(); slug(sessionName); if (chunkBytes !== undefined) positive(chunkBytes);
+    atomic(maxTotalAtomic); trimReviews();
     const value = await selected(await chooseProfile(productId), chunkBytes);
     need(BigInt(value.plannedMaxAtomic) <= BigInt(maxTotalAtomic), 'OBJECT_TOTAL_BUDGET_INSUFFICIENT');
     const reviewId = randomUUID(), expires = Date.now() + 15 * 60 * 1000;
     reviews.set(reviewId, { ...value, sessionName, maxTotalAtomic, expires });
     return { ...value.public, plannedMaxAtomic: value.plannedMaxAtomic, maxTotalAtomic, sessionName,
       reviewId, expiresAt: new Date(expires).toISOString(), configurationSha256: value.configurationSha256,
-      firstRange: { offset: 0, length: Math.min(chunkBytes, value.selection.bytes) },
-      lastRange: { offset: (value.chunks - 1) * chunkBytes,
-        length: value.selection.bytes - (value.chunks - 1) * chunkBytes } };
+      firstRange: value.selection.deliveryMode === 'whole' ? null :
+        { offset: 0, length: Math.min(value.selection.chunkBytes, value.selection.bytes) },
+      lastRange: value.selection.deliveryMode === 'whole' ? null :
+        { offset: (value.chunks - 1) * value.selection.chunkBytes,
+          length: value.selection.bytes - (value.chunks - 1) * value.selection.chunkBytes } };
   }
   function matchesReview(report, review) {
     return report.configurationSha256 === review.configurationSha256 &&
       report.workspace === review.product.workspace && report.bytes === review.selection.bytes &&
+      report.deliveryMode === (review.selection.deliveryMode ?? 'chunks') &&
       report.chunkBytes === review.selection.chunkBytes && report.expectedSnapshot === review.selection.expectedSnapshot &&
       report.expectedSha256 === review.selection.expectedSha256 &&
       report.expectedContentType === review.selection.expectedContentType &&
@@ -243,7 +257,9 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     assertIdle(); const review = reviews.get(reviewId);
     need(review && review.expires > Date.now(), 'OBJECT_WORKSPACE_REVIEW_EXPIRED', 409);
     mutation = { kind: 'CREATE', session: review.sessionName };
-    try { return await createReviewed(review); } finally { mutation = null; }
+    let release;
+    try { release = await acquireRunbookMetadataLease(root); return await createReviewed(review); }
+    finally { try { await release?.(); } finally { mutation = null; } }
   }
   async function createReviewed(review) {
     let temporary;
@@ -273,7 +289,9 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   }
   async function receivingMutation(kind, action) {
     assertIdle(); mutation = { kind };
-    try { return await action(); } finally { mutation = null; }
+    let release;
+    try { release = await acquireRunbookMetadataLease(root); return await action(); }
+    finally { try { await release?.(); } finally { mutation = null; } }
   }
   async function createReceived(value) {
     return receivingMutation('CREATE_RECEIVED_OBJECT', async () => {
@@ -293,6 +311,47 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       chunkCount: work.report?.chunkCount ?? work.total, processedChunks: work.processed,
       totals: work.totals, currentOffset: work.offset, phase: work.phase,
       verifiedBytes: work.verifiedBytes, streamedBytes: work.streamedBytes, totalBytes: work.totalBytes };
+  }
+  function recoveryResult(result) {
+    return { status: result.status, bundle: result.bundle, recordSha256: result.recordSha256,
+      stateRoot: result.stateRoot, files: result.files, bytes: result.bytes, createdAt: result.createdAt,
+      operators: result.operators?.length ?? 0, sessions: result.application?.sessions.length ?? 0,
+      selectionRecord: result.selectionRecord, selectionRecordError: result.selectionRecordError,
+      leaseReleaseErrors: result.leaseReleaseErrors };
+  }
+  async function inspectRecovery(input) {
+    assertIdle(); mutation = { kind: 'REVIEW_BACKUP' };
+    try { return await recovery.inspect(input); } finally { mutation = null; }
+  }
+  async function snapshotRecovery(input, context = {}) {
+    assertIdle(); mutation = { kind: 'BACKUP' };
+    try { return await recovery.snapshot(input, context); } finally { mutation = null; }
+  }
+  function startRecovery({ kind, actionId, ...input } = {}) {
+    assertOpen(); need(['BACKUP', 'VERIFY_BACKUP'].includes(kind), 'OBJECT_RECOVERY_ACTION_REQUIRED');
+    need(typeof actionId === 'string' && /^[a-f0-9-]{36}$/.test(actionId), 'OBJECT_WORKSPACE_ACTION_ID_REQUIRED');
+    if (lastRecovery?.id === actionId) return lastRecovery;
+    assertIdle();
+    const controller = new AbortController(), work = { id: actionId, kind, session: null, controller,
+      startedAt: now(), stopping: false, events: [] };
+    active = work;
+    const retainProgress = (status, extra = {}) => { lastRecovery = { ...runView(work), state: status,
+      events: [...work.events], ...extra }; };
+    retainProgress('RUNNING');
+    const operation = kind === 'BACKUP' ? recovery.snapshot : recovery.verify;
+    work.promise = operation(input, { signal: controller.signal, onProgress: event => {
+      work.events.push({ ...event, at: now() }); if (work.events.length > 64) work.events.shift();
+      work.progressAt = now(); work.phase = event.stage; retainProgress(work.stopping ? 'STOPPING' : 'RUNNING');
+    } }).then(result => retainProgress('COMPLETED', { result: recoveryResult(result), endedAt: now() }),
+      error => retainProgress(controller.signal.aborted ? 'STOPPED' : 'FAILED',
+        { error: workspaceError(error), endedAt: now() }))
+      .finally(() => { reports.clear(); if (active === work) active = null; });
+    return runView(work);
+  }
+  async function recoveryState() {
+    assertOpen(); return { directory: root, suggestedStateRoot: dirname(root),
+      active: active && ['BACKUP', 'VERIFY_BACKUP'].includes(active.kind) ? runView(active) : null,
+      last: lastRecovery, history: await recovery.history(), available: !active && !mutation };
   }
   async function readAccounting(session, offset = 0, limit = ACCOUNTING_PAGE) {
     slug(session); need(index.has(session), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
@@ -402,6 +461,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     if (!active && dispatches.get(session)?.id === runId) return dispatches.get(session);
     if (!active && finalizations.get(session)?.id === runId) return finalizations.get(session);
     if (!active && fileTransfers.get(session)?.id === runId) return fileTransfers.get(session);
+    if (!active && session === null && lastRecovery?.id === runId) return lastRecovery;
     need(active?.session === session && active.id === runId, 'OBJECT_WORKSPACE_RUN_CHANGED', 409);
     active.stopping = true; active.controller.abort(); return runView(active);
   }
@@ -623,6 +683,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
   await scan();
   return { products, reviewSelection, create, view, refresh, run, stop, recover, assemble,
     finalize, openAccountingExport, exportReport, openDownload, close,
+    inspectRecovery, snapshotRecovery, startRecovery, recoveryState,
     receivingState: () => { assertOpen(); return receiving.state(); },
     receivingOptions: (id, objectId) => { assertOpen(); return receiving.options(id, objectId); },
     receive: value => receivingMutation('RECEIVE_OBJECT', () => receiving.receive(value)),

@@ -1,7 +1,10 @@
 import {mountPricing} from './pricing.mjs';
 import {mountAccountant} from './accountant.mjs';
 import {mountPeriods} from './periods.mjs';
-let pricingPane,accountantPane,periodPane;
+import {mountRecovery} from './recovery.mjs';
+import {mountAdjustments} from './adjustments.mjs';
+let pricingPane,accountantPane,periodPane,maintenancePane,adjustmentsPane;
+let maintenanceMode = 'RUNNING';
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
 import {mountCollection} from './collection.mjs';
@@ -62,7 +65,13 @@ function notify(message, error = false) {
   $('message').classList.toggle('error', error);
   $('message').hidden = !message;
 }
-function attempt(work) { return Promise.resolve().then(work).catch(error => notify(error.message || String(error), true)); }
+function attempt(work) { return Promise.resolve().then(work).catch(async error => {
+  if (error.status === 503 && maintenancePane) {
+    try { await maintenancePane.refresh(); } catch {}
+    if (maintenanceMode !== 'RUNNING') { openArea('maintenance'); return; }
+  }
+  notify(error.message || String(error), true);
+}); }
 function operator() {
   const value = $('operator').value.trim();
   if (!value) { $('operator').focus(); throw new Error('Enter the operator or reviewer name before saving.'); }
@@ -81,18 +90,23 @@ function selectOptions(element, items, preferred) {
   element.value = items.some(([value]) => value === wanted) ? wanted : items[0]?.[0] ?? '';
 }
 function updateButtons() {
-  for (const button of document.querySelectorAll('button[type="submit"],button[data-write]')) button.disabled = busy || !state;
-  $('begin-run').disabled = busy || !state || state.runs.some(run => ['queued','running'].includes(run.status));
-  $('export-button').disabled = busy || !state?.runs.some(run => run.status === 'complete');
-  $('reapply-conflict').disabled = busy || !pendingIntent?.reloaded;
-  $('reload-conflict').disabled = busy;
+  const locked = maintenanceMode !== 'RUNNING', blocked = busy || locked;
+  for (const button of document.querySelectorAll('button[type="submit"],button[data-write]')) if (!button.closest('#area-maintenance')) button.disabled = blocked || !state;
+  $('begin-run').disabled = blocked || !state || state.runs.some(run => ['queued','running'].includes(run.status));
+  $('export-button').disabled = blocked || !state?.runs.some(run => run.status === 'complete');
+  $('reapply-conflict').disabled = blocked || !pendingIntent?.reloaded;
+  $('reload-conflict').disabled = blocked;
   const connected = Boolean(state?.recovery?.directory);
-  $('recovery-refresh').disabled = $('recovery-disconnect').disabled = busy || !connected;
-  $('recovery-import').disabled = busy || !connected || !$('recovery-preview-select').value || recoveryActive();
-  for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
-  for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
+  $('recovery-refresh').disabled = $('recovery-disconnect').disabled = blocked || !connected;
+  $('recovery-import').disabled = blocked || !connected || !$('recovery-preview-select').value || recoveryActive();
+  for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = blocked || button.dataset.requested === 'true';
+  for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = blocked || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
-  pricingPane?.setBusy(busy);periodPane?.setBusy(busy);accountantPane?.setBusy(busy);
+  for (const area of document.querySelectorAll('.area:not(#area-maintenance)')) area.inert = locked;
+  $('run-list').inert = $('period-current').inert = locked;
+  for (const button of document.querySelectorAll('.tabs [data-area]')) button.disabled = locked && button.dataset.area !== 'maintenance';
+  pricingPane?.setBusy(blocked);periodPane?.setBusy(blocked);accountantPane?.setBusy(blocked);adjustmentsPane?.setBusy(blocked);
+  maintenancePane?.setBusy(busy);
 }
 
 function renderRuns() {
@@ -131,7 +145,7 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); accountantPane?.render(state); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); accountantPane?.render(state); adjustmentsPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
@@ -172,13 +186,15 @@ async function loadRun(id, {reset = false} = {}) {
   if (result.run.status === 'complete') await loadRecords(reset ? 0 : records.offset);
 }
 async function refreshState() {
+  if (maintenanceMode !== 'RUNNING') return;
   const result = await api('/api/state'); adopt(result);
   await loadRun(selectedRun);
   await collectionUI?.refresh();
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
-  if (!state?.runs.some(run => ['queued','running'].includes(run.status)) && !recoveryActive()) return;
+  if (maintenanceMode !== 'RUNNING') return;
+  if (!state?.runs.some(run => ['queued','running'].includes(run.status)) && !recoveryActive() && !adjustmentsPane?.active()) return;
   pollTimer = setTimeout(() => attempt(async () => {
     const before = state.runs.find(run => run.id === selectedRun)?.status;
     adopt(await api('/api/state'));
@@ -187,10 +203,23 @@ function schedulePoll() {
   }), 1000);
 }
 function openArea(area) {
+  if (maintenanceMode !== 'RUNNING' && area !== 'maintenance') area = 'maintenance';
+  maintenancePane?.setVisible(area === 'maintenance');
+  adjustmentsPane?.setVisible(area === 'adjustments');
   if (area === 'collection') attempt(() => collectionUI?.refresh());
   if (area === 'accountant') attempt(() => accountantPane?.refresh());
   for (const button of document.querySelectorAll('[data-area]')) { const active = button.dataset.area === area; button.classList.toggle('active',active); if (active) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); }
   for (const section of document.querySelectorAll('.area')) section.hidden = section.id !== 'area-' + area;
+}
+
+async function onMaintenanceMode(next, previous) {
+  maintenanceMode = next.configured ? next.mode : 'RUNNING';
+  if (maintenanceMode !== 'RUNNING') { clearTimeout(pollTimer); retainReviewDraft(); openArea('maintenance'); }
+  updateButtons();
+  if (maintenanceMode === 'RUNNING' && previous && previous !== 'RUNNING' && maintenancePane) {
+    await refreshState();
+    notify('The original accounting workspace is open. Its retained records and reviews are loaded.');
+  }
 }
 
 const columns = {
@@ -236,6 +265,7 @@ function renderDetail(row = currentRecord()) {
   if (!row) { $('record-detail').innerHTML = '<p class="empty">Select a record to inspect its complete values.</p>'; return; }
   const title = view === 'exceptions' ? friendly(row.reason) : view === 'proofs' ? row.name : row.method + ' ' + row.routeId;
   let html = '<h3>' + esc(title) + '</h3>' + values(row);
+  if (view === 'ledger') html += '<div class="actions"><button type="button" data-open-adjustment="' + esc(row.eventId) + '" data-adjustment-run="' + esc(selectedRun) + '">Open adjustments</button></div>';
   if (view === 'recovered' && row.response) html += '<div class="actions"><a class="button" download href="/api/runs/' + endpoint(selectedRun) + '/recovered/' + endpoint(row.recoveryId) + '/response">Download retained response</a></div><p class="hint">This response comes from the selected run’s immutable source capture.</p>';
   if (view === 'exceptions') {
     const key = reviewDraftKey(selectedRun,row.id), saved = row.review, draft = drafts.get(key) || saved;
@@ -266,7 +296,10 @@ async function perform(intent) {
     if (intent.success) await intent.success(result);
     notify(typeof intent.message === 'function' ? intent.message(result) : intent.message || 'Saved.');
   } catch (error) {
-    if (error.status === 409 && ['STALE_WORKSPACE','STALE_REVIEW','STALE_PERIOD'].includes(error.code)) {
+    if (error.status === 409 && intent.onConflict) {
+      await intent.onConflict(error);
+      notify(error.message + ' Review the retained draft again before saving.',true);
+    } else if (error.status === 409 && ['STALE_WORKSPACE','STALE_REVIEW','STALE_PERIOD'].includes(error.code)) {
       intent.reloaded = false; pendingIntent = intent;
       $('conflict-text').textContent = error.message + ' Your submitted changes remain in this tab. Load the saved version, inspect it, then explicitly reapply your changes.';
       $('conflict').hidden = false; notify('The saved version changed. Your submitted draft is retained.',true);
@@ -408,6 +441,7 @@ async function importRecovery(previewId) {
   await perform({path:'/api/recovered/import',body:{revision:state.revision,previewId,actor:operator()},description:'original recovered-payment import',message:'Original transfer verification started. Its result and any retained import are shown in the saved attempts.',success:() => openArea('recovery')});
 }
 
+maintenancePane = await mountRecovery({api,operator,onModeChange:onMaintenanceMode});
 pricingPane = await mountPricing({api,perform,operator,attempt,notify,openArea,loadRun});
 periodPane = await mountPeriods({api,perform,operator,attempt,notify,openArea,loadRun,
   compare:async (current,baseline) => {
@@ -416,9 +450,14 @@ periodPane = await mountPeriods({api,perform,operator,attempt,notify,openArea,lo
     await compareRuns(0);openArea('compare');
   }});
 accountantPane = await mountAccountant({api,perform,operator,attempt,notify});
+adjustmentsPane = await mountAdjustments({api,perform,operator,attempt,notify,adopt,openArea,loadRun});
 
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
 document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));
+$('record-detail').addEventListener('click',event => {
+  const button=event.target.closest('[data-open-adjustment]');
+  if(button)attempt(async()=>{openArea('adjustments');await adjustmentsPane.openEvent(button.dataset.adjustmentRun,button.dataset.openAdjustment);});
+});
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click',() => attempt(async () => {
   retainReviewDraft(); view = button.dataset.view; selectedKey = null; records.offset = 0;
   document.querySelectorAll('[data-view]').forEach(item => { item.classList.toggle('active',item === button); item.setAttribute('aria-pressed',String(item === button)); });
@@ -426,7 +465,7 @@ document.querySelectorAll('[data-view]').forEach(button => button.addEventListen
 })));
 $('operator').value = remembered('operator');
 $('operator').addEventListener('input',() => remember('operator',$('operator').value));
-$('refresh').addEventListener('click',() => attempt(async () => { retainReviewDraft(); await refreshState(); notify('Loaded saved workspace revision ' + state.revision + '. Form drafts are retained.'); }));
+$('refresh').addEventListener('click',() => attempt(async () => { retainReviewDraft(); await maintenancePane.refresh(); await refreshState(); notify(maintenanceMode === 'RUNNING' ? 'Loaded saved workspace revision ' + state.revision + '. Form drafts are retained.' : 'Loaded the saved backup and recovery state.'); }));
 $('run-search').addEventListener('input',() => { runLimit = 30; if (state) renderRuns(); });
 $('run-more').addEventListener('click',() => { runLimit += 30; renderRuns(); });
 $('run-list').addEventListener('click',event => {
@@ -551,5 +590,6 @@ attempt(async () => {
   $('area-collection').innerHTML = await fragment.text();
   collectionUI = mountCollection({root:$('area-collection'),api,perform,operator,adopt,getState:() => state,notify,
     openRun:async id => { await loadRun(id,{reset:true}); openArea('reconcile'); }});
-  adopt(await api('/api/state')); await loadRun(selectedRun); await collectionUI.refresh();
+  if (maintenanceMode === 'RUNNING') { adopt(await api('/api/state')); await loadRun(selectedRun); await collectionUI.refresh(); }
+  else { updateButtons(); openArea('maintenance'); }
 });

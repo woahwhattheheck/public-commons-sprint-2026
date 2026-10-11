@@ -4,6 +4,7 @@
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import {bindDiscoveryQuote, reviewPaymentRequired} from '../../../stellar-forge/quote-commitment/quote-commitment.mjs';
 import {decodeX402Header,checkStellarTestnetTransaction,createOfficialEventDecoder} from './verify.mjs';
+import {nativeAnalysisActions,nativeAnalysisSchema} from '../../../stellar-forge/mcp-paid-agent/native-analysis-schema.mjs';
 
 const REPORT=(reason,other={})=>({decision:'NOT_AUTHORIZED',reason,...other});
 /**
@@ -88,10 +89,16 @@ export async function executeDiscoveredHttpPayment({
 // owns streamable HTTP initialize/tools/list/tools/call JSON-RPC and consent state.
 export const mcpAgentCommerceTool = Object.freeze({
   name:'sf43_discover_review_and_pay',
-  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. With the native SF88 workspace, supply a stable intentId and prepare or execute the exact request; status, history, cancel, recover and read use its original durable inbox and saved output. The legacy callback retains its original search/request interface. A tool call cannot replace terminal approval.',
+  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows or exact files, and inspect/finalize original accounting. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
   inputSchema:{type:'object',additionalProperties:false,
     properties:{
-      action:{type:'string',enum:['prepare','execute','status','history','cancel','recover','read'],description:'Native workspace action; omitted means execute. Non-native operator callbacks may support only the original execute arguments.'},
+      action:{type:'string',enum:['prepare','execute','status','history','cancel','recover','read',
+        'object-sources','object-list','object-prepare','object-history','object-status','object-run',
+        'object-cancel','object-recover','object-assemble','object-read','object-accounting','object-finalize',
+        'dataset-sources','dataset-describe','dataset-prepare','dataset-history','dataset-status','dataset-run',
+        'dataset-cancel','dataset-recover','dataset-deliver','dataset-rows','dataset-read','dataset-accounting','dataset-finalize',
+        ...nativeAnalysisActions],
+        description:'Native workspace action; omitted means execute. object-* and dataset-* use operator-registered original descriptions and native acquisition sessions. Non-native callbacks may support only the original execute arguments.'},
       intentId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Required by the native workspace. Keep this same ID to inspect or recover an existing operation.'},
       search:{type:'string',minLength:1,maxLength:256},targetResourceURL:{type:'string'},
       targetMethod:{type:'string',enum:['GET','POST','HEAD','PUT','PATCH','DELETE']},
@@ -99,11 +106,36 @@ export const mcpAgentCommerceTool = Object.freeze({
       acceptIndex:{type:'integer',minimum:0,description:'Optional exact original option index when the selected listing has several compatible alternatives.'},
       body:{type:'string',maxLength:1048576,description:'Explicit UTF-8 request body for the operator-configured non-GET/HEAD route; no file path or signer settings are accepted.'},
       byteOffset:{type:'integer',minimum:0},maxBytes:{type:'integer',minimum:1,maximum:65536},
-      limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'}
+      limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'},
+      sourceId:{type:'string',pattern:'^[a-f0-9]{64}$',description:'Exact registered descriptor ID returned by object-sources or dataset-sources. Tool arguments cannot import a local file.'},
+      objectId:{type:'string',pattern:'^[A-Za-z0-9_-]{1,64}$',description:'Original merchant object ID from object-list.'},
+      acquisitionId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Stable complete acquisition identity. Reuse it for run, recovery, accounting and file reads.'},
+      chunkBytes:{type:'integer',minimum:1,maximum:1048576,description:'Optional native descriptor-bounded chunk length. Whole products keep their exact fixed length.'},
+      maxTotalAtomic:{type:'string',pattern:'^[1-9][0-9]*$',description:'Explicit maximum for the complete object or dataset query. The original per-request cap and configured cumulative ledger still apply.'},
+      offset:{type:'integer',minimum:0,description:'Zero-based list/status/accounting offset, or row offset for dataset-rows.'},
+      query:{type:'object',additionalProperties:{type:'string',maxLength:8192},maxProperties:32,
+        description:'Original dataset query parameters as strings: fields, limit, where_COLUMN, gt/gte/lt/lte_COLUMN and sort. Only descriptor-enabled typed capabilities are accepted. The registered snapshot is pinned; initial cursors are not accepted.'},
+      maxPages:{type:'integer',minimum:1,maximum:4096},
+      maxRows:{type:'integer',minimum:1,maximum:1000000},
+      maxPageBytes:{type:'integer',minimum:1024,maximum:2097152},
+      filename:{type:'string',enum:['dataset.jsonl','dataset.csv','review.html','manifest.json'],
+        description:'Exact original SF100 delivered file for dataset-read; return its bytes without reformatting.'},
+      ...nativeAnalysisSchema.properties
     },
     anyOf:[
       {required:['search','targetResourceURL','maxAtomic'],properties:{action:{enum:['prepare','execute']}}},
       {required:['action','intentId'],properties:{action:{enum:['execute','status','cancel','recover','read']}}},
-      {required:['action'],properties:{action:{const:'history'}}}
+      {required:['action'],properties:{action:{enum:['history','object-history','object-sources','dataset-history','dataset-sources']}}},
+      {required:['action','sourceId'],properties:{action:{const:'object-list'}}},
+      {required:['action','sourceId','objectId','acquisitionId','maxTotalAtomic'],properties:{action:{const:'object-prepare'}}},
+      {required:['action','acquisitionId'],properties:{action:{enum:['object-status','object-run','object-cancel',
+        'object-recover','object-assemble','object-read','object-accounting','object-finalize']}}},
+      {required:['action','sourceId'],properties:{action:{const:'dataset-describe'}}},
+      {required:['action','sourceId','acquisitionId','query','maxPages','maxTotalAtomic','maxRows','maxPageBytes'],
+        properties:{action:{const:'dataset-prepare'}}},
+      {required:['action','acquisitionId'],properties:{action:{enum:['dataset-status','dataset-run','dataset-cancel',
+        'dataset-recover','dataset-deliver','dataset-rows','dataset-accounting','dataset-finalize']}}},
+      {required:['action','acquisitionId','filename'],properties:{action:{const:'dataset-read'}}},
+      ...nativeAnalysisSchema.anyOf
     ]}
 });

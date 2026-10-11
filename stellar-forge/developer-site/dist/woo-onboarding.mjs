@@ -128,15 +128,15 @@ node merchant.mjs inspect --toolkit "$TOOLKIT"
 
 Preparation validates the actual routes through the original seller compiler,
 creates ${shell(input.privateDirectory)} as a NEW private directory, writes
-merchant.json and copies the three original plugin files without editing them.
+merchant.json and copies the complete original plugin and its operating guide without editing them.
 It refuses an existing directory. Inspect and later commands reuse that same
 configuration and outbox. Keep this packet for normal startup and recovery.
 
 ## 2. Install and configure the original Woo plugin
 
 The prepared directory contains wordpress-plugin/starforge-sf98-woo/ with
-starforge-sf98-woo.php, checkout-gateway.php and checkout-admission.php. Copy that
-whole folder to the shop's wp-content/plugins using its ordinary deployment
+the original receiver, checkout/admission, merchant-console PHP/JS/CSS,
+merchant-operator.php, OPERATIONS.md and NATIVE_REVIEW.md. Copy that whole folder to the shop's wp-content/plugins using its ordinary deployment
 process. Alternatively zip that single folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. PHP 8.0+, WooCommerce and
 real MySQL/MariaDB named locks are required. HPOS is supported.
@@ -157,8 +157,9 @@ Enable the Stellar Forge native checkout gateway in WooCommerce Payments.
 Each imported file must come from THIS shop's saved simple virtual product.
 The product declares its exact storefront currency/total and native atomic
 amount separately; no exchange rate is calculated. One mapped product, qty 1,
-per checkout; no mixed cart, coupons, tax, shipping, fees or variation. Upload
-a private downloadable file through ordinary Woo settings when applicable.
+per checkout; no mixed cart, coupons, shipping, fees or variation. Any
+applicable tax must preserve the deliberately mapped final total. Upload a
+private downloadable file through ordinary Woo settings when applicable.
 Keep the saved price/native mapping unchanged for an order already created.
 Export the route again if configuring a different product or seller.
 
@@ -358,12 +359,14 @@ TOOLKIT=/absolute/path/to/checkout-or-installed-package
 node merchant.mjs plugin --toolkit "$TOOLKIT" --out /private/new-plugin-files
 \`\`\`
 
-The command copies the exact original starforge-sf98-woo.php,
-checkout-gateway.php and checkout-admission.php into the new output directory's
+The command copies the exact original receiver, checkout/admission files,
+merchant-console PHP/JS/CSS, merchant-operator.php and both operating guides into the new output directory's
 starforge-sf98-woo folder. It makes no network request or store change.
 Copy that folder to WordPress wp-content/plugins using the shop's normal
 deployment process, or zip the folder and use WordPress Upload Plugin.
-Activate Starforge SF98 WooCommerce Merchant Bridge.
+Activate Starforge SF98 WooCommerce Merchant Bridge. Open WooCommerce → Stellar
+merchant operations for the native order, attempt and release console. Retain
+all nine delivered files when upgrading an existing plugin.
 
 The original plugin requires WooCommerce, PHP 8.0+ and actual MySQL/MariaDB
 named locks. Define SF98_WEBHOOK_SECRET as a PHP constant in wp-config.php from

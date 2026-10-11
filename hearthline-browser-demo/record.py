@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record one genuine browser journey against the unchanged local MCP runtime.
+"""Record one genuine browser journey against the original local MCP runtime.
 
 Requires Playwright and its Chromium/ffmpeg binaries. No mocked browser requests,
 DOM state injection, real weather query, credential, or paid provider is used.
@@ -30,7 +30,7 @@ def main() -> None:
     timeline: list[dict] = []
     errors: list[str] = []
     server_log = (out / 'server.log').open('w')
-    server = subprocess.Popen(['node', str(ROOT / 'server.mjs')], env={**os.environ, 'PORT': '8790'}, stdout=server_log, stderr=subprocess.STDOUT)
+    server = subprocess.Popen(['node', str(ROOT / 'server.mjs')], env={**os.environ, 'PORT': '8790', 'HEARTHLINE_EPHEMERAL': '1'}, stdout=server_log, stderr=subprocess.STDOUT)
     try:
         for _ in range(100):
             if server.poll() is not None:
@@ -49,7 +49,7 @@ def main() -> None:
             page = context.new_page()
             page.on('pageerror', lambda error: errors.append(str(error)))
             page.goto('http://127.0.0.1:8790/')
-            expect(page.locator('#connection')).to_contain_text('7 tools')
+            expect(page.locator('#connection')).to_contain_text('12 tools')
             clock = time.monotonic()
             def chapter(label: str) -> None:
                 timeline.append({'seconds': round(time.monotonic() - clock, 3), 'label': label})
@@ -58,11 +58,12 @@ def main() -> None:
                 page.locator(selector).hover()
                 page.wait_for_timeout(400)
                 page.locator(selector).click()
-                expect(page.locator(selector)).to_be_enabled()
+                expect(page.locator('#prepare')).to_be_enabled()
                 expect(page.locator('#verdict')).to_contain_text(expected)
             chapter('Live local MCP connection; fixture/weather and no-provider boundaries')
             click('#prepare', 'Plan prepared.')
             chapter('Create a durable household mission from inventory')
+            page.locator('#runtime-details > summary').click()
             click('#probe', 'Correctly blocked:')
             chapter('An unapproved action is rejected by the real MCP server')
             click('#approve', 'Approved, not executed.')
@@ -108,7 +109,7 @@ def main() -> None:
             if duration >= 180:
                 raise RuntimeError('Recording exceeds the competition video limit')
         shutil.rmtree(out / 'raw')
-        manifest = {'schema': 'hearthline.browser-capture/v1', 'source_commit': os.environ.get('GITHUB_SHA', 'local-unversioned'), 'runner': os.environ.get('GITHUB_RUN_ID', 'local'), 'duration_seconds': duration, 'focused_journey': 'passed', 'video': 'genuine Chromium recording; pointer/controls driven by Playwright', 'weather': 'synthetic fixture', 'mcp': 'unchanged production server over real loopback HTTP', 'alexa_device': False, 'language_model': False, 'purchases': False, 'messages_delivered': False, 'official_submission': False, 'chapters': timeline, 'page_errors': errors, 'files': []}
+        manifest = {'schema': 'hearthline.browser-capture/v1', 'source_commit': os.environ.get('GITHUB_SHA', 'local-unversioned'), 'runner': os.environ.get('GITHUB_RUN_ID', 'local'), 'duration_seconds': duration, 'focused_journey': 'passed', 'video': 'genuine Chromium recording; pointer/controls driven by Playwright', 'weather': 'synthetic fixture', 'mcp': 'original production MCP service over real loopback HTTP', 'alexa_device': False, 'language_model': False, 'purchases': False, 'messages_delivered': False, 'official_submission': False, 'chapters': timeline, 'page_errors': errors, 'files': []}
         for path in sorted(out.iterdir()):
             if path.is_file():
                 manifest['files'].append({'name': path.name, 'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest()})

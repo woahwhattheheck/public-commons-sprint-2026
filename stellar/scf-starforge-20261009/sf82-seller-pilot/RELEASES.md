@@ -18,6 +18,12 @@ original private query package and generated client. Its existing operator
 workspace can stage directly into this lifecycle and retain the reviewed native
 schema with the selected source and full payment contract.
 
+For a facilitator change on an already prepared merchant, use
+[Retained facilitator review](FACILITATORS.md). It reads actual native capabilities,
+retains every generated payment alternative with the same source, and checks that
+review at native startup. The original console, CLI and MCP complete selection,
+restart and rollback through this release store.
+
 ## First release
 
 From the repository root, with Node.js 22 or later:
@@ -142,6 +148,85 @@ specific instance. A seller owned by another terminal remains visible, with
 instructions to stop it there. Closing the console command stops its own
 seller; closing the browser tab leaves the command running. A separate
 `run` process can be used when the operator UI is not needed.
+
+## Receiving review for a saved release
+
+The console can prepare and review every payment alternative from the release's
+retained `seller-service.json`. It uses the original SF101 receiving workspace,
+including its native evaluator, durable jobs, capture import/export and replay.
+The release panel shows original atomic quotes, receiving accounts, native
+balances, inbound capacity and the evaluator's findings.
+
+From an installed merchant package:
+
+```sh
+starforge releases console --store /private/merchant-releases \
+  --receiving-config /private/merchant-receiving.json
+```
+
+The same option is available on `node release-cli.mjs console`. The private
+configuration file can select an existing receiving workspace:
+
+```json
+{
+  "directory": "/private/merchant/receiving-desk",
+  "timeoutMs": 12000,
+  "feeOperations": 0
+}
+```
+
+Keep this file readable only by its owner (mode 0600). Without a configuration
+file, the default workspace is the release store path followed by
+`.receiving`. Optional `assetMap` and `rpcEndpoints` contain the same original
+JSON inputs accepted by the receiving desk; `proxyEnv` names an existing proxy
+environment variable. The original compiler validates those inputs when a
+profile is prepared. Existing attached profiles retain their original source
+files and options.
+
+1. Choose a prepared release and select **Open receiving**. This explicitly
+   acquires the original workspace lease. Close its current CLI or MCP owner
+   first when reusing a workspace already open elsewhere.
+2. Select **Prepare from this release**. The binding records the exact release
+   digest, retained seller bytes, original compiled plan and current selection
+   generation. Repeating preparation for the same source and options reuses the
+   saved profile.
+3. Select **Read current receiving state**, or open **Attach an existing
+   receiving capture**. Import a saved capture in **Open receiving desk**, list
+   saved reviews, and attach a completed review of the same exact seller bytes.
+   The original desk opens at the console's `/receiving/` path.
+4. Select **Replay selected capture** to reproduce the retained native reads
+   through the same evaluator. A previous completed review is supplied to the
+   original comparison. Inspect the current job, cancel a queued or running
+   review, and page through its original payment choices and findings.
+5. Use the existing **Select this release**, **Select previous release**,
+   **Start selected**, or **Restart selected** controls. A displayed completed review for that operation's target
+   travels with the original selection or run record. The current selection
+   generation and exact source digest are checked again when the operation is
+   accepted.
+6. **Download original capture** preserves the original workspace export,
+   including its complete report and native reads. **Close receiving** releases
+   the same workspace so its browser, CLI or MCP operator can reopen it.
+
+Receiving findings inform the operator's decision. All original evaluator
+outcomes can accompany an explicit release operation. Captures preserve their
+observation time, and replay keeps the evaluator's original retained-source and
+freshness findings. A review prepared at an older selection generation remains
+visibly associated with that generation and its exact immutable release.
+
+If a start response is interrupted, **Recover pending start** resends the saved
+request identity to the original controller. An existing job is returned even
+after the selection has advanced. A new job still requires the current
+generation. Closing the console drains accepted receiving work and retains
+queued jobs for normal workspace reopening.
+
+The optional `receivingReview` snapshot lives in the original
+`state.json` selection event and `runtime.json` process observation. It retains
+the release/configuration/plan digests, binding/profile/review IDs, completed
+time, mode, original result and counts. A subsequent ordinary run reuses its
+current selection event's review context. The receiving controller remains the
+owner of all profile, job, report and capture files; the release adapter stores
+only private bindings under
+`RECEIVING_DIRECTORY/release-bindings/RELEASE_ID/`.
 
 ## Release a prepared MySQL merchant
 
@@ -352,6 +437,21 @@ child after a manager crash is shown as an orphan rather than permitting a
 second seller to start over it. Use the recorded process and original terminal
 to recover it; the console does not kill arbitrary local PIDs.
 
+On Linux, install `flock` from util-linux. The manager and its seller inherit
+one open lifetime lock for the store. The kernel retains that lock while either
+process is alive and releases it when both have ended, including after an abrupt
+container exit. The next start can then reuse the retained release even when
+the new container has the same hostname and process numbers. Ordinary close,
+startup source checks, and the seller's original drain remain the same.
+
+Owner and runtime records also retain the manager and worker's Linux process
+birth identities. The worker sends its own identity over the existing private
+startup channel; the manager saves it before allowing application imports or
+listeners. Status uses the same original SF30 boot/procfs/start-time contract.
+Earlier numeric-only records retain their existing live-process protection.
+The permanent `.sf82-*.lock.lifetime` files are kernel lock inodes: leave them
+in place with the private store, including when the seller is stopped.
+
 An embedding fleet manager can call `runActiveRelease(store, { handleSignals:
 false })` to own its shutdown order: close gateway ingress, drain accepted
 gateway work, then await the returned session's `close()`. The default remains
@@ -379,6 +479,7 @@ route, payment and runtime comparison as releases in one store.
 | `releases/ID/runtime-readiness.json` | Original pilot's most recent startup observation |
 | `runtime.json` | Release-manager process identity, listener and exit observation |
 | `state.lock`, `run.lock` | Local operation/process ownership |
+| `.sf82-state.lock.lifetime`, `.sf82-run.lock.lifetime` | Permanent Linux lifetime lock files; automatically released when their owning processes end |
 
 New directories use mode 0700 and files use 0600 where supported. Selection
 and runtime records use flushed temporary writes and atomic replacement.
@@ -399,3 +500,14 @@ is running, rejects a stale selection write and duplicate process, upgrades,
 then rolls back through the real local operator HTTP interface. It also checks
 operator-token/origin behavior and preserves the source snapshot after its
 input file changes. It starts no hosted Actions and submits no payment.
+
+## Customer SDK handover
+
+The same release console now generates, reviews and retains the original customer
+SDK, including every original payment option and its completion receipt. Use
+`console --store DIR --client-exports PRIVATE_CUSTOMER_DIRECTORY` to share an
+existing MCP merchant's `exportsDirectory`; the default is `DIR.clients`.
+The retained list, exact-file inspection, reviewed legacy adoption, complete
+client archive and individual byte-range downloads remain available after seller
+shutdown and console reopening. See [CLIENT_HANDOVER.md](CLIENT_HANDOVER.md) for
+the complete operator, customer, recovery and original MCP workflow.

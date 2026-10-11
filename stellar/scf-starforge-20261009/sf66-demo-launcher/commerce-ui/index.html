@@ -5,7 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Stellar Forge · Commerce workspace</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/request.css">
   <link rel="stylesheet" href="/stream.css">
+  <link rel="stylesheet" href="/recovery.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -31,6 +33,12 @@
           <p class="help">Review the selected payment terms and spending limit before starting this operation.</p>
           <dl id="terms" class="facts"></dl>
           <details id="request-details"><summary>Request details</summary><dl id="request-facts" class="facts compact"></dl><pre id="request-headers"></pre></details>
+          <section id="retained-request" class="retained-request" aria-labelledby="retained-request-heading" hidden>
+            <h3 id="retained-request-heading">Retained input</h3>
+            <p id="retained-request-note" class="help">Inspect the input saved with this operation.</p>
+            <div class="action-row"><button id="request-inspect" type="button" disabled>Inspect retained request</button><button id="request-download" type="button" disabled>Download request body</button></div>
+            <div id="request-input-view" hidden><dl id="request-input-facts" class="facts compact"></dl><div id="request-input-files"></div><pre id="request-input-fields" tabindex="0"></pre><p id="request-input-truncated" class="help" hidden>The field preview is shortened. Download the retained request body for the complete input.</p></div>
+          </section>
           <div class="action-row"><button id="review" class="primary-button" type="button" disabled>Review operation</button><span id="review-note" class="muted">The operation comes from the prepared buyer configuration.</span></div>
         </section>
 
@@ -93,6 +101,7 @@
         </section>
       </aside>
     </div>
+    <section id="recovery-workspace" hidden aria-label="Operating state backup and recovery"></section>
   </main>
   <footer><span>Local operator workspace</span><span id="session-id"></span></footer>
 </body>
