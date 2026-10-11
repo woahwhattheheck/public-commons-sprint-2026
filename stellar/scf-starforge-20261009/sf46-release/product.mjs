@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // MIT. Install, select and run existing Stellar Forge source releases.
 import { spawn } from 'node:child_process';
-import { mkdir, readdir, lstat, rm, rename, mkdtemp } from 'node:fs/promises';
+import { mkdir, readdir, lstat, rm, rename, mkdtemp, unlink } from 'node:fs/promises';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { constants as osConstants } from 'node:os';
-import { HOME_SCHEMA, MANIFEST, sha256, verifyRelease, plainDirectory, boundedFile, putFile,
-  atomicJson, jsonFile, validateId, withHomeLock } from './release-core.mjs';
+import { HOME_SCHEMA, MANIFEST, UPDATE_CLAIMS, sha256, verifyRelease, plainDirectory, boundedFile, putFile,
+  atomicFile, atomicJson, jsonFile, validateId, withHomeLock } from './release-core.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HELP = `Stellar Forge | portable product
@@ -68,14 +68,22 @@ async function initialize(home, bundle) {
   if (!await exists(join(path, 'installation.json'))) {
     const pendingPath = join(path, 'initializing.json');
     const bootstrap = Object.fromEntries(await Promise.all(['forge.mjs', 'release-core.mjs']
-      .map(async name => [name, await boundedFile(bundle.root, name)])));
+      .map(async name => {
+        const file = bundle.files.find(entry => entry.path === name);
+        const bytes = await boundedFile(bundle.root, name, file.bytes);
+        if (bytes.length !== file.bytes || sha256(bytes) !== file.sha256)
+          throw new Error('Release content differs: ' + name);
+        return [name, bytes];
+      })));
+    const tempName = /^(forge\.mjs|release-core\.mjs|initializing\.json|installation\.json)\.new-[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     let pending;
     if (await exists(pendingPath)) {
       pending = await jsonFile(pendingPath);
       if (pending.schema !== HOME_SCHEMA || pending.sourceDigest !== bundle.manifest.digest)
         throw new Error('Resume this interrupted first install with the same release bundle');
     } else {
-      const entries = (await readdir(path)).filter(name => name !== '.release-update.lock');
+      const entries = (await readdir(path)).filter(name => name !== UPDATE_CLAIMS &&
+        !(name.startsWith('initializing.json.new-') && tempName.test(name)));
       if (entries.length) throw new Error('Install into a new or empty directory');
       pending = { schema: HOME_SCHEMA, createdAt: new Date().toISOString(), sourceDigest: bundle.manifest.digest };
       await atomicJson(pendingPath, pending);
@@ -84,12 +92,14 @@ async function initialize(home, bundle) {
       await mkdir(join(path, name), { recursive: true, mode: 0o700 });
       if (await plainDirectory(join(path, name)) !== join(path, name)) throw new Error('Invalid installation directory');
     }
-    for (const [name, bytes] of Object.entries(bootstrap)) {
-      if (await exists(join(path, name))) {
-        if (sha256(await boundedFile(path, name)) !== sha256(bytes)) throw new Error('Bootstrap file differs: ' + name);
-      } else await putFile(join(path, name), bytes, name === 'forge.mjs' ? 0o755 : 0o644);
-    }
-    await rename(pendingPath, join(path, 'installation.json'));
+    // Only an unfinished installation with this verified source digest reaches
+    // here. Repair partial bootstrap bytes from an interrupted older writer, and
+    // publish new files only after their complete bytes have been synced.
+    for (const [name, bytes] of Object.entries(bootstrap))
+      await atomicFile(join(path, name), bytes, name === 'forge.mjs' ? 0o755 : 0o644);
+    for (const name of await readdir(path)) if (tempName.test(name)) await unlink(join(path, name));
+    await atomicJson(join(path, 'installation.json'), pending);
+    await unlink(pendingPath);
   }
   return homeInfo(path);
 }

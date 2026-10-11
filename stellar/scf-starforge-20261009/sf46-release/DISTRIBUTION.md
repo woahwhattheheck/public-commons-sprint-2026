@@ -81,10 +81,19 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `support` | SF93 support-bundle exporter |
 | `seller-check` | SF96 original seller route audit |
 
-Optional `buyer-runbook` and `deploy` commands are included only when their
+Optional `buyer-inbox`, `buyer-runbook` and `deploy` commands are included only when their
 original named CLI files exist in the selected commit. The exact manifest is
 authoritative. Other shipped modules remain importable by their original paths;
 the distribution does not advertise nonexistent entry points.
+
+Use `buyer-inbox` for the original SF88 queue's selected-intent intake, inspection,
+execution and SF82 recovery (`sf88-operator-buyer-cli/QUEUE.md`). Use `buyer-runbook`
+for an explicitly selected batch, private config/body snapshots, atomic-string
+ceilings grouped by network and asset, sequential original SF88 execution and a
+combined offline resource report (`buyer-runbook/README.md`). The inbox executes
+one selected intent; the runbook visits only its untouched planned operations.
+Both preserve the original SF81 approvals and SF36 ledger authority. Their local
+records are workflow state, not additional payment or reservation ledgers.
 
 For an original command's help:
 
@@ -115,13 +124,36 @@ node /tmp/stellar-forge-home/forge.mjs activate RELEASE_ID
 node /tmp/stellar-forge-home/forge.mjs rollback
 ```
 
-`install ... --activate` combines staging and explicit activation. An exclusive
-local update lock serializes changes. A failed copy is never activated. Source
+`install ... --activate` combines staging and explicit activation. Local update
+contenders publish their own unique ownership records and use ticket ordering to
+serialize changes. A concurrent update either obtains its turn or exits with the
+current owner's PID; retry after that update exits. Dead owners are detected by
+PID, with Linux boot/process-start tokens distinguishing PID reuse. Cleanup only
+removes that dead owner's unique record. It never replaces a shared stale lock.
+Use one host's local filesystem with atomic rename and hard-link support; this is
+not a distributed lock for homes shared across hosts. An inaccessible or foreign
+owner is reported conservatively. A chooser gets five seconds to publish its
+ticket before a contender exits, keeping recovery explicit and responsive.
+
+If upgrading a local preview that used `.release-update.lock`, stop all of its
+installation managers, remove that obsolete lock, then use this manager for
+subsequent updates. Do not mix the preview's lock protocol with current managers.
+No live-owner record is automatically removed.
+
+A failed copy is never activated. Source
 files are checked before copying and again before the new directory becomes
 available. The active pointer is replaced atomically, preserving the previous
 release ID. A crash after staging leaves the previous version active; select the
 completed version with `activate`. Repeating an install is idempotent. An
 interrupted first installation can be resumed with its original release bundle.
+While `initializing.json` still identifies that same verified source digest,
+retrying from the bundle's `forge.mjs` repairs incomplete local `forge.mjs` and
+`release-core.mjs`. Complete bytes are synced to temporary files and renamed
+atomically; the installation metadata is committed afterward. Reserved bootstrap
+temporary files are cleaned on retry, including a crash before the initial marker
+was promoted. This repair is limited to the unfinished first-install bootstrap;
+operator configuration and state remain untouched. An installed manager is not
+silently replaced by an ordinary release upgrade.
 
 Activation affects **new launches**. Running sellers remain on their original
 version. Use the original SF30 graceful shutdown and SF99 host-service operator
@@ -136,6 +168,7 @@ The home layout is deliberately simple:
 | --- | --- |
 | `forge.mjs`, `release-core.mjs` | Local installation manager |
 | `installation.json`, `active.json` | Installation and active/previous release selection |
+| `.release-update-claims/` | Private unique local update contenders |
 | `releases/RELEASE_ID/` | Complete versioned source release |
 | `config/` | Operator configuration; never rewritten by upgrades |
 | `state/` | Merchant operational state; never included in source releases |
@@ -193,3 +226,8 @@ packaging, cold install, original seller plus operations HTTP challenge, staged
 upgrade, activation, rollback, unchanged operator files and corrupt-bundle
 rejection. This exercises the distribution; it is not a Stellar settlement or
 customer-revenue claim. No GitHub Actions run is needed.
+
+One focused recovery check additionally exercises concurrent update contenders,
+a killed owner and interrupted first-install bootstrap repair. It is available as
+`node stellar/scf-starforge-20261009/sf46-release/test/recovery-concurrency.test.mjs`;
+test directories are excluded from product bundles.
