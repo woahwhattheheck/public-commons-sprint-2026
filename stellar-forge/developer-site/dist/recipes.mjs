@@ -18,6 +18,20 @@ export const ROLES = Object.freeze({
     "command": "# From the parent of your extracted merchant directory:\nnpm install --ignore-scripts --offline --omit=optional \\\n  /absolute/path/to/the-package.tgz\nnpx --no-install starforge doctor\nnpx --no-install starforge run --workspace ./merchant -- --port 0\n\n# Open the seller URL + /_seller/docs\n# Open the separate operations URL printed at startup.",
     "result": "The original seller loads your JSON files and advertises every configured resource. Unpaid requests return native HTTP 402 challenges; the operations view tracks the running service."
   },
+  "woo": {
+    "meta": "SF104 / WOOCOMMERCE CHECKOUT",
+    "title": "Connect a WooCommerce digital product.",
+    "description": "Import the native route exported from a saved Woo product at /woo.html, review its exact terms and download a complete merchant setup packet.",
+    "checklist": [
+      "Open WooCommerce setup from the navigation and import the saved product route JSON.",
+      "Review the shop, seller, native facilitator and private service directory; download and extract the packet.",
+      "Prepare the original plugin and native merchant, then follow the included buyer, delivery and release instructions."
+    ],
+    "docs": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/GATEWAY.md",
+    "label": "TERMINAL / EXTRACTED WOO SETUP PACKET",
+    "command": "# Open /woo.html, import the shop's saved route exports,\n# then download and extract the reviewed setup packet.\n# Run from that extracted directory with the complete original toolkit:\nTOOLKIT=/absolute/path/to/checkout-or-installed-package\nnode merchant.mjs prepare --toolkit \"$TOOLKIT\"\nnode merchant.mjs inspect --toolkit \"$TOOLKIT\"\n\n# Install the generated original plugin folder in WordPress.\n# Define the WordPress PHP constant SF98_WEBHOOK_SECRET in wp-config.php.\n# Supply the same private value in both Node service environments.\n# Then follow README.md / BUYER.md for ingress and native operation:\nnode merchant.mjs preflight --toolkit \"$TOOLKIT\"\nnode merchant.mjs serve --toolkit \"$TOOLKIT\"\n# In a separate terminal:\nnode merchant.mjs deliver --toolkit \"$TOOLKIT\"",
+    "result": "The original gateway creates an unpaid order and private buyer handoff. Native settlement is delivered to the same Woo review queue; the merchant's original release action completes the order and enables Woo download permissions."
+  },
   "buyer": {
     "meta": "SF88 / NATIVE BUYER WORKSPACE",
     "title": "Prepare a buyer for the selected merchant.",
