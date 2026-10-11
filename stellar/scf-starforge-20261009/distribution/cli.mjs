@@ -69,6 +69,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
+  research-dossiers                         Retain research questions, evidence, findings and portable reports
+  research-workspace                        Open the private research dossier operator workspace
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
