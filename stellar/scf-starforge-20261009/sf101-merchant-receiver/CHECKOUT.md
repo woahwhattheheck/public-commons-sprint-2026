@@ -336,11 +336,13 @@ DNS pinning, TLS checks, no redirects and body deadline. It has no payment
 fallback. A 404 for a pending order or rejected token creates no final file;
 repair the merchant notification/token and explicitly retrieve again.
 
-The original response-file writer receives a stream that verifies the promised
-size and SHA-256 at EOF. Only matching complete bytes reach the create-only final
-path. A failed or interrupted stream can leave the original writer's private
-`.partial` file; it is never called a completed download. The new file and its
-adjacent `.sf101.json` receipt use 0600 permissions.
+On Linux the same command retains and resumes an interrupted download. The buyer
+checks its saved prefix, requests the missing range from the original receiver,
+and feeds the prefix and exact returned suffix through the original response-file
+writer. Complete size and SHA-256 verification precede its create-only final path.
+The new file, private transfer state and adjacent `.sf101.json` receipt use 0600
+permissions. The [resumable transfer guide](RESUMABLE_TRANSFERS.md) covers status,
+restart, graceful cancellation, process recovery and proxy configuration.
 
 Rerunning `retrieve` when the final file already exists checks its actual private
 bytes first. Matching bytes reuse or repair the local file receipt without a
