@@ -1,5 +1,12 @@
 # SF30 seller operations
 
+Upstream-backed sessions also expose optional [backend availability and recovery](../UPSTREAM_AVAILABILITY.md)
+in this same console. The original `/api/snapshot` and JSON export include an
+`upstreams` object; read-only `/api/upstreams` serves it separately. Binding names,
+capacity, failure counters and circuit state contain no backend address,
+credentials, request data or payment outcomes. Ordinary seller sessions retain
+their existing snapshot shape.
+
 A live, read-only operator surface for the **existing SF30 seller service**. See which API routes receive traffic, return payment challenges, fail or disconnect, without collecting customers or turning HTTP codes into revenue. Node 22+, no additional packages or hosted services.
 
 ## Run
