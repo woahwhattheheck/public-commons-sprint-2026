@@ -1,12 +1,16 @@
 // MIT. Bitwave Data Fusion representation of the original accountant handoff.
 // All financial/source values remain exact strings. The accountant engine owns returns.
 import {createHash,randomUUID} from 'node:crypto';
-import {CSV_COLUMNS,PROTECTED_COLUMNS,EDITABLE_COLUMNS,inspectHandoff,validateHandoff,validateRevision} from './engine.mjs';
+import {CSV_COLUMNS,EDITABLE_COLUMNS,accountantColumns,inspectHandoff,validateHandoff,validateRevision} from './engine.mjs';
 
 export const BITWAVE_PLAN_SCHEMA='stellar-forge.bitwave-data-source.v1';
 export const BITWAVE_CAPTURE_SCHEMA='stellar-forge.bitwave-data-source-capture.v1';
-export const BITWAVE_COLUMNS=Object.freeze(['accountantExportRowId','accountantExportId','accountantRevisionId','accountantRevisionSha256',...CSV_COLUMNS]);
+const EXPORT_COLUMNS=Object.freeze(['accountantExportRowId','accountantExportId','accountantRevisionId','accountantRevisionSha256']);
+export const BITWAVE_COLUMNS=Object.freeze([...EXPORT_COLUMNS,...CSV_COLUMNS]);
 export const BITWAVE_SOURCE_COLUMNS=Object.freeze(BITWAVE_COLUMNS.filter(name=>!EDITABLE_COLUMNS.includes(name)));
+// Legacy plans retain their original schema; adjusted plans use the handoff's
+// sealed snapshot columns throughout native delivery, comparison and return.
+export const bitwavePlanColumns=plan=>[...EXPORT_COLUMNS,...accountantColumns({source:plan.source})];
 export const BITWAVE_DOCS=Object.freeze([
   {title:'Loaded data sources: create, schema and row batches',url:'https://docs.bitwave.io/docs/api-loaded-data-sources'},
   {title:'Retrieve rows: native table rows and pagination',url:'https://docs.bitwave.io/docs/get-datasource-rows'},
@@ -40,18 +44,21 @@ export function createBitwavePlan({handoff,revision=null,id=randomUUID(),name,ac
   bitwaveCheck(Number.isInteger(batchSize)&&batchSize>=1&&batchSize<=250,'INVALID_BITWAVE_BATCH','Choose 1 to 250 rows per request.');
   bitwaveCheck(Number.isFinite(Date.parse(createdAt)),'INVALID_BITWAVE_TIME','Use a valid creation time.');
   const meta={handoffId:handoff.id,sourceRunId:handoff.source.runId,sourceReportSha256:handoff.source.reportSha256,
-    sourcePeriodCloseId:handoff.source.periodClose?.id,sourcePeriodCloseSha256:handoff.source.periodClose?.sha256,sourcePeriodCloseRevision:handoff.source.periodClose?.revision};
+    sourcePeriodCloseId:handoff.source.periodClose?.id,sourcePeriodCloseSha256:handoff.source.periodClose?.sha256,sourcePeriodCloseRevision:handoff.source.periodClose?.revision,
+    sourceAdjustmentsSha256:handoff.source.adjustments?.sha256};
+  const columns=accountantColumns(handoff);
   const rows=inspectHandoff(handoff,revision).rows.map(item=>{
     const row={accountantExportRowId:bitwaveHash('stellar-forge.bitwave-row.v1\n'+id+'\n'+item.rowId),accountantExportId:id,
       accountantRevisionId:revision?.id??'',accountantRevisionSha256:revision?.integrity.sha256??''};
-    for(const key of CSV_COLUMNS){
+    for(const key of columns){
       row[key]=cell(Object.hasOwn(meta,key)?meta[key]:key==='rowId'?item.rowId:key==='sourceRowSha256'?item.sourceRowSha256:
-        EDITABLE_COLUMNS.includes(key)?item[key]:Object.hasOwn(item.label,key)?item.label[key]:item.original[key]);
+        EDITABLE_COLUMNS.includes(key)?item[key]:Object.hasOwn(item.adjustments??{},key)?item.adjustments[key]:
+        Object.hasOwn(item.label,key)?item.label[key]:item.original[key]);
     }
     return row;
   });
   bitwaveCheck(rows.length>0,'EMPTY_BITWAVE_SOURCE','Choose a handoff containing original merchant events.');
-  const schemaColumns=BITWAVE_COLUMNS.map(name=>({name,type:'stringType'}));
+  const schemaColumns=[...EXPORT_COLUMNS,...columns].map(name=>({name,type:'stringType'}));
   const batches=[];
   for(let offset=0;offset<rows.length;offset+=batchSize){
     const index=batches.length+1,selected=rows.slice(offset,offset+batchSize),body={rows:selected};
@@ -68,6 +75,10 @@ export function validateBitwavePlan(plan){
   bitwaveCheck(bitwaveHash(bitwaveCanonical(body))===integrity.sha256,'BITWAVE_PLAN_CHANGED','The saved data-source plan changed.',409);
   bitwaveId(plan.id);bitwaveTargetId(plan.orgId,'organization ID');
   bitwaveCheck(Array.isArray(plan.rows)&&plan.rowCount===plan.rows.length&&plan.rows.length<=22000,'INVALID_BITWAVE_ROWS','The plan has an invalid source count.');
+  const columns=bitwavePlanColumns(plan);
+  bitwaveCheck(bitwaveCanonical(plan.schemaColumns)===bitwaveCanonical(columns.map(name=>({name,type:'stringType'})))&&
+    plan.rows.every(row=>object(row)&&Object.keys(row).length===columns.length&&columns.every(name=>typeof row[name]==='string')),
+    'BITWAVE_SCHEMA_CHANGED','Retain every exact string column from this original handoff schema.',409);
   return plan;
 }
 export const bitwaveJson=value=>Buffer.from(JSON.stringify(value,null,2)+'\n','utf8');
@@ -102,6 +113,7 @@ export function readBitwavePage(bytes){
 
 export function compareBitwavePages(plan,pageBytes){
   validateBitwavePlan(plan);
+  const columns=accountantColumns({source:plan.source}),sourceColumns=bitwavePlanColumns(plan).filter(name=>!EDITABLE_COLUMNS.includes(name));
   bitwaveCheck(Array.isArray(pageBytes)&&pageBytes.length>0&&pageBytes.length<=500,'BITWAVE_PAGES_REQUIRED','Choose 1 to 500 ordered native response pages.');
   bitwaveCheck(pageBytes.reduce((n,bytes)=>n+bytes.length,0)<=64*1024*1024,'BITWAVE_CAPTURE_SIZE','A capture supports up to 64 MiB of native pages.');
   const pages=pageBytes.map(readBitwavePage),received=pages.flatMap(page=>page.items);
@@ -126,18 +138,18 @@ export function compareBitwavePages(plan,pageBytes){
     if(!candidates.length){items.push({rowId:original.rowId,status:'MISSING',expected:original,received:null,changes:[]});continue;}
     if(candidates.length!==1){items.push({rowId:original.rowId,status:'DUPLICATE',expected:original,received:candidates.map(item=>item.row),changes:[],occurrences:candidates.length});continue;}
     const incoming=candidates[0].row,changes=[];
-    for(const field of BITWAVE_SOURCE_COLUMNS)if(typeof incoming[field]!=='string'||incoming[field]!==original[field])changes.push({field,expected:original[field],received:incoming[field]??null});
+    for(const field of sourceColumns)if(typeof incoming[field]!=='string'||incoming[field]!==original[field])changes.push({field,expected:original[field],received:incoming[field]??null});
     for(const field of EDITABLE_COLUMNS)if(typeof incoming[field]!=='string')changes.push({field,expected:'text',received:incoming[field]??null});
     const status=changes.length?'CHANGED':'MATCHED';
     const item={rowId:original.rowId,status,expected:original,received:incoming,changes};items.push(item);
-    if(status==='MATCHED')matched.push(Object.fromEntries(CSV_COLUMNS.map(key=>[key,incoming[key]])));
+    if(status==='MATCHED')matched.push(Object.fromEntries(columns.map(key=>[key,incoming[key]])));
   }
   const count=status=>items.filter(item=>item.status===status).length;
   const summary={expectedRows:plan.rows.length,receivedRows:received.length,matchedRows:count('MATCHED'),changedRows:count('CHANGED'),missingRows:count('MISSING'),
     unknownRows:unknown.length,duplicateRows:count('DUPLICATE'),totalRows:total,pages:pages.length};
   const status=issues.length?'PARTIAL':'COMPLETE';
   const body={schema:BITWAVE_CAPTURE_SCHEMA,planId:plan.id,planSha256:plan.integrity.sha256,status,summary,issues,items:[...items,...unknown]};
-  return {comparison:sealed(body),csvBytes:bitwaveRowsCsv(matched,CSV_COLUMNS)};
+  return {comparison:sealed(body),csvBytes:bitwaveRowsCsv(matched,columns)};
 }
 
 /** Merge remote edits against the exported revision and the current local return. */
@@ -157,5 +169,5 @@ export function prepareBitwaveReturn(plan,comparison,handoff,currentRevision=nul
     if(fields.length)editConflicts.push({code:'ACCOUNTANT_EDIT_CONFLICT',rowId:item.rowId,fields,message:'The accountant and returned source changed the same field differently.'});
     else rows.push(next);
   }
-  return {csvBytes:bitwaveRowsCsv(rows,CSV_COLUMNS),editConflicts,matchedRows:rows.length};
+  return {csvBytes:bitwaveRowsCsv(rows,accountantColumns(handoff)),editConflicts,matchedRows:rows.length};
 }
