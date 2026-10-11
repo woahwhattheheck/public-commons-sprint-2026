@@ -1,13 +1,16 @@
 // MIT. Portable source releases and local installation primitives.
 import { createHash, randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
-import { open, readFile, lstat, realpath, readdir, mkdir, rename, unlink } from 'node:fs/promises';
+import { open, readFile, lstat, realpath, readdir, mkdir, rename, unlink, link } from 'node:fs/promises';
 import { resolve, join, dirname, sep } from 'node:path';
+import { hostname } from 'node:os';
+import { setTimeout as delay } from 'node:timers/promises';
 
 export const RELEASE_SCHEMA = 'stellar-forge.product-release.v1';
 export const HOME_SCHEMA = 'stellar-forge.product-home.v1';
 export const MANIFEST = 'release.json';
 export const MAX_BYTES = 64 * 1024 * 1024;
+export const UPDATE_CLAIMS = '.release-update-claims';
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 export function canonical(value) {
   if (Array.isArray(value)) return '[' + value.map(canonical).join(',') + ']';
@@ -52,15 +55,22 @@ export async function putFile(path, bytes, mode = 0o644) {
   const handle = await open(path, 'wx', mode);
   try { await handle.writeFile(bytes); await handle.sync(); } finally { await handle.close(); }
 }
-export async function atomicJson(path, value) {
+export async function atomicFile(path, bytes, mode = 0o644, { exclusive = false } = {}) {
   const temp = path + '.new-' + randomUUID();
-  await putFile(temp, JSON.stringify(value, null, 2) + '\n', 0o600);
-  try { await rename(temp, path); } catch (error) { await unlink(temp).catch(() => {}); throw error; }
+  try {
+    await putFile(temp, bytes, mode);
+    // A link publishes a complete create-only record without reusing its name.
+    if (exclusive) { await link(temp, path); await unlink(temp); }
+    else await rename(temp, path);
+  } catch (error) { await unlink(temp).catch(() => {}); throw error; }
   // Directory fsync is available on Linux; Windows does not provide it.
   if (process.platform !== 'win32') {
     const directory = await open(dirname(path), 'r');
     try { await directory.sync(); } finally { await directory.close(); }
   }
+}
+export async function atomicJson(path, value, options) {
+  return atomicFile(path, JSON.stringify(value, null, 2) + '\n', 0o600, options);
 }
 export async function jsonFile(path) { return JSON.parse(await readFile(path, 'utf8')); }
 
@@ -112,25 +122,87 @@ export async function verifyRelease(input, expected) {
   return { root, manifest, manifestBytes, files, totalBytes: total, id: releaseId(manifest) };
 }
 
+const CONTENDER_SCHEMA = 'stellar-forge.update-contender.v1';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+async function processToken(pid) {
+  if (process.platform !== 'linux') return null;
+  try {
+    const [boot, stat] = await Promise.all([readFile('/proc/sys/kernel/random/boot_id', 'utf8'),
+      readFile('/proc/' + pid + '/stat', 'utf8')]);
+    const start = stat.slice(stat.lastIndexOf(')') + 2).split(' ')[19];
+    return /^[0-9]+$/.test(start ?? '') ? boot.trim() + ':' + start : null;
+  } catch { return null; }
+}
+async function ownerAlive(owner) {
+  // Installations use one host's local filesystem. Never guess about an owner
+  // from another host or a process the current user cannot inspect.
+  if (owner.host !== hostname()) return true;
+  try { process.kill(owner.pid, 0); }
+  catch (error) { return error.code !== 'ESRCH'; }
+  const current = await processToken(owner.pid);
+  return !owner.processToken || !current || owner.processToken === current;
+}
+async function contender(root, id) {
+  const path = join(root, id + '.json');
+  let value;
+  try { value = JSON.parse((await boundedFile(root, id + '.json', 4096)).toString('utf8')); }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+  if (value.schema !== CONTENDER_SCHEMA || value.id !== id || !UUID.test(id) ||
+      !Number.isSafeInteger(value.pid) || value.pid < 1 || typeof value.host !== 'string' ||
+      !value.host || ![true, false].includes(value.choosing) ||
+      (value.processToken !== null && typeof value.processToken !== 'string') ||
+      !/^(0|[1-9][0-9]{0,99})$/.test(value.ticket ?? '') ||
+      (value.choosing ? value.ticket !== '0' : value.ticket === '0'))
+    throw new Error('Invalid installation contender: ' + path);
+  if (await ownerAlive(value)) return value;
+  // Each UUID is create-only and belongs to one process for its entire life.
+  // Removing this dead owner's name cannot unlink another contender's lock.
+  await unlink(path).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  return null;
+}
+async function contenders(root) {
+  return (await readdir(root)).filter(name => name.endsWith('.json') && UUID.test(name.slice(0, -5)))
+    .map(name => name.slice(0, -5));
+}
 export async function withHomeLock(input, operation) {
-  const home = await plainDirectory(input), lock = join(home, '.release-update.lock');
-  let handle;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try { handle = await open(lock, 'wx', 0o600); break; }
-    catch (error) {
-      if (error.code !== 'EEXIST') throw error;
-      const previous = await readFile(lock, 'utf8');
-      let owner; try { owner = JSON.parse(previous); } catch { throw new Error('Unreadable installation lock: ' + lock); }
-      if (!Number.isSafeInteger(owner.pid) || owner.pid < 1) throw new Error('Invalid installation lock');
-      let active = true;
-      try { process.kill(owner.pid, 0); } catch (probe) { if (probe.code === 'ESRCH') active = false; }
-      if (active || attempt) throw new Error('Another release update is in progress (PID ' + owner.pid + ')');
-      if (await readFile(lock, 'utf8') === previous) await unlink(lock);
+  const home = await plainDirectory(input), root = join(home, UPDATE_CLAIMS);
+  try {
+    await lstat(join(home, '.release-update.lock'));
+    throw new Error('Pre-release update lock exists. Stop all installation managers before removing .release-update.lock; use this manager for subsequent updates.');
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  if (await plainDirectory(root) !== root) throw new Error('Installation contender directory was redirected');
+  const id = randomUUID(), path = join(root, id + '.json');
+  let registered = false;
+  const owner = { schema: CONTENDER_SCHEMA, id, pid: process.pid, host: hostname(),
+    processToken: await processToken(process.pid), choosing: true, ticket: '0' };
+  try {
+    await atomicJson(path, owner, { exclusive: true }); registered = true;
+    let maximum = 0n;
+    for (const otherId of await contenders(root)) {
+      const other = await contender(root, otherId);
+      if (other && BigInt(other.ticket) > maximum) maximum = BigInt(other.ticket);
     }
+    owner.choosing = false; owner.ticket = String(maximum + 1n);
+    await atomicJson(path, owner);
+    // Lamport ticket order: publish choosing before observing tickets; after
+    // publishing our ticket, wait for every visible chooser to finish. A later
+    // arrival observes our ticket and cannot overtake this critical section.
+    const deadline = performance.now() + 5000;
+    for (const otherId of await contenders(root)) {
+      if (otherId === id) continue;
+      let other = await contender(root, otherId);
+      while (other?.choosing) {
+        if (performance.now() >= deadline)
+          throw new Error('Another release update is choosing its turn (PID ' + other.pid + '); retry after it exits.');
+        await delay(10); other = await contender(root, otherId);
+      }
+      if (other && (BigInt(other.ticket) < BigInt(owner.ticket) ||
+          (other.ticket === owner.ticket && otherId < id)))
+        throw new Error('Another release update is in progress (PID ' + other.pid + '); retry after it exits.');
+    }
+    return await operation(home);
+  } finally {
+    if (registered) await unlink(path).catch(error => { if (error.code !== 'ENOENT') throw error; });
   }
-  if (!handle) throw new Error('Could not acquire release update lock');
-  const nonce = randomUUID();
-  await handle.writeFile(JSON.stringify({ pid: process.pid, nonce })); await handle.sync();
-  try { return await operation(home); }
-  finally { await handle.close(); await unlink(lock).catch(() => {}); }
 }

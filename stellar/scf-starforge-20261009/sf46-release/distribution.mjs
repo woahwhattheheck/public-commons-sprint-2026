@@ -81,6 +81,7 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   }
   // New modules can participate once they actually exist at the selected commit.
   const optional = [
+    ['buyer-inbox', 'sf88-operator-buyer-cli/queue-cli.mjs', 'Inspect the original inbox and execute one selected intent'],
     ['buyer-runbook', 'buyer-runbook/cli.mjs', 'Plan and resume an original multi-resource buying run'],
     ['deploy', 'sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
   ];
