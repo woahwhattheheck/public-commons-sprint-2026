@@ -2854,6 +2854,58 @@ configuration review, `./merchant/recipient-readiness` for
 `validate(terms, registry)` method returns the original SF16 accepted terms with
 the corresponding receiving result.
 
+### Keep receiving reviews in the operator browser
+
+Open the receiving desk with the existing installed command:
+
+```sh
+npx --no-install starforge merchant-readiness workspace \
+  --directory /private/merchant/receiving-desk --port 8408
+```
+
+The parent directory must exist. The command creates or reopens the same private
+receiving directory and prints its loopback browser URL. Save the merchant's actual
+seller JSON and its optional asset/RPC maps, inspect the compiled payment choices,
+and choose **Run live review**. Each option keeps its exact advertised amount,
+network, token, recipient and the original receiving action. Saved history supports
+comparison, offline replay of a completed capture, and complete JSON export/import.
+The installed `source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/RECEIVING_DESK.md`
+covers configuration, account actions, cancellation, retained captures and recovery.
+
+One process owns a receiving directory. Normal shutdown drains an accepted review
+and releases the original lease; queued requests resume when that directory reopens.
+Keep the private directory outside `node_modules` so installed source updates retain
+the merchant's configurations and history. Live reads use the existing optional
+Stellar SDK and operator-selected RPC environment. Replay consumes the original
+capture's resolved endpoints and response bytes after that environment is removed.
+
+An application can open the same standalone desk through its public server entry:
+
+```js
+import { startReceivingWorkspace } from
+  '@tokenjunkielabs/starforge-merchant/merchant/receiving-server';
+
+const receiving = await startReceivingWorkspace({
+  directory: '/private/merchant/receiving-desk',
+  port: 8408,
+  basePath: '/merchant/receiving',
+});
+console.log(receiving.url);
+// In the application's shutdown handler:
+await receiving.close();
+```
+
+For an existing operator listener,
+`@tokenjunkielabs/starforge-merchant/merchant/receiving-workspace` exports
+`openReceivingWorkspace`; the adjacent `merchant/receiving-server` entry exports
+`createReceivingWorkspaceHandler({workspace, origins, basePath, token})`. Pass that
+one controller to the handler, register the operator's exact allowed origins, and
+mount before body parsing so the handler owns its bounded JSON input. The handler
+returns `false` for paths outside its mount. The host retains the controller's
+lifetime and closes its original lease with `await workspace.close()` during
+shutdown. Controller integrations can retain IDs for profile creation, imports and
+review requests; equal retries recover the original saved objects.
+
 The existing facilitator command also provides RPC readiness and shared signer
 ownership from the same native implementation:
 
