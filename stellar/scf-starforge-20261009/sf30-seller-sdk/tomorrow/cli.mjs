@@ -44,7 +44,7 @@ export const USAGE = 'Tomorrow.io operations\n' +
   '  node cli.mjs prepare --workspace DIR --work WORK_ID [--label TEXT]\n' +
   '  node cli.mjs review --workspace DIR --edition ID --out NEW_JSON\n' +
   '  node cli.mjs acquire --workspace DIR --edition ID --review JSON\n' +
-  '  node cli.mjs review-retry --workspace DIR --edition ID --kind tile [--tile-time-format whole-seconds] --out NEW_JSON\n' +
+  '  node cli.mjs review-retry --workspace DIR --edition ID --kind tile [--tile-time-format iso-path] --out NEW_JSON\n' +
   '  node cli.mjs retry --workspace DIR --edition ID --kind tile --review JSON\n' +
   '  node cli.mjs decision --workspace DIR --input JSON\n' +
   '  node cli.mjs compare --workspace DIR --before ID --after ID [--out NEW_JSON]\n' +
@@ -126,7 +126,7 @@ export async function main(args = process.argv.slice(2)) {
       case 'review': return await publish(await workspace.reviewEdition(required('edition')));
       case 'acquire': return editionSummary(await workspace.acquireEdition(required('edition'), await json('review')));
       case 'recover': return editionSummary(await workspace.recoverEdition(required('edition')));
-      case 'review-retry': return await publish(await workspace.reviewResourceRetry(required('edition'), required('kind'), { tileTimeFormat: options['tile-time-format'] ?? 'original' }));
+      case 'review-retry': return await publish(await workspace.reviewResourceRetry(required('edition'), required('kind'), { tileTimeFormat: options['tile-time-format'] ?? 'iso-path' }));
       case 'retry': return editionSummary(await workspace.retryResource(required('edition'), required('kind'), { reviewSha256: (await json('review')).reviewSha256 }));
       case 'decision': return await workspace.decide(await json('input'));
       case 'compare': return await publish(await workspace.compare(required('before'), required('after')));

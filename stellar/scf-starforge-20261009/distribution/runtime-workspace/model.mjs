@@ -24,6 +24,10 @@ import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attach
 import { initializeApplications, applicationsState, reviewApplication, saveApplication, applicationBindingOperation,
   reviewApplicationStart, dispatchApplicationStart, cancelApplicationRun, applicationOperation, applicationOutput,
   readApplicationTerminal, sendApplicationTerminal } from './applications.mjs';
+import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWorkspaceState,
+  reviewWorkspaceRuntimeTransfer, attachWorkspaceRuntimeTransfer, prepareWorkspaceRuntimeTransferReceive,
+  uploadWorkspaceRuntimeTransferPart, downloadWorkspaceRuntimeTransfer, normalizeRuntimeTransferOperation,
+  executeRuntimeTransferOperation, recoverWorkspaceRuntimeTransferOperation } from './transfer-workspace.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
@@ -119,6 +123,7 @@ async function jobView(root, id) {
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
     homeId: request.homeId ?? null, applicationId: request.applicationId ?? null, terminal: request.terminal === true, commandActive,
     targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
+    cacheTransferId: request.cacheTransferId ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
     contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
     containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
@@ -152,6 +157,7 @@ function newTarget(config, name) {
 const fields = {
   ...managedOperationFields,
   ...imageOperationFields,
+  ...transferOperationFields,
   import: ['archive', 'sha256', 'label'],
   prepare: ['archiveId', 'name', 'selection', 'profileId'],
   install: ['runtimeId', 'offline', 'cache', 'nodeHeaders'],
@@ -164,8 +170,23 @@ export async function openRuntimeWorkspace({ directory } = {}) {
   const { root, config } = await context(directory);
   await initializeManagedWorkspace(root);
   await initializeApplications(root);
+  await initializeTransferWorkspace(root);
   const model = {
     directory: root,
+    async transfersState(input) { return runtimeTransferWorkspaceState(root, input); },
+    async transfersReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewWorkspaceRuntimeTransfer(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async transfersAttach(input) { return attachWorkspaceRuntimeTransfer(root, input); },
+    async transfersReceive(input) { return prepareWorkspaceRuntimeTransferReceive(root, input); },
+    async transfersUpload(input) { return uploadWorkspaceRuntimeTransferPart(root, input); },
+    async transfersDownload(input) { return downloadWorkspaceRuntimeTransfer(root, input); },
+    async recoverTransferOperation(id) {
+      const result = await recoverWorkspaceRuntimeTransferOperation(root, id);
+      if (result.resume) await spawnWorker(root, id);
+      return result;
+    },
     async imagesState() { return imageWorkspaceState(root); },
     async imagesReview(input) {
       const selected = await entry(root, recordId(input.runtimeId));
@@ -238,7 +259,7 @@ export async function openRuntimeWorkspace({ directory } = {}) {
       if (retainedRequest?.clientRequestHash) {
         need(retainedRequest.clientRequestHash === clientRequestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
         return { operationId: id, runtimeId: retainedRequest.targetId ?? retainedRequest.runtimeId ?? null,
-          homeId: retainedRequest.homeId ?? null, imageId: retainedRequest.imageId ?? null, transferId: retainedRequest.transferId ?? null, reopened: true };
+          homeId: retainedRequest.homeId ?? null, imageId: retainedRequest.imageId ?? null, transferId: retainedRequest.transferId ?? null, cacheTransferId: retainedRequest.cacheTransferId ?? null, reopened: true };
       }
       if (!retainedRequest) request.clientRequestHash = clientRequestHash;
       for (const key of ['offline', 'load', 'source', 'install']) if (request[key] !== undefined)
@@ -249,7 +270,7 @@ export async function openRuntimeWorkspace({ directory } = {}) {
       if (request.runtimeId) request.runtimeDirectory = (await entry(root, request.runtimeId)).directory;
       if (['install', 'inspect', 'upgrade', 'recover'].includes(request.operation))
         need(request.runtimeDirectory, 'RUNTIME_WORKSPACE_RUNTIME_REQUIRED');
-      if (request.runtimeId && request.operation !== 'inspect') {
+      if (request.runtimeId && !['inspect', 'transfer-export'].includes(request.operation)) {
         const names = (await readdir(join(root, 'operations'))).filter(name => /^[a-f0-9-]{36}$/.test(name));
         for (const existingId of names) {
           if (existingId === id) continue;
@@ -290,11 +311,13 @@ export async function openRuntimeWorkspace({ directory } = {}) {
       }
       if (Object.hasOwn(imageOperationFields, request.operation))
         Object.assign(request, await normalizeImageOperation(root, request, id));
+      if (Object.hasOwn(transferOperationFields, request.operation))
+        await normalizeRuntimeTransferOperation(root, request, id, config);
       const operationDirectory = jobPath(root, id), body = canonical(request), requestHash = digest(json(body));
       const previous = await readJSON(join(operationDirectory, 'request.json'), true);
       if (previous) {
         need(previous.requestHash === requestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
-        return { operationId: id, runtimeId: previous.targetId ?? previous.runtimeId ?? null, homeId: previous.homeId ?? null, imageId: previous.imageId ?? null, transferId: previous.transferId ?? null, reopened: true };
+        return { operationId: id, runtimeId: previous.targetId ?? previous.runtimeId ?? null, homeId: previous.homeId ?? null, imageId: previous.imageId ?? null, transferId: previous.transferId ?? null, cacheTransferId: previous.cacheTransferId ?? null, reopened: true };
       }
       await makePrivate(operationDirectory);
       await saveJSON(join(operationDirectory, 'request.json'), { ...body, requestHash, createdAt: now() });
@@ -306,7 +329,7 @@ export async function openRuntimeWorkspace({ directory } = {}) {
           phase: 'QUEUED', updatedAt: now(), error: asError(error), launchPending: true }, true);
         throw error;
       }
-      return { operationId: id, runtimeId: request.targetId ?? request.runtimeId ?? null, homeId: request.homeId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null };
+      return { operationId: id, runtimeId: request.targetId ?? request.runtimeId ?? null, homeId: request.homeId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null, cacheTransferId: request.cacheTransferId ?? null };
     },
     async resumeQueued(operation) {
       const current = await jobView(root, operation);
@@ -425,6 +448,12 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
           } });
       } else if (Object.hasOwn(imageOperationFields, request.operation)) {
         result = await executeImageOperation(root, request, id);
+      } else if (Object.hasOwn(transferOperationFields, request.operation)) {
+        result = await executeRuntimeTransferOperation(root, request, {
+          checkpoint: async value => {
+            Object.assign(started, value, { updatedAt: now() });
+            await saveJSON(join(operationDirectory, 'state.json'), started, true);
+          } });
       } else if (request.operation === 'import') {
         result = await prepareRuntimeInstall({ directory: request.targetDirectory, archive: request.archive, sha256: request.sha256 });
         result = { ...result, archive: await retainArchive(root, request.targetDirectory, request.label) };

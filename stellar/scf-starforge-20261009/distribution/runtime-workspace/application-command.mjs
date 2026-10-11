@@ -70,6 +70,8 @@ export function observeApplicationOutput(request, directory) {
     let candidate = null;
     if (request.command === 'openapi-workspace' && text.startsWith('API merchant workspace: '))
       candidate = text.slice('API merchant workspace: '.length);
+    if (request.command === 'object-workspace' && text.startsWith('Object buyer workspace: '))
+      candidate = text.slice('Object buyer workspace: '.length);
     if (request.command === 'commerce-console' && text.startsWith('Commerce workspace: '))
       candidate = text.slice('Commerce workspace: '.length);
     if (request.command === 'dataset-workspace') {

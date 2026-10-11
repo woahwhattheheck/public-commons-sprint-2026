@@ -110,7 +110,7 @@ export async function report({operationId, request, payment, signal}) {
 
 Use that operation ID for any application-side writes. A process can fail after the application finishes and before the response file is committed; explicit recovery may call that handler again with the original ID. Completed responses replay their retained bytes without calling the handler again, including after a price or route edit on the same public origin. Recovery loads the delivery's retained original merchant profile and shares the same operation lock across merchant instances.
 
-The merchant exposes public `/_mpp/health` and `/_mpp/offers` read endpoints. Offers contain prices and route descriptions. The configured resource bodies remain behind payment.
+The merchant exposes public `/_mpp/health`, `/_mpp/offers`, `/_mpp/contract` and `/_mpp/openapi.json` read endpoints. Offers contain prices and route descriptions. The configured resource bodies remain behind payment.
 
 ## Buyer configuration
 
@@ -210,6 +210,12 @@ import {
 ~~~
 
 The library accepts a private workspace and explicit configuration. loadNative resolves the isolated published dependency directory. It keeps global fetch, module resolution, and unrelated process credentials unchanged.
+
+## Customer delivery
+
+The **Customer handoff** tab publishes the selected merchant contract, OpenAPI 3.1 document and a complete Node/TypeScript/Python customer package. CLI export and interrupted receiving use `customer-export`, `customer-receive`, `customer-inspect` and `customer-resume`. Generated customers invoke this original governed buyer, retain exact requests and reopen the same signed purchase after interruption.
+
+See [Native MPP customer delivery](customer/README.md) for installation, public endpoints, complete examples, original-contract recovery and the maintained `@tokenjunkielabs/starforge-merchant/mpp/customer` API.
 
 ## Original sources
 

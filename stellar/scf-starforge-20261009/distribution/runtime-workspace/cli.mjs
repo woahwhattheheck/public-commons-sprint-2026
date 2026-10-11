@@ -14,6 +14,11 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace serve --workspace DIRECTORY [--port 8465]
   runtime-workspace status --workspace DIRECTORY [--runtime-id ID]
   runtime-workspace handoff --workspace DIRECTORY --runtime-id ID
+  runtime-workspace transfers --workspace DIRECTORY [--transfer-id ID]
+  runtime-workspace transfer-review --workspace DIRECTORY --runtime-id ID
+  runtime-workspace transfer-attach --workspace DIRECTORY --directory TRANSFER_DIRECTORY [--label NAME]
+  runtime-workspace transfer-operation --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
+  runtime-workspace transfer-continue --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-open --workspace DIRECTORY --home HOME [--label NAME]
   runtime-workspace managed-status --workspace DIRECTORY [--home-id ID]
   runtime-workspace managed-review --workspace DIRECTORY --home-id ID --runtime-id ID
@@ -46,6 +51,9 @@ const allowed = {
   'application-stop': ['--workspace', '--application-id', '--operation-id'],
   'application-recover': ['--workspace', '--application-id', '--operation-id'],
   'application-output': ['--workspace', '--application-id', '--operation-id'],
+  transfers: ['--workspace', '--transfer-id'], 'transfer-review': ['--workspace', '--runtime-id'],
+  'transfer-attach': ['--workspace', '--directory', '--label'],
+  'transfer-operation': ['--workspace', '--request'], 'transfer-continue': ['--workspace', '--operation-id'],
   'managed-open': ['--workspace', '--home', '--label'], 'managed-status': ['--workspace', '--home-id'],
   'managed-review': ['--workspace', '--home-id', '--runtime-id'], 'managed-operation': ['--workspace', '--request'],
   'managed-recover': ['--workspace', '--operation-id'], 'managed-stop': ['--workspace', '--operation-id'],
@@ -96,7 +104,18 @@ export async function main(argv = process.argv.slice(2)) {
     const method = { 'application-start-review': 'applicationsStartReview', 'application-connect': 'applicationsConnect',
       'application-stop': 'applicationsStop', 'application-recover': 'applicationsRecover', 'application-output': 'applicationsOutput' }[command];
     result = await model[method]({ applicationId: options['--application-id'], ...(options['--operation-id'] ? { operationId: options['--operation-id'] } : {}) });
-  } else if (command === 'managed-open') {
+  } else if (command === 'transfers') result = await model.transfersState({ cacheTransferId: options['--transfer-id'] ?? null });
+  else if (command === 'transfer-review') result = await model.transfersReview({ runtimeId: options['--runtime-id'] });
+  else if (command === 'transfer-attach') {
+    if (!options['--directory']) fail('RUNTIME_TRANSFER_DIRECTORY_REQUIRED');
+    result = await model.transfersAttach({ directory: resolve(options['--directory']), label: options['--label'] });
+  } else if (command === 'transfer-operation') {
+    if (!options['--request']) fail('RUNTIME_TRANSFER_REQUEST_FILE_REQUIRED');
+    const request = await readJSON(resolve(options['--request']));
+    if (!request?.operation?.startsWith('transfer-')) fail('RUNTIME_TRANSFER_OPERATION_INVALID');
+    result = await model.begin(request);
+  } else if (command === 'transfer-continue') result = await model.recoverTransferOperation(options['--operation-id']);
+  else if (command === 'managed-open') {
     if (!options['--home']) fail('MANAGED_HOME_REQUIRED');
     result = await model.openManagedHome({ directory: resolve(options['--home']), label: options['--label'] });
   } else if (command === 'managed-status') result = await model.managedState({ homeId: options['--home-id'] ?? null });
