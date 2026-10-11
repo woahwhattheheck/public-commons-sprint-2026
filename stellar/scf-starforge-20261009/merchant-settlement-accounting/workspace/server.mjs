@@ -7,6 +7,7 @@ import {join,resolve} from 'node:path';
 import {openAccountingWorkspace,WorkspaceError} from './store.mjs';
 import {openCollectionWorkspace} from './collection-workspace.mjs';
 import {handlePricingRequest,PRICING_REQUEST_BYTES} from './pricing-workspace.mjs';
+import {handlePeriodRequest} from './period-workspace.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
@@ -38,7 +39,8 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       const url=new URL(request.url,'http://'+request.headers.host),path=url.pathname;
       const assets={'/':['index.html','text/html; charset=utf-8'],'/app.mjs':['app.mjs','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],
         '/collection.mjs':['collection.mjs','text/javascript; charset=utf-8'],'/collection.html':['collection.html','text/html; charset=utf-8'],'/collection.css':['collection.css','text/css; charset=utf-8'],
-        '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8']};
+        '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8'],
+        '/periods.mjs':['periods.mjs','text/javascript; charset=utf-8'],'/periods.html':['periods.html','text/html; charset=utf-8'],'/periods.css':['periods.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
       let value;
       if(request.method==='POST'){
@@ -49,6 +51,8 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       const pricing=await handlePricingRequest(workspace,{method:request.method,path,query,value});
       if(pricing){if(pricing.file)send(response,200,pricing.file.bytes,{type:TYPES['.json'],name:pricing.file.name});else send(response,200,pricing.value);return;}
+      const period=await handlePeriodRequest(workspace,{method:request.method,path,query,value});
+      if(period){if(period.file)send(response,200,period.file.bytes,{type:period.type,name:period.file.name});else send(response,200,period.value);return;}
       let result;
       if(parts[0]==='api'&&parts[1]==='collection'){
         result=await collection.route(request.method,parts,value);
