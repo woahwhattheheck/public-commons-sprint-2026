@@ -48,8 +48,8 @@ async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
     process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
       '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json\n');
-    process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET] [--total-atomic 1000] [--daily-atomic 1000]\n' +
-      '       node cli.mjs --review-workspace|--execute-workspace --dir /absolute/workspace\n');
+    process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--total-atomic 1000] [--daily-atomic 1000]\n' +
+      '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
     return;
   }
   if (args[0] === '--prepare') {
@@ -59,6 +59,12 @@ async function main(args) {
   if (args[0] === '--init-workspace') {
     const {initializeWorkspace} = await import('./workspace.mjs');
     return print(await initializeWorkspace(args.slice(1)));
+  }
+  if (args[0] === '--diagnose-workspace') {
+    const {diagnoseWorkspace} = await import('./workspace.mjs');
+    const result = await diagnoseWorkspace(args.slice(1));
+    if (result.status === 'SETUP_REQUIRED') process.exitCode = 1;
+    return print(result);
   }
   let c, operatorEnvironment;
   if (['--review-workspace', '--execute-workspace'].includes(args[0])) {

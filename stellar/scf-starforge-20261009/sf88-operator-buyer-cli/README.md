@@ -14,7 +14,7 @@ this directory:
 
 ```sh
 cd stellar/scf-starforge-20261009/sf88-operator-buyer-cli
-npm install --ignore-scripts --no-audit --no-fund
+npm ci --ignore-scripts --no-audit --no-fund
 ```
 
 Use the saved discovery `--prepare` command below to create a review config for
@@ -27,6 +27,7 @@ node cli.mjs --init-workspace \
   --actor owner-operator --service chosen-weather-seller \
   --payer ACTUAL_EXISTING_TESTNET_PUBLIC_ADDRESS --python /usr/bin/python3
 node cli.mjs --review-workspace --dir /private/weather-operator
+node cli.mjs --diagnose-workspace --dir /private/weather-operator
 ```
 
 Replace the payer placeholder with the actual existing public `G...` address.
@@ -64,11 +65,30 @@ operator terminal:
 node cli.mjs --execute-workspace --dir /private/weather-operator
 ```
 
+For an existing wallet or hardware provider, use
+`--signer-provider /absolute/operator/wallet.mjs` in the initializer instead of
+`--secret-env`. The trusted module exports
+`createSigner({network, payer, rpcUrl})` and returns the official SEP-43 signer.
+Initialization and diagnostics check its file without importing it. The
+generated private module loads it only inside the original approved signing
+callback. An optional `--rpc https://operator-rpc.example` selects a testnet RPC;
+the default is the official testnet endpoint. RPC credentials, query parameters
+and fragments are not accepted in the URL.
+
+`--diagnose-workspace` checks the existing workspace, pinned SDK versions and
+provider file or environment-variable presence. It never reads the SF36 key
+file, opens a wallet, signs, reserves funds or calls RPC. `READY_TO_EXECUTE`
+means the setup requirements are present; actual wallet access, payer identity
+and network availability are checked during approved execution. An empty or
+invalid wallet variable is still rejected at that point. Existing environment
+workspaces keep the same generated signer and operator ledger.
+
 Execution loads the workspace's private SF36 keys into the original approval
 bridge without changing the parent environment. The lazy signer reads the
 existing wallet key only after the native terminal approval and durable budget
 reservation. It checks the payer and chosen terms, then uses the official
-`@x402/core` and `@x402/stellar` implementation to simulate and sign the actual
+`@x402/core` and `@x402/stellar` implementation through the shared
+[SF103 native payload engine](../sf103-native-buyer-signer/README.md) to simulate and sign the actual
 authorization. SF31 performs the one paid HTTP retry and SF82 records its
 original result. Neither initialization nor review makes a network request,
 reads a wallet key, reserves funds or signs an authorization.
