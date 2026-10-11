@@ -1,5 +1,6 @@
 // MIT. Trusted operator configuration; review does not load signing material.
 import { readFile, stat } from 'node:fs/promises';
+import { isAbsolute, resolve } from 'node:path';
 
 export class FacilitatorError extends Error {
   constructor(code, status = 400) { super(code); this.code = code; this.status = status; }
@@ -25,7 +26,7 @@ function addresses(x, prefix, code) {
 }
 
 export function validateConfig(input) {
-  fields(input, ['schema','network','rpcUrl','signers','feeBumpSigner','payments','limits'], 'CONFIG_FIELDS_INVALID');
+  fields(input, ['schema','network','rpcUrl','signers','feeBumpSigner','payments','limits','operations'], 'CONFIG_FIELDS_INVALID');
   requireValue(input.schema === 'stellar-forge.native-facilitator.v1', 'CONFIG_SCHEMA_INVALID');
   requireValue(['stellar:testnet','stellar:pubnet'].includes(input.network), 'EXPLICIT_STELLAR_NETWORK_REQUIRED');
   let rpc;
@@ -57,9 +58,25 @@ export function validateConfig(input) {
   integer(maxVerifyInFlight, 1, 256, 'VERIFY_CAPACITY_INVALID');
   const drainGraceMs = limits.drainGraceMs ?? 60000;
   integer(drainGraceMs, 1000, 300000, 'DRAIN_GRACE_INVALID');
+  const op = input.operations ?? {};
+  fields(op, ['ownershipDirectory','rpcTimeoutMs','readinessMaxAgeMs','maxLedgerAgeSeconds','requireReady'],
+    'OPERATIONS_CONFIG_INVALID');
+  const ownershipDirectory = op.ownershipDirectory ?? null;
+  requireValue(ownershipDirectory === null || (typeof ownershipDirectory === 'string' &&
+    isAbsolute(ownershipDirectory) && !/[\0\r\n]/.test(ownershipDirectory) && ownershipDirectory.length <= 4096),
+    'OWNERSHIP_ABSOLUTE_DIRECTORY_REQUIRED');
+  const rpcTimeoutMs = op.rpcTimeoutMs ?? 10000;
+  const readinessMaxAgeMs = op.readinessMaxAgeMs ?? 30000;
+  const maxLedgerAgeSeconds = op.maxLedgerAgeSeconds ?? 120;
+  integer(rpcTimeoutMs, 100, 60000, 'RPC_TIMEOUT_INVALID');
+  integer(readinessMaxAgeMs, 1000, 300000, 'READINESS_MAX_AGE_INVALID');
+  integer(maxLedgerAgeSeconds, 5, 3600, 'LEDGER_MAX_AGE_INVALID');
+  requireValue(op.requireReady === undefined || typeof op.requireReady === 'boolean', 'REQUIRE_READY_INVALID');
   return { schema:input.schema, network:input.network, rpcUrl:rpc.href, signers, feeBumpSigner,
     payments:{assets,recipients,maxAtomic}, limits:{maxTransactionFeeStroops:limits.maxTransactionFeeStroops,
-      inclusionFeeStroops,maxVerifyInFlight,drainGraceMs} };
+      inclusionFeeStroops,maxVerifyInFlight,drainGraceMs}, operations:{
+      ownershipDirectory:ownershipDirectory === null ? null : resolve(ownershipDirectory),
+      rpcTimeoutMs,readinessMaxAgeMs,maxLedgerAgeSeconds,requireReady:op.requireReady ?? false} };
 }
 
 export async function readConfig(path) {
@@ -77,5 +94,6 @@ export function reviewConfig(input) {
   const c = validateConfig(input);
   return { mode:'OFFLINE_FACILITATOR_REVIEW', network:c.network, rpcOrigin:new URL(c.rpcUrl).origin,
     signers:c.signers, feeBumpSigner:c.feeBumpSigner, payments:c.payments, limits:c.limits,
-    feesSponsored:true, settlementConcurrency:1, signingMaterialLoaded:false };
+    operations:c.operations,feesSponsored:true, settlementConcurrency:1, signingMaterialLoaded:false };
 }
+
