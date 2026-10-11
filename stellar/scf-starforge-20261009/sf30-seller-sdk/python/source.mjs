@@ -13,7 +13,7 @@ const error = code => new PythonSourceError(code);
 const rejection = failure => ({ status: 422, body: { error: failure.code } });
 const MAX_PROTOCOL = 1500000;
 
-export async function createPythonSource(compiled, { env = process.env } = {}) {
+export async function createPythonSource(compiled, { env = process.env, expectedApplicationSha256 } = {}) {
   if (!compiled?.functions || !compiled?.options) throw new TypeError('Compiled Python merchant required');
   const { application, executable, environment, workerCount, maxPending, startupTimeoutMs,
     shutdownTimeoutMs = 5000, lifecycle = {} } = compiled.options;
@@ -22,6 +22,10 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
   const applicationBytes = await readFile(application);
   if (applicationBytes.length > 2097152) throw new TypeError('Python application exceeds 2 MiB');
   const applicationSha256 = createHash('sha256').update(applicationBytes).digest('hex');
+  if (expectedApplicationSha256 !== undefined &&
+      (typeof expectedApplicationSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(expectedApplicationSha256) ||
+        expectedApplicationSha256 !== applicationSha256))
+    throw error('PYTHON_APPLICATION_CHANGED');
   const selectedEnvironment = Object.create(null);
   for (const key of ['PATH', 'LANG', 'LC_ALL', 'SYSTEMROOT', ...environment]) {
     if (env[key] !== undefined) selectedEnvironment[key] = String(env[key]);
