@@ -44,7 +44,7 @@ async function controlServer(versions, transport) {
           (transport === 'loopback' && req.headers.host !== `127.0.0.1:${server.address().port}`))
         return respond(res, 403, { error: 'PRIVATE_CONTROL_REQUIRED' });
       if (req.method === 'GET' && req.url === '/status') return respond(res, 200, versions.status());
-      if (req.method !== 'POST' || !['/refresh', '/collect'].includes(req.url))
+      if (req.method !== 'POST' || !['/refresh', '/activate', '/collect'].includes(req.url))
         return respond(res, 404, { error: 'CONTROL_ROUTE_NOT_FOUND' });
       if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''))
         return respond(res, 415, { error: 'JSON_CONTENT_TYPE_REQUIRED' });
@@ -62,14 +62,16 @@ async function controlServer(versions, transport) {
         if (Object.keys(body).length) return respond(res, 400, { error: 'INVALID_CONTROL_REQUEST' });
         return respond(res, 200, { removed: await versions.collect(), ...versions.status() });
       }
-      if (Object.keys(body).sort().join(',') !== 'configPath,expectedSnapshot' ||
-          typeof body.configPath !== 'string' || !isAbsolute(body.configPath))
+      const actionKey = req.url === '/activate' ? 'snapshot' : 'configPath';
+      const keys = [actionKey, 'expectedSnapshot', ...(Object.hasOwn(body, 'expectedRevision') ? ['expectedRevision'] : [])];
+      if (Object.keys(body).sort().join(',') !== keys.sort().join(',') ||
+          (actionKey === 'configPath' && (typeof body.configPath !== 'string' || !isAbsolute(body.configPath))))
         return respond(res, 400, { error: 'INVALID_CONTROL_REQUEST' });
-      respond(res, 200, await versions.refresh(body));
+      respond(res, 200, await (req.url === '/activate' ? versions.activate(body) : versions.refresh(body)));
     };
     run().catch(error => {
       if (!res.writableEnded && !res.destroyed)
-        respond(res, [400, 409].includes(error.status) ? error.status : 422,
+        respond(res, [400, 409, 410].includes(error.status) ? error.status : 422,
           { error: error.code ?? 'DATASET_REFRESH_REJECTED', message: error.message });
     });
   });
@@ -109,10 +111,23 @@ export async function startVersionedDatasetSeller({ versions, config, port = 842
   if (!routes.length || routes.some(route => route.admit !== 'admitDataset' ||
       (route.definition?.method ?? route.offer?.extensions?.bazaar?.info?.input?.method) !== 'GET'))
     throw new TypeError('Dataset routes require GET, queryDataset and admitDataset from the original generated config');
+  const snapshotPaths = new Set(routes.filter(route => {
+    const definition = route.definition?.queryParameters?.find(parameter => parameter.name === 'snapshot');
+    const query = route.offer?.extensions?.bazaar?.schema?.properties?.input?.properties?.queryParams;
+    const parameter = definition ?? query?.properties?.snapshot;
+    if (parameter === undefined) return false;
+    if (parameter.type !== 'string' || parameter.required || Object.hasOwn(parameter, 'default') ||
+        query?.required?.includes('snapshot'))
+      throw new TypeError('The versioned snapshot selector must be optional string metadata without a default');
+    return true;
+  }).map(route => route.path));
+  const selection = context => ({ allowSnapshot: snapshotPaths.has(context.url?.pathname) });
   let service, controls;
   try {
     service = await startSellerService({ config, port, nativeFactory, maxInFlight, drainGraceMs,
-      handlers: { ...handlers, admitDataset: versions.admit, queryDataset: versions.handle } });
+      handlers: { ...handlers,
+        admitDataset: context => versions.admit(context, selection(context)),
+        queryDataset: context => versions.handle(context, selection(context)) } });
     const listeners = service.server.listeners('request');
     if (listeners.length !== 1) throw new TypeError('Expected the original SF30 single request dispatcher');
     service.server.removeListener('request', listeners[0]);
@@ -134,7 +149,7 @@ export async function startVersionedDatasetSeller({ versions, config, port = 842
 
 /** Operator-only request to the socket in a known private state directory. */
 export async function datasetControl(directory, action = 'status', body = undefined) {
-  if (!['status', 'refresh', 'collect'].includes(action)) throw new TypeError('Unknown dataset control action');
+  if (!['status', 'refresh', 'activate', 'collect'].includes(action)) throw new TypeError('Unknown dataset control action');
   const file = await open(descriptorFor(directory), constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   let descriptor;
   try {
@@ -173,7 +188,7 @@ export async function datasetControl(directory, action = 'status', body = undefi
       });
     });
     req.on('error', fail);
-    req.on('timeout', () => req.destroy(new Error('Dataset control request timed out; use status before retrying a refresh')));
+    req.on('timeout', () => req.destroy(new Error('Dataset control request timed out; use status before retrying a dataset change')));
     req.end(payload ?? undefined);
   });
 }
