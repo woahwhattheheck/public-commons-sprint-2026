@@ -1,12 +1,14 @@
 // MIT. Local operator boundary, matching the original seller release console.
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { open, readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { inspectRelease } from '../../../sf82-seller-pilot/releases.mjs';
 import { openWorkspace } from './model.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const BODY_LIMIT = 48 * 1024 * 1024;
+const OPERATOR_ASSET_LIMIT = 2 * 1024 * 1024;
+const OPERATOR_ASSETS_LIMIT = 8 * 1024 * 1024;
 const failure = (code, message, status = 400) => Object.assign(new Error(message), { code, status });
 const safeFilename = name => name.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 200);
 async function body(req) {
@@ -31,6 +33,26 @@ function fields(input, allowed) {
   if (unknown.length) throw failure('INVALID_FIELD', 'Unknown action field: ' + unknown.join(', '));
 }
 
+async function readOperatorAsset(file, remaining) {
+  const handle = await open(file, 'r');
+  try {
+    const stat = await handle.stat();
+    if (!stat.isFile()) throw new TypeError('Operator assets must be regular local files.');
+    if (!Number.isSafeInteger(stat.size) || stat.size < 0 || stat.size > OPERATOR_ASSET_LIMIT || stat.size > remaining)
+      throw new RangeError('Additional operator assets are limited to 2 MiB per file and 8 MiB in total.');
+    const bytes = Buffer.alloc(stat.size);
+    let offset = 0;
+    while (offset < bytes.length) {
+      const { bytesRead } = await handle.read(bytes, offset, bytes.length - offset, offset);
+      if (!bytesRead) throw new Error('An operator asset changed while loading; start again with stable files.');
+      offset += bytesRead;
+    }
+    if ((await handle.read(Buffer.alloc(1), 0, 1, offset)).bytesRead)
+      throw new Error('An operator asset changed while loading; start again with stable files.');
+    return bytes;
+  } finally { await handle.close(); }
+}
+
 /**
  * Open the original saved workspace and local operator boundary.
  * operatorAssets optionally adds explicit {path, file, type} records; file is a
@@ -38,8 +60,9 @@ function fields(input, allowed) {
  * assets cannot be replaced. Set operatorPath to one registered HTML page.
  * The selected operatorUrl and nativeOperatorUrl share the same token, native
  * source/preview/release APIs, origin checks and owned-process close lifecycle.
- * Assets are read once at startup; callers keep their scripts/styles external
- * so the original same-origin CSP applies without modification.
+ * Added assets are read once at startup, with 2 MiB per-file and 8 MiB total
+ * bounds checked before allocation. Callers keep scripts/styles external so
+ * the original same-origin CSP applies without modification.
  */
 export async function startPythonWorkspace(root, { port = 8431, operatorAssets = [], operatorPath = '/' } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Workspace port must be 0–65535.');
@@ -59,6 +82,7 @@ export async function startPythonWorkspace(root, { port = 8431, operatorAssets =
       ['/release-panel.mjs', 'release-panel.mjs', 'text/javascript; charset=utf-8'],
       ['/style.css', 'style.css', 'text/css; charset=utf-8'],
     ]) assets.set(path, { bytes: await readFile(new URL('./' + file, import.meta.url)), type });
+    let operatorBytes = 0;
     for (const asset of operatorAssets) {
       if (!asset || !assetPath(asset.path) || assets.has(asset.path) || asset.path === '/api' || asset.path.startsWith('/api/'))
         throw new TypeError('Each additional operator asset needs a distinct local path outside the original assets and API.');
@@ -66,7 +90,9 @@ export async function startPythonWorkspace(root, { port = 8431, operatorAssets =
         throw new TypeError('Operator assets must select existing local file paths or file URLs.');
       if (typeof asset.type !== 'string' || asset.type.length > 200 || !/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:;[^\r\n\u0000]*)?$/.test(asset.type))
         throw new TypeError('Each operator asset needs a valid content type.');
-      assets.set(asset.path, { bytes: await readFile(asset.file), type: asset.type });
+      const bytes = await readOperatorAsset(asset.file, OPERATOR_ASSETS_LIMIT - operatorBytes);
+      operatorBytes += bytes.length;
+      assets.set(asset.path, { bytes, type: asset.type });
     }
     if (!assets.has(operatorPath) || assets.get(operatorPath).type.split(';')[0] !== 'text/html')
       throw new TypeError('The selected operator path must name an available HTML page.');
