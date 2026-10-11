@@ -1,17 +1,30 @@
 """Install the full, explicitly sourced public SANDAG migration example."""
 import base64
+import hashlib
 import json
 from pathlib import Path
+from zipfile import ZipFile
 
 EXAMPLE = Path(__file__).resolve().parents[1] / "examples" / "sandag"
 
 
+def example_bytes(path):
+    """Read the published example directly from its compact, complete CSV archive."""
+    if path.is_file():
+        return path.read_bytes()
+    with ZipFile(EXAMPLE / "data.zip") as package:
+        return package.read(path.relative_to(EXAMPLE).as_posix())
+
+
 def load_example(service, build=False):
+    identity = hashlib.sha256(b"".join((EXAMPLE / name).read_bytes() for name in
+        ("SOURCE.json", "reviewed-project.json", "SANDAG_Public_Aggregates.xml",
+         "capture-query.dax", "native-comparison.json"))).hexdigest()[:12]
     def call(action, label, request):
-        return service.dispatch(action, {**request, "operation_id": "sandag-public-v1-" + label})["record"]
+        return service.dispatch(action, {**request, "operation_id": "sandag-public-" + identity + "-" + label})["record"]
 
     def source_file(path):
-        return {"filename": path.name, "base64": base64.b64encode(path.read_bytes()).decode()}
+        return {"filename": path.name, "base64": base64.b64encode(example_bytes(path)).decode()}
 
     source_info = json.loads((EXAMPLE / "SOURCE.json").read_text())
     source = call("source.import", "source", {**source_file(EXAMPLE / "SANDAG_Public_Aggregates.xml"),

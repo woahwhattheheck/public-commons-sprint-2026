@@ -1,0 +1,6 @@
+{
+  "repository": "https://github.com/microsoft/json-schemas",
+  "tree_sha": "0346d0e844495d7786c09d7c4bebe0d3b191f411",
+  "canonical_base": "https://developer.microsoft.com/json-schemas/",
+  "note": "Unmodified versioned schema files retrieved from Microsoft's source repository; index.json pins actual UTF-8 bytes. The closure includes 18 schemas."
+}
