@@ -1,24 +1,20 @@
 // MIT. Native cursor reads use the original seller request signal and admission.
-import { MongoClient, BSON } from 'mongodb';
+import { MongoClient } from 'mongodb';
 import { performance } from 'node:perf_hooks';
 import { compileMongoQueries, bindMongoParameters, describeMongoQueries, resultPipeline, QueryInputError } from './declaration.mjs';
 import { integer } from './common.mjs';
+import { canonicalEjson, bsonType } from './values.mjs';
+import { MongoDatasetError, mongoDatasetExtractionOptions, readMongoDataset } from './publisher/stream.mjs';
+export { canonicalEjson, bsonType } from './values.mjs';
 
 export class MongoSourceError extends Error {
   constructor(code, query) { super(code); this.name = 'MongoSourceError'; this.code = code; if (query) this.query = query; }
 }
 const error = (code, query) => new MongoSourceError(code, query);
-export const canonicalEjson = value => BSON.EJSON.serialize(value, { relaxed: false });
-export function bsonType(value) {
-  if (value === null) return 'null';
-  if (value?._bsontype) return value._bsontype;
-  if (value instanceof Date) return 'Date';
-  if (Array.isArray(value)) return 'array';
-  return typeof value;
-}
 function publicError(issue, name, signal) {
   if (signal?.aborted) return signal.reason instanceof MongoSourceError ? signal.reason : error('QUERY_ABORTED', name);
-  if (issue instanceof MongoSourceError || issue instanceof QueryInputError) return issue;
+  if (issue instanceof MongoSourceError || issue instanceof MongoDatasetError || issue instanceof QueryInputError) return issue;
+  if (issue?.code === 'DATASET_CSV_TOO_LARGE') return new MongoDatasetError(issue.code);
   const code = Number(issue?.code);
   if (code === 50 || issue?.name === 'MongoOperationTimeoutError') return error('QUERY_TIMEOUT', name);
   if ([246, 286].includes(code)) return error('QUERY_SNAPSHOT_UNAVAILABLE', name);
@@ -126,7 +122,7 @@ export async function createMongoQuerySource({ connection, queries, maxConnectio
       await session.endSession();
     }
   }
-  function query(name, input, { signal: callerSignal } = {}) {
+  function enqueue(name, input, { signal: callerSignal, timeoutMs, operation = execute } = {}) {
     let values;
     try {
       if (closed) throw error('SOURCE_CLOSED');
@@ -135,18 +131,32 @@ export async function createMongoQuerySource({ connection, queries, maxConnectio
       if (jobs.size >= maxPending) throw error('SOURCE_BUSY');
     } catch (issue) { return Promise.reject(issue); }
     const controller = new AbortController(), signal = callerSignal ? AbortSignal.any([controller.signal, callerSignal]) : controller.signal;
-    const duration = definition(name).timeoutMs, deadline = performance.now() + duration;
+    const duration = timeoutMs ?? definition(name).timeoutMs, deadline = performance.now() + duration;
     const timer = setTimeout(() => controller.abort(error('QUERY_TIMEOUT', name)), duration);
     const job = { controller, task: null }; jobs.add(job);
     job.task = (async () => {
       let acquired = false;
       try {
         await acquire(signal); acquired = true;
-        const result = await execute(name, values, signal, deadline); completed++; return result;
+        const result = await operation(name, values, signal, deadline); completed++; return result;
       } catch (issue) { failures++; throw publicError(issue, name, signal); }
       finally { clearTimeout(timer); jobs.delete(job); if (acquired) active--; pump(); }
     })();
     return job.task;
+  }
+  const query = (name, input, { signal } = {}) => enqueue(name, input, { signal });
+  function exportDataset(name, input, { signal, onRow, ...supplied } = {}) {
+    let options;
+    try {
+      if (typeof onRow !== 'function') throw new MongoDatasetError('DATASET_ROW_CONSUMER_REQUIRED');
+      options = mongoDatasetExtractionOptions(definition(name), supplied);
+    } catch (issue) { return Promise.reject(issue); }
+    return enqueue(name, input, { signal, timeoutMs: options.timeoutMs,
+      operation: async (queryName, values, activeSignal, deadline) => ({
+        ...await readMongoDataset(database, client, definition(queryName),
+          { name: queryName, values, signal: activeSignal, deadline, options, onRow }),
+        server: { ...metadata }, database: database.databaseName,
+      }) });
   }
   const invalid = issue => ({ status: 422, body: { error: 'QUERY_INPUT_INVALID', code: issue.code, field: issue.field } });
   function route(name, { input = 'query' } = {}) {
@@ -183,9 +193,12 @@ export async function createMongoQuerySource({ connection, queries, maxConnectio
     closing = Promise.allSettled(pending.map(job => job.task)).then(() => client.close());
     return closing;
   }
-  return Object.freeze({ query, validate, route, close,
+  return Object.freeze({ query, exportDataset, validate, route, close,
     describe: () => describeMongoQueries(compiled),
     inspect: () => ({ schema: 'stellar-forge.mongodb-inspection.v1', ...metadata, queries: describeMongoQueries(compiled),
+      columnTypes: Object.fromEntries(Object.entries(compiled).map(([name, query]) =>
+        [name, Object.fromEntries(query.columns.map(column => [column, {}]))])),
+      columnTypeSemantics: 'dynamic-bson-types-counted-for-each-complete-extraction',
       namespaces: [...new Set(Object.values(compiled).flatMap(query => [query.collection, ...query.referencedCollections]))].sort(),
       credentials: 'environment-only', sourceSemantics: 'live-fixed-read-aggregations' }),
     status: () => ({ schema: 'stellar-forge.mongodb-status.v1', state: closed ? 'CLOSED' : 'READY',
