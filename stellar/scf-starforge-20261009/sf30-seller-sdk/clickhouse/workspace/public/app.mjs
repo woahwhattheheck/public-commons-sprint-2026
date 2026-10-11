@@ -67,7 +67,7 @@ async function api(path, input, download = false) {
   if (!download) return response.json();
   const blob = await response.blob(), digest = [...new Uint8Array(await crypto.subtle.digest('SHA-256', await blob.arrayBuffer()))]
     .map(byte => byte.toString(16).padStart(2, '0')).join('');
-  if (digest !== response.headers.get('x-content-sha256')) throw Error('The customer download did not match the returned bytes. Request the same retained client again.');
+  if (digest !== response.headers.get('x-content-sha256')) throw Error('The downloaded file did not match the returned bytes. Request the same retained file again.');
   const filename = /filename="([^"]+)"/.exec(response.headers.get('content-disposition') ?? '')?.[1] ?? 'clickhouse-customer.tar.gz';
   const url = URL.createObjectURL(blob), anchor = el('a'); anchor.href = url; anchor.download = filename;
   document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -398,6 +398,10 @@ function renderRelease() {
       notice('Downloaded ' + result.filename + ' · ' + result.bytes.toLocaleString() + ' bytes. This customer package contains the generated client and public API description.');
     }));
   panel.append(actions, el('p', 'The private source, SQL, probe values and environment references stay in the merchant folder. Customer downloads contain only the original generated client and public OpenAPI.', 'hint'));
+  panel.append(button('Download fleet source', async () => {
+    const result = await api('fleet-source', { releaseId: release.id }, true);
+    notice('Downloaded ' + result.filename + '. Import it into a registered source in the fleet setup workbench.');
+  }), el('p', 'The fleet source file preserves this merchant’s host package path, reviewed output columns and selected facilitator settings for your fleet.', 'hint'));
   const reopen = button('Open its saved revision', async () => {
     if (dirty && !confirm('Discard unsaved changes and open this merchant’s saved revision?')) return;
     const result = await api('checkout', { revision: release.revision, baseRevision: editorBase });
@@ -436,7 +440,10 @@ function renderRetainedReleases() {
         const result = await api('export', { merchantReleaseId: item.id, kind }, true);
         notice('Downloaded ' + result.filename + ' from the verified retained release.');
       }));
-    row.append(actions); list.append(row);
+    row.append(actions, button('Download retained fleet source', async () => {
+      const result = await api('fleet-source', { merchantReleaseId: item.id }, true);
+      notice('Downloaded ' + result.filename + ' from this retained release. Import it into the fleet setup workbench.');
+    })); list.append(row);
   }
   for (const error of status?.errors ?? []) list.append(el('p', error.id + ': ' + error.message, 'hint'));
 }
