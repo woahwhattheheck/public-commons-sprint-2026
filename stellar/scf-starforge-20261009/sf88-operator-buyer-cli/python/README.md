@@ -260,8 +260,9 @@ For a workspace or existing configuration using a merchant operation ticket,
 native review supplies the ticket fingerprint without its bearer value. Python
 passes that reviewed fingerprint to the original ticket validator before its
 permanent attempt and to original execution. Replacing or expiring the private
-ticket cannot silently change the reviewed operation. Keep the referenced
-private ticket file for the operation; the original loader and request assembly
+ticket cannot silently change the reviewed operation. Configuration import
+retains a validated private ticket copy inside the operation directory, so the
+received source file can be archived. The original loader and request assembly
 continue to own its bytes and header. The paid-file GET flow uses its separate
 order reference and does not require a merchant POST ticket.
 
@@ -455,6 +456,25 @@ prepared review with its original `ticketFile`, exact body and headers. The
 original ticket reader and request assembly remain responsible for the bearer;
 ordinary request headers never carry it in the Python review. Original SF98
 order references and authentication/payment header handling are retained.
+
+To import the merchant's complete private request on another host:
+
+```python
+operation = buyer.from_operation_handoff(
+    "/private/merchant-operation.handoff.json", accept=0
+)
+operation.configure("/private/operator-profile.json")
+review = operation.review()
+result = operation.execute(review=review)
+```
+
+Choose the actual offered payment option and use the matching native SF88
+runtime. The original importer supplies the reviewed local request; Python keeps
+its own body and validated ticket copies after temporary import files are removed.
+The original stable intent remains unchanged. The packet contains no operator
+or signer settings; configure yours separately. Keep the received packet `0600`
+at a canonical absolute path, and reopen an existing operation with
+`buyer.operation(intent)` instead of importing it again.
 
 ## Restart and consume a completed purchase
 

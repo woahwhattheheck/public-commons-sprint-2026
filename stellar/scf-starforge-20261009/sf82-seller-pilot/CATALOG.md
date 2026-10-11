@@ -8,6 +8,11 @@ stays online, with one existing journal writer throughout the workflow.
 
 ## Connect the existing merchant and catalog
 
+For a first catalog, [merchant discovery setup](./DISCOVERY_SETUP.md) creates the
+private identity, source-derived startup policy and this original connection
+from a retained release, then runs the existing writer and catalog browser.
+Existing catalog installations can continue with the connection below.
+
 Start the catalog using its existing [operator instructions](../sf60-durable-catalog-transaction/OPERATOR.md).
 Keep its approved seller ID, public-key pin, origins, payment recipients,
 networks and schemes in that operator's existing policy. The release console

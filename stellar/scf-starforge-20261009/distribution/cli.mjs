@@ -114,7 +114,7 @@ export async function doctor({ requireNative = false, requiredFeatures = [] } = 
     if (!manifest.dependencies || typeof manifest.dependencies !== 'object' || Array.isArray(manifest.dependencies) ||
         !Object.keys(manifest.dependencies).length) throw new TypeError('Runtime dependencies missing: ' + path);
     featurePeers[group] = Object.fromEntries(Object.entries(manifest.dependencies ?? {}).map(([name, version]) =>
-      [name, { version, probe: name }]));
+      [name, { version, probe: specification.featurePeers?.[group]?.[name]?.probe ?? name }]));
     // Match the original adapter's location, including a checkout that installed
     // drivers in its postgres directory rather than at the distribution root.
     featureResolvers[group] = createRequire(filename).resolve;

@@ -26,6 +26,13 @@ function scalar(value, spec, field) {
     throw new QueryInputError(field, 'NULL_NOT_ALLOWED');
   }
   const parsed = decimalText(value, field);
+  const [whole, fraction = ''] = parsed.replace(/^-/, '').split('.');
+  // Trailing fractional zeroes do not require database scale. Zero itself
+  // needs no significant integer digits, including DECIMAL(p,p) declarations.
+  if (own(spec, 'maxScale') && fraction.replace(/0+$/, '').length > spec.maxScale)
+    throw new QueryInputError(field, 'DECIMAL_SCALE_EXCEEDED');
+  if (own(spec, 'maxIntegerDigits') && whole.replace(/^0+/, '').length > spec.maxIntegerDigits)
+    throw new QueryInputError(field, 'DECIMAL_INTEGER_DIGITS_EXCEEDED');
   if (own(spec, 'minimum') && compare(parsed, spec.minimum) < 0 ||
       own(spec, 'maximum') && compare(parsed, spec.maximum) > 0)
     throw new QueryInputError(field, 'OUT_OF_RANGE');
@@ -48,6 +55,9 @@ export function compileDecimalParameter(spec, field) {
     throw new TypeError('POSTGRES_DECIMAL_NULLABLE_INVALID');
   if (own(spec, 'minLength') || own(spec, 'maxLength'))
     throw new TypeError('POSTGRES_DECIMAL_USES_FIXED_TEXT_LIMIT');
+  for (const key of ['maxScale', 'maxIntegerDigits']) if (own(spec, key) &&
+      (!Number.isInteger(spec[key]) || spec[key] < 0 || spec[key] > MAX_DECIMAL_LENGTH))
+    throw new TypeError('POSTGRES_DECIMAL_PRECISION_LIMIT_INVALID:' + key);
   for (const key of ['minimum', 'maximum']) if (own(spec, key)) decimalText(spec[key], field);
   if (own(spec, 'minimum') && own(spec, 'maximum') && compare(spec.minimum, spec.maximum) > 0)
     throw new TypeError('POSTGRES_DECIMAL_MINIMUM_EXCEEDS_MAXIMUM');

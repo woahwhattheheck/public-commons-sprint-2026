@@ -91,6 +91,33 @@ routes. A route with a handler or application admission export requires its
 trusted application module. Setup retains the same absolute module reference;
 the original commerce session checks its digest and loads it at startup.
 
+### Existing HTTP backends and merchant operation tickets
+
+Use `seller.upstreams` with `seller.config` for a merchant using the original
+SF30 declarative HTTP bindings. The upstream factory supplies its handlers and
+admissions. Preparation retains the exact private declaration; launch captures
+its named credentials and starts the original transport, response, cache and
+operation lifecycle. An explicit `seller.allowLoopbackUpstream:true` enables
+the original local-backend example option.
+
+A selected idempotent POST also requires its merchant-issued private
+`ticketFile`. Set `ticketHeader` when its configured header differs from
+`x-merchant-operation`. Preparation checks the original ticket metadata, current
+expiry and header contract, retains its exact bytes and uses the original SF88
+workspace/inbox path. The merchant verifies its HMAC and request binding during
+admission. Set root `operationControls:true` to mount the existing merchant
+recovery console on this same session; the CLI prints its private capability
+URL only at startup. Read [UPSTREAM_COMMERCE.md](UPSTREAM_COMMERCE.md) for the full
+review, preparation, native purchase, retained reopen and recovery workflow.
+
+For any configured merchant mode, optional `seller.availabilityDirectory`
+retains the original per-product pause/resume policy. The running session links
+its existing availability desk and prints the private control URL at startup.
+Use the current product IDs and revision from that desk; the original seller
+rejects new paused-product requests before payment while admitted work drains.
+See the original [availability guide](../sf30-seller-sdk/availability/README.md)
+for directory ownership and restart behavior.
+
 ### Initialized Python applications
 
 For an existing [Python merchant](../sf30-seller-sdk/python/README.md), use
