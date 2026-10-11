@@ -1,0 +1,35 @@
+{
+  "schema": "stellar-forge.stellar-jsonrpc-merchant.v1",
+  "publicOrigin": "https://stellar-payments.example",
+  "dataNetwork": "stellar:pubnet",
+  "endpointEnv": "QUICKNODE_STELLAR_RPC_URL",
+  "payment": {
+    "network": "stellar:testnet",
+    "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    "payTo": "REPLACE_WITH_ACTUAL_MERCHANT_RECIPIENT",
+    "maxTimeoutSeconds": 60
+  },
+  "operations": [
+    {
+      "method": "getNetwork",
+      "amountAtomic": "10000"
+    },
+    {
+      "method": "getTransaction",
+      "amountAtomic": "10000"
+    },
+    {
+      "method": "getEvents",
+      "amountAtomic": "10000"
+    }
+  ],
+  "limits": {
+    "timeoutMs": 10000,
+    "maxResponseBytes": 1048576,
+    "maxInFlight": 4,
+    "maxEventPage": 100,
+    "maxTransactionPage": 100,
+    "maxLedgerKeys": 100,
+    "maxLedgerPage": 100
+  }
+}
