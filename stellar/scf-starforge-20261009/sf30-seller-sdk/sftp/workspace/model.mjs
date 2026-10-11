@@ -74,8 +74,17 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
   const root = resolve(selectedDirectory);
   await directory(root);
   const release = await acquireWorkspace(root);
-  const sessions = new Map();
+  const sessions = new Map(), operations = new Set(), sources = new Set();
   let queue = Promise.resolve(), closing = null, closed = false;
+  const admitted = action => (...args) => {
+    if (closed) return Promise.reject(fault('WORKSPACE_CLOSED', 'Reopen this private workspace.', 409));
+    let operation;
+    try { operation = Promise.resolve(action(...args)); }
+    catch (issue) { return Promise.reject(issue); }
+    operations.add(operation);
+    operation.then(() => operations.delete(operation), () => operations.delete(operation));
+    return operation;
+  };
   const mutate = action => {
     if (closed) throw fault('WORKSPACE_CLOSED', 'Reopen this private workspace.', 409);
     const pending = queue.then(action); queue = pending.catch(() => {}); return pending;
@@ -132,8 +141,14 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
     if (!saved) throw fault('SFTP_SOURCE_REQUIRED', 'Save this connection before inspecting its files.');
     const captureDirectory = await directory(join(root, 'captures'));
     const opened = await openSftpSourceFile(saved.sourceFile, { env: environment, captureDirectory });
-    try { return await action(opened.source, saved); }
-    finally { await opened.source.close(); }
+    sources.add(opened.source);
+    try {
+      if (closed) throw fault('WORKSPACE_CLOSED', 'Reopen this private workspace.', 409);
+      return await action(opened.source, saved);
+    } finally {
+      try { await opened.source.close(); }
+      finally { sources.delete(opened.source); }
+    }
   }
   async function catalogue(input) {
     fields(input, ['expectedRevision', 'path', 'limit', 'offset']);
@@ -168,8 +183,8 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
           throw fault('DATASET_SELLER_BINDING_CHANGED', 'The seller must keep this publication’s saved merchant terms.', 409);
       } else await createFile(file, bytes(config));
       seller = await startVersionedDatasetSeller({ versions, config, port: 0, nativeFactory: datasetNativeFactory, controlTransport: 'loopback' });
-      session.seller = seller; session.startedAt = timestamp(); session.startError = null;
       if (persist) await setServiceIntent(session, true);
+      session.seller = seller; session.startedAt = timestamp(); session.startError = null;
       return sellerView(session);
     } catch (issue) { if (seller) await seller.close(); else await versions.close(); throw issue; }
   }
@@ -266,17 +281,19 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
   }
   async function publicationAction(selected, action, input = {}) {
     fields(input, action === 'buyer' ? ['runId', 'query', 'intentId', 'acceptIndex', 'offerSha256'] : []);
-    const session = await sessionFor(selected);
-    if (action === 'seller/start') { await startSeller(session); return publicationView(session); }
-    if (action === 'seller/stop') {
-      if (session.publisher.status().active || session.console.schedule.status().active)
-        throw fault('PUBLICATION_BUSY', 'Wait for the current source read or publication to finish before closing its seller.', 409);
-      await session.console.schedule.pause({ revision: session.console.schedule.status().revision });
-      await session.seller?.close(); session.seller = null; await setServiceIntent(session, false);
-      return publicationView(session);
-    }
-    if (action === 'buyer') return buyer(session, input.runId, input);
-    throw fault('WORKSPACE_ACTION_NOT_FOUND', 'Action not found.', 404);
+    return mutate(async () => {
+      const session = await sessionFor(selected);
+      if (action === 'seller/start') { await startSeller(session); return publicationView(session); }
+      if (action === 'seller/stop') {
+        if (session.publisher.status().active || session.console.schedule.status().active)
+          throw fault('PUBLICATION_BUSY', 'Wait for the current source read or publication to finish before closing its seller.', 409);
+        await session.console.schedule.pause({ revision: session.console.schedule.status().revision });
+        await session.seller?.close(); session.seller = null; await setServiceIntent(session, false);
+        return publicationView(session);
+      }
+      if (action === 'buyer') return buyer(session, input.runId, input);
+      throw fault('WORKSPACE_ACTION_NOT_FOUND', 'Action not found.', 404);
+    });
   }
   async function buyerOffer(selected, runId, query) { return offer(await sessionFor(selected), runId, query); }
   async function inspectRun(selected, runId) { return (await sessionFor(selected)).publisher.inspect(runId); }
@@ -326,13 +343,19 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
     if (closing) return closing;
     closed = true;
     closing = (async () => {
+      // Stop current SSH reads, then settle every admitted operation before
+      // closing publishers or releasing the original workspace lease.
+      const stoppingSources = Promise.allSettled([...sources].map(source => source.close()));
+      await Promise.allSettled([...operations]);
       await queue;
+      const stoppedSources = await stoppingSources;
       const opened = await Promise.allSettled([...sessions.values()]);
       try {
         const results = await Promise.allSettled(opened.filter(item => item.status === 'fulfilled').map(async item => {
           try { await item.value.console.close(); } finally { await item.value.seller?.close(); }
         }));
-        const failed = results.find(item => item.status === 'rejected'); if (failed) throw failed.reason;
+        const failed = [...stoppedSources, ...results].find(item => item.status === 'rejected');
+        if (failed) throw failed.reason;
       } finally { await release(); }
     })(); return closing;
   }
@@ -347,7 +370,10 @@ export async function openSftpWorkbench({ directory: selectedDirectory, sourcePa
       else if (merchantPath) throw fault('SFTP_SOURCE_REQUIRED', 'Import the source file alongside its merchant settings.');
     }
     await inspect();
-    return { directory: root, inspect, revision, save, catalogue, sample, createPublication, inspectPublication,
-      publicationAction, buyerOffer, inspectRun, candidateFile, file, close };
+    return { directory: root,
+      ...Object.fromEntries(Object.entries({ inspect, revision, save, catalogue, sample, createPublication,
+        inspectPublication, publicationAction, buyerOffer, inspectRun, candidateFile, file })
+        .map(([name, action]) => [name, admitted(action)])),
+      close };
   } catch (issue) { await close(); throw issue; }
 }

@@ -130,7 +130,9 @@ export async function startSftpWorkbench({ port = 0, ...options } = {}) {
     closing = true;
     const stopped = new Promise((done, fail) => server.close(issue => issue ? fail(issue) : done()));
     server.closeIdleConnections();
-    try { await pending; await model.close(); } finally { await stopped; }
+    const results = await Promise.allSettled([pending, model.close(), stopped]);
+    const failed = results.find(item => item.status === 'rejected');
+    if (failed) throw failed.reason;
   })();
   return { model, server, origin, url: origin + '/#' + token, close };
 }

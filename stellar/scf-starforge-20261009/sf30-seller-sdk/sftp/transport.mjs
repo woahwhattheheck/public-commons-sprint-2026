@@ -64,16 +64,11 @@ export function createSftpTransport(config, { env = process.env, baseDirectory =
     const timeout = AbortSignal.timeout(timeoutMs);
     const joined = AbortSignal.any([stop.signal, timeout, ...(signal ? [signal] : [])]);
     joined.throwIfAborted();
-    const imported = await import('ssh2'); const Client = imported.Client ?? imported.default?.Client;
-    if (!Client) throw fail('SFTP_RUNTIME_MISSING', 'Install the declared ssh2 runtime.');
-    const auth = await credentials(config, env, baseDirectory), client = new Client();
-    let rejectedPin, observedFingerprint, negotiated = null, completing = false;
-    const cancel = () => { client.destroy(); };
-    const entry = () => { stop.abort(fail('SFTP_SOURCE_CLOSED')); client.destroy(); };
+    let client, auth, rejectedPin, observedFingerprint, negotiated = null, completing = false;
+    const cancel = () => { client?.destroy(); };
+    const entry = () => { stop.abort(fail('SFTP_SOURCE_CLOSED')); client?.destroy(); };
+    // Register before loading the runtime or key so close owns this whole run.
     active.add(entry); joined.addEventListener('abort', cancel, { once: true });
-    client.on('handshake', value => { negotiated = structuredClone(value); });
-    client.on('error', issue => { if (!completing) stop.abort(transportIssue(issue, rejectedPin)); });
-    client.on('close', () => { if (!completing && !joined.aborted) stop.abort(fail('SFTP_CONNECTION_CLOSED')); });
     const call = (receiver, method, ...args) => new Promise((done, reject) => {
       if (joined.aborted) return reject(joined.reason);
       let finished = false;
@@ -85,6 +80,15 @@ export function createSftpTransport(config, { env = process.env, baseDirectory =
       try { receiver[method](...args, finish); } catch (issue) { finish(issue); }
     });
     try {
+      const imported = await import('ssh2'); const Client = imported.Client ?? imported.default?.Client;
+      if (!Client) throw fail('SFTP_RUNTIME_MISSING', 'Install the declared ssh2 runtime.');
+      joined.throwIfAborted();
+      auth = await credentials(config, env, baseDirectory);
+      joined.throwIfAborted();
+      client = new Client();
+      client.on('handshake', value => { negotiated = structuredClone(value); });
+      client.on('error', issue => { if (!completing) stop.abort(transportIssue(issue, rejectedPin)); });
+      client.on('close', () => { if (!completing && !joined.aborted) stop.abort(fail('SFTP_CONNECTION_CLOSED')); });
       await new Promise((done, reject) => {
         const abort = () => { cleanup(); reject(joined.reason); };
         const ready = () => { cleanup(); done(); };
@@ -131,8 +135,9 @@ export function createSftpTransport(config, { env = process.env, baseDirectory =
       return await operation(api);
     } catch (issue) { throw transportIssue(joined.aborted ? joined.reason : issue, rejectedPin); }
     finally {
-      completing = true; active.delete(entry); joined.removeEventListener('abort', cancel); client.end(); client.destroy();
-      if (Buffer.isBuffer(auth.privateKey)) auth.privateKey.fill(0);
+      completing = true; active.delete(entry); joined.removeEventListener('abort', cancel);
+      try { client?.end(); client?.destroy(); }
+      finally { if (Buffer.isBuffer(auth?.privateKey)) auth.privateKey.fill(0); }
     }
   }
   return Object.freeze({ run, close() { closed = true; for (const cancel of active) cancel(); } });
