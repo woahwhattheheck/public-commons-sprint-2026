@@ -1,4 +1,56 @@
 // MIT. Owner-entered terms for the original SF77 builder. Browser memory only; no network/storage.
+const deliveryFields={deliveryScope:'scope',deliverables:'deliverables',acceptanceCriteria:'acceptanceCriteria'};
+
+// Shared conversion for the original form and host-configured merchant operator.
+// This keeps unfinished form values in SF74; SF77 still validates a proposal.
+export function termsDocumentFromDraft(values) {
+  if(!values||typeof values!=='object'||Array.isArray(values))throw new Error('Unknown owner terms draft shape.');
+  const keys=['workOrderRef','sellerDisplayName','relationshipOwner','proposedWindow','consentStatus','consentReceipt',
+    'priceApproval','feeUsd','costUsd','approvalReceipt',...Object.keys(deliveryFields)];
+  if(Object.keys(values).some(key=>!keys.includes(key)))throw new Error('Unknown owner terms draft field.');
+  const draft={...Object.fromEntries(Object.keys(deliveryFields).map(key=>[key,''])),...values};
+  for(const key of keys)if(typeof draft[key]!=='string'||draft[key].length>8192)throw new Error('Invalid '+key+' draft.');
+  if(!['NOT_RECORDED','CONFIRMED'].includes(draft.consentStatus)||
+      !['NOT_APPROVED','OWNER_APPROVED_PROPOSAL'].includes(draft.priceApproval))throw new Error('Unknown owner terms draft status.');
+  const approved=draft.priceApproval==='OWNER_APPROVED_PROPOSAL',confirmed=draft.consentStatus==='CONFIRMED';
+  if(approved)for(const key of ['feeUsd','costUsd'])if(!/^-?(?:\d+|\d*\.\d+)(?:[eE][+-]?\d+)?$/.test(draft[key])||!Number.isFinite(Number(draft[key])))
+    throw new Error('Provide the recorded '+key+' value before preparing the proposal.');
+  const delivery=Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[key,draft[name].trim()]));
+  return {workOrderRef:draft.workOrderRef.trim(),sellerDisplayName:draft.sellerDisplayName.trim(),
+    relationshipOwner:draft.relationshipOwner.trim(),proposedWindow:draft.proposedWindow.trim()||'UNSCHEDULED',
+    ...(Object.values(delivery).some(Boolean)?{delivery}:{}),
+    merchantConsent:{status:draft.consentStatus,receiptUrl:confirmed?draft.consentReceipt.trim():null},
+    commercial:{priceApproval:draft.priceApproval,feeUsd:approved?Number(draft.feeUsd):null,
+      costUsd:approved?Number(draft.costUsd):null,approvalReceiptUrl:approved?draft.approvalReceipt.trim():null}};
+}
+
+export function termsDraftFromDocument(doc) {
+  const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
+  if(!object(doc)||!object(doc.merchantConsent)||!object(doc.commercial))
+    throw new Error('Choose a terms file with merchantConsent and commercial fields.');
+  if(doc.delivery!==undefined&&(!object(doc.delivery)||Object.keys(doc.delivery).some(key=>!Object.values(deliveryFields).includes(key))))
+    throw new Error('Invalid owner delivery terms.');
+  if(!['NOT_RECORDED','CONFIRMED'].includes(doc.merchantConsent.status)||
+      !['NOT_APPROVED','OWNER_APPROVED_PROPOSAL'].includes(doc.commercial.priceApproval))
+    throw new Error('The terms file has an unknown permission or price approval status.');
+  const string=(value,label,max=Infinity)=>{
+    if(value===null||value===undefined)return '';
+    if(typeof value!=='string'||value.length>max)throw new Error('Invalid '+label+' in the terms file.');
+    return value;
+  };
+  const number=(value,label)=>{
+    if(value===null||value===undefined)return '';
+    if(typeof value!=='number'||!Number.isFinite(value))throw new Error('Invalid '+label+' in the terms file.');
+    return String(value);
+  };
+  return {workOrderRef:string(doc.workOrderRef,'work order reference',120),sellerDisplayName:string(doc.sellerDisplayName,'seller name',200),
+    relationshipOwner:string(doc.relationshipOwner,'relationship owner',200),proposedWindow:string(doc.proposedWindow,'delivery window'),
+    consentStatus:doc.merchantConsent.status,consentReceipt:string(doc.merchantConsent.receiptUrl,'permission record URL'),
+    priceApproval:doc.commercial.priceApproval,feeUsd:number(doc.commercial.feeUsd,'fee'),costUsd:number(doc.commercial.costUsd,'cost'),
+    approvalReceipt:string(doc.commercial.approvalReceiptUrl,'owner approval record URL'),
+    ...Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[name,string(doc.delivery?.[key],key,8192)]))};
+}
+
 export function mountTermsEditor(container, {onChange=()=>{}}={}) {
   container.innerHTML=`
     <div class="form-grid">
@@ -31,7 +83,6 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
     <p data-terms-summary class="hint" aria-live="polite"></p>
     `;
   const fields=Object.fromEntries([...container.querySelectorAll('[name]')].map(el=>[el.name,el]));
-  const deliveryFields={deliveryScope:'scope',deliverables:'deliverables',acceptanceCriteria:'acceptanceCriteria'};
   function showFields(selector,visible) {
     for(const label of container.querySelectorAll(selector)) {
       label.hidden=!visible;
@@ -52,45 +103,12 @@ export function mountTermsEditor(container, {onChange=()=>{}}={}) {
       if(field.required&&!field.disabled&&!field.value.trim())throw new Error('Provide '+field.dataset.label.toLowerCase()+'.');
       if(!field.checkValidity()) {field.reportValidity();throw new Error('Check '+field.dataset.label.toLowerCase()+'.');}
     }
-    const approved=fields.priceApproval.value==='OWNER_APPROVED_PROPOSAL';
-    const confirmed=fields.consentStatus.value==='CONFIRMED';
-    const delivery=Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[key,fields[name].value.trim()]));
-    return {workOrderRef:fields.workOrderRef.value.trim(),sellerDisplayName:fields.sellerDisplayName.value.trim(),
-      relationshipOwner:fields.relationshipOwner.value.trim(),proposedWindow:fields.proposedWindow.value.trim()||'UNSCHEDULED',
-      ...(Object.values(delivery).some(Boolean)?{delivery}:{}),
-      merchantConsent:{status:fields.consentStatus.value,receiptUrl:confirmed?fields.consentReceipt.value.trim():null},
-      commercial:{priceApproval:fields.priceApproval.value,feeUsd:approved?Number(fields.feeUsd.value):null,
-        costUsd:approved?Number(fields.costUsd.value):null,approvalReceiptUrl:approved?fields.approvalReceipt.value.trim():null}};
+    return termsDocumentFromDraft(Object.fromEntries(Object.entries(fields).map(([name,field])=>[name,field.value])));
   }
-  function decodeTerms(doc) {
-    const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
-    if(!object(doc)||!object(doc.merchantConsent)||!object(doc.commercial))
-      throw new Error('Choose a terms file with merchantConsent and commercial fields.');
-    if(doc.delivery!==undefined&&(!object(doc.delivery)||Object.keys(doc.delivery).some(key=>!Object.values(deliveryFields).includes(key))))
-      throw new Error('Invalid owner delivery terms.');
-    if(!['NOT_RECORDED','CONFIRMED'].includes(doc.merchantConsent.status)||
-        !['NOT_APPROVED','OWNER_APPROVED_PROPOSAL'].includes(doc.commercial.priceApproval))
-      throw new Error('The terms file has an unknown permission or price approval status.');
-    const string=(value,label,max=Infinity)=>{
-      if(value===null||value===undefined)return '';
-      if(typeof value!=='string'||value.length>max)throw new Error('Invalid '+label+' in the terms file.');
-      return value;
-    };
-    const number=(value,label)=>{
-      if(value===null||value===undefined)return '';
-      if(typeof value!=='number'||!Number.isFinite(value))throw new Error('Invalid '+label+' in the terms file.');
-      return String(value);
-    };
-    return {workOrderRef:string(doc.workOrderRef,'work order reference',120),sellerDisplayName:string(doc.sellerDisplayName,'seller name',200),
-      relationshipOwner:string(doc.relationshipOwner,'relationship owner',200),proposedWindow:string(doc.proposedWindow,'delivery window'),
-      consentStatus:doc.merchantConsent.status,consentReceipt:string(doc.merchantConsent.receiptUrl,'permission record URL'),
-      priceApproval:doc.commercial.priceApproval,feeUsd:number(doc.commercial.feeUsd,'fee'),costUsd:number(doc.commercial.costUsd,'cost'),
-      approvalReceipt:string(doc.commercial.approvalReceiptUrl,'owner approval record URL'),
-      ...Object.fromEntries(Object.entries(deliveryFields).map(([name,key])=>[name,string(doc.delivery?.[key],key,8192)]))};
-  }
+
   function load(terms) {
     // Validate the complete shape before replacing fields; a failed import leaves current terms intact.
-    const values=decodeTerms(terms);
+    const values=termsDraftFromDocument(terms);
     for(const [name,value] of Object.entries(values))fields[name].value=value;
     sync();onChange();
   }
