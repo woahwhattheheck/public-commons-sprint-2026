@@ -94,7 +94,8 @@ export async function serveLibrary(library,{port=0,additionalAssets=[],authentic
       }
       requireValue(request.headers.authorization === 'Bearer ' + token,'PRIVATE_SESSION_REQUIRED',401);
       const route = url.pathname, method = request.method;
-      if (method === 'GET' && route === '/api/status') return send({...library.status(),lastScan});
+      if (method === 'GET' && route === '/api/status') return send({...library.status(),lastScan,
+        pages:[...assets].filter(([,asset])=>asset.type==='text/html').map(([path])=>path)});
       if (method === 'GET' && route === '/api/resources') return send(library.search({
         q:url.searchParams.get('q') ?? '', offset:Number(url.searchParams.get('offset') ?? 0),
         limit:Number(url.searchParams.get('limit') ?? 50),status:url.searchParams.get('status') ?? '',
