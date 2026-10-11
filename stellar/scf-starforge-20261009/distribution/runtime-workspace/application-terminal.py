@@ -50,13 +50,18 @@ def read(path, maximum=65536):
     finally:
         os.close(descriptor)
 
-def identity(pid):
+def process_identity(pid):
     try:
         text = Path("/proc/" + str(pid) + "/stat").read_text()
         fields = text[text.rfind(")") + 2:].split()
-        return fields[19] if fields[0] != "Z" else None
-    except OSError:
+        return {"processStart": fields[19], "state": fields[0],
+                "parent": int(fields[1]), "group": int(fields[2]), "session": int(fields[3])}
+    except (OSError, ValueError, IndexError):
         return None
+
+def identity(pid):
+    observed = process_identity(pid)
+    return observed["processStart"] if observed and observed["state"] != "Z" else None
 
 def main(directory):
     root = Path(directory)
@@ -85,53 +90,161 @@ def main(directory):
         })
         os.execve(executable, [executable] + argv, os.environ)
     os.set_blocking(master, False)
+    os.set_blocking(1, False)
+    original = process_identity(pid)
+    original_start = original["processStart"] if original else None
     stopping = False
+    stop_reason = None
+    stop_at = None
+    term_sent = False
+    kill_sent = False
+    term_attempted = False
+    kill_attempted = False
+    waitable = False
+    reaped_status = None
+    closed = False
+    discarded_output = 0
+    pending_output = bytearray()
+    grace_seconds = 5.0
+    input_seconds = 10.0
+
+    def request_stop(reason, explicit=False):
+        nonlocal stopping, stop_reason, stop_at
+        stopping = stopping or explicit
+        if stop_at is None:
+            stop_at = time.monotonic()
+            stop_reason = reason
 
     def stop(signum, frame):
-        nonlocal stopping
-        stopping = True
+        request_stop("operator_signal", explicit=True)
+
+    def probe_child():
+        nonlocal waitable
+        if not waitable:
+            # Keep the exited original child unreaped until PTY cleanup is
+            # complete. Its PID cannot be recycled while we address its group.
+            observed = os.waitid(os.P_PID, pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+            waitable = observed is not None and observed.si_pid == pid
+        return waitable
+
+    def signal_original(signum):
+        nonlocal original_start
+        observed = process_identity(pid)
+        if original_start is None and observed and observed["parent"] == os.getpid():
+            # This is still our own unreaped child, so a delayed first /proc
+            # observation cannot accidentally adopt a recycled process.
+            original_start = observed["processStart"]
+        if not observed or observed["processStart"] != original_start:
+            return None
+        if observed["group"] != pid or observed["session"] != pid:
+            # pty.fork's child may still be establishing its own session.
+            # Never signal the parent's group; retry on the next loop.
+            return None
         try:
-            os.killpg(pid, signal.SIGTERM)
+            os.killpg(pid, signum)
         except ProcessLookupError:
-            pass
+            return False
+        return True
+
+    def tick():
+        nonlocal term_sent, kill_sent, term_attempted, kill_attempted
+        if probe_child() and (not closed or pending_output):
+            request_stop("original_child_exited")
+        if stop_at is None:
+            return
+        if not term_attempted:
+            sent = signal_original(signal.SIGTERM)
+            term_attempted = sent is not None
+            term_sent = sent is True
+        if time.monotonic() - stop_at >= grace_seconds and not kill_attempted:
+            sent = signal_original(signal.SIGKILL)
+            kill_attempted = sent is not None
+            kill_sent = sent is True
+
+    def pump(writing=False, discard=False):
+        nonlocal closed, discarded_output
+        tick()
+        if discard or (kill_attempted and time.monotonic() - stop_at >= grace_seconds + 1.0):
+            discarded_output += len(pending_output)
+            pending_output.clear()
+        # Keep output bounded and backpressured without a blocking inner write.
+        # Every loop can still observe stop, child exit and the input deadline.
+        readable, writable, _ = select.select(
+            [] if closed or len(pending_output) >= 65536 else [master],
+            ([master] if writing and not closed else []) + ([1] if pending_output else []),
+            [], 0.1)
+        if 1 in writable:
+            try:
+                count = os.write(1, pending_output)
+                if not count:
+                    raise BrokenPipeError("Original output pipe closed")
+                del pending_output[:count]
+            except BlockingIOError:
+                pass
+        if master in readable:
+            try:
+                chunk = os.read(master, 65536 if discard else 65536 - len(pending_output))
+                if not chunk:
+                    closed = True
+                elif discard:
+                    discarded_output += len(chunk)
+                else:
+                    pending_output.extend(chunk)
+            except OSError as error:
+                if error.errno == errno.EIO:
+                    closed = True
+                elif error.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
+                    raise
+        return master in writable and not closed
+
+    def reap():
+        nonlocal reaped_status
+        if reaped_status is None:
+            if not probe_child():
+                raise RuntimeError("Original terminal child is not yet waitable")
+            # waitid(WNOWAIT) above already proved exit; this cannot wait on a
+            # live or recycled process.
+            reaped_pid, reaped_status = os.waitpid(pid, os.WNOHANG)
+            if reaped_pid != pid:
+                raise RuntimeError("Original terminal child custody changed")
+        return reaped_status
+
+    def result_record(error=None):
+        status = reap()
+        result = {"schema": "stellar-forge.application-terminal-exit.v1", "completedAt": now(),
+                  "operationId": root.name, "pid": pid, "stopped": stopping,
+                  "exitCode": os.waitstatus_to_exitcode(status),
+                  "termination": {"reason": stop_reason, "graceSeconds": grace_seconds,
+                                  "termSent": term_sent, "killSent": kill_sent,
+                                  "processStart": original_start, "group": pid, "session": pid},
+                  "discardedOutputBytes": discarded_output}
+        if error is not None:
+            result["bridgeError"] = str(error)[:2000]
+        save(root / "terminal-exit.json", result)
+        return result
 
     signal.signal(signal.SIGTERM, stop)
     signal.signal(signal.SIGINT, stop)
-    exit_status = None
-    closed = False
     try:
+        if original_start is None:
+            raise RuntimeError("Original terminal process identity unavailable")
         save(root / "terminal-process.json", {
             "schema": "stellar-forge.application-terminal-process.v1",
             "startedAt": now(), "operationId": root.name,
             "bridge": {"pid": os.getpid(), "processStart": identity(os.getpid())},
-            "original": {"pid": pid, "processStart": identity(pid), "executable": executable,
-                         "args": argv, "cwd": launch["cwd"]},
+            "original": {"pid": pid, "processStart": original_start, "group": pid, "session": pid,
+                         "executable": executable, "args": argv, "cwd": launch["cwd"]},
             "terminal": os.ttyname(master), "inputMode": "explicit-operator",
         })
-        while not closed or exit_status is None:
-            if exit_status is None:
-                result_pid, status = os.waitpid(pid, os.WNOHANG)
-                if result_pid:
-                    exit_status = status
-            readable, _, _ = select.select([] if closed else [master], [], [], 0.1)
-            if readable:
-                try:
-                    chunk = os.read(master, 65536)
-                    if not chunk:
-                        closed = True
-                    else:
-                        view = memoryview(chunk)
-                        while view:
-                            count = os.write(1, view)
-                            view = view[count:]
-                except OSError as error:
-                    if error.errno == errno.EIO:
-                        closed = True
-                    elif error.errno not in (errno.EAGAIN, errno.EWOULDBLOCK):
-                        raise
-            if stopping or exit_status is not None:
+        while not closed or not waitable or pending_output:
+            pump()
+            if waitable and not closed:
+                request_stop("original_child_exited")
+            if stop_at is not None or waitable:
                 continue
             for pending in sorted((root / "terminal-pending").glob("*.json")):
+                if stopping or probe_child():
+                    break
                 packet = read(pending, 32768)
                 input_id = packet["inputId"]
                 if not re.fullmatch(r"[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}", input_id):
@@ -149,30 +262,55 @@ def main(directory):
                 receipt.update(state="DISPATCHING", dispatchedAt=now())
                 save(receipt_path, receipt)
                 count = 0
+                deadline = time.monotonic() + input_seconds
                 try:
                     while count < len(data):
-                        _, writable, _ = select.select([], [master], [], 1)
-                        if not writable:
+                        if stopping or probe_child():
+                            raise InterruptedError("Original terminal stopped during input")
+                        if time.monotonic() >= deadline:
+                            raise TimeoutError("Original terminal did not accept the complete input within 10 seconds")
+                        if not pump(writing=True):
+                            if closed:
+                                raise BrokenPipeError("Original terminal closed during input")
                             continue
-                        count += os.write(master, data[count:])
+                        if stopping or probe_child():
+                            raise InterruptedError("Original terminal stopped during input")
+                        try:
+                            written = os.write(master, data[count:])
+                            if not written:
+                                raise BrokenPipeError("Original terminal did not accept input")
+                            count += written
+                        except BlockingIOError:
+                            continue
                     receipt.update(state="SENT", sentAt=now(), writtenBytes=count)
                 except OSError as error:
-                    receipt.update(state="DELIVERY_UNCERTAIN", writtenBytes=count, error=str(error))
+                    receipt.update(state="DELIVERY_UNCERTAIN", writtenBytes=count,
+                                   error=str(error)[:2000], completedAt=now())
                 save(receipt_path, receipt)
                 pending.unlink()
-        result = {"schema": "stellar-forge.application-terminal-exit.v1", "completedAt": now(),
-                  "operationId": root.name, "pid": pid, "stopped": stopping,
-                  "exitCode": os.waitstatus_to_exitcode(exit_status) if exit_status is not None else None}
-        save(root / "terminal-exit.json", result)
+                if stopping or waitable:
+                    break
+        result = result_record()
         code = result["exitCode"]
-        return code if isinstance(code, int) and code >= 0 else 128 + (-code if isinstance(code, int) else 1)
-    except BaseException:
-        stop(signal.SIGTERM, None)
-        if exit_status is None:
+        return code if code >= 0 else 128 - code
+    except BaseException as error:
+        request_stop("bridge_failure", explicit=True)
+        # The original lease remains held during graceful shutdown, identity-
+        # checked escalation, PTY drain and reap. No blocking wait on a live
+        # child follows a single TERM, and no input packet is dispatched here.
+        while not closed or not waitable or pending_output:
             try:
-                os.waitpid(pid, 0)
-            except ChildProcessError:
-                pass
+                pump(discard=True)
+            except OSError:
+                closed = True
+                tick()
+                select.select([], [], [], 0.1)
+            if waitable and closed and not pending_output:
+                break
+        try:
+            result_record(error)
+        except OSError:
+            pass
         raise
     finally:
         os.close(master)
