@@ -41,7 +41,7 @@ For a corporate or cloud network with an explicitly configured HTTPS proxy, add:
 }
 ```
 
-That selection uses the original SF31 public HTTPS transport with its CONNECT, TLS and origin checks. Direct networks use the original SF30 upstream transport. Provider and proxy credentials are referenced through server environment names.
+That selection uses the original SF31 public HTTPS transport with its CONNECT, TLS and origin checks. Direct Timeline requests use the original SF30 upstream transport. Map requests use the original SF31 public HTTPS transport to preserve the provider's ISO timestamp directly in the URL path; its direct connection validates and pins public DNS answers. Provider and proxy credentials are referenced through server environment names.
 
 For licensed service, configure the customer's actual license reference, allowed retention in seconds, raw export permission and any license expiry. Set the API key in the named server environment variable, default `TOMORROW_API_KEY`. The app uses the REST `apikey` header. The separate hosted Tomorrow MCP service uses its documented `X-Api-Key` scheme.
 
@@ -162,10 +162,10 @@ Use one explicit timestep for an intake export; other returned timesteps remain 
 | Module | Public interface |
 | --- | --- |
 | config.mjs | compileWeatherPlan, normalizeWork, requestsFor |
-| source.mjs | createTomorrowSource, readTimeline, readPng |
+| source.mjs | createTomorrowSource, readTimeline, readPng, readProviderError |
 | workspace.mjs | WeatherWorkspace.create/open and original workflow methods |
 | server.mjs | startWeatherServer({workspace,host,port}) |
-| merchant.mjs | packageWeatherEdition, openWeatherPackage, serveWeatherPackage |
+| merchant.mjs | packageWeatherEdition, openWeatherPackage, serveWeatherPackage, prepareWeatherPackagePurge, purgeExpiredWeatherPackage |
 | customer.mjs | WeatherPurchase.prepare/open/review/execute/recover/export/original |
 | austin-intake.mjs | buildAustinForecast, exportAustinForecast |
 | cli.mjs | main and complete command help |
@@ -182,12 +182,14 @@ A provider response can complete the Timeline while the map fails. The edition r
 
 ```sh
 node cli.mjs recover --workspace ./operations --edition EDITION_ID
-node cli.mjs review-retry --workspace ./operations --edition EDITION_ID --kind tile --tile-time-format whole-seconds --out ./tile-retry-review.json
+node cli.mjs review-retry --workspace ./operations --edition EDITION_ID --kind tile --tile-time-format iso-path --out ./tile-retry-review.json
 node cli.mjs retry --workspace ./operations --edition EDITION_ID --kind tile --review ./tile-retry-review.json
 ```
 
-The browser exposes the same review and retry actions. Its review shows the exact URL, previous failure, usage terms and one provider call. `whole-seconds` removes an all-zero fractional second from the map timestamp while preserving the exact instant, map point and field; `original` retains the original spelling. The adapter validates either request against the original work selection. It never substitutes a forecast window or field during a retry.
+The browser exposes the same review and retry actions. Its review shows the exact URL, previous failure, usage terms and one provider call. The default `iso-path` sends the ISO timestamp directly in the provider path and removes an all-zero fractional second while preserving the exact instant, map point and field. `original` selects the exact request saved in that edition. Historical encoded requests and `whole-seconds` reviews remain supported in saved products and handovers. Acquisition always sends the request retained by its original review.
 
-Every retry has an immutable capture file and retained request history. A successfully captured resource cannot be retried through this action. An interrupted attempt can be recovered from its saved capture; another provider request requires a new review. Provider error JSON is read up to 64 KiB and only its code/type/message are retained, with a configured API key redacted. No automatic HTTP retry is performed.
+Every retry has an immutable capture file and retained request history. A successfully captured resource cannot be retried through this action. An interrupted attempt can be recovered from its saved capture; another provider request requires a new review.
+
+Provider failures are read up to 64 KiB independently of their advertised MIME type. The saved observation contains normalized messages, a redacted text prefix of at most 4,096 characters, observed/retained byte counts, the retained-prefix SHA-256, parse/read outcome and available request IDs. JSON error arrays, empty responses, invalid JSON and interrupted streams remain distinguishable. Cleanup cannot erase bytes already read, and configured API keys are redacted before truncation. The operator sees the actual message, including the provider's plain-text `invalid timestamp` response under `application/json`.
 
 Expired licensed packages retain a verified `weather-purge-plan.json` before any response is removed. `purge-package` resumes that same plan after interruption, accepts an already-removed planned response, checks the hash of every remaining response, and preserves the original product, seller, catalog and manifest. JavaScript callers can inspect `prepareWeatherPackagePurge(directory)` before executing cleanup.

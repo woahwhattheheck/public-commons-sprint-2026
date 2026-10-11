@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/microsoft/RdlMigration",
+  "tree": "70dd6569dae1b9cdafab4697ce94f6fa865e2689",
+  "path": "RdlMigration.UnitTest/reportdefinition.xsd",
+  "blob": "f54329fe34fee553bf1d7de572b72884ca20d727",
+  "sha256": "efec7ea84380eca8eaabbddaed9ac4339994ad1c93e9caec5fe6abc12b1ad63b",
+  "license": "MIT",
+  "namespace": "http://schemas.microsoft.com/sqlserver/reporting/2016/01/reportdefinition"
+}

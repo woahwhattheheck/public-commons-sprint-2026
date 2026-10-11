@@ -1,0 +1,38 @@
+{
+  "schema": "sandag-published-counting-basis/v1",
+  "source_url": "https://www.sandag.org/-/media/SANDAG/Documents/PDF/data-and-research/criminal-justice-and-public-safety/criminal-justice-research-clearinghouse/cj-bulletin/cj-bulletin-2024-crime-in-the-san-diego-region-2025-08-18.pdf",
+  "source_sha256": "e25453715fbf0712c8b690ba09b2fb6c44191534f24f228b19d626d2da59738b",
+  "page": 5,
+  "label": "Published offense counts",
+  "rules": [
+    {
+      "group": "A",
+      "category": "Crimes Against Persons",
+      "basis": "One offense per victim"
+    },
+    {
+      "group": "A",
+      "category": "Crimes Against Property",
+      "basis": "Generally one offense per distinct operation of crime",
+      "exception": {
+        "offense": "Motor Vehicle Theft",
+        "basis": "One offense per stolen vehicle"
+      }
+    },
+    {
+      "group": "A",
+      "category": "Crimes Against Society",
+      "basis": "One offense per distinct operation of crime"
+    },
+    {
+      "group": "B",
+      "basis": "One offense per arrest; reported only when an arrest occurs"
+    }
+  ],
+  "model_guidance": [
+    "Retain the original A/B group and category for interpretation.",
+    "These offense counts do not measure unique incidents or unique people.",
+    "A single incident can have multiple reported offenses.",
+    "Do not silently combine Group A and B into a measure labeled incidents."
+  ]
+}

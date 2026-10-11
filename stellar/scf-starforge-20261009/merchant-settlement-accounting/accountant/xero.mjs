@@ -186,7 +186,9 @@ export function prepareXeroReturn({plan,capture,handoff,revision=null,previousAs
     const note='[Xero plan '+plan.id+'] '+plan.context.organization.name+' ('+plan.context.organization.baseCurrency+', '+plan.purpose+'); '+(posted?'posted':'draft')+' journals: '+references.join(', ')+'.';
     values.externalNote=(base.externalNote?base.externalNote+'\n':'')+note;
     if(values.externalNote.length>4000){skipped.push({rowId,reason:'The combined original note and native journal references exceed the accountant note limit.'});continue;}
-    const changed=EDITABLE_COLUMNS.filter(key=>now[key]!==base[key]&&now[key]!==values[key]&&(!prior||now[key]!==prior[key]));
+    // Once Xero wrote a row, the last verified return is its edit baseline.
+    // A staff-cleared value is an edit even when it equals the original plan baseline.
+    const changed=EDITABLE_COLUMNS.filter(key=>now[key]!==values[key]&&now[key]!==(prior??base)[key]);
     if(changed.length){conflicts.push({rowId,fields:changed,current:editable(now),planBaseline:editable(base),previousXeroReturn:prior?editable(prior):null,proposed:values});continue;}
     proposed.set(rowId,values);
   }

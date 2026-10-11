@@ -1,5 +1,9 @@
 # SF88: One-command approved Stellar buyer pilot
 
+For research questions, source notes, cited findings and portable reports, use
+[research dossiers](research-dossiers/README.md). The same local operator can
+receive the original buyer's saved research results and open provider editions.
+
 For complete large-file downloads, use [object acquisition](OBJECTS.md): select
 the original merchant object description, approve each chunk through this buyer,
 resume saved progress, and assemble the complete private file.

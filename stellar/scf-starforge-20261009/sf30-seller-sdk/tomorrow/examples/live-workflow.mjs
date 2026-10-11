@@ -255,7 +255,7 @@ if(has('--child')){
     const before=await pickEdition(id,'Request review');
     if(before.tile?.available){await record('map-already-available',{number,id});return;}
     requireValue(before.edition.resources?.tile?.state==='FAILED','The original map resource does not have a failed request to review.');
-    await page.locator('[name="tileTimeFormat"]').selectOption('whole-seconds');
+    await page.locator('[name="tileTimeFormat"]').selectOption('iso-path');
     const review=await act(page.getByRole('button',{name:'Review failed map request',exact:true}),'/api/editions/'+encodeURIComponent(id)+'/resources/tile/review');
     requireValue(review.providerCalls===1&&review.request?.kind==='tile','The retry must review one original map resource.');
     const timePath=decodeURIComponent(new URL(review.request.url).pathname.split('/').at(-1)).replace(/\.png$/,'');
@@ -264,7 +264,7 @@ if(has('--child')){
     await act(page.getByRole('button',{name:'Retry reviewed map request',exact:true}),'/api/editions/'+encodeURIComponent(id)+'/resources/tile/retry');
     const after=await workspace.editionView(id),resource=after.edition.resources?.tile;
     journal.resourceRetries??=[];journal.resourceRetries.push({editionId:id,reviewSha256:review.reviewSha256,status:resource?.status,sha256:resource?.sha256});
-    await record('map-retry-outcome',{number,id,status:resource?.status,sha256:resource?.sha256,error:resource?.providerError?.message||resource?.error||null});
+    await record('map-retry-outcome',{number,id,status:resource?.status,sha256:resource?.sha256,error:resource?.providerError?.message||resource?.providerDiagnostic?.text||resource?.error||null});
     requireValue(after.edition.resources?.timeline?.sha256===before.edition.resources?.timeline?.sha256,'The map-only retry changed the Timeline reference.');
     requireValue(JSON.stringify(after.decisions)===JSON.stringify(before.decisions),'The map-only retry changed the saved staff decisions.');
     requireValue(after.tile?.available===true,'The reviewed map resource did not return an available PNG. Inspect its original provider outcome.');

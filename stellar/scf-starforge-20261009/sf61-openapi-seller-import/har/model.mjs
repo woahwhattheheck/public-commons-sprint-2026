@@ -40,9 +40,9 @@ function mergeShape(a, b) {
   const ts = [...new Set([...[a.type].flat(), ...[b.type].flat()])].sort();
   const out = { type: ts.length === 1 ? ts[0] : ts };
   if (ts.includes('object')) {
-    out.properties = {};
+    out.properties = Object.create(null);
     for (const k of new Set([...Object.keys(a.properties || {}), ...Object.keys(b.properties || {})])) {
-      out.properties[k] = mergeShape(a.properties?.[k], b.properties?.[k]);
+      out.properties[k] = mergeShape(own(a.properties || {}, k) ? a.properties[k] : null, own(b.properties || {}, k) ? b.properties[k] : null);
     }
     out.additionalProperties = true;
   }
@@ -104,7 +104,7 @@ export function inspectHar(har, sourceSha256) {
       const key = `${method} ${u.origin}${u.pathname}`;
       if (!groups.has(key)) groups.set(key, {
         id: `group-${groups.size + 1}`, method, origin: u.origin, path: u.pathname, entryIds: [],
-        query: {}, credentials: {}, headers: [], requestBodies: [], responses: {},
+        query: Object.create(null), credentials: Object.create(null), headers: [], requestBodies: [], responses: Object.create(null),
       });
       const group = groups.get(key); group.entryIds.push(id);
       for (const k of new Set(qs)) {

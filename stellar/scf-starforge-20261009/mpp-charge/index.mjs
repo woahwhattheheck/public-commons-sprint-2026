@@ -6,3 +6,4 @@ export { createMerchant } from './merchant.mjs';
 export { preparePurchase, executePurchase, finalizePurchase, purchaseView } from './buyer.mjs';
 export { serveWorkspace, serveMerchant, exportResponse } from './server.mjs';
 export { observeTransfer, transferRequirement } from './transfer.mjs';
+export * as customer from './customer/index.mjs';
