@@ -1,10 +1,12 @@
 # Merchant settlement accounting
 
-This Node 22+ operator CLI is a read-only integration of the ORIGINAL native SF98 merchant delivery outbox and independently collected ORIGINAL SF86 Stellar testnet transfer-verification results.
+This Node 22+ operator CLI and local workspace integrate the ORIGINAL native SF98 merchant delivery outbox and independently collected ORIGINAL SF86 Stellar testnet transfer-verification results.
 
 It does not sign, purchase, authorize, retry payments, create invoices, or move assets. Existing SF30/SF98 native processSettlement success events come from `../sf98-merchant-delivery/outbox.mjs`, which is imported directly at runtime. Existing SF86 operator outputs retain the actual `stellar-forge.sf86.rpc-reconciliation.v1` schema and verified official testnet RPC response details.
 
 ## Operator workflow
+
+For a retained browser workflow with source imports, paginated ledger and exception review, before/after comparisons, named operator notes, and original report downloads, use the [merchant settlement workspace](workspace/README.md). It runs this same accounting engine and report writer directly; the command below remains available for one create-only report.
 
 On the original merchant host, retain its private SF98 outbox directory with its native `events.ndjson` and `deliveries.ndjson`. In another private directory retain the original authorized operator's SF86 reconciliation JSON result files. Source instructions for this first-party read-only original verification are at `../sf86-rpc-transfer-reconcile/README.md`. The report can be generated with no SF86 files, in which case all native successes remain unverified.
 
@@ -75,7 +77,7 @@ A valid `stellar:pubnet` native event is retained in a mixed-network journal wit
 
 `verifiedQuotedValueUsd` is the independently transfer-matched quantity multiplied by the merchant's *own quoted USD unit price*. It is not realized revenue, an exchange-rate valuation, or a payout. Unknown costs remain unknown. No challenge-only 402 count, successful 2xx response, or unverified event is upgraded into sale or cash evidence.
 
-This module complements existing SF97 merchant forecasting, SF93 support, SF98 delivery notifications, and SF82/SF86 chain reconciliation. It creates no new payment protocol, no controller or database, and no hosted GitHub Actions.
+This module complements existing SF97 merchant forecasting, SF93 support, SF98 delivery notifications, and SF82/SF86 chain reconciliation. The optional local workspace retains operator state on private disk. The original accounting engine and CLI remain usable independently.
 
 ## Focused source exercise
 

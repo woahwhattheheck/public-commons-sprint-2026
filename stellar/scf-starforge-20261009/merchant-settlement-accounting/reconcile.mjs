@@ -43,9 +43,9 @@ const display = x => {
 };
 const toUsd = v => (v === null ? null : display(v));
 const strictObject = x => x && typeof x === 'object' && !Array.isArray(x);
-const readPlain = async (path,max) => {
+const readPlain = async (path,max,{allowEmpty=false}={}) => {
   const s = await lstat(path);
-  if (!s.isFile() || s.isSymbolicLink() || s.size > max || s.size === 0)
+  if (!s.isFile() || s.isSymbolicLink() || s.size > max || (!allowEmpty && s.size === 0))
     throw new Error('SOURCE_FILE_UNSAFE_OR_TOO_LARGE');
   const handle = await open(path,constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
@@ -336,6 +336,6 @@ export async function runOriginalAccounting({outboxDir,proofDir,termsFile}) {
     policy:'No fiat exchange rate, refunds, tax, invoice, client entitlement, bank receipt or merchant cash flow inferred.'};
 }
 async function hashOptional(path){
-  try {return sha(await readPlain(path,16_000_000));}
+  try {return sha(await readPlain(path,16_000_000,{allowEmpty:true}));}
   catch(e){if(e.code==='ENOENT')return null;throw e;}
 }
