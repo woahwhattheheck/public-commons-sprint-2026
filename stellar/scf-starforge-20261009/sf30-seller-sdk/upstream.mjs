@@ -19,7 +19,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract','idempotency','cache','oauth2']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxRequestBytes','bodyType','maxInFlight','availability','responseContract','idempotency','cache','oauth2']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
 
@@ -141,6 +141,8 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     if (oauth2 && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
     if (!supportsSellerMethod(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
+    const bodyType=raw.bodyType??'json';
+    if (!['json','form-data'].includes(bodyType)||bodyType==='form-data'&&!['POST','PUT','PATCH'].includes(method)) bad('Invalid upstream bodyType');
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
     const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
     const maxResponseBytes = integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes');
@@ -152,6 +154,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     }
     const binding = {origin:url.origin,hostname:url.hostname,local:url.protocol === 'http:',
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
+      bodyType,maxRequestBytes:integer(raw.maxRequestBytes,1_048_576,16*1_048_576,'maxRequestBytes'),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
       credentials:Object.freeze(credentials),responseMode,...(idempotency ? {idempotency} : {}),
       ...(oauth2 ? {oauth2} : {}),
@@ -182,6 +185,7 @@ export function validateUpstreamService(config,compiled) {
     }
     const method = route.definition?.method ?? route.offer?.extensions?.bazaar?.info?.input?.method;
     if (method !== bound.method) bad(`Seller/upstream method mismatch for handler: ${route.handler}`);
+    if (['POST','PUT','PATCH'].includes(method)&&(route.definition?.bodyType??route.offer?.extensions?.bazaar?.info?.input?.bodyType??'json')!==bound.bodyType) bad(`Seller/upstream body type mismatch for handler: ${route.handler}`);
     const serviceKeys = new Set(String(route.path).split('/').filter(s => s.startsWith(':')).map(s => s.slice(1)));
     if (bound.pathKeys.some(key => !serviceKeys.has(key))) bad(`Missing seller path parameter for handler: ${route.handler}`);
     used.add(route.handler);
@@ -215,6 +219,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
     if (key && !providers.has(key)) providers.set(key,createOAuthClientCredentials(binding.oauth2,{allowLoopback,env,lookup}));
     const provider = key ? providers.get(key) : undefined;
     const options = {...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
+      bodyType:binding.bodyType,maxRequestBytes:binding.maxRequestBytes,
       query:binding.query,headers:binding.credentials,requestHeaders:binding.requestHeaders,
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
@@ -260,8 +265,10 @@ export function createUpstreamApplication(config,bindings,options={}) {
     closeHandlers:closeOptions => closeUpstreamHandlers(originals,closeOptions)});
   const caches = new Map(Object.entries(originals).filter(([,handler]) => handler.cache).map(([name,handler]) => [name,handler.cache]));
   const service = structuredClone(config);
+  service.maxRequestBytes=Math.max(config.maxRequestBytes??1048576,...Object.values(compiled).map(binding=>binding.maxRequestBytes));
   let sequence = 0;
   for (const route of service.routes) {
+    if (compiled[route.handler]) route.maxRequestBytes=compiled[route.handler].maxRequestBytes;
     const handler = originals[route.handler];
     if (typeof handler?.admit !== 'function') continue;
     let name;

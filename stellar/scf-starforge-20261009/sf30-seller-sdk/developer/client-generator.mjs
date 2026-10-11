@@ -75,7 +75,7 @@ function makeSnapshot(specification, sourceSha256) {
   const origin = [...origins][0];
   const local = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(?::[0-9]+)?$/.test(origin);
   // Use the original compiler for payment, schema, dynamic-path and URL acceptance.
-  const compiled = compileSellerRoutes(originals.map(({ route, offer }) => ({ id: route.id, offer,
+  const compiled = compileSellerRoutes(originals.map(({ route, offer }) => ({ id: route.id, offer,maxRequestBytes:route.maxRequestBytes,
     handler: async () => { throw new Error('Client generation has no application handler'); },
   })), { allowLocalhost: local });
   const operations = compiled.routes.map(route => {
@@ -87,7 +87,10 @@ function makeSnapshot(specification, sourceSha256) {
     const root = route.offer.extensions.bazaar.schema;
     const querySchemas = propertySchemas(root, 'input', root).flatMap(input => propertySchemas(input, 'queryParams', root));
     const requiredQuery = [...new Set(querySchemas.flatMap(schema => [...requiredNames(schema, root)]))].sort();
+    const inputs=propertySchemas(root,'input',root);
     return { id: route.id, method: route.method, path: route.path, pathNames: [...route.binding.names],
+      bodyType:route.offer.extensions.bazaar.info.input.bodyType??null,
+      bodyRequired:inputs.some(input=>requiredNames(input,root).has('body')),maxRequestBytes:route.maxRequestBytes??1048576,
       requiredQuery, offer: structuredClone(route.offer) };
   });
   return { schema: 'stellar-forge.seller-client.v1', sourceSha256,
@@ -111,7 +114,13 @@ together for JavaScript execution and TypeScript autocomplete.
 \`buildRequest(operationId, inputs, authorization)\` is offline. The exact operation
 IDs are listed in \`operations\` and the declaration file. Supply \`inputs.path\`
 for dynamic paths, \`inputs.query\` as strings or repeated arrays of strings, and
-an explicit JSON \`inputs.body\` for POST, PUT or PATCH. GET, HEAD and DELETE cannot contain a body.
+an explicit JSON \`inputs.body\` for JSON POST, PUT or PATCH. Multipart operations
+use \`inputs.multipart = {body: retainedUint8Array, contentType: exactContentType}\`.
+Prepare and review those bytes once with the merchant workspace or the original
+SF88 \`--prepare --form-file … --form-out …\` command. The content type must retain
+that file's exact boundary. The client copies the selected bytes before returning
+the request. Optional request bodies may use \`inputs.omitBody = true\` explicitly;
+required bodies cannot be omitted. GET, HEAD and DELETE cannot contain a body.
 
 \`\`\`js
 import { buildRequest, operations } from './seller-client.mjs';
@@ -128,7 +137,8 @@ not authorize a purchase. If an operation has multiple advertised payment choice
 authorization must include an explicit zero-based \`acceptIndex\`; it has no default
 in that case. The selected option supplies the exact original payment identity.
 Inputs are serialized by the original SF30 developer
-request builder. JSON bodies reject lossy values, cycles and bodies above 1 MiB.
+request builder. JSON bodies reject lossy values and cycles. Body bytes must fit
+the merchant's exported request limit (1 MiB by default, up to 16 MiB).
 Input declarations project advertised Bazaar metadata; numeric ranges, patterns
 and the application's complete business constraints remain with the seller.
 Response types remain the existing buyer's types, never inferred from examples.

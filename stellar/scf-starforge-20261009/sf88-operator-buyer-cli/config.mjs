@@ -3,6 +3,7 @@ import { stat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { normalizeBuyerTransport } from '../sf31-buyer-client/public-transport.mjs';
 import { operationTicketReference } from './operation-ticket.mjs';
+import { validateRequestBodyPin } from './request-body.mjs';
 import { normalizeOperationHeaders } from './request-headers.mjs';
 import { validateResponseFileIntegrity } from '../sf31-buyer-client/response-file.mjs';
 
@@ -94,7 +95,8 @@ export function catalog(x) {
   return x;
 }
 export function operation(x) {
-  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference','ticketFile','ticketHeader'], 'INVALID_OPERATION');
+  shape(x, ['intentId','url','method','expect','bodyFile','bodyBytes','bodySha256','headers','orderReference','ticketFile','ticketHeader'], 'INVALID_OPERATION');
+  validateRequestBodyPin(x);
   need(typeof x.intentId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(x.intentId),
     'STABLE_INTENT_ID_REQUIRED');
   let u;

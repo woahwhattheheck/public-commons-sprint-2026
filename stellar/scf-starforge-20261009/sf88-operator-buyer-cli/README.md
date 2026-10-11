@@ -182,7 +182,7 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 }
 ~~~
 
-The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB).
+The trusted signer module exports an async sign({intent,challenge,accepted}) function. The native workspace generates this module using the official SDK adapter; an existing externally managed signer can supply the same interface. The shared [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) also connects an existing configured buyer to an account or trusted provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 16 MiB, subject to the seller's smaller configured limit). `--prepare --body-file` pins its length and SHA-256 before review; changed pinned bytes are rejected before execution or inbox staging. Use `--form-file` with `--form-out` to create a private multipart body once from local fields and files. The boundary and selected bytes are retained through unsigned and paid attempts. See the [merchant file input workflow](../sf61-openapi-seller-import/workspace/FILE_INPUT.md) for the manifest format and exact handoff.
 
 ### Ordinary request headers
 

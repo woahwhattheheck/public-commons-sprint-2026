@@ -5,6 +5,7 @@ import { basename } from 'node:path';
 import { buyerTransport, config, operation, responseFile, bytes, need } from './config.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
+import { readRequestBody, requestBodyReview } from './request-body.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 const sha256 = data => createHash('sha256').update(data).digest('hex');
@@ -13,8 +14,7 @@ let cancellationExitCode;
 async function review(c) {
   const op = operation(c.operation);
   const download = responseFile(c);
-  const body = op.bodyFile === undefined ? undefined :
-    await bytes(op.bodyFile, 1048576, 'BODY_FILE_INVALID');
+  const body = await readRequestBody(op);
   const ticket = await loadOperationTicket(op);
   print({
     mode:'OFFLINE_REVIEW', intentId:op.intentId,
@@ -23,6 +23,8 @@ async function review(c) {
     bodyPresent:body !== undefined,
     bodyBytes:body?.byteLength ?? 0,
     bodySha256:sha256(body ?? new Uint8Array()),
+    bodyPinned:op.bodySha256!==undefined,
+    multipart:await requestBodyReview(op,body,c.preparedFrom?.originalListing),
     operationTicket:operationTicketView(ticket),
     operatorId:c.operator?.actor ?? null,
     serviceId:c.operator?.service ?? null,
@@ -43,6 +45,7 @@ async function main(args) {
       '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json [--response-out /absolute/product] [--body-file /absolute/request.json] [--content-type application/json] [--headers-file /absolute/request.headers.json] [--ticket-file /absolute/merchant-ticket.json] [--ticket-header x-merchant-operation]\n');
     process.stdout.write('       node cli.mjs --init-workspace --config /absolute/review.json --dir /absolute/new-workspace --actor operator-id --service seller-id --payer G... --python /usr/bin/python3 [--secret-env STELLAR_SECRET | --signer-provider /absolute/wallet.mjs] [--rpc https://rpc.example] [--https-proxy http://proxy.example:8080 | --https-proxy-env HTTPS_PROXY] [--total-atomic 1000] [--daily-atomic 1000]\n' +
       '       node cli.mjs --review-workspace|--diagnose-workspace|--execute-workspace --dir /absolute/workspace\n');
+    process.stdout.write('File input: replace --body-file with --form-file /absolute/fields-and-files.json --form-out /private/new-request.multipart. The exact generated boundary and bytes are pinned in the review. Maximum native request: 16 MiB.\n');
     process.stdout.write('       node cli.mjs --import-operation --file /private/merchant-operation.json --dir /private/new-request --accept 0\n' +
       '       node cli.mjs --export-operation --config /private/review.json --discovery /private/offers.json --out /private/merchant-operation.json\n');
     process.stdout.write('       node cli.mjs --inspect-workspace-backup|--backup-workspace --dir /private/buyer/operator --state-root /private/buyer [--inbox /private/buyer/inbox] [--include /private/buyer/session] [--out /private/backups/selected --quiesced --pass-env SF88_BACKUP_PASSPHRASE]\n' +

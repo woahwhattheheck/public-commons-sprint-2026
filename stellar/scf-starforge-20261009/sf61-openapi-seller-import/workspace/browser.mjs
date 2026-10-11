@@ -7,7 +7,8 @@ let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=fal
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
-  const response=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:{'x-workspace-token':token,...(body===undefined?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:JSON.stringify(body)})});
+  const form=body instanceof FormData;
+  const response=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:{'x-workspace-token':token,...(body===undefined||form?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:form?body:JSON.stringify(body)})});
   const value=await response.json();
   if(!response.ok)throw new Error(value.error??'Workspace request failed');
   return value;
@@ -67,6 +68,8 @@ function drawRoutes(saved=[]) {
       settings.append(server.container,amount.container);
       const description=field('Public description',previous?.publicDescription??op.publicDescription??'');
       description.container.className='wide';settings.append(description.container);
+      if (op.requestBody) settings.append(make('p',op.requestBody.mediaType+' · Whole body '+(op.requestBody.required?'required':'optional')+
+        (op.requestBody.fields?.some(field=>field.file)?' · File fields: '+op.requestBody.fields.filter(field=>field.file).map(field=>field.name+(field.required?' (required when sent)':'')).join(', '):''),'hint wide'));
       const advanced=make('details'),summary=make('summary','Backend credentials and response settings'),fields=make('div',undefined,'fields');
       const headers=make('label','Header → environment variable references'),headerInput=make('textarea');
       headerInput.value=JSON.stringify(previous?.headerEnv??{},null,2);headerInput.spellcheck=false;headers.className='wide';headers.append(headerInput);
@@ -79,9 +82,12 @@ function drawRoutes(saved=[]) {
       const request=make('label','Public request example'),requestInput=make('textarea');request.className='wide';
       requestInput.value=previous?.requestExample===undefined?'':JSON.stringify(previous.requestExample,null,2);requestInput.spellcheck=false;
       requestInput.placeholder=['POST','PUT','PATCH'].includes(op.method)?'{"pathParams":{},"query":{},"body":{}}':'{"pathParams":{},"query":{}}';
-      request.append(requestInput,make('span','Optional reusable sample values for the public offer and saved route checks. Declare pathParams and query names from this operation; POST, PUT and PATCH use a JSON body.','hint'));
+      request.append(requestInput,make('span','Reusable public sample values. Declare pathParams, query and body fields from this operation. For multipart files, use a harmless string sample; select actual private files only in the running operation form.','hint'));
       const timeout=field('Backend timeout, milliseconds',previous?.timeoutMs??10000,'number');
       const size=field('Maximum response bytes',previous?.maxResponseBytes??1048576,'number');
+      const requestSize=field('Maximum request bytes',previous?.maxRequestBytes??1048576,'number');
+      requestSize.input.min='1';requestSize.input.max=String(16*1024*1024);
+      requestSize.container.append(make('span','Up to 16 MiB including multipart framing. The default is 1 MiB.','hint'));
       const capacity=field('Concurrent backend requests',previous?.maxInFlight??16,'number');
       const forwarded=field('Forward ordinary request headers',previous?.requestHeaders?.join(', ')??'');
       forwarded.input.placeholder='accept-language, x-region';
@@ -90,7 +96,7 @@ function drawRoutes(saved=[]) {
       const failureThreshold=field('Failures before pausing',previous?.availability?.failureThreshold??3,'number');
       const resetAfter=field('Initial recovery wait, milliseconds',previous?.availability?.resetAfterMs??30000,'number');
       const maxResetAfter=field('Maximum recovery wait, milliseconds',previous?.availability?.maxResetAfterMs??300000,'number');
-      fields.append(headers,security.container,mode.container,validation.container,timeout.container,size.container,capacity.container,
+      fields.append(headers,security.container,mode.container,validation.container,timeout.container,size.container,requestSize.container,capacity.container,
         request,forwarded.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
       const authentication=createAuthenticationPanel({operation:op,definitions:inspection.backendSecurity??[],previous,
@@ -113,7 +119,7 @@ function drawRoutes(saved=[]) {
       }
       const operation=createOperationSettings({make,field},previous,op.method);
       if(operation)settings.append(operation.element);
-      const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,capacity.input,forwarded.input,guard.input];
+      const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,requestSize.input,capacity.input,forwarded.input,guard.input];
       const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
       const toggle=()=>{
         controls.forEach(c=>{c.disabled=!check.checked;});
@@ -127,7 +133,7 @@ function drawRoutes(saved=[]) {
       mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')validation.input.value='none';toggle();});
       cache?.enabled.addEventListener('change',toggle);toggle();
       routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
-        mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input,forwarded:forwarded.input,
+        mode:mode.input,timeout:timeout.input,size:size.input,requestSize:requestSize.input,capacity:capacity.input,forwarded:forwarded.input,
         guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation});
     }
     $('routes').append(card);
@@ -144,7 +150,7 @@ function planFromForm() {
       ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
       ...r.authentication.toPlan(),
       ...(r.operation?.read()?{idempotency:r.operation.read()}:{}),
-      securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxInFlight:Number(r.capacity.value),
+      securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxRequestBytes:Number(r.requestSize.value),maxInFlight:Number(r.capacity.value),
       requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),
       ...(r.guard.checked?{availability:{failureThreshold:Number(r.failureThreshold.value),resetAfterMs:Number(r.resetAfter.value),maxResetAfterMs:Number(r.maxResetAfter.value)}}:{}),
       ...(r.cache?.enabled.checked?{cache:{shareAcrossBuyers:true,...Object.fromEntries(Object.entries(r.cache.values).map(([name,input])=>[name,Number(input.value)])),
@@ -168,12 +174,12 @@ async function loadSource(text,plan) {
 }
 function preview(value) {
   const table=make('table'),thead=make('thead'),head=make('tr');
-  for(const title of ['Route','Public seller','Backend target','Atomic price','Response','Read policy'])head.append(make('th',title));
+  for(const title of ['Route','Public seller','Backend target','Request','Atomic price','Response','Read policy'])head.append(make('th',title));
   thead.append(head);table.append(thead);const rows=make('tbody');
   for(const route of value.routes) {
     const row=make('tr');
     const cache=route.cache?`Shared for at most ${route.cache.ttlMs} ms · ${route.cache.maxEntries} entries · ${route.cache.maxBytes} bytes`:'Fresh backend request';
-    for(const text of [route.method+' '+route.path,route.publicUrl,route.upstream,route.amountAtomic+' / '+route.network,
+    for(const text of [route.method+' '+route.path,route.publicUrl,route.upstream,route.requestBody?route.requestBody.mediaType+' · '+(route.requestBody.required?'required':'optional')+' · '+route.maxRequestBytes+' bytes':'No body',route.amountAtomic+' / '+route.network,
       route.responseValidation==='declared'?'Declared '+route.responseStatuses.join(', '):'Transport limits',cache])row.append(make('td',text));
     rows.append(row);
   }
@@ -182,7 +188,7 @@ function preview(value) {
     make('p','Required environment variables: '+(value.environment.join(', ')||'none')+'. Actual credential values are checked when the seller starts.','hint'));
   if(value.routeChecks){const ready=value.routeChecks.filter(r=>r.state==='READY').length;
     $('review').append(make('p',ready+' / '+value.routeChecks.length+' route examples ready for an unpaid check.','small'));
-    for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': add a public request example with its path, query and JSON body values.','hint'));}
+    for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': '+(route.reason==='MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'?'select and retain an actual private file in the running operation form.':'add a public request example with its path, query and body values.'),'hint'));}
   appendAuthenticationReview($('review'),value.routes,{make});
 }
 function saved(name) {
@@ -246,8 +252,8 @@ async function refresh() {
 }
 $('file').addEventListener('change',()=>act(async()=>{
   const file=$('file').files[0];if(!file)return;
-  if(file.size>4*1024*1024)throw new Error('OpenAPI JSON must be at most 4 MiB');
-  const data=await file.arrayBuffer(),text=new TextDecoder('utf-8',{fatal:true}).decode(data);
+  if(file.size>4*1024*1024)throw new Error('OpenAPI JSON or YAML must be at most 4 MiB');
+  const data=await file.arrayBuffer(),text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data);
   await loadSource(text);notice('API description loaded. Select the routes and enter your terms.');
 }));
 $('example').addEventListener('click',()=>act(async()=>{

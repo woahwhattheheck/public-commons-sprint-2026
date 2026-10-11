@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { importOpenApi } from './importer.mjs';
+import { parseOpenApiSource } from './source-document.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
 
 export async function run(args = process.argv.slice(2)) {
@@ -18,10 +19,11 @@ export async function run(args = process.argv.slice(2)) {
     throw new Error('--upstream-bindings requires --service-bindings');
   const input = async name => {
     const path = options.get(name), stat = await lstat(path);
-    if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error(name + ' requires a regular JSON file up to 4 MiB');
+    if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error(name + ' requires a regular source file up to 4 MiB');
     const bytes = await readFile(path);
     if (bytes.length > 4 * 1024 * 1024) throw new Error('Input grew beyond size limit');
-    return { bytes, value: JSON.parse(bytes.toString('utf8')) };
+    const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:name==='--spec'}).decode(bytes);
+    return { bytes, value:name==='--spec'?parseOpenApiSource(text).document:JSON.parse(text) };
   };
   const spec = await input('--spec'), config = await input('--config');
   const compiled = importOpenApi(spec.value, config.value);

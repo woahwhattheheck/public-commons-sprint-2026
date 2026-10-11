@@ -17,6 +17,19 @@ function values() {
 function preview() {
   invalidate();
   try {
+    if (current['x-x402-payment-required'].extensions.bazaar.info.input.bodyType==='form-data') {
+      request=null;setError('');$('copy').disabled=true;$('send').disabled=true;
+      text('target',current['x-x402-payment-required'].resource.url);
+      text('curl','Prepare and review a private file request in the API merchant workspace, or use SF88 --prepare --form-file with --form-out. The resulting body file retains its exact multipart boundary.');
+      text('client-code',"// Read the retained body and Content-Type from your private buyer review.\n"+
+        "const request = buildRequest("+JSON.stringify(current.operationId)+", {\n"+
+        "  multipart: {body: retainedBytes, contentType: retainedContentType},\n"+
+        "  // Include this operation's path and query values when declared.\n"+
+        "}, {intentId: 'stable-business-operation-id', acceptIndex: 0, maxAtomic: 'YOUR_LIMIT'});\n"+
+        "// Supply the original merchant ticket header when this operation requires it.\n"+
+        "// Pass the request to your existing buyer approval and signer.");
+      return;
+    }
     request = buildUnpaidRequest(current, values(), location.origin);
     text('curl', request.curl); text('target', request.url); setError('');
     const inputs = values();
@@ -103,7 +116,7 @@ function choose(operation) {
     field.addEventListener('input', preview); label.append(field); $('path-fields').append(label);
   }
   $('query').value = json(input.queryParams ?? {});
-  $('body').value = json(input.body ?? {}); $('body-field').hidden = !bodyMethods.has(route.method);
+  $('body').value = json(input.body ?? {}); $('body-field').hidden = !bodyMethods.has(route.method)||input.bodyType==='form-data';
   const choices = $('client-payment-option'); choices.replaceChildren();
   if (offer.accepts.length > 1) {
     const placeholder = document.createElement('option'); placeholder.value = ''; placeholder.textContent = 'Choose a payment option';

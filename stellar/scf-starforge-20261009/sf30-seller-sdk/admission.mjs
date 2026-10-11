@@ -31,6 +31,10 @@ export async function evaluateAdmission(admit, request, { timeoutMs = 2000, sign
     const input = {
       method: request.method, url: new URL(request.url.href),
       query: structuredClone(request.query), body: structuredClone(request.body),
+      ...(request.bodyPresent===undefined?{}:{bodyPresent:request.bodyPresent}),
+      ...(request.bodyType===undefined?{}:{bodyType:request.bodyType}),
+      ...(request.rawBody===undefined?{}:{rawBody:Uint8Array.from(request.rawBody)}),
+      ...(request.multipart===undefined?{}:{multipart:structuredClone(request.multipart)}),
       pathParams: structuredClone(request.pathParams ?? {}),
       headers: structuredClone(request.headers), signal: controller.signal,
     };

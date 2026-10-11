@@ -9,6 +9,7 @@ import { createRequestLifetime, validateRequestTimeout, DEFAULT_REQUEST_TIMEOUT_
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
+import { decodeMultipart, compileMultipartSchema } from './multipart.mjs';
 
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const hopHeaders = new Set(['connection', 'keep-alive', 'proxy-authenticate',
@@ -27,15 +28,15 @@ function importedOffer(raw, allowLocalhost) {
   const offer = structuredClone(raw), bazaar = offer.extensions.bazaar;
   const input = bazaar?.info?.input;
   if (input?.type !== 'http' || !supportsSellerMethod(input.method) ||
-      (requiresJsonBody(input.method) && input.bodyType !== 'json')) {
-    throw new TypeError('Imported service offer requires GET, HEAD, DELETE or JSON POST, PUT, PATCH');
+      (requiresJsonBody(input.method) && !['json','form-data'].includes(input.bodyType))) {
+    throw new TypeError('Imported service offer requires GET, HEAD, DELETE or JSON/multipart POST, PUT, PATCH');
   }
   const checked = compileHttpSellerOffer({
     url: offer.resource.url, method: input.method,
     description: offer.resource.description ?? 'Imported API resource',
     serviceName: offer.resource.serviceName, tags: offer.resource.tags,
     paymentOptions: offer.accepts,
-    ...(requiresJsonBody(input.method) ? { bodyType: 'json', body: input.body } : {}),
+    ...(requiresJsonBody(input.method) ? { bodyType: input.bodyType, body: input.body } : {}),
   }, { allowLocalhost });
   if (checked.resource.url !== offer.resource.url ||
       checked.accepts.some((terms, index) => {
@@ -79,7 +80,8 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
     throw new TypeError('One to 100 seller route definitions required');
   }
   const nativeRoutes = Object.create(null), ids = new Set(), origins = new Set();
-  const routes = definitions.map(({ id, definition, offer: originalOffer, handler, admit } = {}) => {
+  const routes = definitions.map(({ id, definition, offer: originalOffer, handler, admit, maxRequestBytes } = {}) => {
+    if (maxRequestBytes!==undefined&&(!Number.isSafeInteger(maxRequestBytes)||maxRequestBytes<1||maxRequestBytes>16*1024*1024)) throw new TypeError('Invalid route request byte limit');
     if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(id) || ids.has(id)) {
       throw new TypeError('Unique printable route id required');
     }
@@ -93,9 +95,10 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       importedOffer(originalOffer, allowLocalhost);
     paymentRequiredResponse(offer); // Validate the whole multi-option header before serving or native setup.
     const method = offer.extensions.bazaar.info.input.method;
-    if (!supportsSellerMethod(method) || (requiresJsonBody(method) && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
-      throw new TypeError('Seller service supports GET, HEAD, DELETE and JSON POST, PUT, PATCH');
+    if (!supportsSellerMethod(method) || (requiresJsonBody(method) && !['json','form-data'].includes(offer.extensions.bazaar.info.input.bodyType))) {
+      throw new TypeError('Seller service supports GET, HEAD, DELETE and JSON/multipart POST, PUT, PATCH');
     }
+    if (offer.extensions.bazaar.info.input.bodyType==='form-data') compileMultipartSchema(offer.extensions.bazaar.schema.properties.input.properties.body);
     const url = new URL(offer.resource.url), binding = compileServicePath(offer);
     const path = binding.path;
     const key = `${method} ${path}`;
@@ -114,7 +117,7 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       extensions: structuredClone(offer.extensions),
     };
     ids.add(id); origins.add(url.origin);
-    return Object.freeze({ id, path, method, binding, offer: freeze(offer), handler,
+    return Object.freeze({ id, path, method, binding, offer: freeze(offer), handler, maxRequestBytes,
       ...(admit === undefined ? {} : { admit }) });
   });
   if (origins.size !== 1) throw new TypeError('All seller routes must use one public origin');
@@ -173,23 +176,26 @@ function send(req, res, response) {
   res.end(req.method === 'HEAD' || [204, 205, 304].includes(response.status) ? undefined : response.body);
 }
 
-async function readBody(req, maxBytes) {
+async function readBody(req, maxBytes, route) {
   const chunks = []; let count = 0;
   for await (const chunk of req) {
     count += chunk.length;
     if (count > maxBytes) throw fault('REQUEST_BODY_TOO_LARGE', 413);
     chunks.push(chunk);
   }
-  if (!count) return null;
+  const bodyType=route.offer.extensions.bazaar.info.input.bodyType;
+  if (!count) return {body:null,bodyPresent:false,bodyType};
   if (!requiresJsonBody(req.method)) throw fault('REQUEST_BODY_NOT_SUPPORTED');
+  if (bodyType==='form-data') return decodeMultipart(Buffer.concat(chunks),req.headers['content-type'],route.offer.extensions.bazaar.schema.properties.input.properties.body);
   if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? '')) {
     throw fault('JSON_CONTENT_TYPE_REQUIRED', 415);
   }
-  try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
+  try { return {body:JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))),bodyPresent:true,bodyType}; }
   catch { throw fault('INVALID_JSON_BODY'); }
 }
 
-function requestContext(req, route, target, body, pathParams, signal) {
+function requestContext(req, route, target, parsed, pathParams, signal) {
+  const {body}=parsed;
   const decodedPath = decodeURIComponent(target.pathname);
   const query = Object.create(null);
   for (const [key, value] of target.searchParams) {
@@ -208,7 +214,7 @@ function requestContext(req, route, target, body, pathParams, signal) {
   };
   return { sdk: { adapter, path: target.pathname, decodedPath, method: req.method,
     paymentHeader: getHeader('payment-signature') || getHeader('x-payment') },
-  application: { method: req.method, url: new URL(target.href), query, body,
+  application: { method: req.method, url: new URL(target.href), query, ...parsed,
     pathParams: Object.freeze({ ...pathParams }),
     headers: { ...req.headers }, signal } };
 }
@@ -283,7 +289,7 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       } });
       execution = createHandlerExecution(req, res, { timeoutMs: handlerTimeoutMs, signal: lifetime.signal });
       phase = 'body';
-      const body = await lifetime.run(() => readBody(req, maxRequestBytes));
+      const body = await lifetime.run(() => readBody(req, Math.min(maxRequestBytes,route.maxRequestBytes??maxRequestBytes), route));
       lifetime.assertOpen();
       const context = requestContext(req, route, target, body, pathParams, execution.signal);
       context.application.deadlineEpochMillis = lifetime.deadlineEpochMillis;

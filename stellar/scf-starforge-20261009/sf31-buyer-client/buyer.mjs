@@ -1,5 +1,6 @@
 // MIT License. SF31 non-custodial x402 v2 buyer transport. No embedded keys or signing.
 import { randomUUID, createHash } from 'node:crypto';
+import { MAX_REQUEST_BODY_BYTES } from './request-body.mjs';
 import { isDeepStrictEqual } from 'node:util';
 import { isIP } from 'node:net';
 
@@ -101,8 +102,8 @@ function immutableTerms(value){
 }
 function prepareBody(body){
   if(body==null)return undefined;
-  if(typeof body==='string' && Buffer.byteLength(body)<=1_048_576)return body;
-  if(body instanceof Uint8Array && body.byteLength<=1_048_576)return Uint8Array.from(body);
+  if(typeof body==='string' && Buffer.byteLength(body)<=MAX_REQUEST_BODY_BYTES)return body;
+  if(body instanceof Uint8Array && body.byteLength<=MAX_REQUEST_BODY_BYTES)return Uint8Array.from(body);
   throw new BuyerError('NONREPLAYABLE_BODY');
 }
 // Catalog responses are untrusted network input. Apply the limit to bytes actually

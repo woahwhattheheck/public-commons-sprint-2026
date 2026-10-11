@@ -1,4 +1,5 @@
 // MIT. Durable POST configuration and ticket files in the existing API workspace.
+import { createFileInput } from './file-input-browser.mjs';
 export function createOperationSettings({ make, field }, previous, method) {
   if (method !== 'POST') return null;
   const policy = previous?.idempotency;
@@ -60,7 +61,8 @@ export function createOperationPanel({ container, make, field, api, act, notice 
     const expiry = field('Ticket valid for, seconds','','number'); expiry.input.min='1';
     const requestLabel = make('label','Exact public request'), request = make('textarea');
     request.rows = 12; request.spellcheck = false; requestLabel.className = 'wide'; requestLabel.append(request);
-    const result = make('div',undefined,'wide');
+    const result = make('div',undefined,'wide'), fileContainer=make('div',undefined,'wide');
+    let fileInput;
     const issue = make('button','Create private buyer ticket file'); issue.type = 'button';
     function selected() { return bindings.find(binding=>binding.binding===select.value); }
     function fill() {
@@ -68,6 +70,9 @@ export function createOperationPanel({ container, make, field, api, act, notice 
       scope.textContent = 'Scope: '+binding.scope+'. Buyer header: '+binding.requestHeader+'.';
       if (binding.forwardedHeaders?.length) scope.textContent += ' Forwarded request headers: '+binding.forwardedHeaders.join(', ')+'. Include the buyer’s exact values in the request below.';
       request.value = JSON.stringify(binding.request,null,2);
+      fileInput?.dispose();
+      fileInput=createFileInput({binding,runtimeId:captured,request,make,api,act,notice});
+      fileContainer.replaceChildren(fileInput.element);
       expiry.input.value = String(Math.min(3600,binding.maxTicketSeconds)); expiry.input.max=String(binding.maxTicketSeconds);
       result.replaceChildren();
     }
@@ -76,15 +81,16 @@ export function createOperationPanel({ container, make, field, api, act, notice 
       const binding = selected();
       const issued = await api('operations/issue',{runtimeId:captured,binding:binding.binding,
         id:operationId.input.value.trim(),subject:subject.input.value.trim(),
-        expiresAt:Date.now()+Number(expiry.input.value)*1000,request:JSON.parse(request.value)});
+        expiresAt:Date.now()+Number(expiry.input.value)*1000,...fileInput.issueSelection()});
       result.replaceChildren(make('p','Private ticket file created. This does not execute or charge for the operation.','small'),
         make('p',issued.path,'hint'),make('p','Operation: '+issued.operationKey,'hint'),
         make('p','Request: '+issued.requestHash,'hint'),make('p','Expires: '+new Date(issued.expiresAt).toISOString(),'hint'));
       const command = make('pre',issued.reviewCommand,'wrap');
       result.append(make('p','The original buyer review is prepared with the exact request body, headers, merchant offer and private ticket. Review it on this host:','hint'),command,
-        make('p','Body: '+issued.bodyPath,'hint'),make('p','Headers: '+issued.headersPath,'hint'),
+        make('p',issued.bodyPresent?'Body: '+issued.bodyPath:'Body omitted, as permitted by the original source.','hint'),make('p','Headers: '+issued.headersPath,'hint'),
         make('p','Offer: '+issued.offersPath,'hint'),
         make('p','Continue with the existing buyer workspace and inbox using this review config. Keep the same intent '+issued.intentId+' when resuming this operation.','hint'));
+      if (issued.bodyPresent) result.append(make('p','Retained body: '+issued.bodyBytes.toLocaleString()+' bytes · SHA-256 '+issued.bodySha256,'hint wrap'));
       const handoff = make('button','Download complete buyer request'); handoff.type = 'button';
       handoff.addEventListener('click',()=>act(async()=>{
         const document=await api('operations/handoff',{runtimeId:captured,fileId:issued.handoffId});
@@ -109,7 +115,7 @@ export function createOperationPanel({ container, make, field, api, act, notice 
         make('p','When moving to another host, transfer the matching body, headers and offer files through your normal private channel. Use the original buyer --prepare with --body-file and --headers-file at those local paths; keep the ticket separate in --ticket-file.','hint'));
       notice('Created an exact operation ticket in the private merchant package.');
     }));
-    fields.append(selectLabel,scope,operationId.container,subject.container,expiry.container,requestLabel,issue,result);
+    fields.append(selectLabel,scope,operationId.container,subject.container,expiry.container,requestLabel,fileContainer,issue,result);
     container.replaceChildren(heading,
       make('p','The original merchant issuer binds this ticket to the selected route, request and expiry. Use the existing operations dashboard to inspect or recover executed operations.','small'),fields);
   }
