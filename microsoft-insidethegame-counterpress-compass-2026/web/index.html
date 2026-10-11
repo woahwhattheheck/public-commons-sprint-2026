@@ -85,6 +85,31 @@
 <div class="optional"><span data-i18n="opusTitle">AI match insight (optional)</span> <button id="opus" type="button" disabled>Not configured</button><div id="opusResult" aria-live="polite"></div></div>
 </aside>
 </div>
+<section class="card archive-panel" id="savedMatches" aria-labelledby="archiveHeading">
+<h2 id="archiveHeading" data-archive-i18n="heading">Saved matches</h2>
+<p class="note" data-archive-i18n="help">Keep the original match, review and replay position. Shared match links include saved notes.</p>
+<div class="archive-toolbar">
+<label for="archiveSelect" class="sr" data-archive-i18n="choose">Choose a saved match</label>
+<select id="archiveSelect"><option value="">Choose a saved match</option></select>
+<button id="archiveOpen" type="button" data-archive-i18n="open" disabled>Open match</button>
+<button id="archiveSave" type="button" data-archive-i18n="save" disabled>Save match</button>
+<button id="archiveExport" type="button" data-archive-i18n="download" disabled>Download match</button>
+<button id="archiveImport" type="button" data-archive-i18n="import">Import match</button>
+<input id="archiveFile" type="file" accept="application/json,.json" aria-label="Import Counterpress match package" hidden>
+<button id="archiveRemove" type="button" data-archive-i18n="remove" hidden>Remove saved match</button>
+</div>
+<p id="archiveEmpty" class="note" data-archive-i18n="empty">Save a match to keep your review here.</p>
+<div id="archiveEditor" hidden>
+<div class="archive-fields">
+<label><span data-archive-i18n="title">Match title</span><input id="archiveTitle" type="text" maxlength="100" autocomplete="off"></label>
+<label><span data-archive-i18n="notes">Coach notes</span><textarea id="archiveNotes" rows="3" maxlength="6000"></textarea></label>
+</div>
+<div class="archive-review-heading"><h3 data-archive-i18n="moments">Saved moments</h3><button id="archiveBookmarkCurrent" type="button" data-archive-i18n="current">Save current event</button></div>
+<ol id="archiveBookmarks" class="archive-bookmarks plain"></ol>
+<p id="archiveMode" class="note"></p>
+</div>
+<p id="archiveStatus" class="note" role="status" aria-live="polite"></p>
+</section>
 </main>
 <footer>Counterpress Compass · Match analysis and replay.</footer>
 <script type="module" src="/app.js"></script>

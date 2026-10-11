@@ -62,6 +62,8 @@ function drawRoutes(saved=[]) {
       const server=selectField('Backend server',op.servers.map(s=>[s.index,s.url+(s.variables?' (expand variables first)':'')]),previous?.serverIndex??0);
       const amount=field('Price in atomic units',previous?.amountAtomic??'');amount.input.inputMode='numeric';amount.input.placeholder='e.g. 20000';
       settings.append(server.container,amount.container);
+      const description=field('Public description',previous?.publicDescription??op.publicDescription??'');
+      description.container.className='wide';settings.append(description.container);
       const advanced=make('details'),summary=make('summary','Backend credentials and response settings'),fields=make('div',undefined,'fields');
       const headers=make('label','Header → environment variable references'),headerInput=make('textarea');
       headerInput.value=JSON.stringify(previous?.headerEnv??{},null,2);headerInput.spellcheck=false;headers.className='wide';headers.append(headerInput);
@@ -69,19 +71,24 @@ function drawRoutes(saved=[]) {
       const alternatives=op.security.length?op.security.map((names,i)=>[i,names.length?names.join(' + '):'No additional backend authentication']):[[0,'No additional backend authentication']];
       const security=selectField('Backend security alternative',alternatives,previous?.securityAlternative??0);
       const mode=selectField('Response format',[['json','JSON'],['bytes','Bytes']],previous?.responseMode??'json');
+      const validation=selectField('Response validation',[['declared','Match declared OpenAPI response'],['none','Transport limits only']],previous?previous.responseValidation??(previous.enforceResponseContract===true?'declared':'none'):'declared');
+      if(mode.input.value==='bytes')validation.input.value='none';
+      const request=make('label','Public request example'),requestInput=make('textarea');request.className='wide';
+      requestInput.value=previous?.requestExample===undefined?'':JSON.stringify(previous.requestExample,null,2);requestInput.spellcheck=false;
+      requestInput.placeholder=['POST','PUT','PATCH'].includes(op.method)?'{"pathParams":{},"query":{},"body":{}}':'{"pathParams":{},"query":{}}';
+      request.append(requestInput,make('span','Optional reusable sample values for the public offer and saved route checks. Declare pathParams and query names from this operation; POST, PUT and PATCH use a JSON body.','hint'));
       const timeout=field('Backend timeout, milliseconds',previous?.timeoutMs??10000,'number');
       const size=field('Maximum response bytes',previous?.maxResponseBytes??1048576,'number');
       const capacity=field('Concurrent backend requests',previous?.maxInFlight??16,'number');
       const forwarded=field('Forward ordinary request headers',previous?.requestHeaders?.join(', ')??'');
       forwarded.input.placeholder='accept-language, x-region';
       forwarded.container.append(make('span','Comma-separated names. Credentials and payment headers cannot be forwarded. Shared reads vary on every forwarded header.','hint'));
-      const contract=checkField('Validate the declared JSON response schema',previous?.enforceResponseContract);
       const guard=checkField('Pause paid admission after repeated backend failures',previous?.availability!==undefined);
       const failureThreshold=field('Failures before pausing',previous?.availability?.failureThreshold??3,'number');
       const resetAfter=field('Initial recovery wait, milliseconds',previous?.availability?.resetAfterMs??30000,'number');
       const maxResetAfter=field('Maximum recovery wait, milliseconds',previous?.availability?.maxResetAfterMs??300000,'number');
-      fields.append(headers,security.container,mode.container,timeout.container,size.container,capacity.container,
-        forwarded.container,contract.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
+      fields.append(headers,security.container,mode.container,validation.container,timeout.container,size.container,capacity.container,
+        request,forwarded.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
       let cache=null;
       if(['GET','HEAD'].includes(op.method)) {
@@ -99,19 +106,19 @@ function drawRoutes(saved=[]) {
           make('p','Enable only when this API result may be reused by different buyers. Native payment remains per delivery. Origin privacy and freshness rules can shorten or prevent reuse.','hint'),cacheFields);
         settings.append(section);
       }
-      const controls=[server.input,amount.input,headerInput,security.input,mode.input,timeout.input,size.input,capacity.input,forwarded.input,guard.input];
+      const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,capacity.input,forwarded.input,guard.input];
       const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
       const toggle=()=>{
         controls.forEach(c=>{c.disabled=!check.checked;});
-        contract.input.disabled=!check.checked||mode.input.value!=='json';
+        validation.input.disabled=!check.checked||mode.input.value!=='json';
         guardControls.forEach(c=>{c.disabled=!check.checked||!guard.input.checked;});
         if(cache){cache.enabled.disabled=!check.checked;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked;});}
       };
       check.addEventListener('change',toggle);guard.input.addEventListener('change',toggle);
-      mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')contract.input.checked=false;toggle();});
+      mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')validation.input.value='none';toggle();});
       cache?.enabled.addEventListener('change',toggle);toggle();
-      routeFields.push({op,previous,check,server:server.input,amount:amount.input,headers:headerInput,security:security.input,
-        mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input,forwarded:forwarded.input,contract:contract.input,
+      routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
+        mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input,forwarded:forwarded.input,
         guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache});
     }
     $('routes').append(card);
@@ -124,8 +131,10 @@ function planFromForm() {
     allowLoopbackUpstream:$('allow-loopback').checked,
     operations:routeFields.filter(r=>r.check.checked).map(r=>({method:r.op.method,path:r.op.path,
       ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
+      publicDescription:r.description.value.trim(),responseValidation:r.validation.value,
+      ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
       securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxInFlight:Number(r.capacity.value),
-      requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),enforceResponseContract:r.contract.checked,
+      requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),
       ...(r.guard.checked?{availability:{failureThreshold:Number(r.failureThreshold.value),resetAfterMs:Number(r.resetAfter.value),maxResetAfterMs:Number(r.maxResetAfter.value)}}:{}),
       ...(r.cache?.enabled.checked?{cache:{shareAcrossBuyers:true,...Object.fromEntries(Object.entries(r.cache.values).map(([name,input])=>[name,Number(input.value)])),
         ...(r.previous?.cache?.maxSourceInFlight!==undefined?{maxSourceInFlight:r.previous.cache.maxSourceInFlight}:{})}}:{})}))};
@@ -148,24 +157,28 @@ async function loadSource(text,plan) {
 }
 function preview(value) {
   const table=make('table'),thead=make('thead'),head=make('tr');
-  for(const title of ['Route','Public seller','Backend target','Atomic price','Read policy'])head.append(make('th',title));
+  for(const title of ['Route','Public seller','Backend target','Atomic price','Response','Read policy'])head.append(make('th',title));
   thead.append(head);table.append(thead);const rows=make('tbody');
   for(const route of value.routes) {
     const row=make('tr');
     const cache=route.cache?`Shared for at most ${route.cache.ttlMs} ms · ${route.cache.maxEntries} entries · ${route.cache.maxBytes} bytes`:'Fresh backend request';
     for(const text of [route.method+' '+route.path,route.publicUrl,route.upstream,route.amountAtomic+' / '+route.network,
-      cache+(route.responseContract?' · Declared JSON schema enforced':'')])row.append(make('td',text));
+      route.responseValidation==='declared'?'Declared '+route.responseStatuses.join(', '):'Transport limits',cache])row.append(make('td',text));
     rows.append(row);
   }
   table.append(rows);const wrap=make('div',undefined,'table-wrap');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Selected route terms');wrap.append(table);
   $('review').replaceChildren(make('p',countLabel(value.routes.length,'route')+' accepted by the original seller compiler.','small'),wrap,
     make('p','Required environment variables: '+(value.environment.join(', ')||'none')+'. Actual credential values are checked when the seller starts.','hint'));
+  if(value.routeChecks){const ready=value.routeChecks.filter(r=>r.state==='READY').length;
+    $('review').append(make('p',ready+' / '+value.routeChecks.length+' route examples ready for an unpaid check.','small'));
+    for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': add a public request example with its path, query and JSON body values.','hint'));}
 }
 function saved(name) {
   selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
 }
 function runtime(value) {
   $('runtime').replaceChildren();$('cache-runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
+  $('check-routes').disabled=value.state!=='RUNNING'||value.mode!=='CHALLENGE_ONLY';
   if(value.state!=='RUNNING'){$('runtime').append(make('p','No seller is managed by this workspace.','small'));return;}
   const mode=value.mode==='CHALLENGE_ONLY'?'Challenge preview':value.mode==='NATIVE_X402'?'Native seller':'Seller running';
   $('runtime').append(make('p',value.name+' · '+mode));
@@ -175,6 +188,9 @@ function runtime(value) {
       const link=make('a',text);link.href=url;link.target='_blank';link.rel='noopener';link.referrerPolicy='origin';$('runtime').append(link);
     }
   }
+  if(value.acceptance){const result=value.acceptance;$('runtime').append(make('p',result.summary.passed+' / '+result.summary.total+' unpaid routes matched their offers.','small'));
+    for(const route of result.routes??[])if(route.state!=='PASS')$('runtime').append(make('p',route.method+' '+route.id+': '+route.issues.join(', '),'hint'));
+    $('runtime').append(make('p','Saved review: '+result.out,'hint'));}
   if(value.caches?.length) {
     const table=make('table'),head=make('tr'),body=make('tbody');
     for(const text of ['Shared read','Current cache','Source reads','Backend state','Action'])head.append(make('th',text));
@@ -243,6 +259,7 @@ $('start-preview').addEventListener('click',()=>act(()=>start(false)));
 $('start-native').addEventListener('click',()=>act(()=>start(true)));
 $('facilitator').addEventListener('input',available);
 $('stop').addEventListener('click',()=>act(async()=>{runtime(await api('stop',{}));notice('Managed seller and operations dashboard stopped. The saved package is retained.');}));
+$('check-routes').addEventListener('click',()=>act(async()=>{const result=await api('accept',{});runtime(result);notice('Original route check completed and saved in this package.');}));
 $('refresh').addEventListener('click',()=>act(async()=>{await refresh();notice('Projects refreshed.');}));
 if(!/^[0-9a-f]{64}$/.test(token))notice('Open the complete local workspace URL, including its fragment, printed by the launcher.',true);
 else act(async()=>{await refresh();notice('Ready. Load an OpenAPI description or reopen a saved project.');});

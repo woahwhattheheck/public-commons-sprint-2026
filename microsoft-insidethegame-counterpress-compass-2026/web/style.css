@@ -100,6 +100,29 @@ svg.pitch{width:100%;height:auto;display:block;border-radius:2px}
 .review-evidence li{display:grid;grid-template-columns:54px 44px minmax(0,1fr);gap:6px;padding:7px 0;border-top:1px solid var(--edge);font-size:.78rem}
 .review-evidence code,.review-evidence time{color:var(--muted);font-variant-numeric:tabular-nums}
 .review-jump{min-height:38px;margin-top:9px;font-size:.84rem}
+
+/* Saved reviews use the same restrained, keyboard-first industrial controls. */
+.archive-panel{margin-top:18px}
+.archive-panel h2{margin-top:0}
+.archive-toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}
+.archive-toolbar select{flex:1 1 280px;min-width:0;max-width:100%;min-height:38px}
+.archive-toolbar button{min-height:38px}
+.archive-fields{display:grid;grid-template-columns:minmax(180px,1fr) minmax(280px,2fr);gap:14px;margin:14px 0}
+.archive-fields label,.archive-moment label{display:grid;gap:6px;font-size:.84rem}
+.archive-fields input,.archive-fields textarea,.archive-moment input,.archive-moment textarea{width:100%;min-width:0;box-sizing:border-box;background:var(--bg);color:var(--text);border:1px solid var(--edge);border-radius:4px;font:inherit;padding:9px;resize:vertical}
+.archive-fields textarea,.archive-moment textarea{line-height:1.5}
+.archive-review-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.archive-review-heading h3{margin:0;font-size:.9rem}
+.archive-bookmarks{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-top:12px}
+.archive-moment{border:1px solid var(--edge);border-radius:4px;padding:10px;display:grid;gap:8px;align-content:start}
+.archive-jump{white-space:normal;text-align:left;font-weight:500;min-height:38px}
+.archive-moment summary{cursor:pointer;overflow-wrap:anywhere;font-size:.82rem;line-height:1.5}
+.archive-moment details[open]{display:grid;gap:8px}
+.archive-moment details label{margin-top:9px}
+.archive-moment>button:last-child{justify-self:start;font-weight:400;font-size:.78rem}
+.review-jump+.review-jump{margin-left:8px}
+.archive-panel :focus-visible{outline:2px solid var(--text);outline-offset:2px}
+@media(max-width:650px){.archive-fields{grid-template-columns:1fr}.archive-toolbar select{flex-basis:100%}.archive-bookmarks{grid-template-columns:1fr}}
 @media(max-width:1000px){.layout{grid-template-columns:1fr}#broadcast{position:static}.moments,.feed{max-height:280px}}
 @media(max-width:540px){header,main,footer{padding-left:12px;padding-right:12px}.card,.setup{padding:12px}.persona{grid-template-columns:1fr 1fr}.club{font-size:1rem}.clock strong{font-size:1.55rem}.cue{position:static;margin-top:8px}.cue p{font-size:1rem}.marker{font-size:40px}.review-evidence li{grid-template-columns:48px 40px minmax(0,1fr);gap:4px}.transport button{padding-left:10px;padding-right:10px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}

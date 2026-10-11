@@ -94,7 +94,9 @@ retain their original meaning. Runtime uses SF25's supported JSON Schema 2020-12
 vocabulary: object properties/required/additional properties, arrays/items,
 types, enum/const, supported composition, string length and numeric bounds.
 Unknown assertions fail export or startup. References are resolved before a
-schema is embedded under the validator's response envelope.
+schema is embedded under the validator's response envelope. The shared resolver
+removes OpenAPI 3.1 discriminator hints, which cannot change JSON Schema
+validation, while retaining all original compositions and assertions.
 
 All explicitly declared success responses and `default` are compiled. Error
 status definitions remain the upstream adapter's existing failure path. Empty

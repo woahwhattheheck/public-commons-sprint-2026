@@ -15,7 +15,8 @@ const MAX_PROTOCOL = 1500000;
 
 export async function createPythonSource(compiled, { env = process.env } = {}) {
   if (!compiled?.functions || !compiled?.options) throw new TypeError('Compiled Python merchant required');
-  const { application, executable, environment, workerCount, maxPending, startupTimeoutMs } = compiled.options;
+  const { application, executable, environment, workerCount, maxPending, startupTimeoutMs,
+    shutdownTimeoutMs = 5000, lifecycle = {} } = compiled.options;
   const info = await stat(application);
   if (!info.isFile() || info.size > 2097152) throw new TypeError('Python application must be a regular module up to 2 MiB');
   const applicationBytes = await readFile(application);
@@ -30,9 +31,12 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
     [name, { output: spec.output, maxOutputBytes: spec.maxOutputBytes }]));
   const waiting = [], children = new Map();
   const slots = Array.from({ length: workerCount }, () => ({ child: null, ready: false, stopping: false,
-    starting: null, active: null, failed: false, starts: 0, rejectBoot: null }));
+    starting: null, active: null, failed: false, starts: 0, rejectBoot: null,
+    stopRequested: false, graceful: false, stopReceipt: null, stopTimer: null,
+    forceCounted: false, shutdownFailureCounted: false }));
   const totals = { submitted: 0, completed: 0, failed: 0, aborted: 0, timedOut: 0, overloaded: 0,
-    workerStarts: 0, workerRestarts: 0, peakProcesses: 0, highWaterPending: 0, totalQueueMs: 0, totalExecutionMs: 0 };
+    workerStarts: 0, workerRestarts: 0, peakProcesses: 0, highWaterPending: 0, totalQueueMs: 0, totalExecutionMs: 0,
+    startupFailures: 0, gracefulStops: 0, forcedStops: 0, shutdownFailures: 0, shutdownTimeouts: 0 };
   let closed = false, closing = null, nextId = 0, scheduled = false;
   const activeCount = () => slots.filter(slot => slot.active).length;
   const pending = () => waiting.length + activeCount();
@@ -58,10 +62,25 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
     } else { totals.completed++; job.resolve(body); }
     schedule();
   }
+  function shutdownFailure(slot) {
+    if (!slot.shutdownFailureCounted) { slot.shutdownFailureCounted = true; totals.shutdownFailures++; }
+  }
   function retire(slot) {
-    slot.ready = false; slot.stopping = true;
+    slot.ready = false; slot.stopping = true; slot.graceful = false;
     slot.rejectBoot?.(error(closed ? 'PYTHON_SOURCE_CLOSED' : 'PYTHON_WORKER_FAILED'));
-    if (slot.child && slot.child.exitCode === null && slot.child.signalCode === null) slot.child.kill('SIGKILL');
+    if (slot.child && slot.child.exitCode === null && slot.child.signalCode === null) {
+      if (!slot.forceCounted) { slot.forceCounted = true; totals.forcedStops++; }
+      slot.child.kill('SIGKILL');
+    }
+  }
+  function stopGracefully(slot) {
+    slot.ready = false; slot.stopping = true; slot.stopRequested = true; slot.graceful = true;
+    slot.stopTimer = setTimeout(() => {
+      totals.shutdownTimeouts++; shutdownFailure(slot); retire(slot);
+    }, shutdownTimeoutMs);
+    // EOF is private to this worker's existing protocol; no caller can request it.
+    // The worker acknowledges only after hooks, tasks and the loop have closed.
+    slot.child.stdin.end();
   }
   function cancel(job, code) {
     if (job.done) return;
@@ -79,6 +98,8 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
       });
     } catch { slot.failed = true; return Promise.reject(error('PYTHON_WORKER_FAILED')); }
     slot.child = child; slot.stopping = false; slot.ready = false; slot.failed = false;
+    slot.stopRequested = false; slot.graceful = false; slot.stopReceipt = null;
+    slot.forceCounted = false; slot.shutdownFailureCounted = false; slot.stopTimer = null;
     totals.workerStarts++; if (slot.starts++) totals.workerRestarts++;
     let exited;
     children.set(child, new Promise(resolve => { exited = resolve; }));
@@ -89,18 +110,25 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
       function reject(failure) {
         if (bootDone) return;
         bootDone = true; clearTimeout(timer); slot.rejectBoot = null; slot.failed = true; rejectBoot(failure);
+        if (!closed) totals.startupFailures++;
       }
       slot.rejectBoot = reject;
       function failed(failure) {
-        if (slot.child !== child || slot.stopping) return;
+        if (slot.child !== child || (slot.stopping && !slot.graceful)) return;
+        if (slot.stopRequested) shutdownFailure(slot);
         reject(failure); retire(slot);
         if (slot.active) finish(slot.active, failure);
       }
       child.once('error', () => failed(error('PYTHON_WORKER_FAILED')));
       child.stdin.on('error', () => failed(error('PYTHON_WORKER_FAILED')));
       child.stdio[3].on('error', () => failed(error('PYTHON_WORKER_FAILED')));
-      child.once('close', () => {
+      child.once('close', code => {
         if (slot.child === child) {
+          clearTimeout(slot.stopTimer); slot.stopTimer = null;
+          if (slot.stopRequested) {
+            if (slot.stopReceipt === 'clean' && code === 0) totals.gracefulStops++;
+            else shutdownFailure(slot);
+          }
           reject(error(closed ? 'PYTHON_SOURCE_CLOSED' : 'PYTHON_WORKER_EXITED'));
           slot.child = null; slot.ready = false; slot.stopping = false;
           if (slot.active) finish(slot.active, error(closed ? 'PYTHON_SOURCE_CLOSED' : 'PYTHON_WORKER_EXITED'));
@@ -108,7 +136,7 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
         children.delete(child); exited(); schedule();
       });
       child.stdio[3].on('data', chunk => {
-        if (slot.child !== child || slot.stopping) return;
+        if (slot.child !== child || (slot.stopping && !slot.graceful)) return;
         buffer = Buffer.concat([buffer, chunk]);
         if (buffer.length > MAX_PROTOCOL) return failed(error('PYTHON_PROTOCOL_REJECTED'));
         let at;
@@ -118,6 +146,13 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
           try { message = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(line)); }
           catch { return failed(error('PYTHON_PROTOCOL_REJECTED')); }
           if (!message || typeof message !== 'object') return failed(error('PYTHON_PROTOCOL_REJECTED'));
+          if (slot.stopRequested) {
+            if (message.type !== 'stopped' || !['clean', 'failed'].includes(message.status) || slot.stopReceipt !== null)
+              return failed(error('PYTHON_PROTOCOL_REJECTED'));
+            slot.stopReceipt = message.status;
+            if (message.status === 'failed') shutdownFailure(slot);
+            continue;
+          }
           if (message.type === 'startup-error') return failed(error('PYTHON_APPLICATION_UNAVAILABLE'));
           if (!bootDone && message.type === 'ready') {
             bootDone = true; clearTimeout(timer); slot.rejectBoot = null; slot.ready = true;
@@ -137,7 +172,7 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
           finish(job, null, body);
         }
       });
-      child.stdin.write(JSON.stringify({ functions: definitions, applicationSha256 }) + '\n', failure => {
+      child.stdin.write(JSON.stringify({ functions: definitions, applicationSha256, lifecycle }) + '\n', failure => {
         if (failure) failed(error('PYTHON_WORKER_FAILED'));
       });
     });
@@ -207,13 +242,27 @@ export async function createPythonSource(compiled, { env = process.env } = {}) {
   function close() {
     if (closing) return closing;
     closed = true;
-    for (const job of [...waiting, ...slots.flatMap(slot => slot.active ? [slot.active] : [])]) finish(job, error('PYTHON_SOURCE_CLOSED'));
+    const before = { gracefulStops: totals.gracefulStops, forcedStops: totals.forcedStops,
+      shutdownFailures: totals.shutdownFailures, shutdownTimeouts: totals.shutdownTimeouts };
+    for (const job of [...waiting]) finish(job, error('PYTHON_SOURCE_CLOSED'));
     const exits = [...children.values()];
-    for (const slot of slots) retire(slot);
-    closing = Promise.all(exits).then(() => undefined);
+    for (const slot of slots) {
+      if (!slot.child) continue;
+      if (slot.active) {
+        const job = slot.active; retire(slot); finish(job, error('PYTHON_SOURCE_CLOSED'));
+      } else if (slot.ready && !slot.stopping) stopGracefully(slot);
+      else retire(slot);
+    }
+    closing = Promise.all(exits).then(() => {
+      const counts = Object.fromEntries(Object.keys(before).map(key => [key, totals[key] - before[key]]));
+      return Object.freeze({ schema: 'stellar-forge.python-shutdown.v1',
+        clean: counts.forcedStops === 0 && counts.shutdownFailures === 0,
+        ...counts, processes: children.size });
+    });
     return closing;
   }
   const stats = () => ({ schema: 'stellar-forge.python-pool.v1', applicationSha256, closed, workerCount, maxPending,
+    lifecycle: { eventLoop: 'persistent', ...lifecycle }, startupTimeoutMs, shutdownTimeoutMs,
     processes: children.size, readyWorkers: slots.filter(slot => slot.ready).length,
     running: activeCount(), queued: waiting.length, pending: pending(), ...totals });
   try { await Promise.all(slots.map(launch)); } catch (failure) { await close(); throw failure; }
