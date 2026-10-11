@@ -185,6 +185,7 @@ export async function main(args=process.argv.slice(2)) {
     ready:seller.url+'/_seller/ready', offers:seller.url+'/_seller/offers',
     operator:operations.url,fulfillment:operations.url+'/fulfillment',
     availability:operations.availabilityUrl,availabilityControl:operations.availabilityControlUrl,
+    fulfillmentControl:operations.deliveryControlUrl,
     usageHistory:o.historyDirectory===undefined?null:operations.url+'/api/history',
     privateOriginalOutboxAttached:true,
     webhookDelivery:'OPERATOR_ONLY',

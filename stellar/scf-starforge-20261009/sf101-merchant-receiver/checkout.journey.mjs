@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, stat, readdir, rename } from '
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
 import { execFile as execCallback, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { request as httpRequest } from 'node:http';
@@ -22,7 +23,7 @@ import { drainOnce, sendSignedWebhook } from '../sf98-merchant-delivery/deliver.
 
 const execFile = promisify(execCallback), here = dirname(fileURLToPath(import.meta.url));
 const root = await mkdtemp(join(tmpdir(), 'sf101-checkout-'));
-let merchant, receiver;
+let merchant, receiver, browser;
 const stopReceiver = async () => { if (receiver && receiver.exitCode === null) { receiver.kill('SIGTERM'); await once(receiver, 'exit'); } receiver = null; };
 async function startReceiver(state, secret) {
   const code = "import sys\nfrom pathlib import Path\nfrom http.server import ThreadingHTTPServer\nimport receiver\ns=ThreadingHTTPServer(('127.0.0.1',0),receiver.make_handler(Path(sys.argv[1]),sys.argv[2]))\nprint(s.server_address[1],flush=True)\ns.serve_forever()\n";
@@ -104,7 +105,64 @@ try {
   assert.equal(rows[0].event.orderReference,handoff.orderReference);
   const sender = options => sendSignedWebhook({...options,resolver:async()=>[{address:'93.184.216.34',family:4}],
     transport:(_url,requestOptions,callback)=>httpRequest(receive.url+'/sf98/events',{...requestOptions,lookup:undefined},callback)});
+  // Continue this SAME payment through an actual receiver credential failure.
+  // Advance only the native retry clock; each signed HTTP request reaches the
+  // original Python receiver with a current timestamp and the wrong HMAC key.
+  let retryClock=Date.now(); const wrongSecret=randomBytes(32).toString('hex');
+  for(let attempt=0;attempt<8;attempt++) {
+    await drainOnce(merchant.outbox,{url:'https://merchant.example/internal/x402-events',allowedHost:'merchant.example',
+      secret:wrongSecret,clock:()=>retryClock,send:options=>sender({...options,clock:Date.now})});
+    rows=await merchant.outbox.rows();
+    retryClock=Date.parse(rows[0].state.nextAt) || retryClock;
+  }
+  assert.equal(rows[0].state.state,'EXHAUSTED'); assert.equal(rows[0].state.attempt,8);
+  assert.equal((await inspectOrder(compiled,handoff.orderReference)).state,'PENDING');
+  const attention=await(await fetch(merchant.operations.url+'/api/delivery/events')).json();
+  assert.equal(attention.totalMatching,1); assert.equal(attention.events[0].id,rows[0].event.id);
+  const detail=await(await fetch(merchant.operations.url+'/api/delivery/event?id='+rows[0].event.id)).json();
+  const recoveryCommand={id:rows[0].event.id,expectedRevision:detail.revision};
+  const controlToken=new URLSearchParams(new URL(merchant.operations.deliveryControlUrl).hash.slice(1)).get('control');
+  response=await fetch(merchant.operations.url+'/api/delivery/requeue',{method:'POST',
+    headers:{'content-type':'application/json',origin:merchant.operations.url},body:JSON.stringify(recoveryCommand)});
+  assert.equal(response.status,403); await response.arrayBuffer();
+  let page;
+  if(process.env.SF98_BROWSER_MODULE) {
+    const {chromium}=createRequire(import.meta.url)(process.env.SF98_BROWSER_MODULE);
+    browser=await chromium.launch({headless:true,executablePath:process.env.SF98_BROWSER_EXECUTABLE,
+      args:['--no-sandbox','--disable-dev-shm-usage']});
+    page=await browser.newPage({viewport:{width:1365,height:900}});
+    await page.goto(merchant.operations.deliveryControlUrl);
+    await page.getByRole('button',{name:'Inspect '+handoff.orderReference,exact:true}).click();
+    await page.waitForFunction(()=>document.getElementById('requeue')?.disabled===false);
+    if(process.env.SF98_JOURNEY_OUTPUT) {
+      await mkdir(process.env.SF98_JOURNEY_OUTPUT,{recursive:true,mode:0o700});
+      await page.screenshot({path:join(process.env.SF98_JOURNEY_OUTPUT,'fulfillment-exhausted-desktop.png'),fullPage:true});
+      await page.setViewportSize({width:390,height:844});
+      await page.screenshot({path:join(process.env.SF98_JOURNEY_OUTPUT,'fulfillment-exhausted-mobile.png'),fullPage:true});
+      assert(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth));
+      await page.setViewportSize({width:1365,height:900});
+    }
+    await page.getByRole('button',{name:'Requeue notification',exact:true}).click();
+    await page.waitForFunction(()=>document.getElementById('event-state')?.textContent==='Requeued');
+  } else {
+    response=await fetch(merchant.operations.url+'/api/delivery/requeue',{method:'POST',
+      headers:{'content-type':'application/json',origin:merchant.operations.url,'x-delivery-control':controlToken},
+      body:JSON.stringify(recoveryCommand)});
+    assert.equal(response.status,200); await response.arrayBuffer();
+  }
+  // A stale operator cannot replay a successful recovery command.
+  response=await fetch(merchant.operations.url+'/api/delivery/requeue',{method:'POST',
+    headers:{'content-type':'application/json',origin:merchant.operations.url,'x-delivery-control':controlToken},
+    body:JSON.stringify(recoveryCommand)});
+  assert.equal(response.status,409); assert.equal((await response.json()).error,'DELIVERY_STATE_CHANGED');
   assert.equal((await drainOnce(merchant.outbox,{url:'https://merchant.example/internal/x402-events',allowedHost:'merchant.example',secret,send:sender})).delivered,1);
+  if(page) {
+    await page.getByRole('button',{name:'Refresh',exact:true}).click();
+    await page.waitForFunction(()=>document.getElementById('event-state')?.textContent==='Receiver accepted');
+    assert((await page.locator('#recovery-result').textContent()).startsWith('Recovered:'));
+    if(process.env.SF98_JOURNEY_OUTPUT) await page.screenshot({path:join(process.env.SF98_JOURNEY_OUTPUT,'fulfillment-recovered-desktop.png'),fullPage:true});
+    await browser.close(); browser=null;
+  }
   assert.equal((await inspectOrder(compiled,handoff.orderReference)).state,'ENTITLED');
   const downloaded = join(root,'purchased.csv');
   await assert.rejects(retrieveFile({handoff,destination:join(root,'wrong-token.csv'),token:randomBytes(32).toString('hex'),fetchImpl:fetchDownload}), {code:'ENTITLEMENT_NOT_AVAILABLE'});
@@ -182,7 +240,8 @@ print(json.dumps({'pythonApplication':'PASS','nativeAttemptStarted':False,
   delete applicationResult.configuration;
   applicationResult.nativeWorkspaceBinding='ORIGINAL_HELPER_PASS';
   console.log(JSON.stringify({result:'PASS',node:process.version,nativeSdk:'2.28.0',verifies,settlements,
-    flow:'original enrollment -> SF88 immutable inbox/review -> approved URL -> SF30 Python/native settlement -> SF98 signed HTTP -> SF101 entitlement -> exact private file/restart',
+    flow:'original enrollment -> SF88 immutable inbox/review -> approved URL -> SF30 Python/native settlement -> eight actual rejected signed HTTP deliveries -> exhausted operator review -> revision-guarded private recovery -> same SF98 event accepted -> SF101 entitlement -> exact private file/restart',
+    fulfillmentBrowser:process.env.SF98_BROWSER_MODULE ? 'PASS desktop/mobile original HTTP recovery' : 'not requested',
     financialExecution:'controlled local facilitator/approval; no wallet or chain transaction',fileBytes:source.length,
     pythonApplication:applicationResult}));
-} finally { await stopReceiver(); await merchant?.close(); await rm(root,{recursive:true,force:true}); }
+} finally { await browser?.close(); await stopReceiver(); await merchant?.close(); await rm(root,{recursive:true,force:true}); }
