@@ -291,6 +291,7 @@ export class MerchantReleaseOperator {
   close() {
     if (this.#close) return this.#close;
     this.#closing = true;
+    this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
       const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#clientReads.close(),
