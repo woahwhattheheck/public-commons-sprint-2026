@@ -28,8 +28,24 @@ export async function config(path) {
   let value;
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('CONFIG_JSON_INVALID'); }
-  return shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
-    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile'], 'INVALID_CONFIG_FIELDS');
+  shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
+    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom'], 'INVALID_CONFIG_FIELDS');
+  if (value.preparedFrom !== undefined) preparedFrom(value.preparedFrom);
+  return value;
+}
+// Saved source data is review context only; it grants no payment authority.
+export function preparedFrom(x) {
+  shape(x, ['schema','discoveryFileSha256','source','sourceEnvelope','rowIndex',
+    'acceptIndex','originalListing'], 'INVALID_PREPARED_SOURCE');
+  need(x.schema === 'stellar-forge.sf88.saved-discovery.v1' &&
+    typeof x.discoveryFileSha256 === 'string' && /^[a-f0-9]{64}$/.test(x.discoveryFileSha256) &&
+    (x.source === null || typeof x.source === 'string' && x.source.length <= 8192) &&
+    ['resources','items'].includes(x.sourceEnvelope) &&
+    Number.isSafeInteger(x.rowIndex) && x.rowIndex >= 0 &&
+    Number.isSafeInteger(x.acceptIndex) && x.acceptIndex >= 0 &&
+    obj(x.originalListing) && Array.isArray(x.originalListing.accepts) &&
+    obj(x.originalListing.accepts[x.acceptIndex]), 'INVALID_PREPARED_SOURCE');
+  return x;
 }
 export function responseFile(c) {
   if (c.responseFile === undefined) return null;
