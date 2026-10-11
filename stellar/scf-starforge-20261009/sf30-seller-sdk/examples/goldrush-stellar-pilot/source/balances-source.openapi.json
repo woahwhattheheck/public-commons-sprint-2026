@@ -1,0 +1,201 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Provider wallet balances contract",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.covalenthq.com"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/v1/{chainName}/address/{walletAddress}/balances_v2/": {
+      "get": {
+        "tags": [
+          "get-token-balances-for-address"
+        ],
+        "operationId": "getTokenBalancesForWalletAddress",
+        "parameters": [
+          {
+            "name": "chainName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "walletAddress",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "quote-currency",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "no-spam",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "address": {
+                      "type": "string"
+                    },
+                    "chain_id": {
+                      "type": "integer"
+                    },
+                    "chain_name": {
+                      "type": "string"
+                    },
+                    "chain_tip_height": {
+                      "type": "integer"
+                    },
+                    "chain_tip_signed_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "quote_currency": {
+                      "type": "string"
+                    },
+                    "updated_at": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "contract_decimals": {
+                            "type": "integer"
+                          },
+                          "contract_name": {
+                            "type": "string"
+                          },
+                          "contract_ticker_symbol": {
+                            "type": "string"
+                          },
+                          "contract_address": {
+                            "type": "string"
+                          },
+                          "contract_display_name": {
+                            "type": "string"
+                          },
+                          "supports_erc": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "logo_urls": {
+                            "type": "object",
+                            "properties": {
+                              "token_logo_url": {
+                                "type": "string"
+                              },
+                              "protocol_logo_url": {
+                                "type": "string"
+                              },
+                              "chain_logo_url": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "last_transferred_at": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "block_height": {
+                            "type": "integer",
+                            "format": "int64"
+                          },
+                          "is_native_token": {
+                            "type": "boolean"
+                          },
+                          "type": {
+                            "type": "string"
+                          },
+                          "is_spam": {
+                            "type": "boolean"
+                          },
+                          "balance": {
+                            "type": "string"
+                          },
+                          "balance_24h": {
+                            "type": "string"
+                          },
+                          "quote_rate": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "quote_rate_24h": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "quote": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "quote_24h": {
+                            "type": "number",
+                            "format": "double"
+                          },
+                          "pretty_quote": {
+                            "type": "string"
+                          },
+                          "pretty_quote_24h": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Provider HTTP 200 response"
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "TypeScript",
+            "label": "GoldRush SDK",
+            "source": "import { GoldRushClient } from \"@covalenthq/client-sdk\";\n\nconst ApiServices = async () => {\n    const client = new GoldRushClient(\"<GOLDRUSH_API_KEY>\");\n    const resp = await client.BalanceService.getTokenBalancesForWalletAddress({chainName: \"chainName\", walletAddress: \"walletAddress\"});\n    console.log(resp.data);\n};\n\nApiServices();"
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}
