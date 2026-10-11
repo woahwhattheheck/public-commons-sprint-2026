@@ -1,0 +1,193 @@
+{
+  "id": "ers-iris-2026",
+  "title": "IRIS retirement-return conversion",
+  "source": {
+    "url": "https://www.txsmartbuy.gov/esbd/26-15697-001",
+    "label": "Texas ERS 26-15697-001 \u2014 corrected October 5, 2026 RFP",
+    "sections": [
+      "A.1.a",
+      "B.5.a.ii",
+      "C.1",
+      "Appendix E B.2"
+    ]
+  },
+  "cohorts": [
+    {
+      "id": "retirement_amounts",
+      "title": "1099-R payment amounts",
+      "purpose": "Compare the agreed upstream payment grain with the actual prepared filing projection. Select only monetary fields present in both approved exports.",
+      "keys": [
+        "tax_year",
+        "issuer",
+        "account",
+        "record"
+      ],
+      "amounts": [
+        {
+          "name": "gross_distribution",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "taxable_amount",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "federal_withholding",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "attributes": [
+        "distribution_code",
+        "corrected"
+      ],
+      "groupBy": [
+        "tax_year",
+        "issuer"
+      ]
+    },
+    {
+      "id": "retirement_recipients",
+      "title": "Recipient and account identity",
+      "purpose": "Match selected private identifiers and exact recipient/account fields at the approved record grain. Report identities use the original keyed hashes.",
+      "keys": [
+        "tax_year",
+        "issuer",
+        "account",
+        "record"
+      ],
+      "amounts": [],
+      "attributes": [
+        "recipient_identifier",
+        "recipient_name",
+        "account_number"
+      ],
+      "groupBy": [
+        "tax_year",
+        "issuer"
+      ]
+    },
+    {
+      "id": "retirement_state",
+      "title": "State and local withholding",
+      "purpose": "Compare repeated state/local entries at their own explicitly selected state/local grain, keeping all reported decimal amounts.",
+      "keys": [
+        "tax_year",
+        "issuer",
+        "account",
+        "record",
+        "jurisdiction"
+      ],
+      "amounts": [
+        {
+          "name": "withholding",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "distribution",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "attributes": [
+        "payer_state_number"
+      ],
+      "groupBy": [
+        "tax_year",
+        "issuer",
+        "jurisdiction"
+      ]
+    },
+    {
+      "id": "filing_membership",
+      "title": "Prepared filing record membership",
+      "purpose": "Match every retained upstream record to an actual submission and record identity in the prepared transmission.",
+      "keys": [
+        "submission",
+        "record"
+      ],
+      "amounts": [],
+      "attributes": [
+        "form",
+        "tax_year",
+        "filing_origin"
+      ],
+      "groupBy": [
+        "submission"
+      ]
+    },
+    {
+      "id": "retirement_corrections",
+      "title": "Correction and replacement reconciliation",
+      "purpose": "Compare the selected complete corrected records with the approved upstream revisions and preserve original receipt/record or prior-system linkage.",
+      "keys": [
+        "tax_year",
+        "issuer",
+        "account",
+        "record"
+      ],
+      "amounts": [
+        {
+          "name": "gross_distribution",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "taxable_amount",
+          "scale": 2,
+          "tolerance": "0.00"
+        },
+        {
+          "name": "federal_withholding",
+          "scale": 2,
+          "tolerance": "0.00"
+        }
+      ],
+      "attributes": [
+        "distribution_code",
+        "filing_origin",
+        "original_reference"
+      ],
+      "groupBy": [
+        "tax_year",
+        "issuer"
+      ]
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "source_conversion",
+      "title": "Source mapping and complete conversion totals",
+      "cohorts": [
+        "retirement_amounts",
+        "retirement_recipients",
+        "retirement_state"
+      ]
+    },
+    {
+      "id": "transmission_membership",
+      "title": "Prepared transmission and original record membership",
+      "cohorts": [
+        "filing_membership"
+      ]
+    },
+    {
+      "id": "acknowledgment_review",
+      "title": "Native acknowledgment and exception review",
+      "cohorts": [
+        "filing_membership",
+        "retirement_corrections"
+      ]
+    },
+    {
+      "id": "correction_handoff",
+      "title": "Linked correction, retained review and private handoff",
+      "cohorts": [
+        "retirement_corrections"
+      ]
+    }
+  ]
+}
