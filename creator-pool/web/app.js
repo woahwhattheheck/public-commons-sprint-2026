@@ -695,8 +695,8 @@ const ENTRY_TERMINAL = new Set(["done", "failed", "rejected", "abandoned"]);
 
 const TX_STATUS_TEXT = {
   unsent: "not sent yet",
-  unsent_uncertain: "a previous send did not return a hash — verify in the wallet before resending",
-  awaiting_wallet: "sent to wallet — approval state unknown; verify in the wallet before resending",
+  unsent_uncertain: "send outcome unknown — recover its transaction hash from wallet history",
+  awaiting_wallet: "wallet request unresolved — recover its transaction hash before continuing",
   broadcast: "broadcast — receipt not seen yet",
   sent_pending: "sent — awaiting confirmation",
   mined_unreconciled: "mined — attaching metadata via reconcile",
@@ -767,6 +767,9 @@ function journalNew(key, meta, payload) {
 }
 
 function journalMerge(entry, payload) {
+  if (hasUnknownWalletSend(entry)) {
+    stopWalletEntry(entry, "Recover the previous transaction hash before requesting this action again.");
+  }
   // A repeated identical intent returns the same calldata; keep hashes/status
   // of steps we already broadcast, adopt any new steps verbatim.
   const fresh = journalNew(entry.id, { kind: entry.kind, ...entry.ref }, payload);
@@ -833,7 +836,69 @@ async function reconcileWalletEntry(entry) {
   journalSave();
 }
 
+function hasUnknownWalletSend(entry) {
+  return entry.txs.some((tx) => !tx.txHash &&
+    (tx.status === "unsent_uncertain" || tx.status === "awaiting_wallet"));
+}
+
+function stopWalletEntry(entry, message) {
+  entry.status = "paused";
+  entry.lastError = message;
+  journalSave();
+  throw new Error(message);
+}
+
+async function recoverWalletTransaction(entry, tx, hash) {
+  if (!/^0x[0-9a-fA-F]{64}$/.test(hash || "")) {
+    throw new Error("Enter the full transaction hash from wallet history.");
+  }
+  const p = Wallet.provider();
+  if (!p) throw new Error("Open the wallet that sent this transaction.");
+  const chain = chainIdDecFromHex(await p.request({ method: "eth_chainId" }));
+  if (!entry.requiredChainId || chain !== entry.requiredChainId) {
+    throw new Error("Switch the wallet to this operation's original network before recovery.");
+  }
+  const observed = await p.request({ method: "eth_getTransactionByHash", params: [hash] });
+  if (!observed) throw new Error("Transaction is not visible yet on the original network. Keep this operation paused.");
+  if (!entry.wallet || !sameAddr(observed.from, entry.wallet) ||
+      !sameAddr(observed.to, tx.to) ||
+      str(observed.hash).toLowerCase() !== hash.toLowerCase() ||
+      str(observed.input === undefined ? observed.data : observed.input).toLowerCase() !== tx.data.toLowerCase() ||
+      BigInt(observed.value) !== BigInt(tx.value)) {
+    throw new Error("This transaction does not match the original account and prepared action.");
+  }
+  tx.txHash = observed.hash;
+  tx.status = "broadcast";
+  tx.detail = "Recovered from the original wallet's network.";
+  entry.lastError = null;
+  entry.status = "paused";
+  journalSave();
+  await reconcileWalletEntry(entry);
+}
+
+async function recoverWalletStep(entryId, index) {
+  const entry = ui.walletOps.get(entryId), tx = entry && entry.txs[index];
+  if (!tx || tx.txHash || ui.inflight.has(entryId)) return;
+  const hash = window.prompt("Paste this action's transaction hash from the original wallet history. Recovery checks the account, network and action without sending another transaction.");
+  if (hash === null) return;
+  ui.inflight.add(entryId);
+  try {
+    await recoverWalletTransaction(entry, tx, hash.trim());
+    toast("info", "Transaction recovered. Continue any remaining steps after confirmation.");
+  } catch (err) {
+    entry.lastError = err.message || "Transaction recovery failed.";
+    journalSave();
+    toast("error", entry.lastError);
+  } finally {
+    ui.inflight.delete(entryId);
+    renderAll();
+  }
+}
+
 async function continueWalletEntry(entry) {
+  if (hasUnknownWalletSend(entry)) {
+    stopWalletEntry(entry, "A previous send has no known hash. Recover it from the original wallet history before continuing; no transaction was resent.");
+  }
   // Sends the still-unsent transactions in order, then reconciles. Throws a
   // precise error on rejection/failure; the journal keeps exact state.
   if (!Wallet.available()) {
@@ -844,6 +909,10 @@ async function continueWalletEntry(entry) {
   }
   await Wallet.refresh(); // re-read the real account + chain before acting
   if (!Wallet.address) await Wallet.connect();
+  if (entry.wallet && !sameAddr(entry.wallet, Wallet.address)) {
+    stopWalletEntry(entry, "Reconnect the original wallet account before continuing this operation.");
+  }
+  if (!entry.wallet) { entry.wallet = Wallet.address; journalSave(); }
   if (entry.requiredChainId && Wallet.chainIdDec !== entry.requiredChainId) {
     entry.status = "waiting_chain";
     journalSave();
@@ -859,18 +928,22 @@ async function continueWalletEntry(entry) {
       tx.detail = null;
       journalSave();
       try {
-        const hash = await Wallet.sendTransaction(tx);
-        tx.txHash = typeof hash === "string" ? hash : null;
-        tx.status = "broadcast";
-        tx.detail = null;
-      } catch (err) {
-        tx.status = "rejected";
-        tx.detail = walletErrText(err);
-        entry.status = "rejected";
-        entry.lastError = `${tx.label}: ${tx.detail} ${tx.txHash ? `Earlier tx ${shortTx(tx.txHash)} was already broadcast.` : "No transaction was sent for this step."}`;
-        journalSave();
-        throw new Error(entry.lastError);
-      }
+        const hash = await Wallet.sendTransaction(tx);
+        if (typeof hash !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(hash)) {
+          throw new Error("The wallet returned no valid transaction hash.");
+        }
+        tx.txHash = hash;
+        tx.status = "broadcast";
+        tx.detail = null;
+      } catch (err) {
+        const rejected = err && (err.code === 4001 || err.code === "ACTION_REJECTED");
+        tx.status = rejected ? "rejected" : "unsent_uncertain";
+        tx.detail = walletErrText(err);
+        entry.status = rejected ? "rejected" : "paused";
+        entry.lastError = `${tx.label}: ${tx.detail} ${rejected ? "The wallet explicitly rejected this step." : "The send outcome is unknown. Recover its transaction hash from wallet history before continuing."}`;
+        journalSave();
+        throw new Error(entry.lastError);
+      }
       journalSave();
     }
   }
@@ -1306,14 +1379,18 @@ const KIND_LABEL = {
 };
 
 function walletEntryNode(entry) {
-  const rows = entry.txs.map((tx) => h("li", { class: `wtx st-${tx.status.replace(/_/g, "-")}` },
+  const rows = entry.txs.map((tx, index) => h("li", { class: `wtx st-${tx.status.replace(/_/g, "-")}` },
     h("span", { class: "wtx-label", text: tx.label }),
     tx.txHash ? txLinkNode(tx.txHash) : h("span", { class: "wtx-hash muted", text: "—" }),
     h("span", { class: "wtx-st", text: TX_STATUS_TEXT[tx.status] || tx.status }),
-    tx.detail ? h("span", { class: "wtx-detail muted", text: tx.detail }) : null));
+    tx.detail ? h("span", { class: "wtx-detail muted", text: tx.detail }) : null,
+    !tx.txHash && ["unsent_uncertain", "awaiting_wallet"].includes(tx.status)
+      ? h("button", { type: "button", class: "btn secondary small",
+          onClick: () => recoverWalletStep(entry.id, index) }, "Recover transaction")
+      : null));
   const inProgress = !ENTRY_TERMINAL.has(entry.status) && entry.status !== "open" &&
     entry.txs.some((t) => !TX_FINAL.has(t.status));
-  const resumable = ["paused", "rejected", "waiting_chain"].includes(entry.status) &&
+  const resumable = !hasUnknownWalletSend(entry) && ["paused", "rejected", "waiting_chain"].includes(entry.status) &&
     entry.txs.some((t) => !TX_FINAL.has(t.status));
   return h("div", { class: `wallet-op st-${entry.status}` },
     h("div", { class: "wop-head" },
@@ -1864,19 +1941,7 @@ function opRow(op) {
 }
 
 function walletOpRow(entry) {
-  const first = entry.txs[0];
-  return h("li", { class: `op-row st-${entry.status}` },
-    h("div", { class: "op-main" },
-      h("span", { class: "op-kind", text: `${KIND_LABEL[entry.kind] || entry.kind} · wallet` }),
-      h("span", { class: "op-status", text: walletEntrySummary(entry) }),
-      entry.lastError ? h("span", { class: "op-err", text: entry.lastError }) : null),
-    entry.txs.some((t) => t.txHash)
-      ? h("div", { class: "op-txs" }, entry.txs.filter((t) => t.txHash).map((t) => txLinkNode(t.txHash)))
-      : (first ? h("span", { class: "op-status muted", text: "not broadcast yet" }) : null),
-    ["paused", "rejected", "waiting_chain"].includes(entry.status) &&
-      entry.txs.some((t) => !TX_FINAL.has(t.status))
-      ? h("button", { type: "button", class: "btn secondary small", onClick: () => resumeWalletEntry(entry.id) }, "Resume signing")
-      : null);
+  return h("li", { class: `op-row st-${entry.status}` }, walletEntryNode(entry));
 }
 
 function renderOperations() {
