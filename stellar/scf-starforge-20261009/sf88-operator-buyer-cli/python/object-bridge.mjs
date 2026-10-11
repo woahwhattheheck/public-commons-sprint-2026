@@ -9,7 +9,7 @@ import {need} from '../config.mjs';
 import {openWorkspace} from '../workspace.mjs';
 import {selectObjectDescription} from '../object-description.mjs';
 import {createObjectSession, inspectObjectSession, runObjectSession,
-  recoverObjectSession, assembleObjectSession} from '../object-session.mjs';
+  recoverObjectSession, assembleObjectSession, accountObjectSession} from '../object-session.mjs';
 import {renderObjectReport} from '../object-report.mjs';
 
 const MODE = 'ORIGINAL_PYTHON_OBJECT';
@@ -20,6 +20,8 @@ const modes = {
     '--sha256','--content-type','--max-total-atomic'],
   inspect:[], run:['--workspace'], recover:[], assemble:['--out'],
   delivery:['--out'], download:['--out','--workspace'], report:['--out','--format'],
+  accounting:['--workspace','--offset','--limit'],
+  finalize:['--workspace','--offset','--limit','--outbox','--merchant-route'],
 };
 const safeCode = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '') ? error.code :
   /^[A-Z0-9_]{1,120}$/.test(error?.message ?? '') ? error.message : 'OBJECT_APPLICATION_FAILED';
@@ -98,6 +100,19 @@ export async function main(args = process.argv.slice(2)) {
   const interrupt = () => {process.exitCode=130; controller.abort();};
   const terminate = () => {process.exitCode=143; controller.abort();};
   let report, saved, output;
+  if (action === 'accounting' || action === 'finalize') {
+    process.once('SIGINT',interrupt); process.once('SIGTERM',terminate);
+    try {
+      report=await accountObjectSession(directory,{workspace:v['--workspace'],
+        offset:integer(v['--offset'],0,0),limit:integer(v['--limit'],100,1,250),
+        finalize:action==='finalize',signal:controller.signal,
+        outbox:v['--outbox'],merchantRoute:v['--merchant-route']});
+    } finally {process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);}
+    if(!process.exitCode&&action==='finalize'&&report.entries.some(entry=>
+      !['FINALIZED','IDEMPOTENT_FINALIZED','NO_PAYMENT_REQUIRED','NOT_ATTEMPTED'].includes(entry.outcome)))
+      process.exitCode=2;
+    const result={mode:MODE,action,report};print(result);return result;
+  }
   if (action === 'prepare' || action === 'prepare-explicit') {
     need(v['--config'] || v['--workspace'], 'OBJECT_CONFIG_OR_WORKSPACE_REQUIRED');
     need(v['--max-total-atomic'], 'OBJECT_TOTAL_BUDGET_REQUIRED');

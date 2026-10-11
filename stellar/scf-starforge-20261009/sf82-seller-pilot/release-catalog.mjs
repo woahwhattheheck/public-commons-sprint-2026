@@ -81,6 +81,9 @@ async function originalOffers(root, releaseId) {
   return { release, offers };
 }
 
+// Setup and publication consume the same retained source and catalog validator.
+export { originalOffers as inspectReleaseCatalogOffers };
+
 async function collect(root, input, releaseId) {
   const config = configuration(input), original = await originalOffers(root, releaseId);
   if (new URL(config.sourceURL).origin !== original.release.publicOrigin)

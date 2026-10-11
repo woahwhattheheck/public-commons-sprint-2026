@@ -200,6 +200,56 @@ the original exhausted notification after receiver repair.
 SIGINT/SIGTERM drain the original seller, close the original
 operations observer, and then close the Python workers.
 
+### Pause and resume new purchases
+
+Add the original persistent availability directory when starting this checkout:
+
+```sh
+node stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs serve \
+  --config /private/merchant/checkout.json --port 8423 --operations-port 8424 \
+  --facilitator https://facilitator.example \
+  --availability-dir /private/merchant/checkout-availability
+```
+
+Use a canonical absolute private directory, separate from the receiver database,
+native delivery outbox and optional usage history. Its original SF30 policy uses
+Linux `flock` for one active writer. The checkout validates the option before
+opening its outbox or acquiring Python workers. Keep the compiled merchant
+`publicOrigin` and this directory stable through restart; the saved route pause
+then follows the same checkout product.
+
+Startup includes `availability` for the existing private desk and
+`availabilityControl` for its authorized control session. Put the latter in the
+operator's `SELLER_AVAILABILITY_URL` environment variable, then use the original
+CLI to inspect the current revision and configured route ID:
+
+```sh
+S=stellar/scf-starforge-20261009/sf30-seller-sdk
+node "$S/availability/cli.mjs" status --url-env SELLER_AVAILABILITY_URL
+node "$S/availability/cli.mjs" pause --url-env SELLER_AVAILABILITY_URL \
+  --revision REVIEWED_REVISION --route paid_report --reason 'Report refresh'
+```
+
+The `paid_report` route ID comes from the example checkout configuration; select
+the ID returned by the actual desk. This product serves all approved orders on
+its configured purchase route, so pausing it stops new purchases for those
+orders before order/file admission and native payment verification. Already
+admitted purchases finish through their original settlement and delivery path.
+Entitled downloads continue through the receiver's existing access policy.
+
+Use `resume` with a freshly reviewed revision and the same route ID when the
+product is ready. A stale revision returns the current saved policy for review.
+The original [availability guide](../sf30-seller-sdk/availability/README.md)
+covers the private browser desk, bulk changes, restart and removed-route recovery.
+The checkout's existing graceful close drains the seller, closes its operations
+observer and then releases its Python workers; the seller owns the saved policy.
+
+Embedding applications pass the same option to
+`startCheckout(compiled, {availabilityDirectory: '/private/merchant/checkout-availability', ...})`.
+The original controller is exposed on `session.seller.availability` and the two
+desk URLs on `session.operations`. The retained commerce setup's
+`seller.availabilityDirectory` now reaches this same original controller.
+
 ## Buyer preparation, approval and purchase
 
 Start with the buyer's already configured original SF88 operation for this

@@ -11,6 +11,7 @@ import {openWorkspace} from './workspace.mjs';
 import {resolveBuyerProxy} from '../sf31-buyer-client/public-transport.mjs';
 import {originalRecordFromEvidence} from '../sf86-rpc-transfer-reconcile/cli.mjs';
 import {checkOriginalTerms, resolveRpcEndpoint} from '../sf86-rpc-transfer-reconcile/terms.mjs';
+import {analyzeOne} from '../sf52-buyer-outcomes/outcomes.mjs';
 
 const SCHEMA='stellar-forge.sf88.inbox-finalization.v1';
 const WORKER_SCHEMA='stellar-forge.sf36.finalization.v1';
@@ -38,7 +39,7 @@ async function readPrivate(path,limit=4_000_000) {
     return {raw,value:JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw))};
   } finally {await handle.close();}
 }
-async function saveView(path,value) {
+export async function saveFinalizationView(path,value) {
   const temporary=join(dirname(path),'.finalization-'+randomUUID());
   const handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL,0o600);
   try {
@@ -88,9 +89,12 @@ function runWorker(python,args,operatorEnvironment,signal,rpcProxyUrl) {
 
 /** Trusted host core for an existing original attempt. Callers retain their own
  * immutable attempt/config/body record; SF36 remains the only ledger authority.
+ * A native session caller may supply its validated sourceEvidenceDirectory;
+ * ordinary inbox/application calls retain the workspace directory requirement.
  * This API never creates an attempt, reservation, signer or payment. */
 export async function finalizeOriginalAttempt({configurationPath,configSha256,intentId,
-  evidencePath,bodySha256,bodyBytes,attemptStartedAt,workspace,outbox,merchantRoute,signal}={}) {
+  evidencePath,bodySha256,bodyBytes,attemptStartedAt,workspace,outbox,merchantRoute,signal,
+  sourceEvidenceDirectory}={}) {
   need(process.platform!=='win32','WORKSPACE_POSIX_OPERATOR_REQUIRED');
   need(typeof configurationPath==='string'&&isAbsolute(configurationPath)&&
     resolve(configurationPath)===configurationPath,'INBOX_FINALIZATION_ABSOLUTE_PATH_REQUIRED');
@@ -109,9 +113,11 @@ export async function finalizeOriginalAttempt({configurationPath,configSha256,in
     'INBOX_APPROVED_OPERATION_MISMATCH');
   const active=await openWorkspace(['--dir',workspace]);
   const {op:workspaceOp,owner:workspaceOwner,transport:workspaceTransport}=execution(active.config);
+  const selectedEvidenceDirectory=sourceEvidenceDirectory??active.config.evidenceDir;
+  await privateDirectory(selectedEvidenceDirectory);
   // Use the original selected workspace, never a replacement payer or ledger.
   need(['python','actor','service','policy','ledger'].every(key=>owner[key]===workspaceOwner[key])&&
-    cfg.signerModule===active.config.signerModule&&cfg.evidenceDir===active.config.evidenceDir&&
+    cfg.signerModule===active.config.signerModule&&cfg.evidenceDir===selectedEvidenceDirectory&&
     cfg.trustedPayer===active.config.trustedPayer,'INBOX_WORKSPACE_OPERATOR_MISMATCH');
   need(JSON.stringify(transport)===JSON.stringify(workspaceTransport),
     'INBOX_WORKSPACE_TRANSPORT_MISMATCH');
@@ -128,7 +134,7 @@ export async function finalizeOriginalAttempt({configurationPath,configSha256,in
     rpcProxyUrl=new URL(workspaceTransport.proxyEnv===undefined?
       workspaceTransport.proxyUrl:process.env[workspaceTransport.proxyEnv]).origin;
   }
-  need(evidencePath===join(active.config.evidenceDir,sha(intentId)+'.json'),
+  need(evidencePath===join(selectedEvidenceDirectory,sha(intentId)+'.json'),
     'INBOX_FINALIZATION_EVIDENCE_PATH_MISMATCH');
   const {raw:evidenceRaw,value:evidence}=await readPrivate(evidencePath);
   const record=originalRecordFromEvidence(evidence);
@@ -182,10 +188,40 @@ export async function finalizeQueueIntent({root,intentId,workspace,outbox,mercha
     recordAuthority:'ORIGINAL_SF36_LEDGER; THIS_FILE_IS_A_SAVED_OPERATOR_VIEW'};
   if(FINALIZED.has(result.outcome))view.lastFinalized={completedAt:view.completedAt,result};
   else if(job.finalization?.lastFinalized)view.lastFinalized=job.finalization.lastFinalized;
-  try {await saveView(join(directory,'finalization.json'),view);}
+  try {await saveFinalizationView(join(directory,'finalization.json'),view);}
   catch(error) {
     // Preserve a successful ledger result even if its inbox view could not save.
     return {...job,finalization:view,finalizationView:{status:'SAVE_FAILED',code:errorCode(error)}};
   }
   return {...await queue.show(intentId),finalizationView:{status:'SAVED'}};
+}
+
+/** Bounded display of the original saved view; its ledger remains authoritative. */
+export function summarizeFinalization(view) {
+  const result=view?.result;
+  const done=FINALIZED.has(result?.outcome);
+  const previous=view?.lastFinalized;
+  return {outcome:result?.outcome??'NOT_RECORDED',
+    actualAtomicUnits:done?result.actual:null,receipt:done?result.receipt_ref:null,
+    requestSha256:result?.request_sha256??null,completedAt:view?.completedAt??null,
+    ...(typeof result?.reason==='string'?{reason:result.reason}:{}),
+    lastFinalized:previous&&FINALIZED.has(previous.result?.outcome)?{
+      completedAt:previous.completedAt,outcome:previous.result.outcome,
+      actualAtomicUnits:previous.result.actual,receipt:previous.result.receipt_ref}:null};
+}
+
+/** Identify an original unsigned response, without manufacturing a ledger result. */
+export async function readUnpaidAttempt({evidencePath,intentId,attemptStartedAt}) {
+  const {value:evidence}=await readPrivate(evidencePath);
+  need(evidence?.schema==='scf82.checkout-evidence.v1'&&evidence.intentId===intentId&&
+    evidence.observation?.intentId===intentId&&
+    Number.isFinite(Date.parse(evidence.observedAt))&&
+    Date.parse(evidence.observedAt)>=Date.parse(attemptStartedAt),
+    'INBOX_EVIDENCE_ATTEMPT_MISMATCH');
+  if(evidence.observation.buyer?.status!=='NO_PAYMENT_REQUIRED')return null;
+  need(evidence.operatorReservation===null&&evidence.observedAt===evidence.observation.observedAt&&
+    analyzeOne(evidence.observation).status==='NO_PAYMENT_REQUIRED','INBOX_UNPAID_EVIDENCE_MISMATCH');
+  return {outcome:'NO_PAYMENT_REQUIRED',actualAtomicUnits:null,receipt:null,
+    requestSha256:null,completedAt:evidence.observedAt,lastFinalized:null,
+    recordAuthority:'ORIGINAL_UNSIGNED_RESPONSE; NO_LEDGER_FINALIZATION_ASSERTED'};
 }

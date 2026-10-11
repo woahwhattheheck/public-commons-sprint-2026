@@ -146,6 +146,47 @@ retains these distinctions so an interrupted purchase does not cause another
 payment. Original evidence, partial files and completed chunks stay available
 for the existing operator recovery process.
 
+## Complete the original chunk accounting
+
+The same object session exposes the original inbox finalizer for its retained
+chunk attempts. Product assembly and accounting can finish independently:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs finalize \
+  --session /absolute/private/downloads/archive-session
+
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs accounting \
+  --session /absolute/private/downloads/archive-session
+```
+
+`finalize` uses the session's saved workspace, or an explicit matching
+`--workspace` for an older config-only session. It invokes the existing inbox
+accounting core with the original attempt, complete approved request, workspace
+keys, ledger, evidence directory and selected-network RPC. It does not download
+a chunk, import a wallet, create an attempt or substitute a new reservation.
+Missing product bytes do not prevent the original approved debt from being
+accounted for. Current lower spending limits do not erase historical authority.
+
+Both commands return a selected range of at most 100 chunks by default. Use
+zero-based `--offset` and `--limit` (1–250), then continue `range.nextOffset` until
+null. Each entry retains its original intent and native finalized amount/receipt,
+or a specific unresolved condition. Free original responses remain
+`NO_PAYMENT_REQUIRED`; unattempted chunks remain `NOT_ATTEMPTED`.
+An accounting result does not assert that the product file was delivered.
+
+`accounting` reads the existing inbox views without keys or RPC. After a process
+interruption, reopen that same session and read saved receipts. A later source
+failure keeps the earlier result in `lastFinalized`; resolve the reported cause
+and explicitly run finalization for that same range. Original SF36 receipt reuse
+prevents duplicate ledger transitions. Exit code 2 identifies unresolved entries;
+`viewStatus: SAVE_FAILED` keeps an actual worker result visible when its display
+record could not save. Optional paired `--outbox` and `--merchant-route` arguments
+use the existing merchant notification path.
+
+Applications can import `accountObjectSession` from `object-session.mjs` or use
+Python's `ObjectSession.finalize_all()` to visit every retained chunk and yield
+progress through the [same customer workflow](python/README.md#finish-dataset-and-object-purchase-accounting).
+
 ## Assemble and hand over the complete file
 
 When status is `COMPLETE`, assemble into a **new** absolute destination beneath

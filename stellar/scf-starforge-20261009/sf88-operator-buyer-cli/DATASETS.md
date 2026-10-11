@@ -153,6 +153,50 @@ and independent SF82 outcome separately. Completion means the selected dataset
 was acquired with a continuous source snapshot; it does not mean that all
 transfers were independently verified or that revenue was earned.
 
+## Finish accounting for the same acquired pages
+
+Use the original session to finalize its existing spending reservations, including
+an interrupted purchase whose response file is missing:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-cli.mjs finalize \
+  --session /private/purchases/east-region --workspace /private/dataset-buyer
+
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-cli.mjs accounting \
+  --session /private/purchases/east-region
+```
+
+The saved workspace is used automatically when initialization attached one.
+For a session created from a configuration, select its matching original workspace
+explicitly. The original operator keys authorize SF36 reconciliation; no wallet
+key, terminal payment approval or new page request is required. The native
+finalizer retains the original approved request, payment terms, evidence, ledger
+and selected-network RPC. It uses this session's original evidence directory.
+A lower current spending cap does not cancel a previously approved reservation.
+
+The result contains up to 100 entries by default. `--offset` is a zero-based
+position and `--limit` accepts 1–250. Continue from `range.nextOffset` until it is
+null; the dataset's displayed page `index` remains one-based. Each entry shows
+the native outcome and actual atomic amount/receipt when finalized. A free
+original response remains `NO_PAYMENT_REQUIRED`, with no fabricated ledger
+receipt. `NOT_ATTEMPTED` records have no acquisition attempt to finalize.
+
+`accounting` reads the saved per-page views without RPC or operator keys and does
+not require the delivered page body. `finalize` returns exit code 2 when an entry
+needs attention. Resolve that specific source/provider error, then explicitly
+finalize the same range again; the original ledger reuses an existing receipt.
+After a later error, `lastFinalized` retains any earlier finalized result.
+`viewStatus: SAVE_FAILED` exposes a completed native result whose display record
+could not be saved; restore writable private storage and reconcile the same
+attempt. Saved views remain recoverable after interruption, while the original
+ledger is the financial authority.
+
+The native `accountDatasetSession(directory, options)` export supplies this same
+workflow to applications. Python's `DatasetAcquisition.finalize_all()` iterates
+every retained range and yields progress; see [the customer guide](python/README.md#finish-dataset-and-object-purchase-accounting).
+Optional paired `--outbox` and `--merchant-route` arguments feed the existing
+finalizer's original merchant notification path.
+
 ## Stop, resume and recover
 
 Ctrl-C reaches the original buyer's cancellation signal. Run the same command

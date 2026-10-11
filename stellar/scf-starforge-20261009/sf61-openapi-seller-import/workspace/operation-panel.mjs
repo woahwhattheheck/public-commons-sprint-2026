@@ -85,7 +85,18 @@ export function createOperationPanel({ container, make, field, api, act, notice 
         make('p','Body: '+issued.bodyPath,'hint'),make('p','Headers: '+issued.headersPath,'hint'),
         make('p','Offer: '+issued.offersPath,'hint'),
         make('p','Continue with the existing buyer workspace and inbox using this review config. Keep the same intent '+issued.intentId+' when resuming this operation.','hint'));
-      const download = make('button','Download ticket for another host'); download.type = 'button';
+      const handoff = make('button','Download complete buyer request'); handoff.type = 'button';
+      handoff.addEventListener('click',()=>act(async()=>{
+        const document=await api('operations/handoff',{runtimeId:captured,fileId:issued.handoffId});
+        const url=URL.createObjectURL(new Blob([JSON.stringify(document,null,2)+'\n'],{type:'application/json'}));
+        const link=make('a'); link.href=url; link.download=issued.handoffFilename;
+        link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+        notice('Complete request downloaded. Keep this file private; set its permissions to 600 before import.');
+      }));
+      result.append(handoff,make('p','Move this one private file to the buyer’s machine. It carries the exact ticket, request bytes, headers and merchant offer. Choose the payment option when importing, then review the local request:','hint'),
+        make('pre','chmod 600 /private/'+issued.handoffFilename+'\nstarforge buyer --import-operation --file /private/'+issued.handoffFilename+' --dir /private/buyer-request --accept 0\nstarforge buyer --review --config /private/buyer-request/review.json','wrap'),
+        make('p','Use a new destination directory. Initialize the existing buyer workspace from this review with your own wallet and operator settings. Its operator.json can then enter the inbox or the runbook’s configured local sources directory.','hint'));
+      const download = make('button','Download ticket only'); download.type = 'button';
       download.addEventListener('click',()=>act(async()=>{
         const document = await api('operations/download',{runtimeId:captured,fileId:issued.fileId});
         const url = URL.createObjectURL(new Blob([JSON.stringify(document,null,2)+'\n'],{type:'application/json'}));
@@ -93,7 +104,7 @@ export function createOperationPanel({ container, make, field, api, act, notice 
         link.click(); setTimeout(()=>URL.revokeObjectURL(url),1000);
         notice('Ticket downloaded. On Linux or macOS run chmod 600 on that file before the original buyer imports it.');
       }));
-      result.append(download,make('p','A browser cannot preserve the private file mode. Before importing a download on Linux or macOS, run:','hint'));
+      result.append(download,make('p','For a ticket-only transfer, also transfer its matching body, headers and offer. A browser cannot preserve private file mode:','hint'));
       const permission = make('pre','chmod 600 '+issued.filename,'wrap'); result.append(permission,
         make('p','When moving to another host, transfer the matching body, headers and offer files through your normal private channel. Use the original buyer --prepare with --body-file and --headers-file at those local paths; keep the ticket separate in --ticket-file.','hint'));
       notice('Created an exact operation ticket in the private merchant package.');
