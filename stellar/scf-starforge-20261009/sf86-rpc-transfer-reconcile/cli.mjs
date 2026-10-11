@@ -19,7 +19,7 @@ function argsOf(argv) {
   return parsed;
 }
 
-function originalRecordFromEvidence(envelope) {
+export function originalRecordFromEvidence(envelope) {
   if(envelope?.schema !== 'scf82.checkout-evidence.v1')
     throw new ReconciliationError('SF82_EVIDENCE_SCHEMA_INVALID');
   if(envelope.reconciliation?.status !== 'AVAILABLE' || !envelope.reconciliation.record)
@@ -27,6 +27,9 @@ function originalRecordFromEvidence(envelope) {
   const record=envelope.reconciliation.record;
   const observation=envelope.observation, buyer=observation?.buyer;
   const reservation=envelope.operatorReservation;
+  if(record.operatorReservation?.request_sha256 !== undefined &&
+    record.operatorReservation.request_sha256 !== reservation?.requestSha256)
+    throw new ReconciliationError('SF82_ORIGINAL_REQUEST_DIGEST_MISMATCH');
   // Identify the same saved operation without deriving missing approval fields.
   // The unchanged verifier still checks the complete original record and payer.
   if(record.intentId !== envelope.intentId || record.intentId !== observation?.intentId ||
