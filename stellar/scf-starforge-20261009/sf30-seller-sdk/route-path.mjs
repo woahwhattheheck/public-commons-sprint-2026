@@ -117,7 +117,10 @@ export function selectServiceRoute(routes, rawPath, method) {
     selectedPath = route.path; params = found; break;
   }
   if (selectedPath === undefined) return null;
-  const matching = routes.filter(r => r.path === selectedPath);
+  // Keep fixed routes for distinct methods together when their native patterns
+  // select the same case-insensitive path; otherwise a valid POST becomes 405.
+  const matching = routes.filter(r => r.binding.dynamic
+    ? r.path === selectedPath : asciiFold(r.path) === asciiFold(selectedPath));
   const route = matching.find(r => r.method === method);
   if (route?.binding.dynamic) {
     const decoded = decodeURIComponent(rawPath);
