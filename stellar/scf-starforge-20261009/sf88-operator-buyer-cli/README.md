@@ -1,5 +1,9 @@
 # SF88: One-command approved Stellar buyer pilot
 
+For several prepared operations and restart recovery, use the [durable buyer
+inbox](QUEUE.md). It adds private request snapshots, a permanent attempt record,
+original-evidence recovery and an offline history report to this same buyer.
+
 Operator-side executable joining ORIGINAL SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 durable evidence. This is not a new signer, wallet, merchant service, ledger, protocol, auto-payer or replacement for the existing SF82 seller pilot.
 
 From the complete public sprint checkout, using Node 22+ and Python 3.11+:

@@ -22,8 +22,9 @@ const reservationOf = value => {
   return Object.keys(result).length ? result : null;
 };
 
-export async function execute(cfg, { signal } = {}) {
+export async function execute(cfg, { signal, emitSummary = true } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
+  need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const { op, owner, download:responseFile } = execution(cfg);
   const directory = await stat(cfg.evidenceDir);
   need(directory.isDirectory() && (process.platform === 'win32' ||
@@ -132,7 +133,7 @@ export async function execute(cfg, { signal } = {}) {
     ...(cleanupError ? {responseCleanupError:{code:codeOf(cleanupError,'RESPONSE_FILE_CLEANUP_FAILED'),
       cleanupWarnings:cleanupError.cleanupWarnings ?? []}} : {}),
   };
-  process.stdout.write(JSON.stringify(summary,null,2)+'\n');
+  if (emitSummary) process.stdout.write(JSON.stringify(summary,null,2)+'\n');
   if (error || evidenceError) process.exitCode = 2;
   else if (delivery.status === 'FAILED' || delivery.cleanupWarnings?.length || cleanupError) process.exitCode = 3;
   return summary;
