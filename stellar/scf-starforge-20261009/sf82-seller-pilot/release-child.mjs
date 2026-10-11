@@ -3,8 +3,9 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { attachReleaseCacheControls } from './release-cache.mjs';
+import { releaseProcessOwner, inheritedReleaseLease } from './release-process.mjs';
 
-const [pilot, directory, instanceId, controlFile] = process.argv.slice(2);
+const [pilot, directory, instanceId, controlFile, lifetimeDescriptor = '-'] = process.argv.slice(2);
 let started = false;
 process.once('disconnect', () => { if (!started) process.exit(0); });
 process.once('message', async message => {
@@ -39,3 +40,9 @@ process.once('message', async message => {
     process.stderr.write('RELEASE_CHILD_START_FAILED\n'); process.exitCode = 1;
   }
 });
+// No application import or listener is permitted before the original manager
+// durably records this exact worker identity and grants startup over this IPC.
+const owner = await releaseProcessOwner();
+const kernelLease = inheritedReleaseLease(lifetimeDescriptor);
+process.send({ type: 'sf82-owner', instanceId, pid: owner.pid,
+  processIdentity: owner.processIdentity, kernelLease }, error => { if (error) process.exit(1); });
