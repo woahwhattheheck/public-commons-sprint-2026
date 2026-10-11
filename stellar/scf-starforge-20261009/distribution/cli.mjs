@@ -57,6 +57,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
+  clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source

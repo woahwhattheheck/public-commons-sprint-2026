@@ -521,6 +521,98 @@ The original checkout guide supplies the native facilitator, authenticated SF98
 delivery and existing receiver configuration for actual payment and file release.
 The desk's order view does not infer settlement or payment from enrollment.
 
+### Resume and recover the entitled file
+
+Keep the customer's original handoff, selected output path and current private
+claim-token environment variable. For retained interruption recovery, use Linux
+with the `flock` utility available. The destination's parent must already exist
+as the customer's private directory. The installed original command is:
+
+```sh
+npx --no-install starforge paid-file-purchase retrieve \
+  --handoff /private/customer/order.json \
+  --out /private/customer/downloads/report.bin \
+  --claim-env SF101_CLAIM_TOKEN --timeout-ms 30000
+```
+
+After a timeout, lost connection, Ctrl-C or process loss, repeat that **same
+command with the same handoff and destination**. The original SF101 transfer
+record retains the original writer's private prefix. The matching receiver
+returns the remaining range, and the original writer verifies the complete
+file's approved size and SHA-256 before publishing it. A completed local file
+is verified with zero merchant requests. Each new request uses the merchant's
+current entitlement, access deadline, suspension state and claim token.
+
+Read retained state locally with:
+
+```sh
+npx --no-install starforge paid-file-purchase transfer \
+  --handoff /private/customer/order.json \
+  --out /private/customer/downloads/report.bin
+```
+
+The result includes status, retained and expected bytes, attempt count, whether
+the saved prefix can resume, and the original record location. The completed
+file has its original `report.bin.sf101.json` receipt; transfer recovery uses
+`report.bin.sf101-transfer.json` beside it. Keep those records with the selected
+destination so reopening can recover the original generation. A live process
+keeps its file lock; wait for that download to finish or stop before another
+process uses the same output.
+
+For a deliberate fresh start after reviewing a rejected or interrupted prefix:
+
+```sh
+npx --no-install starforge paid-file-purchase reset-transfer \
+  --handoff /private/customer/order.json \
+  --out /private/customer/downloads/report.bin
+```
+
+That local action clears the original unfinished download. A later `retrieve`
+performs the fresh request for the same existing entitlement. Ordinary resume
+needs only the original `retrieve` command. If the merchant denies a retry,
+keep the retained prefix while its operator opens the existing `merchant-desk`,
+inspects the exact order, and checks access and **File health**. Restore the
+enrolled source when it changed, or configure the current claim token after a
+rotation, then repeat the customer's original retrieval.
+
+The original `commerce-console` provides the same recovery in **Purchased
+file**: retained byte count, **Resume download**, completed-partial local
+finish, and **Download progress and recovery**. **Discard retained download**
+clears an idle partial through the original transfer API. The foreground
+`commerce` console has `status`, `retrieve INTENT`, and `reset-transfer INTENT`.
+Both interfaces bind the original frozen handoff and saved destination.
+Reopen the same commerce session after loading a changed claim-token variable.
+
+Applications use the existing public purchase exports:
+
+```js
+import {
+  retrieveFile, inspectFileTransfer, resetFileTransfer,
+} from '@tokenjunkielabs/starforge-merchant/buyer/paid-file';
+
+const state = await inspectFileTransfer({handoff, destination});
+const result = await retrieveFile({handoff, destination, token, timeoutMs:30000});
+```
+
+`@tokenjunkielabs/starforge-merchant/buyer/purchase` resolves to that same
+original module. The maintained whole SF101 component includes
+`resumable-transfer.mjs`, `receiver.py`, `access.py`, `RESUMABLE_TRANSFERS.md`
+and `TRANSFER_SERVER.md`; the existing aliases forward all original arguments.
+For the merchant upgrade, install the matching receiver and access source,
+restart the original receiver with its retained state and secret, and preserve
+`Range`, `If-Match`, `If-Range`, `ETag`, `Content-Range`, `Content-Length` and
+identity bytes through its HTTPS proxy. Its health response identifies
+`stellar-forge.sf101.byte-ranges.v1`. The bundled SF101 guides give the exact
+server protocol and buyer state behavior; the original
+`sf66-demo-launcher/COMMERCE_PAID_FILES.md` covers the complete browser workflow.
+
+
+The matching [Python buyer guide](../sf88-operator-buyer-cli/python/README.md)
+provides the same retained download state and reset operations for the existing
+Python SDK and CLI. The joined source changes are the
+[original receiver and buyer transfer implementation](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1103)
+and [original Python consumer integration](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1118).
+
 ## Operate a multi-resource buyer runbook
 
 The installed runbook combines selected original SF88 configurations into one
@@ -1523,7 +1615,45 @@ no ClickHouse JavaScript driver. Source configuration, complete examples and the
 query contract are included at
 `source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/README.md`.
 
-Start with its `examples/source.json` and `examples/merchant-plan.json`. In the
+For a retained browser workflow, set those source environment variables in the
+launching terminal and open a private workspace:
+
+    npx --no-install starforge clickhouse-workspace \
+      --state /private/clickhouse-workspace --port 8443
+
+Open the complete private URL printed by the original server. **Source & offers**
+loads the existing source and merchant-plan JSON files, edits approved SQL and
+typed input declarations, and retains both with every complete ordered payment
+option. Each save compares the revision actually opened by that editor; another
+window cannot silently replace current work. Actual connection values remain in
+the server environment.
+
+**Native review** displays the real ClickHouse version and zero-row result
+schema, the original typed parameter contract, bounded private previews and the
+compiled public offers. Review those queries and all payment terms, then choose
+**Prepare merchant**. The original preparer creates its normal service and
+generated client in an immutable retained folder attached to that revision and
+review. **Resume preparation** continues the same interrupted preparation.
+
+**Prepared merchants** starts and drains the original seller, opens its original
+customer API, operations and availability interfaces, and downloads the
+generated customer client or OpenAPI. The browser verifies each download's
+returned SHA-256. SQL, probe values, private source and credential references are
+excluded from the fixed customer archive. Restart the same workspace command to
+reopen saved revisions, reviews and prepared merchants; restarting does not
+automatically launch a seller.
+
+The existing native facilitator is selected with `--facilitator HTTPS_URL` and the
+same payment dependencies described below. The default serves the original
+402 challenges. The workspace needs the standard Linux flock and tar utilities;
+it adds no JavaScript driver or frontend build. Its complete guide is
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/workspace/README.md`.
+Embedding applications import `startClickHouseWorkspace` from
+`@tokenjunkielabs/starforge-merchant/seller/clickhouse/workspace`, or
+`createClickHouseWorkspace` from the adjacent `/model` package subpath.
+
+For direct command-line preparation, start with its `examples/source.json` and
+`examples/merchant-plan.json`. In the
 private source, select the database, approved named queries, public columns,
 typed parameters and actual preflight probes. The three `endpointEnv`, `userEnv`
 and `passwordEnv` names resolve through the host's existing secret setup.

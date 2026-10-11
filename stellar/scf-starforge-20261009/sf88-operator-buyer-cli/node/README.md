@@ -19,6 +19,12 @@ the matching `object-*` lifecycle, without a new package or payment engine.
 `accounting` and explicit `finalize` invoke the original chunk reservation
 continuation and return its native report separately from file completion.
 
+The complete [dataset and object accounting workflow](ACCOUNTING.md) reads or
+finalizes every original page/chunk range, reports progress to an async consumer,
+stops on cancellation, reopens saved native command output after a process loss,
+and streams the complete financial view to a new private JSONL file. These methods
+use the same native sessions and are usable independently of delivered data files.
+
 Finite SSE and NDJSON responses use the same native operation and retained file.
 Select `responseFile.stream` before review, then consume verified records with
 `result.events()` or `result.ndjson()`. Reopen them after a restart with

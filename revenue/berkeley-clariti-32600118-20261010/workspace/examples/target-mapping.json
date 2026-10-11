@@ -1,0 +1,24 @@
+{
+  "fields": {
+    "id": "CaseRef",
+    "type": "Entity",
+    "department": "Service",
+    "status": "Phase",
+    "relatedIds": "Relationships",
+    "reviewStates": "ReviewState",
+    "reviewAssignments": "Reviewer",
+    "reviewDueAt": "ReviewDue",
+    "attachments": "Documents",
+    "paymentMinor": "PaidMinor"
+  },
+  "related_separator": "|",
+  "reviews": {},
+  "reviewers": {},
+  "review_due_dates": {},
+  "type_aliases": {},
+  "department_aliases": {},
+  "status_aliases": {},
+  "review_aliases": {},
+  "reviewer_aliases": {},
+  "payment_format": "minor"
+}

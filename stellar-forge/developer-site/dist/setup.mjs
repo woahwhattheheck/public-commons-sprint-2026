@@ -1,7 +1,9 @@
 import {
   DEFAULT_STARTER, DEFAULT_RESOURCE, SOURCE_CONTRACT, createDatasetWorkspace,
   validateWorkspaceInput, importDatasetConfig, importWorkspaceDraft, zipWorkspace,
+  usesSharedPayment, paymentChoicesForResource,
 } from './onboarding.mjs';
+import { createPaymentEditor } from './payment-editor.mjs';
 import { listDrafts, loadDraft, saveDraft, deleteDraft } from './drafts.mjs';
 
 const host = document.getElementById('merchant-setup');
@@ -21,6 +23,7 @@ let generated = null;
 let generatedVersion = -1;
 let errorsShown = false;
 let previewTimer;
+let paymentEditor;
 const labels = ['Resources', 'Payment terms', 'Review files', 'Run locally'];
 const resourceLabel = name => `resource-${name}`;
 
@@ -56,7 +59,7 @@ host.innerHTML = `
   </nav>
   <section id="setup-resources" class="setup-pane" aria-labelledby="resources-heading">
     <h3 id="resources-heading">Choose the resources this merchant will serve.</h3>
-    <p class="pane-intro">Each resource has a static GET route, a JSON file and an exact price. The original seller loads these files when it starts.</p>
+    <p class="pane-intro">Each resource has a static GET route, a JSON file and complete exact payment terms. The original seller loads these files when it starts.</p>
     <div class="resource-grid">
       <aside class="resource-sidebar"><span class="small-label" id="resource-count">RESOURCES / 1</span><div class="resource-list" id="resource-list"></div><button id="add-resource" class="button small" type="button">Add resource +</button><p>Up to 64 resources. Each data file can contain up to 1 MiB of JSON.</p></aside>
       <div class="resource-editor">
@@ -64,7 +67,7 @@ host.innerHTML = `
           <div class="field"><label for="resource-id">Resource ID</label><input id="resource-id" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="resource-id-error"><p id="resource-id-error" class="field-error" hidden></p></div>
           <div class="field"><label for="resource-path">Request path</label><input id="resource-path" autocomplete="off" spellcheck="false" aria-describedby="resource-path-error"><p id="resource-path-error" class="field-error" hidden></p></div>
           <div class="field"><label for="resource-serviceName">Service name</label><input id="resource-serviceName" maxlength="32" autocomplete="off" aria-describedby="resource-serviceName-error"><p id="resource-serviceName-error" class="field-error" hidden></p></div>
-          <div class="field"><label for="resource-amount">Price in atomic units</label><input id="resource-amount" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Use shared default" aria-describedby="resource-amount-hint resource-amount-error"><p id="resource-amount-hint" class="hint">Leave blank to use the shared default.</p><p id="resource-amount-error" class="field-error" hidden></p></div>
+          <div class="field"><label for="resource-amount">Price in atomic units</label><input id="resource-amount" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="Use shared default" aria-describedby="resource-amount-hint resource-amount-error"><p id="resource-amount-hint" class="hint">Leave blank to use the shared default.</p><button id="resource-payment-terms" class="text-button" type="button">Edit payment choices →</button><p id="resource-amount-error" class="field-error" hidden></p></div>
           <div class="field full"><label for="resource-description">Description</label><input id="resource-description" maxlength="2048" autocomplete="off" aria-describedby="resource-description-error"><p id="resource-description-error" class="field-error" hidden></p></div>
           <div class="field full"><label for="resource-tags">Tags</label><input id="resource-tags" autocomplete="off" placeholder="dataset, weather" aria-describedby="resource-tags-hint resource-tags-error"><p id="resource-tags-hint" class="hint">Up to five comma-separated tags.</p><p id="resource-tags-error" class="field-error" hidden></p></div>
           <div class="field full"><div class="field-row"><label for="resource-dataText">JSON data</label><div class="data-tools"><button id="load-data" class="text-button" type="button">Choose JSON file</button><button id="example-data" class="text-button" type="button">Load example</button></div></div><textarea id="resource-dataText" class="code-input" spellcheck="false" aria-describedby="resource-dataText-error"></textarea><p id="resource-dataText-error" class="field-error" hidden></p></div>
@@ -75,7 +78,10 @@ host.innerHTML = `
     </div>
   </section>
   <section id="setup-terms" class="setup-pane" aria-labelledby="terms-heading" hidden>
-    <h3 id="terms-heading">Set the shared merchant terms.</h3><p class="pane-intro">Every resource uses this network, asset, recipient and timeout. The default price applies wherever the resource price is blank.</p>
+    <h3 id="terms-heading">Keep each resource's complete payment choices.</h3><p class="pane-intro">Add and order 1–16 native choices per route. Each choice keeps its own network, asset, public recipient, exact atomic amount, timeout and optional JSON metadata.</p>
+    <div id="route-payment-editor"></div>
+    <details id="workspace-defaults" class="workspace-defaults"><summary>Workspace directory and payment defaults</summary>
+    <p class="pane-intro">Defaults apply to resources marked “Use workspace defaults.” New resources start with them. Imported route choices remain independent.</p>
     <div class="field-grid terms-grid">
       <div class="field"><label for="shared-folder">Workspace directory</label><input id="shared-folder" maxlength="64" autocomplete="off" spellcheck="false" aria-describedby="shared-folder-error"><p id="shared-folder-error" class="field-error" hidden></p></div>
       <div class="field"><label for="shared-network">Network</label><select id="shared-network" aria-describedby="shared-network-error"><option value="stellar:testnet">Stellar testnet</option><option value="stellar:pubnet">Stellar public network</option></select><p id="shared-network-error" class="field-error" hidden></p></div>
@@ -85,6 +91,7 @@ host.innerHTML = `
       <div class="field"><label for="shared-maxTimeoutSeconds">Payment timeout in seconds</label><input id="shared-maxTimeoutSeconds" inputmode="numeric" autocomplete="off" aria-describedby="shared-maxTimeoutSeconds-error"><p id="shared-maxTimeoutSeconds-error" class="field-error" hidden></p></div>
     </div>
     <div id="example-terms-note" class="setup-notice">The starting asset and recipient are example values for local setup. Replace them with the merchant's public identifiers when configuring native payments.</div>
+    </details>
     <p class="setup-notice">The generated launch command starts the original seller in <strong>challenge-only mode</strong>. Native payment setup is described in the run instructions and remains part of the original toolkit.</p>
   </section>
   <section id="setup-review" class="setup-pane" aria-labelledby="review-heading" hidden>
@@ -149,8 +156,15 @@ function selectResource(index) {
     $(resourceLabel(name)).value = name === 'tags' && Array.isArray(value) ? value.join(', ') : typeof value === 'string' || typeof value === 'number' ? value : '';
   }
   $('remove-resource').disabled = input.resources.length === 1;
-  renderResourceList(); renderDataSummary();
+  renderResourceList(); renderDataSummary(); renderResourcePayment(); paymentEditor?.render();
   if (errorsShown) showErrors(validateWorkspaceInput(input).errors);
+}
+function renderResourcePayment() {
+  const resource = input.resources[selectedResource], shared = usesSharedPayment(resource);
+  const choices = paymentChoicesForResource(input, resource);
+  $('resource-amount').disabled = !shared;
+  $('resource-amount').value = shared ? resource.amount ?? '' : choices[0]?.amount ?? '';
+  $('resource-amount-hint').textContent = shared ? 'Leave blank to use the shared default.' : choices.length + ' independent payment choice' + (choices.length === 1 ? '' : 's') + '. Edit the complete terms in Payment terms.';
 }
 function renderDataSummary() {
   const resource = input.resources[selectedResource];
@@ -171,15 +185,17 @@ function updateExampleNote() {
   $('example-terms-note').hidden = input.asset !== 'UNVERIFIED_DEMO_ASSET' && input.payTo !== 'UNVERIFIED_DEMO_RECIPIENT';
 }
 function focusField(field) {
+  if (/^resources\.\d+\.paymentOptions/.test(field)) { activateStep(1, false); paymentEditor.focus(field); return; }
   const match = /^resources\.(\d+)\.(\w+)$/.exec(field);
   if (match) {
     activateStep(0, false); selectResource(Number(match[1]));
     $(resourceLabel(match[2]))?.focus();
   } else if (sharedFields.includes(field)) {
-    activateStep(1, false); $('shared-' + field)?.focus();
+    activateStep(1, false); $('workspace-defaults').open = true; $('shared-' + field)?.focus();
   } else { activateStep(0, false); $('resources-heading').scrollIntoView({ block: 'center' }); }
 }
 function showErrors(errors) {
+  paymentEditor?.showErrors(errors);
   $('workspace-errors').hidden = errors.length === 0;
   $('workspace-error-list').replaceChildren(...errors.map(error => {
     const row = el('li'); row.append(button(error.message, () => focusField(error.field), '')); return row;
@@ -229,18 +245,25 @@ function renderReview() {
     return;
   }
   const summary = el('div', undefined, 'review-summary');
-  for (const [label, value] of [['RESOURCES', result.summary.resourceCount], ['SOURCE DATA', `${result.summary.totalDataBytes.toLocaleString()} bytes`], ['NETWORK', result.summary.network]]) {
+  for (const [label, value] of [['RESOURCES / CHOICES', result.summary.resourceCount + ' / ' + result.summary.paymentChoiceCount], ['SOURCE DATA', `${result.summary.totalDataBytes.toLocaleString()} bytes`], ['NETWORKS', result.summary.networks.join(' · ')]]) {
     const box = el('div'); box.append(el('span', label, 'small-label'), el('strong', value)); summary.append(box);
   }
   const table = el('table'), head = el('thead'), headRow = el('tr');
-  for (const label of ['Resource', 'Request', 'Exact price', 'Data bytes']) headRow.append(el('th', label)); head.append(headRow);
+  table.className = 'payment-review-table';
+  for (const label of ['Resource / request', 'Choice', 'Network', 'Asset / recipient', 'Exact atomic amount', 'Timeout / extra']) headRow.append(el('th', label)); head.append(headRow);
   const body = el('tbody');
-  for (const resource of result.summary.resources) {
-    const row = el('tr');
-    for (const value of [resource.serviceName, `GET ${resource.path}`, resource.amount, resource.dataBytes.toLocaleString()]) {
-      const cell = el('td'); cell.append(el('code', value)); row.append(cell);
+  for (const resource of result.summary.resources) for (const [index, choice] of resource.effectivePayments.entries()) {
+    const row = el('tr'), route = el('td'), order = el('td'), network = el('td'), identifiers = el('td'), amount = el('td'), metadata = el('td');
+    route.append(el('strong', resource.serviceName), el('code', 'GET ' + resource.path), el('small', resource.dataBytes.toLocaleString() + ' data bytes'));
+    order.append(el('code', String(index + 1) + ' / ' + resource.effectivePayments.length));
+    network.append(el('code', choice.network));
+    identifiers.append(el('code', choice.asset), el('code', choice.payTo));
+    amount.append(el('code', choice.amount));
+    metadata.append(el('code', String(choice.maxTimeoutSeconds) + ' seconds'));
+    if (Object.prototype.hasOwnProperty.call(choice, 'extra')) {
+      const details = el('details'); details.append(el('summary', 'Extra JSON'), el('pre', JSON.stringify(choice.extra, null, 2))); metadata.append(details);
     }
-    body.append(row);
+    row.append(route, order, network, identifiers, amount, metadata); body.append(row);
   }
   table.append(head, body); const scroll = el('div', undefined, 'table-scroll'); scroll.append(table);
   const fileView = el('div', undefined, 'review-bottom'), fileList = el('div', undefined, 'file-list'), code = el('pre', undefined, 'file-code');
@@ -283,7 +306,7 @@ function renderRun() {
   const install = runStep(2, 'Install the original toolkit archive', 'Use Node.js 22.16 or later. Obtain the maintained local source archive, replace the archive path below, and run from the parent of your workspace.', result.commands.install);
   const installLinks = el('div', undefined, 'run-links'); installLinks.append(link('Distribution and archive instructions ↗', SOURCE_CONTRACT.distributionGuide)); install.content.append(installLinks);
   const start = runStep(3, 'Start this workspace', 'The original launcher prints a seller URL and an operations URL. Open the seller URL followed by /_seller/docs to inspect the live resources; open the operations URL for the running service.', result.commands.run);
-  const inspect = runStep(4, 'Inspect the running seller', 'Use the actual seller URL printed at startup. An unpaid resource request receives HTTP 402. Stop with Ctrl-C; edit a data file and restart to load the new snapshot.', result.commands.inspect);
+  const inspect = runStep(4, 'Inspect the running seller', 'Use the actual seller URL printed at startup. An unpaid resource request receives HTTP 402 with all ordered choices for that route. Inspect its complete accepts array; the original buyer selects a compatible network/asset/payee. Stop with Ctrl-C and restart after changing a data file.', result.commands.inspect);
   const advanced = el('details', undefined, 'raw-details'); advanced.append(el('summary', 'Configure native payments and continue development'));
   advanced.append(el('p', 'Use the merchant’s actual public payment identifiers and facilitator endpoint. Install the documented native packages in the same application directory.'));
   const native = el('pre', result.commands.nativeDependencies + '\n\n' + result.commands.nativeRun, 'command-block'); native.tabIndex = 0; advanced.append(native);
@@ -297,6 +320,7 @@ function activateStep(step, focus = true) {
   host.querySelectorAll('[data-setup-step]').forEach(node => {
     if (Number(node.dataset.setupStep) === step) node.setAttribute('aria-current', 'step'); else node.removeAttribute('aria-current');
   });
+  if (step === 1) paymentEditor.render();
   if (step === 2) renderReview(); if (step === 3) renderRun();
   $('setup-next').textContent = step === 3 ? 'Review files ←' : labels[step + 1] + ' →';
   $('setup-footnote').textContent = step === 2 ? 'REVIEW THE GENERATED CONFIGURATION AND DATA BEFORE EXPORT.' : step === 3 ? 'RUN FROM THE PARENT OF THE EXTRACTED WORKSPACE.' : 'DRAFTS SAVE ONLY WHEN YOU CHOOSE SAVE. EXPORTS INCLUDE YOUR DATA.';
@@ -385,9 +409,10 @@ for (const name of resourceFields) $(resourceLabel(name)).addEventListener('inpu
   clearTimeout(previewTimer); previewTimer = setTimeout(renderDataSummary, 120);
 });
 for (const name of sharedFields) $('shared-' + name).addEventListener('input', event => {
-  input[name] = event.target.value; changed(); updateExampleNote();
+  input[name] = event.target.value; changed(); updateExampleNote(); renderResourcePayment(); paymentEditor.render();
 });
 host.querySelectorAll('[data-setup-step]').forEach(node => node.addEventListener('click', () => activateStep(Number(node.dataset.setupStep))));
+$('resource-payment-terms').addEventListener('click', () => activateStep(1));
 $('setup-next').addEventListener('click', () => activateStep(activeStep === 3 ? 2 : activeStep + 1));
 $('add-resource').addEventListener('click', () => {
   if (input.resources.length >= 64) return;
@@ -439,4 +464,8 @@ for (const id of ['seller-file-input', 'seller-folder-input']) $(id).addEventLis
   try { await importSellerFiles(files); } catch (error) { reportError(error); }
 });
 window.addEventListener('beforeunload', event => { if (dirty) { event.preventDefault(); event.returnValue = ''; } });
+paymentEditor = createPaymentEditor({
+  root: $('route-payment-editor'), getInput: () => input, getResourceIndex: () => selectedResource,
+  selectResource, onChange: () => { renderResourcePayment(); changed(); },
+});
 selectResource(0); renderSharedFields(); updateTitle();
