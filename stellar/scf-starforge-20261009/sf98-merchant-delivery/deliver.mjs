@@ -4,6 +4,7 @@ import { lookup } from 'node:dns/promises';
 import { request } from 'node:https';
 import { isIP } from 'node:net';
 import { openOutbox } from './outbox.mjs';
+import { assertDeliveryLease, withDeliveryLease } from './delivery-lock.mjs';
 
 const MAX_ATTEMPTS = 8;
 const NOW = () => Date.now();
@@ -55,12 +56,39 @@ export async function pinnedPublicLookup(hostname, resolver = lookup) {
     else done(null, first.address, first.family);
   };
 }
-export async function sendSignedWebhook({ event, url, allowedHost, secret,
-  resolver = lookup, transport = request, clock = NOW }) {
+function interruptible(promise, signal) {
+  return new Promise((resolve, reject) => {
+    const abort = () => reject(signal.reason ?? new Error('WEBHOOK_ABORTED'));
+    if (signal.aborted) { abort(); return; }
+    signal.addEventListener('abort', abort, { once: true });
+    promise.then(value => { signal.removeEventListener('abort', abort); resolve(value); },
+      error => { signal.removeEventListener('abort', abort); reject(error); });
+  });
+}
+export async function sendSignedWebhook({ event, url, allowedHost, secret, signal,
+  timeoutMs = 7000, resolver = lookup, transport = request, clock = NOW }) {
   const endpoint = validateDestination(url, allowedHost);
   if (typeof secret !== 'string' || Buffer.byteLength(secret) < 32 || Buffer.byteLength(secret) > 1024)
     throw new Error('A private operator HMAC secret of 32-1024 bytes is required');
-  const dnsLookup = await pinnedPublicLookup(endpoint.hostname, resolver);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 60000)
+    throw new RangeError('Webhook timeout must be 100-60000ms');
+  const attemptSignal = signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs);
+  let dnsLookup;
+  try {
+    attemptSignal.throwIfAborted();
+    dnsLookup = await interruptible(pinnedPublicLookup(endpoint.hostname, resolver), attemptSignal);
+    attemptSignal.throwIfAborted();
+  } catch (error) {
+    if (signal?.aborted) {
+      const cancelled = new Error('SF98_WEBHOOK_CANCELLED_BEFORE_SEND');
+      cancelled.code = 'SF98_WEBHOOK_CANCELLED_BEFORE_SEND';
+      throw cancelled;
+    }
+    throw error;
+  }
+  if (event.recipientDigest != null &&
+      (typeof event.recipientDigest !== 'string' || !/^[a-f0-9]{64}$/.test(event.recipientDigest)))
+    throw new Error('INVALID_SELECTED_RECIPIENT_DIGEST');
   // Minimal message: no payment header, transaction hash, signer, wallet, buyer request or response body.
   const payload = JSON.stringify({
     schema: 'stellar-forge.sf98.webhook.v1',
@@ -68,13 +96,14 @@ export async function sendSignedWebhook({ event, url, allowedHost, secret,
     routeId: event.routeId, method: event.method,
     network: event.network, amountAtomic: event.amountAtomic,
     assetDigest: event.assetDigest, orderReference: event.orderReference,
+    ...(event.recipientDigest == null ? {} : { recipientDigest: event.recipientDigest }),
     settlement: 'ORIGINAL_NATIVE_SUCCESS',
   });
   const timestamp = String(Math.floor(clock() / 1000));
   const digest = createHmac('sha256', secret).update(timestamp + '.' + payload).digest('hex');
   return await new Promise((resolve, reject) => {
     const call = transport(endpoint, {
-      method: 'POST', agent: false, lookup: dnsLookup, timeout: 7000,
+      method: 'POST', agent: false, lookup: dnsLookup, timeout: timeoutMs, signal: attemptSignal,
       headers: {
         'content-type': 'application/json',
         'content-length': String(Buffer.byteLength(payload)),
@@ -85,7 +114,9 @@ export async function sendSignedWebhook({ event, url, allowedHost, secret,
       },
     }, response => {
       const code = response.statusCode || 0;
-      response.resume();
+      // Acceptance is the response status, never its body. Do not let an
+      // unbounded response body hold a completed delivery socket open.
+      response.destroy();
       resolve({ ok: code >= 200 && code < 300, httpStatus: code });
     });
     call.on('timeout', () => call.destroy(new Error('WEBHOOK_TIMEOUT')));
@@ -94,39 +125,68 @@ export async function sendSignedWebhook({ event, url, allowedHost, secret,
   });
 }
 export async function drainOnce(outbox, options) {
+  if (!options?.lease) return withDeliveryLease(outbox.dir,
+    lease => drainOnce(outbox, { ...options, lease }), { purpose: 'drain' });
+  await assertDeliveryLease(options.lease, outbox.dir);
   const { url, allowedHost, secret, send = sendSignedWebhook,
-    clock = NOW, limit = 10 } = options;
+    clock = NOW, limit = 10, concurrency = 1, signal, timeoutMs = 7000 } = options;
   if (!Number.isInteger(limit) || limit < 1 || limit > 100)
     throw new RangeError('Limit must be 1-100');
   validateDestination(url, allowedHost);
-  if (typeof secret !== 'string' || Buffer.byteLength(secret) < 32)
+  if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16 ||
+      !Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 60000)
+    throw new RangeError('Invalid delivery concurrency or timeout');
+  if (typeof secret !== 'string' || Buffer.byteLength(secret) < 32 || Buffer.byteLength(secret) > 1024)
     throw new Error('WEBHOOK_SECRET_NOT_SET');
   const rows = await outbox.rows();
-  let delivered = 0, attempted = 0, skipped = 0, exhausted = 0;
-  for (const row of rows) {
-    if (attempted >= limit) break;
-    const prior = row.state;
-    if (prior?.state === 'DELIVERED' || prior?.state === 'EXHAUSTED' ||
-        prior?.state === 'RETRY' && Date.parse(prior.nextAt) > clock()) {
-      skipped++; continue;
+  const due = rows.filter(row => deliveryDueAt(row, clock()) <= clock());
+  const selected = due.slice(0, limit);
+  let delivered = 0, attempted = 0, exhausted = 0, cancelled = 0, cursor = 0;
+  let writes = Promise.resolve(), failure = null;
+  const work = async () => {
+    while (cursor < selected.length && !signal?.aborted && !failure) {
+      const row = selected[cursor++];
+      const attempt = (row.state?.attempt ?? 0) + 1;
+      let result;
+      try { result = await send({ event: row.event, url, allowedHost, secret, clock, signal, timeoutMs }); }
+      catch (error) {
+        if (error.code === 'SF98_WEBHOOK_CANCELLED_BEFORE_SEND') { cancelled++; continue; }
+        result = { ok: false, httpStatus: null };
+      }
+      const status = result.ok ? 'DELIVERED' : attempt >= MAX_ATTEMPTS ? 'EXHAUSTED' : 'RETRY';
+      const delayMs = Math.min(30 * 60 * 1000, 30 * 1000 * 2 ** (attempt - 1));
+      const nextAt = status === 'RETRY' ? new Date(clock() + delayMs).toISOString() : null;
+      const writing = writes.then(() => outbox.recordDelivery({
+        id: row.event.id, state: status, attempt, at: new Date(clock()).toISOString(),
+        httpStatus: Number.isInteger(result.httpStatus) ? result.httpStatus : null, nextAt,
+      }));
+      writes = writing.catch(() => {});
+      try { await writing; }
+      catch (error) { failure ??= error; continue; }
+      attempted++;
+      if (status === 'DELIVERED') delivered++;
+      if (status === 'EXHAUSTED') exhausted++;
     }
-    const attempt = (prior?.attempt ?? 0) + 1;
-    let result;
-    try { result = await send({ event: row.event, url, allowedHost, secret, clock }); }
-    catch { result = { ok: false, httpStatus: null }; }
-    const status = result.ok ? 'DELIVERED' : attempt >= MAX_ATTEMPTS ? 'EXHAUSTED' : 'RETRY';
-    const delayMs = Math.min(30 * 60 * 1000, 30 * 1000 * 2 ** (attempt - 1));
-    const nextAt = status === 'RETRY' ? new Date(clock() + delayMs).toISOString() : null;
-    await outbox.recordDelivery({
-      id: row.event.id, state: status, attempt, at: new Date(clock()).toISOString(),
-      httpStatus: Number.isInteger(result.httpStatus) ? result.httpStatus : null, nextAt,
-    });
-    attempted++;
-    if (status === 'DELIVERED') delivered++;
-    if (status === 'EXHAUSTED') exhausted++;
-  }
-  return { ...await outbox.status(), attemptThisRun: attempted,
-    deliveredThisRun: delivered, exhaustedThisRun: exhausted, skippedThisRun: skipped };
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, selected.length) }, work));
+  if (failure) throw failure;
+  const latest = await outbox.rows();
+  const dueTimes = latest.map(row => deliveryDueAt(row, clock())).filter(Number.isFinite);
+  const earliest = dueTimes.length ? dueTimes.reduce((first, at) => Math.min(first, at), Infinity) : null;
+  return { schema: 'stellar-forge.sf98.outbox-status.v1', uniqueNativeReceipts: latest.length,
+    delivered: latest.filter(row => row.state?.state === 'DELIVERED').length,
+    exhausted: latest.filter(row => row.state?.state === 'EXHAUSTED').length,
+    pending: dueTimes.length, ready: dueTimes.filter(at => at <= clock()).length,
+    nextDueAt: earliest === null ? null : new Date(earliest).toISOString(),
+    attemptThisRun: attempted, deliveredThisRun: delivered, exhaustedThisRun: exhausted,
+    skippedThisRun: rows.length - due.length, cancelledBeforeSend: cancelled };
+}
+function deliveryDueAt(row, now) {
+  if (!row.state || row.state.state === 'REQUEUE') return now;
+  if (['DELIVERED', 'EXHAUSTED'].includes(row.state.state)) return Infinity;
+  if (row.state.state !== 'RETRY' || !Number.isFinite(Date.parse(row.state.nextAt)))
+    throw new Error('INVALID_DELIVERY_RETRY_STATE');
+  return Date.parse(row.state.nextAt);
 }
 export async function main(args = process.argv.slice(2)) {
   const [command, ...rest] = args;
@@ -136,7 +196,7 @@ export async function main(args = process.argv.slice(2)) {
   if (rest.length % 2) throw new TypeError('Option requires value');
   const opts = new Map();
   for (let i = 0; i < rest.length; i += 2) {
-    if (!['--state', '--url', '--allow-host', '--secret-env', '--limit', '--id'].includes(rest[i]) ||
+    if (!['--state', '--url', '--allow-host', '--secret-env', '--limit', '--id', '--concurrency', '--timeout-ms'].includes(rest[i]) ||
         opts.has(rest[i])) throw new TypeError('Invalid or duplicate option: ' + rest[i]);
     opts.set(rest[i], rest[i + 1]);
   }
@@ -145,7 +205,7 @@ export async function main(args = process.argv.slice(2)) {
   let result;
   if (command === 'status') result = await outbox.status();
   if (command === 'requeue') {
-    await outbox.requeue(opts.get('--id'));
+    await withDeliveryLease(outbox.dir, () => outbox.requeue(opts.get('--id')), { purpose: 'requeue' });
     result = await outbox.status();
   }
   if (command === 'drain') {
@@ -156,6 +216,8 @@ export async function main(args = process.argv.slice(2)) {
     result = await drainOnce(outbox, {
       url: opts.get('--url'), allowedHost: opts.get('--allow-host'),
       secret: process.env[secretName], limit: Number(rawLimit),
+      concurrency: Number(opts.get('--concurrency') || '1'),
+      timeoutMs: Number(opts.get('--timeout-ms') || '7000'),
     });
   }
   process.stdout.write(JSON.stringify(result) + '\n');

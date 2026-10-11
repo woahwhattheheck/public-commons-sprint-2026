@@ -8,3 +8,10 @@ export { createPublicBuyer } from '../sf31-buyer-client/public-buyer.mjs';
 export { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 export { OperatorApprovedBuyer } from '../sf81-buyer-operator-bridge/bridge.mjs';
 export { captureBundle } from '../sf93-seller-support-bundle/bundle.mjs';
+export { compileSellerOpenApi, createSellerDeveloperPortal } from '../sf30-seller-sdk/developer-portal.mjs';
+export { generateSellerClient } from '../sf30-seller-sdk/developer/client-generator.mjs';
+export { exportSellerClient } from '../sf30-seller-sdk/developer/client-export.mjs';
+export { initReleaseStore, stageRelease, readReleaseState, listReleases, inspectRelease,
+  compareReleases, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from '../sf82-seller-pilot/releases.mjs';
+export { startReleaseConsole } from '../sf82-seller-pilot/release-console.mjs';
+export { initializeQueue, openQueue, saveQueueReport } from '../sf88-operator-buyer-cli/queue.mjs';

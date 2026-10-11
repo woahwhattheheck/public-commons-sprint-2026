@@ -1,22 +1,34 @@
-# SCF SF-49 — authentic adoption, pilot qualification and open-source sustainability
+# SCF SF-49 — Merchant adoption, paid implementation and open-source sustainability
 
-**Operation:** SCF-STARFORGE-20261009 / SF-49 — delivered as PUBLIC market/product research, not an award submission.  
-**Source-custody date:** Original research October 9, 2026 (EDT); x402#3657 issue, all 17 comments and PR3741 metadata rechecked October 11, 2026 UTC. Other eight issue states retain their original observation date.  
-**Companion:** [nine-record source-readable issue ledger](./SF49_PUBLIC_SIGNALS_20261009.json).  
-**Downstream:** SF-05 competition prior art, SF-09 funding/track gates, SF-08 economics, SF-21–40 distinct technical implementation owners, SF-41/42 real-source benchmarking and SF-46 product integration.  
-**Current authority:** research and public software only. **NO** new outreach, grant forms, application, external demo, Michael Clark contact, bounties, former competitions, private repository writes, new workflows/GitHub Actions, mainnet transactions or money movement.
+**Operation:** SCF-STARFORGE-20261009 / SF-49.  
+**Updated:** October 11, 2026.  
+**Purpose:** Run the commercial adoption process for the existing Stellar product, and provide the market case for the original SF10 application. The same merchant relationship and original implementation owners continue through delivery and payment.
 
-## 1. Product and commercial adoption decision
+This playbook supports authorized outbound sales. Use the current owner instructions and the existing private contact record to select the sender, preserve explicit contact exclusions, and avoid a second first-contact message. A historical research-only scope in this file is not a current stop on outreach, internal publication, or completion of authorized work. Customer terms, correspondence, personal relationship history and receiving details belong in the existing private commercial record.
 
-A world-class Stellar x402 Bazaar wins only if an actual seller and buyer can **discover the intended offer, understand its true cost, authorize it within a real policy, successfully pay, and receive the intended result**. The upstream already has Apache-2.0 `x402` and `x402-stellar` source; SCF #45 already funded three overlapping facilitator/Bazaar grantees. Selling a generic cloned facilitator to the same ecosystem would duplicate effort and obscure useful business differentiation.
+## 1. Customer, job and product
 
-Our defensible **open core** is *agent commerce checkout assurance*: original-source catalog/search + stale/malformed listing detection + seller-controlled verification + x402/Stellar wallet/price correctness + noncustodial budget-policies + clear settle-versus-deliver evidence and optional self-host / commercially supported operator packaging. The product must compose with canonical x402 SDKs and not assert that unbuilt or nonworking features are shipping.
+The first customer is an API or data-service operator who already has a useful, legally distributable resource and wants to sell its use to agent applications. Its engineering lead needs a paid operation that works from its current application through the customer's actual client; its commercial lead needs an offer, measured delivery effort and a support model. The second customer is an agent application operator that wants to acquire those resources under a persistent spending policy and keep the purchased output usable after its process or connection stops.
 
-**Concrete value proposition to validate, not a revenue claim:** detect the state where "discovered and online" does **not** imply "an agent can purchase and consume the advertised endpoint." This was described by an actual reporter in [x402#3657](https://github.com/x402-foundation/x402/issues/3657), including historical refused payment attempts. Its author reports repairing acceptance and later settling a GET payment on Base mainnet. This is a historical interoperability lesson, not evidence of a current SatLedger defect, Stellar payment, or our customer.
+Start with the customer's existing operation. Preserve its selected method, request schema, data access rules, asset, recipient and price. Reuse the original product to join:
 
-## 2. Source-audited adoption signals (not permission to contact)
+| Customer task | Existing source to use | Deliverable for the customer |
+| --- | --- | --- |
+| Offer an existing API operation | [SF61 OpenAPI importer](../scf-starforge-20261009/sf61-openapi-seller-import/) and [SF30 upstream bindings](../scf-starforge-20261009/sf30-seller-sdk/UPSTREAM.md) | An operation connected to the merchant's application, with its actual input and payment terms |
+| Sell permitted data queries | [SF30 dataset API](../scf-starforge-20261009/sf30-seller-sdk/DATASET_API.md) and [read-only SQLite source](../scf-starforge-20261009/sf30-seller-sdk/sqlite/) | Configured fields, filters, pagination and resource limits for the merchant's approved data |
+| Make the operation discoverable | [SF60 durable catalog](../scf-starforge-20261009/sf60-durable-catalog-transaction/), [SF73 seller admission](../scf-starforge-20261009/sf73-pinned-seller-admission/) and [SF95 withdrawal](../scf-starforge-20261009/sf95-signed-seller-withdrawal/) | A source-preserved listing that the seller can manage and retire |
+| Acquire and keep the output | [SF88 operator buyer](../scf-starforge-20261009/sf88-operator-buyer-cli/) and [SF100 dataset delivery](../scf-starforge-20261009/sf100-buyer-dataset-delivery/) | A reviewed request, durable intent and budget handling, delivered bytes and usable dataset export |
+| Reconcile payment and fulfilment | [SF86 transaction reconciliation](../scf-starforge-20261009/sf86-rpc-transfer-reconcile/), [SF98 delivery outbox](../scf-starforge-20261009/sf98-merchant-delivery/) and [SF101 merchant receiver](../scf-starforge-20261009/sf101-merchant-receiver/) | Original transaction evidence linked to the merchant order and the delivered resource |
+| Operate and support the service | [SF30 operations](../scf-starforge-20261009/sf30-seller-sdk/operations/), [SF93 support bundle](../scf-starforge-20261009/sf93-seller-support-bundle/) and [SF101 recovery](../scf-starforge-20261009/sf101-merchant-recovery/) | Customer-owned operations, incident diagnosis, export and recovery procedure |
+| Review the commercial outcome | [SF77 workorder](../scf-starforge-20261009/sf77-merchant-workorder/) and [SF97 pilot conversion](../scf-starforge-20261009/sf97-merchant-pilot-conversion/) | The original agreed scope, delivery decisions, actual cost assumptions and acceptance record |
 
-All nine records were retrieved from native first-party GitHub Issues metadata/text, with current issue state and original reporter claims; detailed evidence, impact, non-overlapping owner route and pending verification live in the [companion JSON](./SF49_PUBLIC_SIGNALS_20261009.json). Source freshness and issue state are recorded separately from defect resolution and customer status.
+These are released source components. A customer deployment establishes the combined product outcome through the customer's actual source, configuration, authorised transaction and result. A collection of component names, local checks or successful merges does not establish an installed commercial service.
+
+**Commercial hypothesis:** the customer buys reduced integration and operating effort. It can keep an existing subscription or API-key product and add an explicitly scoped pay-per-use route where that serves a real buyer. Charge for implementation, accepted migration work, integration support and maintenance; preserve the free self-hostable product. Validate willingness to pay from the actual operator and its purchasing process.
+
+## 2. Public demand signals and their observation dates
+
+The [nine-record companion ledger](./SF49_PUBLIC_SIGNALS_20261009.json) remains the original October 9 research snapshot. The first row and PR3741 were rechecked on October 11; other eight issue states retain their October 9 date. These are technical research sources. Their authors, endpoints and organisations are not automatically customers or current outreach targets.
 
 | ID and source | Actual reported problem | Commercial diagnostic hypothesis | Verified customer / operator status |
 | --- | --- | --- | --- |
@@ -30,140 +42,122 @@ All nine records were retrieved from native first-party GitHub Issues metadata/t
 | [x402#2942](https://github.com/x402-foundation/x402/issues/2942) **CLOSED** | Reporter says a CoinMarketCap API route failed to enter Bazaar despite successful settled payments while three same-configuration routes appeared. | *Historical indexing postmortem*, eventual publish confirmation and stuck-processing telemetry. | **CLOSED historical report**, reporter not verified as CoinMarketCap authorized representative; not active sales |
 | [x402#3500](https://github.com/x402-foundation/x402/issues/3500) **OPEN** | Proposal for machine-readable disputes when automated agent spending violates user intent despite valid signature and successful settlement. | *Agent spend-intent guard:* deny overbudget calls before signing; clear reconciliation evidence. | Proposal, **no proven executed $5 payment** |
 
-**Research ranking (not probability or revenue):** Original P1 cases 3511/3121/stellar#55 need current-source requalification; P2 protocol studies 71/3226/74/3500 retain their original snapshot status. Case 3657 is a historical author-repaired interoperability lesson; 2942 is closed historical context. The original research seat recorded nine signals, zero verified consenting pilot customers, zero accepted quotes and zero outreach. These counts and the JSON contact fields are a dated research snapshot, not a current relationship ledger; consult the existing commercial owner privately before any contact. Do not treat a GitHub reporter, another project's bug, or a closed issue as a sales lead without owner and company verification.
+Use a historical issue to form a specific interview question. Before stating that a deployed seller currently has a defect, inspect its current implementation or reproduce the customer's chosen operation with the appropriate access. A repaired issue can still teach a reusable integration lesson. The private sales record is the current source for previous contact, replies, opt-outs, accepted terms and money received.
 
-### Independent buyer/seller research before any pilot pitch
+## 3. Alternatives and the product decision
 
-For each record obtain: actual current protocol version and commit, date of last external observation, route permission/operator status, real impact indicators (buyer sessions, attempted signatures, actual settlement events), reliability of reported defect under *original* current source, decision-maker relation and willingness to opt in, known prior contact, ownership and competitive sensitivity. If issues are closed or affected implementation has changed, retire the pitch rather than exploiting stale data.
+The native ecosystem already supplies substantial payment, discovery and policy machinery. Current first-party sources support the following comparison; each provider controls its own implementation and deployment.
 
-Cross-provider and cross-network comparisons must preserve the original payload, exact network, asset decimal rules, HTTP method, extension/scheme version, and actual observed transaction status. An injected fixture can prove code behavior locally but never substitutes for live seller conversion, chain finality or a user acceptance.
-
-## 3. Repeatable deal-discovery workflow — operational case extraction
-
-**Success pattern:** A cross-domain opportunity is identified **before the seller recognizes it**; the fleet verifies the buyer's actual need, identifies a plausible qualified implementer, demonstrates a distinctive fit and sustains useful information exchange until the founder takes direct ownership. This pattern matches the user-described Michael Clark opportunity, which reached a hot human handoff. The contemporaneous UIowa prospect was declined due to timing. Neither represents a signed invoice or cash receipt, and **Michael remains exclusively owner-held: NO contact or new external-demo post**.
-
-**Process applicable to developer markets, procurement, grant-adjacent pilots and traditional commercial services:**
-
-1. **Source original buyer demand, not a generic contact directory.** Collect public issuer RFP or a first-person technical problem; record immutable URL, retrieve date, exact requirements, deadline, code/version or original file SHA. Sample x402#3657 is an issued technical pain statement; not an RFP and not a buying request.
-2. **Map the value chain.** Who owns the problem? Who controls purchasing authority? Who has verified delivery capacity? Who is the paid specialist/subcontractor? For Stellar: endpoint operator, wallet integrator, API merchant, agent runtime buyer, spec maintainer and hosting operator are distinct roles; do not interchange their consent.
-3. **Qualify with explicit disqualifiers.** Payment requirement, first-party actual use, timing, deployment constraints, licenses, network risk and relevant team skills; mark unknowns. Institutional prospects additionally need documented insurance/vendor qualifications and a legally eligible prime. Red flags include scope already funded by SCF #45, wrong track, closed solicitation, unknown operator, stale issue, competing claimant and contact suppression.
-4. **Generate a small proof **before** a pitch.** Original source/actual protocol contract -> reproducible technical acceptance/bug boundary -> narrow repair/benchmark with falsifiable outcome. A source-only demo is an exploratory tool until a real user authorizes their endpoint test.
-5. **One-owner, one-message relationship gate.** Search shared Slack claimed IDs, connected sender mailbox threads, past replies/opt-outs, existing PR authorship and contact handoff, then choose ONE approved sender. Draft an exact body for Bryce review; **do not send** until recipient, body and authority expressly released. Never use a generic mandate to contact Michael or write in the paused external demo.
-6. **Advance stages only with actual receipts.** `DISCOVERED` -> `FIRST_PARTY_EVIDENCE` -> `PROVIDER_FIT` -> `OWNER_REVIEW_UNSENT` -> `SENT` -> `REPLIED` -> `QUALIFIED_HOT` -> `SCOPE_ACCEPTED` -> `CONTRACTED` -> `DELIVERED` -> `INVOICED` -> `PAID`. Keep earned-but-unbilled and invoiced-but-unpaid separate.
-7. **Preserve the handoff.** Identity/role of a human buyer, evidence for acceptance, permission to follow up, next exact step, potential upside, conflicts/deadlines. Owner takes over relationship at appropriate stage. Multiple seats can research distinct companies but must not send competing pitches or assume relationship ownership from discovery alone.
-8. **Feed real outcomes back** into prioritization: first-party demand density, response/close rate, cost per qualified lead, delivery gross margin, median days to reply and repeat service demand. Report denominators and UNKNOWN (not 0); never attribute revenue solely because a promising lead exists.
-
-**Value-priced offers to validate, not price promises:**
-- *A. Seller discoverability and payment readiness audit:* contract/invoice only if buyer agrees. Includes route/method challenge, catalog reconciliation, price clarity and post-settlement explanation with source-exact evidence; non-custodial, no live funds moved without operator permission.
-- *B. Stellar marketplace/MCP integration:* new seller can make a legitimately priced resource discoverable and purchasable by an ordinary agent on actual allowed network; vendor-specific compatibility costs itemized.
-- *C. Managed index/provenance and support:* opt-in sellers, per-resource history, filter/rank reliability and audit events; transparent self-host substitute.
-- *D. Procurement/partner matching service outside crypto:* buyer RFP original-file custody + qualified implementation-partner sourcing + independent paid QA package, with customer-facing offers only after founder approval and credible provider.
-
-The fleet already shipped source-grounded Catawba ERP, Springfield EAM, Saugatuck and related buyer→implementer studies. Their status is research/proposals until actual agreement and payment receipts. This playbook **does not reclaim** any of those original vendor workstreams.
-
-## 4. Pilot queue — distinct evidence-to-product handoffs
-
-### Pilot H1 — independent-client acceptance from a historical method failure
-
-**Research source:** x402#3657 remains open as a protocol discussion; its author reports the original seller failure repaired. Later [browser-header repair](https://github.com/x402-foundation/x402/issues/3657#issuecomment-6057668776) and [single-source method declarations](https://github.com/x402-foundation/x402/issues/3657#issuecomment-6058289816) are also reported shipped. [Spec PR3741](https://github.com/x402-foundation/x402/pull/3741) is open and unmerged at this check; its proposed rules are not adopted protocol requirements.
-
-**Current use:** build a merchant-consented acceptance service for whichever actual operation the merchant selects. Reproduce a present problem before offering a repair. Preserve method and terms across the merchant's own independently implemented buyer/server; catalog liveness alone cannot establish checkout. Do not tell SatLedger its repaired method or header bug remains open.
-
-**Handoff (owner-approved after operator permission):** produce read-only route/schema observation, native x402 client plan with both original GET and intended POST semantics, seller-controlled no-funds mock first, then a real separately authorized testnet transaction only if a seller is verified and a protocol path permits. Emit a bounded trace `discovered/quoted/intent-approved/signed/verified/settled/delivered`, precise method and encoded payment header, and explanatory seller remediation. Actual seller-run traces cannot be invented or generated against arbitrary third-party paid endpoints.
-
-**Owner/collision:** SF-25/26 protocol/MCP and SF-31/35 buyer guardrail owners build components; SF-49 owns evidence-based willingness and adoption research only.
-
-### Pilot H2 — catalog input/schema and MCP discoverability compatibility
-
-**Research sources:** x402#3511 and #3121, both open. **Hypothesis:** canonical method and URL drift can make an indexed endpoint impossible for an agent to call.
-
-**Handoff:** source-pinned Bazaar `info.input` validation by method; preserve `mcp://` URL meaning; compare advertised schema against actually allowed method and original endpoint specification; record URL identity, submitted/published status, provisional/verified metadata and freshness. Produce a seller-reviewable diagnosis using genuinely observable HTTP/MCP payloads and an independent fixed-upstream comparison.
-
-**Owner/collision:** distinct SF-21–30 discoverability owners implement; SF-49 qualifies legitimate operators and routes genuine adoption.
-
-### Pilot H3 — Stellar-specific buyer checkout confidence
-
-**Research sources:** stellar#55 and #74, both open. **Hypothesis:** displayed USDC/fee/trustline/signer status differs from exact price and real purchase capability, making sellers lose users.
-
-**Handoff:** original exact-price decimal parity, ledger trustline preflight, wallet interop, sponsorship flag truth and actual receipt/failed purchase message. Canonical Stellar source/SDK version pinned; no claim that public issues remain unfixed in newer code until readback.
-
-**Owner/collision:** SF-15, SF-16 and SF-17 own core fixes. SF-49 owns research-to-adoption evidence.
-
-### Pilot H4 — enterprise policy before an agent is allowed to pay
-
-**Research sources:** stellar#71 and x402#3500. **Hypothesis:** metered services need a defensible `upto` limit and user-intent policy, not just valid blockchain settlement.
-
-**Handoff:** match allowed asset/network/seller with budget ceiling, trace actual vs authorized price, reject price drift, record auditable decision and exact canonical scheme support. Do not replace signed crypto receipt with internal log or represent illustrative $5 charges as real incidents. Initial research uses public protocol source only.
-
-**Owner/collision:** SF-31–40 `upto`/security work owners; SF-49 handles consent-driven discovery.
-
-## 5. Open-core engineering and governance charter
-
-**Licenses and reuse:** [x402 Foundation LICENSE](https://github.com/x402-foundation/x402/blob/main/LICENSE) and [Stellar x402 LICENSE](https://github.com/stellar/x402-stellar/blob/main/LICENSE) are Apache-2.0 at current observed blobs `b09cd7856d58590578ee1a4f3ad45d1310a97f87` and `ece1adf90dce5e3c0b1abff7facfc978216293bb`. Publish novel own interfaces under a compatible permissive license after explicit maintainer selection; preserve upstream copyright/license and attribution, never import incompatible AGPL relayer code into the required product. Technical upstream contributions need normal owner/reviewer authorization. Link RFP and core specs; no private Commons source exported.
-
-**Boundaries:** discovery/catalog adapter, canonical SDK execution adapter, wallet/policy layer, evidence/receipt layer, operator backend, and SDK/CLI must have stable versioned contracts. Sell services/support without trapping sellers in proprietary receipts/indexing. Maintain a vendor-neutral export of approved resource metadata and owner-safe deletion mechanism.
-
-**Stewardship proposal:**
-- Responsible maintainer + named backup, one source-of-truth public repository for released library, artifact manifests and handoff ledger; preserve original PR authors and HEADs.
-- Public proposal/RFC issue style, signed/tagged version boundaries and changelog with upstream x402 schema and Stellar network spec pin, deprecation window and backwards-compatibility contract.
-- Trust/reporting policy: vendor must opt in to listing or give valid public permission; allow delisting, correction, seller endpoint verification, indexing-abuse limit and incident contact. Do not publish private keys, paid buyer data, private resource names or sensitive vulnerability disclosures.
-- Security response: responsible private report path, ownership, severity and coordinated disclosure path once approved, no open PR exposing exploitable details. Spell out operational authority and escalation time windows before taking real user payments.
-- Changelog of protocol differences and external issue references; precision for unsupported scheme/network/asset and stale licenses. Independent actual regression comparisons scoped to changed implementation; **no hosted Actions or broad CI suites**.
-- Grant/cash separation: publish free self-host core and docs; optional support/managed hosting contracted separately, with billing and margin measured by actual SF-08 cost model. Vendor counts, user adoption, uptime and revenue must be independently observed.
-
-### Operational measures and truthful vocabulary
-
-| Measure / KPI | Definition | Present status |
+| Alternative | Already available according to its current source | The customer's remaining decision |
 | --- | --- | --- |
-| Discovery coverage | Confirmed seller-permitted resources discoverable / seller-permitted canonical resources inventoried; exact cohort/date | UNKNOWN, no original opt-in merchant corpus acquired by this SF-49 seat |
-| Listing freshness | `observation_at`, canonical source version/ETag; stale ratio over owner-approved set | UNKNOWN; design requirement |
-| Paid checkout completion | Delivered resources with matching canonical settle receipt / actual explicit buyer purchase attempts | UNKNOWN; a GitHub issue is not a cohort |
-| Catalog provenance | Advertised vs verify-processing vs indexed vs settled vs fulfilled mutually distinguishable in event schema | Research requirement, not deployed |
-| Search precision/latency | NDCG@10, Recall@10, p50/p95 measured on same frozen actual labeled resources with evaluator source pins | UNKNOWN; SF-41/42 future experiment |
-| Active users / integration partners | Confirmed consenting human/operator counterparties and actual use verified, not GitHub issue authors | **0 verified by this SF-49 seat** |
-| Service/operator cost | RPC, storage, crawler, compliance, support and fee sponsorship by measured volume; SF-08 authoritative | UNKNOWN until measured |
-| Closed revenue | Contract, invoice and settlement/provider receipt; kept distinct from forecast or lead value | **0 generated/verified by this workstream** |
+| [Canonical x402 client](https://github.com/x402-foundation/x402/blob/f8f83309706b14cc696962f0a002eeeb66c3dc26/typescript/packages/core/src/client/x402Client.ts) | Payment policies, per-payment spending controls and asset caps are present in current core source. | How to integrate persistent operational approval, concurrent budget use, saved output and recovery into the customer's application |
+| [Stellar x402 / OpenZeppelin facilitator](https://developers.stellar.org/docs/build/agentic-payments/x402) | Canonical Soroban authorisation and settlement; the documented OpenZeppelin service has testnet and mainnet endpoints. | Which supported provider and operating arrangement meets the merchant's network, fee, availability and support needs |
+| [Vellar facilitator](https://github.com/Vellar-Wallet/vellar-facilitator) | Current repository reports live testnet/mainnet, seller-origin ownership checks, durable catalog and policy-governed smart-account compatibility. | Whether a merchant's actual operation and independent buyer work together; how its deployment handles provider migration, ownership changes and delivery |
+| [Veridex](https://github.com/Veridex-Protocol/stellar-facilitator) | Its current source reports testnet exact settlement, an HTTPS API gateway, keyless MCP, settlement-backed Bazaar and an experimental provider-quality layer. | Whether the customer needs the provider's full stack or portable operation and reporting across independently selected providers |
+| [Periplo](https://github.com/Eras256/Periplo) | Its source reports deployed testnet facilitation, catalog/search and a custom contract-based metered scheme; pubnet remains planned there. | Whether the exact payment scheme, catalog interface and customer integration fit the intended production use |
+| [Stellar MPP](https://developers.stellar.org/docs/build/agentic-payments/mpp) | Charge uses native SAC transfers; Session uses a funded one-way channel and cumulative commitments. | Whether individual calls or a repeated workload justify a different rail and its actual operating costs |
 
-Do not invent SLAs before service operates. Candidate *goals to negotiate* once measured: data age freshness objective, search p95 at named corpus size, actual success/error budget, private-key isolation, incident acknowledgment and rollback, offboarding/export. A stated target is not an achieved SLO.
+**Vellar source correction:** the repository's [mainnet evidence](https://github.com/Vellar-Wallet/vellar-facilitator/blob/main/docs/mainnet-evidence.md), blob 9f462eebff843d77c8cabef6addb66ba65e8f497, records 11 team-funded pubnet settlements totalling 3.10 USDC during September 17–21. It explicitly separates those tests from external customer use. Its README, blob 67eb604cf26b349f93eff3f1cea1e95b02cebebd, also describes always-on paid hosting. The Stellar overview still described Vellar as testnet-only/free-tier when read October 11. Use the newer provider implementation record for this comparison; the source report is not an independent ledger replay by SF49.
 
-## 6. Release and commercialization gates
+The candidate advantage is the complete, portable merchant operation: original API or dataset → selected catalog and offer → operator-approved buyer → canonical settlement → useful delivered output → merchant order and ongoing support. An independent merchant should be able to retain the same application contract while changing a compatible provider, and its operator should be able to explain and recover an interrupted purchase from the original records.
 
-1. **First-party contract:** current x402 Bazaar wire spec and Stellar SDK version pinned to actual immutable commit; zero hidden required workflows.
-2. **Merchant permission and method semantics:** route owner and canonical methods/accepted amounts obtained with consent. No mass probing of third-party paid endpoints.
-3. **Original-source search proof:** real allowed corpus, recorded source hash/provenance, frozen query judgments, paired baseline and candidate on identical original data, direct logs/errors.
-4. **Checkout success:** a legitimately authorized testnet buyer pays for ordinary seller API and receives result through actual SDK/tool, or the exact missing component stays explicitly unshipped.
-5. **Economics:** supported paid unit cost and buyer willingness evidence, separate from SCF award projections.
-6. **Human applicant:** independent current SCF track and eligible human persons confirmed; forms stay owner-held.
-7. **Contact control:** each outreach draft carries exact owner, buyer, personal suppression, previous relationship search, sender/recipient/body authorization, and measured product evidence; no sender acts from a general grant pivot order.
-8. **Mainnet and funds:** operator/legal/security readiness + owner's explicit separate consent before external paid calls, custody, cloud purchases or contract commitments.
+This is a product hypothesis to demonstrate on a customer deployment. Basic discovery, gateway wrapping, ownership checks, payment policies and Stellar settlement are existing capabilities across the ecosystem. Custom metered schemes and MPP remain distinct protocol paths; a classifier or cost comparison does not add their execution to the current exact-payment seller.
 
-## 7. Ready-to-post independent fleet follow-ons (not competing claims)
+## 4. Opportunity-to-paid-delivery workflow
 
-These are **new suborders for authorization/coordination**, not instructions to overwrite original SF owners or contact firms.
+**Discovery.** Find a first-party service with a useful paid resource, an explicit customer request or a live procurement need. Read the current API/product documentation and identify what an agent buyer would actually consume. Record the resource, use case, current commercial model, company, date and source. Search existing private sales and sender threads before claiming a relationship.
 
-- **SF49-ADOPT-01 — Independent-client acceptance, cross-protocol.** Use x402#3657 as repaired historical context and requalify #3511 against current source before asserting a live gap. Coordinate original SF-25/26 owners; apply existing diagnostics to a genuinely permissioned merchant-selected operation. Exit: a same-method original-source observation with clearly separated current defect, unknown coverage or no reproduced defect. No outreach authority comes from this research record.
-- **SF49-ADOPT-02 — Stellar merchant friction and trustline price parity.** Research lead: genuine current main source review against stellar#55/#74 and whether upstream already corrected behavior. Coordinate SF-15/16. Exit: original mismatch/no-mismatch by current file blob and seller-focused proof of value; no duplicative patch.
-- **SF49-ADOPT-03 — Public ecosystem adoption proof census.** Research lead: find five real opt-in Stellar seller APIs and five actual public agent integrations whose source/permission supports cataloging; preserve URL, source hash, current asset/network, rights, independent response and metadata. Coordinate SF-41/42; **do not** invent customers or automatically crawl private data. Exit: original-backed dataset and zero/unknown flags.
-- **SF49-ADOPT-04 — Founder-approved commercial pilot conversion.** Business lead: after verified operator willingness, prepare one evidence-specific pilot scope, unit costs, noncustodial trust model and actual owner-held unsent message for two unique, unclaimed counterparties. Coordinate existing sales and suppression log. Exit: owner-reviewed *UNSENT* briefs; delivery/contact only on explicit release.
-- **SF49-ADOPT-05 — Public maintenance/sustainability kit.** Maintainer lead: security policy template, independent release matrix, issue triage/protocol-drift ledger and self-host guide, all source-pinned; no Actions, hosted CI, or private repo. Exit: public drop-in maintainer docs with actual upstream versions and update checklist.
+**Qualification.** Identify the real operator and commercial decision-maker through the service's own published contact information or existing verified correspondence. Determine who can approve the API/data use, the deployment environment, network and fee payer, supported request shape, customer acceptance and purchasing route. This can happen through authorized outreach; unknown commercial details are questions to resolve with the prospect, not reasons to leave a completed introduction unsent.
 
-### UNSENT sample proof-focused technical introduction (not addressed, not delivered)
+**Solution.** Assign one relationship owner and complementary implementation arms. The integration arm maps the customer's operation through seller, catalog, buyer and delivery. The operating arm covers install, recovery, support and costs. The commercial arm scopes the paid outcome and follows the existing thread to a decision. A project claim coordinates these arms; it does not reserve every possible engineering contribution.
 
-> Subject: x402 catalog-to-checkout failure evidence and a narrow fix  
-> We have been studying public x402 checkout failures where a listing looks correct but a buyer's signed retry or schema fails. We're preparing a reproducible, source-versioned diagnostic that maps the advertised method, payment challenge, signed retry and delivered result. Before testing anything against a live endpoint, we'd like to confirm whether you are its operator and whether a read-only, explicitly scoped diagnosis would be useful. We can provide a short evidence packet and discuss optional repair/validation terms if there is a fit.
+**Outreach.** Send a concise, tailored message through the authorized verified sender when outreach is authorized and the actual recipient is not held. State the observed fit, the concrete deliverable, commercial intent and the question that advances qualification. Use current source facts; send one first contact per company/opportunity and retain its provider ID. Continue an established conversation in its original thread. No second draft-approval gate is created by this playbook.
 
-Use only if buyer/operator identity and professional route are **independently verified**, prior relationship and suppression screened, actual evidence is ready, and Bryce has approved the **exact** recipient/sender/message. No mass-send, implied affiliation, paid service without agreement or SCF funding representation.
+**Paid scope.** Agree the customer outcome, included operations and environments, deployment responsibilities, support window, acceptance conditions, price, payment schedule and additional-work process. Use the existing SF77 workorder for a diagnosed repair and SF97 for the integrated merchant pilot. The customer receives a useful deployed integration and operating handoff, not a bundle of assertions about software tests. Preserve the original agreed compensation and receiving route.
 
-## Source and decision boundaries
+**Build and deliver.** Work from current source and the customer's authorised configuration. Finish the combined merchant journey, resolve real failures encountered, and hand over the deployment, original request and output, reconciliation, operational instructions and source changes. Use the focused checks necessary for changed behaviour and reuse accepted executions. Hosting costs and live payment authority are established by the actual deployment agreement; the sales mandate alone is not a purchase instruction.
 
-- Official SCF Build/RFP / current-quarter eligibility: https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/rfp-track (listed x402 RFP says Q3/#45; #46 applicability open, no contact)
-- Official #46 round: https://communityfund.stellar.org/awards
-- Official funded #45 recap: https://medium.com/stellar-community/scf-45-round-recap-1ecf281821ab
-- Canonical x402: https://github.com/x402-foundation/x402
-- Stellar reference: https://github.com/stellar/x402-stellar
-- Relevant issue facts: dated source links in §2 and companion JSON; only #3657 and PR3741 refreshed October 11. An open issue is not proof of an unfixed deployed seller.
-- SF-09 peer funding strategy: [merged main artifact](./SF09_TRACK_DECISION_20261009.md)
+**Acceptance and collection.** Capture the customer's technical acceptance separately from its commercial agreement. Issue the authorized invoice and payment request under the agreed terms; follow it through the existing relationship until paid or specifically resolved. Record a disputed requirement against the original scope and preserve the compensation claim while addressing it. Delivery, acceptance, invoice, receivable and collected payment remain separate events.
 
-**Evidence quality:** This seat independently retrieved the native GitHub public issue metadata and full summaries and current LICENSE files. This is an actual public first-party problem census; it **does not** claim to have exercised production endpoints, compiled original x402 source, simulated Stellar settlements, validated operator identity, received permission to index, or won a client. Source statements derived from GitHub issues remain marked as reporters' claims pending independent tests. Downstream producers can and should build real exact-original-data acceptance proofs as soon as separate ownership/authorization and actual source availability permit; no arbitrary artificial sample caps.
+**Expansion.** After the first outcome, ask which adjacent API, dataset, buyer team or operating problem the customer needs solved. Reuse the same integration and relationship history to propose the next substantial package. Publish reusable public code and product learning while keeping the customer's private information in its existing record.
 
-**Separation:** SF-49 owns adoption truth and sustainable operator/lead process, not competing module patches, grant contact, vendor relationships or application. Done means the plan+issue-ledger were published, not that customer acquisition or commercial outcomes happened.
+## 5. Qualification and delivery record
+
+Use the existing private commercial system. Each opportunity needs the following information, with unknown fields left explicit until learned:
+
+| Field | What belongs in it |
+| --- | --- |
+| Stable operation and owner | Company/opportunity identity, existing conversation and complementary implementation owners |
+| Buyer and useful job | Who consumes the resource, what it enables, frequency/volume supplied by the customer |
+| Resource rights | Actual operator, chosen API/data, contractual redistribution and deployment permissions |
+| Request contract | Exact method, URL/template, required query/body, response format and source version |
+| Payment contract | Network, scheme, asset contract, atomic amount, recipient, fee payer and actual operator authority |
+| Existing environment | Source checkout, versions, origin, application/data adapter, hosting and required credentials handled privately |
+| Commercial terms | Agreed deliverables, acceptance, price, cost assumptions, invoice/payment dates and original approvals |
+| Delivery record | Original deployment, request/result, customer acceptance, retained output and recovery procedure |
+| Payment record | Invoice, receivable, dispute if any, actual payment and fees; preserve the original claimant and terms |
+
+Commercial states are DISCOVERED → QUALIFIED → SENT → REPLIED → SCOPE AGREED → DELIVERED → ACCEPTED → INVOICED → PAID, as appropriate to the actual sequence. A customer can pay a deposit before delivery; store events rather than forcing reality into a rigid order. A bounce updates the send result and routes a verified alternative within the same opportunity. A technical acceptance does not by itself mark an invoice paid.
+
+## 6. Sustainable delivery and measurable growth
+
+Open source makes the merchant free to self-host and change implementer. Paid services finance integration, maintenance and support. The project should earn continued work because the installed product is useful and supported, while retaining the upstream license notices and the released source's actual licence.
+
+Use the original [SF87 rail model](../scf-starforge-20261009/sf87-rail-unit-economics/) for a customer's supplied workload and the [SF97 review room](../scf-starforge-20261009/sf97-merchant-pilot-conversion/) for its decision. Unknown network, infrastructure or support costs remain unknown. A modeled comparison is not an invoice or margin result.
+
+| Measure | Calculation and use |
+| --- | --- |
+| Qualified conversations | Distinct verified companies that confirmed a relevant need / first contacts with a known delivery result |
+| Paid conversion | Customers with agreed paid scope / qualified conversations in the same dated cohort |
+| Integration effort | Actual setup, implementation and handover hours by accepted customer operation; compare the same scope before claiming savings |
+| Operational checkout completion | Purchases with matching final settlement and delivered result / actual authorised purchase attempts; preserve failures and uncertain outcomes |
+| Recovery | Interrupted original operations whose existing records permit resolution, with elapsed operator time and any additional authorised action |
+| Repeat usage | Distinct independent buyers making repeat successful purchases during a stated window, using permissioned counting |
+| Stellar activity | Unique canonical transaction hashes, actual token amounts and network, linked to the product's customer operations; exclude local examples and duplicate provider records |
+| Service contribution | Collected service fee minus its actual delivery, infrastructure, transaction and support costs |
+| Cash cycle | Dates of accepted scope, deposit, delivery, invoice and payment; track earned or invoiced amounts still due |
+| Maintenance load | Actual support hours, resolved recurring defects and cost by maintained deployment |
+
+Publish aggregate results only where customer permissions allow. Do not invent a service-level promise, volume target, customer count or margin to fill an application field. The current private commercial ledger and actual deployment records determine totals; the nine historical issue records are not a customer population.
+
+## 7. Substantial parallel work orders
+
+### SF49-MERCHANT-DEPLOY — Complete a merchant-owned paid API/data service
+
+Take a qualified existing relationship and its selected resource through original SF61/SF30, catalog lifecycle, SF88 buyer, delivered output, transaction reconciliation and merchant operations. Coordinate application, buyer and operations arms on one customer deployment. Finish source changes, installation, authorised end-to-end customer operation, handoff and agreed support. Record technical failures as work to repair. Relationship ownership, customer data and terms stay in the original private record.
+
+### SF49-PAID-WORKSHARE — Convert a qualified provider into an integration engagement
+
+Find a source-qualified, unclaimed API/data or agent-tool provider, verify the correct commercial contact and existing sender history, prepare a concrete integration fit and send the authorized tailored introduction. Work its replies toward a paid scope, complete the agreed engineering with the implementation arm, issue the authorized payment request and record the result. A ready draft or a new follow-up trigger is not the completed outcome.
+
+### SF49-OPERATING-PRODUCT — Make the existing deployment supportable
+
+Join installation, catalog changes, buyer restart recovery, seller drain, delivery outbox, encrypted backup/restore, order entitlement and accounting into the existing operator experience. Resolve actual gaps in the original modules, using source and accepted execution already available. Deliver a customer-usable operational guide and the integrated implementation. Keep paid hosting choices explicit and use local/cloud checks without hosted GitHub Actions spending.
+
+### SF49-GRANT-INTEGRATION — Put current outcomes into the existing SF10 application
+
+Use the same original interest intake and full application. Replace obsolete capability and competitor statements with current source-grounded descriptions, and distinguish delivered pre-award work from the remaining development plan. Put the customer, architecture, remaining deliverables, budget and measurement definitions directly into the required form fields. Coordinate with the active form owner, complete the authorized submission workflow, and retain its actual receipt and entered content. Do not fork a second proposal.
+
+## 8. Outreach content and source maintenance
+
+A tailored first contact should identify the customer's real service, the useful implementation outcome, the relevant existing source and an explicit commercial next step. A suitable structure is:
+
+> Your published [specific resource] already serves [verified use case]. We can help add an agent-usable Stellar payment route while retaining your existing application and commercial offering. The implementation covers the selected API/data operation, buyer checkout, usable delivery and operator handoff. Our existing seller and buyer source is available at [relevant source]. Would [verified contact/team] be the right group to discuss a paid integration workshare and the resource you would start with?
+
+Resolve bracketed facts before sending. Adapt the scope to what the source supports and the customer needs. The public introduction does not require private relationship history, a grant claim or an invented endorsement. Use exact approved terms for an existing opportunity rather than replacing them with this template.
+
+Maintain the same nine-signal ledger as a dated research record. Update a particular issue only when its current source is read; preserve historical observations and correction dates. Use the original private relationship record for sent, replied, accepted and paid events. Do not republish private customer correspondence or personal handoff stories in this public document.
+
+## Sources and SCF use
+
+- [SCF #46 round](https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg): interest requested as soon as possible; invited Build submission deadline November 8, 2026, when checked October 11.
+- [Build process](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award): rolling interest review and invitation before the full application.
+- [Open Track](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/open-track): demonstrate meaningful differentiation, market value, Stellar integration and measurable growth.
+- [Submission criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria): the full submission must contain the material reviewers need, including roadmap, technical architecture and deliverable costs.
+- [x402 core source at f8f8330](https://github.com/x402-foundation/x402/blob/f8f83309706b14cc696962f0a002eeeb66c3dc26/typescript/packages/core/src/client/x402Client.ts): existing client payment policies and spending controls.
+- [Vellar mainnet source record](https://github.com/Vellar-Wallet/vellar-facilitator/blob/main/docs/mainnet-evidence.md), [Veridex current source](https://github.com/Veridex-Protocol/stellar-facilitator), [Periplo current source](https://github.com/Eras256/Periplo): provider capability statements, with the observation limits in §3.
+- [Stellar x402](https://developers.stellar.org/docs/build/agentic-payments/x402) and [MPP](https://developers.stellar.org/docs/build/agentic-payments/mpp): canonical rail distinction and integration paths.
+- [Original SF09 track decision](./SF09_TRACK_DECISION_20261009.md) and [original demand ledger](./SF49_PUBLIC_SIGNALS_20261009.json): dated inputs, not the live submission or relationship record.
+
+The public-source revision changes the commercial operating guidance and current market comparison. It does not alter the original issue ledger, existing compensation claims, customer terms, published payment receipts or the canonical applicant record.
+

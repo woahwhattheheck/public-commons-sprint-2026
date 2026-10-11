@@ -171,7 +171,8 @@ function terms(payment) {
 }
 
 /** Keep each quoted network/asset/payee/amount together, in merchant order. */
-function paymentOptions(input) {
+export function normalizeSellerPaymentOptions(input) {
+  obj(input);
   const single = hasOwn(input, 'payment'), multiple = hasOwn(input, 'paymentOptions');
   if (single === multiple) throw new TypeError('Choose payment or paymentOptions, not both');
   const supplied = multiple ? input.paymentOptions : [input.payment];
@@ -197,7 +198,7 @@ export function compileHttpSellerOffer(input, { allowLocalhost = false } = {}) {
   if (!METHODS.has(method)) throw new TypeError('Unsupported HTTP method');
   const url = resourceUrl(input.url, allowLocalhost);
   const metadata = serviceMetadata(input);
-  const accepts = paymentOptions(input);
+  const accepts = normalizeSellerPaymentOptions(input);
   const { inputInfo, inputSchema } = parameters(input, method);
   if (input.routeTemplate !== undefined) {
     const tpl = input.routeTemplate;
