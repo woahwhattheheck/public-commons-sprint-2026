@@ -109,7 +109,7 @@ export function merchantDeclaration(plan) {
       spot_instruments: providerFunction('spot_instruments', '/spot/instruments', 'Read the selected Amberdata spot instrument and its actual availability; one deliberate original provider page.'),
       spot_ohlcv: providerFunction('spot_ohlcv', '/spot/ohlcv', 'Read one original Amberdata OHLCV page for the retained exchange, instrument and explicit time window.'),
       ohlcv_summary: {
-        path: '/research/ohlcv-summary', method: 'POST', description: 'Summarize original Amberdata REST pages or retained CloudSync candles, with source identities, exact decimal values, interval coverage and optional cross-interval comparison.',
+        path: '/research/ohlcv-summary', method: 'POST', description: 'Summarize original Amberdata REST pages or retained CloudSync candles, with source identities, decimal OHLCV, observed price change and range, interval coverage and optional cross-interval comparison.',
         payment: payment('ohlcv_summary'),
         inputSchema: { type: 'object', properties: {
           pages: { type: 'array', minItems: 1, maxItems: plan.limits.maxPages, items: {
