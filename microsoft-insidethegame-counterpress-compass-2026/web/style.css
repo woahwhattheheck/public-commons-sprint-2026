@@ -25,6 +25,9 @@ button:disabled{opacity:.45;cursor:not-allowed}
 .clock{text-align:center}.clock strong{display:block;font-size:2.1rem;font-variant-numeric:tabular-nums;line-height:1.1}
 .state{font-size:.7rem;letter-spacing:.12em;padding:2px 9px;border-radius:99px;background:#243b49}
 .state.live{background:#b3261e;color:#fff}.state.ft{background:#3b4f1f}
+.state.reconnecting{background:#334452;color:#f3e9ce}
+#recover:not([hidden]){border-color:var(--gold);background:#283844}
+#recover[hidden]{display:none}
 .note{font-size:.74rem;color:var(--muted);margin:6px 0}
 .pitchwrap{position:relative;margin-top:6px}
 svg.pitch{width:100%;height:auto;display:block;border-radius:10px}
