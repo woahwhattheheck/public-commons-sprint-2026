@@ -16,6 +16,8 @@ init --session ABS --config ABS --description ABS --object ID --max-total-atomic
      [--chunk-bytes N] [--workspace ABS]
 init --session ABS --config ABS --bytes N --chunk-bytes N --snapshot SHA256
      --max-total-atomic UNITS [--sha256 SHA256] [--content-type MIME] [--workspace ABS]
+init --session ABS --config ABS --delivery-mode whole --bytes N --snapshot SHA256
+     --max-total-atomic UNITS [--sha256 SHA256] [--content-type MIME] [--workspace ABS]
 status --session ABS
 run --session ABS [--workspace ABS]
 recover --session ABS
@@ -27,8 +29,9 @@ finalize --session ABS [--workspace ABS] [--offset 0] [--limit 100]
          [--outbox ABS --merchant-route ABS]
 
 init selects one ORIGINAL SF30 S3 objects.json row, or explicit reviewed object facts.
-run uses the original buyer inbox, fresh per-chunk approval and configured spending ledger.
-Completed chunks are reused. Previously attempted uncertain chunks are never sent again.
+Whole products use one GET without a query, including an empty file; chunks use exact ranges.
+run uses the original buyer inbox, fresh per-request approval and configured spending ledger.
+Completed responses are reused. Previously attempted uncertain requests are never sent again.
 status, recover, assemble, report and export work offline without signing keys.
 accounting reads saved native receipts; finalize reconciles original reservations without another purchase.
 Accounting ranges are zero-based. Continue range.nextOffset and inspect any unresolved entries.
@@ -38,7 +41,7 @@ const common = ['session'];
 function parse(tokens) {
   const [command,...args] = tokens;
   const additions = {
-    init:['config','description','object','bytes','chunk-bytes','snapshot','sha256','content-type','max-total-atomic','workspace'],
+    init:['config','description','object','bytes','chunk-bytes','delivery-mode','snapshot','sha256','content-type','max-total-atomic','workspace'],
     status:[], run:['workspace'], recover:[], assemble:['out'], report:['out'], export:['out'],
     accounting:['workspace','offset','limit'], finalize:['workspace','offset','limit','outbox','merchant-route'],
   }[command];
@@ -65,6 +68,11 @@ function offset(value) {
   if(value===undefined)return 0;
   need(/^(0|[1-9][0-9]{0,15})$/.test(value)&&Number.isSafeInteger(Number(value)),
     'OBJECT_ACCOUNTING_RANGE_INVALID');
+  return Number(value);
+}
+function wholeBytes(value) {
+  need(typeof value === 'string' && /^(0|[1-9][0-9]{0,15})$/.test(value) &&
+    Number.isSafeInteger(Number(value)), 'OBJECT_WHOLE_BYTE_COUNT_REQUIRED');
   return Number(value);
 }
 
@@ -96,12 +104,15 @@ export async function main(tokens = process.argv.slice(2)) {
     need(f.config && f['max-total-atomic'], 'OBJECT_CONFIG_AND_TOTAL_CAP_REQUIRED');
     let selected;
     if (f.description !== undefined || f.object !== undefined) {
-      need(f.description && f.object && ['bytes','snapshot','sha256','content-type'].every(key => f[key] === undefined),
+      need(f.description && f.object && ['bytes','delivery-mode','snapshot','sha256','content-type'].every(key => f[key] === undefined),
         'OBJECT_SELECT_DESCRIPTION_OR_EXPLICIT_FACTS');
       selected = await selectObjectDescription({descriptionPath:f.description, objectId:f.object,
         configPath:f.config, chunkBytes:positive(f['chunk-bytes'],true)});
     } else {
-      selected = {bytes:positive(f.bytes), chunkBytes:positive(f['chunk-bytes']),
+      const deliveryMode = f['delivery-mode'] ?? 'chunks';
+      need(['whole','chunks'].includes(deliveryMode), 'OBJECT_DELIVERY_MODE_INVALID');
+      selected = {deliveryMode, bytes:deliveryMode === 'whole' ? wholeBytes(f.bytes) : positive(f.bytes),
+        chunkBytes:positive(f['chunk-bytes'],deliveryMode === 'whole'),
         expectedSnapshot:f.snapshot, expectedSha256:f.sha256 ?? null,
         expectedContentType:f['content-type'] ?? null};
     }
@@ -131,7 +142,7 @@ export async function main(tokens = process.argv.slice(2)) {
         : await runObjectSession(f.session,{signal:controller.signal,
         ...(f.workspace === undefined ? {} : {workspace:f.workspace}),
         onChunk:state => process.stderr.write('Object: '+state.completeChunks+'/'+state.chunkCount+
-          ' chunks, '+state.downloadedBytes+' bytes, '+state.status+'\n')});
+          ' requests, '+state.downloadedBytes+' bytes, '+state.status+'\n')});
     } finally {
       process.off('SIGINT',interrupt); process.off('SIGTERM',terminate);
       if (signalExit) process.exitCode = signalExit;
