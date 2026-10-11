@@ -153,6 +153,7 @@ export async function openCubeEditions({ root, workbenchId, originalBytes, creat
     return { ...selected, items };
   }
   async function reviewRefresh({ baseVersion, metadataId, operator, decisions, previousReview = null }) {
+    await restoreActive();
     text(operator, 'Review operator', 240);
     const base = await inspectVersion(checkId(baseVersion)), before = await metadata(base.metadataId), target = await metadata(metadataId);
     if (previousReview) {
@@ -177,6 +178,8 @@ export async function openCubeEditions({ root, workbenchId, originalBytes, creat
     return inspectReview(name);
   }
   async function applyRefresh({ reviewId, reviewSha256 }) {
+    // Recover a complete application whose subsequent fsync or cleanup failed.
+    await restoreActive();
     const saved = await openReview(reviewId), { manifest, review } = saved;
     if (reviewSha256 !== saved.reviewSha256) throw new TypeError('Reopen the exact saved review before applying it');
     if (review.status !== 'READY') throw new TypeError('Resolve the original compiler findings in a successor review');
@@ -209,22 +212,44 @@ export async function openCubeEditions({ root, workbenchId, originalBytes, creat
     return { review: await inspectReview(saved.id), version, alreadyApplied: false };
   }
   async function restoreActive() {
-    const candidates = [];
+    const applied = new Map(), children = new Map(), roots = [];
     for (const entry of await readdir(reviewRoot, { withFileTypes: true })) {
       if (!entry.isDirectory() || !ID.test(entry.name)) continue;
-      const bytes = await optional(join(reviewRoot, entry.name, 'applied', 'application.json'));
-      if (bytes) candidates.push({ id: entry.name, application: parse(bytes, 'Schema application') });
-    }
-    candidates.sort((a, b) => String(b.application.appliedAt).localeCompare(String(a.application.appliedAt)) || b.id.localeCompare(a.id));
-    if (candidates.length) {
-      const saved = await openReview(candidates[0].id);
+      if (!await optional(join(reviewRoot, entry.name, 'applied', 'application.json'))) continue;
+      const saved = await openReview(entry.name);
+      if (!saved.application || saved.review.status !== 'READY')
+        throw new TypeError('An applied schema review is incomplete or was not ready');
       const version = await inspectVersion(saved.manifest.targetVersion);
       if (version.view.planSha256 !== saved.application.planSha256 || version.view.metadataSha256 !== saved.application.metadataSha256)
-        throw new TypeError('Active refresh version binding changed');
-      active = { id: saved.id, ...saved.application, metadataId: saved.manifest.metadataId };
+        throw new TypeError('An applied native version binding changed');
+      applied.set(entry.name, saved);
     }
+    if (!applied.size) { active = null; return null; }
+    for (const [name, saved] of applied) {
+      const parent = saved.manifest.parentAppliedReview;
+      if (parent === null) { roots.push(name); continue; }
+      if (typeof parent !== 'string' || !ID.test(parent) || !applied.has(parent))
+        throw new TypeError('The retained schema application chain has a missing parent');
+      if (children.has(parent))
+        throw new TypeError('The retained schema application chain diverges; inspect the conflicting reviews');
+      children.set(parent, name);
+    }
+    if (roots.length !== 1)
+      throw new TypeError('The retained schema applications do not form one rooted chain');
+    const visited = new Set(); let terminal = roots[0];
+    while (true) {
+      if (visited.has(terminal)) throw new TypeError('The retained schema application chain contains a cycle');
+      visited.add(terminal);
+      if (!children.has(terminal)) break;
+      terminal = children.get(terminal);
+    }
+    if (visited.size !== applied.size)
+      throw new TypeError('The retained schema application chain contains a disconnected cycle');
+    const saved = applied.get(terminal);
+    active = { id: saved.id, ...saved.application, metadataId: saved.manifest.metadataId };
     return active;
   }
+
   async function download({ kind, item, file }) {
     if (kind === 'metadata' && file === 'cube-meta.json') return (await metadata(item)).bytes;
     if (kind === 'metadata' && item !== 'original' && file === 'edition.json') {
