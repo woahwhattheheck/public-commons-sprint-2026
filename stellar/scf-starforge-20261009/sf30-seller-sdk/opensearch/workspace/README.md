@@ -39,7 +39,7 @@ A comparison describes its two retained result editions. Their complete query, i
 
 The adapter's original unsafe-integer representation is preserved unchanged: decimal strings, its numberEncoding value, and every hit's exactIntegerPaths. Original numeric tokens therefore remain distinguishable from original string identifiers. JSON downloads come from the retained server result text. The browser's display and table previews are separate views.
 
-CSV contains original index, document ID, score, selected fields, complete source JSON, native sort JSON and exact-integer paths. Formula-like text, leading-zero text and long integer text receive a leading apostrophe for spreadsheet safety and precision. Use the result JSON for the unchanged adapter representation. CSV cell previews in the browser never replace the full download.
+CSV contains original index, document ID, score, selected fields, complete source JSON, native sort JSON and exact-integer paths. Selected nested fields retain arrays and their positions in both the table and CSV; the full source JSON preserves every captured document structure. Formula-like text, leading-zero text and long integer text receive a leading apostrophe for spreadsheet safety and precision. Use the result JSON for the unchanged adapter representation. CSV cell previews in the browser never replace the full download.
 
 For the underlying provider contracts, see [OpenSearch Search](https://docs.opensearch.org/latest/api-reference/search-apis/search/), [Point in Time](https://docs.opensearch.org/latest/api-reference/search-apis/point-in-time-api/) and [Field Capabilities](https://docs.opensearch.org/latest/api-reference/search-apis/field-caps/).
 
