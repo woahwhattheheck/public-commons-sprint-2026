@@ -3,7 +3,7 @@
 A local merchant setup application connecting an OpenAPI-described backend to
 the original SF61 compiler, SF30 native upstream seller, SF82 saved pilot and
 SF96 operations dashboard. It supports configure → review → save → run → check →
-stop → reopen. GET, HEAD, DELETE and JSON POST, PUT, PATCH backends use the
+stop → reopen. GET, HEAD, DELETE and JSON or multipart POST, PUT, PATCH backends use the
 original native method support and need no custom JavaScript.
 Optional GET/HEAD result sharing, declared response validation and backend
 availability controls use the same native launcher and saved package. Durable
@@ -16,6 +16,7 @@ outside the checkout, then launch:
 
 ~~~sh
 npm ci --prefix stellar-forge/payment-auto-catalog --ignore-scripts
+npm ci --prefix stellar/scf-starforge-20261009/sf61-openapi-seller-import --ignore-scripts
 mkdir -m 700 /tmp/my-merchant-projects
 node stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs \
   --out-parent /tmp/my-merchant-projects --port 0
@@ -23,7 +24,8 @@ node stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.
 
 The install supplies the pinned engine for API string patterns. Existing
 descriptions without patterns can run without it; pattern-bearing schemas
-require the engine and retain their original assertions.
+require the engine and retain their original assertions. The second install
+supplies exact `yaml@2.9.1` for OpenAPI YAML. JSON source needs no YAML engine.
 
 Open the complete loopback URL printed by the command. Its fragment contains
 the workspace's temporary access token. The interface uses exact local origin
@@ -37,7 +39,7 @@ reuses the SF82 description with explicitly nonpayable demonstration terms.
 
 ## Configure a merchant
 
-1. Load the merchant's original OpenAPI 3.0 or 3.1 JSON description.
+1. Load the merchant's original OpenAPI 3.0 or 3.1 JSON or YAML description.
 2. Enter the public HTTPS seller server, including its path prefix, Stellar
    network, asset identifier, payment recipient and timeout.
 3. Select operations, choose their declared backend servers, and enter positive
@@ -52,7 +54,7 @@ reuses the SF82 description with explicitly nonpayable demonstration terms.
    [OAuth setup and saved-package guide](AUTHENTICATION.md). The browser accepts
    credential references only.
 5. Enter a short public description and, where needed, a **public request example**
-   containing `pathParams`, `query`, and a JSON `body`. These are reusable values
+   containing `pathParams`, `query`, and a declared `body`. These are reusable values
    advertised to buyers, so use demonstration values. The original schemas check
    them; they do not replace the API's constraints. Explicit samples also prepare
    dynamic routes and mutations for the existing unpaid route checker.
@@ -87,11 +89,17 @@ look like this (the names and values must match the imported operation):
 }
 ~~~
 
-POST, PUT and PATCH route checks need a body; DELETE needs an explicit example
+JSON POST, PUT and PATCH route checks need a body; DELETE needs an explicit example
 but no body. A static GET or HEAD can use the description's own query examples.
 Samples are limited to 8 KiB each and the combined saved cases to 64 KiB. If the
 API supplies no required body/path example, enter one before validation. Only
 the original challenge-only seller is called by **Check unpaid routes**.
+
+Multipart routes use actual privately selected files in the running operation
+form. The generic public-example checker marks them `PRIVATE_FILE_REQUEST`;
+it does not manufacture file bytes from an advertised string example. Follow
+the [complete file input workflow](FILE_INPUT.md) for source import, retained
+file review, original ticket issuance, buyer preparation and restart/reopen.
 
 The saved service enables the original request-schema admission before payment
 verification. Declared response contracts are enforced by the original upstream
@@ -275,7 +283,7 @@ defines the discriminator as a hint that cannot change validation results. The
 original source and generated facade keep it. Unsupported assertion keywords
 still produce the original validator's error.
 
-Cookie/query authentication, OAuth/OIDC, custom header parameter schemas,
+Cookie/query authentication, interactive OAuth/OIDC, custom header parameter schemas,
 unsupported HTTP methods, unresolved server variables and unsupported schema
 features use the original trusted-handler integration. The workspace reports
 the source compiler's error.
@@ -286,7 +294,7 @@ Each save creates a new directory; an existing name is never overwritten.
 
 | Path | Purpose |
 | --- | --- |
-| original-openapi.json | Original imported description |
+| original-openapi.json or original-openapi.yaml | Exact original imported description; selected by sourceFile in the package manifest |
 | merchant-plan.json | Explicit route, price and backend choices |
 | facade-openapi.json | Generated public paid API description |
 | selections.json | Original SF61 operation/payment inputs |
@@ -296,7 +304,7 @@ Each save creates a new directory; an existing name is never overwritten.
 | compiled/ | Actual original offers, seller service and compiler manifest |
 | merchant-package.json | File hashes and explicit source transformations |
 | support/ | Private original support-workflow output |
-| operation-tickets/ | Issued private tickets and exact original buyer handoff files |
+| operation-tickets/ | Retained multipart requests, issued private tickets and exact original buyer handoff files |
 | RUN.md | Exact shell command and route summary |
 
 Reopening verifies the prepared file and route-case hashes. Save changed input under a new

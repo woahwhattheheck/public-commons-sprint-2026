@@ -8,11 +8,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName } from './model.mjs';
 import { prepareMerchantOperationDirectories } from './operation-plan.mjs';
 import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket, readMerchantOperationHandoff } from './operation-ticket.mjs';
+import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequests } from './file-requests.mjs';
+import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
 import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/style.css','style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
@@ -24,6 +26,28 @@ const limited = async req => {
   }
   return JSON.parse(Buffer.concat(chunks).toString('utf8'));
 };
+async function uploadSelection(req) {
+  const contentType=req.headers['content-type']??'';
+  if (!/^multipart\/form-data\s*;/i.test(contentType)||contentType.length>256) throw new TypeError('Select files using the multipart request form');
+  const chunks=[]; let length=0;
+  for await (const chunk of req) {
+    length+=chunk.length;
+    if (length>MAX_REQUEST_BODY_BYTES+65536) {const error=new Error('Upload intake exceeds 16 MiB plus request metadata');error.status=413;throw error;}
+    chunks.push(chunk);
+  }
+  const form=await new Response(Buffer.concat(chunks),{headers:{'Content-Type':contentType}}).formData();
+  const selections=form.getAll('@selection');
+  if (selections.length!==1||typeof selections[0]!=='string'||Buffer.byteLength(selections[0])>65536) throw new TypeError('One private request selection is required');
+  const selection=JSON.parse(selections[0]);
+  if (!selection||typeof selection!=='object'||Array.isArray(selection)||Object.keys(selection).some(key=>!['runtimeId','binding','request'].includes(key))) throw new TypeError('Invalid file request selection');
+  const files=[];
+  for (const [field,file] of form) {
+    if (field==='@selection') continue;
+    if (typeof file==='string'||files.length>=128) throw new TypeError('Upload parts must be selected files');
+    files.push({field,filename:file.name,contentType:file.type||'application/octet-stream',bytes:new Uint8Array(await file.arrayBuffer())});
+  }
+  return {...selection,files};
+}
 const constantEqual = (a,b) => typeof a === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) &&
   timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
@@ -83,6 +107,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         }
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/operations/requests') {
+          const selected=active;
+          if (!selected||url.searchParams.get('runtimeId')!==selected.runtimeId) return send(409,{error:'The managed runtime changed. Reopen its operation form.'});
+          const requests=await listMerchantFileRequests(selected.project);
+          if (active!==selected) return send(409,{error:'The managed runtime changed. Refresh retained requests.'});
+          return send(200,{requests});
+        }
         if (pathname==='/api/load') {
           const p=await readPackage(output,url.searchParams.get('name'));
           return send(200,{name:p.name,specText:p.specText,plan:p.plan,preview:p.manifest.preview});
@@ -90,12 +121,22 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         return send(404,{error:'Not found'});
       }
       if (req.method!=='POST') return send(405,{error:'Use GET or POST'});
+      if (pathname==='/api/operations/stage') {
+        if (busy) return send(409,{error:'A workspace operation is in progress'});
+        busy=true; let finishMutation;
+        mutationDone=new Promise(yes=>{finishMutation=yes;});
+        try {
+          const selection=await uploadSelection(req);
+          if (!active||selection.runtimeId!==active.runtimeId) return send(409,{error:'The managed runtime changed. Reopen its operation form.'});
+          return send(201,await stageMerchantFileRequest(active.project,active.service,active.upstreams,selection));
+        } finally {busy=false;finishMutation();}
+      }
       if (!/^application\/json(?:;|$)/i.test(req.headers['content-type']??'')) return send(415,{error:'Use application/json'});
       const body=await limited(req);
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
       if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
-      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/handoff'].includes(pathname)) return send(404,{error:'Not found'});
+      if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
@@ -128,16 +169,27 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           active.session.session.invalidateUpstreamCache(body.binding);
           return send(200,view());
         }
-        if (['/api/operations/issue','/api/operations/download','/api/operations/handoff'].includes(pathname)) {
+        if (['/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff'].includes(pathname)) {
           if (typeof body.runtimeId!=='string' || !active || body.runtimeId!==active.runtimeId)
             return send(409,{error:'The managed runtime changed. Reopen its operation form.'});
-          const {runtimeId,...request}=body;
+          const {runtimeId,stagedFileId,...request}=body;
           if (pathname!=='/api/operations/issue') {
             if (Object.keys(request).length!==1 || typeof request.fileId!=='string')
               return send(400,{error:'Select a ticket file issued by the current runtime'});
+            if (pathname==='/api/operations/load') {
+              const {preparedBody,...retained}=await loadMerchantFileRequest(active.project,active.service,request.fileId);
+              return send(200,retained);
+            }
             return send(200,await (pathname==='/api/operations/handoff'?readMerchantOperationHandoff:readMerchantTicket)(active.project,runtimeId,request.fileId));
           }
-          const document=active.tickets.issue(request);
+          let preparedBody;
+          if (stagedFileId!==undefined) {
+            if (Object.hasOwn(request,'request')) throw new TypeError('Select retained bytes or a new request, not both');
+            const retained=await loadMerchantFileRequest(active.project,active.service,stagedFileId);
+            if (retained.binding!==request.binding) throw new TypeError('Retained request belongs to another operation');
+            request.request=retained.request; preparedBody=retained.preparedBody;
+          }
+          const document=active.tickets.issue(request,{preparedBody});
           return send(201,await saveMerchantTicket(active.project,runtimeId,document));
         }
         packageName(body.name);
@@ -172,15 +224,15 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           return original;
         }});
         if (shuttingDown) {await session.close();return send(503,{error:'Workspace stopped during startup'});}
-        let tickets;
+        let tickets, served;
         try {
           // Validate against the exact public offers of the active original
           // seller, while retaining its configured upstream binding names.
           const offers=new Map(session.session.compiled.routes.map(route=>[route.id,route.offer]));
-          const served={...service,routes:service.routes.map(route=>({...route,offer:offers.get(route.id)}))};
+          served={...service,routes:service.routes.map(route=>({...route,offer:offers.get(route.id)}))};
           tickets=createMerchantTicketIssuer({service:served,upstreams,control:session.session.operationControl});
         } catch(error) {await session.close();throw error;}
-        active={name:body.name,project,session,runtimeId:randomUUID(),tickets};
+        active={name:body.name,project,session,runtimeId:randomUUID(),tickets,service:served,upstreams};
         return send(200,view());
       } finally {busy=false;finishMutation();}
     } catch(error) {

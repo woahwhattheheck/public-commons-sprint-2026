@@ -15,6 +15,7 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     $('#add-request-to-plan').disabled=busy||!selected?.prepared;
   }
   function renderList() {
+    $('#request-size-limit').textContent=Number.isSafeInteger(state.maxHandoffBytes)?'Complete packet limit: '+state.maxHandoffBytes.toLocaleString()+' bytes.':'';
     $('#request-count').textContent=String(state.requests.length);
     $('#received-request-list').innerHTML=state.requests.length?state.requests.map(item=>
       `<button class="request-row ${item.id===selected?.id?'selected':''}" data-request="${item.id}"><span><strong>${escape(title(item))}</strong><small>${escape(item.summary.url)}</small></span><span class="badge">${item.prepared?'Ready':item.summary.expiresAt<=Date.now()?'Expired':'Needs review'}</span></button>`).join(''):
@@ -32,8 +33,9 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     $('#request-filename').textContent=title(item);
     $('#request-state').textContent=item.prepared?'Ready to add':item.expired?'Ticket expired':review?'Reviewed':'Select payment option';
     $('#request-url').textContent=view.method+' '+view.sellerUrl;
-    $('#request-summary').innerHTML=`<div><dt>Stable intent</dt><dd>${escape(view.intentId)}</dd></div><div><dt>Ticket expires</dt><dd>${escape(when(view.operationTicket.expiresAt))}</dd></div><div><dt>Exact request body</dt><dd>${view.bodyBytes.toLocaleString()} bytes</dd></div><div><dt>Forwarded request headers</dt><dd>${view.requestHeaderNames.length}</dd></div>`;
+    $('#request-summary').innerHTML=`<div><dt>Stable intent</dt><dd>${escape(view.intentId)}</dd></div><div><dt>Ticket expires</dt><dd>${escape(when(view.operationTicket.expiresAt))}</dd></div><div><dt>Exact request body</dt><dd>${view.bodyPresent===false?'Omitted as declared by the source':view.bodyBytes.toLocaleString()+' bytes'}</dd></div><div><dt>Forwarded request headers</dt><dd>${view.requestHeaderNames.length}</dd></div>`;
     $('#request-body-download').href=`/files/requests/${item.id}/body`;
+    $('#request-body-download').hidden=view.bodyPresent===false;
     $('#request-handoff-download').href=`/files/requests/${item.id}/handoff`;
     $('#request-bytes').innerHTML=`<p>Original private file</p><code>${escape(item.filename)}</code><p>Body SHA-256</p><code>${escape(view.bodySha256)}</code><p>Merchant operation key</p><code>${escape(view.operationTicket.operationKey)}</code><p>Request headers</p><pre>${escape(JSON.stringify(view.requestHeaders,null,2))}</pre>`;
     $('#request-option').innerHTML='<option value="">Choose a payment option</option>'+view.choices.map(choice=>choice.error?
@@ -69,7 +71,9 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
   $('#request-upload-form').addEventListener('submit',event=>{event.preventDefault();action(async()=>{
     const file=$('#request-upload').files[0];
     if(!file)throw new Error('Choose the private merchant request file.');
-    if(file.size===0||file.size>4194304)throw new Error('Choose a complete merchant request of up to 4 MiB.');
+    const limit=state.maxHandoffBytes;
+    if(!Number.isSafeInteger(limit)||limit<=0)throw new Error('Refresh the receiving workspace before uploading.');
+    if(file.size===0||file.size>limit)throw new Error('Choose a complete merchant request of up to '+limit.toLocaleString()+' bytes.');
     const bytes=new Uint8Array(await file.arrayBuffer());let binary='';
     for(let offset=0;offset<bytes.length;offset+=16384)binary+=String.fromCharCode(...bytes.subarray(offset,offset+16384));
     const value=await request('/api/requests/upload',{filename:file.name,base64:btoa(binary)});

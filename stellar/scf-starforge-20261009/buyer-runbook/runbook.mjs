@@ -7,6 +7,7 @@ import { hostname } from 'node:os';
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { config as readNativeConfig, execution, bytes, need } from '../sf88-operator-buyer-cli/config.mjs';
+import {MAX_REQUEST_BODY_BYTES,readRequestBody} from '../sf88-operator-buyer-cli/request-body.mjs';
 
 export const MANIFEST_SCHEMA = 'stellar-forge.buyer-runbook.v1';
 const PLAN_SCHEMA = 'stellar-forge.buyer-runbook-plan.v1';
@@ -155,7 +156,7 @@ async function prepareRunbook({ manifest, output }) {
     }
     let body = null;
     if (op.bodyFile !== undefined) {
-      const sourceBody = await bytes(op.bodyFile, 1048576, 'BODY_FILE_INVALID');
+      const sourceBody = await readRequestBody(op);
       totalBodyBytes += sourceBody.length;
       need(totalBodyBytes <= 64 * 1048576, 'BODY_SNAPSHOT_BUDGET_EXCEEDED');
       const name = entry.id + '.bin';
@@ -245,7 +246,7 @@ async function readInitialization(snapshot, directory, expectedSha256) {
     if (op.body) {
       const body = 'bodies/' + op.id + '.bin';
       need(op.body.path === body, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
-      const bytes = await readRegular(join(snapshot, body));
+      const bytes = await readRegular(join(snapshot, body), MAX_REQUEST_BODY_BYTES);
       need(bytes.length === op.body.bytes && sha256(bytes) === op.body.sha256, 'RUNBOOK_INITIALIZATION_INPUT_CHANGED');
       writes.push([body, bytes]);
     }
@@ -332,7 +333,7 @@ async function nativeInput(plan, op) {
     JSON.stringify(parsed.download) === JSON.stringify(op.responseFile), 'FROZEN_PLAN_MISMATCH');
   if (op.body) {
     need(parsed.op.bodyFile === join(plan.directory, 'bodies', op.id + '.bin'), 'FROZEN_BODY_PATH_CHANGED');
-    const rawBody = await readRegular(parsed.op.bodyFile, 1048576);
+    const rawBody = await readRegular(parsed.op.bodyFile, MAX_REQUEST_BODY_BYTES);
     need(sha256(rawBody) === op.body.sha256 && rawBody.length === op.body.bytes, 'FROZEN_BODY_CHANGED');
   } else need(parsed.op.bodyFile === undefined, 'FROZEN_BODY_CHANGED');
   return cfg;

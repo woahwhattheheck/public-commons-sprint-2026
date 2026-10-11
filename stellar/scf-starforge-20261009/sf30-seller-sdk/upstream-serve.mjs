@@ -10,7 +10,7 @@ const USAGE = `Usage: node upstream-serve.mjs --config SELLER.json --upstreams B
   [--max-in-flight 64] [--drain-grace-ms 60000]
   [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
 
-Wrap existing GET/HEAD/DELETE and JSON POST/PUT/PATCH APIs with the original SF30 payment lifecycle.
+Wrap existing GET/HEAD/DELETE and JSON or multipart POST/PUT/PATCH APIs with the original SF30 payment lifecycle.
 Both JSON paths resolve from the current directory. Backend origins are fixed;
 credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
