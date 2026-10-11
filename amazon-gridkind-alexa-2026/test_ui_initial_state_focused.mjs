@@ -3,11 +3,19 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import vm from 'node:vm';
 
-const element=()=>({textContent:'',className:'',style:{},disabled:false,children:[],
+const element=()=>({value:'',checked:false,textContent:'',className:'',style:{},disabled:false,children:[],
   replaceChildren(){this.children=[]},append(...children){this.children.push(...children)}});
 const controls=new Map();
 const document={getElementById(id){if(!controls.has(id))controls.set(id,element());return controls.get(id)},
   createElement(){return element()}};
+// Hydrate the new editor from the shipped markup instead of inventing defaults.
+const html=await readFile(new URL('./index.html',import.meta.url),'utf8');
+for(const match of html.matchAll(/<input\b([^>]*\bid="([^"]+)"[^>]*)>/g)){
+  const node=document.getElementById(match[2]);
+  node.value=match[1].match(/\bvalue="([^"]*)"/)?.[1]||'';
+  node.checked=/\bchecked\b/.test(match[1]);
+}
+document.getElementById('scenario-form').reportValidity=()=>true;
 const planned={status:'proposed',approved:false,receipt:null,
   proposal:{id:'synthetic-1',baseline:{cost:2},optimized:{cost:0,items:[]},avoidedCost:2,
     prices:Array(24).fill(0),decisionTrace:{search:'synthetic-only'}}};
@@ -29,3 +37,4 @@ assert.equal(document.getElementById('output').className,'',
   'stale startup GET must not erase newer POST proposal');
 assert.match(document.getElementById('status').textContent,/PROPOSED/);
 process.stdout.write('PASS: 24 zero-price bars stay finite; late bootstrap response cannot overwrite a completed proposal.\n');
+
