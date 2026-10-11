@@ -4115,3 +4115,7 @@ and `validateProfiles`; `./buyer/provider-workspace/server` exports
 `startProviderWorkspace`; and `./buyer/provider-workspace/recovery` exports
 the original complete-case create/inspect/restore and interrupted-restore
 functions. All resolve to this same packaged source and original native case.
+
+## Tomorrow.io weather operations
+
+`starforge tomorrow --help` opens the complete maintained command surface for location/work selection, reviewed Timeline and PNG capture, staff decisions, operations reports, single-resource recovery, licensed merchant packaging, native customer purchase/recovery and portable handover. `starforge tomorrow serve --workspace PRIVATE_DIRECTORY` serves the industrial browser workspace. The original setup, usage, request semantics and customer/Austin workflows are documented in [Tomorrow weather operations](../sf30-seller-sdk/tomorrow/README.md). All source is included by the existing SF30 component.
