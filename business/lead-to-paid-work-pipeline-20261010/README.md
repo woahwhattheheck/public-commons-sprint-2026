@@ -52,3 +52,8 @@ The original Linux implementation is hardened so an owner-entered *estimate* can
 ## Collection balances and installment receipts
 
 The same command now also writes `collections.json` and `collection-queue.csv`. See [COLLECTIONS.md](COLLECTIONS.md) for the explicit invoice/receipt input, partial payments, refunds, global duplicate quarantine, currency-separated integer totals and a synthetic runnable example. Use `evaluateAll` for batch totals; standalone `evaluate` is explicitly not duplicate-cleared. Actual payment records remain private operator inputs, never included in public source.
+
+
+## Optional outreach snapshot on the same board
+
+Add `--outreach-snapshot=/private/current-mailbox-snapshot.json` to run the existing collision checker in the same command. Map each opportunity to its exact intended contact using `communication.intentId` and `communication.to`; see [OUTREACH-BOARD.md](OUTREACH-BOARD.md). A snapshot HOLD can only reduce approach readiness. Without the option, existing commercial decisions are unchanged and the board shows NOT_EVALUATED. The command now writes seven outputs, including a preflight result or explicit not-evaluated record.
