@@ -29,6 +29,7 @@ import webbrowser
 
 from . import _analysis_ui
 from .datasets import DatasetAcquisition
+from .dataset_changes import DatasetChanges
 from .errors import BuyerError, StateError
 from .sqlite_dataset import DatasetDatabase
 from .storage import digest, dump, parse, private_directory, read
@@ -149,6 +150,7 @@ class AnalysisWorkspace:
                 # operator explicitly retries after an interrupted process.
                 db.execute("UPDATE sf_analysis_jobs SET status='INTERRUPTED',finished_at=?,error='WORKSPACE_PROCESS_INTERRUPTED' WHERE status='RUNNING'", (_now(),))
                 db.commit()
+            self.changes = DatasetChanges(self.database)
             self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="dataset-analysis")
         except BaseException:
             os.close(self._owner)
@@ -260,7 +262,7 @@ class AnalysisWorkspace:
 
     def start(self, kind, request):
         """Persist the exact request before dispatch; repeated IDs reuse it."""
-        if kind not in {"import", "query", "backup"} or not isinstance(request, dict):
+        if kind not in {"import", "query", "backup", "compare", "change-export"} or not isinstance(request, dict):
             raise StateError("ANALYSIS_JOB_INVALID")
         job_id = request.get("id")
         if not isinstance(job_id, str) or not _JOB.fullmatch(job_id):
@@ -271,6 +273,10 @@ class AnalysisWorkspace:
             if not isinstance(request.get("expected_views"), list):
                 raise StateError("ANALYSIS_REVIEWED_VIEWS_REQUIRED")
             spec["expected_views"] = request["expected_views"]
+        elif kind == "compare":
+            spec.update(self.changes.prepare(request, check=False))
+        elif kind == "change-export":
+            spec.update(self.changes.prepare_export(request, check=False))
         elif kind == "import":
             name = _name(request.get("source"))
             mapping = parse(request.get("columns_text", "{}").encode())
@@ -298,6 +304,10 @@ class AnalysisWorkspace:
                     return self.job(job_id)
                 if db.execute("SELECT 1 FROM sf_analysis_jobs WHERE status='RUNNING' LIMIT 1").fetchone():
                     raise StateError("ANALYSIS_JOB_RUNNING")
+                if kind == "compare":
+                    self.changes._inputs(db, spec)
+                elif kind == "change-export":
+                    self.changes._export_input(db, spec)
                 db.execute("INSERT INTO sf_analysis_jobs(id,kind,status,created_at,request) VALUES(?,?,'RUNNING',?,?)", (job_id, kind, _now(), raw))
                 db.commit()
             self._executor.submit(self._execute, job_id, kind, spec)
@@ -326,6 +336,12 @@ class AnalysisWorkspace:
                 result = {"columns": list(result.columns), "rows": [[_cell(v) for v in row] for row in result.rows],
                           "truncated": result.truncated, "views": list(result.views), "read_tables": list(result.read_tables)}
                 result["result_sha256"] = digest(_json(result).encode())
+            elif kind == "compare":
+                # Difference rows and the COMPLETE job become visible together.
+                self.changes.run(job_id, spec)
+                return
+            elif kind == "change-export":
+                result = self.changes.export({key: value for key, value in spec.items() if key != "id"})
             else:
                 target = self.database.backup(self.database.directory / "analysis-backups" / job_id)
                 with target.open("rb") as stream:
@@ -355,6 +371,9 @@ class AnalysisWorkspace:
             result = job["result"]
             if result.get("result_sha256") != digest(_json({k: v for k, v in result.items() if k != "result_sha256"}).encode()):
                 raise StateError("ANALYSIS_RETAINED_RESULT_CHANGED")
+        elif job["kind"] == "compare" and job["result"] is not None:
+            with self.database._connection(readonly=True) as db:
+                job["result"] = self.changes._report(db, job_id)
         return job
 
     def job(self, job_id, *, offset=0, limit=100):
@@ -397,6 +416,18 @@ class AnalysisWorkspace:
             raise StateError("ANALYSIS_BACKUP_LOCATION_CHANGED")
         return path
 
+    def change_export_file(self, job_id):
+        job = self._job(job_id)
+        if job["kind"] != "change-export" or job["status"] != "COMPLETE":
+            raise StateError("ANALYSIS_COMPLETE_CHANGE_EXPORT_REQUIRED")
+        result = job["result"]
+        if not re.fullmatch(r"changes-[a-f0-9]{64}\.(json|csv)", result["filename"]):
+            raise StateError("ANALYSIS_CHANGE_EXPORT_LOCATION_CHANGED")
+        path = self.database.directory / "analysis-exports" / result["filename"]
+        if str(path) != result["path"]:
+            raise StateError("ANALYSIS_CHANGE_EXPORT_REGENERATE_AFTER_RECOVERY")
+        return path, result
+
 
 def serve(workspace, *, port=0):
     """Bind the private operator application only to numeric IPv4 loopback."""
@@ -431,6 +462,26 @@ def serve(workspace, *, port=0):
             if name:
                 self.send_header("Content-Disposition", 'attachment; filename="' + name + '"')
 
+        def _file_reply(self, path, record):
+            """Verify and stream the same retained file descriptor."""
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            with os.fdopen(fd, "rb") as stream:
+                info = os.fstat(stream.fileno())
+                if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077 or info.st_size != record["bytes"]:
+                    raise StateError("ANALYSIS_RETAINED_DOWNLOAD_CHANGED")
+                if hashlib.file_digest(stream, "sha256").hexdigest() != record["sha256"]:
+                    raise StateError("ANALYSIS_RETAINED_DOWNLOAD_CHANGED")
+                stream.seek(0)
+                self.send_response(200)
+                self.send_header("Content-Type", record["mime"])
+                self.send_header("Content-Length", str(info.st_size))
+                self.send_header("X-Content-SHA256", record["sha256"])
+                self._headers(record["filename"])
+                self.end_headers()
+                if self.command != "HEAD":
+                    for block in iter(lambda: stream.read(1024 * 1024), b""):
+                        self.wfile.write(block)
+
         def _dispatch(self):
             origin = f"http://127.0.0.1:{self.server.server_port}"
             if self.headers.get("Host") != origin[7:] or self.headers.get("Origin", origin) != origin or self.headers.get("Sec-Fetch-Site", "none") not in {"none", "same-origin"}:
@@ -454,6 +505,13 @@ def serve(workspace, *, port=0):
                     return self._reply(200, workspace.state())
                 if url.path == "/api/versions":
                     return self._reply(200, workspace.database.versions(before=int(get("before")) if get("before") else None, limit=25))
+                if url.path == "/api/changes":
+                    return self._reply(200, workspace.changes.history(before=int(get("before")) if get("before") else None))
+                if len(parts) == 3 and parts[:2] == ["api", "changes"]:
+                    return self._reply(200, workspace.changes.page(parts[2], kind=get("kind", "all"), after=int(get("after", "0"))))
+                if len(parts) == 3 and parts[:2] == ["api", "change-export"]:
+                    path, record = workspace.change_export_file(parts[2])
+                    return self._file_reply(path, record)
                 if len(parts) == 3 and parts[:2] == ["api", "version"]:
                     return self._reply(200, workspace.database.version(parts[2]))
                 if len(parts) == 3 and parts[:2] == ["api", "manifest"]:
@@ -485,6 +543,8 @@ def serve(workspace, *, port=0):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
                 if url.path == "/api/activate":
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
+                if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
+                    return self._reply(200, workspace.changes.select(parts[2], body))
                 if len(parts) == 3 and parts[:2] == ["api", "queries"]:
                     return self._reply(200, workspace.save_query(parts[2], body, expected_revision=body.get("expected_revision")))
                 if len(parts) == 3 and parts[:2] == ["api", "start"]:
