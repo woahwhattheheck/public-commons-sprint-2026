@@ -1,12 +1,14 @@
 import { compareSnapshots } from './offer-delta.mjs';
 import { rankFederatedListings } from './federated-query.mjs';
 import { buildOfferCsv } from './offer-csv.mjs';
+import { SHORTLIST_LIMIT, selectionKey, selectOffer, selectionStatus, shortlistDocument } from './shortlist.mjs';
 // MIT. Browser uses DOM textContent exclusively for external native provider data.
 const $ = id => document.getElementById(id);
 const results = $('results');
 const sources = $('sources');
 const deltaResults = $('delta-results');
-const state = {data:null,loading:false,delta:null};
+const state = {data:null,loading:false,delta:null,shortlist:[],undo:null,refreshFailed:false};
+const selectionButtons = new Map();
 const elem = (tag, className = '', content) => {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -107,7 +109,7 @@ function detail(container, name, value) {
   container.append(div);
 }
 
-function renderPayment(option, index) {
+function renderPayment(option, index, listing = null) {
   const section=elem('section','terms');
   section.append(elem('h4','',`Declared option ${index + 1}`));
   detail(section,'Network',option.network);
@@ -115,6 +117,32 @@ function renderPayment(option, index) {
   detail(section,'Asset',option.asset);
   detail(section,'Atomic amount',option.amount);
   detail(section,'Pay to',option.payTo);
+  if (listing) {
+    const key = selectionKey(state.data, listing, index);
+    const button = elem('button', 'compare-option');
+    button.type = 'button';
+    button.setAttribute('aria-label', 'Compare option ' + (index + 1) + ' from ' + listing.label + ' on ' + listing.source);
+    button.addEventListener('click', () => {
+      const existing = state.shortlist.findIndex(item => item.key === key);
+      if (existing >= 0) {
+        state.undo = [...state.shortlist];
+        state.shortlist.splice(existing, 1);
+        announceSelection('Option removed from comparison. Undo is available.');
+      } else {
+        if (state.shortlist.length >= SHORTLIST_LIMIT) {
+          announceSelection('Compare up to ' + SHORTLIST_LIMIT + ' options. Remove one from the comparison first.');
+          return;
+        }
+        try { state.shortlist.push(selectOffer(state.data, listing, index)); }
+        catch (error) { announceSelection(error.message); return; }
+        state.undo = null;
+        announceSelection('Option added. ' + state.shortlist.length + ' selected; use Compare selected to review.');
+      }
+      renderShortlist();
+    });
+    selectionButtons.set(key, button);
+    section.append(button);
+  }
   return section;
 }
 
@@ -135,7 +163,7 @@ function renderListing(listing) {
   if (listing.toolName) detail(card,'MCP tool',listing.toolName);
   const section=elem('div','options');
   section.append(elem('h4','options-title',listing.paymentOptions.length+' observed payment option(s)'));
-  for (const [index,option] of listing.paymentOptions.entries()) section.append(renderPayment(option,index));
+  for (const [index,option] of listing.paymentOptions.entries()) section.append(renderPayment(option,index,listing));
   if (listing.hiddenPaymentOptions) section.append(elem('p','warning','Additional options not displayed: '+listing.hiddenPaymentOptions));
   card.append(section);
   const actions = elem('div','listing-actions');
@@ -220,6 +248,7 @@ function renderListings() {
     ' native provider rows '+(q?'ranked by lexical/fuzzy relevance':'in native order')+
     '; original source identity and payment terms remain separate.';
   results.replaceChildren();
+  selectionButtons.clear();
   if (!visible.length) {
     results.append(elem('p','empty','No observed rows match this filter. This does not imply a seller is absent from all Bazaar providers.'));
     return;
@@ -229,6 +258,109 @@ function renderListings() {
   for (const row of visible.slice(0,LIMIT)) grid.append(renderListing(row));
   if (visible.length>LIMIT) grid.append(elem('p','warning','Displayed first 300 matching rows; narrow your search to see others.'));
   results.append(grid);
+  updateSelectionButtons();
+}
+
+function announceSelection(message) {
+  $('shortlist-status').textContent = message;
+}
+
+function updateSelectionButtons() {
+  for (const [key, button] of selectionButtons) {
+    const selected = state.shortlist.some(item => item.key === key);
+    button.setAttribute('aria-pressed', String(selected));
+    button.textContent = selected ? 'Selected · remove from comparison' : 'Compare this option';
+  }
+}
+
+function renderShortlist() {
+  const selections = state.shortlist;
+  $('shortlist-count').textContent = selections.length + ' / ' + SHORTLIST_LIMIT;
+  $('compare-link').textContent = 'Compare selected (' + selections.length + ') ↑';
+  $('shortlist-export').disabled = !selections.length;
+  $('shortlist-clear').disabled = !selections.length;
+  $('shortlist-undo').hidden = !state.undo;
+  updateSelectionButtons();
+  const container = $('shortlist-content');
+  container.replaceChildren();
+  if (!selections.length) {
+    const empty = elem('div', 'empty shortlist-empty');
+    empty.append(elem('strong', '', 'Build a comparison as you browse'));
+    empty.append(elem('p', '', 'Choose Compare this option below any advertised payment option. Your selections remain here when you change the search or provider filter.'));
+    container.append(empty);
+    return;
+  }
+  container.append(elem('p', 'comparison-note', 'Amounts are declared atomic units. Different assets, networks or operations are not directly comparable; this view does not rank a cheapest offer or confirm equivalent services.'));
+  const scroll = elem('div', 'comparison-scroll');
+  scroll.tabIndex = 0;
+  scroll.setAttribute('role', 'region');
+  scroll.setAttribute('aria-label', 'Selected offers comparison. Scroll horizontally for all options.');
+  const table = elem('table', 'comparison-table');
+  table.append(elem('caption', '', 'Selected provider observations — original terms retained after refresh'));
+  const head = elem('thead');
+  const top = elem('tr');
+  const corner = elem('th', '', 'Compare');
+  corner.scope = 'col';
+  top.append(corner);
+  selections.forEach((selected, index) => {
+    const cell = elem('th');
+    cell.scope = 'col';
+    cell.append(elem('span', 'comparison-number', 'OPTION ' + (index + 1)));
+    cell.append(elem('strong', '', show(selected.listing.label)));
+    const remove = elem('button', 'remove-option', 'Remove option ' + (index + 1));
+    remove.type = 'button';
+    remove.addEventListener('click', () => {
+      state.undo = [...state.shortlist];
+      state.shortlist = state.shortlist.filter(item => item.key !== selected.key);
+      renderShortlist();
+      const remaining = $('shortlist-content').querySelectorAll('.remove-option');
+      (remaining[Math.min(index, remaining.length - 1)] ?? $('shortlist-heading')).focus();
+      announceSelection('Option ' + (index + 1) + ' removed. Undo is available.');
+    });
+    cell.append(remove);
+    top.append(cell);
+  });
+  head.append(top);
+  table.append(head);
+  const body = elem('tbody');
+  const row = (label, value, className = '') => {
+    const tr = elem('tr', className);
+    const heading = elem('th', '', label);
+    heading.scope = 'row';
+    tr.append(heading);
+    selections.forEach(selected => {
+      const cell = elem('td');
+      const result = value(selected);
+      if (result && typeof result === 'object') cell.append(result);
+      else cell.textContent = show(result);
+      tr.append(cell);
+    });
+    body.append(tr);
+  };
+  row('Observation status', selected => {
+    const current = selectionStatus(selected, state.data, state.refreshFailed);
+    const node = elem('div', 'observation-state ' + current.kind);
+    node.append(elem('strong', '', current.label), elem('p', '', current.detail));
+    return node;
+  });
+  row('Provider', selected => selected.source.name + ' · row ' + selected.listing.sourceRow + ', option ' + (selected.optionIndex + 1));
+  row('Captured at (UTC)', selected => selected.source.observedAt);
+  row('Source endpoint', selected => selected.source.endpoint);
+  row('Capture network filter', selected => selected.capturedNetwork);
+  row('Resource URL', selected => selected.listing.url);
+  row('HTTP method', selected => selected.listing.method);
+  row('Input type', selected => selected.listing.kind);
+  row('MCP tool', selected => selected.listing.toolName);
+  row('Route template', selected => selected.listing.routeTemplate);
+  row('Network', selected => selected.option.network, 'payment-row');
+  row('Scheme', selected => selected.option.scheme, 'payment-row');
+  row('Atomic amount', selected => selected.option.amount, 'payment-row amount-row');
+  row('Asset ID', selected => selected.option.asset, 'payment-row');
+  row('Pay to', selected => selected.option.payTo, 'payment-row');
+  row('Other undisplayed options', selected => String(selected.listing.hiddenPaymentOptions ?? 0));
+  table.append(body);
+  scroll.append(table);
+  container.append(scroll);
 }
 
 async function load(manual = false) {
@@ -243,6 +375,8 @@ async function load(manual = false) {
     if(!Array.isArray(data.sources)||!Array.isArray(data.listings))throw new Error(data.error||'Invalid native federation response');
     state.delta=state.data ? compareSnapshots(state.data,data) : null;
     state.data=data;
+    state.refreshFailed=false;
+    renderShortlist();
     $('export-csv').disabled=false;
     renderDelta();
     const good=data.sources.filter(x=>x.status==='COMPLETE_GET_CAPTURE').length;
@@ -262,11 +396,43 @@ async function load(manual = false) {
       'Source coverage is incomplete. Available entries are shown with provider errors; do not infer absence in unavailable sources.') + deliveryNote;
     renderListings();
   } catch(error) {
+    state.refreshFailed=true;
+    renderShortlist();
     $('status').textContent='Unable to load source catalogs: '+String(error.message).slice(0,150);
     $('status').className='status caution';
     if(!state.data)results.replaceChildren(elem('p','empty','No current original-source observations.'));
   } finally {state.loading=false;$('refresh').disabled=false;}
 }
+$('shortlist-clear').addEventListener('click', () => {
+  if (!state.shortlist.length) return;
+  state.undo = [...state.shortlist];
+  state.shortlist = [];
+  renderShortlist();
+  $('shortlist-undo').focus();
+  announceSelection('Comparison cleared. Undo is available.');
+});
+$('shortlist-undo').addEventListener('click', () => {
+  if (!state.undo) return;
+  state.shortlist = state.undo;
+  state.undo = null;
+  renderShortlist();
+  $('shortlist-heading').focus();
+  announceSelection('Previous selections restored.');
+});
+$('shortlist-export').addEventListener('click', () => {
+  if (!state.shortlist.length) return;
+  const document = shortlistDocument(state.shortlist, state.data, state.refreshFailed);
+  const url = URL.createObjectURL(new Blob([JSON.stringify(document, null, 2) + '\n'], {type:'application/json'}));
+  const link = elem('a');
+  link.href = url;
+  link.download = 'sf70-selected-advertised-offers.json';
+  window.document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  announceSelection('Prepared ' + state.shortlist.length + ' original offer observations for local JSON download.');
+});
+renderShortlist();
 $('filters').addEventListener('submit',e=>e.preventDefault());
 $('query').addEventListener('input',renderListings);
 $('provider').addEventListener('change',renderListings);
