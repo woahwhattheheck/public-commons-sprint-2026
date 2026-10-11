@@ -129,6 +129,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   fleet-release                              Stage, compare and operate original releases across a fleet
   revenue-workspace / revenue-report         Plan pricing from original merchant activity
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
+  merchant-customer-statements               Retain customer statements with original payments and API usage
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace

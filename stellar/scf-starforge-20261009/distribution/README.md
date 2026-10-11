@@ -3202,6 +3202,38 @@ existing verification and transaction matching rules across both. Pricing
 imports and recovery records keep their own source identities in the same
 merchant review.
 
+### Give customers their purchase and usage statements
+
+Open **Customer statements** in the existing accounting workspace. Save the
+customer profile, bind that customer's original order references, select a
+completed reconciliation and import the original API-pass export. Review the
+statement before retaining its immutable version and customer downloads.
+
+The statement keeps each original payment's asset, recipient, atomic amount and
+verification state. Its usage view joins the exact order and native event to the
+purchased plan and complete retained call history. The purchase period and the
+cumulative usage capture time are displayed separately. Internal merchant costs
+and customer notes remain in the operator workspace.
+
+The installed command opens that same accounting state:
+
+```sh
+starforge merchant-customer-statements state \
+  --workspace /private/merchant/accounting
+starforge merchant-customer-statements help
+starforge merchant-customer-statements export \
+  --workspace /private/merchant/accounting \
+  --id STATEMENT_ID --file statement.html \
+  --output /private/customer-delivery/statement.html
+```
+
+Retained customer files include JSON, payment CSV, usage CSV, printable HTML,
+a manifest and current document status. Original revisions and request identifiers
+keep retries attached to the same retained version. The
+[customer statement guide](../merchant-settlement-accounting/customer-statements/README.md)
+covers profiles, assignments, native usage imports, periods, adjustments,
+withdrawal, export and the complete command API.
+
 ### Exchange a completed reconciliation with an accountant
 
 Open the same retained accounting workspace:
