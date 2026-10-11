@@ -9,6 +9,7 @@ import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
 import { prepareDuckdbRelease, selectDuckdbInterpreter } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-duckdb.mjs';
+import { prepareS3Release } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-s3.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
@@ -94,7 +95,7 @@ export function duckdbSourceView(duckdb) {
   return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
 }
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -107,7 +108,12 @@ function sourceDefinition(source, base, alias) {
     throw failure('CONFIGURATION_ERROR', 'A Python source root requires a Python merchant declaration.');
   if (source.duckdbPython !== undefined && source.duckdbPackage === undefined)
     throw failure('CONFIGURATION_ERROR', 'A DuckDB interpreter selection requires a prepared DuckDB package.');
-  if (source.duckdbPackage !== undefined) {
+  if (source.s3Package !== undefined) {
+    if (['workspace', 'spec', 'selections', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython'].some(key => source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose the original S3 configured package or another source. S3 owns its pinned object bindings.');
+    result.s3Package = hostPath(source.s3Package, base);
+  } else if (source.duckdbPackage !== undefined) {
     if (['workspace', 'spec', 'selections', 'bindings', 'upstreams', 'python', 'pythonRoot'].some(key => source[key] !== undefined) ||
         runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
       throw failure('CONFIGURATION_ERROR', 'Choose a prepared DuckDB package or another source. The package owns its original query bindings.');
@@ -137,6 +143,18 @@ function sourceDefinition(source, base, alias) {
 }
 /** Inspect configured source through the ORIGINAL workspace and upstream readers. */
 export async function inspectMerchantSource(source) {
+  if (source.s3Package) {
+    const prepared = await prepareS3Release(source.s3Package), { s3 } = prepared;
+    return { source: source.alias, label: source.label, sourceType: 'S3_OBJECT_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { declaration: s3.sourceConfigSha256, objects: s3.objectsSha256, execution: s3.executionSha256 },
+      inputPackage: { schema: s3.schema, sourceConfigSha256: s3.sourceConfigSha256 },
+      application: { type: 'S3_OBJECT_PACKAGE', ...s3 },
+      environment: s3.credentialProvider === 'environment' ? ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'] : [],
+      credentialValuesChecked: false,
+      routes: prepared.service.routes.map(route => ({ method: 'GET', path: route.path, publicPath: route.path,
+        resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
   if (source.duckdbPackage) {
     const { bundle, duckdb } = await prepareDuckdbRelease(source.duckdbPackage, { python: source.duckdbPython });
     return { source: source.alias, label: source.label, sourceType: 'DUCKDB_PACKAGE',
@@ -218,10 +236,10 @@ export async function readMerchantConfig(path) {
   if (config.support) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, runtime = {}, catalog, fleetPlan, support }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, runtime = {}, catalog, fleetPlan, support }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, runtime }, process.cwd(), 'initial');
   if (source.pythonRoot) {
     const sourceRoot = await realpath(source.pythonRoot);
     const destination = join(await realpath(dirname(root)), basename(root));
@@ -245,7 +263,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(catalogConnection ? { catalogConnection } : {}), ...(supportConnection ? { supportConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.duckdbPackage ? { duckdbPackage: source.duckdbPackage, duckdbPython: source.duckdbPython }
+        ...(source.s3Package ? { s3Package: source.s3Package }
+          : source.duckdbPackage ? { duckdbPackage: source.duckdbPackage, duckdbPython: source.duckdbPython }
           : source.python ? { python: source.python, ...(source.pythonRoot ? { pythonRoot: source.pythonRoot } : {}) }
           : source.workspace ? { workspace: source.workspace } : { spec: source.spec, selections: source.config,
           bindings: source.bindings, ...(source.upstreams ? { upstreams: source.upstreams } : {}) }) },
