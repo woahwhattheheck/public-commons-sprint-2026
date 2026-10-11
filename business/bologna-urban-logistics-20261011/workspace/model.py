@@ -30,6 +30,7 @@ PRIORITY = {
 }
 RELATIONSHIPS = {"UNREVIEWED", "SEPARATE", "SAME_LOCATION", "RELATED", "SUPERSEDED"}
 RATINGS = {"UNASSESSED", "LOW", "MEDIUM", "HIGH", "MIXED", "NOT_APPLICABLE"}
+STREET_FIELDS = ["accessWindows", "vehicleCriteria", "loadingSpaces", "hubLockerConcepts", "replicationGovernance"]
 
 
 def utc_now() -> str:
@@ -187,6 +188,12 @@ def initialize(source: Path, receipt_path: Path, root: Path) -> dict:
                        "note": "Retain separately until reviewed against current authoritative municipal material.",
                        "reviewer": None, "reviewedAt": None}],
         "assumptions": [],
+        "streetPlans": [{"streetKey": key, "street": labels, "status": "UNREVIEWED",
+                         "fields": {name: {"value": "", "source": ""} for name in STREET_FIELDS},
+                         "reviewer": None, "reviewedAt": None} for key, labels in PRIORITY.items()],
+        "roadmap": {"targetYear": 2030, "sumpAlignmentYear": 2027,
+                    "milestones": [],
+                    "interpretation": "Analyst-supplied progression and derogation criteria; municipality selects scenarios and retains formal judgment."},
         "scenarios": [{"id": sid, "name": {"en": en, "it": it}, "purpose": purpose, "status": "DRAFT_HYPOTHESIS",
                        "criteria": {k: {"rating": "UNASSESSED", "note": ""} for k in
                                     ["serviceContinuity", "streetAccess", "emissionsPotential", "implementationComplexity", "evidenceCoverage"]},
@@ -239,6 +246,33 @@ def apply_action(root: Path, payload: dict):
                 scenario["criteria"][name] = {"rating": rating, "note": checked_text(entry.get("note", ""), f"{name} note", 1000, False)}
             scenario.update(status="REVIEWED_QUALITATIVE", reviewer=checked_text(payload.get("reviewer"), "Reviewer", 160), reviewedAt=utc_now())
             return {"event": "SCENARIO_REVIEWED", "id": scenario["id"]}
+        if action == "reviewStreetPlan":
+            plan = next((x for x in state["streetPlans"] if x["streetKey"] == payload.get("streetKey")), None)
+            if not plan:
+                raise ValueError("Unknown street plan")
+            supplied = payload.get("fields")
+            if not isinstance(supplied, dict):
+                raise ValueError("Street review fields are required")
+            for name in STREET_FIELDS:
+                entry = supplied.get(name, {})
+                plan["fields"][name] = {
+                    "value": checked_text(entry.get("value", ""), f"{name} value", 2000, False),
+                    "source": checked_text(entry.get("source", ""), f"{name} source", 1000, False),
+                }
+            plan.update(status="REVIEWED", reviewer=checked_text(payload.get("reviewer"), "Reviewer", 160), reviewedAt=utc_now())
+            return {"event": "STREET_PLAN_REVIEWED", "id": plan["streetKey"]}
+        if action == "addRoadmapMilestone":
+            year = payload.get("year")
+            if not isinstance(year, int) or not 2026 <= year <= 2030:
+                raise ValueError("Milestone year must be from 2026 through 2030")
+            milestone = {"id": str(uuid.uuid4()), "year": year,
+                         "milestone": checked_text(payload.get("milestone"), "Milestone", 2000),
+                         "derogationCriteria": checked_text(payload.get("derogationCriteria"), "Derogation criteria", 2000),
+                         "source": checked_text(payload.get("source"), "Source", 1000),
+                         "owner": checked_text(payload.get("owner"), "Owner", 160), "createdAt": utc_now()}
+            state["roadmap"]["milestones"].append(milestone)
+            state["roadmap"]["milestones"].sort(key=lambda x: (x["year"], x["createdAt"]))
+            return {"event": "ROADMAP_MILESTONE_ADDED", "id": milestone["id"]}
         if action == "addSurveyResponse":
             response_id = checked_text(payload.get("respondentId"), "Respondent ID", 100)
             if any(x["respondentId"] == response_id for x in state["survey"]["responses"]):
@@ -283,6 +317,7 @@ def survey_summary(state: dict) -> dict:
 def report_payload(state: dict) -> dict:
     return {"schema": "bologna-urban-logistics-report/v1", "source": state["source"], "baseline": state["baseline"],
             "datedObservations": state["datedObservations"], "decisions": state["decisions"], "assumptions": state["assumptions"],
+            "streetPlans": state["streetPlans"], "roadmap": state["roadmap"],
             "scenarios": state["scenarios"], "survey": survey_summary(state), "workspaceRevision": state["revision"],
             "boundary": "Analyst evidence for prime review; not a current-condition claim or formal planning judgment."}
 
@@ -303,6 +338,18 @@ def geojson(state: dict) -> bytes:
                          "properties": {k: row[k] for k in ["sourceId", "observedAt", "civic", "spaces", "category", "layout", "status"]} |
                                        {"street_en": row["street"]["en"], "street_it": row["street"]["it"]}})
     return canonical({"type": "FeatureCollection", "features": features})
+
+
+def roadmap_csv(state: dict) -> bytes:
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(["record_type", "street", "field", "value", "source", "year", "milestone", "derogation_criteria", "owner", "status"])
+    for plan in state["streetPlans"]:
+        for name, entry in plan["fields"].items():
+            writer.writerow(["street_review", plan["street"]["it"], name, entry["value"], entry["source"], "", "", "", plan["reviewer"] or "", plan["status"]])
+    for row in state["roadmap"]["milestones"]:
+        writer.writerow(["roadmap_milestone", "", "", "", row["source"], row["year"], row["milestone"], row["derogationCriteria"], row["owner"], "SUPPLIED"])
+    return output.getvalue().encode("utf-8")
 
 
 def report_html(state: dict) -> bytes:
@@ -326,7 +373,7 @@ def report_html(state: dict) -> bytes:
 def export_workspace(root: Path, out: Path) -> dict:
     state = load_state(root)
     out.mkdir(parents=True, exist_ok=True)
-    files = {"baseline.csv": baseline_csv(state), "observations.geojson": geojson(state),
+    files = {"baseline.csv": baseline_csv(state), "observations.geojson": geojson(state), "roadmap.csv": roadmap_csv(state),
              "report.json": canonical(report_payload(state)), "report.html": report_html(state)}
     manifest = {"schema": "bologna-urban-logistics-export/v1", "createdAt": utc_now(), "workspaceRevision": state["revision"],
                 "sourceSha256": state["source"]["compressedSha256"], "files": []}
