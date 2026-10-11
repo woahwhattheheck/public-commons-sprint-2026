@@ -1,5 +1,6 @@
 import { compareSnapshots } from './offer-delta.mjs';
 import { rankFederatedListings } from './federated-query.mjs';
+import { buildOfferCsv } from './offer-csv.mjs';
 // MIT. Browser uses DOM textContent exclusively for external native provider data.
 const $ = id => document.getElementById(id);
 const results = $('results');
@@ -21,6 +22,42 @@ function operationKey(row) {
   const method = String(row.method ?? '').toUpperCase();
   if (['GET', 'POST', 'HEAD'].includes(method)) return method;
   return method ? 'OTHER' : 'UNDECLARED';
+}
+
+function filteredListings() {
+  if (!state.data) return [];
+  const query = $('query').value.trim();
+  const provider = $('provider').value;
+  const operation = $('operation').value;
+  return rankFederatedListings(
+    state.data.listings.filter(row => !operation || operationKey(row) === operation),
+    query, provider);
+}
+
+function downloadMatchingOfferCsv() {
+  if (!state.data) return;
+  const selection = {
+    query: $('query').value.trim(),
+    provider: $('provider').value,
+    operation: $('operation').value,
+  };
+  const rows = filteredListings();
+  try {
+    const csv = buildOfferCsv(state.data, rows, selection);
+    const url = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'sf70-native-offers-' + state.data.network.replace(':', '-') + '-' +
+      state.data.observedAt.replace(/[^a-zA-Z0-9]/g, '-') + '.csv';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    $('export-status').textContent = 'Prepared ' + rows.length +
+      ' selected native listing(s) for CSV download. Provider status rows and separate advertised payment alternatives are included. No merchant calls.';
+  } catch (error) {
+    $('export-status').textContent = 'CSV export unavailable: ' + String(error?.message ?? error).slice(0,120);
+  }
 }
 
 function sourceBoundHandoff(row) {
@@ -178,10 +215,7 @@ function renderDelta() {
 function renderListings() {
   if (!state.data) return;
   const q=$('query').value.trim();
-  const source=$('provider').value;
-  const operation=$('operation').value;
-  const scoped=state.data.listings.filter(row => !operation || operationKey(row)===operation);
-  const visible=rankFederatedListings(scoped,q,source);
+  const visible=filteredListings();
   $('matches').textContent=visible.length+' of '+state.data.listings.length+
     ' native provider rows '+(q?'ranked by lexical/fuzzy relevance':'in native order')+
     '; original source identity and payment terms remain separate.';
@@ -209,6 +243,7 @@ async function load(manual = false) {
     if(!Array.isArray(data.sources)||!Array.isArray(data.listings))throw new Error(data.error||'Invalid native federation response');
     state.delta=state.data ? compareSnapshots(state.data,data) : null;
     state.data=data;
+    $('export-csv').disabled=false;
     renderDelta();
     const good=data.sources.filter(x=>x.status==='COMPLETE_GET_CAPTURE').length;
     $('row-count').textContent=data.observedListingRows;
@@ -237,4 +272,5 @@ $('query').addEventListener('input',renderListings);
 $('provider').addEventListener('change',renderListings);
 $('operation').addEventListener('change',renderListings);
 $('refresh').addEventListener('click',()=>load(true));
+$('export-csv').addEventListener('click',downloadMatchingOfferCsv);
 load();
