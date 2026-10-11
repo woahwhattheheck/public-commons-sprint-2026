@@ -75,7 +75,9 @@ export async function main(args = process.argv.slice(2)) {
   if (options.check) {
     const upstreams = application.snapshot().bindings;
     process.stdout.write(JSON.stringify({status:'CONFIG_VALID',routes:config.routes.length,
-      upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length}) + '\n');
+      upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
+      cachedUpstreamBindings:upstreams.filter(row => row.cache).length}) + '\n');
+    await application.close();
     return null;
   }
   let nativeFactory = null;
@@ -87,10 +89,20 @@ export async function main(args = process.argv.slice(2)) {
       facilitatorClient:new HTTPFacilitatorClient({url:options.facilitator}),
     });
   }
-  const session = await startSellerService({config:application.config,port:options.port,
-    handlers:application.handlers,nativeFactory,
-    maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
+  let session;
+  try {
+    session = await startSellerService({config:application.config,port:options.port,
+      handlers:application.handlers,nativeFactory,
+      maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
+  } catch(error) { await application.close(); throw error; }
   session.upstreamSnapshot = application.snapshot;
+  session.invalidateUpstreamCache = application.invalidateCache;
+  const nativeClose = session.close.bind(session);
+  let closing;
+  session.close = () => closing ??= (async () => {
+    try { return await nativeClose(); }
+    finally { await application.close(); }
+  })();
   process.stdout.write(JSON.stringify({url:session.url,mode:session.mode,
     health:session.url + '/_seller/health',ready:session.url + '/_seller/ready',
     offers:session.url + '/_seller/offers',
