@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Conversion workspace</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="masthead">
+    <div><p class="eyebrow">ERP conversion / operator workspace</p><h1 id="profileTitle">Conversion workspace</h1><a id="sourceLink" target="_blank" rel="noreferrer">Original requirements</a></div>
+    <div class="actions"><button id="newMapping" type="button">New mapping</button><button id="refreshAll" type="button">Refresh</button></div>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite">Opening retained service…</div>
+  <nav class="tabs" aria-label="Workspace views">
+    <button type="button" data-view="intake" aria-current="page">Intake &amp; mapping</button>
+    <button type="button" data-view="runs">Runs &amp; review</button>
+    <button type="button" data-view="bundles">Retained inputs</button>
+  </nav>
+  <main>
+    <section id="intakeView" aria-label="Intake and mapping">
+      <form id="mappingForm">
+        <section class="panel">
+          <div class="section-heading"><div><p class="eyebrow" id="mappingMode">New conversion</p><h2>1. Define the conversion scope</h2></div><p class="muted" id="mappingRevision"></p></div>
+          <div class="grid two"><label>Cohort<select id="cohort" required></select></label><label>Dataset name<input id="dataset" maxlength="160" required></label></div>
+          <p id="cohortPurpose" class="muted"></p>
+          <div class="grid two">
+            <label>Conversion owner<input id="conversionOwner" maxlength="200" autocomplete="name" required></label>
+            <label>Period or cutoff<input id="period" maxlength="200" placeholder="Agreed history and cutover date"></label>
+            <label>Source system<input id="sourceSystem" maxlength="200"></label>
+            <label>Target system<input id="targetSystem" maxlength="200"></label>
+            <label class="span-two">Included history and conversion responsibility<textarea id="coverage" rows="2" maxlength="2000" required></textarea></label>
+            <label>Excluded or unavailable history<textarea id="excludedHistory" rows="2" maxlength="2000"></textarea></label>
+            <label>Customer resources and dependencies<textarea id="resources" rows="2" maxlength="2000"></textarea></label>
+            <label class="span-two">Conversion timeline and UAT plan<textarea id="timeline" rows="2" maxlength="2000"></textarea></label>
+          </div>
+          <label id="correctionWrap" hidden>Reason for this correction<textarea id="correctionReason" rows="2" maxlength="2000"></textarea></label>
+        </section>
+        <section class="panel">
+          <h2>2. Select the original exports</h2>
+          <p class="muted" id="inputLimit">UTF-8 CSV with a header row. Each staged revision retains its exact source and target bytes.</p>
+          <div class="grid two">
+            <div class="input-card"><label>Source export<input id="sourceFile" type="file" accept=".csv,text/csv"></label><p id="sourceMeta" class="muted">No source selected.</p><button id="retainedSource" type="button" hidden>Use retained source</button></div>
+            <div class="input-card"><label>Target export<input id="targetFile" type="file" accept=".csv,text/csv"></label><p id="targetMeta" class="muted">No target selected.</p><button id="retainedTarget" type="button" hidden>Use retained target</button></div>
+          </div>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><h2>3. Map keys, text and amounts</h2><button id="matchingColumns" type="button">Use matching column names</button></div>
+          <p class="muted">Keys identify each unique record. Text compares exactly after Unicode normalization. Amounts use the declared decimal scale and tolerance. Select key fields to compare group totals and row counts.</p>
+          <div class="table-scroll"><table class="mapping-table"><thead><tr><th scope="col">Logical field</th><th scope="col">Compare as</th><th scope="col">Source column</th><th scope="col">Target column</th><th scope="col">Scale</th><th scope="col">Tolerance</th><th scope="col">Group</th><th scope="col"><span class="sr-only">Remove</span></th></tr></thead><tbody id="mappingRows"></tbody></table></div>
+          <div class="actions"><button id="addKey" type="button">Add key</button><button id="addText" type="button">Add text</button><button id="addAmount" type="button">Add amount</button></div>
+        </section>
+        <section class="panel">
+          <h2>4. Apply an approved code crosswalk</h2>
+          <label class="check"><input id="crosswalkEnabled" type="checkbox">Map selected source key tuples to target codes</label>
+          <p class="muted">Every source tuple needs an approved row, including unchanged codes. Composite keys keep their order. The comparison reports any resulting duplicate record identity.</p>
+          <div id="crosswalkEditor" hidden>
+            <div id="crosswalkKeys" class="actions"></div>
+            <div class="actions"><label class="file-inline">Import crosswalk JSON<input id="crosswalkFile" type="file" accept=".json,application/json"></label><button id="downloadCrosswalk" type="button">Download crosswalk</button></div>
+            <div class="table-scroll"><table><thead id="crosswalkHead"></thead><tbody id="crosswalkRows"></tbody></table></div>
+            <div class="section-heading"><div class="actions"><button id="addCrosswalk" type="button">Add mapping row</button><button id="previousCrosswalk" type="button">Previous rows</button><button id="nextCrosswalk" type="button">Next rows</button></div><p id="crosswalkPage" class="muted"></p></div>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>5. Retain the mapping and run</h2>
+          <p class="muted">Staging creates an immutable input bundle. A correction retains its predecessor and stages the current comparison engine. Run only the reviewed staged revision.</p>
+          <div class="actions"><button id="stageMapping" class="primary" type="submit">Stage immutable inputs</button><button id="previewMapping" type="button">Preview mapping JSON</button></div>
+          <details id="mappingPreview" hidden><summary>Mapping JSON</summary><pre id="mappingJson"></pre><button id="downloadMapping" type="button">Download mapping</button></details>
+          <div id="stagedPanel" class="subpanel" hidden><h3>Staged input bundle</h3><div id="stagedIdentity"></div><div class="grid run-entry"><label>Reconciliation job ID<input id="jobId" maxlength="96" pattern="[A-Za-z0-9](?:[A-Za-z0-9._]|-){0,95}" spellcheck="false"></label><button id="executeJob" class="primary" type="button">Run reconciliation</button></div></div>
+        </section>
+      </form>
+    </section>
+    <section id="runsView" aria-label="Runs and review" hidden>
+      <div class="runs-layout"><aside class="panel run-list"><div class="section-heading"><h2>Retained runs</h2><button id="refreshJobs" type="button">Refresh</button></div><div id="jobsList"></div><button id="moreJobs" type="button" hidden>Load more runs</button></aside><div id="jobDetail" class="panel"><h2>Choose a run</h2><p class="muted">Open a retained run to inspect its original comparison, record a review or create a linked correction.</p></div></div>
+    </section>
+    <section id="bundlesView" class="panel" aria-label="Retained inputs" hidden><div class="section-heading"><div><h2>Retained input bundles</h2><p class="muted">Each bundle pins the original exports, mapping and comparison engine. Open one to run it or prepare a correction.</p></div><button id="refreshBundles" type="button">Refresh</button></div><div id="bundlesList"></div><button id="moreBundles" type="button" hidden>Load more inputs</button></section>
+  </main>
+  <footer>Private local workspace · Original exports, mapping revisions and reviews stay in the retained reconciliation service.</footer>
+</body>
+</html>
