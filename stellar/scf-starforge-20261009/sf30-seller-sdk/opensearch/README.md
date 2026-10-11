@@ -10,7 +10,7 @@ Use Node.js **22.16 or newer** with JSON.parse source-context support, and an ex
 
 OpenSearch 3.3 introduced the PIT-only `_shard_doc` sort. This source explicitly adds `_index` and `_shard_doc` after the merchant's business ordering. The tuple disambiguates documents across indices and shards. Startup checks the actual distribution and version.
 
-Supply an account with access to the declared indices, field capabilities, query validation, PIT creation, search and deletion of its own PITs. Keep customer-specific data access in the existing application's authorization and OpenSearch roles. A customer-selected filter is an input value; it is not an authenticated tenant identity.
+Supply an account with access to the declared indices, mappings, field capabilities, query validation, PIT creation, search and deletion of its own PITs. Keep customer-specific data access in the existing application's authorization and OpenSearch roles. A customer-selected filter is an input value; it is not an authenticated tenant identity.
 
 ## Prepare and start
 
@@ -43,7 +43,7 @@ node opensearch/start.mjs --directory /private/search-ready \
 
 Preparation is offline. It creates a private source/plan, the original `service.json` and bindings, public OpenAPI and the complete generated `client/`. Existing directories are never overwritten. An `INCOMPLETE` marker prevents starting interrupted preparation. Prepare a deliberate query/price revision in a new folder and switch it through the existing release process.
 
-`--inspect` reads the actual cluster version and field capabilities and asks OpenSearch to validate every named query with its private probe. Normal startup performs this same preflight before opening the seller. Startup prints the original seller, docs and operations URLs. `--no-operations`, `--max-in-flight`, `--drain-grace-ms` and `--availability-dir` use the existing merchant lifecycle.
+`--inspect` reads the actual cluster version, field capabilities and stored-source projection mappings, then asks OpenSearch to validate every named query with its private probe. Normal startup performs this same preflight before opening the seller. Startup prints the original seller, docs and operations URLs. `--no-operations`, `--max-in-flight`, `--drain-grace-ms` and `--availability-dir` use the existing merchant lifecycle.
 
 With no facilitator, the service advertises the original HTTP 402 challenges. Supply the configured facilitator for the maintained verify → query → settle → delivery flow.
 
@@ -78,7 +78,7 @@ A parameter is a complete JSON value placeholder: `{"$param":"term"}`. Field nam
 
 The shared SF30 scalar contract supports strings, signed 64-bit integers, finite numbers, booleans, enums, defaults, nullability and appropriate bounds. Use decimal text for integer inputs beyond JavaScript's safe range; their exact native numeric tokens are written to OpenSearch. General `number` inputs retain ordinary binary floating-point semantics.
 
-Each projected field must have one mapped type across the selected indices. Business sort fields must be aggregatable. Missing/conflicting mappings prevent startup, and changed mappings during delivery fail the query through the original seller cancellation path. Use original source field names instead of mapping aliases for `_source` projection.
+Each projected field must have one mapped type across the selected indices. Business sort fields must be aggregatable. Missing/conflicting mappings prevent startup, and changed mappings during delivery fail the query through the original seller cancellation path. The adapter reads native mappings separately to reject disabled `_source`, mapping aliases, multi-fields and fields pruned from stored source. Use original source field names for projection; a sortable multi-field such as `title.keyword` can remain a business sort field while `title` is projected. The pinned mapping contract includes resolved index membership.
 
 The merchant-plan schema is `stellar-forge.opensearch-merchant-plan.v1`. It uses the original public `publicOrigin`, `payment` or `paymentOptions` and `routes` shape. Each route supplies `id`, fixed `path`, GET/POST `method`, named `query`, `serviceName`, `description`, `parameterDescriptions` and public `example`. The [complete example](examples/merchant-plan.json) is ready to adapt. The existing compiler owns route collisions, public origins, Bazaar schemas and payment metadata.
 
@@ -87,11 +87,12 @@ The merchant-plan schema is `stellar-forge.opensearch-merchant-plan.v1`. It uses
 Give the customer the public OpenAPI and generated `client/`. The original Node Buyer owns signing, approval, durable reservations and saved-response recovery:
 
 ~~~js
+import { fileURLToPath } from 'node:url';
 import { Buyer } from '@tokenjunkielabs/starforge-merchant/buyer/node';
 import { createSellerClient } from './client/seller-client.mjs';
 
 const buyer = new Buyer({
-  runtimeDirectory: '/opt/starforge/stellar/scf-starforge-20261009/sf88-operator-buyer-cli',
+  runtimeDirectory: fileURLToPath(new URL('../', import.meta.resolve('@tokenjunkielabs/starforge-merchant/buyer/node'))),
   stateDirectory: '/private/customer/buyer-state',
   operatorProfile: '/private/customer/operator-profile.json',
 });
@@ -99,6 +100,7 @@ const client = createSellerClient({ buyer });
 const response = await client.call('product_search', {
   body: { term: 'pump', available: true },
 }, { intentId: 'product-search-001', maxAtomic: '10000', acceptIndex: 0 });
+response.raiseForStatus();
 const result = await response.json();
 console.log(result.hitCount, result.total, result.hits);
 ~~~
@@ -110,6 +112,7 @@ The response schema is `stellar-forge.opensearch-result.v1`:
 | Field | Meaning |
 | --- | --- |
 | `query`, `fields`, `fieldTypes` | Named product and original mapping contract |
+| `source` | Native server version and cluster UUID fingerprint, preserving source identity across endpoint changes |
 | `hits` | Projected `_source`, `_index`, `_id`, `_score`, native sort and exact-integer pointers |
 | `hitCount` | Documents delivered |
 | `total.value`, `total.relation` | Native exact count (`eq`) or lower bound (`gte`) |
@@ -159,6 +162,8 @@ Native timeout enforcement and existing account resource settings determine how 
 - [PIT create/delete and permissions](https://docs.opensearch.org/latest/api-reference/search-apis/point-in-time-api/)
 - [Native search](https://docs.opensearch.org/latest/api-reference/search-apis/search/)
 - [Field capabilities](https://docs.opensearch.org/latest/api-reference/search-apis/field-caps/)
+- [Stored-source mappings](https://docs.opensearch.org/latest/mappings/metadata-fields/source/)
+- [Source fields and mapped fields](https://docs.opensearch.org/latest/search-plugins/searching-data/retrieve-specific-fields/)
 - [PIT pagination](https://docs.opensearch.org/latest/search-plugins/searching-data/paginate/)
 - [Sortable index metadata](https://docs.opensearch.org/latest/mappings/metadata-fields/index-metadata/)
 - [Original shard/doc sort and native pagination cases](https://github.com/opensearch-project/OpenSearch/pull/18924)

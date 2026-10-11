@@ -26,9 +26,10 @@ export function assertLosslessJSONSupport() {
 export function parseNativeJSON(text) {
   return JSON.parse(text, (_key, value, context) => {
     if (typeof value === 'number' && Number.isInteger(value) && !Number.isSafeInteger(value)) {
-      if (!context?.source || !/^-?(?:0|[1-9]\d*)$/.test(context.source))
-        fail('OPENSEARCH_UNSAFE_NUMERIC_ENCODING');
-      return new NativeInteger(context.source);
+      if (typeof context?.source !== 'string') fail('OPENSEARCH_UNSAFE_NUMERIC_ENCODING');
+      // Decimal/exponent tokens have native floating-point semantics. Preserve
+      // exact decimal text only for lexical integer tokens (long/doc cursors).
+      if (/^-?(?:0|[1-9]\d*)$/.test(context.source)) return new NativeInteger(context.source);
     }
     if (typeof value === 'number' && !Number.isFinite(value)) fail('OPENSEARCH_UNSAFE_NUMERIC_ENCODING');
     return value;
