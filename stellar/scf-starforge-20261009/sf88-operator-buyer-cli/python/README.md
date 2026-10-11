@@ -311,20 +311,65 @@ for row in delivery.csv_rows():
 ```
 
 `retrieve_file` calls the original SF101 retrieval function, which reads the named
-token in Node, sends one exact merchant HTTPS GET, and verifies promised bytes
-before the original streamed file writer publishes the final path. The Python
+token in Node and verifies promised bytes before the original streamed file writer
+publishes the final path. On Linux, an interrupted transfer retains its private
+prefix and the next explicit call requests the remaining bytes from the same
+entitlement. A matching completed local file requires zero HTTP requests. The Python
 file readers reuse the same verified-descriptor implementation as ordinary
 buyer responses. `FileDelivery` describes completed product bytes separately
 from the original `BuyerResult` financial outcome; a local file is not payment
 confirmation.
 
 The default product destination is `product.bin` in the private operation
-directory. `claim_env="NAME"` selects a different existing private variable. Once
-a destination is selected, later calls retain it; use `delivery.save_as(...)`
-for a second local copy. An error retains the original failure and any private
-partial-file path in `operation.inspect()["fileDelivery"]`. Notification pending,
-wrong token, changed bytes or interrupted download never trigger a payment.
-Repair the cause, then explicitly call `retrieve_file` for the same operation.
+directory. `claim_env="NAME"` selects a different existing private variable. The
+canonical destination is durably selected before Node starts, so a fresh Python
+process keeps the same output even if its predecessor was killed. Use
+`delivery.save_as(...)` for a second local copy. `timeout_ms` accepts 1–300000
+milliseconds and defaults to 30000; it includes connection and body transfer.
+`resume=None` follows the original Linux default. `resume=False` explicitly uses
+the original full-download route. The enclosing `Buyer(timeout=...)` is the
+separate Python subprocess deadline, in seconds.
+
+```python
+from stellar_forge_buyer import DeliveryError
+
+try:
+    delivery = operation.retrieve_file(
+        destination="/private/customer/report-482.csv", timeout_ms=120000,
+    )
+except DeliveryError as error:
+    print(error.code, error.retained_bytes, error.resumable)
+    print(error.partial_path, error.transfer_state_path)
+    transfer = operation.inspect_file_transfer()
+    print(transfer.status, transfer.retained_bytes, transfer.expected_bytes)
+else:
+    print(delivery.http_requests, delivery.resumed_bytes, delivery.transfer)
+```
+
+`inspect_file_transfer()` opens the original local transfer record, validates its
+handoff and saved prefix, and recovers a stopped process's original writer
+reservation. It requires Linux with `flock`. Its `FileTransfer` result exposes
+`status`, `destination`, `retained_bytes`, `expected_bytes`, `resumable`, and
+`partial_path`. These operations use local files and the retained operation.
+
+| Original transfer state | Operator action |
+| --- | --- |
+| `NEW` | Retrieve the original entitlement when ready. |
+| `INTERRUPTED` | Repair the reported source, access or connection condition, then call `retrieve_file()` again. |
+| `REJECTED` | Correct the original file condition, then explicitly call `reset_file_transfer()` and retrieve again. |
+| `COMPLETE` | Consume `recover_file()` or retrieve locally to repair its receipt. |
+| A live operation owns the transfer | Let that operation finish or interrupt it before inspecting the checkpoint. |
+
+`reset_file_transfer()` calls the original reset operation and returns a
+`FileTransfer` with `removed_partial_bytes`. It removes only the retained
+original partial and preserves the selected destination; an existing final file
+is refused. The same payment, order handoff and access policy continue to apply.
+For the protocol and retained-state details, see
+[`RESUMABLE_TRANSFERS.md`](../../sf101-merchant-receiver/RESUMABLE_TRANSFERS.md).
+
+The original failure and transfer metadata are also retained in
+`operation.inspect()["fileDelivery"]`. Python interruption and subprocess
+timeout signal Node to checkpoint its original transfer before it exits.
 
 ```python
 reopened = Buyer(checkout="/work/public-commons-sprint-2026",
@@ -335,12 +380,28 @@ if delivery is not None:
         import_row(row)
 ```
 
-If the native download completed before Python could save its result, call
-`retrieve_file` with the same destination. Original matching local bytes recover
-the receipt without an HTTP request or claim token. This also works after
-application restart. `recover_file` only consumes a retained completed result;
-it does not guess that a partial file is complete. The same operation's existing
-`recover()` retains the separate original buyer outcome.
+Each retrieval retains its original child output in the private operation's
+`file-runs` directory. If Node completed before Python could save its view,
+`recover_file()` reads that exact run and returns its completed result locally.
+A recovered stdout record preserves an unknown child exit status in
+`runtimeError`; its product can still be consumed through the verified file
+methods. If a complete child result is unavailable, call `retrieve_file()` with
+the same destination to reconstruct the original matching local receipt with
+zero HTTP requests. The same operation's existing `recover()` retains its
+separate original buyer outcome.
+
+The installed CLI exposes the same lifecycle:
+
+```bash
+stellar-forge-buyer --state /private/data-buyer retrieve-file approved-file-482 --timeout-ms 120000
+stellar-forge-buyer --state /private/data-buyer inspect-file-transfer approved-file-482
+stellar-forge-buyer --state /private/data-buyer reset-file-transfer approved-file-482
+stellar-forge-buyer --state /private/data-buyer recover-file approved-file-482
+```
+
+`--resume` and `--no-resume` select the retrieval mode explicitly. Failed
+retrieval JSON includes `retainedBytes`, `resumable`, and the original private
+partial/state paths when available.
 
 `examples/buy_file.py` provides explicit prepare, review, purchase, download and
 local CSV-consumption actions, followed by original accounting and history.
