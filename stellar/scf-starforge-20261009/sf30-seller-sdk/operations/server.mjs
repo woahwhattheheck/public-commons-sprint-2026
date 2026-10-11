@@ -7,13 +7,15 @@ import { createDeliveryReader, deliveryCsv, deliveryPrometheus } from './deliver
 import { createMerchantOperationDesk } from './merchant-operations.mjs';
 import { createAvailabilityDesk } from '../availability/desk.mjs';
 import { createDeliveryDesk } from './delivery-control.mjs';
+import { createMerchantIncidentSource } from './delivery-incidents.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
 export async function startSellerOperations(session, { port = 8424, recentLimit = 160, deliveryOutbox = null, navigationOrigin = null,
   historyDirectory, historyRetentionDays = 90, historyCheckpointMs = 5000, operationControls = false,
-  deliveryControls = true, deliveryRecovery = null } = {}) {
+  deliveryControls = true, deliveryRecovery = null, deliveryWorkspaceDirectory = null,
+  deliveryWorkspaceOptions = {}, incidentSource = null } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   if (!Number.isInteger(historyCheckpointMs) || historyCheckpointMs < 1000 || historyCheckpointMs > 60000)
     throw new RangeError('history checkpoint interval must be 1000–60000 ms');
@@ -22,7 +24,13 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       Number(new URL(navigationOrigin).port)>65535)) throw new TypeError('navigationOrigin must be an explicit loopback workspace origin');
   const merchantDesk = createMerchantOperationDesk(session.operationControl,{enabled:operationControls});
   const availabilityDesk = createAvailabilityDesk(session.availability);
-  const deliveryDesk = createDeliveryDesk(deliveryOutbox,{enabled:deliveryControls,recovery:deliveryRecovery});
+  if(deliveryWorkspaceDirectory!==null && (!deliveryOutbox || deliveryRecovery!==null))
+    throw new TypeError('The receiver workspace requires the same original outbox and its own recovery controller');
+  let deliveryWorkspaceModel=null,deliveryWorkspaceHandler=null,operationsOrigin=null;
+  const incidents=incidentSource===null?null:createMerchantIncidentSource(incidentSource,()=>({seller:session.url,ops:operationsOrigin}));
+  const deliveryDesk = createDeliveryDesk(deliveryOutbox,{enabled:deliveryControls,
+    recovery:deliveryWorkspaceDirectory===null?deliveryRecovery:input=>deliveryWorkspaceModel.recoverDelivery(input),
+    incidents,receiverWorkspace:deliveryWorkspaceDirectory===null?null:'/delivery-workspace/'});
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
@@ -34,6 +42,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     ['/availability/style.css', '../availability/style.css', 'text/css; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
+    ['/delivery-incidents-panel.mjs', 'delivery-incidents-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery.css', 'delivery.css', 'text/css; charset=utf-8'],
     ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
@@ -97,6 +106,13 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
           (!userNavigation && ((req.headers.origin && !allowedOrigins.has(req.headers.origin)) ||
           ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site'])))) {
         return reply(403, 'text/plain', 'Operator origin required');
+      }
+      if(req.url==='/delivery-workspace' || req.url?.startsWith('/delivery-workspace/')) {
+        if(!deliveryWorkspaceHandler)return reply(503,'application/json; charset=utf-8',JSON.stringify({error:'DELIVERY_WORKSPACE_UNAVAILABLE'}));
+        deliveryWorkspaceHandler(req,res).catch(()=>{
+          if(!res.destroyed&&!res.headersSent)reply(503,'application/json; charset=utf-8',JSON.stringify({error:'DELIVERY_WORKSPACE_UNAVAILABLE'}));
+        });
+        return;
       }
       if (merchantDesk.accepts(req.url)) {
         merchantDesk.dispatch(req,allowedOrigins).then(result => {
@@ -205,6 +221,8 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
         await merchantDesk.close();
         await availabilityDesk.close();
         await deliveryDesk.close();
+        deliveryWorkspaceHandler?.close();
+        await deliveryWorkspaceModel?.close();
         await checkpointPending;
         await history?.close(observer.snapshot());
       }
@@ -222,11 +240,23 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     allowedOrigins = new Set([...allowedHosts].map(host => `http://${host}`));
     if (history) checkpointTimer = setInterval(checkpoint, historyCheckpointMs).unref();
     const url = `http://${HOST}:${assigned}`;
+    operationsOrigin=url;
+    if(deliveryWorkspaceDirectory!==null) {
+      const [{openDeliveryWorkspace},{createDeliveryWorkspaceHandler}]=await Promise.all([
+        import('../../sf98-merchant-delivery/workspace-model.mjs'),
+        import('../../sf98-merchant-delivery/workspace-server.mjs')]);
+      deliveryWorkspaceModel=await openDeliveryWorkspace({directory:deliveryWorkspaceDirectory,
+        outboxDirectory:deliveryOutbox.dir,deliveryOptions:deliveryWorkspaceOptions});
+      deliveryWorkspaceHandler=await createDeliveryWorkspaceHandler({model:deliveryWorkspaceModel,
+        origins:[...allowedOrigins],basePath:'/delivery-workspace'});
+    }
     return { server, url, merchantOperationsUrl:url + '/merchant-operations',
       availabilityUrl:url + '/availability',
       availabilityControlUrl:availabilityDesk.controlFragment ? url + '/availability#' + availabilityDesk.controlFragment : null,
       operationControlUrl:merchantDesk.controlFragment ? url + '/merchant-operations#' + merchantDesk.controlFragment : null,
       deliveryControlUrl:deliveryDesk.controlFragment ? url + '/fulfillment#' + deliveryDesk.controlFragment : null,
+      deliveryWorkspace:deliveryWorkspaceModel,
+      deliveryWorkspaceUrl:deliveryWorkspaceModel?url+'/delivery-workspace/':null,
       observer, history, close };
   } catch (error) { await close().catch(() => {}); throw error; }
 }

@@ -24,8 +24,28 @@ const safeError = issue => [issue?.code, issue?.message].find(value =>
 async function absent(path) { try { await lstat(path); return false; } catch (issue) { if (issue.code === 'ENOENT') return true; throw issue; } }
 const unpack = row => row ? { ...row, data: JSON.parse(row.data) } : null;
 
-export async function openPostgresPublisher({ directory, create = false, sourceFile, targetDirectory,
-  environment = process.env, seller = null, resource = null } = {}) {
+const postgresDriver = Object.freeze({
+  sourceName: 'PostgreSQL',
+  workspaceSchema: 'stellar-forge.postgres-publisher-workspace.v1',
+  statusSchema: 'stellar-forge.postgres-publisher-status.v1',
+  candidateSchema: 'stellar-forge.postgres-dataset-candidate.v1',
+  capturePlan, inspectSource, openSource: openPostgresSourceFile, checkColumnTypes, encodeRow,
+  validateExtraction: extraction => extraction?.transaction?.readOnly && extraction.transaction.isolation === 'REPEATABLE READ',
+});
+
+export function openPostgresPublisher(options = {}) { return openSourceDatasetPublisher(options, postgresDriver); }
+
+/** Trusted application adapter, never selected by an HTTP request or source JSON.
+ * Both source types use this same durable candidate, review and version writer. */
+export async function openSourceDatasetPublisher({ directory, create = false, sourceFile, targetDirectory,
+  environment = process.env, seller = null, resource = null } = {}, driver = postgresDriver) {
+  if (!driver || ['workspaceSchema', 'statusSchema', 'candidateSchema'].some(key =>
+    typeof driver[key] !== 'string' || !/^stellar-forge\.[a-z-]+\.v1$/.test(driver[key])) ||
+    ['capturePlan', 'inspectSource', 'openSource', 'checkColumnTypes', 'encodeRow', 'validateExtraction']
+      .some(key => typeof driver[key] !== 'function')) throw new TypeError('A trusted dataset source driver is required');
+  const sourceName = driver.sourceName ?? 'PostgreSQL';
+  if (typeof sourceName !== 'string' || !/^[A-Za-z][A-Za-z0-9 -]{0,63}$/.test(sourceName))
+    throw new TypeError('A plain source display name is required');
   absolute(directory);
   if (create) {
     if (!await absent(directory)) throw fault('WORKSPACE_EXISTS', 'Use a new workspace or reopen this one without --create.');
@@ -51,13 +71,13 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
         created TEXT NOT NULL, updated TEXT NOT NULL, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY, run TEXT, created TEXT NOT NULL, kind TEXT NOT NULL, data TEXT NOT NULL);`);
     if (create) {
-      await createFile(join(directory, 'workspace.json'), bytes({ schema: 'stellar-forge.postgres-publisher-workspace.v1',
+      await createFile(join(directory, 'workspace.json'), bytes({ schema: driver.workspaceSchema,
         sourceFile, targetDirectory, createdAt: stamp() }));
       await privateDirectory(join(directory, 'plans'), true); await privateDirectory(join(directory, 'runs'), true);
       await syncDirectory(directory);
     }
     const settings = await readJson(join(directory, 'workspace.json'), 4096);
-    if (settings.schema !== 'stellar-forge.postgres-publisher-workspace.v1' ||
+    if (settings.schema !== driver.workspaceSchema ||
         sourceFile && sourceFile !== settings.sourceFile || targetDirectory && targetDirectory !== settings.targetDirectory)
       throw fault('WORKSPACE_BINDING_CHANGED', 'Reopen with its original source and dataset target.');
     absolute(settings.sourceFile, 'source file'); absolute(settings.targetDirectory, 'target state directory');
@@ -106,12 +126,12 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
     for (const row of db.prepare("SELECT id,state FROM runs WHERE state IN ('EXTRACTING','PUBLISHING')").all())
       change(row.id, row.state === 'EXTRACTING' ? 'INTERRUPTED' : 'PUBLICATION_UNKNOWN',
         { error: row.state === 'EXTRACTING' ? 'EXTRACTION_INTERRUPTED' : 'PUBLICATION_OUTCOME_NOT_RECORDED' }, 'PROCESS_RECOVERY');
-    const source = () => inspectSource(sourceFile);
+    const source = () => driver.inspectSource(sourceFile);
     async function savePlan(input) {
       return mutate('saving plan', null, async () => {
       const folder = randomUUID(), path = join(directory, 'plans', folder);
       await privateDirectory(path, true);
-      const data = await capturePlan(sourceFile, path, input);
+      const data = await driver.capturePlan(sourceFile, path, input);
       await syncDirectory(path); await syncDirectory(join(directory, 'plans'));
       return transaction(() => {
         const result = db.prepare('INSERT INTO plans(created,folder,data) VALUES(?,?,?)').run(stamp(), folder, JSON.stringify(data));
@@ -140,7 +160,7 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
           previous: offset > 0 ? Math.max(0, offset - limit) : null };
         return rows;
       };
-      return { schema: 'stellar-forge.postgres-publisher-status.v1', directory, sourceFile, targetDirectory, buyer,
+      return { schema: driver.statusSchema, directory, sourceFile, targetDirectory, buyer,
         plans: page('plans', 'plans', 'id DESC'), runs: page('runs', 'runs', 'created DESC, id DESC'),
         active: active ? { kind: active.kind, id: active.id, progress: active.progress } : null,
         history: page('history', 'events', 'id DESC'), pages };
@@ -158,8 +178,8 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
       const saved = run(id), p = plan(saved.plan), path = join(directory, 'runs', id);
       await validatePlan(p);
       const manifest = await readJson(join(path, 'candidate.json'));
-      if (manifest.schema !== 'stellar-forge.postgres-dataset-candidate.v1' || manifest.run !== id || manifest.planDigest !== p.data.digest ||
-          !manifest.extraction?.transaction?.readOnly || manifest.extraction.transaction.isolation !== 'REPEATABLE READ')
+      if (manifest.schema !== driver.candidateSchema || manifest.run !== id || manifest.planDigest !== p.data.digest ||
+          !driver.validateExtraction(manifest.extraction))
         throw fault('CANDIDATE_MANIFEST_INVALID');
       const { candidateDigest, ...body } = manifest;
       if (candidateDigest !== identity(body)) throw fault('CANDIDATE_MANIFEST_CHANGED');
@@ -172,8 +192,13 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
         throw fault('CANDIDATE_DATASET_CHANGED');
       return { manifest, dataset, configPath: join(path, 'dataset.json') };
     }
-    function startExtraction(planId) {
-      available(); const p = plan(planId), id = randomUUID(), controller = new AbortController();
+    function startExtraction(planId, { id = randomUUID() } = {}) {
+      available();
+      if (typeof id !== 'string' || !/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id))
+        throw fault('EXTRACTION_ID_INVALID');
+      if (db.prepare('SELECT id FROM runs WHERE id=?').get(id))
+        throw fault('EXTRACTION_ALREADY_EXISTS', 'Continue the original retained extraction with this ID.', 409);
+      const p = plan(planId), controller = new AbortController();
       transaction(() => {
         const now = stamp(); db.prepare('INSERT INTO runs(id,plan,state,created,updated,data) VALUES(?,?,?,?,?,?)')
           .run(id, planId, 'EXTRACTING', now, now, JSON.stringify({ planDigest: p.data.digest, error: null }));
@@ -187,9 +212,9 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
         try {
           const sourceDirectory = await validatePlan(p);
           await privateDirectory(path, true);
-          const opened = await openPostgresSourceFile(join(sourceDirectory, 'source.json'), { env: environment });
+          const opened = await driver.openSource(join(sourceDirectory, 'source.json'), { env: environment });
           pg = opened.source;
-          checkColumnTypes(p.data.dataset.columns, pg.inspect().columnTypes[p.data.query]);
+          driver.checkColumnTypes(p.data.dataset.columns, pg.inspect().columnTypes[p.data.query]);
           file = await open(join(path, 'data.partial'), 'wx', 0o600);
           const hash = createHash('sha256'); let count = 0;
           async function write(text) {
@@ -201,11 +226,11 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
           const extraction = await pg.exportDataset(p.data.query, p.data.input, { ...p.data.extraction,
             signal: controller.signal,
             async onRow(row, types, progress) {
-              checkColumnTypes(p.data.dataset.columns, types);
-              await write(encodeRow(row, p.data.dataset));
+              driver.checkColumnTypes(p.data.dataset.columns, types);
+              await write(driver.encodeRow(row, p.data.dataset));
               operation.progress = { rows: progress.rowCount, bytes: count };
             } });
-          checkColumnTypes(p.data.dataset.columns, extraction.columnTypes);
+          driver.checkColumnTypes(p.data.dataset.columns, extraction.columnTypes);
           // exportDataset resolves only after the original transaction COMMIT.
           await pg.close(); pg = null;
           await file.sync(); await file.close(); file = null;
@@ -215,7 +240,7 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
           const dataset = await loadDatasetConfig(join(path, 'dataset.json'));
           const description = dataset.describe();
           if (description.rowCount !== extraction.rowCount) throw fault('DATASET_ROW_COUNT_CHANGED');
-          const manifest = { schema: 'stellar-forge.postgres-dataset-candidate.v1', run: id,
+          const manifest = { schema: driver.candidateSchema, run: id,
             planDigest: p.data.digest, sourceHash: p.data.sourceHash, queryHash: p.data.queryHash,
             completedAt: stamp(), csvHash: hash.digest('hex'), csvBytes: count,
             configHash: digest(configBytes), dataset: description, extraction };
@@ -348,7 +373,7 @@ export async function openPostgresPublisher({ directory, create = false, sourceF
       closing = (async () => { try { await active?.promise; } finally { db.close(); await release(); } })();
       return closing;
     }
-    return Object.freeze({ directory, settings, source, savePlan, plan, run, target, status, startExtraction,
+    return Object.freeze({ directory, settings, sourceName, source, savePlan, plan, run, target, status, startExtraction,
       cancel, inspect, review, publish, recover, candidate, buyerOffer, prepareBuyer, close });
   } catch (issue) { db?.close(); await release(); throw issue; }
 }

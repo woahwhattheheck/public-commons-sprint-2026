@@ -256,6 +256,7 @@ or automatically retry a request.
 | `starforge dataset` | SF30 dataset API compilation |
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
+| `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
@@ -1195,6 +1196,161 @@ SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;
 `starforge sqlite-inspect --help` exposes declaration/query inspection. The
 bundled source guides cover application bindings and current Node requirements.
+
+### Prepare and operate a ClickHouse merchant
+
+The installed ClickHouse adapter uses the original SF30 HTTP transport and
+merchant lifecycle. It requires an existing ClickHouse HTTP endpoint and a
+dedicated account with SELECT access to the approved tables or views; it requires
+no ClickHouse JavaScript driver. Source configuration, complete examples and the
+query contract are included at
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/README.md`.
+
+Start with its `examples/source.json` and `examples/merchant-plan.json`. In the
+private source, select the database, approved named queries, public columns,
+typed parameters and actual preflight probes. The three `endpointEnv`, `userEnv`
+and `passwordEnv` names resolve through the host's existing secret setup.
+Ordinary connections use HTTPS with certificate verification; `allowLocal: true`
+permits an explicitly selected loopback HTTP endpoint for a local database.
+In the plan, set the actual public origin and full ordered payment terms. Replace
+the conspicuous demonstration asset and recipient before customer deployment.
+
+Prepare a new private directory, inspect the real source and start its seller:
+
+```sh
+npx --no-install starforge clickhouse-prepare \
+  --source /private/clickhouse-draft/source.json \
+  --plan /private/clickhouse-draft/merchant-plan.json \
+  --directory /private/clickhouse-ready
+npx --no-install starforge clickhouse \
+  --directory /private/clickhouse-ready --inspect
+npx --no-install starforge clickhouse \
+  --directory /private/clickhouse-ready --port 8423 --operations-port 8424
+```
+
+Preparation is offline. It creates the original `source.json`, `service.json`,
+`bindings.json`, reviewed `merchant-plan.json`, public `openapi.json` and complete
+customer `client/` folder. Existing destinations are never replaced. Interrupted
+preparation retains an `INCOMPLETE` marker and cannot be launched; prepare again
+into a new directory. The complete folder is portable when the destination host
+supplies the same named environment variables.
+
+`--inspect` authenticates to the actual database, obtains its version and runs
+each declared query with `LIMIT 0`. Every normal launch performs this preflight,
+then prints the original seller, docs, health and operations URLs. For the
+maintained payment path, install the [native payment dependencies](#native-payment-dependencies)
+and add `--facilitator HTTPS_URL`. The default serves the original 402 challenges.
+`--availability-dir PRIVATE_ABSOLUTE_DIRECTORY` preserves the existing route
+controls. SIGINT/SIGTERM drain the original seller and close the source.
+
+Send the customer the generated `client/` and public OpenAPI contract. The source
+SQL, probes and database credentials stay with the merchant. The installed Node
+Buyer consumes the original generated module, for example:
+
+```js
+import { fileURLToPath } from 'node:url';
+import { Buyer } from '@tokenjunkielabs/starforge-merchant/buyer/node';
+import { createSellerClient } from './client/seller-client.mjs';
+
+const buyer = new Buyer({
+  runtimeDirectory: fileURLToPath(new URL('../',
+    import.meta.resolve('@tokenjunkielabs/starforge-merchant/buyer/node'))),
+  stateDirectory: '/private/customer/buyer-state',
+  operatorProfile: '/private/customer/operator-profile.json',
+});
+const api = createSellerClient({ buyer });
+const result = await api.call('transfers', {
+  body: { account: 'merchant-demo', after_ledger: '0', after_record_id: '0', minimum_amount: '0' },
+}, { intentId: 'transfer-page-001', maxAtomic: '10000', acceptIndex: 0 });
+const page = await result.json();
+```
+
+Use the actual operation, selected offer and independent customer cap. All
+non-null ClickHouse values are strings; SQL null is JSON null. Preserve exact
+integer and decimal text. The example's `(ledger, record_id)` cursor advances
+from both values in the same last row, with the other filters unchanged. Each
+request observes the current database rather than a frozen multi-page snapshot.
+The source rejects changed column types, invalid input and completed results
+above configured scan limits. Native query settings, HTTP deadlines, result
+bytes, row limits and admission retain the complete source guide's bounds.
+
+Application hosts can import `openClickHouseSourceFile` from
+`@tokenjunkielabs/starforge-merchant/seller/clickhouse`, query compilation and
+binding from `./seller/clickhouse/declaration`, `prepareClickHouseSeller` from
+`./seller/clickhouse/prepare`, and `startClickHouseMerchant` from
+`./seller/clickhouse/start`. The last three names are package subpaths of the
+same `@tokenjunkielabs/starforge-merchant` package. These exports are the original
+modules used by the installed commands; they retain SF30's existing payment,
+approval, operations and customer execution contracts.
+
+### Publish and maintain a PostgreSQL data product
+
+The installed publisher turns an approved PostgreSQL query into a retained
+dataset using the original read-only repeatable-read extraction, exact scalar
+mapping, review and version writer. The running dataset seller keeps serving the
+current version while the next candidate is extracted. Existing buyer cursors
+remain bound to their original retained snapshots.
+
+Use the PostgreSQL runtime setup above, Linux and util-linux `flock`. Start the
+original dataset seller on its chosen state directory, then open a new private
+publisher workspace using an existing approved source declaration:
+
+```sh
+npx --no-install starforge postgres-publisher serve \
+  --workspace /absolute/private/inventory-publications --create \
+  --source /absolute/private/postgres-merchant/source.json \
+  --state /absolute/private/inventory-dataset --port 8442
+```
+
+Open the printed loopback address. Save the query, its parameters, exact public
+column mapping, deterministic ordering and extraction limits. Extract the whole
+result, inspect its typed rows, record a publication review against the displayed
+current target, and publish those exact candidate bytes. A first publication can
+also initialize a new dataset state; use the original dataset configure/serve
+commands from the included publisher guide to start that target before enabling
+recurrence. Native buyer preparation stays on the same retained candidate.
+
+For continuing source updates, select the current published extraction and use
+**Keep this data product current** on the same page. Save the publication policy:
+interval, minimum/maximum rows, optional maximum percentage decrease, failure
+action, responsible operator and note. Saving leaves the schedule paused.
+**Enable using displayed target** binds the current snapshot/revision and starts
+the saved cadence. **Run refresh now** requests one immediate refresh.
+
+Every refresh uses that immutable plan and the original native candidate and
+writer. Identical data records **UNCHANGED** without another dataset revision.
+Source errors or candidates outside the configured row policy leave the last-good
+version available. Manual target changes require explicit reconciliation against
+the displayed current target. The original retention and version-capacity rules
+continue to protect buyer snapshots.
+
+**Pause after current refresh** stops future intervals while accepted work
+drains. Stop and reopen the same private workspace to retain its policies and
+original run identities:
+
+```sh
+npx --no-install starforge postgres-publisher serve \
+  --workspace /absolute/private/inventory-publications --port 8442
+```
+
+Saved paused work stays paused. Enabled pending work resumes its original run;
+an already-committed candidate can complete without querying again. Unknown
+publication outcomes remain with the original recovery/continuation controls.
+The browser's history opens the native extraction, review and candidate details.
+
+Stop the server before using a separate CLI on its locked workspace.
+`starforge postgres-publisher schedule --workspace /absolute/private/inventory-publications`
+reads the saved policy and history. The same original command provides
+`schedule-save`, `schedule-enable`, `schedule-pause`, `schedule-run` and
+`schedule-continue`; `--help` lists their arguments. These commands forward
+directly to the existing publisher and do not start a second worker.
+
+The included original `sf30-seller-sdk/postgres/publisher/README.md` and
+`SCHEDULES.md` cover policy JSON, source limits, exact version binding, recovery
+and private storage. Applications can import
+`@tokenjunkielabs/starforge-merchant/seller/postgres/publisher`, its `/server`
+and `/schedule` subpaths. These expose the original open-publisher, browser
+server and schedule controller; no additional dependency group is required.
 
 ### Build and operate a MySQL or MariaDB merchant
 

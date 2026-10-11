@@ -26,6 +26,7 @@ Execute from the repository root, with Node22+ and original native x402 SDK:
       --facilitator https://your-approved-facilitator.example \
       --state /private/merchant/sf98-outbox \
       --history-dir /private/merchant/usage --history-days 90 \
+      --delivery-workspace /private/merchant/receiver-workspace \
       --port 8423 --operations-port 8424 --check
 
 The preflight uses the original SF30 seller config and offer compiler and the
@@ -49,7 +50,12 @@ After reviewing the original merchant config, run the exact command without
 --handlers /private/merchant/handlers.mjs, exported as original SF30 functions.
 
 At startup it prints the original seller URL, health/readiness and offers URLs,
-owner-local operations URL and the owner-local /fulfillment URL.
+owner-local operations URL, /fulfillment and its private `fulfillmentControl`
+link. With `--delivery-workspace`, it also prints the existing receiver workspace
+on this same listener. To attach the original monitor, add `--incident-state`
+and its matching `--incident-merchant` registration. The complete
+[incident, receiver and fulfillment workflow](DELIVERY_OPERATIONS.md#connect-incident-monitoring-and-receiver-repair)
+reuses their original state, profiles and worker.
 Original network verification and settlement are handled by the existing native
 resource server. Only its processSettlement success with a supported original
 native receipt enters the durable SF98 outbox; original 402/HTTP2xx attempts do
@@ -70,9 +76,10 @@ original /metrics provide local Prometheus-compatible data. Event fingerprints
 are hashes, not wallet identities; avoid publishing them with customer
 documentation. Protect originals and exports on trusted operator hosts.
 
-The original SF98 sender alone delivers webhooks when explicitly invoked by a
-merchant operator. This launcher does not auto-drain, auto-requeue, spend funds,
-contact buyers or send outbound webhook requests. A receiver HTTP 2xx indicates
+The original SF98 sender delivers webhooks under the operator's selected receiver
+profile. A new attached workspace starts paused; its **Run continuously** action
+and retained restart intent use the same original worker. Fulfillment recovery
+requeues only the selected original exhausted notification. A receiver HTTP 2xx indicates
 acceptance only. Use the original SF86 chain reconciliation and merchant order
 authority for independent confirmation before irreversible fulfillment.
 
@@ -99,7 +106,7 @@ where the operator already has appropriate testnet account/payment authority;
 confirm the original SDK outcome and inspect the corresponding original journal
 event via /fulfillment. A refusal must produce no event, and repeated successful
 receipt processing must not duplicate durable SF98 events. Confirm operator-only
-retries on the existing SF98 delivery CLI, not this dashboard.
+retries through the original SF98 worker and the private fulfillment control link.
 
 This package requires no hosted Actions, added service or additional dependency
 beyond the maintained original seller implementation and its official x402 SDK.

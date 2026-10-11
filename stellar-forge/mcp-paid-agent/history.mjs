@@ -18,10 +18,13 @@ export function renderHistory(data, format) {
   if (format === 'json') return JSON.stringify(data, null, 2) + '\n';
   if (format === 'csv') {
     const rows = [['quote_id', 'created_at', 'updated_at', 'status', 'phase', 'method', 'request_url',
-      'network', 'asset', 'amount_atomic', 'recipient', 'signed_dispatch_recorded', 'transaction', 'failure']];
+      'network', 'asset', 'amount_atomic', 'recipient', 'signed_dispatch_recorded', 'transaction', 'failure',
+      'result_status', 'result_bytes', 'result_sha256', 'result_path', 'result_manifest_status']];
     for (const q of data.quotes) rows.push([q.quoteId, time(q.createdAt), time(q.updatedAt), q.status,
       q.phase, q.method, q.url, q.accepted.network, q.accepted.asset, q.accepted.amount,
-      q.accepted.payTo, q.signedRequestDispatched, q.result?.paymentResponse?.transaction, q.failure]);
+      q.accepted.payTo, q.signedRequestDispatched, q.result?.paymentResponse?.transaction, q.failure,
+      q.result?.responseFile?.status, q.result?.responseFile?.bytes, q.result?.responseFile?.sha256,
+      q.result?.responseFile?.path, q.result?.responseFile?.manifestStatus]);
     return rows.map(row => row.map(csv).join(',')).join('\r\n') + '\r\n';
   }
   if (format !== 'html') throw new TypeError('Format must be json, csv or html');
@@ -29,7 +32,10 @@ export function renderHistory(data, format) {
     <td><strong>${escape(q.status)}</strong><small>${escape(q.phase)}</small></td>
     <td>${escape(q.method)}<small class="url">${escape(q.url)}</small></td>
     <td><code>${escape(q.accepted.amount)}</code><small>${escape(q.accepted.network)} · ${escape(q.accepted.asset)}</small></td>
-    <td>${q.signedRequestDispatched ? 'Recorded before dispatch' : 'Not recorded'}<small>${escape(q.failure)}</small></td></tr>`).join('');
+    <td>${q.signedRequestDispatched ? 'Recorded before dispatch' : 'Not recorded'}<small>${escape(q.failure)}</small></td>
+    <td>${escape(q.result?.responseFile?.status ?? 'Preview metadata')}
+      ${q.result?.responseFile ? `<small>${escape(q.result.responseFile.bytes ?? 0)} bytes · ${escape(q.result.responseFile.manifestStatus ?? 'No completion manifest')}</small>
+      <small><code>${escape(q.result.responseFile.sha256)}</code></small>` : ''}</td></tr>`).join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
     <title>Stellar MCP · Quote workspace</title><style>
@@ -43,8 +49,8 @@ export function renderHistory(data, format) {
     @media print{body{background:#fff}header,main{padding:10px}details{break-inside:avoid}th{background:#eee}}
     </style></head><body><header><h1>Stellar MCP / Quote workspace</h1>
     <p>Saved operator quotes, execution checkpoints and recovery status.</p><p class="meta">Generated ${escape(data.generatedAt)} · ${data.quotes.length} of ${data.total} matching quotes</p></header>
-    <main><p>Amounts are original atomic units. A dispatch checkpoint means the request may have reached the seller. A server-reported receipt requires independent ledger reconciliation. Response bodies and signer payloads are absent from this workspace.</p>
-    <div class="table"><table><thead><tr><th>Quote / created</th><th>State</th><th>Request</th><th>Original terms</th><th>Dispatch / recovery</th></tr></thead><tbody>${rows || '<tr><td colspan="5">No matching quotes.</td></tr>'}</tbody></table></div>
+    <main><p>Amounts are original atomic units. A dispatch checkpoint records a possible seller request; a server receipt records the seller's settlement claim. SQLite keeps receipt and file metadata. Complete remote MCP results live in this workspace's private result directory; use the result inbox or result-cli.mjs to read and export them.</p>
+    <div class="table"><table><thead><tr><th>Quote / created</th><th>State</th><th>Request</th><th>Original terms</th><th>Dispatch / recovery</th><th>Saved result</th></tr></thead><tbody>${rows || '<tr><td colspan="6">No matching quotes.</td></tr>'}</tbody></table></div>
     ${data.nextCursor ? `<p class="meta">More records are available. Continue with cursor <code>${escape(data.nextCursor)}</code>.</p>` : ''}
     <details><summary>Original saved metadata${data.transitions ? ' and checkpoint history' : ''}</summary><pre>${escape(JSON.stringify(data, null, 2))}</pre></details></main></body></html>\n`;
 }

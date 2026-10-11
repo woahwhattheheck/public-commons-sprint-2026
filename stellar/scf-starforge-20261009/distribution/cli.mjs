@@ -43,8 +43,11 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
+  clickhouse                                 Preflight and run a retained ClickHouse merchant
+  clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
