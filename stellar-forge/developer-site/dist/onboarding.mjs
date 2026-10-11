@@ -4,6 +4,8 @@
 const encoder = new TextEncoder();
 const MAX_DATA_BYTES = 1024 * 1024;
 const MAX_ATOMIC = (1n << 127n) - 1n;
+const PAYMENT_FIELDS = ['scheme', 'network', 'amount', 'asset', 'payTo', 'maxTimeoutSeconds', 'extra'];
+export const MAX_PAYMENT_OPTIONS = 16;
 const SCHEMA = 'stellar-forge.seller-service.v1';
 const WORKSPACE_SCHEMA = 'stellar-forge.merchant-workspace.v1';
 const DRAFT_SCHEMA = 'stellar-forge.frontdoor-starter.v1';
@@ -40,6 +42,7 @@ export const SOURCE_CONTRACT = Object.freeze({
   maximumResources: 64,
   maximumDataBytes: MAX_DATA_BYTES,
   maximumAtomicAmount: String(MAX_ATOMIC),
+  maximumPaymentOptions: MAX_PAYMENT_OPTIONS,
 });
 
 export const INPUT_SCHEMA = Object.freeze({
@@ -57,6 +60,9 @@ export const INPUT_SCHEMA = Object.freeze({
     description: '1–2048 printable characters.',
     tags: 'Up to 5 unique printable ASCII strings, each 1–32 characters; array or comma-separated text.',
     amount: 'Optional resource-specific atomic price; an empty value uses the shared default.',
+    paymentMode: 'shared uses workspace defaults; route uses complete ordered paymentOptions.',
+    paymentOptions: '1–16 complete exact choices, each with network, asset, payTo, amount, timeout and optional extra JSON.',
+    paymentStyle: 'Original payment or paymentOptions form. Multiple choices always export paymentOptions.',
     dataText: 'Complete UTF-8 JSON text up to 1 MiB; preserved unchanged in its data file.',
   }),
   importedSeller: 'Optional original dataset-service object retained during edits.',
@@ -99,6 +105,102 @@ function atomic(value, field, errors) {
     return typeof value === 'string' ? value : '';
   }
   return value;
+}
+
+export function usesSharedPayment(resource) {
+  return resource?.paymentMode === 'shared' || !Array.isArray(resource?.paymentOptions) && resource?.paymentMode !== 'route';
+}
+
+export function paymentChoicesForResource(input, resource) {
+  if (!usesSharedPayment(resource)) return Array.isArray(resource.paymentOptions) ? resource.paymentOptions : [];
+  const original = input.importedSeller?.routes?.find(route => route.id === (resource.originalRouteId ?? resource.id));
+  const previous = Array.isArray(resource.paymentOptions)
+    ? resource.paymentOptions.length === 1 ? resource.paymentOptions[0] : {}
+    : original?.definition?.payment ?? (original?.definition?.paymentOptions?.length === 1 ? original.definition.paymentOptions[0] : {});
+  return [{ ...previous, scheme: 'exact', network: input.network, asset: input.asset, payTo: input.payTo,
+    amount: resource.amount === undefined || resource.amount === '' ? input.amount : resource.amount,
+    maxTimeoutSeconds: input.maxTimeoutSeconds }];
+}
+
+export function paymentDeclarationStyle(input, resource, choices = paymentChoicesForResource(input, resource)) {
+  const original = input.importedSeller?.routes?.find(route => route.id === (resource.originalRouteId ?? resource.id));
+  return choices.length > 1 || resource.paymentStyle === 'paymentOptions' ||
+    resource.paymentStyle === undefined && own(original?.definition ?? {}, 'paymentOptions') ? 'paymentOptions' : 'payment';
+}
+
+// Browser field checks follow the original SF30 configuration contract.
+// The installed compiler owns offer generation and payment execution.
+function paymentExtra(value) {
+  if (!object(value)) throw new Error('Payment extra must be a JSON object.');
+  const active = new Set(); let nodes = 0, textLength = 0;
+  const inspect = (item, depth) => {
+    if (++nodes > 4096 || depth > 32) throw new Error('Payment extra exceeds the native 4096-node or 32-level limit.');
+    if (item === null || typeof item === 'boolean') return;
+    if (typeof item === 'string') { textLength += item.length; if (textLength > 8192) throw new Error('Payment extra exceeds 8192 bytes.'); return; }
+    if (typeof item === 'number' && Number.isFinite(item)) return;
+    if (typeof item !== 'object' || active.has(item)) throw new Error('Payment extra must contain finite JSON values.');
+    const array = Array.isArray(item), prototype = Object.getPrototypeOf(item), keys = Reflect.ownKeys(item);
+    if (prototype !== (array ? Array.prototype : Object.prototype) && !(prototype === null && !array)) throw new Error('Payment extra must contain JSON objects and arrays.');
+    if (array && (keys.length !== item.length + 1 || keys.some(key => key !== 'length' && (typeof key !== 'string' || !/^(0|[1-9][0-9]*)$/.test(key) || Number(key) >= item.length)))) throw new Error('Payment extra arrays must be dense.');
+    active.add(item);
+    for (const key of keys) {
+      if (array && key === 'length') continue;
+      const descriptor = Object.getOwnPropertyDescriptor(item, key);
+      if (typeof key !== 'string' || !descriptor.enumerable || !own(descriptor, 'value')) throw new Error('Payment extra must contain ordinary JSON fields.');
+      textLength += key.length;
+      if (textLength > 8192) throw new Error('Payment extra exceeds 8192 bytes.');
+      inspect(descriptor.value, depth + 1);
+    }
+    active.delete(item);
+  };
+  inspect(value, 0);
+  if (encoder.encode(JSON.stringify(value)).length > 8192) throw new Error('Payment extra exceeds 8192 UTF-8 bytes.');
+  return clone(value);
+}
+
+function exactPaymentText(value, field, name, errors) {
+  textField(value, field, name, 128, errors);
+  return typeof value === 'string' ? value : '';
+}
+
+function paymentTimeout(value, field, errors) {
+  const timeout = typeof value === 'string' && /^[0-9]+$/.test(value) ? Number(value) : value;
+  if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 86400)
+    errors.push({ field, code: 'INVALID_TIMEOUT', message: 'Timeout must be a whole number from 1 through 86400 seconds.' });
+  return timeout;
+}
+
+function normalizeChoices(input, resource, prefix, errors) {
+  const choices = paymentChoicesForResource(input, resource), style = paymentDeclarationStyle(input, resource, choices);
+  if (choices.length < 1 || choices.length > MAX_PAYMENT_OPTIONS)
+    errors.push({ field: prefix + '.paymentOptions', code: 'PAYMENT_OPTION_COUNT', message: 'Each resource needs 1–16 complete payment choices.' });
+  const identities = new Set();
+  return choices.slice(0, MAX_PAYMENT_OPTIONS).map((supplied, index) => {
+    const field = prefix + `.paymentOptions.${index}`, choice = object(supplied) ? supplied : {};
+    if (!object(supplied)) errors.push({ field, code: 'PAYMENT_OBJECT', message: 'Each payment choice must be a complete JSON object.' });
+    const unsupported = Object.keys(choice).filter(key => !PAYMENT_FIELDS.includes(key) && key !== 'extraText');
+    if (style === 'paymentOptions' && unsupported.length)
+      errors.push({ field: field + '.fields', code: 'PAYMENT_FIELDS', message: `Choice ${index + 1} contains unsupported native option fields: ${unsupported.join(', ')}. Review and remove those fields explicitly.` });
+    if (choice.scheme !== 'exact') errors.push({ field: field + '.scheme', code: 'PAYMENT_SCHEME', message: 'The original seller supports the exact payment scheme.' });
+    if (!['stellar:testnet', 'stellar:pubnet'].includes(choice.network)) errors.push({ field: field + '.network', code: 'INVALID_NETWORK', message: 'Choose stellar:testnet or stellar:pubnet for this payment choice.' });
+    const amount = atomic(choice.amount, field + '.amount', errors);
+    const asset = exactPaymentText(choice.asset, field + '.asset', 'Asset', errors);
+    const payTo = exactPaymentText(choice.payTo, field + '.payTo', 'Recipient', errors);
+    const maxTimeoutSeconds = paymentTimeout(choice.maxTimeoutSeconds, field + '.maxTimeoutSeconds', errors);
+    const result = { ...choice, scheme: choice.scheme, network: choice.network, asset, payTo, amount, maxTimeoutSeconds };
+    delete result.extraText;
+    try {
+      if (own(choice, 'extraText')) {
+        if (typeof choice.extraText !== 'string') throw new Error('Enter extra as JSON text.');
+        if (!choice.extraText.trim()) delete result.extra;
+        else result.extra = paymentExtra(JSON.parse(choice.extraText));
+      } else if (own(choice, 'extra')) result.extra = paymentExtra(choice.extra);
+    } catch (error) { errors.push({ field: field + '.extra', code: 'PAYMENT_EXTRA', message: error instanceof SyntaxError ? 'Payment extra must be complete JSON object text.' : error.message }); }
+    const identity = JSON.stringify([result.scheme, result.network, result.asset, result.payTo]);
+    if (identities.has(identity)) errors.push({ field: field + '.asset', code: 'DUPLICATE_PAYMENT', message: `Choice ${index + 1} repeats a network, asset and recipient. A different price or timeout does not identify another choice.` });
+    identities.add(identity);
+    return result;
+  });
 }
 
 function validUnicode(value) {
@@ -149,10 +251,9 @@ function importedRoutes(value) {
       continue;
     }
     const definition = route.definition;
-    const payment = definition.payment ?? definition.paymentOptions?.[0];
-    if (!object(payment) || payment.scheme !== 'exact' || own(definition, 'payment') === own(definition, 'paymentOptions') ||
-        own(definition, 'paymentOptions') && (!Array.isArray(definition.paymentOptions) || definition.paymentOptions.length !== 1)) {
-      errors.push({ field: field + '.amount', code: 'IMPORT_PAYMENT_OPTIONS', message: `Resource ${route.id} has multiple or missing payment choices. Preserve that configuration in the original payment-options workflow.` });
+    const choices = own(definition, 'payment') ? [definition.payment] : definition.paymentOptions;
+    if (own(definition, 'payment') === own(definition, 'paymentOptions') || !Array.isArray(choices) || choices.length < 1 || choices.length > MAX_PAYMENT_OPTIONS || choices.some(choice => !object(choice) || choice.scheme !== 'exact')) {
+      errors.push({ field: field + '.paymentOptions', code: 'IMPORT_PAYMENT_OPTIONS', message: `Resource ${route.id} needs payment or paymentOptions with 1–16 complete exact payment choices.` });
     }
   }
   if (errors.length) throw new WorkspaceValidationError(errors);
@@ -167,11 +268,6 @@ export function importDatasetConfig(sellerInput, { dataFiles = {}, folder = 'mer
   const routes = importedRoutes(seller);
   const paymentFor = route => route.definition.payment ?? route.definition.paymentOptions[0];
   const firstPayment = paymentFor(routes[0]);
-  if (!object(firstPayment) || routes.some(route => {
-    const payment = paymentFor(route);
-    return !object(payment) || payment.scheme !== 'exact' ||
-      ['network', 'asset', 'payTo', 'maxTimeoutSeconds'].some(key => payment[key] !== firstPayment[key]);
-  })) throw new WorkspaceValidationError([{ field: 'importedSeller', code: 'IMPORT_SHARED_TERMS', message: 'These resources use different payment rails or timeouts. Keep their original independent terms in the native developer workspace.' }]);
   const missingDataFiles = [];
   const resources = routes.map((route, index) => {
     let dataText;
@@ -185,9 +281,11 @@ export function importDatasetConfig(sellerInput, { dataFiles = {}, folder = 'mer
         missingDataFiles.push({ index, id: route.id, originalPath: path, field: `resources.${index}.dataText` });
       }
     }
-    return { id: route.id, path: route.path, serviceName: route.definition.serviceName ?? route.id,
+    return { id: route.id, originalRouteId: route.id, path: route.path, serviceName: route.definition.serviceName ?? route.id,
       description: route.definition.description, tags: clone(route.definition.tags ?? []),
-      amount: paymentFor(route).amount, dataText };
+      amount: paymentFor(route).amount, paymentMode: 'route',
+      paymentStyle: own(route.definition, 'paymentOptions') ? 'paymentOptions' : 'payment',
+      paymentOptions: clone(route.definition.paymentOptions ?? [route.definition.payment]), dataText };
   });
   return { input: { folder, network: firstPayment.network, asset: firstPayment.asset, payTo: firstPayment.payTo,
     amount: firstPayment.amount, maxTimeoutSeconds: firstPayment.maxTimeoutSeconds, resources, importedSeller: seller },
@@ -205,16 +303,17 @@ export function validateWorkspaceInput(input = {}) {
   const base = { ...DEFAULT_STARTER, ...input };
   if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/.test(base.folder ?? ''))
     errors.push({ field: 'folder', code: 'INVALID_FOLDER', message: 'Use a directory name of 1–64 letters, digits, underscores or hyphens, starting with a letter or digit.' });
-  if (!['stellar:testnet', 'stellar:pubnet'].includes(base.network))
-    errors.push({ field: 'network', code: 'INVALID_NETWORK', message: 'Choose stellar:testnet or stellar:pubnet.' });
-  const asset = textField(base.asset, 'asset', 'Asset', 128, errors);
-  const payTo = textField(base.payTo, 'payTo', 'Recipient', 128, errors);
-  const amount = atomic(base.amount, 'amount', errors);
-  const timeout = typeof base.maxTimeoutSeconds === 'string' && /^[0-9]+$/.test(base.maxTimeoutSeconds) ? Number(base.maxTimeoutSeconds) : base.maxTimeoutSeconds;
-  if (!Number.isSafeInteger(timeout) || timeout < 1 || timeout > 86400)
-    errors.push({ field: 'maxTimeoutSeconds', code: 'INVALID_TIMEOUT', message: 'Timeout must be a whole number from 1 through 86400 seconds.' });
-  // Keep the former single-resource shape useful to small consuming UIs.
+  // Imported routes own their terms. Unused defaults remain editable without
+  // changing or invalidating those independent choices.
   const supplied = own(input, 'resources') ? input.resources : own(input, 'dataText') ? [{ ...DEFAULT_RESOURCE, ...input }] : base.resources;
+  const shared = Array.isArray(supplied) && supplied.some(usesSharedPayment), defaultErrors = [];
+  if (!['stellar:testnet', 'stellar:pubnet'].includes(base.network))
+    defaultErrors.push({ field: 'network', code: 'INVALID_NETWORK', message: 'Choose stellar:testnet or stellar:pubnet.' });
+  const asset = exactPaymentText(base.asset, 'asset', 'Asset', defaultErrors);
+  const payTo = exactPaymentText(base.payTo, 'payTo', 'Recipient', defaultErrors);
+  const amount = atomic(base.amount, 'amount', defaultErrors);
+  const timeout = paymentTimeout(base.maxTimeoutSeconds, 'maxTimeoutSeconds', defaultErrors);
+  if (shared) errors.push(...defaultErrors.filter(error => error.field !== 'amount' || supplied.some(resource => usesSharedPayment(resource) && (resource.amount === undefined || resource.amount === ''))));
   if (!Array.isArray(supplied) || supplied.length < 1 || supplied.length > 64)
     errors.push({ field: 'resources', code: 'RESOURCE_COUNT', message: 'A merchant workspace needs 1–64 resources.' });
   const ids = new Set(), filenames = new Set(), paths = new Set();
@@ -238,10 +337,16 @@ export function validateWorkspaceInput(input = {}) {
     if (!Array.isArray(tags) || tags.length > 5 || tags.some(tag => typeof tag !== 'string' || !/^[\x20-\x7e]{1,32}$/.test(tag) || !tag.trim()) ||
         new Set(Array.isArray(tags) ? tags.map(tag => String(tag).toLowerCase()) : []).size !== tags.length)
       errors.push({ field: prefix + '.tags', code: 'INVALID_TAGS', message: 'Use at most five unique printable ASCII tags, each 1–32 characters.' });
-    const price = r.amount === undefined || r.amount === '' ? amount : atomic(r.amount, prefix + '.amount', errors);
+    const choiceInput = { ...base, asset, payTo, amount, maxTimeoutSeconds: timeout, importedSeller };
+    const effectivePayments = normalizeChoices(choiceInput, r, prefix, errors);
+    const price = r.amount === undefined || r.amount === '' ? '' : r.amount;
     const data = dataset(r.dataText, prefix + '.dataText', errors);
     return { id: r.id, path: r.path, serviceName, description, tags: Array.isArray(tags) ? tags : [],
-      amount: price, dataText: data.text, dataBytes: data.bytes };
+      amount: price, paymentMode: usesSharedPayment(r) ? 'shared' : 'route',
+      paymentStyle: paymentDeclarationStyle(choiceInput, r, effectivePayments),
+      ...(typeof r.originalRouteId === 'string' ? { originalRouteId: r.originalRouteId } : {}),
+      ...(Array.isArray(r.paymentOptions) ? { paymentOptions: clone(r.paymentOptions) } : {}),
+      effectivePayments, dataText: data.text, dataBytes: data.bytes };
   });
   const value = { folder: base.folder, network: base.network, asset, payTo, amount,
     maxTimeoutSeconds: timeout, resources, importedSeller };
@@ -251,15 +356,14 @@ export function validateWorkspaceInput(input = {}) {
 function buildConfig(value) {
   const previous = new Map((value.importedSeller?.routes ?? []).map(route => [route.id, route]));
   const routes = value.resources.map(resource => {
-    const route = previous.has(resource.id) ? clone(previous.get(resource.id)) : {};
+    const originalId = resource.originalRouteId ?? resource.id;
+    const route = previous.has(originalId) ? clone(previous.get(originalId)) : {};
     const definition = route.definition ?? {};
-    const oldPayment = definition.payment ?? definition.paymentOptions?.[0] ?? {};
-    const payment = { ...oldPayment, scheme: 'exact', network: value.network, asset: value.asset,
-      payTo: value.payTo, amount: resource.amount, maxTimeoutSeconds: value.maxTimeoutSeconds };
-    // A retained one-choice paymentOptions declaration stays in its original form.
-    const paymentKey = own(definition, 'paymentOptions') ? 'paymentOptions' : 'payment';
     const nextDefinition = { ...definition, method: 'GET', serviceName: resource.serviceName,
-      description: resource.description, tags: [...resource.tags], [paymentKey]: paymentKey === 'paymentOptions' ? [payment] : payment };
+      description: resource.description, tags: [...resource.tags] };
+    delete nextDefinition.payment;
+    delete nextDefinition.paymentOptions;
+    nextDefinition[resource.paymentStyle] = resource.paymentStyle === 'paymentOptions' ? clone(resource.effectivePayments) : clone(resource.effectivePayments[0]);
     delete nextDefinition.url;
     delete route.response;
     return { ...route, id: resource.id, path: resource.path, definition: nextDefinition,
@@ -286,8 +390,96 @@ function commandsFor(value) {
 }
 
 function readme(value, commands) {
-  const rows = value.resources.map(resource => `| \`${resource.id}\` | \`GET ${resource.path}\` | \`${resource.amount}\` | \`data/${resource.id}.json\` | ${resource.dataBytes} |`).join('\n');
-  return `# ${value.folder}: Stellar Forge merchant workspace\n\nThis workspace runs through the original Starforge merchant toolkit. It contains ${value.resources.length} configured JSON resource${value.resources.length === 1 ? '' : 's'} and the selected source data. Data files retain their original UTF-8 bytes.\n\n## Install the toolkit\n\nUse Node.js ${SOURCE_CONTRACT.nodeMinimum} or later. Obtain or build the source archive using the maintained [distribution guide](${SOURCE_CONTRACT.distributionGuide}). This is an npm-compatible local archive; it is not a package published to a registry.\n\nThe original packager prints the archive path, selected source commit, version and SHA-256 receipt. Keep that receipt with the archive you install. Use the source manifest to identify the native commands actually included in that version.\n\nFrom the application directory that contains this extracted ${value.folder} directory, replace /absolute/path/to/the-package.tgz with the actual archive path and run:\n\n\`\`\`sh\n${commands.install}\n\`\`\`\n\nThe workspace is already initialized; use it directly:\n\n\`\`\`sh\n${commands.run}\n\`\`\`\n\nTwo original startup messages print the seller URL and the operations dashboard URL. Open the dashboard, or open the seller URL followed by /_seller/docs. Its /_seller/openapi.json is generated from these exact routes. Ctrl-C shuts down the original processes.\n\n## Resources\n\n| ID | Request | Exact atomic price | Data file | Bytes |\n| --- | --- | --- | --- | --- |\n${rows}\n\nShared network: \`${value.network}\`. Asset: \`${value.asset}\`. Recipient: \`${value.payTo}\`. Timeout: ${value.maxTimeoutSeconds} seconds. Atomic amounts stay decimal strings.\n\nThe startup command serves native HTTP 402 challenges. It does not configure payment processing. The default UNVERIFIED_DEMO_ASSET and UNVERIFIED_DEMO_RECIPIENT are deliberately nonpayable example markers. Replace them with the merchant's public payment identifiers before configuring the native facilitator. Data is loaded once at startup; edit a data file and restart to load its new snapshot. The default challenge-only mode does not release the data.\n\nCopy the actual seller URL from startup before making these local inspection requests:\n\n\`\`\`sh\n${commands.inspect}\n\`\`\`\n\n## Configure native operation\n\nUse the merchant's original payment terms and configured facilitator. Install the original documented optional dependencies in the consuming application:\n\n\`\`\`sh\n${commands.nativeDependencies}\n\`\`\`\n\nReplace the example facilitator URL with the configured endpoint:\n\n\`\`\`sh\n${commands.nativeRun}\n\`\`\`\n\nThe original SDK and facilitator perform verification and settlement. The browser that prepared these files does not connect to either. Doctor checks local runtime/dependency availability.\n\n## Continue development\n\n- seller.json: the original seller-service.v1 configuration.\n- workspace.json: the original merchant-workspace.v1 dataset descriptor.\n- data/: original JSON source files named by resource ID.\n- starter-input.json: reopen this editable front-door draft to revise the workspace.\n- .private/: local operator material, excluded from Git by .gitignore.\n\nSupported imported metadata and explicit output examples are preserved. Selected data is never added to advertised examples. Other native resource types continue in the original developer workspace.\n\n[Seller guide](${SOURCE_CONTRACT.sellerGuide}) · [Developer workspace](${SOURCE_CONTRACT.developerGuide}) · [Payment choices](${SOURCE_CONTRACT.paymentOptionsGuide}) · [Portable release operations](${SOURCE_CONTRACT.releaseGuide})\n\nTo produce an immutable toolkit archive from a committed checkout, run from its repository root:\n\n\`\`\`sh\n${commands.buildPackage}\n\`\`\`\n\nThat command runs the original source packager. The output directory must be new. Use the printed archive path with the installation command above. Inspect the installed package's source manifest with:\n\n\`\`\`sh\n${commands.source}\n\`\`\`\n`;
+  const rows = value.resources.map(resource => `| ${resource.id} | GET ${resource.path} | ${resource.effectivePayments.length} | data/${resource.id}.json | ${resource.dataBytes} |`).join('\n');
+  const terms = value.resources.map(resource => `### GET ${resource.path}\n\nThe ${resource.effectivePayments.length} choice${resource.effectivePayments.length === 1 ? '' : 's'} below remain in merchant order. The original declaration uses ${resource.paymentStyle}.\n\n\`\`\`json\n${JSON.stringify(resource.effectivePayments, null, 2)}\n\`\`\``).join('\n\n');
+  return `# ${value.folder}: Stellar Forge merchant workspace
+
+This workspace runs through the original Starforge merchant toolkit. It contains ${value.resources.length} JSON resources and the selected source data. Data files retain their original UTF-8 bytes.
+
+## Install the toolkit
+
+Use Node.js ${SOURCE_CONTRACT.nodeMinimum} or later. Obtain or build the source archive using the maintained [distribution guide](${SOURCE_CONTRACT.distributionGuide}). This is an npm-compatible local archive. Keep its source commit, version and SHA-256 receipt with the archive you install.
+
+From the application directory that contains this extracted ${value.folder} directory, replace /absolute/path/to/the-package.tgz with the actual archive path:
+
+\`\`\`sh
+${commands.install}
+\`\`\`
+
+The workspace is already initialized:
+
+\`\`\`sh
+${commands.run}
+\`\`\`
+
+The original launcher prints the seller URL and the operations dashboard URL. Open that dashboard, or the seller URL followed by /_seller/docs. Its /_seller/openapi.json comes from these exact routes. Ctrl-C shuts down the original processes.
+
+## Resources
+
+| ID | Request | Payment choices | Data file | Bytes |
+| --- | --- | --- | --- | --- |
+${rows}
+
+## Complete ordered payment choices
+
+Each resource keeps its own network, asset, recipient, exact atomic amount, timeout and optional extra object. Prices remain decimal strings. Choice order is preserved; it does not authorize a buyer, select an exchange rate or combine values across different assets.
+
+${terms}
+
+The original SF30 compiler accepts 1–16 complete exact choices per route. Network, asset and recipient identify a distinct choice; changing only price or timeout cannot distinguish another choice. Its native offer/header limits and payment SDK checks continue to apply. See the [original payment-options guide](${SOURCE_CONTRACT.paymentOptionsGuide}).
+
+The startup command serves native HTTP 402 challenges. The default UNVERIFIED_DEMO_ASSET and UNVERIFIED_DEMO_RECIPIENT are local example markers. Replace them with the merchant's public payment identifiers before configuring the native facilitator. Challenge-only mode does not release the data. Data is loaded once at startup; restart after editing a data file to load a new snapshot.
+
+Copy the actual seller URL from startup:
+
+\`\`\`sh
+${commands.inspect}
+\`\`\`
+
+Inspect the complete accepts array on each route's original PAYMENT-REQUIRED offer. The original buyer's explicit network/asset/payee policy selects a compatible choice. This workspace supplies no automatic choice ranking or payment execution.
+
+## Configure native operation
+
+Use the merchant's original payment terms and configured facilitator. Install the documented optional dependencies in the consuming application:
+
+\`\`\`sh
+${commands.nativeDependencies}
+\`\`\`
+
+Replace the facilitator URL with the configured endpoint:
+
+\`\`\`sh
+${commands.nativeRun}
+\`\`\`
+
+The original SDK and facilitator perform verification and settlement. The browser that prepared these files does not connect to either. Doctor checks local runtime and dependency availability.
+
+## Continue development
+
+- seller.json: the original seller-service.v1 configuration.
+- workspace.json: the original merchant-workspace.v1 dataset descriptor.
+- data/: complete selected JSON source files named by resource ID.
+- starter-input.json: reopen the same resources, ordered choices and editable extra JSON.
+- .private/: local operator material, excluded from Git by .gitignore.
+
+Imported route metadata and explicit output examples remain attached when a resource is renamed. Imported routes initially own their terms, independently of workspace defaults. Choosing workspace defaults temporarily retains the route's edited choices in the draft; choose route-specific terms to restore them. A copied payment list changes only the destination's terms. Drafts can retain incomplete extra JSON for later editing; workspace export requires complete native terms.
+
+Selected data is never added to advertised examples. Other native resource types continue in the original developer workspace.
+
+[Seller guide](${SOURCE_CONTRACT.sellerGuide}) · [Developer workspace](${SOURCE_CONTRACT.developerGuide}) · [Payment choices](${SOURCE_CONTRACT.paymentOptionsGuide}) · [Portable release operations](${SOURCE_CONTRACT.releaseGuide})
+
+To produce an immutable toolkit archive from a committed checkout, run the original packager from its repository root with a new output directory:
+
+\`\`\`sh
+${commands.buildPackage}
+\`\`\`
+
+Inspect the installed package's source manifest:
+
+\`\`\`sh
+${commands.source}
+\`\`\`
+`;
 }
 
 export function createDatasetWorkspace(input = {}) {
@@ -300,7 +492,7 @@ export function createDatasetWorkspace(input = {}) {
     throw new WorkspaceValidationError([{ field: 'importedSeller', code: 'CONFIG_TOO_LARGE', message: 'The original seller configuration must fit within 1 MiB. Reduce retained examples or metadata.' }]);
   const workspace = { schema: WORKSPACE_SCHEMA, template: 'dataset', packageVersion: null, sourceCommit: null };
   const draft = { schema: DRAFT_SCHEMA, ...value,
-    resources: value.resources.map(({ dataBytes, ...resource }) => resource) };
+    resources: value.resources.map(({ dataBytes, effectivePayments, ...resource }) => resource) };
   if (!draft.importedSeller) delete draft.importedSeller;
   const commands = commandsFor(value);
   const entry = (path, content) => ({ path: value.folder + '/' + path, content });
@@ -311,9 +503,11 @@ export function createDatasetWorkspace(input = {}) {
   return { files, config, workspace, commands, draft,
     summary: { folder: value.folder, resourceCount: value.resources.length,
       totalDataBytes: value.resources.reduce((total, resource) => total + resource.dataBytes, 0),
+      networks: [...new Set(value.resources.flatMap(resource => resource.effectivePayments.map(choice => choice.network)))],
+      paymentChoiceCount: value.resources.reduce((count, resource) => count + resource.effectivePayments.length, 0),
       network: value.network, asset: value.asset, payTo: value.payTo,
       maxTimeoutSeconds: value.maxTimeoutSeconds,
-      nonpayableExample: value.asset === EXAMPLE_ASSET || value.payTo === EXAMPLE_RECIPIENT,
+      nonpayableExample: value.resources.some(resource => resource.effectivePayments.some(choice => choice.asset === EXAMPLE_ASSET || choice.payTo === EXAMPLE_RECIPIENT)),
       source: SOURCE_CONTRACT,
       resources: value.resources.map(({ dataText, tags, description, ...resource }) => resource) } };
 }
