@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 // MIT. File-to-original-SF73/SF95 operations on a running local SF60 owner.
 import { constants as FS } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { open, unlink } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requestCatalogOperator, SIGNED_BATCH_SCHEMA, SIGNED_BATCH_PLAN_SCHEMA } from './operator.mjs';
+import { requestCatalogOperator, CONTROL_SCHEMA, SIGNED_BATCH_SCHEMA, SIGNED_BATCH_PLAN_SCHEMA } from './operator.mjs';
 import { MAX_BATCH_OPERATIONS } from './journal.mjs';
 import { renderReview } from './bulk-import.mjs';
+import { run as recoverCommand } from './recover-cli.mjs';
 
 const USAGE = [
   'Live catalog operator (Node 22+, same OS user as operator.mjs):',
@@ -22,7 +24,10 @@ const USAGE = [
   '  apply-withdrawal --directory DIR --envelope SELLER_SIGNED.json [--out RECEIPT.json]',
   '  preview-batch --directory DIR --batch FILE_MANIFEST.json --out PLAN.json [--html REVIEW.html]',
   '  apply-batch --directory DIR --batch FILE_MANIFEST.json --plan PLAN.json [--out RECEIPT.json]',
-  'All commands support --out NEW_FILE and --request-id ID. No command signs or pays.',
+  '  recover --directory DIR --command RETAINED_COMMAND.json --out RECOVERY.json [--html RECOVERY.html]',
+  'admit, apply-withdrawal and apply-batch support --retain-command NEW_FILE.',
+  'Retention saves the exact command privately before dispatch; recover never resubmits it.',
+  'Native commands support --out NEW_FILE and --request-id ID. No command signs or pays.',
   'Seller signing remains the original sf95-signed-seller-withdrawal/cli.mjs sign command.',
 ].join('\n');
 const definitions = {
@@ -31,11 +36,11 @@ const definitions = {
   search: { required: ['query'] },
   lookup: { required: ['catalog-key'] },
   history: { required: ['lifecycle-id'] },
-  admit: { required: ['seller', 'sequence', 'entry', 'proofs', 'source-url', 'observed-at'] },
+  admit: { required: ['seller', 'sequence', 'entry', 'proofs', 'source-url', 'observed-at'], optional: ['retain-command'] },
   'prepare-withdrawal': { required: ['seller', 'catalog-key', 'source-url', 'reason', 'out'] },
-  'apply-withdrawal': { required: ['envelope'] },
+  'apply-withdrawal': { required: ['envelope'], optional: ['retain-command'] },
   'preview-batch': { required: ['batch','out'], optional:['html'] },
-  'apply-batch': { required: ['batch','plan'] },
+  'apply-batch': { required: ['batch','plan'], optional: ['retain-command'] },
 };
 function parse(argv) {
   const [operation, ...args] = argv, definition = definitions[operation];
@@ -101,7 +106,9 @@ export async function readSignedBatch(filename) {
 
 export async function run(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--help') { console.log(USAGE); return; }
+  if (argv[0] === 'recover') return recoverCommand(argv.slice(1));
   const { operation, options: o } = parse(argv);
+  const requestId = o['request-id'] ?? randomUUID();
   let input = {};
   if (operation === 'list' || operation === 'search') {
     const query = new URLSearchParams(o.query ?? '');
@@ -133,19 +140,29 @@ export async function run(argv = process.argv.slice(2)) {
   }
   // Reserve any output name before sending a mutation. A typo/existing file
   // therefore cannot turn a successful remote commit into a local save error.
-  let output,html;
+  let output,html,retained;
   try {
     if (o.out) output = await open(o.out,'wx',0o600);
     if (o.html) html = await open(o.html,'wx',0o600);
+    if (o['retain-command']) retained = await open(o['retain-command'],'wx',0o600);
   } catch(error) {
-    if(output){await output.close();await unlink(o.out).catch(()=>{});}
+    for (const [handle,path] of [[output,o.out],[html,o.html],[retained,o['retain-command']]]) {
+      if(handle){await handle.close();await unlink(path).catch(()=>{});}
+    }
     throw error;
   }
   let result, requested = false, persisted = false;
   try {
+    if (retained) {
+      // These are the exact native command bytes, not a reconstructed catalog row.
+      const command = JSON.stringify({schema:CONTROL_SCHEMA,requestId,operation,input});
+      if (Buffer.byteLength(command) > 8 * 1024 * 1024) throw new Error('COMMAND_TOO_LARGE');
+      await retained.writeFile(command); await retained.sync();
+      const parent = await open(dirname(resolve(o['retain-command'])),FS.O_RDONLY | (FS.O_DIRECTORY ?? 0));
+      try { await parent.sync(); } finally { await parent.close(); }
+    }
     requested = true;
-    result = await requestCatalogOperator({ directory: o.directory, operation, input,
-      ...(o['request-id'] ? { requestId: o['request-id'] } : {}) });
+    result = await requestCatalogOperator({ directory: o.directory, operation, input, requestId });
     const text = JSON.stringify(result, null, 2) + '\n';
     if(html) {
       const content=renderReview({review:result.review,inputSha256:result.batchSha256,authoritiesSha256:result.policySha256},
@@ -155,6 +172,7 @@ export async function run(argv = process.argv.slice(2)) {
     if (output) {
       await output.writeFile(text); await output.sync(); persisted = true;
       console.log(JSON.stringify({ saved: resolve(o.out), operation,
+        ...(retained?{retainedCommand:resolve(o['retain-command'])}:{}),
         ...(o.html?{html:resolve(o.html)}:{}),
         ...(operation==='preview-batch'?{changes:result.review.applied,replays:result.review.replayed,expiresAt:result.expiresAt}: {result}) }));
     } else console.log(text.trimEnd());
@@ -166,11 +184,14 @@ export async function run(argv = process.argv.slice(2)) {
     } else if (requested && error.commandSent === true && ['admit', 'apply-withdrawal', 'apply-batch'].includes(operation) &&
         !Number.isInteger(error.statusCode)) {
       console.error(JSON.stringify({ error: 'TRANSPORT_OUTCOME_UNKNOWN_CHECK_CATALOG', operation,
-        requestId: error.requestId ?? o['request-id'] ?? null,
-        inspect: 'Use status, lookup and history before any retry.' }));
+        requestId: error.requestId ?? requestId,
+        ...(retained?{retainedCommand:resolve(o['retain-command'])}:{}),
+        inspect: retained ? 'Use operator-cli.mjs recover with the retained command; no resubmission is needed.'
+          : 'Use status, lookup and history before any retry.' }));
     }
     throw error;
   } finally {
+    if(retained) {await retained.close();if(!requested)await unlink(o['retain-command']).catch(()=>{});}
     if(html) {await html.close();if(!persisted && result===undefined)await unlink(o.html).catch(()=>{});}
     if (output) {
       await output.close();
