@@ -31,7 +31,7 @@ process.once('message', async message => {
       originalOffersSha256: report.originalOffersSha256,
       originalServiceConfigSha256: report.originalServiceConfigSha256,
       listener: session.url, mode: session.mode, cacheControlAvailable: control !== null,
-      ...(session.jsonrpc && session.operations ? { operations: {
+      ...((session.jsonrpc || session.postgres) && session.operations ? { operations: {
         url: session.operations.url, availability: session.operations.availabilityUrl,
         availabilityControl: session.operations.availabilityControlUrl,
       } } : {}) }) + '\n');
