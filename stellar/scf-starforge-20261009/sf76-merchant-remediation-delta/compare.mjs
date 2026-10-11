@@ -33,6 +33,10 @@ function scopeOf(report) {
   }
   if (!['GET','POST','PUT','PATCH','DELETE'].includes(result.intendedRetryMethod))
     fail('Invalid original HTTP method');
+  if (Object.hasOwn(report.scope,'browserCredentialed')) {
+    if (typeof report.scope.browserCredentialed!=='boolean') fail('Invalid browser credential mode');
+    result.browserCredentialed=report.scope.browserCredentialed;
+  }
   // Scope identity is literal, rather than normalized, to prevent false comparisons of changed URLs/payees.
   return result;
 }
@@ -128,6 +132,19 @@ function postSummary(p,sha) {
   return p?{reportSha256:sha,status:p.status,observedAt:p.observedAt,
     optionsRequests:p.operations.OPTIONS,eligibility:p.eligibility}:null;
 }
+function credentialMode(intake,post) {
+  const modes=[];
+  if (Object.hasOwn(intake.scope,'browserCredentialed')) modes.push(intake.scope.browserCredentialed);
+  const browser=intake.originals.browserReadiness;
+  if (browser && Object.hasOwn(browser,'credentialed')) {
+    if (typeof browser.credentialed!=='boolean') fail('Invalid original browser credential mode');
+    modes.push(browser.credentialed);
+  }
+  if (post) modes.push(post.credentialed);
+  if (modes.some(mode=>mode!==modes[0]))
+    fail('Original observations disagree about browser credential mode');
+  return modes.length?modes[0]:null;
+}
 /** Source-safe, read-only comparison. Input hashes are SHA-256 of original exact JSON bytes. */
 export function compare({before,after,beforeSha,afterSha,postBefore=null,postAfter=null,
     postBeforeSha=null,postAfterSha=null}) {
@@ -146,6 +163,12 @@ export function compare({before,after,beforeSha,afterSha,postBefore=null,postAft
     if (!/^[a-f0-9]{64}$/.test(postBeforeSha)||!/^[a-f0-9]{64}$/.test(postAfterSha))
       fail('Real SF72 JSON file SHA-256 required');
   }
+  // New SF70 reports preserve the configured mode even if a browser probe failed.
+  // Legacy reports may establish it through their original SF68/SF72 observation.
+  const beforeMode=credentialMode(before,postBefore),afterMode=credentialMode(after,postAfter);
+  const credentialModesKnown=beforeMode!==null&&afterMode!==null;
+  if (credentialModesKnown&&beforeMode!==afterMode)
+    fail('Before/after merchant scope differs: browserCredentialed');
   const changes=diff(before.findings,after.findings);
   const observedAfterComplete=after.originals.sellerCatalog.catalog.complete;
   const authoritativePost=postAfter?.status==='POST_PREFLIGHT_READY_CHALLENGE_UNKNOWN';
@@ -154,6 +177,7 @@ export function compare({before,after,beforeSha,afterSha,postBefore=null,postAft
   let classification='INCOMPLETE_EVIDENCE';
   if (afterHasHigh) classification='REMEDIATION_STILL_REQUIRED';
   else if (!observedAfterComplete) classification='CATALOG_COVERAGE_INCOMPLETE';
+  else if (!credentialModesKnown) classification='BROWSER_CREDENTIAL_MODE_UNCONFIRMED';
   else if (lhs.intendedRetryMethod==='GET'&&
       after.state==='UNPAID_DISCOVERY_AND_BROWSER_READY')
     classification='GET_UNPAID_DISCOVERY_AND_BROWSER_READY';
@@ -163,19 +187,20 @@ export function compare({before,after,beforeSha,afterSha,postBefore=null,postAft
     classification='POST_OPTIONS_READY_CHALLENGE_UNCHECKED';
   const technicalMilestoneObserved=classification==='GET_UNPAID_DISCOVERY_AND_BROWSER_READY'||
     classification==='POST_OPTIONS_READY_CHALLENGE_UNCHECKED';
-  const resolved=observedAfterComplete?changes.notReobserved:[];
+  const resolved=observedAfterComplete&&credentialModesKnown?changes.notReobserved:[];
   const unverified=observedAfterComplete?[]:changes.notReobserved;
   return {
     schema:'stellar-forge.merchant-repair-delta.v1',
-    scope:lhs, classification,technicalMilestoneObserved,
+    scope:{...lhs,browserCredentialed:credentialModesKnown?beforeMode:null}, classification,technicalMilestoneObserved,
     source:{before:{sha256:beforeSha,observedAt:before.observedAt,state:before.state,
-      catalogComplete:before.originals.sellerCatalog.catalog.complete,
+      catalogComplete:before.originals.sellerCatalog.catalog.complete,browserCredentialed:beforeMode,
       verdict:before.originals.sellerCatalog.verdict},
       after:{sha256:afterSha,observedAt:after.observedAt,state:after.state,
-        catalogComplete:observedAfterComplete,verdict:after.originals.sellerCatalog.verdict},
+        catalogComplete:observedAfterComplete,browserCredentialed:afterMode,verdict:after.originals.sellerCatalog.verdict},
       sf72Before:postSummary(postBefore,postBeforeSha),sf72After:postSummary(postAfter,postAfterSha)},
     changes:{notReobservedWithCompleteAfterCatalog:resolved,
       notReobservedButAfterCatalogIncomplete:unverified,
+      notReobservedButCredentialModeUnknown:observedAfterComplete&&!credentialModesKnown?changes.notReobserved:[],
       newlyObserved:changes.newlyObserved,stillObserved:changes.stillObserved,
       severityChanged:changes.severityChanged},
     boundaries:{cashReceived:false,merchantContractSigned:false,paidCheckoutVerified:false,
