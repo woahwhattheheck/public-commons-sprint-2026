@@ -69,6 +69,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-recovery-remote                  Upload, list, retrieve and restore retained off-host snapshots
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  buyer-expenses                            Allocate native buyer expenses and issue accountant periods
   routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
   routescan-workspace Operate its saved project through the original local workspace
   buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
