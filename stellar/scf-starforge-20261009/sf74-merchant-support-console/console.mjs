@@ -249,9 +249,14 @@ function syncSources() {
   }
   const before = selectedSource('before'), after = selectedSource('after');
   const baselineOnly = $('workorder-baseline-only').checked || !after;
+  const runtime=$('workorder-source').value==='runtime',hasRuntime=runtimeDesk?.hasCaptures()??false;
   $('compare-run').disabled = !before || !after || Boolean(comparisonAbort);
-  $('workorder-run').disabled = !before || termsImportPending || Boolean(workorderAbort);
-  $('workorder-sources').textContent = !before ? 'Select a before capture in Review changes to get started.'
+  $('workorder-baseline-control').hidden=runtime;
+  $('workorder-run').disabled = (runtime?!hasRuntime:!before) || termsImportPending || Boolean(workorderAbort);
+  $('workorder-sources').textContent = runtime?(hasRuntime?
+    'Attached runtime case · original before/follow-up sources, route and coverage review, native option outcomes and source hashes.':
+    'Attach an original packet or retained period in Runtime support to prepare this workorder.'):
+    !before ? 'Select a before capture in Review changes to get started.'
     : baselineOnly ? 'Baseline only · ' + before.name + '. No after capture or browser comparison will be included.'
     : 'Before: ' + before.name + ' → After: ' + after.name + '. The same selected browser checks are included when supplied.';
 }
@@ -387,6 +392,7 @@ const termsEditor = mountTermsEditor($('terms-editor'), {onChange: () => {
   caseDesk?.changed();
 }});
 $('workorder-baseline-only').addEventListener('change', () => invalidateWorkorder());
+$('workorder-source').addEventListener('change', () => invalidateWorkorder('Workorder source changed. Review its retained sources and owner terms.'));
 $('terms-file').addEventListener('change', async () => {
   const revision = ++termsImportRevision;
   termsImportPending = true;
@@ -423,7 +429,8 @@ function showWorkorder(result) {
   const fee = packet.commercial.approvedFeeUsd;
   rows($('workorder-facts'), [
     ['Relationship owner', packet.seller.relationshipOwner], ['Seller route', packet.scope.resource],
-    ['Capture review', packet.repairReview ? titleFor(packet.repairReview.classification) : 'Baseline only · repair not yet reviewed'],
+    ['Source review', packet.runtimeReview?packet.runtimeReview.comparison.detail:
+      packet.repairReview ? titleFor(packet.repairReview.classification) : 'Baseline only · repair not yet reviewed'],
     ['Seller permission', packet.seller.consentStatus === 'CONFIRMED' ? 'Existing record supplied' : 'Not recorded'],
     ['Approved proposal fee', fee === null ? 'Withheld · not approved' : new Intl.NumberFormat(undefined, {style: 'currency', currency: 'USD'}).format(fee)],
     ['Proposed delivery window', packet.commercial.proposedWindow === 'UNSCHEDULED' ? 'Not scheduled' : packet.commercial.proposedWindow],
@@ -441,8 +448,11 @@ $('workorder-form').addEventListener('submit', async event => {
   message('workorder-status', 'Preparing the workorder from your selected captures and owner terms…', 'busy');
   try {
     const terms = termsEditor.read();
+    const runtime=$('workorder-source').value==='runtime';
     const includeAfter = !$('workorder-baseline-only').checked && Boolean(selectedSource('after'));
-    const payload = await encodedSelection(includeAfter);
+    const payload = runtime?{supportText:runtimeDesk.getText(),
+      inputs:{...Object.fromEntries(new FormData(form).entries()),credentialed:$('credentialed').checked}}:
+      await encodedSelection(includeAfter);
     payload.terms = encodeBytes(new TextEncoder().encode(JSON.stringify(terms) + '\n'));
     if (revision !== workorderRevision) return;
     const result = await request('/api/workorder', payload, controller.signal);
@@ -510,13 +520,14 @@ async function readCase() {
   inputs.credentialed = $('credentialed').checked;
   const termsText = JSON.stringify({schema: 'stellar-forge.merchant-terms-draft.v1', values: termsEditor.readDraft()});
   const baselineOnly = $('workorder-baseline-only').checked;
+  const workorderSource=$('workorder-source').value;
   const current = latestBytes, browser = postBytes;
   const selected = files.map(([field]) => [field, selectedSource(field)]);
   const sources = Object.fromEntries(await Promise.all(selected.map(async ([field, file]) =>
     [field, file ? await encodedFile(file) : null])));
   sources.intake = current ? encodeBytes(new TextEncoder().encode(current)) : null;
   sources.preflight = browser ? encodeBytes(new TextEncoder().encode(browser)) : null;
-  return {inputs, sources, termsText, baselineOnly};
+  return {inputs, sources, termsText, baselineOnly,workorderSource};
 }
 async function applyCase(state, {canReplace = ()=>true} = {}) {
   // Complete structural/representability checks before touching the current editor.
@@ -525,6 +536,8 @@ async function applyCase(state, {canReplace = ()=>true} = {}) {
   if (!isRecord(terms) || terms.schema !== 'stellar-forge.merchant-terms-draft.v1' ||
       Object.keys(terms).some(key => !['schema', 'values'].includes(key))) throw new Error('Unsupported terms draft version.');
   termsEditor.validateDraft(terms.values);
+  const workorderSource=state.workorderSource??'diagnostic';
+  if(!['diagnostic','runtime'].includes(workorderSource))throw new Error('Unsupported saved workorder source.');
   for (const [key, value] of Object.entries(state.inputs)) {
     if (key === 'credentialed') continue;
     const field = form.elements.namedItem(key), probe = field.cloneNode(true);
@@ -566,6 +579,7 @@ async function applyCase(state, {canReplace = ()=>true} = {}) {
   }
   $('permission').checked = false; $('post-permission').checked = false;
   $('workorder-baseline-only').checked = state.baselineOnly;
+  $('workorder-source').value=workorderSource;
   termsEditor.loadDraft(terms.values);
   for (const [field, value] of selections) if (value) retained.set(field, value);
   if (current) {
@@ -601,8 +615,8 @@ caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   applyState:async (state,options)=>{await applyCase(state,options);portable.setName(state.name);},
   readSupport:()=>runtimeDesk.getText(),
   prepareSupport:(text,inputs)=>runtimeDesk.prepare(text,inputs),
-  applySupport:(text,review)=>runtimeDesk.apply(text,review),
-  onDraftChange:()=>runtimeDesk.inputsChanged(),
+  applySupport:(text,review)=>{runtimeDesk.apply(text,review);syncSources();},
+  onDraftChange:()=>{runtimeDesk.inputsChanged();invalidateWorkorder();},
   onNameChange:name=>portable.setName(name)});
 for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
   if (caseRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) ||

@@ -91,13 +91,16 @@ function sourceSchema(bytes, slot) {
   return data.schema;
 }
 function draft(value) {
-  object(value, ['name', 'inputs', 'sources', 'termsText', 'baselineOnly'], 'workspace draft');
+  object(value, ['name', 'inputs', 'sources', 'termsText', 'baselineOnly', 'workorderSource'], 'workspace draft');
+  if(value.workorderSource!==undefined&&!['diagnostic','runtime'].includes(value.workorderSource))
+    throw new TypeError('Unknown workorder source');
   return {
     name: string(value.name ?? 'Merchant case', 480, 'case name', {empty: false}),
     inputs: inputs(value.inputs),
     sources: sources(value.sources),
     termsText: string(value.termsText ?? '', MAX_TERMS_BYTES, 'draft terms'),
     baselineOnly: bool(value.baselineOnly ?? false, 'baselineOnly'),
+    ...(value.workorderSource===undefined?{}:{workorderSource:value.workorderSource}),
   };
 }
 
@@ -118,6 +121,7 @@ export async function serializeWorkspace(value, {now = new Date().toISOString()}
     schema: WORKSPACE_SCHEMA, savedAt: utc(now), name: state.name,
     inputs: state.inputs, sources: refs, blobs, termsText: state.termsText,
     baselineOnly: state.baselineOnly,
+    ...(state.workorderSource==='runtime'?{workorderSource:'runtime'}:{}),
   }, null, 2) + '\n';
   if (textEncoder.encode(file).length > MAX_WORKSPACE_BYTES) throw new TypeError('Workspace exceeds file size limit');
   return file;
@@ -128,7 +132,7 @@ export async function parseWorkspace(text) {
   string(text, MAX_WORKSPACE_BYTES, 'workspace file', {empty: false});
   let file;
   try { file = JSON.parse(text); } catch { throw new TypeError('Workspace is not valid JSON'); }
-  object(file, ['schema', 'savedAt', 'name', 'inputs', 'sources', 'blobs', 'termsText', 'baselineOnly'], 'workspace');
+  object(file, ['schema', 'savedAt', 'name', 'inputs', 'sources', 'blobs', 'termsText', 'baselineOnly', 'workorderSource'], 'workspace');
   for (const key of ['schema', 'savedAt', 'name', 'inputs', 'sources', 'blobs', 'termsText', 'baselineOnly'])
     if (!own(file, key)) throw new TypeError(`Missing workspace field: ${key}`);
   if (file.schema !== WORKSPACE_SCHEMA) throw new TypeError('Unsupported merchant workspace version');
@@ -157,7 +161,7 @@ export async function parseWorkspace(text) {
   }
   if (used.size !== keys.length) throw new TypeError('Workspace contains unreferenced source blobs');
   const state = draft({name: file.name, inputs: file.inputs, sources: restored,
-    termsText: file.termsText, baselineOnly: file.baselineOnly});
+    termsText: file.termsText, baselineOnly: file.baselineOnly,...(own(file,'workorderSource')?{workorderSource:file.workorderSource}:{})});
   return { ...state, savedAt, summary: {
     sourceCount: Object.values(restored).filter(v => v !== null).length,
     uniqueSourceCount: used.size,
