@@ -269,7 +269,7 @@ $('request-form').addEventListener('submit', event => {
     selectedRequest = await api('issue', { profile: selectedId(), body: requestBody(),
       id: $('operation-id').value.trim(), subject: $('request-subject').value.trim(), expiresAt: Date.now() + minutes * 60000 });
     text('request-detail', pretty(selectedRequest.packet)); await loadRequests();
-  }, 'Original operation ticket issued and retained.'));
+  }, 'Original operation ticket issued and retained.');
 });
 $('import-request').addEventListener('change', () => run(async () => {
   const source = await readJsonFile($('import-request')); setRequest(source.body ?? source);
