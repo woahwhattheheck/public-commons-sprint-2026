@@ -26,6 +26,33 @@ The HTTPS seller exposes `GET /.well-known/x402-bazaar-proof?nonce=<32-byte-base
 
 **Seller reference invocation:** `node cli.mjs sign --entry payment-required.json --key /secure/seller-ed25519-private.pem --nonce <fresh-verifier-nonce>`. Give the resulting JSON to the requested well-known handler. Do not store private key in public source, message, shell history or CI. Read-only verification: `node cli.mjs verify --entry payment-required.json --proof seller-proof.json --pubkey known-seller-public.pem --nonce <same-nonce>`. Online verifier: `node cli.mjs verify-origin --entry payment-required.json --nonce <same-nonce>` (public seller origin must actually serve dynamic well-known proof over HTTPS). `node --test test/proof.test.mjs` runs the single focused regression entrypoint locally; no workflows are added.
 
+## Select an offline payment alternative
+
+Offline `sign` and `verify` accept `--accept-index N`, the zero-based index in
+the **unchanged original** declaration's `accepts` array. Omitting it preserves
+the original index-zero behavior. Supply the same index to both commands:
+
+```sh
+node cli.mjs sign --entry payment-required.json --key /secure/seller-ed25519-private.pem --nonce FRESH_NONCE --accept-index 1
+node cli.mjs verify --entry payment-required.json --proof seller-proof-option-1.json --pubkey known-seller-public.pem --nonce SAME_NONCE --accept-index 1
+```
+
+Replace the nonce placeholders with the actual verifier challenge. The sign
+command prints the proof JSON to stdout; retain that output as the proof file
+for the verifier. Index `1` selects the second complete payment alternative,
+not a combination of fields from different alternatives. Indices must be
+canonical nonnegative safe integers and identify an existing option. Selection
+is checked before opening key or proof files. Unknown, repeated, and incomplete
+command options fail instead of silently falling back to index zero.
+
+SF73 admission requires one indexed `{nonce,proof}` pair for **every** original
+alternative. Use a distinct fresh verifier nonce for each, preserve original
+array order, and keep signatures within the existing proof lifetime; do not
+rewrite the entry to move another option into index zero. The independent key
+pin and separately authorized admission policy are still required. The online
+`verify-origin` command retains its existing option-zero wire contract and
+rejects `--accept-index`; this change does not modify the HTTPS responder.
+
 ## v2 contract commitment (2026-10-10)
 
 The proof statement domain is now `stellar-bazaar-seller-origin-quote-proof/v2`. Every signature includes an `identity.contractSha256` for deterministic, domain-separated SHA-256 of the **entire original `extensions.bazaar`** (including HTTP query parameters, MCP `inputSchema`, output metadata and route template) plus the **complete selected `accepts`** entry (including timeout and `extra`). JSON object keys are recursively sorted; omitted/undefined, cyclic, overdeep and oversized metadata is rejected rather than silently left unsigned. Buyers MUST recreate the contract from the original declaration before accepting a proof; no argument supplied only by an untrusted proof establishes the listing's identity.
