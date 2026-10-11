@@ -127,9 +127,55 @@ with tempfile.TemporaryDirectory() as p:
     good=issue_finality_attestation(keys[2],r['request_id'],'200','testnet:exact','c'*64)
     assert g.reconcile(good)['outcome']=='FINALIZED'
     g.close()
+# One original durable finalizer lifecycle. The transport is replaced here only
+# to exercise accounting; no network/finality claim is made by this local check.
+import finalize
+from governor import canonical
+with tempfile.TemporaryDirectory() as p:
+    db=Path(p)/'finalizer.db';g=Governor(db,policy,*keys)
+    r=req('finalizer-one',200,'exact')
+    g.reserve(r,consent(r))
+    transaction='d'*64
+    record={'intentId':r['request_id'],
+      'requirement':{'scheme':'exact','network':r['network'],'asset':asset,'payTo':PAYEE,'amount':'200'},
+      'receipt':{'transaction':transaction,'network':r['network'],'payer':PAYEE,'success':True},
+      'operatorReservation':{'schema':'stellar-forge.sf62.result.v1','outcome':'FRESH_RESERVATION_APPROVED',
+        'request_id':r['request_id'],'request_sha256':hashlib.sha256(canonical(r)).hexdigest(),
+        'approved_request':r,'network':r['network'],'asset':asset,'reserved_atomic_units':'200'}}
+    proof={'schema':'stellar-forge.sf86.rpc-reconciliation.v1',
+      'verdict':'CHAIN_TRANSFER_MATCHED_RPC_TESTNET','source':'official-stellar-testnet-rpc',
+      'intentId':r['request_id'],'transaction':transaction,'network':r['network'],
+      'asset':asset,'payer':PAYEE,'recipient':PAYEE,'atomicAmount':'200',
+      'matchingTransfers':1,'ledger':123,'matchingEventId':'fixture:1'}
+    original_adapter=finalize.run_adapter
+    calls=[]
+    finalize.run_adapter=lambda *args: calls.append(args) or proof
+    try:
+        altered=json.loads(json.dumps(record));altered['operatorReservation']['approved_request']['method']='POST'
+        deny(lambda:finalize.finalize_source(g,altered,PAYEE,node='/unused'),'DIGEST_MISMATCH')
+        altered['operatorReservation']['request_sha256']=hashlib.sha256(canonical(altered['operatorReservation']['approved_request'])).hexdigest()
+        deny(lambda:finalize.finalize_source(g,altered,PAYEE,node='/unused'),'differs from original reservation')
+        assert calls==[]
+        altered=json.loads(json.dumps(record));altered['requirement']['payTo']=OTHER_PAYEE
+        deny(lambda:finalize.finalize_source(g,altered,PAYEE,node='/unused'),'PAYMENT_TERMS_MISMATCH')
+        proof['verdict']='LOCAL_RPC_REPLAY_MATCHED'
+        deny(lambda:finalize.finalize_source(g,record,PAYEE,node='/unused'),'FRESH_ORIGINAL_RPC')
+        assert g.reservation(r)['state']=='reserved'
+        proof['verdict']='CHAIN_TRANSFER_MATCHED_RPC_TESTNET'
+        first=finalize.finalize_source(g,record,PAYEE,node='/unused')
+        assert first['outcome']=='FINALIZED' and first['receipt_ref']=='stellar:testnet/'+transaction
+        calls.clear();g.close();g=Governor(db,policy,*keys)
+        replay=finalize.finalize_source(g,record,PAYEE,node='/unused')
+        assert replay['outcome']=='IDEMPOTENT_FINALIZED' and replay['proof_sha256']==first['proof_sha256'] and calls==[]
+        assert g.audit()['events']==2
+    finally:
+        finalize.run_adapter=original_adapter;g.close()
+
 print(json.dumps({'focused_check':'PASS','behaviors':['authorization bound to request','atomic max reserve and idempotency',
    'day+actor+service+total caps','upto actual <= reserved and excess released','duplicate receipt prevented',
    'signed receipt attestation','exact scheme no undersettlement','persisted journal tamper detected',
    'recipient, timeout, HTTP method, body and accepted terms HMAC-bound','unknown/missing approval fields fail closed',
-   'parsed HTTPS host, credentials, fragments, invalid ports, loopback and legacy numeric IP refused'],
+   'parsed HTTPS host, credentials, fragments, invalid ports, loopback and legacy numeric IP refused',
+   'full original approved request retained and checked before observation',
+   'local replay rejected as finality; original durable finalization reused after restart'],
    'network_io':'NONE','money_movements':0,'performance_claim':'NONE'},indent=2))
