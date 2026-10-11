@@ -224,6 +224,42 @@ export async function inspectCommerce(directory) {
       paidFile: await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), job) }))) };
 }
 
+/** Review the retained native RPC without opening signers or merchant listeners. */
+export async function probeCommerceReadiness(directory) {
+  const { saved } = await readSession(directory);
+  need(saved.seller.facilitatorConfig, 'COMMERCE_NATIVE_FACILITATOR_NOT_CONFIGURED');
+  const [{ readConfig }, { createRpcReadiness }] = await Promise.all([
+    import('../native-facilitator/config.mjs'), import('../native-facilitator/readiness.mjs'),
+  ]);
+  const readiness = createRpcReadiness(await readConfig(saved.seller.facilitatorConfig));
+  try { return await readiness.probe(); }
+  finally { await readiness.close(); }
+}
+
+/** Keep the owning process alive through accepted native work after a grace timeout. */
+export async function completeCommerceShutdown(session, closing, { onWaiting } = {}) {
+  const keepAlive = setInterval(() => {}, 1000);
+  try {
+    let result;
+    try { result = await closing; }
+    catch (error) {
+      // Original seller/observer cleanup can reject after a native drain times out.
+      // Retain this process through the owned native completion, then report that error.
+      try { await session.waitForIdle?.({ sharedOnly: true }); } catch {}
+      throw error;
+    }
+    const native = result?.shutdown?.facilitator;
+    if (result?.drained !== false || result?.nativeCompletion?.drained === true ||
+        native?.ownership?.mode !== 'HOST_SIGNER_LEASES' ||
+        (native.activeVerify ?? 0) + (native.activeSettle ?? 0) === 0) return result;
+    need(typeof session.waitForIdle === 'function', 'COMMERCE_NATIVE_DRAIN_INTERFACE_REQUIRED');
+    // An optional presentation callback cannot shorten accepted native work.
+    try { await onWaiting?.(native); } catch {}
+    const nativeCompletion = await session.waitForIdle();
+    return { ...result, nativeCompletion };
+  } finally { clearInterval(keepAlive); }
+}
+
 /** Bind the actual compiled native merchant route to the frozen original request. */
 export function bindMerchantPurchase(compiled, job) {
   const op = job.operation, url = new URL(op.url);
@@ -306,6 +342,17 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
   let state = 'STARTING';
   const controller = new AbortController();
   const pending = new Set(), activeRetrievals = new Map();
+  const waitForIdle = async ({ sharedOnly = false } = {}) => {
+    need(state === 'STOPPING' || state === 'STOPPED', 'COMMERCE_DRAIN_REQUIRED');
+    const native = ownedFacilitator ?? seller?.facilitator;
+    if (!native || sharedOnly && native.status().ownership?.mode !== 'HOST_SIGNER_LEASES') return null;
+    need(typeof native.waitForIdle === 'function', 'COMMERCE_NATIVE_DRAIN_INTERFACE_REQUIRED');
+    // A failed original close can reach this path before native draining begins.
+    if (native.status().state === 'ACCEPTING') {
+      try { await native.drain(); } catch {}
+    }
+    return native.waitForIdle();
+  };
   const runOriginal = (script, args, options) => {
     const promise = originalCommand(script, args, options);
     pending.add(promise);
@@ -399,7 +446,13 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       need(saved.buyers.some(entry => entry.intentId === intentId), 'COMMERCE_INTENT_NOT_IN_SESSION');
       return { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
     };
-    return Object.freeze({ seller, operations, status, close,
+    return Object.freeze({ seller, operations, status, close, waitForIdle,
+      async probeReadiness() {
+        need(state === 'RUNNING', 'COMMERCE_SESSION_NOT_RUNNING');
+        const native = ownedFacilitator ?? seller.facilitator;
+        need(typeof native?.probeReadiness === 'function', 'COMMERCE_NATIVE_FACILITATOR_NOT_CONFIGURED');
+        return native.probeReadiness({ force: true });
+      },
       async review(intentId) {
         const job = await jobFor(intentId);
         return runOriginal(buyerCli, ['--review', '--config', join(queue.root, 'jobs', job.id, 'execution.json')],
@@ -442,7 +495,10 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
         return work.finally(() => { pending.delete(work); activeRetrievals.delete(intentId); });
       },
     });
-  } catch (error) { await close().catch(() => {}); throw error; }
+  } catch (error) {
+    await completeCommerceShutdown({ waitForIdle }, close()).catch(() => {});
+    throw error;
+  }
 }
 
 export { codeOf as commerceErrorCode };
