@@ -5,6 +5,7 @@ import { observeSellerTraffic, trafficCsv, trafficPrometheus } from './traffic.m
 import { createTrafficHistory, historyCsv } from './history.mjs';
 import { createDeliveryReader, deliveryCsv, deliveryPrometheus } from './delivery-view.mjs';
 import { createMerchantOperationDesk } from './merchant-operations.mjs';
+import { createAvailabilityDesk } from '../availability/desk.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -18,12 +19,16 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(navigationOrigin) ||
       Number(new URL(navigationOrigin).port)>65535)) throw new TypeError('navigationOrigin must be an explicit loopback workspace origin');
   const merchantDesk = createMerchantOperationDesk(session.operationControl,{enabled:operationControls});
+  const availabilityDesk = createAvailabilityDesk(session.availability);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
     ['/merchant-operations', 'merchant-operations.html', 'text/html; charset=utf-8'],
     ['/merchant-operations-panel.mjs', 'merchant-operations-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/merchant-operations.css', 'merchant-operations.css', 'text/css; charset=utf-8'],
+    ['/availability', '../availability/index.html', 'text/html; charset=utf-8'],
+    ['/availability/panel.mjs', '../availability/panel.mjs', 'text/javascript; charset=utf-8'],
+    ['/availability/style.css', '../availability/style.css', 'text/css; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
@@ -80,7 +85,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       let referringOrigin = null;
       try { if (req.headers.referer) referringOrigin = new URL(req.headers.referer).origin; } catch {}
       const userNavigation = navigationOrigin !== null && referringOrigin === navigationOrigin &&
-        req.method === 'GET' && ['/', '/fulfillment', '/merchant-operations'].includes(req.url) &&
+        req.method === 'GET' && ['/', '/fulfillment', '/merchant-operations', '/availability'].includes(req.url) &&
         req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document' &&
         req.headers['sec-fetch-user'] === '?1';
       // Binding loopback alone does not stop hostile DNS names / browser cross-origin access.
@@ -91,6 +96,12 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       }
       if (merchantDesk.accepts(req.url)) {
         merchantDesk.dispatch(req,allowedOrigins).then(result => {
+          if (!res.destroyed) reply(result.status,'application/json; charset=utf-8',JSON.stringify(result.body),result.headers);
+        });
+        return;
+      }
+      if (availabilityDesk.accepts(req.url)) {
+        availabilityDesk.dispatch(req,allowedOrigins).then(result => {
           if (!res.destroyed) reply(result.status,'application/json; charset=utf-8',JSON.stringify(result.body),result.headers);
         });
         return;
@@ -182,6 +193,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
         });
       } finally {
         await merchantDesk.close();
+        await availabilityDesk.close();
         await checkpointPending;
         await history?.close(observer.snapshot());
       }
@@ -200,6 +212,8 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     if (history) checkpointTimer = setInterval(checkpoint, historyCheckpointMs).unref();
     const url = `http://${HOST}:${assigned}`;
     return { server, url, merchantOperationsUrl:url + '/merchant-operations',
+      availabilityUrl:url + '/availability',
+      availabilityControlUrl:availabilityDesk.controlFragment ? url + '/availability#' + availabilityDesk.controlFragment : null,
       operationControlUrl:merchantDesk.controlFragment ? url + '/merchant-operations#' + merchantDesk.controlFragment : null,
       observer, history, close };
   } catch (error) { await close().catch(() => {}); throw error; }
