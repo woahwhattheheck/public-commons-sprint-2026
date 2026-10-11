@@ -127,6 +127,15 @@ journey. The backend's actual result is retained by the original response writer
 with its byte count, digest and outcome. Setup and ticket issuance themselves
 make no payment.
 
+Read the original chain observation and saved-response result together. With a
+response file enabled, its writer consumes the response stream and the original
+evidence capture does not read that body again. The chain report can therefore
+say `TRANSFER_VERIFIED_DELIVERY_UNCONFIRMED` while `outcome.responseFile` says
+`SAVED` with the actual path, byte count and digest. Preserve both records: the
+first reports the independently observed transfer, and the second records the
+bytes delivered to this buyer. Neither a saved body nor the merchant operation's
+`COMPLETE` state substitutes for a chain observation or settlement accounting.
+
 For an installed merchant package, the same entrypoints are
 `starforge commerce-setup` and `starforge commerce`. Use the original release
 containing this workflow and its existing native dependencies. The original
