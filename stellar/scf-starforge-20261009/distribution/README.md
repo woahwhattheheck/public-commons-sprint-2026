@@ -11,8 +11,11 @@ The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
 
-Browser modules served under shared URLs use the same [asset contracts](BROWSER_ASSETS.md)
-in their original HTTP servers and the source collector.
+Browser modules served under shared URLs use the same
+[asset contracts](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c26eee9e80fe4bccfd9faa5d79b4464742d8d95f/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md)
+in their original HTTP servers and the source collector. The same guide is included
+at `source/stellar/scf-starforge-20261009/distribution/BROWSER_ASSETS.md` inside the
+installed package.
 
 ## Install the source archive
 
