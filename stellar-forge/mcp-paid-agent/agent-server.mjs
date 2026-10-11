@@ -9,6 +9,7 @@ import { mcpAgentCommerceTool } from '../../stellar/scf-starforge-20261009/sf43-
 import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs';
 import { describeDiscoveredResource } from './descriptor.mjs';
 import { requiredQueryKeys } from './query-requirements.mjs';
+import { historyPage } from './quote-history.mjs';
 
 export const MCP_VERSION='2025-11-25';
 const plain = x => x!==null && typeof x==='object' && !Array.isArray(x);
@@ -35,7 +36,9 @@ async function readData(response,max=64*1024){
 }
 const statOf=q=>({quoteId:q.quoteId,status:q.status,resource:q.resource,requestUrl:q.url,method:q.method,
   selected:sanitizedPrice(q.accepted),expiresAt:q.expiresAt,attempts:q.attempts,
-  result:q.result??null,failure:q.failure??null,
+  createdAt:q.createdAt,updatedAt:q.updatedAt,phase:q.phase??null,
+  signedRequestDispatched:q.signedRequestDispatched===true,
+  result:structuredClone(q.result??null),failure:q.failure??null,
   ...(q.status==='INDETERMINATE'?{recovery:explainFailure({stage:'settle',
     response:{success:false,errorReason:'unexpected_settle_error',
       transaction:q.result?.paymentResponse?.transaction??null,
@@ -56,6 +59,7 @@ const schemas={
     name:'bazaar_execute_approved',description:'Attempt the quoted call ONLY when operator approval callback authorizes it; default denies. Never retries a potentially settled signed request.',
     inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
   bazaar_status:{name:'bazaar_status',description:'Inspect the exact state of a prior quote; no network call.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
+  bazaar_history:{name:'bazaar_history',description:'List this operator workspace\'s quote history, including recovered interrupted operations. Read only; never resumes a payment.',annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false},inputSchema:{type:'object',properties:{status:{type:'string'},limit:{type:'integer',minimum:1,maximum:100},cursor:{type:'string'}},additionalProperties:false}},
   bazaar_cancel:{name:'bazaar_cancel',description:'Cancel an unexecuted quote. Signed/unknown transactions require external reconciliation.',inputSchema:{type:'object',properties:{quoteId:{type:'string'}},required:['quoteId'],additionalProperties:false}},
 };
 const TOOLS=[...Object.values(schemas),mcpAgentCommerceTool];
@@ -70,9 +74,10 @@ if(new Set(TOOLS.map(tool=>tool.name)).size!==TOOLS.length)
 export class McpPaidToolBroker {
   #catalogUrl;#trustedOrigins;#approve;#sign;#fetch;#records=new Map();#quotes=new Map();
   #timeLimit;#quoteTTL;#maxRecords;#agentCommerce;
+  #store;#scope;#closing=false;#storeClosed=false;#closePromise;#active=new Set();#shutdown=new AbortController();
   constructor({discoveryUrl,allowedResourceOrigins=[],approve=()=>false,signPayment=null,
     fetchImpl=defaultFetch,timeoutMs=8000,quoteTTL=10*60*1000,maxRecords=500,
-    agentCommerce=null}={}){
+    agentCommerce=null,quoteStore=null}={}){
     if(!discoveryUrl)throw new TypeError('Explicit configured discoveryUrl required');
     this.#catalogUrl=new URL(discoveryUrl);
     if(!['https:','http:'].includes(this.#catalogUrl.protocol)||this.#catalogUrl.username||this.#catalogUrl.password||
@@ -84,11 +89,42 @@ export class McpPaidToolBroker {
     this.#approve=approve;this.#sign=signPayment;this.#fetch=fetchImpl;
     this.#timeLimit=timeoutMs;this.#quoteTTL=quoteTTL;this.#maxRecords=maxRecords;
     this.#agentCommerce=agentCommerce;
+    if(quoteStore!==null&&['load','save','close'].some(name=>typeof quoteStore[name]!=='function'))
+      throw new TypeError('Quote store must provide load/save/close');
+    this.#store=quoteStore;
+    this.#scope=hash({discoveryUrl:this.#catalogUrl.href,origins:[...this.#trustedOrigins].sort()});
+    try{for(const saved of this.#store?.load()??[]){
+      const q=structuredClone(saved);this.#quotes.set(q.quoteId,q);
+      if(['APPROVAL_PENDING','EXECUTING','CANCEL_REQUESTED'].includes(q.status)){
+        q.status=q.signedRequestDispatched?'INDETERMINATE':'INTERRUPTED';
+        q.failure=q.signedRequestDispatched
+          ?'Recovered interrupted signed dispatch; reconcile the original operation before any reattempt'
+          :'Recovered interrupted approval or execution before signed dispatch; inspect the original operator reservation';
+        this.#persist(q);
+      }else if(q.status==='PREVIEWED'&&q.operatorScope!==this.#scope){
+        q.status='CONFIG_CHANGED';q.failure='Operator discovery/origin configuration changed; search and review current terms';
+        this.#persist(q);
+      }else if(q.status==='PREVIEWED'&&Date.now()>q.expiresAt){
+        q.status='EXPIRED';this.#persist(q);
+      }
+    }}catch(error){this.#store?.close();throw error;}
   }
+  #running(){if(this.#closing)fail('BROKER_CLOSING','Operator workspace is closing');}
+  #persist(q){
+    q.updatedAt=Date.now();
+    if(!this.#store)return;
+    try{this.#store.save(q);}
+    catch(error){
+      q.status=q.signedRequestDispatched?'INDETERMINATE':'INTERRUPTED';
+      q.failure='Quote persistence failed; preserve this workspace and inspect its original operation';
+      fail(error?.code??'QUOTE_STORAGE_UNAVAILABLE',q.failure);
+    }
+  }
+  #signal(){return AbortSignal.any([AbortSignal.timeout(this.#timeLimit),this.#shutdown.signal]);}
   // Resource/catalog redirects must never escape the operator-approved origin.
   // In particular, a 3xx must not forward PAYMENT-SIGNATURE to a new host.
   async #get(url){
-    const resp=await this.#fetch(url,{method:'GET',headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
+    const resp=await this.#fetch(url,{method:'GET',headers:{accept:'application/json'},redirect:'error',signal:this.#signal()});
     if(!resp.ok)fail('DISCOVERY_UNAVAILABLE','Bazaar returned HTTP '+resp.status);
     const data=await readData(resp,2*1024*1024);if(data.truncated)fail('DISCOVERY_TOO_LARGE','Bazaar response exceeds configured limit');
     let value;try{value=JSON.parse(data.body);}catch{fail('DISCOVERY_INVALID','Invalid Bazaar JSON');}
@@ -96,6 +132,7 @@ export class McpPaidToolBroker {
     return value;
   }
   async search(args){
+    this.#running();
     if(!plain(args)||!maxText(args.query,1024)||!args.query.trim())fail('INVALID_PARAMS','Search query required');
     const u=new URL(this.#catalogUrl);
     if(!u.pathname.endsWith('/'))u.pathname+='/';
@@ -149,6 +186,7 @@ export class McpPaidToolBroker {
       expiresAt:row.createdAt+this.#quoteTTL});
   }
   preview({handle,acceptIndex=0,input={}}={}){
+    this.#running();
     const row=this.#records.get(handle);
     if(!row||Date.now()-row.createdAt>this.#quoteTTL)fail('RESOURCE_STALE','Search this resource again');
     if(!this.#trustedOrigins.has(row.origin))fail('ORIGIN_UNAPPROVED','Operator has not approved this exact resource origin');
@@ -181,73 +219,92 @@ export class McpPaidToolBroker {
       ![accepted.payTo,accepted.asset].every(x=>typeof x==='string'&&x.length>0))fail('INVALID_PAYMENT_TERMS','Unsupported or invalid Stellar payment option');
     const quoteId=randomUUID();const q={quoteId,resource:row.resource.url,method,url:u.toString(),accepted:structuredClone(accepted),
       status:'PREVIEWED',fingerprint:row.fingerprint,expiresAt:Date.now()+this.#quoteTTL,attempts:0,
-      signedRequestDispatched:false};
+      signedRequestDispatched:false,createdAt:Date.now(),operatorScope:this.#scope,phase:'PREVIEW'};
+    this.#persist(q);
     this.#quotes.set(quoteId,q);
-    while(this.#quotes.size>Math.max(500,this.#maxRecords*4))this.#quotes.delete(this.#quotes.keys().next().value);
+    if(!this.#store)while(this.#quotes.size>Math.max(500,this.#maxRecords*4))this.#quotes.delete(this.#quotes.keys().next().value);
     return {...statOf(q),warning:'No payment has been made. An independent operator approval and signer are required to execute.'};
   }
   status({quoteId}={}){const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');return statOf(q);}
+  history(args={}){return {...historyPage(this.#quotes.values(),args,statOf),durable:this.#store!==null};}
   cancel({quoteId}={}){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
     if(q.status==='PREVIEWED'||q.status==='APPROVAL_PENDING'){
-      q.status='CANCELLED';return statOf(q);
+      q.status='CANCELLED';this.#persist(q);return statOf(q);
     }
     if(q.status==='EXECUTING'){
       q.status=q.signedRequestDispatched?'INDETERMINATE':'CANCEL_REQUESTED';
       q.failure=q.signedRequestDispatched?'Signed call may have reached merchant; reconcile before any reattempt':null;
-      return statOf(q);
+      this.#persist(q);return statOf(q);
     }
     return statOf(q);
   }
   async execute({quoteId}={}){
+    this.#running();
+    const operation=this.#execute(quoteId);this.#active.add(operation);
+    try{return await operation;}finally{this.#active.delete(operation);}
+  }
+  async #execute(quoteId){
     const q=this.#quotes.get(quoteId);if(!q)fail('QUOTE_UNKNOWN','Unknown quote');
     if(q.status!=='PREVIEWED')return statOf(q); // replay never dispatches a second request
-    if(Date.now()>q.expiresAt){q.status='EXPIRED';return statOf(q);}
+    if(Date.now()>q.expiresAt){q.status='EXPIRED';this.#persist(q);return statOf(q);}
+    if(q.operatorScope!==this.#scope||!this.#trustedOrigins.has(resourceOrigin(q.url))){
+      q.status='CONFIG_CHANGED';q.failure='Operator configuration no longer allows this quote';this.#persist(q);return statOf(q);
+    }
     if(!this.#sign)fail('SIGNER_NOT_CONNECTED','Operator has not connected an x402 v2 signer');
     // Approval is an out-of-model trusted callback; "approved":true tool args never count.
     // Reserve the quote synchronously before the first await: concurrent MCP
     // calls must not independently authorize/sign/dispatch the same payment.
-    q.status='APPROVAL_PENDING';
+    q.status='APPROVAL_PENDING';q.phase='APPROVAL';this.#persist(q);
     let permission;
     try {
-      permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted)}));
+      permission=await this.#approve(Object.freeze({quoteId:q.quoteId,resource:q.resource,requestUrl:q.url,method:q.method,accepted:structuredClone(q.accepted),signal:this.#shutdown.signal}));
     }catch(e){
-      if(q.status==='CANCELLED')return statOf(q);
+      if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
       q.status='PREVIEWED'; // approval errors retain the original retry semantics
+      this.#persist(q);
       throw e;
     }
     // Cancellation/expiration during asynchronous human approval must win.
-    if(q.status==='CANCELLED')return statOf(q);
-    if(Date.now()>q.expiresAt){q.status='EXPIRED';return statOf(q);}
+    if(this.#closing||q.status!=='APPROVAL_PENDING')return statOf(q);
+    if(Date.now()>q.expiresAt){q.status='EXPIRED';this.#persist(q);return statOf(q);}
     if(!asBool(permission)){
       q.status='PREVIEWED'; // a denial does not authorize or consume payment
+      this.#persist(q);
       fail('APPROVAL_REQUIRED','Operator independently denied or has not authorized payment');
     }
-    q.status='EXECUTING';q.attempts++;
+    q.status='EXECUTING';q.phase='PROBE';q.attempts++;this.#persist(q);
     try {
-      const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
-      if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
+      const first=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json'},redirect:'error',signal:this.#signal()});
+      if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';if(!this.#storeClosed)this.#persist(q);return statOf(q);}
+      if(this.#closing||q.status!=='EXECUTING')return statOf(q);
       if(first.status!==402){
         q.status=first.ok?'FREE_SUCCESS':'PROBE_REJECTED';
-        q.result={httpStatus:first.status,paid:false,content:first.ok?await readData(first):null};return statOf(q);
+        q.result={httpStatus:first.status,paid:false,content:first.ok?await readData(first):null};this.#persist(q);return statOf(q);
       }
       const header=first.headers.get('payment-required');
       const required=strictBytes(header);
       // The catalog URL is provenance; payment binds to the concrete previewed request.
       if(required?.x402Version!==2||required?.resource?.url!==q.url||!Array.isArray(required.accepts)||
         !required.accepts.some(a=>sameTerms(a,q.accepted)))fail('CHALLENGE_MISMATCH','402 payment terms differ from quoted catalog');
-      if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
+      if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';if(!this.#storeClosed)this.#persist(q);return statOf(q);}
+      this.#running();
+      q.phase='SIGNING';this.#persist(q);
       const payload=await this.#sign(Object.freeze({quoteId,resource:structuredClone(required.resource),
-        accepted:structuredClone(q.accepted),paymentRequired:structuredClone(required)}));
+        accepted:structuredClone(q.accepted),paymentRequired:structuredClone(required),signal:this.#shutdown.signal}));
+      if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';if(!this.#storeClosed)this.#persist(q);return statOf(q);}
+      if(this.#closing||q.status!=='EXECUTING')return statOf(q);
       if(payload?.x402Version!==2||payload?.resource?.url!==q.url||!sameTerms(payload?.accepted,q.accepted)||
         !plain(payload?.payload))fail('SIGNER_INVALID','Signer returned mismatched x402 v2 payload');
-      if(q.status==='CANCEL_REQUESTED'){q.status='CANCELLED';return statOf(q);}
-      q.signedRequestDispatched=true;
-      const second=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json','PAYMENT-SIGNATURE':Buffer.from(JSON.stringify(payload)).toString('base64')},redirect:'error',signal:AbortSignal.timeout(this.#timeLimit)});
-      if(q.status==='INDETERMINATE')return statOf(q);
+      this.#running();
+      q.signedRequestDispatched=true;q.phase='SIGNED_DISPATCH';this.#persist(q);
+      const second=await this.#fetch(q.url,{method:q.method,headers:{accept:'application/json','PAYMENT-SIGNATURE':Buffer.from(JSON.stringify(payload)).toString('base64')},redirect:'error',signal:this.#signal()});
+      if(this.#closing||q.status!=='EXECUTING')return statOf(q);
       const responseHeader=second.headers.get('payment-response');
       let receipt=null;if(responseHeader){try{receipt=strictBytes(responseHeader);}catch{receipt=null;}}
-      q.result={httpStatus:second.status,paidAttempted:true,content:second.ok?await readData(second):null,paymentResponse:receipt?{
+      const content=second.ok?await readData(second):null;
+      if(this.#closing||q.status!=='EXECUTING')return statOf(q);
+      q.result={httpStatus:second.status,paidAttempted:true,content,paymentResponse:receipt?{
         success:receipt.success===true,network:receipt.network??null,transaction:receipt.transaction??null}:null};
       // A server success header without the quoted Stellar network and a
       // valid transaction hash is not even a coherent x402 settlement claim.
@@ -256,12 +313,33 @@ export class McpPaidToolBroker {
         typeof receipt.transaction==='string'&&/^[0-9a-f]{64}$/i.test(receipt.transaction);
       q.status=second.ok&&receiptMatchesQuote?'CONFIRMED_BY_SERVER':'INDETERMINATE';
       if(q.status==='INDETERMINATE')q.failure='Signed request dispatched; obtain provider reconciliation before any reattempt';
+      q.phase='RESULT';this.#persist(q);
       return statOf(q);
     }catch(e){
-      q.status=q.signedRequestDispatched?'INDETERMINATE':'REJECTED';
-      q.failure=q.signedRequestDispatched?'Signed request outcome uncertain; do not retry automatically':String(e.code||'PROVIDER_ERROR');
+      if(this.#storeClosed)return statOf(q);
+      if(['INTERRUPTED','INDETERMINATE','CANCELLED'].includes(q.status))return statOf(q);
+      q.status=q.signedRequestDispatched?'INDETERMINATE':this.#closing||q.status==='CANCEL_REQUESTED'?'CANCELLED':'REJECTED';
+      q.failure=q.signedRequestDispatched?'Signed request outcome uncertain; do not retry automatically':q.status==='CANCELLED'?null:String(e.code||'PROVIDER_ERROR');
+      this.#persist(q);
       return statOf(q);
     }
+  }
+  close({graceMs=5000}={}){
+    if(this.#closePromise)return this.#closePromise;
+    if(!Number.isSafeInteger(graceMs)||graceMs<0||graceMs>60000)throw new RangeError('Invalid close grace');
+    this.#closing=true;
+    this.#closePromise=(async()=>{
+      let timer,firstFailure;
+      try{
+        for(const q of this.#quotes.values())if(['APPROVAL_PENDING','EXECUTING'].includes(q.status)){
+          try{this.cancel({quoteId:q.quoteId});}catch(error){firstFailure??=error;}
+        }
+        this.#shutdown.abort();
+        await Promise.race([Promise.allSettled([...this.#active]),new Promise(resolve=>{timer=setTimeout(resolve,graceMs);})]);
+      }finally{clearTimeout(timer);this.#shutdown.abort();this.#storeClosed=true;this.#store?.close();}
+      if(firstFailure)throw firstFailure;
+    })();
+    return this.#closePromise;
   }
   async call(name,args={}){
     switch(name){
@@ -270,10 +348,15 @@ export class McpPaidToolBroker {
       case 'bazaar_preview':return this.preview(args);
       case 'bazaar_execute_approved':return this.execute(args);
       case 'bazaar_status':return this.status(args);
+      case 'bazaar_history':return this.history(args);
       case 'bazaar_cancel':return this.cancel(args);
-      case 'sf43_discover_review_and_pay':
+      case 'sf43_discover_review_and_pay':{
+        this.#running();
         if(!this.#agentCommerce)fail('AGENT_COMMERCE_UNAVAILABLE','SF43 requires an explicitly injected approved adapter');
-        return this.#agentCommerce(structuredClone(args));
+        const operation=Promise.resolve().then(()=>{this.#running();return this.#agentCommerce(structuredClone(args));});
+        this.#active.add(operation);
+        try{return await operation;}finally{this.#active.delete(operation);}
+      }
       default:fail('TOOL_NOT_FOUND','Unknown tool '+String(name));
     }
   }
