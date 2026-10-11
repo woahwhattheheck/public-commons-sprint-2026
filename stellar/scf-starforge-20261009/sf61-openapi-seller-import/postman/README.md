@@ -19,6 +19,10 @@ Open the complete local URL printed by the launcher. Its fragment supplies the o
 4. Continue in the original workspace: enter the public HTTPS seller address, Stellar network, payment asset, recipient and atomic price for each route. Review the suggested **Header → environment variable references**. Replace suggested names with the actual names your launcher will provide. Validate the configuration and save a new package.
 5. Start the saved seller, check the unpaid routes, and use the existing operations and buyer workflows. Stop the managed seller before closing its workspace. Reopen the same private parent and select the saved project: the original packet, source decisions, merchant plan and compiled output are read back together. A changed selection is saved under a new package name and can enter the normal release review.
 
+Use the selection count, **Show selected requests only**, and page selection to review larger collections. Prices, limits and backend references carry into a revised selection only for the same retained collection, environment and request decisions. Newly reviewed response modes and public samples take precedence. Replacing the active source resets the intake; controls stay disabled while an adoption or reopen is in progress.
+
+The [USGS facility-event example](examples/usgs-facility-events/README.md) includes a public collection, original merchant-plan preparation and a downstream customer reporting application. The [complete onboarding guide](../ONBOARDING.md) also covers installed package imports and the original OpenWeather entry.
+
 For source checkout use, the equivalent entry is `node sf61-openapi-seller-import/workspace/server.mjs --out-parent ...`. Installed commands retain the same arguments.
 
 ## Source decisions and request semantics

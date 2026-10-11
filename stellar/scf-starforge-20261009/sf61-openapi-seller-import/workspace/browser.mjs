@@ -2,7 +2,7 @@ import { createAuthenticationPanel, appendAuthenticationReview, renderCredential
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
-import { createPostmanPanel } from '/postman-browser.mjs';
+import { createPostmanPanel, mergePostmanMerchantPlan } from '/postman-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
@@ -59,12 +59,7 @@ function selectField(label,values,value) {
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
 const postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
   async onSource(text,operations) {
-    const current=planFromForm(), previous=new Map(current.operations.map(row=>[row.method+' '+row.path,row]));
-    current.operations=operations.map(row=>{
-      const saved=previous.get(row.method+' '+row.path);
-      return {...row,...saved,amountAtomic:saved?.amountAtomic??'',requestExample:row.requestExample,
-        responseValidation:'none',headerEnv:{...row.headerEnv,...saved?.headerEnv}};
-    });
+    const current=mergePostmanMerchantPlan({currentSource:specText,source:text,currentPlan:planFromForm(),operations});
     await loadSource(text,current);
   }});
 function drawRoutes(saved=[]) {
