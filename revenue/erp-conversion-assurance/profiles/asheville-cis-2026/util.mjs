@@ -18,21 +18,29 @@ export function format(value,scale=2){const n=BigInt(value),sign=n<0n?'-':'',dig
 export function rounded(n,d,mode='half_up'){need(d>0n,'A positive denominator is required.');need(['half_up','half_even'].includes(mode),'Select the reviewed rounding convention.');const sign=n<0n?-1n:1n,a=n<0n?-n:n,q=a/d,r=a%d;return sign*(q+(r*2n>d||(r*2n===d&&(mode==='half_up'||q%2n===1n))?1n:0n));}
 export function date(value,label='Date'){need(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value+'T00:00:00Z'))&&new Date(value+'T00:00:00Z').toISOString().slice(0,10)===value,`${label} must be a real YYYY-MM-DD date.`);return value;}
 export const day=value=>Date.parse(date(value)+'T00:00:00Z')/86400000;
-export function localDay(value,timeZone){need(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)&&Number.isFinite(Date.parse(value)),'Read timestamps need an explicit UTC offset.');const parts=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date(value));return ['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('-');}
-export function zone(value){try{new Intl.DateTimeFormat('en',{timeZone:value}).format();}catch{need(false,'Select a valid IANA time zone.');}return value;}
-export function midnight(value,timeZone){const target=Date.parse(date(value)+'T00:00:00Z');let t=target;for(let i=0;i<4;i++){const p=Object.fromEntries(new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(t)).map(v=>[v.type,v.value]));const local=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);t+=target-local;}return t;}
-export function parseCsv(bytes) {
-  let source;try{source=new TextDecoder('utf-8',{fatal:true}).decode(bytes);}catch{need(false,'CSV input must be valid UTF-8.');}
-  if(source.startsWith('\ufeff'))source=source.slice(1);const rows=[];let row=[],field='',quoted=false,closed=false;
-  for(let i=0;i<source.length;i++){const c=source[i];if(quoted){if(c==='"'){if(source[i+1]==='"'){field+='"';i++;}else{quoted=false;closed=true;}}else field+=c;}
-    else if(c===','){row.push(field);field='';closed=false;}
-    else if(c==='\r'||c==='\n'){if(c==='\r'&&source[i+1]==='\n')i++;row.push(field);rows.push(row);row=[];field='';closed=false;}
+const dayFormatters=new Map(),clockFormatters=new Map(),midnights=new Map();
+const dayFormatter=timeZone=>{if(!dayFormatters.has(timeZone))dayFormatters.set(timeZone,new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}));return dayFormatters.get(timeZone);};
+const clockFormatter=timeZone=>{if(!clockFormatters.has(timeZone))clockFormatters.set(timeZone,new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}));return clockFormatters.get(timeZone);};
+export function localDay(value,timeZone){need(typeof value==='string'&&/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/.test(value)&&Number.isFinite(Date.parse(value)),'Read timestamps need an explicit UTC offset.');const parts=dayFormatter(timeZone).formatToParts(new Date(value));return ['year','month','day'].map(k=>parts.find(p=>p.type===k).value).join('-');}
+export function zone(value){try{dayFormatter(value).format();}catch{need(false,'Select a valid IANA time zone.');}return value;}
+export function midnight(value,timeZone){const key=timeZone+'|'+value;if(midnights.has(key))return midnights.get(key);const target=Date.parse(date(value)+'T00:00:00Z');let t=target;for(let i=0;i<4;i++){const p=Object.fromEntries(clockFormatter(timeZone).formatToParts(new Date(t)).map(v=>[v.type,v.value]));const local=Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute,+p.second);t+=target-local;}if(midnights.size>4096)midnights.clear();midnights.set(key,t);return t;}
+export function parseCsvRecords(bytes) {
+  let source;try{source=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);}catch{need(false,'CSV input must be valid UTF-8.');}
+  const bom=source.startsWith('\ufeff'),records=[],spans=[];let row=[],rowSpans=[],field='',quoted=false,closed=false,start=bom?1:0,newline=null;
+  const finishField=end=>{row.push(field);rowSpans.push({start,end});field='';closed=false;};
+  const finishRow=()=>{records.push(row);spans.push(rowSpans);row=[];rowSpans=[];};
+  for(let i=start;i<source.length;i++){const c=source[i];if(quoted){if(c==='"'){if(source[i+1]==='"'){field+='"';i++;}else{quoted=false;closed=true;}}else field+=c;}
+    else if(c===','){finishField(i);start=i+1;}
+    else if(c==='\r'||c==='\n'){finishField(i);const separator=c==='\r'&&source[i+1]==='\n'?'\r\n':c;newline??=separator;if(separator==='\r\n')i++;finishRow();start=i+1;}
     else if(c==='"'){need(!field&&!closed,'A CSV quote must begin its field.');quoted=true;}
     else{need(!closed,'Unexpected text after a closing CSV quote.');field+=c;}
-    need(field.length<=1024*1024&&row.length<1000&&rows.length<=200000,'The CSV exceeds the field, column or 200,000-row intake limit.');
+    need(field.length<=1024*1024&&row.length<1000&&records.length<=200000,'The CSV exceeds the field, column or 200,000-row intake limit.');
   }
-  need(!quoted,'The CSV ends inside a quoted field.');if(field||row.length||closed){row.push(field);rows.push(row);}
-  need(rows.length>0,'The CSV needs a header.');const headers=rows.shift().map(v=>v.trim());need(headers.length&&headers.every(v=>v&&v.length<=160)&&new Set(headers).size===headers.length,'CSV headers must be nonempty and unique.');
+  need(!quoted,'The CSV ends inside a quoted field.');if(field||row.length||closed){finishField(source.length);finishRow();}
+  return {source,records,spans,bom,newline:newline??'\r\n'};
+}
+export function parseCsv(bytes) {
+  const parsed=parseCsvRecords(bytes),rows=parsed.records;need(rows.length>0,'The CSV needs a header.');const headers=rows.shift().map(v=>v.trim());need(headers.length&&headers.every(v=>v&&v.length<=160)&&new Set(headers).size===headers.length,'CSV headers must be nonempty and unique.');
   return {headers,rows:rows.filter(r=>!(r.length===1&&r[0]==='')).map((r,i)=>{need(r.length===headers.length,`CSV record ${i+2} has ${r.length} fields; expected ${headers.length}.`);return Object.fromEntries(headers.map((h,n)=>[h,r[n]]));})};
 }
 export function parseTable(bytes,kind='csv'){

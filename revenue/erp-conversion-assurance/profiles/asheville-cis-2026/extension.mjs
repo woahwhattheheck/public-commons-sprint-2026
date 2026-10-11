@@ -1,5 +1,7 @@
 // MIT. Authenticated native utility API hosted by the original loopback operator.
-import {readFile,mkdtemp,rm} from 'node:fs/promises';
+import {readFile,mkdtemp,mkdir,writeFile,rm} from 'node:fs/promises';
+import {createWriteStream} from 'node:fs';
+import {pipeline} from 'node:stream/promises';
 import {join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {openUtilityEngine} from './engine.mjs';
@@ -10,7 +12,21 @@ function bytes(body,maximum=48*1024*1024){need(body.encoding==='base64'&&typeof 
 function binary(res,data,name,type='application/octet-stream'){res.statusCode=200;res.setHeader('Content-Type',type);res.setHeader('Content-Length',data.length);res.setHeader('Content-Disposition','attachment; filename="'+name.replace(/[^A-Za-z0-9._-]/g,'_')+'"');res.setHeader('X-Source-Sha256',sha(data));res.end(data);}
 export async function createUtilityExtension({directory}){
   const engine=await openUtilityEngine(directory),store=engine.store;
-  async function packageProject(body){const project=store.project(body.projectId);need(project.revision===body.revision,'Refresh this project before freezing its handoff.');text(body.note,'Handoff note',2000);const temporary=await mkdtemp(join(store.root,'handoff-'));try{const output=join(temporary,'project.zip'),manifest=JSON.parse(await runProgram(process.env.UTILITY_PYTHON??'python3',[fileURLToPath(new URL('package.py',import.meta.url)),store.file,body.projectId,String(body.revision),output])),content=await readFile(output);return store.transaction(body.projectId,body.revision,body.actor,'project_handoff',{snapshotRevision:body.revision,sha256:sha(content),note:body.note},(p,next)=>{const hash=store.putBlob(body.projectId,content,'utility-'+body.projectId+'-r'+body.revision+'.zip','frozen_handoff');return {sha256:hash,manifest,artifact:store.saveArtifact(body.projectId,next,'project_handoff',{sourceSha256:hash,snapshotRevision:body.revision,manifest,note:body.note})};});}finally{await rm(temporary,{recursive:true,force:true});}}
+  async function packageProject(body,model){
+    const project=store.project(body.projectId);need(project.revision===body.revision,'Refresh this project before freezing its handoff.');text(body.note,'Handoff note',2000);need(model?.getJob&&model?.createHandoff,'The full handoff needs the original comparison service.');const temporary=await mkdtemp(join(store.root,'handoff-'));
+    try{
+      const native=join(temporary,'native-comparisons');await mkdir(native,{mode:0o700});const index=[];
+      for(const item of store.summary(body.projectId).artifacts.filter(a=>a.kind==='comparison')){
+        const comparison=store.artifact(body.projectId,item.id);let job;try{job=await model.getJob(comparison.value.jobId);}catch(error){if(['JOB_NOT_FOUND','NOT_FOUND','SERVICE_JOB_NOT_FOUND'].includes(error.code)){index.push({comparisonId:item.id,jobId:comparison.value.jobId,state:'Not dispatched',message:error.message});continue;}throw error;}
+        const entry={comparisonId:item.id,jobId:comparison.value.jobId,bundleId:job.bundle.bundleId,state:job.job.state,reportSha256:job.job.result?.report?.sha256??null};
+        if(job.job.state==='COMPLETED'){const handoff=await model.createHandoff(comparison.value.jobId);try{const name=handoff.filename;need(/^[A-Za-z0-9._-]+$/.test(name),'The original comparison export returned an invalid archive name.');await pipeline(handoff.stream(),createWriteStream(join(native,name),{flags:'wx',mode:0o600}));entry.archive=name;entry.bytes=handoff.bytes;}finally{await handoff.close();}}
+        index.push(entry);
+      }
+      await writeFile(join(native,'index.json'),json({schema:'asheville.original-comparison-archives.v1',comparisons:index})+'\n',{mode:0o600});
+      const output=join(temporary,'project.zip'),manifest=JSON.parse(await runProgram(process.env.UTILITY_PYTHON??'python3',[fileURLToPath(new URL('package.py',import.meta.url)),store.file,body.projectId,String(body.revision),output,native])),content=await readFile(output);
+      return store.transaction(body.projectId,body.revision,body.actor,'project_handoff',{snapshotRevision:body.revision,sha256:sha(content),note:body.note},(p,next)=>{const hash=store.putBlob(body.projectId,content,'utility-'+body.projectId+'-r'+body.revision+'.zip','frozen_handoff');return {sha256:hash,manifest,artifact:store.saveArtifact(body.projectId,next,'project_handoff',{sourceSha256:hash,snapshotRevision:body.revision,manifest,note:body.note})};});
+    }finally{await rm(temporary,{recursive:true,force:true});}
+  }
   const extension={id:'asheville-utility',browserModule:'/utility/panel.mjs',engine,
     assets:[['panel.mjs','text/javascript; charset=utf-8'],['panel.css','text/css; charset=utf-8']].map(([name,type])=>({path:'/utility/'+name,type,file:new URL(name,import.meta.url)})),
     decorateDraft:({spec,draft})=>({...draft,utility:spec.workspace?.utility??null}),
@@ -41,12 +57,20 @@ export async function createUtilityExtension({directory}){
         else if(route==='record-payments')result=engine.recordPayments(body);
         else if(route==='account-action')result=engine.adjustment(body);
         else if(route==='transition')result=engine.transition(body);
+        else if(route==='template-inspect')result=engine.templateInspect({...body,bytes:bytes(body)});
+        else if(route==='template-import')result=engine.templateImport({...body,bytes:bytes(body)});
+        else if(route==='template-corrected-export')result=engine.templateCorrectedExport(body);
+        else if(route==='template-export')result=engine.templateExport(body);
+        else if(route==='munibilling-import')result=engine.muniImport({...body,bytes:bytes(body)});
+        else if(route==='munibilling-export')result=engine.muniExport(body);
         else if(route==='native-import')result=engine.nativeImport({...body,bytes:bytes(body)});
         else if(route==='native-export')result=engine.nativeExport(body);
         else if(route==='field-packet')result=engine.fieldPacket(body);
         else if(route==='field-return')result=engine.fieldReturn({...body,bytes:bytes(body)});
         else if(route==='aging')result=engine.aging(body);
-        else if(route==='handoff')result=await packageProject(body);
+        else if(route==='dunning')result=engine.dunning(body);
+        else if(route==='collection-field')result=engine.reviewedField(body);
+        else if(route==='handoff')result=await packageProject(body,model);
         else if(route==='settings'){need(body.settings&&typeof body.settings==='object'&&!Array.isArray(body.settings)&&json(body.settings).length<=64000,'Provide the operator settings within 64 KiB.');result=store.transaction(body.projectId,body.revision,body.actor,'operator_settings',{settings:body.settings},(p,next)=>{const updated={...p,settings:body.settings};delete updated.revision;store.db.prepare('UPDATE projects SET body=? WHERE id=?').run(json(updated),body.projectId);return {artifact:store.saveArtifact(body.projectId,next,'operator_settings',body.settings)};});}
         else{send(res,404,{error:'UTILITY_NOT_FOUND',message:'This utility operation was not found.'});return true;}
         send(res,200,result);return true;
