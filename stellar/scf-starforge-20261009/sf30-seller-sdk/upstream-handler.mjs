@@ -4,12 +4,18 @@ import { request as httpRequest, validateHeaderName, validateHeaderValue } from 
 import { request as httpsRequest } from 'node:https';
 import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
 import { compileResponseContract } from './response-contract.mjs';
+import { canonicalOperationJSON, operationRequestHash } from './upstream-idempotency.mjs';
 import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
+
+// Private per-invocation metadata. Never serialized into a response or retained in
+// operation state; lets availability distinguish a real backend call from replay.
+export const UPSTREAM_ATTEMPT = Symbol('sf30.upstream.attempt');
 
 const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
   'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length', 'host', 'expect']);
 const CREDENTIAL = new Set(['authorization', 'cookie', 'set-cookie', 'x-api-key', 'api-key', 'apikey']);
 const OWNED = new Set(['accept-encoding', 'content-encoding', 'content-type']);
+const CACHE_POLICY_FIELDS = ['cache-control', 'vary', 'age', 'date', 'expires', 'pragma'];
 const payment = name => /^(?:payment-|x-payment(?:-|$)|x402-|extension-responses$|settlement-overrides$)/.test(name);
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(x));
@@ -113,13 +119,14 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract } = options;
+    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false } = options;
   if (!supportsSellerMethod(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
+      typeof cachePolicyMetadata !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
       lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
   integer(timeoutMs, 1, 120000, 'timeoutMs');
@@ -134,6 +141,21 @@ export function createUpstreamHandler(options = {}) {
   // Static credentials are copied at construction; a synchronous factory reads
   // freshly rotated environment credentials on each request without buyer input.
   const staticHeaders = typeof configuredHeaders === 'function' ? null : serverHeaders(configuredHeaders);
+  if (idempotency !== undefined) {
+    if (!object(idempotency) || method !== 'POST' || typeof idempotency.scope !== 'string' ||
+        !object(idempotency.operations) || ['issue','admit','execute','inspect','recover'].some(k => typeof idempotency.operations[k] !== 'function') ||
+        typeof idempotency.requestHeader !== 'string' || typeof idempotency.backendHeader !== 'string') {
+      throw new TypeError('Idempotency requires a configured POST operation controller');
+    }
+    headerList([idempotency.requestHeader, idempotency.backendHeader]);
+    if (idempotency.requestHeader !== idempotency.requestHeader.toLowerCase() ||
+        idempotency.backendHeader !== idempotency.backendHeader.toLowerCase() ||
+        idempotency.requestHeader === idempotency.backendHeader ||
+        forward.includes(idempotency.requestHeader) || forward.includes(idempotency.backendHeader) ||
+        staticHeaders && (Object.hasOwn(staticHeaders,idempotency.requestHeader) || Object.hasOwn(staticHeaders,idempotency.backendHeader))) {
+      throw new TypeError('Operation ticket and backend idempotency headers are server-owned');
+    }
+  }
   const totals = { started: 0, completed: 0, inFlight: 0, failed: 0, timedOut: 0, responseBytes: 0 };
   function prepare(context) {
     if (!object(context) || context.method !== method) throw new TypeError('Method mismatch');
@@ -156,27 +178,38 @@ export function createUpstreamHandler(options = {}) {
     }
     let body;
     if (requiresJsonBody(method)) {
-      const encoded = JSON.stringify(context.body);
+      const encoded = idempotency ? canonicalOperationJSON(context.body) : JSON.stringify(context.body);
       if (encoded === undefined) throw new TypeError('Replayable JSON body required');
       body = Buffer.from(encoded);
       if (body.length > maxRequestBytes) throw new TypeError('Upstream request body too large');
     }
-    return { target, outgoing, body };
+    const operation = idempotency ? {
+      ticket: incomingHop.has(idempotency.requestHeader) ? undefined : incoming[idempotency.requestHeader],
+      requestHash: operationRequestHash({scope:idempotency.scope,method,sourceUrl:context.url.href,
+        targetUrl:target.href,headers:outgoing,body}),
+    } : undefined;
+    return { target, outgoing, body, operation };
   }
-  function exchange({ target, outgoing, body }) {
+  function exchange({ target, outgoing, body }, signal) {
     return new Promise(resolve => {
-      let request, response, decoded, timer, done = false, count = 0, wire = 0;
+      let request, response, decoded, timer, done = false, dispatched = false, count = 0, wire = 0;
       const chunks = [];
-      function finish(result) {
+      const aborted = () => bad(499, 'UPSTREAM_ABORTED');
+      function finish(result, outcome = 'COMPLETE') {
         if (done) return;
         done = true; clearTimeout(timer);
+        signal?.removeEventListener('abort', aborted);
         // Stop both compressed and decoded streams immediately on any limit,
         // timeout or error. No drain, retry, redirect or uncertain request replay.
         decoded?.destroy(); response?.destroy(); request?.destroy();
-        resolve(result);
+        resolve({response:result,outcome,error:result.body?.error});
       }
-      const bad = (status, code, upstreamStatus) => finish(failure(status, code, upstreamStatus));
+      const bad = (status, code, upstreamStatus) => finish(failure(status, code, upstreamStatus),
+        dispatched ? 'UNCERTAIN' : 'NOT_DISPATCHED');
       try {
+        if (signal?.aborted) return aborted();
+        signal?.addEventListener('abort', aborted, {once:true});
+        dispatched = true;
         request = (target.protocol === 'https:' ? httpsRequest : httpRequest)(target, {
           method, headers: outgoing, maxHeaderSize: 16384, agent: false,
           ...(lookup === undefined ? {} : { lookup }),
@@ -202,13 +235,23 @@ export function createUpstreamHandler(options = {}) {
             const value = res.headers[key];
             if (typeof value === 'string' && value.length <= 8192) resultHeaders[key] = value;
           }
+          // The cache adapter needs cookie presence and policy completeness,
+          // never session values. Ordinary upstream responses keep their shape.
+          const metadata = cachePolicyMetadata ? { cacheMetadata: {
+            hasSetCookie: res.headers['set-cookie'] !== undefined,
+            policyFieldsComplete: CACHE_POLICY_FIELDS.every(key => res.headers[key] === undefined ||
+              !responseHop.has(key) && typeof res.headers[key] === 'string' &&
+              res.headers[key].length <= 8192 && expose.includes(key)) &&
+              ['age', 'date', 'expires'].every(key => res.rawHeaders.filter((name, index) =>
+                index % 2 === 0 && name.toLowerCase() === key).length <= 1),
+          } } : {};
           if (method === 'HEAD' || status === 204 || status === 205) {
             res.resume();
             res.once('end', () => {
               if (!res.complete) return bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE');
               const body = Buffer.alloc(0), error = responseCheck?.validate({ status, body });
               if (error) return bad(502, error, status);
-              finish({ status, headers: resultHeaders, body });
+              finish({ status, headers: resultHeaders, body, ...metadata });
             });
             return;
           }
@@ -243,7 +286,7 @@ export function createUpstreamHandler(options = {}) {
             const contractError = responseCheck?.validate({ status, body: content, value,
               contentType: responseHop.has('content-type') ? undefined : res.headers['content-type'] });
             if (contractError) return bad(502, contractError, status);
-            finish({ status, headers: resultHeaders, body: content });
+            finish({ status, headers: resultHeaders, body: content, ...metadata });
           });
           if (decoded !== res) res.pipe(decoded);
         });
@@ -254,13 +297,27 @@ export function createUpstreamHandler(options = {}) {
       } catch { bad(502, 'UPSTREAM_UNAVAILABLE'); }
     });
   }
+  function storedResponseError(response) {
+    if (!responseCheck || response?.status < 200 || response?.status > 299) return null;
+    let body, value;
+    try {
+      body = Buffer.isBuffer(response.body) || response.body instanceof Uint8Array ? Buffer.from(response.body) :
+        Buffer.from(typeof response.body === 'string' ? response.body : canonicalOperationJSON(response.body ?? null));
+      if (body.length && ![204,205].includes(response.status)) value = JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(body));
+    } catch { return 'UPSTREAM_RESPONSE_CONTRACT_BODY'; }
+    const contentType = Object.entries(response.headers ?? {}).find(([key]) => key.toLowerCase() === 'content-type')?.[1];
+    return responseCheck.validate({status:response.status,contentType,body,value});
+  }
   async function upstreamHandler(context) {
-    if (totals.inFlight >= maxInFlight) return failure(503, 'UPSTREAM_CAPACITY_EXHAUSTED');
-    let prepared;
+    let prepared, attempt;
     try { prepared = prepare(context); }
     catch { return failure(400, 'UPSTREAM_REQUEST_INVALID'); }
     try {
-      Object.assign(prepared.outgoing, staticHeaders ?? serverHeaders(configuredHeaders()));
+      const trustedHeaders = staticHeaders ?? serverHeaders(configuredHeaders());
+      if (idempotency && (Object.hasOwn(trustedHeaders,idempotency.requestHeader) || Object.hasOwn(trustedHeaders,idempotency.backendHeader))) {
+        throw new TypeError('Operation headers cannot be supplied as credentials');
+      }
+      Object.assign(prepared.outgoing, trustedHeaders);
       prepared.outgoing['accept-encoding'] = 'gzip, deflate, br';
       prepared.outgoing.accept ??= responseType === 'json' ? 'application/json' : '*/*';
       if (prepared.body !== undefined) {
@@ -268,23 +325,68 @@ export function createUpstreamHandler(options = {}) {
         prepared.outgoing['content-length'] = String(prepared.body.length);
       }
     } catch { return failure(503, 'UPSTREAM_CONFIGURATION_UNAVAILABLE'); }
-    totals.started++; totals.inFlight++;
-    const began = performance.now();
-    const result = await exchange(prepared);
-    totals.inFlight--; totals.completed++;
-    if (result.status >= 400) totals.failed++;
-    if (result.body?.error === 'UPSTREAM_TIMEOUT') totals.timedOut++;
-    const bytes = Buffer.isBuffer(result.body) ? result.body.length : 0;
-    totals.responseBytes += bytes;
-    if (onResult) {
-      const event = Object.freeze({ method, status: result.status, responseBytes: bytes,
-        durationMs: Math.round(performance.now() - began), error: result.body?.error ?? null });
-      try { Promise.resolve(onResult(event)).catch(() => {}); } catch { /* telemetry cannot change delivery */ }
+    async function perform({backendKey} = {}) {
+      if (totals.inFlight >= maxInFlight) return {outcome:'NOT_DISPATCHED',
+        response:failure(503,'UPSTREAM_CAPACITY_EXHAUSTED'),error:'UPSTREAM_CAPACITY_EXHAUSTED'};
+      if (backendKey !== undefined) prepared.outgoing[idempotency.backendHeader] = backendKey;
+      totals.started++; totals.inFlight++;
+      const began = performance.now();
+      const result = await exchange(prepared, context.signal);
+      attempt = Object.freeze({dispatched:result.outcome !== 'NOT_DISPATCHED',
+        status:result.response.status,error:result.response.body?.error ?? null,
+        upstreamStatus:result.response.body?.upstreamStatus ?? null});
+      totals.inFlight--; totals.completed++;
+      if (result.response.status >= 400) totals.failed++;
+      if (result.response.body?.error === 'UPSTREAM_TIMEOUT') totals.timedOut++;
+      const bytes = Buffer.isBuffer(result.response.body) ? result.response.body.length : 0;
+      totals.responseBytes += bytes;
+      if (onResult) {
+        const event = Object.freeze({ method, status: result.response.status, responseBytes: bytes,
+          durationMs: Math.round(performance.now() - began), error: result.response.body?.error ?? null });
+        try { Promise.resolve(onResult(event)).catch(() => {}); } catch { /* telemetry cannot change delivery */ }
+      }
+      return result;
     }
+    let result = idempotency ? await idempotency.operations.execute({...prepared.operation,signal:context.signal},perform) :
+      (await perform()).response;
+    // Recovered results and prior-version stored results remain subject to the
+    // active original response contract. A mismatch never repeats the mutation.
+    const contractError = idempotency ? storedResponseError(result) : null;
+    if (contractError) result = failure(502,contractError,result.status);
+    Object.defineProperty(result,UPSTREAM_ATTEMPT,{value:attempt ?? Object.freeze({dispatched:false})});
     return result;
   }
   // No URL, credential, request or response payload is retained in diagnostics.
-  upstreamHandler.snapshot = () => Object.freeze({ ...totals });
+  upstreamHandler.snapshot = () => Object.freeze({ ...totals,
+    ...(idempotency ? {idempotency:idempotency.operations.snapshot()} : {}) });
+  if (idempotency) {
+    upstreamHandler.admit = context => {
+      let prepared;
+      try { prepared = prepare(context); } catch { return failure(400,'UPSTREAM_REQUEST_INVALID'); }
+      return idempotency.operations.admit(prepared.operation);
+    };
+    upstreamHandler.idempotency = Object.freeze({
+      issue(context, options) { const prepared = prepare(context); return idempotency.operations.issue({...options,requestHash:prepared.operation.requestHash}); },
+      inspect:idempotency.operations.inspect,
+      recover(options) {
+        if (options?.action === 'complete') {
+          const response = options.response;
+          for (const [name,value] of Object.entries(response?.headers ?? {})) {
+            const key = name.toLowerCase();
+            const retryAfter = key === 'retry-after' && [429,503].includes(response.status) &&
+              typeof value === 'string' && value.length <= 128 &&
+              (/^\d+$/.test(value) || Number.isFinite(Date.parse(value)));
+            if (!expose.includes(key) && !retryAfter) throw new TypeError('Recovery headers must match configured upstream responseHeaders');
+            validateHeaderValue(key,value);
+          }
+        }
+        const error = options?.action === 'complete' ? storedResponseError(options.response) : null;
+        if (error) throw new TypeError('Recovered response violates configured upstream contract: ' + error);
+        return idempotency.operations.recover(options);
+      },
+      close:idempotency.operations.close,
+    });
+  }
   return upstreamHandler;
 }
 

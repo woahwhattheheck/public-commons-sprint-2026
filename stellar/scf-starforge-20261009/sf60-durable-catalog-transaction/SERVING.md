@@ -5,6 +5,11 @@ original Bazaar HTTP discovery API. Node 22+ is the only runtime dependency.
 The service does not introduce a second catalog, parser, ranker or persistence
 format. Existing trust, lifecycle, cursor and withdrawal semantics are retained.
 
+For signed seller admission, revisions and withdrawal while discovery stays
+online, use the [live operator and command-line client](./OPERATOR.md). It owns
+this same journal and discovery implementation, with private Unix or
+authenticated loopback control for the operating-system user.
+
 ## Start from an existing journal
 
 Stop the current standalone SF60 owner cleanly, then run from the repository:

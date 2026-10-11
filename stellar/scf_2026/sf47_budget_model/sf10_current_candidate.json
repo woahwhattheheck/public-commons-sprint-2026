@@ -1,0 +1,140 @@
+{
+  "schema_version": "1.0",
+  "status": "ILLUSTRATIVE_UNSENT",
+  "scenario_name": "SF10 current remaining delivery planning scenario: 400 prospective hours at the retained assumed $95/hour, 150 days; no unquoted service reserve",
+  "award_request_usd": "38000",
+  "project_end_day": 150,
+  "team_budget_inputs_are_hypothetical": true,
+  "application_state": "INTEREST_ACKNOWLEDGED_AWAITING_FULL_APPLICATION_INVITATION",
+  "planning_basis": {
+    "reviewed_preaward_head": "ab76ec64d5c8b11d92f3b2dce0232a5ac903b378",
+    "hourly_rate_usd_assumption": "95",
+    "prospective_hours_estimate": 400,
+    "rate_source": "Retained assumption from the historical sf10_70000_candidate.json; not an agreed human rate or vendor quote.",
+    "hours_source": "New engineering scope estimate after original 14-row shipped-source reconciliation; not time worked or contracted staffing.",
+    "capacity_required": "120 hours in days1-30; 120 in days31-90; 160 in days91-150. Actual contributor allocation remains to be recorded.",
+    "preaward_exclusions": "All already delivered seller, catalog, approval, signer, ledger, finalizer, dataset adapters, buyer inbox, merchant outbox/receiver, recovery, monitoring and distribution source. Any further pre-award work also comes out.",
+    "new_service_reserve_usd": "0",
+    "service_basis": "Use existing available fleet/container capacity. Add actual incremental units and sourced prices only when a real deployment needs them; no Actions spend."
+  },
+  "milestones": [
+    {
+      "tranche": 1,
+      "submit_day": 30,
+      "review_and_payment_lag_days": 14,
+      "deliverable": "Independent merchant installation and recoverable operator onboarding",
+      "measurable_proof": "Independent merchant operator installs the maintained release and exposes its agreed real resource, preserving method, schema, network, asset, recipient and exact terms. The same merchant changes terms, retires its old resource and recovers operation with its approved identity; a second operator completes the documented handover."
+    },
+    {
+      "tranche": 2,
+      "submit_day": 90,
+      "review_and_payment_lag_days": 14,
+      "deliverable": "Deployed native settlement, merchant operation and independent-provider integration with threat response",
+      "measurable_proof": "A merchant resource is used through participating independent providers with exact operation identity. The original approved transaction, SF36 reservation and merchant event are correlated and survive restart without another charge. An actual deployed fault reaches the responsible operator through the installed alert path and is recovered in the same service/reservation. Complete the required threat assessment and remediation in this tranche."
+    },
+    {
+      "tranche": 3,
+      "submit_day": 150,
+      "review_and_payment_lag_days": 14,
+      "deliverable": "Maintained mainnet merchant release and measured operational recovery",
+      "measurable_proof": "Authorized mainnet purchases deliver the original merchant product with matching transfer, request, reservation and merchant operation. Record the actual participating deployment and controlled rollback. Restore the same merchant catalog, reservation and delivery state to a new authorized host, reconcile post-backup operations and measure recovery time. An independent operator handles a real support case using the maintained release."
+    }
+  ],
+  "future_costs": [
+    {
+      "id": "T1-merchant-resource-integration",
+      "tranche": 1,
+      "start_day": 1,
+      "end_day": 30,
+      "estimated_hours": 80,
+      "assumed_hourly_rate_usd": "95",
+      "category": "core-development",
+      "amount_usd": "7600",
+      "future_only": true,
+      "remaining_work": "Merchant-specific HTTP and MCP installation on the participating operator's real deployment, including selected schemas, DNS/TLS, source authority and connection to the maintained native distribution.",
+      "measurable_proof": "Independent merchant operator installs the maintained release and exposes its agreed real resource, preserving method, schema, network, asset, recipient and exact terms.",
+      "quote_status": "PROSPECTIVE_ENGINEERING_ESTIMATE_RATE_UNCONFIRMED"
+    },
+    {
+      "id": "T1-merchant-authority-handover",
+      "tranche": 1,
+      "start_day": 1,
+      "end_day": 30,
+      "estimated_hours": 40,
+      "assumed_hourly_rate_usd": "95",
+      "category": "frontend-ux",
+      "amount_usd": "3800",
+      "future_only": true,
+      "remaining_work": "Real operator role/authority transfer and merchant-specific onboarding repairs discovered during the installation; use shipped admission, withdrawal and recovery components.",
+      "measurable_proof": "The same merchant changes terms, retires its old resource and recovers operation with its approved identity; a second operator completes the documented handover.",
+      "quote_status": "PROSPECTIVE_ENGINEERING_ESTIMATE_RATE_UNCONFIRMED"
+    },
+    {
+      "id": "T2-provider-and-ledger-deployment",
+      "tranche": 2,
+      "start_day": 31,
+      "end_day": 90,
+      "estimated_hours": 70,
+      "assumed_hourly_rate_usd": "95",
+      "category": "core-development",
+      "amount_usd": "6650",
+      "future_only": true,
+      "remaining_work": "Deploy existing native buyer, privileged finalizer and merchant receiver across independently operated provider APIs; implement actual cursor/version/auth differences and missing deployment-specific integration.",
+      "measurable_proof": "A merchant resource is used through participating independent providers with exact operation identity. The original approved transaction, SF36 reservation and merchant event are correlated and survive restart without another charge.",
+      "quote_status": "PROSPECTIVE_ENGINEERING_ESTIMATE_RATE_UNCONFIRMED"
+    },
+    {
+      "id": "T2-deployed-threat-response",
+      "tranche": 2,
+      "start_day": 31,
+      "end_day": 90,
+      "estimated_hours": 50,
+      "assumed_hourly_rate_usd": "95",
+      "category": "core-development",
+      "amount_usd": "4750",
+      "future_only": true,
+      "remaining_work": "Implement the deployment-specific threat model and operational response: signer/observer custody, actionable alert delivery, acknowledgement and recovery for real pending-transfer or merchant-notice failures.",
+      "measurable_proof": "An actual deployed fault reaches the responsible operator through the installed alert path and is recovered in the same service/reservation. Complete the required threat assessment and remediation in this tranche.",
+      "quote_status": "PROSPECTIVE_ENGINEERING_ESTIMATE_RATE_UNCONFIRMED"
+    },
+    {
+      "id": "T3-mainnet-merchant-rollout",
+      "tranche": 3,
+      "start_day": 91,
+      "end_day": 150,
+      "estimated_hours": 90,
+      "assumed_hourly_rate_usd": "95",
+      "category": "core-development",
+      "amount_usd": "8550",
+      "future_only": true,
+      "remaining_work": "Production mainnet integration on actual merchant infrastructure, original asset/account authority, protected signer/observer configuration, native provider support and controlled release/cutover.",
+      "measurable_proof": "Authorized mainnet purchases deliver the original merchant product with matching transfer, request, reservation and merchant operation. Record the actual participating deployment and controlled rollback.",
+      "quote_status": "PROSPECTIVE_ENGINEERING_ESTIMATE_RATE_UNCONFIRMED"
+    },
+    {
+      "id": "T3-production-recovery-and-handover",
+      "tranche": 3,
+      "start_day": 91,
+      "end_day": 150,
+      "estimated_hours": 70,
+      "assumed_hourly_rate_usd": "95",
+      "category": "release",
+      "amount_usd": "6650",
+      "future_only": true,
+      "remaining_work": "Integrate existing encrypted recovery and outbox continuity into actual supervision/off-host retention and key rotation; resolve material deployment findings and deliver maintainer handover.",
+      "measurable_proof": "Restore the same merchant catalog, reservation and delivery state to a new authorized host, reconcile post-backup operations and measure recovery time. An independent operator handles a real support case using the maintained release.",
+      "quote_status": "PROSPECTIVE_ENGINEERING_ESTIMATE_RATE_UNCONFIRMED"
+    }
+  ],
+  "planning_inputs_to_complete": [
+    "Accountable contributor allocation and actual rates/capacity for the six remaining work packages.",
+    "Participating merchant scope and production deployment requirements.",
+    "Actual incremental infrastructure pricing only if existing capacity is insufficient.",
+    "Actual invitation, accepted full-application terms and any award-specific milestone agreement.",
+    "Source of working capital for the modeled cash gap; no credit or funding receipt is assumed."
+  ],
+  "primary_sources": [
+    "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines",
+    "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria"
+  ]
+}

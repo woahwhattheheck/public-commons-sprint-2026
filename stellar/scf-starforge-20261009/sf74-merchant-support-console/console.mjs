@@ -2,6 +2,9 @@
 import {mountTermsEditor} from './terms-editor.mjs';
 import {mountWorkspaceFiles} from './workspace-files.mjs';
 import {decodeSource, sourceDigest} from './workspace-file.mjs';
+import {mountCaseDesk} from './case-desk.mjs';
+
+let caseDesk = null;
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -112,6 +115,7 @@ function showIntake(report, originalText = JSON.stringify(report, null, 2) + '\n
     safe.walletCalls + ' wallet calls; settlement confirmed: ' + (safe.settlementConfirmed === true ? 'yes' : 'no') + '.';
   $('capture-selection-status').textContent = 'Choose where this capture belongs, or save it for later.';
   preparePreflight(report);
+  caseDesk?.changed();
 }
 form.addEventListener('input', () => {
   intakeRevision++;
@@ -125,6 +129,7 @@ form.addEventListener('input', () => {
 });
 form.addEventListener('submit', async event => {
   event.preventDefault();
+  caseDesk?.changed({user:true});
   const revision = ++intakeRevision, operation = ++intakeOperation;
   clearPreflight();
   $('run').disabled = true;
@@ -164,6 +169,7 @@ function clearPreflight() {
   $('post-output').hidden = true;
   $('download-post').disabled = true;
   $('post-permission').checked = false;
+  caseDesk?.changed();
 }
 function preparePreflight(report) {
   clearPreflight();
@@ -182,10 +188,12 @@ function showPreflight(report, originalText = JSON.stringify(report, null, 2) + 
     $('post-limits').textContent = report.limitations;
     $('post-output').hidden = false;
     $('download-post').disabled = false;
+    caseDesk?.changed();
 }
 $('post-form').addEventListener('submit', async event => {
   event.preventDefault();
   if (!latestBytes || !$('post-permission').checked || $('post-run').disabled) return;
+  caseDesk?.changed({user:true});
   const source = latestBytes;
   const revision = ++postRevision;
   postAbort?.abort();
@@ -267,6 +275,7 @@ function invalidateWorkorder(text = 'Sources or terms changed. Create a new work
 function sourcesChanged() {
   invalidateComparison();
   invalidateWorkorder();
+  caseDesk?.changed();
 }
 for (const [field, id] of files) $(id).addEventListener('change', () => {
   retained.delete(field);
@@ -287,6 +296,7 @@ for (const button of document.querySelectorAll('[data-save-source]')) button.add
 });
 function retainCurrent(side) {
   if (!latestBytes || $('use-' + side).disabled) return;
+  caseDesk?.changed({user:true});
   clearSource(side);
   retained.set(side, {file: new File([latestBytes], 'merchant-' + side + '.json', {type: 'application/json'}),
     observedAt: latest.observedAt});
@@ -372,6 +382,7 @@ const termsEditor = mountTermsEditor($('terms-editor'), {onChange: () => {
   termsImportRevision++;
   termsImportPending = false;
   invalidateWorkorder('Owner terms changed. Create a new workorder when the terms are ready.');
+  caseDesk?.changed();
 }});
 $('workorder-baseline-only').addEventListener('change', () => invalidateWorkorder());
 $('terms-file').addEventListener('change', async () => {
@@ -457,10 +468,16 @@ $('download-workorder-json').addEventListener('click', () => {
 syncSources();
 
 
-// Portable cases compose the current console; no new backend or diagnostic engine.
+// Portable workspaces and the private case desk compose the current console.
 const emptyTermsDraft = termsEditor.readDraft();
 const workspaceRoot = document.createElement('div');
-$('diagnose').before(workspaceRoot);
+const caseRoot = document.createElement('div');
+const portableFiles = document.createElement('details');
+portableFiles.className = 'portable-cases source-details';
+const portableSummary = document.createElement('summary');
+portableSummary.textContent = 'Portable workspace files · import or download';
+portableFiles.append(portableSummary,workspaceRoot);
+$('diagnose').before(caseRoot,portableFiles);
 const sourceText = value => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(decodeSource(value));
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function checkDisplayReport(report, kind) {
@@ -497,7 +514,7 @@ async function readCase() {
   sources.preflight = browser ? encodeBytes(new TextEncoder().encode(browser)) : null;
   return {inputs, sources, termsText, baselineOnly};
 }
-async function applyCase(state) {
+async function applyCase(state, {canReplace = ()=>true} = {}) {
   // Complete structural/representability checks before touching the current editor.
   const terms = state.termsText ? JSON.parse(state.termsText) :
     {schema: 'stellar-forge.merchant-terms-draft.v1', values: emptyTermsDraft};
@@ -530,6 +547,7 @@ async function applyCase(state) {
     return [field, {file: new File([bytes], 'merchant-'+field+'.json', {type: 'application/json'}),
       observedAt: report.observedAt}];
   });
+  if (!canReplace()) throw new Error('The current draft changed while this case was opening.');
   // Retire all previous result owners before replacing case state. No request is made here.
   intakeRevision++; intakeOperation++; clearPreflight(); invalidateComparison(); invalidateWorkorder();
   termsImportRevision++; termsImportPending = false; $('terms-file').value = '';
@@ -564,6 +582,16 @@ async function applyCase(state) {
   message('status', 'Saved case restored. Choose Run diagnosis only when you intend another probe.');
   message('post-status', 'Saved browser results are historical. A new check needs its own explicit authorization.');
   $('terms-file-status').textContent = 'Restored raw draft fields, including existing recorded terms. Original workorder validation still applies.';
-  document.querySelector('footer').textContent = 'Merchant workspace · Save case file retains this session for later. Downloads contain private business data.';
+  document.querySelector('footer').textContent = 'Merchant workspace · Save case retains the full case. Portable workspace files transfer captures and draft terms.';
 }
-mountWorkspaceFiles({root: workspaceRoot, readState: readCase, applyState: applyCase});
+const portable = mountWorkspaceFiles({root:workspaceRoot,readState:readCase,
+  applyState:state=>caseDesk.importWorkspace(state),
+  onNameChange:name=>caseDesk?.rename(name)});
+caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
+  applyState:async (state,options)=>{await applyCase(state,options);portable.setName(state.name);},
+  onNameChange:name=>portable.setName(name)});
+for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
+  if (caseRoot.contains(e.target) || workspaceRoot.contains(e.target) ||
+      ['permission','post-permission'].includes(e.target.id)) return;
+  caseDesk.changed({user:true});
+});
