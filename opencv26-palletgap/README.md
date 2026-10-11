@@ -95,3 +95,20 @@ The selected version of the camera config must include its existing reference_ke
 The SAM template enables S3 Versioning and s3:GetObjectVersion and expires noncurrent raw frame versions after seven noncurrent days; operators must evaluate cost and evidence retention before deploying. This source is NOT deployed here. Backward-compatible schema 1 continues to hash bytes actually read, but config and frames remain UNPINNED on schema 1. Object VersionId alone proves neither independent capture time, upload authorization, camera authenticity, actual physical clearance nor regulatory compliance. The system still requires a trusted publisher, human review, real OpenCV5/AWS deployment validation and explicit contest submission.
 
 Focused offline AWS-mocked check: PYTHONPATH=. python -m unittest -q focus.test_s3_snapshot focus.test_s3_all_inputs_pinned. No live AWS, official entry, award or broad test run is claimed.
+
+
+### Trusted schema-2 capture producer
+
+`palletgap.capture` is the source-only producer for the version-pinned ingestion contract. It requires an already configured, versioned S3 bucket and ordinary AWS credentials; it does not create infrastructure or grant upload authority. For each capture it uploads the reference and frame bytes under unique site-scoped keys, reads every object back by the returned S3 VersionId, verifies the exact bytes and SHA-256 metadata, derives the camera config from the verified reference version, and uploads the schema-2 request manifest **last**.
+
+```bash
+python -m palletgap.capture \\
+  --bucket configured-versioned-bucket --site demo-site \\
+  --capture-id capture-001 --camera-id aisle-camera-1 \\
+  --camera-config camera.json --reference reference.png \\
+  --first capture-001.jpg --second capture-002.jpg
+```
+
+Object-key collisions, missing or invalid VersionIds, byte/hash mismatches, oversized inputs and interrupted uploads fail closed. An interrupted input sequence can leave unreferenced objects for lifecycle cleanup, but it does not publish a request manifest. The returned JSON receipt records the exact key, version, byte count and SHA-256 for each object. Version IDs and hashes establish S3 object identity; they do not establish camera authenticity, capture independence, physical safety or regulatory compliance.
+
+Focused source-only check: `PYTHONPATH=. python -m unittest -q focus.test_capture_producer`. It uses a fake S3 client and performs no AWS calls.
