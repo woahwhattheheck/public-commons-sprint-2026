@@ -3,8 +3,8 @@
 *{box-sizing:border-box}
 body{margin:0}
 a{color:var(--green)}
-button,input,textarea{font:inherit}
-button,a,input,textarea,summary{outline-offset:4px}
+button,input,textarea,select{font:inherit}
+button,a,input,textarea,select,summary{outline-offset:4px}
 button{cursor:pointer;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink);padding:10px 14px}
 button:disabled{cursor:wait;opacity:.6}
 button:hover:not(:disabled){border-color:var(--green)}
@@ -29,6 +29,7 @@ code{font-family:var(--mono);overflow-wrap:anywhere;font-size:12px}
 .workspace aside{padding:8px 0}
 .workspace article{border:1px solid var(--line);border-radius:12px;background:var(--white);padding:28px;min-width:0}
 input,textarea{border:1px solid var(--line);border-radius:7px;background:var(--white);color:var(--ink);width:100%;padding:11px 12px}
+#client-payment-option{display:block;width:100%;min-width:0;max-width:100%;border:1px solid var(--line);background:var(--white);color:var(--ink);padding:10px;font-size:12px}
 input:focus,textarea:focus{outline:2px solid #91bcb0}
 input[type=search]{margin-top:12px;margin-bottom:15px;font-size:12px}
 textarea{font-family:var(--mono);font-size:12px;line-height:1.65;resize:vertical}
