@@ -294,3 +294,8 @@ Save the verified backup bytes as datasets.sqlite3 in a new private directory, t
 Old file-job paths may still name the earlier directory; the adapter rejects files belonging to another workspace directory. A new report-export job can regenerate bytes from the original retained publication without source files or another query. New full-query exports use the original controller and retained SQL data.
 
 The original database service remains the single process/worker owner. This integration needs no additional scheduler, proxy, lock service or recovery daemon.
+
+
+## Customer workbooks
+
+Native agents can also use the original customer Workbooks application through this same registered analysis service. The [complete native workbook workflow](WORKBOOKS.md) covers retained complete query/report sources, typed sheet mappings, saved definition review, original full builds and cancellation, verified file receiving, recurring-edition review/save and historical reopening. It uses the existing workbook engine and its original source/definition/build identities. The host must select the complete maintained workbook and recurring-edition source with the original Python workbooks extra; no additional analysis service or package producer is introduced.

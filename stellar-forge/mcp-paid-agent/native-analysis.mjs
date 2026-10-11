@@ -8,6 +8,7 @@ import {initializationDirectory as directory, initializationBytes as bytes,
   from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs';
 import {need,InputError} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs';
 import {createSavedFileReader} from './native-file.mjs';
+import {createNativeWorkbookActions} from './native-analysis-workbooks.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
 const CUSTOMER='stellar-forge.customer-analysis.v1';
@@ -113,6 +114,7 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
   need(object(manifest),'MCP_ANALYSIS_NATIVE_WORKSPACE_REQUIRED');
   const root=join(localPath(manifest.directory),'analysis'),aliases=join(root,'workspaces');
   const shutdown=new AbortController(),reads=createSavedFileReader(),pending=new Set();
+  const workbooks=createNativeWorkbookActions({reads,parse});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
   async function roots(create=false){
@@ -275,6 +277,7 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     else if(op==='cancel-query-export')value=publicJob(await post('/api/query-exports/'+id(body.id)+'/cancel',{}));
     else if(op==='query-export-file')value=await queryExportFile(record,connection,body,context.signal);
     else if(op==='file')value=await file(record,connection,body,context.signal);
+    else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
     else fail('MCP_ANALYSIS_OPERATION_UNKNOWN');
     return finish(alias,op,value);
   }
@@ -282,6 +285,7 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     const task=dispatch(args,context);pending.add(task);try{return await task;}finally{pending.delete(task);}
   },async close(){
     if(closed)return;closed=true;shutdown.abort();await Promise.allSettled([...pending]);
+    workbooks.close();
     // The original analysis service belongs to its host/browser. It keeps its own jobs and lease.
   }};
 }
