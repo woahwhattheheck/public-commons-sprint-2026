@@ -7,7 +7,8 @@ import {fileURLToPath} from 'node:url';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
-import {compare} from '../sf76-merchant-remediation-delta/compare.mjs';
+import {compare, validateIntake} from '../sf76-merchant-remediation-delta/compare.mjs';
+import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.mjs';
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -71,31 +72,31 @@ async function boundedBody(req, maximum = MAX_BODY) {
   catch { throw new TypeError('Invalid JSON document'); }
 }
 
+function uploadedSource(encoded, field, required = false) {
+  if (encoded === undefined || encoded === null) {
+    if (required) throw new TypeError('Missing ' + field + ' source');
+    return null;
+  }
+  if (typeof encoded !== 'string' || !encoded.length ||
+      encoded.length > Math.ceil(MAX_SOURCE / 3) * 4)
+    throw new TypeError(field + ' source must contain 1..2,000,000 bytes');
+  // Hash the uploaded bytes, never a parsed/reformatted JSON representation.
+  const bytes = Buffer.from(encoded, 'base64');
+  if (bytes.toString('base64') !== encoded || !bytes.length || bytes.length > MAX_SOURCE)
+    throw new TypeError(field + ' source has invalid encoding or size');
+  let data;
+  try { data = JSON.parse(new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(bytes)); }
+  catch { throw new TypeError(field + ' source must be valid UTF-8 JSON'); }
+  return {data, sha: createHash('sha256').update(bytes).digest('hex')};
+}
+
 function compareUploadedSources(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input))
     throw new TypeError('Expected before and after source files');
   const fields = ['before', 'after', 'postBefore', 'postAfter'];
   if (Object.keys(input).some(key => !fields.includes(key))) throw new TypeError('Unexpected source field');
-  function source(field, required = false) {
-    const encoded = input[field];
-    if (encoded === undefined || encoded === null) {
-      if (required) throw new TypeError('Missing ' + field + ' source');
-      return null;
-    }
-    if (typeof encoded !== 'string' || !encoded.length ||
-        encoded.length > Math.ceil(MAX_SOURCE / 3) * 4)
-      throw new TypeError(field + ' source must contain 1..2,000,000 bytes');
-    // Hash the uploaded bytes, never a parsed/reformatted JSON representation.
-    const bytes = Buffer.from(encoded, 'base64');
-    if (bytes.toString('base64') !== encoded || !bytes.length || bytes.length > MAX_SOURCE)
-      throw new TypeError(field + ' source has invalid encoding or size');
-    let data;
-    try { data = JSON.parse(new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(bytes)); }
-    catch { throw new TypeError(field + ' source must be valid UTF-8 JSON'); }
-    return {data, sha: createHash('sha256').update(bytes).digest('hex')};
-  }
-  const before = source('before', true), after = source('after', true);
-  const pb = source('postBefore'), pa = source('postAfter');
+  const before = uploadedSource(input.before, 'before', true), after = uploadedSource(input.after, 'after', true);
+  const pb = uploadedSource(input.postBefore, 'postBefore'), pa = uploadedSource(input.postAfter, 'postAfter');
   return compare({before: before.data, after: after.data, beforeSha: before.sha, afterSha: after.sha,
     postBefore: pb?.data, postAfter: pa?.data, postBeforeSha: pb?.sha, postAfterSha: pa?.sha});
 }
@@ -135,6 +136,31 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         json(res, Number(error?.status) || 422, {error: 'INVALID_COMPARISON',
           detail: String(error?.message ?? error).slice(0, 240)});
       }
+      return;
+    }
+    if (route === '/api/post-preflight' && req.method === 'POST') {
+      if (req.headers.origin !== ownOrigin) { json(res, 403, {error: 'ORIGIN_MISMATCH'}); return; }
+      if (active) { json(res, 409, {error: 'DIAGNOSIS_IN_PROGRESS'}); return; }
+      active = true;
+      try {
+        const input = await boundedBody(req, Math.ceil(MAX_SOURCE / 3) * 4 + 512);
+        if (!input || typeof input !== 'object' || Array.isArray(input) ||
+            Object.keys(input).some(key => !['intake', 'permission'].includes(key)))
+          throw new TypeError('Expected one original intake and explicit permission');
+        if (input.permission !== true) throw new TypeError('Authorize one OPTIONS preflight for the displayed seller');
+        const source = uploadedSource(input.intake, 'intake', true);
+        const scope = validateIntake(source.data);
+        if (scope.intendedRetryMethod !== 'POST' || typeof scope.browserCredentialed !== 'boolean')
+          throw new TypeError('A current POST intake with explicit browser credential mode is required');
+        // SF72 remains the sole eligibility gate and OPTIONS implementation.
+        const report = await postPreflight(source.data, {allowLoopback, credentialed: scope.browserCredentialed});
+        report.source.intakeSha256 = source.sha;
+        json(res, 200, {report});
+      } catch (error) {
+        const status = Number(error?.status) || (error instanceof TypeError ? 422 : 502);
+        json(res, status, {error: status === 502 ? 'ORIGINAL_PREFLIGHT_FAILED' : 'INVALID_PREFLIGHT',
+          detail: String(error?.message ?? error).slice(0, 240)});
+      } finally { active = false; }
       return;
     }
     if (route === '/api/intake' && req.method === 'POST') {

@@ -23,6 +23,14 @@ For explicit local source fixtures only, `node .../server.mjs --allow-loopback` 
 - Original SF70 `state` and `findings` are displayed without reinterpretation. `INCONCLUSIVE` and `REMEDIATION_REQUIRED` are not an approved sale or payment. For any proposed paid remediation, SF49 owner still obtains real seller consent, commercial terms and buyer acceptance.
 - `payTo` is a PUBLIC recipient address, not a secret. Do not paste private keys, privileged resource URLs or tokens. The report is retained only in the current browser tab unless an operator explicitly copies or downloads it.
 
+## Run the original POST-only preflight
+
+For an intake with intended method POST, the output offers **Run original OPTIONS-only preflight**. Review the displayed captured seller URL, buyer origin and credential mode, then explicitly authorize this separate check. The server calls the unchanged original SF72 eligibility gate and evaluator. Only a report proving the original complete POST-only HTTP payment route can trigger its one OPTIONS request; other reports return original `INCONCLUSIVE` with zero requests. No GET, POST, cookies, authorization or payment is sent by this action.
+
+Download **both** the intake JSON and the SF72 preflight JSON. The latter contains the SHA-256 of the exact intake bytes offered by **Download intake JSON**, plus its original scope and observation timestamp. It is directly usable as the optional SF72 input in section 4 or the existing SF76/SF77 CLI workflows. Do not reformat the intake after generating its preflight. Repeat the diagnosis and optional preflight after the repair, using identical scope and credential policy.
+
+The server accepts only a current POST intake with explicit `scope.browserCredentialed`, validates it with original SF76, and forwards that mode to SF72. An older file without a retained mode needs a new capture. Intake and preflight share the existing single-network-diagnostic gate. Changing intake inputs or replacing a report invalidates the old preflight display/download and requires a new diagnosis; late responses cannot restore stale results. Cancelling a browser request cannot undo an OPTIONS request already sent. Page load and comparison remain free of provider calls.
+
 ## Compare a repair in the same console
 
 1. Run the authorized diagnosis before the repair and choose **Download intake JSON**. Keep this file unchanged. CLI-produced original SF70 JSON is accepted too.
@@ -46,3 +54,11 @@ node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/co
 ```
 
 The focused check runs the actual SF70/SF52/SF68 diagnostics against explicit local HTTP fixtures, then the actual SF72 preflight and unchanged SF76 comparator through the console API. It checks GET and POST repair paths, exact CRLF file hashes, malformed/oversized input, same-origin protection, changed scope, altered findings and SF72 byte-link rejection; comparison adds zero merchant requests. This is local software acceptance, not a live-provider or paid-checkout claim.
+
+The POST preflight integration can be checked separately with:
+
+```sh
+node --test stellar/scf-starforge-20261009/sf74-merchant-support-console/test/post-preflight.test.mjs
+```
+
+It uses original local HTTP captures, original SF72 OPTIONS and original SF76 comparison: explicit permission and Origin gates, zero calls on page load/ineligible input, one authorized OPTIONS, exact downloadable-intake hash, serialized network checks and end-to-end paired repair comparison. No rendered browser test or live-provider claim is implied.
