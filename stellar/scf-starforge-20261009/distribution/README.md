@@ -1120,6 +1120,47 @@ no SubQuery server or database fixture dependency to the installation.
 `./seller/graphql`, `./seller/graphql/schema`, `./seller/graphql/onboarding`
 and `./seller/graphql/workspace` expose their existing module APIs.
 
+### Compare and revise a retained merchant
+
+Use the provider's new served schema and a complete previously prepared merchant
+directory to review changes to approved queries, selected contracts and native
+payment terms. Compare the explicit candidate before exporting its replacement:
+
+```sh
+npx --no-install starforge graphql-onboarding compare \
+  --previous /private/graphql-release --schema /private/new-served-schema.json \
+  --queries /private/revised-queries.json --plan /private/revised-plan.json
+npx --no-install starforge graphql-onboarding revise \
+  --previous /private/graphql-release --schema /private/new-served-schema.json \
+  --queries /private/revised-queries.json --plan /private/revised-plan.json \
+  --directory /private/graphql-revision
+```
+
+Omit `--queries` or `--plan` to retain the corresponding original source file.
+The new revision directory must not exist; its parent must exist and it must be
+outside the previous merchant package. Review `revision/review.html` and
+`merchant/review.html` inside that directory. The original exporter creates the
+replacement in `merchant/` and preserves the complete prior package in
+`previous/`. Use `graphql-merchant` with the replacement's `merchant/service.json`
+and `merchant/queries.json`; use `merchant/` as `--previous` for another revision.
+These comparison and preparation commands operate offline. Selecting the prior
+package still requires a provider that serves its original query contract.
+
+Applications can use the same file-based review and preparation APIs through
+the public revisions entry:
+
+```js
+import {
+  reviewSubQueryRevision,
+  prepareSubQueryRevision,
+} from '@tokenjunkielabs/starforge-merchant/seller/graphql/revisions';
+```
+
+The module also exports `readSubQueryMerchantBundle` and
+`compareSubQueryMerchantSchemas` for retained-package and in-memory schema review.
+The included `sf105-subquery-graphql-merchant/onboarding/REVISIONS.md` documents
+their exact arguments, return values, compatibility statuses and retained files.
+
 ## Connect a WooCommerce checkout
 
 The complete original bridge is included under
