@@ -168,6 +168,7 @@ await session.close();
 |---|---|
 | `readPostgresSourceFile(filename)` | Offline validation; `{path,config,description}` plus the declaration's direct fields for workspace consumers. It does not read password variables or connect. |
 | `describePostgresFile(filename)` | Offline query metadata and route bindings without SQL or connection values. |
+| `resolvePostgresConnection(declaration,environment)` | Resolve the validated file declaration's private credentials and TLS into a `pg` connection object for operator metadata introspection. Opens no pool and executes no SQL. Keep the returned object private; it includes a password callback. |
 | `openPostgresSourceFile(filename,{env})` | Existing `{source,config}` API. |
 | `openPostgresQueryFile(filename,{environment})` | Equivalent source with `{source,bindings,config}`. |
 | `bindPostgresSeller(serviceConfig,source,bindings)` | Handler map for the original `startSellerService`. It requires explicit `handler` and `admit` route names and leaves the configuration unchanged. The higher-level merchant/launch APIs still add missing admission names to their private configuration copy. |

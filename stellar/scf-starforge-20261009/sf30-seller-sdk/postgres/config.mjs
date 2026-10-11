@@ -70,8 +70,11 @@ export async function readPostgresSourceFile(filename) {
   return { ...config, path, config, description: describePostgresQueries(queries) };
 }
 
-async function resolveConnection(declaration, env) {
+export async function resolvePostgresConnection(declaration, env = process.env) {
+  if (!record(declaration) || !record(declaration.config) || typeof declaration.path !== 'string')
+    throw new TypeError('POSTGRES_SOURCE_DECLARATION_INVALID');
   const { config, path } = declaration;
+  validateConnectionConfig(config);
   let host, port, user, password, database;
   const profile = config.connection;
   if (profile) {
@@ -121,7 +124,7 @@ async function resolveConnection(declaration, env) {
 
 export async function openPostgresSourceFile(filename, { env = process.env } = {}) {
   const declaration = await readPostgresSourceFile(filename);
-  const connection = await resolveConnection(declaration, env);
+  const connection = await resolvePostgresConnection(declaration, env);
   const { config } = declaration;
   const source = await createPostgresQuerySource({ connection, queries: config.queries,
     maxConnections: config.maxConnections ?? config.poolSize, maxPending: config.maxPending,
