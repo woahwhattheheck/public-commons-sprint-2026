@@ -13,7 +13,7 @@ FIELDS = ("source_name", "request_id", "recognition_date", "native_reservation_d
           "center_code", "center_name", "project", "account_code", "amount", "settled_actual",
           "reserved_maximum", "receipt_ref", "proof_sha256", "request_digest", "coding_id",
           "source_capture", "memo")
-OUTSTANDING = ("source_name", "request_id", "native_reservation_day", "network", "asset", "amount", "missing")
+OUTSTANDING = ("source_name", "request_id", "native_reservation_day", "network", "asset", "amount", "missing", "source_capture", "request_digest")
 CSS = """
 :root{color-scheme:light;font-family:system-ui,sans-serif;color:#202224;background:#f2f3f3}
 *{box-sizing:border-box}body{margin:0;font-size:14px;line-height:1.55}
@@ -82,9 +82,10 @@ def render_issued(doc):
           esc(r["description"]), esc((r.get("disposition") or {}).get("kind") or "Unresolved"),
           esc((r.get("disposition") or {}).get("operator") or "") + "<br>" + esc((r.get("disposition") or {}).get("reason") or "")]
          for r in doc["issues"]])
-    outstanding = table(["Request / source", "Native reservation day", "Network / asset", "Outstanding maximum"],
+    outstanding = table(["Request / source", "Native reservation day", "Network / asset", "Outstanding maximum", "Capture status"],
         [[esc(r["request_id"]) + "<br><small>" + esc(r["source_name"]) + "</small>", esc(r["native_reservation_day"]),
-          esc(r["network"]) + "<br><code>" + esc(r["asset"]) + "</code>", units(r["amount"], r, labels)] for r in doc["outstanding_reservations"]])
+          esc(r["network"]) + "<br><code>" + esc(r["asset"]) + "</code>", units(r["amount"], r, labels),
+          "Absent from latest capture; original row retained" if r["missing"] else "Present in accepted capture"] for r in doc["outstanding_reservations"]])
     sources = table(["Source", "Accepted capture", "Captured at", "Projection"],
         [[esc(r["name"]), "<code>" + esc(r["current_capture"]) + "</code>", esc(r.get("capture_time")),
           "<code>" + esc(r.get("projection_sha256")) + "</code>"] for r in doc["source_captures"]])

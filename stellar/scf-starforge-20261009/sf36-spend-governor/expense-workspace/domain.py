@@ -137,6 +137,7 @@ def period_view(period, items, sources, centers, dispositions):
         valid = bool(selected and selected["basis"] == issue_basis and selected["kind"] in allowed)
         result = {"code": code, "item_id": item_id, "request_id": item["row"]["request_id"] if item else None,
                   "source_name": item.get("source_name") if item else None, "description": description,
+                  "source_capture": item.get("capture_id") if item else None,
                   "basis": issue_basis, "allowed_kinds": allowed, "resolved": valid,
                   "disposition": selected if valid else None, "group": group}
         issues.append(result)
@@ -165,7 +166,8 @@ def period_view(period, items, sources, centers, dispositions):
         if row["state"] == "reserved":
             exposures.append({"item_id": item["id"], "request_id": row["request_id"], "source_name": item["source_name"],
                               "network": row["network"], "asset": row["asset"], "amount": row["reserved_base_units"],
-                              "native_reservation_day": row["day"], "missing": item["missing"]})
+                              "native_reservation_day": row["day"], "missing": item["missing"],
+                              "source_capture": item["capture_id"], "request_digest": row["request_digest"]})
         if item["missing"]:
             issue("ABSENT_FROM_CURRENT_SOURCE", item, "This original row is absent from the accepted source capture; its previous bytes remain retained")
             continue

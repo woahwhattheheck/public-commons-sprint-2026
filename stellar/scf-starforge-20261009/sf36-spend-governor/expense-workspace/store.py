@@ -1,7 +1,7 @@
 """Durable operator decisions beside, and never inside, the original buyer ledger."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import suppress
 from pathlib import Path
 import fcntl
 import json
@@ -148,7 +148,9 @@ class Store:
                 self.connection.execute("COMMIT")
                 return {"revision": revision, "result": result}
             except BaseException:
-                self.connection.execute("ROLLBACK")
+                with suppress(sqlite3.Error):
+                    if self.connection.in_transaction:
+                        self.connection.execute("ROLLBACK")
                 raise
 
     def _source_views(self):
@@ -426,12 +428,15 @@ class Store:
             if review["decision"] != "READY" or not report["ready"]:
                 raise Problem("PERIOD_EXCEPTIONS", "Complete the displayed exception decisions before issuing this period", 409)
             sequence = self.connection.execute("SELECT COALESCE(MAX(sequence),0)+1 FROM closes WHERE period_id=?", (ident,)).fetchone()[0]
+            capture_ids = {s["current_capture"] for s in self._bodies("sources") if s.get("current_capture")}
+            for rows in (report["allocations"], report["outstanding_reservations"], report["issues"]):
+                capture_ids.update(r["source_capture"] for r in rows if r.get("source_capture"))
             value = dict(report)
             value.update(id=identifier("close"), status="CLOSED", sequence=sequence, created_at=now(),
                          previous=period.get("latest_close"), review={k: review[k] for k in ("id", "created_at", "reviewer", "role", "notes", "decision")},
-                         native_captures=[self._get("captures", s["current_capture"]) for s in self._bodies("sources") if s.get("current_capture")],
+                         native_captures=[self._get("captures", capture_id) for capture_id in sorted(capture_ids)],
                          labels=json.loads(self.connection.execute("SELECT value FROM meta WHERE key='labels'").fetchone()[0]))
-            value["period"] = period | {"state": "CLOSED"}
+            value["period"] = period | {"state": "CLOSED", "latest_close": value["id"]}
             self.connection.execute("INSERT INTO closes VALUES(?,?,?,?,?)", (value["id"], ident, sequence, value["created_at"], canonical(value)))
             period.update(state="CLOSED", latest_close=value["id"], updated_at=now())
             self._put("periods", period)
