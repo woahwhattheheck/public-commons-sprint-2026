@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { requestCatalogOperator } from './operator.mjs';
 import { validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 import { checkedRequest } from '../sf95-signed-seller-withdrawal/proof.mjs';
+import { revisionTargetKey, revisionTargetsDigest, validateRevisionPage, MAX_REVISION_PAGE_BYTES } from './revision-snapshot.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -91,42 +92,105 @@ export function matchCatalogEffect(intent, observation) {
     explanation: 'No exact matching effect exists in the returned history. No replay or failed-outcome conclusion was made.' };
 }
 
-/** Read a single native mutation or all members of the original signed batch.
- * Effects are matched by original key, pinned signer identity, seller, sequence,
- * raw source/proof digest, source URL and (for admission) original observation time.
- * A matching effect is not attribution of a particular socket request or a payment.
- * No internal polling: one set of reads with one final journal-head observation.
+/** Recover through one native selected-revision snapshot (or head-bound pages).
+ * Older daemons use the original lookup/history API only after their exact
+ * unsupported-command response. Caller cancellation and one total deadline cover
+ * every request. Effects never become inferred socket receipts or payment claims.
  */
 export async function reconcileCatalogOperation({ directory, operation, input, timeoutMs = 30000,
-  expectedPolicySha256 = null, concurrency = 4 } = {}) {
+  expectedPolicySha256 = null, concurrency = 4, signal, readMode = 'auto',
+  pageBytes = MAX_REVISION_PAGE_BYTES } = {}) {
   if (typeof directory !== 'string' || !directory.trim()) fail('CATALOG_DIRECTORY_REQUIRED');
   if (!Number.isInteger(concurrency) || concurrency < 1 || concurrency > 8) fail('READ_CONCURRENCY_INVALID');
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 120000) fail('TIMEOUT_INVALID');
+  if (signal !== undefined && !(signal instanceof AbortSignal)) fail('ABORT_SIGNAL_REQUIRED');
+  if (!['auto', 'snapshot', 'legacy'].includes(readMode)) fail('RECOVERY_READ_MODE_INVALID');
+  if (!Number.isSafeInteger(pageBytes) || pageBytes < 16384 || pageBytes > MAX_REVISION_PAGE_BYTES) fail('REVISION_PAGE_BYTES_INVALID');
   if (expectedPolicySha256 !== null && !/^[a-f0-9]{64}$/.test(expectedPolicySha256)) fail('POLICY_DIGEST_INVALID');
-  const intents = catalogOperationIntents({ operation, input });
-  let readCalls = 0;
-  const native = (name, value = {}) => {
-    readCalls++; return requestCatalogOperator({ directory, operation: name, input: value, timeoutMs });
+  const deadline = performance.now() + timeoutMs;
+  const budget = AbortSignal.timeout(timeoutMs);
+  const combined = signal ? AbortSignal.any([signal, budget]) : budget;
+  const check = () => {
+    if (signal?.aborted) fail('CATALOG_RECOVERY_ABORTED');
+    if (budget.aborted || performance.now() >= deadline) fail('CATALOG_RECOVERY_DEADLINE');
   };
-  const before = await native('status');
-  const keys = [...new Set(intents.map(item => item.catalogKey))], observations = new Map();
-  let next = 0;
-  await Promise.all(Array.from({ length: Math.min(concurrency, keys.length) }, async () => {
-    while (next < keys.length) {
-      const key = keys[next++];
-      try {
-        const lookup = await native('lookup', { catalogKey: key });
-        const history = lookup.current?.lifecycleId ? await native('history', { lifecycleId: lookup.current.lifecycleId }) : null;
-        observations.set(key, { lookup, history });
-      } catch (error) { observations.set(key, { error: errorCode(error) }); }
-    }
+  check();
+  const intents = catalogOperationIntents({ operation, input });
+  let readCalls = 0, snapshotPages = 0;
+  const native = async (name, value = {}) => {
+    check(); readCalls++;
+    try {
+      const result = await requestCatalogOperator({ directory, operation: name, input: value,
+        timeoutMs: Math.max(100, Math.ceil(deadline - performance.now())), signal: combined });
+      check(); return result;
+    } catch (error) { check(); throw error; }
+  };
+  let before, after, coherentSnapshot = false, finalError, strategy = 'selected-revisions';
+  const observations = new Map();
+  const targetMap = new Map(intents.map(item => {
+    const target = { catalogKey: item.catalogKey, sequence: item.sequence };
+    return [revisionTargetKey(target), target];
   }));
-  let after, finalError;
-  try { after = await native('status'); } catch (error) { finalError = errorCode(error); }
-  const items = intents.map(intent => matchCatalogEffect(intent, observations.get(intent.catalogKey)));
-  const coherentSnapshot = Boolean(after && before.journalHead === after.journalHead &&
-    [...observations.values()].every(item => !item.error && item.lookup.journalHead === before.journalHead &&
-      (!item.history || item.history.journalHead === before.journalHead)));
+  const targets = [...targetMap.values()], targetHash = revisionTargetsDigest(targets);
+  let legacy = readMode === 'legacy';
+  if (!legacy) {
+    let offset = 0;
+    while (offset !== null) {
+      try {
+        const page = await native('inspect-revisions', { targets, offset, pageBytes,
+          ...(before ? { expectedHead: before.journalHead, expectedTargets: targetHash } : {}) });
+        validateRevisionPage(page, { targets, offset, head: before?.journalHead, policySha256: before?.policySha256 });
+        before ??= page; after = page; snapshotPages++;
+        for (const row of page.rows) observations.set(revisionTargetKey(row), {
+          lookup: { journalHead: page.journalHead, current: row.current },
+          history: { journalHead: page.journalHead, history: row.history },
+        });
+        offset = page.nextOffset;
+      } catch (error) {
+        check();
+        if (readMode === 'auto' && snapshotPages === 0 && error.statusCode === 422 &&
+            error.message === 'UNKNOWN_OPERATOR_COMMAND') { legacy = true; break; }
+        if (!before) throw error;
+        // Earlier pages remain observations at their named head. An intervening
+        // write or unavailable page never restarts/retries the read or hides rows.
+        finalError = errorCode(error); after = null;
+        for (const target of targets) if (!observations.has(revisionTargetKey(target)))
+          observations.set(revisionTargetKey(target), { error: finalError });
+        break;
+      }
+    }
+    coherentSnapshot = Boolean(after && observations.size === targets.length && !finalError);
+  }
+  if (legacy) {
+    strategy = 'legacy-history';
+    before = await native('status');
+    const keys = [...new Set(intents.map(item => item.catalogKey))], byKey = new Map();
+    let next = 0;
+    const jobs = Array.from({ length: Math.min(concurrency, keys.length) }, async () => {
+      while (next < keys.length) {
+        check(); const key = keys[next++];
+        try {
+          const lookup = await native('lookup', { catalogKey: key });
+          const history = lookup.current?.lifecycleId ? await native('history', { lifecycleId: lookup.current.lifecycleId }) : null;
+          byKey.set(key, { lookup, history });
+        } catch (error) { check(); byKey.set(key, { error: errorCode(error) }); }
+      }
+    });
+    // Always retire all owned reads before returning, including cancellation.
+    const completed = await Promise.allSettled(jobs);
+    check();
+    const rejected = completed.find(result => result.status === 'rejected');
+    if (rejected) throw rejected.reason;
+    try { after = await native('status'); } catch (error) { check(); finalError = errorCode(error); after = null; }
+    for (const target of targets) observations.set(revisionTargetKey(target), byKey.get(target.catalogKey));
+    coherentSnapshot = Boolean(after && before.journalHead === after.journalHead &&
+      [...byKey.values()].every(item => !item.error && item.lookup.journalHead === before.journalHead &&
+        (!item.history || item.history.journalHead === before.journalHead)));
+  }
+  check();
+  const items = intents.map(intent => matchCatalogEffect(intent, observations.get(revisionTargetKey(intent))));
   const observed = items.filter(item => item.effectObserved).length;
+  check();
   return { schema: 'stellar-forge.catalog-effect-recovery/v1', operation, observedAt: new Date().toISOString(),
     requestOutcome: 'not-inferred', catalogEffects: observed === items.length ? 'all-observed' : observed ? 'partially-observed' : 'not-observed',
     counts: { requested: items.length, observed, unavailable: items.filter(item => item.state === 'unavailable').length },
@@ -137,6 +201,6 @@ export async function reconcileCatalogOperation({ directory, operation, input, t
     interpretation: operation === 'apply-batch'
       ? 'Matches individual native catalog effects. This does not attribute them to a particular batch request or establish its atomic commit boundary.'
       : 'Matches the expected native catalog effect, not a particular socket request. Original journal and saved native response remain authoritative.',
-    nativeReadCalls: readCalls,
+    readStrategy: strategy, snapshotPages, nativeReadCalls: readCalls,
     nativeMutationCalls: 0, signaturesIssued: 0, paymentCalls: 0 };
 }
