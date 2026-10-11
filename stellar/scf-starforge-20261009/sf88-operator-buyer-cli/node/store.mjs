@@ -1,5 +1,6 @@
 // MIT — Private application state. Financial authority stays in the original SF36 ledger.
 import { constants } from 'node:fs';
+import { inspect } from 'node:util';
 import { open, mkdir, lstat, rename, link, unlink } from 'node:fs/promises';
 import { resolve, dirname, join, isAbsolute } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
@@ -9,7 +10,23 @@ export class BuyerError extends Error {
     super(code);
     this.name = 'BuyerError';
     this.code = code;
-    Object.assign(this, details);
+    // Recovery objects remain directly accessible, but are not log payloads.
+    for (const key of Reflect.ownKeys(Object(details))) {
+      if (!Object.prototype.propertyIsEnumerable.call(details, key)) continue;
+      Object.defineProperty(this, key, { value: details[key], writable: true, configurable: true });
+    }
+  }
+  toJSON() {
+    const value = { name: this.name, code: this.code };
+    if (Number.isInteger(this.exitCode) || this.exitCode === null) value.exitCode = this.exitCode;
+    if (typeof this.destinationPublished === 'boolean') value.destinationPublished = this.destinationPublished;
+    return value;
+  }
+  [inspect.custom](_depth, options) {
+    const display = new Error(this.message);
+    Object.assign(display, this.toJSON());
+    display.stack = this.stack;
+    return inspect(display, { ...options, customInspect: false });
   }
 }
 export const need = (condition, code) => { if (!condition) throw new BuyerError(code); };
@@ -91,3 +108,4 @@ export async function writeBytes(path, data, { exclusive = false } = {}) {
   }
 }
 export const writeJson = (path, value, options) => writeBytes(path, jsonBytes(value), options);
+
