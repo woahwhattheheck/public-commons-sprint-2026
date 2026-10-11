@@ -45,6 +45,29 @@ Run the focused original-engine and browser-script flow check with:
 node --test test-scenario-flow.focused.mjs
 ```
 
+## Compare a changed tariff
+
+After planning, **What if the tariff changed?** compares the current optimized schedule
+with a newly optimized schedule under hypothetical off-peak, daytime and evening
+rates. The loads, deadlines, quiet hours and circuit cap stay those of the current
+proposal. Costs use four decimal places; changed start hours show what replanning
+would require. **Download comparison JSON** saves the original rate-robustness report.
+
+The panel uses the existing `robustness/compare.mjs` analyzer and `engine.mjs`
+optimizer through `POST /api/robustness`. The endpoint binds `proposalId` to this
+browser session's current proposal and returns HTTP 409 if it has been replaced
+or cleared. It cannot change a proposal, approval, execution receipt or history.
+Editing the main scenario requires planning again; editing alternative rates
+invalidates the comparison and its download. Late results never replace newer edits.
+
+Comparison does not apply the alternative tariff or approve a new schedule.
+To use different rates, edit the main scenario and plan it through the existing
+workflow. All costs remain hypothetical; this does not read utilities or devices.
+
+The focused HTTP and shipped-module workflow can be run with
+`node --experimental-vm-modules test-robustness-flow.focused.mjs`. Its small DOM
+fixture exercises the actual scripts and download bytes, not browser rendering.
+
 ## Agentic tools and method
 
 - `plan` enumerates feasible whole-hour placements for 1–5 tasks. It respects deadlines, quiet hours, and a shared circuit power ceiling, comparing the **earliest jointly feasible** baseline with the joint minimum-cost schedule. It will move a flexible load later if a greedy prefix would block a fixed load; task hours outside the 0–24 hour horizon are rejected.
@@ -68,5 +91,6 @@ Focused source regression:
 ```bash
 node amazon-gridkind-alexa-2026/test-flat-symmetry.focused.mjs
 ```
+
 
 

@@ -1,3 +1,4 @@
+import {createRobustnessPanel} from './robustness-ui.js';
 const $=id=>document.getElementById(id);
 const loads=[
   {id:'laundry',label:'Laundry'},
@@ -5,6 +6,7 @@ const loads=[
   {id:'ev-topup',label:'EV top-up'},
 ];
 let state=null,busy=false,stateRevision=0,draftRevision=0,needsPlan=false;
+const robustness=createRobustnessPanel({getContext:()=>({state,busy,needsPlan,draftRevision})});
 const money=n=>'$'+Number(n||0).toFixed(2);
 const rateForHour=h=>h>=17&&h<21?'peak':h>=21||h<7?'offpeak':'standard';
 function number(id){
@@ -57,6 +59,7 @@ function updateControls(){
   $('scenario-status').textContent=busy?'Planning or updating your simulation…':
     needsPlan?'Settings changed. Plan again before approving or executing.':
     state?.proposal?'This proposal uses your current scenario settings.':'Choose at least one load, then plan your scenario.';
+  robustness.refresh();
 }
 function changed(){
   draftRevision++;needsPlan=true;$('error').textContent='';updateControls();
@@ -139,4 +142,5 @@ fetch('/api/state').then(r=>{if(!r.ok)throw Error('Could not restore current ses
   if(draftRevision===initialDraft)needsPlan=!fillScenario(data.scenario)&&Boolean(data.proposal);
   render();
 }).catch(()=>{});
+
 
