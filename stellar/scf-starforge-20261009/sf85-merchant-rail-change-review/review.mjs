@@ -38,7 +38,7 @@ export function compareCaptures(beforeBytes,afterBytes) {
       note:'An original file hash is not seller authentication. No invoice, transaction or seller signoff is implied.'}
   };
 }
-const safe = v=>String(v??'').replace(/[\\r\\n\\t|<>]/g,' ').slice(0,250);
+const safe = v=>String(v??'').replace(/[\r\n\t|<>]/g,' ').slice(0,250);
 export function renderMarkdown(r) {
   const lines=['# SF85 · Merchant 402 protocol-change review','',
     'Decision: **'+r.decision+'**','',
@@ -63,7 +63,7 @@ export function renderMarkdown(r) {
     '- Review each changed original x402 tuple or MPP charge/session request separately; never mix payment rails.',
     '- Use the existing SF70/SF76/SF77 diagnosis and paid workorder only with seller-approved terms.',
     '- Keep actual customer acceptance and transaction receipts separate. This report is not payment evidence.','');
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]) {
   try{
@@ -71,6 +71,6 @@ if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1]) {
     if(![2,4].includes(args.length)||(args.length===4&&(args[2]!=='--format'||!['markdown','json'].includes(args[3]))))
       throw new ReviewError('USAGE: node review.mjs before.json after.json [--format markdown|json]');
     const result=compareCaptures(readFileSync(args[0]),readFileSync(args[1]));
-    process.stdout.write(args[3]==='markdown'?renderMarkdown(result):JSON.stringify(result,null,2)+'\\n');
+    process.stdout.write(args[3]==='markdown'?renderMarkdown(result):JSON.stringify(result,null,2)+'\n');
   }catch(e){console.error('SF85_REVIEW_ERROR: '+(e.code??'ORIGINAL_SOURCE_OR_FILE_ERROR'));process.exitCode=2;}
 }
