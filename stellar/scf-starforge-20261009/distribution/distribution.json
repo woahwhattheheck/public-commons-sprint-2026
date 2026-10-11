@@ -273,7 +273,9 @@
     "sftp-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/workspace/server.mjs",
     "valyu-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/merchant-cli.mjs",
     "valyu-research": "stellar/scf-starforge-20261009/sf30-seller-sdk/valyu/run.mjs",
-    "mpp": "stellar/scf-starforge-20261009/mpp-charge/cli.mjs"
+    "mpp": "stellar/scf-starforge-20261009/mpp-charge/cli.mjs",
+    "arcgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs",
+    "arcgis-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -558,7 +560,10 @@
     "./mpp": "./source/stellar/scf-starforge-20261009/mpp-charge/index.mjs",
     "./mpp/merchant": "./source/stellar/scf-starforge-20261009/mpp-charge/merchant.mjs",
     "./mpp/buyer": "./source/stellar/scf-starforge-20261009/mpp-charge/buyer.mjs",
-    "./mpp/workspace": "./source/stellar/scf-starforge-20261009/mpp-charge/server.mjs"
+    "./mpp/workspace": "./source/stellar/scf-starforge-20261009/mpp-charge/server.mjs",
+    "./seller/arcgis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/capture.mjs",
+    "./seller/arcgis/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/publisher.mjs",
+    "./buyer/arcgis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/receiving.mjs"
   },
   "nativePeers": {
     "@x402/core": {

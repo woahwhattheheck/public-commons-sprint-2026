@@ -1,0 +1,12 @@
+{
+  "layerUrl": "https://clear-gis.uconn.edu/arcgis/rest/services/LISS_Fertilizer/Fertilizer_by_BlockGrps/MapServer/0",
+  "query": {
+    "where": "State = 'New York' AND County IN ('Nassau County', 'Suffolk County')",
+    "returnGeometry": true
+  },
+  "pageSize": 75,
+  "maxRows": 1000,
+  "maxSourceBytes": 16777216,
+  "maxPageBytes": 4194304,
+  "timeoutMs": 120000
+}
