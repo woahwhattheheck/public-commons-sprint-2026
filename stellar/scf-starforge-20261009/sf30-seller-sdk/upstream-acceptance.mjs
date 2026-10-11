@@ -59,7 +59,24 @@ try {
   assert.throws(() => make('/items', { requestHeaders: ['authorization'] }));
   assert.throws(() => make('/items', { responseHeaders: ['payment-response'] }));
   assert.throws(() => make('/items', { headers: { 'PAYMENT-SIGNATURE': 'fixture' } }));
-  console.log('PASS path/query mapping, credential rotation, header isolation, preflight');
+  const lookups = [];
+  const pinned = createUpstreamHandler({ baseUrl: baseUrl.replace('127.0.0.1', 'localhost'),
+    path: '/pinned', allowLocal: true,
+    lookup(hostname, options, callback) {
+      lookups.push({ hostname, all: options.all === true });
+      if (options.all) callback(null, [{ address: '127.0.0.1', family: 4 }]);
+      else callback(null, '127.0.0.1', 4);
+    } });
+  assert.equal((await pinned(ctx())).status, 200);
+  assert.equal(lookups.length, 1); assert.equal(lookups[0].hostname, 'localhost');
+  assert.equal(seen.at(-1).headers.host, `localhost:${server.address().port}`);
+  const unresolved = createUpstreamHandler({ baseUrl: baseUrl.replace('127.0.0.1', 'localhost'),
+    path: '/never-resolved', allowLocal: true, timeoutMs: 100, lookup() {} });
+  const beforeLookup = seen.length;
+  assert.equal((await unresolved(ctx())).body.error, 'UPSTREAM_TIMEOUT');
+  assert.equal(seen.length, beforeLookup);
+  assert.throws(() => make('/items', { lookup: 'not-a-function' }));
+  console.log('PASS path/query mapping, credential rotation, header isolation, trusted lookup, preflight');
 
   const post = make('/score', { method: 'POST' }), input = ctx('POST');
   input.body = { nested: ['é', 3], flag: false };
