@@ -1,0 +1,23 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "dataset",
+      "path": "/dataset",
+      "definition": {
+        "method": "GET",
+        "serviceName": "Local Dataset API",
+        "description": "An example dataset behind seller's x402 route",
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      },
+      "response": { "hello": "world" }
+    }
+  ]
+}
