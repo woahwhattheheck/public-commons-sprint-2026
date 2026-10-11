@@ -7,6 +7,7 @@ import { compileSellerRoutes, createSellerResourceHandler } from './resource-ser
 import { validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath } from './route-path.mjs';
 import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
+import { createSellerDeveloperPortal } from './developer-portal.mjs';
 
 const SCHEMA = 'stellar-forge.seller-service.v1';
 const HOST = '127.0.0.1';
@@ -18,7 +19,8 @@ const USAGE = `Usage: node serve.mjs --config FILE [--port 8423] [--handlers FIL
 Without --facilitator the server serves real SF30 payment challenges only.
 --handlers loads application functions from a trusted local ESM module.
 The listener binds to 127.0.0.1. Use an operator-managed HTTPS proxy for deployment.
-Inspect GET /_seller/health and GET /_seller/offers to see the running configuration.`;
+Inspect GET /_seller/health and GET /_seller/offers to see the running configuration.
+Open /_seller/docs for the developer explorer or /_seller/openapi.json for OpenAPI.`;
 
 function validateConfig(config) {
   if (!object(config) || config.schema !== SCHEMA || !Array.isArray(config.routes) ||
@@ -147,12 +149,14 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     const resources = createSellerResourceHandler({ compiled, nativeServer,
       admissionTimeoutMs: config.admissionTimeoutMs ?? 2000 });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    const developerPortal = createSellerDeveloperPortal({ compiled, mode });
     const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
       id: route.id, method: route.method, url: route.offer.resource.url,
       admission: typeof route.admit === 'function',
       ...(route.binding.dynamic ? { routeTemplate: route.path } : {}),
     })) };
     dispatch = (req, res) => {
+      if (developerPortal(req, res)) return;
       if (req.url === '/_seller/health' || req.url === '/_seller/offers') {
         if (!['GET', 'HEAD'].includes(req.method)) { res.writeHead(405, { allow: 'GET, HEAD' }); res.end(); return; }
         const payload = req.url === '/_seller/health' ? info : compiled.routes.map(route => route.offer);
@@ -201,7 +205,8 @@ export async function main(args = process.argv.slice(2)) {
   }
   const session = await startSellerService({ config, port: Number(portText), handlers, nativeFactory });
   process.stdout.write(JSON.stringify({ url: session.url, mode: session.mode,
-    health: session.url + '/_seller/health', offers: session.url + '/_seller/offers' }) + '\n');
+    health: session.url + '/_seller/health', offers: session.url + '/_seller/offers',
+    docs: session.url + '/_seller/docs', openapi: session.url + '/_seller/openapi.json' }) + '\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
     session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });
   });
