@@ -7,6 +7,8 @@ import { open, lstat, realpath, mkdir, rename, link, unlink, rm } from 'node:fs/
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requiredQueryKeys } from './query-requirements.mjs';
+import {createNativeObjects, nativeObjectActions} from './native-objects.mjs';
+import {createSavedFileReader} from './native-file.mjs';
 import { initializeQueue, openQueue } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs';
 import { openWorkspace } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/workspace.mjs';
 import { discoveryOptions, discoverCatalog } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/discovery.mjs';
@@ -230,7 +232,7 @@ export async function openNativeWorkspace(directory) {
   await privateDirectory(join(root, 'downloads'));
   const queue = await openQueue(join(root, 'inbox'));
   const shutdown = new AbortController(), preparing = new Map(), active = new Map();
-  const verifiedFiles = new Map();
+  const readSavedFile = createSavedFileReader();
   let closed = false;
   async function currentWorkspace() {
     const current = await openWorkspace(['--dir', manifest.workspace]);
@@ -238,6 +240,26 @@ export async function openNativeWorkspace(directory) {
     return current;
   }
   await currentWorkspace();
+  async function runOwned(key, kind, context, task) {
+    if(active.has(key)) {
+      need(active.get(key).kind===kind,'MCP_NATIVE_OPERATOR_BUSY');
+      return active.get(key).promise;
+    }
+    need(active.size===0,'MCP_NATIVE_OPERATOR_BUSY');
+    const controller=new AbortController();
+    const signal=AbortSignal.any([shutdown.signal,controller.signal,...(context.signal?[context.signal]:[])]);
+    need(!closed&&!signal.aborted,'OPERATOR_ABORTED');
+    const entry={controller,kind};
+    entry.promise=Promise.resolve().then(()=>task(signal));
+    active.set(key,entry);
+    try{return await entry.promise;}finally{active.delete(key);}
+  }
+  const objects=createNativeObjects({manifest,currentWorkspace,runOwned,
+    isClosed:()=>closed,isActive:key=>active.has(key),
+    cancelOwned:async key=>{
+      const entry=active.get(key);if(!entry)return false;
+      entry.controller.abort();await entry.promise;return true;
+    }});
   async function retained(intentId) {
     const path = join(root, 'requests', intentKey(intentId));
     await privateDirectory(path);
@@ -354,7 +376,7 @@ export async function openNativeWorkspace(directory) {
     need(complete || purchaseFields.every(key => args[key] === undefined), 'MCP_NATIVE_COMPLETE_REQUEST_REQUIRED');
     if (complete) await prepare(args);
     else await requireQueued(await retained(args.intentId));
-    if (active.has(args.intentId)) return active.get(args.intentId).promise;
+    if (active.has('request:'+args.intentId)) return active.get('request:'+args.intentId).promise;
     if (active.size) return {...nativeView(await queue.show(args.intentId)), execution:'OPERATOR_BUSY'};
     const controller = new AbortController();
     const signal = AbortSignal.any([shutdown.signal, controller.signal,
@@ -367,60 +389,17 @@ export async function openNativeWorkspace(directory) {
       const worker = await runOriginalQueue({root:queue.root, workspace:manifest.workspace, intentId:args.intentId, signal});
       return {...nativeView(await queue.show(args.intentId)), execution:worker};
     })();
-    active.set(args.intentId, entry);
-    try { return await entry.promise; } finally { active.delete(args.intentId); }
+    active.set('request:'+args.intentId, entry);
+    try { return await entry.promise; } finally { active.delete('request:'+args.intentId); }
   }
   async function readResult(args) {
     const record = await queue.show(args.intentId);
     const file = record.outcome?.responseFile;
     const destination = join(root, 'downloads', intentKey(args.intentId) + '.bin');
-    need(file?.status === 'SAVED' && (file.destination ?? file.path) === destination &&
-      typeof file.sha256 === 'string' && /^[0-9a-f]{64}$/.test(file.sha256) &&
-      Number.isSafeInteger(file.bytes) && file.bytes >= 0, 'MCP_NATIVE_SAVED_RESULT_REQUIRED');
-    const offset = args.byteOffset ?? 0, maximum = args.maxBytes ?? 32768;
-    need(Number.isSafeInteger(offset) && offset >= 0 && offset <= file.bytes &&
-      Number.isSafeInteger(maximum) && maximum >= 1 && maximum <= 65536, 'MCP_NATIVE_RESULT_RANGE_INVALID');
-    const handle = await open(destination, constants.O_RDONLY | constants.O_NOFOLLOW);
-    try {
-      const before = await handle.stat({bigint:true});
-      need(before.isFile() && (before.mode & 0o077n) === 0n && before.size === BigInt(file.bytes) &&
-        (typeof process.getuid !== 'function' || before.uid === BigInt(process.getuid())), 'MCP_NATIVE_RESULT_FILE_CHANGED');
-      const fields = ['dev','ino','size','mtimeNs','ctimeNs'];
-      const stamp = fields.map(key => String(before[key])).join(':') + ':' + file.sha256;
-      // One full hash per observed file state, then same-descriptor range reads.
-      // New processes and changed metadata must verify the full original digest again.
-      if (verifiedFiles.get(destination) !== stamp) {
-        const hash = createHash('sha256'), buffer = Buffer.alloc(64 * 1024);
-        let position = 0;
-        for (;;) {
-          const {bytesRead} = await handle.read(buffer, 0, buffer.length, position);
-          if (!bytesRead) break;
-          hash.update(buffer.subarray(0, bytesRead)); position += bytesRead;
-          need(position <= file.bytes, 'MCP_NATIVE_RESULT_FILE_CHANGED');
-        }
-        const checked = await handle.stat({bigint:true});
-        need(position === file.bytes && hash.digest('hex') === file.sha256 &&
-          fields.every(key => before[key] === checked[key]), 'MCP_NATIVE_RESULT_FILE_CHANGED');
-        verifiedFiles.set(destination, stamp);
-        while (verifiedFiles.size > 512) verifiedFiles.delete(verifiedFiles.keys().next().value);
-      }
-      const bytes = Buffer.alloc(Math.min(maximum, file.bytes - offset));
-      let read = 0;
-      while (read < bytes.length) {
-        const {bytesRead} = await handle.read(bytes, read, bytes.length - read, offset + read);
-        need(bytesRead > 0, 'MCP_NATIVE_RESULT_FILE_CHANGED'); read += bytesRead;
-      }
-      const after = await handle.stat({bigint:true});
-      need(fields.every(key => before[key] === after[key]), 'MCP_NATIVE_RESULT_FILE_CHANGED');
-      let text;
-      if (offset === 0 && bytes.length === file.bytes) try { text = new TextDecoder('utf-8', {fatal:true}).decode(bytes); } catch {}
-      return {schema:RESULT, intentId:args.intentId, state:record.state,
-        result:{contentType:file.contentType ?? null, bytes:file.bytes, sha256:file.sha256,
-          byteOffset:offset, returnedBytes:bytes.length, encoding:'base64', data:bytes.toString('base64'),
-          ...(text === undefined ? {} : {text}),
-          nextByteOffset:offset + bytes.length < file.bytes ? offset + bytes.length : null,
-          verifiedSavedFile:true}, retry:'NO_AUTOMATIC_RETRY'};
-    } finally { await handle.close(); }
+    need(file?.status === 'SAVED' && (file.destination ?? file.path) === destination,
+      'MCP_NATIVE_SAVED_RESULT_REQUIRED');
+    return {schema:RESULT,intentId:args.intentId,state:record.state,
+      result:await readSavedFile({...file,destination},args),retry:'NO_AUTOMATIC_RETRY'};
   }
   const allowedFields = {
     prepare:['intentId','search','targetResourceURL','targetMethod','maxAtomic','body','acceptIndex'],
@@ -430,11 +409,13 @@ export async function openNativeWorkspace(directory) {
   };
   return {
     manifest:structuredClone(manifest),
+    registerObjects:objects.register,
     async call(args = {}, context = {}) {
       need(!closed, 'MCP_NATIVE_WORKSPACE_CLOSING');
       need(object(args) && object(context) &&
         (context.signal === undefined || context.signal instanceof AbortSignal), 'MCP_NATIVE_ARGUMENTS_INVALID');
       const action = args.action ?? 'execute';
+      if(nativeObjectActions.includes(action))return objects.call(args,context);
       need(Object.hasOwn(allowedFields, action) &&
         Object.keys(args).every(key => key === 'action' || allowedFields[action].includes(key)), 'MCP_NATIVE_ARGUMENTS_INVALID');
       if (action !== 'history') intentKey(args.intentId);
@@ -455,13 +436,13 @@ export async function openNativeWorkspace(directory) {
       await retained(args.intentId);
       if (action === 'status') return nativeView(await queue.show(args.intentId));
       if (action === 'recover') {
-        need(!active.has(args.intentId), 'MCP_NATIVE_OPERATION_ACTIVE');
+        need(!active.has('request:'+args.intentId), 'MCP_NATIVE_OPERATION_ACTIVE');
         return nativeView(await queue.recover(args.intentId));
       }
       if (action === 'cancel') {
-        if (active.has(args.intentId)) {
-          active.get(args.intentId).controller.abort();
-          return active.get(args.intentId).promise;
+        if (active.has('request:'+args.intentId)) {
+          active.get('request:'+args.intentId).controller.abort();
+          return active.get('request:'+args.intentId).promise;
         }
         const record = await queue.show(args.intentId);
         return nativeView(record.attempt ? record : await queue.cancel(args.intentId));
@@ -471,7 +452,7 @@ export async function openNativeWorkspace(directory) {
     async close() {
       if (closed) return;
       closed = true; shutdown.abort();
-      await Promise.allSettled([...preparing.values(), ...[...active.values()].map(value => value.promise)]);
+      await Promise.allSettled([objects.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
     },
   };
 }
