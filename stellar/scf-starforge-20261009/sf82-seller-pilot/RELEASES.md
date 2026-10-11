@@ -142,6 +142,85 @@ instructions to stop it there. Closing the console command stops its own
 seller; closing the browser tab leaves the command running. A separate
 `run` process can be used when the operator UI is not needed.
 
+## Receiving review for a saved release
+
+The console can prepare and review every payment alternative from the release's
+retained `seller-service.json`. It uses the original SF101 receiving workspace,
+including its native evaluator, durable jobs, capture import/export and replay.
+The release panel shows original atomic quotes, receiving accounts, native
+balances, inbound capacity and the evaluator's findings.
+
+From an installed merchant package:
+
+```sh
+starforge releases console --store /private/merchant-releases \
+  --receiving-config /private/merchant-receiving.json
+```
+
+The same option is available on `node release-cli.mjs console`. The private
+configuration file can select an existing receiving workspace:
+
+```json
+{
+  "directory": "/private/merchant/receiving-desk",
+  "timeoutMs": 12000,
+  "feeOperations": 0
+}
+```
+
+Keep this file readable only by its owner (mode 0600). Without a configuration
+file, the default workspace is the release store path followed by
+`.receiving`. Optional `assetMap` and `rpcEndpoints` contain the same original
+JSON inputs accepted by the receiving desk; `proxyEnv` names an existing proxy
+environment variable. The original compiler validates those inputs when a
+profile is prepared. Existing attached profiles retain their original source
+files and options.
+
+1. Choose a prepared release and select **Open receiving**. This explicitly
+   acquires the original workspace lease. Close its current CLI or MCP owner
+   first when reusing a workspace already open elsewhere.
+2. Select **Prepare from this release**. The binding records the exact release
+   digest, retained seller bytes, original compiled plan and current selection
+   generation. Repeating preparation for the same source and options reuses the
+   saved profile.
+3. Select **Read current receiving state**, or open **Attach an existing
+   receiving capture**. Import a saved capture in **Open receiving desk**, list
+   saved reviews, and attach a completed review of the same exact seller bytes.
+   The original desk opens at the console's `/receiving/` path.
+4. Select **Replay selected capture** to reproduce the retained native reads
+   through the same evaluator. A previous completed review is supplied to the
+   original comparison. Inspect the current job, cancel a queued or running
+   review, and page through its original payment choices and findings.
+5. Use the existing **Select this release**, **Select previous release**,
+   **Start selected**, or **Restart selected** controls. A displayed completed review for that operation's target
+   travels with the original selection or run record. The current selection
+   generation and exact source digest are checked again when the operation is
+   accepted.
+6. **Download original capture** preserves the original workspace export,
+   including its complete report and native reads. **Close receiving** releases
+   the same workspace so its browser, CLI or MCP operator can reopen it.
+
+Receiving findings inform the operator's decision. All original evaluator
+outcomes can accompany an explicit release operation. Captures preserve their
+observation time, and replay keeps the evaluator's original retained-source and
+freshness findings. A review prepared at an older selection generation remains
+visibly associated with that generation and its exact immutable release.
+
+If a start response is interrupted, **Recover pending start** resends the saved
+request identity to the original controller. An existing job is returned even
+after the selection has advanced. A new job still requires the current
+generation. Closing the console drains accepted receiving work and retains
+queued jobs for normal workspace reopening.
+
+The optional `receivingReview` snapshot lives in the original
+`state.json` selection event and `runtime.json` process observation. It retains
+the release/configuration/plan digests, binding/profile/review IDs, completed
+time, mode, original result and counts. A subsequent ordinary run reuses its
+current selection event's review context. The receiving controller remains the
+owner of all profile, job, report and capture files; the release adapter stores
+only private bindings under
+`RECEIVING_DIRECTORY/release-bindings/RELEASE_ID/`.
+
 ## Release a prepared MySQL merchant
 
 The original MySQL CLI and browser produce a complete merchant package accepted by
