@@ -47,6 +47,8 @@ function parameterDescription(spec, supplied, isQuery) {
   if (spec.type === 'integer') parts.push('Canonical signed 64-bit decimal integer text; no plus sign, leading zero or negative zero.' +
     (isQuery ? '' : ' Safe integer JSON numbers are also accepted.'));
   if (spec.type === 'decimal') parts.push('Exact decimal string, at most 128 characters; no exponent, plus sign or leading zero. Numeric comparisons use exact decimal values.');
+  if (spec.type === 'decimal' && own(spec, 'maxScale')) parts.push(`At most ${spec.maxScale} fractional digits after removing trailing fractional zeros.`);
+  if (spec.type === 'decimal' && own(spec, 'maxIntegerDigits')) parts.push(`At most ${spec.maxIntegerDigits} significant integer digits; zero uses none.`);
   if (spec.type === 'number') parts.push('Finite JavaScript number, or decimal/exponent text up to 128 characters; ordinary binary floating-point conversion applies. Use decimal for exact decimal arithmetic.');
   if (spec.type === 'boolean') parts.push(isQuery ? 'Use the query text true or false.' : 'Use JSON true/false or the strings "true"/"false".');
   if (own(spec, 'minimum')) parts.push(`Inclusive minimum: ${spec.minimum}.`);
