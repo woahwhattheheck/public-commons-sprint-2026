@@ -353,7 +353,7 @@ export class McpPaidToolBroker {
       case 'sf43_discover_review_and_pay':{
         this.#running();
         if(!this.#agentCommerce)fail('AGENT_COMMERCE_UNAVAILABLE','SF43 requires an explicitly injected approved adapter');
-        const operation=Promise.resolve().then(()=>{this.#running();return this.#agentCommerce(structuredClone(args));});
+        const operation=Promise.resolve().then(()=>{this.#running();return this.#agentCommerce(structuredClone(args),{signal:this.#shutdown.signal});});
         this.#active.add(operation);
         try{return await operation;}finally{this.#active.delete(operation);}
       }
