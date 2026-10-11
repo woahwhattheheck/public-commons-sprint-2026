@@ -1993,6 +1993,34 @@ and `runMaintenance` from
 These are the original implementations used by the installed command and do
 not create another supervisor or recovery engine.
 
+## Keep encrypted merchant recovery points off the host
+
+The installed `merchant-recovery` command exposes the original SF101 snapshot,
+verification and cold-restore engine. `merchant-recovery-remote` sends those
+unchanged encrypted bundles to an existing private S3-compatible bucket, lists
+completed recovery points, retrieves them and invokes that same restore engine.
+Use the existing `s3` runtime dependency and Linux `flock`.
+
+Create the snapshot with the original host maintenance command above or with an
+actually quiesced local recovery plan. Then follow the
+[remote recovery guide](../sf101-merchant-recovery/REMOTE.md) for the private
+store configuration, credentials, stable operation IDs and new destination
+paths. A typical upload is:
+
+```sh
+npx --no-install starforge merchant-recovery-remote push \
+  --config /private/merchant/recovery-s3.json \
+  --bundle /private/backups/merchant-20261011-001 \
+  --operations /private/recovery-transfers --id merchant-20261011-001 \
+  --pass-env SF101_RECOVERY_PASSPHRASE
+```
+
+The remote inventory publishes a completion record only after the encrypted
+files and original manifest have been uploaded and read back. Interrupted
+operations retain their progress under the same ID. Cold restore authenticates
+the original bundle and creates a new private destination; the original SF99
+maintenance operator handles the later merchant cutover.
+
 ## Operate several merchants
 
 The fleet commands package the existing merchant gateway and its private
