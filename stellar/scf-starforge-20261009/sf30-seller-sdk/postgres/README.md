@@ -55,10 +55,10 @@ Without `--facilitator`, SF30 returns its original payment challenge and does no
 
 | Field | Purpose |
 |---|---|
-| `connectionEnv` | Existing environment variable containing the private PostgreSQL URI. |
-| `tls` | `verify-full` by default, using Node's trusted roots. `local-plaintext` is accepted only for literal loopback/localhost development. |
+| `connectionEnv` or `connection` | Choose one connection form: an existing environment variable containing the private PostgreSQL URI, or the explicit profile below. |
+| `tls` | `verify-full` by default, using Node's trusted roots. `local-plaintext` and its workspace alias `disable-loopback` are accepted only for literal loopback/localhost development. |
 | `caFile` | Optional operator CA bundle, resolved beside the source file; TLS certificate verification remains enabled. |
-| `maxConnections` | Dedicated source pool size, 1–32; default 4. |
+| `maxConnections` or `poolSize` | Dedicated source pool size, 1–32; default 4. These are aliases; declaring conflicting values is rejected. |
 | `maxPending` | Total accepted active and queued source queries, up to 256; default 32, at least the pool size. |
 | `connectTimeoutMs` | Connection acquisition deadline, 100–30000 ms; default 5000. |
 | `idleTimeoutMs` | Idle pooled connection lifetime, 1000–300000 ms; default 30000. |
@@ -66,6 +66,24 @@ Without `--facilitator`, SF30 returns its original payment challenge and does no
 | `startupTimeoutMs` | Whole startup preflight deadline, 100–60000 ms; default 10000. |
 | `queries` | 1–64 named, operator-owned query declarations. |
 | `bindings` | Existing seller route ID → named query and input location. |
+
+The operator workspace can use an explicit connection profile in the same schema:
+
+```json
+{
+  "connection": {
+    "host": "database.merchant.example",
+    "port": 5432,
+    "database": "merchant",
+    "user": "sf30_reader",
+    "passwordEnv": "SF30_POSTGRES_PASSWORD",
+    "tls": "verify-full"
+  },
+  "poolSize": 4
+}
+```
+
+This replaces `connectionEnv` in the source document; keep its existing `schema`, `queries` and `bindings`. `passwordEnv` is optional for a database that accepts the operator's connection without a password. A declared password variable must exist in the selected environment. Literal `password` and `connectionString` values are rejected. `caFile`, when used inside the profile, is still relative to the source JSON. URI and profile declarations use the same connection resolver, TLS verification, query pool and seller lifecycle. Existing URI source files continue to work without migration.
 
 Each query uses ordinary PostgreSQL positional placeholders (`$1`, `$2`, …). `parameterOrder` maps those positions to public names; it must contain exactly the declared names once. When omitted, source JSON property order is used. Explicit order is recommended for maintained merchant configurations.
 
@@ -100,13 +118,15 @@ GRANT SELECT (id,title,region,price_cents,updated_at)
   ON sf30_demo.products TO sf30_catalog_reader;
 ```
 
-Every actual source query owns one pool client from `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY` through `COMMIT`. Connection defaults and local statement/lock/idle-transaction timeouts protect acquisition and work. On error, timeout or abort, that client is retired rather than returned with uncertain transaction state. Requests are never automatically replayed. Existing database views, grants and row-level policies remain responsible for which records may be sold; payment alone does not establish permission to read another tenant's data.
+Every actual source query owns one pool client from `BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY` through `COMMIT`. Connection defaults and local statement/lock/idle-transaction timeouts protect acquisition and work. On error, timeout or abort, that client is retired rather than returned with uncertain transaction state. Queued cancellations are removed immediately; an active backend connection error retires that request's client without terminating the seller. Requests are never automatically replayed. Existing database views, grants and row-level policies remain responsible for which records may be sold; payment alone does not establish permission to read another tenant's data.
 
-Output schema is `stellar-forge.postgres-result.v1`. Each result contains query name, selected columns, PostgreSQL type OIDs, rows, row count and truncation. **Every non-null value is the original PostgreSQL text representation**; null remains JSON null. This preserves exact bigint, numeric and timestamp precision instead of coercing values through JavaScript Number/Date. Booleans therefore appear as `"t"`/`"f"`; bytea, arrays, JSON and custom types retain PostgreSQL text along with their type OID. Consumers choose their type decoding explicitly. SQL, host, database name, username, password and raw backend errors are not returned.
+Output schema is `stellar-forge.postgres-result.v1`. Each result contains query name, selected columns, PostgreSQL type OIDs, rows, row count and truncation. **Every non-null value is the original PostgreSQL text representation**; null remains JSON null, also declared by `nullEncoding:"json-null"`. This preserves exact bigint, numeric and timestamp precision instead of coercing values through JavaScript Number/Date. Each request fixes UTC, ISO date/interval output and hexadecimal bytea output, so pooled sessions cannot change these encodings. Booleans therefore appear as `"t"`/`"f"`; bytea, arrays, JSON and custom types retain PostgreSQL text along with their actual result type OID. Consumers choose their type decoding explicitly. SQL, host, database name, username, password and raw backend errors are not returned.
 
 The sample uses keyset paging (`id > after_id ORDER BY id`). When `truncated` is true, use the last returned ID for a new request. Each request has its own repeatable-read transaction; multiple paid pages are not one shared snapshot. Merchants needing an immutable multi-page dataset should query a versioned/immutable source or use the existing SF30 dataset snapshot workflow.
 
-PostgreSQL read-only transaction mode is a database access mode, not a total SQL sandbox. Review trusted functions and query plans, and retain role privileges and database resource controls. Row/JSON caps limit exposed results; a very large individual field can still be allocated by the driver before the JSON size check. Set practical database-side field limits or project bounded values for large text/blob columns. This source neither reads whole database files nor creates backups.
+The result reader uses pinned `pg-cursor` 2.22.1 to consume at most eight rows per batch. PostgreSQL materializes only the declared page and checks each projected row's text byte count against `maxBytes`. An oversized row's values become NULL inside PostgreSQL, with a private flag that makes the source fail; the oversized values never reach the Node driver. The application counts the complete UTF-8 JSON envelope, including escaped strings and column metadata, as rows arrive. It rejects an oversized result in full and retires the connection; it never returns a partial successful page. Normal results retain their field OIDs and exact text values, and one extra row still supplies `truncated`.
+
+PostgreSQL read-only transaction mode is a database access mode, not a total SQL sandbox. Review trusted functions and query plans, and retain role privileges and database resource controls. The server still computes the approved query and its field values; the wire/result limits do not impose a database work-memory limit. Use practical query plans and database-side resource controls for expensive expressions. This source neither reads whole database files nor creates backups.
 
 ## Bind, run and close
 
@@ -132,6 +152,31 @@ const session = await startPostgresMerchant({
 await session.close();
 ```
 
+The workspace-oriented names use that same implementation:
+
+```js
+import { startPostgresSeller } from './postgres/launch.mjs';
+const session = await startPostgresSeller({
+  sourceFile: '/private/source.json', configFile: '/private/service.json',
+  port: 8423, operationsPort: 8424, nativeFactory: existingNativeFactory
+});
+console.log(session.seller.url, session.operations.url);
+await session.close();
+```
+
+`node postgres/launch.mjs` accepts the exact options documented for `start.mjs` and delegates to its CLI. Programmatic `startPostgresSeller` accepts `environment` for explicitly supplied environment values and `operationsPort:null` to omit the console. It returns `{seller,source,operations,close}`; shutdown drains the original seller and closes the same source once.
+
+| Export from `config.mjs` | Result and behavior |
+|---|---|
+| `readPostgresSourceFile(filename)` | Offline validation; `{path,config,description}` plus the declaration's direct fields for workspace consumers. It does not read password variables or connect. |
+| `describePostgresFile(filename)` | Offline query metadata and route bindings without SQL or connection values. |
+| `resolvePostgresConnection(declaration,environment)` | Resolve the validated file declaration's private credentials and TLS into a `pg` connection object for operator metadata introspection. Opens no pool and executes no SQL. Keep the returned object private; it includes a password callback. |
+| `openPostgresSourceFile(filename,{env})` | Existing `{source,config}` API. |
+| `openPostgresQueryFile(filename,{environment})` | Equivalent source with `{source,bindings,config}`. |
+| `bindPostgresSeller(serviceConfig,source,bindings)` | Handler map for the original `startSellerService`. It requires explicit `handler` and `admit` route names and leaves the configuration unchanged. The higher-level merchant/launch APIs still add missing admission names to their private configuration copy. |
+
+These connection/profile and export aliases implement the contract supplied by ASTRA-2D58 for ASTRA-5403's operator workspace, composed into the source merged in PR862. They do not introduce another PostgreSQL engine or another payment implementation.
+
 `createPostgresQuerySource` also exposes `query`, `validate`, `route`, `describe`, `inspect`, `status` and idempotent `close`. Direct inspection and `query` calls are local operator APIs; they are not exposed as HTTP payment bypasses. Idle pooled sockets do not keep an otherwise finished process alive. No periodic query, telemetry sender or scheduled work is installed.
 
 Admission checks typed input and current source capacity without running SQL. It returns 422 for invalid input or 429 for an already full source. Capacity can change between admission and the paid application handler; the original native failure/cancellation lifecycle handles a later failure. Source timeouts return 504, overload 429, and other source failures 503 with safe codes. The existing seller determines settlement/cancellation semantics; this adapter does not promise refunds or turn failed application delivery into a success.
@@ -146,7 +191,7 @@ npm install --prefix stellar/scf-starforge-20261009/sf30-seller-sdk/postgres \
 node stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/exercise.mjs
 ```
 
-The exercise runs PostgreSQL 18.3 compiled to WASM (PGlite 0.5.8) in its own child process, exposes its actual PostgreSQL wire protocol through `pglite-socket` 0.2.11, and connects with the production `pg` 8.23.1 driver. It seeds a disposable fictional schema and uses the actual source and original seller. The accepted Linux Node 24.19 run completed exact large-numeric/Unicode projection, keyset continuation, native read-only transaction state, literal parameter injection, prepayment input rejection, oversized-result failure, queue capacity plus timeout recovery, close, original unsigned HTTP 402 and original developer docs. No payment/facilitator fixture is used. Six source queries completed; payment operations and hosted Actions were zero.
+The exercise runs PostgreSQL 18.3 compiled to WASM (PGlite 0.5.8) in its own child process, exposes its actual PostgreSQL wire protocol through `pglite-socket` 0.2.11, and connects with production `pg` 8.23.1 and `pg-cursor` 2.22.1. It seeds a disposable fictional schema and uses the actual source and original seller. The workflow covers exact large-numeric/Unicode projection, keyset continuation, native read-only transaction state, literal parameter injection, prepayment input rejection, queue capacity plus timeout recovery, close, original unsigned HTTP 402 and original developer docs. The streaming checks cross two cursor batch boundaries, retain actual numeric type OIDs, observe a million-byte field suppressed at the PostgreSQL wire boundary, and reject JSON-escaped rows that exceed the full response budget. No payment/facilitator fixture is used; payment operations and hosted Actions remain zero.
 
 PGlite's socket multiplexer is an embedded development runtime, so this exercise uses one pooled connection. Production PostgreSQL owns independent backend sessions for the configured pool. Reuse the accepted exercise output for this source; deployment operators can run `--preflight` against their approved database and actual TLS configuration without replaying the engineering exercise.
 
@@ -157,9 +202,10 @@ To keep the disposable database running for manual local inspection, execute `de
 - [node-postgres parameterized queries and per-query text parsers](https://node-postgres.com/features/queries)
 - [node-postgres transaction/client ownership](https://node-postgres.com/features/transactions)
 - [node-postgres connection pooling](https://node-postgres.com/features/pooling)
+- [node-postgres cursor consumption and close](https://node-postgres.com/apis/cursor)
 - [node-postgres TLS configuration and URI overrides](https://node-postgres.com/features/ssl)
 - [PostgreSQL transaction access and isolation modes](https://www.postgresql.org/docs/current/sql-set-transaction.html)
 - [PostgreSQL statement, lock and idle transaction settings](https://www.postgresql.org/docs/current/runtime-config-client.html)
 - [Original PGlite socket implementation and embedded-runtime boundaries](https://github.com/electric-sql/pglite/tree/main/packages/pglite-socket)
 
-The source package is private and stays in the original repository layout. Distribution owners must retain `../sqlite/parameters.mjs`, `../serve.mjs`, `../operations/` and their existing transitive dependencies when packaging this adapter. Production needs `pg`; PGlite is a development-only database. All original payment engines, existing author ownership and merchant financial terms remain in their current modules.
+The source package is private and stays in the original repository layout. Distribution owners must retain `../sqlite/parameters.mjs`, `../serve.mjs`, `../operations/` and their existing transitive dependencies when packaging this adapter. Production needs the pinned `pg` and `pg-cursor` packages; PGlite is a development-only database. All original payment engines, existing author ownership and merchant financial terms remain in their current modules.

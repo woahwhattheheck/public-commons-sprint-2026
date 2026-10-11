@@ -16,7 +16,11 @@ const same = (left, right) => isDeepStrictEqual(left, right);
 let sdkPromise;
 
 export class NativeSignerError extends Error {
-  constructor(code) { super(code); this.name = 'NativeSignerError'; this.code = code; }
+  constructor(code) {
+    super(code); this.name = 'NativeSignerError'; this.code = code;
+    // The adapter returns before SF31 constructs or sends its paid HTTP retry.
+    this.paymentSent = false;
+  }
 }
 const fail = code => { throw new NativeSignerError(code); };
 
@@ -134,6 +138,23 @@ export async function inspectNativeSignerRuntime() {
     scheme:'exact', payloadEngine:'SF103_ORIGINAL_X402_STELLAR', feesSponsoredRequired:true };
 }
 
+/** Execute-only local setup check; does not read a wallet key, sign or call RPC. */
+export async function checkNativeSignerPrerequisites(options) {
+  pins(options);
+  if (options.signerProvider !== undefined) {
+    if (options.secretEnv !== undefined) fail('SIGNER_ONE_SOURCE_REQUIRED');
+    await inspectSignerProvider(options.signerProvider);
+  } else {
+    const environment = options.environment ?? process.env;
+    const secretEnv = options.secretEnv ?? 'STELLAR_SECRET';
+    if (typeof secretEnv !== 'string' || !/^[A-Z][A-Z0-9_]{0,127}$/.test(secretEnv))
+      fail('SIGNER_INVALID_SECRET_ENV_NAME');
+    if (!object(environment) || !Object.hasOwn(environment, secretEnv))
+      fail('SIGNER_LOCAL_TESTNET_KEY_REQUIRED');
+  }
+  await officialSdk();
+}
+
 /**
  * Existing official ClientStellarSigner -> SF31 sign callback.
  * Call only from the operator-owned SF81 path after its durable reservation.
@@ -155,7 +176,9 @@ export async function createOfficialStellarSigner(options) {
       // SF88 retains its independent workspace policy; SF103 is the single
       // shared native payload engine. The existing SF31/SF81 call supplies the
       // approved request body and operation, after its durable reservation.
-      const adapter = await createNativeBuyerSigner({ signer, sdk, rpcUrl:policy.rpcUrl,
+      let result;
+      try {
+        const adapter = await createNativeBuyerSigner({ signer, sdk, rpcUrl:policy.rpcUrl,
         expected:{ payer:policy.expectedPayer,
           operation:{ intentId:input.intent.intentId, method:input.intent.method,
             url:input.intent.url, expect:{ scheme:'exact', network:policy.network,
@@ -163,7 +186,13 @@ export async function createOfficialStellarSigner(options) {
               maxTimeoutSeconds:input.intent.maxTimeoutSeconds } },
           body:{ present:input.intent.bodyPresent, bytes:input.intent.bodyBytes,
             sha256:input.intent.bodySha256 } } });
-      const result = await adapter.sign(input);
+        result = await adapter.sign(input);
+      } catch (error) {
+        // SF103 finishes before SF31 sends the paid request. Preserve that phase.
+        if (error instanceof NativeSignerError) throw error;
+        fail(error?.name === 'NativeSignerError' && /^[A-Z0-9_]{1,120}$/.test(error.code)
+          ? error.code : 'OFFICIAL_STELLAR_PAYMENT_CREATION_FAILED');
+      }
       if (typeof result.payload?.transaction !== 'string' || !result.payload.transaction.length)
         fail('OFFICIAL_STELLAR_ENVELOPE_MISMATCH');
       return result;

@@ -244,10 +244,14 @@ export async function openWorkspace(args, { execute = false, environment = proce
   await privateDirectory(cfg.evidenceDir);
   let operatorEnvironment;
   if (execute) {
+    // Surface missing local setup before an inbox attempt or SF36 reservation.
+    const {checkNativeSignerPrerequisites} = await import('./native-signer.mjs');
+    await checkNativeSignerPrerequisites({...manifest.signer, environment});
     const stored = await privateJson(join(directory, manifest.keys), 16384);
     need(stored.schema === SCHEMA && schemaObject(stored.keys) &&
       Object.keys(stored.keys).length === KEY_NAMES.length, 'WORKSPACE_KEY_FILE_INVALID');
-    operatorEnvironment = {...environment, ...keys(stored.keys).values};
+    // SF81 accepts only these three values; do not copy unrelated credentials.
+    operatorEnvironment = keys(stored.keys).values;
   }
   return {config:cfg, configPath, manifest, operatorEnvironment};
 }
