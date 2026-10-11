@@ -108,8 +108,9 @@ function source(input) {
     if (!plain(environment) || !Array.isArray(environment.values)) fail('Select a Postman environment export with a values list');
   }
   const decisions = normalizeDecisions(input.decisions);
-  const variables = {...variableMap(collection.variable, 'Collection variables'),
-    ...variableMap(environment?.values, 'Environment variables'), ...decisions.publicVariables};
+  const sourceVariables = {...variableMap(collection.variable, 'Collection variables'),
+    ...variableMap(environment?.values, 'Environment variables')};
+  const variables = {...sourceVariables, ...decisions.publicVariables};
   const secretVariables = new Set([...rows(collection.variable, 'Collection variables'),
     ...rows(environment?.values, 'Environment variables')].filter(row => row.type === 'secret').map(row => row.key ?? row.id));
   const items = [];
@@ -130,7 +131,7 @@ function source(input) {
     }
   }
   visit(collection, '', [], null, []);
-  return {collection, environment, decisions, variables, secretVariables, items};
+  return {collection, environment, decisions, variables, sourceVariables, secretVariables, items};
 }
 function authAttributes(auth) {
   if (!auth || auth.type === 'noauth') return {};
@@ -151,6 +152,9 @@ function resolver(context, item) {
   const attributes = authAttributes(item.auth);
   for (const value of Object.values(attributes)) for (const name of tokens(value)) credentials.add(name);
   for (const header of headersOf(item.request)) for (const name of tokens(header.value)) credentials.add(name);
+  // Follow the original aliases before applying any public overrides. A nested
+  // credential variable cannot become public through a different alias.
+  for (const name of credentials) for (const child of tokens(context.sourceVariables[name])) credentials.add(child);
   function expand(value, publicValue = true, stack = []) {
     let text = scalar(value, 'Request value');
     text = text.replace(/\{\{([^{}]+)\}\}/g, (_match, name) => {
@@ -261,14 +265,16 @@ function bodyOf(item, decision, expand, method) {
     example = bounded(decision.body);
     adaptation = 'Explicit public JSON body replaces the collection body';
   } else if (body.mode === 'raw') {
+    if (body.options?.raw?.language && body.options.raw.language !== 'json')
+      fail('A non-JSON raw body requires an explicit reviewed JSON body adaptation');
     const raw = expand(body.raw ?? '');
     try { example = bounded(JSON.parse(raw)); } catch { fail('Raw request body must resolve to exact JSON; supply an explicit public object if it needs adaptation'); }
+    adaptation = 'Resolved raw JSON is represented as application/json';
   } else if (body.mode === 'graphql') {
     if (!plain(body.graphql) || typeof body.graphql.query !== 'string') fail('GraphQL body requires query text');
     let variables = body.graphql.variables ?? '{}';
-    if (typeof variables === 'string') {
-      try { variables = bounded(JSON.parse(expand(variables))); } catch { fail('GraphQL variables must resolve to a JSON object'); }
-    }
+    try { variables = bounded(JSON.parse(expand(typeof variables === 'string' ? variables : JSON.stringify(variables)))); }
+    catch { fail('GraphQL variables must resolve to a JSON object'); }
     if (!plain(variables)) fail('GraphQL variables must be an object');
     example = {query:expand(body.graphql.query), variables};
     adaptation = 'GraphQL query and variables are represented as the original JSON HTTP body';
@@ -279,7 +285,9 @@ function bodyOf(item, decision, expand, method) {
       if (!name || forbidden.has(name) || own(properties, name)) fail('Multipart fields need distinct names');
       if (field.contentType) fail('Custom multipart part media types require an explicit JSON adaptation or a dedicated integration');
       if (field.type === 'file') {
-        properties[name] = {type:'string', format:'binary'}; example[name] = 'example-file';
+        const multiple = Array.isArray(field.src);
+        properties[name] = multiple ? {type:'array', items:{type:'string', format:'binary'}} : {type:'string', format:'binary'};
+        example[name] = multiple ? field.src.map(() => 'example-file') : 'example-file';
       } else if (!field.type || field.type === 'text') {
         properties[name] = {type:'string'}; example[name] = expand(field.value ?? '');
       } else fail('Multipart fields must use text or file');
@@ -408,7 +416,9 @@ export function openPostmanSource(packet) {
   if (packet.schema !== POSTMAN_SOURCE_SCHEMA) fail('Not a retained Postman source');
   const input = {collectionText:packet.collectionText, environmentText:packet.environmentText, decisions:packet.decisions};
   const prepared = preparePostmanSource(input), expected = JSON.parse(prepared.specText);
-  if (JSON.stringify(packet.hashes) !== JSON.stringify(expected.hashes)) fail('Retained Postman source or decisions changed; prepare a new reviewed source packet');
+  exact(packet.hashes, ['collection', 'environment', 'decisions', 'document'], 'Postman source hashes');
+  if (Object.entries(expected.hashes).some(([key, value]) => packet.hashes[key] !== value))
+    fail('Retained Postman source or decisions changed; prepare a new reviewed source packet');
   const {document} = generated(input);
   return {document, summary:prepared.review, operations:prepared.operations};
 }
