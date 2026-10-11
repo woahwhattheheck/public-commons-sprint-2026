@@ -52,7 +52,26 @@ def configured_environment(config_file, options):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     environment_file = directory / "environment.json"
     retained = json.loads(environment_file.read_text()) if environment_file.exists() else None
-    operation_id = supplied.get("operationId") or (retained or {}).get("operationId") or "coingecko-native-" + str(uuid.uuid4())
+    legacy = bool(retained and retained.get("schema") == "coingecko.private-native-environment.v1")
+    original_operation_id = (retained or {}).get("operationId")
+    if legacy and not original_operation_id:
+        preparation_file = directory / "preparation.json"
+        preparation = json.loads(preparation_file.read_text()) if preparation_file.exists() else {}
+        steps = preparation.get("steps", {})
+        project_op = steps.get("project", {}).get("body", {}).get("opId")
+        if project_op:
+            if not isinstance(project_op, str) or not project_op.endswith(":project"):
+                raise ValueError("The retained original project operation ID is unrecognized")
+            original_operation_id = project_op[:-len(":project")]
+            for step in steps.values():
+                step_op = step.get("body", {}).get("opId")
+                if step_op and not step_op.startswith(original_operation_id + ":"):
+                    raise ValueError("The retained original steps have different operation identities")
+        elif steps:
+            raise ValueError("The retained operation has steps without its original project intent")
+    operation_id = supplied.get("operationId") or original_operation_id or "coingecko-native-" + str(uuid.uuid4())
+    if original_operation_id and operation_id != original_operation_id:
+        raise ValueError("Keep the retained original operation ID during adoption")
     if not isinstance(operation_id, str) or not re.fullmatch(r"[A-Za-z0-9._:-]{1,90}", operation_id):
         raise ValueError("operationId must be a stable identifier of at most 90 ASCII characters")
     source_ref = supplied.get("sourceRef", "")
@@ -122,9 +141,22 @@ def configured_environment(config_file, options):
                     "publicConfigFile", "originalPaidResult", "originalPaidResultSha256",
                     "signerOwnershipDirectory", "buyerSecretEnv", "facilitatorSecretEnv",
                     "merchantOrigin", "rpcUrl", "profile"):
+            if key == "operationId" and legacy and not retained.get(key):
+                continue
             if retained.get(key) != value[key]:
                 raise ValueError("The retained operation's " + key + " changed; reopen its original configuration")
         value["ports"] = retained["ports"]
+    if legacy:
+        original_environment = environment_file.read_bytes()
+        backup = directory / ("environment.before-portable-" + hashlib.sha256(original_environment).hexdigest() + ".json")
+        if not backup.exists():
+            descriptor = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+            with os.fdopen(descriptor, "wb") as stream:
+                stream.write(original_environment)
+                stream.flush()
+                os.fsync(stream.fileno())
+    if supplied.get("browser"):
+        value["browser"] = supplied["browser"]
     retain_json(environment_file, value)
     browser = supplied.get("browser", {})
     if not isinstance(browser, dict):

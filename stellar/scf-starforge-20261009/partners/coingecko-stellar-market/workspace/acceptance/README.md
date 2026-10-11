@@ -72,6 +72,8 @@ The selected run directory contains preparation.json, environment.json, the orig
 
 The same configuration preserves operation IDs, recorded request bodies, imported source hashes, profile, ports and account bindings when resumed. Failed attempts remain in failures/ and NATIVE_LAST_FAILURE.json. Resume that existing run after correcting a concrete runtime problem; do not delete its state or create a replacement paid intent.
 
+An earlier private preparation can be adopted on the same host by pointing directory, state, source files, profile and account bindings to that existing run. Copy its original environment into a separate private configuration file and select the current complete sourceRoot. The launcher derives the operation prefix from the retained original project intent, preserves the original profile and ports, and saves the exact previous environment before updating its format. It does not clear preparation steps, outputs or failed attempts. A run with no retained steps has no existing project intent to replace. Moving signing custody to another host still belongs to its existing runtime owner.
+
 ## 4. Open the original product or run the complete browser continuation
 
 To open the product directly, have the existing owner supply the two named signing environment variables and run:
