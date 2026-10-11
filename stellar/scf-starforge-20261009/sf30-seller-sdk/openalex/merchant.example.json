@@ -1,0 +1,368 @@
+{
+  "schema": "stellar-forge.openalex-merchant.v1",
+  "title": "OpenAlex research metadata",
+  "publicOrigin": "https://merchant.example",
+  "provider": {
+    "account": "openalex-keyless"
+  },
+  "budget": {
+    "creditsPerDay": 1000,
+    "requestsPerSecond": 5
+  },
+  "timeoutMs": 30000,
+  "maxResponseBytes": 16777216,
+  "products": [
+    {
+      "id": "works",
+      "path": "/research/works",
+      "entity": "works",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex works matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "greenhouse AND \"heat pump\"",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "work",
+      "path": "/research/work",
+      "entity": "works",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex work record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "W2741809807"
+      }
+    },
+    {
+      "id": "authors",
+      "path": "/research/authors",
+      "entity": "authors",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex authors matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "Einstein",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "author",
+      "path": "/research/author",
+      "entity": "authors",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex author record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "A5023888391"
+      }
+    },
+    {
+      "id": "sources",
+      "path": "/research/sources",
+      "entity": "sources",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex sources matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "Agricultural",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "source",
+      "path": "/research/source",
+      "entity": "sources",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex source record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "S137773608"
+      }
+    },
+    {
+      "id": "institutions",
+      "path": "/research/institutions",
+      "entity": "institutions",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex institutions matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "Memorial University",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "institution",
+      "path": "/research/institution",
+      "entity": "institutions",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex institution record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "I27837315"
+      }
+    },
+    {
+      "id": "topics",
+      "path": "/research/topics",
+      "entity": "topics",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex topics matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "Geothermal",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "topic",
+      "path": "/research/topic",
+      "entity": "topics",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex topic record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "T10802"
+      }
+    },
+    {
+      "id": "publishers",
+      "path": "/research/publishers",
+      "entity": "publishers",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex publishers matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "Elsevier",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "publisher",
+      "path": "/research/publisher",
+      "entity": "publishers",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex publisher record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "P4310320990"
+      }
+    },
+    {
+      "id": "funders",
+      "path": "/research/funders",
+      "entity": "funders",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex funders matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "Natural Sciences",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "funder",
+      "path": "/research/funder",
+      "entity": "funders",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex funder record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "F4320332161"
+      }
+    },
+    {
+      "id": "awards",
+      "path": "/research/awards",
+      "entity": "awards",
+      "kind": "list",
+      "requireFilter": true,
+      "description": "OpenAlex awards matching a retained research query",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "search": "energy",
+        "per_page": "100",
+        "cursor": "*"
+      }
+    },
+    {
+      "id": "award",
+      "path": "/research/award",
+      "entity": "awards",
+      "kind": "entity",
+      "requireFilter": false,
+      "description": "OpenAlex award record selected by canonical ID",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        }
+      ],
+      "example": {
+        "id": "G5453349320"
+      }
+    }
+  ]
+}

@@ -58,7 +58,7 @@ export async function openLibrary({state, kind, source, roots,
     db.exec('BEGIN IMMEDIATE');
     let config = getSetting('config');
     if (!config) {
-      requireValue(['inbox','snapshot','collection'].includes(kind), 'SOURCE_KIND_REQUIRED');
+      requireValue(['inbox','snapshot','collection','paid-jobs'].includes(kind), 'SOURCE_KIND_REQUIRED');
       requireValue(Array.isArray(roots) && roots.length > 0 && roots.length <= 32, 'FILES_ROOT_REQUIRED');
       config = {schema:'stellar-forge.sf88.resource-library.v1',kind,source:absolute(source),
         roots:[...new Set(await Promise.all(roots.map(p => directory(p))))].sort(),
