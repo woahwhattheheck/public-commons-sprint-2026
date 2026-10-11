@@ -3,8 +3,10 @@ import {mountTermsEditor} from './terms-editor.mjs';
 import {mountWorkspaceFiles} from './workspace-files.mjs';
 import {decodeSource, sourceDigest} from './workspace-file.mjs';
 import {mountCaseDesk} from './case-desk.mjs';
+import {mountRuntimeDesk} from './runtime-desk.mjs';
 
 let caseDesk = null;
+let runtimeDesk = null;
 
 const $ = id => document.getElementById(id);
 const form = $('intake-form');
@@ -472,12 +474,14 @@ syncSources();
 const emptyTermsDraft = termsEditor.readDraft();
 const workspaceRoot = document.createElement('div');
 const caseRoot = document.createElement('div');
+const runtimeRoot = document.createElement('section');
 const portableFiles = document.createElement('details');
 portableFiles.className = 'portable-cases source-details';
 const portableSummary = document.createElement('summary');
 portableSummary.textContent = 'Portable workspace files · import or download';
 portableFiles.append(portableSummary,workspaceRoot);
 $('diagnose').before(caseRoot,portableFiles);
+$('review').before(runtimeRoot);
 const sourceText = value => new TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(decodeSource(value));
 const isRecord = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 function checkDisplayReport(report, kind) {
@@ -587,11 +591,21 @@ async function applyCase(state, {canReplace = ()=>true} = {}) {
 const portable = mountWorkspaceFiles({root:workspaceRoot,readState:readCase,
   applyState:state=>caseDesk.importWorkspace(state),
   onNameChange:name=>caseDesk?.rename(name)});
+runtimeDesk = mountRuntimeDesk({root:runtimeRoot,
+  readInputs:()=>({...Object.fromEntries(new FormData(form).entries()),credentialed:$('credentialed').checked}),
+  onChange:()=>caseDesk?.changed({user:true}),
+  exportCase:()=>caseDesk.exportSnapshot(),
+  importCase:(state,files)=>caseDesk.importWorkspace(state,files),
+});
 caseDesk = mountCaseDesk({root:caseRoot,readState:readCase,
   applyState:async (state,options)=>{await applyCase(state,options);portable.setName(state.name);},
+  readSupport:()=>runtimeDesk.getText(),
+  prepareSupport:(text,inputs)=>runtimeDesk.prepare(text,inputs),
+  applySupport:(text,review)=>runtimeDesk.apply(text,review),
+  onDraftChange:()=>runtimeDesk.inputsChanged(),
   onNameChange:name=>portable.setName(name)});
 for (const event of ['input','change']) document.querySelector('main').addEventListener(event,e=>{
-  if (caseRoot.contains(e.target) || workspaceRoot.contains(e.target) ||
+  if (caseRoot.contains(e.target) || workspaceRoot.contains(e.target) || runtimeRoot.contains(e.target) ||
       ['permission','post-permission'].includes(e.target.id)) return;
   caseDesk.changed({user:true});
 });

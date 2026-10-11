@@ -36,8 +36,8 @@ export function compileOpenApiResponseContract(document, offer, { specSha256 } =
         fail('Response contract supports exact JSON media types only: ' + media);
       if (!plain(rawMedia) || !own(rawMedia, 'schema')) fail('Each response media type requires an explicit schema');
       if (rawMedia.encoding !== undefined) fail('Response encoding requires manual integration');
-      // Preserve original schema assertions. The original SF25 validator rejects
-      // unsupported keywords; no schema keyword is removed to make export pass.
+      // Preserve original schema assertions. The shared resolver handles OAS
+      // annotations; original SF25 rejects unsupported assertion keywords.
       content[media] = typeof rawMedia.schema === 'boolean' && /^3\.1\./.test(document.openapi)
         ? rawMedia.schema : refs.schema(rawMedia.schema);
     }

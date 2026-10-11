@@ -1,22 +1,33 @@
 {
   "project": "COMP-QLOO-SHELFCONDUCTOR-20261009-GPT6-CLOUD",
-  "repo_status": "published original candidate source to woahwhattheheck/public-commons-sprint-2026 via recovery PR; Devpost not submitted",
-  "qloo_calls_executed": 0,
-  "devpost_submission": false,
-  "files": {
-    "LICENSE": "6695de0415214b1e01ea31a8d3d8c6e7f7933e3db88d80b92adaf0b388d006e8",
-    "README.md": "fdc1afe9421002b4166c1fc948a1b8739f5f63a9c3c8cb9df3d7b9285cf3f626",
-    "package.json": "32cd6e48a3781aef00e1703cca5eb245155630083fdc898e2f81cd0cd9c55bfc",
-    "public/app.js": "81d8175dcc1440a8f06ae1b7af0a0b84f5636e73fa2062be9fa2d010c1553d7e",
-    "public/index.html": "2a79056c1450201eb28228b731763c2c227b300700a5ca8ba20ceaf7d5a6e475",
-    "public/style.css": "414d71c5991fa3b4ab8cc39599802b9953d392a78ad0504441d54b3545573295",
-    "src/core.mjs": "5b90353ce5c115fec14d388a8e5fe6f69bc36351f32941275c6c27883dba4324",
-    "src/demo.mjs": "73566bece81236f8fc5af10ade21540f4e0c2ad7f3ad8ab68626e7256ea96822",
-    "src/qloo.mjs": "620e554ea414913d855223e96e424d799672766b4cec9cfdba39efe9089d1419",
-    "src/server.mjs": "19c4ad2646a925241d4bc0eba4800014e582146717cdfc939c8cb787432bd7ae",
-    "tests/shelfconductor.test.mjs": "239a013d0bd0d86c5c971d6e961fe6bc53ec117b4955af03c4d3a5b2de19e8bf"
+  "product_revision": "bookseller-desk-20261011",
+  "base_commit": "2610c6a77804787ddc4e18633dc590838ec6b443",
+  "original_archive_sha256": "abfc158099484f9e479a6896f24ab4e77799ee2935c39c129195eaaed5d20a2c",
+  "original_archive_manifest_sha256": "0a139404cf243c16b75037c2f8acb1df4b8b9e458aa9c52ab62d921b691d61ef",
+  "prior_publication_manifest_git_blob": "a20d759b2c43e46dc49d1a2660c33be182445906",
+  "this_revision_execution": {
+    "live_qloo_calls": 0,
+    "devpost_submission": false,
+    "hosted_deployment": false,
+    "node": "22.16.0 Linux",
+    "original_tests": "six unchanged, passed",
+    "http_journey": "one complete application journey, including 10000-row catalog; recorded Qloo transport",
+    "browser": "actual served modules and application HTTP via fixed-target test bridge; desktop/mobile and downloads passed"
   },
-  "source_archive_sha256": "abfc158099484f9e479a6896f24ab4e77799ee2935c39c129195eaaed5d20a2c",
-  "archive_original_manifest_sha256": "0a139404cf243c16b75037c2f8acb1df4b8b9e458aa9c52ab62d921b691d61ef",
-  "provenance_note": "Only SOURCE_MANIFEST.json refreshed from preferred full provider-response-bounds archive to reflect its true src/qloo.mjs source hash and post-archive GitHub publication. All other executable/docs bytes remain exact ZIP original."
+  "files": {
+    "Dockerfile": "830669aa62b377428d4255fe083082b8fd8d1ce4dda9ea0bad070b81f113e25e",
+    "LICENSE": "6695de0415214b1e01ea31a8d3d8c6e7f7933e3db88d80b92adaf0b388d006e8",
+    "README.md": "58eb2495cb7c784329464d4f586bf109abb493bbe5cc037576884e0342d86ac7",
+    "package.json": "32cd6e48a3781aef00e1703cca5eb245155630083fdc898e2f81cd0cd9c55bfc",
+    "public/app.js": "3c903cc0fbfd930ef7a5f9e3bd3381843384592c06bbcf0ab353da5063716232",
+    "public/catalog.js": "4b7e4bc16114bdc04d7070316fb2cab25618310b63bb3e091a73223cbac90a5c",
+    "public/index.html": "18260cc35dcb540c728caf8725fa39568f4e70d77a777647db9f92260276334a",
+    "public/style.css": "69846e592f564b490670fc840f25f19215805396f54b95f9f96af22416a3096e",
+    "src/core.mjs": "e821340f3bfcf4af2969a4e09c1124c918e14aa24424a21f4b178335368afdef",
+    "src/demo.mjs": "73566bece81236f8fc5af10ade21540f4e0c2ad7f3ad8ab68626e7256ea96822",
+    "src/qloo.mjs": "c8b73095ae617543b6a38e4ed5e8586c152aae1c4598232d7ba1aa5a471511fc",
+    "src/server.mjs": "fe73310e1548885b956c5f31d619d0b8bcfe5e2f86ec4f19ea989e3b5dc43851",
+    "tests/desk-journey.mjs": "deff93fbfb842c64db747edc08f6d4dbf18daf81de39348c18b1ba8ba719a845",
+    "tests/shelfconductor.test.mjs": "239a013d0bd0d86c5c971d6e961fe6bc53ec117b4955af03c4d3a5b2de19e8bf"
+  }
 }

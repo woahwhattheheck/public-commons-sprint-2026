@@ -4,19 +4,24 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { initReleaseStore, stageRelease, readReleaseState, listReleases, inspectRelease,
   compareReleases, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from './releases.mjs';
+import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 
 const USAGE = `Seller releases — Node 22+, original SF61 compiler and SF82 launcher
 
   init     --store NEW_DIRECTORY
   stage    --store DIR --id RELEASE --spec OPENAPI --config SELECTIONS --bindings BINDINGS
-           [--label TEXT] [--port 8423] [--handlers TRUSTED_ESM]
+           [--label TEXT] [--port 8423] [--handlers TRUSTED_ESM | --upstreams BINDINGS_JSON]
+           [--allow-loopback-upstream]
            [--facilitator HTTPS_URL] [--allow-local-facilitator]
+  stage    --store DIR --id RELEASE --workspace SAVED_API_PACKAGE [runtime options above]
   list     --store DIR
   inspect  --store DIR --id RELEASE
   diff     --store DIR --to RELEASE [--from RELEASE]
   activate --store DIR --id RELEASE --expect GENERATION [--reason TEXT]
   rollback --store DIR --expect GENERATION [--to RELEASE] [--reason TEXT]
   status   --store DIR
+  cache-status --store DIR
+  cache-invalidate --store DIR --instance INSTANCE [--route ROUTE_ID | --all]
   run      --store DIR [--expect GENERATION]
   console  --store DIR [--port 8425]
 
@@ -27,10 +32,11 @@ Run starts the original foreground seller; Ctrl-C stops this process's seller.
 Console opens a private loopback interface to compare, activate, start, stop and roll back.
 Application entry modules are pinned; their external dependencies remain operator-managed.`;
 const COMMANDS = {
-  init: ['store'], stage: ['store', 'id', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'facilitator', 'allow-local-facilitator'],
+  init: ['store'], stage: ['store', 'id', 'workspace', 'spec', 'config', 'bindings', 'label', 'port', 'handlers', 'upstreams', 'facilitator', 'allow-local-facilitator', 'allow-loopback-upstream'],
   list: ['store'], inspect: ['store', 'id'], diff: ['store', 'from', 'to'],
   activate: ['store', 'id', 'expect', 'reason'], rollback: ['store', 'expect', 'to', 'reason'],
   status: ['store'], run: ['store', 'expect'], console: ['store', 'port'],
+  'cache-status': ['store'], 'cache-invalidate': ['store', 'instance', 'route', 'all'],
 };
 function parse(args) {
   if (!args.length || args.includes('--help')) return null;
@@ -40,7 +46,7 @@ function parse(args) {
   for (let i = 0; i < rest.length; i++) {
     const name = rest[i].startsWith('--') ? rest[i].slice(2) : '';
     if (!allowed.includes(name) || Object.hasOwn(options, name)) throw new Error('Unknown or duplicate option: ' + rest[i]);
-    if (name === 'allow-local-facilitator') { options[name] = true; continue; }
+    if (['allow-local-facilitator', 'allow-loopback-upstream', 'all'].includes(name)) { options[name] = true; continue; }
     if (!rest[i + 1] || rest[i + 1].startsWith('--')) throw new Error('Missing value for ' + rest[i]);
     options[name] = rest[++i];
   }
@@ -62,11 +68,14 @@ export async function main(args = process.argv.slice(2)) {
   switch (command) {
     case 'init': result = await initReleaseStore(root); break;
     case 'stage': {
-      for (const key of ['id', 'spec', 'config', 'bindings']) if (!o[key]) throw new Error('Stage requires --' + key);
+      for (const key of o.workspace ? ['id'] : ['id', 'spec', 'config', 'bindings'])
+        if (!o[key]) throw new Error('Stage requires --' + key);
       const runtime = {};
       for (const key of ['port', 'handlers', 'facilitator']) if (o[key] !== undefined) runtime[key] = o[key];
       if (o['allow-local-facilitator']) runtime.allowLocalFacilitator = true;
-      result = await stageRelease(root, { id: o.id, label: o.label, spec: o.spec, config: o.config, bindings: o.bindings, runtime }); break;
+      if (o['allow-loopback-upstream']) runtime.allowLoopbackUpstream = true;
+      result = await stageRelease(root, { id: o.id, label: o.label, workspace: o.workspace, spec: o.spec, config: o.config, bindings: o.bindings,
+        upstreams: o.upstreams, runtime }); break;
     }
     case 'list': result = { state: await readReleaseState(root), ...await listReleases(root) }; break;
     case 'inspect': result = await inspectRelease(root, o.id); break;
@@ -77,6 +86,11 @@ export async function main(args = process.argv.slice(2)) {
     case 'activate': result = await activateRelease(root, o.id, { expectedGeneration: o.expect, reason: o.reason }); break;
     case 'rollback': result = await rollbackRelease(root, { to: o.to, expectedGeneration: o.expect, reason: o.reason }); break;
     case 'status': result = await releaseStatus(root); break;
+    case 'cache-status': result = await releaseCacheStatus(root); break;
+    case 'cache-invalidate': {
+      if (!o.instance || Boolean(o.route) === Boolean(o.all)) throw new Error('Supply --instance and exactly one of --route ROUTE_ID or --all.');
+      result = await invalidateReleaseCache(root, { instanceId: o.instance, routeId: o.route }); break;
+    }
     case 'run': {
       const session = await runActiveRelease(root, { expectedGeneration: o.expect });
       print({ runningRelease: session.release.id, listener: session.url, mode: session.mode,

@@ -8,12 +8,14 @@ import { createPythonSource } from './source.mjs';
 import { startSellerService } from '../serve.mjs';
 
 const USAGE = `Usage: node python/merchant.mjs inspect --config MERCHANT.json
+       node python/merchant.mjs diagnose --config MERCHANT.json
        node python/merchant.mjs preview --config MERCHANT.json --function NAME --input INPUT.json --out NEW_FILE
        node python/merchant.mjs serve --config MERCHANT.json [--port 8423] [--operations-port 8424]
          [--facilitator HTTPS_URL] [--allow-local-facilitator]
          [--max-in-flight 64] [--drain-grace-ms 60000]
 
-inspect reads configuration only. preview runs the selected local Python function
+inspect reads configuration only. diagnose initializes and closes the configured
+Python workers without invoking a public function. preview runs the selected local Python function
 without payment and saves its result privately. serve uses the original SF30
 payment and operations service; without a facilitator it only returns challenges
 and does not import or execute Python. See python/README.md.`;
@@ -33,12 +35,13 @@ export async function startPythonMerchant(compiled, { port = 8423, nativeFactory
   async function close() {
     if (closing) return closing;
     closing = (async () => {
-      let failure;
+      let failure, sellerShutdown = null, pythonShutdown = null;
       // Keep observers and workers alive while original responses drain.
-      try { await seller?.close(); } catch (caught) { failure = caught; }
+      try { sellerShutdown = await seller?.close() ?? null; } catch (caught) { failure = caught; }
       try { await operations?.close(); } catch (caught) { failure ??= caught; }
-      try { await source?.close(); } catch (caught) { failure ??= caught; }
+      try { pythonShutdown = await source?.close() ?? null; } catch (caught) { failure ??= caught; }
       if (failure) throw failure;
+      return { clean: pythonShutdown?.clean !== false, seller: sellerShutdown, python: pythonShutdown };
     })();
     return closing;
   }
@@ -61,7 +64,7 @@ export async function startPythonMerchant(compiled, { port = 8423, nativeFactory
 
 function parse(args) {
   const action = args[0];
-  if (!['inspect', 'preview', 'serve'].includes(action)) throw new TypeError(USAGE);
+  if (!['inspect', 'diagnose', 'preview', 'serve'].includes(action)) throw new TypeError(USAGE);
   const values = new Map();
   for (let i = 1; i < args.length; i++) {
     const flag = args[i];
@@ -72,7 +75,7 @@ function parse(args) {
     values.set(flag, args[++i]);
   }
   if (!values.has('--config')) throw new TypeError(USAGE);
-  const allowed = new Set(action === 'inspect' ? ['--config'] : action === 'preview' ?
+  const allowed = new Set(['inspect', 'diagnose'].includes(action) ? ['--config'] : action === 'preview' ?
     ['--config', '--function', '--input', '--out'] :
     ['--config', '--port', '--operations-port', '--facilitator', '--allow-local-facilitator', '--max-in-flight', '--drain-grace-ms']);
   if ([...values.keys()].some(flag => !allowed.has(flag))) throw new TypeError('Option does not apply to this action');
@@ -90,10 +93,22 @@ export async function main(args = process.argv.slice(2)) {
   if (action === 'inspect') {
     const summary = { status: 'CONFIG_VALID', pythonImported: false,
       workerCount: compiled.options.workerCount, maxPending: compiled.options.maxPending,
+      lifecycle: compiled.options.lifecycle, eventLoop: 'persistent',
+      startupTimeoutMs: compiled.options.startupTimeoutMs, shutdownTimeoutMs: compiled.options.shutdownTimeoutMs,
       routes: compiled.service.routes.map(route => ({ id: route.id, path: route.path,
         offer: route.offer, maxInputBytes: compiled.functions[route.id].maxInputBytes,
         maxOutputBytes: compiled.functions[route.id].maxOutputBytes, timeoutMs: compiled.functions[route.id].timeoutMs })) };
     process.stdout.write(JSON.stringify(summary) + '\n'); return summary;
+  }
+  if (action === 'diagnose') {
+    const source = await createPythonSource(compiled);
+    const ready = source.stats();
+    const shutdown = await source.close();
+    const summary = { status: shutdown.clean ? 'PYTHON_LIFECYCLE_READY' : 'PYTHON_SHUTDOWN_INCOMPLETE',
+      pythonImported: true, functionsInvoked: 0, ready, shutdown, pool: source.stats() };
+    process.stdout.write(JSON.stringify(summary) + '\n');
+    if (!shutdown.clean) process.exitCode = 1;
+    return summary;
   }
   if (action === 'preview') {
     const name = values.get('--function'), definition = compiled.functions[name];
@@ -110,10 +125,13 @@ export async function main(args = process.argv.slice(2)) {
       source = await createPythonSource(compiled);
       const body = await source.call(name, context);
       await output.writeFile(body); await output.sync(); written = true;
+      const shutdown = await source.close();
       const summary = { status: 'LOCAL_PREVIEW_SAVED', function: name, destination,
         bytes: body.length, sha256: createHash('sha256').update(body).digest('hex'),
-        contentType: definition.output.contentType, pool: source.stats() };
-      process.stdout.write(JSON.stringify(summary) + '\n'); return summary;
+        contentType: definition.output.contentType, shutdown, pool: source.stats() };
+      process.stdout.write(JSON.stringify(summary) + '\n');
+      if (!shutdown.clean) process.exitCode = 1;
+      return summary;
     } finally {
       await source?.close(); await output.close();
       if (!written) await unlink(destination).catch(() => {});
@@ -138,7 +156,10 @@ export async function main(args = process.argv.slice(2)) {
     health: session.seller.url + '/_seller/health', docs: session.seller.url + '/_seller/docs',
     operations: session.operations?.url ?? null, pythonStarted: Boolean(session.source) }) + '\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
-    session.close().catch(() => { process.exitCode = 1; });
+    session.close().then(shutdown => {
+      process.stdout.write(JSON.stringify({ status: shutdown.clean ? 'MERCHANT_STOPPED' : 'MERCHANT_STOP_INCOMPLETE', shutdown }) + '\n');
+      if (!shutdown.clean) process.exitCode = 1;
+    }).catch(() => { process.stderr.write('PYTHON_MERCHANT_SHUTDOWN_FAILED\n'); process.exitCode = 1; });
   });
   return session;
 }

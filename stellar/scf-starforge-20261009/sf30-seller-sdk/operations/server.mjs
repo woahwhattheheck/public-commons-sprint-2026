@@ -1,24 +1,29 @@
-// MIT. Read-only operator listener; separate from the advertised seller origin.
+// MIT. Private operator listener; original traffic/history APIs remain read-only.
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { observeSellerTraffic, trafficCsv, trafficPrometheus } from './traffic.mjs';
 import { createTrafficHistory, historyCsv } from './history.mjs';
 import { createDeliveryReader, deliveryCsv, deliveryPrometheus } from './delivery-view.mjs';
+import { createMerchantOperationDesk } from './merchant-operations.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
 export async function startSellerOperations(session, { port = 8424, recentLimit = 160, deliveryOutbox = null, navigationOrigin = null,
-  historyDirectory, historyRetentionDays = 90, historyCheckpointMs = 5000 } = {}) {
+  historyDirectory, historyRetentionDays = 90, historyCheckpointMs = 5000, operationControls = false } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   if (!Number.isInteger(historyCheckpointMs) || historyCheckpointMs < 1000 || historyCheckpointMs > 60000)
     throw new RangeError('history checkpoint interval must be 1000–60000 ms');
   if (navigationOrigin !== null && (typeof navigationOrigin !== 'string' ||
       !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(navigationOrigin) ||
       Number(new URL(navigationOrigin).port)>65535)) throw new TypeError('navigationOrigin must be an explicit loopback workspace origin');
+  const merchantDesk = createMerchantOperationDesk(session.operationControl,{enabled:operationControls});
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
+    ['/merchant-operations', 'merchant-operations.html', 'text/html; charset=utf-8'],
+    ['/merchant-operations-panel.mjs', 'merchant-operations-panel.mjs', 'text/javascript; charset=utf-8'],
+    ['/merchant-operations.css', 'merchant-operations.css', 'text/css; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
@@ -75,7 +80,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       let referringOrigin = null;
       try { if (req.headers.referer) referringOrigin = new URL(req.headers.referer).origin; } catch {}
       const userNavigation = navigationOrigin !== null && referringOrigin === navigationOrigin &&
-        req.method === 'GET' && ['/', '/fulfillment'].includes(req.url) &&
+        req.method === 'GET' && ['/', '/fulfillment', '/merchant-operations'].includes(req.url) &&
         req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document' &&
         req.headers['sec-fetch-user'] === '?1';
       // Binding loopback alone does not stop hostile DNS names / browser cross-origin access.
@@ -83,6 +88,12 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
           (!userNavigation && ((req.headers.origin && !allowedOrigins.has(req.headers.origin)) ||
           ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site'])))) {
         return reply(403, 'text/plain', 'Operator origin required');
+      }
+      if (merchantDesk.accepts(req.url)) {
+        merchantDesk.dispatch(req,allowedOrigins).then(result => {
+          if (!res.destroyed) reply(result.status,'application/json; charset=utf-8',JSON.stringify(result.body),result.headers);
+        });
+        return;
       }
       if (!['GET', 'HEAD'].includes(req.method)) return reply(405, 'text/plain', 'Read only', { allow: 'GET, HEAD' });
       if (req.url === '/api/snapshot' || req.url === '/export.json') {
@@ -170,6 +181,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
           server.closeIdleConnections?.();
         });
       } finally {
+        await merchantDesk.close();
         await checkpointPending;
         await history?.close(observer.snapshot());
       }
@@ -186,7 +198,10 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     allowedHosts = new Set([`${HOST}:${assigned}`, `localhost:${assigned}`]);
     allowedOrigins = new Set([...allowedHosts].map(host => `http://${host}`));
     if (history) checkpointTimer = setInterval(checkpoint, historyCheckpointMs).unref();
-    return { server, url: `http://${HOST}:${assigned}`, observer, history, close };
+    const url = `http://${HOST}:${assigned}`;
+    return { server, url, merchantOperationsUrl:url + '/merchant-operations',
+      operationControlUrl:merchantDesk.controlFragment ? url + '/merchant-operations#' + merchantDesk.controlFragment : null,
+      observer, history, close };
   } catch (error) { await close().catch(() => {}); throw error; }
 }
 

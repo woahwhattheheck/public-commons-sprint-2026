@@ -10,6 +10,18 @@ export const bounded = (value, low, high, code) => {
   return value;
 };
 
+/** The same declaration compiler is used by preparation and the native reader. */
+export function compileDuckdbQueries(input) {
+  const queries = compileQueries(input);
+  if (Object.keys(queries).length > 32) throw new TypeError('DUCKDB_QUERY_LIMIT');
+  for (const [name, query] of Object.entries(queries)) {
+    if (!NAME.test(name) || query.columns.some(column => !NAME.test(column)) ||
+        Object.keys(query.parameters).some(field => !NAME.test(field)) ||
+        Object.keys(query.parameters).length > 32) throw new TypeError('DUCKDB_DECLARATION_INVALID');
+  }
+  return queries;
+}
+
 export async function readDuckdbSourceFile(filename) {
   const path = await realpath(resolve(filename)), handle = await open(path, 'r');
   let config;
@@ -48,13 +60,7 @@ export async function readDuckdbSourceFile(filename) {
   const databasePath = database === ':memory:' ? database : await localFile(database);
   const approved = [];
   for (const file of parquetFiles) approved.push(await localFile(file, true));
-  const queries = compileQueries(config.queries);
-  if (Object.keys(queries).length > 32) throw new TypeError('DUCKDB_QUERY_LIMIT');
-  for (const [name, query] of Object.entries(queries)) {
-    if (!NAME.test(name) || query.columns.some(column => !NAME.test(column)) ||
-        Object.keys(query.parameters).some(field => !NAME.test(field)) ||
-        Object.keys(query.parameters).length > 32) throw new TypeError('DUCKDB_DECLARATION_INVALID');
-  }
+  const queries = compileDuckdbQueries(config.queries);
   const options = {
     maxWorkers: bounded(config.maxWorkers ?? 2, 1, 4, 'DUCKDB_WORKER_LIMIT'),
     maxPending: bounded(config.maxPending ?? 32, 1, 128, 'DUCKDB_PENDING_LIMIT'),

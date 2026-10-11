@@ -43,7 +43,10 @@ export async function startOrderBackend({stateDir,port=8426,authorization=proces
         if(!KEY.test(key))return send(res,400,{error:'OPERATION_KEY_INVALID'});
         const row=db.prepare('SELECT response FROM orders WHERE operation_key=?').get(key);
         if(!row)return send(res,404,{error:'ORDER_NOT_FOUND'});
-        return send(res,200,{status:201,headers,bodyBase64:Buffer.from(row.response).toString('base64')});
+        // Match the original binding's exposed response contract. Cache policy
+        // protects this lookup HTTP response, not the stored replay envelope.
+        return send(res,200,{status:201,headers:{'content-type':headers['content-type']},
+          bodyBase64:Buffer.from(row.response).toString('base64')});
       }
       if(req.method!=='POST'||url.pathname!=='/v1/orders'||url.search)return send(res,404,{error:'NOT_FOUND'});
       const operationKey=req.headers['idempotency-key'];

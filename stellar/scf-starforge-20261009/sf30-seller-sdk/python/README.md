@@ -80,6 +80,7 @@ Copy the example merchant config and change:
 | `python` | Optional interpreter executable; use your venv's absolute executable path |
 | `publicOrigin` | Your real public HTTPS origin, served by your existing reverse proxy |
 | `environment` | Names of the environment variables the application needs, never values |
+| `lifecycle` | Optional `startup` and `shutdown` names for private, zero-argument application hooks |
 | `functions` | 1–64 explicitly named public Python callables |
 | Function `path` and `method` | Fixed resource path and `GET`, `HEAD`, or JSON `POST` |
 | Function `inputSchema` | Explicit object schema, properties and `additionalProperties:false` |
@@ -104,10 +105,116 @@ async def my_async_report(input):
 ```
 
 Imports run once per worker. Synchronous and async callables are supported.
-Async functions run with an event loop for each invocation; do not retain a
-client bound to an earlier loop across requests. Use your installed venv for
-third-party dependencies. Each worker gets its own module globals, so shared
-mutable business state requires the application's own explicit storage design.
+Each worker now retains one event loop across initialization, requests, idle
+time and shutdown. An initialized async database/API client, queue or connection
+pool can be reused by consecutive requests. Synchronous callables still run
+outside a running event loop; an existing synchronous function that runs its
+own short `asyncio.run` operation keeps working. Use your installed venv for
+third-party dependencies. Each worker gets its own module globals and initialized
+resources, so shared mutable business state requires the application's own
+explicit storage design.
+
+### Initialize and close application resources
+
+Add explicit hooks to the same merchant configuration:
+
+```json
+{
+  "lifecycle": { "startup": "startup", "shutdown": "shutdown" },
+  "startupTimeoutMs": 10000,
+  "shutdownTimeoutMs": 5000
+}
+```
+
+These fields are added alongside the existing `application`, `functions` and
+merchant settings. Either hook may be omitted; configurations without hooks
+remain valid. Hook names must be public Python identifiers, take no arguments
+and be separate from callable names under `functions`. They are private worker
+lifecycle operations, never merchant HTTP routes. Both synchronous hooks and
+hooks returning awaitables are supported. Initialize async resources inside an
+async startup hook so they bind to the worker's persistent loop.
+
+The original pool validates every callable, executes startup and waits for it
+to finish **before** marking that worker ready. Native merchant startup waits
+for all configured workers before opening its original seller listener. A
+replacement worker loads the original pinned application bytes, imports the
+module again and runs startup again. A startup failure closes the pool and
+prevents the merchant from listening; an available shutdown hook is attempted
+to release partially initialized resources. The existing parent startup
+deadline still terminates a stuck import or hook.
+
+The runnable standard-library example owns an async queue and processing task
+from startup through shutdown. It can serve repeated summaries without creating
+another event loop:
+
+```sh
+# Imports the application, initializes every worker and closes it; no purchase
+# or public function is performed. Configuration-only inspection remains inspect.
+node stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs diagnose \
+  --config stellar/scf-starforge-20261009/sf30-seller-sdk/python/example-lifecycle.json
+
+# Executes the original private preview path using that initialized service.
+node stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs preview \
+  --config stellar/scf-starforge-20261009/sf30-seller-sdk/python/example-lifecycle.json \
+  --function summarize \
+  --input stellar/scf-starforge-20261009/sf30-seller-sdk/python/example-input.json \
+  --out /tmp/sf30-initialized-summary.json
+```
+
+The sample's source is `lifecycle-example.py`; it returns the real summary of the
+provided series and creates no network service or financial operation. Replace
+its initialized queue with the application's own client or data resource. Its
+example asset and recipient remain nonpayable placeholders.
+
+Each request receives a fresh copy of the initialized `contextvars.Context`.
+Context variables set by one buyer do not become the next buyer's request
+context. Startup-owned tasks retain their own context, and shutdown runs in the
+startup context. Module globals and shared clients still belong to the worker;
+use them deliberately for resource state rather than retaining a buyer's
+identity. Await request work before returning a result, and manage any intended
+long-lived background tasks through startup/shutdown.
+
+During normal merchant shutdown, the original SF30 seller drains accepted work
+before the pool closes. Each idle worker receives protocol EOF, calls shutdown
+once, cancels remaining tasks, closes async generators and its loop, and then
+acknowledges completion. The parent also waits for the actual process exit.
+`shutdownTimeoutMs` covers the complete cleanup, including synchronous hooks,
+async hooks and executor/task teardown. A failed hook or a deadline-forced stop
+is reported as incomplete cleanup. It does not invalidate a result already
+saved successfully, and it never authorizes a repeated payment.
+
+Call timeout, explicit cancellation, a protocol failure, or directly closing a
+pool with an active function retains the existing forced process termination.
+Shutdown hooks cannot be guaranteed in those paths. Application resources must
+tolerate a disconnected worker and the existing explicitly initialized
+replacement; a cleanup hook is not an external-transaction rollback.
+
+### Operator diagnosis and stop results
+
+`inspect` only compiles configuration and shows the selected hooks/deadlines.
+`diagnose` deliberately imports and initializes trusted application code with
+the selected environment, then closes all workers. It prints one private JSON
+summary containing readiness, zero public functions invoked, the pool counters
+and the shutdown result. Successful initialization and cleanup yield
+`PYTHON_LIFECYCLE_READY`. Incomplete cleanup yields
+`PYTHON_SHUTDOWN_INCOMPLETE` and exit code 1. Import/startup failure also exits
+nonzero without exposing the application's exception text or environment values.
+
+The existing `source.stats()` schema adds lifecycle and deadline metadata plus
+`startupFailures`, `gracefulStops`, `forcedStops`, `shutdownFailures` and
+`shutdownTimeouts`. These are local process counters, not merchant revenue or
+Stellar outcomes. `source.close()` returns the same idempotent promise and a
+`stellar-forge.python-shutdown.v1` summary: `clean`, the four stop counters for
+that close, and remaining `processes`. Lifetime counters remain in `stats()`;
+a previously recovered call timeout stays visible there even when the final
+shutdown is clean.
+
+`startPythonMerchant(...).close()` returns the original seller shutdown and the
+Python summary. The CLI prints `MERCHANT_STOPPED` or
+`MERCHANT_STOP_INCOMPLETE` after SIGINT/SIGTERM; incomplete cleanup exits with
+code 1. Preview output retains its saved file details and now includes its
+completed cleanup summary. Embedding applications can use these same return
+values without another telemetry service.
 
 For GET/HEAD, declare scalar `string`, `integer`, `number`, or `boolean`
 properties. The original SF89 admission converts URL scalar values for schema
@@ -183,7 +290,8 @@ if diagnosis is needed; no separate telemetry or support service is introduced.
 | --- | --- | --- |
 | `workerCount` | 1 | 1–8 persistent Python processes |
 | `maxPending` | 32 | 1–256 running plus queued calls in one FIFO queue |
-| `startupTimeoutMs` | 10000 | 100–30000 ms per worker import |
+| `startupTimeoutMs` | 10000 | 100–30000 ms per worker import and application startup |
+| `shutdownTimeoutMs` | 5000 | 100–30000 ms for each idle worker's complete shutdown |
 | Function `timeoutMs` | 10000 | 50–120000 ms, including queue time |
 | Function `maxInputBytes` | 262144 | 1–524288 UTF-8 bytes after input normalization |
 | Function `maxOutputBytes` | 524288 | 1–1048576 bytes, also within original SF30's 1 MiB response budget |
@@ -211,13 +319,19 @@ The code is operator-trusted and runs with that OS account's access; the process
 boundary is a concurrency/failure boundary, not an untrusted-code sandbox.
 
 SIGINT/SIGTERM drain the original seller first, keep its operations observer alive
-through response completion, then close operations and all Python workers. An
+through response completion, then close operations and gracefully close idle Python workers. An
 expired original drain deadline closes outstanding HTTP connections and still
 closes the worker pool. The current original SF30 HTTP handler does not propagate
 client disconnect signals into application handlers; those Python calls end at
 their configured deadline or merchant shutdown. Embedding calls can use an
 AbortSignal directly. No timeout, disconnect or shutdown authorizes another
 purchase or releases a recorded payment reservation.
+
+The persistent runtime uses the standard-library
+[Python 3.11 `asyncio.Runner`](https://docs.python.org/3.11/library/asyncio-runner.html#runner-context-manager)
+with the existing POSIX private-pipe protocol. No new Python or Node dependency
+is required. Its read wait runs in the same loop so initialized async resources
+continue to make progress while the merchant is idle.
 
 ## Embed in an existing operator runtime
 

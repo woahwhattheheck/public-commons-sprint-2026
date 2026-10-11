@@ -1,0 +1,33 @@
+{
+  "schema": "stellar-forge.fleet-release-plan.v1",
+  "gateway": { "port": 8400, "adminPort": 8401 },
+  "tenants": [
+    {
+      "id": "alpha",
+      "host": "alpha.example",
+      "startupSlot": "blue",
+      "slots": {
+        "blue": { "store": "/srv/stellar/alpha/blue", "port": 8501 },
+        "green": { "store": "/srv/stellar/alpha/green", "port": 8502 }
+      },
+      "packages": {
+        "current": { "workspace": "/srv/stellar/packages/alpha-current" },
+        "updated": { "workspace": "/srv/stellar/packages/alpha-updated" }
+      },
+      "limits": { "maxInFlight": 12, "timeoutMs": 15000 }
+    },
+    {
+      "id": "beta",
+      "host": "beta.example",
+      "startupSlot": "blue",
+      "slots": {
+        "blue": { "store": "/srv/stellar/beta/blue", "port": 8511 },
+        "green": { "store": "/srv/stellar/beta/green", "port": 8512 }
+      },
+      "packages": {
+        "current": { "workspace": "/srv/stellar/packages/beta-current" },
+        "updated": { "workspace": "/srv/stellar/packages/beta-updated" }
+      }
+    }
+  ]
+}

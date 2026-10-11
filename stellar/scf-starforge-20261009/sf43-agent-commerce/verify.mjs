@@ -1,7 +1,23 @@
 // MIT — SF-43. Independently inspect a real Stellar TESTNET x402 receipt.
 // Read-only RPC calls; neither this module nor its caller may infer a paid sale
 // from HTTP status 200 or a seller-generated PAYMENT-RESPONSE header alone.
+import {createRequire} from 'node:module';
 const RPC = 'https://soroban-testnet.stellar.org';
+// Public testnet providers listed by Stellar; never take an endpoint from a receipt.
+// https://developers.stellar.org/docs/data/apis/rpc/providers
+const PUBLIC_TESTNET_RPC = new Set([RPC, 'https://soroban-rpc.testnet.stellar.gateway.fm']);
+const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
+function publicTestnetEndpoint(value) {
+  if (typeof value !== 'string') return null;
+  let url;
+  try { url = new URL(value); } catch { return null; }
+  return !url.username && !url.password && !url.search && !url.hash &&
+    url.pathname === '/' && PUBLIC_TESTNET_RPC.has(url.origin) ? url.origin : null;
+}
+/** Prefer a supported public workspace RPC; private signer RPCs retain SDF evidence. */
+export function selectTestnetEvidenceEndpoint(preferred) {
+  return publicTestnetEndpoint(preferred) ?? RPC;
+}
 const HASH = /^[0-9a-f]{64}$/;
 const AMOUNT = /^[1-9][0-9]*$/;
 // Soroban contract token amounts are signed i128, not arbitrary-precision
@@ -47,9 +63,10 @@ export function parseExactTestnetTerms(challenge, maxAtomic) {
 }
 
 async function callRpc(method, params, fetchImpl, endpoint) {
-  if (endpoint !== RPC && !/^http:\/\/127\.0\.0\.1:[0-9]+\/$/.test(endpoint))
-    throw new TypeError('Only the official read-only Stellar testnet RPC or explicit loopback for focused tests');
-  const response = await fetchImpl(endpoint, {
+  const publicEndpoint = publicTestnetEndpoint(endpoint);
+  if (publicEndpoint === null && !/^http:\/\/127\.0\.0\.1:[0-9]+\/$/.test(endpoint))
+    throw new TypeError('Only supported public Stellar testnet RPC or explicit loopback for focused tests');
+  const response = await fetchImpl(publicEndpoint ?? endpoint, {
     method:'POST', headers:{'content-type':'application/json'}, redirect:'error',
     body:JSON.stringify({jsonrpc:'2.0',id:'sf43-'+method,method,params}),
     signal: AbortSignal.timeout(15000),
@@ -86,6 +103,13 @@ export async function checkStellarTestnetTransaction({ receipt, expected, fetchI
   if(expected.payer!==undefined &&
       (typeof expected.payer!=='string' || !PAYER.test(expected.payer) || expected.payer!==receipt.payer))
     return failure('EXPECTED_PAYER_MISMATCH');
+  if (publicTestnetEndpoint(rpcEndpoint) !== null && publicTestnetEndpoint(rpcEndpoint) !== RPC) {
+    let network;
+    try { network = await callRpc('getNetwork', {}, fetchImpl, rpcEndpoint); }
+    catch (error) { return failure('RPC_NETWORK_LOOKUP_FAILED', {detail:error.message}); }
+    if (network.passphrase !== TESTNET_PASSPHRASE)
+      return failure('RPC_TESTNET_NETWORK_MISMATCH');
+  }
   let tx;
   try { tx=await callRpc('getTransaction',{hash:receipt.transaction},fetchImpl,rpcEndpoint); }
   catch (error) { return failure('RPC_TRANSACTION_LOOKUP_FAILED',{detail:error.message}); }
@@ -157,7 +181,14 @@ export function parseSep41TransferAmount(native) {
 
 /** Prefer actual @stellar/stellar-sdk provided by @x402/stellar installation. */
 export async function createOfficialEventDecoder() {
-  const sdk=await import('@stellar/stellar-sdk');
+  let sdk;
+  try { sdk=await import('@stellar/stellar-sdk'); }
+  catch(error) {
+    if(error.code !== 'ERR_MODULE_NOT_FOUND') throw error;
+    // The maintained buyer installs its pinned SDK in its own package. Reuse
+    // that exact runtime when the operator has no hoisted root installation.
+    sdk=createRequire(new URL('../sf88-operator-buyer-cli/package.json',import.meta.url))('@stellar/stellar-sdk');
+  }
   const decode=value=>sdk.scValToNative(sdk.xdr.ScVal.fromXDR(value,'base64'));
   return async event=>{
     if (!Array.isArray(event.topic) || event.topic.length < 3 || !event.value) return null;

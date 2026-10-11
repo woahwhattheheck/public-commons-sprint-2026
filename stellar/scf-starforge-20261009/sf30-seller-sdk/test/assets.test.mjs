@@ -141,3 +141,72 @@ test('original HTTP adapter: challenge, prepayment admission, exact delivery and
   assert.equal(response.status, 402); assert.deepEqual(await response.json(), { error: 'CONTROLLED_SETTLEMENT_REFUSAL' });
   assert.equal(response.headers.get('x-content-sha256'), null);
 });
+
+test('merchant release → content-free catalog → original buyer preparation → pinned HTTP download', async t => {
+  const [{exportAssetCatalog}, {prepareReview, prepare}, {responseFile}, {prepareBuyerResponseFile}, {createServer}] = await Promise.all([
+    import('../asset-cli.mjs'), import('../../sf88-operator-buyer-cli/prepare.mjs'),
+    import('../../sf88-operator-buyer-cli/config.mjs'), import('../../sf31-buyer-client/response-file.mjs'), import('node:http'),
+  ]);
+  const dir = await mkdtemp(join(tmpdir(), 'sf30-buyer-product-')); t.after(() => rm(dir, {recursive:true, force:true}));
+  const source = join(dir,'private-product.bin'), bytes = Buffer.alloc(2 * 1024 * 1024 + 37,0xc7);
+  await writeFile(source,bytes);
+  const {bytes: size, ...descriptor} = await inspectResponseAsset(source,'application/octet-stream','merchant-name.bin');
+  const input = {...config(descriptor), publicOrigin:'https://files.example'};
+  const bundle = join(dir,'release'); await createAssetBundle(input,{out:bundle});
+  const catalogPath = join(dir,'catalog.json'), catalogResult = await exportAssetCatalog(bundle,catalogPath);
+  assert.equal(catalogResult.contentIncluded,false);
+  const raw = await readFile(catalogPath), listing = JSON.parse(raw);
+  assert.ok(raw.length < 10000); assert.ok(!raw.includes(Buffer.from(dir)));
+  assert.equal(listing.resources[0].resource.url,'https://files.example/download');
+  const metadata = listing.resources[0].extensions['stellar-forge-asset'];
+  assert.equal(metadata.sha256,sha(bytes)); assert.equal(metadata.bytes,size);
+  await assert.rejects(exportAssetCatalog(bundle,catalogPath),{code:'EEXIST'});
+  const selection = {rowIndex:0, acceptIndex:0, intentId:'download-v1', method:'GET', url:'https://files.example/download'};
+  assert.throws(() => prepareReview(raw,selection),{code:'ASSET_RESPONSE_DESTINATION_REQUIRED'});
+  const output = join(dir,'buyers-choice.bin');
+  const {draft} = prepareReview(raw,{...selection,responseOut:output});
+  assert.equal(draft.responseFile.destination,output);
+  assert.equal(draft.responseFile.expectedSha256,sha(bytes)); assert.equal(draft.responseFile.expectedBytes,size);
+  assert.equal(draft.operation.expect.maxAtomic,payment.amount);
+  assert.equal(draft.preparedFrom.originalListing.extensions['stellar-forge-asset'].downloadName,'merchant-name.bin');
+  const prepared = await prepare(['--discovery',catalogPath,'--row','0','--accept','0','--intent-id','download-v1',
+    '--url',selection.url,'--method','GET','--out',join(dir,'review.json'),'--response-out',output]);
+  assert.equal(prepared.responseFile.expectedBytes,size);
+  const {spawnSync} = await import('node:child_process');
+  const {fileURLToPath} = await import('node:url');
+  const review=spawnSync(process.execPath,[fileURLToPath(new URL('../../sf88-operator-buyer-cli/cli.mjs',import.meta.url)),
+    '--review','--config',join(dir,'review.json')],{encoding:'utf8',timeout:5000});
+  assert.equal(review.status,0,review.stderr);
+  assert.equal(JSON.parse(review.stdout).responseFile.expectedSha256,sha(bytes));
+  const snapshot = await readResponseAsset(descriptor);
+  let mode = 'correct';
+  const server = createServer(async (_req,res) => {
+    const response = await snapshot.handler();
+    // Local HTTP exercises delivery bytes only. The original native payment
+    // interface and withholding cases are covered in the preceding flow.
+    res.writeHead(200, {'content-type': mode==='type'?'text/plain':response.headers['content-type'],
+      'x-content-sha256':sha(bytes)}); // A lying header must not replace a local pin.
+    res.end(mode==='digest'?Buffer.alloc(bytes.length):mode==='short'?bytes.subarray(0,bytes.length-1):response.body);
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  t.after(()=>new Promise(resolve=>{server.close(resolve);server.closeAllConnections();}));
+  const url=`http://127.0.0.1:${server.address().port}/download`;
+  const writer=await prepareBuyerResponseFile(responseFile(draft));
+  const saved=await writer.save({response:await fetch(url)});
+  assert.deepEqual(await readFile(output),bytes); assert.equal(saved.verifiedAgainst.expectedSha256,sha(bytes));
+  assert.deepEqual(saved.objectMetadata,{contentRange:null,contentSha256:sha(bytes),snapshot:null,totalBytes:null});
+  assert.equal((await stat(output)).mode & 0o777,0o600);
+  for (const [failure,code] of [['digest','RESPONSE_FILE_DIGEST_MISMATCH'],['short','RESPONSE_FILE_SIZE_MISMATCH'],['type','RESPONSE_FILE_TYPE_MISMATCH']]) {
+    mode=failure; const path=join(dir,failure+'.bin');
+    const bad=await prepareBuyerResponseFile({...responseFile(draft),destination:path});
+    await assert.rejects(bad.save({response:await fetch(url)}),error=>{
+      assert.equal(error.code,code);
+      if(failure!=='type') assert.ok(error.partialPath);
+      return true;
+    });
+    await assert.rejects(stat(path),{code:'ENOENT'}); await bad.abort();
+  }
+  assert.throws(()=>responseFile({responseFile:{destination:output,expectedSha256:'invalid'}}),{code:'BAD_RESPONSE_FILE_EXPECTED_SHA256'});
+  const legacy=structuredClone(listing); delete legacy.resources[0].extensions['stellar-forge-asset'];
+  assert.equal(prepareReview(Buffer.from(JSON.stringify(legacy)),selection).draft.responseFile,undefined);
+});
