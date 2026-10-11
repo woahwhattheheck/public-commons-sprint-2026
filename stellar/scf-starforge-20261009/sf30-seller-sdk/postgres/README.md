@@ -55,10 +55,10 @@ Without `--facilitator`, SF30 returns its original payment challenge and does no
 
 | Field | Purpose |
 |---|---|
-| `connectionEnv` | Existing environment variable containing the private PostgreSQL URI. |
-| `tls` | `verify-full` by default, using Node's trusted roots. `local-plaintext` is accepted only for literal loopback/localhost development. |
+| `connectionEnv` or `connection` | Choose one connection form: an existing environment variable containing the private PostgreSQL URI, or the explicit profile below. |
+| `tls` | `verify-full` by default, using Node's trusted roots. `local-plaintext` and its workspace alias `disable-loopback` are accepted only for literal loopback/localhost development. |
 | `caFile` | Optional operator CA bundle, resolved beside the source file; TLS certificate verification remains enabled. |
-| `maxConnections` | Dedicated source pool size, 1–32; default 4. |
+| `maxConnections` or `poolSize` | Dedicated source pool size, 1–32; default 4. These are aliases; declaring conflicting values is rejected. |
 | `maxPending` | Total accepted active and queued source queries, up to 256; default 32, at least the pool size. |
 | `connectTimeoutMs` | Connection acquisition deadline, 100–30000 ms; default 5000. |
 | `idleTimeoutMs` | Idle pooled connection lifetime, 1000–300000 ms; default 30000. |
@@ -66,6 +66,24 @@ Without `--facilitator`, SF30 returns its original payment challenge and does no
 | `startupTimeoutMs` | Whole startup preflight deadline, 100–60000 ms; default 10000. |
 | `queries` | 1–64 named, operator-owned query declarations. |
 | `bindings` | Existing seller route ID → named query and input location. |
+
+The operator workspace can use an explicit connection profile in the same schema:
+
+```json
+{
+  "connection": {
+    "host": "database.merchant.example",
+    "port": 5432,
+    "database": "merchant",
+    "user": "sf30_reader",
+    "passwordEnv": "SF30_POSTGRES_PASSWORD",
+    "tls": "verify-full"
+  },
+  "poolSize": 4
+}
+```
+
+This replaces `connectionEnv` in the source document; keep its existing `schema`, `queries` and `bindings`. `passwordEnv` is optional for a database that accepts the operator's connection without a password. A declared password variable must exist in the selected environment. Literal `password` and `connectionString` values are rejected. `caFile`, when used inside the profile, is still relative to the source JSON. URI and profile declarations use the same connection resolver, TLS verification, query pool and seller lifecycle. Existing URI source files continue to work without migration.
 
 Each query uses ordinary PostgreSQL positional placeholders (`$1`, `$2`, …). `parameterOrder` maps those positions to public names; it must contain exactly the declared names once. When omitted, source JSON property order is used. Explicit order is recommended for maintained merchant configurations.
 
@@ -131,6 +149,30 @@ const session = await startPostgresMerchant({
 // On shutdown: existing SF30 drains requests, then operations/source close.
 await session.close();
 ```
+
+The workspace-oriented names use that same implementation:
+
+```js
+import { startPostgresSeller } from './postgres/launch.mjs';
+const session = await startPostgresSeller({
+  sourceFile: '/private/source.json', configFile: '/private/service.json',
+  port: 8423, operationsPort: 8424, nativeFactory: existingNativeFactory
+});
+console.log(session.seller.url, session.operations.url);
+await session.close();
+```
+
+`node postgres/launch.mjs` accepts the exact options documented for `start.mjs` and delegates to its CLI. Programmatic `startPostgresSeller` accepts `environment` for explicitly supplied environment values and `operationsPort:null` to omit the console. It returns `{seller,source,operations,close}`; shutdown drains the original seller and closes the same source once.
+
+| Export from `config.mjs` | Result and behavior |
+|---|---|
+| `readPostgresSourceFile(filename)` | Offline validation; `{path,config,description}` plus the declaration's direct fields for workspace consumers. It does not read password variables or connect. |
+| `describePostgresFile(filename)` | Offline query metadata and route bindings without SQL or connection values. |
+| `openPostgresSourceFile(filename,{env})` | Existing `{source,config}` API. |
+| `openPostgresQueryFile(filename,{environment})` | Equivalent source with `{source,bindings,config}`. |
+| `bindPostgresSeller(serviceConfig,source,bindings)` | Handler map for the original `startSellerService`. It requires explicit `handler` and `admit` route names and leaves the configuration unchanged. The higher-level merchant/launch APIs still add missing admission names to their private configuration copy. |
+
+These connection/profile and export aliases implement the contract supplied by ASTRA-2D58 for ASTRA-5403's operator workspace, composed into the source merged in PR862. They do not introduce another PostgreSQL engine or another payment implementation.
 
 `createPostgresQuerySource` also exposes `query`, `validate`, `route`, `describe`, `inspect`, `status` and idempotent `close`. Direct inspection and `query` calls are local operator APIs; they are not exposed as HTTP payment bypasses. Idle pooled sockets do not keep an otherwise finished process alive. No periodic query, telemetry sender or scheduled work is installed.
 
