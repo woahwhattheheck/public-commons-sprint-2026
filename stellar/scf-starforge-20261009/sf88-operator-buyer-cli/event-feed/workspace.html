@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Starforge · Event feed</title>
+<style>
+:root{font:14px/1.5 system-ui,sans-serif;color:#202020;background:#f5f5f5;color-scheme:light}
+*{box-sizing:border-box}body{margin:0}header{padding:22px 32px;border-bottom:1px solid #bdbdbd;background:#fff}
+h1{font-size:22px;line-height:1.2;margin:4px 0}h2{font-size:16px;margin:0 0 14px}p{margin:6px 0;color:#555}
+main{max-width:1400px;margin:auto;padding:24px 32px;display:grid;gap:20px}
+section{border:1px solid #c7c7c7;background:#fff;padding:20px;min-width:0}
+.summary{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:12px}
+.summary div{border-right:1px solid #ddd;padding-right:12px}.summary strong{display:block;font-size:24px;font-weight:550}
+label,.label{display:block;font-size:12px;font-weight:600;letter-spacing:.04em;color:#555}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px}
+button{font:inherit;border:1px solid #777;background:#f4f4f4;color:#111;padding:8px 12px;border-radius:2px;cursor:pointer}
+button.primary{background:#252525;color:#fff;border-color:#252525}button:disabled{opacity:.5;cursor:default}
+input{font:inherit;border:1px solid #999;border-radius:2px;padding:8px;min-width:260px;flex:1}
+code{font:12px ui-monospace,monospace;overflow-wrap:anywhere}.details{display:grid;grid-template-columns:160px 1fr;gap:6px 18px;margin-top:20px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}th,td{padding:9px 10px;text-align:left;border-bottom:1px solid #ddd;vertical-align:top}
+th{font-size:12px;color:#555;font-weight:600}.scroll{overflow:auto}td{max-width:420px;overflow-wrap:anywhere}
+pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.6 ui-monospace,monospace;background:#f6f6f6;border:1px solid #ddd;padding:12px;max-height:240px;overflow:auto;margin:10px 0 0}
+.status{font:12px ui-monospace,monospace;border:1px solid #aaa;padding:3px 7px;display:inline-block}
+#message{min-height:22px;margin-top:12px;font-family:ui-monospace,monospace;font-size:12px}
+.empty{padding:20px 10px;color:#666}details summary{cursor:pointer;font-size:12px}
+@media(max-width:700px){header{padding:18px}main{padding:18px}.summary{grid-template-columns:repeat(2,1fr)}.details{grid-template-columns:1fr;gap:2px}input{min-width:100%}}
+</style></head>
+<body>
+<header><span class="label">STARFORGE / BUYER OPERATIONS</span><h1>Event feed</h1><p>Collect, recover and export events from your configured merchant.</p></header>
+<main>
+<section aria-labelledby="overview"><h2 id="overview">Collection</h2>
+<div class="summary"><div><span class="label">EVENTS RECEIVED</span><strong id="events">—</strong></div>
+<div><span class="label">PAGES RETAINED</span><strong id="pages">—</strong></div>
+<div><span class="label">LAST SEQUENCE</span><strong id="sequence">—</strong></div>
+<div><span class="label">STATE</span><span id="state" class="status">Loading</span></div></div>
+<div class="details"><span class="label">Subscription</span><span id="name"></span><span class="label">Source</span><code id="source"></code>
+<span class="label">Feed / store</span><code id="identity"></code><span class="label">Feed revision</span><code id="revision"></code></div>
+<div class="actions"><button id="sync" class="primary">Collect available events</button><button id="recover">Recover current page</button><button id="refresh">Refresh</button></div>
+<p>Each page uses your original buyer policy and payment journal. Collection finishes at the sequence limit captured for this batch.</p>
+<div id="message" role="status" aria-live="polite"></div><pre id="job" hidden></pre>
+</section>
+<section aria-labelledby="export-heading"><h2 id="export-heading">Export received events</h2>
+<p>The NDJSON export includes a manifest with page references, event count and file checksum. Repeating the same destination preserves its original snapshot.</p>
+<div class="actions"><label for="destination">Destination file</label><input id="destination" placeholder="/absolute/path/events.ndjson" autocomplete="off"><button id="export">Export</button></div>
+</section>
+<section aria-labelledby="pages-heading"><h2 id="pages-heading">Recent pages</h2><div class="scroll"><table><thead><tr><th>Page / cycle</th><th>Original operation</th><th>Events</th><th>Native status</th><th>Received</th></tr></thead><tbody id="page-rows"></tbody></table></div></section>
+<section aria-labelledby="events-heading"><h2 id="events-heading">Recent events</h2><div class="scroll"><table><thead><tr><th>Sequence</th><th>Source / event</th><th>Type</th><th>Received</th><th>Payload</th></tr></thead><tbody id="event-rows"></tbody></table></div></section>
+</main>
+<script>
+const el=id=>document.getElementById(id);let csrf='',timer=null,busy=false;
+const cell=(row,text)=>{const td=document.createElement('td');td.textContent=text??'—';row.append(td);return td;};
+const empty=(target,columns,text)=>{const tr=document.createElement('tr');const td=cell(tr,text);td.colSpan=columns;td.className='empty';target.append(tr);};
+function render(data){
+ const s=data.subscription;csrf=data.csrf;busy=data.job?.state==='RUNNING';
+ for(const [id,value] of Object.entries({events:s.events,pages:s.pages,sequence:s.lastSequence,state:s.state,name:s.id,source:s.source,
+  identity:s.feedId+' / '+(s.storeId??'awaiting first page'),revision:s.feedRevision??'awaiting first page'}))el(id).textContent=String(value);
+ for(const id of ['sync','recover','export'])el(id).disabled=busy;
+ el('recover').disabled=busy||!s.pending;
+ el('message').textContent=busy?'Operation running…':s.pending?.errorCode??(data.job?.error??'');
+ el('job').hidden=!data.job;
+ if(data.job)el('job').textContent=JSON.stringify({kind:data.job.kind,state:data.job.state,
+   result:data.job.result?.state??null,error:data.job.error??null,
+   destination:data.job.result?.destination??null,manifest:data.job.result?.manifestPath??null,
+   checksum:data.job.result?.data?.sha256??null},null,2);
+ const pages=el('page-rows');pages.replaceChildren();
+ for(const p of s.recentPages){const tr=document.createElement('tr');cell(tr,p.ordinal+' / '+p.cycle);
+   cell(tr,p.operationId);cell(tr,p.events);cell(tr,p.errorCode??p.nativeStatus);cell(tr,p.acceptedAt);pages.append(tr);}
+ if(!s.recentPages.length)empty(pages,5,'Pages will appear after the first collection.');
+ const events=el('event-rows');events.replaceChildren();
+ for(const e of s.recentEvents){const tr=document.createElement('tr');cell(tr,e.sequence);cell(tr,e.sourceId+' / '+e.eventId);
+   cell(tr,e.type);cell(tr,e.receivedAt);const td=cell(tr,'');const details=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');
+   summary.textContent='View payload';pre.textContent=JSON.stringify(e.payload,null,2);details.append(summary,pre);td.append(details);events.append(tr);}
+ if(!s.recentEvents.length)empty(events,5,'No events received yet.');
+ clearTimeout(timer);if(busy)timer=setTimeout(refresh,1500);
+}
+async function refresh(){try{const res=await fetch('/api/state');const data=await res.json();if(!res.ok)throw new Error(data.error);render(data);}
+ catch(error){el('message').textContent=error.message;}}
+async function action(name,body={}){
+ try{const res=await fetch('/api/'+name,{method:'POST',headers:{'Content-Type':'application/json','X-Feed-CSRF':csrf},body:JSON.stringify(body)});
+ const data=await res.json();if(!res.ok)throw new Error(data.error);await refresh();}
+ catch(error){el('message').textContent=error.message;}
+}
+el('sync').onclick=()=>action('sync');el('recover').onclick=()=>action('recover');el('refresh').onclick=refresh;
+el('export').onclick=()=>action('export',{destination:el('destination').value.trim()});refresh();
+</script></body></html>

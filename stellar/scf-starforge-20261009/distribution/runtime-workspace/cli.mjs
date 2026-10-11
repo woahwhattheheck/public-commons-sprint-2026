@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
+import { readJSON } from './storage.mjs';
 import { fail, json } from './storage.mjs';
 
 const HELP = `Starforge customer runtime workspace
@@ -13,6 +14,13 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace serve --workspace DIRECTORY [--port 8465]
   runtime-workspace status --workspace DIRECTORY [--runtime-id ID]
   runtime-workspace handoff --workspace DIRECTORY --runtime-id ID
+  runtime-workspace managed-open --workspace DIRECTORY --home HOME [--label NAME]
+  runtime-workspace managed-status --workspace DIRECTORY [--home-id ID]
+  runtime-workspace managed-review --workspace DIRECTORY --home-id ID --runtime-id ID
+  runtime-workspace managed-operation --workspace DIRECTORY --request ABSOLUTE_JSON_FILE
+  runtime-workspace managed-recover --workspace DIRECTORY --operation-id UUID
+  runtime-workspace managed-stop --workspace DIRECTORY --operation-id UUID
+  runtime-workspace managed-config --workspace DIRECTORY --home-id ID [--path RELATIVE_FILE]
 
 The private browser receives an original archive or reuses an existing runtime,
 reviews exact dependency profiles, prepares and resumes original installations,
@@ -22,6 +30,10 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  'managed-open': ['--workspace', '--home', '--label'], 'managed-status': ['--workspace', '--home-id'],
+  'managed-review': ['--workspace', '--home-id', '--runtime-id'], 'managed-operation': ['--workspace', '--request'],
+  'managed-recover': ['--workspace', '--operation-id'], 'managed-stop': ['--workspace', '--operation-id'],
+  'managed-config': ['--workspace', '--home-id', '--path'],
   init: ['--workspace', '--runtime-home'], attach: ['--workspace', '--runtime', '--label'],
   serve: ['--workspace', '--port'], status: ['--workspace', '--runtime-id'], handoff: ['--workspace', '--runtime-id'],
 };
@@ -58,7 +70,20 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (command === 'attach') {
+  if (command === 'managed-open') {
+    if (!options['--home']) fail('MANAGED_HOME_REQUIRED');
+    result = await model.openManagedHome({ directory: resolve(options['--home']), label: options['--label'] });
+  } else if (command === 'managed-status') result = await model.managedState({ homeId: options['--home-id'] ?? null });
+  else if (command === 'managed-review') result = await model.reviewManagedAdoption({
+    homeId: options['--home-id'], runtimeId: options['--runtime-id'] });
+  else if (command === 'managed-config') result = await model.managedConfig({
+    homeId: options['--home-id'], ...(options['--path'] ? { path: options['--path'] } : {}) });
+  else if (command === 'managed-operation') {
+    if (!options['--request']) fail('MANAGED_REQUEST_FILE_REQUIRED');
+    result = await model.begin(await readJSON(resolve(options['--request'])));
+  } else if (command === 'managed-recover') result = await model.recoverManagedOperation(options['--operation-id']);
+  else if (command === 'managed-stop') result = await model.stopManagedCommand(options['--operation-id']);
+  else if (command === 'attach') {
     if (!options['--runtime']) fail('RUNTIME_WORKSPACE_RUNTIME_REQUIRED');
     result = await model.attach({ directory: resolve(options['--runtime']), label: options['--label'] });
   } else if (command === 'handoff') {

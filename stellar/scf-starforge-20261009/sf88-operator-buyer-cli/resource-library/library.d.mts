@@ -1,12 +1,13 @@
 import type { FileHandle } from 'node:fs/promises';
 export interface LibraryConfig {
-  schema: 'stellar-forge.sf88.resource-library.v1'; kind: 'inbox' | 'snapshot';
+  schema: 'stellar-forge.sf88.resource-library.v1'; kind: 'inbox' | 'snapshot' | 'collection';
   source: string; roots: string[]; maxFileBytes: number; indexBytes: number;
 }
 export interface Annotation {
   id: string; revision: number; note: string; tags: string[]; starred: boolean; updatedAt: string | null;
+  inheritedRevision?: number;
   source?: {intentId: string; sha256: string | null; configSha256: string; path: string | null;
-    source: {kind: 'inbox' | 'snapshot'; path: string}};
+    source: {kind: 'inbox' | 'snapshot' | 'collection'; path: string}};
 }
 export interface Verification {
   verifiedAt: string; bytes: number; sha256: string; indexedBytes: number;
@@ -19,17 +20,20 @@ export interface Resource {
   httpStatus: number | null; queueState: string | null; method: string | null; url: string;
   paymentTerms: {scheme: string | null; network: string | null; asset: string | null;
     payTo: string | null; maxAtomic: string | null};
-  source: {kind: 'inbox' | 'snapshot'; path: string};
+  source: {kind: 'inbox' | 'snapshot' | 'collection'; path: string};
   status: 'VERIFIED' | 'UNAVAILABLE' | 'INCOMPLETE'; error?: string; verification?: Verification;
-  annotation: Annotation; snippet?: string;
+  annotation: Annotation; snippet?: string; inheritedAnnotation?: Annotation;
+  origin?: {manifestSha256: string; collectionId: string; collectionRevision: number;
+    resource: Omit<Resource,'annotation'>; annotation: Annotation};
 }
 export interface Scan {
-  generation: string; sourceSha256: string; sourceBytes: number; jobCount: number;
+  generation: string; sourceSha256: string; sourceBytes: number; jobCount: number | null;
+  collection?: {id: string; name: string; revision: number; note: string};
   resourceCount: number; withoutFile: number; rejected: Array<{id: string | null; code: string}>;
   startedAt: string; completedAt: string; counts: Partial<Record<Resource['status'], number>>;
 }
 export interface Library {
-  readonly state: string; readonly config: LibraryConfig;
+  readonly state: string; readonly config: LibraryConfig; readonly collections: Collections;
   status(): {config: LibraryConfig; scan: Scan | null; selection: string | null;
     activity: {id: string; state: string; completed: number; total: number | null; startedAt: string} | null;
     scanLease: {id: string; pid: number; host: string; start: string | null} | null};
@@ -48,5 +52,28 @@ export interface Library {
   cancelScan(): ReturnType<Library['status']>;
   close(): Promise<void>;
 }
-export function openLibrary(options: {state: string; kind?: 'inbox' | 'snapshot'; source?: string;
+export function openLibrary(options: {state: string; kind?: 'inbox' | 'snapshot' | 'collection'; source?: string;
   roots?: string[]; maxFileBytes?: number; indexBytes?: number}): Promise<Library>;
+
+export interface ResourceCollection {
+  schema: 'stellar-forge.sf88.resource-collection.v1';
+  id: string; revision: number; name: string; note: string; updatedAt: string; scan: Scan | null;
+  members: Array<Resource & {bytes: number; sha256: string; path: string}>;
+}
+export interface CollectionSelection {
+  id: string; sha256: string; annotationRevision: number; mode?: 'current' | 'retain';
+}
+export interface CollectionSave {
+  id: string; name: string; note?: string; members: CollectionSelection[];
+  expectedRevision: number; operationId: string;
+}
+export interface CollectionSummary {
+  id: string; name: string; note: string; revision: number; updatedAt: string; memberCount: number; bytes: string;
+}
+export interface CollectionPage {total: number; offset: number; limit: number; items: CollectionSummary[]}
+export interface Collections {
+  list(options?: {offset?: number; limit?: number}): CollectionPage;
+  show(id: string, revision?: number): ResourceCollection;
+  history(id: string, options?: {offset?: number; limit?: number}): CollectionPage;
+  save(request: CollectionSave): ResourceCollection;
+}
