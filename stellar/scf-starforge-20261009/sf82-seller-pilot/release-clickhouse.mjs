@@ -86,16 +86,16 @@ export async function prepareClickHouseRelease(packageDirectory) {
     }
     const original = await readClickHouseSourceFile(join(directory, 'source.json'));
     const config = parse(retained['source.json']), plan = parse(retained['merchant-plan.json']);
-    if (!isDeepStrictEqual(config, original.config)) fail('ClickHouse source changed during original validation.');
+    if (stable(config) !== stable(original.config)) fail('ClickHouse source changed during original validation.');
     const bundle = compileClickHouseMerchantPlan(config.queries, plan);
-    if (!isDeepStrictEqual(config.bindings, bundle.bindings) ||
-        !isDeepStrictEqual(parse(retained['bindings.json']), bundle.bindings) ||
-        !isDeepStrictEqual(parse(retained['service.json']), bundle.service) ||
-        !isDeepStrictEqual(await readSellerConfig(join(directory, 'service.json')), bundle.service))
+    if (stable(config.bindings) !== stable(bundle.bindings) ||
+        stable(parse(retained['bindings.json'])) !== stable(bundle.bindings) ||
+        stable(parse(retained['service.json'])) !== stable(bundle.service) ||
+        stable(await readSellerConfig(join(directory, 'service.json'))) !== stable(bundle.service))
       fail('The retained source, typed inputs, payment choices and original compiled service differ. Prepare a new package.');
     const routes = compileSellerRoutes(bundle.service.routes.map(route => ({ id: route.id, offer: route.offer,
       handler() { throw new Error('Release inspection never executes a query.'); }, admit() { return true; } })));
-    if (!isDeepStrictEqual(parse(retained['openapi.json']), compileSellerOpenApi(routes, { mode: 'CHALLENGE_ONLY' })))
+    if (stable(parse(retained['openapi.json'])) !== stable(compileSellerOpenApi(routes, { mode: 'CHALLENGE_ONLY' })))
       fail('The prepared public OpenAPI differs from the original source and merchant plan.');
     const client = generateSellerClient(retained['openapi.json']);
     for (const [file, expected] of [['seller-client.mjs', client.javascript], ['seller-client.d.mts', client.declarations],
