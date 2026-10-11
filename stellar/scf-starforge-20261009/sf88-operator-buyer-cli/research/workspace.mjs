@@ -166,8 +166,7 @@ export async function openResearchWorkspace(directory){
       }
       pages.push(p);seenCursors.add(nextCursor);nextCursor=p.nextCursor;
       if(nextCursor!==null&&seenCursors.has(nextCursor)){broken=true;reason='CURSOR_REPEATED';}
-      else if(nextCursor===null&&p.records>0){broken=true;reason='TERMINAL_CURSOR_WITH_RECORDS';}
-      else reason=nextCursor===null?'TERMINAL_EMPTY_PAGE':'MORE_PAGES';
+      else reason=nextCursor===null?(p.records===0?'TERMINAL_EMPTY_PAGE':'TERMINAL_CURSOR'):'MORE_PAGES';
       check(!broken||name===names.at(-1),'CURSOR_CHAIN_INVALID');
     }
     let annotations={revision:0,items:{}};

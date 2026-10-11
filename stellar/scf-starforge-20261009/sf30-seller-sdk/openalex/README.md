@@ -138,7 +138,7 @@ node sf30-seller-sdk/openalex/cli.mjs gather \
 
 This creates or reopens the named edition at the saved query's current revision and label, then follows the provider cursor chain. Progress records go to stderr; the final edition, query, coverage, and budget snapshot go to stdout. When creating a custom-labelled edition first, use the research CLI's `gather --edition-id` route to preserve that label.
 
-The optional `--max-pages N` can be used for an operator-selected page limit. Omitting it allows the complete cursor walk. Reopening an edition preserves its stored pages and next request. The final empty terminal page is part of the edition's coverage record.
+The optional `--max-pages N` can be used for an operator-selected page limit. Omitting it allows the complete cursor walk. Reopening an edition preserves its stored pages and next request. The exact final response is part of the edition's coverage record. A null next cursor ends the walk whether that response is empty or still contains records; every final record is retained.
 
 For paid customer retrieval, the researcher runs the workspace's `gather` with the original buyer profile, exported client, and selected product. The same workspace also receives already saved provider pages or original buyer results, and exports a complete portable edition.
 
@@ -177,7 +177,7 @@ A 429 response contributes its retry timing to the shared provider state. OpenAl
 
 A successful application response preserves the original provider JSON bytes. The source records the request URL without a provider key, retrieval time, body SHA-256, byte length, reservation, and observed cost. Available quota headers and content type are allowed through to the merchant response; the application adds the provider name, source URL, and source hash.
 
-The complete customer handover consists of the configured product contract and client, the research query and edition, the exact saved page responses, review decisions, report and bibliographies, plus the original buyer results attached to paid pages. The research export's manifest records each exported file hash.
+The complete customer handover consists of the configured product contract and client, the research query and edition, the exact saved page responses, review decisions, report and bibliographies, plus the original buyer results attached to paid pages. The research export's manifest records each exported file hash. The [full-edition receiver](../../sf88-operator-buyer-cli/research/RECEIVING.md) restores one or several complete exports together in a new private workspace, preserving original query revisions, source pages, buyer results and reviews.
 
 Keep the operator's key and private account/runtime files in the service environment. Publish the intended public client and edition deliverables from their prepared export directories.
 
