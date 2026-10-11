@@ -29,6 +29,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
+  arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
+  arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
   sftp                                      Inspect, capture and resume pinned private report files
   sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
   sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
