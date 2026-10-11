@@ -172,6 +172,17 @@ Use the actual reviewed atomic limit and selected option for your offer. The ori
 
 Each response has schema `stellar-forge.mysql-result.v1`, declared `columns`, native column metadata, `rows`, `rowCount`, `truncated` and explicit encoding fields. SQL scalar numbers, exact DECIMAL/BIGINT values and date/time values are returned as strings; binary data is `{"base64":"..."}` and SQL null is JSON null. For example, the native journey preserved the decimal `900719925474099312345.123456`, the ID `9007199254740993`, a microsecond timestamp and Japanese text. Consumers retain decimal strings until passing them to an exact decimal implementation.
 
+## Retain and operate merchant releases
+
+Use the existing SF82 release console and merchant MCP to retain an original prepared
+MySQL package, compare query and payment changes, select a version, run the native
+seller, export its original customer client and roll back. Start with
+`starforge releases stage --store /srv/merchant/releases --id first --mysql-package /srv/merchant/package`.
+The full [MySQL release workflow](../../sf82-seller-pilot/MYSQL_RELEASES.md) covers
+initialization, source and credential handling, native runtime, generation checks,
+client export and same-state reopening. Retained merchant versions keep their
+configuration and commercial terms; queries continue to read current database rows.
+
 ## Resource and lifecycle behavior
 
 The source validates and limits admitted work before queueing it. Query deadlines include waiting for a connection, transaction setup, execution and result processing. A timeout, aborted request or source close retires the affected native socket. Connections are tracked from creation so startup and catalog deadlines also cover a peer that stalls before login. Failed requests are returned to the caller for a deliberate recovery decision. Successful connections are reused until their configured idle timeout.
