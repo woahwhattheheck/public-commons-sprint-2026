@@ -6,6 +6,10 @@ This is a customer-readable delivery package for the **actual existing SF52 sell
 
 SF52's real `inspectChallenge(200, null)` returns `UNPAID_GET_HTTP_200`, not the older generic `NOT_HTTP_402` state. The portable report identifies this exact original-source case as a HIGH-priority checkout-discovery failure, even when the catalog URL is already listed. It tells the merchant to check default free-tier or cached-success routing and expose an unpaid 402 on the intended paid route; historic `NOT_HTTP_402` reports remain interpretable. A visible resource listing is not proof the current origin advertises a valid offer. The focused package test imports the actual SF52 decoder rather than manufacturing an outdated status.
 
+## Source-verified method-aware reports
+
+After SF52 PR665, catalog-only POST/MCP resources use `CATALOG_NON_GET_ONLY`. The report displays `NOT PROBED`, original declared HTTP methods and MCP count, not a fictitious failed GET. Method-specific seller invocation still requires merchant consent and live contract verification; a listing is not evidence of checkout or payment.
+
 ## Two execution modes (Node 22+, no packages)
 
 Live, **read-only GET only**: the same original source performs the seller probe and catalog paging. No buyer signature, POST, index registration, payment, RPC, contact, or GitHub Actions.
