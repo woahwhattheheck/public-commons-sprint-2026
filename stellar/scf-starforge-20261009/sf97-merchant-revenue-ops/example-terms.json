@@ -1,0 +1,21 @@
+{
+  "schema": "stellar-forge.merchant-revenue-ops.v1",
+  "merchantName": "Illustrative merchant (replace with authorized operator data)",
+  "sharedMonthlyFixedUsd": null,
+  "routes": {
+    "dataset": {
+      "expectedPayment": {
+        "scheme": "exact",
+        "network": "stellar:testnet",
+        "asset": "UNVERIFIED_DEMO_ASSET",
+        "atomicAmount": "10000",
+        "payTo": "UNVERIFIED_DEMO_RECIPIENT"
+      },
+      "priceBasis": "Hypothetical fiat value for this demo only; verify asset decimals, FX and actual merchant quote",
+      "unitPriceUsd": "0.01",
+      "perFulfilledUsd": null,
+      "perChallengeUsd": null,
+      "monthlyPaidTarget": 3000
+    }
+  }
+}
