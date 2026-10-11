@@ -1,0 +1,9 @@
+{
+  "name": "@tokenjunkielabs/starforge-mysql-source",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.16.0" },
+  "dependencies": { "mysql2": "3.24.5" }
+}

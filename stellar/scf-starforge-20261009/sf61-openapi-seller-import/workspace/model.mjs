@@ -10,6 +10,7 @@ import { compileUpstreamBindings, validateUpstreamService } from '../../sf30-sel
 import { supportsSellerMethod } from '../../sf30-seller-sdk/http-methods.mjs';
 import { compileOpenApiResponseContract } from '../response-contracts.mjs';
 import { preparePublicOperation, createMerchantCases } from './requests.mjs';
+import { merchantOperationPolicy, merchantValidationEnvironment, merchantOperationSummary } from './operation-plan.mjs';
 
 const LIMIT = 4 * 1024 * 1024;
 const MANIFEST_LIMIT = 1024 * 1024;
@@ -110,7 +111,7 @@ export function prepareMerchant(specText, plan) {
   const facade = structuredClone(spec), selections = [], bindings = [], upstreams = {schema:'stellar-forge.seller-upstreams.v1', bindings:{}};
   const transformations = [], ids = new Set(), routes = [], envNames = new Set(), seen = new Set(), materialized = new Set();
   for (const row of plan.operations) {
-    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract'], 'operation');
+    exactKeys(row, ['method','path','id','serverIndex','amountAtomic','headerEnv','securityAlternative','responseMode','responseValidation','publicDescription','requestExample','timeoutMs','maxResponseBytes','maxInFlight','requestHeaders','cache','availability','enforceResponseContract','idempotency'], 'operation');
     const method = String(row.method).toUpperCase(), key = method + ' ' + row.path;
     if (!supportsSellerMethod(method)) fail(key + ': choose a method supported by the original seller');
     if (seen.has(key)) fail('Duplicate selected operation: ' + key);
@@ -137,7 +138,9 @@ export function prepareMerchant(specText, plan) {
     selections.push({method, path:row.path, serverIndex:0,
       ...(plan.serviceName ? {serviceName:plan.serviceName} : {}),
       accepts:[{scheme:'exact', ...plan.payment, amount:row.amountAtomic}]});
-    bindings.push({method, path:row.path, id, handler:id, validateInput:true});
+    const idempotency = merchantOperationPolicy(row.idempotency,{method,id});
+    bindings.push({method, path:row.path, id, handler:id, validateInput:true,
+      ...(idempotency ? {admit:idempotency.admission} : {})});
     upstreams.bindings[id] = {origin:backend.origin,
       path:backend.pathname.replace(/\/$/, '') + row.path.replace(/\{([^{}]+)\}/g, ':$1'), method,
       headerEnv:headers, responseMode:row.responseMode ?? 'json',
@@ -146,6 +149,7 @@ export function prepareMerchant(specText, plan) {
       ...(row.maxInFlight !== undefined ? {maxInFlight:row.maxInFlight} : {}),
       ...(row.requestHeaders !== undefined ? {requestHeaders:structuredClone(row.requestHeaders)} : {}),
       ...(row.cache !== undefined ? {cache:structuredClone(row.cache)} : {}),
+      ...(idempotency ? {idempotency} : {}),
       ...(row.availability !== undefined ? {availability:structuredClone(row.availability)} : {})};
     transformations.push({method, path:row.path, originalServer:backend.href, publicServer:sellerServer.href,
       publicDescription:publicOperation.description ?? null, requestExampleSupplied:row.requestExample !== undefined,
@@ -175,12 +179,14 @@ export function prepareMerchant(specText, plan) {
   const {cases, review} = createMerchantCases(imported, service, plan);
   // Validate environment REFERENCES only. The original launcher reads actual values.
   const compiled = compileUpstreamBindings(upstreams, {allowLoopback:plan.allowLoopbackUpstream === true,
-    env:Object.fromEntries([...envNames].map(name => [name, 'SET_IN_LAUNCH_ENVIRONMENT']))});
+    env:merchantValidationEnvironment(upstreams,envNames)});
   validateUpstreamService(service, compiled);
   for (const route of routes) {
     route.cache = compiled[route.id].cache;
     route.availability = compiled[route.id].availability;
     route.requestHeaders = [...compiled[route.id].requestHeaders];
+    route.operation = merchantOperationSummary(upstreams.bindings[route.id],compiled[route.id]);
+    if (route.operation && !route.environment.includes(route.operation.keyEnv)) route.environment.push(route.operation.keyEnv);
   }
   return {facade, selections, bindings, upstreams, imported, service, transformations, cases,
     preview:{title:titleOf(spec), sourceSha256:sha(specText), routes,
@@ -268,6 +274,16 @@ export async function savePackage({specText, plan, parent, name}) {
     'Optional shared read policies are retained in upstreams.json. Each delivery still uses the original native payment lifecycle.',
     'The API workspace shows live cache counts and can invalidate a selected binding for the exact managed runtime.',
     'Cached bodies stay in process memory. Restart starts empty; backend credentials and response policy are checked by the original transport.',
+    '', '## Durable POST operations', '',
+    'Selected POST idempotency policies retain the original scope, stateDir, keyEnv reference, ticket/backend header names and bounded ledger settings in upstreams.json.',
+    'Before launch, provision the same persistent 32-byte hexadecimal operation key in its named environment variable. The workspace creates missing canonical private state directories (0700); existing directories must already be private.',
+    'For a shell launch, create each declared state directory with mode 0700 first. Preserve the directory, scope and key across restart or release changes.',
+    'In the running workspace, choose Durable POST operations, enter an operation ID, opaque customer reference, lifetime and exact public request, then create the private buyer ticket file.',
+    'Issuance uses the active original handler after original route and input-schema validation. It makes no backend request or payment.',
+    'The original five-field ticket, matching body/headers/concrete merchant offer, and original SF88 prepared review are stored as create-only 0600 files under operation-tickets. The displayed buyer review command uses these exact private paths.',
+    'Same-host buyer initialization can consume that review directly. For another host, transfer the matching files privately, run chmod 600 on a downloaded ticket, and prepare the buyer with its actual local paths.',
+    'Use the existing operations dashboard to list, inspect, audit or recover the same operation key. Ticket issuance does not mark an operation complete, authorize another payment, or reset its ledger.',
+    'The original buyer workflow is documented in sf88-operator-buyer-cli/OPERATION_TICKETS.md. Native seller shutdown drains actual dispatch before closing the bound operation controllers.',
     '', '## Explicit facade adaptation', '',
     'Original server URLs remain in original-openapi.json. Selected facade operations use your declared public seller server.',
     'Supported backend security is satisfied by operator header environment references and removed only from the generated public facade.',

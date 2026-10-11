@@ -1,3 +1,4 @@
+import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
@@ -38,6 +39,7 @@ async function act(work) {
 function field(label,value,type='text') {
   const container=make('label',label),input=make('input');input.type=type;input.value=value??'';container.append(input);return {container,input};
 }
+const operationPanel=createOperationPanel({container:$('operation-runtime'),make,field,api,act,notice});
 function checkField(label,value) {
   const container=make('label',undefined,'check wide'),input=make('input');
   input.type='checkbox';input.checked=value===true;container.append(input,make('span',label));return {container,input};
@@ -106,12 +108,15 @@ function drawRoutes(saved=[]) {
           make('p','Enable only when this API result may be reused by different buyers. Native payment remains per delivery. Origin privacy and freshness rules can shorten or prevent reuse.','hint'),cacheFields);
         settings.append(section);
       }
+      const operation=createOperationSettings({make,field},previous,op.method);
+      if(operation)settings.append(operation.element);
       const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,capacity.input,forwarded.input,guard.input];
       const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
       const toggle=()=>{
         controls.forEach(c=>{c.disabled=!check.checked;});
         validation.input.disabled=!check.checked||mode.input.value!=='json';
         guardControls.forEach(c=>{c.disabled=!check.checked||!guard.input.checked;});
+        operation?.setEnabled(check.checked);
         if(cache){cache.enabled.disabled=!check.checked;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked;});}
       };
       check.addEventListener('change',toggle);guard.input.addEventListener('change',toggle);
@@ -119,7 +124,7 @@ function drawRoutes(saved=[]) {
       cache?.enabled.addEventListener('change',toggle);toggle();
       routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
         mode:mode.input,timeout:timeout.input,size:size.input,capacity:capacity.input,forwarded:forwarded.input,
-        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache});
+        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,operation});
     }
     $('routes').append(card);
   }
@@ -133,6 +138,7 @@ function planFromForm() {
       ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
       publicDescription:r.description.value.trim(),responseValidation:r.validation.value,
       ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
+      ...(r.operation?.read()?{idempotency:r.operation.read()}:{}),
       securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxInFlight:Number(r.capacity.value),
       requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),
       ...(r.guard.checked?{availability:{failureThreshold:Number(r.failureThreshold.value),resetAfterMs:Number(r.resetAfter.value),maxResetAfterMs:Number(r.maxResetAfter.value)}}:{}),
@@ -177,12 +183,14 @@ function saved(name) {
   selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
 }
 function runtime(value) {
+  operationPanel.render(value);
   $('runtime').replaceChildren();$('cache-runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
   $('check-routes').disabled=value.state!=='RUNNING'||value.mode!=='CHALLENGE_ONLY';
   if(value.state!=='RUNNING'){$('runtime').append(make('p','No seller is managed by this workspace.','small'));return;}
   const mode=value.mode==='CHALLENGE_ONLY'?'Challenge preview':value.mode==='NATIVE_X402'?'Native seller':'Seller running';
   $('runtime').append(make('p',value.name+' · '+mode));
-  for(const [text,url] of [['Open operations dashboard',value.operations],['Inspect seller offers',value.seller+'/_seller/offers']]) {
+  for(const [text,url] of [['Open operations dashboard',value.operations],['Inspect seller offers',value.seller+'/_seller/offers'],
+    ...(value.operationConsole?[['Open operation recovery',value.operationConsole]]:[])]) {
     const parsed=new URL(url);
     if(parsed.protocol==='http:'&&parsed.hostname==='127.0.0.1') {
       const link=make('a',text);link.href=url;link.target='_blank';link.rel='noopener';link.referrerPolicy='origin';$('runtime').append(link);

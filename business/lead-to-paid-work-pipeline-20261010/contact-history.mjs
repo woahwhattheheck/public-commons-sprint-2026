@@ -54,7 +54,8 @@ function unpack(result, path, operation, depth = 0) {
     throw Error('Registry result has no readable provider data');
   }
   if (result.outcome) {
-    must(operation === 'first_contact.export' && result.outcome === 'CONTACT_EXPORT' && result.path === path, 'Use a completed canonical export, not a prepared write plan');
+    const identities = [result.claim_path,result.path].filter(value => value !== undefined);
+    must(operation === 'first_contact.export' && result.outcome === 'CONTACT_EXPORT' && identities.length && identities.every(value => value === path), 'Use a completed canonical export whose path matches the requested record');
     if (result.http_status === 404 && result.record === null) return null;
     must(result.http_status === 200 && result.record, 'Canonical export did not read a record');
     return unpack(result.record, path, operation, depth + 1);
