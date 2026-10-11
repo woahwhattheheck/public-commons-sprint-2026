@@ -5,6 +5,7 @@ import { dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { compileSellerRoutes, createSellerResourceHandler } from './resource-server.mjs';
 import { validateAdmissionTimeout } from './admission.mjs';
+import { createConfiguredAdmission, validateInputOption } from './configured-admission.mjs';
 import { compileServicePath } from './route-path.mjs';
 import { readJsonResponseFile, validateResponseFile } from './response-file.mjs';
 import { createSellerDeveloperPortal } from './developer-portal.mjs';
@@ -39,6 +40,7 @@ function validateConfig(config) {
       throw new TypeError('Each route needs a unique ID, canonical path and SF30 definition or imported offer');
     }
     seen.add(route.id);
+    validateInputOption(route);
     if (route.definition && OWN(route.definition, 'url')) throw new TypeError('Use route.path and publicOrigin instead of definition.url');
     if (route.offer) {
       const binding = compileServicePath(route.offer);
@@ -108,6 +110,9 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
       throw new TypeError(`Admission export missing: ${route.admit}`);
     }
   }
+  const admissions = new Map(config.routes.map(route =>
+    [route.id, createConfiguredAdmission(route, handlers)]));
+  const inputValidation = new Set(config.routes.filter(route => route.validateInput === true).map(route => route.id));
   const fileResponses = new Map();
   for (const route of config.routes) {
     if (!OWN(route, 'responseFile')) continue;
@@ -137,7 +142,7 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : url;
     const compiled = compileSellerRoutes(config.routes.map(route => ({
       id: route.id,
-      ...(route.admit ? { admit: handlers[route.admit] } : {}),
+      ...(admissions.get(route.id) ? { admit: admissions.get(route.id) } : {}),
       ...(route.offer ? { offer: route.offer } : { definition: { ...route.definition, url: origin + route.path } }),
       handler: route.handler ? handlers[route.handler] : async () => ({
         status: 200, headers: { 'content-type': 'application/json' },
@@ -153,6 +158,7 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
       id: route.id, method: route.method, url: route.offer.resource.url,
       admission: typeof route.admit === 'function',
+      inputValidation: inputValidation.has(route.id),
       ...(route.binding.dynamic ? { routeTemplate: route.path } : {}),
     })) };
     dispatch = (req, res) => {
