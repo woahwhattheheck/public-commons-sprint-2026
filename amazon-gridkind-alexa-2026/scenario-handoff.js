@@ -119,12 +119,12 @@ export function mountScenarioHandoff({getDraft, getProposal, applyDraft, onProbl
       status('Scenario ready. Apply inputs to the editor, then plan and approve a new schedule.');
     }catch(error){if(thisSelection===selection)status(error.message||'Cannot read this scenario.');}
   };
-  applyButton.onclick=()=>{
-    if(!pending||isBusy())return;
+  applyButton.onclick=async()=>{
+    if(!pending||isBusy()||applying)return;
     try{
       applying=true;
       // applyDraft must call the same dirty-state invalidation as manual edits.
-      applyDraft(pending);
+      await applyDraft(pending);
       pending=null;selection++;applyButton.disabled=true;input.value='';preview.textContent='';
       status('Inputs applied. Run Plan this scenario, then approve the newly generated schedule.');
     }catch(error){onProblem(error);}finally{applying=false;}
