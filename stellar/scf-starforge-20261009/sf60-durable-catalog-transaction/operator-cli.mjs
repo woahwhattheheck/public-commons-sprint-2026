@@ -2,15 +2,17 @@
 // MIT. File-to-original-SF73/SF95 operations on a running local SF60 owner.
 import { constants as FS } from 'node:fs';
 import { open, unlink } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requestCatalogOperator } from './operator.mjs';
+import { requestCatalogOperator, SIGNED_BATCH_SCHEMA, SIGNED_BATCH_PLAN_SCHEMA } from './operator.mjs';
+import { MAX_BATCH_OPERATIONS } from './journal.mjs';
+import { renderReview } from './bulk-import.mjs';
 
 const USAGE = [
   'Live catalog operator (Node 22+, same OS user as operator.mjs):',
   '  status --directory DIR',
   '  list --directory DIR [--query "limit=20&offset=0"]',
-  '  search --directory DIR --query "q=weather&limit=20"',
+  '  search --directory DIR --query "query=weather&limit=20"',
   '  lookup --directory DIR --catalog-key KEY',
   '  history --directory DIR --lifecycle-id ID',
   '  admit --directory DIR --seller ID --sequence N --entry ORIGINAL.json --proofs PROOFS.json',
@@ -18,6 +20,8 @@ const USAGE = [
   '  prepare-withdrawal --directory DIR --seller ID --catalog-key KEY',
   '        --source-url HTTPS --reason TEXT --out REQUEST.json',
   '  apply-withdrawal --directory DIR --envelope SELLER_SIGNED.json [--out RECEIPT.json]',
+  '  preview-batch --directory DIR --batch FILE_MANIFEST.json --out PLAN.json [--html REVIEW.html]',
+  '  apply-batch --directory DIR --batch FILE_MANIFEST.json --plan PLAN.json [--out RECEIPT.json]',
   'All commands support --out NEW_FILE and --request-id ID. No command signs or pays.',
   'Seller signing remains the original sf95-signed-seller-withdrawal/cli.mjs sign command.',
 ].join('\n');
@@ -30,6 +34,8 @@ const definitions = {
   admit: { required: ['seller', 'sequence', 'entry', 'proofs', 'source-url', 'observed-at'] },
   'prepare-withdrawal': { required: ['seller', 'catalog-key', 'source-url', 'reason', 'out'] },
   'apply-withdrawal': { required: ['envelope'] },
+  'preview-batch': { required: ['batch','out'], optional:['html'] },
+  'apply-batch': { required: ['batch','plan'] },
 };
 function parse(argv) {
   const [operation, ...args] = argv, definition = definitions[operation];
@@ -51,12 +57,47 @@ async function bytes(filename, limit) {
   try {
     const meta = await handle.stat();
     if (!meta.isFile() || meta.size < 1 || meta.size > limit) throw new Error('LOCAL_INPUT_SIZE_INVALID');
-    const content = await handle.readFile();
-    if (content.length !== meta.size) throw new Error('LOCAL_INPUT_CHANGED_DURING_READ');
-    return content;
+    const content = Buffer.alloc(meta.size + 1);
+    let size = 0;
+    while (size < content.length) {
+      const part = await handle.read(content,size,content.length-size,null);
+      if (!part.bytesRead) break;
+      size += part.bytesRead;
+    }
+    if (size !== meta.size) throw new Error('LOCAL_INPUT_CHANGED_DURING_READ');
+    return content.subarray(0,size);
   } finally { await handle.close(); }
 }
-const json = async (filename, limit) => JSON.parse((await bytes(filename, limit)).toString('utf8'));
+const json = async (filename, limit) => {
+  const raw = await bytes(filename,limit);
+  try {return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
+  catch {throw new Error('LOCAL_INPUT_JSON_INVALID');}
+};
+
+/** Resolve entry/proof files relative to the manifest, retaining original entry bytes. */
+export async function readSignedBatch(filename) {
+  const manifest = await json(filename,1024*1024);
+  if (manifest?.schema !== 'stellar-forge.catalog-signed-batch-files/v1' ||
+      Object.keys(manifest).some(key=>!['schema','admissions'].includes(key)) ||
+      !Array.isArray(manifest.admissions) || !manifest.admissions.length ||
+      manifest.admissions.length>MAX_BATCH_OPERATIONS) throw new Error('SIGNED_BATCH_FILES_SCHEMA_INVALID');
+  const admissions=[], base=dirname(resolve(filename));
+  let total=0;
+  const keys=['sellerId','sequence','sourceURL','observedAt','entry','proofs'];
+  for (const [index,row] of manifest.admissions.entries()) {
+    if (!row || typeof row!=='object' || Array.isArray(row) || Object.keys(row).length!==keys.length ||
+        keys.some(key=>!Object.hasOwn(row,key)) || typeof row.entry!=='string' || !row.entry ||
+        typeof row.proofs!=='string' || !row.proofs) throw new Error(`SIGNED_BATCH_FILE_ROW_${index}_INVALID`);
+    const source=await bytes(resolve(base,row.entry),65536);
+    const proofs=await json(resolve(base,row.proofs),384*1024);
+    const admission={sellerId:row.sellerId,sequence:row.sequence,sourceURL:row.sourceURL,
+      observedAt:row.observedAt,sourceBase64:source.toString('base64'),proofs};
+    total+=Buffer.byteLength(JSON.stringify(admission))+1;
+    if(total>8*1024*1024-8192)throw new Error('SIGNED_BATCH_COMMAND_SIZE_LIMIT');
+    admissions.push(admission);
+  }
+  return {schema:SIGNED_BATCH_SCHEMA,admissions};
+}
 
 export async function run(argv = process.argv.slice(2)) {
   if (argv.length === 1 && argv[0] === '--help') { console.log(USAGE); return; }
@@ -80,26 +121,49 @@ export async function run(argv = process.argv.slice(2)) {
   } else if (operation === 'apply-withdrawal') {
     input = { envelope: await json(o.envelope, 128 * 1024) };
   }
+  if (operation === 'preview-batch' || operation === 'apply-batch') {
+    const batch=await readSignedBatch(o.batch);
+    input={batch};
+    if(operation==='apply-batch') {
+      const plan=await json(o.plan,32*1024*1024);
+      if(plan?.schema!==SIGNED_BATCH_PLAN_SCHEMA || !plan.review)throw new Error('SIGNED_BATCH_PLAN_REQUIRED');
+      Object.assign(input,{expectedHead:plan.review.baseHead,expectedPlan:plan.review.planId,
+        expectedBatch:plan.batchSha256,expectedPolicy:plan.policySha256});
+    }
+  }
   // Reserve any output name before sending a mutation. A typo/existing file
   // therefore cannot turn a successful remote commit into a local save error.
-  let output;
-  if (o.out) output = await open(o.out, 'wx', 0o600);
+  let output,html;
+  try {
+    if (o.out) output = await open(o.out,'wx',0o600);
+    if (o.html) html = await open(o.html,'wx',0o600);
+  } catch(error) {
+    if(output){await output.close();await unlink(o.out).catch(()=>{});}
+    throw error;
+  }
   let result, requested = false, persisted = false;
   try {
     requested = true;
     result = await requestCatalogOperator({ directory: o.directory, operation, input,
       ...(o['request-id'] ? { requestId: o['request-id'] } : {}) });
     const text = JSON.stringify(result, null, 2) + '\n';
+    if(html) {
+      const content=renderReview({review:result.review,inputSha256:result.batchSha256,authoritiesSha256:result.policySha256},
+        {notice:`The running operator verified every included SF50 quote proof against startup-pinned seller keys. Apply rechecks signatures and expiry. Earliest proof expiry: ${result.expiresAt}. No payment is made; amounts below are advertised terms.`});
+      await html.writeFile(content);await html.sync();
+    }
     if (output) {
       await output.writeFile(text); await output.sync(); persisted = true;
-      console.log(JSON.stringify({ saved: resolve(o.out), operation, result }));
+      console.log(JSON.stringify({ saved: resolve(o.out), operation,
+        ...(o.html?{html:resolve(o.html)}:{}),
+        ...(operation==='preview-batch'?{changes:result.review.applied,replays:result.review.replayed,expiresAt:result.expiresAt}: {result}) }));
     } else console.log(text.trimEnd());
     return result;
   } catch (error) {
     if (result !== undefined) {
       // Retain the actual successful result if the local output fsync failed.
       console.error(JSON.stringify({ error: 'COMMAND_SUCCEEDED_OUTPUT_SAVE_FAILED', operation, result }));
-    } else if (requested && error.commandSent === true && ['admit', 'apply-withdrawal'].includes(operation) &&
+    } else if (requested && error.commandSent === true && ['admit', 'apply-withdrawal', 'apply-batch'].includes(operation) &&
         !Number.isInteger(error.statusCode)) {
       console.error(JSON.stringify({ error: 'TRANSPORT_OUTCOME_UNKNOWN_CHECK_CATALOG', operation,
         requestId: error.requestId ?? o['request-id'] ?? null,
@@ -107,6 +171,7 @@ export async function run(argv = process.argv.slice(2)) {
     }
     throw error;
   } finally {
+    if(html) {await html.close();if(!persisted && result===undefined)await unlink(o.html).catch(()=>{});}
     if (output) {
       await output.close();
       if (!persisted && result === undefined) await unlink(o.out).catch(() => {});
