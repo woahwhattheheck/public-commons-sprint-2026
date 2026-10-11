@@ -1,6 +1,7 @@
 // MIT. Live request admission for actual SF30/SF61 imported seller offers.
 // Reuses the exact original SF25 Draft 2020-12 validator; never touches payment.
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (value, key) => Object.hasOwn(value, key);
@@ -64,7 +65,7 @@ export function createLiveRequestAdmission(offer) {
   const reference = extension.info?.input;
   const schemaInput = extension.schema?.properties?.input;
   if (!object(reference) || reference.type !== 'http' ||
-      !['GET', 'HEAD', 'POST'].includes(reference.method) ||
+      !supportsSellerMethod(reference.method) ||
       !object(schemaInput) || !object(schemaInput.properties)) {
     throw new TypeError('A supported SF30 HTTP Bazaar offer is required');
   }
