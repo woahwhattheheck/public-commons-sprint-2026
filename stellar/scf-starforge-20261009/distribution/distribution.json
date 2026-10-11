@@ -215,7 +215,8 @@
     "mcp-buyer": "stellar-forge/mcp-paid-agent/serve.mjs",
     "mcp-results": "stellar-forge/mcp-paid-agent/result-cli.mjs",
     "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs",
-    "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
+    "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
+    "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -391,7 +392,9 @@
     "./merchant/mcp/data-tools": "./source/stellar-forge/mcp-paid-agent/data-tools.mjs",
     "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs",
     "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs",
-    "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
+    "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
+    "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
+    "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs"
   },
   "nativePeers": {
     "@x402/core": {
