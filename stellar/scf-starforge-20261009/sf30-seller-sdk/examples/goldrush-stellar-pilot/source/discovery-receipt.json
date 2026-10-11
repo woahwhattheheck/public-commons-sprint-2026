@@ -1,0 +1,12 @@
+{
+  "url": "https://x402.goldrush.dev/v1/x402/endpoints",
+  "httpStatus": 200,
+  "serverDate": "2026-10-11T18:57:17Z",
+  "originalBytes": 71078,
+  "originalSha256": "32bb735f15862a8246f1bdbdf74526fde4b388a4e613d3f0d158996516785450",
+  "originalEndpointCount": 54,
+  "selectedEndpointCount": 2,
+  "projection": "Only the two implemented endpoint identities, route templates, supported chains, pricing and global payment metadata; full raw response retained in private acquisition state.",
+  "requests": 1,
+  "payments": 0
+}
