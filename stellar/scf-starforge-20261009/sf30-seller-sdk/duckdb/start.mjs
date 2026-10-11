@@ -9,6 +9,7 @@ const HELP = `Usage: node duckdb/start.mjs --source SOURCE.json --config SERVICE
   [--operations-port 8424 | --no-operations]
   [--facilitator HTTPS_URL] [--allow-local-facilitator]
   [--max-in-flight 64] [--drain-grace-ms 60000]
+  [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
 Without a facilitator, original SF30 serves HTTP 402 challenges without paid query execution.`;
 export function safeCode(issue) {
   const value = issue?.code ?? issue?.message;
@@ -21,7 +22,7 @@ export async function main(args = process.argv.slice(2), constraints = {}) {
     const key = args[i];
     if (flags.has(key)) throw new TypeError('DUCKDB_DUPLICATE_OPTION');
     if (['--no-operations', '--allow-local-facilitator'].includes(key)) { flags.set(key, true); continue; }
-    if (!['--source', '--config', '--python', '--port', '--operations-port', '--facilitator', '--max-in-flight', '--drain-grace-ms'].includes(key) ||
+    if (!['--source', '--config', '--python', '--port', '--operations-port', '--facilitator', '--max-in-flight', '--drain-grace-ms', '--availability-dir'].includes(key) ||
         !args[i + 1] || args[i + 1].startsWith('--')) throw new TypeError(HELP);
     flags.set(key, args[++i]);
   }
@@ -42,12 +43,14 @@ export async function main(args = process.argv.slice(2), constraints = {}) {
   const session = await startDuckdbSeller({ sourceFile: resolve(flags.get('--source')), configFile: resolve(flags.get('--config')),
     expectedSourceSha256: constraints.expectedSourceSha256, expectedSourceConfig: constraints.expectedSourceConfig,
     expectedServiceConfig: constraints.expectedServiceConfig,
+    availabilityDirectory: flags.get('--availability-dir'),
     python: flags.get('--python') ?? 'python3', nativeFactory,
     port: Number(flags.get('--port') ?? 8423), operationsPort: flags.has('--no-operations') ? null : Number(flags.get('--operations-port') ?? 8424),
     maxInFlight: Number(flags.get('--max-in-flight') ?? 64), drainGraceMs: Number(flags.get('--drain-grace-ms') ?? 60000) });
   process.stdout.write(JSON.stringify({ url: session.seller.url, mode: session.seller.mode,
     docs: session.seller.url + '/_seller/docs', ready: session.seller.url + '/_seller/ready',
-    ...(session.operations ? { operations: session.operations.url } : {}),
+    ...(session.operations ? { operations: session.operations.url, availability: session.operations.availabilityUrl,
+      availabilityControl: session.operations.availabilityControlUrl } : {}),
     sourceSha256: session.source.describe().sourceSha256, engineVersion: session.source.inspect().engineVersion }) + '\n');
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
     session.close().then(() => { process.exitCode = 0; }, () => { process.exitCode = 1; });
