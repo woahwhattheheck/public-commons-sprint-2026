@@ -760,7 +760,7 @@
       "fields": [
         {
           "position": 0,
-          "label": "ACCT #",
+          "label": "ACCT#",
           "exportField": null,
           "importField": null,
           "required": "YES",
