@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePublisherMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -13,6 +13,7 @@ const HELP = `Starforge merchant MCP
   init-fleet --dir NEW_DIRECTORY --plan ORIGINAL_FLEET_PLAN.json [--fleet-directory RETAINED_DIRECTORY] [--name NAME]
        [--accounting ACCOUNTING_JSON]
   init-receiving --dir NEW_DIRECTORY --receiving RECEIVING_CONNECTION_JSON [--name NAME]
+  init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json [--name NAME]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
        [--handlers TRUSTED_MODULE.mjs | --upstreams UPSTREAMS.json]
@@ -78,7 +79,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     const handler = createMcpToolHandler(operator, { bearerToken: environment[tokenEnv],
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
-      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. Payment verification and settlement remain in the original seller and configured facilitator.' });
+      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts. With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply. For receiving, inspect host source aliases, open the original saved workspace, and retain prepare/import/review IDs with exact source and plan digests. Read saved review status before retrying; replay uses the original capture. Close receiving to hand the same directory to its browser. Customer client export reads original metadata and retains its completion receipt. After a lost response, inspect merchant_client_export_status; legacy exports require explicit adoption of the inspected complete files digest. File delivery reads the original five payloads and receipt without running the seller or generated code. For accounting, list declared sources and explicitly open their original workspace. Review a recovery request before importing its retained preview, follow jobs and refresh the current revision, then capture and inspect the original report. File retrieval returns SHA-pinned chunks of the saved response or original report/archive; it never purchases again. Close the accounting workspace to release its original lease. For a publisher connection, list merchant_publishers and explicitly open its declared workspace; saved enabled refreshes resume. Inspect native source, plan, candidate and target before review/publication. Use original run UUIDs, review IDs and schedule revisions; reopen buyer files by the recorded handoff UUID. Close only the exact owned publisher instance. Payment verification and settlement remain in the original seller and configured facilitator.' });
     server = createServer(handler);
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
@@ -146,6 +147,13 @@ export async function main(args = process.argv.slice(2)) {
       process.stdout.write(JSON.stringify(result) + '\n'); return result;
     } finally { process.off('SIGINT', stop); process.off('SIGTERM', stop); }
   }
+  if (command === 'init-publishers') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializePublisherMerchant({ directory: options.get('--dir'), connection: options.get('--connection'),
+      ...(options.has('--name') ? { name: options.get('--name') } : {}) });
+    process.stdout.write(JSON.stringify(result) + '\n'); return result;
+  }
   if (command === 'init-accounting') {
     const options = pairs(rest, ['--dir', '--accounting', '--name']);
     if (!options.has('--dir') || !options.has('--accounting')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --accounting.');
@@ -183,7 +191,7 @@ export async function main(args = process.argv.slice(2)) {
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, serve, inspect-support, inspect-client, download-support, download-client or reopen-support.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet, init-accounting, init-receiving, init-publishers, serve, inspect-support, inspect-client, download-support, download-client or reopen-support.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),

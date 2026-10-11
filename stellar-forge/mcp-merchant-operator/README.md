@@ -412,3 +412,7 @@ explicitly with `merchant_receiving_open`; `merchant_receiving_close` drains the
 original controller and releases its lease for browser or CLI use.
 [Receiving setup and complete workflows](./RECEIVING.md) document all thirteen
 tools, host configuration, replay, comparison, export and browser handoff.
+
+## Retained data publication
+
+The same provider now operates original PostgreSQL, SQLite and MySQL publisher workspaces: approved saved query and typed candidate, native review/publication, recurring maintenance, retained buyer configuration and restart recovery. Use `init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json` or add the host `publisherConnection` to an existing merchant. [PUBLISHERS.md](PUBLISHERS.md) gives complete setup, agent operations, seller/customer handoff and shutdown.
