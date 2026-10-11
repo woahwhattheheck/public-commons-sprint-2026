@@ -1,0 +1,23 @@
+{
+  "schema": "stellar-forge.open-meteo-operations.v1",
+  "publicOrigin": "https://YOUR_WEATHER_MERCHANT.example",
+  "provider": {
+    "mode": "evaluation"
+  },
+  "payment": {
+    "scheme": "exact",
+    "network": "stellar:testnet",
+    "asset": "REPLACE_WITH_REVIEWED_ASSET_CONTRACT",
+    "payTo": "REPLACE_WITH_REVIEWED_MERCHANT_ACCOUNT",
+    "maxTimeoutSeconds": 600,
+    "extra": {
+      "paymentFlow": "authorization"
+    }
+  },
+  "prices": {
+    "forecast": "10000",
+    "history": "10000",
+    "ensemble": "10000"
+  },
+  "maxInFlight": 4
+}

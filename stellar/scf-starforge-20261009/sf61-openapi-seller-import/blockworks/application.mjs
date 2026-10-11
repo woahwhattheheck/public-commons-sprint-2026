@@ -29,9 +29,11 @@ function inventory(value) {
   return value;
 }
 
-export async function openMigrationApplication({ parent, origin, parentRuntime, transport, python, buyerTransport, receiverOptions = {} } = {}) {
+export async function openMigrationApplication({ parent, origin, parentRuntime, transport, python, buyerTransport, receiverOptions = {},
+  env = process.env, oauthConnections = [], allowLoopbackOAuth = false, oauthLookup, validatePlan } = {}) {
+  const runtimeEnv = { ...env };
   const projects = await openMigrationProjects({ parent });
-  const releases = await openMigrationReleases({ projects, origin, parentRuntime });
+  const releases = await openMigrationReleases({ projects, origin, parentRuntime, env: runtimeEnv, validatePlan });
   const jobs = new Map(), receivers = new Map(), receivedWorkspaces = new Map(); let closing = false;
   const handovers = await openMigrationHandovers({ projects, releases, acquisition, python });
   async function acquirer(projectId, sourceRef) {
@@ -271,7 +273,8 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     let session = receivedWorkspaces.get(name);
     if (!session) {
       const { startWorkspace } = await import('../workspace/server.mjs');
-      session = await startWorkspace({ parent: join(projects.merchantParent, 'received-migrations', name), port: 0, noSignals: true });
+      session = await startWorkspace({ parent: join(projects.merchantParent, 'received-migrations', name), port: 0, noSignals: true,
+        env: runtimeEnv, oauthConnections, allowLoopbackOAuth, oauthLookup });
       receivedWorkspaces.set(name, session);
     }
     const url = new URL(session.url); url.pathname = '/migrations/'; url.searchParams.set('project', found.projectId);
@@ -294,10 +297,10 @@ export async function openMigrationApplication({ parent, origin, parentRuntime, 
     const current = [...jobs.values()]; for (const job of current) job.controller.abort();
     await Promise.allSettled(current.map(job => job.promise));
     const ends = await Promise.allSettled([...receivers.values(), ...receivedWorkspaces.values()].map(session => session.close()));
-    await releases.close();
     const errors = ends.filter(result => result.status === 'rejected').map(result => result.reason);
-    if (errors.length) throw new AggregateError(errors, 'An owned receiving workspace did not finish stopping.');
+    try { await releases.close(); } catch (error) { errors.push(error); }
     receivers.clear(); receivedWorkspaces.clear();
+    if (errors.length) throw new AggregateError(errors, 'Owned migration and receiving sessions did not finish stopping.');
   }
   return { projects, releases, handovers, snapshot, openReceiver, closeReceiver, receiverView, retainReceivedResponse,
     createHandover, importHandover, listReceivedWorkspaces, openReceivedWorkspace, acquisition, acquirer, mappingSources, addSource, createAcquisition, startAcquisition, stopAcquisition,

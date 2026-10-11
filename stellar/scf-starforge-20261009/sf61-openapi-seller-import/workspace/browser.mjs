@@ -1,4 +1,5 @@
 import { createAuthenticationPanel, appendAuthenticationReview, renderCredentialRuntime } from './authentication-browser.mjs';
+import { createOAuthConnections } from './oauth-browser.mjs';
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
 import { createRevisionDesk } from './revision-browser.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
@@ -8,14 +9,14 @@ const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
 $('migration-link').href='/migrations/#'+token;
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
   const form=body instanceof FormData;
   const response=await fetch('/api/'+path,{method:body===undefined?'GET':'POST',headers:{'x-workspace-token':token,...(body===undefined||form?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:form?body:JSON.stringify(body)})});
   const value=await response.json();
-  if(!response.ok)throw new Error(value.error??'Workspace request failed');
+  if(!response.ok){const error=new Error(value.error??'Workspace request failed');error.status=response.status;error.code=value.code;error.outcomeUnknown=value.outcomeUnknown===true;throw error;}
   return value;
 }
 function available() {
@@ -23,8 +24,7 @@ function available() {
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
-  postmanPanel.refresh(busy);
-  revisionDesk?.available(busy);
+  revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);
 }
 function dirty() {
   selectedPackage=null;
@@ -50,11 +50,6 @@ function field(label,value,type='text') {
   const container=make('label',label),input=make('input');input.type=type;input.value=value??'';container.append(input);return {container,input};
 }
 const operationPanel=createOperationPanel({container:$('operation-runtime'),make,field,api,act,notice});
-revisionDesk=createRevisionDesk({container:$('source-revisions'),api,act,notice,onSaved:async(result,configuration)=>{
-  await loadSource(configuration.specText,configuration.plan);preview(result.preview);await saved(result.name,result);
-  $('package-name').value=result.name;$('saved-path').textContent='Saved to '+result.folder+'\n\n'+result.command;$('saved-path').hidden=false;
-  await refresh();
-}});
 function checkField(label,value) {
   const container=make('label',undefined,'check wide'),input=make('input');
   input.type='checkbox';input.checked=value===true;container.append(input,make('span',label));return {container,input};
@@ -118,11 +113,22 @@ function createQuerySettings(op,previous) {
   }};
 }
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
-const postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
+postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
   async onSource(text,operations) {
     const current=mergePostmanMerchantPlan({currentSource:specText,source:text,currentPlan:planFromForm(),operations});
     await loadSource(text,current);
   }});
+connections=createOAuthConnections({container:$('oauth-connections'),make,field,selectField,api,act,notice,
+  onChanged(values,changed){
+    for(const route of routeFields)route.authentication?.refreshConnections();
+    revisionDesk?.connectionsChanged(changed);
+    if(changed.some(alias=>routeFields.some(route=>route.authentication?.usesAlias(alias))))dirty();
+  }});
+revisionDesk=createRevisionDesk({container:$('source-revisions'),api,act,notice,connections,onSaved:async(result,configuration)=>{
+  await loadSource(configuration.specText,configuration.plan);preview(result.preview);await saved(result.name,result);
+  $('package-name').value=result.name;$('saved-path').textContent='Saved to '+result.folder+'\n\n'+result.command;$('saved-path').hidden=false;
+  await refresh();
+}});
 function drawRoutes(saved=[]) {
   const map=new Map(saved.map(v=>[v.method.toUpperCase()+' '+v.path,v]));
   $('routes').replaceChildren();routeFields=[];
@@ -175,7 +181,7 @@ function drawRoutes(saved=[]) {
       if(op.streamError) fields.append(make('p','Stream declaration: '+op.streamError,'hint wide'));
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
       const authentication=createAuthenticationPanel({operation:op,definitions:inspection.backendSecurity??[],previous,
-        server:server.input,security:security.input,make,field,selectField});settings.append(authentication.element);
+        server:server.input,security:security.input,make,field,selectField,connections,sourceText:()=>specText,act,notice,onChanged:dirty});settings.append(authentication.element);
       let cache=null;
       if(['GET','HEAD'].includes(op.method)) {
         const section=make('details'),cacheFields=make('div',undefined,'fields');
@@ -252,7 +258,8 @@ function fillPlan(plan) {
 async function loadSource(text,plan) {
   const info=await api('inspect',{specText:text});
   specText=text;inspection=info;selectedPackage=null;
-  $('source-summary').textContent=info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation');
+  $('source-summary').replaceChildren(make('p',info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation')),
+    make('p','Original source SHA256: '+info.sourceSha256,'hint wrap'));
   fillPlan(plan);dirty();available();
   await postmanPanel.reopen(text);
 }
@@ -322,6 +329,7 @@ function runtime(value) {
   }
 }
 async function refresh() {
+  await connections.refresh();
   const result=await api('packages');$('packages').replaceChildren();
   for(const project of result.packages) {
     const button=make('button',undefined,'project');button.type='button';button.append(make('strong',project.name),
