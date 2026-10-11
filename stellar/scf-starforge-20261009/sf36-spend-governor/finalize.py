@@ -156,7 +156,7 @@ def verified_facts(proof, request, request_sha, transaction, payer):
 
 
 def finalize_source(governor, source, payer, *, node, rpc_endpoint=DEFAULT_RPC,
-                    expected_request_sha=None):
+                    expected_request_sha=None, rpc_proxy_url=None):
     record, request, request_sha = approved_record(source)
     if rpc_endpoint not in TESTNET_RPC_ENDPOINTS:
         raise Denied('RPC_ENDPOINT_NOT_ALLOWED')
@@ -178,7 +178,8 @@ def finalize_source(governor, source, payer, *, node, rpc_endpoint=DEFAULT_RPC,
             'receipt_ref': receipt_ref, 'proof_sha256': row['proof_sha256'],
             'chainObservation': 'ORIGINAL_AUDITED_FINALIZATION_REUSED'}
     proof = run_adapter(node, {'action': 'observe', 'source': source, 'payer': payer,
-                              'rpcEndpoint': rpc_endpoint})
+                              'rpcEndpoint': rpc_endpoint,
+                              **({'rpcProxyUrl': rpc_proxy_url} if rpc_proxy_url is not None else {})})
     facts = verified_facts(proof, request, request_sha, receipt['transaction'], payer)
     # Audit again after network IO, before issuing authority. Original reconcile
     # then takes its own immediate transaction and rechecks journal/projection.
@@ -223,6 +224,7 @@ def main(argv=None):
     parser.add_argument('--payer', required=True, help='Actual account from trusted signer configuration')
     parser.add_argument('--node', default=shutil.which('node'))
     parser.add_argument('--rpc-endpoint', default=DEFAULT_RPC, choices=TESTNET_RPC_ENDPOINTS)
+    parser.add_argument('--rpc-proxy-env', help='Explicit environment variable containing a credential-free HTTP CONNECT proxy URL')
     parser.add_argument('--expected-request-sha', help='Selected inbox approval digest, when called from SF88')
     parser.add_argument('--reports', type=Path, required=True, help='Separate existing private output directory')
     parser.add_argument('--outbox', type=Path, help='Existing original merchant SF98 private outbox')
@@ -240,6 +242,16 @@ def main(argv=None):
             raise Denied('EXPECTED_DIGEST_REQUIRES_ONE_ORIGINAL_RECORD')
         if args.watch_seconds and args.watch_seconds < 30:
             raise Denied('WATCH_INTERVAL_MUST_BE_AT_LEAST_30_SECONDS')
+        rpc_proxy_url = None
+        if args.rpc_proxy_env is not None:
+            if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]{0,127}', args.rpc_proxy_env):
+                raise Denied('INVALID_PROXY_ENVIRONMENT_NAME')
+            rpc_proxy_url = os.environ.get(args.rpc_proxy_env)
+            if not isinstance(rpc_proxy_url, str) or not rpc_proxy_url or len(rpc_proxy_url) > 4096:
+                raise Denied('EXPLICIT_RPC_PROXY_ENVIRONMENT_REQUIRED')
+            # The fixed original Node observer validates this with SF31/SF85
+            # before connecting. It travels only through that private JSON pipe;
+            # no operator keys or unrelated environment enter the observer.
         check_ledger_path(args.ledger)
         private_path(args.ledger)  # MUST exist; Governor must not create a new ledger.
         private_path(args.reports, directory=True)
@@ -276,7 +288,8 @@ def main(argv=None):
                     try:
                         source = read_source(path)
                         result = finalize_source(governor, source, args.payer, node=args.node,
-                            rpc_endpoint=args.rpc_endpoint, expected_request_sha=args.expected_request_sha)
+                            rpc_endpoint=args.rpc_endpoint, expected_request_sha=args.expected_request_sha,
+                            rpc_proxy_url=rpc_proxy_url)
                         result['merchant'] = {'status': 'NOT_CONFIGURED'}
                         if args.outbox:
                             try:
