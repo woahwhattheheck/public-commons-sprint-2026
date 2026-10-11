@@ -2,6 +2,54 @@
 
 Operate the original PostgreSQL, SQLite or MySQL publisher through the maintained merchant MCP service. The same saved plans, extraction runs, typed candidates, reviews, version writer, recurring policy and buyer files remain available after the MCP host restarts. The adapter uses the original publisher and scheduler instances under their existing workspace lease.
 
+## Start from the public SQLite example
+
+The original [SQLite example producer](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/create-example.mjs) creates a fictional four-product catalog on the operator's own host. It supplies a runnable source without a database daemon or a customer database. Use Linux, Node 22.16 or newer and util-linux `flock`. From a source checkout, choose a new absolute directory and run:
+
+```sh
+SCF_DEMO=/absolute/path/to/new-catalog-demo
+mkdir -m 700 "$SCF_DEMO"
+node stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/create-example.mjs \
+  --directory "$SCF_DEMO/source"
+node stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/cli.mjs init \
+  --workspace "$SCF_DEMO/publisher" \
+  --source "$SCF_DEMO/source/source.json" --state "$SCF_DEMO/dataset"
+cat > "$SCF_DEMO/publisher-connection.json" <<'JSON'
+{
+  "schema": "stellar-forge.merchant-publisher-connection.v1",
+  "workspaces": {
+    "catalog": {
+      "label": "Public example catalog",
+      "kind": "sqlite",
+      "directory": "publisher"
+    }
+  }
+}
+JSON
+chmod 600 "$SCF_DEMO/publisher-connection.json"
+node stellar-forge/mcp-merchant-operator/serve.mjs init-publishers \
+  --dir "$SCF_DEMO/mcp" --connection "$SCF_DEMO/publisher-connection.json" \
+  --name "Public catalog publications"
+node stellar-forge/mcp-merchant-operator/stdio.mjs \
+  --config "$SCF_DEMO/mcp/merchant-mcp.json"
+```
+
+Configure the final stdio command as the MCP client's subprocess. The original publisher `init` command has already released its workspace lease. Open alias `catalog`, inspect its source and use the returned hash in a saved plan with these exact public example fields:
+
+| Plan field | Public example value |
+| --- | --- |
+| `query` | `catalog` |
+| `input` | `{"region":"north","after_id":"0"}` |
+| `dataset.columns` | `{"id":"integer","title":"string","region":"string","price_cents":"integer"}` |
+| `dataset.filters`, `ranges`, `sorts` | `[]`, `[]`, `["id"]` |
+| `dataset.defaultLimit`, `maxLimit` | `3`, `100` |
+| `extraction.order` | `[{"column":"id","direction":"asc"}]` |
+| `extraction.maxRows`, `maxBytes`, `maxRowBytes`, `timeoutMs` | `100`, `1048576`, `65536`, `30000` |
+
+Give the plan and dataset meaningful names and use the save/extract/review/publish sequence below. The original north-region query returns products 1, 3 and 4; its approved projection excludes `internal_note`. The first publication uses `initialize: true` because the chosen dataset directory is absent.
+
+The producer's `service.json` contains explicitly unverified example payment terms. Use those only for the original challenge-only demonstration, or configure the seller with the merchant's actual terms before an approved native purchase. The buyer and recurring sections below then operate this same retained workspace, target and saved run. Keep the generated source, publisher and MCP directories together; reopen their existing paths to continue instead of running either initialization again.
+
 ## Connect an existing publisher
 
 Use the original [PostgreSQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/README.md), [SQLite publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md) or [MySQL publisher](../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md) to create a private workspace bound to its approved source and dataset target. An empty newly created workspace is supported; the first MCP publication can initialize its absent target.
