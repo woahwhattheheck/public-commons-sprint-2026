@@ -7,6 +7,12 @@ its authenticated HTTP endpoint and existing subprocess MCP entrypoint.
 
 ## Connect the merchant's catalog
 
+For a first catalog, use the existing release CLI's `catalog-init` and
+`catalog-run` workflow in [Merchant discovery setup](../../stellar/scf-starforge-20261009/sf82-seller-pilot/DISCOVERY_SETUP.md).
+It derives the original policy from the retained merchant, creates the private
+signing identity and produces the `connection.json` consumed here. The same
+catalog and MCP operating tools below handle publication and later restarts.
+
 Prepare the original catalog connection described in the
 [SF82 publication guide](../../stellar/scf-starforge-20261009/sf82-seller-pilot/CATALOG.md).
 It points to the merchant's existing catalog directory, approved seller ID,
