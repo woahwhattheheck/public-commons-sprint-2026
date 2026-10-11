@@ -69,3 +69,16 @@ Architecture, original research and product decomposition **must be finished bef
 **SF47-B4:** Financial operations to reconcile committed expenses, actual invoices and successful funding receipts with a **separate ledger**; model output is not an accounting record.
 
 **Status:** code, JSON exemplar and source-linked operator guide are deliverables. Actual staff budget, award, eligibility, user demand, XLM exchange values and transfer receipts remain unknown. No grant application or payment initiated.
+
+## SF10 founder provisional $70k / 19-week scenario
+
+[**sf10_70000_candidate.json**](./sf10_70000_candidate.json) is the existing founder SF10 editorial baseline in this calculator's `ILLUSTRATIVE_UNSENT` input schema, **not** a selected award request, approved labor rate, vendor quote, interest form or grant application. It holds fourteen future-only cost entries totaling $70,000: $18,000 MVP + $23,000 testnet + $29,000 mainnet (700 *hypothetical* engineering hours at $95/hour and $3,500 of assumed future services). All staff rates, costs and eligibility still require founder confirmation. Its owner context is the [existing private founder workspace](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C82MLR4UV).
+
+The original offline calculator already accepts this input:
+
+```bash
+python3 stellar/scf_2026/sf47_budget_model/budget.py \
+  stellar/scf_2026/sf47_budget_model/sf10_70000_candidate.json
+```
+
+For submitted milestone days 35, 77 and 133, the file's hypothetical 14-day review/payment lag implies tranche receipt days 0, 49, 91 and 147. A locally edited 30-day sensitivity implies days 0, 65, 107 and 163. Under the source model's inclusive even-accrual assumption, the respective peak pre-financing gaps are **$28,000 at day 133** and **$35,017.86 at day 106**. A uniform 60-day lag fails the sequential-payment rule because tranche 2's submission day 77 precedes tranche 1's hypothetical payment day 95. Rephase the schedule instead of treating a rejected case as viable. These are *cash-flow assumptions*, not SDF payout commitments.
