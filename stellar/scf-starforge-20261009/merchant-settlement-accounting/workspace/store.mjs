@@ -82,6 +82,9 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
   await privateDir(directory,{create:true});
   const lease=await acquireStateLease(directory);
   try{
+    let restoreMarker;
+    try{restoreMarker=await lstat(join(directory,'recovery-restore.json'));}catch(error){if(error.code!=='ENOENT')throw error;}
+    check(!restoreMarker,'WORKSPACE_RESTORE_INCOMPLETE','This workspace has an unfinished operating-state restore. Resume the same authenticated backup with merchant-accounting-workspace restore before reopening.',409);
     const statePath=join(directory,'workspace.json');
     const existing=await readBytes(statePath,32_000_000,{optional:true});
     let state;

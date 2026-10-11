@@ -72,14 +72,12 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/style.css",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/app.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_CONSOLE.md",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/JSONRPC_COMMERCE.md",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/RESUMABLE_SETUP.md",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-stream.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/stream.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/stream.css",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_STREAMS.md",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-request.mjs",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.mjs",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.css",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md",
     "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
     "stellar-forge/mcp-paid-agent/http-tools.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs",
@@ -104,7 +102,11 @@
     "stellar/scf-starforge-20261009/sf70-merchant-intake/run.mjs",
     "stellar/scf-starforge-20261009/sf72-post-only-preflight/preflight.mjs",
     "stellar/scf-starforge-20261009/sf76-merchant-remediation-delta/compare.mjs",
-    "stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs"
+    "stellar/scf-starforge-20261009/sf77-merchant-workorder/workorder.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-request.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.css",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md"
   ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
@@ -278,6 +280,8 @@
     "./seller/sheets": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/source.mjs",
     "./seller/sheets/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/capture.mjs",
     "./seller/sheets/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs",
+    "./seller/sheets/auth": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/oauth.mjs",
+    "./seller/sheets/auth/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/auth/server.mjs",
     "./seller/mongodb": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/merchant.mjs",
     "./seller/mongodb/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/source.mjs",
     "./seller/mongodb/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/prepare.mjs",
@@ -367,6 +371,8 @@
     "./merchant/accounting": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/reconcile.mjs",
     "./merchant/accounting-workspace": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/server.mjs",
     "./merchant/accountant": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/engine.mjs",
+    "./merchant/bitwave": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave.mjs",
+    "./merchant/bitwave-http": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/bitwave-http.mjs",
     "./merchant/accounting-pricing": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/pricing.mjs",
     "./merchant/recovery": "./source/stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery.mjs",
     "./merchant/host": "./source/stellar/scf-starforge-20261009/sf99-merchant-deploy/host.mjs",
@@ -382,7 +388,8 @@
     "./buyer/mcp/result-store": "./source/stellar-forge/mcp-paid-agent/result-store.mjs",
     "./buyer/mcp/result-cli": "./source/stellar-forge/mcp-paid-agent/result-cli.mjs",
     "./merchant/mcp/data-tools": "./source/stellar-forge/mcp-paid-agent/data-tools.mjs",
-    "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs"
+    "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs",
+    "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs"
   },
   "nativePeers": {
     "@x402/core": {
