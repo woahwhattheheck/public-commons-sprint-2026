@@ -131,6 +131,24 @@ Reopen the retained release, original source and review history. Keep the corres
 
 ## 8. Hand over the completed migration
 
+### Continue editing in WordPress
+
+After the migration, staff maintain published content in the destination's normal WordPress editor. Open the appropriate Pages, Posts, Projects, Documents or Notices list, select a resource, and use the **Content details** panel below its content. The normal WordPress Save, Publish or Update action saves the panel along with the resource. An Editor can maintain these fields; migration installation and release operations use the administrator account described in the destination guide.
+
+For a document, select **Choose or upload file** to open the native media library. Select the retained attachment or upload the next approved edition. Set the **Version label**, **Document family**, **Download filename**, **Document description** and any useful **File alternative text**. Reuse a family for editions of the same document. WordPress reads the selected local attachment's actual file size, MIME type and SHA-256 when saving. The earlier attachment remains available, and native revisions retain the document metadata that selected it. Changing a document file keeps the original migration source and release history attached to that resource.
+
+The same panel can add a document download to a page or project. Select **Include a downloadable document** and complete its file details. A native Documents entry always requires its document fields.
+
+Each attached map appears under **Maps** with its original ArcGIS item ID, URL, title, introduction and text equivalent. Update the introduction and text equivalent when the underlying project changes. Use **Add map resource** for another published ArcGIS resource, or **Remove this map** to remove it from the current draft. The text equivalent accepts normal paragraph, heading, list and link markup; WordPress sanitizes that markup before saving. It must describe the information the map communicates so readers can understand the resource when the embedded application is unavailable. Each map requires a distinct 32-character item ID and an HTTPS ArcGIS URL. Save or Update publishes the changes.
+
+For a meeting, emergency or other notice, enable **Include notice details**, choose the type, and enter its location and optional start and end times. Enter a complete date and time with its UTC offset, such as **2026-10-29T16:30:00-06:00**. Retained UTC timestamps and fractional seconds are accepted. WordPress displays notice times in the destination site's configured time zone. The end time must follow the start time.
+
+Select **Mark this resource as archived** to keep a historical resource public with its archive notice. Clear the checkbox and update the resource to return it to the current collection.
+
+Use WordPress **Revisions** to inspect or restore a previous content revision. The plugin registers document, map, notice and archive metadata for the same native revision history. A deployment readback identifies subsequent staff edits, and a selective migration rollback preserves those edited resources. Refresh a destination preview before preparing a later migration that targets staff-maintained content.
+
+WordPress checks the editing account and the form's session nonce before saving. It validates the four content-detail groups together; if an attachment, map or notice is invalid, the error identifies the field to correct and preserves the previous metadata. Return to the editor, correct the identified field, and save again.
+
 Use the acceptance sequence in `commercial/ACCEPTANCE.md` with the actual selected source cohort and destination. Deliver the maintained source package, exact releases, native readback, source catalog, editorial history and operating backup. Walk through a content correction, document version, GIS text equivalent, notice, source refresh and a controlled rollback with the receiving staff.
 
 Record the receiving CMS, hosting, domain and analytics administrators, the applicable service accounts, backup location, update responsibility and ongoing third-party costs. DEWR's ownership and independent administration are part of the original RFP requirements. The commercial workshare identifies the implementation fee, correction cycles, warranty, optional care and separately priced content work so the prime can integrate this migration arm into its complete engagement.
