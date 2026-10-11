@@ -83,6 +83,7 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   const optional = [
     ['buyer-inbox', 'sf88-operator-buyer-cli/queue-cli.mjs', 'Inspect the original inbox and execute one selected intent'],
     ['buyer-runbook', 'buyer-runbook/cli.mjs', 'Plan and resume an original multi-resource buying run'],
+    ['buyer-node', 'sf88-operator-buyer-cli/node/examples/customer.mjs', 'Review, execute and recover a durable generated-client application request'],
     ['deploy', 'sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
     ['postgres', 'sf30-seller-sdk/postgres/start.mjs', 'Run the original PostgreSQL merchant seller'],
     ['postgres-init', 'sf30-seller-sdk/postgres/create-example.mjs', 'Create a PostgreSQL source and seller starter'],

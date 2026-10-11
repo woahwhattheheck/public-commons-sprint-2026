@@ -43,6 +43,11 @@ they ignore it, the broker cannot newly dispatch their result after shutdown.
 The injected SF43 adapter retains its own ledger/cancellation behavior and its
 trusted module is responsible for closing its own resources.
 
+The SF43 callback also receives an optional second argument `{signal}` carrying
+broker shutdown. Existing one-argument callbacks remain compatible. The original
+[native workspace adapter](NATIVE_WORKSPACE.md) uses this signal to cancel and
+drain the original SF88 CLI child and retains the same durable buyer intent.
+
 ## Restart behavior
 
 Every transition commits a quote snapshot and a checkpoint record together.

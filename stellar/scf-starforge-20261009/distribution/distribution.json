@@ -57,7 +57,11 @@
     "stellar-forge/mcp-paid-agent/http-tools.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/OPERATOR.md",
-    "stellar/scf-starforge-20261009/sf96-seller-acceptance/audit.mjs"
+    "stellar/scf-starforge-20261009/sf96-seller-acceptance/audit.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-purchase.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-python.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_PAID_FILES.md",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/PYTHON_COMMERCE.md"
   ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
@@ -99,6 +103,7 @@
     "merchant-desk": "stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/cli.mjs",
     "paid-file-checkout": "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
     "paid-file-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
+    "buyer-node": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/customer.mjs",
     "commerce-setup": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs",
     "upstream-operation": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-operation.mjs",
     "dataset-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-workspace.mjs",
@@ -162,6 +167,10 @@
     "./seller/merchant-desk/workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/workspace.mjs",
     "./seller/paid-file": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
     "./buyer/paid-file": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
+    "./buyer/node": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/index.mjs"
+    },
     "./commerce-setup": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs",
     "./merchant/fleet/control": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/control.mjs",
     "./merchant/fleet/workspace": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/workspace/server.mjs",

@@ -7,6 +7,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abs, buyerTransport, config, execution, need, operation, operator, InputError } from './config.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
+import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.operator-workspace.v1';
@@ -295,6 +296,12 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
     ? error.code : 'WORKSPACE_RUNTIME_UNAVAILABLE';
   const pins = validateNativeSignerConfiguration(manifest.signer);
   const transport = buyerTransport(workspace.config);
+  try {
+    await checkOperatorTerminal(workspace.config.operation.intentId);
+    checks.push({check:'operator-terminal', status:'AVAILABLE'});
+  } catch (error) {
+    checks.push({check:'operator-terminal', status:'UNAVAILABLE', code:code(error)});
+  }
   if (transport !== null) {
     try {
       resolveBuyerProxy(transport, environment);

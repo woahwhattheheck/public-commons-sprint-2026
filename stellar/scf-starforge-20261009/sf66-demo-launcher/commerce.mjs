@@ -13,6 +13,11 @@ import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
 import { initializeQueue, openQueue } from '../sf88-operator-buyer-cli/queue.mjs';
 import { config as readBuyer, execution } from '../sf88-operator-buyer-cli/config.mjs';
 import { absolute, readPrivateFile, parseJson, inspectOperatorConfig } from '../sf103-native-buyer-signer/operator.mjs';
+import { readCheckout, compileCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
+import { startCheckout } from '../sf101-merchant-receiver/checkout.mjs';
+import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase } from './commerce-purchase.mjs';
+import { preparePythonCommerce, savePythonCommerce, readPythonCommerce,
+  describePythonCommerce, openPythonCommerce } from './commerce-python.mjs';
 
 const PLAN = 'stellar-forge.commerce-plan.v1';
 const SESSION = 'stellar-forge.commerce-session.v1';
@@ -73,19 +78,23 @@ function plan(value) {
   fields(value, ['schema', 'seller', 'buyers', 'operationsPort'], 'COMMERCE_PLAN_INVALID');
   need(value.schema === PLAN && Array.isArray(value.buyers) && value.buyers.length >= 1 &&
     value.buyers.length <= 64, 'COMMERCE_PLAN_BUYERS_REQUIRED');
-  const seller = fields(value.seller, ['config', 'handlers', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
-  absolute(seller.config);
+  const seller = fields(value.seller, ['config', 'checkoutConfig', 'python', 'handlers', 'port', 'facilitator', 'facilitatorConfig'], 'COMMERCE_SELLER_INVALID');
+  need([seller.config, seller.checkoutConfig, seller.python].filter(Boolean).length === 1,
+    'COMMERCE_ONE_SELLER_CONFIGURATION_REQUIRED');
+  absolute(seller.checkoutConfig ?? seller.python ?? seller.config);
+  need(!(seller.checkoutConfig || seller.python) || seller.handlers === undefined, 'COMMERCE_APPLICATION_USES_ORIGINAL_HANDLERS');
   if (seller.handlers !== undefined) absolute(seller.handlers);
   if (seller.facilitatorConfig !== undefined) absolute(seller.facilitatorConfig);
   need(!seller.facilitatorConfig || seller.facilitator === undefined, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
   const buyers = value.buyers.map(item => {
-    fields(item, ['config', 'signerConfig', 'workspace'], 'COMMERCE_BUYER_INVALID');
+    fields(item, ['config', 'signerConfig', 'workspace', 'paidFile'], 'COMMERCE_BUYER_INVALID');
     absolute(item.config);
     if (item.signerConfig !== undefined) absolute(item.signerConfig);
     if (item.workspace !== undefined) absolute(item.workspace);
     return { ...item };
   });
-  return { seller: { config: seller.config, handlers: seller.handlers ?? null,
+  return { seller: { config: seller.config ?? null, checkoutConfig: seller.checkoutConfig ?? null, handlers: seller.handlers ?? null,
+    python: seller.python ?? null,
     port: port(seller.port, 8423), facilitator: facilitator(seller.facilitator),
     facilitatorConfig: seller.facilitatorConfig ?? null },
   buyers, operationsPort: port(value.operationsPort, 0) };
@@ -96,7 +105,10 @@ export async function initializeCommerce({ planFile, directory }) {
   absolute(planFile); absolute(directory);
   await privateDirectory(dirname(directory));
   const input = plan(parseJson(await readPrivateFile(planFile)));
-  const seller = await readSellerConfig(input.seller.config);
+  const checkoutRaw = input.seller.checkoutConfig ? await readPrivateFile(input.seller.checkoutConfig) : null;
+  const checkout = checkoutRaw ? compileCheckout(parseJson(checkoutRaw)) : null;
+  const python = input.seller.python ? await preparePythonCommerce(input.seller.python) : null;
+  const seller = checkout?.service ?? python?.compiled.service ?? await readSellerConfig(input.seller.config);
   need(typeof seller.publicOrigin === 'string', 'COMMERCE_MERCHANT_PUBLIC_ORIGIN_REQUIRED');
   const handlers = input.seller.handlers ? await sourceFile(input.seller.handlers) : null;
   let facilitatorConfig;
@@ -104,7 +116,12 @@ export async function initializeCommerce({ planFile, directory }) {
     const { readConfig } = await import('../native-facilitator/config.mjs');
     facilitatorConfig = await readConfig(input.seller.facilitatorConfig);
   }
-  const prepared = [];
+  const prepared = [], outputs = new Set();
+  const reserveOutput = path => {
+    const key = resolve(path);
+    need(!outputs.has(key), 'COMMERCE_OUTPUT_PATH_COLLISION');
+    outputs.add(key);
+  };
   for (const entry of input.buyers) {
     const buyer = await readBuyer(entry.config), { op } = execution(buyer);
     need(new URL(op.url).origin === new URL(seller.publicOrigin).origin, 'COMMERCE_BUYER_MERCHANT_ORIGIN_MISMATCH');
@@ -114,13 +131,21 @@ export async function initializeCommerce({ planFile, directory }) {
     if (signer) need(signer.config.buyerConfig === entry.config &&
       signer.expected.operation.intentId === op.intentId, 'COMMERCE_SF103_BUYER_MISMATCH');
     if (entry.workspace) await privateDirectory(entry.workspace);
+    const purchase = entry.paidFile ? await readPurchaseInput(entry.paidFile, op, buyer.responseFile?.destination) : null;
+    reserveOutput(join(buyer.evidenceDir, sha(op.intentId) + '.json'));
+    if (buyer.responseFile) reserveOutput(buyer.responseFile.destination);
+    if (purchase) { reserveOutput(purchase.destination); reserveOutput(purchase.destination + '.sf101.json'); }
+    if (purchase) need(!prepared.some(item => item.purchase?.destination === purchase.destination),
+      'COMMERCE_DUPLICATE_PRODUCT_DESTINATION');
     prepared.push({ ...entry, intentId: op.intentId,
+      ...(purchase ? { purchase } : {}),
       ...(entry.signerConfig ? { signerConfigSha256: sha(await readPrivateFile(entry.signerConfig)) } : {}) });
   }
   // mkdir is exclusive; failure must never remove an existing operator directory.
   await mkdir(directory, { mode: 0o700 });
   try {
     await writeNew(join(directory, 'seller.json'), seller);
+    const pythonSnapshot = python ? await savePythonCommerce(python, directory) : {};
     const sellerBytes = await readPrivateFile(join(directory, 'seller.json'), 1048576);
     const queueRoot = join(directory, 'inbox');
     const facilitatorPath = facilitatorConfig ? join(directory, 'facilitator.json') : null;
@@ -128,13 +153,25 @@ export async function initializeCommerce({ planFile, directory }) {
     await initializeQueue(queueRoot);
     const queue = await openQueue(queueRoot);
     for (const entry of prepared) await queue.enqueue(entry.config);
+    const buyers = [];
+    for (const entry of prepared) {
+      const { purchase, paidFile: sourcePaidFile, ...original } = entry;
+      if (purchase) original.paidFile = await freezePurchase(purchase,
+        join(directory, 'handoff-' + sha(entry.intentId) + '.json'));
+      buyers.push(original);
+    }
+    const checkoutPath = checkoutRaw ? join(directory, 'checkout.json') : null;
+    if (checkoutPath) await writeNew(checkoutPath, parseJson(checkoutRaw));
     const session = { schema: SESSION, createdAt: new Date().toISOString(),
       directory, queueRoot, seller: { ...input.seller, config: join(directory, 'seller.json'),
         configSha256: sha(sellerBytes),
+        ...pythonSnapshot,
+        checkoutConfig: checkoutPath,
+        ...(checkoutPath ? { checkoutConfigSha256: sha(await readPrivateFile(checkoutPath)) } : {}),
         facilitatorConfig: facilitatorPath,
         ...(facilitatorPath ? { facilitatorConfigSha256: sha(await readPrivateFile(facilitatorPath)) } : {}),
         ...(handlers ? { handlersSha256: handlers.sha256 } : {}) },
-      operationsPort: input.operationsPort, buyers: prepared };
+      operationsPort: input.operationsPort, buyers };
     await writeNew(join(directory, 'session.json'), session);
     const handle = await open(directory, 'r');
     try { await handle.sync(); } finally { await handle.close(); }
@@ -151,10 +188,18 @@ async function readSession(directory) {
   const saved = parseJson(await readPrivateFile(join(directory, 'session.json')));
   need(saved.schema === SESSION && saved.directory === directory && saved.queueRoot === join(directory, 'inbox') &&
     saved.seller?.config === join(directory, 'seller.json') && Array.isArray(saved.buyers), 'COMMERCE_SESSION_INVALID');
-  need(sha(await readPrivateFile(saved.seller.config, 1048576)) === saved.seller.configSha256,
+  const sellerBytes = await readPrivateFile(saved.seller.config, 1048576);
+  need(sha(sellerBytes) === saved.seller.configSha256,
     'COMMERCE_MERCHANT_CONFIG_CHANGED');
+  need(!(saved.seller.python && saved.seller.checkoutConfig) &&
+    (!(saved.seller.python || saved.seller.checkoutConfig) || !saved.seller.handlers),
+    'COMMERCE_ONE_MERCHANT_APPLICATION_REQUIRED');
+  const python = saved.seller.python ? await readPythonCommerce(saved.seller, directory, parseJson(sellerBytes)) : null;
   if (saved.seller.handlers) need((await sourceFile(saved.seller.handlers)).sha256 === saved.seller.handlersSha256,
     'COMMERCE_HANDLER_CHANGED');
+  if (saved.seller.checkoutConfig) need(saved.seller.checkoutConfig === join(directory, 'checkout.json') &&
+    sha(await readPrivateFile(saved.seller.checkoutConfig)) === saved.seller.checkoutConfigSha256,
+    'COMMERCE_CHECKOUT_CONFIG_CHANGED');
   if (saved.seller.facilitatorConfig) need(saved.seller.facilitatorConfig === join(directory, 'facilitator.json') &&
     sha(await readPrivateFile(saved.seller.facilitatorConfig)) === saved.seller.facilitatorConfigSha256,
     'COMMERCE_FACILITATOR_CONFIG_CHANGED');
@@ -162,13 +207,21 @@ async function readSession(directory) {
   const jobs = await queue.list();
   need(saved.buyers.length === jobs.length && saved.buyers.every(entry =>
     jobs.some(job => job.operation?.intentId === entry.intentId)), 'COMMERCE_INBOX_MEMBERSHIP_CHANGED');
-  return { saved, queue, jobs };
+  for (const entry of saved.buyers) if (entry.paidFile) {
+    need(entry.paidFile.handoff === join(directory, 'handoff-' + sha(entry.intentId) + '.json'),
+      'COMMERCE_HANDOFF_PATH_CHANGED');
+    await inspectCommercePurchase(entry, jobs.find(job => job.operation.intentId === entry.intentId));
+  }
+  return { saved, queue, jobs, python };
 }
 export async function inspectCommerce(directory) {
-  const { saved, jobs } = await readSession(directory);
+  const { saved, jobs, python } = await readSession(directory);
   return { schema: SESSION, state: 'SAVED_SESSION', directory,
     sellerConfig: saved.seller.config, sellerPort: saved.seller.port,
-    facilitator: saved.seller.facilitator ?? { config: saved.seller.facilitatorConfig }, buyers: jobs };
+    python: python ? describePythonCommerce(python) : null,
+    facilitator: saved.seller.facilitator ?? { config: saved.seller.facilitatorConfig },
+    buyers: await Promise.all(jobs.map(async job => ({ ...job,
+      paidFile: await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), job) }))) };
 }
 
 /** Bind the actual compiled native merchant route to the frozen original request. */
@@ -236,22 +289,23 @@ async function signerEnvironment(saved, job, environment) {
 }
 
 /** Trusted embedding may supply an already configured original nativeFactory. */
-export async function openCommerce(directory, { nativeFactory, environment = process.env } = {}) {
-  const { saved, queue, jobs } = await readSession(directory);
+export async function openCommerce(directory, { nativeFactory, environment = process.env, purchaseFetch } = {}) {
+  const { saved, queue, jobs, python: pythonApplication } = await readSession(directory);
   need(nativeFactory === undefined || typeof nativeFactory === 'function', 'COMMERCE_NATIVE_FACTORY_INVALID');
+  need(purchaseFetch === undefined || typeof purchaseFetch === 'function', 'COMMERCE_PURCHASE_TRANSPORT_INVALID');
   need(!nativeFactory || !saved.seller.facilitator && !saved.seller.facilitatorConfig, 'COMMERCE_ONE_FACILITATOR_REQUIRED');
   const config = await readSellerConfig(saved.seller.config);
-  const handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
+  let handlers = saved.seller.handlers ? await import(pathToFileURL(saved.seller.handlers).href) : {};
   if (saved.seller.facilitator) {
     const endpoint = facilitator(saved.seller.facilitator);
     const { HTTPFacilitatorClient } = await import('@x402/core/server');
     const client = new HTTPFacilitatorClient({ url: endpoint.url });
     nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: client });
   }
-  let seller, operations, closing, active;
+  let seller, operations, checkoutSession, ownedFacilitator, python, closing, active;
   let state = 'STARTING';
   const controller = new AbortController();
-  const pending = new Set();
+  const pending = new Set(), activeRetrievals = new Map();
   const runOriginal = (script, args, options) => {
     const promise = originalCommand(script, args, options);
     pending.add(promise);
@@ -266,15 +320,48 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     const failures = [];
     let shutdown;
     try { shutdown = await seller?.close(); } catch (error) { failures.push(error); }
+    if (ownedFacilitator) try {
+      const native = await ownedFacilitator.drain();
+      shutdown = { ...shutdown, facilitator: native, drained: shutdown?.drained !== false && native.drained };
+    } catch (error) { failures.push(error); }
+    let pythonShutdown = null;
+    try { pythonShutdown = await (python ?? checkoutSession?.source)?.close() ?? null; }
+    catch (error) { failures.push(error); }
     const traffic = operations?.observer.snapshot() ?? null;
-    try { await operations?.close(); } catch (error) { failures.push(error); }
+    try { await (checkoutSession ? checkoutSession.close() : operations?.close()); } catch (error) { failures.push(error); }
     state = 'STOPPED';
     need(failures.length === 0, 'COMMERCE_SHUTDOWN_INCOMPLETE');
-    return { state, shutdown, drained: shutdown?.drained !== false && shutdown?.forcedClose !== true,
+    return { state, shutdown, python: pythonShutdown,
+      drained: shutdown?.drained !== false && shutdown?.forcedClose !== true && pythonShutdown?.clean !== false,
       traffic, buyers: await queue.list() };
   })();
   try {
-    if (saved.seller.facilitatorConfig) {
+    if (pythonApplication) {
+      python = await openPythonCommerce(pythonApplication, {
+        native: Boolean(nativeFactory || saved.seller.facilitatorConfig), environment,
+      });
+      handlers = python.handlers;
+    }
+    if (saved.seller.checkoutConfig) {
+      const checkout = await readCheckout(saved.seller.checkoutConfig);
+      need(same(JSON.parse(JSON.stringify(checkout.service)), config), 'COMMERCE_CHECKOUT_OFFER_CHANGED');
+      if (saved.seller.facilitatorConfig) {
+        const [{ readConfig }, { createNativeFacilitator }] = await Promise.all([
+          import('../native-facilitator/config.mjs'), import('../native-facilitator/runtime.mjs'),
+        ]);
+        const policy = await readConfig(saved.seller.facilitatorConfig), terms = checkout.terms;
+        need(terms.scheme === 'exact' && terms.network === policy.network &&
+          policy.payments.assets.includes(terms.asset) && policy.payments.recipients.includes(terms.payTo) &&
+          BigInt(terms.amount) <= BigInt(policy.payments.maxAtomic), 'SELLER_TERMS_OUTSIDE_FACILITATOR_POLICY');
+        ownedFacilitator = await createNativeFacilitator(policy, { environment });
+        nativeFactory = compiled => createNativeSellerServer(compiled, { facilitatorClient: ownedFacilitator });
+      }
+      checkoutSession = await startCheckout(checkout, { port: saved.seller.port,
+        operationsPort: saved.operationsPort, nativeFactory: nativeFactory ?? null, env: environment,
+        historyDirectory: join(directory, 'usage'), historyRetentionDays: 90,
+        ...(ownedFacilitator ? { maxInFlight: 1, drainGraceMs: ownedFacilitator.drainGraceMs } : {}) });
+      seller = checkoutSession.seller; operations = checkoutSession.operations;
+    } else if (saved.seller.facilitatorConfig) {
       const [{ readConfig }, { startSelfFacilitatedSeller }] = await Promise.all([
         import('../native-facilitator/config.mjs'), import('../native-facilitator/runtime.mjs'),
       ]);
@@ -285,26 +372,32 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
     } else {
       seller = await startSellerService({ config, port: saved.seller.port, handlers, nativeFactory: nativeFactory ?? null });
     }
-    for (const job of jobs) bindMerchantPurchase(seller.compiled, job);
-    operations = await startSellerOperations(seller, { port: saved.operationsPort,
+    for (const job of jobs) {
+      const merchant = bindMerchantPurchase(seller.compiled, job);
+      await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), { ...job, merchant });
+    }
+    operations ??= await startSellerOperations(seller, { port: saved.operationsPort,
       historyDirectory: join(directory, 'usage'), historyRetentionDays: 90 });
     state = 'RUNNING';
     const status = async () => ({ schema: SESSION, state, directory,
       seller: { url: seller.url, publicOrigin: config.publicOrigin, mode: seller.mode,
-        health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot() },
-      facilitator: seller.facilitator?.status() ?? { mode: saved.seller.facilitator ? 'EXISTING_HTTP_FACILITATOR' :
+        health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot(),
+        ...(python ? { python: python.status() } : {}) },
+      facilitator: (ownedFacilitator ?? seller.facilitator)?.status() ?? { mode: saved.seller.facilitator ? 'EXISTING_HTTP_FACILITATOR' :
         nativeFactory ? 'TRUSTED_NATIVE_EMBEDDING' : 'NOT_CONFIGURED' },
       operations: { url: operations.url, traffic: operations.observer.snapshot(),
-        historyUrl: operations.url + '/history.json', usageHistory: operations.history.status() },
-      buyers: await Promise.all((await queue.list()).map(async job => ({ ...job,
-        merchant: bindMerchantPurchase(seller.compiled, job) }))),
+        historyUrl: operations.history ? operations.url + '/history.json' : null, usageHistory: operations.history?.status() ?? null },
+      buyers: await Promise.all((await queue.list()).map(async job => {
+        const bound = { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
+        return { ...bound, paidFile: await inspectCommercePurchase(
+          saved.buyers.find(entry => entry.intentId === job.operation.intentId), bound) };
+      })),
     });
     const jobFor = async intentId => {
       need(state === 'RUNNING', 'COMMERCE_SESSION_NOT_RUNNING');
       const job = await queue.show(intentId);
       need(saved.buyers.some(entry => entry.intentId === intentId), 'COMMERCE_INTENT_NOT_IN_SESSION');
-      bindMerchantPurchase(seller.compiled, job);
-      return job;
+      return { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
     };
     return Object.freeze({ seller, operations, status, close,
       async review(intentId) {
@@ -338,6 +431,16 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       },
       async cancel(intentId) { await jobFor(intentId); return queue.cancel(intentId); },
       async recover(intentId) { await jobFor(intentId); return queue.recover(intentId); },
+      retrieve(intentId) {
+        need(!activeRetrievals.has(intentId), 'COMMERCE_FILE_RETRIEVAL_BUSY');
+        const work = (async () => {
+          const job = await jobFor(intentId), entry = saved.buyers.find(item => item.intentId === intentId);
+          need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
+          return retrieveCommercePurchase(entry, job, { environment, signal: controller.signal, fetchImpl: purchaseFetch });
+        })();
+        pending.add(work); activeRetrievals.set(intentId, work);
+        return work.finally(() => { pending.delete(work); activeRetrievals.delete(intentId); });
+      },
     });
   } catch (error) { await close().catch(() => {}); throw error; }
 }

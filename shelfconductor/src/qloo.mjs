@@ -58,22 +58,37 @@ export function makeQlooClient({apiKey,fetchImpl=fetch,now=()=>Date.now(),maxCal
       if(!response.ok)throw new UpstreamError(response.status===429?'QLOO_RATE_LIMITED':response.status===401?'QLOO_AUTH_FAILED':'QLOO_HTTP_ERROR',`Qloo HTTP ${response.status}`);
       const body=await readJsonWithinLimit(response);
       if(body?.success===false)throw new UpstreamError('QLOO_REJECTED','Qloo did not accept the request');
+      for(const [k,v] of cache)if(v.until<=now())cache.delete(k);
+      if(cache.size>=256)cache.delete(cache.keys().next().value);
       cache.set(key,{body,until:now()+300000});return body;
     })().finally(()=>inflight.delete(key));
     inflight.set(key,job);return job;
   }
-  async function resolveBook(title){
-    const name=requireText(title,'seed title',120);
+  async function searchBooks(title){
+    const name=requireText(title,'book search',120);
     const data=await get('/search',{query:name,types:'urn:entity:book',take:12});
-    const candidates=entities(data).filter(e=>e&&typeof e==='object');
-    const exact=candidates.filter(e=>norm(e.name??e.properties?.name)===norm(name));
-    const unique=Array.from(new Set(exact.map(e=>e.entity_id??e.id).filter(id=>typeof id==='string'&&id)));
-    if(unique.length!==1)throw new UpstreamError('AMBIGUOUS_SEED',`Seed "${name}" resolved to ${unique.length} exact Qloo entity IDs; choose a less ambiguous title`);
-    return {title:name,qloo_id:unique[0]};
+    const seen=new Set();const candidates=[];
+    for(const e of entities(data)){
+      const id=e?.entity_id??e?.id;const title=e?.name??e?.properties?.name;
+      if(typeof id!=='string'||!id||id.length>140||typeof title!=='string'||!title||seen.has(id))continue;
+      seen.add(id);candidates.push({qloo_id:id,title:title.slice(0,300),exact:norm(title)===norm(name)});
+    }
+    return {query:name,candidates};
+  }
+  async function resolveBook(title,selectedId=null){
+    const {query:name,candidates}=await searchBooks(title);
+    if(selectedId){
+      const chosen=candidates.find(e=>e.qloo_id===selectedId);
+      if(!chosen)throw new UpstreamError('SEED_SELECTION_CHANGED',`The chosen book is no longer returned for "${name}"; search and choose it again`);
+      return {title:chosen.title,query:name,qloo_id:chosen.qloo_id,selection:'REVIEWED_SEARCH_RESULT'};
+    }
+    const exact=candidates.filter(e=>e.exact);
+    if(exact.length!==1)throw new UpstreamError('AMBIGUOUS_SEED',`Search and choose a book for "${name}" (${exact.length} exact matches)`);
+    return {title:name,qloo_id:exact[0].qloo_id};
   }
   async function recommendBooks(ids){
     if(!Array.isArray(ids)||ids.length<1||ids.length>4||ids.some(id=>typeof id!=='string'||!id||id.length>150))throw new InputError('INVALID_INPUT','1..4 resolved Qloo book IDs required');
     return get('/v2/insights',{'filter.type':'urn:entity:book','signal.interests.entities':ids.join(','),take:30});
   }
-  return {resolveBook,recommendBooks};
+  return {resolveBook,recommendBooks,searchBooks};
 }
