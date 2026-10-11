@@ -20,6 +20,7 @@ const help = `Starforge merchant toolkit
 Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
+  getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -90,11 +91,13 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
+  python-workspace                           Author Python sources, run private previews and operate native releases
   merchant-readiness                         Review every configured Stellar receiving account
   availability                              Review, pause and resume a running seller's selected routes
   cube-onboarding                            Capture and prepare reviewed Cube reports as a merchant
   graphql-onboarding / graphql-merchant      Prepare approved queries and run the original GraphQL seller
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
+  graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
 
 Optional feature groups: ${[...new Set([
