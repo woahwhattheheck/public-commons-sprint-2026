@@ -11,6 +11,8 @@ interrupted attempts, receipt accounting and finalization. The receiver consumes
 its DatasetDelivery.jsonl_rows(), which verifies the saved original export before
 yielding typed rows. Receiving and reopening sources use those retained files.
 
+The consumer also uses `sf30-seller-sdk/source_file_delivery.py` from the same checkout for the shared chunk, hash, complete-inventory and atomic-reopen operations. Keep that original helper with the consumer when packaging the SDK.
+
 ## Publish and acquire the source projection
 
 Use the Census publisher's reviewed source_files plan and its original buyer
@@ -192,3 +194,4 @@ The application example uses the original Peoria acs.assemble_bundle signature:
 (base_bundle, base_source_dir, capture_package, output_dir,
 supplements=(), method_sources=()). The SDK's consumer only restores delivery
 bytes and passes them to that original function.
+
