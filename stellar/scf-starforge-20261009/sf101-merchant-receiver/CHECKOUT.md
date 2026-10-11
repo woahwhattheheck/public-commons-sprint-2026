@@ -193,7 +193,11 @@ Configure the existing HTTPS proxy as follows. Preserve the complete query and
 Keep the operations listener private. Its existing `/fulfillment` view is wired
 to this checkout's actual original outbox; `/api/delivery` shows its current
 delivery status. `/_seller/docs` and `/_seller/openapi.json` use the same compiled
-purchase offer. SIGINT/SIGTERM drain the original seller, close the original
+purchase offer. The startup `deliveryControl` URL opens private
+[fulfillment recovery](../sf30-seller-sdk/operations/DELIVERY_OPERATIONS.md):
+complete journal history, exact order detail and revision-guarded requeue of
+the original exhausted notification after receiver repair.
+SIGINT/SIGTERM drain the original seller, close the original
 operations observer, and then close the Python workers.
 
 ## Buyer preparation, approval and purchase

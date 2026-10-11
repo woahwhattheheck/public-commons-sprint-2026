@@ -88,7 +88,7 @@ export async function prepareHandoff(compiled, {ref, output, file, claimEnv = 'S
 
 export async function startCheckout(compiled, {port = 8423, operationsPort = 8424,
   nativeFactory = null, env = process.env, maxInFlight = 64, drainGraceMs = 60000,
-  historyDirectory, historyRetentionDays = 90} = {}) {
+  historyDirectory, historyRetentionDays = 90, deliveryRecovery = null} = {}) {
   let source, seller, operations, closing;
   const outbox = await openOutbox(compiled.outbox);
   const close = () => closing ??= (async () => {
@@ -121,7 +121,7 @@ export async function startCheckout(compiled, {port = 8423, operationsPort = 842
         compiled:routes, outbox, onWriteFailure:() => process.stderr.write('SF101_NATIVE_OUTBOX_WRITE_FAILED\n'),
       }) : null});
     operations = await startSellerOperations(seller, {port:operationsPort, deliveryOutbox:outbox,
-      historyDirectory, historyRetentionDays});
+      historyDirectory, historyRetentionDays, deliveryRecovery});
     return {seller, operations, source, outbox, close};
   } catch (error) { await close().catch(() => {}); throw error; }
 }
@@ -169,7 +169,8 @@ export async function main(args = process.argv.slice(2)) {
     for (const key of ['--port','--operations-port']) if (v.has(key)) need(/^\d{1,5}$/.test(v.get(key)) && Number(v.get(key)) <= 65535, 'CHECKOUT_PORT_INVALID');
     const session = await startCheckout(c, {nativeFactory, port:Number(v.get('--port') ?? 8423), operationsPort:Number(v.get('--operations-port') ?? 8424)});
     result = {mode:session.seller.mode, seller:session.seller.url, operations:session.operations.url,
-      developer:session.seller.url + '/_seller/docs', delivery:session.operations.url + '/fulfillment'};
+      developer:session.seller.url + '/_seller/docs', delivery:session.operations.url + '/fulfillment',
+      deliveryControl:session.operations.deliveryControlUrl};
     for (const signal of ['SIGINT','SIGTERM']) process.once(signal, () => session.close().catch(() => {process.exitCode=1;}));
   }
   console.log(JSON.stringify(result)); return result;
