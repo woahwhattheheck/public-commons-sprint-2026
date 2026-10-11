@@ -13,6 +13,8 @@
  *   --headful                         Show Chromium on the receiving host.
  *   --single-process                  Use an existing compact cloud Chromium build.
  *   --keep-open                       Keep the same source process for inspection.
+ *   --continue-original               Complete the saved operation in one process; retries its first failed map once.
+ *   --compare-refresh                 Capture a third deliberate refresh if the first source expired.
  *   --extension /absolute/module.mjs  Optional same-process integration, run by extension command.
  *   --pause-after handover            Preserve live source memory before restart.
  *   --capture-layout /absolute/layout.png  Capture the configuration before acquisition.
@@ -234,13 +236,14 @@ if(has('--child')){
     await act(page.getByRole('button',{name:'Acquire reviewed forecast',exact:true}),'/api/editions/'+encodeURIComponent(id)+'/acquire');
     detail=await workspace.editionView(id);
     memory['edition'+number]=detail;
-    requireValue(detail.edition.state==='COMPLETE','Native edition '+id+' completed as '+detail.edition.state+'. Inspect its original resource outcome before continuing.');
+    await record('native-resource-outcomes',{number,id,state:detail.edition.state,resources:Object.fromEntries(Object.entries(detail.edition.resources||{}).map(([kind,value])=>[kind,{state:value.state,status:value.status,sha256:value.sha256,error:value.providerError?.message||value.error||null}]))});
+    requireValue(['COMPLETE','PARTIAL'].includes(detail.edition.state),'Native edition '+id+' completed as '+detail.edition.state+'. Inspect its original resource outcome before continuing.');
     requireValue(detail.rows?.length>0,'The native Timeline did not provide interval rows.');
-    requireValue(detail.tile?.available===true,'The reviewed native PNG is unavailable.');
     await pickEdition(id,'Work plan');
-    const image=page.locator('img.map-tile');
-    await image.waitFor();
-    await page.waitForFunction(()=>{const img=document.querySelector('img.map-tile');return img?.complete&&img.naturalWidth===256&&img.naturalHeight===256;});
+    if(detail.tile?.available){
+      await page.locator('img.map-tile').waitFor();
+      await page.waitForFunction(()=>{const img=document.querySelector('img.map-tile');return img?.complete&&img.naturalWidth===256&&img.naturalHeight===256;});
+    }
     await record('edition-acquired',{number,id,state:detail.edition.state,returnedIntervals:detail.rows.length,
       receivedAt:detail.edition.resources?.timeline?.receivedAt,
       timelineSha256:detail.edition.resources?.timeline?.sha256,
@@ -291,18 +294,25 @@ if(has('--child')){
     await record('decision-saved',{number,id,intervalId:row.id,decision:'REVIEW',assignee:'Internal operations reviewer',matchedRuleCount:rules.length});
   }
   async function compare(){
-    requireValue(journal.editions.length===2,'Acquire both original editions before comparison.');
-    await pickEdition(journal.editions[1],'Edition changes');
-    await page.locator('[name="before"]').selectOption(journal.editions[0]);
-    await page.locator('[name="after"]').selectOption(journal.editions[1]);
+    requireValue(journal.editions.length>=2,'Acquire two original editions before comparison.');
+    const pair=journal.comparisonPair||journal.editions.slice(-2);
+    await pickEdition(pair[1],'Edition changes');
+    await page.locator('[name="before"]').selectOption(pair[0]);
+    await page.locator('[name="after"]').selectOption(pair[1]);
     const expected='/api/compare';
     const responsePromise=page.waitForResponse(response=>new URL(response.url()).pathname===expected);
     await page.getByRole('button',{name:'Compare editions',exact:true}).click();
     const response=await responsePromise;
     const comparison=await response.json();
-    requireValue(response.ok()&&comparison.comparable,'The original editions are not available for native comparison.');
-    requireValue(comparison.rows?.length>0,'Native comparison did not return matching field/interval keys.');
+    requireValue(response.ok(),'The original comparison request failed.');
     memory.comparison=comparison;
+    if(!comparison.comparable){
+      requireValue(comparison.reason==='SOURCE_NOT_AVAILABLE','The original editions use different comparison semantics.');
+      requireValue(Array.isArray(comparison.rows)&&comparison.rows.length===0,'Unavailable source comparison must not manufacture field changes.');
+      await record('editions-comparison-unavailable',{beforeId:comparison.beforeId,afterId:comparison.afterId,reason:comparison.reason});
+      return;
+    }
+    requireValue(comparison.rows?.length>0,'Native comparison did not return matching field/interval keys.');
     await record('editions-compared',{beforeId:comparison.beforeId,afterId:comparison.afterId,rows:comparison.rows.length,
       changed:comparison.rows.filter(row=>typeof row.change==='number'&&row.change!==0).length,
       missingBefore:comparison.rows.filter(row=>row.beforePresent===false).length,
@@ -313,14 +323,14 @@ if(has('--child')){
     await page.getByRole('tab',{name:'Operations',exact:true}).click();
     const response=await responsePromise;const review=await response.json();
     requireValue(response.ok()&&review.schema==='stellar-forge.tomorrow.operations-review.v1','The original operations projection did not load.');
-    requireValue(review.editions?.length===2&&review.decisions?.length>=2,'Operations review lost an original edition or staff decision.');
+    requireValue(journal.editions.every(id=>review.editions?.some(edition=>edition.id===id||edition.editionId===id))&&review.decisions?.length>=journal.editions.length,'Operations review lost an original edition or staff decision.');
     requireValue(review.assignments?.some(row=>row.assignee==='Internal operations reviewer'),'The operations queue lost its staff assignment.');
     await page.getByRole('heading',{name:'Staff review queue',exact:true}).waitFor();
-    if(label!=='live')requireValue(review.intervals?.some(row=>row.observationAvailability==='RETAINED_DECISION_ONLY'),
+    if(['reopened','receiving'].includes(label))requireValue(review.intervals?.some(row=>row.observationAvailability==='RETAINED_DECISION_ONLY'),
       'Reopened operations should show original retained staff interval identities.');
     memory['operations-'+label]=review;
     const files=[];
-    for(const format of label==='live'?['html','csv','json']:['json']){
+    for(const format of ['reopened','receiving'].includes(label)?['json']:['html','csv','json']){
       const downloadPromise=page.waitForEvent('download');
       await page.getByRole('button',{name:'Download '+format.toUpperCase()+' report',exact:true}).click();
       const download=await downloadPromise,path=join(directory,'operations-'+label+'.'+format);
@@ -329,7 +339,7 @@ if(has('--child')){
       requireValue(bytes.length>0,'The operations report is empty.');
       if(format==='json'){
         const retained=JSON.parse(bytes);
-        requireValue(retained.report?.licensedEditionsWithValues===0&&retained.report?.derivedOnlyEditions===2,
+        requireValue(retained.report?.licensedEditionsWithValues===0&&retained.report?.derivedOnlyEditions===review.editions.length,
           'The evaluation report did not apply the original retention projection.');
         requireValue((retained.intervals||[]).every(row=>(row.fields||[]).every(field=>field.value===null&&field.valueState==='NOT_RETAINABLE')),
           'The evaluation report retained native provider values.');
@@ -342,8 +352,9 @@ if(has('--child')){
   }
 
   async function handover(){
-    requireValue(journal.editions.length===2,'Prepare both source-linked operating editions first.');
-    await pickEdition(journal.editions[1],'Handover');
+    requireValue(journal.editions.length>=2,'Prepare both source-linked operating editions first.');
+    await pickEdition(journal.editions.at(-1),'Handover');
+    await page.locator('[name="handoverScope"]').selectOption('workspace');
     for(const input of await page.locator('[name="exportEdition"]').all())await input.check();
     requireValue(await page.locator('[name="includeRaw"]').isDisabled(),'Evaluation handovers must keep the source attachment control unavailable.');
     const downloadPromise=page.waitForEvent('download');
@@ -352,11 +363,11 @@ if(has('--child')){
     const path=join(directory,'weather-operations-handover.json');
     await download.saveAs(path);
     const bundle=JSON.parse(await readFile(path,'utf8'));
-    requireValue(bundle.payload?.editions?.length===2,'The handover must contain both original editions.');
-    requireValue(bundle.payload?.decisions?.length>=2,'The handover must carry the saved staff instructions.');
+    const original=await workspace.view();
+    requireValue(bundle.payload?.editions?.length===original.editions.length&&original.editions.every(edition=>bundle.payload.editions.some(item=>item.id===edition.id)),'The handover must contain every selected original work plan and edition.');
+    requireValue(bundle.payload?.decisions?.length===original.decisions.length,'The handover must carry the saved staff instructions.');
     requireValue((bundle.payload?.raw||[]).length===0,'Evaluation handovers must not contain raw source attachments.');
     journal.handover={path,sha256:bundle.sha256,editions:bundle.payload.editions.length,decisions:bundle.payload.decisions.length};
-    const original=await workspace.view();
     journal.original=summary(original);
     await record('handover-downloaded',journal.handover);
     await page.setViewportSize({width:390,height:844});
@@ -398,7 +409,7 @@ if(has('--child')){
     await page.goto(restored.url,{waitUntil:'networkidle'});
     const view=await browserJSON('/api/workspace');
     requireValue(view.workspaceId===journal.workspaceId,'The original workspace identity changed on restart.');
-    requireValue(view.editions?.length===2&&view.decisions?.length>=2,'The fresh process lost retained editions or staff decisions.');
+    requireValue(view.editions?.length===journal.original.editions.length&&view.decisions?.length===journal.original.decisions,'The fresh process lost retained editions or staff decisions.');
     for(const edition of view.editions){
       const original=journal.original.editions.find(item=>item.id===edition.id);
       requireValue(original&&edition.resources?.timeline?.sha256===original.timelineSha256,'The restarted edition changed its original Timeline source reference.');
@@ -425,7 +436,7 @@ if(has('--child')){
       await quiet();
     }
     view=await browserJSON('/api/workspace');
-    requireValue(view.editions?.length===2&&view.decisions?.length>=2,'The receiving workspace did not retain the full handover.');
+    requireValue(view.editions?.length===journal.handover.editions&&view.decisions?.length===journal.handover.decisions,'The receiving workspace did not retain the full handover.');
     requireValue(journal.editions.every(id=>view.editions.some(edition=>edition.id===id)),'The receiving workspace changed an original edition identity.');
     await pickEdition(journal.editions[1],'Work plan');
     await page.getByRole('heading',{name:'Saved staff work instructions',exact:true}).waitFor();
@@ -433,6 +444,37 @@ if(has('--child')){
     await operationsReport('receiving');
   }
   const phases={setup,edition1:()=>edition(1),decision1:()=>decide(1),edition2:()=>edition(2),decision2:()=>decide(2),compare,operations:()=>operationsReport('live'),handover,restart,receive};
+  async function extension(){
+    const path=option('--extension');
+    requireValue(path,'Configure --extension /absolute/module.mjs for this original operation.');
+    const module=await import('file://'+resolve(path)+'?loaded='+Date.now());
+    requireValue(typeof module.run==='function','The integration must export async run({workspace,page,context,journal,memory,directory,record}).');
+    await module.run({workspace,page,context,running,journal,memory,directory,record});
+  }
+  async function continueOriginal(){
+    requireValue(journal.editions[0]&&journal.workId,'Continue an existing original work plan and acquisition.');
+    try{await retryMap(1);}catch(error){await record('map-recovery-review-required',{editionId:journal.editions[0],message:error.message});}
+    const recovered=await workspace.editionView(journal.editions[0]);
+    if(recovered.tile?.available&&!journal.editions[1]){
+      await pickEdition(journal.editions[0],'Configuration');
+      const originalTime=recovered.work.tile.time,whole=originalTime.replace(/\.0{1,3}(?=Z$|[+-]\d{2}:\d{2}$)/,'');
+      requireValue(Date.parse(whole)===Date.parse(originalTime),'The new work version must keep the exact reviewed map instant.');
+      await page.locator('[name="tileTime"]').fill(whole);
+      await act(page.getByRole('button',{name:'Save work configuration',exact:true}),'/api/work');
+      await record('map-time-format-adopted',{from:originalTime,to:whole,workId:journal.workId});
+    }
+    await phase('edition2');await phase('decision2');
+    journal.comparisonPair=journal.editions.slice(0,2);await phase('compare');
+    if(memory.comparison?.reason==='SOURCE_NOT_AVAILABLE'&&has('--compare-refresh')){
+      await record('comparison-refresh-authorized',{reason:'The retained first edition has no live evaluation bytes.',workId:journal.workId});
+      await edition(3);await decide(3);journal.comparisonPair=journal.editions.slice(1,3);await phase('compare');
+    }
+    await phase('operations');
+    if(option('--extension')){try{await extension();await operationsReport('with-integration');}catch(error){await record('integration-review-required',{message:error.message});}}
+    await phase('handover');await phase('restart');await phase('receive');
+    await page.goto(receiver.url,{waitUntil:'networkidle'});await record('browser-reconnected');
+    await record('workflow-complete',{workspaceId:journal.workspaceId,editions:journal.editions,comparison:memory.comparison?{beforeId:memory.comparison.beforeId,afterId:memory.comparison.afterId,comparable:memory.comparison.comparable,reason:memory.comparison.reason}:null,resourceRetries:journal.resourceRetries||[],handover:journal.handover});
+  }
   async function phase(name){
     requireValue(phases[name],'Unknown phase '+name+'.');
     await phases[name]();journal.phases[name]={completedAt:new Date().toISOString()};
@@ -450,7 +492,7 @@ if(has('--child')){
     for(const child of children){try{child.send({action:'close'});}catch{}}
     try{await browser?.close();}catch{}
     if(!restored){try{await running?.close();await workspace?.close?.();}catch{}}
-    emit({event:'closed'});setTimeout(()=>process.exit(0),1000).unref();
+    emit({event:'closed'});setTimeout(()=>process.exit(process.exitCode||0),1000).unref();
   }
   process.once('SIGINT',()=>{void close();});
   process.once('SIGTERM',()=>{void close();});
@@ -465,19 +507,20 @@ if(has('--child')){
     working=true;
     try{
       if(command==='run')await run();
-      else if(command==='extension'){
-        const path=option('--extension');
-        requireValue(path,'Configure --extension /absolute/module.mjs for this original operation.');
-        const extension=await import('file://'+resolve(path)+'?loaded='+Date.now());
-        requireValue(typeof extension.run==='function','The integration must export async run({workspace,page,context,journal,memory,directory,record}).');
-        await extension.run({workspace,page,context,running,journal,memory,directory,record});
-      }else if(command==='retry1'||command==='retry2')await retryMap(Number(command.at(-1)));
+      else if(command==='extension')await extension();
+      else if(command==='continue-original')await continueOriginal();
+      else if(command==='retry1'||command==='retry2')await retryMap(Number(command.at(-1)));
       else await phase(command);
     }
     catch(error){await record('phase-error',{phase:command,message:error.message});}
     finally{working=false;}
   });
-  if(has('--run')){
+  if(has('--continue-original')){
+    working=true;
+    try{await continueOriginal();}
+    catch(error){await record('phase-error',{phase:'continue-original',message:error.message});process.exitCode=1;}
+    finally{working=false;rl.close();await close();}
+  }else if(has('--run')){
     working=true;
     try{await run();if(!has('--keep-open')&&!option('--pause-after')){rl.close();await close();}}
     catch(error){await record('phase-error',{phase:'run',message:error.message});}

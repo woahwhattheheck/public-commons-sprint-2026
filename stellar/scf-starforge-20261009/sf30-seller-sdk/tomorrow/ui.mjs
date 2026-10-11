@@ -1,6 +1,6 @@
 const $=id=>document.getElementById(id);
 const arr=value=>Array.isArray(value)?value:(value&&typeof value==='object'?Object.values(value):[]);
-const state={workspace:null,workId:null,editionId:null,detail:null,tab:'plan',review:null,retryReview:null,comparison:null,busy:false,csrf:null,intervalId:null,page:0,filter:'ALL',printing:false,operations:null,operationsKey:null,operationsScope:'workspace',operationsFilter:'ALL',operationsAssignee:'ALL'};
+const state={workspace:null,workId:null,editionId:null,detail:null,tab:'plan',review:null,retryReview:null,comparison:null,busy:false,csrf:null,intervalId:null,page:0,filter:'ALL',printing:false,operations:null,operationsKey:null,operationsScope:'workspace',operationsFilter:'ALL',operationsAssignee:'ALL',handoverScope:'current'};
 const PREFIX='sf-tomorrow-operator:';
 const volatileDrafts=new Map();
 const storageScope=()=>state.workspace?.workspaceId||state.workspace?.id||null;
@@ -516,11 +516,14 @@ function download(name,bundle){
 }
 function renderHandover(){
   const section=element('section',{class:'panel'},element('h2',{},'Customer operating handover'),element('p',{},'Export the selected forecast editions with work configuration, source references and staff decisions. The portable handover can be reopened through the original workspace import.'));
-  const usage=state.workspace.plan?.usage||{},editions=workEditions(),checks=[];
+  const usage=state.workspace.plan?.usage||{},editions=state.handoverScope==='workspace'?arr(state.workspace.editions):workEditions(),checks=[];
+  const scope=select('handoverScope',[['current','Current work plan'],['workspace','All work plans in this workspace']],state.handoverScope,{onChange:event=>{state.handoverScope=event.target.value;render();}});
+  section.append(element('div',{class:'toolbar spaced'},field('Handover scope',scope)));
+  const workNames=new Map(arr(state.workspace.workOrders).map(work=>[work.id,work.title]));
   for(const edition of editions){
     const check=input('exportEdition',edition.id,{type:'checkbox',checked:edition.id===state.editionId});
     checks.push(check);
-    section.append(element('label',{class:'check-row spaced'},check,element('span',{},edition.label||edition.id,element('span',{class:'small muted'},' · '+edition.state+' · '+(edition.rawAvailability||'No retained raw source')))));
+    section.append(element('label',{class:'check-row spaced'},check,element('span',{},state.handoverScope==='workspace'?(workNames.get(edition.workId)||edition.workId)+' · ':null,edition.label||edition.id,element('span',{class:'small muted'},' · '+edition.state+' · '+(edition.rawAvailability||'No retained raw source')))));
   }
   const raw=input('includeRaw','on',{type:'checkbox',checked:false,disabled:usage.exportRaw!==true||usage.mode!=='licensed-service'});
   section.append(element('div',{class:'form-section'},element('label',{class:'check-row'},raw,'Include source attachments permitted by this workspace’s order and retention settings'),element('p',{class:'help'},'The original workspace selects the currently available, authorized attachments.')));
