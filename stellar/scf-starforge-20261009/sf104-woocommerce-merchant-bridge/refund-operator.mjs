@@ -287,14 +287,19 @@ export async function inspectRefunds(config, order, {client} = {}) {
 
 /** Each explicit prepare reads the original order first. At most one POST is
  * sent; its response is followed by a fresh GET, including after interruption. */
-export async function prepareRefund(config, {adjustmentId:id, order, adjustmentsPath, wooAmount, client} = {}) {
+export async function prepareRefund(config, {adjustmentId:id, order, adjustmentsPath, wooAmount, client,
+  expectedSourceSha256, expectedCurrency} = {}) {
   adjustmentId(id);
   need(reference(order), 'WOO_REFUND_ORDER_REQUIRED');
   const raw = await readBytes(absolute(adjustmentsPath), MAX_EXPORT), exported = parseJson(raw);
+  need(expectedSourceSha256 === undefined || HASH.test(expectedSourceSha256) && digest(raw) === expectedSourceSha256,
+    'WOO_REFUND_SOURCE_CHANGED');
   const {record} = selectRefundAdjustment(exported, id);
   const api = client ?? createMerchantClient(config);
   const before = await api.inspectRefunds(order);
   bindRefundAdjustment(exported, id, before, config, order);
+  need(expectedCurrency === undefined || typeof expectedCurrency === 'string' && before.order.currency === expectedCurrency,
+    'WOO_REFUND_CURRENCY_CHANGED');
   const money = wooMoney(wooAmount, before.order.priceDecimals, {positive:true});
   await workspace(config);
   const directory = await privateDirectory(refundPath(config, id));
@@ -330,12 +335,14 @@ export async function prepareRefund(config, {adjustmentId:id, order, adjustments
 
 /** Explicitly record/recover the same verified credit. The server's stable
  * adjustment metadata identifies a refund child saved before journal recovery. */
-export async function applyRefund(config, id, {confirmOrder, client} = {}) {
+export async function applyRefund(config, id, {confirmOrder, client, expectedReviewSha256} = {}) {
   const loaded = await loadInput(config, id), input = loaded.input;
   need(confirmOrder === input.orderReference, 'WOO_REFUND_ORDER_CONFIRMATION_REQUIRED');
   const api = client ?? createMerchantClient(config);
   const before = await api.inspectRefunds(input.orderReference);
   const observed = inspectMapping(config, loaded, before);
+  need(expectedReviewSha256 === undefined || HASH.test(expectedReviewSha256) && observed.adjustment?.reviewSha256 === expectedReviewSha256,
+    'WOO_REFUND_REVIEW_CHANGED');
   if (['APPLIED', 'REFUND_RECONCILIATION_REQUIRED'].includes(observed.status)) {
     return recordRead(loaded, before, observed, 'apply');
   }
@@ -408,5 +415,6 @@ export async function exportRefund(config, id, destination) {
     siteUrl:config.siteUrl, orderReference:status.orderReference, inputSha256:loaded.input.sha256, files};
   const saved = await saveFirst(join(target, 'manifest.json'), manifest);
   need(same(saved, manifest), 'WOO_REFUND_EXPORT_MANIFEST_CONFLICT');
-  return {...manifest, directory:target};
+  return {...manifest, directory:target,
+    manifestSha256:digest(await readBytes(join(target, 'manifest.json'), MAX_STATE))};
 }
