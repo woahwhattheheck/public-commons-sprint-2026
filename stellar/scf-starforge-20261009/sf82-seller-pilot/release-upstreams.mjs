@@ -59,7 +59,7 @@ function inspectBytes(bytes, service, allowLoopback) {
   for (const [name, value] of Object.entries(compiled)) {
     const raw = input.bindings[name];
     bindings[name] = {
-      binding: name, configurationSha256: digest(stable(raw)),
+      binding: name, configurationSha256: digest(stable(value.transport ? {binding:raw,transport:value.transport} : raw)),
       origin: value.origin, path: value.path, method: value.method, query: value.query,
       requestHeaders: value.requestHeaders, headerEnvironment: raw.headerEnv ?? {},
       responseHeaders: value.responseHeaders, responseMode: value.responseMode,
@@ -69,6 +69,7 @@ function inspectBytes(bytes, service, allowLoopback) {
       idempotency: raw.idempotency ?? null,
       cache: raw.cache ?? null,
       ...(raw.oauth2 === undefined ? {} : { oauth2: raw.oauth2 }),
+      ...(value.transport ? { transport: value.transport } : {}),
     };
   }
   return { bindings, environment: references, credentialValuesChecked: false };

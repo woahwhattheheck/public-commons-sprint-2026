@@ -15,7 +15,8 @@ Both JSON paths resolve from the current directory. Backend origins are fixed;
 credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
 Without --facilitator, requests return payment challenges and never call a backend.
-See UPSTREAM.md for merchant setup and OAUTH.md for OAuth client-credentials backends.`;
+See UPSTREAM.md for merchant setup, UPSTREAM_TRANSPORT.md for named host egress,
+and OAUTH.md for OAuth client-credentials backends.`;
 
 function parse(args) {
   const options = new Map(), switches = new Set(['--allow-loopback-upstream','--allow-local-facilitator','--check']);
@@ -81,7 +82,8 @@ export async function main(args = process.argv.slice(2)) {
       upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
       cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
       oauthUpstreamBindings:upstreams.filter(row => row.oauth2).length,
-      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length}) + '\n');
+      supplierQuotaBindings:upstreams.filter(row => row.supplierAccount).length,
+      upstreamTransports:upstreams.filter(row => row.transport).map(row => ({binding:row.name,...row.transport}))}) + '\n');
     await application.close();
     return null;
   }

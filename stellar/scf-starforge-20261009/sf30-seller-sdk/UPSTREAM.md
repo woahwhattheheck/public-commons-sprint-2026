@@ -10,6 +10,11 @@ An API owner supplies two small files: its ordinary seller configuration and
 its upstream bindings. Existing OpenAPI-derived `offer` routes work too; the
 launcher does not replace their descriptions, schemas or payment terms.
 
+For proxy-managed merchant hosts, [named transport profiles](UPSTREAM_TRANSPORT.md)
+retain the selected environment reference in the same upstream file and SF82
+release review. JSON, file, OAuth and finite streaming requests use the original
+exchange and close with their accepted source work.
+
 For an existing event or record source, the [streaming workflow](STREAMING.md)
 uses these same bindings with `responseMode: "sse"` or `"ndjson"`. It includes
 a real finite telemetry backend, explicit payment-flow examples, byte/time
