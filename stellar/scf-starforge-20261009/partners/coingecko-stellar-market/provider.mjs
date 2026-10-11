@@ -55,7 +55,7 @@ export async function prepareCoinGeckoProduct(input) {
       parameters:[...c.pathFields.map(f=>parameter(f,'path',c)),...c.queryFields.map(f=>parameter(f,'query',c))],
       responses:{'200':{description:'Original provider JSON bytes. Prices, nulls and included entity identities retain their native representation.',
         content:{'application/json':{schema:{type:'object',additionalProperties:true}}}}}}};
-    selections.push({method:'GET',path:c.pathTemplate,serviceName:plan.name+' — '+c.name,
+    selections.push({method:'GET',path:c.pathTemplate,serviceName:'CoinGecko '+endpoint,
       accepts:clone(plan.endpointAccepts[endpoint]??plan.accepts)});
     bindings.push({method:'GET',path:c.pathTemplate,id:'coingecko-'+endpoint,
       handler,admit:handler+'Admission',validateInput:true});
