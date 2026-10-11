@@ -31,7 +31,7 @@ SF70 reports current provider-observed row counts, not users, customers, seller 
 - Two pinned preapproved public HTTPS hosts, never browser-selected URL parameters. The server binds literal `127.0.0.1` and rejects non-loopback sockets and altered `Host` headers.
 - Requests reject redirects, use a 12-second per-page abort, cap each JSON page at 2 MiB, at most 30 pages and 3,000 source rows per provider. No cookies, authorization, credentials, wallet, or private endpoints forwarded.
 - Source JSON is rendered with textContent, under same-origin restrictive CSP; no untrusted HTML insertion. Errors remain source-specific and do not become false absence.
-- No telemetry or persistence; refresh requests new public native captures and may differ from old Muse snapshots.
+- No telemetry or persistence. Independent native source capture timestamps remain unchanged by delivery coordination. The manual **Refresh genuine GETs** button bypasses any recent completed-capture reuse and obtains a new provider observation (or joins a simultaneous in-progress fetch).
 - No CI, customer contacts, SCF submission, commercial promises, or hosted deployments. The grant founder and SF49 merchant operator can reuse this original product for operator demonstration, not claim commercial adoption from a testnet result.
 
 ### Exact live source follow-through
@@ -54,3 +54,17 @@ The browser reads the original Bazaar v2 operation declaration from `extensions.
 The **Copy source-bound offer handoff** button copies only currently observed data: original facilitator and native discovery endpoint, capture time, resource URL, declared operation/method/tool/route template and each indivisible advertised tuple (network, scheme, asset, payTo, atomic amount), plus a warning if options were truncated. It is a reviewable merchant/engineering transfer, not a seller probe or authorization. It cannot sign, spend, invoke seller endpoints, or verify ledger finality. Confirm merchant ownership, present live unpaid 402 and permitted selected terms using existing SF52/SF64/SF36 workflows before buyer approval.
 
 This is compatible with SF71's *separate* between-refresh observed-provider-offer delta view. Method identity improves that existing longitudinal view because method changes remain distinct native operations. SF71's previously merged module, source/UI and behavior are preserved. No additional independent facilitator, crawler, controller, CI, wallet, contact or competition proof product is created.
+
+## Concurrent native capture and operator-visible freshness (SF70)
+
+This same loopback server coalesces simultaneous browser requests into **one** original native Vellar+Periplo capture per Stellar network. A completed capture with both independent sources marked `COMPLETE_GET_CAPTURE` can be reused by automatic tab loads for **up to 8 seconds**; partial-source failure or total-source failure is **never** stored as an eligible complete capture. Failed attempts clear the in-flight state so the next request can retry. All data, declared native pagination, per-provider source `observedAt`, original advertised payment alternatives and the existing SF71/SF72 operator features remain unchanged.
+
+An added response-level `operatorDelivery` explains **how this HTTP response was served**, separate from when the native providers were read: `LIVE_NATIVE_CAPTURE`, `SHARED_LIVE_CAPTURE`, or `RECENT_COMPLETE_CAPTURE`, with serving time and completed-capture age in milliseconds. UI source cards display native per-provider capture timestamps; the status reports reused versus live/joined delivery. Clicking **Refresh genuine GETs** calls `/api/federated?refresh=1` and always bypasses reuse, preserving SF71's successive-observation semantics. No scheduled background requests or external cache are introduced; no seller-origin calls, credentials, wallets, settlement or fee-bearing hosted CI.
+
+Run the focused local check (Node 22+; no hosted Actions):
+
+```sh
+node --test stellar/scf-starforge-20261009/sf70-federated-bazaar-operator/test/refresh.test.mjs
+```
+
+These checks cover concurrent native capture, manual freshness, an incomplete provider, an upstream throw, completed-capture expiry and network-scope independence. They assert coordination semantics, not live provider counts or payment success. For current original provider totals, use new genuine native GET data; the prior Muse 27+2 receipt is a timestamped observation rather than a permanent fixture.

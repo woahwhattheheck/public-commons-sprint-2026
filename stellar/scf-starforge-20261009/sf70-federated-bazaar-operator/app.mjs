@@ -58,6 +58,7 @@ function renderSource(source) {
   if (isAvailable) {
     card.append(elem('p','',source.rows + ' rows across ' + source.pages + ' page(s) · '+source.coverage+
       (source.declaredTotal === null ? '' : ' · declared total '+source.declaredTotal)));
+    if (source.observedAt) card.append(elem('p','','Native source observed: '+new Date(source.observedAt).toLocaleString()));
   } else card.append(elem('p','error','Fetch did not complete: '+short(source.error,180)));
   return card;
 }
@@ -196,14 +197,14 @@ function renderListings() {
   results.append(grid);
 }
 
-async function load() {
+async function load(manual = false) {
   if(state.loading)return;
   state.loading=true;
   $('refresh').disabled=true;
-  $('status').textContent='Performing the original public GETs with native pagination…';
+  $('status').textContent=manual?'Refreshing both original public native sources…':'Loading native source observations…';
   $('status').className='status';
   try {
-    const response=await fetch('/api/federated',{method:'GET',cache:'no-store',credentials:'omit'});
+    const response=await fetch(manual?'/api/federated?refresh=1':'/api/federated',{method:'GET',cache:'no-store',credentials:'omit'});
     const data=await response.json();
     if(!Array.isArray(data.sources)||!Array.isArray(data.listings))throw new Error(data.error||'Invalid native federation response');
     state.delta=state.data ? compareSnapshots(state.data,data) : null;
@@ -215,9 +216,15 @@ async function load() {
     $('time').textContent=new Date(data.observedAt).toLocaleTimeString();
     sources.replaceChildren(...data.sources.map(renderSource));
     $('status').className='status'+(good!==data.sources.length?' caution':'');
-    $('status').textContent=data.state==='BOTH_SOURCES_COMPLETE'?
+    const delivery = data.operatorDelivery?.mode;
+    const deliveryNote = delivery === 'RECENT_COMPLETE_CAPTURE' ?
+      ' Reused complete native capture ('+data.operatorDelivery.completedCaptureAgeMs+' ms old); not a new provider fetch.' :
+      delivery === 'SHARED_LIVE_CAPTURE' ?
+      ' Joined a simultaneous original native capture without duplicate upstream requests.' :
+      ' Original native provider fetch attempted.';
+    $('status').textContent=(data.state==='BOTH_SOURCES_COMPLETE'?
       'Both independent original-source catalogs captured. Browse complete native advertised rows.' :
-      'Source coverage is incomplete. Available entries are shown with provider errors; do not infer absence in unavailable sources.';
+      'Source coverage is incomplete. Available entries are shown with provider errors; do not infer absence in unavailable sources.') + deliveryNote;
     renderListings();
   } catch(error) {
     $('status').textContent='Unable to load source catalogs: '+String(error.message).slice(0,150);
@@ -229,5 +236,5 @@ $('filters').addEventListener('submit',e=>e.preventDefault());
 $('query').addEventListener('input',renderListings);
 $('provider').addEventListener('change',renderListings);
 $('operation').addEventListener('change',renderListings);
-$('refresh').addEventListener('click',load);
+$('refresh').addEventListener('click',()=>load(true));
 load();
