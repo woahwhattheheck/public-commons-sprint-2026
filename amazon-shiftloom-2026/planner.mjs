@@ -57,6 +57,51 @@ export function overlaps(a, b) {
 export function proposeCoverage(state, command) {
   const intent = parseIntent(command, state);
   if (intent.error) return { ok: false, message: intent.error, trace: [{ tool: 'intent_reader', result: 'clarification' }] };
+  return proposeCoverageIntent(state, intent);
+}
+
+function qualificationProblems(volunteer, shift) {
+  const missing = shift.required.filter(id => !volunteer.skills.includes(id));
+  const invalid = volunteer.qualificationWindows ? shift.required.filter(id =>
+    volunteer.skills.includes(id) && !volunteer.qualificationWindows.some(q => q.id === id && q.status === 'active'
+      && (!q.from || Date.parse(q.from) <= Date.parse(shift.start))
+      && (!q.until || Date.parse(q.until) >= Date.parse(shift.end)))) : [];
+  return { missing, invalid };
+}
+
+/** Inspect the retained roster with the same constraints used for new candidates. */
+export function rosterFindings(state, { shiftId = null, removing = null } = {}) {
+  const findings = [];
+  for (const shift of state.shifts.filter(s => !shiftId || s.id === shiftId)) {
+    const assigned = shift.assigned.filter(id => !(sameshift(shift.id, shiftId) && id === removing));
+    if (assigned.length + (shift.reservedSlots || 0) > shift.capacity)
+      findings.push({ code: 'OVER_CAPACITY', shiftId: shift.id, message: 'Named assignments and reserved slots exceed capacity.' });
+    for (const id of assigned) {
+      const v = state.volunteers.find(v => v.id === id);
+      if (!v) { findings.push({ code: 'UNKNOWN_VOLUNTEER', shiftId: shift.id, volunteerId: id, message: 'Assigned volunteer is absent from the roster.' }); continue; }
+      const add = (code, message) => findings.push({ code, shiftId: shift.id, volunteerId: id, message });
+      if (v.active === false) add('INACTIVE_ASSIGNEE', 'An inactive volunteer remains assigned.');
+      if (v.eligibility && v.eligibility[shift.id] === false) add('INELIGIBLE_ASSIGNEE', 'A coordinator-ineligible volunteer remains assigned.');
+      if ((state.unavailable[id] || []).includes(shift.id)) add('UNAVAILABLE_ASSIGNEE', 'A known unavailable volunteer remains assigned.');
+      const q = qualificationProblems(v, shift);
+      if (q.missing.length || q.invalid.length) add('ASSIGNEE_QUALIFICATION', 'Assigned qualifications are missing or invalid for the complete shift: ' + [...q.missing, ...q.invalid].join(', ') + '.');
+      const bookings = state.shifts.filter(s => s.assigned.includes(id) && !(s.id === shiftId && id === removing));
+      if (bookings.some(s => s.id !== shift.id && overlaps(s, shift))) add('ASSIGNEE_OVERLAP', 'The retained assignment overlaps another committed shift.');
+      if (shift.countsTowardLimit !== false && bookings.filter(s => s.countsTowardLimit !== false).length > v.weeklyLimit)
+        add('ASSIGNEE_LIMIT', 'Retained assignments exceed the declared planning-week limit.');
+    }
+  }
+  return findings;
+}
+
+function sameshift(a, b) { return a === b; }
+
+/** Structured source IDs share the original filtering, ranking and approval engine. */
+export function proposeCoverageIntent(state, intent) {
+  if (!intent || typeof intent.shiftId !== 'string' || !state.shifts.some(s => s.id === intent.shiftId))
+    return { ok: false, message: 'Choose a shift from this exact source version.', trace: [{ tool: 'schedule_lookup', result: 'unknown_shift' }] };
+  for (const key of ['absentVolunteerId', 'excludedVolunteerId']) if (intent[key] && !state.volunteers.some(v => v.id === intent[key]))
+    return { ok: false, message: 'Choose a volunteer from this exact roster.', trace: [{ tool: 'schedule_lookup', result: 'unknown_volunteer' }] };
   const shift = state.shifts.find(s => s.id === intent.shiftId);
   const removing = intent.absentVolunteerId;
   if (removing && !shift.assigned.includes(removing)) {
@@ -68,17 +113,22 @@ export function proposeCoverage(state, command) {
       trace: [{ tool: 'schedule_lookup', result: 'assigned_volunteer_exclusion_needs_absence' }] };
   }
   const retained = shift.assigned.filter(id => id !== removing);
-  const vacancies = shift.capacity - retained.length;
+  const vacancies = shift.capacity - retained.length - (shift.reservedSlots || 0);
   const trace = [
     { tool: 'intent_reader', result: `Requested ${shift.label}${removing ? ' with a reported absence' : ''}` },
-    { tool: 'schedule_lookup', result: `${retained.length} retained / ${shift.capacity} required` },
+    { tool: 'schedule_lookup', result: `${retained.length} named retained + ${shift.reservedSlots || 0} reserved / ${shift.capacity} required` },
   ];
+  const baseline = rosterFindings(state, { shiftId: shift.id, removing });
+  if (baseline.length) return { ok: false, message: 'Resolve the retained assignment findings for this shift before accepting revised coverage.', trace, baselineFindings: baseline, candidateReview: [] };
   if (vacancies < 1) return { ok: false, message: 'That shift is already fully covered; no changes proposed.', trace };
-  const rejected = { excluded: 0, unavailable: 0, skill: 0, clash: 0, limit: 0, booked: 0 };
+  const rejected = { excluded: 0, unavailable: 0, eligibility: 0, skill: 0, clash: 0, limit: 0, booked: 0 };
   const scored = [];
   const candidateReview = [];
   for (const v of state.volunteers) {
     const explain = (status, reason) => candidateReview.push({ id: v.id, name: v.name, status, reason });
+    if (v.active === false || (v.eligibility && v.eligibility[shift.id] !== true)) {
+      rejected.eligibility++; explain('blocked', v.active === false ? 'Volunteer is not active in the selected source.' : 'Coordinator eligibility is not confirmed for this shift.'); continue;
+    }
     if (v.id === intent.excludedVolunteerId) { rejected.excluded++; explain('blocked', 'Excluded in this request.'); continue; }
     if (v.id === removing || (state.unavailable[v.id] || []).includes(shift.id) || !v.available.includes(shift.id)) {
       rejected.unavailable++;
@@ -88,17 +138,20 @@ export function proposeCoverage(state, command) {
       continue;
     }
     if (retained.includes(v.id)) { rejected.booked++; explain('assigned', 'Already assigned to this shift.'); continue; }
-    if (!shift.required.every(s => v.skills.includes(s))) {
-      rejected.skill++; explain('blocked', 'Missing required qualification: ' + shift.required.filter(s => !v.skills.includes(s)).join(', ') + '.'); continue;
+    const qualifications = qualificationProblems(v, shift);
+    if (qualifications.missing.length || qualifications.invalid.length) {
+      rejected.skill++; explain('blocked', qualifications.missing.length ? 'Missing required qualification: ' + qualifications.missing.join(', ') + '.'
+        : 'Qualification is not active for the complete shift: ' + qualifications.invalid.join(', ') + '.'); continue;
     }
     const bookings = state.shifts.filter(s => s.assigned.includes(v.id) && !(s.id === shift.id && removing === v.id));
     if (bookings.some(s => overlaps(s, shift))) {
       rejected.clash++; explain('blocked', 'Overlaps an existing assignment: ' + bookings.filter(s => overlaps(s, shift)).map(s => s.label).join(', ') + '.'); continue;
     }
-    if (bookings.length >= v.weeklyLimit) { rejected.limit++; explain('blocked', 'Already at the weekly limit of ' + v.weeklyLimit + ' assignment(s).'); continue; }
-    const score = bookings.length * 100 + (v.preferred.includes(shift.id) ? -20 : 0);
-    explain('eligible', bookings.length + ' current assignment(s)' + (v.preferred.includes(shift.id) ? '; prefers this shift.' : '; available for this shift.'));
-    scored.push({ id: v.id, name: v.name, score, currentAssignments: bookings.length, preference: v.preferred.includes(shift.id) });
+    const counted = bookings.filter(s => s.countsTowardLimit !== false).length;
+    if (counted >= v.weeklyLimit) { rejected.limit++; explain('blocked', 'Already at the weekly limit of ' + v.weeklyLimit + ' assignment(s).'); continue; }
+    const score = counted * 100 + (v.preferred.includes(shift.id) ? -20 : 0);
+    explain('eligible', counted + ' current assignment(s)' + (v.preferred.includes(shift.id) ? '; prefers this shift.' : '; available for this shift.'));
+    scored.push({ id: v.id, name: v.name, score, currentAssignments: counted, preference: v.preferred.includes(shift.id) });
   }
   scored.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name));
   const selected = scored.slice(0, vacancies);
@@ -111,6 +164,7 @@ export function proposeCoverage(state, command) {
       ? `Honored named exclusion for ${state.volunteers.find(v => v.id === intent.excludedVolunteerId).name}`
       : 'No named exclusions requested' },
     { tool: 'availability_check', result: `${rejected.unavailable} unavailable; ${rejected.booked} already on this shift` },
+    { tool: 'coordinator_eligibility', result: `${rejected.eligibility} inactive or without affirmative shift eligibility` },
     { tool: 'skill_match', result: `${rejected.skill} lack required role (${shift.required.join(', ')})` },
     { tool: 'overlap_and_limit', result: `${rejected.clash} time conflicts; ${rejected.limit} weekly-limit conflicts` },
     { tool: 'fairness_rank', result: `${scored.length} eligible; prioritize lighter loads and preferences` },
@@ -149,7 +203,7 @@ export function applyProposal(state, proposal) {
     } else throw new Error('Unknown proposed action.');
   }
   const target = next.shifts.find(s => s.id === proposal.shift.id);
-  if (target.assigned.length !== target.capacity) throw new Error('Incomplete coverage cannot be published.');
+  if (target.assigned.length + (target.reservedSlots || 0) !== target.capacity) throw new Error('Incomplete coverage cannot be published.');
   next.revision += 1;
   return next;
 }

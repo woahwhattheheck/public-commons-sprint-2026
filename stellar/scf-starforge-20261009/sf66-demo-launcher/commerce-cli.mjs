@@ -5,6 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { createInterface } from 'node:readline/promises';
 import { initializeCommerce, inspectCommerce, openCommerce, probeCommerceReadiness,
   completeCommerceShutdown, commerceErrorCode } from './commerce.mjs';
+import { readCommerceRecoveryConfig } from './commerce-recovery.mjs';
+import { createCommerceRecoveryController } from './commerce-recovery-controller.mjs';
 
 const HELP = `Original SCF commerce session (Node 22+, full checkout)
 
@@ -13,6 +15,11 @@ const HELP = `Original SCF commerce session (Node 22+, full checkout)
   node commerce-cli.mjs probe --directory /private/session
   node commerce-cli.mjs start --directory /private/session [--finality-node /absolute/trusted-node]
   node commerce-cli.mjs start --directory /private/session --execute INTENT [--one-shot]
+  node commerce-cli.mjs backup-review --recovery-config /private/host/recovery.json
+  node commerce-cli.mjs backup --recovery-config /private/host/recovery.json --review SHA256
+  node commerce-cli.mjs backup-verify --recovery-config /private/host/recovery.json --backup ID
+  node commerce-cli.mjs backup-restore --recovery-config /private/host/recovery.json --backup ID
+  node commerce-cli.mjs backup-status --recovery-config /private/host/recovery.json
 
 The foreground console starts the original merchant and operations listeners.
 Commands: status | readiness | review INTENT | signer INTENT | execute INTENT |
@@ -26,13 +33,17 @@ An upstream session with operationControls prints its private merchant recovery
 URL at startup; ordinary status output includes only the read-only operations URL.
 RPC recovery verifies an existing payment, then separately reads and saves the
 same retained method and parameters. See JSONRPC_COMMERCE.md for the full workflow.
+Stop and drain the owning commerce process before CLI backup review/capture.
+The original OS lease rejects capture while another commerce process owns it.
+Recovery uses original operator journal checkpoints and SF101 encryption;
+see COMMERCE_RECOVERY.md for source-absent verification and same-session restore.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function printExecution(value) {
   print(value);
   if (Number.isInteger(value.exitCode) && value.exitCode !== 0) process.exitCode = value.exitCode;
 }
-function options(args, allowed) {
+function options(args, allowed, required = '--directory') {
   const values = {};
   for (let i = 0; i < args.length; i++) {
     const key = args[i];
@@ -41,7 +52,7 @@ function options(args, allowed) {
     if (!args[i + 1] || args[i + 1].startsWith('--')) throw new Error(HELP);
     values[key] = args[++i];
   }
-  if (!values['--directory']) throw new Error(HELP);
+  if (!values[required]) throw new Error(HELP);
   return values;
 }
 function stateView(value) {
@@ -71,6 +82,35 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(HELP); return;
   }
   const [command, ...rest] = args;
+  if (['backup-review', 'backup', 'backup-verify', 'backup-restore', 'backup-status'].includes(command)) {
+    const allowed = ['--recovery-config', ...(command === 'backup' ? ['--review'] :
+      ['backup-verify', 'backup-restore'].includes(command) ? ['--backup'] : [])];
+    const opts = options(rest, allowed, '--recovery-config');
+    if (command === 'backup' && !/^[a-f0-9]{64}$/.test(opts['--review'] ?? '') ||
+        ['backup-verify', 'backup-restore'].includes(command) && !opts['--backup']) throw new Error(HELP);
+    const profile = await readCommerceRecoveryConfig(resolve(opts['--recovery-config']));
+    const recovery = createCommerceRecoveryController(profile, {
+      // A separate CLI cannot close a different host process. Capture acquires
+      // every original commerce lease and the native operator journal locks.
+      pause: async () => {}, state: async () => 'OFFLINE',
+    });
+    async function run(action, value = {}) {
+      recovery.dispatch(action, value); await recovery.wait();
+      const result = await recovery.status();
+      if (result.job?.error) throw Object.assign(new Error(result.job.error), { code: result.job.error });
+      return result;
+    }
+    try {
+      if (command === 'backup-status') return print(await recovery.status());
+      if (command === 'backup-review') return print(await run('review'));
+      if (command === 'backup') {
+        await run('review');
+        return print(await run('capture', { reviewSha256: opts['--review'] }));
+      }
+      return print(await run(command === 'backup-verify' ? 'verify' : 'restore',
+        { id: opts['--backup'] }));
+    } finally { await recovery.close(); }
+  }
   if (command === 'init') {
     const opts = options(rest, ['--plan', '--directory']);
     if (!opts['--plan']) throw new Error(HELP);

@@ -53,7 +53,8 @@
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge",
     "stellar-forge/mcp-paid-agent",
     "stellar/scf-starforge-20261009/partners/getblock-stellar",
-    "stellar/scf-starforge-20261009/merchant-settlement-accounting"
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting",
+    "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -106,7 +107,12 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-request.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.css",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md"
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.css",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_RECOVERY.md"
   ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
@@ -217,6 +223,9 @@
     "mcp-results": "stellar-forge/mcp-paid-agent/result-cli.mjs",
     "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs",
     "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
+    "tenderly": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/cli.mjs",
+    "tenderly-workspace": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs",
+    "tenderly-customer": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer/cli.mjs",
     "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs"
   },
   "exports": {
@@ -396,6 +405,14 @@
     "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs",
     "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs",
     "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
+    "./commerce-recovery": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery.mjs",
+    "./commerce-recovery-controller": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
+    "./partners/tenderly": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/product.mjs",
+    "./partners/tenderly/application": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/application.mjs",
+    "./partners/tenderly/preparation": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer.mjs",
+    "./partners/tenderly/customer": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer/client.mjs",
+    "./partners/tenderly/workspace": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/model.mjs",
+    "./partners/tenderly/workspace/server": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs",
     "./buyer/tenderly-analysis": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/library.mjs",
     "./buyer/tenderly-analysis/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/server.mjs",
     "./buyer/tenderly-analysis/records": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/analyze.mjs"

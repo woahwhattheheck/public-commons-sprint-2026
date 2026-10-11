@@ -3303,6 +3303,37 @@ worker and Woo merchant review remain the fulfillment flow. The full source
 guide includes those commands, retained order generations and recovery.
 `./seller/woocommerce` and `./buyer/woocommerce` expose the same original APIs.
 
+## Operate a Tenderly simulation merchant
+
+The complete Tenderly partner product includes provider configuration, the
+retained operation application, its industrial operator workspace, and the
+original Node and Python customer adapters. Its selected EVM network and
+seven public transaction fields remain bound to the merchant's plan.
+
+Use `starforge tenderly --help` for the original preparation and merchant
+lifecycle, `starforge tenderly-workspace --help` for the operator browser, and
+`starforge tenderly-customer --help` for customer selection, import, review,
+execution, status, recovery, export and analysis. Customer recovery opens the
+existing attempt and its saved file. The same customer can deliver its result
+directly to the analysis workspace:
+
+```sh
+starforge tenderly-customer analyze \
+  --runtime /absolute/installed/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --state /private/customer/purchases --intent EXISTING_INTENT \
+  --workspace /private/customer/tenderly-analysis --label 'Reviewed simulation'
+```
+
+Use the actual installed SF88 directory and retained customer intent. The whole
+`source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/`
+directory includes the original operator, preparation and customer guides,
+browser assets, and `customer/python/stellar_forge_tenderly` package.
+
+Stable application entries are `./partners/tenderly`, `/application`,
+`/preparation`, `/customer`, `/workspace` and `/workspace/server`, each under
+`@tokenjunkielabs/starforge-merchant`. They expose the maintained product,
+application, buyer preparation, native customer and operator workspace.
+
 ## Analyze a completed Tenderly simulation
 
 Use the customer analysis workspace to receive the original merchant or buyer
