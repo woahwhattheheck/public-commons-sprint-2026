@@ -9,11 +9,13 @@ const sha = data => createHash('sha256').update(data).digest('hex');
 export async function run(args = process.argv.slice(2)) {
   const options = new Map();
   for (let i = 0; i < args.length; i += 2) {
-    if (!['--spec', '--config', '--out', '--service-bindings'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--') || options.has(args[i]))
-      throw new Error('Usage: node cli.mjs --spec openapi.json --config selections.json --out NEW_DIRECTORY [--service-bindings bindings.json]');
+    if (!['--spec', '--config', '--out', '--service-bindings', '--upstream-bindings'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--') || options.has(args[i]))
+      throw new Error('Usage: node cli.mjs --spec openapi.json --config selections.json --out NEW_DIRECTORY [--service-bindings bindings.json] [--upstream-bindings upstreams.json]');
     options.set(args[i], args[i + 1]);
   }
   if (!['--spec', '--config', '--out'].every(key => options.has(key))) throw new Error('Supply --spec, --config and --out');
+  if (options.has('--upstream-bindings') && !options.has('--service-bindings'))
+    throw new Error('--upstream-bindings requires --service-bindings');
   const input = async name => {
     const path = options.get(name), stat = await lstat(path);
     if (!stat.isFile() || stat.size > 4 * 1024 * 1024) throw new Error(name + ' requires a regular JSON file up to 4 MiB');
@@ -29,6 +31,15 @@ export async function run(args = process.argv.slice(2)) {
   const createSellerServiceConfig = bindings
     ? (await import('./service-config.mjs')).createSellerServiceConfig : null;
   const serviceConfig = bindings ? createSellerServiceConfig(compiled, bindings.value) : null;
+  const upstreamInput = options.has('--upstream-bindings') ? await input('--upstream-bindings') : null;
+  let upstreamBytes = null;
+  if (upstreamInput) {
+    const { createContractUpstreamBindings } = await import('./response-contracts.mjs');
+    const upstreams = createContractUpstreamBindings(spec.value, compiled, bindings.value, upstreamInput.value,
+      { specSha256: sha(spec.bytes) });
+    upstreamBytes = Buffer.from(JSON.stringify(upstreams, null, 2) + '\n');
+    if (upstreamBytes.length > 1048576) throw new RangeError('Upstream config exceeds the SF30 1 MiB limit');
+  }
   const responseFiles = [];
   if (serviceConfig?.routes.some(route => Object.hasOwn(route, 'responseFile'))) {
     const { readJsonResponseFile } = await import('../sf30-seller-sdk/response-file.mjs');
@@ -64,6 +75,12 @@ export async function run(args = process.argv.slice(2)) {
     manifest.responseFiles = responseFiles.map(({ routeId, file, bytes }) => ({ routeId, file, sha256: sha(bytes) }));
     manifest.responseFileLoaderSha256 = sha(await readFile(new URL('../sf30-seller-sdk/response-file.mjs', import.meta.url)));
   }
+  if (upstreamBytes) {
+    manifest.upstreamBindingsSha256 = sha(upstreamInput.bytes);
+    manifest.upstreamConfigSha256 = sha(upstreamBytes);
+    manifest.responseContractCompilerSha256 = sha(await readFile(new URL('./response-contracts.mjs', import.meta.url)));
+    manifest.responseContractRuntimeSha256 = sha(await readFile(new URL('../sf30-seller-sdk/response-contract.mjs', import.meta.url)));
+  }
   const output = resolve(options.get('--out'));
   await mkdir(output, { mode: 0o700 });
   if (responseFiles.length) {
@@ -72,10 +89,12 @@ export async function run(args = process.argv.slice(2)) {
   }
   await writeFile(resolve(output, 'offers.json'), bytes, { flag: 'wx', mode: 0o600 });
   if (serviceBytes) await writeFile(resolve(output, 'seller-service.json'), serviceBytes, { flag: 'wx', mode: 0o600 });
+  if (upstreamBytes) await writeFile(resolve(output, 'upstreams.json'), upstreamBytes, { flag: 'wx', mode: 0o600 });
   await writeFile(resolve(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
   process.stdout.write(JSON.stringify({ output, operations: compiled.offers.length, paymentsInitiated: 0 }) + '\n');
   return manifest;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
   run().catch(error => { process.stderr.write(error.message + '\n'); process.exitCode = 1; });
+
 

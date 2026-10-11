@@ -3,6 +3,7 @@
 import { request as httpRequest, validateHeaderName, validateHeaderValue } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { createGunzip, createInflate, createBrotliDecompress } from 'node:zlib';
+import { compileResponseContract } from './response-contract.mjs';
 
 const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-authorization',
@@ -112,12 +113,12 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult } = options;
+    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract } = options;
   if (!METHODS.has(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
       lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
@@ -127,6 +128,9 @@ export function createUpstreamHandler(options = {}) {
   integer(maxInFlight, 1, 256, 'maxInFlight');
   const targetFor = compileTarget(baseUrl, path, allowLocal), queries = queryMapping(query);
   const forward = headerList(requestHeaders), expose = headerList(responseHeaders, true);
+  if (responseContract !== undefined && (responseType !== 'json' || !expose.includes('content-type')))
+    throw new TypeError('A response contract requires JSON mode and exposed content-type');
+  const responseCheck = responseContract === undefined ? null : compileResponseContract(responseContract, { method });
   // Static credentials are copied at construction; a synchronous factory reads
   // freshly rotated environment credentials on each request without buyer input.
   const staticHeaders = typeof configuredHeaders === 'function' ? null : serverHeaders(configuredHeaders);
@@ -200,8 +204,12 @@ export function createUpstreamHandler(options = {}) {
           }
           if (method === 'HEAD' || status === 204 || status === 205) {
             res.resume();
-            res.once('end', () => res.complete ? finish({ status, headers: resultHeaders, body: Buffer.alloc(0) }) :
-              bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE'));
+            res.once('end', () => {
+              if (!res.complete) return bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE');
+              const body = Buffer.alloc(0), error = responseCheck?.validate({ status, body });
+              if (error) return bad(502, error, status);
+              finish({ status, headers: resultHeaders, body });
+            });
             return;
           }
           if (responseType === 'json' && !/^application\/(?:[\w!#$&^.+-]+\+)?json(?:\s*;|$)/i.test(res.headers['content-type'] ?? '')) {
@@ -227,10 +235,14 @@ export function createUpstreamHandler(options = {}) {
             if (done) return;
             if (!res.complete) return bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE');
             const content = Buffer.concat(chunks, count);
+            let value;
             if (responseType === 'json') {
-              try { JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(content)); }
+              try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(content)); }
               catch { return bad(502, 'UPSTREAM_JSON_INVALID'); }
             }
+            const contractError = responseCheck?.validate({ status, body: content, value,
+              contentType: responseHop.has('content-type') ? undefined : res.headers['content-type'] });
+            if (contractError) return bad(502, contractError, status);
             finish({ status, headers: resultHeaders, body: content });
           });
           if (decoded !== res) res.pipe(decoded);
@@ -275,3 +287,4 @@ export function createUpstreamHandler(options = {}) {
   upstreamHandler.snapshot = () => Object.freeze({ ...totals });
   return upstreamHandler;
 }
+
