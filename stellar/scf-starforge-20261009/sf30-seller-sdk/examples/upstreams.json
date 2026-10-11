@@ -1,0 +1,15 @@
+{
+  "schema": "stellar-forge.seller-upstreams.v1",
+  "bindings": {
+    "existingDataset": {
+      "origin": "http://127.0.0.1:8425",
+      "path": "/v1/dataset",
+      "query": ["region"],
+      "requestHeaders": ["accept-language"],
+      "responseHeaders": ["etag"],
+      "responseMode": "json",
+      "timeoutMs": 5000,
+      "maxResponseBytes": 65536
+    }
+  }
+}
