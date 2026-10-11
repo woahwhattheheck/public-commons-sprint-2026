@@ -114,7 +114,7 @@ function checkVerification(result, request, jobId) {
     (!jobId || result.job?.id === jobId), 'The observed job differs from the prepared original refund and transaction.', 'JOB_BINDING');
 }
 
-/** Reconcile is read-only. Execute submits only this exact prepared native operation. */
+/** Reconcile recovers original stored results. Execute may submit the exact prepared native operation. */
 export async function runAccountingAdjustmentOperation({ directory, execute = false, client: providedClient,
   environment = process.env, maxWaitMs = 30000, pollMs = 1000, signal } = {}) {
   need(typeof execute === 'boolean' && Number.isSafeInteger(maxWaitMs) && maxWaitMs >= 0 && maxWaitMs <= 300000 &&

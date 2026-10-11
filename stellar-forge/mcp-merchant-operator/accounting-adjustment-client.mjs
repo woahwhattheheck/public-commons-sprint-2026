@@ -160,7 +160,7 @@ export function createAccountingAdjustmentClient({ workspace, call } = {}) {
       checkedRecord(result.adjustment, args.adjustmentId);
       need(result.adjustment.status === 'WITHDRAWN', 'The original request was not withdrawn.', 'REPLY'); return result;
     },
-    /** No mutation: find the same reviewed UUID after an uncertain record reply. */
+    /** Find the reviewed UUID and original stored result after an uncertain reply. */
     async reconcileRecord(preview, options) {
       const args = accountingAdjustmentRecordArguments(preview); let result;
       try { result = await client.detail({ adjustmentId: args.id }, options); }
@@ -169,7 +169,7 @@ export function createAccountingAdjustmentClient({ workspace, call } = {}) {
         'The original adjustment UUID was retained with different request inputs.', 'REQUEST_BINDING');
       return { found: true, ...result };
     },
-    /** Only inspect original jobs/proofs. afterJobId selects a reviewed failed prior attempt. */
+    /** Inspect and recover original jobs/proofs. afterJobId selects a reviewed failed prior attempt. */
     async reconcileVerification({ adjustmentId, transaction, jobId, afterJobId } = {}, options) {
       identifier(adjustmentId, UUID, 'adjustment UUID'); identifier(transaction, SHA, 'reverse-transfer transaction SHA256');
       need(!(jobId && afterJobId), 'Choose an exact retained job or an explicitly reviewed failed predecessor.');
