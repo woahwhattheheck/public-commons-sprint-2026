@@ -19,6 +19,10 @@ const record={ intentId:'actual-intent-placeholder',
     request_id:'actual-intent-placeholder',network:'stellar:testnet',asset,reserved_atomic_units:'10000'}};
 const mk=(id,ledger=123,decoded={name:'transfer',from:payer,to:payTo,amount:'10000'})=>
   ({id,ledger,txHash:hash,contractId:asset,localDecoded:decoded});
+const eventId=n=>`${((123n<<32n)+(1n<<12n)).toString().padStart(19,'0')}-${String(n).padStart(10,'0')}`;
+const endCursor=`${((125n<<32n)+0xffffffffn).toString().padStart(19,'0')}-4294967295`;
+const fullPage=(offset,match=false)=>Array.from({length:200},(_,i)=>
+  mk(eventId(offset+i),123,i===0&&match?undefined:{name:'other'}));
 let scenario='pass',calls=[];
 const server=createServer(async(req,res)=>{
   let payload='';for await (const chunk of req) payload+=chunk;
@@ -27,15 +31,20 @@ const server=createServer(async(req,res)=>{
   if(q.method==='getTransaction') result={status:'SUCCESS',txHash:hash,ledger:123};
   else if(q.method==='getEvents') {
     const second=Boolean(q.params.pagination.cursor);
+    // Match original Stellar RPC semantics: full pages return the final event
+    // ID; short/empty pages return the maximum cursor of the scanned window.
     if(scenario==='duplicate') result=second?
-      {events:[mk('b')],latestLedger:125}:{events:[mk('a')],cursor:'c1',latestLedger:125};
-    else if(scenario==='unfinished') result={events:[mk(second?'b':'a',123,{name:'other'})],
-      cursor:second?'c2':'c1',latestLedger:125};
-    else if(scenario==='single-unfinished') result={events:second?[mk('x',123,{name:'other'})]:[mk('a')],
-      cursor:second?'c2':'c1',latestLedger:125};
-    else if(scenario==='no-transfer') result={events:[mk('a',123,{name:'other'})],latestLedger:125};
-    else result=second?{events:[mk('next',124,{name:'other'})],latestLedger:125}:
-      {events:[mk('a')],cursor:'c1',latestLedger:125};
+      {events:[mk(eventId(200))],cursor:endCursor,latestLedger:125}:
+      {events:fullPage(0,true),cursor:eventId(199),latestLedger:125};
+    else if(scenario==='unfinished'||scenario==='single-unfinished') result={
+      events:fullPage(second?200:0,scenario==='single-unfinished'&&!second),
+      cursor:eventId(second?399:199),latestLedger:125};
+    else if(scenario==='no-transfer') result={events:[mk(eventId(0),123,{name:'other'})],
+      cursor:endCursor,latestLedger:125};
+    else if(scenario==='quiet-contract') result={events:[mk(eventId(0))],
+      cursor:endCursor,latestLedger:125};
+    else result=second?{events:[],cursor:endCursor,latestLedger:125}:
+      {events:fullPage(0,true),cursor:eventId(199),latestLedger:125};
   } else result={error:'unsupported method'};
   res.writeHead(200,{'content-type':'application/json'}).end(JSON.stringify({jsonrpc:'2.0',id:q.id,result}));
 });
@@ -56,7 +65,11 @@ try {
   assert.deepEqual(calls.map(x=>x.method),['getTransaction','getEvents','getEvents']);
   assert.equal(calls[1].params.startLedger,123);
   assert.equal(calls[2].params.startLedger,undefined);
-  assert.equal(calls[2].params.pagination.cursor,'c1');passed++;
+  assert.equal(calls[2].params.pagination.cursor,eventId(199));passed++;
+  scenario='quiet-contract';calls=[];
+  const quiet=await run();
+  assert.equal(quiet.matchingTransfers,1);assert.equal(quiet.eventPages,1);
+  assert.deepEqual(calls.map(x=>x.method),['getTransaction','getEvents']);passed++;
   scenario='duplicate';await expectCode(run,'AMBIGUOUS_TRANSFERS');
   scenario='unfinished';await expectCode(()=>run({maxEventPages:2}),'EVENT_PAGE_BUDGET_EXHAUSTED');
   scenario='single-unfinished';await expectCode(()=>run({maxEventPages:2}),'EVENT_PAGE_BUDGET_EXHAUSTED');

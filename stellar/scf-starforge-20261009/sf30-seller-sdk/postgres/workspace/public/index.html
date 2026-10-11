@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>PostgreSQL merchant setup</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><strong>PostgreSQL merchant setup</strong><span>Original SF30 seller</span></div><span id="connection-status">Connecting</span></header>
+<main>
+  <aside>
+    <h1>Data sources</h1><p>Choose a table or view visible to your database role.</p>
+    <label>Schema <input id="schema" placeholder="All accessible schemas" maxlength="63"></label>
+    <div class="actions"><button id="refresh">Refresh sources</button></div>
+    <label>Find a source <input id="find" type="search" placeholder="Schema or table name"></label>
+    <p id="source-count" class="muted"></p><div id="sources" class="source-list"></div>
+    <p class="muted">This workspace reads database metadata. It does not read or preview table contents.</p>
+  </aside>
+  <section class="work">
+    <div id="notice" role="status" aria-live="polite">Select a data source to begin.</div>
+    <div id="empty" class="empty"><h2>Turn selected data into a paid API</h2><p>Choose the fields, filters and terms. Review the generated query, then export configuration for the existing seller.</p></div>
+    <form id="setup" hidden>
+      <div class="section-heading"><div><p class="eyebrow">Selected source</p><h2 id="relation-title"></h2></div><span id="relation-kind" class="tag"></span></div>
+      <fieldset><legend>1. Public result</legend><p>Select only the columns this API should return.</p>
+        <div class="table-scroll"><table><thead><tr><th scope="col">Include</th><th scope="col">Column</th><th scope="col">PostgreSQL type</th><th scope="col">Key</th></tr></thead><tbody id="columns"></tbody></table></div>
+        <div class="grid"><label>Order results by <select id="order" multiple size="4" required></select><small>Choose 1–4 scalar columns. A primary key gives stable ordering.</small></label>
+        <div><label>Maximum rows <input id="max-rows" type="number" min="1" max="1000" value="100" required></label><label>Query timeout (ms) <input id="timeout" type="number" min="50" max="10000" value="1500" required></label></div></div>
+      </fieldset>
+      <fieldset><legend>2. Optional request filters</legend><p>Each filter becomes a bound parameter. Leaving it out of a request leaves that filter unrestricted.</p>
+        <div id="filters"></div><button type="button" id="add-filter" class="secondary">Add filter</button>
+      </fieldset>
+      <fieldset><legend>3. API and payment terms</legend>
+        <div class="grid"><label>Query / route name <input id="query-name" pattern="[A-Za-z][A-Za-z0-9_]{0,47}" maxlength="48" required></label><label>Resource path <input id="route-path" placeholder="/data/orders" required></label></div>
+        <label>Description <input id="description" maxlength="512" required></label>
+        <label>Public HTTPS origin <input id="public-origin" placeholder="https://data.your-company.example"><small>Leave blank for the original local onboarding service.</small></label>
+        <div class="grid"><label>Stellar network <select id="network"><option value="stellar:testnet">Testnet</option><option value="stellar:pubnet">Public network</option></select></label><label>Price in atomic units <input id="amount" inputmode="numeric" pattern="[1-9][0-9]*" placeholder="10000" required><small>Use the asset's exact atomic-unit amount.</small></label></div>
+        <label>Existing asset identifier <input id="asset" maxlength="128" required></label>
+        <label>Existing receiving account <input id="pay-to" maxlength="128" required></label>
+      </fieldset>
+      <div class="actions bottom"><button id="preview" type="submit">Review package</button><button type="button" id="export" disabled>Export merchant files</button><span id="selection-count" class="muted"></span></div>
+    </form>
+    <section id="review" hidden><h2>Package review</h2><p id="review-files" class="muted"></p><h3>Fixed parameterized query</h3><pre id="sql"></pre><details><summary>Database source configuration</summary><pre id="source-json"></pre></details><details><summary>Original seller configuration</summary><pre id="seller-json"></pre></details><h3>Run from your existing checkout</h3><pre id="run"></pre><p class="muted">Database credentials remain in the configured environment variable. Exporting creates files; the seller starts when you run its command.</p></section>
+    <section id="saved" hidden><h2>Merchant package exported</h2><p id="saved-path"></p><pre id="saved-run"></pre><p>Use the original seller's facilitator option when enabling its native payment runtime. Keep database privileges and approved payment terms under your normal operator control.</p></section>
+  </section>
+</main><script type="module" src="/app.mjs"></script>
+</body></html>
