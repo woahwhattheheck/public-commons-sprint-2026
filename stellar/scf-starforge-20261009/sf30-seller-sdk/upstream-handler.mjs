@@ -160,17 +160,20 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream']);
+    'maxInFlight', 'allowLocal', 'lookup', 'agent', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream', 'supplierQuota']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json' } = options;
+    maxInFlight = 16, allowLocal = false, lookup, agent, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json', supplierQuota } = options;
   if (!['json','form-data'].includes(bodyType) || bodyType==='form-data'&&!requiresJsonBody(method)) throw new TypeError('Invalid upstream bodyType');
   if (!supportsSellerMethod(method) || !['json', 'bytes', 'sse', 'ndjson'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
       lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
+  if (supplierQuota !== undefined && (!object(supplierQuota) ||
+      ['reserve','observe'].some(key => typeof supplierQuota[key] !== 'function')))
+    throw new TypeError('Invalid supplier quota controller');
   integer(timeoutMs, 1, 120000, 'timeoutMs');
   integer(maxRequestBytes, 1, 16 * 1048576, 'maxRequestBytes');
   integer(maxResponseBytes, 1, 16 * 1048576, 'maxResponseBytes');
@@ -411,10 +414,25 @@ export function createUpstreamHandler(options = {}) {
           prepared.outgoing['content-length'] = String(prepared.body.length);
         }
         if (backendKey !== undefined) prepared.outgoing[idempotency.backendHeader] = backendKey;
-        startedExchange = true;
-        result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,
-          format:responseType,policy:streamPolicy,headerSignal:lifetime.signal,signal:context.signal}) :
-          await exchange(prepared, lifetime.signal);
+        const allowance = supplierQuota
+          ? await lifetime.wait(supplierQuota.reserve({signal:lifetime.signal})) : true;
+        lifetime.signal.throwIfAborted();
+        if (allowance !== true) {
+          if (!object(allowance) || ![429,503].includes(allowance.status) ||
+              !object(allowance.body) || typeof allowance.body.error !== 'string')
+            throw new TypeError('Invalid supplier quota decision');
+          result = {outcome:'NOT_DISPATCHED',error:allowance.body.error,response:allowance};
+        } else {
+          startedExchange = true;
+          result = streaming ? await openUpstreamStream({...prepared,method,lookup,expose,
+            format:responseType,policy:streamPolicy,headerSignal:lifetime.signal,signal:context.signal}) :
+            await exchange(prepared, lifetime.signal);
+          // Only the original source exchange observes provider cooldowns.
+          // An observed response keeps its original outcome if local storage fails.
+          if (supplierQuota) {
+            try { await supplierQuota.observe(result.response); } catch { /* Controller owns its local recovery. */ }
+          }
+        }
         // Invalidate only the bearer actually rejected by this native call.
         // Never retry a GET or mutation here; 403 is not token expiry.
         if (credentialProvider && result.response.body?.upstreamStatus === 401) {

@@ -10,20 +10,23 @@ const HELP = `Starforge customer runtime installation (Linux, Node 22.16+, Pytho
 
 runtime-install prepare --dir NEW_DIRECTORY --archive ORIGINAL.tgz --sha256 HASH
   [--native] [--feature NAME ...] [--operator] [--pins EXACT_PINS.json]
-runtime-install install --dir DIRECTORY [--offline] [--cache CACHE_DIRECTORY]
-runtime-install resume --dir DIRECTORY [--offline] [--cache CACHE_DIRECTORY]
+runtime-install install --dir DIRECTORY [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
+runtime-install resume --dir DIRECTORY [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
 runtime-install inspect --dir DIRECTORY [--load] [--source]
 runtime-install run --dir DIRECTORY -- ORIGINAL_STARFORGE_COMMAND [ARGUMENTS...]
 runtime-install upgrade --from PREVIOUS_DIRECTORY --dir NEW_DIRECTORY
   --archive ORIGINAL.tgz --sha256 HASH [--native] [--feature NAME ...]
-  [--operator] [--pins EXACT_PINS.json] [--offline] [--cache CACHE_DIRECTORY]
+  [--operator] [--pins EXACT_PINS.json] [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
 runtime-install recover --from PREVIOUS_DIRECTORY --dir NEW_DIRECTORY
-  [--offline] [--cache CACHE_DIRECTORY]
+  [--offline] [--cache CACHE_DIRECTORY] [--node-headers NODE_HEADER_PREFIX]
 runtime-install compare --before DIRECTORY --after DIRECTORY
 
 Preparation unpacks and matches one original source archive, selects exact native
 dependencies from that release, and writes an inspectable private installation.
-Install uses the normal npm registry/cache; --offline uses only the existing cache.
+Install uses the normal npm registry/cache. Only declared native install hooks run.
+--offline uses the existing cache; native source preparation also requires matching
+local Node headers (--node-headers prefix containing include/node) and a compiler.
+Each SQLite readiness check executes an isolated in-memory database transaction.
 The original source stays in package/ and dependencies live beside it in node_modules/.
 Upgrade/recovery prepare a new runtime and keep the previous runtime available.
 Use the resulting sourceRoot and dependencyRoot in the original host/container plan.`;
@@ -31,12 +34,12 @@ Use the resulting sourceRoot and dependencyRoot in the original host/container p
 const COMMON_SELECTION = ['--native', '--feature', '--operator', '--pins'];
 const OPTIONS = {
   prepare: ['--dir', '--archive', '--sha256', ...COMMON_SELECTION],
-  install: ['--dir', '--offline', '--cache'],
-  resume: ['--dir', '--offline', '--cache'],
+  install: ['--dir', '--offline', '--cache', '--node-headers'],
+  resume: ['--dir', '--offline', '--cache', '--node-headers'],
   inspect: ['--dir', '--load', '--source'],
   run: ['--dir'],
-  upgrade: ['--from', '--dir', '--archive', '--sha256', ...COMMON_SELECTION, '--offline', '--cache'],
-  recover: ['--from', '--dir', '--offline', '--cache'],
+  upgrade: ['--from', '--dir', '--archive', '--sha256', ...COMMON_SELECTION, '--offline', '--cache', '--node-headers'],
+  recover: ['--from', '--dir', '--offline', '--cache', '--node-headers'],
   compare: ['--before', '--after'],
 };
 const FLAGS = new Set(['--native', '--operator', '--offline', '--load', '--source']);
@@ -72,7 +75,7 @@ export async function main(args = process.argv.slice(2)) {
   } else {
     const directory = requireValue('--dir');
     if (command === 'install' || command === 'resume') {
-      result = await installRuntime({ directory, offline: !!values['--offline'], cache: values['--cache'] });
+      result = await installRuntime({ directory, offline: !!values['--offline'], cache: values['--cache'], nodeHeaders: values['--node-headers'] });
     } else if (command === 'inspect') {
       result = await inspectRuntimeInstall({ directory, load: !!values['--load'], source: !!values['--source'] });
     } else {
@@ -85,10 +88,10 @@ export async function main(args = process.argv.slice(2)) {
       if (command === 'prepare') result = await prepareRuntimeInstall({ directory,
         archive: requireValue('--archive'), sha256: requireValue('--sha256'), ...selection });
       else if (command === 'recover') result = await recoverRuntime({ from: requireValue('--from'), directory,
-        offline: !!values['--offline'], cache: values['--cache'] });
+        offline: !!values['--offline'], cache: values['--cache'], nodeHeaders: values['--node-headers'] });
       else result = await upgradeRuntime({ from: requireValue('--from'), directory, ...selection,
         ...(command === 'upgrade' ? { archive: requireValue('--archive'), sha256: requireValue('--sha256') } : {}),
-        offline: !!values['--offline'], cache: values['--cache'] });
+        offline: !!values['--offline'], cache: values['--cache'], nodeHeaders: values['--node-headers'] });
     }
   }
   console.log(JSON.stringify(result, null, 2));

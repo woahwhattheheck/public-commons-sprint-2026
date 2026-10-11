@@ -23,16 +23,35 @@ async function atomic(path,bytes){
   const temp=path+'.pending-'+randomUUID();await writeNew(temp,bytes);
   try{await rename(temp,path);await syncDir(dirname(path));}catch(e){await unlink(temp).catch(()=>{});throw e;}
 }
-async function processIdentity(pid){
-  try{const s=await readFile('/proc/'+pid+'/stat','utf8');return s.slice(s.lastIndexOf(')')+2).split(' ')[19];}
-  catch{try{process.kill(pid,0);return 'alive';}catch(e){return e.code==='ESRCH'?null:'alive';}}
+function statIdentity(value){
+  const pid=Number(value.slice(0,value.indexOf(' '))),start=value.slice(value.lastIndexOf(')')+2).split(' ')[19];
+  if(!Number.isSafeInteger(pid)||pid<=0||!/^\d+$/.test(start))throw new Error('Unsupported process identity');
+  return {pid,start};
+}
+async function selfIdentity(){
+  try{
+    const own=statIdentity(await readFile('/proc/self/stat','utf8')),
+      view=await lstat('/proc/1'),init=statIdentity(await readFile('/proc/1/stat','utf8'));
+    return {procPid:own.pid,procStart:own.start,procView:[view.dev,view.ino,init.start].join(':'),
+      bootId:(await readFile('/proc/sys/kernel/random/boot_id','utf8')).trim()};
+  }catch{return {};}
+}
+async function ownerMayBeAlive(old,current){
+  if(Number.isSafeInteger(old.procPid)&&old.procPid>0&&typeof old.procStart==='string'){
+    if(!current.procView||old.procView!==current.procView)return true;
+    if(old.bootId&&current.bootId&&old.bootId!==current.bootId)return false;
+    try{return statIdentity(await readFile('/proc/'+old.procPid+'/stat','utf8')).start===old.procStart;}
+    catch(e){return e.code!=='ENOENT'&&e.code!=='ESRCH';}
+  }
+  // Legacy and non-Linux leases use the local PID; uncertain ownership stays with its operator.
+  try{process.kill(old.pid,0);return true;}catch(e){return e.code!=='ESRCH';}
 }
 async function lease(root){
-  const path=join(root,'writer.lock'),owner={host:hostname(),pid:process.pid,start:await processIdentity(process.pid),nonce:randomUUID()};
+  const path=join(root,'writer.lock'),owner={host:hostname(),pid:process.pid,...await selfIdentity(),nonce:randomUUID()};
   try{await writeNew(path,stable(owner));}catch(e){
     if(e.code!=='EEXIST')throw e;
     const oldBytes=await readPrivate(path,4096),old=JSON.parse(oldBytes);
-    if(old.host!==hostname()||!Number.isSafeInteger(old.pid)||await processIdentity(old.pid)!==null)
+    if(old.host!==hostname()||!Number.isSafeInteger(old.pid)||old.pid<=0||await ownerMayBeAlive(old,owner))
       fail('STORE_IN_USE','This workspace is open in another process. Use its console or stop that exact process first',409);
     const before=await lstat(path);
     if(digest(await readPrivate(path,4096))!==digest(oldBytes))fail('STORE_IN_USE','Workspace ownership changed',409);

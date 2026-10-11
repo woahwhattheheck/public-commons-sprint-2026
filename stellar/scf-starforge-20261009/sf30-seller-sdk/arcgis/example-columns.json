@@ -1,0 +1,35 @@
+{
+  "object_id": {
+    "field": "OBJECTID"
+  },
+  "GEOID": {
+    "field": "GEOID"
+  },
+  "county": {
+    "field": "County"
+  },
+  "town": {
+    "field": "TOWN"
+  },
+  "reduction_class": {
+    "field": "cls_ndev_resiLawn_reduct"
+  },
+  "delivery_lb_n_year": {
+    "field": "ndev_resiLawn_sum"
+  },
+  "after_delivery_lb_n_year": {
+    "field": "ndev_resiLawn_aft_sum"
+  },
+  "reduction_lb_n_year": {
+    "field": "ndev_resiLawn_reduct"
+  },
+  "attributes_json": {
+    "source": "attributes"
+  },
+  "geometry_json": {
+    "source": "geometry"
+  },
+  "spatial_reference_json": {
+    "source": "spatialReference"
+  }
+}

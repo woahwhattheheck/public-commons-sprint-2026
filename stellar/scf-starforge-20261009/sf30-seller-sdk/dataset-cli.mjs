@@ -5,7 +5,9 @@ import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from './dataset-handler.mjs';
 
 const USAGE = `Usage:
+  node dataset-cli.mjs xml --workspace DIRECTORY init|serve|source|plan|build|query|compare|export|import
   node dataset-cli.mjs --dataset FILE
+  node dataset-cli.mjs ogc --help      OGC / GeoJSON capture, field review and dataset export
   node dataset-cli.mjs --dataset FILE --payment FILE --origin https://api.example \\
     [--path /data] --out seller.json
 
@@ -62,6 +64,8 @@ export async function buildDatasetSellerConfig(dataset, { payment, origin, path 
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'xml') return (await import('./xml/cli.mjs')).main(args.slice(1));
+  if (args[0] === 'ogc') return (await import('./ogc/cli.mjs')).main(args.slice(1));
   if (args.includes('--help')) { console.log(USAGE); return; }
   const allowed = new Set(['--dataset', '--payment', '--origin', '--path', '--out']);
   const options = {};

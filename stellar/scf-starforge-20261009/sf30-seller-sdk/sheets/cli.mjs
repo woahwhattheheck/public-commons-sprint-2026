@@ -8,6 +8,8 @@ import { inspectSheetsSource } from './source.mjs';
 
 const HELP = `Google Sheets merchant source (Node 22.16+; publisher also requires Linux flock)
 
+  workspace serve --directory PRIVATE_SOURCE_WORKSPACE [--create] [--connections PRIVATE_CONNECTIONS.json]
+  workspace --help
   auth connect|status|refresh|disconnect --directory PRIVATE_CONNECTION [AUTH_OPTIONS]
   use-connection --source REVIEWED_SOURCE.json --connection PRIVATE_CONNECTION --out NEW_LIVE_SOURCE.json
   import --resource PRIVATE_SPREADSHEET_RESOURCE.json --range "'Catalog'!A1:G500" --directory NEW_CAPTURE_DIR
@@ -40,6 +42,7 @@ function letters(index) {
   return text;
 }
 export async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === 'workspace') return (await import('./workspace/cli.mjs')).main(argv.slice(1));
   if (argv[0] === 'auth') return (await import('./auth/cli.mjs')).main(argv.slice(1));
   if (argv.length === 1 && argv[0] === '--help') { process.stdout.write(HELP + '\n'); return; }
   const [command, ...args] = argv, options = {};
