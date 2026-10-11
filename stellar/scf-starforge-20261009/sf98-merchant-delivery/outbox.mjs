@@ -93,6 +93,9 @@ export async function openOutbox(directory) {
     throw new Error('PRIVATE_STATE_DIRECTORY_REQUIRED_0700');
   const eventsFile = join(directory, 'events.ndjson');
   const attemptsFile = join(directory, 'deliveries.ndjson');
+  // Load once at startup; do not scan a growing journal on every paid request.
+  const seen = new Set((await loadLines(eventsFile)).map(row => row.id));
+  let appendTail = Promise.resolve();
   return Object.freeze({
     dir: directory,
     async record(event) {
@@ -100,10 +103,16 @@ export async function openOutbox(directory) {
           !/^[A-Za-z0-9_-]{1,80}$/.test(event.routeId) ||
           !['GET', 'HEAD', 'POST'].includes(event.method) ||
           typeof event.receiptFingerprint !== 'string') throw new TypeError('Invalid native settlement event');
-      const existing = await loadLines(eventsFile);
-      if (existing.some(x => x.id === event.id)) return { id: event.id, duplicate: true };
-      await append(directory, 'events.ndjson', event);
-      return { id: event.id, duplicate: false };
+      // Native HTTP requests can settle simultaneously. Keep one append in flight,
+      // with a stable dedup set updated only after durable journal fsync.
+      const operation = appendTail.then(async () => {
+        if (seen.has(event.id)) return { id: event.id, duplicate: true };
+        await append(directory, 'events.ndjson', event);
+        seen.add(event.id);
+        return { id: event.id, duplicate: false };
+      });
+      appendTail = operation.then(() => undefined, () => undefined);
+      return operation;
     },
     async recordDelivery(status) {
       if (!okId(status?.id) || !['DELIVERED', 'RETRY', 'EXHAUSTED', 'REQUEUE'].includes(status.state) ||
