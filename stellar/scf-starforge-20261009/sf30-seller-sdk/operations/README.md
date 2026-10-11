@@ -18,7 +18,7 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/operations/launch.mjs \
   --operations-port 9001 -- --config /path/to/seller.json --port 9000
 ```
 
-Every argument after `--` goes unchanged to existing `serve.mjs`, including `--handlers`, `--facilitator` and `--allow-local-facilitator`. This launcher does not sign, verify or settle payments; keep the existing SF30 native runtime setup. Without a facilitator it runs the original challenge-only service. Ctrl+C closes both listeners. Failed dashboard startup closes the seller rather than leaving a half-launched process.
+By default, every argument after `--` goes unchanged to existing `serve.mjs`, including `--handlers`, `--facilitator` and `--allow-local-facilitator`. Select `--upstream` before the separator to pass upstream-API options to its maintained launcher instead. This launcher does not sign, verify or settle payments; keep the existing SF30 native runtime setup. Without a facilitator it runs the original challenge-only service. Ctrl+C closes both listeners. Failed dashboard startup closes the seller rather than leaving a half-launched process.
 
 ## Existing API and upstream bindings
 
