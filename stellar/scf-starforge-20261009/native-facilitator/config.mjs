@@ -48,7 +48,7 @@ export function validateConfig(input) {
     maxAtomic.length <= 39 && BigInt(maxAtomic) <= 170141183460469231731687303715884105727n,
     'MAX_ATOMIC_I128_REQUIRED');
   const limits = input.limits;
-  fields(limits, ['maxTransactionFeeStroops','inclusionFeeStroops','maxVerifyInFlight','drainGraceMs'], 'FEE_LIMIT_REQUIRED');
+  fields(limits, ['maxTransactionFeeStroops','inclusionFeeStroops','maxVerifyInFlight','maxSettleInFlight','drainGraceMs'], 'FEE_LIMIT_REQUIRED');
   integer(limits.maxTransactionFeeStroops, 100, 2147483647, 'FEE_CEILING_REQUIRED');
   const inclusionFeeStroops = limits.inclusionFeeStroops ?? 100;
   integer(inclusionFeeStroops, 100, limits.maxTransactionFeeStroops, 'INCLUSION_FEE_INVALID');
@@ -56,6 +56,8 @@ export function validateConfig(input) {
     'FEE_BUMP_CEILING_TOO_LOW');
   const maxVerifyInFlight = limits.maxVerifyInFlight ?? 16;
   integer(maxVerifyInFlight, 1, 256, 'VERIFY_CAPACITY_INVALID');
+  const maxSettleInFlight = limits.maxSettleInFlight ?? 1;
+  integer(maxSettleInFlight, 1, signers.length, 'SETTLEMENT_CAPACITY_INVALID');
   const drainGraceMs = limits.drainGraceMs ?? 60000;
   integer(drainGraceMs, 1000, 300000, 'DRAIN_GRACE_INVALID');
   const op = input.operations ?? {};
@@ -74,7 +76,7 @@ export function validateConfig(input) {
   requireValue(op.requireReady === undefined || typeof op.requireReady === 'boolean', 'REQUIRE_READY_INVALID');
   return { schema:input.schema, network:input.network, rpcUrl:rpc.href, signers, feeBumpSigner,
     payments:{assets,recipients,maxAtomic}, limits:{maxTransactionFeeStroops:limits.maxTransactionFeeStroops,
-      inclusionFeeStroops,maxVerifyInFlight,drainGraceMs}, operations:{
+      inclusionFeeStroops,maxVerifyInFlight,maxSettleInFlight,drainGraceMs}, operations:{
       ownershipDirectory:ownershipDirectory === null ? null : resolve(ownershipDirectory),
       rpcTimeoutMs,readinessMaxAgeMs,maxLedgerAgeSeconds,requireReady:op.requireReady ?? false} };
 }
@@ -94,6 +96,7 @@ export function reviewConfig(input) {
   const c = validateConfig(input);
   return { mode:'OFFLINE_FACILITATOR_REVIEW', network:c.network, rpcOrigin:new URL(c.rpcUrl).origin,
     signers:c.signers, feeBumpSigner:c.feeBumpSigner, payments:c.payments, limits:c.limits,
-    operations:c.operations,feesSponsored:true, settlementConcurrency:1, signingMaterialLoaded:false };
+    operations:c.operations,feesSponsored:true, settlementConcurrency:c.limits.maxSettleInFlight,
+    signingMaterialLoaded:false };
 }
 
