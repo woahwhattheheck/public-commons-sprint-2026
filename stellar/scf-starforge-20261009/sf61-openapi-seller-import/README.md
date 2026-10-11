@@ -37,6 +37,33 @@ OpenAPI `method` and `path`, and either `handler` (a trusted ESM export name)
 or `response` (static JSON application data, including explicit `null`).
 The importer never uses documentation examples as application responses.
 
+An existing JSON dataset can instead be bound with `responseFile`:
+
+```json
+[
+  {"method":"POST","path":"/forecast","id":"forecast","responseFile":"./datasets/forecast.json"}
+]
+```
+
+Paths resolve beside the **bindings file**, independently of the current working
+directory or output location. Exactly one of `handler`, `response` and
+`responseFile` must be supplied; the importer never chooses between conflicting
+sources. `admit` remains available with any response source.
+
+During the existing CLI export, each selected file is read as valid UTF-8 JSON
+up to 1 MiB, then copied byte-for-byte into `responses/ROUTE_ID.json` in the new
+output directory. `seller-service.json` points to that relative path, and
+`manifest.json` records each asset's SHA-256. Missing, invalid or oversized
+datasets fail before creating the output directory. Files use mode `0600` and
+the response directory uses `0700`, matching the existing private export.
+
+The resulting directory is self-contained: move it and start the same SF30
+command, or use the existing seller pilot. Changes to the original dataset do
+not change an exported snapshot; export a new directory to publish changed data.
+The runtime reads the bundled files before listening. File responses retain the
+original admission and native payment flow, and are never returned in
+challenge-only mode.
+
 From the repository root, this complete example starts a real HTTP 402 route:
 
 ```sh
