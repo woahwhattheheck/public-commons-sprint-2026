@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Starforge SF98 WooCommerce Merchant Bridge
  * Description: Receives authenticated native Stellar x402 SF98 settlement notices and binds them to WooCommerce orders for explicit merchant release.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires PHP: 8.0
  * Requires Plugins: woocommerce
  * License: MIT
@@ -92,6 +92,11 @@ final class Starforge_SF98_Woo {
         // Refuse accidental extra secrets or fields outside the ORIGINAL SF98 wire contract.
         $fields = ['schema','eventId','occurredAt','routeId','method','network',
                    'amountAtomic','assetDigest','orderReference','settlement'];
+        if (array_key_exists('recipientDigest', $x)) {
+            if (!is_string($x['recipientDigest']) || !preg_match('/^[0-9a-f]{64}$/D', $x['recipientDigest']))
+                return false;
+            $fields[] = 'recipientDigest';
+        }
         $keys = array_keys($x);
         sort($fields); sort($keys);
         return $fields === $keys;
@@ -128,21 +133,31 @@ final class Starforge_SF98_Woo {
         $order = wc_get_order($order_id);
         if (!$order) return self::response(404, 'UNKNOWN_PREBOUND_ORDER');
         $terms = $order->get_meta(self::META_READY, true);
-        if (!is_array($terms) || ($terms['approved'] ?? '') !== 'YES' ||
+        $binding_mismatch = !is_array($terms) || ($terms['approved'] ?? '') !== 'YES' ||
             !in_array($order->get_status(), ['pending', 'on-hold'], true) ||
             ($terms['routeId'] ?? '') !== $event['routeId'] ||
             ($terms['method'] ?? '') !== $event['method'] ||
             ($terms['network'] ?? '') !== $event['network'] ||
             ($terms['amountAtomic'] ?? '') !== $event['amountAtomic'] ||
             !is_string($terms['assetDigest'] ?? null) ||
-            !hash_equals($terms['assetDigest'], $event['assetDigest'])) {
+            !hash_equals($terms['assetDigest'], $event['assetDigest']);
+        $recipient = $event['recipientDigest'] ?? null;
+        $bound_recipient = is_array($terms) ? ($terms['recipientDigest'] ?? null) : null;
+        // Historical orders and historical notices both lacked a recipient.
+        // A selected recipient may never silently inherit that legacy binding.
+        $recipient_matches = ($recipient === null && $bound_recipient === null) ||
+            (is_string($bound_recipient) && preg_match('/^[0-9a-f]{64}$/D', $bound_recipient) &&
+             is_string($recipient) && hash_equals($bound_recipient, $recipient));
+        if ($binding_mismatch || !$recipient_matches) {
             // A replay after authorized fulfillment can still be acknowledged below.
             $existing = $wpdb->get_row($wpdb->prepare(
                 'SELECT * FROM ' . self::table() . ' WHERE event_id=%s', $event['eventId']));
             if ($existing && (int) $existing->order_id === $order_id &&
                 hash_equals($existing->body_sha256, hash('sha256', $raw)))
                 return self::response(200, 'ALREADY_ACCEPTED');
-            return self::response(409, 'ORDER_BINDING_OR_STATUS_MISMATCH');
+            if ($binding_mismatch) return self::response(409, 'ORDER_BINDING_OR_STATUS_MISMATCH');
+            return self::response(409, $bound_recipient === null ?
+                'ORDER_RECIPIENT_NOT_BOUND' : 'ORDER_RECIPIENT_MISMATCH');
         }
         $digest = hash('sha256', $raw);
         $success = $wpdb->insert(self::table(), [
@@ -190,12 +205,17 @@ final class Starforge_SF98_Woo {
         $network = sanitize_text_field(wp_unslash($_POST['network'] ?? ''));
         $amount = sanitize_text_field(wp_unslash($_POST['amount_atomic'] ?? ''));
         $asset = sanitize_text_field(wp_unslash($_POST['asset'] ?? ''));
+        // Hash the exact advertised payTo bytes; text sanitization could silently
+        // change the selected recipient. WordPress request slashes are removed.
+        $pay_to = is_string($_POST['pay_to'] ?? null) ? wp_unslash($_POST['pay_to']) : null;
         if (!$order || !in_array($order->get_status(), ['pending','on-hold'], true) ||
             !preg_match('/^[A-Za-z0-9_-]{1,80}$/D', $route) ||
             !in_array($method, self::METHODS, true) ||
             !in_array($network, ['stellar:testnet','stellar:pubnet'], true) ||
             !self::amount_ok($amount) || strlen($asset) < 3 || strlen($asset) > 128 ||
             preg_match('/[\x00-\x1f\x7f]/', $asset) ||
+            !is_string($pay_to) || strlen($pay_to) < 1 || strlen($pay_to) > 128 ||
+            preg_match('/[\x00-\x20\x7f]/', $pay_to) || preg_match('/^S[A-Z2-7]{55}$/D', $pay_to) ||
             $wpdb->get_var($wpdb->prepare('SELECT event_id FROM ' . self::table() . ' WHERE order_id=%d', $order_id))) {
             self::admin_redirect('binding_rejected');
         }
@@ -203,10 +223,11 @@ final class Starforge_SF98_Woo {
             'approved' => 'YES', 'routeId' => $route, 'method' => $method,
             'network' => $network, 'amountAtomic' => $amount,
             'assetDigest' => hash('sha256', $asset),
+            'recipientDigest' => hash('sha256', $pay_to),
             'approvedBy' => get_current_user_id(), 'approvedAt' => gmdate('c'),
         ]);
         $order->save();
-        $order->add_order_note('SF98 route and atomic Stellar payment terms explicitly prebound by store operator.');
+        $order->add_order_note('SF98 route, atomic Stellar payment terms and selected recipient digest explicitly prebound by store operator.');
         self::admin_redirect('bound');
     }
 
@@ -276,23 +297,38 @@ final class Starforge_SF98_Woo {
         $result = sanitize_key(wp_unslash($_GET['sf98_result'] ?? ''));
         if ($result) echo '<div class="notice notice-info"><p>' . esc_html(str_replace('_', ' ', $result)) . '</p></div>';
         if (self::secret() === null) echo '<div class="notice notice-error"><p>Define SF98_WEBHOOK_SECRET in wp-config.php before accepting notices.</p></div>';
-        echo '<h2>Bind an existing unpaid WooCommerce order</h2><p>Enter exact ORIGINAL SF30 route and atomic payment terms. The asset identifier is hashed; no wallet secret is stored.</p>';
+        echo '<h2>Bind an existing unpaid WooCommerce order</h2><p>Copy one complete payment option from the original SF30 offer, including its exact public payTo recipient. Asset and recipient identifiers are stored only as SHA-256 digests. Use this same form to bind the recipient of an older pending order before its first notice is accepted.</p>';
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field('sf98_bind_order');
         echo '<input type="hidden" name="action" value="sf98_bind">';
         foreach ([['order_id','Woo order ID'], ['route_id','Seller route ID'], ['amount_atomic','Atomic amount'], ['asset','SEP-41 asset identifier']] as $field) {
             echo '<p><label>' . esc_html($field[1]) . ' <input required name="' . esc_attr($field[0]) . '" autocomplete="off" size="42"></label></p>';
         }
+        echo '<p><label>Selected public payTo recipient <input required name="pay_to" autocomplete="off" spellcheck="false" maxlength="128" size="60"></label><br><span class="description">Copy the exact selected recipient, without spaces or normalization. Never enter a wallet seed or private key. The raw value is not saved in the order or notice journal.</span></p>';
         echo '<p><label>Method <select name="method">';
         foreach (self::METHODS as $method) echo '<option>' . esc_html($method) . '</option>';
         echo '</select></label> ';
         echo '<label>Network <select name="network"><option>stellar:testnet</option><option>stellar:pubnet</option></select></label></p>';
         submit_button('Prebind order (no charge, no fulfillment)');
-        echo '</form><h2>Original accepted notice queue</h2><table class="widefat striped"><thead><tr><th>Order</th><th>Event</th><th>Status</th><th>Received UTC</th><th>Independent chain review and fulfillment</th></tr></thead><tbody>';
+        echo '</form><h2>Original accepted notice queue</h2><table class="widefat striped"><thead><tr><th>Order</th><th>Event</th><th>Status</th><th>Received UTC</th><th>Bound payment option</th><th>Independent chain review and fulfillment</th></tr></thead><tbody>';
         foreach ($rows as $row) {
             $id = $row->event_id;
             echo '<tr><td>' . esc_html((string) $row->order_id) . '</td><td><code>' . esc_html(substr($id,0,16)) . '...</code></td>';
             echo '<td>' . esc_html($row->state) . '</td><td>' . esc_html($row->received_at) . '</td><td>';
+            $bound_order = wc_get_order((int) $row->order_id);
+            $bound_terms = $bound_order ? $bound_order->get_meta(self::META_READY, true) : null;
+            if (is_array($bound_terms)) {
+                echo '<code>' . esc_html((string) ($bound_terms['method'] ?? '')) . ' ' . esc_html((string) ($bound_terms['routeId'] ?? '')) . '</code><br>';
+                echo esc_html((string) ($bound_terms['network'] ?? '')) . '<br>Atomic amount: ' . esc_html((string) ($bound_terms['amountAtomic'] ?? ''));
+                echo '<details><summary>Asset and recipient digests</summary><p>Asset SHA-256<br><code style="overflow-wrap:anywhere">' . esc_html((string) ($bound_terms['assetDigest'] ?? '')) . '</code></p>';
+                $bound_digest = $bound_terms['recipientDigest'] ?? null;
+                if (is_string($bound_digest) && preg_match('/^[a-f0-9]{64}$/D', $bound_digest)) {
+                    echo '<p>Selected payTo SHA-256<br><code style="overflow-wrap:anywhere">' . esc_html($bound_digest) . '</code></p>';
+                } elseif ($bound_digest === null) echo '<p>Legacy binding: recipient was not recorded.</p>';
+                else echo '<p>Stored recipient digest is invalid.</p>';
+                echo '</details>';
+            } else echo 'Order binding unavailable';
+            echo '</td><td>';
             if (in_array($row->state, ['RECEIVED','REVIEWING'], true)) {
                 echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
                 wp_nonce_field('sf98_release_order');
@@ -303,7 +339,7 @@ final class Starforge_SF98_Woo {
             } else echo 'Woo payment completion recorded';
             echo '</td></tr>';
         }
-        if (!$rows) echo '<tr><td colspan="5">No accepted events yet.</td></tr>';
+        if (!$rows) echo '<tr><td colspan="6">No accepted events yet.</td></tr>';
         echo '</tbody></table><p>Receive at <code>/wp-json/stellar-forge/v1/settlement</code>. See plugin README for the exact SF98 sender command and review procedure.</p></div>';
     }
 }

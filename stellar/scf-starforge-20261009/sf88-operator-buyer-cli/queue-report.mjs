@@ -102,7 +102,7 @@ function dependencyDetails(job) {
     '<p class="note">The queue checks these file identities before the original buyer runs. The live original policy still controls spending.</p>') : '';
 }
 
-function detail(job, queueRoot) {
+function detail(job, queueRoot, commandFor) {
   const op = object(job.operation) ? job.operation : {};
   const terms = object(op.expect) ? op.expect : {};
   const original = nativeSummary(job);
@@ -144,15 +144,15 @@ function detail(job, queueRoot) {
     'To run this exact queued request, use the trusted terminal. The original buyer still obtains fresh terms and operator approval.' :
     'Inspect this attempt and recover any original terminal evidence before deciding what happened. The permanent attempt marker prevents another queue execution.';
   const actions = section('Operator commands', `<p>${escape(actionCopy)}</p>` +
-    `<h4>Inspect saved history</h4><pre>${escape(command('show', queueRoot, intentOf(job)))}</pre>` +
-    (!['CANCELLED','REVIEW_REQUIRED'].includes(job.state) ? `<h4>${action === 'execute' ? 'Execute this one intent' : 'Read original evidence'}</h4><pre>${escape(command(action, queueRoot, intentOf(job)))}</pre>` : '') +
+    `<h4>Inspect saved history</h4><pre>${escape(commandFor('show', queueRoot, intentOf(job)))}</pre>` +
+    (!['CANCELLED','REVIEW_REQUIRED'].includes(job.state) ? `<h4>${action === 'execute' ? 'Execute this one intent' : 'Read original evidence'}</h4><pre>${escape(commandFor(action, queueRoot, intentOf(job)))}</pre>` : '') +
     '<p class="note">These are copyable commands only. This report has no execution controls and contacts no service.</p>');
   const recoveredFile = object(recovery.deliveryFile) ?
     responseDetails({responseFile:recovery.deliveryFile}, 'Response-file recovery status') : '';
   return `<div class="detail-grid">${reviewed}${dependencyDetails(job)}${attempt}${result}${responseDetails(original)}${recoveryDetails(job)}${recoveredFile}${errorFields(job)}${actions}</div>`;
 }
 
-function row(job, index, queueRoot) {
+function row(job, index, queueRoot, commandFor) {
   const intent = intentOf(job);
   const original = nativeSummary(job);
   const observed = reportOutcome(job);
@@ -172,18 +172,25 @@ function row(job, index, queueRoot) {
       <td>${code(output?.status)}${output?.bytes !== undefined ? `<span class="source-label">${escape(output.bytes)} bytes</span>` : ''}${!original.responseFile && recovery.deliveryFile ? '<span class="source-label">Recovery record</span>' : ''}</td>
       <td>${code(job.attempt?.startedAt ?? job.createdAt)}<span class="source-label">${job.attempt?.startedAt ? 'Attempt started' : 'Queued'}</span></td>
     </tr>
-    <tr class="detail-row"><td colspan="5"><details id="${id}"><summary>Request, result and recovery details</summary>${detail(job, queueRoot)}</details></td></tr>
+    <tr class="detail-row"><td colspan="5"><details id="${id}"><summary>Request, result and recovery details</summary>${detail(job, queueRoot, commandFor)}</details></td></tr>
   </tbody>`;
 }
 
-/** Render full openQueue().show() records, or list() records when they include the same fields. */
-export function renderQueueReport({jobs, queueRoot, generatedAt = new Date().toISOString()} = {}) {
+/** Render original queue records. A trusted embedding can supply its own workspace-aware commands. */
+export function renderQueueReport({jobs, queueRoot, generatedAt = new Date().toISOString(), commandFor = command} = {}) {
   if (!Array.isArray(jobs) || jobs.length > 10000 || !jobs.every(object))
     throw new TypeError('QUEUE_REPORT_JOBS_INVALID');
   if (typeof queueRoot !== 'string' || !queueRoot || queueRoot.includes('\0'))
     throw new TypeError('QUEUE_REPORT_ROOT_REQUIRED');
   if (typeof generatedAt !== 'string' || !Number.isFinite(Date.parse(generatedAt)))
     throw new TypeError('QUEUE_REPORT_TIME_INVALID');
+  if (typeof commandFor !== 'function') throw new TypeError('QUEUE_REPORT_COMMAND_FACTORY_INVALID');
+  const operatorCommand = (verb, root, intent) => {
+    const value = commandFor(verb, root, intent);
+    if (typeof value !== 'string' || !value || value.length > 32768 || value.includes('\0'))
+      throw new TypeError('QUEUE_REPORT_COMMAND_INVALID');
+    return value;
+  };
   const counts = new Map(STATES.map(([state]) => [state, jobs.filter(job => job.state === state).length]));
   const controls = STATES.map(([state, label]) => `<button type="button" data-filter="${state}" aria-pressed="false">${escape(label)} <span>${counts.get(state)}</span></button>`).join('');
   return `<!doctype html>
@@ -219,7 +226,7 @@ export function renderQueueReport({jobs, queueRoot, generatedAt = new Date().toI
 <h2>Operation history</h2><p class="note">Queue states describe local lifecycle. Buyer, chain, and response-file results retain their original meanings. A running marker alone cannot say whether a payment was sent.</p>
 <div class="toolbar"><div class="filters" role="group" aria-label="Filter queue state"><button type="button" data-filter="ALL" aria-pressed="true">All <span>${jobs.length}</span></button>${controls}</div><div><label for="search">Find an intent or resource</label><input id="search" type="search" placeholder="Intent, URL, asset, outcome" autocomplete="off"></div></div>
 <p class="visibility" id="visible-count" aria-live="polite">Showing ${jobs.length} of ${jobs.length} intents</p>
-${jobs.length ? `<div class="table-wrap"><table><thead><tr><th scope="col">Intent / resource</th><th scope="col">Queue state</th><th scope="col">Original outcome</th><th scope="col">Response file</th><th scope="col">Time</th></tr></thead>${jobs.map((job,index) => row(job,index,queueRoot)).join('')}</table></div><p class="empty" id="no-matches" hidden>No intents match the current filter.</p>` : '<p class="empty">No requests have been added. Enqueue an existing operator-reviewed SF88 configuration to begin.</p>'}
+${jobs.length ? `<div class="table-wrap"><table><thead><tr><th scope="col">Intent / resource</th><th scope="col">Queue state</th><th scope="col">Original outcome</th><th scope="col">Response file</th><th scope="col">Time</th></tr></thead>${jobs.map((job,index) => row(job,index,queueRoot,operatorCommand)).join('')}</table></div><p class="empty" id="no-matches" hidden>No intents match the current filter.</p>` : '<p class="empty">No requests have been added. Enqueue an existing operator-reviewed SF88 configuration to begin.</p>'}
 <footer>Keep this report private: it contains original resource identities, prices, operation IDs and local file paths. No signer, secret, request body, cookie, authorization header or whole raw evidence object is embedded by this renderer. The original SF81/SF36 approval and reservation, SF31 buyer and response writer, and SF82/SF52 evidence remain authoritative. This exported page makes no network requests, reserves no funds and releases no budget.</footer>
 </main><script>
 (()=>{'use strict';const rows=Array.from(document.querySelectorAll('tbody.job'));const buttons=Array.from(document.querySelectorAll('[data-filter]'));const search=document.getElementById('search');const count=document.getElementById('visible-count');const empty=document.getElementById('no-matches');let state='ALL';function update(){const query=search.value.trim().toLowerCase();let visible=0;for(const row of rows){row.hidden=!(state==='ALL'||row.dataset.state===state)||!row.dataset.search.includes(query);if(!row.hidden)visible++;}count.textContent='Showing '+visible+' of '+rows.length+' intents';if(empty)empty.hidden=visible!==0;}for(const button of buttons)button.addEventListener('click',()=>{state=button.dataset.filter;for(const other of buttons)other.setAttribute('aria-pressed',String(other===button));update();});search.addEventListener('input',update);for(const link of document.querySelectorAll('.summary-row a'))link.addEventListener('click',()=>{const target=document.getElementById(link.getAttribute('href').slice(1));if(target)target.open=true;});let opened=[];window.addEventListener('beforeprint',()=>{opened=Array.from(document.querySelectorAll('details')).filter(item=>!item.open);for(const item of opened)item.open=true;});window.addEventListener('afterprint',()=>{for(const item of opened)item.open=false;opened=[];});})();
