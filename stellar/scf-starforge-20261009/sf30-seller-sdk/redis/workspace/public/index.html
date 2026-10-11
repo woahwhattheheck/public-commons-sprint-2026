@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Redis merchant workspace</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<header><div><p class="eyebrow">Starforge merchant</p><h1 id="workspace-title">Redis workspace</h1></div><div class="header-actions"><button id="refresh">Refresh saved work</button><button id="open-releases">Release controls ↗</button></div></header>
+<div id="status" role="status" aria-live="polite">Opening workspace…</div>
+<section class="connection-bar" aria-label="Selected database"><strong id="transport">Database</strong><span id="connection"></span><span id="credential"></span></section>
+<main id="workspace" hidden>
+<section class="draft-bar"><div><strong id="draft-status">Saved configuration</strong><p id="revision-label" class="muted"></p></div>
+<div class="actions"><button id="use-current">Use current revision</button><button id="download-draft">Download draft</button><label class="button">Import draft<input id="import-draft" type="file" accept="application/json,.json" hidden></label><button id="review">Review draft</button><button class="primary" id="save">Save revision</button></div></section>
+<label class="note-field">Revision note<input id="revision-note" maxlength="2000" placeholder="Describe the change for the next operator"></label>
+<section id="pending-panel" class="panel" hidden><h2>Saved request</h2><p id="pending-message"></p><div class="actions"><button id="inspect-pending">Refresh request</button><button id="continue-pending">Continue saved request</button></div></section>
+<nav aria-label="Workspace sections"><button data-tab="products" aria-current="page">Products</button><button data-tab="terms">Merchant terms</button><button data-tab="preview">Live preview</button><button data-tab="packages">Customer packages</button><button data-tab="versions">Versions</button><button data-tab="activity">Activity</button></nav>
+
+<section id="panel-products" class="tab">
+<div class="split"><aside><div class="section-heading"><h2>Named products</h2><button id="add-query">Add</button></div><div id="query-list" class="item-list"></div></aside>
+<div><h2>Product definition</h2><p class="muted">Choose a fixed key or a key selected from declared parameter values. The source uses the same native read command for previews and paid requests.</p>
+<form id="query-form"><div class="grid">
+<label>Product name<input id="query-name" required maxlength="64" pattern="[A-Za-z_][A-Za-z0-9_]*"></label>
+<label>Read type<select id="query-kind"><option value="get">Value — GET</option><option value="hash">Hash fields</option><option value="sorted-set">Sorted set</option><option value="stream">Stream entries</option></select></label>
+<label>Key selection<select id="key-mode"><option value="fixed">Fixed key</option><option value="parameter">Prefix and enum parameter</option></select></label>
+<label id="fixed-key-label">Key<input id="query-key" maxlength="1024"></label>
+<label id="key-prefix-label" hidden>Key prefix<input id="key-prefix" maxlength="1024"></label>
+<label id="key-parameter-label" hidden>Key parameter<input id="key-parameter" maxlength="64"></label>
+<label>Maximum rows<input id="query-rows" type="number" min="1" max="1000" required></label>
+<label>Maximum response bytes<input id="query-bytes" type="number" min="1024" max="917504" required></label>
+<label>Query timeout (ms)<input id="query-timeout" type="number" min="50" max="30000" required></label>
+<label id="offset-label" hidden>Rank offset parameter<input id="query-offset" maxlength="64" placeholder="offset"></label>
+<label id="after-label" hidden>Stream continuation parameter<input id="query-after" maxlength="64" placeholder="after"></label>
+</div>
+<label>Parameter definitions<textarea id="query-parameters" class="code" rows="8" spellcheck="false"></textarea></label>
+<p class="hint">Use the source parameter map. Integer values and bounds can be exact decimal strings; key parameters require a declared string enum.</p>
+<label id="fields-label">Projected fields<textarea id="query-fields" class="code" rows="5" spellcheck="false"></textarea></label>
+<label id="columns-label">Output columns<textarea id="query-columns" class="code" rows="3" spellcheck="false"></textarea></label>
+<div class="actions"><button type="submit">Apply product</button><button type="button" id="remove-query">Remove product and its routes</button></div>
+</form></div></div></section>
+
+<section id="panel-terms" class="tab" hidden>
+<h2>Merchant terms</h2><p class="muted">Routes, public examples, parameter descriptions, and payment terms are compiled together when the revision is reviewed or saved.</p>
+<label>Public origin<input id="public-origin" type="url" placeholder="https://data.example.com"></label>
+<fieldset id="single-payment"><legend>Default payment</legend><div class="grid">
+<label>Network<input id="payment-network"></label><label>Asset<input id="payment-asset"></label>
+<label>Recipient<input id="payment-recipient"></label><label>Atomic amount<input id="payment-amount" inputmode="numeric"></label>
+<label>Payment timeout (seconds)<input id="payment-timeout" type="number" min="1"></label>
+</div></fieldset>
+<div class="split"><aside><div class="section-heading"><h3>Public routes</h3><button id="add-route">Add</button></div><div id="route-list" class="item-list"></div></aside>
+<div><label>Route definition<textarea id="route-editor" class="code" rows="20" spellcheck="false"></textarea></label>
+<p class="hint">Each route names a saved product, path, service name, description, example input, and every parameter description. Per-route payment options are supported.</p>
+<div class="actions"><button id="apply-route">Apply route</button><button id="remove-route">Remove route</button></div></div></div>
+<details><summary>Full merchant plan</summary><p class="muted">Use this editor to import an existing plan or edit multiple payment options. Applying it replaces this draft's merchant terms and routes.</p><textarea id="plan-editor" class="code" rows="22" spellcheck="false"></textarea><button id="apply-plan">Apply full plan</button></details>
+</section>
+
+<section id="panel-preview" class="tab" hidden>
+<div class="section-heading"><div><h2>Live source preview</h2><p class="muted">Reads the selected saved revision from the configured database.</p></div><button id="run-preview" class="primary">Run preview</button></div>
+<div class="grid"><label>Saved version<select id="preview-version"></select></label><label>Product<select id="preview-query"></select></label></div>
+<label>Input object<textarea id="preview-input" class="code" rows="7" spellcheck="false">{}</textarea></label>
+<div id="preview-result" hidden><div class="section-heading"><p id="preview-summary"></p><div class="actions"><button id="next-preview" hidden>Read next page</button><button id="download-preview">Download result</button></div></div><div id="preview-table" class="table-scroll"></div><details><summary>Complete response</summary><pre id="preview-json"></pre></details></div>
+</section>
+
+<section id="panel-packages" class="tab" hidden>
+<div class="section-heading"><div><h2>Customer packages</h2><p class="muted">Prepare the current saved revision as an original merchant package with its OpenAPI document and generated customer client.</p></div><button id="prepare" class="primary">Prepare current revision</button></div>
+<div id="package-list"></div><button id="older-packages" hidden>Load older packages</button>
+<fieldset id="stage-form"><legend>Stage a prepared release</legend><div class="grid">
+<label>Prepared package<select id="stage-package"></select></label><label>New release ID<input id="stage-id" maxlength="64" placeholder="catalog-v1"></label>
+<label>Release label<input id="stage-label" maxlength="240" placeholder="Catalog version 1"></label><label>Seller port<input id="stage-port" type="number" min="0" max="65535" value="8423"></label>
+<label>Facilitator URL<input id="stage-facilitator" type="url" placeholder="https://facilitator.example.com"></label>
+<label class="checkbox"><input id="stage-local" type="checkbox">Use a local HTTP facilitator</label>
+</div><p class="hint">An empty facilitator starts in challenge-only mode. Release controls provide selection, start, stop, upgrades, rollback, and customer handoff.</p><button id="stage">Stage release</button></fieldset>
+</section>
+
+<section id="panel-versions" class="tab" hidden><h2>Saved versions</h2><p class="muted">Each version retains its product declarations and merchant terms. Load one into the draft, or restore it as a new current revision.</p><div id="version-list"></div><button id="older-versions" hidden>Load older versions</button></section>
+<section id="panel-activity" class="tab" hidden><h2>Workspace activity</h2><p class="muted">Saved operations retain the exact requested revision and their original outcome.</p><div id="activity-list"></div><button id="older-activity" hidden>Load older activity</button></section>
+</main>
+<dialog id="detail-dialog"><div class="section-heading"><h2 id="detail-title">Details</h2><button id="close-detail">Close</button></div><pre id="detail-text"></pre></dialog>
+<footer>Redis / Valkey merchant workspace</footer>
+</body></html>
