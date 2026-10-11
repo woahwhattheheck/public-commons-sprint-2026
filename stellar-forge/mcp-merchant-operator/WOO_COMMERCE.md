@@ -235,6 +235,44 @@ export again. `merchant_woo_file_release` explicitly releases a selected
 temporary read. Provider shutdown drains active Woo operations and closes these
 temporary readers.
 
+## Reopen the handoff on the receiving operator
+
+Place the original manifest and every listed payload directly in one private
+directory after verifying their returned hashes. The receiving command imports
+that exact operation into the receiving operator's configured workspace:
+
+```sh
+starforge woo-refund receive \
+  --config /private/receiving-operator.json \
+  --from /private/downloaded-refund \
+  --manifest-sha256 ORIGINAL_MANIFEST_SHA256 \
+  --check
+
+starforge woo-refund receive \
+  --config /private/receiving-operator.json \
+  --from /private/downloaded-refund \
+  --manifest-sha256 ORIGINAL_MANIFEST_SHA256
+```
+
+The receiving configuration uses the same store URL and existing credential
+environment references, with its own private workspace. The command validates
+the original accounting source, sealed input, reviews and history through the
+same refund operator before installing its input. A repeated receive after an
+interrupted copy or lost response reopens the same saved receiving receipt.
+Existing later recovery records remain available.
+
+Use `starforge woo-refund read` and `history` to reopen the received
+operation offline. The receiving operator's next live step is the original
+`recover` command against the same adjustment UUID and Woo store. Its
+observation joins that operation's history. A subsequent export to a new
+directory carries the additional outcome.
+
+The SDK entry
+`@tokenjunkielabs/starforge-merchant/merchant/woocommerce/refund-handoff`
+exports `receiveRefund(config, directory, {expectedManifestSha256})`.
+See [the complete receiving guide](../../stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md#receive-a-support-handoff-on-another-operator-machine)
+for the private configuration, original file limits and recovery details.
+
 ## Tool reference
 
 | Tool | Inputs beyond the store alias |
