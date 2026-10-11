@@ -36,7 +36,7 @@ function savedDelivery(outcome) {
     bytes: saved.bytes, sha256: saved.sha256, contentType: saved.contentType ?? null };
 }
 async function savedFile(delivery) {
-  if (!delivery.available) throw problem('The original buyer has no saved response.', 404);
+  if (!delivery.available) throw problem('The buyer has no saved response.', 404);
   // The path comes solely from the original buyer's SAVED result. Browser
   // requests cannot supply a file path, destination, URL or response identity.
   let handle;
@@ -53,12 +53,12 @@ async function savedFile(delivery) {
     }
     const after = await handle.stat();
     if (digest.digest('hex') !== delivery.sha256 || after.size !== info.size || after.mtimeMs !== info.mtimeMs)
-      throw problem('The saved response no longer matches the original buyer result.', 409);
+      throw problem('The saved response no longer matches the recorded buyer result.', 409);
     return handle;
   } catch (error) {
     await handle?.close();
     if (error.status) throw error;
-    throw problem('The original saved response is unavailable.', 409);
+    throw problem('The saved response is unavailable.', 409);
   }
 }
 async function preview(delivery) {
@@ -107,7 +107,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
   function choose(original, intent) {
     if (typeof intent !== 'string' || !intent) throw problem('Select a prepared operation.');
     const job = original.buyers.find(row => row.operation?.intentId === intent);
-    if (!job) throw problem('This intent is not in the original commerce session.', 404);
+    if (!job) throw problem('This intent is not in this commerce session.', 404);
     return job;
   }
   async function current(intent) {
@@ -224,11 +224,11 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       action = target.pathname;
       try {
         const { original, job } = await current(value.intent), intent = job.operation.intentId;
-        if (original.state !== 'RUNNING') throw problem('The original commerce session is not running.', 409);
+        if (original.state !== 'RUNNING') throw problem('The commerce session is not running.', 409);
         if (target.pathname === '/api/review') {
           const result = await session.review(intent);
           if (result.exitCode !== 0 || result.original?.mode !== 'OFFLINE_REVIEW')
-            throw problem('Original buyer review failed. ' + (result.original?.error ?? ''), 409);
+            throw problem('Buyer review failed. ' + (result.original?.error ?? ''), 409);
           const fresh = (await current(intent)).job;
           if (fingerprint(fresh) !== fingerprint(job)) throw problem('The prepared request changed during review. Review it again.', 409);
           reviews.set(intent, { id: randomUUID(), at: new Date().toISOString(), fingerprint: fingerprint(job), original: result.original });
@@ -240,9 +240,9 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           if (work) throw problem('Wait for the current buyer before reading interrupted-operation recovery.', 409);
           await session.recover(intent); reviews.delete(intent);
         } else {
-          if (work) throw problem('The original session already has an active buyer.', 409);
-          if (job.state !== 'QUEUED') throw problem('This intent already has an original attempt or cancellation. Use its retained result.', 409);
-          if (original.seller.mode !== 'NATIVE_X402') throw problem('Configure the original native facilitator before executing purchases.', 409);
+          if (work) throw problem('The session already has an active buyer.', 409);
+          if (job.state !== 'QUEUED') throw problem('This intent has already been attempted or cancelled. Use its retained result.', 409);
+          if (original.seller.mode !== 'NATIVE_X402') throw problem('Configure the native facilitator before executing purchases.', 409);
           const review = reviews.get(intent);
           if (!review || value.reviewId !== review.id || review.fingerprint !== fingerprint(job))
             throw problem('Review this exact operation before executing it.', 409);
@@ -287,11 +287,11 @@ const HELP = `StellarForge commerce browser workspace
 
   node commerce-console.mjs start --directory /private/merchant-session [--port 8426]
 
-Initialize the session with the original commerce-cli.mjs init command first.
+Initialize the session with commerce-cli.mjs init first.
 Open the complete local operator URL printed here. Review and select requests
-in the browser; original SF81 payment approval remains in this terminal.
+in the browser; payment approval remains in this terminal.
 Stop session drains this process's seller and buyer. Saved inbox results remain.
-SIGINT/SIGTERM closes the browser server and the original owned session.
+SIGINT/SIGTERM closes the browser server and its owned session.
 `;
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && ['help', '--help'].includes(args[0])) { process.stdout.write(HELP); return; }
