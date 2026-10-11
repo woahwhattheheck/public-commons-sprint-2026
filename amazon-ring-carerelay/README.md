@@ -70,3 +70,18 @@ Competition entry, award and payment have not yet been verified. The original en
 ## Session lifecycle
 
 The runtime now disables redirects, validates same-device session URLs, closes HTTP responses, and exposes explicit DELETE termination plus context-managed cleanup. See [RUNTIME.md](RUNTIME.md) for usage, uncertain-outcome handling, and the focused transport checks.
+
+## Review an event workspace in the browser
+
+The local inbox completes the existing import → review → saved workspace flow without requiring hand-written decision files. On Linux or macOS with Python 3.10+, from this directory:
+
+```bash
+python -m carerelay.workbench import examples/workbench_events.jsonl --source offline-simulator --out household.json
+python -m carerelay.workbench serve household.json --out-dir household-reviews --port 8792
+```
+
+Open `http://127.0.0.1:8792`. The existing example contains synthetic event metadata, clearly labeled `offline-simulator`. For an existing workspace, use its path instead of importing the example again. The inbox shows the original event context and proposal rationale, lets an operator record an explicit approval or rejection with a reviewer ID, and filters pending/completed decisions. Reviewer IDs attribute a decision; they are not authenticated identities. Recording a decision never sends a notice, dispatches a check-in, or changes a Ring device.
+
+Every saved decision creates an immutable `workspace-<revision>.json` in the output directory and updates `current.json` atomically. The input workspace remains unchanged. Restart the same `serve` command with the same original input and output directory to resume the latest saved revision. Only one server writes that directory at a time. Multiple browser views may read it; a decision from an older revision is rejected so the operator can refresh and review current state. The current workspace download uses the original workspace format and remains usable by the existing CLI and report exporter.
+
+The standard-library server binds only to `127.0.0.1`, accepts bounded JSON review requests, and does not enable cross-origin access. It is a local operator tool, not a hosted multi-user service. Stop it with Ctrl+C when finished. Source labels and the original proposal-only policy are preserved throughout; this browser workflow does not establish Ring simulator/device execution.

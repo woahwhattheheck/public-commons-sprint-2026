@@ -36,8 +36,17 @@ def main(argv: list[str] | None = None) -> int:
     report.add_argument("--summary", action="store_true", help="aggregate table, no event cards")
     report.add_argument("--all-pages", action="store_true",
                         help="--out names a NEW directory; export all linked static HTML pages")
+    serve = commands.add_parser("serve", help="open a local inbox for explicit review decisions")
+    serve.add_argument("workspace", type=Path)
+    serve.add_argument("--out-dir", required=True, type=Path,
+                       help="directory for immutable workspace revisions; reuse to resume")
+    serve.add_argument("--port", type=int, default=8792)
     args = parser.parse_args(argv)
     try:
+        if args.command == "serve":
+            from .review_server import serve_inbox
+            serve_inbox(args.workspace, args.out_dir, port=args.port)
+            return 0
         if args.command == "import":
             previous = load_workspace(args.resume) if args.resume else None
             result = import_events(args.events, previous=previous, source=args.source)
