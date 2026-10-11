@@ -8,6 +8,7 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
+import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
 import { createReleaseClientConsole } from './release-client.mjs';
 import { createReleaseReceivingConsole } from './release-receiving.mjs';
 
@@ -25,18 +26,20 @@ async function body(req) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw failure('JSON object required.');
   return value;
 }
-export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, clientExportsDirectory, receivingConfig } = {}) {
+export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, facilitators, clientExportsDirectory, receivingConfig } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
   if (catalogConfig && discoverySetup !== undefined) throw new TypeError('Use either an existing catalog connection or a managed discovery setup.');
   const discovery = catalogConfig ? null : createReleaseDiscoveryConsole(root, { directory: discoverySetup ?? root + '.discovery' });
   const catalogConnection = () => catalogConfig ?? discovery?.catalogConfig;
   const receiving = createReleaseReceivingConsole(root, receivingConfig);
+  const facilitator = createReleaseFacilitatorControl(root, facilitators);
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
     ['/client.mjs', 'client.mjs', 'text/javascript; charset=utf-8'],
     ['/receiving.mjs', 'receiving.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
@@ -116,6 +119,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         await clients.sendDownload(req, res, Object.fromEntries(target.searchParams)); return;
       }
       if (req.method === 'GET' && target.pathname === '/api/cache' && !target.search) { send(200, await releaseCacheStatus(root)); return; }
+      if (req.method === 'GET' && target.pathname === '/api/facilitators' && !target.search) { send(200, facilitator.status()); return; }
       if (req.method === 'GET' && target.pathname === '/api/discovery' && !target.search) {
         send(200, discovery ? await discovery.status() : { enabled: false, state: 'EXTERNAL' }); return;
       }
@@ -137,7 +141,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
         '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
-        '/api/clients/generate', '/api/clients/adopt',
+        '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt',
         '/api/receiving/open', '/api/receiving/close', '/api/receiving/prepare', '/api/receiving/attach',
         '/api/receiving/start', '/api/receiving/cancel'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
@@ -168,6 +172,9 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
             throw failure('The receiving workspace path is configured by the console command.');
           send(200, await receiving[action === 'close' ? 'closeWorkspace' : action](input)); return;
 
+        } else if (target.pathname.startsWith('/api/facilitator/')) {
+          const action = target.pathname.slice('/api/facilitator/'.length);
+          send(200, await facilitator[action](input)); return;
         } else if (target.pathname.startsWith('/api/clients/')) {
           const action = target.pathname.slice('/api/clients/'.length);
           send(200, await clients[action](input)); return;
@@ -246,6 +253,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
     closing = (async () => {
       try {
         await actionDone;
+        await facilitator.close();
         try { if (managed) await managed.close(); }
         finally {
           try { try { await clients.close(); } finally { await discovery?.close(); } }

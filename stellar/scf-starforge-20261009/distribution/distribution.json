@@ -55,7 +55,8 @@
     "stellar/scf-starforge-20261009/partners/getblock-stellar",
     "stellar/scf-starforge-20261009/partners/chainstack-stellar",
     "stellar/scf-starforge-20261009/merchant-settlement-accounting",
-    "stellar/scf-starforge-20261009/partners/allium-explorer-pilot"
+    "stellar/scf-starforge-20261009/partners/allium-explorer-pilot",
+    "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -175,6 +176,7 @@
     "sheets-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/cli.mjs",
     "mongodb": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/cli.mjs",
     "mongodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/workspace/server.mjs",
+    "mongodb-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/publisher/cli.mjs",
     "redis": "stellar/scf-starforge-20261009/sf30-seller-sdk/redis/cli.mjs",
     "clickhouse": "stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/start.mjs",
     "clickhouse-prepare": "stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/prepare.mjs",
@@ -247,7 +249,11 @@
     "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
     "allium-explorer": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/cli.mjs",
     "allium-workspace": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs",
-    "buyer-agent": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/agent-workflow.mjs"
+    "buyer-agent": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/agent-workflow.mjs",
+    "tenderly": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/cli.mjs",
+    "tenderly-workspace": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs",
+    "tenderly-customer": "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer/cli.mjs",
+    "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -330,6 +336,7 @@
     "./seller/mongodb/prepare": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/prepare.mjs",
     "./seller/mongodb/onboarding": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/onboarding.mjs",
     "./seller/mongodb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/workspace/server.mjs",
+    "./seller/mongodb/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/publisher/model.mjs",
     "./seller/mongodb/buyer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/buyer.mjs",
     "./seller/redis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/merchant.mjs",
     "./seller/redis/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/source.mjs",
@@ -468,7 +475,16 @@
     "./buyer/node/agents/sqlite": {
       "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/sqlite.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/sqlite.mjs"
-    }
+    },
+    "./partners/tenderly": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/product.mjs",
+    "./partners/tenderly/application": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/application.mjs",
+    "./partners/tenderly/preparation": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer.mjs",
+    "./partners/tenderly/customer": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/customer/client.mjs",
+    "./partners/tenderly/workspace": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/model.mjs",
+    "./partners/tenderly/workspace/server": "./source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs",
+    "./buyer/tenderly-analysis": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/library.mjs",
+    "./buyer/tenderly-analysis/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/server.mjs",
+    "./buyer/tenderly-analysis/records": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/analyze.mjs"
   },
   "nativePeers": {
     "@x402/core": {
