@@ -11,7 +11,7 @@ The project is grounded in the [CSKT DEWR website RFP](https://csktwatercompact.
 - **Documents:** original file and media identities, download metadata, version labels, shared document families, category search and editorial history.
 - **GIS:** original published ArcGIS item and app records, source-page lineage, native map/layer information, published-resource selection and a reviewed text equivalent for each attached map.
 - **Releases:** exact approved revisions, source capture identities, named reviewer decisions, destination paths and validated 301/410 routes.
-- **WordPress delivery:** native destination preview, original target bindings, per-item journal, actual media transfer, apply/readback and rollback that preserves later staff edits.
+- **WordPress delivery:** native destination preview, original target bindings, per-item journal, actual media transfer, apply/readback and rollback that preserves later staff edits. Native WordPress content controls let staff select document files and edit version details, map descriptions, notices and archive status.
 - **Operations:** grayscale responsive UI, stable request recovery, operating export, native SQLite backup/restore and complete staff and destination guides.
 
 The application runs on Node.js 24 or later and uses built-in HTTP, SQLite, cryptography and compression. Its `package.json` has no external application dependencies. The included destination plugin extends the selected WordPress CMS.

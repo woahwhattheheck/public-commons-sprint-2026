@@ -16,6 +16,7 @@ require_once __DIR__ . '/state.php';
 require_once __DIR__ . '/release.php';
 require_once __DIR__ . '/uploads.php';
 require_once __DIR__ . '/public.php';
+require_once __DIR__ . '/editor.php';
 
 function csktm_types() {
     foreach (array('cskt_project'=>'Projects', 'cskt_document'=>'Documents', 'cskt_notice'=>'Notices') as $type=>$label) {

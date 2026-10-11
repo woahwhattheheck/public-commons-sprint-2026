@@ -21,6 +21,8 @@ FILES = [
     "destination/wordpress-plugin/release.php",
     "destination/wordpress-plugin/uploads.php",
     "destination/wordpress-plugin/public.php",
+    "destination/wordpress-plugin/editor.php",
+    "destination/wordpress-plugin/editor.js",
     "source/CONTRACT.md", "source/maintained-source.json",
     "source/source-index.json", "source/source-links.json",
     "source/html-source-index.json", "source/page-completeness.json",

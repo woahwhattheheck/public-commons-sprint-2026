@@ -83,12 +83,56 @@ function csktm_asset_file($id,$header,$inputFile){
         $d['attachmentId']=(int)$attachment;$d['nativeUrl']=wp_get_attachment_url($attachment);$d['created']=$created;$d['retainedAt']=csktm_now();$d['nativeSha256']=csktm_fingerprint($attachment);$record['assets'][$d['itemId']]=$d;csktm_save($record);return $d;
     });
 }
-function csktm_links($record,$bindings){$map=array();foreach($record['manifest']['items']as$item){if(in_array($item['disposition'],array('remove','consolidate'),true))continue;$to=$item['kind']==='media'?($record['assets'][$item['id']]['nativeUrl']??null):home_url($item['route']);if($to){$map[$item['source']['url']]=$to;$map[wp_parse_url($item['source']['url'],PHP_URL_PATH)]=$to;}if(isset($record['assets'][$item['id']])){$asset=$record['assets'][$item['id']];$map[$asset['sourceUrl']]=$asset['nativeUrl'];$map[$asset['finalUrl']]=$asset['nativeUrl'];$map[wp_parse_url($asset['sourceUrl'],PHP_URL_PATH)]=$asset['nativeUrl'];}}return $map;}
-function csktm_rewrite_html($html,$map){
-    $processor=new WP_HTML_Tag_Processor($html);$mapped=0;
-    $rewrite=function($url)use($map,&$mapped){if(isset($map[$url])){$mapped++;return $map[$url];}$base=preg_replace('/[?#].*$/s','',$url);if(isset($map[$base])){$mapped++;return $map[$base].substr($url,strlen($base));}return $url;};
-    while($processor->next_tag()){foreach(array('href','src','poster')as$key){$value=$processor->get_attribute($key);if(is_string($value))$processor->set_attribute($key,$rewrite($value));}$set=$processor->get_attribute('srcset');if(is_string($set)&&!str_contains($set,'data:')){$parts=array();foreach(explode(',',$set)as$part){if(preg_match('/^\s*(\S+)(\s+\S+)?\s*$/',$part,$m))$parts[]=$rewrite($m[1]).($m[2]??'');}$processor->set_attribute('srcset',implode(', ',$parts));}}
-    $rewritten=$processor->get_updated_html();$safe=wp_kses_post($rewritten);return array($safe,array('mappedLinks'=>$mapped,'htmlSanitized'=>$safe!==$rewritten,'sourceHtmlSha256'=>hash('sha256',$html),'nativeHtmlSha256'=>hash('sha256',$safe)));
+function csktm_links($record,$bindings){
+    $urls=array();$images=array();
+    foreach($record['manifest']['items']as$item){
+        if(in_array($item['disposition'],array('remove','consolidate'),true))continue;
+        $to=$item['kind']==='media'?($record['assets'][$item['id']]['nativeUrl']??null):home_url($item['route']);
+        if($to){$urls[$item['source']['url']]=$to;$urls[wp_parse_url($item['source']['url'],PHP_URL_PATH)]=$to;}
+        if(!isset($record['assets'][$item['id']]))continue;
+        $asset=$record['assets'][$item['id']];
+        $urls[$asset['sourceUrl']]=$asset['nativeUrl'];$urls[$asset['finalUrl']]=$asset['nativeUrl'];$urls[wp_parse_url($asset['sourceUrl'],PHP_URL_PATH)]=$asset['nativeUrl'];
+        // This source uses Optimole transformation URLs containing the original
+        // upload URL. Bind only the host observed in this exact source record
+        // and the original file whose complete bytes were verified.
+        $original=wp_parse_url($item['source']['url']);$host=strtolower($original['host']??'');
+        if(str_starts_with($asset['mimeType'],'image/')&&str_ends_with($host,'.optimole.com')&&str_ends_with(rawurldecode($original['path']??''),'/'.rawurldecode($asset['sourceUrl'])))
+            $images[]=array('host'=>$host,'originalUrl'=>$asset['sourceUrl'],'nativeUrl'=>$asset['nativeUrl']);
+    }
+    return array('urls'=>$urls,'images'=>$images);
+}
+function csktm_rewrite_html($html,$links){
+    $map=$links['urls']??$links;$images=$links['images']??array();$processor=new WP_HTML_Tag_Processor($html);$mapped=0;$transforms=0;$collapsed=0;
+    $rewrite=function($url)use($map,$images,&$mapped,&$transforms){
+        if(isset($map[$url])){$mapped++;return $map[$url];}
+        $base=preg_replace('/[?#].*$/s','',$url);
+        if(isset($map[$base])){$mapped++;return $map[$base].substr($url,strlen($base));}
+        $parts=wp_parse_url($base);
+        if(is_array($parts)&&($parts['scheme']??'')==='https'&&!isset($parts['user'])&&!isset($parts['pass'])){
+            foreach($images as$image)if(strtolower($parts['host']??'')===$image['host']&&str_ends_with(rawurldecode($parts['path']??''),'/'.rawurldecode($image['originalUrl']))){
+                $mapped++;$transforms++;$fragment=wp_parse_url($url,PHP_URL_FRAGMENT);
+                return $image['nativeUrl'].(is_string($fragment)&&$fragment!==''?'#'.$fragment:'');
+            }
+        }
+        return $url;
+    };
+    while($processor->next_tag()){
+        foreach(array('href','src','poster','data-src','data-lazy-src')as$key){$value=$processor->get_attribute($key);if(is_string($value))$processor->set_attribute($key,$rewrite($value));}
+        foreach(array('srcset','data-srcset','data-lazy-srcset')as$key){
+            $set=$processor->get_attribute($key);if(!is_string($set)||str_contains($set,'data:'))continue;
+            $parts=array();$nativeUrls=array();$changed=false;
+            foreach(explode(',',$set)as$part){
+                if(!preg_match('/^\s*(\S+)(\s+\S+)?\s*$/',$part,$match)){$parts[]=$part;continue;}
+                $next=$rewrite($match[1]);$changed=$changed||$next!==$match[1];$nativeUrls[]=$next;$parts[]=$next.($match[2]??'');
+            }
+            // All observed transformation widths now reference one verified
+            // original. Do not attach inaccurate derivative-width descriptors.
+            if($changed&&count($nativeUrls)>1&&count(array_unique($nativeUrls))===1){$processor->set_attribute($key,$nativeUrls[0]);$collapsed++;}
+            else $processor->set_attribute($key,implode(', ',$parts));
+        }
+    }
+    $rewritten=$processor->get_updated_html();$safe=wp_kses_post($rewritten);
+    return array($safe,array('mappedLinks'=>$mapped,'mappedImageTransforms'=>$transforms,'collapsedSourceSets'=>$collapsed,'htmlSanitized'=>$safe!==$rewritten,'sourceHtmlSha256'=>hash('sha256',$html),'nativeHtmlSha256'=>hash('sha256',$safe)));
 }
 function csktm_apply($id,$input){
     if(!is_array($input)||!csktm_id($input['operationId']??null)||!csktm_sha($input['sha256']??null))csktm_fail('invalid_apply','Use the exact release hash and stable retained operation ID.');

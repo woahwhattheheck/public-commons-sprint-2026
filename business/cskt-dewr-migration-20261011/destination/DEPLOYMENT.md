@@ -102,3 +102,11 @@ node destination/cli.mjs rollback --config destination.json --release RELEASE_ID
 - [Native post insertion and update](https://developer.wordpress.org/reference/functions/wp_insert_post/)
 - [Registered native metadata and revisions](https://developer.wordpress.org/reference/functions/register_post_meta/)
 - [Native attachment metadata](https://developer.wordpress.org/reference/functions/wp_generate_attachment_metadata/)
+
+## Responsive source images and partial page updates
+
+The adapter recognizes an Optimole transform only when its host was retained in the original media record and its embedded upload URL is the exact reviewed file whose bytes were verified. Thus the captured Crow image’s 300 × 194 and 702 × 453 source forms resolve to the retained original PNG. Unselected images keep their original URLs. A responsive set whose selected variants all resolve to that one original loses the obsolete derivative-width descriptors; the original HTML remains in the immutable release. Native readback reports `mappedImageTransforms` and `collapsedSourceSets` with the original and published HTML hashes.
+
+A later release can update a child page without republishing its parent. The destination must already hold the parent’s explicit original-source binding and matching hierarchical WordPress type. Preview records the actual parent post and fingerprint; apply rechecks that same parent before writing. Two original content records cannot silently write the same native post, and a content record cannot interchange its binding with an attachment. Those conditions return specific preview conflicts.
+
+The destination checks the actual WordPress database before retaining or applying a release: SQLite is supported; on MySQL/MariaDB, all content, metadata, taxonomy and option tables participating in the operation must use InnoDB. Readback lists incomplete uploads with their original item, operation, SHA-256, total bytes and actual retained byte count, so interrupted transfers can continue from their original journal. Conflicted publish attempts are retained under their original operation ID. Rollback preflights current content and route/source bindings before restoring any affected item, retaining a changed child’s parent where necessary to preserve its native hierarchy.
