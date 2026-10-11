@@ -1,36 +1,71 @@
-# SF82 — one-command native OpenAPI seller pilot
+# SF82 — run an OpenAPI seller
 
-An actual merchant can now compile **and serve** a selected OpenAPI API in one operator command, without copying the native seller protocol or writing a second server. This is a thin operational composition over the **original** [SF61 importer](../sf61-openapi-seller-import/README.md) and [SF30 service](../sf30-seller-sdk/README.md). It preserves real OpenAPI 3.0/3.1 schema acceptance, explicit offers, live route methods/path parameters, no-clobber manifest export, existing trusted application handlers and the native x402 payment implementation when configured.
+Compile selected operations from an existing API, run their seller service, stop it, and restart the same compiled seller. This command uses the original [SF61 importer](../sf61-openapi-seller-import/README.md) and [SF30 server](../sf30-seller-sdk/README.md), including their schema checks, application handlers, admission callbacks and native x402 payment integration.
 
-## From an existing API to a running seller
+## Start
 
-In the original full repository checkout, Node 22+:
+From a full checkout with Node 22+:
 
 ```sh
 node stellar/scf-starforge-20261009/sf82-seller-pilot/pilot.mjs \
   --spec stellar/scf-starforge-20261009/sf61-openapi-seller-import/openapi.example.json \
   --config stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-selections.example.json \
   --bindings stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-bindings.example.json \
-  --out /tmp/new-scoped-seller-pilot --port 0
+  --out /tmp/my-seller --port 0
 ```
 
-This uses the unchanged illustrative weather spec and deliberately **nonpayable** example terms. The command creates a private `0700` folder with original `offers.json`, `manifest.json`, `seller-service.json` (each `0600`), starts the original SF30 HTTP seller on `127.0.0.1`, reads back its **real** `/_seller/health` and `/_seller/offers` endpoints without whitespace, compares original exported offer identities with the live server and writes `runtime-readiness.json` at mode `0600`. It prints the actual ephemeral listening URL and route count. In a second terminal, use the printed port:
+The illustrative weather API uses deliberately **nonpayable** example terms. The command prints its actual local base URL, health and offers endpoints, route list, and copyable restart/status commands. It stays in the foreground. **Ctrl-C stops it.** Port `0` chooses an available local port; omit it to use `8423`.
+
+In another terminal, use the printed port:
 
 ```sh
 curl -i -X POST http://127.0.0.1:PORT/api/v2/forecast \
   -H 'content-type: application/json' -d '{"latitude":38.25,"longitude":-85.76}'
 ```
 
-This is a real HTTP `402` in **CHALLENGE_ONLY** mode; it is **not** a successful payment. The original application code is not invoked or charged. Ctrl-C ends the original Node listener. This does not create a wallet, merchant account, grant application or deployment. Keep the durable compiled directory as a source-bound handoff; supply a new output directory for every distinct run.
+The original service returns a real HTTP `402` in `CHALLENGE_ONLY` mode. Application handlers do not run in that mode. The listener binds to `127.0.0.1`; the advertised offers retain the API's declared public HTTPS origin. Use your own HTTPS reverse proxy when deploying.
 
-## Real seller application and facilitator
+## Stop, inspect, restart
 
-Supply the **merchant's** existing OpenAPI spec, exact route selections and accepted payment terms, explicit `--bindings`, and the existing trusted ESM `--handlers` file. For a real facilitator-backed seller, add `--facilitator https://YOUR_ACTUAL_FACILITATOR` to the **same command**. The original SF30 implementation then loads its installed native `@x402/core/server` and creates the original NATIVE_X402 server. No packages are installed by SF82. The handler file path is resolved from the operator's current directory before invoking the original service, avoiding the generated-output-directory relative-import trap. Use the merchant's own HTTPS proxy and ownership/authorization, not a public deployment from this script.
+Keep the output directory. Once the process has stopped, restart without the original input files or recompilation:
 
-Use `--allow-local-facilitator` only with the original SF30 loopback development facilitator; this simply forwards the existing flag, not a new bypass. The `--facilitator` URL, app bindings, original headers and settlement are interpreted exclusively by the original modules. SF82 adds **no approval gate**, payment verification, key management, policy or external network request of its own. Unlike the existing compile-only tool, it creates one running real HTTP service and checks its readback.
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/pilot.mjs --resume /tmp/my-seller
+```
 
-## Delivery boundary
+Resume restores the last requested port, absolute trusted handler path and facilitator settings. `--port 0` stays `0`, so each restart selects a free port and prints its new URL. Explicit runtime flags override saved values and become the settings for the next restart:
 
-`runtime-readiness.json` proves **only** that the original compiled terms match the running local seller's original health and offer endpoints at that observation instant. The compile-time SHA-256 manifest remains byte-for-byte the SF61 output. No application handler, paid request, transaction, wallet, remote facilitator, onchain settlement, customer consent or grant invitation is proved by this readiness file. Native payment acceptance and seller-owned business validation require their established separate flows. On failed readback, the wrapper shuts down the actual listener rather than announcing readiness; compiled files remain recoverable for debugging. It never overwrites an existing output directory or emits GitHub Actions.
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/pilot.mjs \
+  --resume /tmp/my-seller --port 8424 --handlers ./merchant-handlers.mjs
+```
 
-This is SF49 seller-onboarding usability, not a replacement for SF80 buyer input composition, SF81 operator execution, SF77 commercial work orders or SF30 prepayment application admission. The existing owner retains the customer relationship and commercial decision.
+Use `--challenge-only` to explicitly remove a saved facilitator. Status makes a fresh local health/offers request without starting a server or importing application handlers:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/pilot.mjs --status /tmp/my-seller
+```
+
+Its JSON reports `RUNNING` with the current matched routes, `NOT_STARTED` if launch has never completed, or `UNAVAILABLE` when the last listener cannot be reached or no longer matches this seller. `lastSuccessfulRuntime` contains recorded launch settings; health does not independently expose handler paths or facilitator configuration. An old readiness file alone is never treated as a running service. Operate one foreground process per directory; this command is not a process supervisor, and status does not stop a process.
+
+If startup fails, compiled files remain intact. For an occupied port, the error includes the exact `--resume ... --port 0` correction. Fix a missing application file by supplying `--handlers /path/to/correct-module.mjs`. You can resume an older SF82 or SF61 service export too: supply its runtime flags on the first resume. A prior native pilot without saved settings requires an explicit facilitator or `--challenge-only` choice.
+
+## Run your application
+
+Supply your OpenAPI document, explicit selections with your accepted payment terms, route bindings, and trusted ESM handler module. Handler paths supplied on the command line resolve from your current directory and are saved as absolute paths. Resume will import that trusted module again in the new process after checking the compiled files.
+
+For the original facilitator-backed server, add `--facilitator https://YOUR_ACTUAL_FACILITATOR` on first launch or resume. SF30 loads its installed `@x402/core/server` and original native implementation; SF82 installs no packages. `--allow-local-facilitator` forwards the existing SF30 option for an explicitly supplied loopback development facilitator. Health reports `NATIVE_X402` only after the original native server starts. This mode alone does not establish that a request has settled.
+
+## What stays in the directory
+
+| File | Purpose |
+| --- | --- |
+| `offers.json`, `seller-service.json`, `manifest.json` | Original SF61 output; never rewritten by resume. Their original SHA-256 identities are checked before handler import or listening. |
+| `pilot-runtime.json` | Last requested runtime settings, including explicit overrides. Written before starting, so a failed launch can be corrected and resumed. |
+| `runtime-readiness.json` | Last successful local observation, including the actual launch settings, listener and original offer identities. Updated atomically after each successful start. |
+
+The original compiler creates a private `0700` directory and `0600` files. The two operational files are also `0600`; atomic replacement keeps their previous complete versions until an update succeeds. A failed restart may leave an older successful observation, so use `--status` for current availability. Source hashes bind the export together; they are not an independent signature of the directory. Keep the directory and application module under your control.
+
+Changed spec, prices, route bindings or exported files require a **new** `--out` directory. Resume refuses altered compiled artifacts and tells you to restore the originals or compile changed inputs separately. It never overwrites the original source export to make a restart succeed.
+
+This operation creates no wallet, customer account, deployment or payment. Readiness concerns the running local configuration, with no paid request, settlement or customer-adoption claim. The existing SF49 owner retains the merchant relationship. SF30 remains the only serving/payment engine; SF82 adds no router, verification policy or retry mechanism.
