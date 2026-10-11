@@ -29,6 +29,7 @@ const HELP = `MongoDB merchant — Node 22.16+, official driver 7.7.0
       [--facilitator HTTPS_URL] [--allow-local-facilitator] [--no-operations] [--availability-dir PRIVATE_DIRECTORY]
   serve --source SOURCE --config SERVICE [same run options]
   workspace --state WORKSPACE [browser options]
+  publisher COMMAND --workspace DIRECTORY [original publisher and schedule options]
 The source names a URI environment variable; credentials remain in the launcher environment.`;
 
 export async function initMongoWorkspace(directory) {
@@ -40,6 +41,7 @@ export async function initMongoWorkspace(directory) {
   } catch (issue) { await rm(target, { recursive: true, force: true }); throw issue; }
 }
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === 'publisher') return (await import('./publisher/cli.mjs')).main(args.slice(1));
   if (!args.length || args.includes('--help')) { process.stdout.write(HELP + '\n'); return; }
   if (args[0] === 'workspace') return (await import('./workspace/server.mjs')).main(args.slice(1));
   const command = args[0], options = new Map();

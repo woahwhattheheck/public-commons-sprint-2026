@@ -61,6 +61,33 @@ The official [loaded data-source reference](https://docs.bitwave.io/docs/api-loa
 defines the create schema, required primary-key field and row insertion API.
 The plan includes those request files ready for inspection and download.
 
+### Carry the selected adjustment snapshot
+
+A handoff prepared from the [adjustments workflow](ADJUSTMENTS.md) carries its
+frozen refund and cancellation snapshot into this same plan. Each native row
+retains the original gross amount and adds exact returned, pending, remaining,
+available, cancelled and over-returned atomic amounts, refund status and count,
+the latest verified refund-transfer date, the latest cancellation effective
+date, and the source snapshot hash. All these fields are protected source
+columns. Only the four original external bookkeeping fields can change in a
+returned row.
+
+The source table shows the saved returned and remaining amounts beneath gross.
+Select a row for the complete source and dates. Choosing a closed-period handoff
+retains that close's snapshot after later refunds; prepare a new original
+handoff and plan to export later activity. The complete `adjustments.json`,
+`adjustments.csv` and `adjustments.html` files accompany the plan and each
+accountant return in the downloaded archive.
+
+Existing retained plans keep their original schema. Bitwave requires a new
+data source when its schema changes, so create or select a table with the
+complete adjustment schema shown by this plan. The workspace refuses a table
+already bound to one of its retained plans with different columns. An external
+table must have the displayed schema before it receives these rows. Native
+comparison identifies missing or changed adjustment fields alongside other
+source differences, preserving the original accountant assignments for those
+rows.
+
 ## Create or bind, deliver and read back
 
 On **Native plan & requests**, use **Create native data source** to create the

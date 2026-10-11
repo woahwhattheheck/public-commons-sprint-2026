@@ -28,6 +28,16 @@ Open the printed local address, enter your operator name, and choose **Accountan
 
 The original report manifest and input manifest travel with the packet, retaining the source hashes and captured-file references used by the original reconciliation. Individual files remain available in the local workspace.
 
+## Carry refunds and cancellations into the books
+
+Record the later customer operation in the workspace's **Adjustments** area, then prepare the accountant handoff from the original reconciliation. Each payment keeps its original gross amount alongside verified refunds, pending refund requests, remaining amount, and recorded cancellations. The row detail and offline review show the refund's native transfer time separately from the merchant's cancellation effective date.
+
+A handoff freezes the adjustment state that was selected when it was saved. Choosing a saved period close uses that close's original adjustment files; later refunds appear in a newly prepared live handoff. For example, a payment of `50000` atomic units with a verified refund of `12000` remains a gross payment of `50000`, with `12000` returned and `38000` remaining. A cancellation remains a separately dated merchant record. Pending refund requests stay separate from verified returned money.
+
+The complete archive includes `adjustments.json`, the full history in `adjustments.csv`, and an offline `adjustments.html` review. These same original files accompany every returned bookkeeping revision. Their source hash, per-payment amounts, refund status and latest operation dates are protected columns in the accountant CSV. Edit the four bookkeeping columns below and retain the supplied header. To account for a later adjustment, create another handoff from the updated reconciliation.
+
+Structured summaries group exact atomic amounts by network and asset. A verified return above the original gross payment is visible as an over-return and negative remaining amount; it is preserved for review. Older saved handoffs retain their original CSV template and source.
+
 ## Return the bookkeeping file
 
 The accountant edits four columns in the supplied CSV:

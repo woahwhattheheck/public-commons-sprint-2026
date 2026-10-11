@@ -10,7 +10,7 @@
   <div id="notice" role="status" aria-live="polite" hidden></div>
   <div class="shell">
     <aside class="sidebar">
-      <nav aria-label="Workspace"><button class="active" data-tab="source">Data source</button><button data-tab="reports">Named reports</button><button data-tab="merchant">Merchant routes</button><button data-tab="review">Review and run</button><button data-tab="packages">Seller packages</button></nav>
+      <nav aria-label="Workspace"><button class="active" data-tab="source">Data source</button><button data-tab="reports">Named reports</button><button data-tab="merchant">Merchant routes</button><button data-tab="review">Review and run</button><button data-tab="packages">Seller packages</button><button data-tab="publisher">Dataset publisher</button></nav>
       <div class="sidebar-heading"><h2>Saved revisions</h2><button id="refresh-history" class="small">Refresh</button></div>
       <div id="history-list" class="history-list"></div><button id="more-history" class="small" hidden>Older revisions</button>
       <div class="sidebar-note"><strong id="database-label"></strong><span id="workspace-label"></span></div>
@@ -63,6 +63,75 @@
         <div id="seller-card" class="card" hidden><h3>Local merchant</h3><p id="seller-status">Start this package with the connection environment of this workspace.</p><div class="actions"><button id="start-seller">Start local seller</button><button id="stop-seller" hidden>Stop seller</button><a id="seller-operations" hidden target="_blank" rel="noreferrer">Open seller operations</a></div></div>
         <div id="buyer-card" class="card" hidden><h3>Prepare a buyer request</h3><p class="help">Uses the selected package's running seller to read its current offer and payment choices.</p><div class="form-grid"><label>Route<select id="buyer-route"></select></label><label>Payment choice<input id="buyer-choice" type="number" min="0" value="0"></label><label>Intent identifier<input id="buyer-intent" spellcheck="false"></label><label class="full">Exact buyer inputs, JSON<textarea id="buyer-input" class="code" rows="4" spellcheck="false"></textarea></label></div><div class="actions"><button id="prepare-buyer">Prepare request</button><button id="download-buyer" hidden>Download buyer review</button></div><div id="buyer-result" class="spaced"></div></div>
         <details class="card"><summary>Operator commands</summary><pre id="operator-commands"></pre></details>
+      </section>
+      <section id="publisher-panel" class="panel" hidden>
+        <div class="section-heading"><div><span class="eyebrow">06 / retained dataset products</span><h2>Publish a complete dataset</h2><p>Extract a saved MongoDB report, review its rows, and serve a retained version with the merchant’s existing payment choices.</p></div><button id="pub-refresh">Refresh publication</button></div>
+        <div class="card"><div class="form-grid"><label class="full">Existing publication<select id="pub-select"><option value="">Choose a publication</option></select></label></div>
+          <details class="spaced" id="pub-create-details" open><summary>New publication from a saved merchant route</summary>
+            <div class="form-grid"><label>Route and named report<select id="pub-route"></select></label><label>Dataset resource path<input id="pub-path" value="/datasets/report" spellcheck="false"></label></div>
+            <p class="help">The publication keeps this saved source revision and complete payment choices. Its extraction plans can select inputs and public columns independently.</p>
+            <div class="actions"><button id="pub-create">Create publication</button></div>
+          </details>
+        </div>
+        <div id="pub-content" hidden>
+          <div id="pub-binding" class="card facts"></div>
+          <div class="card">
+            <div class="section-heading compact"><div><h3>Extraction plan</h3><p id="pub-plan-status" class="help"></p></div><button id="pub-new-plan" class="small">New plan from saved source</button></div>
+            <div class="form-grid"><label class="full">Saved plan<select id="pub-plan-select"></select></label><label>Plan title<input id="pub-title" maxlength="128"></label><label>Dataset name<input id="pub-name" maxlength="128"></label><label class="full">Exact report inputs, JSON<textarea id="pub-input" class="code" rows="4" spellcheck="false"></textarea></label></div>
+            <h3 class="spaced">Public columns and query options</h3><p class="help">String columns preserve exact BSON integer and decimal text. Use integer for safe integers, number for floating point, and boolean for true/false. Nullable CSV cells represent null; the native publisher rejects missing fields and ambiguous empty strings.</p>
+            <div id="pub-columns"></div>
+            <details class="spaced"><summary>Extraction order and limits</summary><div class="form-grid">
+              <label class="full">Stable source order, JSON<textarea id="pub-order" class="code" rows="4" spellcheck="false"></textarea></label>
+              <label>Maximum rows<input id="pub-max-rows" type="number" min="1" max="1000000" value="250000"></label><label>Maximum source / CSV bytes<input id="pub-max-bytes" type="number" min="1024" max="268435456" value="67108864"></label>
+              <label>Maximum source row bytes<input id="pub-row-bytes" type="number" min="1024" max="8388608" value="1048576"></label><label>Extraction timeout, ms<input id="pub-timeout" type="number" min="100" max="300000" value="30000"></label>
+              <label>Maximum cell characters<input id="pub-cell-chars" type="number" min="1" max="1048576" value="65536"></label><label>Default page rows<input id="pub-default-limit" type="number" min="1" value="50"></label>
+              <label>Maximum page rows<input id="pub-page-limit" type="number" min="1" value="250"></label><label>Maximum response bytes<input id="pub-page-bytes" type="number" min="1024" value="921600"></label>
+            </div><p class="help">The native cursor must finish within every limit. An authored aggregation limit remains part of the saved report. Use source keys that produce a stable order across refreshes.</p></details>
+            <details class="spaced"><summary>Retained MongoDB aggregation and input declarations</summary><pre id="pub-source"></pre></details>
+            <div class="actions"><button id="pub-save-plan">Save extraction plan</button><button id="pub-extract" class="primary">Extract saved plan</button></div>
+            <div id="pub-plan-pages" class="actions"></div>
+          </div>
+          <div class="card">
+            <div class="section-heading compact"><div><h3>Extractions</h3><p id="pub-active" class="help"></p></div><button id="pub-cancel" class="small" hidden>Cancel extraction</button></div>
+            <div id="pub-runs"></div><div id="pub-run-pages" class="actions"></div>
+            <div id="pub-run-detail" class="spaced" hidden>
+              <div id="pub-run-facts" class="facts"></div>
+              <label class="spaced">Inspect candidate page, URL query<input id="pub-preview-query" placeholder="limit=20" spellcheck="false"></label>
+              <div class="actions"><button id="pub-preview">Inspect page</button><button id="pub-csv">Download CSV</button><button id="pub-config">Download dataset config</button><button id="pub-manifest">Download extraction manifest</button></div>
+              <div id="pub-preview-result"></div>
+              <details class="spaced"><summary>Native extraction, source read and publication record</summary><pre id="pub-run-record"></pre></details>
+              <div class="form-grid spaced"><label>Reviewer<input id="pub-reviewer" maxlength="128" autocomplete="name"></label><label>Review note<input id="pub-review-note" maxlength="2000"></label></div>
+              <p id="pub-review-target" class="help"></p><div class="actions"><button id="pub-review">Save candidate review</button><button id="pub-publish" class="primary">Publish reviewed candidate</button><button id="pub-recover" hidden>Reconcile retained run</button></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-heading compact"><div><h3>Dataset seller and retained versions</h3><p id="pub-seller-status" class="help"></p></div><div class="actions"><button id="pub-start">Start dataset seller</button><button id="pub-stop" hidden>Stop seller</button><a id="pub-docs" hidden target="_blank" rel="noreferrer">Open developer explorer</a></div></div>
+            <div id="pub-versions"></div><details class="spaced"><summary>Bound merchant resource and complete payment choices</summary><pre id="pub-terms"></pre></details>
+          </div>
+          <div id="pub-schedule" class="card">
+            <div class="section-heading compact"><div><h3>Recurring publication</h3><p id="schedule-next" class="help"></p></div><strong id="schedule-status">Not configured</strong></div>
+            <p id="schedule-binding" class="help"></p><div class="actions"><button id="schedule-baseline">Use selected publication as baseline</button><button id="schedule-reload">Reload saved policy</button></div>
+            <p id="schedule-baseline-label" class="help"></p><p id="schedule-current-warning" class="help"></p>
+            <form id="schedule-form" class="spaced"><div class="form-grid">
+              <label>Refresh interval, seconds<input id="schedule-interval" type="number" min="30" max="2592000" value="3600" required></label>
+              <label>On failed refresh<select id="schedule-on-error"><option value="pause">Pause for review</option><option value="next-interval">Try on next interval</option></select></label>
+              <label>Minimum rows<input id="schedule-minimum" type="number" min="0" value="0" required></label><label>Maximum rows<input id="schedule-maximum" type="number" min="1" value="250000" required></label>
+              <label>Maximum row decrease, %<input id="schedule-drop" type="number" min="0" max="100" step="any" placeholder="No additional decrease limit"></label>
+              <label>Reviewer<input id="schedule-reviewer" maxlength="128" required></label><label class="full">Policy note<input id="schedule-note" maxlength="2000"></label>
+            </div><div class="actions"><button id="schedule-save" type="submit">Save refresh policy</button></div></form>
+            <div class="actions"><button id="schedule-enable" type="button">Enable schedule</button><button id="schedule-pause" type="button">Pause schedule</button><button id="schedule-run" type="button">Run one refresh</button><button id="schedule-continue" type="button" hidden>Continue retained refresh</button></div>
+            <p class="help">Refreshes use the original native extraction and version writer. A saved policy retains its source plan, row criteria, and target revision. The workspace resumes enabled schedules when reopened.</p>
+            <div class="table-wrap"><table><thead><tr><th>Started</th><th>Trigger</th><th>Status</th><th>Result</th><th>Extraction</th></tr></thead><tbody id="schedule-history"></tbody></table></div><div id="schedule-pages" class="actions"></div>
+            <details class="spaced"><summary>Saved refresh policy</summary><pre id="schedule-policy"></pre></details>
+          </div>
+          <div class="card">
+            <h3>Buyer handoff for the selected extraction</h3><p class="help">Inspect a first-page query, load the running seller’s offer, and select its payment terms. The original buyer config pins the retained snapshot.</p>
+            <div class="form-grid spaced"><label class="full">First-page query<input id="pub-buyer-query" value="limit=20" spellcheck="false"></label></div>
+            <div class="actions"><button id="pub-load-offer">Load current seller offer</button></div><div id="pub-offer"></div>
+            <div class="form-grid spaced"><label>Payment choice<select id="pub-buyer-choice"></select></label><label>Intent identifier<input id="pub-buyer-intent" spellcheck="false"></label></div>
+            <div class="actions"><button id="pub-prepare-buyer">Prepare original buyer request</button><button id="pub-download-buyer" hidden>Download buyer package</button></div><div id="pub-buyer-result"></div>
+          </div>
+        </div>
       </section>
     </main>
   </div>

@@ -7,7 +7,7 @@ const state = { source: null, snapshot: null, target: null, plan: null, dirty: f
 const friendly = {
   DATASET_INTEGER_REQUIRES_EXACT_STRING: 'A database integer exceeds the exact range of a JSON number. Use Text for that public column.',
   DATASET_COLUMN_TYPE_MISMATCH: 'A selected dataset type does not match the native database column. Decimal values and timestamps should remain Text.',
-  DATASET_EMPTY_NULL_CONFLICT: 'This nullable column contains a real empty string. The existing CSV format uses empty nullable cells for NULL. Review the approved SQL or choose a non-nullable text column.',
+  DATASET_EMPTY_NULL_CONFLICT: 'This nullable column contains a real empty string. The existing CSV format uses empty nullable cells for NULL. Review the approved source projection or choose a non-nullable text column.',
   DATASET_NULL_NOT_ALLOWED: 'A database NULL reached a column declared non-nullable. Review the column mapping.',
   DATASET_EXTRACTION_TOO_MANY_ROWS: 'The complete query exceeds the reviewed row limit. No candidate was published.',
   QUERY_TIMEOUT: 'The extraction reached its deadline. Review the query and limits before starting a new extraction.',
@@ -55,7 +55,10 @@ function buttons() {
 }
 function inputChanged() { state.dirty = true; buttons(); }
 function renderQuery(definition, saved) {
-  state.query = definition; $('source-sql').textContent = definition.sql;
+  state.query = definition;
+  $('source-sql').textContent = typeof definition.sql === 'string' ? definition.sql : JSON.stringify({
+    collection: definition.collection, pipeline: definition.pipeline, readConcern: definition.readConcern,
+  }, null, 2);
   $('source-hash').textContent = 'Source ' + short(state.editorHash);
   clear($('parameters'));
   for (const [name, spec] of Object.entries(definition.parameters)) {
