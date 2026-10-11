@@ -1,6 +1,6 @@
 // MIT. One actual original-services order lifecycle; controlled local facilitator.
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm, stat, readdir } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, rm, stat, readdir, rename } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
@@ -9,12 +9,13 @@ import { promisify } from 'node:util';
 import { request as httpRequest } from 'node:http';
 import { once } from 'node:events';
 import { randomBytes } from 'node:crypto';
-import { Asset, Networks } from '@stellar/stellar-sdk';
+import { Asset, Networks, Keypair } from '@stellar/stellar-sdk';
 import { compileCheckout, validateHandoff, sha } from './checkout-config.mjs';
 import { initializeMerchant, prepareHandoff, inspectOrder, startCheckout } from './checkout.mjs';
 import { preparePurchase, retrieveFile } from './purchase.mjs';
 import { operation } from '../sf88-operator-buyer-cli/config.mjs';
 import { initializeQueue, openQueue } from '../sf88-operator-buyer-cli/queue.mjs';
+import { initializeWorkspace } from '../sf88-operator-buyer-cli/workspace.mjs';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import { createNativeSellerServer } from '../sf30-seller-sdk/native-factory.mjs';
 import { drainOnce, sendSignedWebhook } from '../sf98-merchant-delivery/deliver.mjs';
@@ -36,6 +37,7 @@ async function startReceiver(state, secret) {
 try {
   const payment = JSON.parse(await readFile(new URL('../sf30-seller-sdk/python/example-merchant.json', import.meta.url))).functions.summarize.payment;
   payment.asset = Asset.native().contractId(Networks.TESTNET);
+  payment.payTo = Keypair.random().publicKey();
   const compiled = compileCheckout({schema:'stellar-forge.sf101.checkout-service.v1',
     publicOrigin:'https://merchant.example', path:'/purchase/report', routeId:'paid_report',
     description:'Existing approved private report', payment, state:join(root,'receiver'), outbox:join(root,'outbox')});
@@ -126,7 +128,61 @@ try {
   assert.equal(response.status,200); assert(JSON.stringify(view).includes('DELIVERED'));
   await execFile('python3',[join(here,'receiver.py'),'receipt','--state',compiled.state,'--ref',handoff.orderReference,'--out',join(root,'entitlement.json')]);
   assert.equal(JSON.parse(await readFile(join(root,'entitlement.json'))).fileSha256,handoff.file.sha256);
+
+  // Continue the SAME real delivered product through the installable Python app.
+  // Workspace creation/preparation/review remain offline; the product above has
+  // already traversed the actual native seller, signed receiver and file writer.
+  const workspace=join(root,'python-workspace'), base=join(root,'python-base.json');
+  const localCustomer=Keypair.random();
+  const python=(await execFile('python3',['-c','import sys;print(sys.executable)'])).stdout.trim();
+  await writeFile(base,JSON.stringify({operation:cfg.operation}),{mode:0o600});
+  await initializeWorkspace(['--config',base,'--dir',workspace,'--actor','python-customer',
+    '--service','original-paid-files','--payer',localCustomer.publicKey(),'--python',python,
+    '--secret-env','SF101_JOURNEY_WALLET_NOT_PROVISIONED']);
+  await rename(join(workspace,'operator-keys.json'),join(workspace,'operator-keys.retained.json'));
+  const checkout=fileURLToPath(new URL('../../../',import.meta.url));
+  const applicationScript=`import json,sys
+from pathlib import Path
+from stellar_forge_buyer import Buyer,NativeError
+checkout,state,workspace,handoff,product=sys.argv[1:]
+buyer=Buyer(checkout=checkout,state_dir=state)
+op=buyer.from_paid_file(handoff,workspace=workspace,intent_id='python-approved-file-482')
+review=op.review()
+assert review.file_promise['orderReference']=='approved-order-482'
+assert review.native['headers']['X-SF98-Order-ID']=='approved-order-482'
+assert json.loads(op.config_path.read_text())['evidenceDir']==str(Path(workspace)/'evidence')
+try:
+    op.execute(review=review)
+    raise AssertionError('missing native setup must fail before attempt')
+except NativeError as error:
+    assert error.code=='SIGNER_LOCAL_TESTNET_KEY_REQUIRED',error.code
+assert not (op.directory/'attempt.json').exists()
+delivery=op.retrieve_file(destination=product)
+assert delivery.http_requests==0
+assert list(delivery.csv_rows())==[{'sku':'A-17','quantity':'5'},{'sku':'B-23','quantity':'11'}]
+reopened=Buyer(checkout=checkout,state_dir=state).operation(op.intent_id)
+reopened.buyer.runtime.run=lambda *a,**k: (_ for _ in ()).throw(AssertionError('local recovery must not launch Node'))
+saved=reopened.recover_file()
+assert saved.read_bytes()==Path(product).read_bytes()
+assert reopened.inspect()['state']=='PREPARED'
+print(json.dumps({'pythonApplication':'PASS','nativeAttemptStarted':False,
+                  'productHttpRequests':delivery.http_requests,'rows':2,'configuration':str(op.config_path)}))
+`;
+  const applicationEnv={...process.env,PYTHONPATH:join(here,'../sf88-operator-buyer-cli/python')};
+  delete applicationEnv.SF101_JOURNEY_WALLET_NOT_PROVISIONED;
+  delete applicationEnv.SF101_CLAIM_TOKEN;
+  const applicationResult=JSON.parse((await execFile(python,['-c',applicationScript,checkout,
+    join(root,'python-application'),workspace,handoffPath,downloaded],{env:applicationEnv})).stdout);
+  assert.equal(applicationResult.pythonApplication,'PASS');
+  await rename(join(workspace,'operator-keys.retained.json'),join(workspace,'operator-keys.json'));
+  const ready=JSON.parse((await execFile(process.execPath,[join(here,'../sf88-operator-buyer-cli/python/bridge.mjs'),
+    'workspace-check','--dir',workspace,'--config',applicationResult.configuration],
+    {env:{...applicationEnv,SF101_JOURNEY_WALLET_NOT_PROVISIONED:localCustomer.secret()}})).stdout);
+  assert.equal(ready.mode,'ORIGINAL_PYTHON_WORKSPACE_READY');
+  delete applicationResult.configuration;
+  applicationResult.nativeWorkspaceBinding='ORIGINAL_HELPER_PASS';
   console.log(JSON.stringify({result:'PASS',node:process.version,nativeSdk:'2.28.0',verifies,settlements,
     flow:'original enrollment -> SF88 immutable inbox/review -> approved URL -> SF30 Python/native settlement -> SF98 signed HTTP -> SF101 entitlement -> exact private file/restart',
-    financialExecution:'controlled local facilitator/approval; no wallet or chain transaction',fileBytes:source.length}));
+    financialExecution:'controlled local facilitator/approval; no wallet or chain transaction',fileBytes:source.length,
+    pythonApplication:applicationResult}));
 } finally { await stopReceiver(); await merchant?.close(); await rm(root,{recursive:true,force:true}); }

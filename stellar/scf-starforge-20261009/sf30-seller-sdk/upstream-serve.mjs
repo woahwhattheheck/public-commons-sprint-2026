@@ -91,6 +91,7 @@ export async function main(args = process.argv.slice(2)) {
     handlers:application.handlers,nativeFactory,
     maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
   session.upstreamSnapshot = application.snapshot;
+  session.operationControl = application.operationControl;
   process.stdout.write(JSON.stringify({url:session.url,mode:session.mode,
     health:session.url + '/_seller/health',ready:session.url + '/_seller/ready',
     offers:session.url + '/_seller/offers',

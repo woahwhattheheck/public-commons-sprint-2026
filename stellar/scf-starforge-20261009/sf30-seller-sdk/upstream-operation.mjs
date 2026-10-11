@@ -5,6 +5,7 @@ import { open, lstat, realpath } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readUpstreamBindings, createUpstreamHandlers } from './upstream.mjs';
+import { parseOperationResponse } from './upstream-operation-response.mjs';
 
 const USAGE = `Usage: node upstream-operation.mjs COMMAND --upstreams BINDINGS.json --binding NAME
   [--allow-loopback-upstream]
@@ -90,13 +91,7 @@ export async function main(args=process.argv.slice(2)) {
       if(!/^[1-9][0-9]{0,14}$/.test(o.get('--generation')))throw new TypeError('Generation must be a positive integer');
       let response;
       if(o.has('--response')) {
-        response=await privateJSON(o.get('--response'),24000000);
-        if(!response||typeof response!=='object'||Array.isArray(response)||Object.keys(response).some(k=>!['status','headers','body','bodyBase64'].includes(k))||
-            Object.hasOwn(response,'body')===Object.hasOwn(response,'bodyBase64'))throw new TypeError('Recovered response requires exactly body or bodyBase64');
-        if(Object.hasOwn(response,'bodyBase64')) {
-          if(typeof response.bodyBase64!=='string'||! /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(response.bodyBase64))throw new TypeError('Invalid response base64');
-          response={status:response.status,headers:response.headers,body:Buffer.from(response.bodyBase64,'base64')};
-        }
+        response=parseOperationResponse(await privateJSON(o.get('--response'),24000000));
       }
       const result=await operation.recover({operationKey:o.get('--operation-key'),expectedGeneration:Number(o.get('--generation')),
         requestHash:o.get('--request-hash'),action:o.get('--action'),reference:o.get('--reference'),response});

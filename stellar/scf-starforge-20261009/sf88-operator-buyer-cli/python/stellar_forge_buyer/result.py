@@ -16,37 +16,7 @@ from .errors import DeliveryError, NativeError
 from .storage import parse
 
 
-@dataclass(frozen=True)
-class BuyerResult:
-    record: dict
-    expected_destination: Path | None
-    max_bytes: int
-
-    @property
-    def native(self) -> dict:
-        return self.record["native"]
-
-    @property
-    def status(self):
-        return self.native.get("status")
-
-    @property
-    def delivery(self) -> dict:
-        return self.native.get("responseFile") or {"status": "NOT_REQUESTED"}
-
-    @property
-    def ok(self) -> bool:
-        status = self.native.get("httpStatus")
-        return (self.record.get("returncode") == 0 and not self.record.get("runtimeError")
-                and isinstance(status, int) and 200 <= status < 300
-                and not any(self.native.get(key) for key in ("error", "evidenceError", "responseCleanupError")))
-
-    def raise_for_status(self):
-        if not self.ok:
-            raise NativeError(self.record.get("runtimeError") or "NATIVE_ATTEMPT_NOT_SUCCESSFUL",
-                              returncode=self.record.get("returncode"))
-        return self
-
+class _FileReaders:
     @contextmanager
     def open(self):
         """Verify bytes and digest before yielding the SAME open file descriptor."""
@@ -112,3 +82,68 @@ class BuyerResult:
                 path.unlink(missing_ok=True)
                 raise
         return path
+
+
+@dataclass(frozen=True)
+class BuyerResult(_FileReaders):
+    record: dict
+    expected_destination: Path | None
+    max_bytes: int
+
+    @property
+    def native(self) -> dict:
+        return self.record["native"]
+
+    @property
+    def status(self):
+        return self.native.get("status")
+
+    @property
+    def delivery(self) -> dict:
+        return self.native.get("responseFile") or {"status": "NOT_REQUESTED"}
+
+    @property
+    def ok(self) -> bool:
+        status = self.native.get("httpStatus")
+        return (self.record.get("returncode") == 0 and not self.record.get("runtimeError")
+                and isinstance(status, int) and 200 <= status < 300
+                and not any(self.native.get(key) for key in ("error", "evidenceError", "responseCleanupError")))
+
+    def raise_for_status(self):
+        if not self.ok:
+            raise NativeError(self.record.get("runtimeError") or "NATIVE_ATTEMPT_NOT_SUCCESSFUL",
+                              returncode=self.record.get("returncode"))
+        return self
+
+
+@dataclass(frozen=True)
+class FileDelivery(_FileReaders):
+    """Verified customer product bytes; separate from the original payment result."""
+    record: dict
+    expected_destination: Path
+    max_bytes: int
+
+    @property
+    def native(self):
+        return self.record["native"]
+
+    @property
+    def status(self):
+        return self.native["status"]
+
+    @property
+    def delivery(self):
+        return {**self.native["file"], "status": "SAVED"}
+
+    @property
+    def http_requests(self):
+        return self.native.get("httpRequests")
+
+    @property
+    def ok(self):
+        return self.record.get("returncode") == 0 and not self.record.get("runtimeError")
+
+    def raise_for_status(self):
+        if not self.ok:
+            raise DeliveryError("ORIGINAL_FILE_DELIVERY_NOT_COMPLETED")
+        return self
