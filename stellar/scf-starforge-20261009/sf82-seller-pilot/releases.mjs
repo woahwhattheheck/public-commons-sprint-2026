@@ -1,7 +1,8 @@
 // MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
-import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink } from 'node:fs/promises';
+import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -14,6 +15,9 @@ import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './r
 import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
+import { acquireReleaseLease, releaseProcessOwner, releaseOwnerLiveness, recordedSellerAlive,
+  validProcessIdentity, validReleaseLease, sameReleaseLease } from './release-process.mjs';
+import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-factory.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -77,10 +81,6 @@ async function atomic(path, value) {
   try { await writeNew(temp, value); await rename(temp, path); await syncDirectory(dirname(path)); }
   finally { await unlink(temp).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
 }
-function alive(pid) {
-  if (!Number.isSafeInteger(pid) || pid < 1) return false;
-  try { process.kill(pid, 0); return true; } catch (error) { return error.code === 'EPERM'; }
-}
 const OWNER_FILE = /^owner-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.json$/;
 async function lockOwner(root, name) {
   const path = join(root, name);
@@ -91,7 +91,9 @@ async function lockOwner(root, name) {
     const file = owners[0], owner = await optional(join(path, file));
     if (!owner || owner.token !== OWNER_FILE.exec(file)[1] || typeof owner.host !== 'string' ||
         !Number.isSafeInteger(owner.pid) || owner.pid < 1 ||
-        owner.childPid !== undefined && (!Number.isSafeInteger(owner.childPid) || owner.childPid < 1))
+        owner.childPid !== undefined && (!Number.isSafeInteger(owner.childPid) || owner.childPid < 1) ||
+        !validProcessIdentity(owner.processIdentity) || !validProcessIdentity(owner.childProcessIdentity) ||
+        !validReleaseLease(owner.kernelLease))
       return { present: true, path, owner: null };
     return { present: true, path, file, owner };
   } catch (error) {
@@ -110,8 +112,11 @@ async function removeOwner(path, file) {
 }
 async function lock(root, name) {
   const path = join(root, name), token = randomUUID();
-  const owner = { pid: process.pid, host: hostname(), token, createdAt: new Date().toISOString() };
+  const lifetime = await acquireReleaseLease(root, name);
+  const owner = { ...await releaseProcessOwner(), token, createdAt: new Date().toISOString(),
+    ...(lifetime ? { kernelLease: lifetime.identity } : {}) };
   const file = 'owner-' + token + '.json';
+  try {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       await mkdir(path, { mode: 0o700 });
@@ -119,9 +124,12 @@ async function lock(root, name) {
       if (error.code !== 'EEXIST') throw error;
       const current = await lockOwner(root, name);
       if (!current.present) continue;
-      if (current.owner?.host === hostname() && !alive(current.owner.pid) && !alive(current.owner.childPid)) {
-        await removeOwner(path, current.file);
-        continue;
+      if (current.owner) {
+        const { managerAlive, childAlive } = await releaseOwnerLiveness(root, current.owner, owner, lifetime);
+        if (!managerAlive && !childAlive) {
+          await removeOwner(path, current.file);
+          continue;
+        }
       }
       const busy = new Error(name === 'run.lock' ? 'A release manager already owns the running seller. Stop it in its own terminal or console.' : 'Another release change is being saved. Refresh and retry.');
       busy.code = 'RELEASE_BUSY'; throw busy;
@@ -133,15 +141,20 @@ async function lock(root, name) {
       await rmdir(path).catch(() => {});
       throw error;
     }
-    const release = () => removeOwner(path, file);
+    const release = async () => {
+      try { await removeOwner(path, file); } finally { await lifetime?.close(); }
+    };
     release.owner = owner;
+    release.lifetime = lifetime;
     release.update = async fields => {
+      await lifetime?.assert();
       Object.assign(owner, fields);
       await atomic(join(path, file), owner);
     };
     return release;
   }
   throw Object.assign(new Error('Release store lock changed; refresh and retry.'), { code: 'RELEASE_BUSY' });
+  } catch (error) { await lifetime?.close(); throw error; }
 }
 async function mutate(root, action) {
   const release = await lock(root, 'state.lock');
@@ -299,6 +312,8 @@ function publicRelease(record) {
     runtime: record.runtime, handlerEntry: record.handlerEntry,
     mode: record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
     source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
+    ...(record.derivedFrom ? { derivedFrom: record.derivedFrom } : {}),
+    ...(record.facilitatorReview ? { facilitatorReview: record.facilitatorReview } : {}),
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
     ...(record.mysql ? { mysql: record.mysql } : {}),
@@ -307,12 +322,39 @@ function publicRelease(record) {
     ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
     ...(record.sqlite ? { sqlite: record.sqlite } : {}) };
 }
+function checkFacilitatorReview(record) {
+  const review = record.facilitatorReview;
+  if (!review && record.derivedFrom?.kind !== 'FACILITATOR') return;
+  const { id: reviewId, ...content } = review ?? {};
+  if (content.schema !== 'stellar-forge.seller-facilitator-review.v1' ||
+      reviewId !== hash(stable(content)) || content.compatible !== true || content.error !== null ||
+      content.nativeSdk !== NATIVE_SDK_VERSION || Buffer.byteLength(stable(review)) > 1024 * 1024 ||
+      content.supportedSha256 !== hash(stable(content.supported)) ||
+      record.derivedFrom?.kind !== 'FACILITATOR' || record.derivedFrom.reviewId !== reviewId ||
+      record.derivedFrom.supportedSha256 !== content.supportedSha256 ||
+      record.derivedFrom.releaseId !== content.source?.releaseId ||
+      record.derivedFrom.releaseDigest !== content.source?.releaseDigest ||
+      record.id !== content.proposed?.id || record.label !== content.proposed?.label ||
+      record.runtime.facilitator !== content.proposed?.provider?.url ||
+      (record.runtime.allowLocalFacilitator === true) !== content.proposed?.provider?.allowLocalFacilitator ||
+      record.publicOrigin !== content.source?.publicOrigin || stable(record.source) !== stable(content.source?.source) ||
+      !Array.isArray(content.nativePayments) || content.nativePayments.length !== record.routes.length)
+    throw new Error('Retained facilitator review differs from its release binding.');
+  for (const [index, route] of record.routes.entries()) {
+    const payment = content.nativePayments[index];
+    if (payment?.routeId !== route.id || payment.method !== route.method || payment.path !== route.path ||
+        payment.url !== route.url || stable(payment.storedPayment) !== stable(route.payment) ||
+        !Array.isArray(payment.nativePayment) || !payment.nativePayment.length)
+      throw new Error('Retained native payment review differs from its original merchant route.');
+  }
+}
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
   const record = await json(join(path, 'release.json'));
   const { digest, ...content } = record;
   if (record.schema !== RELEASE || record.id !== releaseId || hash(stable(content)) !== digest)
     throw new Error('Release metadata changed or belongs to a different release.');
+  checkFacilitatorReview(record);
   if (verify) {
     const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
@@ -459,6 +501,99 @@ export async function stageRelease(root, options) {
     return publicRelease(record);
   } finally { if (!committed) await rm(temp, { recursive: true, force: true }); }
 }
+/** Retain verified compiled source while changing only its reviewed facilitator.
+ * All original native-kind metadata and file identities travel with the source;
+ * mutable pilot configuration, process records and controls are never copied. */
+export async function stageRetainedRelease(root, options) {
+  const allowed = ['from', 'id', 'label', 'expectedDigest', 'expectedGeneration', 'facilitator',
+    'allowLocalFacilitator', 'review'];
+  if (!options || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).some(key => !allowed.includes(key)))
+    throw new TypeError('Supply the reviewed retained release and facilitator fields.');
+  root = resolve(root); await readReleaseState(root);
+  const from = id(options.from), releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
+  if (from === releaseId) throw new TypeError('Use a new release ID for a facilitator change.');
+  if (typeof options.expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(options.expectedDigest))
+    throw new TypeError('Supply the exact reviewed source digest.');
+  if (!Number.isSafeInteger(options.expectedGeneration) || options.expectedGeneration < 0)
+    throw new TypeError('Supply the reviewed selection generation.');
+  const { record: original, path: sourcePath } = await releaseRecord(root, from, true);
+  if (original.digest !== options.expectedDigest)
+    throw Object.assign(new Error('The retained source differs from the reviewed digest.'), { code: 'RELEASE_CONFLICT' });
+  const retainedRuntime = { ...original.runtime };
+  delete retainedRuntime.facilitator; delete retainedRuntime.allowLocalFacilitator;
+  const runtime = runtimeOptions({ ...retainedRuntime, facilitator: options.facilitator,
+    allowLocalFacilitator: options.allowLocalFacilitator ?? false });
+  if (!runtime.facilitator) throw new TypeError('Select an explicit facilitator for this retained release.');
+  const facilitatorReview = structuredClone(options.review);
+  const derivedFrom = { kind: 'FACILITATOR', releaseId: from, releaseDigest: original.digest,
+    reviewId: facilitatorReview?.id, supportedSha256: facilitatorReview?.supportedSha256 };
+  checkFacilitatorReview({ ...original, id: releaseId, label, runtime, derivedFrom, facilitatorReview });
+  if (facilitatorReview.generation !== options.expectedGeneration ||
+      facilitatorReview.source.currentFacilitator !== (original.runtime.facilitator ?? null) ||
+      facilitatorReview.source.currentAllowLocalFacilitator !== (original.runtime.allowLocalFacilitator === true))
+    throw new Error('The retained review differs from its original runtime or selection generation.');
+  const target = join(root, 'releases', releaseId);
+  const existing = async () => {
+    let value;
+    try { value = await releaseRecord(root, releaseId, true); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    if (value.record.label !== label || stable(value.record.derivedFrom) !== stable(derivedFrom) ||
+        stable(value.record.facilitatorReview) !== stable(facilitatorReview) ||
+        stable(value.record.runtime) !== stable(runtime) || stable(value.record.source) !== stable(original.source) ||
+        stable(value.record.files) !== stable(original.files) || stable(value.record.routes) !== stable(original.routes))
+      throw Object.assign(new Error('That release ID belongs to a different retained change. Inspect it or choose a new ID.'), { code: 'EEXIST' });
+    return { release: publicRelease(value.record), reused: true };
+  };
+  const retained = await existing();
+  if (retained) return retained;
+  const checkGeneration = async () => {
+    const state = await readReleaseState(root);
+    if (state.generation !== options.expectedGeneration)
+      throw Object.assign(new Error('Selection changed while preparing this facilitator. Review the current release again.'),
+        { code: 'RELEASE_CONFLICT', generation: state.generation });
+  };
+  await checkGeneration();
+  const temp = join(root, 'releases', '.stage-' + randomUUID());
+  let committed = false;
+  try {
+    await mkdir(temp, { mode: 0o700 });
+    for (const entry of original.files) {
+      if (typeof entry.file !== 'string' || !entry.file || entry.file.includes('\\') || entry.file.includes('\0') ||
+          isAbsolute(entry.file) || relative(temp, resolve(temp, entry.file)).split(sep).join('/') !== entry.file ||
+          entry.file.split('/').some(part => !part || part === '.' || part === '..') ||
+          !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 || !/^[a-f0-9]{64}$/.test(entry.sha256))
+        throw new TypeError('The original retained source has an invalid file identity.');
+      const source = join(sourcePath, entry.file), destination = join(temp, entry.file);
+      const parents = entry.file.split('/').slice(0, -1);
+      let parent = sourcePath;
+      for (const part of parents) { parent = join(parent, part); await directory(parent); }
+      const info = await lstat(source);
+      if (!info.isFile() || info.size !== entry.bytes) throw new Error('Retained source file changed: ' + entry.file);
+      await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+      await copyFile(source, destination, fsConstants.COPYFILE_EXCL | fsConstants.COPYFILE_FICLONE);
+      const handle = await open(destination, 'r');
+      try { await handle.sync(); } finally { await handle.close(); }
+    }
+    // Original source inspectors validate the complete copied closure, including
+    // native database/package bytes and executable declarations, before commit.
+    const { digest: ignoredDigest, ...originalContent } = original;
+    const content = { ...originalContent, id: releaseId, label, createdAt: new Date().toISOString(), runtime, derivedFrom, facilitatorReview };
+    const record = { ...content, digest: hash(stable(content)) };
+    if (Buffer.byteLength(JSON.stringify(record, null, 2) + '\n') > LIMIT)
+      throw new RangeError('The retained release reached its original metadata size limit.');
+    await writeNew(join(temp, 'release.json'), record);
+    const snapshot = await sourceSnapshot(temp, runtime.upstreams, runtime.allowLoopbackUpstream === true);
+    if (stable(snapshot.files) !== stable(original.files) || stable(snapshot.routes) !== stable(original.routes))
+      throw new Error('Copied source differs from the inspected retained release.');
+    return await mutate(root, async () => {
+      const concurrent = await existing();
+      if (concurrent) return concurrent;
+      await checkGeneration();
+      await rename(temp, target); committed = true; await syncDirectory(join(root, 'releases'));
+      return { release: publicRelease(record), reused: false };
+    });
+  } finally { if (!committed) await rm(temp, { recursive: true, force: true }); }
+}
 export async function listReleases(root) {
   await readReleaseState(root);
   const names = await readdir(join(resolve(root), 'releases'), { withFileTypes: true });
@@ -514,12 +649,44 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'jsonrpc', before: before?.jsonrpc ?? null, after: after.jsonrpc ?? null });
   if (stable(before?.sqlite ?? null) !== stable(after.sqlite ?? null))
     runtimeChanges.push({ field: 'sqlite', before: before?.sqlite ?? null, after: after.sqlite ?? null });
+  if (stable(before?.facilitatorReview ?? null) !== stable(after.facilitatorReview ?? null))
+    runtimeChanges.push({ field: 'facilitatorReview', before: before?.facilitatorReview ?? null, after: after.facilitatorReview ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
       changed: changes.filter(c => c.state === 'CHANGED').length,
       paymentChanged: changes.filter(c => c.fields.some(f => f.field === 'payment')).length,
       unchanged: [...current.keys()].filter(k => previous.has(k) && !changes.some(c => c.route === k)).length } };
+}
+// Optional operator review metadata travels in the original selection and run
+// records. The console resolves this from the original receiving controller.
+function receivingSnapshot(value, record, generation) {
+  if (value === undefined || value === null) return null;
+  const fail = () => { throw Object.assign(new Error('The receiving review does not match this exact release and selection. Refresh its original review.'),
+    { code: 'RECEIVING_RELEASE_MISMATCH', status: 409 }); };
+  const fields = ['schema', 'releaseId', 'releaseDigest', 'configurationSha256', 'preparedGeneration',
+    'expectedGeneration', 'bindingId', 'profileId', 'reviewId', 'planDigest', 'manifestSha256',
+    'completedAt', 'mode', 'status', 'summary'];
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some(key => !fields.includes(key)) ||
+      value.schema !== 'stellar-forge.release-receiving-context.v1' ||
+      value.releaseId !== record.id || value.releaseDigest !== record.digest ||
+      value.configurationSha256 !== record.source.serviceConfigSha256 ||
+      value.expectedGeneration !== generation ||
+      !Number.isSafeInteger(value.preparedGeneration) || value.preparedGeneration < 0 ||
+      !['releaseDigest', 'configurationSha256', 'planDigest', 'manifestSha256']
+        .every(key => typeof value[key] === 'string' && /^[a-f0-9]{64}$/.test(value[key])) ||
+      !['bindingId', 'profileId', 'reviewId'].every(key =>
+        typeof value[key] === 'string' && /^[a-z0-9]{8,13}-[a-f0-9]{16}$/.test(value[key])) ||
+      typeof value.completedAt !== 'string' || value.completedAt.length > 40 || !Number.isFinite(Date.parse(value.completedAt)) ||
+      !['mode', 'status'].every(key => typeof value[key] === 'string' &&
+        /^[A-Za-z][A-Za-z0-9_ -]{0,79}$/.test(value[key])) ||
+      !value.summary || typeof value.summary !== 'object' || Array.isArray(value.summary) ||
+      Object.keys(value.summary).length > 16 ||
+      !Object.entries(value.summary).every(([key, count]) => /^[A-Za-z][A-Za-z0-9]{0,63}$/.test(key) &&
+        Number.isSafeInteger(count) && count >= 0)) fail();
+  const { expectedGeneration, ...snapshot } = value;
+  return JSON.parse(JSON.stringify(snapshot));
 }
 async function selectRelease(root, target, options, operation) {
   root = resolve(root); await readReleaseState(root);
@@ -534,10 +701,11 @@ async function selectRelease(root, target, options, operation) {
     }
     const selected = target ?? state.previous;
     if (!selected) throw new Error('There is no previous release to roll back to.');
-    await releaseRecord(root, selected, true);
+    const { record } = await releaseRecord(root, selected, true);
+    const receivingReview = receivingSnapshot(options.receivingReview, record, state.generation);
     if (state.active === selected) return { changed: false, state };
     const event = { generation: state.generation + 1, operation, from: state.active, to: selected,
-      at: new Date().toISOString(), reason };
+      at: new Date().toISOString(), reason, ...(receivingReview ? { receivingReview } : {}) };
     const next = { ...state, generation: event.generation, active: selected, previous: state.active,
       history: [...state.history, event] };
     if (Buffer.byteLength(JSON.stringify(next)) > LIMIT) throw new Error('Release history reached the store size limit. Retain this store and initialize a new deployment store.');
@@ -571,17 +739,18 @@ export async function releaseStatus(root) {
   const catalog = await listReleases(root);
   const observed = await optional(join(root, 'runtime.json'));
   const claim = await lockOwner(root, 'run.lock'), owner = claim.owner;
+  const processOwner = await releaseProcessOwner();
   let runtime = { state: 'STOPPED', observed };
   if (claim.present && !owner) {
     runtime = { state: 'STARTING', observed, message: 'A manager is establishing its release-store ownership.' };
-  } else if (owner?.host && owner.host !== hostname()) {
-    runtime = { state: 'OTHER_HOST', observed, message: 'The release-store owner is on another host.' };
   } else if (owner) {
-    const managerAlive = alive(owner.pid), childAlive = alive(owner.childPid);
+    const { managerAlive, childAlive } = await releaseOwnerLiveness(root, owner, processOwner);
     const current = observed?.schema === RUN && observed.lockToken === owner.token &&
       observed.instanceId === owner.instanceId && observed.pid === owner.childPid && !observed.endedAt;
     runtime = { state: managerAlive ? 'STARTING' : 'STOPPED', observed, managerAlive, childAlive };
-    if (!managerAlive && childAlive) {
+    if (owner.host !== processOwner.host && (managerAlive || childAlive)) {
+      runtime.state = 'OTHER_HOST'; runtime.message = 'The release-store owner is on another host.';
+    } else if (!managerAlive && childAlive) {
       runtime.state = 'ORPHANED';
       runtime.message = 'The manager ended while its recorded seller process is still present. Start remains unavailable until that process ends.';
     } else if (managerAlive && owner.childPid && !childAlive) {
@@ -595,20 +764,21 @@ export async function releaseStatus(root) {
       } catch (error) { runtime.state = 'UNAVAILABLE'; runtime.message = error.message; }
     }
   } else if (observed?.schema === RUN && !observed.endedAt &&
-      (observed.host === undefined || observed.host === hostname()) && alive(observed.pid)) {
+      (observed.host === undefined || observed.host === hostname()) &&
+      await recordedSellerAlive(root, observed, processOwner)) {
     runtime = { state: 'ORPHANED', observed,
       message: 'The recorded seller process is still present without its owner file. This console does not own that process.' };
   }
   return { schema: 'stellar-forge.seller-release-status.v1', root, state, ...catalog, runtime };
 }
 
-// The child cannot import handlers or open a listener until its PID is durably
-// registered. If the parent dies before granting startup, IPC disconnect ends
+// The child cannot import handlers or open a listener until its process birth
+// identity and inherited lifetime are durably registered. IPC disconnect ends
 // this waiting child. After the grant, the unchanged original pilot owns serving;
 // its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
-export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true, operationsNavigationOrigin } = {}) {
+export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs, expectedGeneration, handleSignals = true, operationsNavigationOrigin, receivingReview } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 120000 ||
       shutdownGraceMs !== undefined && (!Number.isInteger(shutdownGraceMs) || shutdownGraceMs < 1000 || shutdownGraceMs > 120000))
@@ -680,9 +850,15 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     if (!state.active) throw new Error('Activate a staged release before running a seller.');
     const previous = await optional(join(root, 'runtime.json'));
     if (previous?.schema === RUN && !previous.endedAt &&
-        (previous.host === undefined || previous.host === hostname()) && alive(previous.pid))
+        (previous.host === undefined || previous.host === hostname()) &&
+        await recordedSellerAlive(root, previous, releaseLock.owner, releaseLock.lifetime))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
     const { record, path } = await releaseRecord(root, state.active, true);
+    const selection = state.history.at(-1);
+    const retainedReview = receivingReview ?? (selection?.generation === state.generation &&
+      selection.to === record.id && selection.receivingReview
+      ? { ...selection.receivingReview, expectedGeneration: state.generation } : undefined);
+    const receiving = receivingSnapshot(retainedReview, record, state.generation);
     ownsWorkerGroup = Boolean(record.python || record.duckdb || record.sqlite);
     if (record.python && shutdownGraceMs === undefined)
       effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
@@ -697,39 +873,57 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
-      { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
-    let readyResolve, readyReject, stdout = '', stderr = '';
+    child = spawn(process.execPath, [CHILD, record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
+      { stdio: ['ignore', 'pipe', 'pipe', 'ipc', ...(releaseLock.lifetime ? [releaseLock.lifetime.fd] : [])],
+        windowsHide: true, detached: process.platform !== 'win32' });
+    let readyResolve, readyReject, ownerResolve, ownerReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
+    const childOwner = new Promise((done, fail) => { ownerResolve = done; ownerReject = fail; });
+    const rejectStartup = error => { readyReject(error); ownerReject(error); };
     // A spawn error can arrive during the durable owner write, before await ready.
     // Observe rejection now and retain one exit promise for all cleanup paths.
-    void ready.catch(() => {}); rejectReady = readyReject; exitSettled = false;
+    void ready.catch(() => {}); void childOwner.catch(() => {});
+    rejectReady = rejectStartup; exitSettled = false;
+    child.once('message', message => {
+      if (message?.type !== 'sf82-owner' || message.instanceId !== instanceId || message.pid !== child.pid ||
+          !validProcessIdentity(message.processIdentity) ||
+          !sameReleaseLease(message.kernelLease, releaseLock.owner.kernelLease)) {
+        rejectStartup(new Error('Original seller reported a different process owner.')); return;
+      }
+      ownerResolve(message);
+    });
     exited = new Promise(done => {
       const settle = () => { if (!exitSettled) { exitSettled = true; done(); } };
-      child.on('error', error => { failure ??= error.message; readyReject(error); if (!child.pid) settle(); });
+      child.on('error', error => { failure ??= error.message; rejectStartup(error); if (!child.pid) settle(); });
       child.once('exit', (code, signal) => { exitCode = code; exitSignal = signal;
         if (ownsWorkerGroup && (signal || code !== 0)) forceOwnedChild();
-        readyReject(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
+        rejectStartup(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
     });
     if (handleSignals) { process.on('SIGINT', onInterrupt); process.on('SIGTERM', onTerminate); }
     child.stderr.setEncoding('utf8'); child.stdout.setEncoding('utf8');
     child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8192); });
     child.stdout.on('data', chunk => {
       stdout += chunk;
-      if (stdout.length > 1024 * 1024) { readyReject(new Error('Original seller startup output exceeded its limit.')); stdout = ''; return; }
+      if (stdout.length > 1024 * 1024) { rejectStartup(new Error('Original seller startup output exceeded its limit.')); stdout = ''; return; }
       while (stdout.includes('\n')) {
         const newline = stdout.indexOf('\n'), line = stdout.slice(0, newline); stdout = stdout.slice(newline + 1);
         try { const value = JSON.parse(line); if (value.releaseReady === true && value.instanceId === instanceId) readyResolve(value); } catch {}
       }
     });
-    startupTimer = setTimeout(() => readyReject(new Error('Original seller startup timed out.')), startupTimeoutMs);
-    if (Number.isSafeInteger(child.pid)) await releaseLock.update({ childPid: child.pid });
+    startupTimer = setTimeout(() => rejectStartup(new Error('Original seller startup timed out.')), startupTimeoutMs);
+    const workerOwner = await childOwner;
+    await releaseLock.update({ childPid: child.pid, childProcessIdentity: workerOwner.processIdentity });
     observation = { schema: RUN, instanceId, lockToken: releaseLock.owner.token, host: hostname(),
-      managerPid: process.pid, pid: child.pid ?? null, releaseId: record.id, releaseDigest: record.digest,
-      selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString() };
+      managerPid: process.pid, managerProcessIdentity: releaseLock.owner.processIdentity,
+      pid: child.pid ?? null, processIdentity: workerOwner.processIdentity,
+      ...(releaseLock.owner.kernelLease ? { kernelLease: releaseLock.owner.kernelLease } : {}),
+      releaseId: record.id, releaseDigest: record.digest,
+      selectionGeneration: state.generation, listener: null, mode, phase: 'STARTING', startedAt: new Date().toISOString(),
+      ...(receiving ? { receivingReview: receiving } : {}) };
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
-    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes }, error => error ? fail(error) : done()));
+    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes,
+      facilitatorReview: record.facilitatorReview ?? null }, error => error ? fail(error) : done()));
     let report;
     try { report = await ready; } finally { clearTimeout(startupTimer); }
     if (report.originalOffersSha256 !== record.source.offersSha256 ||

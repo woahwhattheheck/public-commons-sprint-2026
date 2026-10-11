@@ -1,0 +1,74 @@
+<section class="panel">
+  <div class="panel-heading"><div><h2>Adjustments</h2><p>Keep the original payment beside dated cancellations, refund requests and verified returned transfers.</p></div><span id="adjustment-revision" class="badge"></span></div>
+  <form id="adjustment-source-form" class="padded adjustment-source-form">
+    <div><label for="adjustment-run">Completed reconciliation</label><select id="adjustment-run" required></select></div>
+    <div><label for="adjustment-search">Find an event</label><input id="adjustment-search" type="search" maxlength="300" placeholder="Event, route or payment option"></div>
+    <button id="adjustment-refresh" type="submit">Load retained events</button>
+  </form>
+  <p id="adjustment-source-context" class="hint padded adjustment-source-context"></p>
+  <div class="table-wrap"><table><caption class="sr-only">Original payments and retained adjustments</caption><thead><tr><th scope="col">Event / network</th><th scope="col">Original gross · atomic</th><th scope="col">Verified returned · atomic</th><th scope="col">Adjustment status</th></tr></thead><tbody id="adjustment-events"></tbody></table></div>
+  <div class="pagination"><span id="adjustment-event-page"></span><div class="actions"><button id="adjustment-previous" type="button">Previous</button><button id="adjustment-next" type="button">Next</button></div></div>
+</section>
+
+<section id="adjustment-empty" class="panel empty"><h2>Select an original payment</h2><p>Choose a completed reconciliation, then select its retained event to inspect the gross amount and adjustment history.</p></section>
+
+<div id="adjustment-selected" hidden>
+  <section class="panel">
+    <div class="panel-heading"><div><h2 id="adjustment-title"></h2><p id="adjustment-subtitle"></p></div><span id="adjustment-status" class="badge"></span></div>
+    <div id="adjustment-totals" class="metrics inset"></div>
+    <p id="adjustment-unit" class="hint padded"></p>
+    <details class="padded adjustment-source-detail"><summary>Original payment and retained identity</summary><div id="adjustment-source-values"></div></details>
+  </section>
+
+  <div class="adjustment-action-layout">
+    <section class="panel">
+      <div class="panel-heading"><div><h2>Record an adjustment</h2><p>Review the proposed action before saving it to this event.</p></div></div>
+      <form id="adjustment-action-form" class="padded adjustment-form">
+        <div><label for="adjustment-kind">Action</label><select id="adjustment-kind" required><option value="REFUND">Refund request</option><option value="CANCELLATION">Cancellation</option></select></div>
+        <div id="adjustment-amount-field"><label for="adjustment-amount">Amount · atomic units</label><input id="adjustment-amount" type="text" inputmode="numeric" maxlength="39" pattern="[1-9][0-9]{0,38}" autocomplete="off" placeholder="Exact whole-number amount" required><p id="adjustment-amount-hint" class="hint"></p></div>
+        <div><label for="adjustment-effective">Effective date and time · UTC</label><input id="adjustment-effective" type="datetime-local" step="1" required></div>
+        <div><label for="adjustment-reference">Customer or merchant reference</label><input id="adjustment-reference" maxlength="1000" autocomplete="off"></div>
+        <div class="adjustment-wide"><label for="adjustment-reason">Reason</label><textarea id="adjustment-reason" rows="3" required maxlength="4000" placeholder="Record the customer request or merchant decision."></textarea></div>
+        <div class="actions adjustment-wide"><button id="adjustment-preview" type="submit">Preview adjustment</button></div>
+      </form>
+      <div id="adjustment-preview-panel" class="padded adjustment-preview" aria-live="polite" hidden>
+        <h3>Review this adjustment</h3><div id="adjustment-preview-values"></div>
+        <p id="adjustment-preview-context" class="hint"></p>
+        <div class="actions"><button id="adjustment-retain" class="primary" type="button">Save adjustment</button><button id="adjustment-clear-preview" type="button">Clear preview</button></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading"><div><h2>Verify a returned transfer</h2><p>Check an already executed return through the original network verifier and retain its matched amount.</p></div></div>
+      <div id="adjustment-verification-context" class="padded adjustment-verification-context"></div>
+      <form id="adjustment-verification-form" class="padded adjustment-form">
+        <div class="adjustment-wide"><label for="adjustment-verification-request">Refund request</label><select id="adjustment-verification-request"></select></div>
+        <div class="adjustment-wide"><label for="adjustment-transaction">Return transaction hash</label><input id="adjustment-transaction" class="mono" spellcheck="false" autocomplete="off" maxlength="64" minlength="64" pattern="[0-9a-fA-F]{64}" required></div>
+        <div class="adjustment-wide" id="adjustment-rpc-field"><label for="adjustment-rpc">Network RPC endpoint (optional)</label><input id="adjustment-rpc" type="url" spellcheck="false" autocomplete="off" placeholder="Original network default"></div>
+        <div class="actions adjustment-wide"><button id="adjustment-verify" class="primary" type="submit">Verify returned transfer</button></div>
+      </form>
+      <div id="adjustment-verification-progress" class="progress padded" role="status" hidden><progress aria-label="Return transfer verification"></progress><span id="adjustment-verification-progress-text"></span></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Saved adjustment history</h2><p>Original gross, requested amounts and verified returns remain available with their dates and operators.</p></div></div>
+    <div class="table-wrap"><table><caption class="sr-only">Retained adjustment actions for the selected payment</caption><thead><tr><th scope="col">Effective / recorded</th><th scope="col">Action</th><th scope="col">Atomic amount</th><th scope="col">Reason / operator</th><th scope="col">Transfer</th></tr></thead><tbody id="adjustment-history"></tbody></table></div>
+    <div class="pagination"><span id="adjustment-history-page"></span><div class="actions"><button id="adjustment-history-previous" type="button">Previous</button><button id="adjustment-history-next" type="button">Next</button></div></div>
+    <div id="adjustment-history-detail" class="padded adjustment-history-detail" hidden></div>
+    <form id="adjustment-withdraw-form" class="padded adjustment-withdraw-form"><div><label for="adjustment-withdraw-request">Refund request to withdraw</label><select id="adjustment-withdraw-request"></select></div><div><label for="adjustment-withdraw-reason">Withdrawal reason</label><input id="adjustment-withdraw-reason" maxlength="4000" required></div><button id="adjustment-withdraw" type="submit">Withdraw request</button></form>
+  </section>
+
+  <section class="panel">
+    <div class="panel-heading"><div><h2>Verification attempts</h2><p>Recent retained attempts for this payment. Open a saved result or load an interrupted request.</p></div></div>
+    <div class="table-wrap"><table><caption class="sr-only">Original return transfer verification attempts</caption><thead><tr><th scope="col">Requested / operator</th><th scope="col">Requested return · atomic</th><th scope="col">Verification</th><th scope="col">Result / operation</th></tr></thead><tbody id="adjustment-jobs"></tbody></table></div>
+    <div id="adjustment-job-detail" class="padded adjustment-history-detail" hidden></div>
+  </section>
+</div>
+
+<section class="panel">
+  <div class="panel-heading"><div><h2>Retain an adjustment handoff</h2><p>Export the selected reconciliation's original amounts together with its current dated adjustment records.</p></div></div>
+  <div id="adjustment-downloads" class="padded actions"></div>
+  <form id="adjustment-export-form" class="padded adjustment-export-form"><label class="check-label"><input id="adjustment-export-sources" type="checkbox"> Include private captured source files in the original review archive.</label><button id="adjustment-export" type="submit">Create review archive</button></form>
+  <div class="table-wrap"><table><caption class="sr-only">Retained adjustment exports</caption><thead><tr><th scope="col">Export / reconciliation</th><th scope="col">Created / operator</th><th scope="col">Retained files</th></tr></thead><tbody id="adjustment-exports"></tbody></table></div>
+</section>

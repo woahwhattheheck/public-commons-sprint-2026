@@ -160,7 +160,8 @@ async function continueOperation(plan, host, state) {
       const destination = attempt === 0 ? state.destination : state.destination + '.resume-' + attempt;
       need(attempt < 32, 'Review retained interrupted destination attempts before another recovery');
       state.restoreAttempts.push(destination); await save(plan, state);
-      state.candidate = await prepareRestoredHost({ previousBundle: plan.p.bundle,
+      const restoreHost = host.prepareRestoredHost ?? prepareRestoredHost;
+      state.candidate = await restoreHost({ previousBundle: plan.p.bundle,
         recoveryPlan: join(directory,'recovery-plan.json'), snapshot: state.snapshot.bundle,
         passphraseEnv: plan.passphraseEnv, destination, sourceRoot: state.sourceRoot });
       for (const field of ['bundle','planFile','stateRoot']) need(inside(destination, absolute(state.candidate[field])),
@@ -199,7 +200,7 @@ async function continueOperation(plan, host, state) {
         await atomicJSON(recoveryPlan, { schema: 'stellar-forge.merchant-recovery-plan.v1', roots: distinct });
         const next = { ...plan.raw, bundle: state.candidate.bundle, recoveryPlan,
           ...(state.candidate.writers ? { writerTemplates: state.candidate.writers.nextTemplates } : {}) };
-        await atomicJSON(state.nextPlan, next);
+        await atomicJSON(state.nextPlan, host.nextMaintenancePlan ? await host.nextMaintenancePlan(state, next) : next);
       }
       await save(plan, state, 'COMMITTED');
     }
@@ -230,7 +231,7 @@ async function continueOperation(plan, host, state) {
 }
 
 /** The host adapter is injectable for an original-process container journey. */
-export async function runMaintenance(planFile, options, { host: suppliedHost } = {}) {
+export async function runMaintenance(planFile, options, { host: suppliedHost, loadPlan = loadMaintenance } = {}) {
   const command = options.command;
   need(['inspect','status','backup','migrate','resume','rollback'].includes(command), 'Unknown maintenance command');
   if (command === 'status') {
@@ -243,7 +244,7 @@ export async function runMaintenance(planFile, options, { host: suppliedHost } =
     need(state.schema === OPERATION_SCHEMA && state.id === options.id && state.maintenancePlan === file, 'Original operation does not belong to this plan');
     return summary(state);
   }
-  const plan = await loadMaintenance(planFile);
+  const plan = await loadPlan(planFile);
   const host = suppliedHost ?? createLinuxHost(plan);
   if (command === 'inspect') return { merchant: plan.p.merchant, bundle: plan.p.bundle,
     operationsRoot: plan.operationsRoot, units: plan.units, recoveryRoots: plan.recovery.roots,
