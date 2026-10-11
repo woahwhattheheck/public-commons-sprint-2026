@@ -105,7 +105,8 @@ try {
  if(process.env.MPP_PLAYWRIGHT_PACKAGE) {
   const require=createRequire(process.env.MPP_PLAYWRIGHT_PACKAGE+'/');
   const {chromium}=require(process.env.MPP_PLAYWRIGHT_PACKAGE);
-  browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage']});
+  browser=await chromium.launch({headless:true,args:['--no-sandbox','--disable-dev-shm-usage'],
+   ...(process.env.MPP_CHROMIUM_EXECUTABLE?{executablePath:process.env.MPP_CHROMIUM_EXECUTABLE}:{})});
   page=await browser.newPage({viewport:{width:1440,height:1200}});
   await page.goto(consoleApp.url);
   await page.locator('[data-tab="customer-workbench"]').click();
@@ -223,8 +224,8 @@ try {
  }
  const retryAfterRestart=await consoleRequest('/api/customer-workbench/retry-prepare',{id:retryOptions.purchaseId});
  assert.equal((await waitJob(retryAfterRestart.id)).result.challenge.id,recovered.challenge.id);
- const page=await consoleRequest('/api/customer-workbench?offset=1&limit=1');
- assert.equal(page.purchases.items.length,1);assert.equal(page.purchases.nextOffset,2);
+ const historySlice=await consoleRequest('/api/customer-workbench?offset=1&limit=1');
+ assert.equal(historySlice.purchases.items.length,1);assert.equal(historySlice.purchases.nextOffset,2);
  const observed={runtime:native.versions,
   console:'authenticated contract/package intake, revision save, exact offer preview and original native preparation',
   nativePrepare:'REVIEW_READY',
