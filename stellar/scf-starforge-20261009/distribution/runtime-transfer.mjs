@@ -253,8 +253,9 @@ export async function exportRuntimeTransfer({ runtimeDirectory, directory, cache
   catch (error) { if (error.code !== 'EEXIST') throw error; await privateDirectory(root); }
   need((await lstat(cachePath)).isDirectory(), 'RUNTIME_TRANSFER_CACHE_DIRECTORY_REQUIRED');
   const lease = await operationLease(join(root, 'transfer.lock'));
-  let state = await readRecord(join(root, STATE), true);
+  let state;
   try {
+    state = await readRecord(join(root, STATE), true);
     need(created || state?.mode === 'EXPORT', 'RUNTIME_TRANSFER_EXISTING_DIRECTORY');
     const binding = { runtimeDirectory: resolve(runtimeDirectory), cache: cachePath, offline, partBytes, maxBytes,
       expectedLockSha256: expectedLockSha256 ?? null };
@@ -517,8 +518,9 @@ export async function completeRuntimeTransferReceive({ directory, npm = 'npm', p
   signal, onProgress = async () => {} } = {}) {
   need(typeof populateCache === 'boolean', 'RUNTIME_TRANSFER_OPTIONS_INVALID');
   const root = await privateDirectory(resolve(directory)), lease = await operationLease(join(root, 'transfer.lock'));
-  let state = await readRecord(join(root, STATE));
+  let state;
   try {
+    state = await readRecord(join(root, STATE));
     need(state.mode === 'RECEIVE', 'RUNTIME_TRANSFER_RECEIVER_REQUIRED');
     const { manifest } = await manifestAt(root, state.manifestSha256);
     if (!state.filesReady) {
@@ -549,7 +551,7 @@ export async function completeRuntimeTransferReceive({ directory, npm = 'npm', p
     }
     return inspectRuntimeTransfer({ directory: root });
   } catch (error) {
-    await saveState(root, { ...state, error: { code: error.code ?? 'RUNTIME_TRANSFER_FAILED', at: now() } }).catch(() => {});
+    if (state) await saveState(root, { ...state, error: { code: error.code ?? 'RUNTIME_TRANSFER_FAILED', at: now() } }).catch(() => {});
     throw error;
   } finally { await lease.close(); }
 }
@@ -583,12 +585,13 @@ export async function installReceivedRuntime({ directory, runtimeDirectory, npm 
   const root = await privateDirectory(resolve(directory)), target = resolve(runtimeDirectory);
   need(disjoint(root, target), 'RUNTIME_TRANSFER_INSTALL_DIRECTORY_OVERLAP');
   const lease = await operationLease(join(root, 'transfer.lock'));
-  const state = await readRecord(join(root, STATE));
-  const { manifest } = await manifestAt(root, state.manifestSha256);
-  const receiptRoot = await ensurePrivate(join(root, 'installations'));
-  const recordPath = join(receiptRoot, digest(target) + '.json');
-  let record = await readRecord(recordPath, true);
+  let recordPath, record;
   try {
+    const state = await readRecord(join(root, STATE));
+    const { manifest } = await manifestAt(root, state.manifestSha256);
+    const receiptRoot = await ensurePrivate(join(root, 'installations'));
+    recordPath = join(receiptRoot, digest(target) + '.json');
+    record = await readRecord(recordPath, true);
     checkAbort(signal);
     const binding = { runtimeDirectory: target, manifestSha256: state.manifestSha256, nodeHeaders,
       python, recoverFrom: recoverFrom ? resolve(recoverFrom) : null };
