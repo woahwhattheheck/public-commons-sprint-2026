@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { captureSchema, inspectSchema, readSchemaSource, validateApprovedQueries } from './schema.mjs';
 import { prepareSubQuerySeller } from './prepare.mjs';
+import { prepareSubQueryRevision, reviewSubQueryRevision } from './revisions.mjs';
 import { parseJson, readBytes } from './files.mjs';
 
 const HELP = `Usage: node onboarding/cli.mjs COMMAND [options]
@@ -10,6 +11,8 @@ const HELP = `Usage: node onboarding/cli.mjs COMMAND [options]
   inspect --schema SERVED_SCHEMA [--type TYPE_NAME]
   validate --schema SERVED_SCHEMA --queries PRIVATE_QUERIES.json
   prepare --schema SERVED_SCHEMA --queries PRIVATE_QUERIES.json --plan MERCHANT_PLAN.json --directory NEW_DIRECTORY
+  compare --previous MERCHANT_DIRECTORY --schema NEW_SERVED_SCHEMA [--queries REVISED_QUERIES.json] [--plan REVISED_PLAN.json]
+  revise --previous MERCHANT_DIRECTORY --schema NEW_SERVED_SCHEMA --directory NEW_REVISION_DIRECTORY [--queries REVISED_QUERIES.json] [--plan REVISED_PLAN.json]
 Only capture makes a network request. It sends one original introspection POST.
 `;
 
@@ -21,6 +24,8 @@ export async function main(args = process.argv.slice(2)) {
     inspect: { required: ['--schema'], optional: ['--type'] },
     validate: { required: ['--schema', '--queries'], optional: [] },
     prepare: { required: ['--schema', '--queries', '--plan', '--directory'], optional: [] },
+    compare: { required: ['--previous', '--schema'], optional: ['--queries', '--plan'] },
+    revise: { required: ['--previous', '--schema', '--directory'], optional: ['--queries', '--plan'] },
   };
   const contract = contracts[command], flags = new Map();
   if (!contract) throw new TypeError(HELP);
@@ -38,6 +43,13 @@ export async function main(args = process.argv.slice(2)) {
     directory: flags.get('--directory'), allowLoopback: flags.has('--allow-loopback-upstream') });
   else if (command === 'prepare') result = await prepareSubQuerySeller({ schemaFile: flags.get('--schema'),
     queriesFile: flags.get('--queries'), planFile: flags.get('--plan'), directory: flags.get('--directory') });
+  else if (['compare', 'revise'].includes(command)) {
+    const revision = { previousDirectory: flags.get('--previous'), schemaFile: flags.get('--schema'),
+      ...(flags.has('--queries') ? { queriesFile: flags.get('--queries') } : {}),
+      ...(flags.has('--plan') ? { planFile: flags.get('--plan') } : {}) };
+    result = command === 'compare' ? await reviewSubQueryRevision(revision) :
+      await prepareSubQueryRevision({ ...revision, directory: flags.get('--directory') });
+  }
   else {
     const schema = await readSchemaSource(flags.get('--schema'));
     if (command === 'inspect') {
