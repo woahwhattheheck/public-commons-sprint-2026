@@ -5,6 +5,7 @@ import { isIP } from 'node:net';
 import { readFile, stat } from 'node:fs/promises';
 import { isPublicAddress } from '../sf31-buyer-client/public-transport.mjs';
 import { createUpstreamHandler } from './upstream-handler.mjs';
+import { supportsSellerMethod } from './http-methods.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -102,7 +103,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       credentials[key] = value;
     }
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
-    if (!['GET','HEAD','POST'].includes(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
+    if (!supportsSellerMethod(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
     compiled[name] = Object.freeze({origin:url.origin,hostname:url.hostname,local:url.protocol === 'http:',
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),

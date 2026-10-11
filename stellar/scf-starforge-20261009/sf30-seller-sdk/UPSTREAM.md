@@ -99,8 +99,8 @@ Declare that exact name in a separate bindings file:
 }
 ```
 
-The seller route in this example must itself declare JSON `POST`. GET, HEAD
-and JSON POST are supported; omitted binding `method` means GET. A binding
+The seller route in this example must itself declare JSON `POST`. GET, HEAD,
+DELETE and JSON POST/PUT/PATCH are supported; omitted binding `method` means GET. A binding
 reused by several routes must match every route's method and required path
 parameters. Unused bindings, missing names, unknown fields and conflicting
 methods fail at startup rather than silently selecting a different operation.
@@ -127,7 +127,7 @@ operator-managed HTTPS reverse proxy.
 `query` may be an array of unchanged names or an input-to-upstream name map.
 Repeated values and their request order are preserved. The shared handler
 **rejects undeclared query parameters**, rather than dropping them or accepting
-an arbitrary backend URL. Request bodies remain JSON values; POST reserializes
+an arbitrary backend URL. Request bodies remain JSON values; POST/PUT/PATCH reserialize
 the parsed original body and does not preserve its raw wire whitespace.
 
 Only explicitly listed ordinary `requestHeaders` are forwarded. Buyer
@@ -223,7 +223,7 @@ shared handler's structured error, not the backend's private error body. The
 existing SF30 cancellation/failure path consumes those non-success results.
 
 **Backend execution and settlement are not an atomic database transaction.**
-The upstream can finish a POST before the subsequent payment/delivery step
+The upstream can finish a POST, PUT, PATCH or DELETE before the subsequent payment/delivery step
 fails. This adapter cannot undo that work, promise a refund for every native
 settlement flow, or prevent a buyer making a second separate request. Use GET,
 HEAD or read-only/stateless POST queries first. A mutating backend needs its
