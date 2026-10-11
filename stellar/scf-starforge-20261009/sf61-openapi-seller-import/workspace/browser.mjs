@@ -4,10 +4,11 @@ import { createOperationSettings, createOperationPanel } from './operation-panel
 import { createRevisionDesk } from './revision-browser.mjs';
 import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
 import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
+import { createPostmanPanel, mergePostmanMerchantPlan } from '/postman-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false, revisionDesk=null, connections=null, postmanPanel=null;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
@@ -22,7 +23,7 @@ function available() {
   $('save').disabled=busy||!specText;
   $('start-preview').disabled=busy||!selectedPackage||customerOpen;
   $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
-  revisionDesk?.available(busy);connections?.available(busy);
+  revisionDesk?.available(busy);connections?.available(busy);postmanPanel?.refresh(busy);
 }
 function dirty() {
   selectedPackage=null;
@@ -58,6 +59,11 @@ function selectField(label,values,value) {
   input.value=String(value??values[0]?.[0]??'');container.append(input);return {container,input};
 }
 const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
+postmanPanel=createPostmanPanel({container:$('postman-intake'),api,act,notice,
+  async onSource(text,operations) {
+    const current=mergePostmanMerchantPlan({currentSource:specText,source:text,currentPlan:planFromForm(),operations});
+    await loadSource(text,current);
+  }});
 connections=createOAuthConnections({container:$('oauth-connections'),make,field,selectField,api,act,notice,
   onChanged(values,changed){
     for(const route of routeFields)route.authentication?.refreshConnections();
@@ -198,6 +204,7 @@ async function loadSource(text,plan) {
   $('source-summary').replaceChildren(make('p',info.title+' · OpenAPI '+info.version+' · '+countLabel(info.operations.length,'operation')),
     make('p','Original source SHA256: '+info.sourceSha256,'hint wrap'));
   fillPlan(plan);dirty();available();
+  await postmanPanel.reopen(text);
 }
 function preview(value) {
   const table=make('table'),thead=make('thead'),head=make('tr');
