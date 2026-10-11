@@ -11,6 +11,7 @@ import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs
 import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView, requireCurrentOperationTicket } from './operation-ticket.mjs';
 import { readRequestBody, MAX_REQUEST_BODY_BYTES } from './request-body.mjs';
+import { initializationDirectory, retainInitializationRecord, optionalInitializationBytes } from './initialization.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.buyer-inbox.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -183,12 +184,17 @@ async function inspect(root, intentId) {
   };
 }
 
-export async function initializeQueue(path) {
+export async function initializeQueue(path, { resume = false } = {}) {
   const root = rootPath(path);
-  await mkdir(root, {mode:0o700});
+  need(typeof resume === 'boolean', 'INBOX_RESUME_BOOLEAN_REQUIRED');
+  if (resume) await initializationDirectory(root, { create: true });
+  else await mkdir(root, {mode:0o700});
   await privateDirectory(root);
-  await mkdir(join(root, 'jobs'), {mode:0o700});
-  await writeJson(join(root, 'inbox.json'), {schema:SCHEMA, createdAt:now()});
+  const published = resume ? await optionalInitializationBytes(join(root, 'inbox.json')) : null;
+  if (published) await privateDirectory(join(root, 'jobs'));
+  else if (resume) await initializationDirectory(join(root, 'jobs'), { create: true });
+  else await mkdir(join(root, 'jobs'), {mode:0o700});
+  await retainInitializationRecord(join(root, 'inbox.json'), {schema:SCHEMA, createdAt:now()}, { resume, ignore: ['createdAt'] });
   await syncDirectory(root);
   return {schema:SCHEMA, root};
 }
@@ -386,3 +392,4 @@ export async function saveQueueReport(destination, html) {
   await createFile(path, Buffer.from(html));
   return {path, sha256:sha(Buffer.from(html)), bytes:Buffer.byteLength(html)};
 }
+

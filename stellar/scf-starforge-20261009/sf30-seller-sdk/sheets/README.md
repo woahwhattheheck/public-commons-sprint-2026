@@ -74,6 +74,15 @@ plan copies the exact capture manifest and original resource into its own
 private plan directory. A later replacement of the original source/capture
 cannot retarget that saved plan.
 
+## Use a renewable Google connection
+
+The installed `starforge sheets-source auth connect` command opens the local
+account/scope review window for a registered Google Desktop client. The saved
+private connection renews access across publisher/scheduler restarts.
+`starforge sheets-source use-connection` binds it to a new source file while
+preserving the reviewed workbook and column projection. Follow the complete
+[connection, refresh and disconnect guide](auth/README.md).
+
 ## Use a live read-only Google source
 
 Copy [example-source.json](example-source.json) to the private working directory.
@@ -90,7 +99,7 @@ obtaining that token. The source stores only the environment variable's name.
 It does not obtain, refresh, print or save credentials, change sharing, or use
 an API key as a substitute for private workbook authorization.
 
-Each explicit live extraction makes one `GET` to the fixed
+Each explicit live extraction retains one successful response to its `GET` to the fixed
 `https://sheets.googleapis.com/v4/spreadsheets/{spreadsheetId}` endpoint with
 the exact range and CellData field mask. The client forbids redirects, limits
 response bytes and time, and retains the original response before projecting it.
