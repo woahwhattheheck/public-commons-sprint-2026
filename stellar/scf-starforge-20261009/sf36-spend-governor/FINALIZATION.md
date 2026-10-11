@@ -17,6 +17,11 @@ No keys are passed to the Node observer, written into reports, or printed.
 The constructor currently requires all three original keys; do not give this
 operator command or its environment to an untrusted buyer or MCP caller.
 
+The original SF88 inbox exposes [one-intent finalization](../sf88-operator-buyer-cli/FINALIZATION.md)
+using its existing workspace. It loads the original accounting keys without
+opening the wallet and displays the result in the same private history.
+The original event decoder can use the SDK pinned inside SF88's package.
+
 Point at an **existing** private SF36 ledger and a private original SF82 evidence
 file written by `executeWithEvidence()` or an original SF81 reconciliation
 record exported on that same trusted buyer host. Use the actual payer from
@@ -58,8 +63,12 @@ private because original request IDs and merchant order references may appear.
    from guessed fields or reexecute a paid request to obtain it.
 2. Compare the native amount, network, asset and recipient with that original
    request, then require the independently configured payer. The actual SF86
-   observer uses the official Stellar testnet RPC and original SDK XDR decoder.
-   Production has no endpoint, fetch, decoder or saved-verdict override.
+   observer uses a selected supported public Stellar testnet RPC and the original
+   SDK XDR decoder. SDF is the default; `--rpc-endpoint
+   https://soroban-rpc.testnet.stellar.gateway.fm` explicitly selects Gateway.
+   Both are in the [Stellar provider directory](https://developers.stellar.org/docs/data/apis/rpc/providers).
+   The observer checks the canonical testnet passphrase before the transaction.
+   There is no arbitrary endpoint, fetch, decoder or saved-verdict override.
 3. Require successful inclusion and exactly one native transfer for that
    transaction, payer, recipient, asset and exact amount. Reaudit the original
    reservation after RPC, and call original `Governor.reconcile()` inside its
@@ -71,6 +80,10 @@ private because original request IDs and merchant order references may appear.
    accounting identity. A competing conflicting finalization is rejected by
    the original governor. Reports retained before and after restart may differ
    in observation detail, while the authoritative ledger result stays the same.
+
+An inbox caller can pass `--expected-request-sha` with one original `--record`.
+The worker verifies that exact approved-request digest before reading or
+changing its reservation and retains it in the final accounting result.
 
 This version follows SF86's **exact testnet** support. Mainnet and `upto`
 continue through their original operator paths; neither is silently treated as

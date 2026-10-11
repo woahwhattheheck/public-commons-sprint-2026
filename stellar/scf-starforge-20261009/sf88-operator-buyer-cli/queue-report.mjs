@@ -87,7 +87,26 @@ function recoveryDetails(job) {
     ['Evidence binding', recovery.binding],
   ].filter(([, value]) => value !== undefined && value !== null);
   return section('Recovered original evidence', fields(rows) +
-    '<p class="note">Recovery reads the configured original SF82 evidence file. SF82 records the intent and payment terms but does not record the resource URL, HTTP method, or saved response-file hash. Recovery does not repeat the purchase or change the spending ledger.</p>');
+    '<p class="note">Recovery reads the original saved checkout evidence. The financial-finalization command separately matches its complete approved request to this inbox and the existing spending ledger. Inspect the recorded binding and file-save outcome; reading evidence does not repeat the purchase.</p>');
+}
+
+function finalizationDetails(job) {
+  const saved=job.finalization;
+  if(!object(saved))return section('Accounting','<p>No financial-finalization result has been saved in this inbox.</p>');
+  const result=object(saved.result)?saved.result:{};
+  const last=object(saved.lastFinalized)?saved.lastFinalized:null;
+  const rows=[
+    ['Latest accounting result',result.outcome],['Checked at',saved.completedAt],
+    ['Actual atomic units',result.actual],['Canonical transaction receipt',result.receipt_ref],
+    ['Approved request SHA-256',saved.approvedRequestSha256],['Finality proof SHA-256',result.proof_sha256],
+    ['Chain observation',result.chainObservation],['Failure reason',result.reason],
+    ['Merchant notification',result.merchant?.status],['Merchant order',result.merchant?.orderReference],
+    ['Callback state',result.merchant?.callbackState],
+    ['Earlier finalized result',last&&last.completedAt!==saved.completedAt?last.result?.outcome:undefined],
+    ['Earlier finalization time',last&&last.completedAt!==saved.completedAt?last.completedAt:undefined],
+  ].filter(([,value])=>value!==undefined&&value!==null);
+  return section('Accounting',fields(rows)+
+    '<p class="note">This is the saved result from the original spending ledger. Repeating finalization checks or reuses that same transaction; it does not make another purchase. Merchant notification and completed file delivery remain separate outcomes.</p>');
 }
 
 function dependencyDetails(job) {
@@ -102,7 +121,7 @@ function dependencyDetails(job) {
     '<p class="note">The queue checks these file identities before the original buyer runs. The live original policy still controls spending.</p>') : '';
 }
 
-function detail(job, queueRoot, commandFor) {
+function detail(job, queueRoot, commandFor, accountingWorkspace) {
   const op = object(job.operation) ? job.operation : {};
   const terms = object(op.expect) ? op.expect : {};
   const original = nativeSummary(job);
@@ -143,16 +162,20 @@ function detail(job, queueRoot, commandFor) {
     'This request was cancelled locally before a queue execution. Its original saved identity remains in history.' : job.state === 'QUEUED' ?
     'To run this exact queued request, use the trusted terminal. The original buyer still obtains fresh terms and operator approval.' :
     'Inspect this attempt and recover any original terminal evidence before deciding what happened. The permanent attempt marker prevents another queue execution.';
+  const workspace=accountingWorkspace??job.finalization?.workspace;
+  const finalizeCommand=job.attempt?.kind==='EXECUTE'&&typeof workspace==='string'&&workspace?
+    command('finalize',queueRoot,intentOf(job))+' --workspace '+shellQuote(workspace):null;
   const actions = section('Operator commands', `<p>${escape(actionCopy)}</p>` +
     `<h4>Inspect saved history</h4><pre>${escape(commandFor('show', queueRoot, intentOf(job)))}</pre>` +
     (!['CANCELLED','REVIEW_REQUIRED'].includes(job.state) ? `<h4>${action === 'execute' ? 'Execute this one intent' : 'Read original evidence'}</h4><pre>${escape(commandFor(action, queueRoot, intentOf(job)))}</pre>` : '') +
+    (finalizeCommand?`<h4>Finalize original payment accounting</h4><pre>${escape(finalizeCommand)}</pre>`:'')+
     '<p class="note">These are copyable commands only. This report has no execution controls and contacts no service.</p>');
   const recoveredFile = object(recovery.deliveryFile) ?
     responseDetails({responseFile:recovery.deliveryFile}, 'Response-file recovery status') : '';
-  return `<div class="detail-grid">${reviewed}${dependencyDetails(job)}${attempt}${result}${responseDetails(original)}${recoveryDetails(job)}${recoveredFile}${errorFields(job)}${actions}</div>`;
+  return `<div class="detail-grid">${reviewed}${dependencyDetails(job)}${attempt}${result}${finalizationDetails(job)}${responseDetails(original)}${recoveryDetails(job)}${recoveredFile}${errorFields(job)}${actions}</div>`;
 }
 
-function row(job, index, queueRoot, commandFor) {
+function row(job, index, queueRoot, commandFor, accountingWorkspace) {
   const intent = intentOf(job);
   const original = nativeSummary(job);
   const observed = reportOutcome(job);
@@ -164,24 +187,28 @@ function row(job, index, queueRoot, commandFor) {
     job.operation?.expect?.asset, job.operation?.expect?.network,
     original.status, observed?.status, original.error?.code].map(value => text(value, '')).join(' ').toLowerCase();
   const outcome = observed?.status ?? recovery.observationStatus ?? original.status;
+  const accounting=job.finalization?.result?.outcome;
   return `<tbody class="job" data-state="${escape(state)}" data-search="${escape(search)}">
     <tr class="summary-row">
       <th scope="row"><a href="#${id}">${escape(intent)}</a><span class="resource">${escape(job.operation?.method ?? '')} ${escape(job.operation?.url ?? '')}</span></th>
       <td><span class="state">${escape(LABELS.get(state) ?? state)}</span></td>
-      <td>${code(outcome)}${observed ? '<span class="source-label">Original SF52</span>' : recovery.observationStatus ? '<span class="source-label">Original evidence</span>' : original.status ? '<span class="source-label">Original buyer</span>' : ''}</td>
+      <td>${code(outcome)}${observed ? '<span class="source-label">Original SF52</span>' : recovery.observationStatus ? '<span class="source-label">Original evidence</span>' : original.status ? '<span class="source-label">Original buyer</span>' : ''}${accounting?'<span class="source-label">Accounting: '+escape(accounting)+'</span>':''}</td>
       <td>${code(output?.status)}${output?.bytes !== undefined ? `<span class="source-label">${escape(output.bytes)} bytes</span>` : ''}${!original.responseFile && recovery.deliveryFile ? '<span class="source-label">Recovery record</span>' : ''}</td>
       <td>${code(job.attempt?.startedAt ?? job.createdAt)}<span class="source-label">${job.attempt?.startedAt ? 'Attempt started' : 'Queued'}</span></td>
     </tr>
-    <tr class="detail-row"><td colspan="5"><details id="${id}"><summary>Request, result and recovery details</summary>${detail(job, queueRoot, commandFor)}</details></td></tr>
+    <tr class="detail-row"><td colspan="5"><details id="${id}"><summary>Request, result and recovery details</summary>${detail(job, queueRoot, commandFor, accountingWorkspace)}</details></td></tr>
   </tbody>`;
 }
 
 /** Render original queue records. A trusted embedding can supply its own workspace-aware commands. */
-export function renderQueueReport({jobs, queueRoot, generatedAt = new Date().toISOString(), commandFor = command} = {}) {
+export function renderQueueReport({jobs, queueRoot, accountingWorkspace, generatedAt = new Date().toISOString(), commandFor = command} = {}) {
   if (!Array.isArray(jobs) || jobs.length > 10000 || !jobs.every(object))
     throw new TypeError('QUEUE_REPORT_JOBS_INVALID');
   if (typeof queueRoot !== 'string' || !queueRoot || queueRoot.includes('\0'))
     throw new TypeError('QUEUE_REPORT_ROOT_REQUIRED');
+  if(accountingWorkspace!==undefined&&(typeof accountingWorkspace!=='string'||
+    !accountingWorkspace.startsWith('/')||accountingWorkspace.includes('\0')))
+    throw new TypeError('QUEUE_REPORT_WORKSPACE_INVALID');
   if (typeof generatedAt !== 'string' || !Number.isFinite(Date.parse(generatedAt)))
     throw new TypeError('QUEUE_REPORT_TIME_INVALID');
   if (typeof commandFor !== 'function') throw new TypeError('QUEUE_REPORT_COMMAND_FACTORY_INVALID');
@@ -226,7 +253,7 @@ export function renderQueueReport({jobs, queueRoot, generatedAt = new Date().toI
 <h2>Operation history</h2><p class="note">Queue states describe local lifecycle. Buyer, chain, and response-file results retain their original meanings. A running marker alone cannot say whether a payment was sent.</p>
 <div class="toolbar"><div class="filters" role="group" aria-label="Filter queue state"><button type="button" data-filter="ALL" aria-pressed="true">All <span>${jobs.length}</span></button>${controls}</div><div><label for="search">Find an intent or resource</label><input id="search" type="search" placeholder="Intent, URL, asset, outcome" autocomplete="off"></div></div>
 <p class="visibility" id="visible-count" aria-live="polite">Showing ${jobs.length} of ${jobs.length} intents</p>
-${jobs.length ? `<div class="table-wrap"><table><thead><tr><th scope="col">Intent / resource</th><th scope="col">Queue state</th><th scope="col">Original outcome</th><th scope="col">Response file</th><th scope="col">Time</th></tr></thead>${jobs.map((job,index) => row(job,index,queueRoot,operatorCommand)).join('')}</table></div><p class="empty" id="no-matches" hidden>No intents match the current filter.</p>` : '<p class="empty">No requests have been added. Enqueue an existing operator-reviewed SF88 configuration to begin.</p>'}
+${jobs.length ? `<div class="table-wrap"><table><thead><tr><th scope="col">Intent / resource</th><th scope="col">Queue state</th><th scope="col">Original outcome</th><th scope="col">Response file</th><th scope="col">Time</th></tr></thead>${jobs.map((job,index) => row(job,index,queueRoot,operatorCommand,accountingWorkspace)).join('')}</table></div><p class="empty" id="no-matches" hidden>No intents match the current filter.</p>` : '<p class="empty">No requests have been added. Enqueue an existing operator-reviewed SF88 configuration to begin.</p>'}
 <footer>Keep this report private: it contains original resource identities, prices, operation IDs and local file paths. No signer, secret, request body, cookie, authorization header or whole raw evidence object is embedded by this renderer. The original SF81/SF36 approval and reservation, SF31 buyer and response writer, and SF82/SF52 evidence remain authoritative. This exported page makes no network requests, reserves no funds and releases no budget.</footer>
 </main><script>
 (()=>{'use strict';const rows=Array.from(document.querySelectorAll('tbody.job'));const buttons=Array.from(document.querySelectorAll('[data-filter]'));const search=document.getElementById('search');const count=document.getElementById('visible-count');const empty=document.getElementById('no-matches');let state='ALL';function update(){const query=search.value.trim().toLowerCase();let visible=0;for(const row of rows){row.hidden=!(state==='ALL'||row.dataset.state===state)||!row.dataset.search.includes(query);if(!row.hidden)visible++;}count.textContent='Showing '+visible+' of '+rows.length+' intents';if(empty)empty.hidden=visible!==0;}for(const button of buttons)button.addEventListener('click',()=>{state=button.dataset.filter;for(const other of buttons)other.setAttribute('aria-pressed',String(other===button));update();});search.addEventListener('input',update);for(const link of document.querySelectorAll('.summary-row a'))link.addEventListener('click',()=>{const target=document.getElementById(link.getAttribute('href').slice(1));if(target)target.open=true;});let opened=[];window.addEventListener('beforeprint',()=>{opened=Array.from(document.querySelectorAll('details')).filter(item=>!item.open);for(const item of opened)item.open=true;});window.addEventListener('afterprint',()=>{for(const item of opened)item.open=false;opened=[];});})();

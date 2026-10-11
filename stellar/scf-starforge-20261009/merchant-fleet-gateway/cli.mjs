@@ -5,31 +5,41 @@ import { loadMerchantFleet, startMerchantFleet } from './gateway.mjs';
 
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: node cli.mjs --manifest FILE [--port 8400] [--admin-port 8401]\n');
+    process.stdout.write('Usage: node cli.mjs [--manifest FILE] [--state PRIVATE_DIRECTORY] [--port 8400] [--admin-port 8401]\n' +
+      '--state enables durable live rollout on Linux; an empty state requires --manifest.\n');
     return null;
   }
   const options = new Map();
   for (let i = 0; i < args.length; i++) {
     const flag = args[i];
-    if (!['--manifest', '--port', '--admin-port'].includes(flag) ||
+    if (!['--manifest', '--state', '--port', '--admin-port'].includes(flag) ||
         options.has(flag) || !args[i + 1] || args[i + 1].startsWith('--')) {
-      throw new TypeError('Use --manifest FILE [--port N] [--admin-port N]');
+      throw new TypeError('Use [--manifest FILE] [--state PRIVATE_DIRECTORY] [--port N] [--admin-port N]');
     }
     options.set(flag, args[++i]);
   }
-  if (!options.has('--manifest')) throw new TypeError('--manifest FILE is mandatory');
+  if (!options.has('--manifest') && !options.has('--state'))
+    throw new TypeError('--manifest FILE or a retained --state PRIVATE_DIRECTORY is required');
   const parsePort = (flag, fallback) => {
     const raw = options.get(flag) ?? String(fallback);
     if (!/^\d{1,5}$/.test(raw) || Number(raw) > 65535) throw new TypeError('Invalid ' + flag);
     return Number(raw);
   };
-  const fleet = await loadMerchantFleet(resolve(options.get('--manifest')));
+  // With retained state the original input may no longer exist. Let startup
+  // choose its retained snapshot before attempting to read an optional input.
+  let fleet = null;
+  if (options.has('--manifest') && !options.has('--state'))
+    fleet = await loadMerchantFleet(resolve(options.get('--manifest')));
   const service = await startMerchantFleet(fleet, {
     port: parsePort('--port', 8400), adminPort: parsePort('--admin-port', 8401),
+    stateDirectory: options.has('--state') ? resolve(options.get('--state')) : null,
+    initialManifest: options.has('--manifest') ? resolve(options.get('--manifest')) : null,
   });
   process.stdout.write(JSON.stringify({ publicURL: service.publicURL,
     privateHealthURL: service.adminURL + '/_fleet/health',
-    merchants: fleet.tenants.map(t => ({ id: t.id, host: t.host, mode: t.mode })) }) + '\n');
+    privateControlFile: service.controlPath,
+    revision: service.status().revision,
+    merchants: service.status().merchants.map(t => ({ id: t.id, host: t.host, mode: t.mode })) }) + '\n');
   let closing = false;
   for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => {
     if (closing) return;

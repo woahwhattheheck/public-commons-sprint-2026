@@ -14,6 +14,30 @@ export class BuyerResponseFileError extends Error {
   }
 }
 
+/** Local expectations are supplied before purchase, never learned from the
+ * response's digest header. This validates content consistency, not seller identity. */
+export function validateResponseFileIntegrity({ expectedSha256, expectedBytes,
+  expectedContentType } = {}, maxBytes = Number.MAX_SAFE_INTEGER) {
+  const pins = {};
+  if (expectedSha256 !== undefined) {
+    if (typeof expectedSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(expectedSha256))
+      throw new BuyerResponseFileError('BAD_RESPONSE_FILE_EXPECTED_SHA256');
+    pins.expectedSha256 = expectedSha256;
+  }
+  if (expectedBytes !== undefined) {
+    if (!Number.isSafeInteger(expectedBytes) || expectedBytes < 0 || expectedBytes > maxBytes)
+      throw new BuyerResponseFileError('BAD_RESPONSE_FILE_EXPECTED_BYTES');
+    pins.expectedBytes = expectedBytes;
+  }
+  if (expectedContentType !== undefined) {
+    if (typeof expectedContentType !== 'string' || expectedContentType.length > 127 ||
+        !/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+$/.test(expectedContentType))
+      throw new BuyerResponseFileError('BAD_RESPONSE_FILE_EXPECTED_TYPE');
+    pins.expectedContentType = expectedContentType.toLowerCase();
+  }
+  return Object.freeze(pins);
+}
+
 async function absent(path) {
   try { await lstat(path); }
   catch (error) { if (error.code === 'ENOENT') return; throw error; }
@@ -36,7 +60,8 @@ function readChunk(reader, signal) {
 
 /** Reserve a caller-chosen destination BEFORE calling the buyer. The parent
  * must be an existing, trusted directory on a hard-link-capable filesystem. */
-export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 1024 * 1024, timeoutMs = 30_000 } = {}) {
+export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 1024 * 1024,
+  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType } = {}) {
   if (typeof destination !== 'string' || !isAbsolute(destination) || destination.includes('\0') ||
       /[\\/]$/.test(destination) || ['.', '..'].includes(basename(destination)))
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_DESTINATION', 'absolute file path required');
@@ -44,6 +69,7 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_LIMIT');
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_TIMEOUT');
+  const pins = validateResponseFileIntegrity({ expectedSha256, expectedBytes, expectedContentType }, maxBytes);
 
   let finalPath, reservationPath, partialPath, probePath, reservation, file;
   let state = 'PREPARING', activeSave = null, bytes = 0;
@@ -123,6 +149,9 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       // that header describe a different representation than this stream.
       const hash = createHash('sha256');
       if (response.body) reader = response.body.getReader();
+      if (pins.expectedContentType !== undefined &&
+          response.headers.get('content-type')?.split(';', 1)[0].trim().toLowerCase() !== pins.expectedContentType)
+        throw new BuyerResponseFileError('RESPONSE_FILE_TYPE_MISMATCH');
       while (reader) {
         check();
         let chunk;
@@ -154,6 +183,21 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       file = null;
       check();
       const saved = { path: finalPath, bytes, sha256: hash.digest('hex'), contentType: response.headers.get('content-type') };
+      // A completed transfer is not yet an accepted product. Leave a mismatched
+      // private partial for reconciliation; never publish it under the buyer's name.
+      if (pins.expectedBytes !== undefined && bytes !== pins.expectedBytes)
+        throw new BuyerResponseFileError('RESPONSE_FILE_SIZE_MISMATCH');
+      if (pins.expectedSha256 !== undefined && saved.sha256 !== pins.expectedSha256)
+        throw new BuyerResponseFileError('RESPONSE_FILE_DIGEST_MISMATCH');
+      if (Object.keys(pins).length) saved.verifiedAgainst = { ...pins };
+      const objectMetadata = {
+        contentRange: response.headers.get('content-range'),
+        contentSha256: response.headers.get('x-content-sha256'),
+        snapshot: response.headers.get('x-sf30-object-snapshot'),
+        totalBytes: response.headers.get('x-sf30-object-bytes'),
+      };
+      if (Object.values(objectMetadata).some(value => value !== null))
+        saved.objectMetadata = objectMetadata;
       // link is atomic and fails when the destination exists; rename would
       // silently overwrite a file created after the original preflight.
       try { await link(partialPath, finalPath); }

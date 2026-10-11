@@ -1,0 +1,32 @@
+{
+  "schema": "stellar-forge.python-merchant.v1",
+  "application": "lifecycle-example.py",
+  "publicOrigin": "https://python-merchant.example",
+  "serviceName": "Initialized Python Data Service",
+  "workerCount": 1,
+  "maxPending": 16,
+  "startupTimeoutMs": 10000,
+  "shutdownTimeoutMs": 5000,
+  "lifecycle": { "startup": "startup", "shutdown": "shutdown" },
+  "functions": {
+    "summarize": {
+      "path": "/summary",
+      "method": "POST",
+      "description": "Summarize a numeric series using an initialized async data service",
+      "payment": { "scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60 },
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "values": { "type": "array", "items": { "type": "number", "minimum": -1000000000, "maximum": 1000000000 }, "minItems": 1, "maxItems": 10000 },
+          "window": { "type": "integer", "minimum": 1, "maximum": 10000 }
+        },
+        "required": ["values"],
+        "additionalProperties": false
+      },
+      "example": { "values": [2, 4, 6, 8] },
+      "timeoutMs": 10000,
+      "maxOutputBytes": 524288,
+      "output": { "format": "json" }
+    }
+  }
+}

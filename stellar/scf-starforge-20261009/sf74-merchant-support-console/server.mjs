@@ -10,8 +10,10 @@ import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
 import {compare, validateIntake} from '../sf76-merchant-remediation-delta/compare.mjs';
 import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.mjs';
 import {buildPacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
-import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES} from './case-store.mjs';
+import {openCaseStore, inspectCaseWriter, recoverCaseWriter, CASE_STATUSES, caseMetadata} from './case-store.mjs';
 import {MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
+import {inspectRuntimeFiles, reviewRuntime, exportRuntimeHandoff, importRuntimeHandoff,
+  MAX_RUNTIME_BYTES, MAX_HANDOFF_BYTES} from './runtime-support.mjs';
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
@@ -20,6 +22,7 @@ const ASSETS = Object.freeze({
   '/workspace-file.mjs': ['workspace-file.mjs', 'text/javascript; charset=utf-8'],
   '/workspace-files.mjs': ['workspace-files.mjs', 'text/javascript; charset=utf-8'],
   '/case-desk.mjs': ['case-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/runtime-desk.mjs': ['runtime-desk.mjs', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const ROOT = new URL('.', import.meta.url);
@@ -172,7 +175,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
           json(res,200,{...await caseStore.list(query), statuses:CASE_STATUSES}); return;
         }
         if (route === '/api/cases' && req.method === 'POST') {
-          json(res,200,await caseStore.save(await boundedBody(req, MAX_WORKSPACE_BYTES * 2 + 100000))); return;
+          json(res,200,await caseStore.save(await boundedBody(req, (MAX_WORKSPACE_BYTES + MAX_RUNTIME_BYTES) * 2 + 100000))); return;
         }
         const match = /^\/api\/cases\/([a-f0-9-]+)(\/history)?$/.exec(route);
         if (match && req.method === 'GET') {
@@ -191,6 +194,31 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
           detail:known || error instanceof TypeError ? String(error.message).slice(0,240) : 'The case operation could not be completed. Your editor is unchanged.',
           ...(error.currentRevision ? {currentRevision:error.currentRevision} : {}),
         });
+      }
+      return;
+    }
+    if (route.startsWith('/api/runtime/') && req.method === 'POST') {
+      if(req.headers.origin!==ownOrigin) {json(res,403,{error:'ORIGIN_MISMATCH'});return;}
+      try {
+        const input=await boundedBody(req,MAX_HANDOFF_BYTES*2+100000);
+        if(!input||typeof input!=='object'||Array.isArray(input))throw new TypeError('Expected runtime support sources');
+        const allowed={
+          '/api/runtime/inspect':['files','inputs','routeId'],
+          '/api/runtime/review':['supportText','inputs'],
+          '/api/runtime/export':['workspaceText','supportText','metadata'],
+          '/api/runtime/import':['handoffText'],
+        }[route];
+        if(!allowed) {json(res,404,{error:'NOT_FOUND'});return;}
+        if(Object.keys(input).some(key=>!allowed.includes(key)))throw new TypeError('Unexpected runtime support field');
+        if(route==='/api/runtime/inspect')json(res,200,inspectRuntimeFiles(input));
+        else if(route==='/api/runtime/review')json(res,200,{report:reviewRuntime(input.supportText,input.inputs)});
+        else if(route==='/api/runtime/export')json(res,200,await exportRuntimeHandoff({...input,metadata:caseMetadata(input.metadata)}));
+        else {
+          const imported=await importRuntimeHandoff(input.handoffText);
+          json(res,200,{...imported,metadata:caseMetadata(imported.metadata)});
+        }
+      } catch(error) {
+        json(res,Number(error.status)||422,{error:'INVALID_RUNTIME_SUPPORT',detail:String(error.message).slice(0,240)});
       }
       return;
     }

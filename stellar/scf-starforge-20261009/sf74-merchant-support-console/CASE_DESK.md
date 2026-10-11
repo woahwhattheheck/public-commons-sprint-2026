@@ -1,6 +1,6 @@
 # Merchant case desk
 
-SF74 now keeps a queue of merchant cases inside its existing local workspace. A case joins the exact route settings, original capture files, unfinished owner terms, follow-up owner, work status, next action, notes and saved versions. It uses the existing SF70 diagnosis, SF72 preflight, SF76 comparison, SF77 workorder and SF74 workspace codec.
+SF74 keeps a queue of merchant cases inside its existing local workspace. A case joins the exact route settings, original capture files, original runtime support packets and delivery records, unfinished owner terms, follow-up owner, work status, next action, notes and saved versions. It uses the existing SF70 diagnosis, SF72 preflight, SF76 comparison, SF77 workorder, SF93 support packet, SF97 native reconciler and SF74 workspace codec.
 
 ## Start with private case storage
 
@@ -43,6 +43,10 @@ For a complete case-desk backup, stop the server and copy the entire private cas
 
 Each case contains an atomic `head.json` pointer, immutable version metadata under `versions/`, and deduplicated, byte-exact original workspace files under `workspaces/`. Metadata and workspace files are completely written and synced before a new head is selected. Saving one new case does not load other cases' capture bodies. Listing reads their compact metadata.
 
+Attached runtime sources are content-addressed in the same case's `runtime/` directory, completely written and synced before the same head publication. Each version records its runtime file's hash, size and compact summary. Reopening or restoring a version validates its exact runtime bytes and reuses the original reconciler. Existing cases without runtime sources open normally. An older API caller omitting `supportText` preserves a current attachment; an explicit `null` removes it from the new version while retaining previous versions.
+
+The complete `.merchant-support.json` transfer includes the current workspace, runtime files and follow-up metadata. Import opens a new case draft; it does not overwrite an existing case or import history. [Runtime support operations](RUNTIME_SUPPORT.md) explains the capture mapping and handoff.
+
 ### Recover a stopped local writer
 
 A save briefly owns an exclusive writer record. If that process stops abruptly, later saves retain their drafts and report `CASE_STORE_BUSY`. Inspect the recorded process from the same host and PID namespace:
@@ -73,7 +77,7 @@ All endpoints retain the original literal-loopback Host restriction and no-store
 | Open current | `GET /api/cases/{id}` | None |
 | Open saved version | `GET /api/cases/{id}?revision={revision}` | Saved revision token |
 | Version history | `GET /api/cases/{id}/history` | Optional `before` and `limit` |
-| Create/save | `POST /api/cases` | `id`, `expectedRevision`, `workspaceText`, `metadata` |
+| Create/save | `POST /api/cases` | `id`, `expectedRevision`, `workspaceText`, `metadata`, optional `supportText` |
 
 For creation, `id` is a new UUID v4 and `expectedRevision` is `null`. For updates use the exact current token. `workspaceText` is the original v1 codec output as a string, retaining its source bytes. `metadata` has `merchant`, `owner`, `status`, `followUpOn`, `nextAction` and `notes`. `CASE_CONFLICT` and `CASE_STORE_BUSY` return HTTP 409 without discarding the browser draft.
 

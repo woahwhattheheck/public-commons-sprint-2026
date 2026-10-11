@@ -11,10 +11,11 @@ Requires Node.js 22 or newer; no dependencies or hosted compute.
 ```bash
 node business/lead-to-paid-work-pipeline-20261010/pipeline.mjs \
   /private/opportunities.json /private/revenue-board \
-  --gmail-captures=/private/gmail-captures.json
+  --gmail-captures=/private/gmail-captures.json \
+  --contact-records=/private/contact-records.json
 ```
 
-Open `/private/revenue-board/index.html`. The same command produces the original decision, workshare, reply and collection files plus the reusable `mailbox-state.json`, `reply-snapshot.json` and `mailbox-coverage.json`. Actual messages, addresses and provider links are private operator inputs and outputs; the public repository contains source only.
+Open `/private/revenue-board/index.html`. The same command produces the original decision, workshare, reply and collection files plus the reusable `mailbox-state.json`, `reply-snapshot.json` and `mailbox-coverage.json`. When `--contact-records` is supplied, `contact-history.json` also retains original reads from the shared email/form contact registry. Accepted web forms appear on this board and suppress a duplicate first introduction without being counted as Gmail SENT or a human reply. Actual messages, addresses and provider links are private operator inputs and outputs; the public repository contains source only.
 
 For the next capture, keep the same case bindings and supply the retained state:
 
@@ -39,7 +40,7 @@ Put original owner authorizations in top-level `communicationAuthority.grants[]`
 | `PROPOSE_WORKSHARE` | Documented mandatory prime requirements, acceptance milestones, fee/cost/margin assessment and owner authority covering proposals. |
 | `FOLLOW_UP` / `REPLY_TO_PARTNER` | Authority can be recorded for these actions; the existing reply queue supplies the relevant original-thread action. First-introduction eligibility remains separate. |
 
-A standing grant uses `issuedBy: "OWNER"`, `kind: "STANDING"`, the original instruction reference and covered actions. It may constrain recipient domains, exact recipients, opportunity IDs, channels or expiration. Existing per-contact `ownerApproved` and `approvalReceipt` fields retain their legacy meaning; they are no longer the only way to record authority.
+A standing grant uses `issuedBy: "OWNER"`, `kind: "STANDING"`, the original instruction reference and covered actions. It may constrain recipient domains, exact recipients, exact official form URLs, opportunity IDs, channels or expiration. A web form uses `communication.channel: "web-form"` and its observed HTTPS `communication.formUrl`; the owner grant must cover that channel. Existing per-contact `ownerApproved` and `approvalReceipt` fields retain their legacy meaning; they are no longer the only way to record authority.
 
 Explicit owner exclusions take precedence. Records explicitly attributed to an agent are advisory, not owner contact restrictions. Unattributed legacy `doNotContact: true` remains an exclusion until its origin is recorded; an explicit `restrictionSource: "AGENT"` identifies an agent-created hold. Existing recipient declines, previous SENT messages and provider delivery failures remain visible in the original reply/preflight workflow.
 
@@ -51,7 +52,7 @@ The case key remains buyer name + solicitation ID + revision. Keep cancelled/rep
 
 Mandatory requirements have stable IDs. Partner records map those IDs to `DOCUMENTED`, `SELF_REPORTED` or `UNKNOWN` with source URLs. `DOCUMENTED` is an operator-entered source pointer, not automatic verification of a certificate or procurement qualification. A qualification contact needs a first-party `partner.sourceUrl` or documentary evidence link; asking the partner to resolve gaps is part of the work.
 
-`communication.partnerName` optionally selects the intended existing partner, and `communication.to` holds the verified recipient list. Explicit `caseId` joins the original reply queue. The case's owner and issuer URL must match the opportunity. This prevents a reply for one buyer from silently being attached to another.
+`communication.partnerName` optionally selects the intended existing partner, and `communication.to` holds the verified recipient list. Optional `communication.contactClaimPaths[]` binds exact existing `tools/sales_first_contact/claims/v1/` record paths to the case; these are reads of the canonical registry, not a second reservation system. Explicit `caseId` joins the original reply queue. The case's owner and issuer URL must match the opportunity. This prevents a reply for one buyer from silently being attached to another.
 
 ## Replies and collection records
 
