@@ -1,11 +1,11 @@
 # VIP Gateway HubSpot Pipeline Intelligence | Nonbounty real buyer engineering
 
-A new independent read-only product demonstration intended to address the buyer's published, specific sales-pipeline intelligence problem. It is not a running CRM integration, a fulfilled contract, a named-customer reference or a fictional benchmark.
+A complete local manager workspace for the buyer's published sales-pipeline problem, composed around the maintained original read-only triage engine. It now includes native HubSpot source capture, retained analysis and manager review, approved task/note creation, receipt reconciliation, browser/CLI operation and private project recovery. See the [operator guide](workspace/README.md) for the runnable product. The engineering workflow has been exercised on explicitly generated development records; customer deployment and conversion outcomes are separate commercial work.
 
 Original first-party buyer: https://www.upwork.com/freelance-jobs/apply/HubSpot-Agent-Automation-Expert-Required_~022105420778671430088/
 Buyer identified on its own public posting: VIP Gateway, UK car leasing. As observed Oct 10, 2026: expert, more than 30 hours/week, over six months, open role, 50+ proposals, no interviews, historically 56 hires and about $9K total spent. The buyer is asking for actual deployed CRM reference projects; source merges are not substituted for that evidence.
 
-## Working implementation
+## Original analysis engine
 
 The original triage.mjs is a self-contained Node.js 22+ tool that reads a previously obtained original HubSpot CRM v3 deals GET JSON response or the same-shaped, customer-authorized export. It implements:
 - Original HubSpot deal ID and explicit real native stage-ID validation, with an operator-defined open/won/lost mapping. Unknown stage IDs and duplicate deals fail closed.
@@ -15,7 +15,7 @@ The original triage.mjs is a self-contained Node.js 22+ tool that reads a previo
 - No outbound network requests, HubSpot API writes, login, client PII free text, external model calls, tool-scheduled checks, GitHub Actions or implicit buy/sell triggers.
 - New-file-only (refuses overwrite) restricted-permission machine-readable JSON artifact.
 
-This source is an engineering starting point, NOT buyer-connected execution. Actual managed deployment additionally needs paid discovery, HubSpot object model/data consent, lead source + contact/activity history, user permissions, native API subscriptions, customer-approved human automation gates, monitored data pipeline and after-acceptance measurement.
+The [retained workspace](workspace/README.md) uses this same engine unchanged. It supplies the source acquisition, durable manager operation, approved native tasks/notes and recoverable handover needed to exercise the complete workflow. Account-specific adoption maps the customer's permitted object model, true lead-source/contact/activity meanings, delivery schedule and agreed success measures.
 
 ## Native private operator input
 
@@ -49,7 +49,7 @@ The report contains only numeric IDs, field-derived segment names, explicit chec
 
 **Milestone B, small real pilot:** one pipeline/team, controlled read-only sync, per-owner alert budgets, notification routing to authorized manager, native URL evidence and supervisor accepts/rejects decisions. Assess coverage and precision against actual manager-reviewed current/historical cases and one pre-agreed 30-day baseline. Avoid selection effects when comparing salespeople.
 
-**Milestone C, optional contracted implementation:** only after buyer accepts pilot, implement consented incremental deal/activity sync, reliable checkpoint/idempotency, access-control policies, dry-run first, approved task updates, backoff and rollback, audit logs, operational dashboard and operator training. No automated customer contact or material deal change without authorized buyer approval.
+**Milestone C, production implementation and handover:** configure the delivered workspace for the agreed account and operating schedule, integrate the customer's activity/history sources and manager routing, define operational responsibilities, measure accepted interventions and train the operators. Native checkpointing, request identity, approval, task/note creation, reconciliation, private export and recovery are already implemented. The present connector captures the permitted account listing and creates approved tasks/notes; incremental activity synchronization, customer communications, material deal updates and native-object undo are separate scoped integrations. The buyer's actual human-approval requirement remains part of those workflows.
 
 Internal cash-model starting point only: 8-12 paid hours discovery, 30-50 paid pilot hours, optional 12-20 weekly support hours at rate verified by existing account owner. Buyer has not disclosed an accepted rate; long job length and prior $9K client spend are not a contract.
 

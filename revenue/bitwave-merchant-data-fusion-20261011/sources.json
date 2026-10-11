@@ -1,0 +1,35 @@
+{
+  "reviewed_at": "2026-10-11T18:51:57.196298+00:00",
+  "sources": [
+    {
+      "title": "Stellar integration",
+      "url": "https://www.bitwave.io/blog/stellar-integration-completes-streamlining-accounting-reporting-for-enterprises",
+      "relevance": "Existing Stellar ingestion and invitation to ecosystem projects."
+    },
+    {
+      "title": "Business contact",
+      "url": "https://www.bitwave.io/contact-us",
+      "relevance": "Published Ask a Question route: info@bitwave.io; exact retrieval metadata in contact-source.json."
+    },
+    {
+      "title": "Loaded data sources",
+      "url": "https://docs.bitwave.io/docs/api-loaded-data-sources",
+      "relevance": "Create/insert contract, required idFieldName, fixed schema and recommended 250-row batches."
+    },
+    {
+      "title": "Native row retrieval",
+      "url": "https://docs.bitwave.io/docs/get-datasource-rows",
+      "relevance": "Native table rows, total count and cursor pagination used for source reconciliation."
+    },
+    {
+      "title": "Original transaction export",
+      "url": "https://docs.bitwave.io/docs/transactions-export-1",
+      "relevance": "Original transactions export independently of subsequent combined transaction IDs."
+    },
+    {
+      "title": "Partner program",
+      "url": "https://www.bitwave.io/accounting-partner-program",
+      "relevance": "Accounting partner network and support model relevant to customer implementation delivery."
+    }
+  ]
+}
