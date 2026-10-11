@@ -178,7 +178,7 @@ class AnalysisWorkspace:
             raise StateError("ANALYSIS_ORIGINAL_RUNTIME_CHECKOUT_REQUIRED")
         return DatasetAcquisition(checkout=self.checkout, session=source["session"], node=self.node)
 
-    def register_source(self, name, session, *, room=None, expected_revision=0):
+    def register_source(self, name, session, *, room=None, expected_revision=0, expected_native=None):
         """Declare a native session locally; the browser never supplies paths."""
         name = _name(name)
         if type(expected_revision) is not int or expected_revision < 0:
@@ -194,6 +194,9 @@ class AnalysisWorkspace:
                       configuration_sha256=report["configurationSha256"], session_id=report["sessionId"],
                       native_status=report["status"], rows=report.get("acquiredRows"),
                       snapshot=report.get("snapshot"), registered_at=_now())
+        if expected_native is not None:
+            from .analysis_native import verify_dataset_source
+            verify_dataset_source(self, source, report, expected_native)
         with self.database._connection() as db:
             db.execute("BEGIN IMMEDIATE")
             existing = db.execute("SELECT * FROM sf_analysis_sources WHERE name=?", (name,)).fetchone()
@@ -201,6 +204,8 @@ class AnalysisWorkspace:
                 old = parse(existing["record"].encode())
                 if all(old.get(key) == source[key] for key in ("session", "room", "session_sha256")):
                     db.commit()
+                    if expected_native is not None:
+                        return {**old, "native_delivery": source["native_delivery"]}
                     return old
             revision = existing["revision"] if existing else 0
             if revision != expected_revision:
@@ -630,10 +635,17 @@ def serve(workspace, *, port=0):
                 body = parse(raw)
                 if not isinstance(body, dict):
                     raise StateError("ANALYSIS_REQUEST_OBJECT_REQUIRED")
+                if url.path == "/api/native-dataset-source":
+                    from .analysis_native import attach_dataset
+                    return self._reply(200, attach_dataset(workspace, body))
                 if len(parts) == 4 and parts[:2] == ["api", "query-exports"] and parts[3] == "cancel":
                     if body:
                         raise StateError("ANALYSIS_EXPORT_CANCEL_FIELDS_INVALID")
                     return self._reply(200, workspace.exports.cancel(parts[2]))
+                if url.path == "/api/object-source":
+                    return self._reply(200, workspace.responses.register(body.get("name"), "object",
+                        session=body.get("session"), destination=body.get("destination"),
+                        format=body.get("format", "json"), expected_revision=body.get("expected_revision", 0)))
                 if url.path == "/api/activate":
                     return self._reply(200, workspace.database.activate(body.get("name"), body.get("version_id"), expected_revision=body.get("expected_revision")))
                 if len(parts) == 4 and parts[:2] == ["api", "changes"] and parts[3] == "select":
@@ -685,11 +697,13 @@ def main():
     source.add_argument("--expected-revision", type=int, default=0)
     response = commands.add_parser("response", help="Register a retained native API response or original typed stream export")
     response.add_argument("--name", required=True)
-    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp"])
+    response.add_argument("--input-kind", required=True, choices=["buyer", "sf31", "stream", "mcp", "object"])
     response.add_argument("--config", help="Original SF88 configuration or SF31 response-file writer options")
     response.add_argument("--result", help="Original SF88 result record or SF31 response-file receipt")
     response.add_argument("--stream-export", help="Original Python StreamDelivery directory")
     response.add_argument("--manifest", help="Original native MCP result .meta.json file")
+    response.add_argument("--object-session", help="Existing COMPLETE native ObjectSession directory")
+    response.add_argument("--object-destination", help="Selected recorded object assembly; defaults to the latest recorded assembly")
     response.add_argument("--format", choices=["json", "csv"], default="json")
     response.add_argument("--expected-revision", type=int, default=0)
     commands.add_parser("status", help="Read saved sources, queries, views and work")
@@ -703,7 +717,8 @@ def main():
             print(_json(workspace.register_source(args.name, args.session, room=args.room, expected_revision=args.expected_revision)))
         elif args.command == "response":
             print(_json(workspace.responses.register(args.name, args.input_kind, config=args.config, result=args.result,
-                stream=args.stream_export, manifest=args.manifest, format=args.format, expected_revision=args.expected_revision)))
+                stream=args.stream_export, manifest=args.manifest, session=args.object_session, destination=args.object_destination,
+                format=args.format, expected_revision=args.expected_revision)))
         else:
             server, control, url = serve(workspace, port=args.port)
             print(_json({"status": "LISTENING", "address": url.split("#", 1)[0], "private_launch": str(control)}), flush=True)
