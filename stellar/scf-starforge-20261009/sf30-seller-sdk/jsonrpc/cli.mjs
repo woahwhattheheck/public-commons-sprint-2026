@@ -18,6 +18,8 @@ const command = parts => parts.map(shell).join(' ');
 const USAGE = `Stellar RPC merchant — original SF30 payments, provider-owned read endpoint
 
   template
+  workspace --dir PRIVATE_DIRECTORY [--create] [--plan PLAN.json] [--port 8447]
+            [--challenge-only | --facilitator HTTPS_URL] (workspace --help for more)
   inspect  --plan PLAN.json
   prepare  --plan PLAN.json --out NEW_PRIVATE_DIRECTORY
   diagnose --plan PLAN.json [--allow-loopback-upstream]
@@ -164,7 +166,7 @@ export async function preparePackage(input, output) {
     paymentNetwork: prepared.plan.payment.network, requiredEnvironment: credentialReferences(prepared.plan) };
 }
 
-async function buyer(options) {
+export async function prepareBuyerReview(options) {
   const folder = resolve(options.package), prepared = prepareProduct(await readPlan(join(folder, 'plan.json')));
   const method = options.method, index = prepared.plan.operations.findIndex(row => row.method === method);
   if (index < 0) throw new TypeError('Choose a method retained in this merchant package');
@@ -180,7 +182,7 @@ async function buyer(options) {
     '--body-file', bodyPath, '--content-type', 'application/json']);
 }
 
-async function serve(plan, options, { env, stdout, stderr }) {
+export async function startRpcCommand(plan, options, { env, stdout, stderr }) {
   if (Boolean(options.facilitator) === Boolean(options['challenge-only']))
     throw new TypeError('Choose an explicit facilitator or --challenge-only');
   if (options['allow-local-facilitator'] && !options.facilitator || options.state && !options.facilitator)
@@ -243,11 +245,15 @@ export async function main(args = process.argv.slice(2), {
   env = process.env, stdout = process.stdout, stderr = process.stderr,
 } = {}) {
   if (!args.length || args.length === 1 && args[0] === '--help') { stdout.write(USAGE + '\n'); return; }
+  if (args[0] === 'workspace') {
+    const { main: workspace } = await import('./workspace/cli.mjs');
+    return workspace(args.slice(1), { env, stdout, stderr });
+  }
   if (args.length === 1 && args[0] === 'template') { const value = template(); stdout.write(json(value)); return value; }
   const { action, options } = parse(args);
-  if (action === 'buyer') { const result = await buyer(options); stdout.write(json(result)); return result; }
+  if (action === 'buyer') { const result = await prepareBuyerReview(options); stdout.write(json(result)); return result; }
   const plan = await readPlan(options.plan);
-  if (action === 'serve') return serve(plan, options, { env, stdout, stderr });
+  if (action === 'serve') return startRpcCommand(plan, options, { env, stdout, stderr });
   let result;
   if (action === 'prepare') result = await preparePackage(plan, options.out);
   else if (action === 'inspect') {
