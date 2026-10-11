@@ -15,6 +15,8 @@ export interface BuyerResponseFileOptions extends BuyerResponseFileIntegrity {
   maxBytes?: number;
   /** Total stream-reading deadline; default 30 seconds. */
   timeoutMs?: number;
+  /** Optional nonsecret owner generation recorded in the original reservation. */
+  reservationTag?: string;
 }
 
 /** Raw metadata for the original object acquisition consumer, not verified claims. */
@@ -39,6 +41,8 @@ export interface SavedBuyerResponse {
 
 export interface PreparedBuyerResponseFile {
   readonly destination: string;
+  /** Original private partial path, available for an owning workflow's journal. */
+  readonly partialPath: string;
   /** Consumes the original successful response body once. Does not change payment metadata. */
   save(result: { response: Response }, options?: { signal?: AbortSignal }): Promise<SavedBuyerResponse>;
   /** Save an already-returned non-HTTP representation through the same reserved writer. */

@@ -61,7 +61,7 @@ function readChunk(reader, signal) {
 /** Reserve a caller-chosen destination BEFORE calling the buyer. The parent
  * must be an existing, trusted directory on a hard-link-capable filesystem. */
 export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 1024 * 1024,
-  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType } = {}) {
+  timeoutMs = 30_000, expectedSha256, expectedBytes, expectedContentType, reservationTag } = {}) {
   if (typeof destination !== 'string' || !isAbsolute(destination) || destination.includes('\0') ||
       /[\\/]$/.test(destination) || ['.', '..'].includes(basename(destination)))
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_DESTINATION', 'absolute file path required');
@@ -69,6 +69,9 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_LIMIT');
   if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2_147_483_647)
     throw new BuyerResponseFileError('BAD_RESPONSE_FILE_TIMEOUT');
+  if (reservationTag !== undefined && (typeof reservationTag !== 'string' ||
+      !/^[A-Za-z0-9._:-]{1,96}$/.test(reservationTag)))
+    throw new BuyerResponseFileError('BAD_RESPONSE_FILE_RESERVATION_TAG');
   const pins = validateResponseFileIntegrity({ expectedSha256, expectedBytes, expectedContentType }, maxBytes);
 
   let finalPath, reservationPath, partialPath, probePath, reservation, file;
@@ -109,7 +112,8 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
     const candidate = join(parent, `.x402-response-${randomUUID()}.partial`);
     file = await open(candidate, 'wx', 0o600);
     partialPath = candidate;
-    await reservation.writeFile(JSON.stringify({ destination: finalPath, partialPath, pid: process.pid }) + '\n');
+    await reservation.writeFile(JSON.stringify({ destination: finalPath, partialPath, pid: process.pid,
+      ...(reservationTag === undefined ? {} : {reservationTag}) }) + '\n');
     await reservation.sync();
     // Discover unsupported hard links before the caller sends a paid request.
     const probe = join(parent, `.x402-link-${randomUUID()}`);
@@ -245,6 +249,9 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
 
   return Object.freeze({
     destination: finalPath,
+    // The owner may journal this original path before consuming a response.
+    // This is a path reference, never a second writer or a publication lease.
+    partialPath,
     save(result, { signal } = {}) {
       if (state !== 'PREPARED')
         return Promise.reject(new BuyerResponseFileError('RESPONSE_FILE_NOT_PREPARED', state));

@@ -1352,6 +1352,64 @@ and private storage. Applications can import
 and `/schedule` subpaths. These expose the original open-publisher, browser
 server and schedule controller; no additional dependency group is required.
 
+### Build a SQLite merchant and retained data product
+
+The original SQLite workbench is installed with the same package. Start from an
+existing database and keep its saved source and configuration on the operator host:
+
+```sh
+starforge sqlite-workbench --database /private/inventory.sqlite \
+  --workspace /private/sqlite-setup --port 0
+```
+
+Open the printed private launch URL. Select source columns, author the original
+named query and typed parameters, preview actual rows, set public merchant terms
+and deliberately public input examples, and export a named release. The exported
+`source.json`, `service.json`, handler bindings and `launch.mjs` run the original
+SQLite merchant. Repeating the same workbench command restores the saved draft
+and completed exports. The database is referenced, not copied.
+
+To sell a reviewed data product with stable pages, use that same exported source:
+
+```sh
+starforge sqlite-publisher serve --workspace /private/sqlite-publications --create \
+  --source /private/sqlite-setup/exports/inventory/source.json \
+  --state /private/inventory-dataset --port 8446
+```
+
+The publisher shares the maintained dataset review browser. Select the fixed query
+and inputs, choose public scalar types and ordering, extract the complete native
+read transaction, inspect the rows, record a review and publish. Exact 64-bit
+identifiers and decimal text stay exact; private columns remain outside the public
+mapping. Subsequent source changes can produce a new candidate while an older
+published version stays available under the original retention policy.
+
+After the first publication, configure the original seller with the merchant's
+actual public payment terms and retained snapshot selection:
+
+```sh
+starforge dataset-refresh configure --state /private/inventory-dataset \
+  --payment /private/inventory-payment.json --origin https://merchant.example \
+  --path /data --snapshot-selection --out /private/inventory-seller.json
+starforge dataset-refresh serve --state /private/inventory-dataset \
+  --seller /private/inventory-seller.json --port 8423 --control-transport loopback
+```
+
+Native payment operation uses the original facilitator options and HTTPS
+merchant deployment. Stop and reopen the publisher without `--create`, adding
+`--seller http://127.0.0.1:8423 --resource https://merchant.example/data`.
+Its Buyer handoff loads that running seller's actual terms and downloads the
+original SF88 configuration pinned to the selected retained version. Use it in
+the existing buyer workspace. Saved plans, candidates, publication reviews and
+buyer files stay in the same publisher workspace across restart.
+
+Applications can import `@tokenjunkielabs/starforge-merchant/seller/sqlite/workbench`
+(`openWorkbench`), `/seller/sqlite/workbench/server` (`startWorkbench`) and
+`/seller/sqlite/publisher` (`openSqlitePublisher`). These exports invoke the
+original engines. The full native value/limit/recovery and seller/buyer instructions
+ship in `source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md`;
+the original authoring guide is beside `sqlite/workbench/server.mjs`.
+
 ### Build and operate a MySQL or MariaDB merchant
 
 The installed MySQL product uses the original native `mysql2` prepared-statement

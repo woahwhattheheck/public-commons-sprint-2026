@@ -240,6 +240,8 @@ function options(select, values) {
 }
 const selectedTenant = () => releases?.tenants?.find(row => row.id === $('release-tenant').value);
 const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('release-slot').value);
+const sourceName = kind => ({ OPENAPI_WORKSPACE: 'API workspace', OPENAPI_SELLER: 'API seller',
+  PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product' }[kind] ?? 'Seller source');
 function releaseReviewValid() {
   return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
 }
@@ -250,7 +252,8 @@ function renderReleases() {
   const tenant = selectedTenant(), firstSlots = !$('release-slot').options.length;
   options($('release-slot'), (tenant?.slots ?? []).map(row => [row.name, row.name + ' · port ' + row.port + (row.serving ? ' · serving' : '')]));
   if (firstSlots) $('release-slot').value = tenant?.slots.find(row => !row.serving)?.name ?? tenant?.slots[0]?.name ?? '';
-  options($('release-package'), (tenant?.packages ?? []).map(name => [name, name]));
+  const sourceTypes = new Map((tenant?.packageSources ?? []).map(source => [source.name, source.kind]));
+  options($('release-package'), (tenant?.packages ?? []).map(name => [name, name + ' · ' + sourceName(sourceTypes.get(name))]));
   const chosen = selectedSlot(), available = catalog?.tenant === tenant?.id && catalog?.slot === chosen?.name;
   $('release-compare').disabled = !managedReady() || !available || !catalog?.releases?.length || chosen?.serving;
   $('release-stage').disabled = !managedReady() || !tenant?.packages.length || chosen?.serving;
@@ -289,11 +292,11 @@ async function loadCatalog(selectId) {
     const value = await api('releases/catalog?' + new URLSearchParams({ tenant, slot }));
     if (version !== catalogVersion) return;
     catalog = value;
-    options($('release-id'), value.releases.length ? value.releases.map(row => [row.id, row.label + ' · ' + row.routes + ' routes']) : [['', 'No staged release']]);
+    options($('release-id'), value.releases.length ? value.releases.map(row => [row.id, row.label + ' · ' + sourceName(row.sourceKind) + ' · ' + row.routes + ' routes']) : [['', 'No staged release']]);
     if (selectId && value.releases.some(row => row.id === selectId)) $('release-id').value = selectId;
     $('release-catalog-note').textContent = value.releases.length ? value.releases.length + ' immutable release' + (value.releases.length === 1 ? '' : 's') + ' · Store generation ' + value.generation +
       ' · Selected ' + (value.selectedReleaseId ?? 'none') + (value.errors.length ? ' · ' + value.errors.length + ' unreadable entries; inspect the original store.' : '') :
-      'This replacement slot has no staged release. Stage a registered saved workspace below.';
+      'This replacement slot has no staged release. Stage a registered seller source below.';
   } catch (error) {
     if (version === catalogVersion) { options($('release-id'), [['', 'Catalog unavailable']]); notify(explain[error.message] ?? 'The original release catalog could not be read. Refresh after restoring its store.', true); }
   } finally { if (version === catalogVersion) { catalogLoading = false; render(); } }
@@ -301,7 +304,7 @@ async function loadCatalog(selectId) {
 function releaseView(release) {
   const view = node('div');
   if (!release) { view.append(node('p', 'No release')); return view; }
-  view.append(node('strong', release.id), node('p', release.publicOrigin + ' · ' + release.mode + ' · port ' + release.runtime.port, 'small'),
+  view.append(node('strong', release.id), node('p', sourceName(release.sourceKind) + ' · ' + release.publicOrigin + ' · ' + release.mode + ' · port ' + release.runtime.port, 'small'),
     node('div', 'Source ' + release.digest, 'digest'));
   for (const route of release.routes) {
     const item = node('div', route.method + ' ' + route.url, 'route');

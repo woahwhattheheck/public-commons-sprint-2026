@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stellar RPC · Merchant workspace</title><link rel="stylesheet" href="/style.css"></head>
+<body><header><div><p class="eyebrow">STELLAR FORGE / MERCHANT</p><h1>Stellar RPC workspace</h1></div>
+<div class="header-meta"><span id="workspace-status">Opening workspace</span><button id="refresh" type="button">Refresh status</button></div></header>
+<div id="notice" role="status" aria-live="polite"></div>
+<main><aside><section><h2>Saved versions</h2><p class="muted">Every save keeps the preceding version.</p><div id="versions"></div>
+<button id="load-latest" type="button">Open latest</button></section>
+<section><h2>Import a plan</h2><p class="muted">Choose an existing public RPC plan. Its original bytes are retained.</p>
+<input id="import-file" type="file" accept=".json,application/json" aria-label="Import an original RPC plan"></section>
+<section><h2>Workspace</h2><code id="directory"></code><p class="muted">Keep this directory when reopening or updating the toolkit.</p></section></aside>
+<div class="content"><section aria-labelledby="editor-heading"><div class="section-heading"><div><h2 id="editor-heading">Merchant plan</h2><p id="editor-meta" class="muted"></p></div>
+<div class="buttons"><button id="download-plan" type="button">Download plan</button><button id="save" type="button" class="primary">Save version</button></div></div>
+<div id="conflict" hidden><p>Another save arrived. Your edits remain in the editor. Open the latest version to compare, or retain these edits as a new version after it.</p>
+<button id="save-next" type="button">Keep my edit as the next version</button></div>
+<form id="plan-form"><fieldset><legend>Merchant and payment</legend><div class="fields">
+<label>Public merchant origin<input id="public-origin" type="url" autocomplete="off" placeholder="https://merchant.example"></label>
+<label>Data network<select id="data-network"><option value="stellar:testnet">Stellar testnet</option><option value="stellar:pubnet">Stellar public network</option></select></label>
+<label>Payment network<select id="payment-network"><option value="stellar:testnet">Stellar testnet</option><option value="stellar:pubnet">Stellar public network</option></select></label>
+<label>Provider URL environment reference<input id="endpoint-env" autocomplete="off" spellcheck="false" placeholder="STELLAR_RPC_URL"></label>
+<label>Asset contract<input id="asset" autocomplete="off" spellcheck="false"></label><label>Merchant recipient<input id="recipient" autocomplete="off" spellcheck="false"></label>
+<label>Payment timeout (seconds)<input id="payment-timeout" type="number" min="1" max="86400" step="1"></label></div>
+<p class="muted">Each product has a positive integer price in the asset’s atomic units. Provider URL and credential values come from the launcher’s private environment.</p></fieldset>
+<fieldset><legend>Selected RPC products</legend><div class="table-wrap"><table><thead><tr><th>Enabled</th><th>RPC method</th><th>Atomic price per request</th></tr></thead><tbody id="products"></tbody></table></div></fieldset>
+<fieldset><legend>Request limits</legend><div id="limits" class="fields"></div></fieldset></form>
+<details id="advanced"><summary>Complete plan JSON · authentication references and advanced settings</summary>
+<p class="muted">Apply JSON to the editor, then save a version. Existing headerEnv, oauth2 and upstreamAvailability declarations are preserved by the form.</p>
+<textarea id="raw-plan" spellcheck="false" rows="14" aria-label="Complete public plan JSON"></textarea><button id="apply-json" type="button">Apply JSON to editor</button></details>
+</section>
+<section aria-labelledby="review-heading"><div class="section-heading"><div><h2 id="review-heading">Review selected version</h2><p class="muted">Original compiler output for the selected saved plan.</p></div><button id="review" type="button">Review saved version</button></div>
+<div id="review-summary"></div><div id="review-products" class="table-wrap"></div>
+<div class="buttons"><button id="prepare" type="button" class="primary">Prepare merchant package</button><button id="diagnose" type="button">Read provider network and health</button>
+<button id="download-review" type="button">Download review</button><button id="download-source" type="button">Download original source</button></div>
+<p class="muted">Provider diagnosis makes the original two reads and saves their observed network and retention range. Reopening a saved result uses the retained record.</p>
+</section>
+<section><div class="section-heading"><div><h2>Compare saved versions</h2><p class="muted">Product selection, payment terms, network, limits and public configuration.</p></div></div>
+<div class="inline-fields"><label>Earlier version<select id="compare-before"></select></label><label>Later version<select id="compare-after"></select></label><button id="compare" type="button">Compare</button></div><div id="comparison"></div></section>
+<section><h2>Prepared merchant packages</h2><p class="muted">Each package retains the original compiler files and is bound to its saved review.</p><div id="packages"></div></section>
+<section><h2>Prepare a buyer request</h2><p class="muted">Select a prepared package for this version, enter the actual method parameters, then retain the original buyer review configuration.</p>
+<div class="fields"><label>Prepared package<select id="buyer-package"></select></label><label>Method<select id="buyer-method"></select></label>
+<label>Stable purchase intent<input id="buyer-intent" autocomplete="off" placeholder="rpc-transaction-review-01"></label></div>
+<label>Params object<textarea id="buyer-body" rows="6" spellcheck="false">{}</textarea></label>
+<div class="buttons"><button id="example" type="button">Use schema example</button><button id="buyer" type="button" class="primary">Prepare buyer review</button></div>
+<p class="muted">Use actual hashes, ledger windows or returned cursors. Continue the saved request in the original buyer workspace with its operator configuration.</p></section>
+<section><div class="section-heading"><div><h2>Merchant operation</h2><p id="runtime-mode" class="muted"></p></div><span id="runtime-state" class="badge"></span></div>
+<label>Reviewed package<select id="runtime-package"></select></label><div class="buttons"><button id="start" type="button" class="primary">Start selected merchant</button><button id="stop" type="button">Drain and stop</button></div>
+<div id="runtime-links" class="buttons"></div><pre id="runtime-detail"></pre>
+<p class="muted">Start performs the original network check. Product pauses and request history use the same retained merchant directories. Reopen this workspace to continue reviewing them.</p></section>
+<section><div class="section-heading"><div><h2>Saved operations</h2><p class="muted">Diagnosis, buyer preparation and merchant starts retain their original operation identity.</p></div></div><div id="activities"></div>
+<button id="older-actions" type="button" hidden>Load earlier operations</button></section>
+</div></main><footer>Private merchant workspace · original Stellar Forge runtime</footer><script type="module" src="/app.mjs"></script></body></html>

@@ -3,7 +3,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, open, stat } from 'node:fs/promises';
 import { isAbsolute, join, resolve } from 'node:path';
-import { runOriginalAccounting } from './reconcile.mjs';
+import { compileAccountingPeriod, runOriginalAccounting } from './reconcile.mjs';
 
 const sha=s=>createHash('sha256').update(s).digest('hex');
 const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -32,6 +32,7 @@ function page(r) {
       table([option],[['nativeAmountAtomic','Native reported atomic total'],['recoveredAmountAtomic','Recovered atomic total'],['officialMatchedAmountAtomic','Official matched atomic total'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+'</section>';
   }).join('');
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'"><title>Merchant Reconciliation</title><style>'+style+optionStyle+'</style></head><body><main><header><div class="kicker">Private owner operations · Stellar x402</div><h1>Merchant settlement reconciliation</h1><div class="muted">Original native SF98 events and explicitly recovered SF31 outcomes joined to original SF86 network-specific RPC proof files. Generated '+esc(r.createdAt)+'</div></header>'+
+  (r.period?'<section class="panel"><h2 style="margin-top:0">Recorded-activity period</h2><p><strong>'+esc(r.period.from)+' inclusive → '+esc(r.period.until)+' exclusive</strong></p><p>Native rows use original settlement capture time; recovered rows use original import time. These are recorded-activity dates, not inferred on-chain payment dates.</p><p>'+r.period.selectedCounts.events+' selected from '+r.period.sourceCounts.events+' captured records; '+r.period.excludedCounts.events+' outside this period. Original verification and transaction reuse examine every captured record before selection. Proof coverage and source hashes describe the complete captured source.</p></section>':'')+
   '<section class="stats"><div class="stat"><strong>'+t.nativeSuccessEvents+'</strong><span>Native seller successes</span></div><div class="stat"><strong>'+(t.recoveredSettlements??0)+'</strong><span>Recovered original settlements</span></div><div class="stat"><strong>'+t.officialTransferMatches+'</strong><span>Official transfer matches</span></div><div class="stat"><strong>'+t.requiringReconciliation+'</strong><span>Require reconciliation</span></div></section>'+
   '<div class="foot"><b>Accounting boundary.</b> The official transfer column follows the original SF86 verifier and accounting engine for each recorded network. Eligible proof must match that network and the original payment option; each event retains its verification scope. A matched transfer for a seller-reported hash does not independently prove buyer entitlement, final accounting recognition, net revenue, tax, fiat conversion, refund status, invoices, or bank settlement. The merchant-supplied USD quote is NOT cash booked. Challenge-only HTTP 402 or 2xx are excluded entirely.</div>'+
   '<h2>Route reconciliation</h2>'+table(routes,[['routeId','Route'],['method','Method'],['nativeSuccessEvents','Native successes'],['recoveredSettlements','Recovered settlements'],['officialTransferMatches','RPC transfer matches'],['missingTransferEvidence','Unmatched'],['webhookAccepted','Webhook accepted'],['verifiedQuotedValueUsd','Owner-quoted USD, verified-tier only']])+
@@ -42,12 +43,16 @@ function page(r) {
   '<p class="muted"><small>No scripts, webfonts, tracking, remote requests, raw wallets, order references or purchaser details. Keep this directory private.</small></p></main></body></html>';
 }
 function argsOf(argv) {
-  if(![8,10].includes(argv.length)) throw new Error('Usage: node cli.mjs --outbox /private/sf98 --proof-dir /private/sf86-results --terms /private/prices.json --out /private/new-accounting-pack [--recovered-dir /private/original-recovered-settlements]');
-  const valid=new Set(['--outbox','--proof-dir','--terms','--out','--recovered-dir']),opts={};
+  if(argv.length<8||argv.length>14||argv.length%2) throw new Error('Usage: node cli.mjs --outbox /private/sf98 --proof-dir /private/sf86-results --terms /private/prices.json --out /private/new-accounting-pack [--recovered-dir /private/original-recovered-settlements] [--period-from 2026-10-01T00:00:00Z --period-until 2026-11-01T00:00:00Z]');
+  const pathKeys=['--outbox','--proof-dir','--terms','--out','--recovered-dir'];
+  const valid=new Set([...pathKeys,'--period-from','--period-until']),opts={};
   for(let i=0;i<argv.length;i+=2){if(!valid.has(argv[i])||opts[argv[i]]!==undefined||!argv[i+1])throw new Error('INVALID_OR_DUPLICATE_CLI_OPTION');opts[argv[i]]=argv[i+1];}
   if(!['--outbox','--proof-dir','--terms','--out'].every(key=>opts[key]))throw new Error('MISSING_REQUIRED_OPTION');
-  for(const v of Object.values(opts)) if(!isAbsolute(v)||resolve(v)!==v||v==='/')throw new Error('ABSOLUTE_NORMALIZED_PATHS_REQUIRED');
-  if(new Set(Object.values(opts)).size!==Object.keys(opts).length)throw new Error('INPUT_OUTPUT_MUST_BE_DISTINCT');
+  const paths=pathKeys.map(key=>opts[key]).filter(value=>value!==undefined);
+  for(const v of paths) if(!isAbsolute(v)||resolve(v)!==v||v==='/')throw new Error('ABSOLUTE_NORMALIZED_PATHS_REQUIRED');
+  if(new Set(paths).size!==paths.length)throw new Error('INPUT_OUTPUT_MUST_BE_DISTINCT');
+  if(opts['--period-from']!==undefined||opts['--period-until']!==undefined)
+    compileAccountingPeriod({from:opts['--period-from'],until:opts['--period-until']});
   for(const key of ['--outbox','--proof-dir','--recovered-dir']){
     const root=opts[key];if(root&&opts['--out'].startsWith(root+'/'))throw new Error('OUTPUT_CANNOT_BE_INSIDE_PRIVATE_INPUTS');
   }
@@ -79,13 +84,15 @@ export async function writeOriginalAccountingPack(result,out){
   ]);
   for(const [name,content] of files)await writePrivate(join(out,name),content);
   const manifest={schema:'stellar-forge.merchant-accounting-manifest.v1',sourceHashes:result.hashes,
+    ...(result.period?{period:result.period}:{}),
     outputs:[...files].map(([name,content])=>({name,sha256:sha(content),bytes:Buffer.byteLength(content)}))};
   await writePrivate(join(out,'manifest.json'),JSON.stringify(manifest,null,2)+'\n');
   return {schema:result.schema,output:out,totals:result.totals,exceptions:result.exceptions.length,manifestSha256:sha(JSON.stringify(manifest,null,2)+'\n')};
 }
 export async function main(argv=process.argv.slice(2)){
   const a=argsOf(argv);
-  const result=await runOriginalAccounting({outboxDir:a['--outbox'],proofDir:a['--proof-dir'],termsFile:a['--terms'],...(a['--recovered-dir']?{recoveredDir:a['--recovered-dir']}:{})});
+  const result=await runOriginalAccounting({outboxDir:a['--outbox'],proofDir:a['--proof-dir'],termsFile:a['--terms'],...(a['--recovered-dir']?{recoveredDir:a['--recovered-dir']}:{}),
+    ...(a['--period-from']?{period:{from:a['--period-from'],until:a['--period-until']}}:{})});
   const output=await writeOriginalAccountingPack(result,a['--out']);
   process.stdout.write(JSON.stringify(output)+'\n');
   return 0;
