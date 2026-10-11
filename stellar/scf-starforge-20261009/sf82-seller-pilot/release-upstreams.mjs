@@ -2,7 +2,7 @@
 import { createHash } from 'node:crypto';
 import { lstat, readFile, open } from 'node:fs/promises';
 import { join, dirname, basename, resolve } from 'node:path';
-import { compileUpstreamBindings, validateUpstreamService } from '../sf30-seller-sdk/upstream.mjs';
+import { compileUpstreamBindings, validateUpstreamService, upstreamCredentialReferences } from '../sf30-seller-sdk/upstream.mjs';
 
 const LIMIT = 1024 * 1024;
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -47,16 +47,11 @@ function inspectBytes(bytes, service, allowLoopback) {
   const input = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   // Validate reference syntax with the ORIGINAL compiler. Staging does not
   // consult process.env or import a handler; actual values resolve at launch.
-  const references = new Set();
-  for (const raw of Object.values(plain(input?.bindings) ? input.bindings : {})) {
-    for (const name of Object.values(plain(raw?.headerEnv) ? raw.headerEnv : {}))
-      if (typeof name === 'string') references.add(name);
-    if (typeof raw?.idempotency?.keyEnv === 'string') references.add(raw.idempotency.keyEnv);
-  }
+  const references = upstreamCredentialReferences(input);
   const compiled = compileUpstreamBindings(input, { allowLoopback,
     // A syntax-only value satisfies both original header and 32-byte key input
     // validation. No operator value is read; no durable operation is opened.
-    env: Object.fromEntries([...references].map(name => [name, '0'.repeat(64)])) });
+    env: Object.fromEntries(references.map(name => [name, '0'.repeat(64)])) });
   validateUpstreamService(service, compiled);
   const bindings = Object.create(null);
   for (const [name, value] of Object.entries(compiled)) {
@@ -71,9 +66,10 @@ function inspectBytes(bytes, service, allowLoopback) {
       maxInFlight: value.maxInFlight, availability: value.availability,
       idempotency: raw.idempotency ?? null,
       cache: raw.cache ?? null,
+      ...(raw.oauth2 === undefined ? {} : { oauth2: raw.oauth2 }),
     };
   }
-  return { bindings, environment: [...references].sort(), credentialValuesChecked: false };
+  return { bindings, environment: references, credentialValuesChecked: false };
 }
 // Let configured operator interfaces display this same original review before
 // staging. This pure reader neither resolves credentials nor creates snapshots.
