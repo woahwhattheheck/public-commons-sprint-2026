@@ -2,7 +2,7 @@
 
 This runner moves an existing native **PBIX or RDL** through a retained Report Server operation. It uses the current Windows identity, streams native files, keeps the original target content, verifies the report returned by the server, and produces a result ZIP that the BI operator can import.
 
-The on-premises Report Server workflow is separate from the cloud Power BI workflow. A PBIP source directory is not a Report Server PBIX. Save a real, compatible native file in the appropriate Microsoft tooling before registering it. Registration checks the existing file's bytes and container or RDL root; it does not establish optimized Desktop compatibility.
+The on-premises Report Server workflow is separate from the cloud Power BI workflow. A PBIP source directory is not a Report Server PBIX. Save a real, compatible native file in the appropriate Microsoft tooling before registering it. Registration checks the existing file's complete bytes, PBIX report members or well-formed RDL XML; it does not establish optimized Desktop compatibility.
 
 ## Existing Windows environment
 
@@ -52,7 +52,7 @@ Extract the operator's job ZIP into a durable working directory. Keep the origin
 | native.sha256 / native.bytes | Exact complete native-file identity |
 | native.embedded | true: the file is next to job.json; false: supply its existing path |
 | target.api_base | Configured portal URL ending in /api/v2.0 |
-| target.report_server_url | Separate configured ReportServer URL-access service root |
+| target.report_server_url | Separate ReportServer rendering root; required only for server-rendered RDL CSV |
 | target.report_path | Absolute catalog path naming one report, such as /Migration/Revenue |
 | parameters | Report parameter values for the default RDL capture |
 | report_server_build / desktop_build | Declared actual native environment versions |
@@ -62,7 +62,7 @@ For example, the portal may be https://reports.example.org/Reports/api/v2.0 whil
 
 Parameters are a JSON object. Strings pass through URL encoding; Boolean values become 1 or 0; null uses the native :isnull=true convention; flat arrays repeat the same parameter. Names are case-sensitive. For locale-sensitive values, provide the exact server-expected string.
 
-A Report job without explicit paginated_exports captures its own RDL as report.csv. A PowerBIReport job captures only explicitly named RDL exports or an operator-supplied Desktop CSV. It never sends a PBIX to the paginated CSV renderer.
+A Report job without explicit paginated_exports captures its own RDL as report.csv when Export or Run is selected. Inspect, Capture, Publish, Reconcile, Rollback, and manual PBIX CSV remain usable without a rendering URL. A PowerBIReport job captures only explicitly named RDL exports or an operator-supplied Desktop CSV. It never sends a PBIX to the paginated CSV renderer.
 
 ## Inspect and choose the intended operation
 
@@ -90,7 +90,7 @@ Run performs:
 .\RUN_REPORT_SERVER.ps1 -Action Run -JobFile 'D:\Migration\job\job.json' -NativeFile 'D:\Migration\Revenue.pbix' -StateDirectory 'D:\Migration\report-server-state' -AllowOverwrite -OutputFile 'D:\Migration\Revenue-evaluation-result.zip'
 ~~~
 
-Use -AllowOverwrite when the job is intended to replace an existing target. The script requires that option because the native multipart endpoint itself has no protective Overwrite switch. For a new catalog path the option is unnecessary.
+Use -AllowOverwrite when the job is intended to replace an existing target. The script requires that option because the native multipart endpoint itself has no protective Overwrite switch. For a new catalog path the option is unnecessary. Its parent catalog folder must already exist.
 
 By default, Run finishes with the original target restored. Add **-KeepPublished** when the intended result is to leave the verified input installed. A job that has entered rollback cannot become a later deployment; create that later deployment as its own job.
 
@@ -112,13 +112,13 @@ Capture a CSV through the actual Desktop workflow, then import that existing fil
 .\RUN_REPORT_SERVER.ps1 -Action Export -Stage published -JobFile 'D:\Migration\job\job.json' -StateDirectory 'D:\Migration\report-server-state' -ManualCsvFile 'D:\Migration\captures\Revenue-desktop.csv'
 ~~~
 
-The result records an operator-supplied Desktop CSV. Its provenance differs from native RDL URL rendering. A manually supplied CSV is not silently reused across before, published, and restored stages.
+The result records an operator-supplied Desktop CSV. Its provenance differs from native RDL URL rendering. Each rendered RDL CSV is bound to its own before/after native content, GUID, and metadata observations, including a related RDL selected for a PBIX job. If that definition changes during rendering, the body is retained as an unverified capture. A manually supplied CSV is not silently reused across before, published, and restored stages.
 
 ## Restart, reconcile, and rollback
 
 Use the exact same job.json and StateDirectory after a process, network, or host interruption. The operation is keyed by job_id plus the original job SHA256, retains its history, and takes an exclusive local lock.
 
-Each server write is checkpointed before it starts. A process interruption can therefore leave publish_pending or rollback_pending even if the server accepted the request. Reconcile performs fresh reads and does not repeat the write:
+Each server write is checkpointed before it starts. A process interruption can therefore leave publish_pending or rollback_pending even if the server accepted the request. Reconcile performs fresh reads and does not repeat the write. Before any write has been recorded, it reports current metadata and the absence of a recorded write for that job:
 
 ~~~powershell
 .\RUN_REPORT_SERVER.ps1 -Action Reconcile -JobFile 'D:\Migration\job\job.json' -StateDirectory 'D:\Migration\report-server-state'
@@ -158,10 +158,10 @@ At the ZIP root, result.json uses **commons-bi-report-server-result/1** and cont
 - state, complete events, original/published observations, and capture stages.
 - files entries with path, bytes, sha256, role, and embedded.
 - Each captured CSV has **role: capture**, report_path, parameters, stage, and capture_kind. The operator imports each embedded capture CSV as a complete dataset.
-- Native files omitted because the input is registered externally have **embedded: false** and an explicit custody statement. The original source and retained server copy remain in the original private Windows operation.
+- Files kept in Windows custody have **embedded: false** and an explicit custody statement. An external native registration keeps all captured native report bytes out of the result ZIP. Any oversized file remains retained in the original private Windows operation.
 - A portable state projection without the external local path or any credential material.
 
-The ZIP also retains the original job, exact runner source, available guide, metadata, embedded native captures, upload/delete responses, and CSV bytes. All listed embedded files have a full streaming SHA256. result.json is the manifest and is not recursively listed as its own hashed file.
+The ZIP retains the original job, exact runner source, available guide, portable state, selected metadata, native captures, upload/delete responses, and CSV bytes. Packing respects the operator's actual 64 MiB ZIP, 64 MiB member, 512 MiB expanded, and 2,000-member limits. It keeps capture CSVs ahead of optional native or diagnostic bodies when choosing embedded files. Every omitted file remains listed by path, size, and SHA256 and stays untouched in Windows custody; an external CSV is a retained reference, not a dataset imported by this ZIP. All listed embedded files have a full streaming SHA256. result.json is the manifest and is not recursively listed as its own hashed file.
 
 Native content and capture paths survive restarts. Identical native observations may reference one verified retained local copy; the runner does not create cross-workspace hard links. Keep the Windows operation until its native-file custody and required recovery period are complete.
 

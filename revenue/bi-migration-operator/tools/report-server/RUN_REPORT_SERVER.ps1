@@ -172,7 +172,8 @@ function Validate-Job($J) {
     $target = Field $J 'target'
     if ($null -eq $target) { throw 'The configured target is missing.' }
     $target.api_base = Check-Endpoint ([string](Field $target 'api_base')) $true
-    $target.report_server_url = Check-Endpoint ([string](Field $target 'report_server_url')) $false
+    $renderUrl = [string](Field $target 'report_server_url' '')
+    $target.report_server_url = if ([string]::IsNullOrWhiteSpace($renderUrl)) { '' } else { Check-Endpoint $renderUrl $false }
     $target.report_path = Check-ReportPath ([string](Field $target 'report_path'))
     $J.parameters = Check-Parameters (Field $J 'parameters')
     $J.report_server_build = [string](Field $J 'report_server_build' '')
@@ -288,6 +289,17 @@ function Open-Native([string]$Path, [string]$Kind, $Expected = $null) {
             if ($s.Read($head,0,4) -ne 4 -or $head[0] -ne 80 -or $head[1] -ne 75 -or $head[2] -ne 3 -or $head[3] -ne 4) {
                 throw 'The .pbix file does not have its native ZIP container signature. A PBIP directory is not a PBIX.'
             }
+            $s.Position = 0
+            $archive = [IO.Compression.ZipArchive]::new($s,[IO.Compression.ZipArchiveMode]::Read,$true)
+            try {
+                $names = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+                $hasReport = $false
+                foreach ($entry in $archive.Entries) {
+                    if (-not $names.Add($entry.FullName)) { throw 'The PBIX contains duplicate native member names.' }
+                    if ($entry.FullName.StartsWith('Report/',[StringComparison]::Ordinal) -and $entry.Length -gt 0) { $hasReport = $true }
+                }
+                if (-not $hasReport) { throw 'The PBIX container has no original Report member.' }
+            } finally { $archive.Dispose() }
         } else {
             $settings = [Xml.XmlReaderSettings]::new()
             $settings.DtdProcessing = [Xml.DtdProcessing]::Prohibit
@@ -299,6 +311,7 @@ function Open-Native([string]$Path, [string]$Kind, $Expected = $null) {
                 if ($reader.LocalName -ne 'Report' -or $reader.NamespaceURI -notmatch '^https?://schemas\.microsoft\.com/sqlserver/reporting/.+/reportdefinition$') {
                     throw 'The .rdl file must contain a native Reporting Services Report definition.'
                 }
+                while ($reader.Read()) { }
             } finally { $reader.Dispose() }
         }
         $s.Position = 0
@@ -343,7 +356,10 @@ function Initialize-Operation {
             events = @(); files = [ordered]@{}; local_native_path = $null; last_error = $null
         }
         $retainedPath = In-Root 'job.json'
-        if (-not [IO.File]::Exists($retainedPath)) { [IO.File]::WriteAllBytes($retainedPath,$jobBytes) }
+        if (-not [IO.File]::Exists($retainedPath)) {
+            $jobStream = [IO.File]::Open($retainedPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+            try { $jobStream.Write($jobBytes,0,$jobBytes.Length); $jobStream.Flush($true) } finally { $jobStream.Dispose() }
+        }
         $retainedJob = Artifact 'job.json' 'original_job'
         if ($retainedJob.sha256 -ne $script:JobHash) { throw 'The job file changed while being retained.' }
         if (-not [IO.File]::Exists((In-Root 'runner/RUN_REPORT_SERVER.ps1'))) { Copy-Exact $PSCommandPath (In-Root 'runner/RUN_REPORT_SERVER.ps1') }
@@ -373,13 +389,14 @@ function New-RecordDirectory([string]$Label) {
     return 'observations/' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssfffffffZ') + '-' + [Guid]::NewGuid().ToString('N').Substring(0,8) + '-' + $Label
 }
 
-function Catalog-Uri([string]$Collection = 'CatalogItems', [string]$Id = '') {
+function Catalog-Uri([string]$Collection = 'CatalogItems', [string]$Id = '', [string]$ReportPath = '') {
     if ($Id) {
         $g = [Guid]::Empty
         if (-not [Guid]::TryParse($Id,[ref]$g)) { throw 'The server did not return a valid catalog item GUID.' }
         return $script:Job.target.api_base + '/' + $Collection + '(' + $g.ToString() + ')'
     }
-    $escaped = (@($script:Job.target.report_path.Replace("'","''").Split('/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
+    if (-not $ReportPath) { $ReportPath = $script:Job.target.report_path }
+    $escaped = (@($ReportPath.Replace("'","''").Split('/') | ForEach-Object { [Uri]::EscapeDataString($_) }) -join '/')
     return $script:Job.target.api_base + '/' + $Collection + "(Path='" + $escaped + "')"
 }
 
@@ -400,13 +417,15 @@ function Http-File([string]$Method, [string]$Uri, [string]$Relative, $Content = 
             throw ('Report Server returned HTTP {0} for {1}. No automatic request retry was made.' -f $status,$Method)
         }
         $output = [IO.File]::Open($tmp,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
-        $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-        $stream.CopyToAsync($output,1048576,$cancel.Token).GetAwaiter().GetResult()
+        if ($null -ne $response.Content) {
+            $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
+            $stream.CopyToAsync($output,1048576,$cancel.Token).GetAwaiter().GetResult()
+        }
         $output.Flush($true); $output.Dispose(); $output = $null
         if ([IO.File]::Exists($destination)) { throw 'An observation file already exists.' }
         [IO.File]::Move($tmp,$destination)
         $etag = if ($null -ne $response.Headers.ETag) { $response.Headers.ETag.ToString() } else { $null }
-        $mime = if ($null -ne $response.Content.Headers.ContentType) { $response.Content.Headers.ContentType.MediaType } else { '' }
+        $mime = if ($null -ne $response.Content -and $null -ne $response.Content.Headers.ContentType) { $response.Content.Headers.ContentType.MediaType } else { '' }
         return [ordered]@{ exists = $true; status = $status; path = $Relative; etag = $etag; content_type = $mime; server = [string]$response.Headers.Server }
     } finally {
         if ($null -ne $output) { $output.Dispose() }
@@ -417,8 +436,10 @@ function Http-File([string]$Method, [string]$Uri, [string]$Relative, $Content = 
     }
 }
 
-function Metadata([string]$Directory) {
-    $response = Http-File 'GET' (Catalog-Uri) ($Directory + '/metadata.json') -AllowMissing
+function Metadata([string]$Directory, [string]$ReportPath = '', [string]$Kind = '') {
+    if (-not $ReportPath) { $ReportPath = $script:Job.target.report_path }
+    if (-not $Kind) { $Kind = $script:Job.native.kind }
+    $response = Http-File 'GET' (Catalog-Uri 'CatalogItems' '' $ReportPath) ($Directory + '/metadata.json') -AllowMissing
     if (-not $response.exists) { return [ordered]@{ exists = $false } }
     [void](Artifact $response.path 'catalog_metadata')
     $meta = Read-Json (In-Root $response.path)
@@ -427,9 +448,9 @@ function Metadata([string]$Directory) {
     if (-not [Guid]::TryParse($id,[ref]$g)) { throw 'Catalog metadata has no valid item ID.' }
     $type = [string](Field $meta 'Type')
     if (-not $type) { $type = ([string](Field $meta '@odata.type')).Replace('#Model.','') }
-    if ($type -ne $script:Job.native.kind) { throw ('The catalog path is occupied by {0}, not the requested native report kind.' -f $type) }
+    if ($type -ne $Kind) { throw ('The catalog path is occupied by {0}, not the requested native report kind.' -f $type) }
     return [ordered]@{
-        exists = $true; id = $g.ToString(); kind = $type; metadata_file = $response.path
+        exists = $true; id = $g.ToString(); kind = $type; requested_path = $ReportPath; metadata_file = $response.path
         etag = $response.etag; modified_date = Field $meta 'ModifiedDate'
         path = Field $meta 'Path'; name = Field $meta 'Name'
     }
@@ -444,16 +465,16 @@ function Same-Metadata($A,$B) {
     return $true
 }
 
-function Observation([string]$Label) {
+function Observation([string]$Label, [string]$ReportPath = '', [string]$Kind = '') {
     $dir = New-RecordDirectory $Label
-    $m = Metadata $dir
+    $m = Metadata $dir $ReportPath $Kind
     if ($m.exists) {
         $collection = if ($m.kind -eq 'PowerBIReport') { 'PowerBIReports' } else { 'Reports' }
         $extension = if ($m.kind -eq 'PowerBIReport') { '.pbix' } else { '.rdl' }
         $relative = $dir + '/content' + $extension
         [void](Http-File 'GET' ((Catalog-Uri $collection $m.id) + '/Content/$value') $relative -Accept 'application/octet-stream')
         $content = Artifact $relative 'native_content'
-        $after = Metadata ($dir + '/after')
+        $after = Metadata ($dir + '/after') $ReportPath $Kind
         if (-not (Same-Metadata $m $after)) { throw 'The catalog item changed while its content was being captured; no target write was made.' }
         $m.content_file = $relative; $m.bytes = $content.bytes; $m.sha256 = $content.sha256
         # Keep one exact local copy of identical native bytes, never hard-link private state.
@@ -544,7 +565,12 @@ function Input-Path {
         Copy-Exact ([IO.Path]::GetFullPath($candidate)) $destination
         $a = Artifact $relative 'native_input'
         if ($a.sha256 -ne $script:Job.native.sha256 -or $a.bytes -ne $script:Job.native.bytes) {
-            throw 'The source changed while being retained; no target write was made.'
+            $rejected = 'input/rejected-' + [Guid]::NewGuid().ToString('N') + '-' + $script:Job.native.file
+            [IO.File]::Move($destination,(In-Root $rejected))
+            $script:State.files.Remove($relative)
+            [void](Artifact $rejected 'rejected_native_input')
+            Event 'source_changed_during_local_retention' ([ordered]@{ rejected_file = $rejected })
+            throw 'The source changed while being retained; its rejected copy is preserved and no target write was made. Supply the exact registered source and invoke Publish again.'
         }
         Save-State
         return $destination
@@ -600,7 +626,11 @@ function Upload-Native([string]$Path, $Expected, [string]$Label, [string]$Existi
 }
 
 function Reconcile-Target {
-    if ($null -eq $script:State.before) { throw 'Capture the original target before reconciling an attempted write.' }
+    if ($null -eq $script:State.before) {
+        $m = Metadata (New-RecordDirectory 'reconcile-without-write')
+        Event 'no_server_write_recorded_for_this_job' $m
+        return
+    }
     $r = Observation 'reconcile'
     $rollback = Last-Attempt 'rollback'
     $publish = Last-Attempt 'publish'
@@ -766,6 +796,9 @@ function Export-Stage([string]$Name) {
     if ($entries.Count -eq 0 -and $script:Job.native.kind -eq 'Report' -and $expected.exists) {
         $entries = @([ordered]@{ report_path = $script:Job.target.report_path; parameters = $script:Job.parameters; file = 'report.csv' })
     }
+    if ($entries.Count -gt 0 -and -not $script:Job.target.report_server_url) {
+        throw 'Server-rendered RDL captures require the existing target.report_server_url service address. Native publish and manual Desktop CSV do not.'
+    }
     $directory = 'captures/' + $Name + '/' + [Guid]::NewGuid().ToString('N')
     $captures = @()
     $set = [ordered]@{ stage = $Name; status = 'capturing'; started_at = Utc-Now; finished_at = $null; files = @(); native_target = $fresh }
@@ -775,13 +808,30 @@ function Export-Stage([string]$Name) {
     foreach ($e in $entries) {
         $index++
         $relative = $directory + '/' + $index.ToString('000') + '-' + $e.file
+        $definitionBefore = Observation ('csv-' + $Name + '-' + $index + '-before') $e.report_path 'Report'
+        if (-not $definitionBefore.exists) { throw 'The explicitly selected paginated report does not exist. No CSV request was sent for that path.' }
         $response = Http-File 'GET' (Export-Uri $e.report_path $e.parameters) $relative -Accept 'text/csv,application/octet-stream;q=0.9'
         if ($response.content_type -match '(?i)(html|xml|json)') {
             [void](Artifact $relative 'unexpected_render_response')
             throw 'The CSV endpoint returned a document or error page instead of CSV; its body is retained.'
         }
-        $f = Artifact $relative 'capture'
+        $probeStream = [IO.File]::OpenRead((In-Root $relative))
+        try {
+            $probeBytes = [byte[]]::new(1024)
+            $probeCount = $probeStream.Read($probeBytes,0,$probeBytes.Length)
+            $probeText = $script:Utf8.GetString($probeBytes,0,$probeCount).TrimStart()
+        } finally { $probeStream.Dispose() }
+        if ($probeText -match '^(?i)(<!doctype\s+html|<html\b)') {
+            [void](Artifact $relative 'unexpected_render_response')
+            throw 'The requested CSV contains an HTML page; its actual response is retained.'
+        }
+        $f = Artifact $relative 'unverified_csv_capture'
         $f.report_path = $e.report_path; $f.parameters = $e.parameters; $f.capture_kind = 'paginated_csv'; $f.stage = $Name
+        $definitionAfter = Observation ('csv-' + $Name + '-' + $index + '-after') $e.report_path 'Report'
+        $f.native_definition = [ordered]@{ before = $definitionBefore; after = $definitionAfter; verified = (Same-Content $definitionBefore $definitionAfter) }
+        if (-not $f.native_definition.verified) { throw 'The selected paginated report definition changed during its CSV request. The unverified CSV and both native observations are retained.' }
+        $f.role = 'capture'
+        if ($e.Contains('null_token')) { $f.null_token = $e.null_token }
         $captures += ,([ordered]@{ file = $f.path; report_path = $e.report_path; parameters = $e.parameters; bytes = $f.bytes; sha256 = $f.sha256; content_type = $response.content_type })
         $set.files = $captures
         Save-State
@@ -849,14 +899,28 @@ function Safe-Error($Record) {
         $external = [string](Field $script:State 'local_native_path' '')
         if ($external) { $text = $text.Replace($external,'<external native file>') }
     }
+    foreach ($supplied in @($NativeFile) + @($ManualCsvFile)) {
+        if ($supplied) {
+            $text = $text.Replace([string]$supplied,'<operator supplied local file>')
+            try { $text = $text.Replace([IO.Path]::GetFullPath($supplied),'<operator supplied local file>') } catch { }
+        }
+    }
     if ($script:Root) { $text = $text.Replace($script:Root,'<operation directory>') }
     if ($script:JobPath) { $text = $text.Replace($script:JobPath,'<original job file>') }
     if ($text.Length -gt 2000) { $text = $text.Substring(0,2000) }
     return $text
 }
 
+function External-Entry($Entry,[string]$Custody) {
+    $copy = [ordered]@{}
+    foreach ($key in $Entry.Keys) { $copy[$key] = $Entry[$key] }
+    $copy.embedded = $false
+    $copy.custody = $Custody
+    return $copy
+}
+
 function Package-Result {
-    # This projection deliberately excludes local_native_path and lock/process data.
+    # Export a portable projection; keep the external path only in local state.json.
     $publicState = [ordered]@{}
     foreach ($key in $script:State.Keys) {
         if ($key -notin @('local_native_path','files')) { $publicState[$key] = $script:State[$key] }
@@ -864,28 +928,73 @@ function Package-Result {
     Write-Json (In-Root 'export/state.json') $publicState
     [void](Artifact 'export/state.json' 'operation_state')
     $files = @(); $retained = @()
+    $maxZipBytes = [long]67108864
+    $maxExpandedBytes = [long]536870912
+    $maxMembers = 2000
     foreach ($entry in @($script:State.files.Values | Sort-Object path)) {
         [void](Verify-Artifact $entry.path)
-        if (-not $script:Job.native.embedded -and $entry.role -in @('native_content','native_input') -and
-            $entry.sha256 -eq $script:Job.native.sha256 -and $entry.bytes -eq $script:Job.native.bytes) {
-            $retained += ,([ordered]@{ path = $entry.path; bytes = $entry.bytes; sha256 = $entry.sha256; role = $entry.role; embedded = $false; custody = 'retained_in_original_private_windows_operation' })
+        $native = $entry.role -in @('native_content','native_input')
+        if ($entry.bytes -gt $maxZipBytes -or ($native -and -not $script:Job.native.embedded)) {
+            $retained += ,(External-Entry $entry 'retained_exact_file_in_original_private_windows_operation')
         } else { $files += ,$entry }
     }
     if (-not $script:Job.native.embedded) {
-        $retained += ,([ordered]@{ path = 'external-native/' + $script:Job.native.file; bytes = $script:Job.native.bytes; sha256 = $script:Job.native.sha256; role = 'native_input'; embedded = $false; custody = 'registered_existing_file_held_by_original_windows_operator' })
+        $retained += ,([ordered]@{
+            path = 'external-native/' + $script:Job.native.file
+            bytes = $script:Job.native.bytes; sha256 = $script:Job.native.sha256
+            role = 'native_input'; embedded = $false
+            custody = 'original_native_registration; verify_existing_file_before_publish'
+        })
     }
     $result = [ordered]@{
         schema = 'commons-bi-report-server-result/1'; job_id = $script:State.job_id; job_sha256 = $script:State.job_sha256
-        state = $script:State.state; created_at = Utc-Now; events = $script:State.events; files = @($files) + @($retained)
-        retained_files = $retained; native_input = $script:Job.native
-        native_input_custody = if ($script:Job.native.embedded) { 'exact_copy_in_operation_and_package' } else { 'registered_existing_file_held_by_original_windows_operator' }
-        before = $script:State.before; published = $script:State.published; export_sets = $script:State.export_sets
+        state = $script:State.state; created_at = Utc-Now; events = $script:State.events; files = @()
+        native_input = $script:Job.native; native_input_custody = ''
+        before = $script:State.before; published = $script:State.published
+        export_sets = $script:State.export_sets; export_history = $script:State.export_history
         report_server_build = $script:Job.report_server_build; desktop_build = $script:Job.desktop_build
+        package_limits = [ordered]@{ zip_bytes = $maxZipBytes; expanded_bytes = $maxExpandedBytes; members = $maxMembers }
         last_error = $script:State.last_error
+    }
+    $mandatory = @('job.json','runner/RUN_REPORT_SERVER.ps1','runner/GUIDE.md','export/state.json')
+    $resultBytes = $null
+    while ($true) {
+        $result.files = @(@($files) + @($retained) | Sort-Object path)
+        $hasInputCopy = @($files | Where-Object {
+            $_.role -in @('native_content','native_input') -and $_.sha256 -eq $script:Job.native.sha256 -and $_.bytes -eq $script:Job.native.bytes
+        }).Count -gt 0
+        $result.native_input_custody = if ($hasInputCopy) {
+            'exact_native_copy_embedded_and_retained_in_windows_operation'
+        } elseif ($script:Job.native.embedded) {
+            'original_job_file_and_any_captured_native_copies_remain_in_windows_custody'
+        } else { 'registered_existing_native_file_and_any_captured_copies_remain_in_windows_custody' }
+        $result.retained_files = $retained
+        $resultBytes = $script:Utf8.GetBytes(($result | ConvertTo-Json -Depth 64) + [Environment]::NewLine)
+        [long]$expanded = $resultBytes.Length
+        [long]$headers = 1048576
+        foreach ($entry in $files) {
+            $expanded += [long]$entry.bytes
+            $headers += 256 + 2 * $script:Utf8.GetByteCount([string]$entry.path)
+        }
+        # Conservative ZIP header and DEFLATE expansion bound; actual bytes are
+        # also checked after the complete streaming archive is closed.
+        $bound = $expanded + $headers + [long]([Math]::Ceiling($expanded / 16384.0) * 5)
+        if ($files.Count + 1 -le $maxMembers -and $expanded -le $maxExpandedBytes -and
+            $resultBytes.Length -le $maxZipBytes -and $bound -le $maxZipBytes) { break }
+        # Retain captures before optional native/diagnostic bytes. Omitted files
+        # keep exact manifest identities and remain untouched in the same state.
+        $ranking = @(@{ Expression = { if ($_.role -in @('native_content','native_input')) { 0 } elseif ($_.role -eq 'capture') { 2 } else { 1 } }; Ascending = $true }, @{ Expression = { $_.bytes }; Descending = $true })
+        $candidate = @($files | Where-Object { $_.path -notin $mandatory } | Sort-Object -Property $ranking | Select-Object -First 1)
+        if ($candidate.Count -eq 0) { throw 'The required job/history manifest exceeds the receiving package limit. The complete original Windows operation remains retained.' }
+        $chosen = $candidate[0]
+        $files = @($files | Where-Object { $_.path -ne $chosen.path })
+        $retained += ,(External-Entry $chosen 'retained_exact_file_in_original_private_windows_operation; excluded_to_fit_receiving_package')
     }
     $resultPath = In-Root 'export/result.json'
     Write-Json $resultPath $result
-    $destination = if ($OutputFile) { [IO.Path]::GetFullPath($OutputFile) } else { Join-Path $script:Root ($script:Job.job_id + '-result-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssfffffffZ') + '.zip') }
+    $destination = if ($OutputFile) { [IO.Path]::GetFullPath($OutputFile) } else {
+        Join-Path $script:Root ($script:Job.job_id + '-result-' + (Get-Date).ToUniversalTime().ToString('yyyyMMddTHHmmssfffffffZ') + '.zip')
+    }
     if ([IO.File]::Exists($destination)) { throw 'The result ZIP already exists; select a new output name to preserve the prior result.' }
     $parent = [IO.Path]::GetDirectoryName($destination)
     if (-not [IO.Directory]::Exists($parent)) { throw 'The result output directory must already exist.' }
@@ -902,7 +1011,9 @@ function Package-Result {
             try { $sourceInput.CopyTo($zs,1048576) } finally { $sourceInput.Dispose(); $zs.Dispose() }
         }
         $zip.Dispose(); $zip = $null
-        $output.Flush($true); $output.Dispose(); $output = $null
+        $output.Flush($true)
+        if ($output.Length -gt $maxZipBytes) { throw 'The completed ZIP exceeds the receiver limit; the original files remain retained for a smaller package.' }
+        $output.Dispose(); $output = $null
         [IO.File]::Move($tmp,$destination)
         $script:ResultZip = $destination
         return $destination
@@ -931,7 +1042,7 @@ try {
             $manifest = [ordered]@{
                 schema = 'commons-bi-report-server-native/1'; file = $name; bytes = $open.bytes; sha256 = $open.sha256
                 kind = $kind; embedded = $false; desktop_build = $DesktopBuild; report_server_build = $ReportServerBuild
-                registered_at = Utc-Now; format_check = 'native_container_or_rdl_root_only'
+                registered_at = Utc-Now; format_check = 'native_zip_report_members_or_complete_rdl_xml'
             }
         } finally { $open.stream.Dispose() }
         if ($OutputFile) {
