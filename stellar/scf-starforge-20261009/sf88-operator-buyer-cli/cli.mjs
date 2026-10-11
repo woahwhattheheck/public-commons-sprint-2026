@@ -32,7 +32,12 @@ async function review(c) {
 }
 async function discover(c) {
   const input = catalog(c.catalog);
-  const result = await new X402BuyerClient({fetchImpl:createPublicHttpsFetch()}).discover(input);
+  // Exact managed-cloud overlay approval is scoped to this unsigned catalog GET.
+  // It never reaches the original SF81 signer or SF82 --execute transport.
+  const {sandboxGatewayIPv4=null, ...originalCatalog} = input;
+  const result = await new X402BuyerClient({
+    fetchImpl:createPublicHttpsFetch({sandboxGatewayIPv4})
+  }).discover(originalCatalog);
   print({
     mode:'ORIGINAL_UNSIGNED_CATALOG', source:result.source,
     sourceEnvelope:result.sourceEnvelope,
