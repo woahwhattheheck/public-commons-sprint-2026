@@ -1,0 +1,60 @@
+{
+  "schema": "stellar-forge.redis-source.v1",
+  "connection": {
+    "host": "127.0.0.1",
+    "port": 6379,
+    "database": 0,
+    "tls": "local-plaintext"
+  },
+  "maxConnections": 4,
+  "maxPending": 16,
+  "connectTimeoutMs": 3000,
+  "idleTimeoutMs": 30000,
+  "startupTimeoutMs": 5000,
+  "queries": {
+    "availability": {
+      "kind": "get",
+      "key": "merchant:availability:catalog",
+      "parameters": {},
+      "columns": ["availability"],
+      "maxRows": 1,
+      "maxBytes": 16384,
+      "timeoutMs": 1000
+    },
+    "catalog": {
+      "kind": "hash",
+      "key": { "prefix": "merchant:catalog:", "parameter": "region" },
+      "parameters": {
+        "region": { "type": "string", "enum": ["north", "south"], "default": "north", "maxLength": 16 }
+      },
+      "fields": { "itemId": "product_id", "title": "name", "priceAtomic": "price_atomic" },
+      "maxRows": 1,
+      "maxBytes": 32768,
+      "timeoutMs": 1000
+    },
+    "leaderboard": {
+      "kind": "sorted-set",
+      "key": "merchant:rankings:daily",
+      "parameters": {
+        "offset": { "type": "integer", "minimum": "0", "maximum": "10000000", "default": "0" }
+      },
+      "offset": "offset",
+      "columns": ["itemId", "score"],
+      "maxRows": 20,
+      "maxBytes": 65536,
+      "timeoutMs": 1500
+    },
+    "events": {
+      "kind": "stream",
+      "key": "merchant:events",
+      "parameters": {
+        "after": { "type": "string", "maxLength": 41, "default": "-" }
+      },
+      "after": "after",
+      "fields": { "eventType": "event_type", "itemId": "product_id", "quantity": "quantity" },
+      "maxRows": 20,
+      "maxBytes": 65536,
+      "timeoutMs": 1500
+    }
+  }
+}

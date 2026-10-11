@@ -123,8 +123,12 @@ async function selectUnlocked(home, id) {
   await atomicJson(join(home, 'active.json'), state);
   return { ...state, changed: true };
 }
-export async function install(bundleInput, homeInput, { expected, activate = false } = {}) {
+export async function install(bundleInput, homeInput, { expected, activate = false, prepareInstalledRelease } = {}) {
+  if (prepareInstalledRelease !== undefined && typeof prepareInstalledRelease !== 'function')
+    throw new TypeError('prepareInstalledRelease must be a function');
   const bundle = await verifyRelease(bundleInput, expected), home = resolve(homeInput);
+  if (Object.hasOwn(bundle.manifest.origin ?? {}, 'runtimeInstallation') && !prepareInstalledRelease)
+    throw new Error('Use starforge installation adopt-runtime to attach this release to its retained runtime');
   if (home === bundle.root || home.startsWith(bundle.root + '/')) throw new Error('Installation must be outside its release bundle');
   await mkdir(home, { recursive: true, mode: 0o700 });
   return withHomeLock(home, async lockedHome => {
@@ -145,6 +149,15 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
         state = 'INSTALLED';
       } catch (error) { await rm(stage, { recursive: true, force: true }); throw error; }
     }
+    // A runtime-aware caller prepares the installed dependency attachment under
+    // this same lock. Selection only follows successful preparation, including
+    // on the first install. Reusing an installed release repeats this idempotent
+    // preparation so an interrupted attachment can finish before activation.
+    if (prepareInstalledRelease) {
+      await prepareInstalledRelease({ home: lockedHome, releaseDirectory: target,
+        releaseId: bundle.id, digest: bundle.manifest.digest });
+      await verifyRelease(target, bundle.manifest.digest);
+    }
     const previous = await activeInfo(lockedHome);
     const selection = activate || !previous ? await selectUnlocked(lockedHome, bundle.id) : previous;
     return { state, home: lockedHome, releaseId: bundle.id, digest: bundle.manifest.digest,
@@ -152,14 +165,34 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
       config: join(lockedHome, 'config'), merchantState: join(lockedHome, 'state') };
   });
 }
-export async function activate(homeInput, id) {
-  const home = await homeInfo(homeInput);
-  return withHomeLock(home, () => selectUnlocked(home, id));
+// Optional selection guards are checked under the same lock used by install/select.
+// Reopening a completed target is idempotent; a newer different selection stays intact.
+function sameSelection(left, right) {
+  return JSON.stringify(left ? [left.releaseId, left.digest, left.previousReleaseId, left.activatedAt] : null) ===
+    JSON.stringify(right ? [right.releaseId, right.digest, right.previousReleaseId, right.activatedAt] : null);
 }
-export async function rollback(homeInput) {
+function selectionChanged() {
+  throw Object.assign(new Error('The active release changed; refresh the managed home before selecting another release'),
+    { code: 'PRODUCT_SELECTION_CHANGED', status: 409 });
+}
+export async function activate(homeInput, id, { expectedActive } = {}) {
+  const home = await homeInfo(homeInput);
+  return withHomeLock(home, async () => {
+    const current = await activeInfo(home);
+    if (expectedActive !== undefined && !sameSelection(current, expectedActive) && current?.releaseId !== id)
+      selectionChanged();
+    return selectUnlocked(home, id);
+  });
+}
+export async function rollback(homeInput, { expectedActive } = {}) {
   const home = await homeInfo(homeInput);
   return withHomeLock(home, async () => {
     const state = await activeInfo(home);
+    if (expectedActive !== undefined && !sameSelection(state, expectedActive)) {
+      if (expectedActive?.previousReleaseId && state?.releaseId === expectedActive.previousReleaseId)
+        return selectUnlocked(home, expectedActive.previousReleaseId);
+      selectionChanged();
+    }
     if (!state?.previousReleaseId) throw new Error('There is no previous release');
     return selectUnlocked(home, state.previousReleaseId);
   });

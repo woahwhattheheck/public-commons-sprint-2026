@@ -219,12 +219,134 @@ finalize or relocate the acquisition. A post-publication reopen failure remains
 attached to the published result. History is available at
 `acquisitions.state().native["recovery"]["history"]`.
 
+## Receive and deliver the original remote file order
+
+The paid-file interface consumes the original
+`stellar-forge.sf101.purchase-handoff.v1` merchant document and the
+[existing receiving model](../../buyer-runbook/PAID_FILES.md). Keep operation
+tickets on `receive_request`; remote file orders use `receive_paid_file`.
+
+On the first workspace call, declare the host's available claim environment
+names with `paid_file_claim_envs=["SF101_CLAIM_TOKEN", "REPORT_CLAIM_TOKEN"]`.
+The default is `SF101_CLAIM_TOKEN`; omit the constructor option on reopening
+to retain the saved list. Token values belong in the selected environment
+variable of the native runtime, not in command JSON, source files or reviews.
+Only the local operator selects the preset, signer, budget limits and names.
+
+```python
+order = acquisitions.receive_paid_file(
+    "/srv/customer/incoming/file-order.json",
+).native
+
+# Present the exact merchant order, price, promised bytes and SHA-256.
+# These one-purchase limits must fit the customer's local preset.
+order_review = acquisitions.review_paid_file(
+    order["id"],
+    expected_revision=order["review"]["revision"] if order["review"] else 0,
+    total_atomic=order["handoff"]["payment"]["amount"],
+    daily_atomic=order["handoff"]["payment"]["amount"],
+    filename="purchased-report.bin",
+    claim_env="SF101_CLAIM_TOKEN",
+).native
+file_buyer = acquisitions.prepare_paid_file(
+    order["id"], review_sha256=order_review["review"]["reviewSha256"],
+).native
+file_draft = acquisitions.save({
+    "schema": "stellar-forge.buyer-runbook.v1",
+    "id": "customer-file-order",
+    "title": "Reviewed customer file",
+    "operations": [{
+        "id": "file-order", "label": "Purchase the reviewed file",
+        "config": file_buyer["configName"], "saveAs": "checkout-response.json",
+    }],
+}).native
+
+# Present the frozen plan, then accept this exact review.
+file_run = acquisitions.initialize(
+    file_draft["id"], expected_revision=file_draft["revision"],
+    review_sha256=file_draft["reviewSha256"],
+).native
+```
+
+One merchant origin/order reference retains one native buyer identity. Receiving
+it again reopens the same order; changed payment/file promises conflict.
+Preparation can be resumed with the same saved review, preserving the original
+keys, policy and spending ledger. The review becomes fixed when setup begins.
+
+Use the existing `execute` method with this acquisition's exact plan hash and
+the original operator terminal. The attempt, checkout response, recovery and
+accounting remain the same original runbook records. Product delivery begins
+after the merchant has granted that order's entitlement:
+
+```python
+import threading
+
+selected = acquisitions.inspect(file_run["id"]).native
+operation = next(row for row in selected["state"]["operations"]
+                 if row["id"] == "file-order")
+if not operation.get("paidFile") or operation["paidFile"].get("error"):
+    raise RuntimeError("Select the original prepared paid-file operation")
+transfer = {
+    "only": operation["id"],
+    "config_sha256": operation["config"]["sha256"],
+    "handoff_sha256": operation["paidFile"]["handoffSha256"],
+}
+cancel = threading.Event()
+try:
+    delivered = acquisitions.retrieve_paid_file(
+        file_run["id"], **transfer, cancel_event=cancel,
+    )
+    print(delivered.native["execution"]["result"])
+except AcquisitionError as error:
+    # Retained native state shows the original partial/cancelled/failed transfer
+    # when available; a failed caller does not imply an absent native result.
+    print(error.result)
+```
+
+A customer control can call `cancel.set()` to pause the owned transfer. Reopen
+with `inspect`, use the same original hashes and a new unset event, then call
+`retrieve_paid_file` again to resume. The native engine checks entitlement,
+ranges, validators and the final digest. An already completed local product
+is verified and reused without HTTP. Transfer actions do not replay purchases.
+The customer's explicit partial-discard action uses
+`reset_paid_file(file_run["id"], **transfer)`.
+
+```python
+acquisitions.download_paid_file(
+    file_run["id"], "file-order", "/srv/customer/exports/purchased-report.bin",
+)
+acquisitions.export_paid_file(
+    order["id"], destination="/srv/customer/exports/original-file-order.json",
+)
+```
+
+Product export reads the original verified descriptor, checks the complete
+bytes/digest across copying and creates a private destination exclusively.
+`download` still exports the checkout response. The handoff export preserves
+the merchant's exact original bytes. Existing destination files are protected.
+
+The existing whole-acquisition recovery includes the received order, every
+original operator and retained transfer artifacts. Capture, source-absent
+verification and original-root restoration preserve their original identity,
+paths and claim environment names. Restore does not execute, retrieve or reset
+a file automatically. The receiving host supplies its own claim token before
+continuing an unfinished network delivery.
+
+The executable example accepts the same eight paid-file command names and
+camelCase command JSON fields as the Node example. SDK methods use snake_case.
+For transfers the JSON fields are `id`, `only`, `configSha256` and
+`handoffSha256`; product downloads take `id`, `operationId` and
+`destination`. Both examples use their original signal-driven cancellation
+and retain native output separately from process errors.
+
 ## Method reference
 
 | Work | Python methods |
 | --- | --- |
 | Select and reopen | `state`, `attach_run` |
 | Original request | `request`, `receive_request`, `review_request`, `prepare_request`, `export_request` |
+| Remote file order | `paid_file`, `receive_paid_file`, `review_paid_file`, `prepare_paid_file`, `export_paid_file` |
+| Entitled product | `retrieve_paid_file`, `reset_paid_file`, `download_paid_file` |
 | Immutable acquisition | `draft`, `save`, `initialize`, `inspect` |
 | Original execution | `execute`, `recover`, `unlock` |
 | Original accounting | `finalize`, `bind_accounting` |

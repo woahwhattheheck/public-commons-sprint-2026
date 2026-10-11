@@ -10,9 +10,22 @@
     <section class="overview" aria-label="Deployment status">
       <div><span class="label">Selected release</span><strong id="selected">—</strong><span id="generation">Loading</span></div>
       <div><span class="label">Running release</span><strong id="running">—</strong><span id="runtime">Checking local seller</span></div>
-      <div><span class="label">Listener</span><strong id="listener">—</strong><span id="mode">—</span><a id="operations-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Open merchant operations</a><a id="availability-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Manage product availability</a></div>
+      <div><span class="label">Listener</span><strong id="listener">—</strong><span id="mode">—</span><a id="operations-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Open merchant operations</a><a id="availability-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Manage product availability</a><a id="explorer-link" target="_blank" rel="noopener" hidden>Open API explorer and customer SDK</a></div>
     </section>
     <div id="notice" role="status" aria-live="polite"></div>
+    <details class="postgres-staging">
+      <summary>Stage a PostgreSQL merchant package</summary>
+      <p>Use the private directory exported by PostgreSQL merchant setup or its original prepare command. The source must already declare its public HTTPS origin.</p>
+      <form id="postgres-stage-form">
+        <label for="postgres-package">Prepared package directory</label><input id="postgres-package" maxlength="4096" required autocomplete="off" spellcheck="false" placeholder="/private/merchant-packages/catalog-v1">
+        <div class="fields"><div><label for="postgres-id">New release ID</label><input id="postgres-id" required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" placeholder="postgres-v1"></div><div><label for="postgres-label">Release label (optional)</label><input id="postgres-label" maxlength="240"></div></div>
+        <div class="fields"><div><label for="postgres-port">Seller port (0 chooses a free port)</label><input id="postgres-port" type="number" min="0" max="65535" value="8423" required></div><div><label for="postgres-facilitator">Facilitator URL (optional)</label><input id="postgres-facilitator" type="url" placeholder="https://facilitator.example" autocomplete="off" spellcheck="false"></div></div>
+        <label class="check-label"><input id="postgres-local-facilitator" type="checkbox">Enable the specified loopback HTTP facilitator</label>
+        <p class="section-note">Without a facilitator this release serves payment challenges. The database stays live; staging and rollback retain configuration. Database credential values stay in the host environment.</p>
+        <div class="actions"><button id="postgres-review" type="submit">Review package</button><button id="postgres-stage" type="button" disabled>Stage reviewed package</button><button id="postgres-fleet-source" type="button" disabled>Download fleet source</button></div>
+      </form>
+      <section id="postgres-package-review" hidden><h3>Prepared PostgreSQL package</h3><p id="postgres-package-origin"></p><div id="postgres-package-contract"></div></section>
+    </details>
     <div class="workspace">
       <aside><h2>Prepared releases</h2><p>Compare route, price and application changes before selecting a release.</p><div id="release-list"></div><p class="help">Prepare a new release with the stage command. Inputs stay on this machine.</p><code id="stage-command"></code></aside>
       <section class="review">
@@ -30,6 +43,40 @@
     <section class="process">
       <div><h2>Seller process</h2><p id="process-description">Start the selected seller release.</p></div>
       <div class="actions"><button id="start">Start selected</button><button id="restart">Restart selected</button><button id="stop">Stop seller</button></div>
+    </section>
+    <section class="facilitator-operations" aria-labelledby="facilitator-title">
+      <div class="section-heading"><h2 id="facilitator-title">Payment facilitator</h2></div>
+      <p id="facilitator-source">Choose a retained release to prepare a provider change.</p>
+      <p id="facilitator-setup">Open this console with <code>--facilitators PROVIDERS_JSON</code> to select your configured providers. Setup and commands are in FACILITATORS.md.</p>
+      <div id="facilitator-form" hidden>
+        <label for="facilitator-provider">Configured provider</label><select id="facilitator-provider"></select>
+        <div class="fields"><div><label for="facilitator-id">New release ID</label><input id="facilitator-id" maxlength="64" autocomplete="off" spellcheck="false"></div><div><label for="facilitator-label">Release label (optional)</label><input id="facilitator-label" maxlength="240" autocomplete="off"></div></div>
+        <button id="facilitator-review">Review provider and native terms</button>
+      </div>
+      <section id="facilitator-review-panel" hidden>
+        <h3 id="facilitator-review-state">Provider review</h3><p id="facilitator-review-description"></p>
+        <div class="table-scroll"><table><thead><tr><th>Retained resource</th><th>Stored payment declarations</th><th>Native provider requirements</th></tr></thead><tbody id="facilitator-payments"></tbody></table></div>
+        <details><summary>Provider capabilities</summary><pre id="facilitator-supported"></pre></details>
+        <div class="actions"><button id="facilitator-stage" class="primary">Stage reviewed release</button><button id="facilitator-download">Download review</button></div>
+      </section>
+    </section>
+    <section class="client-operations" aria-labelledby="client-title">
+      <div class="section-heading"><div><h2 id="client-title">Customer SDK handover</h2><p id="client-owner">Loading the retained customer exports.</p></div><button id="client-refresh">Refresh clients</button></div>
+      <p>Create a client from this console's running seller, or reopen an existing handover. Saved clients remain available after the seller stops.</p>
+      <div class="fields"><div><label for="client-export-id">Customer export ID</label><input id="client-export-id" maxlength="64" pattern="[a-z0-9][a-z0-9_-]{0,63}" placeholder="customer-release-v1" autocomplete="off" spellcheck="false"></div></div>
+      <div class="actions"><button id="client-generate">Generate from running seller</button><button id="client-inspect">Inspect retained client</button></div>
+      <p id="client-notice" role="status" aria-live="polite"></p>
+      <div class="table-scroll"><table><thead><tr><th>Export</th><th>Saved origin / runtime</th><th>Completion</th><th>Files</th><th>Review</th></tr></thead><tbody id="client-list"></tbody></table></div>
+      <div class="actions"><button id="client-first">First page</button><button id="client-next">Next page</button></div>
+      <section id="client-review" hidden>
+        <h3 id="client-review-title">Retained customer client</h3>
+        <dl id="client-identity" class="discovery-fields"></dl>
+        <p id="client-review-description"></p>
+        <div id="client-offers"></div>
+        <div class="table-scroll"><table><thead><tr><th>Original file</th><th>Bytes</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="client-files"></tbody></table></div>
+        <div class="actions"><button id="client-adopt">Adopt these retained files</button><button id="client-package">Download complete client</button><button id="client-download-stop">Stop download</button></div>
+        <p id="client-download-progress" role="status" aria-live="polite"></p>
+      </section>
     </section>
     <section class="cache-operations" aria-labelledby="cache-title">
       <div class="section-heading"><div><h2 id="cache-title">Running source cache</h2><p id="cache-state">Start a release with a shared read policy to inspect its source cache.</p></div><div class="actions"><button id="cache-refresh">Refresh cache</button><button id="cache-invalidate-all">Invalidate all cached routes</button></div></div>

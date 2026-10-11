@@ -16,12 +16,29 @@ const help = `Starforge merchant toolkit
   starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
   starforge doctor [--native] [--feature NAME]
   starforge source
+  starforge installation                     Inspect, install, stage and select a maintained package
+  starforge runtime-profile --help
+  starforge runtime-install --help
+  starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  valyu-merchant                            Configure and operate the native research search merchant
+  valyu-research                            Save queries, operate purchases, compare research and export editions
+  sftp                                      Inspect, capture and resume pinned private report files
+  sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
+  sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
+  provider-operator                          Original external-provider capture, case and terminal workflow
+  provider-workspace                         Retained provider desk, host profiles and complete case recovery
+  runtime-profile                            Select exact dependencies for an original release
+  runtime-install                            Install, resume, run, upgrade and recover a customer runtime
+  runtime-workspace                          Review, install and recover runtimes in a private browser workspace
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
+  chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
+  chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
+  supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -39,8 +56,18 @@ Native commands (arguments pass unchanged to the maintained implementation):
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
+  merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
+  merchant-recovery-remote                  Upload, list, retrieve and restore retained off-host snapshots
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
+  routescan-workspace Operate its saved project through the original local workspace
+  buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
+  buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  tomorrow                                  Plan weather work, review forecasts, recover resources and deliver licensed files
+  tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
+  tenderly-customer                          Receive, recover and export the original simulation purchase
+  tenderly-analysis                          Receive, compare and review completed Tenderly simulations
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
@@ -57,11 +84,15 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sheets-publisher                           Review and publish retained Sheet observations as datasets
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
+  mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
+  redis                                      Inspect, prepare and operate Redis/Valkey read products
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   clickhouse-workspace                       Author, review and operate retained ClickHouse merchants
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
-  openapi-workspace                          Prepare and operate a merchant from its API contract
+  openapi-workspace                          Import an API contract or Postman collection and operate its merchant
+  openapi postman                            Review collections, retain source and create merchant packages
+  openapi weather                            Operate the original OpenWeather customer application
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
@@ -84,6 +115,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce-setup                             Prepare shared operator budgets and merchant requests
   upstream-operation                         Issue, inspect and reconcile merchant operation tickets
   dataset-workspace                          Inspect, preview and operate the retained dataset
+  allium-explorer / allium-workspace          Acquire, review and operate retained Allium data products
   merchant-fleet / merchant-fleet-control     Host, prepare, activate and roll back a merchant fleet
   merchant-fleet-workspace                    Review fleet changes in the private operator browser
   fleet-release                              Stage, compare and operate original releases across a fleet
@@ -91,6 +123,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting / merchant-accounting-workspace  Reconcile original settlement records and review retained ledgers
   merchant-accounting-pricing                Import a saved original pricing report as accounting terms
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
+  merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
+  merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application
   python-workspace                           Author Python sources, run private previews and operate native releases
@@ -101,6 +135,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
+  grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
+  woo-operator                              Review original Stellar transfers and complete selected Woo orders
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),

@@ -12,6 +12,7 @@ dependencies = []
 readme = "README.md"
 
 [project.optional-dependencies]
+workbooks = ["openpyxl==3.1.5"]
 agents = [
   "langchain-core>=1.6.9,<2",
   "langgraph>=1.2.14,<2",
@@ -22,6 +23,8 @@ agents = [
 [project.scripts]
 stellar-forge-buyer = "stellar_forge_buyer.__main__:main"
 stellar-forge-agent = "stellar_forge_buyer.agent_workflow:main"
+stellar-forge-workbook = "stellar_forge_buyer.analysis_workbooks:main"
+stellar-forge-workbook-deliver = "stellar_forge_buyer.workbook_client:main"
 
 [tool.setuptools]
 packages = ["stellar_forge_buyer"]

@@ -1,0 +1,35 @@
+{
+  "schema": "stellar-forge.chainstack-installation.v1",
+  "merchant": "chainstack-stellar",
+  "plan": {
+    "schema": "stellar-forge.stellar-jsonrpc-merchant.v1",
+    "publicOrigin": "https://your-merchant.example",
+    "dataNetwork": "stellar:testnet",
+    "endpointEnv": "STELLAR_RPC_URL",
+    "payment": {
+      "network": "stellar:testnet",
+      "asset": "REPLACE_WITH_ACTUAL_ASSET_CONTRACT",
+      "payTo": "REPLACE_WITH_ACTUAL_MERCHANT_RECIPIENT",
+      "maxTimeoutSeconds": 60
+    },
+    "operations": [
+      { "method": "getTransaction", "amountAtomic": "REPLACE_WITH_YOUR_ATOMIC_PRICE" },
+      { "method": "getEvents", "amountAtomic": "REPLACE_WITH_YOUR_ATOMIC_PRICE" },
+      { "method": "getLedgerEntries", "amountAtomic": "REPLACE_WITH_YOUR_ATOMIC_PRICE" }
+    ],
+    "limits": {
+      "timeoutMs": 10000,
+      "maxResponseBytes": 1048576,
+      "maxInFlight": 8,
+      "maxEventPage": 500,
+      "maxTransactionPage": 200,
+      "maxLedgerKeys": 200,
+      "maxLedgerPage": 200
+    }
+  },
+  "runtime": {
+    "mode": "native",
+    "port": 8423,
+    "facilitator": "https://your-approved-facilitator.example"
+  }
+}

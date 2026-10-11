@@ -14,6 +14,11 @@ workspace and accountant instance. Its thirteen additional tools operate declare
 customer organizations and native tables, retained delivery/capture and repair,
 concurrent-bookkeeping return review, exact file transfer and browser/MCP handover.
 
+The complete [cancellation and refund workflow](./ADJUSTMENTS.md) uses the same
+original adjustment controller, retained verification jobs and workspace lifetime.
+Its nine additional tools carry reviewed requests, native returned amounts and
+exact request/proof downloads through the original close and accountant history.
+
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
 remain in the original buyer, seller and facilitator.
@@ -133,6 +138,63 @@ the same host configuration.
 Supply its existing bearer credential in `MCP_ACCESS_TOKEN`; the listener remains
 on loopback. Existing merchant MCP stdio launchers expose the same registered
 tools. The accounting integration adds no server, dependency or payment adapter.
+
+## Back up and restore the owned accounting operation
+
+The [operator client](./ACCOUNTING-MAINTENANCE-CLIENT.md) prepares, executes and
+reconciles this workflow over the same MCP connection. Add an optional `recovery`
+object inside the declared accounting workspace:
+
+```json
+{
+  "recovery": {
+    "stateRoot": "..",
+    "backupRoot": "../../private-accounting-backups",
+    "passEnv": "STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE",
+    "startPaused": false
+  }
+}
+```
+
+Choose the actual private state root containing the original workspace and inputs.
+Use owner-private directories (0700); the backup catalog must be separate from
+captured sources. Paths resolve relative to the host configuration. Supply the
+passphrase through the named host environment variable, never a tool argument.
+Each workspace has its own catalog. Existing configurations without this object
+keep their ordinary accounting behavior.
+
+Open the alias with `merchant_accounting_open`. All tools below use the prefix
+`merchant_accounting_maintenance_` and require `workspace`:
+
+| Tool suffix | Original operation and required selection |
+| --- | --- |
+| `status` | Read mode, review, backup inventory and retained progress. |
+| `pause` | Drain accepted calls/readers and close owned controllers. |
+| `review` | Review the complete paused source closure. |
+| `backup` | Pin `expectedReviewId`; acknowledge `externalWritersStopped:true`; optional `label`. |
+| `verify` | Select `backupId` and exact `expectedSha256`. |
+| `restore` | Same backup pins plus `externalWritersStopped:true`. |
+| `resume` | Reopen the original complete accounting operation. |
+| `job` | Read retained `jobId` without executing it. |
+| `cancel` | Request cancellation of the selected `jobId`. |
+
+Every mutation requires `actor` (1-160 characters) and a stable UUID `requestId`.
+Its response is `{accepted,job,state}`; follow that job until terminal. Repeating
+the same ID and inputs reconciles a lost reply. Changed inputs require a new ID.
+Stop external source writers before approving backup or restore. Backup rechecks
+the reviewed source; an altered review requires another explicit review.
+
+A stopped host retains jobs and the native recovery marker. Configure
+`startPaused:true` to open maintenance with an absent or incomplete workspace.
+Continue an interrupted restore with the SAME backup and a new request ID.
+Resume succeeds only after the original workspace reopens. Closing MCP waits for
+accepted maintenance work and releases its leases; it retains all original data.
+After resume, retrieve the existing response, close and accountant packet using
+their original IDs and digest. Start a new owned file read after pause.
+
+Status summaries show 25 backups, 10 jobs and 25 sources per kind with exact counts.
+Use `view:backups|jobs|sources`, `offset` and `limit` for pages. Jobs lists cover
+the original latest 50; older retained IDs remain readable with `job`.
 
 ## Complete a recovered-purchase workflow
 
@@ -364,8 +426,9 @@ rejected; keep the same selection on every continued chunk.
 | `export` | `exportId` | Original retained review TAR |
 | `collection` | `collectionId`, `sourceId` | Latest retained original verification result |
 | `pricing` | Exactly one `reviewId` or captured `runId`, `file` | `report` or `terms` |
-| `period` | `closeId`, `file` | `period-close.json`, `review-notes.json`, `archive` |
-| `accountant` | `handoffId`, optional `revisionId`, `file` | A filename from the original packet's file list |
+| `period` | `closeId`, `file` | `period-close.json`, `review-notes.json`, `adjustments.json`, `adjustments.csv`, `adjustments.html`, `archive` |
+| `accountant` | `handoffId`, optional `revisionId`, `file` | A filename from the original packet's file list, including retained adjustment companions |
+| `adjustment` | `adjustmentId`, optional original `jobId`, `file` | `request.json`, or `proof.json` with its completed verification job |
 
 Accountant filenames are `handoff.json`, `accountant.csv`, `review.html`,
 `original-report.json`, `original-manifest.json`, `input-manifest.json`,

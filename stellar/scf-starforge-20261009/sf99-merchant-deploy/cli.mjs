@@ -9,6 +9,7 @@ const HELP = `node cli.mjs generate --plan PRIVATE_HOST.json --out NEW_PRIVATE_D
 node cli.mjs inspect --plan PRIVATE_HOST.json
 node cli.mjs check --bundle PRIVATE_DIRECTORY
 node cli.mjs smoke --bundle PRIVATE_DIRECTORY [--public]
+node cli.mjs container --help
 node cli.mjs maintenance --help
 
 Generate Caddy/systemd for original API sellers, retained SF82 releases with signed
@@ -60,6 +61,7 @@ export async function smoke(bundle, { publicOrigin = false } = {}) {
 
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args[0] === '--help') { console.log(HELP); return 0; }
+  if (args[0] === 'container') return (await import('./container-cli.mjs')).main(args.slice(1));
   if (args[0] === 'maintenance') return (await import('./maintenance-cli.mjs')).main(args.slice(1));
   const [command, ...rest] = args;
   const allowed = { generate: ['--plan','--out'], inspect: ['--plan'], check: ['--bundle'], smoke: ['--bundle','--public'] }[command];
@@ -89,3 +91,4 @@ export async function main(args = process.argv.slice(2)) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   main().then(code => { process.exitCode = code; }).catch(error => { console.error(error.message); process.exitCode = 1; });
+

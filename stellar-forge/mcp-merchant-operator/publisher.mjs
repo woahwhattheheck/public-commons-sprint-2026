@@ -49,13 +49,13 @@ const policy = {
 
 export function publisherTools(tool) {
   return [
-    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/Google Sheets publisher aliases and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
+    tool('merchant_publishers', 'List host-declared retained PostgreSQL/SQLite/MySQL/MongoDB/Google Sheets/SFTP publisher aliases and process ownership. Does not open a workspace, start a timer or query a source.', {}, [], read),
     tool('merchant_publisher_open', 'Open the original retained publisher and its single native scheduler under the original workspace lease. Previously enabled refreshes resume as in the original browser server. An already-open alias returns the same instance.', selected, ['publisher'], { idempotent: true, openWorld: true }),
     tool('merchant_publisher_close', 'Close this exact process-owned publisher instance. Original scheduler stops future intervals, original active work drains or cancels through its existing close method, and the workspace lease is released. Saved policy and operations remain.', { ...selected, instanceId: uuid }, ['publisher', 'instanceId'], { destructive: true }),
     tool('merchant_publisher_status', 'Read native saved plans, extraction runs, events and active progress, with original pagination. Local source paths are omitted; native hashes and identities are unchanged. Open the alias first.', {
       ...selected, limit: page.limit, plansOffset: revision, runsOffset: revision, historyOffset: revision,
     }, ['publisher'], read),
-    tool('merchant_publisher_source', 'Inspect the original configured source hash, approved named source definitions, public projections and parameter schemas. Sheets retains its range/type/formula bindings. Reads the declaration without querying the provider or returning credentials.', selected, ['publisher'], read),
+    tool('merchant_publisher_source', 'Inspect the original configured source hash, approved named source definitions, public projections and parameter schemas. MongoDB retains its collection/pipeline/read concern; Sheets retains its range/type/formula bindings; SFTP retains the pinned host, file path, format, pointers and typed comparisons. Reads the declaration without querying the provider or returning credentials.', selected, ['publisher'], read),
     tool('merchant_publisher_target', 'Read the original versioned seller control schema, current snapshot/revision, retained versions and public resources. Uses only the existing host-bound private control connection.', selected, ['publisher'], read),
     tool('merchant_publisher_plan_save', 'Save an original immutable extraction plan using the inspected sourceHash, approved query and source-specific input (empty for Sheets), explicit public column mapping and extraction limits/order. The original driver retains and validates its own source. After a lost reply inspect native plans before saving again.', { ...selected, plan: planSchema }, ['publisher', 'plan']),
     tool('merchant_publisher_extract', 'Start the original read-only extraction with an explicit native run UUID and exact saved plan digest. Returns immediately; inspect this same run to follow progress. Repeating the same UUID/plan returns its retained run without another query.', {
@@ -175,8 +175,10 @@ async function originalFactory(kind) {
   if (kind === 'postgres') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs')).openPostgresPublisher;
   if (kind === 'sqlite') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/model.mjs')).openSqlitePublisher;
   if (kind === 'mysql') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/model.mjs')).openMysqlPublisher;
+  if (kind === 'mongodb') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/publisher/model.mjs')).openMongoPublisher;
   if (kind === 'sheets') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sheets/publisher/model.mjs')).openSheetsPublisher;
-  throw failure('PUBLISHER_KIND_INVALID', 'Choose a host-declared PostgreSQL, SQLite, MySQL or Google Sheets publisher.');
+  if (kind === 'sftp') return (await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/sftp/publisher/model.mjs')).openSftpPublisher;
+  throw failure('PUBLISHER_KIND_INVALID', 'Choose a host-declared PostgreSQL, SQLite, MySQL, MongoDB, Google Sheets or SFTP publisher.');
 }
 
 export class MerchantPublisher {
