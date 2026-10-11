@@ -193,6 +193,41 @@ def _read_source(input_kind, paths, format, checkout, node, cache_dir):
         context = {"nativeKind": "SF31_RESPONSE_FILE", "responseFileStatus": saved.get("status"),
                    "transportComplete": saved.get("status") == "SAVED", "paymentStatus": None,
                    "responseError": saved.get("error")}
+    elif input_kind == "object":
+        if checkout is None:
+            raise StateError("ANALYSIS_ORIGINAL_RUNTIME_CHECKOUT_REQUIRED")
+        definition, definition_raw = take("object_session", 131072)
+        if (not isinstance(definition, dict) or type(definition.get("bytes")) is not int
+                or not 0 <= definition["bytes"] <= _MAX_SOURCE):
+            raise StateError("RESPONSE_SOURCE_TOO_LARGE")
+        from .objects import ObjectBuyer
+        # delivery() performs the original native inspection itself. It only
+        # selects a recorded assembly; it cannot acquire or assemble an object.
+        session = ObjectBuyer(checkout=checkout, node=node).open(paths["session"], inspect=False)
+        file = session.delivery(paths.get("destination"))
+        native = file.record["report"]
+        if (any(definition.get(key) != native.get(key) for key in
+                ("sessionId", "configurationSha256", "bytes", "expectedSnapshot", "selection"))
+                or definition.get("deliveryMode", "chunks") != native.get("deliveryMode", "chunks")):
+            raise StateError("RESPONSE_OBJECT_SESSION_CHANGED")
+        receipt_path = Path(paths["session"]) / "assemblies" / (digest(str(file.path).encode()) + ".json")
+        receipt_input, receipt_raw = _input(receipt_path, "object_assembly", 8192)
+        receipt = parse(receipt_raw)
+        if (not isinstance(receipt, dict) or not file.receipt_recorded
+                or any(file.assembly.get(key) != value for key, value in receipt.items())):
+            raise StateError("RESPONSE_OBJECT_ASSEMBLY_CHANGED")
+        inputs.append(receipt_input)
+        chunks = session.last_report.chunks
+        context = {"nativeKind": "SF88_OBJECT_DELIVERY", "sessionId": file.session_id,
+                   "configurationSha256": native["configurationSha256"],
+                   "intentId": native.get("sourceIntentId"), "nativeStatus": native["status"],
+                   "responseFileStatus": "SAVED", "transportComplete": True,
+                   "snapshot": native["expectedSnapshot"], "deliveryMode": native.get("deliveryMode", "chunks"),
+                   "objectSelection": native.get("selection"), "chunkCount": native["chunkCount"],
+                   "chunkManifestSha256": receipt["chunkManifestSha256"],
+                   "assemblyReceiptSha256": digest(receipt_raw),
+                   "contentType": chunks[0].get("contentType") if chunks else native.get("expectedContentType"),
+                   "endpoint": _endpoint(native.get("sourceUrl"))}
     elif input_kind == "mcp":
         manifest, manifest_raw = take("manifest", 524288)
         if checkout is None:
@@ -225,7 +260,7 @@ def _read_source(input_kind, paths, format, checkout, node, cache_dir):
         raise StateError("RESPONSE_SELECT_JSON_OR_CSV")
     saved = file.delivery
     context.update(sourceBytes=saved.get("bytes"), sourceSha256=saved.get("sha256"),
-                   contentType=saved.get("contentType"))
+                   contentType=saved.get("contentType") or context.get("contentType"))
     return file, None, format, inputs, context
 
 
@@ -524,7 +559,7 @@ class AnalysisResponses:
         return open_source(source, checkout=self.checkout, node=self.node, cache_dir=self.database.directory / "response-cache")
 
     def register(self, name, input_kind, *, config=None, result=None, stream=None, manifest=None,
-                 format="json", expected_revision=0):
+                 session=None, destination=None, format="json", expected_revision=0):
         if not isinstance(name, str) or not re.fullmatch(r"[a-zA-Z][a-zA-Z0-9_-]{0,63}", name):
             raise StateError("ANALYSIS_NAME_INVALID")
         if type(expected_revision) is not int or expected_revision < 0:
@@ -532,6 +567,13 @@ class AnalysisResponses:
         if input_kind == "stream":
             directory = private_directory(Path(stream), create=False)
             paths = {"stream": str(directory), "manifest": str(directory / "manifest.json"), "request": str(directory / "source.json")}
+        elif input_kind == "object":
+            if not session:
+                raise StateError("RESPONSE_OBJECT_SESSION_REQUIRED")
+            directory = private_directory(Path(session).expanduser().absolute(), create=False)
+            paths = {"session": str(directory), "object_session": str(directory / "session.json")}
+            if destination is not None:
+                paths["destination"] = str(Path(destination).expanduser().absolute())
         elif input_kind == "mcp":
             if not manifest:
                 raise StateError("RESPONSE_MCP_MANIFEST_REQUIRED")
@@ -547,6 +589,10 @@ class AnalysisResponses:
         with opened.file.open():
             pass
         opened.check_inputs()
+        if input_kind == "object":
+            # Pin the chosen recorded destination, including when the caller
+            # selected the latest assembly. Later assemblies cannot change it.
+            source["paths"]["destination"] = str(opened.file.path)
         source.update(format=opened.format, source_sha256=opened.sha256, identity=opened.identity,
                       native_status=opened.context.get("nativeStatus") or opened.context.get("responseFileStatus"),
                       registered_at=_now())

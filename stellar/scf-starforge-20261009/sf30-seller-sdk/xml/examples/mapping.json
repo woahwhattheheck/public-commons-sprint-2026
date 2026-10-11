@@ -1,0 +1,86 @@
+{
+  "schema": "stellar-forge.xml-mapping.v1",
+  "name": "Fictional inventory XML",
+  "recordPath": [
+    "{urn:inventory}inventory",
+    "{urn:inventory}item"
+  ],
+  "columns": [
+    {
+      "name": "sku",
+      "path": [],
+      "attribute": "sku",
+      "type": "string"
+    },
+    {
+      "name": "title",
+      "path": [
+        "{urn:inventory}title"
+      ],
+      "type": "string",
+      "trim": true
+    },
+    {
+      "name": "units",
+      "path": [
+        "{urn:inventory}units"
+      ],
+      "type": "integer",
+      "nullable": true,
+      "nil": "xsi"
+    },
+    {
+      "name": "active",
+      "path": [
+        "{urn:inventory}active"
+      ],
+      "type": "boolean"
+    },
+    {
+      "name": "price",
+      "path": [
+        "{urn:inventory}price"
+      ],
+      "type": "string"
+    },
+    {
+      "name": "tags",
+      "path": [
+        "{urn:inventory}tag"
+      ],
+      "type": "string",
+      "mode": "json"
+    },
+    {
+      "name": "note",
+      "path": [
+        "{urn:inventory}note"
+      ],
+      "type": "string",
+      "text": "descendant"
+    },
+    {
+      "name": "source",
+      "path": [
+        "{urn:inventory}absent"
+      ],
+      "type": "string",
+      "missing": "default",
+      "default": "inventory"
+    }
+  ],
+  "keys": [
+    "sku"
+  ],
+  "filters": [
+    "active",
+    "sku"
+  ],
+  "ranges": [
+    "units"
+  ],
+  "sorts": [
+    "units",
+    "sku"
+  ]
+}
