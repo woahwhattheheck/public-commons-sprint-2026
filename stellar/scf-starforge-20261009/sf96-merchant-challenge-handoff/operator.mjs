@@ -100,20 +100,21 @@ export async function observe(args) {
 /** Prepare a new private pilot; this performs no HTTP, approval, signing or payment. */
 export async function prepare(args, {environment = process.env} = {}) {
   const workspaceFlags = ['--actor','--service','--payer','--python','--secret-env',
-    '--total-atomic','--daily-atomic','--signer-provider','--rpc'];
+    '--total-atomic','--daily-atomic','--signer-provider','--rpc','--https-proxy'];
   const opt = flags(args, ['--capture','--handoff','--offer-index','--intent-id','--max-atomic',
-    '--dir','--max-response-bytes','--response-timeout-ms', ...workspaceFlags]);
+    '--headers-file','--dir','--max-response-bytes','--response-timeout-ms', ...workspaceFlags]);
   required(opt, ['--dir','--actor','--service','--payer','--python']);
   need(opt.has('--capture') !== opt.has('--handoff'), 'PILOT_ONE_SOURCE_REQUIRED');
   const directory = path(opt.get('--dir'));
   await privateDirectory(dirname(directory));
-  let source, selection;
+  let source, selection, headersSource;
   if (opt.has('--handoff')) {
-    need(!['--offer-index','--intent-id','--max-atomic'].some(key => opt.has(key)),
+    need(!['--offer-index','--intent-id','--max-atomic','--headers-file'].some(key => opt.has(key)),
       'PILOT_EXISTING_HANDOFF_SELECTION_IS_FIXED');
     const original = path(opt.get('--handoff'));
-    await verifyHandoff(original);
+    const verified = await verifyHandoff(original);
     source = join(original, 'original-capture.json');
+    if (verified.sourceAcquisition) headersSource = join(original, 'original-response.headers');
     selection = (await jsonFile(join(original, 'selection.json'))).value;
   } else {
     required(opt, ['--offer-index','--intent-id','--max-atomic']);
@@ -121,11 +122,14 @@ export async function prepare(args, {environment = process.env} = {}) {
     need(/^(0|[1-9][0-9]*)$/.test(index) && Number.isSafeInteger(Number(index)),
       'PILOT_EXPLICIT_OFFER_INDEX_REQUIRED');
     source = path(opt.get('--capture'));
+    if (opt.has('--headers-file')) headersSource = path(opt.get('--headers-file'));
     selection = {offerIndex:Number(index), intentId:opt.get('--intent-id'), maxAtomic:opt.get('--max-atomic')};
   }
   // Derive from the original bytes before creating any operator state.
   const raw = await readBytes(source, 262144, false);
-  const derived = derive(raw, {index:selection.offerIndex, intentId:selection.intentId, maxAtomic:selection.maxAtomic});
+  const originalHeaders = headersSource === undefined ? undefined : await readBytes(headersSource, 65536, false);
+  const derived = derive(raw, {index:selection.offerIndex, intentId:selection.intentId,
+    maxAtomic:selection.maxAtomic, originalHeaders});
   need(derived.config.operation.expect.network === 'stellar:testnet', 'PILOT_TESTNET_REQUIRED');
   const maximum = opt.has('--max-response-bytes') ? Number(opt.get('--max-response-bytes')) : 64 * 1024 * 1024;
   const timeout = opt.has('--response-timeout-ms') ? Number(opt.get('--response-timeout-ms')) : 30000;
@@ -139,9 +143,12 @@ export async function prepare(args, {environment = process.env} = {}) {
     // A private immutable source snapshot makes the result independent of the caller's path.
     const capturePath = join(directory, 'intake-capture.json');
     await writeNew(capturePath, raw);
+    const headersPath = originalHeaders === undefined ? undefined : join(directory, 'intake-response.headers');
+    if (headersPath) await writeNew(headersPath, originalHeaders);
     const handoff = await createHandoff({capturePath, outDir:join(directory, 'handoff'),
-      index:selection.offerIndex, intentId:selection.intentId, maxAtomic:selection.maxAtomic});
+      index:selection.offerIndex, intentId:selection.intentId, maxAtomic:selection.maxAtomic, headersPath});
     await unlink(capturePath); // The original handoff now owns these exact bytes.
+    if (headersPath) await unlink(headersPath);
     await mkdir(join(directory, 'delivery'), {mode:0o700});
     const review = {...derived.config, responseFile:{destination:join(directory, 'delivery', 'response.bin'),
       maxBytes:maximum, timeoutMs:timeout}};
@@ -206,10 +213,10 @@ function view({directory, manifest, selected, job}) {
   return {schema:SCHEMA, directory, intentId:manifest.intentId,
     source:{captureSha256:manifest.originalCaptureSha256, selectedOfferSha256:manifest.selectedOfferSha256,
       capturedAt:selected.originalCaptureAtUtc, offerIndex:selected.offerIndex,
-      captureSource:selected.originalCaptureProvenance?.source ?? 'original-sf85-https-capture',
-      importedAt:selected.originalCaptureProvenance?.importedAtUtc ?? null,
-      sourceHeaderSha256:selected.originalCaptureProvenance?.sourceHeaderSha256 ?? null,
-      requestMethodSource:selected.originalCaptureProvenance?.requestMethodSource ?? 'original-request',
+      captureSource:selected.sourceAcquisition?.method ?? 'original-sf85-https-capture',
+      importedAt:selected.sourceAcquisition?.importedAtUtc ?? null,
+      sourceHeaderSha256:selected.sourceAcquisition?.sourceHeaderSha256 ?? null,
+      requestMethodSource:selected.sourceAcquisition?.requestMethodSource ?? 'original-request',
       quotedAtomic:selected.quotedAtomic, maxAtomic:selected.maxAtomic,
       originalMethod:selected.originalMethod, originalResourceUrl:selected.originalResourceUrl},
     // The original result includes distinct HTTP, settlement, reconciliation and file outcomes.

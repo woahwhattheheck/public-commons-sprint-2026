@@ -50,26 +50,63 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
   --review --config /private/scf-pilots/handoffs/review-001/buyer-review.json
 ```
 
+### Use the original operator-header acquisition path
+
+The original [SF85 header importer](../sf85-live-402-capture/HEADER_IMPORT.md)
+is supported directly. Pass the **same original header file** with
+`--headers-file`; the handoff parses it again through SF85, verifies its exact
+hash, byte count, prelude count, HTTP status and challenge headers against the
+imported capture, then retains both files unchanged in the private bundle.
+
+For an authorized public endpoint reached through the operator's configured
+HTTPS proxy, curl's `--suppress-connect-headers` records only the origin response
+headers. This matters for proxies whose successful CONNECT response is `200 OK`
+rather than `200 Connection established`. TLS verification remains enabled;
+there is no redirect following or signing. Keep the actual URL and method with
+the acquisition record.
+
+```sh
+curl --globoff --silent --show-error --suppress-connect-headers --max-time 8 \
+  --request GET --dump-header /private/scf-pilots/captures/merchant.headers \
+  --output /dev/null 'https://YOUR_REAL_APPROVED_SELLER/PATH'
+node stellar/scf-starforge-20261009/sf85-live-402-capture/import-headers.mjs \
+  --url 'https://YOUR_REAL_APPROVED_SELLER/PATH' \
+  --allow-origin 'https://YOUR_REAL_APPROVED_SELLER' --method GET \
+  --headers-file /private/scf-pilots/captures/merchant.headers \
+  --out /private/scf-pilots/captures/imported.json
+node stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/handoff.mjs \
+  --capture /private/scf-pilots/captures/imported.json \
+  --headers-file /private/scf-pilots/captures/merchant.headers \
+  --offer-index 0 --intent-id merchant-import-review-001 \
+  --max-atomic 1000 --out /private/scf-pilots/handoffs/import-review-001
+```
+
+Choose the actual option and review ceiling from the original inspected offer;
+the values above describe the command shape. Continue with the same `--verify`
+and SF88 `--review` commands. Imports require their original headers. A direct
+SF85 capture retains its existing command and bundle format and does not take
+`--headers-file`.
+
+For imported sources, `originalCaptureAtUtc` stays `null`. The selection and
+human review separately show the recorded import time, original header hash,
+and operator-declared request method. No HTTP capture time or TLS result is
+inferred from an imported file. Verification re-parses the retained headers and
+re-derives their original selected offer; retaining a hash alone is insufficient.
+
 ## Source-bound deliverables
 
 | Private file | Purpose |
 | --- | --- |
 | `original-capture.json` | **Exact bytes**, unmodified, of original SF85 operator capture. |
+| `original-response.headers` | For imported captures: **exact original header-file bytes**, required and checked through the original SF85 parser. |
 | `buyer-review.json` | Original SF88-compatible operator review draft with chosen intent, URL, method and complete selected exact Stellar terms. No operator, signer or authorization. |
 | `selection.json` | Original capture SHA-256, raw encoded challenge SHA-256, original accepted-offer SHA-256, quote/cap, exact resource URL and selected alternative. |
 | `review.txt` | Human-readable handoff card, including instructions for the unchanged SF88 reviewer. |
-| `manifest.json` | SHA-256 and byte counts for all four files. |
+| `manifest.json` | SHA-256 and byte counts for every retained file. |
 
-`--verify` re-reads the persisted original capture, reruns the **real SF84 inspector**, checks all four files and derives the same **real SF88 validated** operation. It never trusts the manifest alone and will reject changes to the capture, selected index, terms, budget, config or handoff card. The hashes are locally computed change detection, **not source authentication or signatures**. Compare the printed source SHA to your independently retained operator original if custody matters.
+`--verify` re-reads the persisted original capture, reruns the **real SF84 inspector**, checks every retained file and derives the same **real SF88 validated** operation. It never trusts the manifest alone and will reject changes to the capture, selected index, terms, budget, config or handoff card. The hashes are locally computed change detection, **not source authentication or signatures**. Compare the printed source SHA to your independently retained operator original if custody matters.
 
 The source must be an SF85-shaped, actual 402 GET or HEAD capture; a non-402, missing/duplicate/ambiguous x402 challenge or malformed MPP companion is refused. The selected option must be native `exact` on `stellar:testnet` or `stellar:pubnet`, with source-provided asset, recipient, integer amount and timeout. The captured merchant URL must match the advertised HTTPS resource origin and path (and any declared query). A payment flow other than supported `authorization` is rejected; nothing is silently coerced. Source classification cannot prove merchant identity, customer consent or onchain settlement.
-
-The original [SF85 header importer](../sf85-live-402-capture/HEADER_IMPORT.md)
-is also supported. Its exact exported-header source shape, original header
-digest/byte count, import time and operator-declared method are retained.
-`collectedAtUtc:null` remains unknown; import time never becomes response time.
-The original HTTPS capture and previously created handoff bundles retain their
-existing representation and verification behavior.
 
 ## Transition to an authorized paid pilot
 
