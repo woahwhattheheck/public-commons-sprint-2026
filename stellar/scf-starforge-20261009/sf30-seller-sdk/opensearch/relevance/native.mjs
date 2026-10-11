@@ -8,7 +8,7 @@ import { NativeInteger, OpenSearchSourceError, fail, nativeJSON, portableJSON,
 import { validateRelevanceSuite, describeRelevanceMetrics } from './validation.mjs';
 export { validateRelevanceSuite, describeRelevanceMetrics };
 
-const MAX_NATIVE_RESPONSE = 33554432;
+const MAX_NATIVE_RESPONSE = 33554432, MAX_NATIVE_REQUEST = 33554432;
 const identity = hit => JSON.stringify([hit._index, hit._id]);
 const finite = value => typeof value === 'number' && Number.isFinite(value);
 const issue = error => ({ code: typeof error?.code === 'string' ? error.code : 'OPENSEARCH_RELEVANCE_FAILED',
@@ -139,10 +139,18 @@ export async function evaluateOpenSearchRankings(input, { env = process.env, sig
           abort(signal);
           const query = variant.compiled, sort = openSearchSort(query);
           const sourceIndices = Object.keys(inspection.projections[variant.internalName]).sort();
-          const windows = {}, requests = [];
-          for (const row of suite.cases) {
+          const windows = {}, requests = suite.cases.map(row => ({
+            id: row.id, request: { query: bindOpenSearchQuery(query, row.input),
+              pit: { id: group.pitId, keep_alive: keepAlive }, sort, timeout: query.timeoutMs + 'ms' },
+            ratings: row.ratings, summary_fields: query.fields }));
+          const packet = () => ({ requests, metric: suite.metric, max_concurrent_searches: 1 });
+          // Check the exact expanded request, including its owned PIT, before
+          // any strict-window searches. Saved case collections may be broad.
+          if (Buffer.byteLength(nativeJSON(packet())) > MAX_NATIVE_REQUEST)
+            fail('OPENSEARCH_RELEVANCE_REQUEST_TOO_LARGE');
+          for (const [caseIndex, row] of suite.cases.entries()) {
             abort(signal);
-            const bodyQuery = bindOpenSearchQuery(query, row.input);
+            const bodyQuery = requests[caseIndex].request.query;
             let window;
             try {
               const page = await timed(signal, query.timeoutMs, (options, deadline) => wire('POST',
@@ -157,16 +165,13 @@ export async function evaluateOpenSearchRankings(input, { env = process.env, sig
               window = { state: 'FAILED', capturedAt: new Date().toISOString(), error: issue(error) };
             }
             windows[row.id] = window;
-            requests.push({ id: row.id, request: { query: bodyQuery, pit: null, sort,
-              timeout: query.timeoutMs + 'ms' }, ratings: row.ratings, summary_fields: query.fields });
           }
           // The newest owned PIT preserves the scope of every strict capture.
           for (const request of requests) request.request.pit = { id: group.pitId, keep_alive: keepAlive };
           let native = null, transportError;
           try {
             native = await timed(signal, query.timeoutMs * suite.cases.length + 5000, options =>
-              wire('POST', '_rank_eval', { ...options(), body: {
-                requests, metric: suite.metric, max_concurrent_searches: 1 },
+              wire('POST', '_rank_eval', { ...options(), body: packet(), maxRequestBytes: MAX_NATIVE_REQUEST,
                 maxBytes: Math.min(MAX_NATIVE_RESPONSE, query.maxBytes * suite.cases.length + 262144) }));
           } catch (error) { abort(signal); transportError = issue(error); }
           const expected = new Set(suite.cases.map(row => row.id));
