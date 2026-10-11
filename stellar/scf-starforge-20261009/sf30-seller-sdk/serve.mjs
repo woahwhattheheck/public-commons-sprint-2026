@@ -4,6 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { compileSellerRoutes, createSellerResourceHandler } from './resource-server.mjs';
+import { compileServicePath } from './route-path.mjs';
 
 const SCHEMA = 'stellar-forge.seller-service.v1';
 const HOST = '127.0.0.1';
@@ -27,16 +28,21 @@ function validateConfig(config) {
     if (!object(route) || !/^[A-Za-z0-9_-]{1,64}$/.test(route.id ?? '') ||
         seen.has(route.id) || OWN(route, 'definition') === OWN(route, 'offer') ||
         !(OWN(route, 'offer') ? object(route.offer) : object(route.definition)) ||
-        typeof route.path !== 'string' || !/^\/[A-Za-z0-9_.~/-]*$/.test(route.path) ||
+        typeof route.path !== 'string' || !/^\/[A-Za-z0-9_.~/:-]*$/.test(route.path) ||
         route.path.startsWith('/_seller/') || route.path.includes('//') ||
         new URL(route.path, 'https://seller.example').pathname !== route.path) {
-      throw new TypeError('Each route needs a unique ID, canonical fixed path and SF30 definition');
+      throw new TypeError('Each route needs a unique ID, canonical path and SF30 definition or imported offer');
     }
     seen.add(route.id);
     if (route.definition && OWN(route.definition, 'url')) throw new TypeError('Use route.path and publicOrigin instead of definition.url');
-    if (route.offer && (!config.publicOrigin ||
-        route.offer.resource?.url !== new URL(config.publicOrigin).origin + route.path)) {
-      throw new TypeError('Compiled offer URL must exactly match publicOrigin and route.path');
+    if (route.offer) {
+      const binding = compileServicePath(route.offer);
+      if (!config.publicOrigin || new URL(route.offer.resource.url).origin !== new URL(config.publicOrigin).origin ||
+          binding.path !== route.path) {
+        throw new TypeError('Compiled offer must exactly match publicOrigin and its exact service path');
+      }
+    } else if (route.path.includes(':')) {
+      throw new TypeError('Dynamic service paths require an imported offer with pathParams schema');
     }
     if (OWN(route, 'handler') === OWN(route, 'response')) {
       throw new TypeError('Each route must choose exactly one handler export or static JSON response');
@@ -116,6 +122,7 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
     const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
       id: route.id, method: route.method, url: route.offer.resource.url,
+      ...(route.binding.dynamic ? { routeTemplate: route.path } : {}),
     })) };
     dispatch = (req, res) => {
       if (req.url === '/_seller/health' || req.url === '/_seller/offers') {

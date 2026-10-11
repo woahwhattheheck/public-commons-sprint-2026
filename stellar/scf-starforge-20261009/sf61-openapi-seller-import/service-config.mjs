@@ -27,7 +27,7 @@ export function createSellerServiceConfig(imported, bindings) {
     const key = offer.method + ' ' + offer.path, binding = keyed.get(key);
     if (!binding) throw new TypeError('Missing service binding: ' + key);
     keyed.delete(key);
-    const path = new URL(offer.seller.resource.url).pathname;
+    const path = offer.seller.extensions?.bazaar?.routeTemplate ?? new URL(offer.seller.resource.url).pathname;
     if (path.startsWith('/_seller/')) throw new TypeError('Imported path overlaps seller inspection endpoints');
     return { id: binding.id, path, offer: structuredClone(offer.seller),
       ...(own(binding, 'handler') ? { handler: binding.handler } : { response: structuredClone(binding.response) }) };
