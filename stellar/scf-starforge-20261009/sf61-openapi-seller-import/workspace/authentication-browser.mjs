@@ -100,7 +100,7 @@ export function renderCredentialRuntime(target,credentials,{make}) {
     const lifecycle=state.state==='cooldown'?'Retry in '+seconds(state.retryInMs):
       state.hasToken?'Renew in '+seconds(state.refreshInMs)+' · expires in '+seconds(state.expiresInMs):'No cached token';
     for(const text of [entry.method+' '+label,state.state??'unknown',lifecycle,
-      `${state.tokenRequests??0} token requests · ${state.renewals??0} renewals · ${state.waiters??0} waiting · ${state.failures??0} failures`])
+      `${state.tokenRequests??0} token requests · ${state.renewals??0} tokens obtained · ${state.waiters??0} waiting · ${state.failures??0} failures`])
       row.append(make('td',text));
     body.append(row);
     if(state.lastError){const errorRow=make('tr'),cell=make('td',entry.binding+': '+state.lastError,'hint');cell.colSpan=4;errorRow.append(cell);body.append(errorRow);}
