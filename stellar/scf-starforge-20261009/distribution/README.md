@@ -256,6 +256,7 @@ or automatically retry a request.
 | `starforge dataset` | SF30 dataset API compilation |
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
+| `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
@@ -1281,6 +1282,75 @@ binding from `./seller/clickhouse/declaration`, `prepareClickHouseSeller` from
 same `@tokenjunkielabs/starforge-merchant` package. These exports are the original
 modules used by the installed commands; they retain SF30's existing payment,
 approval, operations and customer execution contracts.
+
+### Publish and maintain a PostgreSQL data product
+
+The installed publisher turns an approved PostgreSQL query into a retained
+dataset using the original read-only repeatable-read extraction, exact scalar
+mapping, review and version writer. The running dataset seller keeps serving the
+current version while the next candidate is extracted. Existing buyer cursors
+remain bound to their original retained snapshots.
+
+Use the PostgreSQL runtime setup above, Linux and util-linux `flock`. Start the
+original dataset seller on its chosen state directory, then open a new private
+publisher workspace using an existing approved source declaration:
+
+```sh
+npx --no-install starforge postgres-publisher serve \
+  --workspace /absolute/private/inventory-publications --create \
+  --source /absolute/private/postgres-merchant/source.json \
+  --state /absolute/private/inventory-dataset --port 8442
+```
+
+Open the printed loopback address. Save the query, its parameters, exact public
+column mapping, deterministic ordering and extraction limits. Extract the whole
+result, inspect its typed rows, record a publication review against the displayed
+current target, and publish those exact candidate bytes. A first publication can
+also initialize a new dataset state; use the original dataset configure/serve
+commands from the included publisher guide to start that target before enabling
+recurrence. Native buyer preparation stays on the same retained candidate.
+
+For continuing source updates, select the current published extraction and use
+**Keep this data product current** on the same page. Save the publication policy:
+interval, minimum/maximum rows, optional maximum percentage decrease, failure
+action, responsible operator and note. Saving leaves the schedule paused.
+**Enable using displayed target** binds the current snapshot/revision and starts
+the saved cadence. **Run refresh now** requests one immediate refresh.
+
+Every refresh uses that immutable plan and the original native candidate and
+writer. Identical data records **UNCHANGED** without another dataset revision.
+Source errors or candidates outside the configured row policy leave the last-good
+version available. Manual target changes require explicit reconciliation against
+the displayed current target. The original retention and version-capacity rules
+continue to protect buyer snapshots.
+
+**Pause after current refresh** stops future intervals while accepted work
+drains. Stop and reopen the same private workspace to retain its policies and
+original run identities:
+
+```sh
+npx --no-install starforge postgres-publisher serve \
+  --workspace /absolute/private/inventory-publications --port 8442
+```
+
+Saved paused work stays paused. Enabled pending work resumes its original run;
+an already-committed candidate can complete without querying again. Unknown
+publication outcomes remain with the original recovery/continuation controls.
+The browser's history opens the native extraction, review and candidate details.
+
+Stop the server before using a separate CLI on its locked workspace.
+`starforge postgres-publisher schedule --workspace /absolute/private/inventory-publications`
+reads the saved policy and history. The same original command provides
+`schedule-save`, `schedule-enable`, `schedule-pause`, `schedule-run` and
+`schedule-continue`; `--help` lists their arguments. These commands forward
+directly to the existing publisher and do not start a second worker.
+
+The included original `sf30-seller-sdk/postgres/publisher/README.md` and
+`SCHEDULES.md` cover policy JSON, source limits, exact version binding, recovery
+and private storage. Applications can import
+`@tokenjunkielabs/starforge-merchant/seller/postgres/publisher`, its `/server`
+and `/schedule` subpaths. These expose the original open-publisher, browser
+server and schedule controller; no additional dependency group is required.
 
 ### Build and operate a MySQL or MariaDB merchant
 
