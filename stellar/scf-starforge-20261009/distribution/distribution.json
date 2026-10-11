@@ -61,6 +61,16 @@
     "stellar/scf-starforge-20261009/mpp-charge",
     "stellar/mercury-event-operations"
   ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/browser-assets.json"
+    }
+  ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
     "stellar-forge/payment-auto-catalog/schema-pattern.mjs",
