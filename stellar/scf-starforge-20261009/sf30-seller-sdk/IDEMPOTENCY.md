@@ -192,6 +192,8 @@ to the merchant backend record:
   order lookup/support path. The private JSON response file contains `status`,
   allowed `headers`, and exactly one of `body` or `bodyBase64`. Base64 preserves
   exact binary or JSON bytes. The imported result becomes available for replay.
+  Headers must match the original binding's exposed response headers; a validated
+  `Retry-After` is additionally permitted for a 429 or 503 outcome.
 - `retry` permits one later backend attempt under the same key and request hash.
   Use the backend's actual lookup/idempotency contract to establish that this
   decision is valid. Recording it performs no request; the later original native

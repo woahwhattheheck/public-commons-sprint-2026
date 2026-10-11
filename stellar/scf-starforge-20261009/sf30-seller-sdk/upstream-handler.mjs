@@ -357,6 +357,17 @@ export function createUpstreamHandler(options = {}) {
       issue(context, options) { const prepared = prepare(context); return idempotency.operations.issue({...options,requestHash:prepared.operation.requestHash}); },
       inspect:idempotency.operations.inspect,
       recover(options) {
+        if (options?.action === 'complete') {
+          const response = options.response;
+          for (const [name,value] of Object.entries(response?.headers ?? {})) {
+            const key = name.toLowerCase();
+            const retryAfter = key === 'retry-after' && [429,503].includes(response.status) &&
+              typeof value === 'string' && value.length <= 128 &&
+              (/^\d+$/.test(value) || Number.isFinite(Date.parse(value)));
+            if (!expose.includes(key) && !retryAfter) throw new TypeError('Recovery headers must match configured upstream responseHeaders');
+            validateHeaderValue(key,value);
+          }
+        }
         const error = options?.action === 'complete' ? storedResponseError(options.response) : null;
         if (error) throw new TypeError('Recovered response violates configured upstream contract: ' + error);
         return idempotency.operations.recover(options);
