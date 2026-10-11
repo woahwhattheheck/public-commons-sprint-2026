@@ -29,7 +29,20 @@ export async function config(path) {
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('CONFIG_JSON_INVALID'); }
   return shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
-    'trustedPayer','captureBody','bodyCaptureTimeoutMs'], 'INVALID_CONFIG_FIELDS');
+    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile'], 'INVALID_CONFIG_FIELDS');
+}
+export function responseFile(c) {
+  if (c.responseFile === undefined) return null;
+  const x = shape(c.responseFile, ['destination','maxBytes','timeoutMs'], 'INVALID_RESPONSE_FILE');
+  abs(x.destination, 'RESPONSE_FILE_PATH_NOT_ABSOLUTE');
+  need(c.captureBody === undefined || c.captureBody === false,
+    'RESPONSE_FILE_REQUIRES_CAPTURE_BODY_FALSE');
+  const maxBytes = x.maxBytes === undefined ? 64 * 1024 * 1024 : x.maxBytes;
+  const timeoutMs = x.timeoutMs === undefined ? 30000 : x.timeoutMs;
+  need(Number.isSafeInteger(maxBytes) && maxBytes >= 1, 'RESPONSE_FILE_LIMIT_INVALID');
+  need(Number.isInteger(timeoutMs) && timeoutMs >= 1 && timeoutMs <= 2147483647,
+    'RESPONSE_FILE_TIMEOUT_INVALID');
+  return { destination:x.destination, maxBytes, timeoutMs };
 }
 export function catalog(x) {
   shape(x, ['origin','query','filters','limit','offset'], 'INVALID_CATALOG');
@@ -96,5 +109,5 @@ export function execution(x) {
   if (x.bodyCaptureTimeoutMs !== undefined)
     need(Number.isInteger(x.bodyCaptureTimeoutMs) && x.bodyCaptureTimeoutMs >= 1 &&
       x.bodyCaptureTimeoutMs <= 60000, 'BODY_TIMEOUT_INVALID');
-  return { op, owner };
+  return { op, owner, download:responseFile(x) };
 }
