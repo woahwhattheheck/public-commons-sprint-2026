@@ -12,6 +12,8 @@ const names = { SAC_RECIPIENT_READY: 'Ready to receive', ACTION_REQUIRED: 'Accou
 const errors = {
   CONFIGURATION_FILE_REQUIRED: 'Choose a seller JSON file of up to 1 MiB.',
   SELLER_CONFIG_REQUIRED: 'Use the original stellar-forge.seller-service.v1 configuration with at least one route.',
+  SELLER_CONFIG_INVALID: 'The original seller compiler rejected this configuration. Check its route, response and payment definitions.',
+  DUPLICATE_PAYMENT_OPTION: 'Each route must use distinct network, token and recipient payment choices. Put a different price for the same payment identity on its own route.',
   INVALID_INPUT_JSON: 'The selected file must contain valid UTF-8 JSON.',
   INVALID_PUBLIC_ORIGIN: 'Enter the seller’s HTTPS public origin, with no path or query.',
   SELLER_ORIGIN_MISMATCH: 'The entered public origin must match the origin in the seller configuration.',
@@ -22,6 +24,8 @@ const errors = {
   COMPLETED_REVIEW_REQUIRED: 'Choose a completed receiving review.',
   WORKSPACE_NOT_ACCEPTING: 'The receiving process is finishing its current work. Reopen the same workspace after it exits.',
   REVIEW_REQUEST_CONFLICT: 'This review ID already belongs to a different saved request. Refresh the history.',
+  PROFILE_REQUEST_CONFLICT: 'This profile ID already belongs to different original seller inputs.',
+  IMPORT_REQUEST_CONFLICT: 'This import ID already belongs to a different retained review.',
   ENOENT: 'That saved item is unavailable. Refresh the workspace to load its current history.',
 };
 const text = value => value === undefined || value === null ? '—' : String(value);
