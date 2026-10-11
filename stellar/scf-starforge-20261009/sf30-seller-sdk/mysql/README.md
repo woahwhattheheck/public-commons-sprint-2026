@@ -4,6 +4,13 @@ Turn an existing database into an SF30 paid API: inspect its actual schema, appr
 
 The source executes native MySQL prepared statements. The maintained SF30 scalar and exact-decimal validators, public offer compiler, seller HTTP/payment service, operator console and customer exporter provide the surrounding product. MySQL 8 and MariaDB 10.11 use their respective server statement-timeout settings. The native acceptance journey was run with MariaDB 10.11.14 and pinned `mysql2` 3.24.5.
 
+For the full database-to-merchant browser workflow, open the [MySQL merchant workspace](workspace/README.md). It builds multiple endpoints from actual table/column metadata, reviews exact filters and native payment terms, prepares private releases, runs the original merchant and availability controls, and exports the complete original customer client:
+
+```bash
+node stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/cli.mjs workspace \
+  --source /private/merchant-draft/source.json --state /private/mysql-workspace
+```
+
 ## Install and create a workspace
 
 Use Node 22.16 or later. From the repository root:
@@ -124,7 +131,7 @@ Keep the full prepared folder with the merchant operator. Give customers `client
 node cli.mjs run --directory /private/merchant-ready --facilitator https://facilitator.example
 ```
 
-`--allow-local-facilitator` permits an explicitly selected HTTP facilitator on `127.0.0.1`. `--no-operations` omits the operations server. Operators with an existing original seller configuration can use `serve --source SOURCE --config SERVICE` with the same launch options. SIGINT and SIGTERM drain the original seller and close its database connections.
+`--allow-local-facilitator` permits an explicitly selected HTTP facilitator on `127.0.0.1`. `--no-operations` omits the operations server. `--availability-dir ABSOLUTE_PRIVATE_DIRECTORY` attaches the original persisted product pause/resume controls and prints their operations URLs. Operators with an existing original seller configuration can use `serve --source SOURCE --config SERVICE` with the same launch options. SIGINT and SIGTERM drain the original seller and close its database connections. `createMysqlNativeFactory` provides this same facilitator construction to embedded launchers and the browser workspace.
 
 ## Use the generated customer client
 
