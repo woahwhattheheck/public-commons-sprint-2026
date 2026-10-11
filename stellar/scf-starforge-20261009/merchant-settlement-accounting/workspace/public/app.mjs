@@ -1,3 +1,5 @@
+import {mountPricing} from './pricing.mjs';
+let pricingPane;
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
 import {mountCollection} from './collection.mjs';
@@ -88,6 +90,7 @@ function updateButtons() {
   for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
   for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
+  pricingPane?.setBusy(busy);
 }
 
 function renderRuns() {
@@ -126,11 +129,12 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
   const run = selectedReport?.run;
+  pricingPane?.renderRun(selectedReport);
   $('empty-run').hidden = Boolean(run);
   $('selected-run').hidden = !run;
   if (!run) return;
@@ -378,7 +382,113 @@ function renderRecovery() {
     const ongoing = ['queued','running'].includes(job.status);
     const retryable = ['failed','interrupted','cancelled'].includes(job.status);
     const result = job.result ? shown(job.result) : job.error || 'Original verifier result will appear here.';
-    return '<tr><td><strong>' + esc(job.name) + '</strong><span class="subtle">' + esc(job.actor) + ' · ' + esc(date(job.createdAt)) + '</span><details class="history-detail"><summary>Saved attempt</summary>' + values({id:job.id,previewId:job.previewId,recoveredDir:job.recoveredDir,startedAt:job.startedAt,completedAt:job.completedAt}) + '</det…2617 tokens truncated…ined inputs to inspect their binding.');
+    return '<tr><td><strong>' + esc(job.name) + '</strong><span class="subtle">' + esc(job.actor) + ' · ' + esc(date(job.createdAt)) + '</span><details class="history-detail"><summary>Saved attempt</summary>' + values({id:job.id,previewId:job.previewId,recoveredDir:job.recoveredDir,startedAt:job.startedAt,completedAt:job.completedAt}) + '</details></td><td>' + badge(job.status) + '</td><td><div class="recovery-native-result">' + esc(result) + '</div></td><td><div class="actions"><button type="button" data-recovery-preview="' + esc(job.previewId) + '">Inspect inputs</button>' +
+      (ongoing ? '<button type="button" data-write data-recovery-cancel="' + esc(job.id) + '" data-requested="' + Boolean(job.cancelRequested) + '">' + (job.cancelRequested ? 'Stop requested' : 'Stop attempt') + '</button>' : '') +
+      (retryable ? '<button type="button" data-write data-recovery-retry="' + esc(job.previewId) + '">Retry original import</button>' : '') + '</div></td></tr>';
+  }).join('') || '<tr><td colspan="4" class="empty">Original transfer verification attempts will be retained here.</td></tr>';
+  $('recovery-job-count').textContent = Math.min(jobs.length,recoveryJobLimit) + ' of ' + jobs.length + ' saved attempts';
+  $('recovery-job-more').hidden = jobs.length <= recoveryJobLimit;
+  renderRecoveryEntries();
+}
+function recoveryConfigBody() {
+  const name = $('recovery-config-name').value.trim(), content = $('recovery-config-content').value;
+  if (!name) throw new Error('Name this original input review.');
+  if (!content.trim() || new TextEncoder().encode(content).length > 200_000) throw new Error('Use an original recovery request JSON up to 200 KB.');
+  try { JSON.parse(content); } catch { throw new Error('The original recovery request must be valid JSON.'); }
+  return {name,content};
+}
+async function importRecovery(previewId) {
+  if (!previewId) throw new Error('Choose a saved original input review.');
+  await perform({path:'/api/recovered/import',body:{revision:state.revision,previewId,actor:operator()},description:'original recovered-payment import',message:'Original transfer verification started. Its result and any retained import are shown in the saved attempts.',success:() => openArea('recovery')});
+}
+
+pricingPane = await mountPricing({api,perform,operator,attempt,notify,openArea,loadRun});
+
+document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
+document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));
+document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click',() => attempt(async () => {
+  retainReviewDraft(); view = button.dataset.view; selectedKey = null; records.offset = 0;
+  document.querySelectorAll('[data-view]').forEach(item => { item.classList.toggle('active',item === button); item.setAttribute('aria-pressed',String(item === button)); });
+  await loadRecords(0);
+})));
+$('operator').value = remembered('operator');
+$('operator').addEventListener('input',() => remember('operator',$('operator').value));
+$('refresh').addEventListener('click',() => attempt(async () => { retainReviewDraft(); await refreshState(); notify('Loaded saved workspace revision ' + state.revision + '. Form drafts are retained.'); }));
+$('run-search').addEventListener('input',() => { runLimit = 30; if (state) renderRuns(); });
+$('run-more').addEventListener('click',() => { runLimit += 30; renderRuns(); });
+$('run-list').addEventListener('click',event => {
+  const button = event.target.closest('[data-run]');
+  if (button) attempt(async () => { retainReviewDraft(); await loadRun(button.dataset.run,{reset:true}); if (selectedReport?.run.status === 'complete') { $('export-run').value = selectedRun; $('compare-current').value = selectedRun; renderDownloads(); } openArea('reconcile'); });
+});
+$('run-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => {
+  const name = $('run-name').value.trim(); if (!name) return;
+  const body = {revision:state.revision,name,actor:operator()};
+  await perform({path:'/api/runs',body,description:'reconciliation request',message:'Reconciliation captured. The original accounting engine is processing the retained sources.',success:async result => { if ($('run-name').value.trim() === name) $('run-name').value = ''; await loadRun(result.run.id,{reset:true}); openArea('reconcile'); }});
+}); });
+$('filter-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => { retainReviewDraft(); selectedKey = null; await loadRecords(0); }); });
+$('previous').addEventListener('click',() => attempt(async () => { retainReviewDraft(); await loadRecords(Math.max(0,records.offset - LIMIT)); }));
+$('next').addEventListener('click',() => attempt(async () => { retainReviewDraft(); await loadRecords(records.offset + LIMIT); }));
+$('record-body').addEventListener('click',event => {
+  const button = event.target.closest('[data-inspect]'); if (!button) return;
+  retainReviewDraft(); const row = records.items[Number(button.dataset.inspect)]; if (!row) return;
+  selectedKey = keyOf(row); renderRecords();
+  $('record-detail').focus({preventScroll:true});
+  if (matchMedia('(max-width:1150px)').matches) $('record-detail').scrollIntoView({block:'start',behavior:'smooth'});
+});
+$('record-detail').addEventListener('input',event => { if (event.target.closest('#review-form')) retainReviewDraft(); });
+$('record-detail').addEventListener('change',event => { if (event.target.closest('#review-form')) retainReviewDraft(); });
+$('record-detail').addEventListener('submit',event => {
+  if (event.target.id !== 'review-form') return;
+  event.preventDefault(); attempt(async () => {
+    const form = event.target; retainReviewDraft();
+    const key = reviewDraftKey(form.dataset.run,form.dataset.id), draft = drafts.get(key);
+    const body = {...draft,actor:operator()};
+    const review = {runId:form.dataset.run,id:form.dataset.id,eventId:form.dataset.event};
+    await perform({path:'/api/runs/' + endpoint(review.runId) + '/exceptions/' + endpoint(review.id) + '/review',body,review,description:'exception review',message:'Named exception review saved.',success:async () => { drafts.delete(key); if (selectedRun === review.runId) await loadRun(selectedRun); }});
+  });
+});
+$('terms-selection').addEventListener('change',() => { $('terms-selection').dataset.dirty = 'true'; });
+$('terms-selection-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => {
+  const body = {revision:state.revision,selection:$('terms-selection').value,actor:operator()};
+  await perform({path:'/api/terms/selection',body,description:'accounting terms selection',message:'Terms selection saved for the next reconciliation.',success:() => { delete $('terms-selection').dataset.dirty; renderSources(); }});
+}); });
+async function importFile(kind) {
+  const input = $(kind === 'terms' ? 'terms-file' : 'proof-file'), file = input.files[0], max = kind === 'terms' ? 200_000 : 80_000;
+  if (!file) throw new Error('Choose a JSON file to import.');
+  if (file.size > max) throw new Error('Choose a file up to ' + (max / 1000) + ' KB.');
+  const actor = operator(), revision = state.revision, content = await file.text();
+  const body = {revision,name:file.name,content,actor};
+  await perform({path:'/api/' + kind,body,description:kind === 'terms' ? 'accounting terms import' : 'verification file import',message:result => result.duplicate ? 'These exact verification bytes are already retained. Their existing selection is preserved.' : kind === 'terms' ? 'Accounting terms imported and selected for the next reconciliation.' : 'Original verification file imported. Its native verdict and eligibility are visible below.',success:() => { if (input.files[0] === file) input.value = ''; if (kind === 'terms') { delete $('terms-selection').dataset.dirty; renderSources(); } }});
+}
+$('terms-import-form').addEventListener('submit',event => { event.preventDefault(); attempt(() => importFile('terms')); });
+$('proof-form').addEventListener('submit',event => { event.preventDefault(); attempt(() => importFile('proofs')); });
+$('proof-imports').addEventListener('click',event => {
+  const button = event.target.closest('[data-proof-selection]'); if (!button) return;
+  attempt(() => perform({path:'/api/proofs/' + endpoint(button.dataset.proofSelection) + '/selection',body:{revision:state.revision,included:button.dataset.included === 'true',actor:operator()},description:'verification file selection',message:'Verification selection saved for the next reconciliation.'}));
+});
+$('recovery-directory').addEventListener('input',() => { $('recovery-directory').dataset.dirty = 'true'; });
+$('recovery-source-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => {
+  const currentBody = () => {
+    const directory = $('recovery-directory').value.trim();
+    if (!directory) throw new Error('Enter the private original recovered collection directory.');
+    return {directory};
+  };
+  await perform({path:'/api/recovered/source',body:{revision:state.revision,actor:operator(),...currentBody()},currentBody,description:'recovered source connection',message:'Original recovered collection connected for future reconciliations.',success:() => {
+    if ($('recovery-directory').value.trim() === state.recovery.directory) delete $('recovery-directory').dataset.dirty;
+    renderRecovery();
+  }});
+}); });
+$('recovery-refresh').addEventListener('click',() => attempt(() => perform({path:'/api/recovered/refresh',body:{revision:state.revision,actor:operator()},description:'recovered collection refresh',message:'Original recovered collection refreshed. Saved reconciliations retain their existing source captures.'})));
+$('recovery-disconnect').addEventListener('click',() => attempt(() => perform({path:'/api/recovered/source',body:{revision:state.revision,actor:operator(),directory:null},description:'recovered source disconnection',message:'Recovered collection disconnected from future runs. Existing entries and saved runs remain in their original storage.',success:() => { delete $('recovery-directory').dataset.dirty; renderRecovery(); }})));
+$('recovery-config-file').addEventListener('change',() => attempt(async () => {
+  const file = $('recovery-config-file').files[0];
+  if (!file) return;
+  if (file.size > 200_000) throw new Error('Choose an original recovery request JSON up to 200 KB.');
+  const content = await file.text();
+  if ($('recovery-config-file').files[0] !== file) return;
+  $('recovery-config-content').value = content;
+  $('recovery-config-name').value = file.name;
+  notify('Original recovery request loaded. Review the retained inputs to inspect their binding.');
 }));
 $('recovery-config-form').addEventListener('submit',event => { event.preventDefault(); attempt(async () => {
   await perform({path:'/api/recovered/review',body:{revision:state.revision,actor:operator(),...recoveryConfigBody()},currentBody:recoveryConfigBody,description:'original recovery input review',message:'Original source files reviewed locally. Their exact request, receipt, terms, and response identities are retained below.',success:result => {
