@@ -34,7 +34,7 @@ function renderCatalogue(s) {
   const items = Array.isArray(s.catalogue) ? s.catalogue.filter(item =>
     item && typeof item.sku === "string" && typeof item.name === "string" &&
     typeof item.why === "string" && typeof item.price === "string" &&
-    /^\\d{1,4}\\.\\d{2}$/.test(item.price)
+    /^\d{1,4}\.\d{2}$/.test(item.price)
   ).sort((a, b) => Number(a.price) - Number(b.price) || a.sku.localeCompare(b.sku)) : [];
   if (!Number.isFinite(budget) || !items.length) {
     target.textContent = "Catalogue comparison unavailable; review the exact item and price above.";
