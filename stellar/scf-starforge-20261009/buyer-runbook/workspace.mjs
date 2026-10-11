@@ -5,6 +5,7 @@ import {randomBytes, timingSafeEqual} from 'node:crypto';
 import {pipeline} from 'node:stream/promises';
 import {openRunbookWorkspace, fault} from './workspace-model.mjs';
 import {OPERATION_HANDOFF_MAX_BYTES} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
+import {CLIENT_FILE_UPLOAD_MAX_BYTES,CLIENT_REQUEST_UPLOAD_MAX_BYTES} from './client-intake.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const messages = {
@@ -28,6 +29,13 @@ const messages = {
   RESOURCE_BYTES_CHANGED:'The saved file differs from its original buyer result.',
   LOCK_OWNER_IS_STILL_RUNNING:'The original execution owner is still running.',
   NATIVE_BUYER_IS_STILL_RUNNING:'The original buyer process is still running.',
+  CLIENT_RECEIVE_INCOMPLETE:'Upload the five files named in this original completion receipt before preparing a request.',
+  CLIENT_RECEIVE_MANIFEST_CHANGED:'The retained SDK differs from the receipt you reviewed. Reopen the original customer export.',
+  CLIENT_RECEIVE_FILE_CHANGED:'This file differs from the original completion receipt. Select the merchant’s exact file.',
+  CLIENT_RECEIVE_BODY_CHOICE_REQUIRED:'Choose the declared request body or explicitly omit an optional body.',
+  CLIENT_RECEIVE_PATH_VALUES_REQUIRED:'Fill every declared path parameter using its original name.',
+  CLIENT_RECEIVE_QUERY_VALUES_REQUIRED:'Supply query parameters as a JSON object of strings or arrays of strings.',
+  OPERATION_HANDOFF_RETAINED_INPUT_CHANGED:'The retained request input changed. Reopen its original source before resuming setup.',
   REQUEST_OPERATOR_PRESET_REQUIRED:'Start this workspace with its local operator settings file to prepare received requests.',
   REQUEST_OPERATOR_SETTINGS_CHANGED:'The local operator settings changed. Review this request again before preparing it.',
   REQUEST_REVIEW_CHANGED:'The selected request review changed. Reopen it and review the current payment option and budget.',
@@ -55,6 +63,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/app.mjs','app.mjs','text/javascript; charset=utf-8'],
     ['/intake.mjs','intake.mjs','text/javascript; charset=utf-8'],
+    ['/clients.mjs','clients.mjs','text/javascript; charset=utf-8'],
     ['/paid-files.mjs','paid-files.mjs','text/javascript; charset=utf-8'],
     ['/accounting.mjs','accounting.mjs','text/javascript; charset=utf-8'],
     ['/recovery.mjs','recovery.mjs','text/javascript; charset=utf-8'],
@@ -104,7 +113,15 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/state') return json(200,{...await model.state(),token});
-        let match = /^\/api\/paid-files\/(file-[a-f0-9]{64})$/.exec(url.pathname);
+        let match=/^\/api\/clients\/(client-[a-f0-9]{64})$/.exec(url.pathname);
+        if(match)return json(200,await model.client(match[1]));
+        match=/^\/files\/clients\/(client-[a-f0-9]{64})\/(client-export\.json|seller-client\.mjs|seller-client\.d\.mts|seller-openapi\.json|package\.json|README\.md)$/.exec(url.pathname);
+        if(match) {
+          const result=await model.clientAttachment(match[1],match[2]);
+          return reply(200,'application/octet-stream',result.bytes,{'content-disposition':'attachment; filename="'+result.name+'"',
+            'x-content-sha256':result.sha256});
+        }
+        match = /^\/api\/paid-files\/(file-[a-f0-9]{64})$/.exec(url.pathname);
         if(match)return json(200,await model.paidFile(match[1]));
         match = /^\/files\/paid-files\/(file-[a-f0-9]{64})\/handoff$/.exec(url.pathname);
         if(match) {
@@ -159,7 +176,13 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         throw fault('NOT_FOUND',404);
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
-      const input = await body(url.pathname === '/api/requests/upload' ? 4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024 : 1024 * 1024);
+      const limit=url.pathname==='/api/clients/file'?CLIENT_FILE_UPLOAD_MAX_BYTES:
+        url.pathname==='/api/clients/request'?CLIENT_REQUEST_UPLOAD_MAX_BYTES:
+        url.pathname==='/api/requests/upload'?4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024:1024*1024;
+      const input=await body(limit);
+      if(url.pathname==='/api/clients/upload')return json(200,await model.receiveClient(input));
+      if(url.pathname==='/api/clients/file')return json(200,await model.uploadClientFile(input));
+      if(url.pathname==='/api/clients/request')return json(200,await model.composeClientRequest(input));
       if (url.pathname === '/api/recovery/review') return json(200,await model.inspectRecovery(input));
       if (url.pathname === '/api/recovery/start') return json(202,await model.startRecovery(input));
       if (url.pathname === '/api/recovery/cancel') return json(200,await model.cancelRecovery(input));
@@ -180,7 +203,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
     })().catch(error => {
       if (res.headersSent) { if (!res.writableEnded) res.destroy(); return; }
       const code = /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '') ? error.code : 'WORKSPACE_LOCAL_ERROR';
-      const status = error.status ?? (error.code === 'ENOENT' ? 404 : error.code === 'EEXIST' || error.code === 'RUNBOOK_METADATA_LOCK_EXISTS' ? 409 : ['InputError','OperationTicketError'].includes(error.name) ? 422 : 500);
+      const status = error.status ?? (error.code === 'ENOENT' ? 404 : error.code === 'EEXIST' || error.code === 'RUNBOOK_METADATA_LOCK_EXISTS' ? 409 : ['InputError','OperationTicketError'].includes(error.name) || code.startsWith('CLIENT_EXPORT_') ? 422 : 500);
       json(status,{code,message:messages[code] ?? (status === 500 ? 'Check the configured private source and state directory.' : code.toLowerCase().replaceAll('_',' ') + '.')});
     });
   });

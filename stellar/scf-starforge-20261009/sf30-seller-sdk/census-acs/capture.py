@@ -368,6 +368,42 @@ def retrieve_rows(url, requested, key, *, unique, timeout, max_response_bytes, m
     return data, receipt
 
 
+
+def capture_annotations(root, year, timeout):
+    """Retain the release's original Jam Values workbook and its HTTP capture."""
+    url = ("https://www2.census.gov/programs-surveys/acs/tech_docs/jam_values/"
+           + str(year) + "_Jam_Values.xlsx")
+    name = str(year) + "_Jam_Values.xlsx"
+    receipt_name = name + ".capture.json"
+    if (root / receipt_name).exists():
+        raw = read_file(root / name, 16 * 1024 * 1024)
+        receipt = json.loads(read_file(root / receipt_name))
+        if (receipt.get("url") != url or receipt.get("final_url") != url
+                or receipt.get("status") != 200
+                or receipt.get("bytes") != len(raw)
+                or receipt.get("sha256") != digest(raw)):
+            raise CaptureError("ANNOTATION_RESUME_MEMBER_CHANGED")
+    else:
+        request = urllib.request.Request(url, headers={
+            "User-Agent": "StellarForge-CensusACS/1.0", "Accept-Encoding": "identity"})
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            if response.status != 200 or response.geturl() != url:
+                raise CaptureError("ANNOTATION_SOURCE_RESPONSE_CHANGED")
+            raw = response.read(16 * 1024 * 1024 + 1)
+            if len(raw) > 16 * 1024 * 1024:
+                raise CaptureError("ANNOTATION_SOURCE_TOO_LARGE")
+            receipt = {"url": url, "final_url": response.geturl(), "status": 200,
+                       "bytes": len(raw), "sha256": digest(raw),
+                       "captured_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                       "response_headers": dict(response.headers.items())}
+        write_once_exact(root, name, raw)
+        write_once_exact(root, receipt_name, encoded(receipt))
+    spec_name = "annotation-spec-" + str(year) + ".json"
+    write_once_exact(root, spec_name, encoded({
+        "year": year, "file": name, "receipt": receipt_name, "source_url": url}))
+    return str(root / spec_name)
+
+
 def capture(args):
     picked = selection(args.year, args.table, args.geo)
     request = {"schema": "stellar-forge.census-acs-request.v1", **picked}
@@ -435,14 +471,83 @@ def capture(args):
             replace_json(root, "capture-progress.json", {"request": request, "error": str(exc),
                          "operation": name, "completed_files": len(members)})
             raise
-    annotations = add_annotations(root, args.annotation, members)
+    annotation_specs = args.annotation or ([capture_annotations(root, args.year, args.timeout)]
+                                          if args.year in (2022, 2023, 2024) else [])
+    annotations = add_annotations(root, annotation_specs, members)
     return finish(root, picked, "", members, {"kind": "original-table-based-summary-file-selected-rows",
                   "source_root": base}, annotations)
+
+
+def activate_capture(args):
+    """Review and atomically select a capture for one fixed publisher source."""
+    import fcntl
+    capture_root = Path(args.capture).absolute()
+    if capture_root.resolve() != capture_root:
+        raise CaptureError("CAPTURE_SYMLINK_PATH")
+    declaration = json.loads(read_file(capture_root / "source.json"))
+    if declaration.get("schema") != "stellar-forge.census-acs-source.v1" or declaration.get("capture") != MANIFEST:
+        raise CaptureError("ORIGINAL_CAPTURE_DIRECTORY_REQUIRED")
+    raw = read_file(capture_root / MANIFEST)
+    if digest(raw) != declaration.get("captureSha256"):
+        raise CaptureError("CAPTURE_MANIFEST_CHANGED")
+    manifest = json.loads(raw)
+    if manifest.get("schema") != SCHEMA:
+        raise CaptureError("CAPTURE_MANIFEST_SCHEMA")
+    for record in manifest["files"]:
+        data = read_file(capture_root / safe_path(record["path"]))
+        if len(data) != record["bytes"] or digest(data) != record["sha256"]:
+            raise CaptureError("CAPTURE_FILE_CHANGED")
+    source = Path(args.source).absolute()
+    source.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    if source.parent.resolve() != source.parent:
+        raise CaptureError("SOURCE_POINTER_SYMLINK_PATH")
+    try:
+        relative = (capture_root / MANIFEST).relative_to(source.parent).as_posix()
+    except ValueError as exc:
+        raise CaptureError("CAPTURE_MUST_BE_INSIDE_SOURCE_PROJECT") from exc
+    if source == capture_root / "source.json":
+        raise CaptureError("CAPTURE_SOURCE_IS_IMMUTABLE")
+    lock = source.parent / ("." + source.name + ".census-lock")
+    fd = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "rb+") as handle:
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1 or info.st_mode & 0o077:
+            raise CaptureError("SOURCE_POINTER_LOCK_INVALID")
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        previous = None
+        if source.exists():
+            previous = read_file(source)
+            current = json.loads(previous)
+            if args.create or current.get("schema") != "stellar-forge.census-acs-source.v1":
+                raise CaptureError("SOURCE_POINTER_EXISTS")
+            if not args.expect_source_sha or digest(previous) != args.expect_source_sha:
+                raise CaptureError("SOURCE_POINTER_REVIEW_CHANGED")
+        elif not args.create or args.expect_source_sha:
+            raise CaptureError("SOURCE_POINTER_CREATE_REQUIRED")
+        value = {"schema": "stellar-forge.census-acs-source.v1",
+                 "capture": relative, "captureSha256": digest(raw)}
+        data = encoded(value)
+        if previous != data:
+            temporary = ".source-pending-" + uuid.uuid4().hex
+            write_file(source.parent, temporary, data)
+            os.replace(source.parent / temporary, source)
+            directory = os.open(source.parent, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        return {"source": str(source), "source_sha256": digest(data),
+                "capture_id": digest(raw), "year": manifest["year"], "changed": previous != data}
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     commands = parser.add_subparsers(dest="command", required=True)
+    active = commands.add_parser("activate", help="Select a retained capture for a fixed publisher source")
+    active.add_argument("--capture", required=True)
+    active.add_argument("--source", required=True)
+    active.add_argument("--create", action="store_true")
+    active.add_argument("--expect-source-sha")
     imp = commands.add_parser("import", help="Retain and verify an existing public source ZIP")
     imp.add_argument("--archive", required=True)
     imp.add_argument("--native-package", help="Optional original customer-compatible capture JSON")
@@ -462,7 +567,8 @@ def main(argv=None):
     if args.command == "capture" and any(getattr(args, key) <= 0 for key in
             ("timeout", "max_response_bytes", "max_selected_bytes")):
         parser.error("limits must be positive integers")
-    print(json.dumps(import_capture(args) if args.command == "import" else capture(args),
+    result = activate_capture(args) if args.command == "activate" else import_capture(args) if args.command == "import" else capture(args)
+    print(json.dumps(result,
                      ensure_ascii=False, indent=2))
 
 

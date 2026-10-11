@@ -17,7 +17,7 @@
   <button id="retry-request" type="button" hidden>Recover last request</button>
 </aside>
 <main>
-  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="images">Images</button></nav>
+  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="managed">Managed releases</button><button data-view="images">Images</button></nav>
   <section data-pane="runtime">
     <div class="section-title"><div><p class="eyebrow">SELECTED INSTALLATION</p><h2 id="selected-name">Open a runtime to begin</h2></div><span id="selected-phase" class="status">EMPTY</span></div>
     <p id="selected-version" class="muted">Open an existing installation or prepare a source archive.</p>
@@ -65,6 +65,7 @@
     <div id="handoff" class="result" hidden><dl id="handoff-facts" class="paths"></dl><h3>Adopt into the existing managed home</h3><p>Run this command with the current Starforge installation command. Set <code>--home</code> to the managed merchant home outside this runtime directory. The first adoption becomes active; later adoptions are staged for the existing activation and rollback controls.</p><pre id="managed-command" tabindex="0"></pre><div class="actions"><button id="download-handoff" type="button">Download handoff JSON</button><button id="copy-handoff" type="button">Copy handoff JSON</button></div><details><summary>Complete handoff</summary><pre id="handoff-json" tabindex="0"></pre></details></div>
     <div class="panel"><h3>Keep the selected directory identity</h3><p>Use <code>sourceRoot</code> and <code>dependencyRoot</code> together. An installed source at <code>DIRECTORY/package/source</code> resolves dependencies from <code>DIRECTORY/node_modules</code>.</p><p>The existing SF46 workflow can attach the ready runtime at its actual path. If preparing directly inside a future release directory, choose its final path before preparation. The existing host and release controls own activation, shutdown and rollback.</p></div>
   </section>
+  <section data-pane="managed" hidden><div id="managed-workspace"></div></section>
   <section data-pane="images" hidden><div id="image-workspace"></div></section>
 </main>
 </div>

@@ -1,0 +1,42 @@
+[
+  {
+    "code": "BLANK_PUBLISHED_CELLS",
+    "table": "10b",
+    "page": 34,
+    "offense": "Sports Tampering",
+    "jurisdictions": [
+      "UCSD",
+      "CSUSM",
+      "SDSU"
+    ],
+    "detail": "Three cells are visibly blank in the original table; retained as null, not zero."
+  },
+  {
+    "code": "UNLABELED_PUBLISHED_ROW",
+    "table": "11b",
+    "page": 37,
+    "source_line": 40,
+    "raw_values": [
+      "1",
+      "0",
+      "1",
+      "0",
+      "0",
+      "1",
+      "2",
+      "4",
+      "5",
+      "1",
+      "1",
+      "1"
+    ],
+    "detail": "Published numeric row has no offense label. It is retained with a null offense and excluded from additive measures. No inferred label/row shift is applied."
+  },
+  {
+    "code": "PRINTED_NUMERIC_FORMAT",
+    "page": 31,
+    "jurisdiction": "Oceanside",
+    "raw_value": ",1,188",
+    "interpretation": "Remove grouping commas for typed integer; original leading comma remains visible."
+  }
+]

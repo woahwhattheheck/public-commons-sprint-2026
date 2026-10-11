@@ -5,6 +5,8 @@ import { randomUUID } from 'node:crypto';
 import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile,
   atomicJson, syncDirectory, bytes, digest, hashPrivate, fault } from '../postgres/publisher/files.mjs';
 
+import { openWorkbookSources, validateWorkbookOrigin } from './workbook/store.mjs';
+
 const SCHEMA = 'stellar-forge.dataset-publisher-workspace.v1';
 const CANDIDATE = 'stellar-forge.dataset-publisher-candidate.v1';
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
@@ -27,6 +29,9 @@ function validateCandidate(record) {
       !HASH.test(record.expectedSnapshot ?? '') || !Number.isSafeInteger(record.expectedRevision) || record.expectedRevision < 1)
     throw fault('SAVED_CANDIDATE_INVALID', 'The retained candidate metadata is invalid. Preserve its directory for repair.');
   label(record.name, 160, true); label(record.notes, 2000);
+  validateWorkbookOrigin(record.workbookSource);
+  if (record.additionalSourceBytes !== undefined && (!Number.isSafeInteger(record.additionalSourceBytes) || record.additionalSourceBytes < 0 || record.additionalSourceBytes !== record.workbookSource?.rowMapBytes))
+    throw fault('SAVED_WORKBOOK_ORIGIN_INVALID');
   return record;
 }
 
@@ -63,7 +68,7 @@ export async function openPublisherDrafts({ datasetDirectory, directory = join(d
         await readPrivate(join(directory, name), 8 * 1024 * 1024); await rm(join(directory, name));
       }
       state = { schema: SCHEMA, datasetDirectory, createdAt: stamp(), revision: 1,
-        selectedDraftId: null, selection: null, candidates: [], buyers: [], removedCandidateIds: [], removedBuyerIds: [] };
+        selectedDraftId: null, selection: null, candidates: [], buyers: [], removedCandidateIds: [], removedBuyerIds: [], workbookSources: [], removedWorkbookIds: [] };
       await atomicJson(directory, 'workspace.json', state);
     } else state = await readJson(indexPath, 8 * 1024 * 1024);
     if (state.schema !== SCHEMA || state.datasetDirectory !== datasetDirectory || !Number.isSafeInteger(state.revision) ||
@@ -89,9 +94,9 @@ export async function openPublisherDrafts({ datasetDirectory, directory = join(d
       if (!record) throw fault('DRAFT_NOT_FOUND', 'Choose a retained candidate from this workspace.', 404);
       return copy(record);
     }
-    const sourceBytes = () => state.candidates.reduce((total, record) => total + record.sourceBytes, 0);
-    function capacity(additional = 0) {
-      if (state.candidates.length >= maxCandidates || sourceBytes() + additional > maxSourceBytes)
+    const sourceBytes = () => state.candidates.reduce((total, record) => total + record.sourceBytes + (record.additionalSourceBytes ?? 0), 0) + (state.workbookSources ?? []).reduce((total, record) => total + record.sourceBytes, 0);
+    function capacity(additional = 0, { candidate: needsCandidate = true } = {}) {
+      if (needsCandidate && state.candidates.length >= maxCandidates || sourceBytes() + additional > maxSourceBytes)
         throw fault('DRAFT_CAPACITY_REACHED', 'Download and remove a completed candidate, or reopen with more retained draft capacity.', 409);
       return Math.max(0, maxSourceBytes - sourceBytes());
     }
@@ -103,10 +108,14 @@ export async function openPublisherDrafts({ datasetDirectory, directory = join(d
     function view() {
       return { schema: SCHEMA, revision: state.revision, createdAt: state.createdAt,
         selectedDraftId: state.selectedDraftId, selection: copy(state.selection),
-        candidates: copy(state.candidates), buyers: copy(state.buyers),
+        candidates: copy(state.candidates), buyers: copy(state.buyers), workbookSources: copy(state.workbookSources ?? []),
         recoveryWarnings: copy(recoveryWarnings),
         capacity: { candidateCount: state.candidates.length, maxCandidates, sourceBytes: sourceBytes(), maxSourceBytes } };
     }
+
+    const workbooks = await openWorkbookSources({ directory, getState: () => state, save, capacity,
+      maxSources: maxCandidates, maxSourceBytes });
+    recoveryWarnings.push(...workbooks.warnings);
 
     // A completed upload renamed before its index commit is recovered once.
     // Partial upload directories belong to this kernel-locked workspace alone.
@@ -149,19 +158,23 @@ export async function openPublisherDrafts({ datasetDirectory, directory = join(d
     }
 
     return {
-      directory, view, candidate, files, capacity,
+      directory, view, candidate, files, capacity, workbooks,
       async stage() {
         capacity(); const id = randomUUID(), path = join(roots.staging, id);
         await mkdir(path, { mode: 0o700 }); return { id, directory: path };
       },
       async adopt(staged, record) {
-        capacity(record.sourceBytes);
+        capacity(record.sourceBytes + (record.additionalSourceBytes ?? 0));
         const saved = validateCandidate({ ...record, schema: CANDIDATE, id: staged.id, revision: 1,
           name: label(record.filename, 160, true), notes: '', createdAt: stamp(), publications: [] });
         if (staged.directory !== join(roots.staging, staged.id)) throw fault('INVALID_UPLOAD_STAGE');
         await createFile(join(staged.directory, 'candidate.json'), bytes(saved));
         await chmod(join(staged.directory, 'data.csv'), 0o400);
         await chmod(join(staged.directory, 'dataset.json'), 0o400);
+        if (saved.workbookSource) {
+          await chmod(join(staged.directory, 'workbook-projection.json'), 0o400);
+          await chmod(join(staged.directory, 'source-rows.jsonl'), 0o400);
+        }
         await syncDirectory(staged.directory);
         await rename(staged.directory, files(staged.id).directory); await syncDirectory(roots.candidates);
         await save(next => { next.candidates.push(saved); next.selectedDraftId = saved.id;
