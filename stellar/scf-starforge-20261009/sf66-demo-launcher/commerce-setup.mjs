@@ -176,13 +176,16 @@ export async function reviewCommerceSetup({ configFile, directory }) {
   for (const [index, value] of input.purchases.entries()) {
     const selected = fields(value, ['routeId','acceptIndex','intentId','method','path','query',
       'bodyFile','ticketFile','ticketHeader','saveResponse','responseMaxBytes','responseTimeoutMs',
-      'requestTimeoutMs'], 'COMMERCE_SETUP_SELECTION_INVALID');
+      'requestTimeoutMs','paymentFlow','responseStream'], 'COMMERCE_SETUP_SELECTION_INVALID');
     const route = compiled.routes.find(route => route.id === selected.routeId);
     need(route && selected.method === route.method, 'COMMERCE_SETUP_EXPLICIT_ROUTE_METHOD_REQUIRED');
     need(Number.isInteger(selected.acceptIndex) && selected.acceptIndex >= 0 &&
       selected.acceptIndex < route.offer.accepts.length, 'COMMERCE_SETUP_EXPLICIT_PAYMENT_OPTION_REQUIRED');
     need(!intents.has(selected.intentId), 'COMMERCE_SETUP_DUPLICATE_INTENT');
     const terms = route.offer.accepts[selected.acceptIndex];
+    const paymentFlow = selected.paymentFlow === undefined ? 'authorization' : selected.paymentFlow;
+    need(['authorization','upfront'].includes(paymentFlow) &&
+      paymentFlow === (terms.extra?.paymentFlow ?? 'authorization'), 'COMMERCE_SETUP_EXPLICIT_PAYMENT_FLOW_REQUIRED');
     atomic(terms.amount, 'COMMERCE_SETUP_AMOUNT_EXCEEDS_ORIGINAL_LEDGER');
     need(requiresJsonBody(route.method) === (selected.bodyFile !== undefined),
       'COMMERCE_SETUP_EXPLICIT_BODY_FILE_REQUIRED');
@@ -207,13 +210,14 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     const saveResponse = selected.saveResponse ?? route.method !== 'HEAD';
     need(typeof saveResponse === 'boolean' && !(route.method === 'HEAD' && saveResponse),
       'COMMERCE_SETUP_HEAD_HAS_NO_RESPONSE_BODY');
-    need(saveResponse || selected.responseMaxBytes === undefined && selected.responseTimeoutMs === undefined,
+    need(saveResponse || selected.responseMaxBytes === undefined && selected.responseTimeoutMs === undefined &&
+      selected.responseStream === undefined,
       'COMMERCE_SETUP_RESPONSE_LIMIT_WITHOUT_DESTINATION');
     const key = String(index + 1).padStart(2, '0');
     const op = operation({intentId:selected.intentId, url:request.publicUrl, method:route.method,
       expect:{scheme:terms.scheme, network:terms.network, asset:terms.asset, payTo:terms.payTo,
         maxAtomic:terms.amount, maxTimeoutSeconds:terms.maxTimeoutSeconds,
-        ...(terms.extra?.paymentFlow ? {paymentFlow:terms.extra.paymentFlow} : {})},
+        paymentFlow},
       headers:{Accept:request.init.headers.accept,
         ...(body === null ? {} : {'Content-Type':request.init.headers['content-type']})},
       ...(selected.ticketFile === undefined ? {} : {ticketFile:join(directory, 'tickets', key + '.json')}),
@@ -226,23 +230,25 @@ export async function reviewCommerceSetup({ configFile, directory }) {
       ...(saveResponse ? {
       responseFile:{destination:join(directory, 'responses', key + '.bin'),
         ...(selected.responseMaxBytes === undefined ? {} : {maxBytes:selected.responseMaxBytes}),
-        ...(selected.responseTimeoutMs === undefined ? {} : {timeoutMs:selected.responseTimeoutMs})},
+        ...(selected.responseTimeoutMs === undefined ? {} : {timeoutMs:selected.responseTimeoutMs}),
+        ...(selected.responseStream === undefined ? {} : {stream:selected.responseStream})},
     } : {})};
-    responseFile(draft);
+    const capture = responseFile(draft);
+    if (capture) draft.responseFile = capture;
     requestTimeoutMs(draft);
     selections.push({key, routeId:route.id, acceptIndex:selected.acceptIndex,
       originalOffer:structuredClone(route.offer), draft, body, ticket,
       bodySha256:body === null ? null : sha(body), bodyBytes:body?.length ?? 0});
   }
   const first = selections[0].draft.operation.expect;
-  need(selections.every(({draft}) => ['network','asset','payTo'].every(key =>
+  need(selections.every(({draft}) => ['network','asset','payTo','paymentFlow'].every(key =>
     draft.operation.expect[key] === first[key])), 'COMMERCE_SETUP_ONE_WORKSPACE_ASSET_RECIPIENT_REQUIRED');
   const maximum = selections.reduce((best, item) =>
     BigInt(item.draft.operation.expect.maxAtomic) > BigInt(best.draft.operation.expect.maxAtomic) ? item : best);
   const single = BigInt(maximum.draft.operation.expect.maxAtomic);
   need(single <= daily, 'COMMERCE_SETUP_PURCHASE_EXCEEDS_DAILY_BUDGET');
   validateNativeSignerConfiguration({network:first.network, asset:first.asset, payTo:first.payTo,
-    expectedPayer:operator.payer, maxAtomic:String(single), rpcUrl:facilitator.rpcUrl});
+    expectedPayer:operator.payer, maxAtomic:String(single), rpcUrl:facilitator.rpcUrl, paymentFlow:first.paymentFlow});
   const transport = operator.httpsProxyEnv === undefined ? null : buyerTransport({
     operation:maximum.draft.operation, buyerTransport:{mode:'explicit-connect',
       origin:new URL(maximum.draft.operation.url).origin, proxyEnv:operator.httpsProxyEnv},
@@ -261,7 +267,8 @@ export async function reviewCommerceSetup({ configFile, directory }) {
     facilitator:reviewConfig(facilitator),
     selections:selections.map(item => ({intentId:item.draft.operation.intentId, routeId:item.routeId,
       method:item.draft.operation.method, url:item.draft.operation.url, acceptIndex:item.acceptIndex,
-      originalTerms:item.originalOffer.accepts[item.acceptIndex], bodyBytes:item.bodyBytes,
+      originalTerms:item.originalOffer.accepts[item.acceptIndex], paymentFlow:item.draft.operation.expect.paymentFlow,
+      bodyBytes:item.bodyBytes,
       bodySha256:item.bodySha256, operationTicket:upstreamPurchaseTicketView(item.ticket),
       responseFile:item.draft.responseFile ?? null, requestTimeoutMs:requestTimeoutMs(item.draft)})),
     signingMaterialLoaded:false, paymentAttempts:0};

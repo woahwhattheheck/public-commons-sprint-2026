@@ -1,0 +1,25 @@
+.stream-workspace { margin-top: 24px; padding-top: 18px; border-top: 1px solid #d6d6d6; }
+.stream-heading, .stream-progress { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+.stream-heading h3 { margin: 0; }
+.stream-workspace meter { display: block; width: 100%; height: 12px; margin-top: 8px; accent-color: #555; }
+.stream-workspace meter::-webkit-meter-bar { background: #eee; border: 1px solid #ccc; border-radius: 0; }
+.stream-workspace meter::-webkit-meter-optimum-value { background: #555; }
+.stream-workspace meter::-moz-meter-bar { background: #555; }
+.stream-workspace > details { margin-top: 18px; }
+.stream-partial { margin: 18px 0; padding: 12px; border: 1px solid #b5b5b5; background: #f6f6f6; }
+.stream-partial label { display: flex; gap: 9px; align-items: flex-start; }
+.stream-partial input { margin-top: 4px; accent-color: #333; }
+.stream-search { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 10px; margin: 18px 0 12px; }
+.stream-search label { flex: 1; min-width: 190px; font-size: 12px; color: #555; }
+.stream-search input { display: block; width: 100%; min-height: 36px; margin-top: 5px; border: 1px solid #aaa; border-radius: 3px; background: #fff; color: #222; padding: 7px 10px; font: inherit; }
+.stream-search input:focus-visible, .stream-partial input:focus-visible { outline: 2px solid #333; outline-offset: 3px; }
+.stream-records { margin-top: 12px; }
+.stream-records details { margin: 0; padding: 10px 0; border-bottom: 1px solid #ddd; }
+.stream-records summary { overflow-wrap: anywhere; font-size: 12px; }
+.stream-records pre { margin: 10px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; }
+.stream-citations { padding-left: 22px; }
+.stream-citations li { margin-bottom: 14px; overflow-wrap: anywhere; }
+.stream-citations details { margin-top: 5px; }
+.stream-citations pre { max-height: 240px; white-space: pre-wrap; overflow-wrap: anywhere; }
+[data-stream="answer-text"] { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 560px; }
+@media (max-width: 520px) { .stream-search { display: block; } .stream-search button { width: 100%; margin-top: 8px; } .stream-heading > .action-row { width: 100%; } }
