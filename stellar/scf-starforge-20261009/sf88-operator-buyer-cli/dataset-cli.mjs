@@ -12,7 +12,7 @@ const help = [
   '     [--max-rows 1000000] [--max-page-bytes 1048576] [--snapshot ORIGINAL_SHA256]',
   '     Use --workspace /private/existing-buyer instead of --config to attach its original operator keys.',
   'status --session /private/session',
-  'run --session /private/session',
+  'run --session /private/session [--workspace /private/existing-buyer]',
   'recover --session /private/session',
   'export --session /private/session --out /private/dataset-manifest.json',
   'deliver --session /private/session --out /private/dataset-data-room',
@@ -33,7 +33,7 @@ function parse(args) {
     ? new Set(['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
     : new Set(['accounting','finalize'].includes(command)
       ? ['session','workspace','offset','limit',...(command==='finalize'?['outbox','merchant-route']:[])]
-      : ['export','deliver'].includes(command) ? ['session','out'] : ['session']);
+      : ['export','deliver'].includes(command) ? ['session','out'] : command === 'run' ? ['session','workspace'] : ['session']);
   const flags = {};
   need(args.length % 2 === 0, 'DATASET_FLAG_VALUE_REQUIRED');
   for (let i = 0; i < args.length; i += 2) {
@@ -84,7 +84,7 @@ export async function main(args = process.argv.slice(2)) {
       report = command === 'finalize' ? await accountDatasetSession(f.session,{
         workspace:f.workspace,offset:offset(f.offset),limit:number(f.limit),finalize:true,
         signal:controller.signal,outbox:f.outbox,merchantRoute:f['merchant-route']})
-        : await runDatasetSession(f.session, {signal:controller.signal,
+        : await runDatasetSession(f.session, {signal:controller.signal, workspace:f.workspace,
         onPage:state => process.stderr.write('Dataset: ' + state.completedPages + ' pages, ' +
           state.acquiredRows + ' rows, ' + state.status + '\n')});
     } finally {
