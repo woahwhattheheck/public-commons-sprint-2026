@@ -130,6 +130,8 @@ serialize changes. A concurrent update either obtains its turn or exits with the
 current owner's PID; retry after that update exits. Dead owners are detected by
 PID, with Linux boot/process-start tokens distinguishing PID reuse. Cleanup only
 removes that dead owner's unique record. It never replaces a shared stale lock.
+When `/proc` describes a different PID namespace, liveness uses process signaling
+without trusting unrelated host process-start tokens.
 Use one host's local filesystem with atomic rename and hard-link support; this is
 not a distributed lock for homes shared across hosts. An inaccessible or foreign
 owner is reported conservatively. A chooser gets five seconds to publish its
