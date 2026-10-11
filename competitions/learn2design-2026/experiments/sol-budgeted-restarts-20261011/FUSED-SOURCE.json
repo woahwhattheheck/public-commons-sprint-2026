@@ -1,0 +1,28 @@
+{
+  "controls": {
+    "pr693_head": "ed869754c237fc35ead7a41266c32bd1daac8567",
+    "pr761_head": "a5425a62236a1dc24fde3b1860e4171e135bb169"
+  },
+  "files": {
+    "fused_adam.py": {
+      "bytes": 1349,
+      "sha256": "8e608abff2f1ddfc5d36ab76006f32489bc5f37ecba92ea241975888a85defa6"
+    },
+    "submission_fused.py": {
+      "bytes": 6657,
+      "sha256": "6c01de7be7f8703c5e803aa8a083d7788b34f496ea06322174f7499a88e7eb1e"
+    },
+    "submission107_fused.py": {
+      "bytes": 11716,
+      "sha256": "bdfe63b2edf4c1c38448cc7ed2de1f111c1a80888fec05f7d215c33362b42c22"
+    },
+    "elite_archive.py": {
+      "bytes": 4697,
+      "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+    },
+    "requirements-cpu.txt": {
+      "bytes": 429,
+      "sha256": "d71566488d1f350494d4d13aec1656dc0aa4836762a09b5800b834adba72324d"
+    }
+  }
+}
