@@ -5,6 +5,8 @@ import { selectServiceRoute } from '../route-path.mjs';
 import { createSellerLifecycle } from '../lifecycle.mjs';
 import { createSellerDeveloperPortal } from '../developer-portal.mjs';
 import { requiresJsonBody } from '../http-methods.mjs';
+import { createSellerAvailability } from '../availability/gate.mjs';
+import { validateAvailabilityDirectory } from '../availability/store.mjs';
 
 const contexts = new AsyncLocalStorage();
 const reserved = path => {
@@ -66,12 +68,13 @@ export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
   allowLocalhost = false, nativeFactory = null, contextFromRequest = () => undefined,
   documentation = true, maxInFlight = 64, drainGraceMs = 60000,
   maxRequestBytes, maxResponseBytes, admissionTimeoutMs, handlerTimeoutMs,
-  requestTimeoutMs } = {}) {
+  requestTimeoutMs, availabilityDirectory } = {}) {
   if ((routes === undefined) === (suppliedCompiled === undefined))
     throw new TypeError('Choose original seller routes or one compiled seller');
   if (typeof contextFromRequest !== 'function' || typeof documentation !== 'boolean' ||
       nativeFactory !== null && typeof nativeFactory !== 'function')
     throw new TypeError('Invalid embedded seller options');
+  if (availabilityDirectory !== undefined) validateAvailabilityDirectory(availabilityDirectory);
   const compiled = suppliedCompiled ?? compileSellerRoutes(routes, { allowLocalhost });
   if (!compiled?.routes?.length || !compiled.nativeRoutes)
     throw new TypeError('Original compiled seller required');
@@ -91,15 +94,24 @@ export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
     },
   };
   const lifecycle = createSellerLifecycle(boundary, { maxInFlight, drainGraceMs });
-  const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
-  if (nativeFactory && !nativeServer)
-    throw new TypeError('Native factory did not return a resource server');
-  const resources = createSellerResourceHandler({ compiled, nativeServer,
-    ...Object.fromEntries(Object.entries({ maxRequestBytes, maxResponseBytes,
-      admissionTimeoutMs, handlerTimeoutMs, requestTimeoutMs }).filter(([, value]) => value !== undefined)),
-  });
-  const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
-  const portal = documentation ? createSellerDeveloperPortal({ compiled, mode }) : null;
+  const availability = availabilityDirectory === undefined ? null :
+    await createSellerAvailability(compiled, availabilityDirectory);
+  let nativeServer, resources, mode, portal;
+  try {
+    nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
+    if (nativeFactory && !nativeServer)
+      throw new TypeError('Native factory did not return a resource server');
+    resources = createSellerResourceHandler({ compiled, nativeServer,
+      ...Object.fromEntries(Object.entries({ maxRequestBytes, maxResponseBytes,
+        admissionTimeoutMs, handlerTimeoutMs, requestTimeoutMs }).filter(([, value]) => value !== undefined)),
+    });
+    mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
+    portal = documentation ? createSellerDeveloperPortal({ compiled, mode }) : null;
+  } catch (error) {
+    // Startup has not admitted host requests, so its new policy lease can close.
+    await availability?.close();
+    throw error;
+  }
   const info = Object.freeze({ schema: 'stellar-forge.embedded-seller.v1', mode,
     routes: Object.freeze(compiled.routes.map(route => Object.freeze({ id: route.id,
       method: route.method, url: route.offer.resource.url,
@@ -108,7 +120,19 @@ export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
   });
 
   function snapshot() {
+    // Health is public. Operator reasons/history remain on the private control.
     return { ...info, lifecycle: lifecycle.snapshot(), requestLifetime: resources.lifetimeSnapshot() };
+  }
+
+  let closing;
+  function close() {
+    return closing ??= (async () => {
+      const result = await lifecycle.close();
+      // Match the original standalone seller: a failed forced drain retains the
+      // writer lease while native work can still be running in this process.
+      await availability?.close();
+      return result;
+    })();
   }
 
   function diagnostics(req, res, path) {
@@ -177,7 +201,8 @@ export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
       res.once('finish', releaseResponse);
       res.once('close', releaseResponse);
       try {
-        await contexts.run({ value }, () => lifecycle.handle(req, res, () => resources(req, res)));
+        await contexts.run({ value }, () => lifecycle.handle(req, res, () => availability
+          ? availability.handle(req, res, () => resources(req, res)) : resources(req, res)));
       } finally {
         if (res.writableFinished || res.destroyed) releaseResponse();
       }
@@ -199,5 +224,7 @@ export async function createEmbeddedSeller({ routes, compiled: suppliedCompiled,
     return handle(req, res).then(consumed => { if (!consumed) return next(); }, next);
   }
 
-  return Object.freeze({ compiled, mode, handle, middleware, snapshot, close: () => lifecycle.close() });
+  return Object.freeze({ compiled, mode, handle, middleware, snapshot, close,
+    ...(availability ? { availability } : {}) });
 }
+
