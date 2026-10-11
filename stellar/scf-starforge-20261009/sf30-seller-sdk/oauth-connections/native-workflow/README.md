@@ -18,6 +18,7 @@ Select a new private working directory outside the source checkout. The same dir
 
 ~~~sh
 mkdir -m 700 /private/oauth-workflow
+/usr/bin/env \
 SCF_OAUTH_WORKSPACE_ROOT=/private/oauth-workflow \
 SCF_OAUTH_SOURCE_ROOT=/absolute/repository \
 SCF_OAUTH_OPERATOR_DRIVER=/absolute/repository/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-connections/native-workflow/operator-session.cjs \
@@ -27,6 +28,8 @@ node /absolute/repository/stellar/scf-starforge-20261009/sf30-seller-sdk/oauth-c
 The browser owner can use explicit `SCF_OAUTH_BROWSER_EXECUTABLE`, `SCF_OAUTH_BROWSER_TMPDIR` and `SCF_OAUTH_PLAYWRIGHT_MODULE_PATH` when supplied by its host. These select an existing browser/runtime, not a signed-in account profile.
 
 On a shared managed host, run this exact process tree through its existing memory/disk admission owner. The controller launches the sole browser child. It does not start another application copy or self-register a second job.
+
+Retain `/usr/bin/env`, the selected path assignments, and the Node command together as the admitted command's executable and arguments. Include any selected browser/runtime path overrides there too. This keeps the same working directory, source checkout and browser owner when the admission owner resumes from another shell session. The retained assignments identify local paths; private grant and credential values remain in the original private connection stores.
 
 ## What is retained
 
@@ -82,6 +85,23 @@ The controller returns `ID.result.json` with the request's content hash, `ok`, a
 `application.invoke` directly calls the original compiled application handler for the credential/backend join. It is deliberately separate from the original HTTP challenge check and asserts no payment verification or settlement.
 
 `host.prepare` invokes the original release store, stage and activation functions, followed by `generate`, `checkBundle`, `checkOAuthHostConnections`, `prepareMounts` and `checkMounts`. Its output records the exact OAuth write path and preflight command in the generated seller unit. It verifies an explicit same-path writable OAuth bind with `create_host_path:false`. It asserts that these host checks made no provider requests. It does not start systemd or Docker.
+
+
+## Supplied operator commands
+
+The `commands/` directory retains the three exact browser instructions for this one workflow. They operate the paired driver through its normal private command queue and use the actual ready file, provider consent page, source importer, compiler, revision desk and seller controls.
+
+| Command | Completed phase |
+| --- | --- |
+| `001_original_source_and_seller.request.json` | Original source selection, provider authorization and explicit grant review, saved merchant and unchanged-provider unpaid challenge |
+| `002_grant_lifecycle.request.json` | Registered distribution CLI status, actual records/cache use, rejected bearer and renewal, lost rotation, explicit reconnect and retained remote cleanup |
+| `003_source_revision_and_host.request.json` | Separate replacement-source authorization, original revision review/save/stage, checked receiving-host output, public output scan and same-workspace restart |
+
+Start the single controller with its selected source and workspace overrides. Place command 001 in `WORKSPACE/acceptance/commands/`; the attached driver writes the same basename with `.response.json` in place of `.request.json`. Inspect its actual `ok` and returned result before placing command 002. Do the same before command 003. The latter two remain outside the live queue until their preceding phase has completed.
+
+The request files contain local operating instructions and source-fixture choices. They contain no provider credential or saved workspace capability. Keep their exact bytes on an unchanged retry. A started request without a response requires inspecting the existing workspace and retained command progress before continuing; it does not authorize creating a second browser or replacing the saved merchant.
+
+All three commands can be copied from the same source checkout. Use their unchanged basenames so the driver's retained request identity remains the same across a handoff. The private controller and operator queues serve different purposes: browser instructions go under `acceptance/commands/`, while the controller's typed lifecycle actions go under `acceptance/control/`. The supplied browser instructions use that controller interface for the original application and host phases.
 
 ## Completion and continuation
 

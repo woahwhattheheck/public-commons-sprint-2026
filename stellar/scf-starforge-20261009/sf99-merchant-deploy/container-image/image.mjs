@@ -61,9 +61,41 @@ async function fileHash(file, maximum) {
 function fields(value, allowed, name) {
   need(object(value) && Object.keys(value).every(key => allowed.includes(key)), 'Unknown or invalid ' + name + ' field');
 }
+function buildDirectory(p) {
+  return p.installation ? p.dependencyRoot + '.merchant-build' : join(p.dependencyRoot, 'merchant-build');
+}
 function dockerfile(p) {
-  const build = join(p.dependencyRoot, 'merchant-build');
+  const build = buildDirectory(p);
   const json = values => JSON.stringify(values);
+  if (p.installation) return [
+    '# Original installer owns selected source, dependency lock and native preparation.',
+    'FROM ' + p.baseImage + ' AS prepared',
+    'USER 0:0',
+    'ENV PATH=' + dirname(p.runtime.node) + ':' + dirname(p.runtime.npm) + ':${PATH}',
+    'WORKDIR ' + build,
+    'COPY ' + json(['package.json','package-lock.json','merchant.tgz','archive.mjs',
+      'runtime.mjs','runtime-profile.mjs','runtime-install.mjs','runtime-unpack.py',
+      'profile.json','runtime-contract.json',build + '/']),
+    'RUN ' + json([p.runtime.node,join(build,'runtime.mjs'),'install',join(build,'runtime-contract.json')]),
+    '',
+    'FROM ' + p.baseImage,
+    'ENV PATH=' + dirname(p.runtime.node) + ':' + dirname(p.runtime.npm) + ':${PATH}',
+    'COPY --from=prepared --chown=' + p.uid + ':' + p.gid + ' ' +
+      json([p.dependencyRoot,p.dependencyRoot]),
+    'COPY --from=prepared --chown=' + p.uid + ':' + p.gid + ' ' + json([build,build]),
+    'WORKDIR ' + p.sourceRoot,
+    'ENV PYTHONDONTWRITEBYTECODE=1',
+    'LABEL org.opencontainers.image.title=' + JSON.stringify('Stellar Forge merchant runtime'),
+    'LABEL org.opencontainers.image.revision=' + JSON.stringify(p.release.sourceCommit),
+    'LABEL org.opencontainers.image.version=' + JSON.stringify(p.release.packageVersion),
+    'LABEL org.opencontainers.image.source=' + JSON.stringify(p.release.sourceRepository),
+    'LABEL org.tokenjunkielabs.starforge.archive-sha256=' + JSON.stringify(p.release.archiveSha256),
+    'USER ' + p.uid + ':' + p.gid,
+    'RUN ' + json([p.runtime.node,join(build,'runtime.mjs'),'check',join(build,'runtime-contract.json')]),
+    'ENTRYPOINT []',
+    'CMD ' + json([p.runtime.node,join(p.sourceRoot,'stellar/scf-starforge-20261009/distribution/cli.mjs'),'doctor']),
+    '',
+  ].join('\n');
   return [
     '# Original merchant source and selected runtime. No private service configuration is copied.',
     'FROM ' + p.baseImage + ' AS prepared',
@@ -95,20 +127,15 @@ export async function inspectPlan(planFile) {
   planFile = absolute(resolve(planFile), 'image plan');
   const planBytes = await regular(planFile, 1024 * 1024), raw = JSON.parse(planBytes);
   fields(raw, ['schema','id','archive','archiveSha256','baseImage','platform','sourceRoot','runtime',
-    'runtimeProfile','selectedSourceRoot','pythonModules','uid','gid'], 'image plan');
+    'runtimeProfile','selectedSourceRoot','pythonModules','uid','gid','nodeHeaders'], 'image plan');
   need(raw.schema === PLAN_SCHEMA && /^[a-z][a-z0-9-]{0,39}$/.test(raw.id ?? ''), 'Image schema and stable ID required');
   absolute(raw.archive, 'distribution archive');
   need(/^[A-Za-z0-9][A-Za-z0-9._:/-]*@sha256:[a-f0-9]{64}$/.test(raw.baseImage ?? ''),
     'Select an existing OCI runtime base by repository and immutable sha256 digest');
   need(/^linux\/(?:amd64|arm64(?:\/v8)?)$/.test(raw.platform ?? ''), 'Select linux/amd64 or linux/arm64');
-  const sourceRoot = imagePath(raw.sourceRoot, 'sourceRoot'), dependencyRoot = dirname(sourceRoot);
-  need(dependencyRoot !== '/' && !sourceRoot.split('/').includes('..') &&
-    !inside(join(dependencyRoot,'node_modules'), sourceRoot) &&
-    !['node_modules','merchant-build','merchant-release'].includes(sourceRoot.split('/').at(-1)),
-    'sourceRoot needs its own directory beside the image dependency node_modules');
+  const sourceRoot = imagePath(raw.sourceRoot, 'sourceRoot');
   fields(raw.runtime, ['node','python','npm'], 'runtime');
   const runtime = Object.fromEntries(['node','python','npm'].map(name => [name,imagePath(raw.runtime[name], name)]));
-  need(!Object.values(runtime).some(path => inside(dependencyRoot,path)), 'Runtime executables must be supplied by the selected base image');
   const uid = raw.uid ?? 65532, gid = raw.gid ?? 65532;
   need([uid,gid].every(value => Number.isInteger(value) && value > 0 && value < 2147483647), 'Unprivileged numeric uid/gid required');
   const pythonModules = raw.pythonModules ?? [];
@@ -119,6 +146,27 @@ export async function inspectPlan(planFile) {
   const runtimeProfileFile = absolute(raw.runtimeProfile,'retained runtime profile');
   const profileBytes = await regular(runtimeProfileFile), profile = verifyRuntimeProfile(JSON.parse(profileBytes));
   need(profile.selection.operator === true, 'Select the original operator runtime profile for a merchant host');
+  const declaredNative = profile.dependencies.some(dependency => dependency.native);
+  const dependencyRoot = declaredNative ? dirname(dirname(sourceRoot)) : dirname(sourceRoot);
+  need(dependencyRoot !== '/' && !sourceRoot.split('/').includes('..') &&
+    !inside(join(dependencyRoot,'node_modules'), sourceRoot) &&
+    !['node_modules','merchant-build','merchant-release'].includes(sourceRoot.split('/').at(-1)),
+    'sourceRoot needs its own directory beside the image dependency node_modules');
+  need(!Object.values(runtime).some(path => inside(dependencyRoot,path)),
+    'Runtime executables must be supplied by the selected base image');
+  let installation = null;
+  if (declaredNative) {
+    need(sourceRoot === join(dependencyRoot,'package','source'),
+      'A declared native profile uses the original installer sourceRoot RUNTIME_DIRECTORY/package/source');
+    need(original.archiveBytes <= 64 * 1024 * 1024,
+      'Declared native image source exceeds the original installer archive limit');
+    const nodeHeaders = raw.nodeHeaders == null ? null : imagePath(raw.nodeHeaders,'nodeHeaders');
+    need(!nodeHeaders || !inside(dependencyRoot,nodeHeaders),
+      'Matching Node headers must be supplied by the selected build base outside the runtime directory');
+    installation = { schema:'stellar-forge.image-runtime-installation.v1',
+      directory:dependencyRoot,sourceRoot,nodeHeaders };
+  } else need(raw.nodeHeaders === undefined,
+    'nodeHeaders belongs to a selected declared-native runtime profile');
   const selectedSourceRoot = absolute(await realpath(raw.selectedSourceRoot),'selected release source');
   await verifyRuntimeSource(profile,{sourceRoot:selectedSourceRoot});
   need(profile.source.sourceCommit === original.manifest.sourceCommit &&
@@ -141,7 +189,8 @@ export async function inspectPlan(planFile) {
     baseImage: raw.baseImage, platform: raw.platform, sourceRoot, dependencyRoot, runtime, uid, gid,
     features: [...(profile.selection.native?['native']:[]),...profile.selection.features].sort(),
     pythonModules: [...pythonModules].sort(), runtimeProfileFile,selectedSourceRoot,profile,
-    profileSha256:sha256(profileBytes),sourceModes,dependencies,release };
+    profileSha256:sha256(profileBytes),sourceModes,dependencies,release,
+    ...(installation ? { installation } : {}) };
 }
 
 export async function prepareImage(planFile, directory) {
@@ -150,23 +199,31 @@ export async function prepareImage(planFile, directory) {
   const contract = { schema: 'stellar-forge.merchant-image-runtime.v1', sourceRoot: p.sourceRoot,
     dependencyRoot: p.dependencyRoot, runtime: p.runtime, release: p.release,
     features: p.features,profileId:p.profile.profileId,pythonModules: p.pythonModules,
-    sourceModes:p.sourceModes };
+    sourceModes:p.sourceModes,...(p.installation ? { installation:p.installation } : {}) };
   const packageJson = p.profile.packageJson;
   const runtimeSource = (await regular(fileURLToPath(new URL('./runtime.mjs',import.meta.url)))).toString('utf8');
   const profileImport = "from '../../distribution/runtime-profile.mjs'";
   need(runtimeSource.split(profileImport).length === 2, 'Original image runtime profile import changed');
   // The generated build context carries the same maintained profile module
   // beside its runtime helper, instead of the repository directory layout.
-  const generatedRuntime = runtimeSource.replace(profileImport,"from './runtime-profile.mjs'");
+  let generatedRuntime = runtimeSource.replace(profileImport,"from './runtime-profile.mjs'");
+  if (p.installation) {
+    const installerImport = "const INSTALLER = '../../distribution/runtime-install.mjs';";
+    need(generatedRuntime.split(installerImport).length === 2, 'Original image runtime installer import changed');
+    generatedRuntime = generatedRuntime.replace(installerImport,"const INSTALLER = './runtime-install.mjs';");
+  }
   const files = new Map([
     ['Dockerfile',dockerfile(p)], ['package.json',jsonText(packageJson)],
     ['runtime-contract.json',jsonText(contract)],
-    ['.dockerignore','*\n!Dockerfile\n!package.json\n!package-lock.json\n!merchant.tgz\n!archive.mjs\n!runtime.mjs\n!runtime-profile.mjs\n!profile.json\n!runtime-contract.json\n'],
+    ['.dockerignore','*\n!Dockerfile\n!package.json\n!package-lock.json\n!merchant.tgz\n!archive.mjs\n!runtime.mjs\n!runtime-profile.mjs\n!profile.json\n!runtime-contract.json\n' +
+      (p.installation ? '!runtime-install.mjs\n!runtime-unpack.py\n' : '')],
     ['archive.mjs',await regular(fileURLToPath(new URL('./archive.mjs',import.meta.url)))],
     ['runtime.mjs',generatedRuntime],
     ['runtime-profile.mjs',await regular(fileURLToPath(new URL('../../distribution/runtime-profile.mjs',import.meta.url)))],
     ['profile.json',await regular(p.runtimeProfileFile)],
   ]);
+  if (p.installation) for (const name of ['runtime-install.mjs','runtime-unpack.py'])
+    files.set(name,await regular(fileURLToPath(new URL('../../distribution/' + name,import.meta.url))));
   await mkdir(out, { mode: 0o700 });
   try {
     for (const [name,bytes] of files) await writeFile(join(out,name),bytes,{mode:0o600,flag:'wx'});
@@ -180,7 +237,7 @@ export async function prepareImage(planFile, directory) {
     return { status:'IMAGE_CONTEXT_PREPARED',directory:out,id:p.id,baseImage:p.baseImage,
       platform:p.platform,release:p.release,features:p.features,dependencies:p.dependencies,
       sourceRoot:p.sourceRoot,dependencyRoot:p.dependencyRoot,runtime:p.runtime,
-      sourceModes:p.sourceModes };
+      sourceModes:p.sourceModes,...(p.installation ? { installation:p.installation } : {}) };
   } catch(error) { await rm(out,{recursive:true,force:true}); throw error; }
 }
 
@@ -209,10 +266,24 @@ export async function checkContext(directory, { requireLock = true } = {}) {
   need(await realpath(directory) === directory, 'Image context must not traverse a symlink');
   const p = await readJSON(join(directory,'context.json'));
   need(p.schema === CONTEXT_SCHEMA && p.directory === directory && object(p.artifacts), 'Original image context manifest required');
-  need(['Dockerfile','package.json','runtime-contract.json','.dockerignore','archive.mjs','runtime.mjs',
-    'runtime-profile.mjs','profile.json','merchant.tgz']
-    .every(name => Object.hasOwn(p.artifacts,name)) && Object.keys(p.artifacts).length === 9,
+  const requiredArtifacts = ['Dockerfile','package.json','runtime-contract.json','.dockerignore',
+    'archive.mjs','runtime.mjs','runtime-profile.mjs','profile.json','merchant.tgz',
+    ...(p.installation ? ['runtime-install.mjs','runtime-unpack.py'] : [])];
+  need(requiredArtifacts.every(name => Object.hasOwn(p.artifacts,name)) &&
+    Object.keys(p.artifacts).length === requiredArtifacts.length,
     'Image context must contain its complete original artifact selection');
+  if (p.installation) {
+    need(object(p.installation) && p.installation.schema === 'stellar-forge.image-runtime-installation.v1' &&
+      p.installation.directory === p.dependencyRoot && p.installation.sourceRoot === p.sourceRoot &&
+      p.sourceRoot === join(p.dependencyRoot,'package','source') &&
+      p.profile?.dependencies?.some(dependency=>dependency.native),
+      'Native image context lost the original installer layout or selected declaration');
+    if (p.installation.nodeHeaders !== null) {
+      imagePath(p.installation.nodeHeaders,'nodeHeaders');
+      need(!inside(p.dependencyRoot,p.installation.nodeHeaders),
+        'Node headers must be supplied by the original build base');
+    }
+  }
   for (const [name,expected] of Object.entries(p.artifacts)) {
     need(/^(?:[A-Za-z0-9][A-Za-z0-9_.-]*|\.dockerignore)$/.test(name) &&
       /^[a-f0-9]{64}$/.test(expected), 'Invalid context artifact');
@@ -224,7 +295,9 @@ export async function checkContext(directory, { requireLock = true } = {}) {
   need(contract.sourceRoot === p.sourceRoot && contract.dependencyRoot === p.dependencyRoot &&
     JSON.stringify(contract.runtime) === JSON.stringify(p.runtime) &&
     JSON.stringify(contract.release) === JSON.stringify(p.release) &&
-    JSON.stringify(contract.sourceModes) === JSON.stringify(p.sourceModes), 'Image metadata differs from its retained runtime contract');
+    JSON.stringify(contract.sourceModes) === JSON.stringify(p.sourceModes) &&
+    JSON.stringify(contract.installation ?? null) === JSON.stringify(p.installation ?? null),
+    'Image metadata differs from its retained runtime contract');
   const profile = verifyRuntimeProfile(await readJSON(join(directory,'profile.json')));
   need(profile.profileId === contract.profileId && profile.profileId === p.profile.profileId &&
     profile.source.sourceCommit === p.release.sourceCommit, 'Runtime profile differs from the selected image source');

@@ -10,6 +10,7 @@ let query = '', filter = 'all', generation = 0, pollTimer, queryTimer, confirmAc
 let downloadWatchUntil = 0;
 let receiving = { sources: [], operator: null }, receivedChoices = [], receivedReview = null, receivingGeneration = 0;
 let recoveryState = null, backupReview = null;
+let analysisReview = null, analysisAction = null;
 const readable = value => String(value ?? '').replace(/_/g, ' ').toLowerCase();
 const integer = value => value === null || value === undefined ? '—' : String(value).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const bytes = value => {
@@ -49,6 +50,13 @@ const messages = {
   OBJECT_RECOVERY_DEPENDENCY_OUTSIDE_ROOT: 'Choose the common private state root that contains this workspace, its operator preset and every selected native buyer.',
   OBJECT_RECOVERY_ORIGINAL_OPERATOR_REQUIRED: 'Workspace backup requires the original prepared buyer and its committed spending journal. Prepare the received product with your local preset first, or select its existing native operator.',
   WORKSPACE_RECOVERY_TARGET_NOT_EMPTY: 'The original restore location contains files. Close its programs and preserve that existing directory before restoring to an absent or empty location.',
+  OBJECT_ANALYSIS_STOP_BEFORE_BACKUP: 'Stop the analysis workspace in Data analysis, then review the backup contents again.',
+  OBJECT_ANALYSIS_SOURCE_INVALID: 'Choose JSON or CSV and a source name beginning with a letter, followed by letters, numbers or underscores.',
+  DATASET_ANALYSIS_COMMAND_FAILED: 'The original Python application could not start. Check Python on the launching host or supply --analysis-python, then reopen the same saved work.',
+  ANALYSIS_WORKSPACE_ALREADY_OPEN: 'This database is already open in another analysis process. Use that original workspace or close its owning terminal before reopening it here.',
+  ANALYSIS_SOURCE_CHANGED: 'The named analysis source changed after review. Review its current revision before registering this file.',
+  DATASET_ANALYSIS_STOPPED: 'The analysis operation stopped. The original downloaded file and committed analytical work remain available.',
+  DATASET_ANALYSIS_WORKSPACE_CHANGED: 'The target analysis database changed after review. Review this source against the current workspace.',
 };
 function notice(message = '', error = false) {
   $('notice').hidden = !message; $('notice').textContent = message; $('notice').classList.toggle('error', error);
@@ -83,8 +91,8 @@ function selectedParams() {
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
-  if ((state?.active || Date.now() < downloadWatchUntil) && !document.hidden)
-    pollTimer = setTimeout(() => load().catch(showError), 1000);
+  if ((state?.active || Date.now() < downloadWatchUntil || !$('analysis-panel').hidden && state?.analysis?.running) && !document.hidden)
+    pollTimer = setTimeout(() => load().catch(showError), state?.active ? 1000 : 2000);
 }
 async function load() {
   const current = ++generation, result = await request('/api/state' + selectedParams());
@@ -105,6 +113,7 @@ function selectSession(id) {
   $('chunk-query').value = ''; $('chunk-filter').value = 'all'; $('setup').hidden = true;
   $('selection-review').hidden = true; load().catch(showError);
   $('recovery-panel').hidden = true;
+  $('analysis-panel').hidden = true; analysisReview = null; analysisAction = null;
 }
 function renderSessions() {
   const list = $('session-list'); list.replaceChildren();
@@ -137,8 +146,9 @@ function explanation(row) {
 }
 function render() {
   renderSessions(); const row = state.selected;
-  $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden;
-  $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden;
+  renderAnalysis();
+  $('empty').hidden = Boolean(row) || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden;
+  $('session').hidden = !row || !$('setup').hidden || !$('recovery-panel').hidden || !$('analysis-panel').hidden;
   if (!row) { controls(); return; }
   $('session-id').textContent = 'SAVED DOWNLOAD / ' + row.id;
   $('session-title').textContent = row.name;
@@ -279,7 +289,85 @@ function controls() {
   $('backup-verify').disabled = receivingBusy;
   $('recovery-stop').hidden = !recoveryState?.active;
   $('recovery-stop').disabled = pending || recoveryState?.active?.state === 'STOPPING';
+  $('open-analysis').disabled = pending; $('close-analysis').disabled = pending;
+  const usableObject = row?.section === 'delivery' && row.status === 'COMPLETE' && row.assembly;
+  $('analyze-file').disabled = receivingBusy || !usableObject;
+  $('analysis-review').disabled = receivingBusy || !usableObject;
+  $('analysis-name').disabled = receivingBusy || !usableObject; $('analysis-format').disabled = receivingBusy || !usableObject;
+  $('analysis-register').disabled = receivingBusy || !analysisReview;
+  $('analysis-open').disabled = receivingBusy || state?.analysis?.running;
+  $('analysis-stop').disabled = receivingBusy || !state?.analysis?.running;
+  $('analysis-cancel').hidden = !state?.analysis?.active;
+  $('analysis-cancel').disabled = pending || state?.analysis?.active?.state === 'STOPPING';
 }
+function renderAnalysis() {
+  const value = state?.analysis, last = value?.last, work = value?.active;
+  $('analysis-status').textContent = work ? readable(work.kind) + ': ' + readable(work.state) +
+    (work.phase ? ' · ' + readable(work.phase) : '') + '.' : value?.running ?
+      'The original analysis workspace is open. Continue in its private browser to map fields, import tables or resume saved work.' :
+      'The analysis workspace is stopped. Open it to continue saved work, or review the selected completed file below.';
+  $('analysis-link').hidden = !value?.url || !value.running;
+  if (value?.url && value.running) $('analysis-link').href = value.url; else $('analysis-link').removeAttribute('href');
+  const row = state?.selected, usable = row?.section === 'delivery' && row.status === 'COMPLETE' && row.assembly;
+  $('analysis-review-form').hidden = !usable;
+  $('analysis-selection').textContent = usable ? row.assembly.name + ' · ' + bytes(row.assembly.bytes) +
+    '. Registration reopens this exact recorded file through the original Object Buyer.' :
+    'Select a completed file in File delivery, then choose Use in data analysis. Existing analytical work remains available above.';
+  if (analysisReview && (analysisReview.session !== row?.id || analysisReview.expectedRevision !== row?.revision)) {
+    analysisReview = null; analysisAction = null; $('analysis-source-review').hidden = true;
+  }
+  $('analysis-history').textContent = last ? (last.name ? last.name + ' · ' : '') + readable(last.kind) + ': ' +
+    readable(last.state) + (last.sourceRevision ? ' · source revision ' + last.sourceRevision : '') +
+    (last.filename ? ' · ' + last.filename + ' / ' + bytes(last.bytes) : '') +
+    (last.endedAt ? ' · ' + new Date(last.endedAt).toLocaleString() : '') +
+    (last.error ? '. ' + errorMessage({code:last.error}) : '') +
+    (last.state === 'INTERRUPTED' ? '. Reopen saved analysis or review and register the same original file to recover its source.' : '') +
+    (last.saveError ? '. The handoff history could not be saved: ' + readable(last.saveError) : '') :
+    'No source has been handed to analysis from this workspace yet.';
+}
+function openAnalysis() {
+  $('setup').hidden = true; $('recovery-panel').hidden = true; $('analysis-panel').hidden = false;
+  analysisReview = null; analysisAction = null; $('analysis-source-review').hidden = true;
+  const row = state?.selected;
+  if (row?.assembly) {
+    const cleaned = row.assembly.name.replace(/\.[^.]*$/, '').replace(/[^A-Za-z0-9_]/g, '_');
+    $('analysis-name').value = (/^[A-Za-z]/.test(cleaned) ? cleaned : 'object_' + cleaned).slice(0,48);
+    $('analysis-format').value = row.contentType?.split(';')[0] === 'text/csv' || /\.csv$/i.test(row.assembly.name) ? 'csv' : 'json';
+  }
+  render(); schedulePoll();
+}
+$('open-analysis').onclick = openAnalysis; $('analyze-file').onclick = openAnalysis;
+$('close-analysis').onclick = () => { $('analysis-panel').hidden = true; render(); schedulePoll(); };
+for (const id of ['analysis-name','analysis-format']) $(id).addEventListener('input', () => {
+  analysisReview = null; analysisAction = null; $('analysis-source-review').hidden = true; controls();
+});
+$('analysis-review-form').onsubmit = event => {
+  event.preventDefault(); action(async () => {
+    analysisReview = null; analysisAction = null; $('analysis-source-review').hidden = true;
+    const row = state.selected;
+    analysisReview = await request('/api/analysis/review', {session:row.id, expectedRevision:row.revision,
+      name:$('analysis-name').value, format:$('analysis-format').value});
+    details($('analysis-source-terms'), [['Recorded file',analysisReview.filename],['Complete bytes',integer(analysisReview.bytes)],
+      ['File SHA-256',analysisReview.sha256],['Original session',analysisReview.sessionId],['Snapshot',analysisReview.snapshot],
+      ['Configuration SHA-256',analysisReview.configurationSha256],
+      ['Analysis source',analysisReview.name],['Chosen format',analysisReview.format.toUpperCase()],
+      ['Current source revision',analysisReview.expectedSourceRevision || 'New source'],
+      ['Workspace',analysisReview.workspaceId ?? 'Create inside this buyer workspace']]);
+    $('analysis-source-review').hidden = false;
+  });
+};
+$('analysis-register').onclick = () => action(async () => {
+  if (!analysisReview) return;
+  analysisAction ??= crypto.randomUUID();
+  await request('/api/analysis/start', {kind:'ATTACH',actionId:analysisAction,reviewId:analysisReview.reviewId});
+});
+for (const [id,kind] of [['analysis-open','OPEN'],['analysis-stop','STOP']]) $(id).onclick = () => action(async () => {
+  await request('/api/analysis/start',{kind,actionId:crypto.randomUUID()});
+});
+$('analysis-cancel').onclick = () => action(async () => {
+  const current = state.analysis.active;
+  if (current) await request('/api/stop',{session:current.session,runId:current.id});
+});
 function productChanged() {
   review = null; $('selection-review').hidden = true;
   const product = products.find(item => item.id === $('product').value);
@@ -297,6 +385,7 @@ function productChanged() {
 async function newDownload() {
   await action(async () => {
     $('recovery-panel').hidden = true;
+    $('analysis-panel').hidden = true;
     products = (await request('/api/products')).products;
     const select = $('product'); select.replaceChildren();
     for (const product of products) { const option = element('option',product.label + (product.error ? ' · setup required' : '')); option.value = product.id; select.append(option); }
@@ -346,6 +435,7 @@ async function loadRecovery() {
   controls();
 }
 $('open-recovery').onclick = () => action(async () => {
+  $('analysis-panel').hidden = true;
   $('setup').hidden = true; $('recovery-panel').hidden = false; await loadRecovery();
 });
 $('close-recovery').onclick = () => { $('recovery-panel').hidden = true; render(); };

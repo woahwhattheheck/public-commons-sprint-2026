@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Xero journals · Merchant accounting</title>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/xero.css">
+  <script type="module" src="/xero.mjs"></script>
+</head>
+<body>
+  <header class="topbar"><div><p class="eyebrow">Merchant accounting</p><h1>Xero journals</h1></div><a href="/">Accounting workspace</a></header>
+  <main class="xero-shell">
+    <aside class="xero-sidebar">
+      <label>Operator <input id="actor" autocomplete="name" maxlength="120" placeholder="Name for the accounting record"></label>
+      <p id="connection" class="muted"></p>
+      <button id="refresh" type="button">Refresh workspace</button>
+      <nav aria-label="Xero workflow"><a href="#organization">Organization</a><a href="#prepare">Prepare journals</a><a href="#saved">Saved journals</a></nav>
+      <p class="muted">Payments and verified refunds keep their original source. Enter each accounting value in the selected organization's base currency.</p>
+      <p id="workspace-revision" class="muted"></p>
+    </aside>
+    <div class="xero-content">
+      <div id="notice" role="status" aria-live="polite" hidden></div>
+      <section id="organization" class="panel">
+        <h2>1. Select the Xero organization and accounts</h2>
+        <p>Capture the native organization and chart of accounts with the configured connection, or import the original JSON responses exported from Xero.</p>
+        <form id="context-form">
+          <div class="xero-grid"><label>Organization name <input name="name" maxlength="160" required></label><label>Xero tenant ID <input name="tenantId" required placeholder="Organization UUID" spellcheck="false"></label></div>
+          <div class="xero-grid"><label>Organization response <input name="organizationFile" type="file" accept=".json,application/json"></label><label>Accounts response <input name="accountsFile" type="file" accept=".json,application/json"></label></div>
+          <div class="xero-actions"><button type="submit" name="mode" value="import">Import source responses</button><button type="submit" name="mode" value="capture">Read from Xero</button></div>
+        </form>
+        <div id="contexts"></div>
+      </section>
+      <section id="prepare" class="panel">
+        <h2>2. Prepare a journal plan</h2>
+        <form id="source-form">
+          <div class="xero-grid"><label>Original accountant handoff <select id="handoff" name="handoffId" required></select></label><label>Xero organization <select id="context" name="contextId" required></select></label></div>
+          <button type="submit">Load payment and refund source</button>
+        </form>
+        <form id="plan-form" hidden>
+          <div class="xero-grid"><label>Plan name <input name="name" maxlength="160" required></label><label>Purpose <select name="purpose"><option value="demo">Xero demo organization</option><option value="books">Merchant books</option></select></label></div>
+          <label>Valuation and tax treatment <textarea name="valuationBasis" maxlength="2000" rows="3" required placeholder="Describe the base-currency valuation source, recognition policy, and why this journal uses no tax."></textarea></label>
+          <label class="xero-check"><input name="cashBasis" type="checkbox"> Show these journals on cash basis reports</label>
+          <p id="source-summary"></p><div id="components"></div>
+          <button type="submit">Review journal plan</button>
+        </form>
+        <section id="preview" hidden><h3>Review the exact journals</h3><div id="preview-content"></div><button id="save" type="button">Save this journal plan</button></section>
+      </section>
+      <section id="saved" class="panel">
+        <div class="xero-heading"><h2>3. Deliver and reconcile journals</h2><button id="reload-plan" type="button" hidden>Reload selected plan</button></div>
+        <label>Saved plan <select id="plans"><option value="">Choose a saved plan</option></select></label>
+        <div id="plan-detail"></div>
+        <section id="native" hidden>
+          <h3>Xero connection</h3>
+          <p>Creating drafts records the exact request before it is sent. Refresh reads the resulting native journals and compares them to the saved plan.</p>
+          <div class="xero-actions"><button id="create-drafts" type="button">Create these drafts in Xero</button><button id="refresh-native" type="button">Read journals from Xero</button></div>
+          <div id="operation"></div>
+        </section>
+        <form id="response-form" hidden><h3>Import Xero journal responses</h3><p>Choose the original ManualJournals JSON response files for this plan. The comparison checks journal IDs, dates, accounts, descriptions, and exact debit and credit values.</p><label>Native response files <input name="files" type="file" multiple accept=".json,application/json" required></label><button type="submit">Compare returned journals</button></form>
+        <section id="captures" hidden><h3>Retained comparisons</h3><label>Comparison <select id="capture"></select></label><div id="comparison"></div><button id="preview-return" type="button">Preview accountant return</button></section>
+        <section id="return" hidden><h3>Original accountant return</h3><div id="return-preview"></div><button id="apply-return" type="button">Apply this accountant return</button></section>
+        <form id="cancel-form" hidden><h3>Cancel an unused plan</h3><label>Reason <input name="reason" maxlength="2000" required></label><label class="xero-check"><input name="noExternalImport" type="checkbox" required> I have not imported any downloaded journal from this plan into Xero.</label><button type="submit">Cancel unused plan</button></form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
