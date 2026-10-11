@@ -38,6 +38,22 @@ test('original diagnostic input becomes deterministic offline report without ele
     legacy.challenge={state:'NOT_HTTP_402',httpStatus:200};
     assert.equal(interpret(legacy).findings[0].priority,'HIGH');
     assert.match(renderReport(report),/Unauthenticated seller GET returned HTTP 200/);
+    // Actual post-SF52 method-aware contract: the origin was never GET-probed.
+    const nonGet=structuredClone(listed);
+    nonGet.challenge={state:'CATALOG_NON_GET_ONLY',observedVia:'COMPLETE_CATALOG',
+      declaredHttpMethods:['POST'],mcpToolCount:1};
+    const methodAssessment=interpret(nonGet);
+    assert.equal(methodAssessment.state,'REVIEW_READY');
+    assert.equal(methodAssessment.findings[0].priority,'INFO');
+    assert.match(methodAssessment.findings[0].finding,/no seller-origin GET was performed/);
+    const methodHtml=renderReport(nonGet);
+    assert.match(methodHtml,/NOT PROBED \(catalog contract excludes GET\)/);
+    assert.match(methodHtml,/Catalog-declared HTTP methods/);
+    assert.match(methodHtml,/POST/);
+    assert.doesNotMatch(methodHtml,/Seller GET HTTP<\/th><td>Request failed/);
+    const invalidNonGet=structuredClone(nonGet);
+    invalidNonGet.challenge.declaredHttpMethods=['GET'];
+    assert.throws(()=>interpret(invalidNonGet),/Contradictory non-GET/);
     const out=join(root,'report');
     await writePackage({source,out,capturedAt:'2026-10-10T22:00:00.000Z'});
     const verified=await verifyPackage(out);
