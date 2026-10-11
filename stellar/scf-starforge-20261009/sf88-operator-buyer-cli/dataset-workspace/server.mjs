@@ -138,7 +138,7 @@ export async function startDatasetWorkspace({ stateDirectory, profilePath = null
       }
     } catch (error) {
       if (res.headersSent) { res.destroy(); return; }
-      json(error.status ?? 400, { error: safeCode(error), message: error.message ?? safeCode(error) });
+      json(error.status ?? 500, { error: safeCode(error), message: error.message ?? safeCode(error) });
     }
   });
   server.on('connection', socket => { sockets.add(socket); socket.once('close', () => sockets.delete(socket)); });

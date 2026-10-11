@@ -40,14 +40,17 @@ function table(headers, rows) {
 function notice(message = '', error = false) {
   const node = $('#notice'); node.textContent = message; node.hidden = !message; node.dataset.error = String(error);
 }
-async function api(path, value) {
+async function fetchWorkspace(path, value) {
   const response = await fetch(path, { method: value === undefined ? 'GET' : 'POST',
     headers: { 'x-dataset-workspace-token': token, ...(value === undefined ? {} : { 'content-type': 'application/json' }) },
     ...(value === undefined ? {} : { body: JSON.stringify(value) }), cache: 'no-store' });
-  const result = await response.json();
-  if (!response.ok) { const error = new Error(result.message || result.error || `HTTP ${response.status}`); error.status = response.status; error.code = result.error; throw error; }
-  return result;
+  if (!response.ok) {
+    const result = await response.json().catch(() => ({}));
+    const error = new Error(result.message || result.error || `HTTP ${response.status}`); error.status = response.status; error.code = result.error; throw error;
+  }
+  return response;
 }
+async function api(path, value) { return (await fetchWorkspace(path, value)).json(); }
 async function execute(action) {
   if (busy) return;
   busy = true; notice();
@@ -146,7 +149,16 @@ function renderReceiving() {
   $('#main').replaceChildren(...contents);
 }
 const pendingKey = () => 'dataset-pending-' + selectedId;
+function pendingRequest() {
+  try { return JSON.parse(sessionStorage.getItem(pendingKey()) || 'null'); } catch { return null; }
+}
 async function start(kind) {
+  const pending = pendingRequest();
+  if (pending) {
+    await submit(pending);
+    notice('Recovered the saved request. Review its original outcome before starting another operation.');
+    return;
+  }
   const request = { actionId: crypto.randomUUID(), session: selectedId, kind, expectedRevision: selected.revision,
     ...(kind === 'analysis' ? { alias } : {}) };
   sessionStorage.setItem(pendingKey(), JSON.stringify(request));
@@ -154,7 +166,11 @@ async function start(kind) {
 }
 async function submit(request) {
   try { const result = await api('/api/start', request); sessionStorage.removeItem('dataset-pending-' + request.session); await refresh(); return result; }
-  catch (error) { if (error.status) sessionStorage.removeItem('dataset-pending-' + request.session); throw error; }
+  catch (error) {
+    if (error.status >= 400 && error.status < 500 && ![401, 403, 408, 425, 429].includes(error.status))
+      sessionStorage.removeItem('dataset-pending-' + request.session);
+    throw error;
+  }
 }
 function progress() {
   const report = selected.report ?? {}, next = report.nextPage;
@@ -195,8 +211,8 @@ function delivered() {
     el('div', { class: 'file-list' }, files.map(([name, value]) => el('div', { class: 'file' }, text('strong', name), text('p', size(value.bytes)),
       text('code', value.sha256), button('Download', () => download(name))))));
   output.append(el('div', { class: 'toolbar spaced' }, button('Download acquisition manifest', async () => {
-    const value = await api('/api/manifest?session=' + encodeURIComponent(selectedId));
-    const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' }));
+    const response = await fetchWorkspace('/api/manifest?session=' + encodeURIComponent(selectedId));
+    const url = URL.createObjectURL(await response.blob());
     const anchor = el('a', { href: url, download: 'acquisition-manifest.json' }); document.body.append(anchor); anchor.click(); anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, { disabled: Boolean(saved.active) })));
@@ -240,9 +256,6 @@ function accounting() {
 function operationHistory() {
   const jobs = saved.jobs.filter(item => item.session === selectedId);
   const result = card(text('h3', 'Customer operation history'));
-  let pending; try { pending = JSON.parse(sessionStorage.getItem(pendingKey()) || 'null'); } catch {}
-  if (pending) result.append(el('div', { class: 'callout' }, text('p', 'The browser did not receive a reply for its last request. Reuse the same saved action ID to retrieve or continue that exact request.'),
-    button('Retry saved request', () => submit(pending))));
   if (!jobs.length) result.append(text('p', 'No browser operation has been started for this acquisition.', 'muted'));
   for (const job of jobs) result.append(el('div', { class: 'operation' },
     el('div', { class: 'toolbar' }, text('strong', statusText(job.kind)), badge(job.status)),
@@ -261,7 +274,11 @@ function renderSession() {
   const tabs = el('nav', { class: 'tabs', 'aria-label': 'Acquisition sections' }, [['progress', 'Progress'], ['data', 'Data & analysis'], ['purchases', 'Purchases'], ['history', 'History']]
     .map(([key, label]) => button(label, async () => { tab = key; if (key === 'data' && selected.delivery && !preview) await loadPreview(); if (key === 'purchases' && !purchases && !saved.active) await loadPurchases(); }, { class: key === tab ? 'selected' : '', 'aria-pressed': String(key === tab) })));
   const content = tab === 'progress' ? progress() : tab === 'data' ? delivered() : tab === 'purchases' ? accounting() : operationHistory();
-  $('#main').replaceChildren(heading, metrics, tabs, ...content);
+  const pending = pendingRequest();
+  const recovery = pending ? el('div', { class: 'callout' },
+    text('p', 'The last request has no confirmed reply. Recover that same request to see its original outcome.'),
+    button('Recover saved request', () => submit(pending))) : null;
+  $('#main').replaceChildren(...[heading, recovery, metrics, tabs, ...content].filter(Boolean));
 }
 function render() {
   if (!saved) return;
