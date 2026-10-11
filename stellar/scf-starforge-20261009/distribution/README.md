@@ -638,6 +638,27 @@ by the CLI and browser. Full source, pipeline, package, buyer and operating guid
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
 
+## Operate retained web intelligence
+
+The [Diffbot workspace](../sf30-seller-sdk/diffbot/README.md) retains original
+Extract/Bulk results, source editions, exact numeric tokens, object reviews,
+recurring watchlists and mapped customer files. It uses the existing native
+Python workspace, release publisher and buyer recovery.
+
+```sh
+npx --no-install starforge diffbot-workspace create \
+  --dir /private/web-intelligence --dataset /private/prepared/workspace.json
+npx --no-install starforge diffbot-workspace serve \
+  --dir /private/web-intelligence --port 8431
+npx --no-install starforge diffbot-acquire --help
+```
+
+Open the printed operator URL. The complete operating guide covers original
+acquisition and credit estimates, reviewed customer-only publication, separate
+customer/operator handoff directories and portable reopen. Provider credentials
+stay in the existing private transport store. The installed acquisition command
+forwards to the original included Python client.
+
 ## Operate a retained Allium data product
 
 The Allium commands package the original Explorer acquisition and the same
