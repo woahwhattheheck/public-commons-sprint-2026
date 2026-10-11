@@ -324,8 +324,8 @@ export async function inspectRelease(root, releaseId) {
   return publicRelease((await releaseRecord(root, releaseId, true)).record);
 }
 /** Exact original atomic strings are displayed as strings, never converted to currency. */
-export async function compareReleases(root, beforeId, afterId) {
-  const before = beforeId === null ? null : await inspectRelease(root, beforeId);
+export async function compareReleases(root, beforeId, afterId, { beforeRoot = root } = {}) {
+  const before = beforeId === null ? null : await inspectRelease(beforeRoot, beforeId);
   const after = await inspectRelease(root, afterId);
   const previous = new Map((before?.routes ?? []).map(route => [route.method + ' ' + route.path, route]));
   const current = new Map(after.routes.map(route => [route.method + ' ' + route.path, route]));
@@ -440,13 +440,14 @@ export async function releaseStatus(root) {
 // its private cache controls attach before the release reports readiness.
 
 /** Spawn the ORIGINAL foreground launcher so each run gets fresh application imports. */
-export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs = 70000, expectedGeneration } = {}) {
+export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdownGraceMs = 70000, expectedGeneration, handleSignals = true } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(startupTimeoutMs) || startupTimeoutMs < 1000 || startupTimeoutMs > 120000 ||
       !Number.isInteger(shutdownGraceMs) || shutdownGraceMs < 1000 || shutdownGraceMs > 120000)
     throw new TypeError('Startup and shutdown timeouts must be 1000–120000 ms.');
   if (expectedGeneration !== undefined && (!Number.isSafeInteger(expectedGeneration) || expectedGeneration < 0))
     throw new TypeError('expectedGeneration must be the nonnegative integer shown by release status.');
+  if (typeof handleSignals !== 'boolean') throw new TypeError('handleSignals must be a boolean.');
   const releaseLock = await lock(root, 'run.lock');
   let child, observation, closing, finishing, stopping, completion, startupTimer, failure;
   let exited = Promise.resolve(), exitSettled = true, shutdownRequested = null, rejectReady = () => {};
@@ -522,7 +523,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       child.once('exit', (code, signal) => { exitCode = code; exitSignal = signal;
         readyReject(new Error('Original seller exited before startup (code ' + code + ', signal ' + signal + '). ' + stderr.slice(-2000))); settle(); });
     });
-    process.on('SIGINT', onInterrupt); process.on('SIGTERM', onTerminate);
+    if (handleSignals) { process.on('SIGINT', onInterrupt); process.on('SIGTERM', onTerminate); }
     child.stderr.setEncoding('utf8'); child.stdout.setEncoding('utf8');
     child.stderr.on('data', chunk => { stderr = (stderr + chunk).slice(-8192); });
     child.stdout.on('data', chunk => {

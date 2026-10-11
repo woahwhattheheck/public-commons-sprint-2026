@@ -237,6 +237,16 @@ child after a manager crash is shown as an orphan rather than permitting a
 second seller to start over it. Use the recorded process and original terminal
 to recover it; the console does not kill arbitrary local PIDs.
 
+An embedding fleet manager can call `runActiveRelease(store, { handleSignals:
+false })` to own its shutdown order: close gateway ingress, drain accepted
+gateway work, then await the returned session's `close()`. The default remains
+`true` for the existing terminal and console workflows. The seller's original
+drain and the release manager's process ownership still apply in either mode.
+For a replacement staged in a separate store, use
+`compareReleases(nextStore, currentId, nextId, { beforeRoot: currentStore })`.
+Both releases undergo the same original source checks and produce the same
+route, payment and runtime comparison as releases in one store.
+
 ## Store layout
 
 | Path | Content |
