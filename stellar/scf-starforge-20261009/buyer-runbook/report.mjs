@@ -1,0 +1,52 @@
+// MIT. Offline industrial operator report; no scripts, external resources or forms.
+const escape = value => String(value ?? '').replace(/[&<>"']/g, character =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+const code = value => `<code>${escape(value ?? '—')}</code>`;
+const json = value => escape(JSON.stringify(value, null, 2));
+
+function nextAction(row) {
+  if (row.integrity !== 'UNCHANGED') return 'Restore the recorded config or body snapshot from its original input, or initialize a separate reviewed plan. Existing attempts remain recorded.';
+  if (row.state === 'UNATTEMPTED') return row.lastError ?
+    'Resolve the displayed local setup problem, then execute this runbook to continue this untouched operation.' :
+    'Execute this runbook when ready. The original buyer obtains fresh seller terms and uses its original terminal approval.';
+  if (row.state === 'INTERRUPTED_NO_RESULT') return 'Use recover to import any complete original SF88 output. Inspect the retained output, native evidence and original governor reservation for this intent before selecting any further action.';
+  if (row.state === 'NOT_LAUNCHED') return 'The native process was not launched. Fix the launch error; the saved native config remains available for a separately selected original SF88 operation. This runbook keeps its recorded attempt.';
+  if (row.state === 'NO_COMPLETE_NATIVE_RESULT') return 'Inspect the original stdout/stderr, evidence directory and governor ledger using the same intent ID. The runbook will continue untouched jobs without purchasing this operation again.';
+  const summary = row.result?.summary;
+  if (summary?.error || summary?.evidenceError || summary?.responseFile?.status === 'FAILED')
+    return 'Use the original buyer/evidence error and any saved or partial output below to resolve this operation. Other untouched jobs can continue. A file failure does not cancel a payment.';
+  return 'Use the returned resource and original evidence. Any independent transfer or reservation reconciliation remains in the existing SF82/SF86 and SF36 tools.';
+}
+
+function job(row) {
+  const summary = row.result?.summary, delivery = summary?.responseFile;
+  const terms = row.acceptedCaps;
+  return `<article id="${escape(row.id)}">
+  <div class="heading"><div><p class="eyebrow">${escape(row.id)} · ${escape(row.state)}</p><h2>${escape(row.label)}</h2></div><span class="state">${escape(row.integrity)}</span></div>
+  <p class="resource">${code(row.method)} ${code(row.url)}</p>
+  <dl class="terms"><div><dt>Intent</dt><dd>${code(row.intentId)}</dd></div><div><dt>Actor / service</dt><dd>${code(row.actor)} / ${code(row.service)}</dd></div><div><dt>Network / scheme</dt><dd>${code(terms.network)} / ${code(terms.scheme)}</dd></div><div><dt>Maximum atomic units</dt><dd>${code(terms.maxAtomic)}</dd></div><div><dt>Asset</dt><dd>${code(terms.asset)}</dd></div><div><dt>Recipient</dt><dd>${code(terms.payTo)}</dd></div><div><dt>Timeout ceiling</dt><dd>${terms.maxTimeoutSeconds === undefined ? 'No additional caller ceiling' : escape(terms.maxTimeoutSeconds) + ' seconds'}</dd></div><div><dt>Payment flow</dt><dd>${escape(terms.paymentFlow ?? 'Original buyer selection')}</dd></div><div><dt>Request body</dt><dd>${row.body ? `${row.body.bytes.toLocaleString('en-US')} bytes · ${code(row.body.sha256)}` : 'Absent'}</dd></div><div><dt>Output destination</dt><dd>${code(row.responseFile?.destination)}</dd></div></dl>
+  <p class="action">${escape(nextAction(row))}</p>
+  ${row.lastError ? `<p class="notice">Local setup: ${code(row.lastError.code)}</p>` : ''}
+  ${row.integrityError ? `<p class="notice">Input: ${code(row.integrityError)}</p>` : ''}
+  ${summary ? `<div class="result"><h3>Original buyer result</h3><dl class="terms"><div><dt>Buyer / HTTP status</dt><dd>${code(summary.status)} / ${code(summary.httpStatus)}</dd></div><div><dt>Native process exit</dt><dd>${row.result.recovered ? 'Recovered result; process exit not observed' : code(row.result.exitCode)}</dd></div><div><dt>Local file</dt><dd>${code(delivery?.status ?? 'NOT_REQUESTED')}${delivery?.bytes !== undefined ? ` · ${escape(delivery.bytes)} bytes` : ''}</dd></div><div><dt>Native evidence</dt><dd>${code(summary.evidencePath)}</dd></div><div><dt>Saved output</dt><dd>${code(delivery?.path ?? delivery?.destination)}</dd></div><div><dt>Partial output</dt><dd>${code(delivery?.partialPath)}</dd></div></dl>
+  ${row.downloadName && delivery?.status === 'SAVED' ? `<p><a href="downloads/${encodeURIComponent(row.downloadName)}" download="${escape(row.downloadName)}">Download ${escape(row.downloadName)}</a></p>` : ''}
+  <details><summary>Original SF88 summary</summary><pre>${json(summary)}</pre></details></div>` : ''}
+  <details><summary>Input lineage and attempt records</summary><pre>${json({sourceConfig:row.sourceConfig, snapshot:row.config, body:row.body, headers:row.headers, started:row.started, result:row.result ? {...row.result, summary:undefined} : null})}</pre></details>
+  </article>`;
+}
+
+export function renderReport(state) {
+  const {plan, operations} = state;
+  const untouched = operations.filter(row => row.state === 'UNATTEMPTED').length;
+  const reported = operations.filter(row => ['RESULT_RECORDED','RESULT_RECOVERED'].includes(row.state)).length;
+  const saved = operations.filter(row => row.result?.summary?.responseFile?.status === 'SAVED').length;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>${escape(plan.title)} · Buyer runbook</title><style>
+  :root{font:15px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#222;background:#f3f3f1}*{box-sizing:border-box}body{margin:0}main{max-width:1240px;margin:0 auto;padding:36px 28px 80px}header{padding-bottom:24px;border-bottom:2px solid #292929}.eyebrow{text-transform:uppercase;letter-spacing:.09em;font-size:11px;font-weight:650;color:#565656;margin:0 0 8px}h1{font-size:30px;line-height:1.15;font-weight:600;margin:0 0 14px}h2{font-size:20px;margin:0;font-weight:600}h3{font-size:15px;margin:4px 0 14px}p{margin:10px 0}.muted{color:#5e5e5e}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#c8c8c5;border:1px solid #c8c8c5;margin:26px 0}.stats div{background:#fff;padding:15px 18px}.stats strong{display:block;font-size:25px;font-weight:550}.stats span{font-size:12px;color:#565656}.panel,article{padding:22px;border:1px solid #c8c8c5;background:#fff;margin:18px 0}.heading{display:flex;align-items:start;justify-content:space-between;gap:20px}.state{font:11px ui-monospace,monospace;border:1px solid #a8a8a5;padding:5px 8px;white-space:nowrap}.resource{margin:20px 0 16px;overflow-wrap:anywhere}.terms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px 28px;margin:0}.terms div{min-width:0}dt{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#666}dd{margin:3px 0 0;overflow-wrap:anywhere}.action{border-left:3px solid #767676;padding:11px 14px;background:#f5f5f3;margin:22px 0 14px}.notice{border:1px solid #888;padding:10px}.result{border-top:1px solid #d5d5d2;margin-top:20px;padding-top:18px}code,pre{font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}pre{white-space:pre-wrap;padding:15px;background:#f5f5f3;border:1px solid #dededb;max-height:520px;overflow:auto}details{margin-top:16px}summary{cursor:pointer;font-size:12px;font-weight:600}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #ddd;vertical-align:top;overflow-wrap:anywhere}th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#666}a{color:#222;text-underline-offset:3px}.table{overflow-x:auto}footer{margin-top:28px;color:#666;font-size:12px}@media(max-width:700px){main{padding:24px 14px 50px}.terms{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.heading{display:block}.state{display:inline-block;margin-top:10px}.panel,article{padding:16px}h1{font-size:26px}}@media print{:root{background:white}main{padding:0}article{break-inside:avoid}details{display:none}.stats{margin:16px 0}a{color:inherit}}
+  </style></head><body><main><header><p class="eyebrow">Stellar Forge · Buyer operations</p><h1>${escape(plan.title)}</h1><p class="muted">Runbook ${code(plan.id)} · Snapshot ${escape(state.inspectedAt)}</p><p>One reviewed plan, original buyer approvals, durable results across resource purchases.</p></header>
+  <section class="stats" aria-label="Runbook counts"><div><strong>${operations.length}</strong><span>Explicit operations</span></div><div><strong>${untouched}</strong><span>Untouched operations</span></div><div><strong>${reported}</strong><span>Original buyer results</span></div><div><strong>${saved}</strong><span>Saved resource files</span></div></section>
+  <section class="panel"><h2>Planned ceilings</h2><p class="muted">Each network and asset keeps its own atomic units. These sums do not reserve funds, approve a payment, or report available governor capacity.</p><div class="table"><table><thead><tr><th>Network</th><th>Asset</th><th>Operations</th><th>Sum of request ceilings</th></tr></thead><tbody>${plan.plannedMaximums.map(group => `<tr><td>${code(group.network)}</td><td>${code(group.asset)}</td><td>${group.operations}</td><td>${code(group.plannedMaximumAtomic)}</td></tr>`).join('')}</tbody></table></div></section>
+  ${state.executionLock ? `<section class="panel"><h2>Execution owner</h2><p>${code(state.executionLock.host)} · PID ${code(state.executionLock.pid)} · ${state.executionLock.ownerRunning === true ? 'Process running' : state.executionLock.ownerRunning === false ? 'Process no longer running; use the documented stale-lock command' : 'Owner is on another host'}</p></section>` : ''}
+  ${operations.map(job).join('')}
+  <footer>Generated from this runbook's original configurations and native SF88 outputs. Seller-reported settlement, HTTP delivery, saved files and independent chain verification remain separate in the original result. Started operations are never automatically executed again. The report contains private seller and operator context; share it deliberately.</footer>
+  </main></body></html>`;
+}
