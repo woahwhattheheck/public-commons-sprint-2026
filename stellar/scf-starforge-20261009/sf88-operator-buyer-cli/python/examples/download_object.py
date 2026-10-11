@@ -30,6 +30,12 @@ def arguments(argv=None):
     run = actions.add_parser("run", parents=[common], help="Continue native requests in an operator terminal")
     run.add_argument("--workspace")
     actions.add_parser("recover", parents=[common], help="Reopen saved native outcomes without HTTP")
+    accounting = actions.add_parser("accounting", parents=[common], help="Read original chunk receipts offline")
+    accounting.add_argument("--offset", type=int, default=0)
+    accounting.add_argument("--limit", type=int, default=100)
+    finalize = actions.add_parser("finalize", parents=[common], help="Finish every original chunk reservation")
+    finalize.add_argument("--workspace")
+    finalize.add_argument("--page-size", type=int, default=25)
     download = actions.add_parser("download", parents=[common], help="Continue and return the complete application file")
     download.add_argument("--out", required=True)
     download.add_argument("--workspace")
@@ -81,8 +87,16 @@ def main(argv=None):
             config_file=args.config, workspace=args.workspace, chunk_bytes=args.chunk_bytes)
         result = session.last_report.to_dict()
     else:
-        session = buyer.open(args.session)
-        if args.action == "status":
+        session = buyer.open(args.session, inspect=args.action not in ("accounting", "finalize"))
+        if args.action == "accounting":
+            result = session.accounting(offset=args.offset, limit=args.limit).native
+        elif args.action == "finalize":
+            attention = False
+            for view in session.finalize_all(workspace=args.workspace, page_size=args.page_size):
+                print(json.dumps(view.native))
+                attention = attention or not view.window_complete
+            return 2 if attention else 0
+        elif args.action == "status":
             report = session.last_report if (args.chunk_offset, args.chunk_limit) == (0, 50) else \
                 session.inspect(chunk_offset=args.chunk_offset, chunk_limit=args.chunk_limit)
             result = report.to_dict()
