@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkNativeSnapshot, appendNativeObservation, loadWatch, parseArgs } from '../watch.mjs';
+import { checkNativeSnapshot, appendNativeObservation, loadWatch, parseArgs, classifyAlert } from '../watch.mjs';
 import { compareSnapshots } from '../../sf70-federated-bazaar-operator/offer-delta.mjs';
 
 // Only tests local persistence/wire shape using one mechanics-only contract object.
@@ -53,4 +53,6 @@ test('invalid scopes, signed snapshots and endpoint aliases cannot enter local w
   assert.throws(()=>checkNativeSnapshot({...snapshot(),payments:1},'stellar:testnet'),/PAID_OR_SIGNED/);
   assert.throws(()=>checkNativeSnapshot(snapshot(),'stellar:pubnet'),/NETWORK_SCOPE_MISMATCH/);
   assert.throws(()=>parseArgs(['--dir=/tmp/test','--origin=http://localhost:8788']),/ORIGIN_MUST_BE/);
+  assert.equal(classifyAlert({status:'BASELINE_CAPTURE'},'BOTH_SOURCES_COMPLETE'),'FIRST_OBSERVATION');
+  assert.equal(classifyAlert({status:'BASELINE_CAPTURE'},'PARTIAL_SOURCE_FAILURE'),'FIRST_OBSERVATION_PARTIAL');
 });
