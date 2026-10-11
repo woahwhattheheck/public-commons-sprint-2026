@@ -30,8 +30,41 @@
 <div class="tag">2 · Compare your plan</div><h2 id="result-title">A schedule within your limits</h2>
 <div class="grid"><div class="panel"><div class="tag">Earliest feasible cost</div><div class="number" id="base">—</div></div><div class="panel"><div class="tag">Optimized simulation cost</div><div class="number" id="optimal">—</div></div><div class="panel"><div class="tag">Hypothetical difference</div><div class="number" id="save">—</div></div></div>
 <div class="panel"><div class="tag">Schedule proposal</div><div id="tasks"></div><p class="dim">Hourly quote profile ($/kWh), hours 00–23. Approval authorizes only this session's simulated commands.</p><div id="bars" class="bars" role="img" aria-label="24 hourly hypothetical price bars"></div><div class="controls approval-controls"><button id="approve" disabled>Approve this exact schedule</button><button id="execute" class="secondary" disabled>Execute simulation</button></div><p id="status" class="dim" role="status"></p></div>
+<section id="robustness-panel" class="panel" aria-labelledby="robustness-title">
+<div class="tag">Optional · Compare another tariff</div><h2 id="robustness-title">What if the tariff changed?</h2>
+<p class="dim" id="robustness-help">Enter a hypothetical alternate tariff to compare keeping this schedule with replanning the same loads within the same limits. This comparison does not change, reapprove, or execute your current schedule.</p>
+<p id="robustness-proposal" class="dim">Comparison uses the schedule proposal above.</p>
+<form id="robustness-form"><fieldset id="robustness-fields" aria-describedby="robustness-help">
+<legend class="sr-only">Hypothetical alternate electricity rates</legend>
+<div class="scenario-grid robustness-rates">
+<label for="robustness-offpeak">Off-peak ($/kWh)<span class="field-hint">00:00–07:00 and 21:00–24:00</span><input id="robustness-offpeak" type="number" min="0" max="10" step="0.0001" required></label>
+<label for="robustness-standard">Daytime ($/kWh)<span class="field-hint">07:00–17:00</span><input id="robustness-standard" type="number" min="0" max="10" step="0.0001" required></label>
+<label for="robustness-peak">Evening ($/kWh)<span class="field-hint">17:00–21:00</span><input id="robustness-peak" type="number" min="0" max="10" step="0.0001" required></label>
+</div>
+<div class="controls"><button id="robustness-compare" type="submit">Compare alternate tariff</button><button id="robustness-reset" class="secondary" type="button">Use current proposal tariff</button></div>
+</fieldset></form>
+<p id="robustness-status" class="dim" role="status" aria-live="polite">Enter three rates, or use the current proposal tariff as a starting point.</p>
+<p id="robustness-error" class="warn" role="alert"></p>
+<div id="robustness-results" class="only-hidden">
+<dl class="robustness-metrics">
+<div><dt class="tag">Original proposal cost</dt><dd class="number" id="robustness-original">—</dd><dd class="field-hint">At the original tariff</dd></div>
+<div><dt class="tag">Keep this schedule</dt><dd class="number" id="robustness-retained">—</dd><dd class="field-hint">At the alternate tariff</dd></div>
+<div><dt class="tag">Replan hypothetically</dt><dd class="number" id="robustness-replanned">—</dd><dd class="field-hint">Same loads and limits, alternate tariff</dd></div>
+<div><dt class="tag">Replanning opportunity</dt><dd class="number" id="robustness-opportunity">—</dd><dd class="field-hint">Modeled difference from keeping this schedule</dd></div>
+</dl>
+<p id="robustness-repricing" class="dim"></p>
+<div class="robustness-table-scroll" role="region" tabindex="0" aria-labelledby="robustness-moves-caption" aria-describedby="robustness-table-help">
+<table class="robustness-table"><caption id="robustness-moves-caption">Loads that would move under the alternate tariff</caption><thead><tr><th scope="col">Load</th><th scope="col">Current start</th><th scope="col">Alternate start</th></tr></thead><tbody id="robustness-moves"></tbody></table>
+</div>
+<p id="robustness-table-help" class="field-hint">Start times use the same 24-hour day. Scroll the table sideways if needed.</p>
+<p id="robustness-empty" class="dim only-hidden">No loads move under this alternate tariff.</p>
+<div class="controls"><button id="robustness-export" class="secondary" type="button" disabled>Download comparison JSON</button></div>
+<p class="dim robustness-note">All costs are hypothetical. Your schedule and its approval state stay unchanged.</p>
+</div>
+</section>
 <div class="panel"><div class="tag">3 · Simulated receipt</div><pre id="receipt">No commands issued.</pre></div>
 </section>
 <footer class="dim"><small>Simulation only. GridKind does not connect to Amazon accounts, Alexa devices, utilities, appliances, or real-time prices. Values describe this scenario, not a prediction of your energy bill.</small></footer>
 </main><script type="module" src="/app.js"></script></body></html>
+
 
