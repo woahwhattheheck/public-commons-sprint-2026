@@ -144,6 +144,36 @@ revalidation, stale response fallback, background refresh or automatic retry.
 
 ## Operate it
 
+### Original JSON launcher and merchant workspace
+
+The existing `upstream-serve.mjs` also accepts optional `cache` in each original
+`seller-upstreams.v1` binding. The binding must use GET or HEAD and explicitly
+set `shareAcrossBuyers: true`. Other accepted cache fields are `ttlMs`,
+`maxEntries`, `maxBytes`, `maxEntryBytes`, `maxSourceInFlight`, `maxWaiters` and
+`sourceTimeoutMs`. The original transport determines `maxResponseBytes`; all
+forwarded `requestHeaders` become cache variation fields. The original cache
+constructor validates the final limits. Omitted cache configuration preserves
+the ordinary upstream behavior.
+
+The existing API merchant workspace provides these controls, original response
+contract selection and backend availability settings in its saved package.
+Its current-runtime controls inspect and invalidate cached bindings without
+adding public seller write endpoints. See
+[`workspace/README.md`](../../sf61-openapi-seller-import/workspace/README.md).
+SF82/SF96 resume uses the same saved upstream settings and fresh credentials.
+
+Embedding through `createUpstreamApplication()` exposes `invalidateCache(name)`
+and async `close()`. The original upstream launcher attaches them as
+`session.invalidateUpstreamCache` and cache-aware `session.close`; it drains the
+original seller before closing caches. `session.upstreamSnapshot` includes
+content-free cache activity and the configured limits.
+
+With backend availability enabled, original `protectUpstream` observes actual
+source calls before cache serialization and keeps one state across cache
+invalidations. Cache hits cannot manufacture backend recovery. The adapter's
+optional trusted `invokeSource(original, context)` hook supplies this existing
+composition; it is never accepted from JSON and does not replace the transport.
+
 Embedding code can inspect `weather.cache.stats()`. `sourceStarted`,
 `sourceCompleted`, `sourceInFlight`, `sourceFailed` and `sourceResponseBytes` count
 actual original transport invocations across generations. `cache` contains the
