@@ -104,10 +104,19 @@ export async function main(args = process.argv.slice(2)) {
   session.operationControl = application.operationControl;
   session.invalidateUpstreamCache = application.invalidateCache;
   const nativeClose = session.close.bind(session);
-  let closing;
+  let closing, cleanup;
+  const closeApplication = () => cleanup ??= session.lifecycle.whenIdle().then(() => application.close());
   session.close = () => closing ??= (async () => {
-    try { return await nativeClose(); }
-    finally { await application.close(); }
+    try {
+      const result = await nativeClose();
+      await closeApplication();
+      return result;
+    } catch (error) {
+      // Preserve the bounded drain failure while late original work still owns
+      // its durable records. Its eventual idle signal performs resource cleanup.
+      closeApplication().catch(() => {});
+      throw error;
+    }
   })();
   process.stdout.write(JSON.stringify({url:session.url,mode:session.mode,
     health:session.url + '/_seller/health',ready:session.url + '/_seller/ready',
