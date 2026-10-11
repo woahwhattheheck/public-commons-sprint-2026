@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>EvidenceForge · Retained Operation Desk</title>
+  <link rel="stylesheet" href="/runtime.css">
+  <script type="application/json" id="runtimeConfig">__CONFIG__</script>
+  <script type="module" src="/runtime.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#operationWorkspace">Skip to operation workspace</a>
+<header class="site-header"><div class="shell masthead">
+  <div class="brand"><span class="brand-symbol" aria-hidden="true">E<span>F</span></span><div><p class="brand-name">EvidenceForge</p><p class="brand-caption">Retained operation desk</p></div></div>
+  <span class="mode-badge">Local controls · Read-only resume</span>
+</div></header>
+<main class="shell">
+  <section class="intro" aria-labelledby="pageHeading">
+    <div><p class="eyebrow">Source. Execution. Evidence.</p><h1 id="pageHeading">Keep the work<br class="wide-break"> behind every run in view.</h1></div>
+    <p class="intro-copy">Choose an existing workload or reopen a retained operation. Inspect its recorded journal, source change, and completed result without losing the operation identity.</p>
+  </section>
+  <p id="state" class="state" role="status" aria-live="polite" aria-atomic="true">Choose a local control or inspect a retained operation. Opening an operation does not dispatch another run.</p>
+
+  <div class="desk">
+    <aside class="sidebar" aria-label="Run controls and retained operations">
+      <section class="panel control-panel" aria-labelledby="controlHeading">
+        <div class="panel-heading"><span class="section-index" aria-hidden="true">01</span><div><p class="eyebrow">New execution</p><h2 id="controlHeading">Choose a control run</h2></div></div>
+        <label for="task">Repository workload</label><select id="task" aria-describedby="goal"></select>
+        <label for="control">Control source</label><select id="control"><option value="corrected">Corrected control</option><option value="baseline">Defective baseline</option></select>
+        <p id="goal" class="task-goal">The selected workload’s goal will appear here.</p>
+        <button id="run" class="button primary full-width" type="button">Execute selected control</button>
+        <p class="control-note">Controls execute the selected workload’s actual Python computation in a fresh task copy. No model request is made.</p>
+      </section>
+
+      <section class="panel retained-panel" aria-labelledby="retainedHeading">
+        <div class="heading-row"><div><p class="eyebrow">Previously started</p><h2 id="retainedHeading">Retained operations</h2></div><button id="refreshRuns" class="button quiet" type="button">Refresh list</button></div>
+        <p id="runsStatus" class="muted">Reading the retained-operation index…</p>
+        <div id="runs" class="operation-list"><p class="empty-state">Retained operations will appear here.</p></div>
+        <div class="open-operation"><label for="operation">Open an operation by ID</label><div class="input-action"><input id="operation" type="text" maxlength="80" pattern="[A-Za-z0-9_-]{1,80}" placeholder="Retained operation ID" autocomplete="off" spellcheck="false"><button id="load" class="button secondary" type="button">Inspect</button></div><p class="muted">Reads the existing journal and result only.</p></div>
+      </section>
+    </aside>
+
+    <div id="operationWorkspace" class="workspace" tabindex="-1">
+      <div class="workspace-heading"><div><p class="eyebrow">Inspect and continue</p><h2>Operation workspace</h2></div><span class="workspace-label">Keep the ID before a run starts</span></div>
+
+      <section id="operationPanel" class="panel identity-panel" aria-labelledby="identityHeading" hidden>
+        <div class="heading-row"><div><p class="eyebrow">Current operation</p><h2 id="identityHeading">Your resume point</h2></div><button id="copyOperation" class="button secondary" type="button">Copy ID</button></div>
+        <code id="currentOperation" class="current-operation"></code>
+        <p id="operationMessage" class="operation-message"></p>
+        <p id="storageStatus" class="storage-status">Browser resume status will appear here.</p>
+        <div class="operation-actions"><button id="inspectCurrent" class="button primary" type="button">Inspect current operation</button><button id="newOperation" class="button secondary" type="button">Choose a new run</button></div>
+      </section>
+
+      <section id="journalPanel" class="panel journal-panel" aria-labelledby="journalHeading" hidden>
+        <div class="heading-row"><div><p class="eyebrow">Recorded progress</p><h2 id="journalHeading">Operation journal</h2></div><span class="label journal-label">Journal state</span></div>
+        <p id="journalState" class="journal-state"></p>
+        <p class="section-note">A recorded journal state does not establish a verified completed result.</p>
+        <details class="journal-details" open><summary>Inspect recorded journal</summary><pre id="journal" class="code-block journal-code" tabindex="0" aria-label="Retained operation journal"></pre></details>
+      </section>
+
+      <section id="result" class="panel result-panel" aria-labelledby="heading" hidden>
+        <div class="heading-row result-heading"><div><p class="eyebrow">Verified retained envelope</p><h2 id="heading" tabindex="-1">Completed result</h2></div><button id="downloadRun" class="button secondary" type="button" disabled>Download run JSON</button></div>
+        <p id="facts" class="result-facts"></p>
+        <div class="table-heading"><h3>Named check results</h3><span>Actual baseline and final outcomes</span></div>
+        <div class="table-scroll" tabindex="0" aria-label="Baseline and final check outcomes"><table><thead><tr><th scope="col">Named check</th><th scope="col">Baseline</th><th scope="col">Final</th></tr></thead><tbody id="checks"></tbody></table></div>
+        <div class="diff-heading"><h3>Source change</h3><span class="label">Retained diff</span></div>
+        <pre id="patch" class="code-block patch-code" tabindex="0" aria-label="Source diff"></pre>
+        <details class="envelope-details"><summary>Inspect the complete run envelope</summary><pre id="envelope" class="code-block envelope-code" tabindex="0" aria-label="Complete verified run envelope"></pre></details>
+        <p class="integrity-note">Hash agreement checks retained bytes. It does not authenticate provider claims; inspect the original run evidence and provider observations.</p>
+      </section>
+
+      <aside class="resume-guide" aria-label="How operation resume works"><span class="guide-mark" aria-hidden="true">↳</span><div><h3>Reopen the operation you already started</h3><p>If a response is interrupted, keep its ID and inspect the retained journal. Opening or refreshing an operation reads existing data. Starting another control remains a separate, explicit action.</p></div></aside>
+    </div>
+  </div>
+</main>
+<footer class="shell site-footer"><span>EvidenceForge</span><p>Local workload execution and retained-run inspection · Provider-backed runs remain a separate CLI workflow.</p></footer>
+</body>
+</html>
