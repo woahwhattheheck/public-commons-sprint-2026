@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Huwise / Opendatasoft workspace · Stellar Forge</title>
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <a class="skip-link" href="#view">Skip to workspace</a>
+  <header>
+    <div><span class="eyebrow">STELLAR FORGE</span><h1>Huwise / Opendatasoft</h1><p class="subtitle">Catalogues, retained editions and customer delivery</p></div>
+    <div id="project" class="project"></div>
+  </header>
+  <nav aria-label="Project sections">
+    <button type="button" data-tab="catalog" aria-current="page">Catalogue</button>
+    <button type="button" data-tab="editions">Retained editions</button>
+    <button type="button" data-tab="products">Data products</button>
+    <button type="button" data-tab="merchant">Merchant &amp; buyer</button>
+    <button type="button" data-tab="receiving">Receiving</button>
+  </nav>
+  <main>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <section id="operation" aria-label="Current project operation" aria-live="polite"></section>
+    <section id="view" tabindex="-1" aria-label="Project workspace"></section>
+  </main>
+  <footer><span>One retained project · Original dataset publisher, seller releases and buyer preparation</span><button id="refresh-project" type="button">Refresh project</button></footer>
+  <noscript>This local workspace needs JavaScript. The original CLI can operate the same project.</noscript>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
