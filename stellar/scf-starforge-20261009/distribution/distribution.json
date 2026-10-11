@@ -56,7 +56,8 @@
     "stellar/scf-starforge-20261009/partners/chainstack-stellar",
     "stellar/scf-starforge-20261009/merchant-settlement-accounting",
     "stellar/scf-starforge-20261009/partners/allium-explorer-pilot",
-    "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot"
+    "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot",
+    "stellar/scf_2026/sf47_budget_model"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -133,6 +134,7 @@
     "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
     "runtime-profile": "stellar/scf-starforge-20261009/distribution/runtime-profile-cli.mjs",
     "runtime-install": "stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs",
+    "runtime-workspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/cli.mjs",
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "upstream": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-serve.mjs",
     "jsonrpc": "stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/cli.mjs",
@@ -257,7 +259,10 @@
     "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs",
     "routescan-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/cli.mjs",
     "routescan-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace-cli.mjs",
-    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
+    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs",
+    "grant-workspace": "stellar/scf_2026/sf47_budget_model/workspace/launcher.mjs",
+    "provider-operator": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator-cli.mjs",
+    "provider-workspace": "stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/cli.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
@@ -266,6 +271,8 @@
     "./installation/product": "./source/stellar/scf-starforge-20261009/sf46-release/product.mjs",
     "./installation/runtime": "./source/stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs",
     "./runtime-install": "./source/stellar/scf-starforge-20261009/distribution/runtime-install.mjs",
+    "./runtime-workspace": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/model.mjs",
+    "./runtime-workspace/server": "./source/stellar/scf-starforge-20261009/distribution/runtime-workspace/server.mjs",
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
     "./seller": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
     "./seller/jsonrpc": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jsonrpc/merchant.mjs",
@@ -496,7 +503,11 @@
     "./seller/routescan/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/project.mjs",
     "./seller/routescan/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace.mjs",
     "./seller/routescan/backup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/backup.mjs",
-    "./buyer/n8n/workflows": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
+    "./buyer/n8n/workflows": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs",
+    "./buyer/provider-operator": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/operator.mjs",
+    "./buyer/provider-workspace": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/model.mjs",
+    "./buyer/provider-workspace/server": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/server.mjs",
+    "./buyer/provider-workspace/recovery": "./source/stellar/scf-starforge-20261009/sf96-merchant-challenge-handoff/workspace/archive.mjs"
   },
   "nativePeers": {
     "@x402/core": {
