@@ -11,6 +11,7 @@ import { parseArgs as captureOptions, run as captureOriginal } from '../sf85-liv
 import { create as createHandoff, derive, verify as verifyHandoff } from './handoff.mjs';
 import { initializeQueue, openQueue, saveQueueReport } from '../sf88-operator-buyer-cli/queue.mjs';
 import { renderQueueReport } from '../sf88-operator-buyer-cli/queue-report.mjs';
+import { NETWORKS } from '../sf86-rpc-transfer-reconcile/terms.mjs';
 
 const SCHEMA = 'scf.sf96.operator-pilot.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -94,13 +95,13 @@ export async function observe(args) {
   const bytes = await readBytes(options.out, 262144);
   const original = inspectBytes(bytes);
   return {...result, originalOffer:original.x402.offer ?? null,
-    next:'Select an original exact Stellar testnet offer index and an explicit atomic ceiling for prepare'};
+    next:'Select an original exact Stellar offer index, inspect its network and choose an explicit atomic ceiling for prepare'};
 }
 
 /** Prepare a new private pilot; this performs no HTTP, approval, signing or payment. */
 export async function prepare(args, {environment = process.env} = {}) {
   const workspaceFlags = ['--actor','--service','--payer','--python','--secret-env',
-    '--total-atomic','--daily-atomic','--signer-provider','--rpc','--https-proxy'];
+    '--total-atomic','--daily-atomic','--signer-provider','--rpc','--https-proxy','--https-proxy-env'];
   const opt = flags(args, ['--capture','--handoff','--offer-index','--intent-id','--max-atomic',
     '--headers-file','--dir','--max-response-bytes','--response-timeout-ms', ...workspaceFlags]);
   required(opt, ['--dir','--actor','--service','--payer','--python']);
@@ -130,7 +131,7 @@ export async function prepare(args, {environment = process.env} = {}) {
   const originalHeaders = headersSource === undefined ? undefined : await readBytes(headersSource, 65536, false);
   const derived = derive(raw, {index:selection.offerIndex, intentId:selection.intentId,
     maxAtomic:selection.maxAtomic, originalHeaders});
-  need(derived.config.operation.expect.network === 'stellar:testnet', 'PILOT_TESTNET_REQUIRED');
+  need(Object.hasOwn(NETWORKS, derived.config.operation.expect.network), 'PILOT_STELLAR_NETWORK_REQUIRED');
   const maximum = opt.has('--max-response-bytes') ? Number(opt.get('--max-response-bytes')) : 64 * 1024 * 1024;
   const timeout = opt.has('--response-timeout-ms') ? Number(opt.get('--response-timeout-ms')) : 30000;
   need(Number.isSafeInteger(maximum) && maximum >= 1 &&
@@ -208,7 +209,7 @@ async function openPilot(input) {
     isDeepStrictEqual(job.operation, operator.config.operation), 'PILOT_QUEUE_SOURCE_CHANGED');
   return {directory, manifest, selected, operator, queue, job};
 }
-function view({directory, manifest, selected, job}) {
+function view({directory, manifest, selected, operator, job}) {
   const command = verb => [process.execPath, thisCli, verb, '--dir', directory];
   return {schema:SCHEMA, directory, intentId:manifest.intentId,
     source:{captureSha256:manifest.originalCaptureSha256, selectedOfferSha256:manifest.selectedOfferSha256,
@@ -217,13 +218,17 @@ function view({directory, manifest, selected, job}) {
       importedAt:selected.sourceAcquisition?.importedAtUtc ?? null,
       sourceHeaderSha256:selected.sourceAcquisition?.sourceHeaderSha256 ?? null,
       requestMethodSource:selected.sourceAcquisition?.requestMethodSource ?? 'original-request',
+      network:selected.network, asset:selected.asset, recipient:selected.recipient,
       quotedAtomic:selected.quotedAtomic, maxAtomic:selected.maxAtomic,
       originalMethod:selected.originalMethod, originalResourceUrl:selected.originalResourceUrl},
+    operator:{network:operator.manifest.network, payer:operator.manifest.payer,
+      rpcOrigin:new URL(operator.manifest.signer.rpcUrl).origin,
+      signerSource:operator.manifest.signerProvider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER'},
     // The original result includes distinct HTTP, settlement, reconciliation and file outcomes.
     buyer:job,
-    commands:{review:command('review'), show:command('show'),
+    commands:{review:command('review'), diagnose:command('diagnose'), show:command('show'),
       ...(job.state === 'QUEUED' ? {execute:command('execute'), cancel:command('cancel')} : {}),
-      ...(job.attempt?.kind === 'EXECUTE' ? {recover:command('recover')} : {}),
+      ...(job.attempt?.kind === 'EXECUTE' ? {recover:command('recover'), finalize:command('finalize')} : {}),
       report:[...command('report'), '--out', join(directory, 'operator-report.html')]},
     retry:'NO_AUTOMATIC_RETRY'};
 }
@@ -254,6 +259,14 @@ export async function review(directory, options = {}) {
   return runChild([buyerCli, '--review-workspace', '--dir', join(pilot.directory, 'operator')], options);
 }
 
+/** Reuse the original setup diagnostics without opening a wallet or claiming an attempt. */
+export async function diagnose(directory, {environment = process.env} = {}) {
+  const pilot = await openPilot(directory);
+  const {diagnoseWorkspace} = await workspaceModule();
+  return {...view(pilot), diagnostics:await diagnoseWorkspace(
+    ['--dir', join(pilot.directory, 'operator')], {environment})};
+}
+
 /** Execute through the existing queue in a fresh process with its native workspace prerequisite. */
 export async function execute(directory, {environment = process.env, signal} = {}) {
   const pilot = await openPilot(directory);
@@ -262,6 +275,16 @@ export async function execute(directory, {environment = process.env, signal} = {
   // SF81 prompts through /dev/tty; the original queue persists its own stdout summary.
   // The parent never reads the workspace keys or mutates process.env.
   const command = await runChild([queueCli, 'execute', '--root', pilot.queue.root,
+    '--intent', pilot.manifest.intentId, '--workspace', join(pilot.directory, 'operator')],
+    {environment, signal, quiet:true});
+  return {...await show(directory), originalCommand:command};
+}
+
+/** Finish the existing request's original accounting; the shared finalizer owns all effects. */
+export async function finalize(directory, {environment = process.env, signal} = {}) {
+  const pilot = await openPilot(directory);
+  need(pilot.job.attempt?.kind === 'EXECUTE', 'PILOT_ORIGINAL_EXECUTION_REQUIRED');
+  const command = await runChild([queueCli, 'finalize', '--root', pilot.queue.root,
     '--intent', pilot.manifest.intentId, '--workspace', join(pilot.directory, 'operator')],
     {environment, signal, quiet:true});
   return {...await show(directory), originalCommand:command};
@@ -282,6 +305,7 @@ export async function cancel(directory) {
 export async function report(directory, destination) {
   const pilot = await openPilot(directory);
   const original = renderQueueReport({jobs:[pilot.job], queueRoot:pilot.queue.root,
+    accountingWorkspace:join(pilot.directory, 'operator'),
     commandFor:verb => `${shellQuote(process.execPath)} ${shellQuote(thisCli)} ${verb} --dir ${shellQuote(pilot.directory)}`});
   const source = view(pilot).source;
   const rows = Object.entries(source).map(([name, value]) =>
