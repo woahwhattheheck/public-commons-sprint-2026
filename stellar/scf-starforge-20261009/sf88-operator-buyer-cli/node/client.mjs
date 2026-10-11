@@ -1,11 +1,13 @@
 // MIT — Durable Node applications on the original SF88 CLI.
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { NativeRuntime } from './runtime.mjs';
 import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import { BuyerResult } from './result.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
+import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
   jsonBytes, parseJson, readBytes, readJson, exists, writeBytes, writeJson, syncDirectory } from './store.mjs';
 
@@ -15,13 +17,17 @@ const copy = value => parseJson(jsonBytes(value));
 const profileKeys = new Set(['operator', 'signerModule', 'trustedPayer', 'bodyCaptureTimeoutMs', 'buyerTransport', 'requestTimeoutMs']);
 
 export class Buyer {
-  constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432, ...runtimeOptions }) {
+  constructor({ runtimeDirectory, stateDirectory, operatorProfile, datasetReportLimit = 33554432,
+    inboxReportLimit = 33554432, ...runtimeOptions }) {
     this.runtime = new NativeRuntime({ runtimeDirectory, ...runtimeOptions });
     this.stateDirectory = absolute(stateDirectory);
     this.operatorProfile = operatorProfile;
     need(Number.isSafeInteger(datasetReportLimit) && datasetReportLimit >= 1048576 &&
       datasetReportLimit <= 268435456, 'DATASET_REPORT_LIMIT_INVALID');
     this.datasetReportLimit = datasetReportLimit;
+    need(Number.isSafeInteger(inboxReportLimit) && inboxReportLimit >= 1048576 &&
+      inboxReportLimit <= 268435456, 'INBOX_REPORT_LIMIT_INVALID');
+    this.inboxReportLimit = inboxReportLimit;
   }
   dataset(id) { return new Dataset(this, id); }
   createDataset(options) { return createDataset(this, options); }
@@ -31,11 +37,23 @@ export class Buyer {
   createObject(options) { return createObject(this, options); }
   attachObject(options) { return createObject(this, options, true); }
   listObjects() { return listObjects(this); }
+  inbox(directory) { return new Inbox(this, directory); }
+  createInbox(options) { return createInbox(this, options); }
+  inspectOperationHandoff(file, options) { return inspectOperationHandoff(this, file, options); }
 
   workspaceRecovery() { return WorkspaceRecovery.fromBuyer(this); }
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
+
+  async _requestFiles() {
+    // The installed original runtime owns the shared request ceiling and exact
+    // descriptor read. The standalone package keeps no second body parser/limit.
+    const source = await import(pathToFileURL(join(this.runtime.directory, 'request-body.mjs')).href);
+    need(Number.isSafeInteger(source.MAX_REQUEST_BODY_BYTES) && source.MAX_REQUEST_BODY_BYTES > 0 &&
+      typeof source.readRequestFile === 'function', 'ORIGINAL_REQUEST_BODY_RUNTIME_REQUIRED');
+    return source;
+  }
 
   async _profile(config, override) {
     let profile = override ?? this.operatorProfile;
@@ -59,12 +77,14 @@ export class Buyer {
     try {
       await writeJson(join(op.directory, 'operation.json'), { schema: SCHEMA,
         intentId: op.intentId, state: 'PREPARING', createdAt: now() }, { exclusive: true });
+      const bodyFiles = body !== undefined || config.operation.bodyFile !== undefined
+        ? await this._requestFiles() : null;
       if (body === undefined && config.operation.bodyFile !== undefined)
-        body = await readBytes(config.operation.bodyFile, 1048576);
+        body = await bodyFiles.readRequestFile(config.operation.bodyFile);
       if (body !== undefined) {
         need(typeof body === 'string' || body instanceof Uint8Array, 'BODY_BYTES_OR_STRING_REQUIRED');
         body = Buffer.from(body);
-        need(body.length <= 1048576, 'REQUEST_BODY_LIMIT');
+        need(body.length <= bodyFiles.MAX_REQUEST_BODY_BYTES, 'REQUEST_BODY_LIMIT');
         config.operation.bodyFile = join(op.directory, 'request.body');
         await writeBytes(config.operation.bodyFile, body, { exclusive: true });
       }
@@ -220,7 +240,8 @@ export class Operation {
     need(meta.schema === SCHEMA && meta.intentId === this.intentId, 'OPERATION_ID_MISMATCH');
     need(meta.state === 'PREPARED', 'OPERATION_PREPARATION_INCOMPLETE');
     const raw = await readBytes(this.configPath), config = parseJson(raw);
-    const body = config.operation.bodyFile ? await readBytes(config.operation.bodyFile, 1048576) : Buffer.alloc(0);
+    const body = config.operation.bodyFile ? await (await this.buyer._requestFiles()).readRequestFile(config.operation.bodyFile)
+      : Buffer.alloc(0);
     need(digest(raw) === meta.configSha256 && digest(body) === meta.bodySha256, 'OPERATION_INPUT_CHANGED');
     const ticketHash = config.operation.ticketFile
       ? digest(await readBytes(config.operation.ticketFile, 16384)) : null;
@@ -254,7 +275,12 @@ export class Operation {
     // attempt marker. A crash cannot expire it or authorize another purchase.
     try { await writeJson(attemptPath, attempt, { exclusive: true }); }
     catch (error) {
-      if (error.code === 'EEXIST') throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+      if (error.code === 'EEXIST') {
+        const previous = await readJson(attemptPath);
+        if (previous.kind === 'INBOX_DELEGATED') throw new BuyerError('OPERATION_DELEGATED_USE_INBOX',
+          {operation:this, inboxDirectory:previous.inboxDirectory});
+        throw new BuyerError('ATTEMPT_ALREADY_RECORDED_USE_RECOVER', { operation: this });
+      }
       throw error;
     }
     let run;
@@ -310,6 +336,8 @@ export class Operation {
     const result = await this.recover();
     return { intentId: this.intentId, directory: this.directory, state: attempt?.state ?? meta.state,
       resultRecoverable: result !== null, nativeStatus: result?.status ?? null,
-      deliveryStatus: result?.delivery.status ?? null, retry: 'NO_AUTOMATIC_RETRY' };
+      deliveryStatus: result?.delivery.status ?? null,
+      ...(attempt?.kind === 'INBOX_DELEGATED' ? {inboxDirectory:attempt.inboxDirectory} : {}),
+      retry: 'NO_AUTOMATIC_RETRY' };
   }
 }
