@@ -54,7 +54,7 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
       if(req.method!=='POST'||path!=='/api/action')return respond(res,405,{error:'Unsupported operation'});
       if(req.headers.origin&&new URL(req.headers.origin).host!==req.headers.host)return respond(res,403,{error:'Cross-origin disabled'});
       const {action,id,command,input}=await readBody(req);
-      const operations={propose:()=>agent.offer(input),approve:()=>agent.approve(id),execute:()=>agent.execute(id),cancel:()=>agent.cancel(),say:()=>agent.say(command)};
+      const operations={propose:()=>agent.offer(input),approve:()=>agent.approve(id),execute:()=>agent.execute(id),cancel:()=>agent.cancel(),say:()=>agent.say(command,input)};
       if(!Object.hasOwn(operations,action))throw Error('Unknown action');
       return respond(res,200,operations[action]());
     }catch(e){return respond(res,400,{error:e instanceof Error?e.message:'Invalid request'});}
@@ -63,3 +63,4 @@ export function start({port=Number(process.env.PORT||'4181'),host=process.env.HO
   return server;
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===process.argv[1])start();
+

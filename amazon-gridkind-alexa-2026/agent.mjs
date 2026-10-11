@@ -1,19 +1,22 @@
 import { createHash } from 'node:crypto';
-import {DEMO,plan} from './engine.mjs';
+import {DEMO,inputs,plan} from './engine.mjs';
 const hash=(value)=>createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0,16);
 /** Explicit proposal -> approval -> simulated execution. Zero external device calls. */
 export function makeAgent(){
   let proposal=null, approvedId=null, receipt=null, revision=0;
+  let scenario=inputs(DEMO);
   const history=[];
-  function offer(input=DEMO){
-    const result=plan(input);
+  function offer(input=scenario){
+    const candidate=inputs(input);
+    const result=plan(candidate);
+    scenario=candidate;
     revision++;
     proposal={...result,id:hash({revision,result}),revision};
     approvedId=null;receipt=null;
     history.push({kind:'plan',revision,planId:proposal.id,avoidedCost:result.avoidedCost});
     return view();
   }
-  function view(){return {proposal,approved:approvedId===proposal?.id,receipt,history:history.slice(-30),status:!proposal?'empty':receipt?'executed':approvedId?'approved':'proposed'};}
+  function view(){return structuredClone({scenario,proposal,approved:approvedId===proposal?.id,receipt,history:history.slice(-30),status:!proposal?'empty':receipt?'executed':approvedId?'approved':'proposed'});}
   function approve(id){
     if(!proposal||id!==proposal.id)throw Error('Stale or unknown plan: generate a new proposal');
     if(receipt)throw Error('Executed plan cannot be reapproved');
@@ -30,7 +33,7 @@ export function makeAgent(){
     return view();
   }
   function cancel(){proposal=null;approvedId=null;receipt=null;history.push({kind:'cancel'});return view();}
-  function say(sentence){
+  function say(sentence,input){
     if(typeof sentence!=='string'||sentence.length>240)throw Error('Command must be text <=240 chars');
     const words=sentence.trim().toLowerCase();
     // Negative commands must NEVER turn into positive scheduling or reset actions.
@@ -42,8 +45,9 @@ export function makeAgent(){
     if(cancelIntent&&readIntent)throw Error('Ambiguous command: ask for status or cancel separately');
     if(cancelIntent)return cancel(); // "cancel the plan" must cancel, never regenerate.
     if(readIntent)return view(); // "explain the plan" is read-only.
-    if(planIntent)return offer();
+    if(planIntent)return offer(input);
     throw Error('Try "find a cheaper schedule", "explain the plan", or use explicit approval controls.');
   }
   return {offer,view,approve,execute,cancel,say};
 }
+
