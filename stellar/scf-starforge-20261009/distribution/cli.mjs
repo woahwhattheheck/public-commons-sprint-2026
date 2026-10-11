@@ -1,0 +1,120 @@
+#!/usr/bin/env node
+// MIT. Product command surface; original command processes own their lifecycle.
+import { readFile, realpath } from 'node:fs/promises';
+import { spawn, spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { constants } from 'node:os';
+import { createWorkspace, workspaceCommand } from './workspace.mjs';
+
+const specification = JSON.parse(await readFile(new URL('./distribution.json', import.meta.url), 'utf8'));
+const sourceRoot = fileURLToPath(new URL('../../../', import.meta.url));
+const help = `Starforge merchant toolkit
+
+  starforge init --dir DIRECTORY [--template dataset|application|upstream]
+  starforge run --workspace DIRECTORY [--operations-port PORT] [-- NATIVE_SELLER_OPTIONS]
+  starforge doctor [--native]
+  starforge source
+
+Native commands (arguments pass unchanged to the maintained implementation):
+  seller      JSON/application seller         upstream    Existing API seller
+  operations  Seller + live dashboard         dataset     Dataset API compiler
+  openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
+  buyer       Discover, review, approved call  capture     One HTTP 402 capture
+  handoff     Captured challenge -> review    support     Private seller support case
+
+Use starforge COMMAND --help for the original command's usage.
+Default workspace launch uses challenge-only mode. Add the original facilitator
+and operator configuration when you want the native payment runtime.`;
+
+async function release() {
+  try {
+    const data = JSON.parse(await readFile(new URL('../../../../manifest.json', import.meta.url), 'utf8'));
+    return data?.schema === 'stellar-forge.merchant-distribution-manifest.v1' &&
+      data.packageName === specification.name ? data : null;
+  }
+  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+}
+function pairs(args, allowed) {
+  const result = {};
+  for (let i = 0; i < args.length; i += 2) {
+    const key = args[i];
+    if (!allowed.includes(key) || Object.hasOwn(result, key) || !args[i + 1] || args[i + 1].startsWith('--'))
+      throw new TypeError('Invalid or repeated option: ' + key);
+    result[key] = args[i + 1];
+  }
+  return result;
+}
+export async function doctor({ requireNative = false } = {}) {
+  const original = await release();
+  const peers = [];
+  for (const [name, value] of Object.entries(specification.nativePeers)) {
+    let available = false;
+    try { import.meta.resolve(value.probe); available = true; } catch {}
+    peers.push({ name, requestedVersion: value.version, available });
+  }
+  const python = spawnSync('python3', ['--version'], { encoding: 'utf8', timeout: 2000, windowsHide: true });
+  const nativeDependenciesPresent = peers.every(peer => peer.available);
+  const [nodeMajor, nodeMinor] = process.versions.node.split('.').map(Number);
+  const result = { package: specification.name, packageVersion: original?.packageVersion ?? 'source-checkout',
+    sourceCommit: original?.sourceCommit ?? null, node: process.version,
+    localSellerReady: nodeMajor > 22 || nodeMajor === 22 && nodeMinor >= 16,
+    nativeDependenciesPresent, nativeDependencies: peers,
+    operatorPython: python.status === 0 ? python.stdout.trim() || python.stderr.trim() : null,
+    operatorPlatform: process.platform === 'win32' ? 'POSIX_HOST_REQUIRED_FOR_ORIGINAL_OPERATOR' : 'POSIX',
+    nativeRuntimeConfigured: false };
+  if (!result.localSellerReady || requireNative && !nativeDependenciesPresent) process.exitCode = 1;
+  return result;
+}
+function forward(command, args) {
+  const entry = specification.commands[command];
+  if (!entry) throw new TypeError('Unknown command: ' + command);
+  return new Promise((resolveRun, reject) => {
+    const child = spawn(process.execPath, [resolve(sourceRoot, entry), ...args], {
+      stdio: 'inherit', shell: false, windowsHide: true,
+    });
+    const forwardInterrupt = () => child.kill('SIGINT');
+    const forwardTerminate = () => child.kill('SIGTERM');
+    const detach = () => {
+      process.off('SIGINT', forwardInterrupt);
+      process.off('SIGTERM', forwardTerminate);
+    };
+    process.on('SIGINT', forwardInterrupt);
+    process.on('SIGTERM', forwardTerminate);
+    child.once('error', error => { detach(); reject(error); });
+    child.once('exit', (code, signal) => {
+      detach(); process.exitCode = code ?? 128 + (constants.signals[signal] ?? 1); resolveRun();
+    });
+  });
+}
+export async function main(args = process.argv.slice(2)) {
+  const [command, ...rest] = args;
+  if (!command || ['--help', '-h', 'help'].includes(command)) { console.log(help); return; }
+  const print = value => console.log(JSON.stringify(value, null, 2));
+  if (command === 'source') {
+    if (rest.length) throw new TypeError('source takes no options');
+    return print(await release() ?? { package: specification.name, mode: 'SOURCE_CHECKOUT', components: specification.components });
+  }
+  if (command === 'doctor') {
+    if (rest.length && !(rest.length === 1 && rest[0] === '--native')) throw new TypeError('doctor [--native]');
+    return print(await doctor({ requireNative: rest[0] === '--native' }));
+  }
+  if (command === 'init') {
+    const options = pairs(rest, ['--dir', '--template']);
+    if (!options['--dir']) throw new TypeError('init --dir DIRECTORY [--template TEMPLATE]');
+    return print(await createWorkspace({ directory: options['--dir'], template: options['--template'], release: await release() }));
+  }
+  if (command === 'run') {
+    const separator = rest.indexOf('--');
+    const options = pairs(separator < 0 ? rest : rest.slice(0, separator), ['--workspace', '--operations-port']);
+    if (!options['--workspace']) throw new TypeError('run --workspace DIRECTORY [-- NATIVE_SELLER_OPTIONS]');
+    const native = await workspaceCommand(options['--workspace'], separator < 0 ? [] : rest.slice(separator + 1));
+    const port = options['--operations-port'] ?? '0';
+    if (!/^\d{1,5}$/.test(port) || Number(port) > 65535) throw new TypeError('operations port must be 0–65535');
+    return forward('operations', ['--operations-port', port, ...(native.upstream ? ['--upstream'] : []), '--', ...native.args]);
+  }
+  return forward(command, rest);
+}
+if (process.argv[1] && await realpath(resolve(process.argv[1])).then(
+  entry => pathToFileURL(entry).href === import.meta.url, () => false))
+  main().catch(error => { console.error(error.message); process.exitCode = 1; });
