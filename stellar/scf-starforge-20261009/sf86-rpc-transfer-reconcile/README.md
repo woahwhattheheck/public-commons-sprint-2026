@@ -16,6 +16,33 @@ node stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/cli.mjs \
 
 The default endpoint is the first-party read-only `https://soroban-testnet.stellar.org`. For a focused *local* HTTP test only, `--rpc-endpoint http://127.0.0.1:PORT/` is permitted and **cannot** return the live verdict. Optional `--max-event-pages 24` (valid range 1–100) caps HTTP reads. No endpoint from the untrusted receipt is accepted.
 
+### Open the original SF82 evidence file
+
+The SF82 checkout adapter now saves the existing `sf81ReconciliationRecord()`
+inside its create-only evidence file whenever that original record is available.
+This completes the saved-file handoff for SF88 operators without requiring a
+separate manual export from an in-memory buyer result:
+
+```sh
+node stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/cli.mjs \
+  --sf82-evidence /private/stellar-evidence/ORIGINAL_INTENT_SHA256.json \
+  --payer YOUR_ACTUAL_TRUSTED_G_ADDRESS
+```
+
+Choose exactly one of `--sf81-result` or `--sf82-evidence`. The latter checks that
+the retained record agrees with the envelope's intent, original observed terms,
+receipt and reservation summary, then uses the **same** SF86 verifier. The payer
+still comes from the wallet owner, and a file or seller assertion does not prove
+approval or payment. No buyer, signer, merchant endpoint or ledger writer runs.
+
+An older SF82 file, a free response or an incomplete buyer result may not contain
+an original reconciliation record. In that case the CLI returns exit code 2 with
+`SF82_ORIGINAL_RECONCILIATION_RECORD_UNAVAILABLE`, before loading the SDK or making
+RPC calls. It never infers the missing reservation asset/schema or original payer.
+A contradictory saved record returns `SF82_RECONCILIATION_RECORD_MISMATCH`.
+The source file remains unchanged; retain it alongside the emitted reconciliation
+result. Neither unavailable evidence nor a failed lookup authorizes a new purchase.
+
 Successful **actual official testnet** verification returns `CHAIN_TRANSFER_MATCHED_RPC_TESTNET`; loopback always returns `LOCAL_RPC_REPLAY_MATCHED`, not live-chain proof. Failure returns `NOT_RECONCILED` plus a machine-readable reason with exit code 2. In both cases `reservation` remains `UNCHANGED_VERIFY_SEPARATELY`.
 
 ## Checks performed on the original source values
