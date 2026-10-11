@@ -147,3 +147,48 @@ class FileDelivery(_FileReaders):
         if not self.ok:
             raise DeliveryError("ORIGINAL_FILE_DELIVERY_NOT_COMPLETED")
         return self
+
+
+@dataclass(frozen=True)
+class AccountingResult:
+    """Saved view of original SF36 accounting; never a new payment authority."""
+    record: dict
+
+    @property
+    def native(self):
+        return self.record.get("native") or {}
+
+    @property
+    def result(self):
+        return self.native.get("result") or {}
+
+    @property
+    def status(self):
+        return self.result.get("outcome") or "NATIVE_ACCOUNTING_RESULT_UNAVAILABLE"
+
+    @property
+    def finalized(self):
+        return self.status in ("FINALIZED", "IDEMPOTENT_FINALIZED")
+
+    @property
+    def actual_atomic_units(self):
+        return self.result.get("actual") if self.finalized else None
+
+    @property
+    def receipt(self):
+        return self.result.get("receipt_ref") if self.finalized else None
+
+    @property
+    def merchant(self):
+        return self.result.get("merchant") or {"status": "NOT_RECORDED"}
+
+    @property
+    def last_finalized(self):
+        return self.record.get("lastFinalized")
+
+    def raise_for_status(self):
+        if not self.finalized:
+            raise NativeError(self.record.get("runtimeError") or self.result.get("reason") or
+                              "ORIGINAL_ACCOUNTING_NOT_FINALIZED",
+                              returncode=self.record.get("returncode"))
+        return self

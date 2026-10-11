@@ -29,6 +29,14 @@ def main():
     retrieve.add_argument("--claim-env", default="SF101_CLAIM_TOKEN")
     recovered_file = commands.add_parser("recover-file", help="read retained product outcome locally")
     recovered_file.add_argument("intent")
+    finalized = commands.add_parser("finalize", help="finish original workspace accounting; never purchase")
+    finalized.add_argument("intent")
+    finalized.add_argument("--outbox")
+    finalized.add_argument("--merchant-route")
+    recovered_accounting = commands.add_parser("recover-finalization", help="read original accounting views locally")
+    recovered_accounting.add_argument("intent")
+    history = commands.add_parser("history", help="read purchase, accounting and product history locally")
+    history.add_argument("--out", help="write a new private JSON history file")
     prepared = commands.add_parser("prepare", help="select one original saved catalog offer")
     prepared.add_argument("discovery")
     prepared.add_argument("--row", type=int, required=True)
@@ -57,6 +65,8 @@ def main():
                 intent_id=args.intent, url=args.url, method=args.method).inspect()
         elif args.command == "list":
             output = [op.inspect() for op in buyer.list_operations()]
+        elif args.command == "history":
+            output = buyer.history(destination=args.out)
         else:
             op = buyer.operation(args.intent)
             if args.command == "configure":
@@ -79,6 +89,13 @@ def main():
                 output = op.retrieve_file(destination=args.out, claim_env=args.claim_env).record
             elif args.command == "recover-file":
                 result = op.recover_file()
+                output = result.record if result else op.inspect()
+            elif args.command == "finalize":
+                result = op.finalize(outbox=args.outbox, merchant_route=args.merchant_route)
+                print(json.dumps(result.record, indent=2))
+                return 0 if result.finalized else 2
+            elif args.command == "recover-finalization":
+                result = op.recover_finalization()
                 output = result.record if result else op.inspect()
             else:
                 output = op.inspect()
