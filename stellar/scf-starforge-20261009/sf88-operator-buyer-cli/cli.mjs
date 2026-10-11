@@ -5,6 +5,7 @@ import { basename } from 'node:path';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { config, catalog, operation, responseFile, bytes, need } from './config.mjs';
+import { signerSummary, diagnoseSigner } from './runtime-signer.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 const sha256 = data => createHash('sha256').update(data).digest('hex');
@@ -25,9 +26,10 @@ async function review(c) {
     operatorId:c.operator?.actor ?? null,
     serviceId:c.operator?.service ?? null,
     signerFilename:c.signerModule ? basename(c.signerModule) : null,
+    signer:signerSummary(c),
     responseFile:download ? { ...download, prepared:false } : null,
     preparedFrom:c.preparedFrom ?? null,
-    next:'Execute an original approved single operation using the private operator module'
+    next:'Check signer setup with --diagnose, then --execute for the existing terminal approval.'
   });
 }
 async function discover(c) {
@@ -46,7 +48,7 @@ async function discover(c) {
 }
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
+    process.stdout.write('Usage: node cli.mjs --review|--discover|--diagnose|--execute --config /absolute/operator.json [--response-out /absolute/output]\n' +
       '       node cli.mjs --prepare --discovery /absolute/catalog.json --row 0 --accept 0 --intent-id stable-id --url https://seller.example/resource --method GET --out /absolute/review.json\n');
     return;
   }
@@ -55,16 +57,21 @@ async function main(args) {
     return print(await prepare(args.slice(1)));
   }
   need((args.length === 3 || args.length === 5 && args[3] === '--response-out') &&
-    ['--review','--discover','--execute'].includes(args[0]) &&
+    ['--review','--discover','--diagnose','--execute'].includes(args[0]) &&
     args[1] === '--config', 'USAGE_MODE_AND_CONFIG_REQUIRED');
   const c = await config(args[2]);
   if (args.length === 5) {
-    need(args[0] !== '--discover', 'RESPONSE_OUT_REQUIRES_REVIEW_OR_EXECUTE');
+    need(['--review','--execute'].includes(args[0]), 'RESPONSE_OUT_REQUIRES_REVIEW_OR_EXECUTE');
     need(c.responseFile === undefined, 'RESPONSE_FILE_CONFIG_AND_FLAG_CONFLICT');
     c.responseFile = { destination:args[4] };
   }
   if (args[0] === '--review') return review(c);
   if (args[0] === '--discover') return discover(c);
+  if (args[0] === '--diagnose') {
+    const result = await diagnoseSigner(c);
+    if (result.status === 'SETUP_REQUIRED') process.exitCode = 1;
+    return print(result);
+  }
   const controller = new AbortController();
   const cancel = exitCode => {
     if (controller.signal.aborted) return;

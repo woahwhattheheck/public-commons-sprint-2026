@@ -1,10 +1,10 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
 import { stat } from 'node:fs/promises';
-import { pathToFileURL } from 'node:url';
 import { OperatorApprovedBuyer } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { execution, bytes, need } from './config.mjs';
+import { loadExecutionSigner } from './runtime-signer.mjs';
 
 const codeOf = (error, fallback) => {
   const value = error?.code ?? error?.message;
@@ -28,8 +28,6 @@ export async function execute(cfg, { signal } = {}) {
   const directory = await stat(cfg.evidenceDir);
   need(directory.isDirectory() && (process.platform === 'win32' ||
     (directory.mode & 0o077) === 0), 'PRIVATE_EVIDENCE_DIRECTORY_REQUIRED');
-  const signerFile = await stat(cfg.signerModule);
-  need(signerFile.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   const body = op.bodyFile === undefined ? undefined :
     Uint8Array.from(await bytes(op.bodyFile, 1048576, 'REQUEST_BODY_INVALID'));
   need(!signal?.aborted, 'OPERATOR_ABORTED');
@@ -39,9 +37,8 @@ export async function execute(cfg, { signal } = {}) {
   try {
     // Refuse an existing/unusable destination before a buyer can run or sign.
     if (responseFile) output = await prepareBuyerResponseFile(responseFile);
-    const signer = await import(pathToFileURL(cfg.signerModule).href);
-    const sign = signer.sign ?? signer.default?.sign;
-    need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
+    const signer = await loadExecutionSigner(cfg);
+    const sign = signer.sign;
     const buyer = new OperatorApprovedBuyer({
       operator: { ...owner, environment: process.env }
     });

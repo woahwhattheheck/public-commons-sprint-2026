@@ -1,10 +1,10 @@
 # SF88: One-command approved Stellar buyer pilot
 
-Operator-side executable joining ORIGINAL SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 durable evidence. This is not a new signer, wallet, merchant service, ledger, protocol, auto-payer or replacement for the existing SF82 seller pilot.
+Operator-side executable joining ORIGINAL SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 durable evidence. The native signer adapter connects the official Stellar x402 SDK to that existing operation. Wallet custody, the original approval ledger, seller transport and settlement verification retain their existing roles.
 
 From the complete public sprint checkout, using Node 22+ and Python 3.11+:
 
-1. Put an owner-reviewed config JSON in a private local directory. It contains only chosen public quote terms and paths to trusted operator files and the existing signer module. Keep the SF36 secret keys outside the config in the operator environment.
+1. Put an owner-reviewed config JSON in a private local directory. It contains chosen public quote terms and paths to trusted operator files. Choose the [native SDK signer](NATIVE_SIGNER.md), backed by a runtime environment key or a wallet module, or retain your existing `signerModule`. Keep secret keys outside the config in the operator environment or established wallet custody.
 2. Review the method, resource URL, base-unit spend cap and body digest without network via: node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs --review --config /private/pilot.json
 3. Optionally use --discover --config /private/pilot.json to read the ORIGINAL catalog without payment or signing. Save the result and use --prepare below to select its actual source terms without retyping them. Discovery is not approval.
 4. Execute with --execute --config /private/pilot.json from the trusted terminal. Original SF81 invokes SF62 terminal review and SF36 durable fresh reservation before the owner-provisioned signer. SF31 makes one unsigned request and at most one signed retry. Original SF82 persists one create-only evidence file and checks canonical testnet RPC when qualified.
@@ -41,7 +41,7 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 }
 ~~~
 
-The trusted signer module exports an async sign({intent,challenge,accepted}) function backed by the already-installed official Stellar x402 SDK; no signer, private key or wallet implementation is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
+The legacy trusted signer module exports an async sign({intent,challenge,accepted}) function. Alternatively, configure `nativeSigner` to use the bundled adapter to official `@x402/core` and `@x402/stellar` 2.28.0. It constructs the canonical payload for SF31's already approved exact option. `--diagnose --config /private/pilot.json` checks its installed dependencies and configured source without loading a key or wallet module. See [native signer setup](NATIVE_SIGNER.md) for both runtime source options. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
 
 Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified testnet transfer event remain distinct. SCF grant and merchant adoption stay with the existing owners. No hosted GitHub Actions or testnet payment is triggered by publication of this code.
 

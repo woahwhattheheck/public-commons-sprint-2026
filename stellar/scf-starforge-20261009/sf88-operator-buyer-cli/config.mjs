@@ -28,7 +28,7 @@ export async function config(path) {
   let value;
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('CONFIG_JSON_INVALID'); }
-  shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
+  shape(value, ['catalog','operation','operator','signerModule','nativeSigner','evidenceDir',
     'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom'], 'INVALID_CONFIG_FIELDS');
   if (value.preparedFrom !== undefined) preparedFrom(value.preparedFrom);
   return value;
@@ -117,17 +117,50 @@ export function operator(x) {
       'VERIFIED_OPERATOR_ID_REQUIRED');
   return x;
 }
+// The public config names a runtime source, never a private key or signature.
+// Legacy operator modules remain supported; one source is chosen explicitly.
+export function signing(x, {required=true}={}) {
+  const legacy = x.signerModule !== undefined;
+  const native = x.nativeSigner !== undefined;
+  need(!(legacy && native), 'SIGNER_SOURCES_CONFLICT');
+  if (!legacy && !native) {
+    need(!required, 'SIGNER_SOURCE_REQUIRED');
+    return null;
+  }
+  if (legacy) return {kind:'operator-module', module:abs(x.signerModule, 'SIGNER_PATH_NOT_ABSOLUTE')};
+  const source = shape(x.nativeSigner, ['secretEnvironment','walletModule','rpcUrl'], 'INVALID_NATIVE_SIGNER');
+  const environment = source.secretEnvironment !== undefined;
+  const module = source.walletModule !== undefined;
+  need(environment !== module, 'ONE_NATIVE_SIGNER_SOURCE_REQUIRED');
+  if (environment)
+    need(typeof source.secretEnvironment === 'string' && /^[A-Z][A-Z0-9_]{0,127}$/.test(source.secretEnvironment),
+      'NATIVE_SECRET_ENVIRONMENT_INVALID');
+  if (module) abs(source.walletModule, 'NATIVE_WALLET_PATH_NOT_ABSOLUTE');
+  const network = operation(x.operation).expect.network;
+  if (source.rpcUrl !== undefined) {
+    let url;
+    try { url = new URL(source.rpcUrl); } catch { throw new InputError('NATIVE_RPC_URL_INVALID'); }
+    const loopback = network === 'stellar:testnet' && url.protocol === 'http:' &&
+      ['127.0.0.1','[::1]'].includes(url.hostname);
+    need((url.protocol === 'https:' || loopback) && !url.username && !url.password && !url.hash,
+      'NATIVE_RPC_URL_INVALID');
+  }
+  need(network !== 'stellar:pubnet' || source.rpcUrl !== undefined, 'NATIVE_PUBNET_RPC_REQUIRED');
+  return {kind:'official-stellar-sdk', network, ...source};
+}
 export function execution(x) {
   const op = operation(x.operation);
   const owner = operator(x.operator);
-  abs(x.signerModule, 'SIGNER_PATH_NOT_ABSOLUTE');
+  const signer = signing(x);
   abs(x.evidenceDir, 'EVIDENCE_PATH_NOT_ABSOLUTE');
   if (x.trustedPayer !== undefined)
     need(typeof x.trustedPayer === 'string' && /^[GC][A-Z2-7]{55}$/.test(x.trustedPayer),
       'TRUSTED_PAYER_INVALID');
+  if (signer.kind === 'official-stellar-sdk')
+    need(typeof x.trustedPayer === 'string', 'NATIVE_SIGNER_TRUSTED_PAYER_REQUIRED');
   if (x.captureBody !== undefined) need(typeof x.captureBody === 'boolean', 'CAPTURE_BODY_INVALID');
   if (x.bodyCaptureTimeoutMs !== undefined)
     need(Number.isInteger(x.bodyCaptureTimeoutMs) && x.bodyCaptureTimeoutMs >= 1 &&
       x.bodyCaptureTimeoutMs <= 60000, 'BODY_TIMEOUT_INVALID');
-  return { op, owner, download:responseFile(x) };
+  return { op, owner, signer, download:responseFile(x) };
 }
