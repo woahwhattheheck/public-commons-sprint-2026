@@ -90,6 +90,28 @@ assets are included under
 `source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/`;
 the README there covers the complete preparation and operator lifecycle.
 
+## Cube report workspace
+
+Open the browser workspace on the merchant's retained Cube member catalog:
+
+```sh
+npx --no-install starforge cube-workspace --state /private/cube-browser \
+  --metadata /private/cube-meta.json --plan /private/merchant-plan.json
+```
+
+Omit `--plan` to compose a new merchant plan, or use the same `--state` alone to
+reopen saved versions and exported packages after restart. The browser selects
+actual Cube members, authors fixed reports and typed inputs, reviews every
+complete payment option, and saves through the original onboarding compiler.
+Atomic amounts stay exact strings.
+
+The selected saved version can run its native backend read, export the runnable
+merchant package and customer files, and prepare the original SF88 buyer review
+for a chosen report and payment option. The operator URL remains on loopback.
+Use `npx --no-install starforge cube-onboard` for the underlying capture, inspection and package
+workflow. See [Cube workspace](../sf102-cube-paid-query-adapter/workspace/README.md)
+for the full authoring and handoff flow.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -961,28 +983,6 @@ subpaths in `package.json`. The main import exports the original client, release
 and inbox functions for applications that manage their own UI and lifecycle.
 Optional database drivers load only when their original source is opened.
 
-## Cube report workspace
-
-Open the browser workspace on the merchant's retained Cube member catalog:
-
-```sh
-npx --no-install starforge cube-workspace --state /private/cube-browser \
-  --metadata /private/cube-meta.json --plan /private/merchant-plan.json
-```
-
-Omit `--plan` to compose a new merchant plan, or use the same `--state` alone to
-reopen saved versions and exported packages after restart. The browser selects
-actual Cube members, authors fixed reports and typed inputs, reviews every
-complete payment option, and saves through the original onboarding compiler.
-Atomic amounts stay exact strings.
-
-The selected saved version can run its native backend read, export the runnable
-merchant package and customer files, and prepare the original SF88 buyer review
-for a chosen report and payment option. The operator URL remains on loopback.
-Use `npx --no-install starforge cube-onboard` for the underlying capture, inspection and package
-workflow. See [Cube workspace](../sf102-cube-paid-query-adapter/workspace/README.md)
-for the full authoring and handoff flow.
-
 ## Maintainers: produce an immutable distribution
 
 Commit the distribution sources in a current public sprint checkout, then run:
@@ -1013,3 +1013,47 @@ Generated code examples in template strings therefore remain ordinary text.
 Dynamic runtime families and browser assets are retained through the explicit
 component inventory; operator-selected application and signer modules remain
 external inputs. This parser adds no package dependency.
+
+## Receiving readiness and native operations
+
+Review every payment option in the original seller configuration before starting
+the merchant. This command binds the exact advertised SAC, network, recipient
+and amount to native contract state and the original account evaluator:
+
+```sh
+starforge merchant-readiness \
+  --config /private/merchant/seller-service.json \
+  --asset-map /private/merchant/sac-assets.json \
+  --out /private/merchant/receiving-review
+```
+
+Use the installed `source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/asset-map.example.json`
+as the starting map for the actual configured assets. The complete
+`MERCHANT_READINESS.md` in that directory explains RPC selection, the explicit
+`--https-proxy-env` option, exact option-level statuses, private output and
+reopening saved reports. The component uses the existing Stellar SDK; its
+accepted native journey and declared component dependency use version 16.3.1.
+
+Embedding applications can import `./merchant/readiness` for the original
+configuration review, `./merchant/recipient-readiness` for
+`createSacRecipientReviewer`, and `./merchant/assets` for the original SF16
+`AssetRegistry`. The reviewer evaluates the exact amount on every call and its
+`validate(terms, registry)` method returns the original SF16 accepted terms with
+the corresponding receiving result.
+
+The existing facilitator command also provides RPC readiness and shared signer
+ownership from the same native implementation:
+
+```sh
+starforge facilitator --probe --config /private/facilitator.json
+starforge facilitator --serve --config /private/facilitator.json --port 5101 \
+  --state /srv/starforge/facilitator-owners --require-ready
+```
+
+Use the same private state directory and operating-system user for cooperating
+processes on one Linux host. The original `OPERATIONS.md` under the installed
+`source/stellar/scf-starforge-20261009/native-facilitator` directory covers
+`flock`, key-free probing, `/readyz`, admission, graceful drain and retained
+ownership while already accepted SDK work completes. The existing
+`./facilitator` API retains its runtime entrypoints; `./facilitator/readiness`
+exposes the original RPC probe directly.
