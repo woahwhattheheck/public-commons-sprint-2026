@@ -36,6 +36,9 @@ export function createRelevanceController({ host, api, perform, refresh, notice,
     const selected=local.set,judged=selected?.cases.reduce((sum,item)=>sum+item.documents.filter(row=>row.rating!==null).length,0)??0;
     $('saved').textContent=selected?(selected.id?'Saved revision '+selected.revision:'New evaluation')+
       (local.dirty?' · unsaved changes':'')+' · '+selected.variants.length+' variants · '+selected.cases.length+' cases · '+judged+' judgments':'Create or open an evaluation set.';
+    const depth=Math.min(1000,...(selected?.variants??[]).map(row=>Number.isInteger(row.query?.maxHits)?row.query.maxHits:1000));
+    $('metric-k').max=String(depth);
+    $('metric-limit').textContent='Native evaluation depth: 1–'+depth+' results for the selected query variants. The exact metric JSON is retained with each saved evaluation.';
     const id=selected?.id;$('set-download').hidden=!id;if(id)$('set-download').href='/api/relevance/sets/'+encodeURIComponent(id)+'/set.json';
   }
   function buttons() {
@@ -209,7 +212,7 @@ export function createRelevanceController({ host, api, perform, refresh, notice,
   }
   function metricPreset() {
     const kind=$('metric-kind').value,k=Number($('metric-k').value);
-    if(!Number.isInteger(k)||k<1)throw new Error('Metric k must be a positive integer.');
+    if(!Number.isInteger(k)||k<1||k>Number($('metric-k').max||1000))throw new Error('Choose k within the selected variants’ native evaluation depth.');
     const parameters={k};
     if(['precision','recall','mean_reciprocal_rank'].includes(kind))parameters.relevant_rating_threshold=1;
     if(kind==='precision')parameters.ignore_unlabeled=false;
@@ -287,7 +290,8 @@ export function createRelevanceController({ host, api, perform, refresh, notice,
       row.append(action);body.append(row);
     }
     table.append(body);target.append(table);
-    $('native-json').textContent=pretty({native:variant.native,exactIntegerPaths:variant.exactIntegerPaths??[]});
+    const {native:response,exactIntegerPaths,cases,...execution}=variant;
+    $('native-json').textContent=pretty({execution,cases,native:response,exactIntegerPaths:exactIntegerPaths??[]});
     buttons();
   }
   function showCaseResult(variant,item) {
@@ -320,14 +324,17 @@ export function createRelevanceController({ host, api, perform, refresh, notice,
     if(!before||!after)throw new Error('Choose two retained evaluations.');
     const path='/api/relevance/compare?before='+encodeURIComponent(before)+'&after='+encodeURIComponent(after);
     const result=await api(path);$('comparison').hidden=false;
-    $('comparison-summary').textContent=result.scope.comparable?'Metric, judgments, case inputs and native cluster match; both runs completed.':
+    $('comparison-summary').textContent=result.scope.comparable?'Metric, judgments, case inputs, native cluster and concrete indices match; both runs completed.':
       'Review the retained comparison scope: '+Object.entries(result.scope).filter(([key,value])=>key!=='comparable'&&!value).map(([key])=>key).join(', ')+'.';
     $('comparison-json').textContent=pretty(result);$('comparison-download').href=path+'&download=1';
     const target=$('comparison-table');target.replaceChildren();const table=element('table'),head=element('tr');
-    for(const label of ['Variant','Earlier score','Later score','Change','Query definition'])head.append(element('th',label));
+    for(const label of ['Variant','Earlier score','Later score','Change','Complete cases','Native failures','Query / ranking'])head.append(element('th',label));
     const thead=element('thead');thead.append(head);table.append(thead);const body=element('tbody');
     for(const item of result.variants){const row=element('tr');for(const value of [item.after?.label??item.before?.label??item.id,
-      item.before?.score??'Unavailable',item.after?.score??'Unavailable',item.delta??'Review scope',item.queryChanged?'Changed':'Same'])row.append(element('td',value));body.append(row);}
+      item.before?.score??'Unavailable',item.after?.score??'Unavailable',item.delta??'Review scope',
+      (item.before?.confirmedCases??0)+' / '+(item.before?.totalCases??0)+' → '+(item.after?.confirmedCases??0)+' / '+(item.after?.totalCases??0),
+      (item.before?.nativeFailed??0)+' → '+(item.after?.nativeFailed??0),
+      item.queryChanged||item.scope?.effectiveSortChanged?'Changed':'Same'])row.append(element('td',value));body.append(row);}
     table.append(body);target.append(table);
   }
   function sync() {
@@ -370,6 +377,7 @@ export function createRelevanceController({ host, api, perform, refresh, notice,
   const metricControls=element('div',undefined,{class:'two-column'});
   metricControls.append(input('Metric preset','metric-kind','select'),input('Top results (k)','metric-k','input',{type:'number',min:'1',step:'1',value:'10','data-rel-write':''}));
   metric.append(metricControls,button('Use preset',metricPreset,{'data-rel-write':''}),input('Exact native metric configuration','metric','textarea',{rows:7,class:'code',spellcheck:'false','data-rel-write':''}),
+    element('p','',{id:'rel-metric-limit',class:'help'}),
     element('p','An empty judgment is unrated. Grade 0 is an explicit relevance judgment. The native metric controls how missing labels affect its score.',{class:'help'}));root.append(metric);
   const variantControls=element('div',undefined,{class:'actions'});
   variantControls.append(input('Saved query draft','draft','select'),button('Add query variant',addVariant,{id:'rel-add-variant','data-rel-write':''}));
@@ -414,7 +422,7 @@ export function createRelevanceController({ host, api, perform, refresh, notice,
     element('h3','',{id:'rel-variant-title'}),element('div',undefined,{id:'rel-case-results',class:'table-wrap'}));
   const caseResult=element('details',undefined,{id:'rel-case-result'});
   caseResult.append(element('summary','Case results',{id:'rel-case-result-title'}),element('div',undefined,{id:'rel-returned-hits',class:'table-wrap'}),element('pre','',{id:'rel-case-result-json'}));result.append(caseResult);
-  const native=element('details');native.append(element('summary','Complete original native response and exact integer paths'),element('pre','',{id:'rel-native-json'}));result.append(native);
+  const native=element('details');native.append(element('summary','Native execution scope, original response and exact integer paths'),element('pre','',{id:'rel-native-json'}));result.append(native);
   const metadata=element('details');metadata.append(element('summary','Retained evaluation identity'),element('pre','',{id:'rel-result-meta'}));result.append(metadata);root.append(result);
   const doc=element('details',undefined,{id:'rel-document'});doc.append(element('summary','Original document'),element('pre','',{id:'rel-document-json'}));root.append(doc);
   for(const[name,label]of [['precision','Precision'],['recall','Recall'],['mean_reciprocal_rank','Mean reciprocal rank'],['dcg','Normalized discounted cumulative gain'],['expected_reciprocal_rank','Expected reciprocal rank']])

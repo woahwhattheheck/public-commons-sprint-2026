@@ -124,7 +124,7 @@ function variantResults(result) {
   return rows.map(row => ({ id: row.id, title: row.label ?? row.title ?? row.id,
     queryName: row.queryName, response: row.native ?? {}, exactIntegerPaths: clone(row.exactIntegerPaths ?? []),
     cases: clone(row.cases ?? []), complete: row.complete === true, metricScore: row.metricScore ?? null,
-    source: result.source ?? null }));
+    source: result.source ?? null, execution: clone({ ...row, native: undefined, exactIntegerPaths: undefined, cases: undefined }) }));
 }
 function resultSummary(result) {
   return variantResults(result).map(row => {
@@ -135,6 +135,14 @@ function resultSummary(result) {
       nativeFailed: native.failed, confirmedCases, incompleteCases: row.cases.length - confirmedCases,
       totalCases: row.cases.length };
   });
+}
+function hasPointer(value,path) {
+  if(typeof path!=='string'||!path.startsWith('/'))return false;
+  for(const part of path.slice(1).split('/').map(token=>token.replaceAll('~1','/').replaceAll('~0','~'))) {
+    if(value===null||typeof value!=='object'||!Object.hasOwn(value,part))return false;
+    value=value[part];
+  }
+  return true;
 }
 export function relevanceReport(edition, { includeCases = false } = {}) {
   const set = edition.set;
@@ -147,14 +155,19 @@ export function relevanceReport(edition, { includeCases = false } = {}) {
       judgedDocuments: item.documents.filter(row => row.rating !== null).length,
       unjudgedDocuments: item.documents.filter(row => row.rating === null).length,
       ...(includeCases ? { input: clone(item.input), judgments: item.documents.map(({ hit, ...row }) => clone(row)) } : {}) })),
-    native: variantResults(edition.result).map(({ id, response, source, cases, complete }) => ({ id, source, cases, complete,
-      metric_score: response.metric_score ?? null,
-      details: Object.fromEntries(Object.entries(response.details ?? {}).map(([id, item]) => [id, {
-        metric_score: item.metric_score ?? null, metric_details: clone(item.metric_details ?? {}),
-        unrated_docs: clone(item.unrated_docs ?? []),
-        hits: (item.hits ?? []).map(({ hit, rating }) => ({
-          hit: { _index: hit?._index, _id: hit?._id, _score: hit?._score ?? null }, rating: rating ?? null })) }])),
-      failures: clone(response.failures ?? {}) })),
+    native: variantResults(edition.result).map(({ id, response, source, cases, complete, execution, exactIntegerPaths }) => {
+      const selected = {
+        metric_score: response.metric_score ?? null,
+        details: Object.fromEntries(Object.entries(response.details ?? {}).map(([id, item]) => [id, {
+          metric_score: item.metric_score ?? null, metric_details: clone(item.metric_details ?? {}),
+          unrated_docs: clone(item.unrated_docs ?? []),
+          hits: (item.hits ?? []).map(({ hit, rating }) => ({
+            hit: { _index: hit?._index, _id: hit?._id, _score: hit?._score ?? null }, rating: rating ?? null })) }])),
+        failures: clone(response.failures ?? {})
+      };
+      return { id, source, cases, complete, execution, ...selected,
+        exactIntegerPaths: exactIntegerPaths.filter(path => hasPointer(selected,path)) };
+    }),
     interpretation: 'Native scores describe the saved metric, labeled document set and successful cases. Unrated results and failed cases remain visible beside every score.' };
 }
 export function relevanceCsv(edition) {
@@ -209,8 +222,8 @@ export function relevanceHtml(edition) {
     }).join('');
     return '<section><h3>' + html(variant.title) + '</h3><p>' + html(variant.queryName) +
       ' · ' + (variant.complete ? 'All cases complete' : 'Review case coverage') +
-      '</p><details><summary>Frozen query definition</summary>' +
-      htmlJson({id:definition?.id,queryName:definition?.queryName,query:definition?.query,draft:definition?.draft}) +
+      '</p><details><summary>Frozen query definition and native execution scope</summary>' +
+      htmlJson({id:definition?.id,queryName:definition?.queryName,query:definition?.query,draft:definition?.draft,nativeExecution:variant.execution}) +
       '</details>' + cases + '</section>';
   }).join('');
   const judgments = edition.set.cases.map(item => '<article><h3>' + html(item.title) + '</h3>' +
@@ -308,7 +321,11 @@ export class OpenSearchRelevanceWorkspace {
       fail('WORKSPACE_RELEVANCE_CASES_AND_VARIANTS_REQUIRED', 'Add a query variant and an input case before evaluation.');
     if (typeof this.validateEvaluation !== 'function') fail('WORKSPACE_RELEVANCE_ENGINE_UNAVAILABLE', 'The native relevance adapter is unavailable.', 503);
     const spec = relevanceInput(current);
-    this.validateEvaluation({ config: this.workspace.config, ...spec });
+    try { this.validateEvaluation({ config: this.workspace.config, ...spec }); }
+    catch(error) {
+      const failure=this.workspace.failure(error);
+      throw new WorkspaceError(failure.code,failure.message,failure.status??422);
+    }
     return { setId:id,revision:current.revision,spec,counts:counts(current) };
   }
   async run(request) {
@@ -381,41 +398,71 @@ export class OpenSearchRelevanceWorkspace {
       ratings:item.documents.filter(row=>row.rating!==null).map(({_index,_id,rating})=>({_index,_id,rating}))
         .sort((a,b)=>canonical([a._index,a._id]).localeCompare(canonical([b._index,b._id])))}))
       .sort((a,b)=>a.id.localeCompare(b.id));
+    const left=new Map(variantResults(before.result).map(row=>[row.id,row]));
+    const right=new Map(variantResults(after.result).map(row=>[row.id,row]));
+    const indexSet=row=>Array.isArray(row?.execution?.concreteIndices)&&row.execution.concreteIndices.length
+      ? [...new Set(row.execution.concreteIndices)].sort() : null;
+    const sameIndices=(a,b)=>indexSet(a)!==null&&indexSet(b)!==null&&canonical(indexSet(a))===canonical(indexSet(b));
+    const matched=[...left.keys()].filter(id=>right.has(id));
     const scope={
       sameMetric:canonical(before.set.metric)===canonical(after.set.metric),
       sameCasesInputsAndJudgments:canonical(caseScope(before.set))===canonical(caseScope(after.set)),
       sameSourceProfile:before.sourceProfileSha256===after.sourceProfileSha256,
       sameNativeCluster:Boolean(before.result.source?.clusterFingerprint) &&
         before.result.source.clusterFingerprint===after.result.source?.clusterFingerprint,
+      sameConcreteIndices:matched.length>0&&matched.every(id=>sameIndices(left.get(id),right.get(id))),
       bothComplete:before.result.complete===true && after.result.complete===true
     };
     const comparable=Object.values(scope).every(Boolean);
-    const left=new Map(variantResults(before.result).map(row=>[row.id,row]));
-    const right=new Map(variantResults(after.result).map(row=>[row.id,row]));
+    const scopeRow=row=>row?{indices:clone(row.execution.indices??null),
+      concreteIndices:clone(row.execution.concreteIndices??null),effectiveSort:clone(row.execution.effectiveSort??null),
+      snapshot:clone(row.execution.snapshot??null),source:clone(row.source)}:null;
+    const scoreRow=row=>{
+      if(!row)return null;
+      const native=detailCounts(row.response),confirmed=row.cases.filter(item=>item.status==='COMPLETE');
+      return {label:row.title,score:row.metricScore,complete:row.complete,
+        ...native,nativeSucceeded:native.succeeded,nativeFailed:native.failed,
+        confirmedCases:confirmed.length,incompleteCases:row.cases.length-confirmed.length,totalCases:row.cases.length,
+        nativeSuccessCaseIds:Object.keys(row.response.details??{}).sort(),
+        nativeFailureCaseIds:Object.keys(row.response.failures??{}).sort(),
+        confirmedCaseIds:confirmed.map(item=>item.id).sort()};
+    };
     const variants=[];
     for(const id of new Set([...left.keys(),...right.keys()])) {
       const a=left.get(id),b=right.get(id);
       const beforeSource=before.set.variants.find(row=>row.id===id);
       const afterSource=after.set.variants.find(row=>row.id===id);
+      const aCases=new Map((a?.cases??[]).map(row=>[row.id,row]));
+      const bCases=new Map((b?.cases??[]).map(row=>[row.id,row]));
+      const nativeSuccessCasesMatch=canonical(Object.keys(a?.response.details??{}).sort())===
+        canonical(Object.keys(b?.response.details??{}).sort());
+      const variantComparable=comparable&&Boolean(a&&b)&&sameIndices(a,b)&&nativeSuccessCasesMatch;
       const cases=[];
-      for(const caseId of new Set([...Object.keys(a?.response.details??{}),...Object.keys(a?.response.failures??{}),
+      for(const caseId of new Set([...aCases.keys(),...bCases.keys(),
+        ...Object.keys(a?.response.details??{}),...Object.keys(a?.response.failures??{}),
         ...Object.keys(b?.response.details??{}),...Object.keys(b?.response.failures??{})])) {
         const scoreA=a?.response.details?.[caseId]?.metric_score??null,scoreB=b?.response.details?.[caseId]?.metric_score??null;
+        const complete=aCases.get(caseId)?.status==='COMPLETE'&&bCases.get(caseId)?.status==='COMPLETE';
         cases.push({id:caseId,before:scoreA,after:scoreB,
-          delta:comparable&&typeof scoreA==='number'&&typeof scoreB==='number'?scoreB-scoreA:null,
-          beforeFailure:clone(a?.response.failures?.[caseId]??null),afterFailure:clone(b?.response.failures?.[caseId]??null)});
+          delta:variantComparable&&complete&&typeof scoreA==='number'&&typeof scoreB==='number'?scoreB-scoreA:null,
+          beforeCoverage:clone(aCases.get(caseId)??null),afterCoverage:clone(bCases.get(caseId)??null),
+          beforeFailure:clone(a?.response.failures?.[caseId]??aCases.get(caseId)?.error??null),
+          afterFailure:clone(b?.response.failures?.[caseId]??bCases.get(caseId)?.error??null)});
       }
-      variants.push({id,before:a?{label:a.title,score:a.metricScore,...detailCounts(a.response)}:null,
-        after:b?{label:b.title,score:b.metricScore,...detailCounts(b.response)}:null,
+      variants.push({id,before:scoreRow(a),after:scoreRow(b),
+        scope:{before:scopeRow(a),after:scopeRow(b),sameConcreteIndices:sameIndices(a,b),
+          nativeSuccessCasesMatch,
+          effectiveSortChanged:canonical(a?.execution.effectiveSort??null)!==canonical(b?.execution.effectiveSort??null),
+          comparable:variantComparable},
         queryChanged:canonical(beforeSource?.query??null)!==canonical(afterSource?.query??null),
-        delta:comparable&&typeof a?.metricScore==='number'&&typeof b?.metricScore==='number'?b.metricScore-a.metricScore:null,cases});
+        delta:variantComparable&&typeof a?.metricScore==='number'&&typeof b?.metricScore==='number'?b.metricScore-a.metricScore:null,cases});
     }
     const summary=edition=>({id:edition.id,title:edition.title,setId:edition.setId,setRevision:edition.setRevision,
       capturedAt:edition.result.capturedAt,source:clone(edition.result.source??null),metric:clone(edition.set.metric),
-      resultSha256:edition.resultSha256,complete:edition.result.complete});
+      resultSha256:edition.resultSha256,complete:edition.result.complete,variants:resultSummary(edition.result)});
     return {schema:'stellar-forge.opensearch-relevance-comparison.v1',comparedAt:now(),scope:{...scope,comparable},
       before:summary(before),after:summary(after),variants,
-      interpretation:'Score differences use matching metric, case inputs, judgments and native cluster with complete cases. Each retained run keeps its own capture time and original result.'};
+      interpretation:'Score differences use matching metric, case inputs, supplied judgments, native cluster and concrete index sets with complete cases and matching successful-case denominators. Query definitions and effective ranking order remain visible as the evaluated variant changes. Each retained run keeps its own snapshot scope and capture time.'};
   }
   promote(request) {
     this.ensureOpen();

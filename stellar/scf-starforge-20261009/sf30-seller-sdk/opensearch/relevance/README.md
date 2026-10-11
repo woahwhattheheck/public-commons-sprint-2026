@@ -7,7 +7,7 @@ The OpenSearch merchant workspace evaluates frozen query variants against explic
 Use the existing installed command:
 
 ```sh
-starforge-merchant opensearch-workspace \
+npx --no-install starforge opensearch-workspace \
   --source ./opensearch-source.json \
   --plan ./merchant-plan.json \
   --workspace ./private-search-workspace \
@@ -51,7 +51,7 @@ A source capture can be truncated or contain only the top results. Its provenanc
 | `dcg` | `k`, `normalize`, optional `unknown_doc_rating` | Graded relevance with rank discounting; the preset enables normalization. |
 | `expected_reciprocal_rank` | `k`, `maximum_relevance`, optional `unknown_doc_rating` | A graded rank measure using the declared maximum relevance. |
 
-The metric object contains one native metric key. The native protocol and its pinned implementation references are documented in [NATIVE_PROTOCOL.md](./NATIVE_PROTOCOL.md).
+The metric object contains one native metric key. Its depth `k` must be between 1 and 1,000 and fit within every selected query's `maxHits`. The workspace shows that shared depth limit beside the metric controls. DCG grades are capped at 1,000 to keep finite gain arithmetic across the supported window. Expected reciprocal rank uses a maximum relevance from 0 through 1,023, and every supplied grade must fit that selected maximum. The native protocol and its pinned implementation references are documented in [NATIVE_PROTOCOL.md](./NATIVE_PROTOCOL.md).
 
 The engine reports an aggregate score over its successful query details. A successful HTTP response can also contain individual query failures. The review screen therefore shows the native aggregate, confirmed complete cases, supplied judgments, returned judged and unrated counts, original failures and per-case capture correspondence together.
 
@@ -71,7 +71,7 @@ Native evaluation requests use the workspace's original request journal. The bro
 
 An evaluation edition stores the complete native result as one original JSON document with a SHA-256 checksum. Reopening the edition verifies the checksum and joins the immutable set revision used by that evaluation.
 
-Comparison keeps each edition's capture time and native cluster fingerprint visible. Score deltas are shown only when the metric, typed case inputs, supplied judgments, source profile and native cluster match and both evaluations are complete. Query definitions may change deliberately; the comparison marks those changes beside the scores. Full per-case outcomes stay in the comparison export.
+Comparison keeps each edition's capture time and native cluster fingerprint visible. Score deltas are shown only when the metric, typed case inputs, supplied judgments, source profile, native cluster and concrete index set match, the successful-case denominator agrees, and both evaluations are complete. Query definitions and effective ranking order may change deliberately; the comparison marks those changes beside the scores and retains the declared indices, concrete indices and original snapshot scope for each variant. Full per-case outcomes stay in the comparison export.
 
 ## Downloads
 
