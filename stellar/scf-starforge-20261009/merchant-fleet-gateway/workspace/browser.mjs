@@ -2,6 +2,8 @@
 const $ = id => document.getElementById(id);
 let session, manifests = [], status = null, capturedAt = null, reviewed = null;
 let working = false, loading = false, connected = false, confirmAction = null, timer, outcomeUnknown = false;
+let pendingRead = null;
+let managed = false, releases = null, catalog = null, releaseReview = null, catalogLoading = false, catalogVersion = 0;
 const explain = {
   FLEET_REVISION_CHANGED: 'The active revision changed in another operator session. Refresh and review the current state before choosing the change again.',
   FLEET_CANDIDATE_CHANGED: 'Another preparation replaced the reviewed candidate. Review the current candidate before activating.',
@@ -19,6 +21,19 @@ const explain = {
   WORKSPACE_SESSION_REQUIRED: 'This workspace process restarted. Reload this page to open a new local session.',
   WORKSPACE_MANIFEST_NOT_REGISTERED: 'That manifest is not registered in this workspace. Restart the workspace with the required named manifest.',
   WORKSPACE_OPERATION_OUTCOME_UNKNOWN: 'The original gateway response was unavailable. It may have applied the change. Inspect the refreshed revision and candidate before deciding whether to retry; no operation is replayed automatically.',
+  FLEET_RELEASE_REVISION_CHANGED: 'Serving traffic changed after this release review. Compare against the current revision before preparing or restoring it.',
+  FLEET_RELEASE_SELECTION_CHANGED: 'An original release store selection changed in another session. Reload its catalog and compare the release again.',
+  FLEET_RELEASE_CANDIDATE_CHANGED: 'The prepared gateway candidate no longer matches this managed release. Compare and prepare the intended release again.',
+  FLEET_RELEASE_REVIEW_EXPIRED: 'This release review expired or was already used. Compare the original releases again.',
+  FLEET_RELEASE_SLOT_IN_USE: 'That slot still owns another original seller. Wait for its admitted requests to finish, retire it, then prepare the replacement.',
+  FLEET_RELEASE_REPLACEMENT_SLOT_REQUIRED: 'Choose a different slot and port from the merchant currently serving traffic.',
+  FLEET_RELEASE_OPERATION_IN_PROGRESS: 'Another release operation is running. Refresh its current state before submitting another change.',
+  FLEET_RELEASE_SESSION_NOT_OWNED: 'This workspace no longer owns that exact running session. Refresh the process table.',
+  FLEET_RELEASE_SOURCE_CHANGED: 'The original release source changed after staging. Restore the exact release or stage a new immutable release ID.',
+  FLEET_RELEASE_OUTCOME_UNKNOWN: 'The release operation response was lost. Inspect the current revision, candidate and process table before deciding whether another action is needed.',
+  FLEET_RELEASE_REVISION_NOT_LINKED: 'Another control session selected a fleet outside this release plan. Use the original control history to restore a linked revision before managing these releases.',
+  FLEET_RELEASE_ROLLBACK_NOT_LINKED: 'That original gateway revision has no retained release mapping. Choose a retained managed revision.',
+  WORKSPACE_MANAGED_RELEASE_REVIEW_REQUIRED: 'Compare the registered original release before changing a managed fleet.',
 };
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -60,6 +75,8 @@ function identity(merchant) {
     }
     box.append(details);
   }
+  if (merchant.routeDetailsState === 'STATUS_LIMIT')
+    box.append(node('p', 'Public route details exceed this status view. Inspect the original seller’s private /_seller/offers endpoint on port ' + merchant.upstreamPort + '.', 'small'));
   return box;
 }
 async function api(path, payload) {
@@ -81,15 +98,18 @@ function reviewValid() {
     reviewed.baseRevision === status.revision && reviewed.baseRevision === candidate.baseRevision &&
     Date.parse(candidate.expiresAt) > Date.now());
 }
-function ready() { return connected && !loading && !working && !status?.busy && !status?.closing; }
+function ready() { return connected && !loading && !working && !status?.busy && !status?.closing && !releases?.busy && !releases?.closing; }
+function managedReady() { return ready() && !catalogLoading && releases?.relationship === 'LINKED'; }
+function canActivate() { return reviewValid() && (!managed || (managedReady() && releases?.pending?.phase === 'PREPARED' && releases.pending.candidateId === reviewed.id)); }
 function render() {
   $('connection').textContent = connected ? (working || status?.busy ? 'Operation in progress' : 'Connected') : 'Disconnected';
   $('refresh').disabled = loading || working;
   $('export').disabled = !status;
-  $('prepare').disabled = !ready() || !manifests.length || !status;
+  $('prepare').disabled = managed || !ready() || !manifests.length || !status;
   $('manifest').disabled = working || !manifests.length;
   $('review').disabled = !ready() || !status?.candidate;
-  $('activate').disabled = !ready() || !reviewValid();
+  $('activate').disabled = !ready() || !canActivate();
+  if (managed) renderReleases();
   if (!status) return;
   $('revision').textContent = String(status.revision);
   $('merchant-count').textContent = String(status.merchants.length);
@@ -116,7 +136,7 @@ function render() {
       candidateBox.append(line);
     }
     candidateBox.append(node('p', 'Retained source: ' + candidate.digest, 'digest'));
-  } else candidateBox.append(node('p', 'No candidate is prepared. Choose a registered manifest to begin.'));
+  } else candidateBox.append(node('p', managed ? 'No candidate is prepared. Compare a seller release above to begin.' : 'No candidate is prepared. Choose a registered manifest to begin.'));
   $('candidate').replaceChildren(candidateBox);
   if (reviewed && !reviewValid()) {
     reviewed = null; $('review-panel').hidden = true;
@@ -126,12 +146,14 @@ function render() {
   for (const generation of status.retired ?? []) {
     const card = node('div', undefined, 'generation'), heading = node('div', undefined, 'generation-head');
     heading.append(node('strong', 'Revision ' + generation.revision), node('span', generation.state, 'pill')); card.append(heading);
-    card.append(table(['Merchant', 'Local port', 'Requests remaining'], generation.merchants.map(m => [identity(m), m.upstreamPort, m.active])));
+    const wrap = node('div', undefined, 'table-wrap');
+    wrap.append(table(['Merchant', 'Local port', 'Requests remaining'], generation.merchants.map(m => [identity(m), m.upstreamPort, m.active]))); card.append(wrap);
     generations.append(card);
   }
   $('draining').replaceChildren(generations.children.length ? generations : node('p', 'No retired generations in this gateway process.', 'empty'));
   $('history').replaceChildren(table(['Revision', 'Activated', 'Snapshot', 'Action'], (status.history ?? []).map(record => {
-    const button = node('button', 'Review rollback'); button.type = 'button'; button.disabled = !ready();
+    const button = node('button', 'Review rollback'); button.type = 'button';
+    button.disabled = !ready() || (managed && (!managedReady() || !releases?.retained?.some(row => row.revision === record.revision)));
     button.addEventListener('click', () => confirmRollback(record));
     const source = node('div'); source.append(node('code', record.snapshotId), node('div', record.digest, 'digest'));
     return [record.revision, date(record.at), source, button];
@@ -140,18 +162,25 @@ function render() {
     (status.storage?.retained !== undefined ? ' · ' + status.storage.retained + ' retained' : '');
 }
 function accept(value) {
-  status = value.status; capturedAt = value.capturedAt; connected = true; render();
+  status = value.status;
+  if (Object.hasOwn(value, 'releaseStatus')) releases = value.releaseStatus;
+  capturedAt = value.capturedAt; connected = true; render();
 }
-async function refresh() {
-  if (loading || working) return;
+function refresh() {
+  if (working) return Promise.resolve();
+  if (pendingRead) return pendingRead;
   loading = true; render();
-  try { accept(await api('status')); outcomeUnknown = false; }
-  catch (error) { connected = false; notify(outcomeUnknown ? 'The change may have been applied, and its current status is unavailable. Restore the original gateway connection and inspect the revision and candidate before retrying.' : explain[error.message] ?? 'The original gateway cannot be reached. Restore its process, then refresh.', true); }
-  finally { loading = false; render(); }
+  pendingRead = (async () => {
+    try { accept(await api('status')); outcomeUnknown = false; }
+    catch (error) { connected = false; notify(outcomeUnknown ? 'The change may have been applied, and its current status is unavailable. Restore the original gateway connection and inspect the revision and candidate before retrying.' : explain[error.message] ?? 'The original gateway cannot be reached. Restore its process, then refresh.', true); }
+    finally { loading = false; pendingRead = null; render(); }
+  })();
+  return pendingRead;
 }
 async function mutate(action, payload) {
   if (working) return;
-  working = true; render();
+  const olderRead = pendingRead;
+  working = true; render(); await olderRead;
   let completed = false;
   try {
     accept(await api(action, payload)); completed = true;
@@ -196,12 +225,165 @@ function confirmChange(title, description, details, action) {
   $('confirm-details').textContent = details; $('confirm').returnValue = 'cancel'; $('confirm').showModal();
 }
 function confirmRollback(record) {
+  if (managed) { if (managedReady()) releaseAction('review-rollback', { targetRevision: record.revision }); return; }
   const expectedRevision = status.revision;
   confirmChange('Restore revision ' + record.revision + '?',
     'The original gateway will recheck the retained seller configuration and create a new active revision. Keep the original seller processes available; rollback does not restart them.',
     'Current revision: ' + expectedRevision + '\nTarget revision: ' + record.revision + '\nSnapshot: ' + record.snapshotId + '\nSource digest: ' + record.digest,
     () => mutate('rollback', { expectedRevision, targetRevision: record.revision }));
 }
+function options(select, values) {
+  const previous = select.value;
+  if (JSON.stringify([...select.options].map(option => [option.value, option.textContent])) === JSON.stringify(values)) return;
+  select.replaceChildren(...values.map(([value, label]) => { const option = node('option', label); option.value = value; return option; }));
+  if (values.some(([value]) => value === previous)) select.value = previous;
+}
+const selectedTenant = () => releases?.tenants?.find(row => row.id === $('release-tenant').value);
+const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('release-slot').value);
+function releaseReviewValid() {
+  return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
+}
+function renderReleases() {
+  if (!releases?.tenants) return;
+  $('release-link').textContent = releases.relationship === 'LINKED' ? 'Managed releases linked' : 'Fleet changed outside plan';
+  options($('release-tenant'), releases.tenants.map(row => [row.id, row.id + ' · ' + row.host]));
+  const tenant = selectedTenant(), firstSlots = !$('release-slot').options.length;
+  options($('release-slot'), (tenant?.slots ?? []).map(row => [row.name, row.name + ' · port ' + row.port + (row.serving ? ' · serving' : '')]));
+  if (firstSlots) $('release-slot').value = tenant?.slots.find(row => !row.serving)?.name ?? tenant?.slots[0]?.name ?? '';
+  options($('release-package'), (tenant?.packages ?? []).map(name => [name, name]));
+  const chosen = selectedSlot(), available = catalog?.tenant === tenant?.id && catalog?.slot === chosen?.name;
+  $('release-compare').disabled = !managedReady() || !available || !catalog?.releases?.length || chosen?.serving;
+  $('release-stage').disabled = !managedReady() || !tenant?.packages.length || chosen?.serving;
+  for (const id of ['release-tenant', 'release-slot', 'release-id', 'release-package', 'release-new-id']) $(id).disabled = working;
+  $('release-apply').disabled = !managedReady() || !releaseReviewValid();
+  if (releaseReview && !releaseReviewValid()) {
+    releaseReview = null; $('release-review-panel').hidden = true;
+    notify('The serving revision changed or this release review expired. Compare the original releases again.');
+  }
+  const rows = [];
+  for (const merchant of releases.tenants) for (const slot of merchant.slots) {
+    const identity = node('div'); identity.append(node('strong', merchant.id), node('div', slot.name + ' · ' + merchant.host, 'small'));
+    const source = node('div'); source.append(node('code', slot.runningReleaseId ?? slot.selectedReleaseId ?? 'No release selected'));
+    if (slot.runningDigest) source.append(node('div', short(slot.runningDigest), 'digest'));
+    const state = [slot.state, slot.serving ? 'SERVING' : '', slot.candidate ? 'CANDIDATE' : '', slot.drainingRequests ? 'DRAINING ' + slot.drainingRequests : ''].filter(Boolean).join(' · ');
+    const button = node('button', 'Retire'); button.type = 'button'; button.disabled = !managedReady() || !slot.canRetire;
+    button.addEventListener('click', () => {
+      const expectedRevision = status.revision, instanceId = slot.instanceId;
+      confirmChange('Retire ' + merchant.id + ' / ' + slot.name + '?',
+        'The gateway will confirm that this exact process has no serving, prepared or draining traffic before stopping its original release session. A later reviewed rollback can restart its retained release.',
+        'Revision: ' + expectedRevision + '\nRelease: ' + slot.runningReleaseId + '\nPort: ' + slot.port + '\nSession: ' + instanceId,
+        () => releaseAction('retire', { tenant: merchant.id, slot: slot.name, instanceId, expectedRevision }));
+    });
+    rows.push([identity, slot.port, source, state, slot.generation, button]);
+  }
+  $('release-processes').replaceChildren(table(['Merchant / slot', 'Local port', 'Release', 'Process and traffic', 'Store generation', 'Action'], rows));
+  $('release-pending').textContent = releases.relationship !== 'LINKED' ? explain[releases.relationship] ?? releases.relationship :
+    releases.pending ? 'Release operation: ' + releases.pending.phase + ' · Based on revision ' + releases.pending.baseRevision :
+    'All serving merchants match their retained original releases. Retiring a process preserves its immutable release for rollback.';
+}
+async function loadCatalog(selectId) {
+  const tenant = $('release-tenant').value, slot = $('release-slot').value, version = ++catalogVersion;
+  if (!tenant || !slot) return;
+  catalogLoading = true; catalog = null; options($('release-id'), [['', 'Loading releases…']]); render();
+  try {
+    const value = await api('releases/catalog?' + new URLSearchParams({ tenant, slot }));
+    if (version !== catalogVersion) return;
+    catalog = value;
+    options($('release-id'), value.releases.length ? value.releases.map(row => [row.id, row.label + ' · ' + row.routes + ' routes']) : [['', 'No staged release']]);
+    if (selectId && value.releases.some(row => row.id === selectId)) $('release-id').value = selectId;
+    $('release-catalog-note').textContent = value.releases.length ? value.releases.length + ' immutable release' + (value.releases.length === 1 ? '' : 's') + ' · Store generation ' + value.generation +
+      ' · Selected ' + (value.selectedReleaseId ?? 'none') + (value.errors.length ? ' · ' + value.errors.length + ' unreadable entries; inspect the original store.' : '') :
+      'This replacement slot has no staged release. Stage a registered saved workspace below.';
+  } catch (error) {
+    if (version === catalogVersion) { options($('release-id'), [['', 'Catalog unavailable']]); notify(explain[error.message] ?? 'The original release catalog could not be read. Refresh after restoring its store.', true); }
+  } finally { if (version === catalogVersion) { catalogLoading = false; render(); } }
+}
+function releaseView(release) {
+  const view = node('div');
+  if (!release) { view.append(node('p', 'No release')); return view; }
+  view.append(node('strong', release.id), node('p', release.publicOrigin + ' · ' + release.mode + ' · port ' + release.runtime.port, 'small'),
+    node('div', 'Source ' + release.digest, 'digest'));
+  for (const route of release.routes) {
+    const item = node('div', route.method + ' ' + route.url, 'route');
+    for (const payment of route.payment ?? []) item.append(node('p',
+      [payment.scheme, payment.network, 'amount ' + payment.amount, 'asset ' + payment.asset, 'recipient ' + payment.payTo].join(' · '), 'route'));
+    const details = node('details'); details.append(node('summary', 'Request and application configuration'),
+      node('pre', JSON.stringify({ requestContractSha256: route.requestContractSha256,
+        application: route.application, ...(route.upstream ? { upstream: route.upstream } : {}) }, null, 2)));
+    item.append(details); view.append(item);
+  }
+  return view;
+}
+function showReleaseReview() {
+  if (!releaseReviewValid()) return;
+  const rollback = releaseReview.kind === 'rollback';
+  $('release-review-panel').hidden = false;
+  $('release-review-title').textContent = rollback ? 'Review release rollback' : 'Review seller release';
+  $('release-review-note').textContent = 'Serving revision ' + releaseReview.baseRevision + ' · Expires ' + date(releaseReview.expiresAt) + ' · Review ' + short(releaseReview.reviewId);
+  $('release-apply').textContent = rollback ? 'Restore reviewed releases' : 'Start and prepare reviewed release';
+  const rows = rollback ? releaseReview.comparisons : [{ tenant: releaseReview.tenant, comparison: releaseReview.comparison }];
+  const content = node('div');
+  for (const row of rows) {
+    const section = node('div', undefined, 'release-comparison'), comparison = row.comparison;
+    section.append(node('h3', row.tenant), node('p', comparison.summary.added + ' added · ' + comparison.summary.changed + ' changed · ' +
+      comparison.summary.removed + ' removed · ' + comparison.summary.unchanged + ' unchanged routes'));
+    const wrap = node('div', undefined, 'table-wrap');
+    wrap.append(table(['Serving release', rollback ? 'Retained release to restore' : 'Replacement release'], [[releaseView(comparison.before), releaseView(comparison.after)]]));
+    section.append(wrap);
+    if (comparison.changes.length || comparison.runtimeChanges.length) {
+      const details = node('details'); details.append(node('summary', 'Exact original configuration changes'),
+        node('pre', JSON.stringify({ routes: comparison.changes, runtime: comparison.runtimeChanges }, null, 2)));
+      section.append(details);
+    }
+    content.append(section);
+  }
+  $('release-comparison').replaceChildren(content); render();
+}
+async function releaseAction(action, payload) {
+  if (working) return;
+  const olderRead = pendingRead;
+  working = true; render(); await olderRead;
+  let result;
+  try {
+    result = (await api('releases/' + action, payload)).result;
+    if (['review', 'review-rollback'].includes(action)) releaseReview = result;
+    else if (action !== 'retire') { releaseReview = null; $('release-review-panel').hidden = true; }
+  } catch (error) {
+    outcomeUnknown = ['WORKSPACE_CONNECTION_LOST', 'WORKSPACE_RESPONSE_UNAVAILABLE', 'WORKSPACE_OPERATION_OUTCOME_UNKNOWN', 'FLEET_RELEASE_OUTCOME_UNKNOWN'].includes(error.message);
+    notify(explain[error.message] ?? (outcomeUnknown ? 'The response was lost. Inspect the refreshed release and gateway state before choosing another action.' : 'The original release operation was rejected: ' + error.message), true);
+  } finally {
+    working = false; await refresh();
+    if (result && connected) {
+      if (['review', 'review-rollback'].includes(action)) { showReleaseReview(); notify('Review the exact original serving and proposed releases below before applying this change.'); }
+      else if (action === 'stage') { await loadCatalog(result.release.id); notify('Staged immutable release ' + result.release.id + '. Compare it with the serving merchant before preparation.'); }
+      else if (action === 'prepare') { reviewCandidate(); notify('The original replacement is running and the gateway retained its checked candidate. Compare its traffic changes, then activate the reviewed candidate.'); }
+      else if (action === 'rollback') notify('Restored the reviewed original releases as revision ' + status.revision + '. Any stopped retained sessions were restarted before the gateway switched traffic.');
+      else notify('Retired the exact drained original session. Its immutable release remains available for a reviewed rollback.');
+    } else if (result) notify('The release operation was accepted, but its subsequent state read failed. Restore the connection and inspect the serving revision and process table before another action.', true);
+    render();
+  }
+}
+$('release-tenant').addEventListener('change', () => { $('release-slot').replaceChildren(); renderReleases(); loadCatalog(); });
+$('release-slot').addEventListener('change', () => loadCatalog());
+$('release-form').addEventListener('submit', event => {
+  event.preventDefault(); if (managedReady() && !selectedSlot()?.serving) releaseAction('review', {
+    tenant: $('release-tenant').value, slot: $('release-slot').value, releaseId: $('release-id').value });
+});
+$('release-stage-form').addEventListener('submit', event => {
+  event.preventDefault(); if (managedReady() && !selectedSlot()?.serving) releaseAction('stage', {
+    tenant: $('release-tenant').value, slot: $('release-slot').value, package: $('release-package').value, releaseId: $('release-new-id').value });
+});
+$('release-clear-review').addEventListener('click', () => { releaseReview = null; $('release-review-panel').hidden = true; render(); });
+$('release-apply').addEventListener('click', () => {
+  if (!managedReady() || !releaseReviewValid()) return;
+  const review = structuredClone(releaseReview), rollback = review.kind === 'rollback';
+  confirmChange(rollback ? 'Restore reviewed original releases?' : 'Start the reviewed replacement?',
+    rollback ? 'Required retained release sessions will start before the original gateway restores this exact reviewed snapshot. Current admitted requests finish on their original generation.' :
+      'The original release manager will start this immutable release on its registered replacement port. The gateway will check and retain a candidate; traffic changes only after you review and activate that candidate.',
+    'Reviewed revision: ' + review.baseRevision + '\nReview: ' + review.reviewId + '\nExpires: ' + date(review.expiresAt) +
+      (rollback ? '\nTarget revision: ' + review.targetRevision : '\nMerchant / slot: ' + review.tenant + ' / ' + review.slot + '\nRelease: ' + review.releaseId + '\nSource: ' + review.comparison.after.digest),
+    () => releaseAction(rollback ? 'rollback' : 'prepare', { reviewId: review.reviewId }));
+});
 $('confirm').addEventListener('close', () => {
   const action = confirmAction; confirmAction = null;
   if ($('confirm').returnValue === 'apply' && action) action();
@@ -212,7 +394,7 @@ $('prepare-form').addEventListener('submit', event => {
 $('review').addEventListener('click', reviewCandidate);
 $('clear-review').addEventListener('click', () => { reviewed = null; $('review-panel').hidden = true; render(); });
 $('activate').addEventListener('click', () => {
-  if (!reviewValid() || !ready()) return;
+  if (!canActivate() || !ready()) return;
   const candidate = structuredClone(reviewed);
   confirmChange('Activate reviewed candidate?', 'New requests will use the retained configuration. Admitted requests continue on their original seller generation.',
     'Reviewed base revision: ' + candidate.baseRevision + '\nCandidate: ' + candidate.id + '\nSource digest: ' + candidate.digest +
@@ -224,7 +406,8 @@ $('refresh').addEventListener('click', refresh);
 $('export').addEventListener('click', () => {
   if (!status) return;
   const value = { schema: 'stellar-forge.fleet-workspace-report.v1', exportedAt: new Date().toISOString(),
-    statusCapturedAt: capturedAt, connected, registeredManifests: manifests, status };
+    statusCapturedAt: capturedAt, connected, registeredManifests: manifests, status,
+    ...(releases ? { releases: { ...releases, native: undefined } } : {}) };
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2) + '\n'], { type: 'application/json' }));
   const link = node('a'); link.href = url; link.download = 'merchant-fleet-revision-' + status.revision + '.json'; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -233,9 +416,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) refr
 function schedule() { timer = setTimeout(async () => { if (!document.hidden) await refresh(); schedule(); }, 4000); }
 window.addEventListener('pagehide', () => clearTimeout(timer));
 try {
-  const initial = await api('session'); session = initial.session; manifests = initial.manifests;
+  const initial = await api('session'); session = initial.session; manifests = initial.manifests; managed = initial.managed === true;
+  $('managed-releases').hidden = !managed; $('managed-processes').hidden = !managed;
+  $('prepare-panel').hidden = managed; $('configuration-grid').classList.toggle('single-column', managed);
   $('manifest').replaceChildren(...manifests.map(name => { const option = node('option', name); option.value = name; return option; }));
   $('manifest-note').textContent = manifests.length ? 'Manifest paths and the gateway capability stay in the local operator process.' :
     'No manifests are registered. Status, existing candidate review and rollback remain available. Start this workspace with --manifest NAME=FILE to prepare a new configuration.';
-  await refresh(); schedule();
+  await refresh(); if (managed && connected) await loadCatalog(); schedule();
 } catch { connected = false; notify('The local workspace could not start. Reload after its original process is available.', true); render(); }
