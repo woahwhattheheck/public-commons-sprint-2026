@@ -6,6 +6,7 @@ import { isAbsolute, join, resolve, dirname } from 'node:path';
 import { hostname } from 'node:os';
 import { config, execution, need, InputError } from './config.mjs';
 import { aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
+import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.buyer-inbox.v1';
 const HASH = /^[a-f0-9]{64}$/;
@@ -87,8 +88,8 @@ async function dependencySame(dependency, limit) {
 async function workspaceEnvironment(cfg, path) {
   const {openWorkspace} = await import('./workspace.mjs');
   const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
-  const {op, owner} = execution(cfg);
-  const {op:workspaceOp, owner:workspaceOwner} = execution(workspace.config);
+  const {op, owner, transport} = execution(cfg);
+  const {op:workspaceOp, owner:workspaceOwner, transport:workspaceTransport} = execution(workspace.config);
   const signer = workspace.manifest.signer;
   // A selected workspace supplies operator keys, never replacement queue terms.
   need(['python','actor','service','policy','ledger'].every(key => owner[key] === workspaceOwner[key]) &&
@@ -96,6 +97,8 @@ async function workspaceEnvironment(cfg, path) {
     cfg.evidenceDir === workspace.config.evidenceDir &&
     cfg.trustedPayer === workspace.config.trustedPayer && cfg.trustedPayer === signer.expectedPayer,
     'INBOX_WORKSPACE_OPERATOR_MISMATCH');
+  need(JSON.stringify(transport) === JSON.stringify(workspaceTransport),
+    'INBOX_WORKSPACE_TRANSPORT_MISMATCH');
   need(['scheme','network','asset','payTo'].every(key => op.expect[key] === workspaceOp.expect[key]) &&
     ['network','asset','payTo'].every(key => op.expect[key] === signer[key]),
     'INBOX_WORKSPACE_TERMS_MISMATCH');
@@ -265,6 +268,9 @@ export async function openQueue(path) {
     // Resolve/bind the actual operator workspace before claiming this attempt.
     // A wrong workspace or unavailable key file must leave the job QUEUED.
     const environment = workspace === undefined ? undefined : await workspaceEnvironment(cfg, workspace);
+    // A named managed proxy may change between processes; resolve it now,
+    // before the permanent attempt, without changing the saved origin/profile.
+    if (cfg.buyerTransport !== undefined) resolveBuyerProxy(cfg.buyerTransport);
     await privateDirectory(cfg.evidenceDir);
     await ensureAbsent(request.evidencePath, 'INBOX_ORIGINAL_EVIDENCE_ALREADY_EXISTS');
     if (request.responseDestination) await ensureAbsent(request.responseDestination, 'INBOX_RESPONSE_DESTINATION_EXISTS');
