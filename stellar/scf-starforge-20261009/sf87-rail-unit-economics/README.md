@@ -56,3 +56,15 @@ First-party protocol sources, checked October 11, 2026:
 ## Reviewer use / real merchant adoption
 
 A seller can import an **actual** SF74/SF84 unpaid technical capture through its original owner workflow, choose supported payment rail from that observed challenge, insert genuine merchant cost/rate/deposit forecasts here, then review pricing and runway with the original SF49 commercial owner. This calculator does **not** consume or overwrite any capture and does not certify a real seller's integration. Use a new input file for each merchant. The comparative report is suitable for an offline meeting, along with actual source-backed seller challenge and chain receipt *if the operator has them*. Keep all original SCF application submissions with the SF10 founder. A grant invitation, revenue, onchain settlement or live production performance cannot be inferred from this model.
+
+## Optional native browser studio (SF87 follow-on)
+
+The companion studio is a real on-device merchant-facing UI backed by the *same* `compare.mjs` math, not a copy of it. It serves a locally editable price, request-volume, and channel-churn form, an exact three-rail results table, full cost lines, an unpriced-cost explanation, and one-click browser downloads of JSON and the merchant Markdown report.
+
+```sh
+node stellar/scf-starforge-20261009/sf87-rail-unit-economics/studio.mjs --port 0
+# Open the printed http://127.0.0.1:PORT/ on the same machine.
+# Ctrl-C stops the foreground server.
+```
+
+Node 22+ standard library only. It binds **only** `127.0.0.1`, rejects foreign Host and cross-origin POST, sets a self-only Content Security Policy, accepts JSON bodies of at most 128 KiB, disables caches, executes original SF87 `analyze()` for every quote, and does not store submitted inputs or contact any external system. Browsers receive static assets and the illustrative starting scenario from that same local server. Unknown cost entries are left empty, not turned into zero. Merchant reports are downloaded by the browser to the operator's device; the server does not save merchant inputs or sales leads. This UI does not change SF74 merchant technical diagnosis, SF49 relationships, SF08 operational hosting quotes or the founder's SCF application authority.

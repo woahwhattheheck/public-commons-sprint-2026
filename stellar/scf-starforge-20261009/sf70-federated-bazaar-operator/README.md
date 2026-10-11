@@ -82,3 +82,68 @@ In the existing loopback browser, filter by text, facilitator and declared opera
 The UTF-8 CSV contains original capture scope/network/time, each independent facilitator's actual native GET status, timestamp, endpoint and coverage, and the active query/provider/operation filters. Separate **PROVIDER_STATUS** records appear even for failed providers, so incomplete discovery cannot be misread as a real zero. A payment option becomes exactly one **ADVERTISED_OPTION** record retaining its *own* asset, scheme, network, recipient and atomic amount. Resources with no exposed options are **RESOURCE_NO_OFFER** rows. Listings with undisplayed payment alternatives retain their truncation count and explanatory warning; the export must not be treated as the full source document or a validated merchant quote.
 
 This is a browser-local Blob download, not a new API, credential flow, offline grant evidence binder or settlement product. The pure [offer-csv.mjs](./offer-csv.mjs) serializer quotes fields, doubles embedded quotes and prepends a spreadsheet-text marker to provider/user-supplied cells beginning with potentially executable formula characters (including after leading whitespace). Such cell escaping is a presentation protection, not an alteration to the underlying in-memory native observation. Retain the source URL and capture timestamp when transferring a row to an authorized merchant operator; use the original 402 inspection tools before any payment or seller assertion. No new npm package, CI job or telemetry is introduced.
+
+
+## Compare a shortlist across searches and providers
+
+Use **Compare this option** underneath an advertised payment alternative. The
+comparison above the catalog retains up to six independently selected options as
+you search, change provider or operation filters, and refresh. **Compare selected**
+returns to the table, which exposes each source endpoint, UTC capture time, native
+row/option, declared operation and the complete projected payment tuple. Keyboard
+users can select options with the normal buttons, follow the comparison link and
+scroll the labeled comparison region. Removing a column keeps focus within the
+comparison; **Undo last change** also restores a cleared or replaced shortlist.
+
+Every selection copies its original projected observation. A refresh never silently
+changes a selected price or recipient. Status distinguishes the latest source
+capture, an earlier capture with the same tuple observed again, a tuple/operation
+not in the latest complete capture, an ambiguous identity, incomplete alternatives,
+and an unavailable source or failed refresh. Provider failures cannot establish a
+removed offer. To select newer terms, choose the desired option in the refreshed
+catalog; the old observation remains until explicitly removed.
+
+Atomic amounts remain strings with no numeric conversion, currency conversion,
+aggregation or price ranking. Different assets, networks and operations cannot be
+assumed equivalent. The comparison retains SF70's existing bounded projection;
+it is not a raw native capture, current seller quote, merchant approval or checkout.
+
+**Save review JSON** downloads the selected projected listings, individual options,
+original source coverage/timestamps and current comparison status in one local
+`SCF-SF70/advertised-offer-shortlist-v1` file. Saving, comparing and removing make
+no network request. Selections live only in page memory: the catalog Refresh button retains them, but
+a browser reload or closing the page clears them. No browser storage is written. Use **Open review JSON** to restore a saved comparison. Refresh is still the existing
+explicit facilitator GET action, never a merchant call.
+
+Focused workflow check (Node 22+):
+
+```sh
+node --experimental-vm-modules --test stellar/scf-starforge-20261009/sf70-federated-bazaar-operator/test/shortlist-flow.test.mjs
+```
+
+This runs the shipped browser module through the real local HTTP static-module
+routes, using an HTML-derived minimal DOM and labeled fictional source observations.
+It covers selection across filters, unchanged versus changed later observations,
+failed refresh, focus after removal, undo/clear, and exact large integer string
+export without extra discovery requests. It is not a rendered-browser or live
+provider check; no hosted CI or merchant request runs.
+
+### Reopen a saved comparison
+
+Choose **Open review JSON** and select the file previously saved by this page. A
+valid file replaces the comparison; **Undo last change** restores the previous
+selections. Invalid or oversized files leave the current comparison intact. Opening
+a file does not refresh discovery or contact any URL in the file.
+
+Files must be smaller than 1 MiB and use the original v1 shortlist schema, with at
+most six complete selected observations and the existing projected field limits.
+The reader checks the source, operation, row/index and individual option against
+its corresponding listing; unknown file metadata, saved status and saved keys do
+not become runtime state. Atomic amounts stay strings. The displayed file source
+and capture time are retained as recorded, not authenticated.
+
+Imported selections are explicitly labeled **Opened local review file**. An
+identical timestamp alone cannot make them current: a unique matching operation
+and exact tuple in the current available provider capture are needed to report a
+match. Otherwise the table keeps the earlier/unavailable/changed state. A match
+still does not establish seller authority, equivalent services or payable terms.

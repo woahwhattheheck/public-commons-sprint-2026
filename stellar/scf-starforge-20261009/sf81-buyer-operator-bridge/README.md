@@ -120,3 +120,13 @@ Executed on Linux / Node 22.16.0 / Python 3.13.5. Original byte-matched source:
 First five pinned at `7b8dc0278cdfa13950a7f7999fe5ea182b31e0ba`; peer transport
 consumed at `6854ae59855f983feec652a26bef7a30c4522c6a`. Only this new SF81 folder
 is changed. Existing modules, policies, wallet source and workflows are untouched.
+
+## Read-only spending workspace
+
+Use SF36's [buyer spend statements](../sf36-spend-governor/STATEMENTS.md) with
+this operator's **same** `ledger` and optional `policy` paths. It generates a
+private, self-contained HTML workspace or JSON/CSV: settled amounts, unresolved
+maximums, whole-ledger capacity and actor/service/day breakdowns. No keys or
+provider calls are needed; filters never hide whole-ledger outstanding exposure.
+It reads native ledger state, not independently verified chain finality, and
+never releases a reservation or authorizes another purchase.

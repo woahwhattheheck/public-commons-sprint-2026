@@ -1836,6 +1836,43 @@ function buildNewCampaignForm() {
   const fDeadline = fieldWrap("Closing date and time", deadline, { hint: "The server requires 5 minutes to 400 days ahead." });
   const fDeadlineZone = fieldWrap("Interpret the closing time as", deadlineZone, { hint: "The exact UTC chain deadline appears below before creation." });
 
+
+  // Only unsent sponsor fields are stored. This is never an authorization or
+  // an on-chain record; choose an identity/asset-specific browser-tab key.
+  const draftInputs = { title, brief, reward: reward.input, budget: budget.input, deadline, deadlineZone };
+  const draftKey = [
+    "creator-pool:sponsor-unsent-v1", ui.state.mode || "unknown",
+    ui.state.chainId || "unknown", (ui.state.assetAddress || "").toLowerCase(),
+    isPublicMode() ? (Wallet.address || "unconnected").toLowerCase() : "local-demo",
+  ].join(":");
+  const clearDraft = () => { try { sessionStorage.removeItem(draftKey); } catch {} };
+  const saveDraft = () => {
+    const data = Object.fromEntries(Object.entries(draftInputs).map(([key, element]) => [key, element.value]));
+    try {
+      if (Object.values(data).some((v) => v.trim())) sessionStorage.setItem(draftKey, JSON.stringify(data));
+      else clearDraft();
+    } catch { /* Form still works when tab storage is unavailable. */ }
+  };
+  try {
+    const restored = JSON.parse(sessionStorage.getItem(draftKey) || "null");
+    if (restored && typeof restored === "object" && !Array.isArray(restored)) {
+      for (const [key, element] of Object.entries(draftInputs)) {
+        if (typeof restored[key] !== "string") continue;
+        if (key === "deadlineZone") {
+          if (restored[key] === "local" || restored[key] === "UTC") element.value = restored[key];
+        } else element.value = restored[key].slice(0, element.maxLength > 0 ? element.maxLength : 4000);
+      }
+    }
+  } catch { /* Ignore damaged saved text. */ }
+  for (const element of Object.values(draftInputs)) element.addEventListener("input", saveDraft);
+  deadlineZone.addEventListener("change", saveDraft);
+  const discardDraft = h("button", { type: "button", class: "btn ghost small", onClick: () => {
+    for (const [key, element] of Object.entries(draftInputs)) element.value = key === "deadlineZone" ? "local" : "";
+    clearDraft(); echoAtomic(); echoDeadline(); refreshPlan(); title.focus();
+  } }, "Discard unsent draft");
+  const draftControls = h("div", { class: "form-actions" }, discardDraft,
+    h("span", { class: "hint", text: "This unsent proposal stays in this browser tab. Creating does not fund." }));
+
   function refreshPlan() {
     if (!precisionKnown) {
       launchPlan.textContent = "The live asset precision is unavailable. Budget preview is paused.";
@@ -1892,7 +1929,7 @@ function buildNewCampaignForm() {
   const form = h("form", { class: "stack", noValidate: false },
     fTitle, fBrief,
     h("div", { class: "field-row" }, fReward, fBudget),
-    fDeadline, fDeadlineZone, dlEcho, echo, launchPlan, errBox,
+    fDeadline, fDeadlineZone, dlEcho, echo, launchPlan, draftControls, errBox,
     h("div", { class: "form-actions" },
       h("button", { type: "submit", class: "btn primary", id: "createCampaignSubmit", disabled: !precisionKnown }, "Create campaign"),
       h("span", { class: "hint", text: precisionKnown ? "Metadata is created first — fund the pool next." : "Amount entry waits until the backend reports asset decimals." })));
@@ -1935,11 +1972,13 @@ function buildNewCampaignForm() {
       okConfirmed: "Campaign created and confirmed on chain.",
       meta: { kind: "create" },
       onDone: (res) => {
-        closeDrawer();
+        if (!isUnsignedResponse(res) || ui.walletOps.get("create")?.status === "done") clearDraft();
+        closeDrawer();
         if (res && res.campaign && res.campaign.id) ui.selectedCampaignId = str(res.campaign.id);
       },
       onConfirmed: () => {
-        // After a wallet-signed create, select the campaign whose create tx
+        if (ui.walletOps.get("create")?.status === "done") clearDraft();
+        // After a wallet-signed create, select the campaign whose create tx
         // we broadcast.
         const entry = ui.walletOps.get("create");
         if (entry && ui.state) {
@@ -1958,95 +1997,249 @@ function buildNewCampaignForm() {
   return form;
 }
 
+
+const CREATOR_DRAFT_PREFIX = "creator-pool:work:v1";
+function creatorDraftShape(v) {
+  const d = v && typeof v === "object" ? v : {};
+  return {
+    title: typeof d.title === "string" ? d.title.slice(0, 140) : "",
+    workUrl: typeof d.workUrl === "string" ? d.workUrl.slice(0, 2048) : "",
+    notes: typeof d.notes === "string" ? d.notes.slice(0, 1000) : "",
+  };
+}
+function creatorDraftEqual(a, b) {
+  return JSON.stringify(creatorDraftShape(a)) === JSON.stringify(creatorDraftShape(b));
+}
+function creatorDraftKey(c, actor) {
+  const net = ui.state && ui.state.chainId || "unknown-chain";
+  const pool = ui.state && ui.state.contracts && ui.state.contracts.pool || "unknown-pool";
+  const who = isLocalDemo() ? "demo:" + (actor || ui.actorId || "unknown")
+    : isPublicMode() ? "wallet:" + (Wallet.address || "unconnected").toLowerCase() : "session";
+  return [CREATOR_DRAFT_PREFIX, encodeURIComponent(net),
+    encodeURIComponent(pool.toLowerCase()), encodeURIComponent(c.id),
+    encodeURIComponent(who)].join(":");
+}
+function readCreatorDraft(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return parsed && parsed.version === 1 ? creatorDraftShape(parsed.data) : null;
+  } catch { return null; }
+}
+function storeCreatorDraft(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ version: 1,
+      savedAt: new Date().toISOString(), data: creatorDraftShape(data) }));
+    return true;
+  } catch { return false; }
+}
+function removeCreatorDraft(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
+function validCreatorWorkUrl(raw) {
+  const value = typeof raw === "string" ? raw.trim() : "";
+  if (value.length < 8 || value.length > 2048) return null;
+  const parsed = safeHttpUrl(value);
+  if (!parsed || parsed.username || parsed.password || !parsed.hostname) return null;
+  const hostname = parsed.hostname.toLowerCase();
+  if (hostname === "localhost" || hostname.endsWith(".local") ||
+    hostname === "[::1]" || /^127\./.test(hostname) || /^10\./.test(hostname) ||
+    /^192\.168\./.test(hostname) || /^172\.(1[6-9]|2[0-9]|3[01])\./.test(hostname)) return null;
+  return parsed;
+}
+window.addEventListener("beforeunload", (event) => {
+  for (const [key, draft] of ui.drafts) {
+    if (!creatorDraftEqual(draft, readCreatorDraft(key))) {
+      event.preventDefault();
+      event.returnValue = "";
+      break;
+    }
+  }
+});
+
+
 function buildSubmissionForm(c) {
-  const demo = isLocalDemo();
-  const pub = isPublicMode();
-  const creators = creatorsForPicker();
-  const me = currentActor();
-  const title = h("input", { name: "title", maxlength: "200", required: true, placeholder: "What did you make?" });
-  const url = h("input", { name: "workUrl", type: "url", required: true, placeholder: "https://…", inputmode: "url" });
-  const notes = h("textarea", { name: "notes", maxlength: "2000", placeholder: "Short note for the sponsor (optional)", style: "min-height:64px" });
-  const errBox = h("p", { class: "form-error", hidden: true });
+  const demo = isLocalDemo();
+  const pub = isPublicMode();
+  const creators = creatorsForPicker();
+  const me = currentActor();
+  const gate = anyWalletGate();
+  const title = h("input", { name: "title", maxlength: "140", required: true,
+    placeholder: "What did you make?" });
+  const url = h("input", { name: "workUrl", type: "url", maxlength: "2048",
+    required: true, placeholder: "https://…", inputmode: "url" });
+  const notes = h("textarea", { name: "notes", maxlength: "1000",
+    placeholder: "Delivery context for the sponsor (optional)", style: "min-height:84px" });
+  const errBox = h("p", { class: "form-error", hidden: true });
+  const draftStatus = h("p", { class: "small muted", role: "status", "aria-live": "polite" });
+  const preview = h("div", { class: "brief-box", role: "status", "aria-live": "polite" });
+  const saveBtn = h("button", { type: "button", class: "btn secondary small" }, "Save draft locally");
+  const discardBtn = h("button", { type: "button", class: "btn ghost small" }, "Discard draft");
+  const sendBtn = h("button", { type: "submit", class: "btn primary", id: "submitWorkBtn" }, "Send submission");
 
-  let creatorField;
-  if (demo && creators.length > 1) {
-    const sel = h("select", { name: "creator", required: true },
-      creators.map((a) => h("option", { value: a.id, text: `${a.label} (demo)${a.address ? " · " + shortAddr(a.address) : ""}`, selected: me && a.id === me.id })));
-    creatorField = fieldWrap("Submitting as (demo actor — not authentication)", sel);
-    creatorField.sel = sel;
-  } else if (demo && creators.length === 1) {
-    creatorField = h("p", { class: "small muted", text: `Submitting as ${creators[0].label} (demo)${creators[0].address ? " · " + shortAddr(creators[0].address) : ""}` });
-    creatorField.sel = { value: creators[0].id };
-  } else if (pub) {
-    creatorField = h("p", { class: "small muted", text: Wallet.address
-      ? `Submitting as your connected wallet · ${shortAddr(Wallet.address)}`
-      : "Connect a wallet to submit — the connected address is recorded as the creator." });
-    creatorField.sel = { value: null };
-  } else {
-    creatorField = h("p", { class: "small muted", text: "Submitting as the session creator." });
-    creatorField.sel = { value: null };
-  }
+  let creatorField;
+  if (demo && creators.length > 1) {
+    const sel = h("select", { name: "creator", required: true },
+      creators.map((a) => h("option", { value: a.id,
+        text: `${a.label} (demo)${a.address ? " · " + shortAddr(a.address) : ""}`,
+        selected: me && a.id === me.id })));
+    creatorField = fieldWrap("Submitting as (demo actor, not authentication)", sel);
+    creatorField.sel = sel;
+  } else if (demo && creators.length === 1) {
+    creatorField = h("p", { class: "small muted",
+      text: `Submitting as ${creators[0].label} (demo)` });
+    creatorField.sel = { value: creators[0].id };
+  } else if (pub) {
+    creatorField = h("p", { class: "small muted", text: Wallet.address
+      ? `Submitting as the connected wallet · ${shortAddr(Wallet.address)}`
+      : "Connect a wallet before submitting; the view switch does not authorize payments." });
+    creatorField.sel = { value: null };
+  } else {
+    creatorField = h("p", { class: "small muted", text: "Submitting as the session creator." });
+    creatorField.sel = { value: null };
+  }
 
-  // Restore any in-progress draft — the poll loop rebuilds this form.
-  const draft = ui.drafts.get(c.id) || {};
-  if (draft.title) title.value = draft.title;
-  if (draft.workUrl) url.value = draft.workUrl;
-  if (draft.notes) notes.value = draft.notes;
-  const saveDraft = () => {
-    const d = { title: title.value, workUrl: url.value, notes: notes.value };
-    if (d.title || d.workUrl || d.notes) ui.drafts.set(c.id, d); else ui.drafts.delete(c.id);
-  };
-  [title, url, notes].forEach((el) => el.addEventListener("input", saveDraft));
-  if (ui.formError && ui.formError.campaignId === c.id) {
-    errBox.textContent = ui.formError.msg;
-    errBox.hidden = false;
-    ui.formError = null;
-  }
+  const fTitle = fieldWrap("Work title", title, { hint: "up to 140 characters" });
+  const fUrl = fieldWrap("Public work URL", url, { hint: "a live http(s) link the sponsor can access" });
+  const fNotes = fieldWrap("Delivery notes", notes, { hint: "optional, up to 1000 characters" });
+  let key = creatorDraftKey(c, creatorField.sel.value);
+  let saveFailed = false;
+  const value = () => creatorDraftShape({ title: title.value, workUrl: url.value, notes: notes.value });
+  function fill(keyToRead) {
+    const d = ui.drafts.has(keyToRead) ? ui.drafts.get(keyToRead) : readCreatorDraft(keyToRead);
+    const restored = creatorDraftShape(d);
+    title.value = restored.title;
+    url.value = restored.workUrl;
+    notes.value = restored.notes;
+  }
+  function fieldProblem() {
+    if (!title.value.trim() || title.value.trim().length > 140) return "Add a work title (up to 140 characters).";
+    if (!validCreatorWorkUrl(url.value)) return "Enter a public http(s) URL with no credentials or local/private network address.";
+    if (notes.value.trim().length > 1000) return "Keep notes under 1000 characters.";
+    return null;
+  }
+  function drawPreview() {
+    const saved = readCreatorDraft(key);
+    const current = value();
+    const dirty = !creatorDraftEqual(current, saved);
+    const hasContent = !!(current.title || current.workUrl || current.notes || saved);
+    const invalid = fieldProblem();
+    const parsed = validCreatorWorkUrl(url.value);
+    saveBtn.disabled = !dirty;
+    discardBtn.disabled = !hasContent;
+    sendBtn.disabled = !gate.ok || !!invalid || ui.inflight.has(`submit:${c.id}`);
+    sendBtn.title = !gate.ok ? gate.reason : invalid || "";
+    draftStatus.textContent = saveFailed
+      ? "Local browser storage is unavailable. Unsaved changes remain only in this tab."
+      : dirty ? "Unsaved changes in this tab. Choose Save draft locally before leaving."
+      : saved ? "Saved on this device for this campaign and creator. Not submitted."
+      : "No saved draft. Nothing has been sent.";
+    const status = !gate.ok ? gate.reason : invalid
+      ? invalid : "Ready for submission. Only the sponsor can approve a reward.";
+    preview.replaceChildren(
+      h("strong", { text: "Creator handoff preview" }),
+      h("p", { class: "small", text: status }),
+      parsed ? h("a", { href: parsed.href, target: "_blank", rel: "noopener noreferrer",
+        class: "sub-link", text: parsed.href })
+        : h("p", { class: "small muted", text: "No valid public work link to preview." }),
+      h("p", { class: "small muted",
+        text: "Submitted work is anchored to a content hash. Later edits require a new submission; sending never approves an award or pays a reward." })
+    );
+  }
+  function changed() {
+    ui.drafts.set(key, value());
+    saveFailed = false;
+    drawPreview();
+  }
+  fill(key);
+  [title, url, notes].forEach((field) => field.addEventListener("input", changed));
+  if (typeof creatorField.sel.addEventListener === "function") {
+    creatorField.sel.addEventListener("change", () => {
+      key = creatorDraftKey(c, creatorField.sel.value);
+      saveFailed = false;
+      fill(key);
+      drawPreview();
+    });
+  }
+  saveBtn.addEventListener("click", () => {
+    ui.drafts.set(key, value());
+    saveFailed = !storeCreatorDraft(key, value());
+    drawPreview();
+  });
+  discardBtn.addEventListener("click", () => {
+    if (!window.confirm("Discard this local draft? Submitted work and rewards are unchanged.")) return;
+    ui.drafts.delete(key);
+    removeCreatorDraft(key);
+    title.value = "";
+    url.value = "";
+    notes.value = "";
+    saveFailed = false;
+    drawPreview();
+  });
+  if (ui.formError && ui.formError.campaignId === c.id) {
+    errBox.textContent = ui.formError.msg;
+    errBox.hidden = false;
+    ui.formError = null;
+  }
+  const form = h("form", { class: "stack", noValidate: true },
+    creatorField, fTitle, fUrl, fNotes, draftStatus,
+    h("div", { class: "form-actions" }, saveBtn, discardBtn),
+    preview, errBox,
+    h("div", { class: "form-actions" }, sendBtn,
+      gate.ok ? null : h("span", { class: "hint", text: gate.reason })));
+  drawPreview();
 
-  const fTitle = fieldWrap("Title", title);
-  const fUrl = fieldWrap("Public work URL", url, { hint: "http or https" });
-  const gate = anyWalletGate();
-  const form = h("form", { class: "stack" }, creatorField, fTitle, fUrl, fieldWrap("Notes", notes), errBox,
-    h("div", { class: "form-actions" },
-      h("button", { type: "submit", class: "btn primary", id: "submitWorkBtn", disabled: !gate.ok, title: gate.ok ? "" : gate.reason }, "Send submission"),
-      gate.ok ? null : h("span", { class: "hint", text: gate.reason })));
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    [fTitle, fUrl, fNotes].forEach((field) => setFieldError(field, null));
+    errBox.hidden = true;
+    let bad = false;
+    if (!title.value.trim() || title.value.trim().length > 140) {
+      setFieldError(fTitle, "Work title must be 1–140 characters."); bad = true;
+    }
+    if (!validCreatorWorkUrl(url.value)) {
+      setFieldError(fUrl, "Enter a public http(s) URL without login credentials or private hosts."); bad = true;
+    }
+    if (notes.value.trim().length > 1000) {
+      setFieldError(fNotes, "Keep delivery notes within 1000 characters."); bad = true;
+    }
+    if (!gate.ok) bad = true;
+    if (bad) { errBox.textContent = "Complete the highlighted fields to submit."; errBox.hidden = false; return; }
 
-  form.addEventListener("submit", async (ev) => {
-    ev.preventDefault();
-    [fTitle, fUrl].forEach((f) => setFieldError(f, null));
-    errBox.hidden = true;
-    let bad = false;
-    if (!title.value.trim()) { setFieldError(fTitle, "Title is required."); bad = true; }
-    if (!safeHttpUrl(url.value)) { setFieldError(fUrl, "Enter a valid http(s) URL."); bad = true; }
-    if (!gate.ok) { bad = true; }
-    if (bad) return;
-    const actorObj = demo && creatorField.sel.value
-      ? (ui.state.actors.find((a) => a.id === creatorField.sel.value) || null)
-      : null;
-    await runAction(`submit:${c.id}`, async () => {
-      const body = {
-        title: title.value.trim(),
-        workUrl: url.value.trim(),
-        notes: notes.value.trim(),
-        operationId: opIdFor(`submit:${c.id}`),
-      };
-      if (demo) body.creator = submissionCreatorParam(actorObj);
-      return await Api.createSubmission(c.id, body);
-    }, {
-      ok: "Submission recorded.",
-      okConfirmed: "Submission confirmed on chain.",
-      meta: { kind: "submit", campaignId: c.id },
-      busy: ["submitWorkBtn"],
-    });
-    if (ui.lastError) {
-      // the panel was rebuilt during the action — re-show via the fresh form
-      ui.formError = { campaignId: c.id, msg: ui.lastError };
-      renderAll();
-    } else {
-      ui.drafts.delete(c.id);
-    }
-  });
-  return form;
+    const actorObj = demo && creatorField.sel.value
+      ? (ui.state.actors.find((a) => a.id === creatorField.sel.value) || null)
+      : null;
+    const sendingKey = key, snapshot = value();
+    function clearConfirmed() {
+      if (creatorDraftEqual(ui.drafts.get(sendingKey), snapshot)) ui.drafts.delete(sendingKey);
+      if (creatorDraftEqual(readCreatorDraft(sendingKey), snapshot)) removeCreatorDraft(sendingKey);
+    }
+    await runAction(`submit:${c.id}`, async () => {
+      const body = {
+        title: snapshot.title.trim(), workUrl: snapshot.workUrl.trim(),
+        notes: snapshot.notes.trim(), operationId: opIdFor(`submit:${c.id}`),
+      };
+      if (demo) body.creator = submissionCreatorParam(actorObj);
+      return await Api.createSubmission(c.id, body);
+    }, {
+      ok: "Submission recorded on chain; sponsor review follows.",
+      okConfirmed: "Submission confirmed on chain; sponsor review follows.",
+      meta: { kind: "submit", campaignId: c.id },
+      busy: ["submitWorkBtn"],
+      onDone: (res) => {
+        if (res && res.submission && res.submission.id) clearConfirmed();
+      },
+      onConfirmed: (entry) => {
+        if (entry.status === "done") clearConfirmed();
+      },
+    });
+    if (ui.lastError) {
+      ui.formError = { campaignId: c.id, msg: ui.lastError };
+      renderAll();
+    }
+    // Pending/rejected/uncertain transactions retain their draft.
+  });
+  return form;
 }
 
 /* ============================ render: operations + timeline ============================ */

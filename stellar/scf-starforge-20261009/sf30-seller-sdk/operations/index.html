@@ -1,32 +1,13 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Starforge · Seller operations</title>
-<link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script>
-</head>
-<body>
-<header class="top"><div class="brand">STARFORGE <span>SELLER OPERATIONS</span></div><span id="connection" role="status">Connecting</span></header>
-<main>
-<section class="intro"><div><p class="eyebrow">RUNTIME / LIVE TRAFFIC</p><h1>Your service, in view.</h1><p>See where requests arrive, slow down, or stop. The payment path stays unchanged.</p></div><div class="session"><span id="mode">—</span><span id="uptime">—</span><span id="updated">No snapshot yet</span></div></section>
-<div class="notice">HTTP outcomes only. A completed response is not a payment receipt, customer delivery confirmation, or revenue.</div>
-<section class="cards" aria-label="Traffic overview">
-<article><span>Requests observed</span><strong id="received">—</strong><small id="rate">—</small></article>
-<article><span>In flight</span><strong id="active">—</strong><small>Currently observed requests</small></article>
-<article><span>HTTP 402</span><strong id="challenges">—</strong><small>Payment-required responses</small></article>
-<article><span>HTTP 5xx / Aborted</span><strong id="failures">—</strong><small>Server errors / incomplete connections</small></article>
-</section>
-<section class="panel">
-<div class="section-head"><div><h2>Route performance</h2><p>Configured templates, never customer URLs. Counters cover this process session.</p></div><div class="controls"><button id="pause" type="button">Pause refresh</button><a class="button" href="/traffic.json" download>Export JSON</a><a class="button" href="/metrics" target="_blank" rel="noopener">Prometheus</a></div></div>
-<div class="table-wrap"><table><thead><tr><th>Route / method</th><th>Requests</th><th>In flight</th><th>Completed</th><th>402</th><th>Other 4xx</th><th>5xx</th><th>Aborted</th><th>p95 ≤ ms</th></tr></thead><tbody id="routes"></tbody></table></div>
-<p class="footnote">Latency includes completed responses, measured with a monotonic clock. p95 is a histogram bucket upper bound, not an exact percentile. A dash means no observations; &gt;60,000 is overflow.</p>
-</section>
-<section class="panel">
-<div class="section-head"><div><h2>Recent outcomes</h2><p id="retention">In-memory history; no request contents are stored.</p></div><div class="controls"><label>Route <select id="route-filter"><option value="">All routes</option></select></label><label>Outcome <select id="outcome-filter"><option value="">All outcomes</option><option value="completed">Completed</option><option value="aborted">Aborted</option><option value="errors">HTTP 4xx / 5xx</option></select></label></div></div>
-<div class="table-wrap"><table><thead><tr><th>Time</th><th>Route</th><th>Method</th><th>Outcome</th><th>HTTP</th><th>Duration ms</th></tr></thead><tbody id="recent"></tbody></table></div>
-<p id="empty" class="empty">No traffic observed yet. Use your existing seller endpoint; this page does not generate seller requests.</p>
-</section>
-<footer><span>Local, read-only operations surface · Refreshes every 2 seconds while visible</span><span>No cookies · No external assets · No paid probes</span></footer>
-</main>
-</body>
-</html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Seller operations · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/console.mjs"></script></head>
+<body><header><div><span class="eyebrow">STELLAR FORGE / MERCHANT OPERATIONS</span><h1>Your API, in operation.</h1><p>Actual HTTP traffic from this seller process. No customer tracking.</p></div><span id="mode" class="badge">Connecting</span></header>
+<main><section class="toolbar" aria-label="Live controls"><p id="connection" role="status" aria-live="polite">Connecting to the local seller…</p><div><button id="pause" type="button">Pause updates</button><a href="/export.json" download>JSON snapshot ↗</a><a href="/export.csv" download>Route CSV ↗</a><a href="/metrics" target="_blank" rel="noopener">Prometheus ↗</a></div></section>
+<section class="cards" aria-label="HTTP totals"><article><h2>HTTP attempts</h2><strong id="started">—</strong><p>Since observation started</p></article><article><h2>HTTP 2xx responses</h2><strong id="success">—</strong><p id="success-rate">Not settlement or revenue</p></article><article><h2>Payment challenges</h2><strong id="challenge">—</strong><p>HTTP 402, including retries</p></article><article><h2>In flight</h2><strong id="in-flight">—</strong><p id="latency">No completed requests yet</p></article></section>
+<section class="panel"><div class="section-heading"><div><h2>Last 60 minutes</h2><p>Requests started per minute; the rightmost bar is the current minute.</p></div><span id="recent" class="badge">—</span></div><div id="timeline" class="timeline" role="img" aria-label="No traffic yet"></div><div class="timeline-labels"><span>59 minutes ago</span><span>Now</span></div></section>
+<section class="panel"><div class="section-heading"><div><h2>Routes and response outcomes</h2><p>Known route templates only. Parameters, queries and credentials never enter this view.</p></div><label>Find route <input id="filter" type="search" placeholder="ID, method or route" autocomplete="off"></label></div>
+<div class="table-wrap" tabindex="0" aria-label="Scrollable route statistics"><table><caption class="sr-only">Cumulative per-route HTTP statistics</caption><thead><tr><th scope="col">Route</th><th scope="col">Attempts</th><th scope="col">2xx</th><th scope="col">402</th><th scope="col">Other 4xx</th><th scope="col">5xx</th><th scope="col">Disconnect</th><th scope="col">In flight</th><th scope="col">p95 upper bound</th></tr></thead><tbody id="routes"></tbody></table></div><p class="table-hint">Scroll sideways for all outcomes. Route names stay visible.</p><p id="empty" class="empty" hidden>No routes match this filter.</p></section>
+<section class="panel"><div class="section-heading"><div><h2>Recent request outcomes</h2><p id="outcome-retention">Local metadata only; no request contents.</p></div><label>Find recent route <input id="outcome-route" type="search" placeholder="Route ID or template" autocomplete="off"></label><label>Outcome <select id="outcome-kind" class="badge"><option value="">All outcomes</option><option value="success">HTTP 2xx</option><option value="challenge">HTTP 402</option><option value="errors">Other HTTP errors</option><option value="disconnected">Disconnected</option></select></label></div>
+<div class="table-wrap" tabindex="0" aria-label="Scrollable recent outcomes"><table><caption class="sr-only">Recent response and disconnect metadata; not customer records</caption><thead><tr><th scope="col">Route</th><th scope="col">Time</th><th scope="col">Method</th><th scope="col">Outcome</th><th scope="col">HTTP</th><th scope="col">Duration ms</th></tr></thead><tbody id="outcomes"></tbody></table></div><p class="table-hint">Scroll sideways for all outcomes. Route names stay visible.</p><p id="outcomes-empty" class="empty">No outcomes retained yet.</p></section>
+<section class="bottom"><article class="panel"><h2>Operating signals</h2><div id="signals"><p>Waiting for the first snapshot.</p></div></article><article class="panel"><h2>What these numbers mean</h2><p>One request is one HTTP attempt, not one buyer. A 2xx response means the server finished writing; it does not prove on-chain settlement or client receipt.</p><p>Latency includes time until completion or disconnect. The p95 value is a histogram upper bound, not an exact percentile.</p><p>Aggregates and a bounded ring of metadata-only outcomes live in memory. Restarting the seller starts a new session. Export a snapshot before stopping when you need a record.</p></article></section>
+<footer><span id="session">Session —</span><span>Read only · Separate loopback listener · No payment or retry controls</span></footer></main></body></html>
