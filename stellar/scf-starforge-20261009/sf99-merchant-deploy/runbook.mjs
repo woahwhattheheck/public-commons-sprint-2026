@@ -45,8 +45,8 @@ Enroll approved real files through the ORIGINAL checkout.mjs workflow and retain
 its handoff. The seller service is checkout.mjs, which binds the same approved
 order query/header, file, native terms and receiver state before payment. See
 sf101-merchant-receiver/CHECKOUT.md for enrollment, buyer approval and download.
-Keep approved file bytes under ${p.stateRoot}, or explicitly add their storage
-root to the recovery plan before snapshotting. The original database retains
+Keep approved file bytes under ${p.stateRoot}, or include their storage root in
+a separate private recovery plan before snapshotting. The original database retains
 their path and digest; it does not contain the file bytes.\n` : `The original seller configuration is ${p.configPath}.\n`}
 Challenge mode advertises original unpaid challenges. Native mode uses the
 explicit facilitator and original SDK. Delivery independently processes any
@@ -139,8 +139,10 @@ the sender retains ambiguous attempts for retry. Confirm all components stopped.
 Also stop any separately operated catalog, application or database writers before
 declaring their data quiesced. An inactive target does not prove unrelated writers
 stopped. The generated recovery plan includes this merchant's state and selected
-configuration files. Add other owned roots explicitly to the original plan when
-needed, without nested/overlapping roots. Credentials remain in their existing
+configuration files. To include other owned roots, copy recovery-plan.json to a
+separate private path, edit that copy without nested/overlapping roots, and use
+the copy's path for --plan in the snapshot command below. Keep the generated
+bundle intact so its installation preflight continues to match. Credentials remain in their existing
 secret store and have their own recovery procedure.
 
 With all listed writers stopped, invoke the original encrypted recovery tool:
