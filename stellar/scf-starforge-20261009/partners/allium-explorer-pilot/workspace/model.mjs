@@ -449,11 +449,13 @@ class AlliumWorkspace {
       const notes = ['Allium acquisition ' + record.id, 'Product revision ' + record.revisionId,
         'Original result SHA-256 ' + source.resultSha256, 'Native snapshot ' + source.snapshot,
         'Provider run ' + (source.runId ?? 'operator import'), record.note ?? ''].join('\n');
-      await this._publisherRequest('/api/draft/metadata', { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: candidate.id, name: this._revision(record.revisionId).product.name,
-          notes, expectedDraftRevision: candidate.revision }) });
-      const result = { acquisitionId, candidateId: candidate.id, snapshot: source.snapshot, url: this.publisher.url };
-      return this._remember(op.record, result);
+      const name = this._revision(record.revisionId).product.name;
+      if (candidate.name !== name || candidate.notes !== notes)
+        await this._publisherRequest('/api/draft/metadata', { method: 'POST', headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: candidate.id, name, notes, expectedDraftRevision: candidate.revision }) });
+      const result = { acquisitionId, candidateId: candidate.id, snapshot: source.snapshot };
+      await this._remember(op.record, result);
+      return { ...result, url: this.publisher.url };
     });
   }
   exportBundle() {
