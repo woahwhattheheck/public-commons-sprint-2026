@@ -42,8 +42,12 @@ function tab(name){
   for(const b of document.querySelectorAll('nav button'))b.classList.toggle('active',b.dataset.tab===name);
   if(name==='editions')return refreshEditions();
 }
+function syncResponseLength(){
+  const custom=$('response-length').value==='custom',input=$('response-length-custom');
+  $('response-length-custom-label').hidden=!custom;input.disabled=!custom;input.required=custom;
+}
 function resetForm(){
-  state.query=null;state.capture=null;$('query-form').reset();$('extra-options').value='{}';
+  state.query=null;state.capture=null;$('query-form').reset();syncResponseLength();$('extra-options').value='{}';
   $('form-title').textContent='New research query';$('edit-state').textContent='Draft';
   $('query-form').hidden=false;$('query-detail').hidden=true;renderQueryList();$('title').focus();
 }
@@ -51,20 +55,26 @@ function setForm(query){
   const input=query.input;
   $('title').value=query.title;$('question').value=input.query??'';$('search-type').value=input.search_type??'all';
   $('max-results').value=input.max_num_results??5;$('max-price').value=input.max_price??'';
-  $('response-length').value=typeof input.response_length==='string'?input.response_length:'short';
+  const customLength=typeof input.response_length==='number';
+  $('response-length').value=customLength?'custom':(input.response_length??'short');
+  $('response-length-custom').value=customLength?String(input.response_length):'';syncResponseLength();
   $('include-sources').value=(input.included_sources??[]).join('\n');$('exclude-sources').value=(input.excluded_sources??[]).join('\n');
   $('start-date').value=input.start_date??'';$('end-date').value=input.end_date??'';
   $('extra-options').value=pretty(Object.fromEntries(Object.entries(input).filter(([key])=>!coreKeys.has(key))));
-  if(typeof input.response_length==='number'){
-    const extra=JSON.parse($('extra-options').value);extra.response_length=input.response_length;$('extra-options').value=pretty(extra);
-  }
   $('form-title').textContent='Edit draft query';$('edit-state').textContent='Revision '+query.revision;
 }
 function formInput(){
   const extra=JSON.parse($('extra-options').value||'{}');
   if(!extra||typeof extra!=='object'||Array.isArray(extra))throw new Error('Additional options must be a JSON object.');
+  if(Object.hasOwn(extra,'response_length'))throw new Error('Set response length with the Response length control above.');
+  let responseLength=$('response-length').value;
+  if(responseLength==='custom'){
+    responseLength=Number($('response-length-custom').value);
+    if(!Number.isSafeInteger(responseLength)||responseLength<=0)
+      throw new Error('Custom response length must be a positive whole number of characters.');
+  }
   const input={...extra,query:$('question').value.trim(),search_type:$('search-type').value,
-    max_num_results:Number($('max-results').value),response_length:extra.response_length??$('response-length').value};
+    max_num_results:Number($('max-results').value),response_length:responseLength};
   if($('max-price').value!=='')input.max_price=Number($('max-price').value);
   const includes=$('include-sources').value.split('\n').map(s=>s.trim()).filter(Boolean),
     excludes=$('exclude-sources').value.split('\n').map(s=>s.trim()).filter(Boolean);
@@ -219,6 +229,7 @@ function renderComparison(value){
   }
   container.append(panel);
 }
+$('response-length').addEventListener('change',syncResponseLength);
 $('query-form').addEventListener('submit',event=>{event.preventDefault();run(async()=>{
   const q=await api('/api/queries',{...(state.query?.phase==='DRAFT'?{id:state.query.id,expectedRevision:state.query.revision}:{}),
     title:$('title').value,input:formInput()});await refreshQueries();await openQuery(q.id);status('Query saved. Review its exact request before preparing payment.');
@@ -236,4 +247,4 @@ for(const[type,field,refresh]of [['queries','queryOffset',refreshQueries],['edit
   $(type+'-prev').addEventListener('click',()=>run(async()=>{state[field]=Math.max(0,state[field]-30);await refresh();}));
   $(type+'-next').addEventListener('click',()=>run(async()=>{state[field]+=30;await refresh();}));
 }
-run(refreshQueries);
+syncResponseLength();run(refreshQueries);

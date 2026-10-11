@@ -39,6 +39,7 @@ function setDraft(record) {
 }
 async function updateStatus() {
   const status=await api('/status');
+  $('collections-link').hidden=!status.pages?.includes('/collections');
   $('source').textContent=`${status.config.kind} · ${status.config.source}`;
   $('refreshed').textContent=status.scan?.completedAt ?? 'No completed refresh';
   const counts=status.scan?.counts ?? {};

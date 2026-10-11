@@ -102,3 +102,39 @@ artifact. SOURCE_MANIFEST.json records every included source filename, byte coun
 SHA-256 and Git blob identity. The supplied source reference is a release label;
 the per-file identities describe the actual packaged bytes. START_HERE.md gives
 the complete application and Practice commands for a new receiving machine.
+
+## Continue only the browser from an existing Practice
+
+A native Practice that has already completed billing and adoption can continue
+its UI on a receiving machine with existing Python Playwright and Chromium.
+Transfer the **closed original workspace**, original result.json and
+practice-files/ together. Include native-continuation-result.json when a separate
+native continuation produced it. Preserve the private workspace permissions and
+original journal identity; these generated Practice files do not belong in a
+public source repository.
+
+From the complete source extraction, use the existing operation path:
+
+~~~bash
+node revenue/erp-conversion-assurance/profiles/asheville-cis-2026/continue-practice.mjs /absolute/existing/private/practice-operation
+~~~
+
+This command does not invoke the Practice generator, calculate another billing
+batch or enqueue another comparison. It reads the two original reviewed
+comparison IDs and 5,000 adopted bills, opens the existing app, and runs the
+desktop/mobile source-correction, upload, download and offline-photo browser
+journey. It then closes and reopens that same workspace for a read-only browser
+continuation. The original result, native continuation result and scenario are
+preserved. Only the fixture paths in a separate new scenario are relocated.
+
+Each invocation writes its outcome, browser outputs and screenshots under a new
+browser-continuations/run-* directory. If a browser exits partway through, retain
+that outcome and inspect its actual last step before another invocation; source
+corrections already accepted by the app remain in the same workspace.
+Use --read-only for a subsequent inspection that does not repeat the source
+correction, file intake or offline return entry.
+
+Set UTILITY_PYTHON and UTILITY_CHROMIUM to existing executables when needed.
+Run the launcher and its browser child in one native invocation so they share
+the same local network namespace. A browser that cannot access the server's
+loopback address needs a supported receiving runtime before UI continuation.
