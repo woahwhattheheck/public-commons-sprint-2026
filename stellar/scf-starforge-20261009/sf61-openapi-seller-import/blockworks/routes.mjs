@@ -7,7 +7,7 @@ export async function createMigrationRoutes(options) {
   const parameter = (url, name) => { const value = url.searchParams.get(name); if (!value) throw new TypeError('Missing ' + name + '.'); return value; };
   async function get(path, url, send, res) {
     const action = path.slice('/api/migrations/'.length);
-    if (action === 'list') return send(200, { projects: await app.projects.list(), packages: await app.releases.packages() });
+    if (action === 'list') return send(200, { projects: await app.projects.list(), packages: await app.releases.packages(), receivedWorkspaces: await app.listReceivedWorkspaces() });
     const id = parameter(url, 'project');
     if (action === 'project') return send(200, await app.snapshot(id));
     if (action === 'history') {
@@ -42,6 +42,14 @@ export async function createMigrationRoutes(options) {
         'Content-Disposition': 'attachment; filename="' + run + '-' + parameter(url, 'capture').replace(/[^a-zA-Z0-9_-]/g, '_') + '.json"' });
       res.end(capture.body); return;
     }
+    if (action === 'handover-download') {
+      const value = await app.handovers.download(id, parameter(url, 'name'));
+      res.writeHead(200, { 'Content-Type': 'application/gzip', 'Content-Length': value.body.length,
+        'Content-Disposition': 'attachment; filename="' + value.filename + '"' });
+      res.end(value.body); return;
+    }
+    if (action === 'handovers') return send(200, { handovers: await app.handovers.list(id) });
+    if (action === 'receiver') return send(200, app.receiverView(id));
     if (action === 'releases') return send(200, await app.releases.status(id));
     return send(404, { error: 'Migration view not found.' });
   }
@@ -58,6 +66,12 @@ export async function createMigrationRoutes(options) {
     else if (action === 'mapping/compare') result = await app.compare(input);
     else if (action === 'source/review') result = await app.createSourceReview(input);
     else if (action === 'source/export') result = await app.exportMerchant(input);
+    else if (action === 'receiver/open') result = await app.openReceiver(input);
+    else if (action === 'receiver/close') result = await app.closeReceiver(input);
+    else if (action === 'receiver/retain') result = await app.retainReceivedResponse(input);
+    else if (action === 'handover/create') result = await app.createHandover(input);
+    else if (action === 'handover/import') result = await app.importHandover(input);
+    else if (action === 'handover/open') result = await app.openReceivedWorkspace(input);
     else if (action === 'release/stage') result = await app.releases.stage(input);
     else if (action === 'release/diff') result = await app.releases.diff(input);
     else if (action === 'release/select') result = await app.releases.select(input);
