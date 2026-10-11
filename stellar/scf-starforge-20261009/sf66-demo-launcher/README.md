@@ -51,6 +51,10 @@ SF61 loopback services without booting another writer or browser. It captures
 all stable native SF60 filtered list pages and their original Atlas proxy JSON,
 checks page parity and stable journal health, and creates one private, atomic,
 no-clobber JSON file with original response bytes and SHA-256 digests.
+Every captured page now also requires exact source-native *pagination metadata*
+parity between SF60 and the SF61 Atlas proxy, including filtered network pages.
+An Atlas total, cursor or limit mismatch aborts before the output file is
+created; matching seller rows alone are not proof of complete coverage.
 
 Use the original operator entrypoint, now with additive optional arguments:
 
