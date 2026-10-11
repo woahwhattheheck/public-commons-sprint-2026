@@ -58,6 +58,7 @@
     "merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/merchant-launch.mjs",
     "delivery": "stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs",
     "dataset-delivery": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-dataset-cli.mjs",
+    "postgres-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "inbox": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-cli.mjs",
     "native-signer": "stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs",
     "facilitator": "stellar/scf-starforge-20261009/native-facilitator/cli.mjs",
@@ -95,6 +96,7 @@
     "./buyer/inbox": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs",
     "./seller/delivery": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/outbox.mjs",
     "./buyer/dataset": "./source/stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery/deliver.mjs",
+    "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "./commerce": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce.mjs",
     "./buyer/native-signer": "./source/stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs",
     "./facilitator": "./source/stellar/scf-starforge-20261009/native-facilitator/runtime.mjs"
@@ -119,7 +121,8 @@
   },
   "excludeFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/exercise.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/demo-database.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/demo-database.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/exercise.mjs"
   ],
   "featurePeers": {
     "postgres": {
@@ -128,5 +131,8 @@
         "probe": "pg"
       }
     }
+  },
+  "runtimePackageManifests": {
+    "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json"
   }
 }
