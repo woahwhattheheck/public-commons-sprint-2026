@@ -1,3 +1,4 @@
+import { mountOperations } from './operations.mjs';
 const $ = (selector, root = document) => root.querySelector(selector);
 const clone = value => structuredClone(value);
 function sourceBase64(buffer) {
@@ -9,7 +10,7 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, character => ({'&':
 const money = value => value === null || value === undefined || value === '' ? 'Not entered' : new Intl.NumberFormat('en-US', {style:'currency',currency:'USD',maximumFractionDigits:2}).format(Number(value));
 const amount = value => new Intl.NumberFormat('en-US',{maximumFractionDigits:2}).format(Number(value || 0));
 const label = value => String(value).replace(/_/g,' ').replace(/([a-z])([A-Z])/g,'$1 $2').replace(/^./, character => character.toUpperCase());
-const tabs = [['overview','Overview'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions']];
+const tabs = [['overview','Overview'],['work','Work packages'],['milestones','Milestones'],['staffing','Staffing'],['payments','Payment timing'],['delivery','Delivery plan'],['history','Saved versions'],['operations','Delivery operations']];
 const state = {token:null,plans:[],current:null,draft:null,tab:'overview',dirty:false,stale:false,busy:false,history:[],selectedHistory:null};
 let controlId = 0;
 let requestIds = {};
@@ -218,7 +219,13 @@ function render(focus = false) {
   controlId=0;
   $('#plan-select').innerHTML=state.plans.map(row=>'<option value="'+esc(row.id)+'"'+(row.id===state.current.id?' selected':'')+'>'+esc(row.name)+'</option>').join('');
   $('#sections').innerHTML=tabs.map(([id,title])=>'<button type="button" data-tab="'+id+'"'+(state.tab===id?' aria-current="page"':'')+'>'+title+'</button>').join('');
-  $('#main-panel').innerHTML=({overview,work,milestones,staffing,payments,delivery,history}[state.tab])();
+  $('.savebar').hidden=state.tab==='operations';
+  if(state.tab==='operations') {
+    mountOperations({container:$('#main-panel'),api,plan:state.current,inform,mutationId})
+      .catch(error=>inform(error.message,true));
+  } else {
+    $('#main-panel').innerHTML=({overview,work,milestones,staffing,payments,delivery,history}[state.tab])();
+  }
   updateBar();
   if(focus) $('#main-content').focus();
 }
