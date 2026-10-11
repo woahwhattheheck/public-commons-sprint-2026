@@ -125,7 +125,9 @@ export function createPublicHttpsFetch({timeoutMs=30_000, lookup=systemLookup, r
       incoming = await new Promise((resolve, reject) => {
         const req = requestImpl({
           protocol:'https:', hostname:url.hostname, port:443,
-          path:url.pathname + url.search, method, headers,
+          // href preserves an explicit empty query, which URL.search drops.
+          // SF31 binds this exact resource identity before approving payment.
+          path:url.href.slice(url.origin.length), method, headers,
           lookup:pinnedLookup, family, autoSelectFamily:false,
           agent:false, servername:url.hostname, rejectUnauthorized:true,
           checkServerIdentity, minVersion:'TLSv1.2', maxHeaderSize:65_536, signal
