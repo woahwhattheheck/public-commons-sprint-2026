@@ -15,6 +15,7 @@ const HOP = new Set(['connection', 'keep-alive', 'proxy-authenticate', 'proxy-au
   'te', 'trailer', 'transfer-encoding', 'upgrade', 'content-length', 'host', 'expect']);
 const CREDENTIAL = new Set(['authorization', 'cookie', 'set-cookie', 'x-api-key', 'api-key', 'apikey']);
 const OWNED = new Set(['accept-encoding', 'content-encoding', 'content-type']);
+const CACHE_POLICY_FIELDS = ['cache-control', 'vary', 'age', 'date', 'expires', 'pragma'];
 const payment = name => /^(?:payment-|x-payment(?:-|$)|x402-|extension-responses$|settlement-overrides$)/.test(name);
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(x));
@@ -118,13 +119,14 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency } = options;
+    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false } = options;
   if (!supportsSellerMethod(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
+      typeof cachePolicyMetadata !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
       lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
   integer(timeoutMs, 1, 120000, 'timeoutMs');
@@ -233,13 +235,23 @@ export function createUpstreamHandler(options = {}) {
             const value = res.headers[key];
             if (typeof value === 'string' && value.length <= 8192) resultHeaders[key] = value;
           }
+          // The cache adapter needs cookie presence and policy completeness,
+          // never session values. Ordinary upstream responses keep their shape.
+          const metadata = cachePolicyMetadata ? { cacheMetadata: {
+            hasSetCookie: res.headers['set-cookie'] !== undefined,
+            policyFieldsComplete: CACHE_POLICY_FIELDS.every(key => res.headers[key] === undefined ||
+              !responseHop.has(key) && typeof res.headers[key] === 'string' &&
+              res.headers[key].length <= 8192 && expose.includes(key)) &&
+              ['age', 'date', 'expires'].every(key => res.rawHeaders.filter((name, index) =>
+                index % 2 === 0 && name.toLowerCase() === key).length <= 1),
+          } } : {};
           if (method === 'HEAD' || status === 204 || status === 205) {
             res.resume();
             res.once('end', () => {
               if (!res.complete) return bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE');
               const body = Buffer.alloc(0), error = responseCheck?.validate({ status, body });
               if (error) return bad(502, error, status);
-              finish({ status, headers: resultHeaders, body });
+              finish({ status, headers: resultHeaders, body, ...metadata });
             });
             return;
           }
@@ -274,7 +286,7 @@ export function createUpstreamHandler(options = {}) {
             const contractError = responseCheck?.validate({ status, body: content, value,
               contentType: responseHop.has('content-type') ? undefined : res.headers['content-type'] });
             if (contractError) return bad(502, contractError, status);
-            finish({ status, headers: resultHeaders, body: content });
+            finish({ status, headers: resultHeaders, body: content, ...metadata });
           });
           if (decoded !== res) res.pipe(decoded);
         });

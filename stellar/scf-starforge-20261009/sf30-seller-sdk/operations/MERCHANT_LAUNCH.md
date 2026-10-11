@@ -25,6 +25,7 @@ Execute from the repository root, with Node22+ and original native x402 SDK:
       --upstreams /private/merchant/api-bindings.json \
       --facilitator https://your-approved-facilitator.example \
       --state /private/merchant/sf98-outbox \
+      --history-dir /private/merchant/usage --history-days 90 \
       --port 8423 --operations-port 8424 --check
 
 The preflight uses the original SF30 seller config and offer compiler and the
@@ -32,6 +33,16 @@ original upstream schema, validates handler-module existence if selected, and
 prints only route/binding counts. It does NOT import the handler, contact a
 facilitator, execute a payment, open/create the outbox or start a listener.
 No wallet/network access or remote resource is required for --check.
+
+`--history-dir` optionally retains the original HTTP observer's daily route
+usage across seller restarts. Use a private absolute directory separate from
+the SF98 outbox and reuse it for this merchant. `--history-days` retains 1–365
+UTC calendar days (default 90) and requires `--history-dir`. The preflight
+validates these options without opening either state directory. The running
+console exposes the same date/route comparison, retained sessions and JSON/CSV
+exports described in the [operations guide](README.md#retain-and-compare-daily-usage).
+These aggregate attempts, outcomes and latency are operational usage; SF98
+retains its separate native-success delivery journal.
 
 After reviewing the original merchant config, run the exact command without
 --check. For a trusted local application replace --upstreams with
@@ -70,8 +81,9 @@ seller is intended for an operator-controlled public HTTPS reverse proxy.
 Never expose the operations port to customers or to a shared reverse proxy.
 
 The --max-in-flight and --drain-grace-ms options reuse original SF30 request
-capacity and lifecycle. Closing the launcher closes both original listeners,
-with the seller honoring its configured in-flight drain period. A failed
+capacity and lifecycle. Closing the launcher first drains the original seller,
+then saves the final usage checkpoint and closes operations. The seller honors
+its configured in-flight drain period. A failed
 operations startup closes the seller, never leaving a half-launched merchant.
 The SF98 outbox itself preserves original 0700/0600 directory and file
 permissions. Multiple independent active merchants must use separate journals

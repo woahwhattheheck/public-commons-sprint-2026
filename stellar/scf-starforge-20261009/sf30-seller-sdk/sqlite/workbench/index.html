@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SQLite merchant workbench · Stellar Forge</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><span class="eyebrow">STELLAR FORGE / MERCHANT TOOLS</span><h1>SQLite merchant workbench</h1><p id="database">Opening private workspace…</p></div><div class="header-actions"><span id="save-state">Not loaded</span><button id="reload">Reload saved</button><button id="save" class="primary">Save draft</button></div></header>
+<div id="notice" role="status" aria-live="polite">Local operator workspace. Nothing here publishes data or initiates a payment.</div>
+<main>
+<aside>
+<section><h2>Database schema</h2><p class="hint">Metadata only. Select a table, then explicitly choose the columns to expose.</p><label>Table or view<select id="table"><option value="">Choose a table</option></select></label><div id="columns" class="column-list"></div><button id="from-table">Add selected columns as query</button></section>
+<section><div class="section-heading"><h2>API queries</h2><button id="add-query">New</button></div><nav id="query-list" aria-label="Queries"></nav><p id="query-count" class="hint">No queries</p></section>
+<section><h2>Releases</h2><div id="exports" class="exports"></div><p class="hint">Exports never overwrite a release. The database stays in place and is not copied.</p></section>
+</aside>
+<div class="workspace">
+<section><div class="section-heading"><div><span class="eyebrow">01 / MERCHANT SETTINGS</span><h2>Public service identity</h2></div><span class="pill">Original SF30 seller</span></div>
+<div class="grid"><label>Service name<input id="merchant-name" maxlength="32" autocomplete="off"></label><label>Public HTTPS origin<input id="merchant-origin" placeholder="https://api.your-domain.example" autocomplete="off"></label><label>Network<select id="merchant-network"><option>stellar:testnet</option><option>stellar:pubnet</option></select></label><label>Payment timeout, seconds<input id="merchant-timeout" type="number" min="1" max="86400"></label><label>SEP-41 asset contract<input id="merchant-asset" autocomplete="off" placeholder="Enter the actual asset contract"></label><label>Merchant payment recipient<input id="merchant-payto" autocomplete="off" placeholder="Enter the actual recipient"></label></div>
+<p class="hint">These settings become public offer metadata. Schema validation does not verify ownership, address checksums, or settlement.</p></section>
+<section id="query-editor" hidden><div class="section-heading"><div><span class="eyebrow">02 / QUERY CONTRACT</span><h2 id="query-heading">Query</h2></div><button id="remove-query">Remove query</button></div>
+<div class="grid"><label>Query name<input id="query-name" autocomplete="off"></label><label>Route path<input id="query-path" placeholder="/catalog" autocomplete="off"></label><label>HTTP input<select id="query-method"><option value="GET">GET · query parameters</option><option value="POST">POST · JSON body</option></select></label><label>Price in atomic units<input id="query-amount" inputmode="numeric" placeholder="10000" autocomplete="off"></label></div>
+<label>Description shown to customers<input id="query-description" maxlength="2048" autocomplete="off"></label>
+<label>Operator-owned SELECT query<textarea id="query-sql" class="code" rows="6" spellcheck="false" placeholder="SELECT id, title FROM catalog WHERE region = $region ORDER BY id"></textarea></label>
+<label>Explicit output aliases, comma-separated<input id="query-columns" autocomplete="off" placeholder="id, title"></label>
+<div class="limits"><label>Rows per request<input id="query-rows" type="number" min="1" max="1000"></label><label>Maximum result bytes<input id="query-bytes" type="number" min="1024" max="917504"></label><label>Query deadline, ms<input id="query-timeout" type="number" min="50" max="30000"></label></div>
+<div class="grid"><label>Typed parameter declarations<textarea id="query-parameters" class="code" rows="6" spellcheck="false">{}</textarea><span class="hint">Example: {"region":{"type":"string","maxLength":64}}. Types: string, integer, number, boolean. Add default, nullable, enum or bounds as needed.</span></label><label>Deliberately public example input<textarea id="query-public" class="code" rows="6" spellcheck="false">{}</textarea><span class="hint">Used by discovery and developer docs. Never put private customer identifiers here. Preview results are not included.</span></label></div>
+</section>
+<section id="preview-section" hidden><div class="section-heading"><div><span class="eyebrow">03 / LOCAL PREVIEW</span><h2>Read the actual selected result</h2></div><button id="preview" class="primary">Run local preview</button></div>
+<label>Private preview input · not saved or exported<textarea id="preview-input" class="code" rows="3" spellcheck="false">{}</textarea></label><p class="hint">This privileged local query uses the original read-only SQLite source. It is not a paid request. Each request reads the database's current snapshot.</p><p id="preview-summary" role="status">No rows fetched.</p><div id="preview-result" class="table-wrap"></div></section>
+<section><div class="section-heading"><div><span class="eyebrow">04 / REVIEW & RELEASE</span><h2>Export to the existing seller</h2></div><button id="inspect">Review all routes</button></div><p class="hint">Review prepares every named query with the original SQLite engine and compiles public offers with the original seller. No dataset rows are read by this step.</p><div id="review-result" class="table-wrap"></div><div class="export-controls"><label>New release name<input id="export-name" placeholder="merchant-pilot-1" autocomplete="off"></label><button id="export" class="primary">Save and export release</button></div><pre id="export-result" tabindex="0"></pre></section>
+</div>
+</main>
+<footer>Private local setup · no database copy · no preview rows in offers · no automatic payment or deployment</footer>
+<script type="module" src="/browser.mjs"></script>
+</body></html>

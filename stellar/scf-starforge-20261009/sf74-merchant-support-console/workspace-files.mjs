@@ -16,18 +16,18 @@ const add = (parent, tag, text) => {
  * Neither callback should initiate a probe or interpret imported terms as a send.
  * Returns destroy() for embedding in an operator workspace with its own lifecycle.
  */
-export function mountWorkspaceFiles({root, readState, applyState}) {
+export function mountWorkspaceFiles({root, readState, applyState, onNameChange = ()=>{}}) {
   if (!root || typeof root.replaceChildren !== 'function' ||
       typeof readState !== 'function' || typeof applyState !== 'function')
     throw new TypeError('Workspace files require a root, readState and applyState');
   root.replaceChildren();
   const section = add(root, 'section');
   section.className = 'card workspace-files';
-  const heading = add(section, 'h2', 'Save or resume a merchant case');
+  const heading = add(section, 'h2', 'Portable workspace files');
   const id = 'workspace-' + (++instance);
   heading.id = id + '-heading';
   section.setAttribute('aria-labelledby', heading.id);
-  add(section, 'p', 'Save intake fields, selected original captures and draft terms in one local file. Nothing is stored in this browser or sent to a merchant. Treat the file as private business data.');
+  add(section, 'p', 'Transfer intake fields, original captures and unfinished terms as a workspace file. Case-desk ownership, follow-up dates, notes and version history are retained separately in the private case directory.');
   const grid = add(section, 'div'); grid.className = 'form-grid';
   const nameLabel = add(grid, 'label', 'Case name');
   const name = add(nameLabel, 'input');
@@ -47,6 +47,7 @@ export function mountWorkspaceFiles({root, readState, applyState}) {
   let candidate = null, selection = 0, busy = false, destroyed = false;
   const controller = new AbortController();
   const options = {signal: controller.signal};
+  name.addEventListener('input',()=>onNameChange(name.value),options);
   function controls() {
     save.disabled = busy; open.disabled = busy; name.disabled = busy;
     restore.disabled = busy || candidate === null;
@@ -99,7 +100,8 @@ export function mountWorkspaceFiles({root, readState, applyState}) {
     busy = true; controls();
     try {
       // The consumer owns a single transactional restore of its actual native state.
-      await applyState(state);
+      const applied = await applyState(state);
+      if (applied === false) { status('Import was not applied. The current case is retained.'); return; }
       if (destroyed) return;
       name.value = state.name;
       candidate = null; open.value = ''; preview.hidden = true;
@@ -108,5 +110,9 @@ export function mountWorkspaceFiles({root, readState, applyState}) {
       if (!destroyed) status('Case could not be restored: ' + String(error.message).slice(0, 220), true);
     } finally { busy = false; if (!destroyed) controls(); }
   }, options);
-  return {destroy() { destroyed = true; selection++; controller.abort(); root.replaceChildren(); }};
+  return {
+    setName(value) { name.value = value; },
+    getName() { return name.value; },
+    destroy() { destroyed = true; selection++; controller.abort(); root.replaceChildren(); },
+  };
 }
