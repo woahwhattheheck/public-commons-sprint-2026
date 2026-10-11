@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Water operations · Stellar Forge</title><link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header><div><div class="eyebrow">STELLAR FORGE / USGS WATER DATA</div><h1>Water operations</h1><p id="project-heading">Open or create a retained monitoring project.</p></div><button id="refresh" type="button">Refresh</button></header>
+<div id="notice" role="status" aria-live="polite" hidden></div>
+<main>
+<aside>
+<section class="panel"><h2>Source selection</h2>
+<form id="project-form">
+<label>Project title<input id="title" required maxlength="200" value="Monitoring review"></label>
+<label>Collection<select id="collection"><option value="daily">Daily observations</option><option value="continuous">Continuous observations</option><option value="monitoring-locations">Monitoring locations</option><option value="time-series-metadata">Time-series metadata</option></select></label>
+<label>Monitoring locations<input id="locations" value="USGS-01646500" placeholder="USGS-01646500, USGS-01651000"><small>Use full USGS identifiers separated by commas. Observations can also use exact series identifiers or geographic bounds below.</small></label>
+<div class="two"><label>Parameter codes<input id="parameters" value="00060" placeholder="00060"></label><label>Statistic codes<input id="statistics" value="00003" placeholder="00003"></label></div>
+<details id="exact-selection"><summary>Exact series, geographic bounds and source filters</summary>
+<label>Time-series identifiers<input id="time-series" placeholder="Exact USGS time-series IDs"><small>Separate multiple original identifiers with commas. Leave monitoring locations blank when selecting by series alone.</small></label>
+<label>Geographic bounds<input id="bbox" placeholder="-77.2, 38.8, -77.0, 39.0" spellcheck="false"><small>West, south, east, north in longitude and latitude degrees. Bounds combine with any selected locations, parameters, series and filters.</small></label>
+<label>Original source filters (JSON)<textarea id="source-filters" rows="4" spellcheck="false" aria-describedby="source-filter-help">{}</textarea></label>
+<p id="source-filter-help" class="caption"></p>
+</details>
+<div class="two"><label><span id="start-label">From (local date)</span><input type="date" id="start" aria-describedby="source-time-help" required></label><label><span id="end-label">Through (local date)</span><input type="date" id="end" aria-describedby="source-time-help" required></label></div>
+<p id="source-time-help" class="caption"></p>
+<label>Records per source page<input type="number" id="limit" value="1000" min="1" max="10000"></label>
+<div class="actions"><button type="submit">Save selection</button><button id="capture" type="button" disabled>Acquire source</button></div>
+<small id="revision">No saved revision.</small>
+</form></section>
+<section class="panel"><div class="section-head"><h2>Retained captures</h2><span id="capture-count" class="count">0</span></div><div id="captures" class="record-list"><p class="empty">Acquired source will appear here.</p></div></section>
+<section class="panel"><div class="section-head"><h2>Saved reviews</h2><span id="review-count" class="count">0</span></div><div id="reviews" class="record-list"><p class="empty">Save a review to retain the selected analysis and decision.</p></div></section>
+</aside>
+<div class="content">
+<nav class="tabs" aria-label="Workspace"><button type="button" data-tab="analysis" aria-current="page">Analysis</button><button type="button" data-tab="source">Original source</button><button type="button" data-tab="merchant">Merchant &amp; customer</button></nav>
+<section class="panel tab-panel" id="tab-analysis">
+<div class="section-head"><h2>Observations and change</h2><span id="analysis-status" class="tag">Select a capture</span></div>
+<form id="analysis-form">
+<div class="three"><label>Approval status<select id="quality"><option value="all">All returned observations</option><option value="approved">Approved only</option><option value="provisional">Provisional only</option></select></label><label><span id="analysis-start-label">From (local date)</span><input id="analysis-start" type="date" aria-describedby="analysis-time-help"></label><label><span id="analysis-end-label">Through (local date)</span><input id="analysis-end" type="date" aria-describedby="analysis-time-help"></label></div>
+<div class="three"><label>Compare saved capture<select id="compare-capture"><option value="">No capture comparison</option></select></label><label><span id="baseline-start-label">Baseline from (local date)</span><input id="baseline-start" type="date" aria-describedby="analysis-time-help"></label><label><span id="baseline-end-label">Baseline through (local date)</span><input id="baseline-end" type="date" aria-describedby="analysis-time-help"></label></div>
+<p id="analysis-time-help" class="caption"></p>
+<button type="submit" id="analyze" disabled>Apply analysis</button>
+</form>
+<div id="analysis-empty" class="empty large">Select a completed or partial capture to inspect its retained observations.</div>
+<div id="analysis-body" hidden>
+<div class="metrics"><div><span>Series</span><strong id="metric-series">0</strong></div><div><span>Selected observations</span><strong id="metric-rows">0</strong></div><div><span>Conflicting features</span><strong id="metric-conflicts">0</strong></div></div>
+<label>Monitoring series<select id="series"></select></label>
+<div id="plot" class="plot" aria-label="Observed values by time"></div>
+<p class="caption">Each point is a returned numeric observation. Units and statistics stay with the original series. Missing intervals are left unfilled.</p>
+<div class="table-wrap"><table><thead><tr><th>Period</th><th>Count</th><th>Minimum</th><th>Maximum</th><th>Mean</th><th>Median</th></tr></thead><tbody id="summary"></tbody></table></div>
+<p id="change" class="caption"></p><p id="quality-summary" class="caption"></p>
+<div id="capture-comparison" hidden></div>
+<details><summary>Observation records</summary><div class="table-wrap"><table><thead><tr><th>Time</th><th>Value</th><th>Approval</th><th>Qualifier</th><th>Source page</th></tr></thead><tbody id="observations"></tbody></table></div><div class="pagination"><button type="button" id="previous-page">Previous</button><span id="page-label"></span><button type="button" id="next-page">Next</button></div></details>
+<details><summary>Calculation and source interpretation</summary><ul id="method"></ul><div id="conflicts"></div></details>
+<form id="review-form"><h3>Retain a decision</h3><label>Decision note<textarea id="note" rows="4" maxlength="24000" placeholder="Record the operational finding, follow-up, or selected source period."></textarea></label><button type="submit">Save review</button></form>
+</div>
+</section>
+<section class="panel tab-panel" id="tab-source" hidden><div class="section-head"><h2>Original response pages</h2><span id="source-state" class="tag">Select a capture</span></div><p class="caption">Open a retained GeoJSON response or its original USGS request. Page files preserve the received response bytes.</p><div id="source-details"></div><div id="source-pages" class="record-list"><p class="empty">No capture selected.</p></div></section>
+<section class="panel tab-panel" id="tab-merchant" hidden>
+<div class="section-head"><h2>Merchant editions</h2><span id="merchant-state" class="tag">Stopped</span></div>
+<p class="caption">A saved review becomes an immutable edition containing the original source pages, observation table and analysis. The original merchant runtime serves the edition and customer downloads.</p>
+<form id="edition-form"><div class="two"><label>Saved review<select id="edition-review" required><option value="">Select a review</option></select></label><label>Edition name<input id="edition-name" placeholder="river-review-october" pattern="[A-Za-z0-9][A-Za-z0-9_-]*" required maxlength="80"></label></div><button type="submit">Prepare edition</button></form>
+<div id="editions" class="record-list"><p class="empty">Prepared merchant editions will appear here.</p></div>
+<form id="stage-form"><h3>Configure the selected edition</h3><label>Edition<select id="merchant-edition" required><option value="">Select an edition</option></select></label><label>Public merchant origin<input id="merchant-origin" type="url" required placeholder="https://water.example.com"></label><label>Resource path<input id="merchant-path" value="/water" required></label><label>Original payment terms (JSON)<textarea id="payment" rows="7" spellcheck="false" required placeholder='{"scheme":"exact","network":"stellar:testnet","asset":"…","amount":"…","payTo":"…","maxTimeoutSeconds":300}'></textarea><small>Supply the exact network, asset, recipient and atomic amount for the original merchant payment contract.</small></label><div class="actions"><button type="submit">Prepare merchant</button><button id="start-merchant" type="button">Start merchant</button><button id="stop-merchant" type="button" disabled>Stop merchant</button></div></form>
+<pre id="merchant-result" hidden></pre>
+<form id="customer-form"><h3>Original customer workflow</h3><p id="buyer-state" class="caption"></p><label>Intent name<input id="intent" placeholder="customer-water-october" pattern="[A-Za-z0-9][A-Za-z0-9_-]*"></label><label>Delivery<select id="customer-kind"><option value="observations">Observation page</option><option value="source">Exact source or analysis JSON</option><option value="edition">Edition manifest</option></select></label>
+<label id="customer-query-label">Dataset query (JSON)<textarea id="customer-query" rows="3" spellcheck="false">{}</textarea><small>Use the original dataset parameter names with string values.</small></label>
+<label id="customer-file-label" hidden>Original JSON member<select id="customer-file" disabled><option value="">Select an original JSON member</option></select><small>Members and sizes come from this immutable edition.</small></label>
+<div class="actions"><button id="prepare-purchase" type="submit" disabled>Prepare purchase</button><button id="execute-purchase" type="button" disabled>Execute prepared purchase</button><button id="reopen-purchase" type="button" disabled>Reopen delivered result</button><button id="prepare-next-page" type="button" disabled>Prepare next page</button></div>
+<p id="customer-page-status" class="caption"></p></form>
+<pre id="customer-result" hidden></pre>
+</section>
+<section id="saved-review" class="panel" hidden><div class="section-head"><h2>Saved review</h2><span id="saved-review-id" class="tag"></span></div><p id="saved-review-note"></p><div id="review-downloads" class="actions"></div><p class="caption">The review preserves its source capture, selected periods, original quality flags and operator decision.</p></section>
+</div>
+</main><footer>U.S. Geological Survey source data · Original units, dates and quality remain attached to every capture.</footer>
+<script type="module" src="/app.mjs"></script>
+</body></html>

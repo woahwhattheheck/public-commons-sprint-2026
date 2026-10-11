@@ -1,30 +1,153 @@
 {
   "title": "Stellar Discovery Trust Layer",
-  "subtitle": "Stellar Forge · SCF #46 product presentation",
-  "sourceCommit": "a4a8dccb3ce3ea01d56624fbda0edee32b47bb20",
+  "subtitle": "Stellar Forge · SCF Open Track product presentation",
+  "sourceCommit": "57835a18f005cf63b5e5e76e0538860806196cc9",
   "sourceRepository": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
   "founder": "Bryce Muhlnickel",
   "chapters": [
-    {"id":"title","title":"A usable path from API to paid result","label":"STELLAR FORGE","seconds":8,"captions":["Stellar Discovery Trust Layer connects merchant APIs, explicit buyer decisions, and useful results."]},
-    {"id":"team","title":"Individual applicant · AI-assisted engineering","label":"THE BUILDER","seconds":14,"captions":["Bryce Muhlnickel is the individual applicant and directs product priorities and relationships.","AI agents assist with design, implementation, review and engineering exercises. That assistance includes this presentation."]},
-    {"id":"purpose","title":"One operation, end to end","label":"THE PRODUCT","seconds":10,"captions":["A merchant publishes an operation. The buyer inspects its exact terms, approves a purchase, and keeps the returned product."]},
-    {"id":"seller","title":"Inspect the running merchant","label":"ORIGINAL UI · LOCAL CONFIGURATION","seconds":18,"captions":["This is the maintained seller workspace, opened from the existing six-method merchant configuration.","Its documentation comes from the running service: methods, inputs, payment options and a reusable OpenAPI description."]},
-    {"id":"request","title":"Build the request and read the quote","label":"ORIGINAL UI · UNPAID REQUEST","seconds":22,"captions":["Choose PATCH, supply the record and JSON body, then inspect the actual unpaid response.","The 402 response carries the concrete request and complete Stellar payment terms. This inspection creates no payment."]},
-    {"id":"review","title":"Review exactly what the buyer will request","label":"ORIGINAL COMMERCE WORKSPACE","seconds":20,"captions":["The buyer workspace keeps the selected operation, recipient, asset, quoted amount and separate spending limit together.","Review uses the original buyer's immutable request. Payment approval remains in its configured operator flow."]},
-    {"id":"details","title":"Keep the request and its authority explicit","label":"ORIGINAL COMMERCE WORKSPACE","seconds":14,"captions":["Method, body size, intent, operator and signer remain visible. Here the merchant is deliberately running in challenge-only mode."]},
-    {"id":"cancel","title":"Keep each intent's state","label":"ORIGINAL DURABLE INBOX","seconds":14,"captions":["A different queued request can be cancelled explicitly. Its cancellation is retained in the original inbox."]},
-    {"id":"reopen","title":"Reopen the same workspace","label":"ORIGINAL DURABLE INBOX","seconds":12,"captions":["After shutdown and reopening, the same cancellation remains. Reopening or refreshing the page does not purchase anything."]},
-    {"id":"transaction","title":"An actual native Stellar testnet purchase","label":"RETAINED COMPLETED TRANSACTION","seconds":22,"captions":["The retained native PATCH purchase transferred 0.005 testnet XLM and updated the merchant record once.","The independent read-only check matched the authorized payer, recipient, exact amount and transfer event at ledger 5,142,311.","This completed run used an isolated local testnet policy. It did not exercise public ingress or the production workspace approval."]},
-    {"id":"response","title":"Keep the useful result","label":"ORIGINAL SAVED MERCHANT RESPONSE","seconds":18,"captions":["The original response is 80 bytes of JSON: the updated record, its label and revision one.","The saved bytes match the recorded SHA-256. One approval, one signature and one merchant invocation produced this result."]},
-    {"id":"plan","title":"What the proposed build adds","label":"PROSPECTIVE SCF WORK","seconds":20,"captions":["The remaining build focuses on independent merchant deployments, operational response and a functional mainnet workflow.","The current proposal models 400 future hours, 38,000 dollars and 150 days. Completed engineering is excluded from those hours.","Measure attributable purchases, complete delivered results, recovery and repeat use, with testnet activity separated from commercial use."]},
-    {"id":"close","title":"Install, inspect, integrate","label":"MAINTAINED OPEN SOURCE","seconds":8,"captions":["The source, operator guides and maintained distribution form one product. The next work is putting it to use with merchants."]}
+    {
+      "id": "title",
+      "title": "From a useful resource to a retained result",
+      "label": "STELLAR FORGE",
+      "seconds": 9,
+      "captions": [
+        "Stellar Discovery Trust Layer connects a merchant’s useful API or data to an approved Stellar purchase and a retained result."
+      ]
+    },
+    {
+      "id": "team",
+      "title": "The builder and the engineering team",
+      "label": "INDIVIDUAL APPLICANT",
+      "seconds": 14,
+      "captions": [
+        "Bryce Muhlnickel directs product, delivery and commercial relationships as the individual applicant.",
+        "AI agents assist with engineering, review and documentation, including this presentation."
+      ]
+    },
+    {
+      "id": "source",
+      "title": "Start with a useful merchant query",
+      "label": "ORIGINAL REVIEWED MYSQL PACKAGE",
+      "seconds": 22,
+      "captions": [
+        "This merchant package exposes the retained NYC HPD project-event data through its reviewed Preservation filter and minimum twenty units.",
+        "The selected response contains one hundred rows and fourteen columns, with exact scalar strings and the configured source limit."
+      ]
+    },
+    {
+      "id": "history",
+      "title": "Reopen the original buyer’s work",
+      "label": "MAINTAINED MCP BUYER CONSOLE",
+      "seconds": 18,
+      "captions": [
+        "The original buyer console reopens the completed intent. Its history keeps the status, attempt and retained result together.",
+        "Earlier unsuccessful authorization remains a separate historical record."
+      ]
+    },
+    {
+      "id": "terms",
+      "title": "Keep the purchased request and terms together",
+      "label": "ORIGINAL CLOSED QUOTE",
+      "seconds": 20,
+      "captions": [
+        "The saved quote identifies the selected tool, exact request and original Stellar payment terms.",
+        "The native purchase used fifty thousand stroops, or 0.005 testnet XLM. Its original intent remains the point of reference."
+      ]
+    },
+    {
+      "id": "transaction",
+      "title": "Read the completed native payment",
+      "label": "RETAINED STELLAR TESTNET OBSERVATION",
+      "seconds": 20,
+      "captions": [
+        "The maintained console displays the independently matched transfer at ledger 5,145,195.",
+        "This is the original completed purchase. Its retained transaction and result can be inspected with the payment adapter disconnected."
+      ]
+    },
+    {
+      "id": "result",
+      "title": "Use the data the buyer received",
+      "label": "COMPLETE ORIGINAL MCP RESULT",
+      "seconds": 28,
+      "captions": [
+        "Open the complete purchased result, including the typed HPD rows and their source fields.",
+        "The original response contains one hundred rows and fourteen columns. The configured truncation flag stays visible.",
+        "Download the same 53,468 bytes of JSON. Scalar strings and the original payment response remain intact."
+      ]
+    },
+    {
+      "id": "reopen",
+      "title": "Continue the same operation after reopening",
+      "label": "ORIGINAL RESULT AND HISTORY",
+      "seconds": 24,
+      "captions": [
+        "Close and reopen the workspace, then select the same completed intent.",
+        "The exact saved response and retained transaction observation are still available. Reading the result does not require another payment."
+      ]
+    },
+    {
+      "id": "delivery",
+      "title": "Install and hand over the working product",
+      "label": "MAINTAINED SOURCE AND OPERATING GUIDES",
+      "seconds": 20,
+      "captions": [
+        "The maintained release includes the merchant package, native buyer, complete-result tools and operating guides.",
+        "A receiving operator can inspect the saved package, reopen the buyer’s result and continue through the original support and recovery workflow."
+      ]
+    },
+    {
+      "id": "plan",
+      "title": "The proposed grant funds independent deployment",
+      "label": "$38,000 · 400 FUTURE HOURS · 150 DAYS",
+      "seconds": 28,
+      "captions": [
+        "The current proposal takes this working baseline to two independent merchant operators and two independent buyer operators.",
+        "By day ninety, complete ten useful testnet purchases in seven days. By day one hundred fifty, complete thirty mainnet purchases across fourteen days, with both buyers returning.",
+        "These are proposed funded outcomes. Seven team-operated testnet purchases have already delivered usable retained results."
+      ]
+    },
+    {
+      "id": "close",
+      "title": "One operation, delivered and recoverable",
+      "label": "OPEN SOURCE · STELLAR FORGE",
+      "seconds": 9,
+      "captions": [
+        "Inspect the maintained source, install the product, and follow one useful merchant operation through purchase, result and operator handover."
+      ]
+    }
   ],
   "sources": [
-    {"label":"Canonical application","url":"https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C86PRE5NF"},
-    {"label":"Founder and applicant context","url":"https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C82MLR4UV"},
-    {"label":"Original native testnet purchase","url":"https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791735222264959"},
-    {"label":"Independent retained chain observation","url":"https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791735902182979"},
-    {"label":"SCF Open Track","url":"https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/open-track"},
-    {"label":"SCF budget and deliverables","url":"https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines"}
+    {
+      "label": "Canonical application and deployment plan",
+      "url": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C86PRE5NF"
+    },
+    {
+      "label": "Original presentation source",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1037"
+    },
+    {
+      "label": "Original completed MySQL native purchase",
+      "url": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791749671310319"
+    },
+    {
+      "label": "MySQL package and customer tools",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/923777adf6f7a429cea188395c6d86696e9fd155/stellar-forge/mcp-paid-agent/MYSQL_PACKAGES.md"
+    },
+    {
+      "label": "Installed merchant and buyer release",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/releases/tag/starforge-merchant-0.1.0-source.g57835a18f005"
+    },
+    {
+      "label": "Native payment inspection and result recovery",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1245"
+    },
+    {
+      "label": "SCF Open Track",
+      "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/open-track"
+    },
+    {
+      "label": "SCF budget and deliverables",
+      "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines"
+    }
   ]
 }

@@ -6,11 +6,12 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, join, dirname, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { openGitSource } from './git-source.mjs';
+import { createBrowserAssetIndex } from './browser-assets.mjs';
 
 const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|json|toml|md|html|css|txt|sql|csv|svg|png|woff2|service)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|go|rs|json|toml|md|html|css|txt|sql|csv|xml|svg|png|woff2|service)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
@@ -18,7 +19,7 @@ function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
   return !parts.some(part => excludedDirs.has(part) || part.startsWith('.')) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
-    (supported.test(path) || parts.at(-1) === 'LICENSE' || parts.at(-1) === 'go.mod');
+    (supported.test(path) || ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)));
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);
@@ -39,12 +40,27 @@ const result = sources.map(([path, source]) => {
 });
 process.stdout.write(JSON.stringify(result));
 `;
-  const modules = [...sources].filter(([path]) => /\.(?:mjs|js)$/.test(path))
-    .map(([path, bytes]) => [path, bytes.toString('utf8')]);
-  return JSON.parse(execFileSync(process.execPath,
-    ['--no-warnings', '--experimental-vm-modules', '--input-type=commonjs', '--eval', parse],
-    { input: JSON.stringify(modules), encoding: 'utf8', timeout: 10000,
-      maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }));
+  // Keep each parser child small as the cumulative source grows. Preserve the
+  // input order and allow shared hosts time to schedule a batch under load.
+  const requests = [];
+  let batch = [], batchBytes = 0;
+  const flush = () => {
+    if (!batch.length) return;
+    requests.push(...JSON.parse(execFileSync(process.execPath,
+      ['--no-warnings', '--experimental-vm-modules', '--input-type=commonjs', '--eval', parse],
+      { input: JSON.stringify(batch), encoding: 'utf8', timeout: 60000,
+        maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] })));
+    batch = [];
+    batchBytes = 0;
+  };
+  for (const [path, bytes] of sources) {
+    if (!/\.(?:mjs|js)$/.test(path)) continue;
+    if (batch.length && (batch.length >= 64 || batchBytes + bytes.length > 1024 * 1024)) flush();
+    batch.push([path, bytes.toString('utf8')]);
+    batchBytes += bytes.length;
+  }
+  flush();
+  return requests;
 }
 
 export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref = 'HEAD', output,
@@ -84,28 +100,43 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   };
   source.progress('selected', { files: selected.length, components: spec.components.length });
   loadSources(selected);
-  // Follow actual static ESM imports into the same immutable Git tree. A new
-  // shared runtime helper should travel with its importing product without a
-  // second hand-maintained list. The original file, mode and size guards apply
-  // to every dependency; explicit exclusions still reject required imports.
-  // Dynamic modules/assets remain in the component/support inventory, and
-  // operator-selected handlers/signers stay external application inputs.
+  // The same manifests drive the actual servers. Retain every mapped source
+  // and resolve browser imports in its served URL context, not by inventing a
+  // missing file beside the importer. Ordinary Node imports keep filesystem
+  // resolution, and physical files never lose precedence or exclusion checks.
+  const browserAssets = createBrowserAssetIndex(spec.browserAssets ?? [], path => {
+    if (!names.has(path)) throw new TypeError('Missing packaged browser entry: ' + path);
+    return sources.get(path);
+  });
   const missingModules = [];
+  const enqueue = (target, importer, discovered) => {
+    if (names.has(target)) return;
+    const item = byPath.get(target);
+    if (!item || excluded.has(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
+      missingModules.push(importer + ' -> ' + target);
+      return;
+    }
+    discovered.push(item);
+    names.add(target);
+    selected.push(item);
+  };
+  const mapped = [];
+  for (const target of browserAssets.files) enqueue(target, 'browser asset manifest', mapped);
+  if (mapped.length) loadSources(mapped);
+  // Parse actual static ESM only, without executing application source. Shared
+  // helpers discovered here travel with their importer. Dynamic application
+  // inputs remain outside this maintained component/support inventory.
   let frontier = sources;
   while (frontier.size) {
     const discovered = [];
     for (const [path, requests] of staticModuleRequests(frontier)) {
-      for (const request of requests.filter(value => value.startsWith('.'))) {
-        const target = posix.normalize(posix.join(posix.dirname(path), request));
-        if (names.has(target)) continue;
-        const item = byPath.get(target);
-        if (!item || excluded.has(target) || !isRuntimeFile(target, explicitRuntime.has(target))) {
-          missingModules.push(path + ' -> ' + target);
-          continue;
+      for (const request of requests) {
+        const served = browserAssets.resolve(path, request);
+        if (request.startsWith('.')) {
+          const target = posix.normalize(posix.join(posix.dirname(path), request));
+          if (byPath.has(target) || served === null) enqueue(target, path, discovered);
         }
-        discovered.push(item);
-        names.add(target);
-        selected.push(item);
+        for (const target of served ?? []) enqueue(target, path + ' -> ' + request, discovered);
       }
     }
     frontier = discovered.length ? loadSources(discovered) : new Map();

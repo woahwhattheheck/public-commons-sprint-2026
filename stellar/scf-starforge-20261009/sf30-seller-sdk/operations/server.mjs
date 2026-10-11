@@ -8,6 +8,7 @@ import { createMerchantOperationDesk } from './merchant-operations.mjs';
 import { createAvailabilityDesk } from '../availability/desk.mjs';
 import { createDeliveryDesk } from './delivery-control.mjs';
 import { createMerchantIncidentSource } from './delivery-incidents.mjs';
+import { readSupplierQuotas, supplierQuotasCsv } from './supplier-quotas.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -40,6 +41,10 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     ['/availability', '../availability/index.html', 'text/html; charset=utf-8'],
     ['/availability/panel.mjs', '../availability/panel.mjs', 'text/javascript; charset=utf-8'],
     ['/availability/style.css', '../availability/style.css', 'text/css; charset=utf-8'],
+    ['/supplier-quotas', 'supplier-quotas.html', 'text/html; charset=utf-8'],
+    ['/supplier-quotas-panel.mjs', 'supplier-quotas-panel.mjs', 'text/javascript; charset=utf-8'],
+    ['/supplier-quotas.mjs', 'supplier-quotas.mjs', 'text/javascript; charset=utf-8'],
+    ['/supplier-quotas.css', 'supplier-quotas.css', 'text/css; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-incidents-panel.mjs', 'delivery-incidents-panel.mjs', 'text/javascript; charset=utf-8'],
@@ -98,7 +103,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       let referringOrigin = null;
       try { if (req.headers.referer) referringOrigin = new URL(req.headers.referer).origin; } catch {}
       const userNavigation = navigationOrigin !== null && referringOrigin === navigationOrigin &&
-        req.method === 'GET' && ['/', '/fulfillment', '/merchant-operations', '/availability'].includes(req.url) &&
+        req.method === 'GET' && ['/', '/fulfillment', '/merchant-operations', '/availability', '/supplier-quotas'].includes(req.url) &&
         req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document' &&
         req.headers['sec-fetch-user'] === '?1';
       // Binding loopback alone does not stop hostile DNS names / browser cross-origin access.
@@ -140,6 +145,21 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       if (req.url === '/api/upstreams') {
         if (typeof session.upstreamSnapshot !== 'function') return reply(404, 'text/plain', 'No upstream adapter attached');
         return reply(200, 'application/json; charset=utf-8', JSON.stringify(session.upstreamSnapshot()));
+      }
+      if (['/api/supplier-quotas', '/supplier-quotas.json', '/supplier-quotas.csv'].includes(req.url)) {
+        // Each explicit read observes the same original shared-account ledger.
+        readSupplierQuotas(session).then(view => {
+          if (res.destroyed) return;
+          if (req.url === '/supplier-quotas.csv') return reply(200, 'text/csv; charset=utf-8',
+            supplierQuotasCsv(view), { 'content-disposition': 'attachment; filename="supplier-accounts.csv"' });
+          return reply(200, 'application/json; charset=utf-8', JSON.stringify(view),
+            req.url === '/supplier-quotas.json'
+              ? { 'content-disposition': 'attachment; filename="supplier-accounts.json"' } : {});
+        }, () => {
+          if (!res.destroyed) reply(503, 'application/json; charset=utf-8',
+            JSON.stringify({ error: 'SUPPLIER_QUOTA_UNAVAILABLE' }));
+        });
+        return;
       }
       if (req.url === '/export.csv') return reply(200, 'text/csv; charset=utf-8', trafficCsv(observer.snapshot()),
         { 'content-disposition': 'attachment; filename="seller-traffic.csv"' });
@@ -252,6 +272,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     }
     return { server, url, merchantOperationsUrl:url + '/merchant-operations',
       availabilityUrl:url + '/availability',
+      supplierQuotasUrl:url + '/supplier-quotas',
       availabilityControlUrl:availabilityDesk.controlFragment ? url + '/availability#' + availabilityDesk.controlFragment : null,
       operationControlUrl:merchantDesk.controlFragment ? url + '/merchant-operations#' + merchantDesk.controlFragment : null,
       deliveryControlUrl:deliveryDesk.controlFragment ? url + '/fulfillment#' + deliveryDesk.controlFragment : null,

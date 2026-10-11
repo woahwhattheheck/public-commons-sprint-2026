@@ -1,0 +1,9 @@
+{
+  "schema": "stellar-forge.oauth-host-connections.v1",
+  "connections": [
+    {
+      "alias": "provider",
+      "directoryEnv": "PROVIDER_OAUTH_DIRECTORY"
+    }
+  ]
+}

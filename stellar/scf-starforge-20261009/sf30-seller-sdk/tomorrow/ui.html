@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Weather operations</title>
+  <link rel="stylesheet" href="/ui.css">
+  <script type="module" src="/ui.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to work plan</a>
+  <header class="app-header">
+    <a class="brand" href="/">Weather operations</a>
+    <span id="workspace-title" class="workspace-title">Opening workspace</span>
+    <div class="header-actions">
+      <button id="refresh-workspace" type="button">Refresh workspace</button>
+      <button id="new-work" class="primary" type="button">New work plan</button>
+    </div>
+  </header>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <div class="app-layout">
+    <aside class="sidebar" aria-label="Saved work plans">
+      <div class="sidebar-heading"><h2>Work plans</h2><span id="work-count" class="count">0</span></div>
+      <label class="search-label" for="work-filter">Find a work plan</label>
+      <input id="work-filter" type="search" placeholder="Name or location" autocomplete="off">
+      <nav id="work-list" aria-label="Work plans"></nav>
+      <button id="import-handover" class="wide" type="button">Import handover</button>
+      <input id="import-file" type="file" accept=".json,application/json" hidden>
+      <p id="workspace-mode" class="small muted"></p>
+    </aside>
+    <main id="main" tabindex="-1">
+      <section class="panel"><h1>Opening weather operations</h1><p>Connecting this browser to the saved local workspace.</p></section>
+    </main>
+  </div>
+  <footer class="app-footer">
+    <a href="https://www.tomorrow.io/" target="_blank" rel="noopener noreferrer">Powered by Tomorrow.io</a>
+    <span>Source values and operator decisions remain attached to their forecast edition.</span>
+  </footer>
+</body>
+</html>

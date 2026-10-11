@@ -39,7 +39,8 @@ the profile's Node version, npm, Python 3.11 or newer and `flock`. Additional
 Python modules, such as an adapter's driver, can be declared in `pythonModules`;
 the image checks their actual imports as its final unprivileged user.
 
-Keep the image's source directory immediately below its dependency directory:
+For profiles without a declared native preparation, keep the image's source
+directory immediately below its dependency directory:
 
 | Purpose | Example image path |
 | --- | --- |
@@ -52,6 +53,57 @@ The runtime executables must live outside `/opt/starforge`. Use the same source,
 Node and Python paths in the original SF99 host plan. For the default container
 source bind, mount the source directory alone so that its sibling
 `node_modules` remains available from the image.
+
+## Declared native dependencies
+
+A selected `node-agents` profile carries the original source declaration
+`native: "sqlite"` on its exact `better-sqlite3` dependency. A new image context
+for that profile uses the maintained [runtime installer](../../distribution/RUNTIME_INSTALL.md#native-sqlite-preparation-and-restart).
+It prepares the original archive, writes the exact accepted dependency lock,
+extracts dependencies with scripts disabled, and prepares only the declared
+native package through its original supported hook. The image has no separate
+native dependency preparation implementation.
+
+Use the installer's real directory layout for this profile:
+
+| Purpose | Example image path |
+| --- | --- |
+| Original runtime directory and dependency root | `/opt/starforge-runtime` |
+| Original sourceRoot in the image plan | `/opt/starforge-runtime/package/source` |
+| Selected dependencies | `/opt/starforge-runtime/node_modules` |
+| Original source manifest | `/opt/starforge-runtime/package/manifest.json` |
+| Retained archive and installation state | `/opt/starforge-runtime/source.tgz`, `install-state.json` |
+| Image build contract and helpers | `/opt/starforge-runtime.merchant-build/` |
+
+The preparer derives this installation mode from the selected profile and
+requires `sourceRoot` to end in `/package/source`. It returns
+`installation.directory`, `installation.sourceRoot` and
+`installation.nodeHeaders` alongside the normal context roots. Pass those
+returned source/dependency roots to the existing container plan. The archive
+remains within the original installer's 64 MiB compressed input limit.
+
+The build base must supply the chosen Node/npm executables, Python and flock.
+A matching original prebuilt binding can be installed through the package's
+normal hook. To select a source build with local headers, add optional
+`nodeHeaders` to the image plan. It is an absolute prefix **inside the selected
+build base**, such as `/usr/local` when that prefix contains the matching
+`include/node` headers. The original installer verifies Node version and native
+ABI before compiling; that base also needs make and a C/C++ compiler. The
+selected Node and npm executable directories precede the base's existing PATH
+during native image preparation and use.
+
+The completed runtime retains its original source archive, profile, transitive
+lock, native preparation journal and private file modes. Docker copies it to the
+final stage with the plan's numeric uid/gid as owner. The final unprivileged
+check opens SQLite, performs a transaction, and verifies the retained source,
+profile and lock through the original runtime APIs. It reports the installation
+identity and native readiness in the existing image runtime result.
+
+Native contexts add the maintained `runtime-install.mjs` and
+`runtime-unpack.py` to the original selected artifact set. Their bytes and
+installation contract are part of the context identity. Previously prepared
+contexts keep their own layout, selected artifact hashes and original recovery
+records; use a new context when selecting this native installation path.
 
 ## Image plan
 
@@ -68,10 +120,11 @@ from the selected release, runtime base and operator host.
 | `selectedSourceRoot` | Absolute path to that same installed release's source tree |
 | `baseImage` | The existing runtime base's immutable repository digest |
 | `platform` | `linux/amd64`, `linux/arm64` or `linux/arm64/v8` |
-| `sourceRoot` | Absolute source path inside the image |
+| `sourceRoot` | Absolute source path inside the image; declared native profiles use `RUNTIME_DIRECTORY/package/source` |
 | `runtime` | Object with absolute image executable paths `node`, `python`, `npm` |
 | `uid`, `gid` | Existing operator's unprivileged numeric identities; defaults are 65532 |
 | `pythonModules` | Optional array of additional Python module import names |
+| `nodeHeaders` | Optional matching Node header prefix inside the build base for a declared native profile |
 
 `inspect` validates the inputs without creating a context. The archive reader
 checks the compressed SHA256, every original source file's size, SHA256 and Git
@@ -125,11 +178,13 @@ node stellar/scf-starforge-20261009/sf99-merchant-deploy/container-image/cli.mjs
   build --context /srv/starforge/image-context --engine /usr/bin/docker
 ```
 
-The native build uses the already selected local base, `npm ci`, the original
-archive and that retained lock. The final image runs the original runtime profile
-inspection with dependency imports enabled, explicit Python and the selected
-numeric user. A successful build returns a receipt only after Docker reports the
-actual image ID, source labels and platform.
+The build uses the already selected local base, original archive and retained
+lock. For a declared native profile, the original runtime installer owns the
+complete locked installation and native preparation. Other profiles keep the
+existing `npm ci` and source installation path. The final image runs the original
+runtime inspection with dependency imports enabled, explicit Python and the
+selected numeric user. A successful build returns a receipt only after Docker
+reports the actual image ID, source labels and platform.
 
 The receipt in `image-receipt.json` joins the image ID to the release archive,
 source commit, profile ID, dependency lock, base digest, runtime paths and build
@@ -208,6 +263,8 @@ runtime selection within the original state recovery operation.
 
 ## Native command references
 
+- [Dockerfile copy ownership](https://docs.docker.com/reference/dockerfile/#copy---chown)
+- [Original runtime native preparation](../../distribution/RUNTIME_INSTALL.md#native-sqlite-preparation-and-restart)
 - [Docker image save](https://docs.docker.com/reference/cli/docker/image/save/)
 - [Docker image load](https://docs.docker.com/reference/cli/docker/image/load/)
 - [npm ci](https://docs.npmjs.com/cli/v11/commands/npm-ci/)
