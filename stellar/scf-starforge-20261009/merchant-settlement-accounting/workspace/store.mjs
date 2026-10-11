@@ -8,6 +8,7 @@ import {compileTerms,indexOriginalVerifications,runOriginalAccounting} from '../
 import {writeOriginalAccountingPack} from '../cli.mjs';
 import {acquireStateLease} from '../../merchant-fleet-gateway/state-lease.mjs';
 import {PricingWorkspace} from './pricing-workspace.mjs';
+import {PeriodWorkspace} from './period-workspace.mjs';
 
 const SCHEMA='stellar-forge.merchant-accounting-workspace.v1';
 const now=()=>new Date().toISOString();
@@ -97,7 +98,8 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
       state={schema:SCHEMA,revision:1,createdAt:now(),sources:{outboxDir,proofDir,termsFile},termsSelection:'source',termsImports:[],proofs:[],runs:[],notes:{},exports:[],history:[]};
     }
     let upgraded=false;
-    for(const name of ['recoveredEntries','recoveryPreviews','recoveryJobs'])if(!Array.isArray(state[name])){state[name]=[];upgraded=true;}
+    for(const name of ['recoveredEntries','recoveryPreviews','recoveryJobs','periodDefinitions','periodCloses'])if(!Array.isArray(state[name])){state[name]=[];upgraded=true;}
+    if(state.periodSelection===undefined){state.periodSelection=null;upgraded=true;}
     if(state.recoveryCapturedAt===undefined){state.recoveryCapturedAt=null;upgraded=true;}
     if(recoveredDir!==undefined&&recoveredDir!==state.sources.recoveredDir){
       await recoveredDirectory(directory,state.sources,recoveredDir);
@@ -118,7 +120,7 @@ export async function openAccountingWorkspace({directory,outboxDir,proofDir,term
 }
 
 class AccountingWorkspace{
-  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.closing=false;this.closed=false;}
+  constructor(directory,state,lease){this.directory=directory;this.state=state;this.lease=lease;this.tail=Promise.resolve();this.tasks=new Set();this.cache=new Map();this.recoveryControllers=new Map();this.pricing=new PricingWorkspace(this);this.periods=new PeriodWorkspace(this);this.closing=false;this.closed=false;}
   async serial(work){check(!this.closed,'CLOSING','The workspace is closing.',503);const result=this.tail.then(async()=>{this.lease.assertHeld();const previous=structuredClone(this.state);try{return await work();}catch(error){this.state=previous;throw error;}});this.tail=result.catch(()=>{});return result;}
   async commit(action,actor,details={}){this.state.revision++;this.state.history.push({at:now(),actor,action,...details});check(this.state.history.length<=100_000&&Buffer.byteLength(json(this.state))<=32_000_000,'HISTORY_LIMIT','Archive this workspace and start a new one before adding further operator history.');await durableJson(join(this.directory,'workspace.json'),this.state);}
   expected(revision){check(Number.isSafeInteger(revision)&&revision===this.state.revision,'STALE_WORKSPACE','Saved workspace state changed. Refresh it before reapplying your retained draft.',409);}
@@ -131,7 +133,7 @@ class AccountingWorkspace{
       proofs:this.state.proofs,runs:this.state.runs,exports:this.state.exports,history:this.state.history.slice(-100).reverse(),
       recovery:{directory:this.state.sources.recoveredDir??null,capturedAt:this.state.recoveryCapturedAt,entries:this.state.recoveredEntries},
       recoveryPreviews:this.state.recoveryPreviews,recoveryJobs:this.state.recoveryJobs,
-      pricingImports:this.state.pricingImports??[],
+      pricingImports:this.state.pricingImports??[],periods:this.periods.view(),
       reviewCounts:Object.values(this.state.notes).reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})});
   }
   async connectRecovered({revision,directory,actor}){return this.serial(async()=>{
@@ -231,13 +233,16 @@ class AccountingWorkspace{
     this.expected(revision);actor=text(actor,'operator');check(selection==='source'||this.state.termsImports.some(item=>item.id===selection),'TERMS_NOT_FOUND','Choose original source terms or a retained terms file.');
     this.state.termsSelection=selection;await this.commit('terms_selected',actor,{termsId:selection});return this.view();
   });}
-  async begin({revision,name,actor,expectedTermsSelection}){return this.serial(async()=>{
+  async begin({revision,name,actor,expectedTermsSelection,expectedPeriodSelection}){return this.serial(async()=>{
     this.expected(revision);actor=text(actor,'operator');name=text(name,'run name',160);
     check(expectedTermsSelection===undefined||expectedTermsSelection===this.state.termsSelection,'TERMS_SELECTION_CHANGED','The selected accounting terms changed. Select the reviewed pricing terms before starting this reconciliation.',409);
+    check(expectedPeriodSelection===undefined||(expectedPeriodSelection===null&&this.state.periodSelection===null)||
+      (expectedPeriodSelection&&this.state.periodSelection&&expectedPeriodSelection.id===this.state.periodSelection.id&&expectedPeriodSelection.version===this.state.periodSelection.version),
+      'PERIOD_SELECTION_CHANGED','The selected reporting period changed. Inspect the current definition before capturing this reconciliation.',409);
     check(!this.state.runs.some(run=>['queued','running'].includes(run.status)),'RUN_IN_PROGRESS','A reconciliation is already queued or running.',409);
     check(this.state.runs.length<5000,'RUN_LIMIT','This workspace already retains 5,000 reconciliations.');
     const run={id:identity(),name,actor,status:'queued',createdAt:now(),sourceRevision:this.state.revision,termsSelection:this.state.termsSelection,
-      sourcePaths:structuredClone(this.state.sources),proofIds:this.state.proofs.filter(proof=>proof.included).map(proof=>proof.id),totals:null,exceptionCount:0,error:null};
+      period:this.periods.selection(),sourcePaths:structuredClone(this.state.sources),proofIds:this.state.proofs.filter(proof=>proof.included).map(proof=>proof.id),totals:null,exceptionCount:0,error:null};
     this.state.runs.unshift(run);await this.commit('reconciliation_queued',actor,{runId:run.id});
     const task=new Promise(resolve=>setImmediate(resolve)).then(()=>this.execute(run.id));this.tasks.add(task);task.finally(()=>this.tasks.delete(task)).catch(()=>{});
     return {run:structuredClone(run),state:this.view()};
@@ -246,7 +251,8 @@ class AccountingWorkspace{
     const root=this.runPath(run.id),sources=join(root,'sources'),outbox=join(sources,'outbox'),proofs=join(sources,'proofs');
     const sourcePaths=run.sourcePaths??this.state.sources;
     await privateDir(root,{create:true});await privateDir(sources,{create:true});await privateDir(outbox,{create:true});await privateDir(proofs,{create:true});
-    const manifest={schema:'stellar-forge.merchant-accounting-inputs.v1',capturedAt:now(),journalOrder:'delivery-prefix-before-event-prefix',files:[],proofs:[],recovered:[],recoveredSource:!!sourcePaths.recoveredDir};
+    const manifest={schema:'stellar-forge.merchant-accounting-inputs.v1',capturedAt:now(),journalOrder:'delivery-prefix-before-event-prefix',files:[],proofs:[],recovered:[],recoveredSource:!!sourcePaths.recoveredDir,
+      ...(run.period?{period:structuredClone(run.period)}:{})};
     // Delivery records refer to already appended native events. Capturing their
     // completed prefix first prevents newer statuses from orphaning older events.
     for(const name of ['deliveries.ndjson','events.ndjson']){
@@ -302,7 +308,8 @@ class AccountingWorkspace{
     }
     check(Buffer.byteLength(json(manifest))<=INPUT_MANIFEST_LIMIT,'INPUT_MANIFEST_LIMIT','The retained source manifest exceeds 16 MB. Select a smaller original recovered collection.');
     await writeNew(join(root,'input-manifest.json'),json(manifest));
-    return {manifest,outboxDir:outbox,proofDir:proofs,termsFile:join(sources,'terms.json'),...(recoveredDir?{recoveredDir}:{})};
+    return {manifest,outboxDir:outbox,proofDir:proofs,termsFile:join(sources,'terms.json'),...(recoveredDir?{recoveredDir}:{}),
+      ...(run.period?{period:{from:run.period.from,until:run.period.until}}:{})};
   }
   async execute(id){
     try{
@@ -320,7 +327,7 @@ class AccountingWorkspace{
   async run(id){
     const run=structuredClone(this.runRow(id));if(run.status!=='complete')return {run};
     const report=await this.report(id),notes=report.exceptions.map(row=>noteFor(this.state,row));
-    return {run,totals:report.totals,routes:report.routes,options:report.options,hashes:report.hashes,ignoredProofs:report.ignoredProofs,pricing:(await this.inputManifest(id)).pricing??null,
+    return {run,totals:report.totals,routes:report.routes,options:report.options,hashes:report.hashes,ignoredProofs:report.ignoredProofs,pricing:(await this.inputManifest(id)).pricing??null,period:report.period??null,
       unmatchedOfficialProofCount:report.unmatchedOfficialProofCount,reviewCounts:notes.reduce((result,note)=>{result[note.status]++;return result;},{open:0,investigating:0,reviewed:0})};
   }
   async rows(id,kind,query={}){
@@ -357,16 +364,32 @@ class AccountingWorkspace{
     check(Object.hasOwn(views,view)&&Number.isSafeInteger(offset)&&offset>=0&&Number.isSafeInteger(limit)&&limit>=1&&limit<=200,'INVALID_COMPARISON_PAGE','Choose a comparison view and a valid page.');
     return {baseline:this.runRow(baselineId),current:this.runRow(id),summary:{addedEvents:added.length,removedEvents:removed.length,changedEvents:changed.length,
       resolvedExceptions:[...oldExceptions].filter(id=>!newExceptions.has(id)).length,newExceptions:[...newExceptions].filter(id=>!oldExceptions.has(id)).length},
+      scope:{sameBounds:(baseline.period?.from??null)===(current.period?.from??null)&&(baseline.period?.until??null)===(current.period?.until??null),baseline:baseline.period??null,current:current.period??null},
       view,offset,limit,total:views[view].length,items:views[view].slice(offset,offset+limit)};
   }
   async exportRun(runId,{revision,actor,includeSources=false}){return this.serial(async()=>{
     this.expected(revision);actor=text(actor,'operator');check(typeof includeSources==='boolean','INVALID_EXPORT','Choose whether to include retained private source files.');
+    const result=await this.retainExport(runId,{actor,includeSources});
+    await this.commit('review_exported',actor,{exportId:result.export.id,runId,includeSources,sha256:result.export.sha256});
+    return {...result,state:this.view()};
+  });}
+  // Called inside the same original workspace serialization by either a normal
+  // export or a period close. One archive writer owns reports and source bytes.
+  async retainExport(runId,{actor,includeSources,close}){
     const run=this.runRow(runId),report=await this.report(runId),id=identity(),folder=join(this.directory,'exports',id),archive=join(this.directory,'exports',id+'.tar');
     await privateDir(folder,{create:true});
     const root=this.runPath(runId);
     for(const name of EXPORTED_FILES){const raw=await this.reportFile(runId,name);await writeNew(join(folder,name),raw);}
     const notes=report.exceptions.map(row=>({...row,id:exceptionId(row),review:noteFor(this.state,row)}));
-    await writeNew(join(folder,'review-notes.json'),json({schema:'stellar-forge.merchant-exception-review.v1',runId,workspaceRevision:this.state.revision,exportedAt:now(),actor,exceptions:notes}));
+    const reviewBytes=json({schema:'stellar-forge.merchant-exception-review.v1',runId,workspaceRevision:this.state.revision,exportedAt:now(),actor,exceptions:notes});
+    await writeNew(join(folder,'review-notes.json'),reviewBytes);
+    let retainedClose;
+    if(close){
+      const record={...close,runId,exportId:id,reportSha256:run.reportSha256,inputManifestSha256:run.inputManifestSha256,
+        reviewSnapshotRevision:this.state.revision,reviewNotesSha256:hash(reviewBytes),includeSources,
+        reviewCounts:notes.reduce((counts,row)=>{counts[row.review.status]++;return counts;},{open:0,investigating:0,reviewed:0})};
+      const bytes=json(record);await writeNew(join(folder,'period-close.json'),bytes);retainedClose={...record,closeSha256:hash(bytes)};
+    }
     const inputManifest=await readBytes(join(root,'input-manifest.json'),INPUT_MANIFEST_LIMIT);check(hash(inputManifest)===run.inputManifestSha256,'INPUT_MANIFEST_CHANGED','The retained source manifest changed.',409);
     await writeNew(join(folder,'input-manifest.json'),inputManifest);
     if(includeSources){
@@ -376,14 +399,19 @@ class AccountingWorkspace{
       if(manifest.recoveredSource)await privateDir(join(folder,'sources','recovered'),{create:true});
       for(const file of manifest.files){if(!file.path)continue;check(file.path.startsWith('sources/')&&!file.path.includes('..'),'INVALID_RETAINED_PATH','A retained source path is invalid.');const raw=await readBytes(join(root,file.path),file.path.endsWith('/response.bin')||file.path==='sources/pricing-report.json'?RECOVERY_RESPONSE_LIMIT:16_000_000,{empty:true});check(hash(raw)===file.sha256&&raw.length===file.bytes,'SOURCE_SNAPSHOT_CHANGED','A retained input changed.',409);await privateDir(resolve(join(folder,file.path),'..'),{create:true});await writeNew(join(folder,file.path),raw);}
     }
-    await writeNew(join(folder,'START.txt'),'Merchant settlement reconciliation\n\nOriginal accounting report/CSV/HTML and a snapshot of named operator exception notes. Review notes do not change native transfer classifications.\n'+(includeSources?'Includes private original journal, terms, verification files, any captured original pricing report, and recovered entries with their retained response bytes. If sources/recovered is present, pass --recovered-dir /absolute/extracted/sources/recovered to the original accounting CLI when reproducing this report.\n':'Private original source bytes were not included.\n'));
+    const periodArgs=report.period?' --period-from '+report.period.from+' --period-until '+report.period.until:'';
+    await writeNew(join(folder,'START.txt'),'Merchant settlement reconciliation\n\nOriginal accounting report/CSV/HTML and a snapshot of named operator exception notes. Review notes do not change native transfer classifications.\n'+
+      (report.period?'Recorded-activity UTC period: '+report.period.from+' inclusive to '+report.period.until+' exclusive. Native rows use capture time; recovered rows use import time. All captured sources participate in original verification and transaction-reuse checks before selection.\n':'')+
+      (retainedClose?'period-close.json records the immutable close revision, period definition, original report identity, and frozen review counts, including open exceptions. Later source captures and reviews do not change this close.\n':'')+
+      (includeSources?'Includes private original journal, terms, verification files, any captured original pricing report, and recovered entries with their retained response bytes.\n\nFrom the extracted archive, reproduce with the installed original CLI (replace absolute paths):\nnode /absolute/merchant-settlement-accounting/cli.mjs --outbox /absolute/extracted/sources/outbox --proof-dir /absolute/extracted/sources/proofs --terms /absolute/extracted/sources/terms.json --out /absolute/new-accounting-pack'+(parse(inputManifest,'input manifest').recoveredSource?' --recovered-dir /absolute/extracted/sources/recovered':'')+periodArgs+'\n':'Private original source bytes were not included.\n'));
     const handle=await open(archive,'wx',0o600);
     try{await new Promise((resolve,reject)=>{
       const child=spawn('tar',['-cf','-','-C',folder,'.'],{stdio:['ignore',handle.fd,'pipe']});let error='';child.stderr.on('data',chunk=>{if(error.length<4000)error+=chunk;});child.once('error',reject);child.once('exit',code=>code===0?resolve():reject(new Error('Archive export failed: '+error)));});await handle.sync();}
     finally{await handle.close();}
-    const raw=await readBytes(archive,256_000_000),record={id,runId,name:run.name,createdAt:now(),actor,includeSources,bytes:raw.length,sha256:hash(raw)};
-    this.state.exports.unshift(record);await this.commit('review_exported',actor,{exportId:id,runId,includeSources,sha256:record.sha256});return {export:record,state:this.view()};
-  });}
+    const raw=await readBytes(archive,256_000_000),record={id,runId,name:run.name,createdAt:now(),actor,includeSources,bytes:raw.length,sha256:hash(raw),
+      ...(retainedClose?{periodCloseId:retainedClose.id}:{})};
+    this.state.exports.unshift(record);return {export:structuredClone(record),...(retainedClose?{close:retainedClose}:{})};
+  }
   async reportFile(runId,name){check(EXPORTED_FILES.includes(name),'INVALID_DOWNLOAD','Choose an original report file.');const run=this.runRow(runId);await this.report(runId);const root=join(this.runPath(runId),'report');const manifestBytes=await readBytes(join(root,'manifest.json'),1_000_000);check(hash(manifestBytes)===run.manifestSha256,'REPORT_MANIFEST_CHANGED','The original report manifest changed.',409);if(name==='manifest.json')return manifestBytes;const expected=parse(manifestBytes,'report manifest').outputs.find(file=>file.name===name),bytes=await readBytes(join(root,name),128_000_000);check(expected&&hash(bytes)===expected.sha256&&bytes.length===expected.bytes,'REPORT_FILE_CHANGED','The original report file changed.',409);return bytes;}
   async download(runId,name){return {bytes:await this.reportFile(runId,name),name};}
   async inputManifest(runId){const run=this.runRow(runId);await this.report(runId);const bytes=await readBytes(join(this.runPath(runId),'input-manifest.json'),INPUT_MANIFEST_LIMIT);check(hash(bytes)===run.inputManifestSha256,'INPUT_MANIFEST_CHANGED','The retained source manifest changed.',409);return parse(bytes,'input manifest');}

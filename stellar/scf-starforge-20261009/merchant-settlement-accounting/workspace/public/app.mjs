@@ -1,5 +1,7 @@
 import {mountPricing} from './pricing.mjs';
 let pricingPane;
+import {mountPeriods} from './periods.mjs';
+let periodPane;
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
 import {mountCollection} from './collection.mjs';
@@ -90,7 +92,7 @@ function updateButtons() {
   for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
   for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
-  pricingPane?.setBusy(busy);
+  pricingPane?.setBusy(busy);periodPane?.setBusy(busy);
 }
 
 function renderRuns() {
@@ -129,12 +131,13 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
   const run = selectedReport?.run;
   pricingPane?.renderRun(selectedReport);
+  periodPane?.renderRun(selectedReport);
   $('empty-run').hidden = Boolean(run);
   $('selected-run').hidden = !run;
   if (!run) return;
@@ -262,7 +265,7 @@ async function perform(intent) {
     if (intent.success) await intent.success(result);
     notify(typeof intent.message === 'function' ? intent.message(result) : intent.message || 'Saved.');
   } catch (error) {
-    if (error.status === 409 && ['STALE_WORKSPACE','STALE_REVIEW'].includes(error.code)) {
+    if (error.status === 409 && ['STALE_WORKSPACE','STALE_REVIEW','STALE_PERIOD'].includes(error.code)) {
       intent.reloaded = false; pendingIntent = intent;
       $('conflict-text').textContent = error.message + ' Your submitted changes remain in this tab. Load the saved version, inspect it, then explicitly reapply your changes.';
       $('conflict').hidden = false; notify('The saved version changed. Your submitted draft is retained.',true);
@@ -306,6 +309,8 @@ function renderComparison() {
   if (!comparison) return;
   const summary = comparison.summary;
   $('compare-metrics').innerHTML = metrics([['Added events',summary.addedEvents],['Changed events',summary.changedEvents],['Removed events',summary.removedEvents],['New exceptions',summary.newExceptions],['Resolved exceptions',summary.resolvedExceptions]]);
+  const scopeLabel = value => value ? value.from + ' inclusive → ' + value.until + ' exclusive' : 'All recorded activity';
+  $('compare-scope').textContent = (comparison.scope?.sameBounds ? 'Same recorded-activity interval.' : 'The selected runs use different recorded-activity intervals. Added and removed rows can reflect the changed boundaries.') + '\nBaseline: ' + scopeLabel(comparison.scope?.baseline) + '\nCurrent: ' + scopeLabel(comparison.scope?.current) + '\nBoth runs verify their full captured sources before period selection. Native time is capture time; recovered time is import time.';
   const kind = comparison.view;
   if (kind === 'changed' || kind === 'options') {
     $('compare-head').innerHTML = '<tr><th scope="col">' + (kind === 'changed' ? 'Event / route' : 'Payment option') + '</th><th scope="col">Baseline: ' + esc(comparison.baseline.name) + '</th><th scope="col">Current: ' + esc(comparison.current.name) + '</th></tr>';
@@ -403,6 +408,12 @@ async function importRecovery(previewId) {
 }
 
 pricingPane = await mountPricing({api,perform,operator,attempt,notify,openArea,loadRun});
+periodPane = await mountPeriods({api,perform,operator,attempt,notify,openArea,loadRun,
+  compare:async (current,baseline) => {
+    $('compare-current').value=current;$('compare-baseline').value=baseline;$('compare-view').value='options';
+    $('compare-current').dataset.chosen=$('compare-baseline').dataset.chosen='true';
+    await compareRuns(0);openArea('compare');
+  }});
 
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
 document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));

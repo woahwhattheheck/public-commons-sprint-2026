@@ -68,6 +68,22 @@ that retains both original files. Earlier runs keep their own pricing sources.
 The [complete pricing workflow](PRICING.md) covers original downloads, selected
 terms, source-inclusive export, revision conflicts, and reopening.
 
+## Recorded-activity periods and closes
+
+Open **Periods & closes** to save an exact UTC interval and retain its definition
+versions. The current selection appears above every operator area. Each queued
+run pins that definition while capturing the complete original source. The
+engine verifies every captured native and recovered record before selecting
+rows for the existing summaries. Native rows use capture time; recovered rows
+use import time.
+
+Retain a named close from a completed period run, including its open exceptions
+and frozen review notes. Compare later captures or definitions through the
+original comparison, inspect frozen notes beside current reviews, download the
+original source-inclusive archive, and reopen the same retained workspace.
+The [complete period workflow](PERIODS.md) covers source scope, immutable close
+revisions, exact CLI bounds, and the existing workspace API.
+
 ## Recover an already completed purchase
 
 The original recovery module handles a completed SF31 purchase whose native request, outcome, and optional delivered response were retained outside SF98. Its input and source-binding format is documented in [the original recovery guide](../RECOVERY.md). It keeps that origin explicit and uses the original network-specific SF86 verifier.
@@ -147,6 +163,11 @@ If the archive contains `sources/recovered/`, add:
 ```
 
 The explicit directory preserves the captured recovery source during reproduction, including an intentionally empty connected collection.
+
+For a period-selected run, also use the exact `--period-from` and `--period-until`
+values printed in the archive's `START.txt`. The captured source remains complete;
+the original engine selects the interval after full-source verification. A period
+close additionally includes `period-close.json` and its immutable review snapshot.
 
 Workspace state is atomically replaced and fsynced under the existing Linux filesystem lease. One server owns a given workspace directory. Stopping and reopening preserves completed runs, imported files, recovery reviews and attempts, review history, and exports. If the process stops during a run, reopening marks that run interrupted and retains any captured files; the operator can capture current sources as a new run. An interrupted recovery import can be retried from its saved review, including a native entry completed immediately before the interruption. Earlier completed results and downloads stay available. Stop the server before copying the entire private workspace for an operating-system backup.
 
