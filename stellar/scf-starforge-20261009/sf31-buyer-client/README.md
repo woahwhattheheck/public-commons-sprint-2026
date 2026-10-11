@@ -12,6 +12,12 @@ The interface deliberately cannot infer consent from agent text, sign Stellar tr
 
 ## Usage
 
+To keep a returned dataset or other response as a local file, use the additive
+[response-file writer](SAVING_RESPONSES.md). Prepare the destination before the
+buyer call, then stream the original response to a create-only file with a byte
+limit and download deadline. Payment approval, receipts and recovery stay with
+the existing buyer and ledger.
+
 ```js
 import { X402BuyerClient } from './buyer.mjs';
 const buyer = new X402BuyerClient();
