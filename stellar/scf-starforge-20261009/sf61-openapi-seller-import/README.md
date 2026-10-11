@@ -1,5 +1,7 @@
 # OpenAPI seller import
 
+For complete merchant onboarding from OpenAPI, split source files or an existing Postman collection, start with the [customer onboarding guide](ONBOARDING.md). It connects source review, the maintained CLI and Node API, saved merchant packages, native release operation and buyer handover.
+
 Turn selected routes from an existing OpenAPI 3.0 or 3.1 JSON description into x402 v2
 seller metadata. The adapter imports the original SF30 `createSellerDiscovery`
 compiler and SF25 `validateBazaarExtension` acceptance function. It avoids a

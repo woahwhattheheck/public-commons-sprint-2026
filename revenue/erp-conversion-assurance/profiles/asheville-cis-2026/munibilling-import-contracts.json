@@ -1,0 +1,1782 @@
+{
+  "schema": "asheville.munibilling-positional-contracts.v1",
+  "observedDate": "2026-10-11",
+  "profiles": [
+    {
+      "id": "munibilling-customers-native-pdf",
+      "kind": "customers",
+      "label": "customers · published 30-field PDF mapping",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/477331703/child/attachment/att1020854280/download",
+        "sha256": "49ecef00820662152d55c7d897c454e7af6640888253d47d5211fb577bc9a292",
+        "bytes": 219903
+      },
+      "configuration": {
+        "delimited": "YES",
+        "quote": "NO",
+        "include_header": "YES",
+        "field_delimiter": "COMMA",
+        "quote_character": "DOUBLE QUOTE",
+        "file_name": "OPTIONAL",
+        "file_extension": "csv",
+        "row_delimiter": "CRLF",
+        "file_type": "CUSTOMER EXPORT",
+        "record_match": "ACCOUNT NUMBER"
+      },
+      "fields": [
+        {
+          "position": 0,
+          "label": "INSERT/UPDATE/NONE PARCEL",
+          "exportField": "UPDATE",
+          "importField": "import.parcel_stage_type",
+          "required": "YES",
+          "type": "TEXT",
+          "values": [
+            "INSERT",
+            "UPDATE",
+            "NONE"
+          ],
+          "notes": [
+            "Original table specifies INSERT for new implementations; UPDATE updates an existing record; NONE leaves it unchanged."
+          ]
+        },
+        {
+          "position": 1,
+          "label": "PARCEL NUMBER",
+          "exportField": "parcels.account_number",
+          "importField": "import.parcel_number",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Preserve the complete text identity, including leading/trailing zeroes and punctuation. Original table asks to review duplicates with the client.",
+            "Native description identifies the property/EDU number as stable; it may be the same as the customer account number."
+          ]
+        },
+        {
+          "position": 2,
+          "label": "ACCOUNT TYPE",
+          "exportField": "account_types.name",
+          "importField": "import.raw_account_type",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Case-sensitive configured label; verify against the provider UI. Required for inserting customer and parcel records."
+          ]
+        },
+        {
+          "position": 3,
+          "label": "ACCOUNT CATEGORY",
+          "exportField": "account_categories.name",
+          "importField": "import.raw_account_category",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Case-sensitive configured label; verify against the provider UI. Required for inserting customer and parcel records."
+          ]
+        },
+        {
+          "position": 4,
+          "label": "INSERT/UPDATE/NONE CUSTOMER",
+          "exportField": "UPDATE",
+          "importField": "import.customer_stage_type",
+          "required": "YES",
+          "type": "TEXT",
+          "values": [
+            "INSERT",
+            "UPDATE",
+            "NONE"
+          ],
+          "notes": [
+            "Original table specifies INSERT for new implementations; UPDATE updates an existing record; NONE leaves it unchanged."
+          ]
+        },
+        {
+          "position": 5,
+          "label": "CUSTOMER ID Number",
+          "exportField": "customers.legacy_customer_id",
+          "importField": "import.legacy_customer_id",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Original table says no duplicates and permits referencing old or new account numbers during implementation."
+          ]
+        },
+        {
+          "position": 6,
+          "label": "ACCOUNT #",
+          "exportField": "customers.account_number",
+          "importField": "import.account_number",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Preserve the complete text identity, including leading/trailing zeroes and punctuation. Original table asks to review duplicates with the client."
+          ]
+        },
+        {
+          "position": 7,
+          "label": "LASTNAME/BUSINESS",
+          "exportField": "customers.last_name",
+          "importField": "import.last_name",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 8,
+          "label": "FIRST NAME",
+          "exportField": "customers.first_name",
+          "importField": "import.first_name",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 9,
+          "label": "BILL ADDRESS LINE 1",
+          "exportField": "customers.address_line1",
+          "importField": "import.bill_address_1",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 10,
+          "label": "BILL ADDRESS LINE 2",
+          "exportField": "customers.address_line2",
+          "importField": "import.bill_address_2",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 11,
+          "label": "BILL CITY",
+          "exportField": "customers.city",
+          "importField": "import.bill_city",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 12,
+          "label": "BILL STATE",
+          "exportField": "customer_state",
+          "importField": "import.raw_bill_state",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 13,
+          "label": "BILL ZIP",
+          "exportField": "customers.zipcode",
+          "importField": "import.bill_zip_code",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 14,
+          "label": "BILL ADDRESS DIFFERENT THAN SERVICE ADDRESS",
+          "exportField": "customers.bill_address_different",
+          "importField": "import.bill_address_different",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "BOOLEAN",
+          "values": [
+            "TRUE",
+            "FALSE"
+          ],
+          "notes": []
+        },
+        {
+          "position": 15,
+          "label": "CUSTOMER NOTE",
+          "exportField": "customers.note",
+          "importField": "import.customer_note",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 16,
+          "label": "ESTABLISH DATE",
+          "exportField": "customers.establish_date",
+          "importField": "import.establish_date",
+          "required": "YES",
+          "type": "DATE",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 17,
+          "label": "CLOSE DATE",
+          "exportField": "customers.close_date",
+          "importField": "import.close_date",
+          "required": "YES - IF LOADING INACTIVE CUSTOMER",
+          "type": "DATE",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 18,
+          "label": "BILLING PHONE",
+          "exportField": "customers.billing_phone",
+          "importField": "import.billing_phone",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 19,
+          "label": "SERVICE PHONE",
+          "exportField": "customers.service_phone",
+          "importField": "import.service_phone",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 20,
+          "label": "CELL PHONE",
+          "exportField": "customers.cell_phone",
+          "importField": "import.cell_phone",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 21,
+          "label": "WORK PHONE",
+          "exportField": "customers.work_phone",
+          "importField": "import.work_phone",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 22,
+          "label": "CUSTOM FIELD 1",
+          "exportField": "customers.custom_field_1",
+          "importField": "import.custom_field_1",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Optional custom fields are not implicitly populated or published; the source specifically calls out potentially sensitive identifiers."
+          ]
+        },
+        {
+          "position": 23,
+          "label": "CUSTOM FIELD 2",
+          "exportField": "customers.custom_field_2",
+          "importField": "import.custom_field_2",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Optional custom fields are not implicitly populated or published; the source specifically calls out potentially sensitive identifiers."
+          ]
+        },
+        {
+          "position": 24,
+          "label": "CUSTOM FIELD 3",
+          "exportField": "customers.custom_field_3",
+          "importField": "import.custom_field_3",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Optional custom fields are not implicitly populated or published; the source specifically calls out potentially sensitive identifiers."
+          ]
+        },
+        {
+          "position": 25,
+          "label": "CUSTOM FIELD 4",
+          "exportField": "customers.custom_field_4",
+          "importField": "import.custom_field_4",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Optional custom fields are not implicitly populated or published; the source specifically calls out potentially sensitive identifiers."
+          ]
+        },
+        {
+          "position": 26,
+          "label": "CUSTOM FIELD 5",
+          "exportField": "customers.custom_field_5",
+          "importField": "import.custom_field_5",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Optional custom fields are not implicitly populated or published; the source specifically calls out potentially sensitive identifiers."
+          ]
+        },
+        {
+          "position": 27,
+          "label": "CUSTOM FIELD 6",
+          "exportField": "customers.custom_field_6",
+          "importField": "import.custom_field_6",
+          "required": "OPTIONAL",
+          "type": "TEXT",
+          "values": null,
+          "notes": [
+            "Optional custom fields are not implicitly populated or published; the source specifically calls out potentially sensitive identifiers."
+          ]
+        },
+        {
+          "position": 28,
+          "label": "CUSTOMER EMAIL",
+          "exportField": "customers.email",
+          "importField": "import.email",
+          "required": "YES - IF CUSTOMER WANTS E-STATEMENTS",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 29,
+          "label": "EMAIL BILL TO CUSTOMER",
+          "exportField": "customers.deliver_bill_email",
+          "importField": "import.deliver_bill_email",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "BOOLEAN",
+          "values": [
+            "TRUE",
+            "FALSE"
+          ],
+          "notes": [
+            "Verify actual e-statement preference; an email address used only for communication is not an e-billing instruction."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "munibilling-payments-native-pdf",
+      "kind": "payments",
+      "label": "payments · published 11-field PDF mapping",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att1021050913/download",
+        "sha256": "98888b6c3896fdd862589869c872e4dca1a300c10b86119e4ead70514e54c475",
+        "bytes": 209382
+      },
+      "configuration": null,
+      "fields": [
+        {
+          "position": 0,
+          "label": "ACCOUNT",
+          "exportField": null,
+          "importField": "payment_stages.raw_identifier",
+          "required": "YES",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Native account identity; review duplicates, including active and inactive accounts."
+          ]
+        },
+        {
+          "position": 1,
+          "label": "PAYMENT TYPE",
+          "exportField": null,
+          "importField": "payment_stages.raw_payment_type",
+          "required": "YES",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Case-sensitive configured payment type."
+          ]
+        },
+        {
+          "position": 2,
+          "label": "PAYMENT DATE",
+          "exportField": null,
+          "importField": "payment_stages.payment_date",
+          "required": "YES",
+          "type": "date",
+          "values": null,
+          "notes": [
+            "mm/dd/yyyy"
+          ]
+        },
+        {
+          "position": 3,
+          "label": "AMOUNT",
+          "exportField": null,
+          "importField": "payment_stages.amount",
+          "required": "YES",
+          "type": "decimal(16,2)",
+          "values": null,
+          "notes": [
+            "Positive; no commas or dollar symbol."
+          ]
+        },
+        {
+          "position": 4,
+          "label": "REFERENCE",
+          "exportField": null,
+          "importField": "payment_stages.reference",
+          "required": "NO",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Reference/check number when applicable."
+          ]
+        },
+        {
+          "position": 5,
+          "label": "NOTE",
+          "exportField": null,
+          "importField": "payment_stages.note",
+          "required": "NO",
+          "type": "varchar",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 6,
+          "label": "POSTED CUSTOMER",
+          "exportField": null,
+          "importField": "payment_stages.posted_customer",
+          "required": "YES",
+          "type": "bool",
+          "values": null,
+          "notes": [
+            "TRUE/FALSE"
+          ]
+        },
+        {
+          "position": 7,
+          "label": "POSTED CUSTOMER DATE",
+          "exportField": null,
+          "importField": "payment_stages.posted_customer_date",
+          "required": "YES",
+          "type": "date",
+          "values": null,
+          "notes": [
+            "mm/dd/yyyy; native table says payment date."
+          ]
+        },
+        {
+          "position": 8,
+          "label": "POSTED ACCOUNTING",
+          "exportField": null,
+          "importField": "payment_stages.posted_accounting",
+          "required": "YES",
+          "type": "bool",
+          "values": null,
+          "notes": [
+            "TRUE/FALSE"
+          ]
+        },
+        {
+          "position": 9,
+          "label": "POSTED ACCOUNTING DATE",
+          "exportField": null,
+          "importField": "payment_stages.posted_accounting_date",
+          "required": "YES",
+          "type": "date",
+          "values": null,
+          "notes": [
+            "mm/dd/yyyy; native table says payment date."
+          ]
+        },
+        {
+          "position": 10,
+          "label": "BILLING TYPE",
+          "exportField": null,
+          "importField": "payment_stages.raw_billing_type",
+          "required": "YES",
+          "type": "varcher",
+          "values": null,
+          "notes": [
+            "Source spelling retained; case-sensitive configured billing type."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "munibilling-bills-native-pdf",
+      "kind": "bills",
+      "label": "bills · published 19-field PDF mapping",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att1020887058/download",
+        "sha256": "dafc6c361dd5f48d389944e3d1647d9efc630eb7f27db4ad39952a289053f7f1",
+        "bytes": 201681
+      },
+      "configuration": null,
+      "fields": [
+        {
+          "position": 0,
+          "label": "ACCOUNT",
+          "exportField": null,
+          "importField": "imports.raw_identifier",
+          "required": "YES",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Review duplicate customer identities."
+          ]
+        },
+        {
+          "position": 1,
+          "label": "BILLED DATE",
+          "exportField": null,
+          "importField": "imports.raw_bill_date",
+          "required": "YES",
+          "type": "date",
+          "values": null,
+          "notes": [
+            "mm/dd/yyyy. Native DTYPE says date while the native validation note says RAW fields must be TEXT; preserve this unresolved source distinction."
+          ]
+        },
+        {
+          "position": 2,
+          "label": "AMOUNT",
+          "exportField": null,
+          "importField": "imports.amount",
+          "required": "YES",
+          "type": "numeric",
+          "values": null,
+          "notes": [
+            "Positive; no commas or dollar symbol."
+          ]
+        },
+        {
+          "position": 3,
+          "label": "BILLING TYPE",
+          "exportField": null,
+          "importField": "imports.raw_billing_type",
+          "required": "YES",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Case-sensitive configured billing type."
+          ]
+        },
+        {
+          "position": 4,
+          "label": "RATE TYPE",
+          "exportField": null,
+          "importField": "imports.raw_rate",
+          "required": "NO",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Source asks for provider review."
+          ]
+        },
+        {
+          "position": 5,
+          "label": "NOTE",
+          "exportField": null,
+          "importField": "imports.note",
+          "required": "NO",
+          "type": "varchar/text",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 6,
+          "label": "REFERENCE",
+          "exportField": null,
+          "importField": "imports.reference",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 7,
+          "label": "POSTED CUSTOMER",
+          "exportField": null,
+          "importField": "bill_stages.posted_customer",
+          "required": "YES",
+          "type": "bool",
+          "values": null,
+          "notes": [
+            "Must contain TRUE or FALSE; original table explicitly says blank does not default."
+          ]
+        },
+        {
+          "position": 8,
+          "label": "POSTED CUSTOMER DATE",
+          "exportField": null,
+          "importField": "bill_stages.posted_customer_date",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": [
+            "Source records unresolved swapped month/day behavior."
+          ]
+        },
+        {
+          "position": 9,
+          "label": "POSTED ACCOUNTING",
+          "exportField": null,
+          "importField": "bill_stages.posted_accounting",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": [
+            "Source asks for provider review."
+          ]
+        },
+        {
+          "position": 10,
+          "label": "POSTED ACCOUNTING DATE",
+          "exportField": null,
+          "importField": "bill_stages.posted_accounting_date",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": [
+            "Source records unresolved swapped month/day behavior."
+          ]
+        },
+        {
+          "position": 11,
+          "label": "CONSUMPTION",
+          "exportField": null,
+          "importField": "bills.consumption",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": [
+            "Source records that its attempted load did not import a value."
+          ]
+        },
+        {
+          "position": 12,
+          "label": "START READ",
+          "exportField": null,
+          "importField": "bill_stages.start_reading",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": [
+            "Source records that its attempted load did not import a value."
+          ]
+        },
+        {
+          "position": 13,
+          "label": "START READ",
+          "exportField": null,
+          "importField": "imports.raw_start_reading_date",
+          "required": null,
+          "type": "date",
+          "values": null,
+          "notes": [
+            "The original table shows both a reading value and a date field around this label; do not flatten them into one CSV column."
+          ]
+        },
+        {
+          "position": 14,
+          "label": "END READ",
+          "exportField": null,
+          "importField": "bill_stages.end_reading",
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": [
+            "Source records that its attempted load did not import a value."
+          ]
+        },
+        {
+          "position": 15,
+          "label": "END READ",
+          "exportField": null,
+          "importField": "imports.raw_end_reading_date",
+          "required": null,
+          "type": "date",
+          "values": null,
+          "notes": [
+            "The original table shows both a reading value and a date field around this label; do not flatten them into one CSV column."
+          ]
+        },
+        {
+          "position": 16,
+          "label": "DUE DATE",
+          "exportField": null,
+          "importField": "imports.penalty_date",
+          "required": null,
+          "type": "text",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 17,
+          "label": "DISCOUNT DUE",
+          "exportField": null,
+          "importField": "bill.discount_amount",
+          "required": "NO",
+          "type": "numeric",
+          "values": null,
+          "notes": [
+            "Source asks for provider review."
+          ]
+        },
+        {
+          "position": 18,
+          "label": "DISCOUNT DATE",
+          "exportField": null,
+          "importField": "bill.discount_date",
+          "required": "NO",
+          "type": "date",
+          "values": null,
+          "notes": [
+            "mm/dd/yyyy. Source records that its attempted load did not import a value."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "munibilling-deposits-native-pdf",
+      "kind": "deposits",
+      "label": "deposits · published 4-field PDF mapping",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att1020788759/download",
+        "sha256": "00f0ee1d2611e168214705ae4470e2b6be97b32d3c22f250ee5aa900ef5eb90f",
+        "bytes": 194591
+      },
+      "configuration": null,
+      "fields": [
+        {
+          "position": 0,
+          "label": "ACCT#",
+          "exportField": null,
+          "importField": null,
+          "required": "YES",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Review duplicate native account numbers."
+          ]
+        },
+        {
+          "position": 1,
+          "label": "DEPOSIT AMOUNT",
+          "exportField": null,
+          "importField": null,
+          "required": "YES",
+          "type": "decimal",
+          "values": null,
+          "notes": [
+            "Positive; no commas or dollar symbol."
+          ]
+        },
+        {
+          "position": 2,
+          "label": "DEPOSIT TYPE",
+          "exportField": null,
+          "importField": null,
+          "required": "YES",
+          "type": "varchar",
+          "values": null,
+          "notes": [
+            "Case-sensitive type agreed by client and implementation specialist."
+          ]
+        },
+        {
+          "position": 3,
+          "label": "DEPOSIT DATE",
+          "exportField": null,
+          "importField": null,
+          "required": "YES",
+          "type": "date",
+          "values": null,
+          "notes": [
+            "mm/dd/yyyy; source states dates older than current date minus 15 years cannot be imported."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "munibilling-credits-native-pdf",
+      "kind": "credits",
+      "label": "credits · published 8-field PDF mapping",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att1020428323/download",
+        "sha256": "89b666c94447b8e9fe5e848fb995921d70a7e38323d6990f95d55ea4fff9d387",
+        "bytes": 197357
+      },
+      "configuration": {
+        "delimited": "YES",
+        "quote": "NO",
+        "include_header": "NO",
+        "field_delimiter": "COMMA",
+        "quote_character": "DOUBLE QUOTE",
+        "file_name": "OPTIONAL",
+        "file_extension": "csv",
+        "row_delimiter": "CRLF",
+        "file_type": "PAYMENT",
+        "record_match": "ACCOUNT NUMBER"
+      },
+      "fields": [
+        {
+          "position": 0,
+          "label": "CUSTOMER ACCOUNT #",
+          "exportField": null,
+          "importField": "imports.raw_identifier",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 1,
+          "label": "ADJUSTMENT DATE",
+          "exportField": null,
+          "importField": "imports.payment_date",
+          "required": "YES",
+          "type": "DATE",
+          "values": null,
+          "notes": [
+            "%m/%d/%Y"
+          ]
+        },
+        {
+          "position": 2,
+          "label": "DATE POSTED TO CUSTOMER",
+          "exportField": null,
+          "importField": "imports.posted_customer_date",
+          "required": "YES",
+          "type": "DATE",
+          "values": null,
+          "notes": [
+            "%m/%d/%Y"
+          ]
+        },
+        {
+          "position": 3,
+          "label": "ADJUSTMENT AMOUNT",
+          "exportField": null,
+          "importField": "imports.amount",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 4,
+          "label": "ADJUSTMENT BILLING TYPE",
+          "exportField": null,
+          "importField": "imports.raw_billing_type",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 5,
+          "label": "ADJUSTMENT NOTE",
+          "exportField": null,
+          "importField": "imports.note",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 6,
+          "label": "ADJUSTMENT FLAG",
+          "exportField": null,
+          "importField": "imports.is_adjustment",
+          "required": "YES",
+          "type": "BOOLEAN",
+          "values": null,
+          "notes": [
+            "TRUE/FALSE"
+          ]
+        },
+        {
+          "position": 7,
+          "label": "ADJUSTMENT POSTED TO CUSTOMER",
+          "exportField": null,
+          "importField": "imports.posted_customer",
+          "required": "YES",
+          "type": "BOOLEAN",
+          "values": null,
+          "notes": [
+            "TRUE/FALSE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "munibilling-debits-native-pdf",
+      "kind": "debits",
+      "label": "debits · published 7-field PDF mapping",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att1020624978/download",
+        "sha256": "a47816666b35bcb8891a1e1ec5cf80e5016d1565d4efb971f374e35d4feede57",
+        "bytes": 197371
+      },
+      "configuration": {
+        "delimited": "YES",
+        "quote": "NO",
+        "include_header": "NO",
+        "field_delimiter": "COMMA",
+        "quote_character": "DOUBLE QUOTE",
+        "file_name": "OPTIONAL",
+        "file_extension": "csv",
+        "row_delimiter": "CRLF",
+        "file_type": "BILL",
+        "record_match": "ACCOUNT NUMBER"
+      },
+      "fields": [
+        {
+          "position": 0,
+          "label": "CUSTOMER ACCOUNT #",
+          "exportField": null,
+          "importField": "imports.raw_identifier",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 1,
+          "label": "ADJUSTMENT DATE",
+          "exportField": null,
+          "importField": "imports.bill_date",
+          "required": "YES",
+          "type": "DATE",
+          "values": null,
+          "notes": [
+            "%m/%d/%Y"
+          ]
+        },
+        {
+          "position": 2,
+          "label": "ADJUSTMENT AMOUNT",
+          "exportField": null,
+          "importField": "imports.amount",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 3,
+          "label": "ADJUSTMENT BILLING TYPE",
+          "exportField": null,
+          "importField": "imports.raw_billing_type",
+          "required": "YES",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 4,
+          "label": "ADJUSTMENT NOTE",
+          "exportField": null,
+          "importField": "imports.note",
+          "required": "HIGHLY RECOMMENDED",
+          "type": "TEXT",
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 5,
+          "label": "ADJUSTMENT FLAG",
+          "exportField": null,
+          "importField": "imports.is_adjustment",
+          "required": "YES",
+          "type": "BOOLEAN",
+          "values": null,
+          "notes": [
+            "TRUE/FALSE"
+          ]
+        },
+        {
+          "position": 6,
+          "label": "ADJUSTMENT POSTED TO CUSTOMER",
+          "exportField": null,
+          "importField": "imports.posted_customer",
+          "required": "YES",
+          "type": "BOOLEAN",
+          "values": null,
+          "notes": [
+            "TRUE/FALSE"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "munibilling-customer_csv-observed-header",
+      "kind": "customer",
+      "label": "customer_csv · actual 49-column CSV header",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att315031628/download",
+        "sha256": "db5710b986eb1f095214cc48a3aeb229e64787214e5281a1c9769cd492910071",
+        "bytes": 137962
+      },
+      "configuration": {
+        "include_header": "YES"
+      },
+      "expectedHeaders": [
+        "INSERT/UPDATE",
+        "INSERT/UPDATE",
+        "CID",
+        "Customer.",
+        "LastName",
+        "FirstName",
+        "MailAddress1",
+        "MailAddress2",
+        "MailAddressCity",
+        "MailAddressState",
+        "MailAddressZip",
+        "MailAddressDiff",
+        "CustomerNote",
+        "CustomerEstDate",
+        "CustomerCloseDate",
+        "",
+        "BillingPhone",
+        "ServicePhone",
+        "CellPhone",
+        "WorkPhone",
+        "Custom1",
+        "Custom2",
+        "Custom3",
+        "Custom4",
+        "Custom5",
+        "Custom6",
+        "Parcel.",
+        "ParcelAux",
+        "ParcelAddress1",
+        "ParcelAddress2",
+        "ParcelCity",
+        "ParcelState",
+        "ParcelZip",
+        "AccountType",
+        "AccountCategory",
+        "Group",
+        "RouteCode",
+        "ParcelSort2",
+        "ParcelSort3",
+        "Parcen",
+        "Rate1",
+        "Rate2",
+        "Rate3",
+        "Rate4",
+        "Rate5",
+        "EmailAddress",
+        "EmailBill",
+        "Latitude",
+        "Longitude"
+      ],
+      "fields": [
+        {
+          "position": 0,
+          "label": "INSERT/UPDATE",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 1,
+          "label": "INSERT/UPDATE",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 2,
+          "label": "CID",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 3,
+          "label": "Customer.",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 4,
+          "label": "LastName",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 5,
+          "label": "FirstName",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 6,
+          "label": "MailAddress1",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 7,
+          "label": "MailAddress2",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 8,
+          "label": "MailAddressCity",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 9,
+          "label": "MailAddressState",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 10,
+          "label": "MailAddressZip",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 11,
+          "label": "MailAddressDiff",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 12,
+          "label": "CustomerNote",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 13,
+          "label": "CustomerEstDate",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 14,
+          "label": "CustomerCloseDate",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 15,
+          "label": "",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 16,
+          "label": "BillingPhone",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 17,
+          "label": "ServicePhone",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 18,
+          "label": "CellPhone",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 19,
+          "label": "WorkPhone",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 20,
+          "label": "Custom1",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 21,
+          "label": "Custom2",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 22,
+          "label": "Custom3",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 23,
+          "label": "Custom4",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 24,
+          "label": "Custom5",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 25,
+          "label": "Custom6",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 26,
+          "label": "Parcel.",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 27,
+          "label": "ParcelAux",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 28,
+          "label": "ParcelAddress1",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 29,
+          "label": "ParcelAddress2",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 30,
+          "label": "ParcelCity",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 31,
+          "label": "ParcelState",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 32,
+          "label": "ParcelZip",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 33,
+          "label": "AccountType",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 34,
+          "label": "AccountCategory",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 35,
+          "label": "Group",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 36,
+          "label": "RouteCode",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 37,
+          "label": "ParcelSort2",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 38,
+          "label": "ParcelSort3",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 39,
+          "label": "Parcen",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 40,
+          "label": "Rate1",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 41,
+          "label": "Rate2",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 42,
+          "label": "Rate3",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 43,
+          "label": "Rate4",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 44,
+          "label": "Rate5",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 45,
+          "label": "EmailAddress",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 46,
+          "label": "EmailBill",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 47,
+          "label": "Latitude",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 48,
+          "label": "Longitude",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        }
+      ]
+    },
+    {
+      "id": "munibilling-payments_csv-observed-header",
+      "kind": "payments",
+      "label": "payments_csv · actual 7-column CSV header",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att315162697/download",
+        "sha256": "6468988478bd75f2158370b804970da4f0e53e3d4b34d863b284e8ea30a8d187",
+        "bytes": 56250
+      },
+      "configuration": {
+        "include_header": "YES"
+      },
+      "expectedHeaders": [
+        "Acct #",
+        "Charge",
+        "Bill Type",
+        "Bill Date",
+        "reference",
+        "note",
+        "POSTED"
+      ],
+      "fields": [
+        {
+          "position": 0,
+          "label": "Acct #",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 1,
+          "label": "Charge",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 2,
+          "label": "Bill Type",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 3,
+          "label": "Bill Date",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 4,
+          "label": "reference",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 5,
+          "label": "note",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 6,
+          "label": "POSTED",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        }
+      ]
+    },
+    {
+      "id": "munibilling-deposits_csv-observed-header",
+      "kind": "deposits",
+      "label": "deposits_csv · actual 4-column CSV header",
+      "source": {
+        "url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att315097148/download",
+        "sha256": "a71f3520e101db9446b1237dfe97c0f496ace8148bc84bfd44c5cbe420198d19",
+        "bytes": 9228
+      },
+      "configuration": {
+        "include_header": "YES"
+      },
+      "expectedHeaders": [
+        "customers.account_number",
+        "customers.establish_date",
+        "amount",
+        "type"
+      ],
+      "fields": [
+        {
+          "position": 0,
+          "label": "customers.account_number",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 1,
+          "label": "customers.establish_date",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 2,
+          "label": "amount",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        },
+        {
+          "position": 3,
+          "label": "type",
+          "exportField": null,
+          "importField": null,
+          "required": null,
+          "type": null,
+          "values": null,
+          "notes": []
+        }
+      ]
+    }
+  ],
+  "distinctions": [
+    "Each published PDF mapping and each observed CSV header is a separate selectable format.",
+    "The five-column bills sample has no observed header and is not offered as an inferred template.",
+    "The older payment prose leaves column 04 unnamed. It is retained as a source distinction, not a manufactured field.",
+    "The seven-column file named NEW CUSTOMER PAYMENTS IMPORT.csv contains Bill Type and Bill Date; choosing a canonical table is an explicit operator decision.",
+    "A locally valid export does not establish a tenant import configuration or import acceptance."
+  ],
+  "separateOlderPaymentProse": {
+    "source_url": "https://jiramb.atlassian.net/wiki/spaces/MKC/pages/261980183",
+    "ordering": "explicit zero-based column numbers in older prose; not reconciled to the separate staging PDF",
+    "columns": [
+      {
+        "column": 0,
+        "label": "Customer Account ID"
+      },
+      {
+        "column": 1,
+        "label": "Payment Amount"
+      },
+      {
+        "column": 2,
+        "label": "Payment Type"
+      },
+      {
+        "column": 3,
+        "label": "Payment Date"
+      },
+      {
+        "column": 4,
+        "label": null
+      },
+      {
+        "column": 5,
+        "label": "Additional Payment Note"
+      }
+    ]
+  },
+  "unmappedSample": {
+    "name": "bills_csv",
+    "source_url": "https://jiramb.atlassian.net/wiki/rest/api/content/261980183/child/attachment/att314343741/download",
+    "status": 200,
+    "bytes": 229193,
+    "sha256": "2a2f9648f61cc17c530a82fc81e3744bec39097c8918c49b2289e3f939cd4a54",
+    "first_row_column_count": 5,
+    "first_row_is_schema_candidate": false,
+    "header": null
+  }
+}
