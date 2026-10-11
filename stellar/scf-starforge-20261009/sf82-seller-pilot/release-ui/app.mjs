@@ -2,7 +2,7 @@ const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
 const token = sessionStorage.getItem('seller-release-token') ?? '';
-let snapshot = null, selected = null, comparison = null, busy = false;
+let snapshot = null, selected = null, comparison = null, cacheSnapshot = null, busy = false;
 const node = (tag, text, className) => { const result = document.createElement(tag); if (text !== undefined) result.textContent = text; if (className) result.className = className; return result; };
 const date = value => value ? new Date(value).toLocaleString() : '—';
 const literal = value => value === null || value === undefined ? '—' : typeof value === 'string' ? value : JSON.stringify(value, null, 2);
@@ -25,6 +25,47 @@ function buttons() {
   $('#start').disabled = !snapshot.state.active || owns || !['STOPPED'].includes(snapshot.runtime.state);
   $('#restart').disabled = !owns || !snapshot.state.active;
   $('#stop').disabled = !owns;
+  $('#cache-invalidate-all').disabled = !owns || !cacheSnapshot?.available ||
+    cacheSnapshot.instanceId !== snapshot.console.instanceId;
+  for (const button of document.querySelectorAll('[data-cache-route]')) button.disabled = $('#cache-invalidate-all').disabled;
+}
+function renderCaches(value) {
+  cacheSnapshot = value;
+  $('#cache-state').textContent = value.available
+    ? 'Running release ' + value.releaseId + '. Invalidation clears retained data; existing buyers finish their original read.'
+    : 'No active cached source. Start a release with an explicit shared GET/HEAD policy.';
+  const rows = $('#cache-routes'); rows.replaceChildren();
+  for (const [id, route] of Object.entries(value.routes ?? {})) {
+    const row = node('tr'), title = node('td');
+    title.append(node('strong', id), node('div', route.binding));
+    const policy = route.policy, configured = node('td',
+      'TTL ' + (policy.ttlMs ?? 1000) + ' ms · ' + (policy.maxEntries ?? 256) + ' entries');
+    configured.append(node('div', 'Source capacity ' + (policy.maxSourceInFlight ?? 16)));
+    const source = route.source.cache ?? route.source;
+    const cache = source.cache ?? source;
+    const activity = node('td', 'Reads ' + (source.sourceStarted ?? cache.sourceReads ?? 0) +
+      ' · shared followers ' + (cache.coalesced ?? 0) + ' · hits ' + (cache.hits ?? 0));
+    activity.append(node('div', (cache.entries ?? 0) + ' retained · ' + (cache.bytes ?? 0) + ' bytes'));
+    const details = node('details'), summary = node('summary', 'Source counters');
+    details.append(summary, node('pre', literal(route.source))); activity.append(details);
+    const action = node('td'), button = node('button', 'Invalidate'); button.dataset.cacheRoute = id;
+    button.addEventListener('click', () => invalidateCache(id)); action.append(button);
+    row.append(title, configured, activity, action); rows.append(row);
+  }
+  buttons();
+}
+async function refreshCaches() {
+  renderCaches(await request('/api/cache'));
+}
+async function invalidateCache(routeId) {
+  if (busy || !cacheSnapshot?.available) return;
+  busy = true; buttons();
+  try {
+    const result = await request('/api/cache/invalidate', { instanceId: cacheSnapshot.instanceId, ...(routeId ? { routeId } : {}) });
+    renderCaches(result);
+    notice('Source cache invalidated for ' + result.invalidatedRoutes.join(', ') + '.');
+  } catch (error) { notice(error.message, true); }
+  finally { busy = false; buttons(); }
 }
 function renderStatus(value) {
   snapshot = value;
@@ -83,6 +124,7 @@ function renderDiff(value) {
     if (change.state !== 'CHANGED') {
       const route = change.after ?? change.before;
       section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', literal(route.payment)));
+      if (route.upstream) section.append(node('small', 'Original upstream configuration and sharing policy'), node('pre', literal(route.upstream)));
     }
     for (const field of change.fields) section.append(fieldPair(field.field, field.before, field.after));
     changes.append(section);
@@ -105,6 +147,7 @@ async function refresh() {
   busy = true; buttons();
   try {
     const value = await request('/api/status'); renderStatus(value);
+    await refreshCaches();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
@@ -121,6 +164,7 @@ async function act(action) {
   busy = true; buttons(); notice(action === 'run' || action === 'restart' ? 'Starting the selected seller release…' : 'Saving operator action…');
   try {
     const value = await request('/api/' + action, payload); renderStatus(value);
+    await refreshCaches();
     if (action === 'rollback') selected = value.state.active;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
     notice(action === 'activate' || action === 'rollback' ? 'Selection saved. Use Start or Restart selected to run it.' : 'Operator action completed.');
@@ -133,4 +177,10 @@ $('#rollback').addEventListener('click', () => act('rollback'));
 $('#start').addEventListener('click', () => act('run'));
 $('#restart').addEventListener('click', () => act('restart'));
 $('#stop').addEventListener('click', () => act('stop'));
+$('#cache-refresh').addEventListener('click', async () => {
+  if (busy) return; busy = true; buttons();
+  try { await refreshCaches(); notice(); } catch (error) { notice(error.message, true); }
+  finally { busy = false; buttons(); }
+});
+$('#cache-invalidate-all').addEventListener('click', () => invalidateCache());
 refresh();
