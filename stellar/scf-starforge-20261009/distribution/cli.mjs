@@ -45,6 +45,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
+  jobs                                      Prepare and operate durable paid application jobs
+  jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
