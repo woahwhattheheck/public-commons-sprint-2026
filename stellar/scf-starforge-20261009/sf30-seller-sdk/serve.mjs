@@ -139,7 +139,7 @@ export async function startSellerService({ config, port = 8423, handlers = {},
   }
   let dispatch = (_req, res) => { res.writeHead(503, { 'retry-after': '1' }); res.end(); };
   const server = createServer((req, res) => {
-    Promise.resolve().then(() => dispatch(req, res)).catch(() => {
+    return Promise.resolve().then(() => dispatch(req, res)).catch(() => {
       if (!res.headersSent) res.writeHead(500, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       if (!res.writableEnded) res.end('{"error":"SELLER_REQUEST_FAILED"}');
     });
