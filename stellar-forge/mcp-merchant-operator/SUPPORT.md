@@ -1,18 +1,20 @@
 # Retained merchant support through the original MCP operator
 
 The merchant MCP can operate the same SF93 incidents, SF74 saved cases and SF77
-workorders used by the merchant console. An agent can read a recorded condition,
+workorders used by the merchant console. An agent can review saved registration
+profiles, operate its own original watcher and notification recovery, read a recorded condition,
 retain its original captures as a case, work through that case with the operator,
 and produce a private support handoff and workorder. The original case directory
 is shared with the support console; either interface can reopen the other's saved
 versions.
 
-These tools run through the existing authenticated HTTP or stdio provider. They
-read retained sources. They do not launch a watcher, poll a seller, request a paid
-resource, sign a payment, send a workorder or record customer acceptance. The
-original SF93 watcher continues to collect observations and send configured
-notifications. Acknowledgment through MCP updates its original incident and can
-queue the same notification that its terminal command queues.
+These tools run through the existing authenticated HTTP or stdio provider.
+Observation is explicit: `merchant_support_watch_start` runs the original SF93
+watcher against its configured local merchant endpoints and delivers its configured
+metadata-only notifications. The remaining source/case readers use retained data.
+Acknowledgment and notification recovery use the same original transactions as
+the terminal commands. Workorder preparation keeps customer acceptance and
+external workorder delivery in the operator's existing commercial workflow.
 
 ## Register the existing support inputs on the host
 
@@ -25,6 +27,12 @@ directories `0700`, source files `0600`. Prepare a support connection file:
   "schema": "stellar-forge.merchant-support-connection.v1",
   "casesDirectory": "/private/merchant/cases",
   "incidentsDirectory": "/private/merchant/incidents",
+  "profiles": {
+    "current-host": {
+      "label": "Current local merchant registration",
+      "file": "/private/merchant/intake/watch.json"
+    }
+  },
   "handoffs": {
     "retained-case": {
       "label": "Current retained merchant support case",
@@ -44,14 +52,16 @@ directories `0700`, source files `0600`. Prepare a support connection file:
 optional; when provided it is the original initialized SF93 state directory.
 `handoffs` contains complete original SF74 support files. `workspaces` contains
 original SF74 workspace files that provide a reviewed mapping for an incident's
-route. Both alias maps are optional and allow up to 32 entries each. Relative
+route. `profiles` contains original SF93 watch configuration files for deliberate
+registration or threshold changes. Each of these alias maps is optional and allows
+up to 32 entries. Relative
 paths resolve beside this support connection file. MCP inputs never select a
 filesystem path.
 
 Add `"supportConnection": "/private/merchant/support-connection.json"` to the
 existing `merchant-mcp.json`, then restart the MCP host. For a new merchant, add
 `--support /private/merchant/support-connection.json` to the existing `serve.mjs
-init` command. Its OpenAPI, saved-package and Python initialization modes all
+init` command. Its OpenAPI, saved-package, Python and DuckDB initialization modes all
 support this option. The original source aliases, release history, running seller
 and catalog connection retain their usual meanings. A support connection can
 also be used with an existing host configuration whose source alias map is empty;
@@ -60,7 +70,121 @@ case operation does not require an active seller release.
 The customer export root from `exportsDirectory` must be a real private directory.
 Support exports use named new subdirectories there, alongside the existing
 customer SDK exports. The connection stores references to the original inputs;
-it does not copy an incident store or alter the operator's capture configuration.
+it does not copy an incident store. Applying a profile explicitly changes the
+original capture configuration through SF93's existing transaction.
+
+## Operate the original observer and notification recovery
+
+Initialize the incident directory once on its host with the existing SF93 command
+and a private watch configuration. The original
+[incident operations guide](../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/INCIDENT_OPERATIONS.md)
+describes local seller/operations origins, thresholds, capture retention and the
+metadata-only webhook contract. For example, from the source checkout:
+
+```sh
+node stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-cli.mjs init \
+  --state /private/merchant/incidents --config /private/merchant/intake/watch.json
+```
+
+Supply the notification URL and signing key using the original configuration's
+environment references when starting the MCP host. Neither value is an MCP
+argument, profile value or returned notification field. Profiles name those
+environment references and retain the original local merchant origins and
+thresholds, so the operator can inspect what a change will observe. Editing a
+profile file alone does not change the running watcher.
+
+| Tool | Operation |
+| --- | --- |
+| `merchant_support_profiles` | List declared profiles and the current original configuration, or inspect one profile, its digest and concrete merchant/settings changes. |
+| `merchant_support_configure` | Apply the inspected profile with its exact file digest and current integer configuration revision. |
+| `merchant_support_watch_status` | Read the saved original worker record, this MCP process's owned instance and its last completion/failure. |
+| `merchant_support_watch_start` | Acquire the original worker lease and start observation for the exact inspected configuration revision/hash. |
+| `merchant_support_watch_stop` | Abort and await only this MCP process's watcher, using its exact returned instance ID. |
+| `merchant_notifications` | Inspect/filter/page original events, their attempts, delivery state and retry reason. |
+| `merchant_incident_notify` | Queue a new reminder for the exact incident revision using the currently configured destination. |
+| `merchant_notification_update` | Retry an original paused/exhausted event, or cancel an unfinished event, with its exact attempt count and named operator. |
+
+Start with `merchant_support_profiles` without arguments. Inspect a declared
+profile when its original merchant registration, thresholds or notification
+settings need changing:
+
+```json
+{"profile":"current-host"}
+```
+
+The result includes the compiled original `configuration`, `sourceSha256`,
+`configHash`, `current.configRevision`, and changes to merchant registrations,
+their order and other settings. Apply precisely that inspected source:
+
+```json
+{
+  "profile":"current-host",
+  "expectedSourceSha256":"<sourceSha256 from profile inspection>",
+  "expectedConfigRevision":1
+}
+```
+
+An unchanged profile retains its existing configuration revision. Use the
+returned values instead of assuming the revision increased. Use that current
+revision and configuration hash to call
+`merchant_support_watch_start`:
+
+```json
+{"expectedConfigRevision":2,"expectedConfigHash":"<current original configHash>"}
+```
+
+The original startup transaction checks both expectations while it owns the
+worker lease. A concurrently changed configuration is refused before replacing
+the saved worker record or polling. Existing CLI/service launches remain
+compatible. A worker already holding that directory's kernel lease remains its
+owner; MCP reports the original lease conflict and cannot stop that worker.
+
+Retain the returned `owned.instanceId`. `owned.startedConfiguration` records the
+configuration accepted at this start; top-level `configRevision`/`configHash`
+describe the current store, including a later explicit profile change. The
+original worker notices configuration changes through its existing sweep logic.
+Changes that retire a registration retain the original `RETIRED` distinction;
+they do not become observed recovery.
+
+After a lost start response, inspect `merchant_support_watch_status`. Its `owned`
+field identifies this MCP process's actual watcher. The saved `worker` record is
+also useful after a crash, but a saved `RUNNING` status alone does not establish
+that a worker is still alive. A new process uses the original kernel lease when
+it starts; it does not kill a saved PID or remove an ownership file. A startup or
+background failure is retained in `lastOwnedExit` with its original safe code.
+
+Read `merchant_incidents` and `merchant_notifications` to work the actual observed
+condition. An event with `EXHAUSTED` or `PAUSED` may be retried using its current
+attempt count, for example through `merchant_notification_update`:
+
+```json
+{"id":"<original event UUID>","expectedAttempts":3,"action":"retry","by":"Merchant operator"}
+```
+
+This continues the same original event/body/destination. The original engine
+refuses an in-flight or completed event, a stale attempt count, or a changed
+destination/configuration. After repairing the existing destination, retry that
+event when its original rules allow it. If intentionally selecting a new
+destination, inspect the current incident revision and call
+`merchant_incident_notify`; this queues a **new** original reminder. Cancel an
+unfinished previous event with the same `merchant_notification_update` tool and
+`action:"cancel"` when the operator intends that cancellation. Cancellation does
+not erase the incident or report its merchant condition as recovered. After an
+interrupted notification mutation, inspect the original events before issuing
+another reminder; reminders create new event identities.
+
+Stop an owned watcher with `merchant_support_watch_stop` and its exact
+`instanceId`. It waits for the current original state write and lease release;
+repeating that same completed stop in the same MCP process returns `unchanged`.
+Closing the MCP host performs the same owned-watch shutdown alongside its other
+owned runtimes. It does not stop an independently run watcher, seller, notification
+receiver or delivery worker. The incident store, captures, events and cases stay
+available to the next MCP process and the original terminal/browser interfaces.
+
+Once the native observer captures the active or recovered condition, continue
+below with `merchant_incident_case`, using the exact incident revision, inspected
+workspace template and original route ID. That creates the same versioned support
+case used for owner terms, workorder and private handoff.
 
 ## Complete case and workorder workflow
 
