@@ -11,6 +11,10 @@ arguments identify the one configured record; callers cannot select a filesystem
 path, payment network, amount, signer or RPC endpoint. It returns the actual record
 ID, label and revision, including Unicode content. It does not modify that record.
 
+[Existing prepared data products](DATA_TOOLS.md) use the same server through
+`data-tools.mjs` and the `data-serve.mjs` launcher. SQLite, PostgreSQL, DuckDB and
+ClickHouse retain their original query engine, schemas, admission and limits.
+
 ## The three addresses
 
 These are distinct values in one workflow:
@@ -121,7 +125,10 @@ payment wrapper's failure path.
 Each tool descriptor supplies `name`, `description`, an object `inputSchema`, one
 or more complete `accepts`, and `handler(arguments, {toolName, signal})`. Optional
 `example` must pass the same schema validator; optional `annotations` are passed
-through to MCP discovery. The handler returns a native MCP `CallToolResult`, for
+through to MCP discovery. Optional `admit(arguments, {toolName, signal})` runs
+before payment verification inside the reserved active-call slot. It returns
+`true` or an ordinary native `CallToolResult` with `isError: true`; rejection never
+enters the payment wrapper. The handler returns a native MCP `CallToolResult`, for
 example `content` plus `structuredContent`. Its result is checked and bounded
 before the payment wrapper performs successful after-handler settlement.
 
@@ -132,7 +139,10 @@ and terms are copied at startup, so subsequent changes to caller-owned objects d
 not alter the advertised tool or an accepted call.
 
 Default limits are 32 sessions, 15 minutes of session inactivity, one active paid
-wrapper, 512 KiB request bodies and 1 MiB handler results. Active tool calls are
+wrapper, 512 KiB request bodies and 1 MiB handler results. The configurable handler maximum is 1,984 KiB
+(2,031,616 bytes), leaving 64 KiB below the buyer's complete 2 MiB transport limit
+for the original payment receipt and protocol framing. Oversized handler results
+fail before successful settlement. Active tool calls are
 excluded from idle session expiry. Invalid arguments, unknown tools, unsupported
 task execution and exhausted capacity are rejected before the handler. Session
 initialization, protocol versions, GET streams and DELETE semantics come from the
