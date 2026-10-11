@@ -39,6 +39,7 @@ export class MarketModel {
     need(KINDS.has(kind),'UNKNOWN_COLLECTION','Unknown retained collection',404);
     const result=this.store.list(kind,projectId,query);
     if(kind==='jobs')result.items=result.items.map(j=>this.jobView(j));
+    if(kind==='requests')result.items=result.items.map(request=>this.requestView(request));
     return result;
   }
   createProject(body){
@@ -47,6 +48,10 @@ export class MarketModel {
   }
   requestConfig(projectId){
     return {...this.store.project(projectId).config,allowLocal:this.options.allowLocal};
+  }
+  requestView(request){
+    const current=normalizeRequest(request,this.requestConfig(request.projectId));
+    return{...request,urls:current.urls,notices:current.notices};
   }
   saveConfig(projectId,body){
     return this.store.write(projectId,body,'project.configuration',()=>{
@@ -66,7 +71,7 @@ export class MarketModel {
       return this.store.put('requests',{...normalized,id:requestId??uuid(),projectId,reference:previous?.reference??uuid()});
     });
   }
-  request(requestId){return{request:this.store.get('requests',requestId),versions:this.store.versions('requests',requestId)}}
+  request(requestId){return{request:this.requestView(this.store.get('requests',requestId)),versions:this.store.versions('requests',requestId)}}
   saveCollection(projectId,body,collectionId=null){
     return this.store.write(projectId,body,collectionId?'collection.updated':'collection.created',()=>{
       const previous=collectionId?this.store.expected('collections',collectionId,body.version):null;
@@ -80,7 +85,7 @@ export class MarketModel {
   }
   collection(collectionId){
     const collection=this.store.get('collections',collectionId);
-    return{collection,requests:collection.requestIds.map(requestId=>this.store.owned('requests',requestId,collection.projectId))};
+    return{collection,requests:collection.requestIds.map(requestId=>this.requestView(this.store.owned('requests',requestId,collection.projectId)))};
   }
   collectionBytes(collectionId){
     const{collection,requests}=this.collection(collectionId);

@@ -12,22 +12,26 @@ const within=path=>{const rel=relative(repositoryRoot,path);return rel&&!rel.sta
 function runtimeSources(){
   const queue=[],seen=new Set(),files=[];
   function add(path){if(within(path)&&existsSync(path)&&statSync(path).isFile()&&!seen.has(path)){seen.add(path);queue.push(path)}}
-  function feature(directory){
-    for(const entry of readdirSync(directory,{withFileTypes:true})){
-      if(entry.name.startsWith('.')||entry.name==='node_modules')continue;
-      const path=join(directory,entry.name);
-      if(entry.isDirectory())feature(path);
-      else if(entry.isFile()&&/\.(mjs|js|json|py|md|html|css|txt)$/.test(entry.name))add(path);
-    }
-  }
-  feature(featureRoot);
+  // Retain published product source, never an operator-selected state subtree.
+  const productFiles=["common.mjs","exact-json.mjs","contracts.mjs","market.mjs","provider.mjs","cli.mjs","workspace/store.mjs","workspace/capture.mjs","workspace/model.mjs","workspace/jobs.mjs","workspace/native-worker.mjs","workspace/recovery.mjs","workspace/server.mjs","README.md","collection.example.json","runtime-dependencies.json","workspace/public/index.html","workspace/public/app.mjs","workspace/public/style.css"];
+  for(const name of productFiles)add(join(featureRoot,name));
+  // SF88's original Python ledger initializer resolves this directory at runtime.
+  add(resolve(featureRoot,'../../sf36-spend-governor/governor.py'));
+  add(resolve(featureRoot,'../../sf61-openapi-seller-import/package.json'));
+  add(resolve(featureRoot,'../../../../stellar-forge/payment-auto-catalog/package.json'));
   for(const name of ['LICENSE','LICENSE.md','package.json'])add(join(repositoryRoot,name));
   let bytesTotal=0;
   while(queue.length){
     const path=queue.shift(),bytes=readFileSync(path);bytesTotal+=bytes.length;
     need(bytesTotal<=32*1024*1024&&files.length<3000,'SOURCE_PACKAGE_TOO_LARGE');
     files.push({path:relative(repositoryRoot,path).split(sep).join('/'),sha256:sha(bytes),bytes:bytes.length,contentBase64:bytes.toString('base64')});
-    if(!['.mjs','.js'].includes(extname(path)))continue;
+    if(extname(path)==='.py'){
+      const python=bytes.toString('utf8');
+      for(const match of python.matchAll(/^(?:from\s+([A-Za-z_][\w.]*)\s+import|import\s+([A-Za-z_][\w.]*))/gm)){
+        add(resolve(dirname(path),(match[1]??match[2]).replaceAll('.','/')+'.py'));
+      }
+    }
+    if(!['.mjs','.js','.cjs'].includes(extname(path)))continue;
     const text=bytes.toString('utf8');
     const patterns=[/(?:from\s*|import\s*\(|new\s+URL\s*\()\s*['"](\.[^'"]+)['"]/g,/import\s*['"](\.[^'"]+)['"]/g];
     for(const pattern of patterns)for(const match of text.matchAll(pattern)){
