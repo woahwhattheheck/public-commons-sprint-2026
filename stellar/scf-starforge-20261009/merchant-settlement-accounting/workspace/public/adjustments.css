@@ -1,0 +1,39 @@
+.adjustment-source-form{display:grid;grid-template-columns:minmax(220px,1fr) minmax(190px,1fr) auto;gap:16px;align-items:end}
+.adjustment-source-context{padding-top:0;overflow-wrap:anywhere}
+#adjustment-events td,#adjustment-history td,#adjustment-jobs td,#adjustment-exports td{overflow-wrap:anywhere;vertical-align:top}
+#adjustment-events td:first-child{max-width:380px}
+#adjustment-events .subtle,#adjustment-history .subtle,#adjustment-jobs .subtle,#adjustment-exports .subtle{display:block;margin-top:4px}
+#adjustment-events button.inspect{text-align:left;justify-content:flex-start}
+#adjustment-totals{grid-template-columns:repeat(4,minmax(0,1fr))}
+#adjustment-totals strong{font-size:20px;overflow-wrap:anywhere}
+#adjustment-unit{padding-top:0}
+.adjustment-source-detail{border-top:1px solid var(--border);font-size:12px}
+.adjustment-source-detail summary{cursor:pointer;font-weight:600}
+.adjustment-source-detail .record-values{margin-top:16px}
+.adjustment-source-detail dd{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px;overflow-wrap:anywhere}
+.adjustment-action-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.adjustment-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.adjustment-form .actions{margin-top:0}
+.adjustment-wide{grid-column:1/-1}
+.adjustment-preview{border-top:1px solid var(--border);background:var(--soft)}
+.adjustment-preview h3{margin-bottom:12px}
+.adjustment-preview .actions{margin-top:16px}
+.adjustment-preview .record-values{grid-template-columns:130px minmax(0,1fr)}
+.adjustment-preview dd{white-space:pre-wrap;overflow-wrap:anywhere}
+.adjustment-verification-context{border-bottom:1px solid var(--border);font-size:12px;padding-top:0}
+.adjustment-verification-context p+p{margin-top:7px}
+.adjustment-verification-context .record-values{grid-template-columns:125px minmax(0,1fr)}
+.adjustment-verification-context dd{overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:11px}
+#adjustment-verification-progress{margin:0;border-top:1px solid var(--border)}
+#adjustment-history td:nth-child(4){max-width:400px;white-space:pre-wrap}
+#adjustment-history details,#adjustment-jobs details,#adjustment-exports details{font-size:11px;margin-top:6px}
+#adjustment-history summary,#adjustment-jobs summary,#adjustment-exports summary{cursor:pointer}
+#adjustment-history pre,#adjustment-jobs pre,#adjustment-exports pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto;font-size:11px}
+.adjustment-export-form{display:grid;grid-template-columns:minmax(230px,1fr) auto;gap:16px;align-items:end}
+.adjustment-withdraw-form{display:grid;grid-template-columns:minmax(180px,1fr) minmax(200px,1fr) auto;gap:16px;align-items:end;border-top:1px solid var(--border)}
+.adjustment-history-detail{border-top:1px solid var(--border);background:var(--soft)}
+.adjustment-history-detail h3{margin-bottom:12px}
+.adjustment-history-detail pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:340px;overflow:auto;font-size:11px}
+#adjustment-exports .actions{gap:7px;flex-wrap:wrap}
+@media(max-width:1150px){.adjustment-action-layout{grid-template-columns:1fr;gap:0}.adjustment-source-form{grid-template-columns:1fr 1fr}.adjustment-source-form button{justify-self:start}#adjustment-totals{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:700px){.adjustment-source-form,.adjustment-form,.adjustment-export-form,.adjustment-withdraw-form{grid-template-columns:1fr}.adjustment-wide{grid-column:auto}.adjustment-preview .record-values,.adjustment-verification-context .record-values{grid-template-columns:1fr;gap:5px}.adjustment-preview dd,.adjustment-verification-context dd{margin-bottom:9px}#adjustment-totals strong{font-size:18px}}

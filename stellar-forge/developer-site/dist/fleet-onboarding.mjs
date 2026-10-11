@@ -3,7 +3,8 @@ export const FLEET_DRAFT_SCHEMA = 'stellar-forge.frontdoor-fleet.v1';
 export const FLEET_BOOTSTRAP_SCHEMA = 'stellar-forge.fleet-bootstrap.v1';
 export const SOURCE_LABELS = Object.freeze({ workspace: 'API workspace', python: 'Python application',
   duckdbPackage: 'DuckDB / Parquet', s3Package: 'S3 objects', jsonrpcPackage: 'Stellar RPC',
-  sqlitePackage: 'SQLite snapshot', mysqlPackage: 'MySQL / MariaDB' });
+  sqlitePackage: 'SQLite snapshot', mysqlPackage: 'MySQL / MariaDB',
+  postgresPackage: 'PostgreSQL' });
 const SOURCE_KEYS = Object.keys(SOURCE_LABELS);
 const GUIDE = 'https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/merchant-fleet-gateway/';
 const NAME = /^[a-z][a-z0-9-]{0,39}$/;
@@ -21,6 +22,7 @@ const json = value => JSON.stringify(value, null, 2) + '\n';
 const text = (value, max) => typeof value === 'string' && value.length <= max &&
   !/[\u0000-\u001f\u007f]/.test(value) && new TextDecoder().decode(new TextEncoder().encode(value)) === value;
 const path = value => text(value, 4096) && value.trim().length > 0;
+export const validPostgresInputManifest = value => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 const absolute = value => path(value) && value.startsWith('/') && value !== '/' &&
   !value.endsWith('/') && !value.split('/').slice(1).some(part => !part || part === '.' || part === '..');
 export class FleetSetupError extends Error {
@@ -41,7 +43,7 @@ function draftShape(input) {
     if (!Array.isArray(tenant.sources) || tenant.sources.length > 32)
       throw new FleetSetupError([{ field, message: 'Each merchant supports at most 32 registered sources.' }]);
     keys(tenant.limits ?? {}, Object.keys(LIMIT_RANGES), field + '.limits');
-    tenant.sources.forEach((source, n) => keys(source, ['name', 'kind', 'path', 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS),
+    tenant.sources.forEach((source, n) => keys(source, ['name', 'kind', 'path', 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'postgresInputManifestSha256',
       'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], field + '.sources.' + n));
   });
 }
@@ -105,6 +107,11 @@ export function validateFleetDraft(input) {
       if (!SOURCE_KEYS.includes(source.kind)) add(at + '.kind', `${display}: choose a supported source type.`);
       if (!path(source.path)) add(at + '.path', `${display}, source ${n + 1}: enter the source path on the merchant host.`);
       const native = { [source.kind]: source.path }, runtime = {};
+      if (source.postgresInputManifestSha256 !== undefined) {
+        if (source.kind !== 'postgresPackage' || !validPostgresInputManifest(source.postgresInputManifestSha256))
+          add(at + '.postgresInputManifestSha256', `${display}: import the original PostgreSQL source definition with its reviewed package manifest.`);
+        else native.postgresInputManifestSha256 = source.postgresInputManifestSha256;
+      }
       for (const [key, kind] of [['pythonRoot', 'python'], ['duckdbPython', 'duckdbPackage']]) {
         if (source[key] !== undefined && source[key] !== '') {
           if (source.kind !== kind || !path(source[key]) || key === 'duckdbPython' && source[key].startsWith('-'))
@@ -171,6 +178,33 @@ export function validateFleetDraft(input) {
   return { valid: errors.length === 0, errors, declaration, assignments, workspacePort,
     planFile: input.directory + '/fleet-plan.json', mcpConfig: input.mcpDirectory + '/merchant-mcp.json' };
 }
+function nativeSourceToDraft(name, native) {
+  keys(native, [...SOURCE_KEYS, 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS),
+    'postgresInputManifestSha256', 'runtime'], 'package ' + name);
+  keys(native.runtime ?? {}, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], 'runtime');
+  const selected = SOURCE_KEYS.filter(key => Object.hasOwn(native, key));
+  if (selected.length !== 1) throw new FleetSetupError([{ field: 'sources', message: 'Each registered package must select one source type.' }]);
+  const source = { ...newFleetSource(name, selected[0]), path: native[selected[0]],
+    ...(native.pythonRoot !== undefined ? { pythonRoot: native.pythonRoot } : {}),
+    ...(native.duckdbPython !== undefined ? { duckdbPython: native.duckdbPython } : {}), ...native.runtime };
+  for (const key of [...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'postgresInputManifestSha256'])
+    if (native[key] !== undefined) source[key] = structuredClone(native[key]);
+  return source;
+}
+/** Read one original host source alias without replacing the merchant or fleet. */
+export function importFleetSource(contents, name = 'current') {
+  if (typeof contents !== 'string' || bytes(contents) > 1024 * 1024)
+    throw new FleetSetupError([{ field: 'sources', message: 'Choose an original source JSON file of at most 1 MiB.' }]);
+  let native;
+  try { native = JSON.parse(contents.replace(/^\uFEFF/, '')); }
+  catch { throw new FleetSetupError([{ field: 'sources', message: 'The selected source file is not valid JSON.' }]); }
+  const source = nativeSourceToDraft(name, native);
+  if (!path(source.path)) throw new FleetSetupError([{ field: 'sources', message: 'The source definition needs its original host package path.' }]);
+  if (source.postgresInputManifestSha256 !== undefined &&
+      (source.kind !== 'postgresPackage' || !validPostgresInputManifest(source.postgresInputManifestSha256)))
+    throw new FleetSetupError([{ field: 'sources', message: 'The PostgreSQL source definition needs the original reviewed package manifest hash.' }]);
+  return source;
+}
 function importNative(input) {
   keys(input, ['schema', 'gateway', 'merchantPortStart', 'slots', 'tenants'], 'setup');
   keys(input.gateway ?? {}, ['port', 'adminPort'], 'gateway');
@@ -184,18 +218,7 @@ function importNative(input) {
     keys(tenant.initial, ['package', 'releaseId', 'label'], 'initial release');
     if (!object(tenant.packages) || Object.keys(tenant.packages).length > 32)
       throw new FleetSetupError([{ field: 'sources', message: 'Register at most 32 packages per merchant.' }]);
-    const sources = Object.entries(tenant.packages).map(([name, native]) => {
-      keys(native, [...SOURCE_KEYS, 'pythonRoot', 'duckdbPython', ...Object.keys(SQLITE_SNAPSHOT_OPTIONS), 'runtime'], 'package ' + name);
-      keys(native.runtime ?? {}, ['facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream'], 'runtime');
-      const selected = SOURCE_KEYS.filter(key => Object.hasOwn(native, key));
-      if (selected.length !== 1) throw new FleetSetupError([{ field: 'sources', message: 'Each registered package must select one source type.' }]);
-      const source = { ...newFleetSource(name, selected[0]), path: native[selected[0]],
-        ...(native.pythonRoot !== undefined ? { pythonRoot: native.pythonRoot } : {}),
-        ...(native.duckdbPython !== undefined ? { duckdbPython: native.duckdbPython } : {}), ...native.runtime };
-      for (const key of Object.keys(SQLITE_SNAPSHOT_OPTIONS))
-        if (native[key] !== undefined) source[key] = native[key];
-      return source;
-    });
+    const sources = Object.entries(tenant.packages).map(([name, native]) => nativeSourceToDraft(name, native));
     return { id: tenant.id, host: tenant.host, sources, initialPackage: tenant.initial.package,
       releaseId: tenant.initial.releaseId, label: tenant.initial.label ?? '', limits: tenant.limits ?? {} };
   });
@@ -230,11 +253,12 @@ function guide(input, result, commands) {
   return `# Merchant fleet launch\n\n` +
     `Prepare ${input.tenants.length} merchants with ${result.assignments.length} original release stores.\n\n` +
     `## Prepare the host\n\nUse the current complete Stellar Forge toolkit on Linux with Node.js 22.16 or later and the native flock utility. Follow its [distribution instructions](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/distribution/README.md). The commands below use the installed starforge executable; when installed in a local npm application, invoke it as npx --no-install starforge. Install the native requirements for the selected source types.\n\n` +
-    `Prepare sources through the original API workspace, Python, DuckDB/Parquet, S3, Stellar RPC, SQLite or MySQL authoring commands. Each source must declare its merchant's public HTTPS origin. Keep payment and provider credentials in the original host environment. For Python, provide the application description and its source root; interpreter and input paths use the original package rules. RPC packages retain their separate data and payment network selections.\n\n` +
+    `Prepare sources through the original API workspace, Python, DuckDB/Parquet, S3, Stellar RPC, SQLite, MySQL or PostgreSQL authoring commands. Each source must declare its merchant's public HTTPS origin. Keep payment and provider credentials in the original host environment. For Python, provide the application description and its source root; interpreter and input paths use the original package rules. RPC packages retain their separate data and payment network selections.\n\n` +
     `SQLite sources use the original six-file workbench export and its referenced database. Staging captures a committed snapshot, including committed WAL changes, into each immutable release. Optional sqliteSnapshotMaxBytes (4096–1099511627776; default 1073741824) and sqliteSnapshotTimeoutMs (100–3600000; default 120000) belong to that package alias. They are separate from gateway request limits. The original snapshot worker requires Node's node:sqlite support. MySQL sources use the original prepared package and installed mysql2 dependency; the running release resolves its passwordEnv and other connection references from the host environment and reads the live database.\n\n` +
+    `PostgreSQL sources use the original configured or prepared package. In the original PostgreSQL workspace or Seller releases, review it and choose Download fleet source. Import that JSON into the intended source card to retain its canonical host path and postgresInputManifestSha256. Staging rechecks that manifest and copies the original query, binding, connection policy and selected CA through the native release adapter. Runtime credentials resolve from the host environment. PostgreSQL rollback restores the retained merchant configuration while database contents remain live.\n\n` +
     `Extract this packet and run the commands from its folder. Relative source paths resolve from fleet-setup.json. Keep that declaration at the same location for setup recovery. Review the absolute fleet and MCP paths for your host.\n\n` +
     `## Prepare the retained stores\n\n${command('setup')}\n\n` +
-    `Repeat this same command to resume interrupted setup. It retains staging and initial activation progress in bootstrap.json, validates the original source packages, then publishes fleet-plan.json. Each merchant starts in the first declared slot. A completed setup preserves later release selections. Setup and fleet shutdown forward cancellation to a pending native SQLite capture; committed releases remain available and an uncommitted capture can be retried with the same command or release ID after reopening.\n\n` +
+    `Repeat this same command to resume interrupted setup. It retains staging and initial activation progress in bootstrap.json, validates the original source packages, then publishes fleet-plan.json. Each merchant starts in the first declared slot. A completed setup preserves later release selections. Setup and fleet shutdown forward cancellation to a pending native SQLite snapshot or PostgreSQL package capture; committed releases remain available and an uncommitted capture can be retried with the same command or release ID after reopening.\n\n` +
     `## Open the fleet\n\nChoose a foreground interface and close it before opening another. Every interface below uses the same plan and retained directory.\n\n### Browser workspace\n\n${command('workspace')}\n\nOpen the loopback URL printed by the original workspace.\n\n### Terminal operator\n\n${command('terminal')}\n\n### Merchant MCP\n\n${command('mcp-init')}\n\nRun MCP initialization once in its new configuration directory; its parent directory must already exist on the host. Its fleet reference points to the retained setup directory. Then create the original stdio host registration:\n\n${command('mcp-host')}\n\nUse mcp-host.json in your MCP client. The native registration command also supports --merge EXISTING_JSON with --output NEW_JSON to preserve other named servers. Starting a host connection loads the tools; the original fleet start tool starts the merchant processes explicitly.\n\n` +
     `## Host and port map\n\nGateway ingress: ${result.declaration.gateway.port}. Private gateway control: ${result.declaration.gateway.adminPort}. Browser workspace: ${result.workspacePort || 'automatically allocated'}.\n\n` +
     `| Merchant | Public host | Slot | Port | Initial |\n|---|---|---|---:|---|\n` +

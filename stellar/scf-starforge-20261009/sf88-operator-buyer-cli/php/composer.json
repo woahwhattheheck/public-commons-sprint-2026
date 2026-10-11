@@ -1,0 +1,18 @@
+{
+  "name": "stellar-forge/native-buyer",
+  "description": "PHP customer acquisitions through the original Stellar Forge buyer-runbook runtime",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.1",
+    "ext-json": "*"
+  },
+  "suggest": {
+    "ext-pcntl": "Cooperative SIGINT and SIGTERM cancellation in the command-line client"
+  },
+  "autoload": {
+    "classmap": ["src/Acquisitions.php"]
+  },
+  "bin": ["bin/stellar-forge-acquisitions.php"],
+  "keywords": ["stellar", "buyer", "acquisition", "php"]
+}

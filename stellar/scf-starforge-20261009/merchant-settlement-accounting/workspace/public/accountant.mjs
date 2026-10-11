@@ -27,7 +27,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   const base=()=>'/api/accountant/handoffs/'+encode(selected);
   function controls(){
     const usable=Boolean(state)&&!busy;
-    $('accountant-create').disabled=!usable||!source;
+    $('accountant-create').disabled=!usable||!source||source.workspaceRevision!==state?.revision;
     $('accountant-preview').disabled=!usable||!detail||revisionChoice!==''||fileLoading||!fileData;
     $('accountant-apply').disabled=!usable||!preview||revisionChoice!==''||preview.handoffId!==selected||!fileData||fileData.token!==preview.fileToken;
     $('accountant-clear-preview').disabled=busy;
@@ -45,7 +45,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     return kind==='close'?{closeId:value}:{runId:value};
   }
   async function selectSource(){
-    const key=$('accountant-source').value;if(key===sourceKey&&source)return;
+    const key=$('accountant-source').value;if(key===sourceKey&&source&&source.workspaceRevision===state.revision)return;
     retainLabels();source=null;sourceKey=key;createId=crypto.randomUUID();const token=++sourceToken;controls();
     $('accountant-labels').innerHTML='';$('accountant-source-summary').textContent=key?'Loading the original source…':'Capture a reconciliation to prepare an accountant handoff.';
     if(!key)return;
@@ -58,6 +58,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     }).join('')||'<tr><td colspan="5" class="empty">This original report contains no configured payment options.</td></tr>';
     const networks=[...new Set(result.options.map(option=>option.network))];
     $('accountant-source-summary').innerHTML='<p><strong>'+esc(result.run.name)+'</strong> · '+esc(result.rowCount)+' original events · '+esc(networks.join(', ')||'No recorded networks')+'</p><p>'+esc(result.source.periodClose?'Retained period close revision '+result.source.periodClose.revision:'Completed original reconciliation')+' · '+esc(result.totals.officialTransferMatches??0)+' original official transfer matches</p><p class="hint">Each native amount stays in its original asset and atomic unit. Merchant USD quotes retain their original source and unknown values.</p>';
+    if(result.adjustments)$('accountant-source-summary').innerHTML+='<p>'+esc(result.adjustments.summary.refundedRows)+' events with verified refunds · '+esc(result.adjustments.summary.cancelledRows)+' events with merchant cancellations. This handoff retains the selected adjustment snapshot and original gross amounts.</p>';
     controls();
   }
   function renderSources(){
@@ -83,6 +84,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
     options($('accountant-revision'),revisions,revisionChoice);
     const download=(name,title)=>'<a class="button" download href="'+base()+'/download/'+encode(name)+(revisionChoice?'?'+new URLSearchParams(revisionQuery()):'')+'">'+esc(title)+'</a>';
     $('accountant-downloads').innerHTML=[download('accountant.csv','Accountant CSV'),download('review.html','Offline review'),download('accountant-handoff.tar','Complete handoff archive'),download(current?'return.json':'handoff.json',current?'Returned result JSON':'Handoff JSON')].join('');
+    if(detail.source.adjustments)$('accountant-downloads').innerHTML+=[download('adjustments.json','Original adjustments JSON'),download('adjustments.csv','Adjustment history CSV'),download('adjustments.html','Adjustment review')].join('');
     $('accountant-lineage').innerHTML=definitions({...detail.source,preparedBy:record.actor,preparedAt:record.createdAt,...(current?{returnId:current.id,returnedBy:current.actor,returnedAt:current.createdAt}:{} )});
     $('accountant-issues-panel').hidden=!(detail.issues?.length);
     $('accountant-issues').innerHTML=detail.issues?.length?'<pre>'+esc(JSON.stringify(detail.issues,null,2))+'</pre>':'';
@@ -98,10 +100,10 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   function renderRowDetail(){
     const row=rows.items.find(item=>item.rowId===selectedRow);
     if(!row){$('accountant-row-detail').innerHTML='<p class="hint">Select an event to inspect its exact source and returned fields.</p>';return;}
-    $('accountant-row-detail').innerHTML='<h3>Accountant’s returned fields</h3><dl class="record-values">'+definitions({status:row.externalStatus,bookReference:row.externalBookRef,accountCode:row.externalAccountCode,note:row.externalNote,updatedBy:row.updatedBy,updatedAt:row.updatedAt})+'</dl><h3>Merchant’s retained account labels</h3><dl class="record-values">'+definitions(row.label??{})+'</dl><h3>Complete original event</h3><dl class="record-values">'+definitions(row.original)+'</dl><details class="history-detail"><summary>Retained row identity</summary><pre>'+esc(JSON.stringify({rowId:row.rowId,eventId:row.eventId,sourceRowSha256:row.sourceRowSha256},null,2))+'</pre></details>';
+    $('accountant-row-detail').innerHTML='<h3>Accountant’s returned fields</h3><dl class="record-values">'+definitions({status:row.externalStatus,bookReference:row.externalBookRef,accountCode:row.externalAccountCode,note:row.externalNote,updatedBy:row.updatedBy,updatedAt:row.updatedAt})+'</dl><h3>Merchant’s retained account labels</h3><dl class="record-values">'+definitions(row.label??{})+'</dl>'+(row.adjustments?'<h3>Frozen payment adjustments</h3><dl class="record-values">'+definitions(row.adjustments)+'</dl>':'')+'<h3>Complete original event</h3><dl class="record-values">'+definitions(row.original)+'</dl><details class="history-detail"><summary>Retained row identity</summary><pre>'+esc(JSON.stringify({rowId:row.rowId,eventId:row.eventId,sourceRowSha256:row.sourceRowSha256},null,2))+'</pre></details>';
   }
   function renderRows(){
-    $('accountant-rows').innerHTML=rows.items.map(row=>'<tr'+(row.rowId===selectedRow?' class="selected"':'')+'><td><button class="inspect" type="button" data-accountant-row="'+esc(row.rowId)+'">'+esc(row.original.method+' '+row.original.routeId)+'</button><span class="subtle">'+esc(row.original.network)+'</span><span class="subtle mono">'+esc(short(row.eventId))+'</span><span class="subtle">'+esc(row.original.verificationScope)+'</span></td><td class="exact">'+esc(row.original.amountAtomic)+'<span class="subtle">'+esc(row.label?.unitLabel||'atomic units')+'</span></td><td>'+esc(row.externalStatus)+'</td><td>'+esc(row.externalBookRef||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No events match these filters.</td></tr>';
+    $('accountant-rows').innerHTML=rows.items.map(row=>'<tr'+(row.rowId===selectedRow?' class="selected"':'')+'><td><button class="inspect" type="button" data-accountant-row="'+esc(row.rowId)+'">'+esc(row.original.method+' '+row.original.routeId)+'</button><span class="subtle">'+esc(row.original.network)+'</span><span class="subtle mono">'+esc(short(row.eventId))+'</span><span class="subtle">'+esc(row.original.verificationScope)+'</span></td><td class="exact">'+esc(row.original.amountAtomic)+'<span class="subtle">'+esc(row.label?.unitLabel||'atomic units')+'</span>'+(row.adjustments?'<span class="subtle">Returned '+esc(row.adjustments.refundedAmountAtomic)+' · remaining '+esc(row.adjustments.remainingAmountAtomic)+'</span><span class="subtle">Cancelled '+esc(row.adjustments.cancelledAmountAtomic)+' · '+esc(row.adjustments.refundStatus)+'</span>':'')+'</td><td>'+esc(row.externalStatus)+'</td><td>'+esc(row.externalBookRef||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No events match these filters.</td></tr>';
     $('accountant-row-page').textContent=rows.total?(rows.offset+1)+'–'+Math.min(rows.offset+rows.items.length,rows.total)+' of '+rows.total+' events':'0 events';
     $('accountant-row-previous').disabled=rows.offset===0;$('accountant-row-next').disabled=rows.offset+rows.items.length>=rows.total;renderRowDetail();
   }
@@ -132,7 +134,7 @@ export async function mountAccountant({api,perform,operator,attempt,notify}){
   $('accountant-source').addEventListener('change',()=>attempt(selectSource));
   $('accountant-create-form').addEventListener('input',()=>{createId=crypto.randomUUID();retainLabels();});
   $('accountant-create-form').addEventListener('submit',event=>{event.preventDefault();attempt(async()=>{
-    if(!source)throw new Error('Wait for the original source to load.');
+    if(!source||source.workspaceRevision!==state.revision)throw new Error('Accounting changed. Refresh the selected source before saving this handoff.');
     const body={revision:state.revision,id:createId,...sourceArgs(),name:$('accountant-name').value.trim(),actor:operator(),labels:labelsFromForm()};
     await perform({path:'/api/accountant/handoffs',body,description:'accountant handoff',message:'Accountant handoff retained. Download its CSV or complete archive, then import the returned bookkeeping file.',success:async result=>{createId=crypto.randomUUID();await selectHandoff(result.record.id);await refresh(result.state);}});
   });});

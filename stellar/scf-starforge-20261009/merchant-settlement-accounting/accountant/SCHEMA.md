@@ -6,12 +6,12 @@ The original report remains the source for amounts, network, selected payment op
 
 ## Pure API
 
-All functions are synchronous, use Node built-ins, and perform no disk or provider operations. The existing workspace owns private source capture, request revisions, file persistence, downloads and idempotent save receipts.
+All functions are synchronous and perform no provider or state-writing operations. The shared reconciliation module loads its original network catalog at import. The existing workspace owns private source capture, request revisions, file persistence, downloads and idempotent save receipts.
 
 ```js
 import {
   createHandoff, importReturn, inspectHandoff, renderCsv, renderHtml,
-  validateHandoff, validateRevision, parseReturnCsv,
+  validateHandoff, validateRevision, parseReturnCsv, accountantColumns,
   HANDOFF_SCHEMA, RETURN_SCHEMA, CSV_COLUMNS,
   PROTECTED_COLUMNS, EDITABLE_COLUMNS, EXTERNAL_STATUSES,
 } from './engine.mjs';
@@ -46,6 +46,20 @@ const inspection = inspectHandoff(handoff, revision);
 
 Labels are optional and supplied for actual `optionId` values from the report. Duplicate labels or unknown options are rejected. `assetLabel` is an operator's currency or asset name; `unitLabel` describes the displayed unit. These labels do not set asset precision or exchange rates. Native `amountAtomic` stays an exact string. Account labels on the handoff remain protected; the accountant's returned account code has its own editable column. Changing source labels requires a new handoff.
 
+## Frozen adjustment source
+
+`createHandoff` accepts optional `adjustmentsBytes` (Buffer or Uint8Array) with `source.adjustmentsSha256`. The bytes contain the original `stellar-forge.merchant-adjustment-export.v1` snapshot from `workspace.adjustments.snapshot(runId)`. The adapter checks the exact byte hash, original run/report/manifest/input-manifest identities and complete original report. It rebuilds the event totals from the snapshot's retained adjustment records through the original adjustment engine before accepting them.
+
+A selected period close binds this same source through its saved `adjustmentsSha256`. The connected workspace reads the close's retained JSON, CSV and HTML companions. A live reconciliation captures one current snapshot. Original closes and handoffs without adjustment files retain their previous source contract.
+
+The accepted handoff adds `source.adjustments` containing `schema`, `sha256`, `bytes`, `workspaceRevision`, `exportedAt` and `dateBasis`. Each row adds `adjustments`: exact-string `grossAmountAtomic`, `refundedAmountAtomic`, `pendingRefundAmountAtomic`, `remainingAmountAtomic`, `availableRefundAmountAtomic`, `cancelledAmountAtomic`, `overRefundedAmountAtomic`; `refundStatus`; `adjustmentCount`; and the latest verified `latestRefundTransferAt` and recorded `latestCancellationEffectiveAt`. The gross amount equals the original row. Remaining equals gross minus verified returns; available subtracts pending requests and clamps at zero. External over-returns keep their exact amount and a negative remaining value.
+
+`summary.adjustments` contains adjusted/refunded/cancelled row counts, adjustment count, and exact amount groups keyed by original network and asset identity. It never adds different networks or assets together. Refund dates come from the verified native transfer; cancellation dates come from the retained merchant record. The original report's period and time basis remain their original source fields.
+
+`accountantColumns(handoff)` returns the exact CSV columns for that handoff. It includes `sourceAdjustmentsSha256` and all row adjustment fields when the source has adjustments. `CSV_COLUMNS` remains the original template for legacy callers. `renderCsv` and `importReturn` select the correct template automatically; direct parsing uses `parseReturnCsv(bytes, {columns: accountantColumns(handoff)})`. Every added adjustment field is protected during return matching.
+
+The initial packet and every returned packet carry the exact selected `adjustments.json`, `adjustments.csv` and `adjustments.html`. Later workspace changes therefore leave all saved handoffs and bookkeeping returns tied to their selected source.
+
 ## Retained schemas
 
 ### Handoff
@@ -66,7 +80,7 @@ Schema: `stellar-forge.merchant-accountant-handoff.v1`.
 
 Each `rows` entry is `{rowId,eventId,sourceRowSha256,original,label}`. The complete original ledger row is in `original`. `sourceRowSha256` hashes that entire row's canonical JSON, including original fields beyond those displayed in the CSV. `rowId` hashes the handoff ID, original report hash and event ID. The event's existing `eventId` is preserved independently.
 
-`summary` contains `totalRows`, `optionCount`, `nativeCapturedRows`, `recoveredRows`, `testnetRows`, `publicNetworkRows`, `officialTransferMatches` and `missingLabelRows`. It does not combine amounts or currencies.
+`summary` contains `totalRows`, `optionCount`, `nativeCapturedRows`, `recoveredRows`, `testnetRows`, `publicNetworkRows`, `officialTransferMatches` and `missingLabelRows`. Its optional `adjustments` member groups exact atomic totals by original network and asset identity.
 
 ### Returned revision
 
@@ -105,7 +119,7 @@ Only these columns are editable:
 
 BOOKED retains the accountant's report of an external entry. Its reference can be shared by several original events when an external book uses a batch journal. The report's original transfer class, asset units, quoted USD and network remain independently visible beside that external status.
 
-All remaining columns are protected: handoff/run/report/close identities, row and original-row hashes; event/option/asset/recipient/amount; transaction, receipt, proof and recovered-response fingerprints; original time/time basis/origin; native transfer, delivery, exception, mapping and verification fields; merchant quote/cost/basis; and operator-supplied labels. `CSV_COLUMNS` is the maintained exact ordered list. Numeric-looking native amount strings are compared as strings; a spreadsheet-modified amount such as `50,000`, `5E4` or `50000.0` conflicts with source `50000`.
+All remaining columns are protected: handoff/run/report/close identities, row and original-row hashes; event/option/asset/recipient/amount; transaction, receipt, proof and recovered-response fingerprints; original time/time basis/origin; native transfer, delivery, exception, mapping and verification fields; merchant quote/cost/basis; and operator-supplied labels. `accountantColumns(handoff)` is the maintained exact ordered list for the selected handoff. Numeric-looking native amount strings are compared as strings; a spreadsheet-modified amount such as `50,000`, `5E4` or `50000.0` conflicts with source `50000`.
 
 Spreadsheet formula triggers are escaped reversibly with one leading apostrophe. Literal leading apostrophes and numeric text containing more than 15 digits are escaped as well, so large native amounts retain their complete text when opened in a spreadsheet. The complete original source remains unchanged in `handoff.json`. Import compares protected values to their original text or that reversible exported representation. Editable values emitted by this adapter round-trip without repeated apostrophes. Formula text in a newly returned note is retained as text and escaped when the adapter emits another CSV. HTML exports escape every source and returned value.
 
