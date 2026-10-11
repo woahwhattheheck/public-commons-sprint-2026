@@ -91,7 +91,11 @@ export async function capture({ target, method, timeout, allowSandboxGateway = f
       agent: false,
       maxHeaderSize: 64 * 1024,
       headers: { Accept: '*/*', 'User-Agent': 'TJLabs-SCF-merchant-capture/1.0' },
-      lookup: (_host, _options, cb) => cb(null, pinnedIP, 4),
+      lookup: (_host, options, cb) => {
+        // Node's family autoselection asks for all:true, even for one pinned IP.
+        if (options?.all) cb(null, [{ address: pinnedIP, family: 4 }]);
+        else cb(null, pinnedIP, 4);
+      },
       signal: AbortSignal.timeout(timeout),
       rejectUnauthorized: true,
     }, (response) => {
