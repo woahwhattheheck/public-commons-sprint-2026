@@ -94,9 +94,15 @@ export function compileOpenAlexMerchant(input){
       example:p.example?.[name]===undefined?'':String(p.example[name])
     }));
     const offer=compileHttpSellerOffer({url:config.publicOrigin+p.path,method:'GET',description:p.description,
-      serviceName:'OpenAlex research metadata',tags:['research','openalex'],paymentOptions:p.paymentOptions,queryParameters:parameters,mimeType:'application/json'});
+      serviceName:'OpenAlex research metadata',tags:['research','openalex'],paymentOptions:p.paymentOptions,queryParameters:parameters.filter(param=>!param.name.includes('.')),mimeType:'application/json'});
     const schema=offer.extensions.bazaar.schema.properties.input.properties.queryParams;
+    // The generic form compiler accepts identifier names. OpenAlex also defines a fixed set of dotted search keys.
+    // Keep those exact provider keys in the normal Bazaar JSON Schema and original generated OpenAPI client.
     for(const param of parameters){
+      if(!Object.hasOwn(schema.properties,param.name)){
+        schema.properties[param.name]={type:'string',description:param.description};
+        if(p.example?.[param.name]!==undefined)offer.extensions.bazaar.info.input.queryParams[param.name]=String(p.example[param.name]);
+      }
       schema.properties[param.name].maxLength=param.name==='id'?100:3500;
       if(p.example?.[param.name]===undefined)delete offer.extensions.bazaar.info.input.queryParams[param.name];
     }
