@@ -11,6 +11,9 @@ The package preserves the original source paths and bytes. Its command interface
 starts those modules directly. It contains no alternative payment implementation,
 install hooks, test suites or GitHub Actions configuration.
 
+Browser modules served under shared URLs use the same [asset contracts](BROWSER_ASSETS.md)
+in their original HTTP servers and the source collector.
+
 ## Install the source archive
 
 Use Node 22.16 or later. From a new application directory, install the supplied

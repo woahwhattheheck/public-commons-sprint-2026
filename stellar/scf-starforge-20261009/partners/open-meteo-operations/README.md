@@ -206,3 +206,13 @@ npx --no-install starforge weather-operations serve \
 ~~~
 
 Restoration preserves original identities and runtime bindings. It neither relocates a ledger nor creates or executes a replacement buyer intent. Export the frozen report again from the restored original sources.
+
+## Completed operating example
+
+The original operating run on 11 October 2026 used three actual Open-Meteo responses: a 48-hour forecast, 72-hour ERA5 history spanning New York's March DST change, and a 48-hour ICON ensemble with 40 members and 120 returned variable/member columns. All original response bytes, requested sites, selected grid cells, native units, and validity seconds remain attached to their captures.
+
+The forecast passed through the maintained SF88 buyer as an HTTP 200 `NO_PAYMENT_REQUIRED` evaluation response, with its original intent retained and no reservation or payment. The original SF30 merchant separately compiled the three operations, preserved the exact retained source bytes through its upstream handlers, and issued its native 402 challenge with the selected 10,000-atomic terms. This run does not claim a paid customer deployment.
+
+The browser completed retained-source reprocessing, three attributed decisions, the 48-timestamp comparison, the complete 120-column member export, and a frozen three-source report. A later decision revision preserved the old report. Desktop and 390-pixel operation completed without page or API errors.
+
+The original SF88 encrypted snapshot, verification, and same-root restoration then preserved the original buyer intent, settings/client/setup, three captures, four decision revisions, and one frozen report. The restored report exported the identical 33,416-byte ZIP, SHA-256 `28d56f92cdf35756773a40eb5a0125d03b5b0f86d5ebf63485d2c79365643f53`; all nine manifest-bound member files matched. Restoration and export used the retained original data without another provider request or buyer execution.
