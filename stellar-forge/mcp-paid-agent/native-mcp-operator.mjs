@@ -91,20 +91,29 @@ export async function createNativeMcpOperator({ payer, signer, rpcUrl, limits,
       const checked = binding(quote);
       if (approved.has(quote.quoteId)) fail('MCP_NATIVE_APPROVAL_ALREADY_USED');
       if (approved.size >= 10000) fail('MCP_NATIVE_OPERATOR_CAPACITY');
-      const permission = await approveQuote(Object.freeze({quoteId:quote.quoteId, requestUrl:quote.requestUrl,
-        invocation:structuredClone(checked.invocation), accepted:structuredClone(checked.accepted),
-        nativeIntent:structuredClone(checked.intent), limits:structuredClone(fixed), signal:quote.signal}));
-      quote?.signal?.throwIfAborted();
-      if (closed) fail('MCP_NATIVE_OPERATOR_CLOSED');
-      if (permission !== true) return false;
-      approved.set(quote.quoteId, {...checked, attempted:false});
-      return true;
+      const reservation = {...checked, state:'APPROVAL_PENDING', attempted:false};
+      // Embedders can call this helper directly. Reserve before yielding so
+      // duplicate reviews cannot reserve spend twice or reset an attempted call.
+      approved.set(quote.quoteId, reservation);
+      try {
+        const permission = await approveQuote(Object.freeze({quoteId:quote.quoteId, requestUrl:quote.requestUrl,
+          invocation:structuredClone(checked.invocation), accepted:structuredClone(checked.accepted),
+          nativeIntent:structuredClone(checked.intent), limits:structuredClone(fixed), signal:quote.signal}));
+        quote?.signal?.throwIfAborted();
+        if (closed) fail('MCP_NATIVE_OPERATOR_CLOSED');
+        if (permission !== true) { approved.delete(quote.quoteId); return false; }
+        reservation.state = 'APPROVED';
+        return true;
+      } catch (error) {
+        if (approved.get(quote.quoteId) === reservation && !reservation.attempted) approved.delete(quote.quoteId);
+        throw error;
+      }
     },
     async signPayment(input) {
       input?.signal?.throwIfAborted();
       const checked = binding(input);
       const prior = approved.get(input.quoteId);
-      if (!prior || prior.attempted || !same(prior.invocation, checked.invocation) ||
+      if (!prior || prior.state !== 'APPROVED' || prior.attempted || !same(prior.invocation, checked.invocation) ||
           !same(prior.accepted, checked.accepted) || !same(prior.intent, checked.intent))
         fail('MCP_NATIVE_APPROVAL_MISMATCH');
       requireMcpChallenge(input.paymentRequired, checked.invocation, checked.accepted);
