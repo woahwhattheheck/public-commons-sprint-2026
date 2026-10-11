@@ -9,6 +9,11 @@ verification, reconcile merchant activity, close a saved period, prepare the
 accountant's original packet and apply a reviewed return. The exact delivered
 response remains retrievable throughout that operation.
 
+The complete [Bitwave Data Fusion workflow](./BITWAVE.md) uses the same owned
+workspace and accountant instance. Its thirteen additional tools operate declared
+customer organizations and native tables, retained delivery/capture and repair,
+concurrent-bookkeeping return review, exact file transfer and browser/MCP handover.
+
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
 remain in the original buyer, seller and facilitator.

@@ -413,6 +413,8 @@ The same provider operates the original merchant accounting workspace, completed
 
 See [ACCOUNTING.md](ACCOUNTING.md) for the complete installed and subprocess workflow, asynchronous job status, original source selection, SHA-pinned file chunks and durable reopening. Existing release, Python, DuckDB, discovery and fleet operations use the same provider.
 
+[Bitwave Data Fusion](BITWAVE.md) extends that same accounting session with declared customer/table inputs, retained native delivery and capture, missing-row repair, concurrent-bookkeeping return review and complete original file handoff. Its thirteen tools share the original browser workspace, accountant engine and native client.
+
 ## Prepare merchant receiving accounts
 
 The same MCP operator can manage the original receiving workspace before or
