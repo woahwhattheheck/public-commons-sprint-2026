@@ -5,8 +5,11 @@ import hashlib
 import hmac
 import ipaddress
 import json
+import math
 import re
+import socket
 import tempfile
+import threading
 import time
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -60,19 +63,32 @@ def _safe_message(error, config):
 class OperatorServer(ThreadingHTTPServer):
     daemon_threads = True
     allow_reuse_address = True
+    request_queue_size = 64
 
     def __init__(self, address, config, engine, *, operator_token=None,
-                 allowed_host=None, behind_https_proxy=False):
+                 allowed_host=None, behind_https_proxy=False, max_connections=16,
+                 http_timeout=30, shutdown_timeout=60):
         if not is_loopback(address[0]) and not (behind_https_proxy and allowed_host):
             raise ValueError("A non-loopback listener requires --behind-https-proxy and --allowed-host.")
         if allowed_host and (len(allowed_host) > 255 or re.search(r"[\s/@\\?#]", allowed_host)):
             raise ValueError("Allowed host must be the exact public hostname, with an optional port.")
+        if isinstance(max_connections, bool) or not isinstance(max_connections, int) or not 1 <= max_connections <= 128:
+            raise ValueError("Max connections must be an integer from 1 to 128.")
+        for label, value in (("HTTP timeout", http_timeout), ("Shutdown timeout", shutdown_timeout)):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or not 1 <= value <= 600:
+                raise ValueError(f"{label} must be from 1 to 600 seconds.")
         self.config = config
         self.engine = engine
+        self.max_connections = max_connections
+        self.http_timeout = http_timeout
+        self.shutdown_timeout = shutdown_timeout
+        self._connections = set()
+        self._connection_changed = threading.Condition()
+        self._draining = False
+        self.shutdown_timed_out = False
         self.operator_token = config.operator_token() if operator_token is None else operator_token
         self.behind_https_proxy = bool(behind_https_proxy)
         if ":" in address[0]:
-            import socket
             self.address_family = socket.AF_INET6
         super().__init__(address, Handler)
         port = self.server_address[1]
@@ -83,15 +99,82 @@ class OperatorServer(ThreadingHTTPServer):
             if is_loopback(address[0]):
                 self.allowed_hosts.update({_authority("127.0.0.1", port), _authority("localhost", port), _authority("::1", port)})
 
+    def connection_status(self):
+        with self._connection_changed:
+            return {"active": len(self._connections), "maximum": self.max_connections,
+                    "draining": self._draining}
+
+    def begin_shutdown(self):
+        with self._connection_changed:
+            self._draining = True
+
+    def process_request(self, request, client_address):
+        with self._connection_changed:
+            admitted = not self._draining and len(self._connections) < self.max_connections
+            if admitted:
+                self._connections.add(request)
+        if not admitted:
+            # Do not allocate a handler, parse private headers or acknowledge a
+            # webhook when the service cannot accept another connection.
+            body = b'{"error":{"code":"SERVICE_BUSY","message":"The service is busy or stopping. Retry the original request."}}\n'
+            response = (b"HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n"
+                        b"Content-Type: application/json\r\nCache-Control: no-store\r\n"
+                        b"Retry-After: 1\r\nContent-Length: " + str(len(body)).encode() + b"\r\n\r\n" + body)
+            try:
+                request.settimeout(0.1)
+                request.sendall(response)
+            except OSError:
+                pass
+            finally:
+                self.shutdown_request(request)
+            return
+        try:
+            super().process_request(request, client_address)
+        except BaseException:
+            self._release_request(request)
+            raise
+
+    def _release_request(self, request):
+        with self._connection_changed:
+            self._connections.discard(request)
+            self._connection_changed.notify_all()
+
+    def process_request_thread(self, request, client_address):
+        try:
+            super().process_request_thread(request, client_address)
+        finally:
+            self._release_request(request)
+
+    def server_close(self):
+        self.begin_shutdown()
+        super().server_close()
+        deadline = time.monotonic() + self.shutdown_timeout
+        with self._connection_changed:
+            while self._connections and (remaining := deadline - time.monotonic()) > 0:
+                self._connection_changed.wait(remaining)
+            unfinished = tuple(self._connections)
+            self.shutdown_timed_out = bool(unfinished)
+        # At the selected deadline, end only this server's remaining sockets.
+        # Committed intake remains in the original store for the next worker.
+        for request in unfinished:
+            try:
+                request.shutdown(socket.SHUT_RDWR)
+            except OSError:
+                pass
+            request.close()
+
     def handle_error(self, request, client_address):
         # Unexpected connection errors do not dump private request context.
         return
 
 
 def make_server(config, engine, *, host="127.0.0.1", port=8787,
-                operator_token=None, allowed_host=None, behind_https_proxy=False):
+                operator_token=None, allowed_host=None, behind_https_proxy=False,
+                max_connections=16, http_timeout=30, shutdown_timeout=60):
     return OperatorServer((host, port), config, engine, operator_token=operator_token,
-                          allowed_host=allowed_host, behind_https_proxy=behind_https_proxy)
+                          allowed_host=allowed_host, behind_https_proxy=behind_https_proxy,
+                          max_connections=max_connections, http_timeout=http_timeout,
+                          shutdown_timeout=shutdown_timeout)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -101,7 +184,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def setup(self):
         super().setup()
-        self.connection.settimeout(30)
+        self.connection.settimeout(self.server.http_timeout)
 
     def log_message(self, format, *args):
         return
@@ -116,6 +199,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Frame-Options", "DENY")
         self.send_header("Referrer-Policy", "no-referrer")
         self.send_header("Content-Security-Policy", CSP)
+        # Idle keep-alive sockets must not occupy all admitted handler slots.
+        self.send_header("Connection", "close")
+        self.close_connection = True
         if download:
             self.send_header("Content-Disposition", 'attachment; filename="' + download + '"')
 
@@ -208,7 +294,8 @@ class Handler(BaseHTTPRequestHandler):
                 "configuration": self.server.config.public_dict(),
                 "operations": self.server.engine.status(),
                 "operator": {"webhook_path": "/webhooks/mercury", "version": "1.0.0",
-                             "worker": getattr(self.server, "worker_status", {"state": "externally_managed"})}}
+                             "worker": getattr(self.server, "worker_status", {"state": "externally_managed"}),
+                             "http": self.server.connection_status()}}
 
     def _export(self, *, events_only=False):
         # Prepare a complete private spool before advertising a successful download.
@@ -236,6 +323,12 @@ class Handler(BaseHTTPRequestHandler):
         self._host()
         parsed = urlsplit(self.path)
         path = parsed.path
+        if path == "/healthz":
+            if parsed.query:
+                raise RequestError("INVALID_QUERY", "Health does not accept query parameters.")
+            state = getattr(self.server, "worker_status", {"state": "externally_managed"})["state"]
+            ready = state in {"running", "externally_managed"} and not self.server.connection_status()["draining"]
+            return self._json({"ready": ready, "worker": state}, 200 if ready else 503)
         if path.startswith("/api/"):
             self._admin()
             if path == "/api/status":

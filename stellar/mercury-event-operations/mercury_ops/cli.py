@@ -9,6 +9,7 @@ import signal
 import sys
 import tempfile
 import threading
+import time
 from pathlib import Path
 
 from . import __version__
@@ -57,6 +58,12 @@ def parser():
     serve.add_argument("--port", type=int, default=8787)
     serve.add_argument("--allowed-host", help="Exact public host[:port] used by the trusted reverse proxy")
     serve.add_argument("--behind-https-proxy", action="store_true")
+    serve.add_argument("--max-connections", type=int, default=16,
+                       help="Concurrent HTTP connections, from 1 to 128 (default: 16)")
+    serve.add_argument("--http-timeout", type=float, default=30,
+                       help="Socket read/write timeout in seconds, from 1 to 600 (default: 30)")
+    serve.add_argument("--shutdown-timeout", type=float, default=60,
+                       help="Combined HTTP and worker shutdown grace in seconds, from 1 to 600 (default: 60)")
     command("status", "Read sanitized configuration and retained operation counts")
     once = command("run-once", "Process retained work without starting an HTTP server")
     once.add_argument("--max-operations", type=int, default=1)
@@ -149,20 +156,31 @@ def _restore_signals(previous):
 
 def serve(config, engine, args):
     server = make_server(config, engine, host=args.host, port=args.port,
-                         allowed_host=args.allowed_host, behind_https_proxy=args.behind_https_proxy)
+                         allowed_host=args.allowed_host, behind_https_proxy=args.behind_https_proxy,
+                         max_connections=args.max_connections, http_timeout=args.http_timeout,
+                         shutdown_timeout=args.shutdown_timeout)
     stop = threading.Event()
+    failed = threading.Event()
     server.worker_status = {"state": "starting"}
     def run_worker():
         server.worker_status = {"state": "running"}
         try:
             engine.run_forever(stop)
+            if not stop.is_set():
+                raise RuntimeError("The owned worker ended before service shutdown")
         except Exception as error:
+            failed.set()
             server.worker_status = {"state": "failed", "error": error_record(error, config)}
             output({"worker": server.worker_status}, stream=sys.stderr)
         finally:
-            if server.worker_status["state"] != "failed":
+            if failed.is_set():
+                server.begin_shutdown()
+                stop.set()
+            else:
                 server.worker_status = {"state": "stopped"}
-    worker = threading.Thread(target=run_worker, name="mercury-owned-worker")
+    # Normal shutdown joins this worker. A deadline leaves the retained task for
+    # the original recovery path instead of keeping a failed service alive.
+    worker = threading.Thread(target=run_worker, name="mercury-owned-worker", daemon=True)
     previous = _signals(stop)
     try:
         engine.recover()
@@ -170,17 +188,29 @@ def serve(config, engine, args):
         host = args.allowed_host if args.allowed_host else (
             ("[" + args.host + "]" if ":" in args.host else args.host) + ":" + str(server.server_address[1]))
         output({"state": "serving", "url": ("https://" if args.behind_https_proxy else "http://") + host,
-                "webhook_path": "/webhooks/mercury", "configuration": config.public_dict()})
-        server.serve_forever(poll_interval=0.25)
+                "webhook_path": "/webhooks/mercury", "health_path": "/healthz",
+                "configuration": config.public_dict(), "http": server.connection_status()})
+        # handle_request has a finite wait and avoids shutdown()/serve_forever()
+        # cross-thread startup deadlocks when the worker fails immediately.
+        server.timeout = 0.25
+        while not stop.is_set():
+            server.handle_request()
     except KeyboardInterrupt:
         pass
     finally:
         stop.set()
+        deadline = time.monotonic() + args.shutdown_timeout
         server.server_close()
         if worker.ident is not None:
-            worker.join()
+            worker.join(max(0, deadline - time.monotonic()))
+        unfinished = server.connection_status()["active"]
+        if worker.is_alive() or unfinished or server.shutdown_timed_out:
+            failed.set()
+            output({"state": "shutdown_deadline", "worker_active": worker.is_alive(),
+                    "http_active": unfinished, "http_deadline_reached": server.shutdown_timed_out,
+                    "recovery": "Reopen this workspace; retained tasks keep their original event keys."}, stream=sys.stderr)
         _restore_signals(previous)
-    return 1 if server.worker_status["state"] == "failed" else 0
+    return 1 if failed.is_set() else 0
 
 
 def main(argv=None):
