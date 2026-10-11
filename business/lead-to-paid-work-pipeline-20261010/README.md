@@ -46,6 +46,25 @@ Explicit owner exclusions take precedence. Records explicitly attributed to an a
 
 For a proposed fee under standing proposal authority, use `workshare.feeStatus: "PROPOSED"`. The board records `OWNER_STANDING`; it does not represent that amount as personally approved by the owner. `OWNER_APPROVED_PROPOSAL` still means the specific price was approved. Numerical margins by themselves provide no authority. A quote is not accepted work or revenue.
 
+When using the original `first_contact.py export`, put the canonical path in the capture's top-level `claimPath` and keep its result unmodified. The native CLI returns `result.claim_path`; the importer also accepts the older `result.path` alias. If both are present, both must match the requested record. `CONTACT_EXPORT` with an actual 404 and null record is an observed absent record, not a failed read.
+
+## Proposed fees in their original currency
+
+Existing `workshare.feeUsd` and `costUsd` inputs keep their USD behavior. For another currency, use a currency code and exact integer minor units in the same workshare record:
+
+```json
+{
+  "currency": "EUR",
+  "feeMinor": 190000,
+  "costMinor": null,
+  "feeStatus": "PROPOSED"
+}
+```
+
+This records EUR 1,900.00; `null` leaves delivery cost unset. The board, decision JSON and workshare sheet retain the proposal currency. The HTML board also shows the delivery scope and acceptance milestones beside that fee. The currency's standard minor-unit precision comes from the Node runtime's internationalization data; currencies with zero or three fraction digits use those units. Amounts must be nonnegative safe integers. Mixing these fields with non-null legacy USD amounts is rejected so a stated EUR quote cannot silently become a USD quote.
+
+A same-currency margin is available only when both fee and cost are supplied. This adds no FX conversion or accepted revenue: USD compatibility fields stay null for a non-USD proposal, and existing invoice/receipt currency accounting is unchanged. A proposed fee under standing owner authority remains a proposal; actual delivery acceptance, contract and payment retain their original provider/receipt workflow.
+
 ## Buyer and partner records
 
 The case key remains buyer name + solicitation ID + revision. Keep cancelled/reposted editions distinct. Buyer status is explicitly `OPEN`, `CLOSED`, `CANCELLED` or `UNKNOWN`; `sourceCheck` records the issuer review. Dated solicitations require a confirmed offset timestamp. A genuinely continuous opportunity can use `buyer.deadline: {kind: "ROLLING", confirmed: true, originalText: "..."}` when supported by the source.

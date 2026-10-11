@@ -48,6 +48,12 @@ export async function startFacilitatorServer({facilitator, port = 4020} = {}) {
       if (req.headers.host !== authority || req.headers.origin !== undefined)
         throw new FacilitatorError('LOCAL_OPERATOR_CLIENT_REQUIRED',403);
       if (req.method === 'GET' && req.url === '/healthz') return json(res,200,facilitator.status());
+      if (req.method === 'GET' && req.url === '/readyz') {
+        if (typeof facilitator.probeReadiness !== 'function')
+          throw new FacilitatorError('READINESS_UNAVAILABLE',503);
+        const observation = await facilitator.probeReadiness();
+        return json(res,observation.ready && facilitator.status().state === 'ACCEPTING' ? 200 : 503,observation);
+      }
       if (req.method === 'GET' && req.url === '/supported') return json(res,200,await facilitator.getSupported());
       if (!['/verify','/settle'].includes(req.url)) throw new FacilitatorError('NOT_FOUND',404);
       if (req.method !== 'POST') throw new FacilitatorError('METHOD_NOT_ALLOWED',405);
@@ -92,3 +98,4 @@ export async function startFacilitatorServer({facilitator, port = 4020} = {}) {
   })();
   return {url:`http://127.0.0.1:${server.address().port}`,server,close};
 }
+

@@ -61,20 +61,26 @@ environment; an explicitly configured proxy contributes only its validated,
 credential-free endpoint. Its separate Node observer receives no operator keys. A later
 reduction in the workspace's new-spending cap does not erase an earlier reservation.
 
-The observer uses the workspace's explicitly configured testnet RPC. Supported
-providers are SDF and Gateway, both in the [Stellar provider directory](https://developers.stellar.org/docs/data/apis/rpc/providers):
-
-- `https://soroban-testnet.stellar.org`
-- `https://soroban-rpc.testnet.stellar.gateway.fm`
+The observer uses the workspace's RPC for the original approved network.
+The shared [network catalog](../sf86-rpc-transfer-reconcile/networks.json)
+contains SDF and Gateway for testnet, Gateway and Lightsail archive for pubnet,
+as listed in the [Stellar provider directory](https://developers.stellar.org/docs/data/apis/rpc/providers).
+The respective defaults are SDF testnet and Gateway mainnet. The complete
+mainnet operation is documented in [MAINNET.md](MAINNET.md).
 
 Equivalent root URLs with an optional trailing slash normalize to the same
-provider origin. Credentials, additional paths, queries and fragments are rejected.
+provider. Credentials, additional paths, queries and fragments are rejected.
 
-The selected provider must return the canonical testnet passphrase before its
+The selected provider must return that network's canonical passphrase before its
 transaction and native transfer events are read. The observation retains that
 endpoint. There is no automatic provider fallback, seller-selected RPC or loopback
 finalization. The original official SDK decoder also supports the maintained
 buyer's local pinned installation.
+
+The request, reservation, receipt, provider and positive transfer verdict must
+all agree on `stellar:testnet` or `stellar:pubnet`. Python and Node read the same
+catalog. The final receipt retains that network prefix, so a transfer on one
+network cannot be reused to discharge a reservation on the other.
 
 If the workspace already selects `buyerTransport`, finalization uses that same
 explicit fixed proxy or named environment source. It compares the queued and

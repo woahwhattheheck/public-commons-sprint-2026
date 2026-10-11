@@ -10,6 +10,7 @@ const COUNTS = ['started', 'completed', 'responses', 'success', 'challenge', 'cl
 const BOUNDS = [5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 15000, null];
 const SESSION_SCHEMA = 'stellar-forge.seller-usage-session.v1';
 const REPORT_SCHEMA = 'stellar-forge.seller-usage-history.v1';
+const COVERAGE_FORMAT = 'stellar-forge.seller-usage-day-routes.v1';
 const SESSION_ID = /^[A-Za-z0-9_-]{1,80}$/;
 const FILE = /^session-([A-Za-z0-9_-]{1,80})\.json$/;
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
@@ -177,6 +178,143 @@ function normalizeSaved(record, filenameId) {
     totals: { ...record.totals, inFlight: record.outstandingAtCheckpoint } });
   return { schema: SESSION_SCHEMA, ...normalized, state: record.state,
     savedAt: instant(record.savedAt), finalizedAt: record.state === 'FINALIZED' ? instant(record.finalizedAt) : null };
+}
+
+function matchingMetrics(actual, expected, label) {
+  const left = metrics(actual), right = metrics(expected);
+  if (COUNTS.some(key => left[key] !== right[key]) ||
+      left.durationMaxMs !== right.durationMaxMs ||
+      left.durationHistogram.buckets.some((bin, i) => bin.count !== right.durationHistogram.buckets[i].count) ||
+      [...new Set([...Object.keys(left.statuses), ...Object.keys(right.statuses)])]
+        .some(status => (left.statuses[status] ?? 0) !== (right.statuses[status] ?? 0)))
+    fail(label + ' differs from the original retained day aggregates');
+  // Summing the same floating-point durations by route or by day may change the
+  // final rounding bit. Integer counters and histogram populations remain exact.
+  const tolerance = 1e-9 * Math.max(1, left.durationHistogram.sumMs, right.durationHistogram.sumMs);
+  if (Math.abs(left.durationHistogram.sumMs - right.durationHistogram.sumMs) > tolerance)
+    fail(label + ' duration sum differs from the original retained days');
+}
+function reportRoutes(input) {
+  if (!Array.isArray(input) || input.length > MAX_SESSIONS * 103)
+    fail('Original retained route variants required');
+  const seen = new Set();
+  return input.map(row => {
+    const definition = routeDefinition(row), key = routeKey(definition);
+    if (row.routeKey !== key || seen.has(key) ||
+        (definition.id.startsWith('@') ? definition.method !== '-' : definition.method === '-'))
+      fail('Invalid or duplicate retained route key');
+    seen.add(key);
+    return { routeKey: key, ...definition, ...view(metrics(row)) };
+  });
+}
+
+/** Validate a saved or live ORIGINAL history export without opening its writer. */
+export function normalizeTrafficHistoryReport(input) {
+  if (input?.schema !== REPORT_SCHEMA || input.enabled !== true)
+    fail('Enabled original SF30 usage history export required', 'HISTORY_EXPORT_REQUIRED');
+  if (input.coverageFormat != null && input.coverageFormat !== COVERAGE_FORMAT)
+    fail('Unsupported original history coverage format', 'HISTORY_COVERAGE_FORMAT');
+  const generatedAt = instant(input.generatedAt), selected = input.range;
+  if (!selected || !Number.isInteger(input.retentionDays) || input.retentionDays < 1 || input.retentionDays > 365)
+    fail('Original history selection and retention required');
+  const from = day(selected.from), to = day(selected.to);
+  if (from > to || Date.parse(to) - Date.parse(from) > 365 * DAY)
+    fail('History selection must be ordered and no longer than 366 days');
+  const routeId = selected.routeId ?? null;
+  if (routeId !== null && !(typeof routeId === 'string' &&
+      (SESSION_ID.test(routeId) || ['@unmatched', '@method', '@invalid'].includes(routeId))))
+    fail('Invalid original history route selection');
+  const outsideRetention = selected.outsideRetention === true;
+  const effectiveFrom = outsideRetention ? null : day(selected.effectiveFrom ?? from);
+  const effectiveTo = outsideRetention ? null : day(selected.effectiveTo ?? to);
+  if (!outsideRetention && (effectiveFrom < from || effectiveTo > to || effectiveFrom > effectiveTo))
+    fail('Invalid effective retained history range');
+  const range = { from, to, routeId, requestedFrom: day(selected.requestedFrom ?? from),
+    truncatedByRetention: selected.truncatedByRetention === true,
+    retainedFrom: day(selected.retainedFrom ?? from), effectiveFrom, effectiveTo, outsideRetention };
+  if (!Array.isArray(input.days) || input.days.length > 366 ||
+      !Array.isArray(input.sessions) || input.sessions.length > MAX_SESSIONS)
+    fail('Original retained days and sessions required');
+  const seenDays = new Set(), routesByKey = new Map(), combined = empty();
+  const days = input.days.map(entry => {
+    const date = day(entry?.day);
+    if (seenDays.has(date) || outsideRetention || date < effectiveFrom || date > effectiveTo)
+      fail('Duplicate or unselected retained history day');
+    seenDays.add(date);
+    const routes = reportRoutes(entry.routes), total = empty();
+    if (!routes.length || count(entry.sessions) < 1) fail('Retained day has no original route or session');
+    for (const row of routes) {
+      if (routeId !== null && row.id !== routeId) fail('Retained route differs from the selected route');
+      add(total, row);
+      if (!routesByKey.has(row.routeKey)) routesByKey.set(row.routeKey,
+        { routeKey: row.routeKey, ...routeDefinition(row), ...empty() });
+      add(routesByKey.get(row.routeKey), row);
+    }
+    matchingMetrics(entry.totals, total, 'Retained day total');
+    add(combined, total);
+    return { day: date, totals: view(metrics(entry.totals)), routes, sessions: entry.sessions };
+  }).sort((a, b) => a.day.localeCompare(b.day));
+  matchingMetrics(input.totals, combined, 'History total');
+  const routes = reportRoutes(input.routes);
+  if (routes.length !== routesByKey.size) fail('History route variants differ from retained days');
+  for (const row of routes) {
+    const combinedRoute = routesByKey.get(row.routeKey);
+    if (!combinedRoute) fail('History route has no retained day');
+    matchingMetrics(row, combinedRoute, 'History route total');
+  }
+  const dayById = new Map(days.map(entry => [entry.day, entry]));
+  const seenSessions = new Set(), modes = new Set();
+  const sessions = input.sessions.map(record => {
+    if (!SESSION_ID.test(record?.sessionId ?? '') || seenSessions.has(record.sessionId) ||
+        !['ACTIVE', 'FINALIZED', 'INTERRUPTED'].includes(record.state) ||
+        !['NATIVE_X402', 'CHALLENGE_ONLY', 'UNKNOWN'].includes(record.mode) ||
+        count(record.matchingDays) < 1 || record.matchingDays > days.length)
+      fail('Invalid original retained session');
+    seenSessions.add(record.sessionId); modes.add(record.mode);
+    const startedAt = instant(record.startedAt), capturedAt = instant(record.capturedAt);
+    if (startedAt > capturedAt) fail('Original retained session interval is reversed');
+    let retainedDays = null;
+    if (record.retainedDays != null) {
+      if (!Array.isArray(record.retainedDays) || record.retainedDays.length !== record.matchingDays)
+        fail('Original session day coverage differs from its selection');
+      const selectedDays = new Set();
+      retainedDays = record.retainedDays.map(entry => {
+        const date = day(entry?.day), originalDay = dayById.get(date);
+        if (!originalDay || selectedDays.has(date) || date < startedAt.slice(0, 10) ||
+            date > capturedAt.slice(0, 10) || !Array.isArray(entry.routeKeys) || !entry.routeKeys.length)
+          fail('Invalid original session day coverage');
+        selectedDays.add(date);
+        const keys = new Set(entry.routeKeys);
+        if (keys.size !== entry.routeKeys.length ||
+            entry.routeKeys.some(key => !originalDay.routes.some(row => row.routeKey === key)))
+          fail('Original session coverage refers to an unknown route variant');
+        return { day: date, routeKeys: [...keys].sort() };
+      }).sort((a, b) => a.day.localeCompare(b.day));
+    } else if (input.coverageFormat === COVERAGE_FORMAT) {
+      fail('Original session day coverage is missing');
+    }
+    return { sessionId: record.sessionId, mode: record.mode, startedAt, capturedAt,
+      savedAt: instant(record.savedAt),
+      finalizedAt: record.state === 'FINALIZED' ? instant(record.finalizedAt) : null,
+      state: record.state, outstandingAtCheckpoint: count(record.outstandingAtCheckpoint),
+      observerErrors: count(record.observerErrors), matchingDays: record.matchingDays, retainedDays };
+  });
+  if (!Array.isArray(input.modes) || new Set(input.modes).size !== input.modes.length ||
+      input.modes.length !== modes.size || input.modes.some(mode => !modes.has(mode)))
+    fail('History modes differ from the original retained sessions');
+  if (days.length && !sessions.length) fail('Retained observations have no original sessions');
+  if (sessions.every(session => session.retainedDays !== null)) {
+    for (const entry of days) {
+      const covered = sessions.flatMap(session => session.retainedDays.filter(row => row.day === entry.day));
+      if (covered.length !== entry.sessions || entry.routes.some(row =>
+        !covered.some(coverage => coverage.routeKeys.includes(row.routeKey))))
+        fail('Retained day and original session coverage do not agree');
+    }
+  }
+  return { schema: REPORT_SCHEMA, enabled: true, generatedAt, retentionDays: input.retentionDays,
+    coverageFormat: input.coverageFormat ?? null, range, totals: view(metrics(input.totals)),
+    routes, days, sessions, modes: [...modes].sort(),
+    storage: structuredClone(input.storage ?? {}), semantics: structuredClone(input.semantics ?? {}) };
 }
 async function privateFile(path, maxBytes = MAX_FILE_BYTES) {
   const info = await lstat(path);
@@ -464,11 +602,13 @@ export async function createTrafficHistory({ directory, retentionDays = 90, now 
     }
     for (const record of records.values()) {
       let matchingDays = 0;
+      const retainedDays = [];
       for (const entry of record.days) {
         if (outsideRetention || entry.day < effectiveFrom || entry.day > to) continue;
         const selected = entry.routes.filter(row => routeId === undefined || row.id === routeId);
         if (!selected.length) continue;
         matchingDays++; modes.add(record.mode);
+        retainedDays.push({ day: entry.day, routeKeys: selected.map(routeKey).sort() });
         if (!days.has(entry.day)) days.set(entry.day, { day: entry.day, totals: empty(), routes: new Map(), sessionIds: new Set() });
         const aggregate = days.get(entry.day); aggregate.sessionIds.add(record.sessionId);
         for (const row of selected) {
@@ -481,11 +621,12 @@ export async function createTrafficHistory({ directory, retentionDays = 90, now 
         state: record.state === 'FINALIZED' ? 'FINALIZED' :
           record.sessionId === activeSessionId && !closed ? 'ACTIVE' : 'INTERRUPTED',
         outstandingAtCheckpoint: record.outstandingAtCheckpoint, observerErrors: record.observerErrors,
-        matchingDays });
+        matchingDays, retainedDays });
     }
     const routeViews = collection => [...collection.values()].sort((a, b) =>
       a.id.localeCompare(b.id) || a.path.localeCompare(b.path) || a.method.localeCompare(b.method)).map(view);
     return { schema: REPORT_SCHEMA, enabled: true, generatedAt: timestamp(), retentionDays,
+      coverageFormat: COVERAGE_FORMAT,
       range: { from, to, routeId: routeId ?? null, requestedFrom,
         truncatedByRetention: requestedFrom < retainedFrom, retainedFrom,
         effectiveFrom, effectiveTo: outsideRetention ? null : to, outsideRetention },

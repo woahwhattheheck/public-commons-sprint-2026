@@ -7,5 +7,5 @@ export { X402BuyerClient, BuyerError } from '../sf31-buyer-client/buyer.mjs';
 export { explainFailure, gateNextAction } from '../sf33-failure-contract/contract.mjs';
 export { MeteredUptoSettlement, MeterError } from '../sf35-metered-settlement/metered-settlement.mjs';
 export { inspectSupported, inspectRequest, inspectResponse, auditCapture, probeSupported, checkHorizonInclusion } from '../sf38-conformance/conformance.mjs';
-export { parseExactTestnetTerms, checkStellarTestnetTransaction, parseSep41TransferAmount } from '../sf43-agent-commerce/verify.mjs';
+export { parseExactTestnetTerms, checkStellarTestnetTransaction, checkStellarTransaction, selectStellarEvidenceEndpoint, parseSep41TransferAmount } from '../sf43-agent-commerce/verify.mjs';
 export { createChallenge, verifyPinnedProof, verifyOriginProof } from '../sf50-seller-proof/proof.mjs';

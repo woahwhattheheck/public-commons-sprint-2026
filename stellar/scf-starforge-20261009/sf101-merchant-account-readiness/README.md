@@ -1,10 +1,6 @@
 # SF101 · Stellar merchant account receiving and reserve preflight
 
-For a configured SF30 merchant, use the complete [seller receiving review](MERCHANT.md).
-It reads the original seller configuration, preserves every native payment choice,
-resolves deployed token metadata and recipient authorization, joins the original
-account/trustline calculation, and saves a private review with original network
-reads. The single-account classic command described below remains available.
+For the complete original SF30 seller configuration and deployed StellarAssetContract receiving workflow, use [Merchant receiving setup](MERCHANT_READINESS.md). It connects this original account evaluator to exact contract derivation, native contract-instance reads, all configured payment choices and the original SF16 validator. The classic-only command below remains available.
 
 **Node 22+ · MIT · read-only official Horizon · no secrets, dependencies, wallet use, hosted Actions, or automated transactions.**
 

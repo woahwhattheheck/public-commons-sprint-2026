@@ -1115,11 +1115,29 @@ function creatorsForPicker() {
   return creators.length ? creators : ui.state.actors;
 }
 
+// Normalized snapshots are replaced together. Reuse their campaign joins
+// across cards, selected detail, wallet references and the payment timeline.
+let indexedState = null;
+let campaignIndex = null;
+function indexCampaignState() {
+  if (indexedState === ui.state && campaignIndex) return campaignIndex;
+  const campaigns = new Map(), submissions = new Map();
+  for (const c of ui.state.campaigns) {
+    if (!campaigns.has(c.id)) campaigns.set(c.id, c);
+  }
+  for (const s of ui.state.submissions) {
+    if (!submissions.has(s.campaignId)) submissions.set(s.campaignId, []);
+    submissions.get(s.campaignId).push(s);
+  }
+  indexedState = ui.state;
+  campaignIndex = { campaigns, submissions };
+  return campaignIndex;
+}
 function campaignSubmissions(campaignId) {
-  return ui.state.submissions.filter((s) => s.campaignId === campaignId);
+  return indexCampaignState().submissions.get(campaignId) || [];
 }
 function getCampaign(id) {
-  return ui.state.campaigns.find((c) => c.id === id) || null;
+  return indexCampaignState().campaigns.get(id) || null;
 }
 
 // Local-mode submission creator parameter: the backend's actorAddr accepts the
@@ -1261,6 +1279,7 @@ function renderWalletBox() {
   }
 }
 
+let actorPickerOptions = null;
 function renderRoleControls() {
   const demo = isLocalDemo();
   const pub = isPublicMode();
@@ -1291,8 +1310,13 @@ function renderRoleControls() {
     const sel = $("#actorSelect");
     const keep = creators.some((a) => a.id === ui.actorId) ? ui.actorId : creators[0].id;
     ui.actorId = keep;
-    sel.replaceChildren(...creators.map((a) =>
-      h("option", { value: a.id, text: `${a.label} (demo)${a.address ? " · " + shortAddr(a.address) : ""}`, selected: a.id === keep })));
+    const options = JSON.stringify(creators.map(a => [a.id, a.label, a.address]));
+    if (options !== actorPickerOptions) {
+      sel.replaceChildren(...creators.map((a) =>
+        h("option", { value: a.id, text: `${a.label} (demo)${a.address ? " · " + shortAddr(a.address) : ""}`, selected: a.id === keep })));
+      actorPickerOptions = options;
+    }
+    sel.value = keep;
   }
 }
 
@@ -1552,10 +1576,32 @@ function campaignTitle(c) {
   return c.title || (c.metadataMatches === false ? "Details unavailable" : "Untitled campaign");
 }
 
+const campaignListView = { state: null, role: null, selected: null, cards: new Map() };
+function updateCampaignSelection() {
+  if (campaignListView.selected === ui.selectedCampaignId) return;
+  for (const id of [campaignListView.selected, ui.selectedCampaignId]) {
+    for (const card of campaignListView.cards.get(id) || []) {
+      const selected = id === ui.selectedCampaignId;
+      card.classList.toggle("selected", selected);
+      card.setAttribute("aria-pressed", String(selected));
+    }
+  }
+  campaignListView.selected = ui.selectedCampaignId;
+}
+
 function renderCampaignList() {
-  const list = $("#campaignList");
-  list.replaceChildren();
-  const s = ui.state;
+  const list = $("#campaignList"), s = ui.state;
+  // Role/actor/detail changes do not change populated campaign cards. Keep
+  // their nodes and keyboard position; a new API snapshot rebuilds the view.
+  if (campaignListView.state === s &&
+      (s.campaigns.length || campaignListView.role === ui.role)) {
+    updateCampaignSelection();
+    return;
+  }
+  list.replaceChildren();
+  campaignListView.role = ui.role;
+  campaignListView.selected = ui.selectedCampaignId;
+  campaignListView.cards.clear();
   if (!s.campaigns.length) {
     const empty = h("div", { class: "empty-state" },
       svgDeco('<svg viewBox="0 0 56 56" width="46" height="46"><circle cx="28" cy="28" r="22" fill="none" stroke="currentColor" stroke-width="2.4" opacity=".45"/><path d="M28 18v20M19 24.5c0-2.5 4-4.5 9-4.5s9 2 9 4.5-3.5 4.1-9 5-9 2-9 5 4 4.5 9 4.5 9-2 9-4.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>'),
@@ -1565,6 +1611,7 @@ function renderCampaignList() {
         : "Create a campaign, fund its pool on the declared network, then share it with creators." }),
       ui.role === "sponsor" ? h("button", { type: "button", class: "btn primary", onClick: openNewCampaign }, "Create the first campaign") : null);
     list.append(empty);
+    campaignListView.state = s;
     return;
   }
   for (const c of s.campaigns) {
@@ -1592,8 +1639,11 @@ function renderCampaignList() {
       h("div", { class: "cc-foot" },
         h("span", { class: "cc-subs", text: `${subs.length} submission${subs.length === 1 ? "" : "s"}${approved ? ` · ${approved} approved` : ""}` }),
         h("span", { class: "muted small", text: "View →" })));
+    if (!campaignListView.cards.has(c.id)) campaignListView.cards.set(c.id, []);
+    campaignListView.cards.get(c.id).push(card);
     list.append(card);
   }
+  campaignListView.state = s;
 }
 
 /* ============================ render: detail ============================ */
@@ -1764,6 +1814,41 @@ function campaignLinkNode(c) {
       : "Opens this campaign in the creator view, on this same app deployment." }));
 }
 
+let detailOverviewView = null;
+function campaignOverview(c, status) {
+  if (detailOverviewView?.state === ui.state && detailOverviewView.campaign === c) {
+    return detailOverviewView;
+  }
+  // Keep the source-only overview across role/actor changes. Action gates,
+  // wallet operations and creator forms are rebuilt from their current state.
+  const nodes = [
+    h("div", { class: "detail-head" },
+      h("div", {},
+        h("h2", { text: campaignTitle(c) }),
+        h("div", { class: "detail-sub" },
+          statusPill(status),
+          c.deadline ? h("span", { title: `deadline (UTC): ${c.deadline}`, text: `Closes ${fmtTime(c.deadline)}` }) : null,
+          c.sponsor ? h("span", { class: "mono", title: c.sponsor, text: `sponsor ${c.sponsorActor ? actorKeyLabel(c.sponsorActor) + " · " : ""}${shortAddr(c.sponsor)}` }) : null,
+          c.createTx ? txLinkNode(c.createTx) : null,
+          c.createdAt ? h("span", { text: `created ${fmtTime(c.createdAt)}` }) : null))),
+    c.brief
+      ? h("div", { class: "brief-box" }, h("span", { class: "brief-label", text: "Creative brief" }), c.brief)
+      : (c.metadataMatches === false ? h("div", { class: "brief-box dim" }, h("span", { class: "brief-label", text: "Creative brief" }), "Details unavailable — the backend has no matching off-chain metadata for this campaign.") : null),
+    h("div", { class: "budget-grid" },
+      figure("Budget", fmt(c.budgetAtomic)),
+      figure("Funded", fmt(c.fundedAtomic), { dim: Amount.isZero(c.fundedAtomic) }),
+      c.unfundedAtomic !== null && !Amount.isZero(c.unfundedAtomic) ? figure("Unfunded", fmt(c.unfundedAtomic)) : null,
+      figure("Reserved", fmt(c.reservedAtomic), { cls: c.reservedAtomic && !Amount.isZero(c.reservedAtomic) ? "accent" : "" }),
+      figure("Available", fmt(c.availableAtomic), { cls: c.availableAtomic && !Amount.isZero(c.availableAtomic) ? "accent" : "" }),
+      figure("Paid to creators", fmt(c.paidAtomic), { cls: c.paidAtomic && !Amount.isZero(c.paidAtomic) ? "good" : "" }),
+      Amount.isZero(c.refundedAtomic) ? null : figure("Refunded", fmt(c.refundedAtomic))),
+    c.remainingApprovals !== null ? h("p", { class: "muted small", text: `Room for ${c.remainingApprovals} more approval${c.remainingApprovals === "1" ? "" : "s"} at the current reward.` }) : null,
+  ].filter(Boolean);
+  const link = campaignLinkNode(c);
+  detailOverviewView = { state: ui.state, campaign: c, nodes, link };
+  return detailOverviewView;
+}
+
 function renderDetail() {
   const empty = $("#detailEmpty");
   const panel = $("#detailPanel");
@@ -1826,33 +1911,11 @@ function renderDetail() {
     detailActions.push(h("button", { type: "button", class: "btn ghost small", "data-focus-key": `cancel-close:${c.id}`, onClick: () => { ui.confirmClose = null; renderDetail(); } }, "Keep open"));
   }
 
-  /* head — args filtered because native append() renders nulls as "null" text */
-  panel.append(...[
-    h("div", { class: "detail-head" },
-      h("div", {},
-        h("h2", { text: campaignTitle(c) }),
-        h("div", { class: "detail-sub" },
-          statusPill(status),
-          c.deadline ? h("span", { title: `deadline (UTC): ${c.deadline}`, text: `Closes ${fmtTime(c.deadline)}` }) : null,
-          c.sponsor ? h("span", { class: "mono", title: c.sponsor, text: `sponsor ${c.sponsorActor ? actorKeyLabel(c.sponsorActor) + " · " : ""}${shortAddr(c.sponsor)}` }) : null,
-          c.createTx ? txLinkNode(c.createTx) : null,
-          c.createdAt ? h("span", { text: `created ${fmtTime(c.createdAt)}` }) : null))),
-    c.brief
-      ? h("div", { class: "brief-box" }, h("span", { class: "brief-label", text: "Creative brief" }), c.brief)
-      : (c.metadataMatches === false ? h("div", { class: "brief-box dim" }, h("span", { class: "brief-label", text: "Creative brief" }), "Details unavailable — the backend has no matching off-chain metadata for this campaign.") : null),
-    h("div", { class: "budget-grid" },
-      figure("Budget", fmt(c.budgetAtomic)),
-      figure("Funded", fmt(c.fundedAtomic), { dim: Amount.isZero(c.fundedAtomic) }),
-      c.unfundedAtomic !== null && !Amount.isZero(c.unfundedAtomic) ? figure("Unfunded", fmt(c.unfundedAtomic)) : null,
-      figure("Reserved", fmt(c.reservedAtomic), { cls: c.reservedAtomic && !Amount.isZero(c.reservedAtomic) ? "accent" : "" }),
-      figure("Available", fmt(c.availableAtomic), { cls: c.availableAtomic && !Amount.isZero(c.availableAtomic) ? "accent" : "" }),
-      figure("Paid to creators", fmt(c.paidAtomic), { cls: c.paidAtomic && !Amount.isZero(c.paidAtomic) ? "good" : "" }),
-      Amount.isZero(c.refundedAtomic) ? null : figure("Refunded", fmt(c.refundedAtomic))),
-    c.remainingApprovals !== null ? h("p", { class: "muted small", text: `Room for ${c.remainingApprovals} more approval${c.remainingApprovals === "1" ? "" : "s"} at the current reward.` }) : null,
-    sponsorBudgetPanel(c),
-    h("div", { class: "detail-actions" }, detailActions),
-    campaignLinkNode(c),
-  ].filter(Boolean));
+  const overview = campaignOverview(c, status);
+  panel.append(...overview.nodes);
+  const budgetPanel = sponsorBudgetPanel(c);
+  if (budgetPanel) panel.append(budgetPanel);
+  panel.append(h("div", { class: "detail-actions" }, detailActions), overview.link);
 
   /* wallet operations attached to this campaign */
   const wops = walletOpsFor(c);
@@ -2501,7 +2564,11 @@ function eventIconName(kind) {
   return { fund: "fund", created: "created", submission: "submission", approve: "approve", reserve: "approve", claim: "claim", paid: "paid", refund: "refund", close: "close" }[kind] || "event";
 }
 
+let timelineState;
 function renderTimeline() {
+  // The timeline depends on the confirmed snapshot, not the selected role,
+  // actor or campaign. Fresh API observations always replace this identity.
+  if (timelineState === ui.state) return;
   const tl = $("#timeline");
   const emptyEl = $("#timelineEmpty");
   tl.replaceChildren();
@@ -2539,6 +2606,7 @@ function renderTimeline() {
         amount !== null ? fmtWithUnit(amount) : "",
         h("span", { class: "tl-time", text: when }))));
   }
+  timelineState = ui.state;
 }
 
 /* ============================ drawer / toast ============================ */
@@ -2740,11 +2808,14 @@ function applyBootLink() {
 async function reconcilePendingWalletOps() {
   // Retry receipt/reconcile passes for broadcast-but-unresolved wallet txs.
   // Never re-sends anything — steps without a hash need a user resume.
+  let attempted = false;
   for (const entry of ui.walletOps.values()) {
     if (ENTRY_TERMINAL.has(entry.status)) continue;
     if (!entry.txs.some((t) => t.txHash && !TX_FINAL.has(t.status))) continue;
+    attempted = true;
     try { await reconcileWalletEntry(entry); } catch { /* keep state; retry next pass */ }
   }
+  return attempted;
 }
 
 async function refresh(userInitiated){
@@ -2761,7 +2832,7 @@ async function refresh(userInitiated){
   }
   renderAll();
   if(userInitiated&&ui.status==="ready"&&!ui.staleError)toast("ok","State refreshed.");
-  if(ui.status==="ready"&&!ui.staleError)void reconcilePendingWalletOps().then(renderAll);
+  if(ui.status==="ready"&&!ui.staleError)void reconcilePendingWalletOps().then(attempted=>{if(attempted)renderAll();});
 }
 
 function renderAll() {
@@ -2846,7 +2917,7 @@ window.addEventListener("DOMContentLoaded", () => {
   wireChrome();
   renderAll();
   Wallet.refresh().then(() => {
-    Wallet.wireEvents(() => { renderAll(); void reconcilePendingWalletOps().then(renderAll); });
+    Wallet.wireEvents(() => { renderAll(); void reconcilePendingWalletOps().then(attempted=>{if(attempted)renderAll();}); });
     renderAll();
   });
   refresh(false);

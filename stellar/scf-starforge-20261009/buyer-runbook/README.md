@@ -14,6 +14,25 @@ private evidence directory and existing SF36 keys as SF88. Initialize and inspec
 a runbook without loading a signer, reading key values or contacting a provider.
 Use a full checkout so the original sibling modules remain available.
 
+## Browser workspace
+
+The maintained `workspace` command now provides a private browser planner and
+operator desk for the same runbook. Select original buyer configs, arrange up to
+64 operations, save and compare draft revisions, review exact grouped atomic
+ceilings and body hashes, initialize the reviewed acquisition, and use the
+original execution, cancellation, retained-output recovery and dead-owner unlock.
+Saved resources and original reports are available from the same page.
+
+```sh
+node stellar/scf-starforge-20261009/buyer-runbook/cli.mjs workspace \
+  --state /private/research/workspace --configs /private/research/buyer-configs
+```
+
+Open the printed loopback URL and keep this process in the operator terminal for
+the original SF81 approval. Existing runs can be registered with `--run` and
+reopened alongside newly initialized acquisitions. See [WORKSPACE.md](WORKSPACE.md)
+for the complete draft, execution, recovery and saved-resource workflow.
+
 ## Assemble one acquisition job
 
 1. Use the existing SF88 `--prepare` / `--review`, or the original SF96 merchant

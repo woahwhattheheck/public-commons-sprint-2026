@@ -9,6 +9,7 @@ import { abs, buyerTransport, config, execution, need, operation, operator, Inpu
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
 import { checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
+import { NETWORKS } from '../sf86-rpc-transfer-reconcile/terms.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.operator-workspace.v1';
 const KEY_NAMES = ['SF36_CONSENT_KEY_B64', 'SF36_AUDIT_KEY_B64', 'SF36_OPERATOR_KEY_B64'];
@@ -143,7 +144,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
       ...(proxyEnv === undefined ? {proxyUrl} : {proxyEnv})},
   });
   const ticket = await loadOperationTicket(op, {requireCurrent:true});
-  need(op.expect.network === 'stellar:testnet', 'WORKSPACE_TESTNET_REQUIRED');
+  need(Object.hasOwn(NETWORKS, op.expect.network), 'WORKSPACE_STELLAR_NETWORK_REQUIRED');
   need(/^C[A-Z2-7]{55}$/.test(op.expect.asset) && /^[GC][A-Z2-7]{55}$/.test(op.expect.payTo),
     'WORKSPACE_STELLAR_TERMS_INVALID');
   const payer = opt['--payer'];
@@ -183,7 +184,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
   const signerPins = {network:op.expect.network, asset:op.expect.asset, payTo:op.expect.payTo,
     maxAtomic:maximum, expectedPayer:payer, secretEnv, signerProvider, rpcUrl:opt['--rpc']};
   const {validateNativeSignerConfiguration, inspectSignerProvider} = await import('./native-signer.mjs');
-  validateNativeSignerConfiguration(signerPins);
+  signerPins.rpcUrl = validateNativeSignerConfiguration(signerPins).rpcUrl;
   if (signerProvider !== undefined) await inspectSignerProvider(signerProvider);
   const factory = signerProvider === undefined ? 'createEnvironmentStellarSigner' : 'createProviderStellarSigner';
   const signerSource = `// Private operator adapter. No wallet key is stored in this file.\n` +
@@ -251,7 +252,8 @@ export async function openWorkspace(args, { execute = false, accounting = false,
   await privateJson(configPath);
   const cfg = await config(configPath);
   const {op, owner, transport} = execution(cfg);
-  need(op.expect.network === 'stellar:testnet' && cfg.trustedPayer === manifest.payer &&
+  need(Object.hasOwn(NETWORKS, op.expect.network) && op.expect.network === manifest.network &&
+    cfg.trustedPayer === manifest.payer &&
     owner.policy === join(directory, 'policy.json') && owner.ledger === join(directory, 'reservations.sqlite') &&
     cfg.signerModule === join(directory, 'signer.mjs') && cfg.evidenceDir === join(directory, 'evidence'),
     'WORKSPACE_CONFIG_BINDING_CHANGED');
@@ -313,7 +315,7 @@ export async function diagnoseWorkspace(args, {environment = process.env} = {}) 
     }
   }
   try {
-    sdk = await inspectNativeSignerRuntime();
+    sdk = await inspectNativeSignerRuntime(pins.network);
     checks.push({check:'official-sdk', status:'AVAILABLE'});
   } catch (error) { checks.push({check:'official-sdk', status:'UNAVAILABLE', code:code(error)}); }
   const provider = manifest.signer.signerProvider;
