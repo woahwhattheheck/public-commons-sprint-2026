@@ -46,6 +46,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
+  mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
+  mongodb                                    Inspect, author and operate fixed native BSON reports
+  mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
@@ -54,6 +57,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   duckdb-prepare                             Prepare, verify and reopen native data packages
   duckdb-workspace / duckdb-workbench         Author and operate a retained data merchant
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
+  sqlite-workbench                           Author and export the original SQLite merchant
+  sqlite-publisher                           Review and publish retained SQLite data products
   commerce-console                           Browser workspace for a prepared commerce session
   dataset-refresh                            Publish and select retained dataset versions
   dataset-publisher                          Publish CSV versions and prepare original buyer acquisition

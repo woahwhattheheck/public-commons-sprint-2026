@@ -2,8 +2,11 @@
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { mkdir, mkdtemp, rm } from 'node:fs/promises';
-import { incidentStatus, acknowledgeIncident, exportIncident } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-operator.mjs';
-import { readPrivateFile } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-store.mjs';
+import { incidentStatus, acknowledgeIncident, exportIncident, configureIncidents, remindIncident,
+  operateNotification } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-operator.mjs';
+import { readPrivateFile, openIncidentStore } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-store.mjs';
+import { compileConfig as compileWatchConfig, configHash as watchConfigHash } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/incident-config.mjs';
+import { runIncidentWatch } from '../../stellar/scf-starforge-20261009/sf93-seller-support-bundle/watch.mjs';
 import { openCaseStore, caseMetadata, CASE_STATUSES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs';
 import { parseWorkspace, serializeWorkspace, MAX_WORKSPACE_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs';
 import { importRuntimeHandoff, exportRuntimeHandoff, reviewRuntime, MAX_HANDOFF_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs';
@@ -31,9 +34,25 @@ const termsSchema = { ...object({ workOrderRef: text(120), sellerDisplayName: te
   required: ['merchantConsent', 'commercial'] };
 const selected = { id: uuid, expectedRevision: digest };
 const page = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 100 } };
+const notificationStatuses = ['PENDING', 'RETRY', 'IN_FLIGHT', 'PAUSED', 'EXHAUSTED', 'DELIVERED', 'CANCELLED'];
 export function supportTools(tool) {
   const read = { readOnly: true, idempotent: true };
   return [
+    tool('merchant_support_profiles', 'List host-declared SF93 registration profiles, or inspect one original compiled configuration, its file digest, current configuration revision and actual changes. Notification values remain environment references.',
+      { profile: alias }, [], read),
+    tool('merchant_support_configure', 'Apply an inspected host profile through the original SF93 configuration transaction. Requires its exact source digest and current configuration revision. After a lost reply, inspect the current configuration before another change.',
+      { profile: alias, expectedSourceSha256: digest, expectedConfigRevision: { type: 'integer', minimum: 1 } }, ['profile', 'expectedSourceSha256', 'expectedConfigRevision']),
+    tool('merchant_support_watch_status', 'Read the original watcher record and this MCP operator\'s actual ownership. A saved RUNNING record alone does not establish a live worker or ownership by this operator.', {}, [], read),
+    tool('merchant_support_watch_start', 'Start the ORIGINAL SF93 watcher for the exact inspected configuration. It acquires the existing kernel lease, polls configured local merchant endpoints and sends the existing configured incident notifications. Does not start a seller or delivery worker.',
+      { expectedConfigRevision: { type: 'integer', minimum: 1 }, expectedConfigHash: digest }, ['expectedConfigRevision', 'expectedConfigHash']),
+    tool('merchant_support_watch_stop', 'Stop only the original watcher started by this MCP process, using its exact instance ID. Waits for its original final state write and lease release. An identical completed stop can be reopened.',
+      { instanceId: uuid }, ['instanceId'], { idempotent: true }),
+    tool('merchant_notifications', 'Page through original incident notification records without message bodies, destination URLs or signing keys. Includes actual attempt counts, state and retry reason for recovery.',
+      { id: uuid, incidentId: uuid, status: { enum: notificationStatuses }, ...page }, [], read),
+    tool('merchant_incident_notify', 'Queue a NEW original metadata-only reminder for the exact incident revision. This explicitly selects the currently configured notification destination; inspect current notification records after an interrupted reply.',
+      { id: uuid, expectedRevision: { type: 'integer', minimum: 1 } }, ['id', 'expectedRevision']),
+    tool('merchant_notification_update', 'Retry an original paused/exhausted notification or cancel an unfinished one, using its exact attempt count and named operator. Existing destination, in-flight and completed-event checks remain authoritative.',
+      { id: uuid, expectedAttempts: { type: 'integer', minimum: 0 }, action: { enum: ['retry', 'cancel'] }, by: text(160) }, ['id', 'expectedAttempts', 'action', 'by']),
     tool('merchant_support_sources', 'List host-configured original handoffs/workspace templates, or inspect one with its exact file digest, saved mapping and retained runtime findings. Reads no arbitrary path and starts no observation.',
       { kind: { enum: ['handoff', 'workspace'] }, source: alias }, [], read),
     tool('merchant_incidents', 'Read the original SF93 incident store. Returns actual condition, revision, capture and notification state; does not poll a seller or send a notification.',
@@ -69,6 +88,23 @@ function expected(value) {
 function caseId(value) {
   if (typeof value !== 'string' || !new RegExp(uuid.pattern).test(value)) throw failure('INVALID_CASE_ID', 'Use an original case UUID.');
   return value;
+}
+function configurationRevision(value) {
+  if (!Number.isSafeInteger(value) || value < 1) throw failure('INVALID_PARAMS', 'Use the exact current original configuration revision.');
+  return value;
+}
+function originalWatchError(error) {
+  if (/^[A-Z][A-Z0-9_]+$/.test(error.code ?? '')) return error.code;
+  if (/^(SF93|FLEET)_[A-Z0-9_]+$/.test(error.message ?? '')) return error.message;
+  return 'INCIDENT_WATCH_FAILED';
+}
+function configurationChanges(before, after) {
+  const prior = new Map(before.merchants.map(row => [row.id, row])), next = new Map(after.merchants.map(row => [row.id, row]));
+  return { addedMerchants: [...next.keys()].filter(id => !prior.has(id)),
+    removedMerchants: [...prior.keys()].filter(id => !next.has(id)),
+    changedMerchants: [...next.keys()].filter(id => prior.has(id) && JSON.stringify(prior.get(id)) !== JSON.stringify(next.get(id))),
+    merchantOrderChanged: JSON.stringify([...prior.keys()]) !== JSON.stringify([...next.keys()]),
+    settings: Object.keys(after).filter(key => !['schema', 'merchants'].includes(key) && JSON.stringify(before[key]) !== JSON.stringify(after[key])) };
 }
 function draftTerms(workspace) {
   if (!workspace.termsText) throw failure('CASE_TERMS_REQUIRED', 'Record the owner terms in this case before creating its workorder.');
@@ -121,11 +157,13 @@ const exportNames = ['case.json', 'merchant-workspace.json', 'merchant-support.j
   'owner-terms.json', 'packet.json', 'seller-packet.html', 'acceptance-checklist.md'];
 
 export class MerchantSupport {
-  #config; #store;
+  #config; #store; #watch = null; #lastWatchExit = null; #closing = false; #close;
   constructor(config) { this.#config = config; }
   get summary() {
     const value = this.#config.support;
     return { configured: Boolean(value), incidentsConfigured: Boolean(value?.incidentsDirectory),
+      watcher: { ownedInstanceId: this.#watch?.instanceId ?? null, state: this.#watch?.state ?? 'NOT_OWNED', lastExit: this.#lastWatchExit },
+      profiles: Object.entries(value?.profiles ?? {}).map(([profile, entry]) => ({ profile, label: entry.label })),
       sources: value ? ['handoffs', 'workspaces'].flatMap(kind => Object.entries(value[kind]).map(([source, entry]) =>
         ({ kind: kind === 'handoffs' ? 'handoff' : 'workspace', source, label: entry.label }))) : [] };
   }
@@ -138,6 +176,84 @@ export class MerchantSupport {
     const directory = this.#configured().incidentsDirectory;
     if (!directory) throw failure('INCIDENTS_NOT_CONFIGURED', 'Register the existing SF93 incident directory in the host support connection.');
     return directory;
+  }
+  async #profile(profile, sourceDigest) {
+    const entry = (this.#configured().profiles ?? {})[identifier(profile, 'Support profile alias')];
+    if (!entry) throw failure('SUPPORT_PROFILE_NOT_FOUND', 'Choose a host profile returned by merchant_support_profiles.');
+    const bytes = await readPrivateFile(entry.file, 65536), sourceSha256 = sha(bytes);
+    if (sourceDigest !== undefined && sourceSha256 !== expected(sourceDigest))
+      throw failure('SUPPORT_SOURCE_CHANGED', 'The configured profile changed. Inspect its actual original configuration before applying it.');
+    const configuration = compileWatchConfig(JSON.parse(decode(bytes)));
+    return { profile, label: entry.label, sourceSha256, configHash: watchConfigHash(configuration), configuration };
+  }
+  async #profiles(profile) {
+    const state = await (await openIncidentStore(this.#incidents())).read();
+    const current = { configRevision: state.configRevision, configHash: state.configHash, configuration: state.config };
+    if (profile === undefined) return { profiles: this.summary.profiles, current };
+    const selected = await this.#profile(profile);
+    return { ...selected, current, matchesCurrent: selected.configHash === state.configHash,
+      changes: configurationChanges(state.config, selected.configuration) };
+  }
+  async #watchStatus() {
+    const state = await incidentStatus({ directory: this.#incidents() });
+    return { schema: 'stellar-forge.merchant-support-watch.v1', configRevision: state.configRevision,
+      configHash: state.configHash, worker: state.worker,
+      owned: this.#watch ? { instanceId: this.#watch.instanceId, state: this.#watch.state,
+        startedConfiguration: this.#watch.startedConfiguration } : null,
+      lastOwnedExit: this.#lastWatchExit };
+  }
+  #watchExited(handle, error) {
+    handle.state = error ? 'FAILED' : 'STOPPED';
+    this.#lastWatchExit = { instanceId: handle.instanceId, state: handle.state,
+      completedAt: new Date().toISOString(), code: error ? originalWatchError(error) : null };
+    if (this.#watch === handle) this.#watch = null;
+  }
+  async #startWatch(args) {
+    const directory = this.#incidents();
+    configurationRevision(args.expectedConfigRevision); expected(args.expectedConfigHash);
+    if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
+    if (this.#watch) throw failure('INCIDENT_WATCH_ALREADY_OWNED', 'This operator already owns a watcher. Read merchant_support_watch_status.');
+    let resolveReady, rejectReady;
+    const ready = new Promise((resolve, reject) => { resolveReady = resolve; rejectReady = reject; });
+    const handle = { controller: new AbortController(), instanceId: null, state: 'STARTING', startedConfiguration: null, done: null };
+    this.#watch = handle;
+    handle.done = runIncidentWatch({ directory, signal: handle.controller.signal,
+      expectedConfigRevision: args.expectedConfigRevision, expectedConfigHash: args.expectedConfigHash,
+      onReady: value => {
+        handle.instanceId = value.instanceId; handle.state = 'RUNNING';
+        handle.startedConfiguration = { configRevision: value.configRevision, configHash: value.configHash };
+        resolveReady();
+      } }).then(result => {
+        this.#watchExited(handle);
+        if (!handle.instanceId) rejectReady(failure('INCIDENT_WATCH_NOT_STARTED', 'The original watcher ended before it became ready.'));
+        return result;
+      }, error => { this.#watchExited(handle, error); rejectReady(error); throw error; });
+    // Keep a background failure visible in status without an unhandled rejection.
+    handle.done.catch(() => {});
+    await ready;
+    return this.#watchStatus();
+  }
+  async #stopWatch(instanceId) {
+    caseId(instanceId);
+    const handle = this.#watch;
+    if (!handle && this.#lastWatchExit?.instanceId === instanceId && this.#lastWatchExit.state === 'STOPPED')
+      return { ...await this.#watchStatus(), unchanged: true };
+    if (!handle || handle.instanceId !== instanceId)
+      throw failure('INCIDENT_WATCH_INSTANCE_CONFLICT', 'This MCP operator does not own that watcher instance. Read merchant_support_watch_status.');
+    handle.state = 'STOPPING'; handle.controller.abort(); await handle.done;
+    return this.#watchStatus();
+  }
+  async #notifications(args) {
+    const state = await incidentStatus({ directory: this.#incidents() }), offset = args.offset ?? 0, limit = args.limit ?? 50;
+    if (!Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+        args.status !== undefined && !notificationStatuses.includes(args.status)) throw failure('INVALID_PARAMS', 'Use a valid notification state and page.');
+    if (args.id !== undefined) caseId(args.id);
+    if (args.incidentId !== undefined) caseId(args.incidentId);
+    const found = state.notifications.filter(row => (args.id === undefined || row.id === args.id) &&
+      (args.incidentId === undefined || row.incidentId === args.incidentId) && (args.status === undefined || row.status === args.status));
+    return { directoryRevision: state.directoryRevision, notifications: found.slice(offset, offset + limit),
+      total: found.length, offset, limit, nextOffset: offset + limit < found.length ? offset + limit : null,
+      notificationCapacityEvents: state.notificationCapacityEvents };
   }
   async #input(kind, source, digest) {
     if (!['handoff', 'workspace'].includes(kind)) throw failure('INVALID_PARAMS', 'Choose handoff or workspace.');
@@ -219,6 +335,25 @@ export class MerchantSupport {
     try {
       return await (async () => {
       switch (name) {
+        case 'merchant_support_profiles': return this.#profiles(args.profile);
+        case 'merchant_support_configure': {
+          configurationRevision(args.expectedConfigRevision); expected(args.expectedSourceSha256);
+          const selected = await this.#profile(args.profile, args.expectedSourceSha256);
+          const result = await configureIncidents({ directory: this.#incidents(), config: selected.configuration,
+            expectedConfigRevision: args.expectedConfigRevision });
+          return { ...result, profile: selected.profile, sourceSha256: selected.sourceSha256,
+            unchanged: result.configRevision === args.expectedConfigRevision };
+        }
+        case 'merchant_support_watch_status': return this.#watchStatus();
+        case 'merchant_support_watch_start': return this.#startWatch(args);
+        case 'merchant_support_watch_stop': return this.#stopWatch(args.instanceId);
+        case 'merchant_notifications': return this.#notifications(args);
+        case 'merchant_incident_notify': return remindIncident({ directory: this.#incidents(), id: caseId(args.id), expectedRevision: configurationRevision(args.expectedRevision) });
+        case 'merchant_notification_update': {
+          if (!Number.isSafeInteger(args.expectedAttempts) || args.expectedAttempts < 0 || !['retry', 'cancel'].includes(args.action))
+            throw failure('INVALID_PARAMS', 'Choose retry or cancel with the exact original notification attempt count.');
+          return operateNotification({ directory: this.#incidents(), id: caseId(args.id), expectedAttempts: args.expectedAttempts, action: args.action, by: args.by });
+        }
         case 'merchant_support_sources': {
           if (args.source === undefined && args.kind === undefined) return this.summary;
           if (args.source === undefined || args.kind === undefined) throw failure('INVALID_PARAMS', 'Inspect a source with both kind and source alias.');
@@ -285,8 +420,18 @@ export class MerchantSupport {
     } catch (error) {
       // Preserve original conflict/validation codes; filesystem failures expose no host paths.
       if (error.path || error.syscall) throw failure('SUPPORT_STORAGE_UNAVAILABLE', 'Host support storage could not complete normally. Inspect the original saved case or export before retrying.');
-      if (/^SF93_[A-Z0-9_]+$/.test(error.message ?? '')) throw failure(error.message, 'Original incident operation: ' + error.message + '. Read current incident state before retrying.');
+      if (/^(SF93|FLEET)_[A-Z0-9_]+$/.test(error.message ?? '')) throw failure(error.message, 'Original incident operation: ' + error.message + '. Read current incident state before retrying.');
       throw error;
     }
+  }
+  close() {
+    if (this.#close) return this.#close;
+    this.#closing = true;
+    this.#close = (async () => {
+      const handle = this.#watch;
+      if (!handle) return;
+      handle.state = 'STOPPING'; handle.controller.abort(); await handle.done;
+    })();
+    return this.#close;
   }
 }

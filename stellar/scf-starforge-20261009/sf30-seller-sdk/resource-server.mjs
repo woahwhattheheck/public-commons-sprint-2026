@@ -10,6 +10,7 @@ import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './ro
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 import { supportsSellerMethod, requiresJsonBody } from './http-methods.mjs';
 import { decodeMultipart, compileMultipartSchema } from './multipart.mjs';
+import { prepareResponseStream, validateMaxStreamBytes } from './stream-response.mjs';
 
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const hopHeaders = new Set(['connection', 'keep-alive', 'proxy-authenticate',
@@ -222,11 +223,13 @@ function requestContext(req, route, target, parsed, pathParams, signal) {
 /** Node handler; nativeServer must be the operator-configured canonical SDK. */
 export function createSellerResourceHandler({ compiled, nativeServer = null,
   maxRequestBytes = 1024 * 1024, maxResponseBytes = 1024 * 1024,
+  maxStreamBytes, streamSpoolDirectory,
   admissionTimeoutMs = 2000, handlerTimeoutMs = 30000,
   requestTimeoutMs = DEFAULT_REQUEST_TIMEOUT_MS } = {}) {
   validateAdmissionTimeout(admissionTimeoutMs);
   validateRequestTimeout(requestTimeoutMs);
   validateHandlerTimeout(handlerTimeoutMs);
+  const streamLimit = validateMaxStreamBytes(maxStreamBytes);
   if (!compiled?.routes?.length || !compiled.nativeRoutes) throw new TypeError('Compiled seller routes required');
   for (const limit of [maxRequestBytes, maxResponseBytes]) {
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16 * 1024 * 1024) throw new TypeError('Invalid body limit');
@@ -235,11 +238,13 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       .some(key => typeof nativeServer[key] !== 'function')) throw new TypeError('Native x402 HTTP server required');
   let activeWork = 0;
   const counters = { deadlineExceeded: 0, clientDisconnects: 0, lateVerifiedResults: 0,
-    cancellationRequests: 0, cancellationErrors: 0, interruptedSettlements: 0 };
+    cancellationRequests: 0, cancellationErrors: 0, interruptedSettlements: 0,
+    streamsStarted: 0, streamsCompleted: 0, streamDeliveryFailures: 0,
+    streamDeliveredBytes: 0, streamCleanupErrors: 0 };
   const handler = async function sellerResourceHandler(req, res) {
     const simple = (status, error, extra = {}) => send(req, res,
       encodeResponse({ status, headers: extra, body: { error } }, maxResponseBytes));
-    let payment, lifetime, execution, cancellation;
+    let payment, lifetime, execution, cancellation, preparedStream, streamCloseReason;
     let phase = 'routing', verificationStarted = false, settlementStarted = false;
     // Original dispatcher, one invocation per verified attempt. A rejected cleanup
     // is observed and counted, never retried and never described as a refund.
@@ -336,7 +341,29 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       let response;
       phase = 'application';
       try {
-        response = encodeResponse(await lifetime.run(() => execution.run(route.handler, context.application)), maxResponseBytes, true);
+        response = await lifetime.run(() => execution.run(async application => {
+          const result = await route.handler(application);
+          if (!plain(result) || !Object.hasOwn(result, 'stream'))
+            return encodeResponse(result, maxResponseBytes, true);
+          let preparing = false;
+          try {
+            if (Object.hasOwn(result, 'body') || (result.status ?? 200) !== 200 || req.method === 'HEAD')
+              throw new TypeError('A stream requires a 200 response without a separate body');
+            const responseHeaders = headers(result.headers ?? {}, { application: true });
+            preparing = true;
+            preparedStream = await prepareResponseStream(result.stream, {
+              headers: responseHeaders, signal: application.signal, payment, track: lifetime.track,
+              maxBytes: streamLimit, ...(streamSpoolDirectory ? { spoolDirectory: streamSpoolDirectory } : {}),
+            });
+            counters.streamsStarted++;
+            return { status: 200, headers: responseHeaders, stream: preparedStream };
+          } catch (error) {
+            if (!preparing) {
+              try { await result.stream?.close?.(error); } catch { counters.streamCleanupErrors++; }
+            }
+            throw error;
+          }
+        }, context.application));
         lifetime.assertOpen();
         execution.check();
       } catch (error) {
@@ -378,8 +405,26 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
         return send(req, res, encodeResponse(settled.response, maxResponseBytes));
       }
       response.headers = { ...response.headers, ...headers(settled.headers) };
+      if (response.stream) {
+        phase = 'delivery';
+        try {
+          await lifetime.run(() => response.stream.send(req, res, response));
+          counters.streamsCompleted++;
+        } catch (error) {
+          counters.streamDeliveryFailures++;
+          streamCloseReason = error;
+          // Headers already contain the original settlement. Do not replace them,
+          // append an invented JSON error/event, or invoke another payment action.
+          if (res.headersSent) { res.destroy(); return; }
+          throw error;
+        } finally {
+          counters.streamDeliveredBytes += response.stream.snapshot().deliveredBytes;
+        }
+        return;
+      }
       return send(req, res, response);
     } catch (error) {
+      streamCloseReason ??= error;
       // Catch the final pre-settlement liveness/encoding edge as well. The existing
       // latch prevents a second cancellation if the application branch already ran it.
       if (payment?.type === 'payment-verified' && !settlementStarted && !cancellation) {
@@ -414,10 +459,16 @@ export function createSellerResourceHandler({ compiled, nativeServer = null,
       return simple(requestFault ? error.status : verificationStarted ? 502 : 500,
         requestFault ? error.message : verificationStarted ? 'PAYMENT_PROCESSING_UNAVAILABLE' : 'SELLER_REQUEST_FAILED');
     } finally {
+      try { await preparedStream?.close(streamCloseReason ?? lifetime?.signal.reason); }
+      catch { counters.streamCleanupErrors++; }
       lifetime?.close();
       // Sending a 504 or losing the peer does not release the existing lifecycle
       // slot. Wait for real native work, its cleanup, and noncooperative handlers.
       await Promise.all([lifetime?.settled(), execution?.settled()]);
+      // A handler which ignored its signal can finish preparation after retirement.
+      // Its same close latch releases that late original source without replay.
+      try { await preparedStream?.close(streamCloseReason ?? lifetime?.signal.reason); }
+      catch { /* Already counted above if applicable. */ }
       execution?.dispose();
       if (lifetime) activeWork--;
     }

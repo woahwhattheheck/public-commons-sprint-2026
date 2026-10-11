@@ -19,6 +19,12 @@ the matching `object-*` lifecycle, without a new package or payment engine.
 `accounting` and explicit `finalize` invoke the original chunk reservation
 continuation and return its native report separately from file completion.
 
+Finite SSE and NDJSON responses use the same native operation and retained file.
+Select `responseFile.stream` before review, then consume verified records with
+`result.events()` or `result.ndjson()`. Reopen them after a restart with
+`operation.recover()`. The [streaming application guide](STREAMS.md) covers both
+completed responses and retained complete records from an interrupted transfer.
+
 ## Install and runtime
 
 Node 22 or later is required. There are no npm dependencies or install scripts.
@@ -58,7 +64,7 @@ const data = await result.json();
 
 `fromConfig` copies request bytes and records their hash. The native evidence and
 saved response paths are relocated into the new operation's private directory;
-response size/time limits are retained. Original operator/policy/ledger/signer
+response limits, content pins and selected stream format are retained. Original operator/policy/ledger/signer
 paths are not copied or reimplemented. To export a completed download use
 `result.saveAs('/absolute/new-file')`, which never overwrites an existing file.
 Merchant `ticketFile` bytes are validated by original SF88, copied privately and
@@ -97,8 +103,8 @@ const data = await result.json();
 Use the actual operation ID and inputs declared by your generated client.
 `acceptIndex` selects an original offered tuple; it is not a price override.
 The existing generator still constructs path/query/body and accepted terms.
-An operator profile accepts only `operator`, `signerModule`, `trustedPayer` and
-`bodyCaptureTimeoutMs` and `buyerTransport`. Original SF31 validates explicit
+An operator profile accepts `operator`, `signerModule`, `trustedPayer`,
+`bodyCaptureTimeoutMs`, `buyerTransport`, and `requestTimeoutMs`. Original SF31 validates explicit
 proxy profiles and pins their origin; this adapter does not infer a proxy. Signer secrets stay in the provided process environment.
 `approve`/`sign` function arguments are explicitly rejected at this process
 boundary rather than silently ignored. Configure the original signer module.
@@ -140,7 +146,8 @@ original runtime's `--headers-file`; generated requests pass through the same
 original native review before an operation is returned. There is no separate
 Node allowlist. The original runtime canonicalizes names and rejects duplicate,
 reserved or whitespace-changing values. This requires the matching current SF88
-runtime; the standalone Node package imports only its own files.
+runtime. Stream readers load the original SF31 parser from that selected runtime,
+so native capture and retained application consumption use the same framing rules.
 
 For a merchant-issued POST, retain the exact body and ordinary headers and pass
 `ticketFile` with its optional `ticketHeader` to `prepare`, or import the

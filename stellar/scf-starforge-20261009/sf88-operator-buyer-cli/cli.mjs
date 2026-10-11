@@ -2,7 +2,7 @@
 // MIT — SF88 operator command: source-native review, discovery and handoff.
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
-import { buyerTransport, config, operation, responseFile, bytes, need } from './config.mjs';
+import { buyerTransport, config, operation, responseFile, requestTimeoutMs, bytes, need } from './config.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 import { readRequestBody, requestBodyReview } from './request-body.mjs';
@@ -30,6 +30,7 @@ async function review(c) {
     serviceId:c.operator?.service ?? null,
     signerFilename:c.signerModule ? basename(c.signerModule) : null,
     responseFile:download ? { ...download, prepared:false } : null,
+    requestTimeoutMs:requestTimeoutMs(c, download),
     buyerTransport:buyerTransport(c),
     preparedFrom:c.preparedFrom ?? null,
     next:'Execute an original approved single operation using the private operator module'

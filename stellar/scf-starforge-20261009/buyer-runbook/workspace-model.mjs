@@ -8,6 +8,7 @@ import {config as nativeConfig, execution, need} from '../sf88-operator-buyer-cl
 import {MANIFEST_SCHEMA, previewRunbook, initializeRunbook, runbookPlanDigest,
   readPlan, inspectRunbook, executeRunbook, recoverRunbook, unlockRunbook, acquireRunbookMetadataLease} from './runbook.mjs';
 import {renderReport} from './report.mjs';
+import {openHandoffIntake} from './handoff-intake.mjs';
 
 const SCHEMA = 'stellar-forge.buyer-runbook-workspace.v1';
 const DRAFT = 'stellar-forge.buyer-runbook-draft.v1';
@@ -62,7 +63,7 @@ async function terminalAvailable() {
   finally { await terminal?.close(); }
 }
 
-export async function openRunbookWorkspace({directory, configsDirectory, runs = []} = {}) {
+export async function openRunbookWorkspace({directory, configsDirectory, operatorSettings, runs = []} = {}) {
   directory = await privateDirectory(directory, true);
   for (const name of ['drafts', 'runs', 'imports']) await privateDirectory(join(directory, name), true);
   let meta;
@@ -77,6 +78,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, runs = 
   check(meta.schema === SCHEMA && meta.directory === directory, 'WORKSPACE_IDENTITY_MISMATCH');
   configsDirectory = await privateDirectory(configsDirectory ?? meta.configsDirectory);
   check(meta.configsDirectory === configsDirectory, 'WORKSPACE_CONFIG_DIRECTORY_MISMATCH');
+  const intake = await openHandoffIntake({directory:join(directory,'handoffs'), configsDirectory, operatorSettings});
   let active = null, task = null, closing = false, sequence = Promise.resolve();
   const serial = action => {
     const next = sequence.then(() => { check(!closing, 'WORKSPACE_CLOSING', 503); return action(); });
@@ -241,7 +243,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, runs = 
     }
     drafts.sort((a,b) => b.savedAt.localeCompare(a.savedAt));
     return {directory, configsDirectory, drafts, acquisitions, errors, active,
-      terminalAvailable:await terminalAvailable(), configurations:await configurations()};
+      terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await intake.state()};
   }
   async function launch({id, only}) {
     check(!active || active.finishedAt, 'WORKSPACE_EXECUTION_BUSY', 409);
@@ -253,7 +255,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, runs = 
     const current = {executionId:randomUUID(), runId:id, only:only ?? null, startedAt:now(),
       status:'RUNNING', cancelRequested:false, events:[], finishedAt:null};
     active = current;
-    task = executeRunbook(path, {only, signal:controller.signal, onProgress:event => {
+    task = executeRunbook(path, {only, signal:controller.signal, environmentForOperation:intake.environmentForOperation, onProgress:event => {
       current.events.push({...event, at:now()});
       if (current.events.length > 128) current.events.shift();
     }}).then(result => { current.result = result; current.status = result.interrupted ? 'CANCELLED' : 'FINISHED'; },
@@ -337,6 +339,10 @@ export async function openRunbookWorkspace({directory, configsDirectory, runs = 
       const old = await json(importPath(id)); check(old.path === canonical && old.planId === plan.id, 'IMPORTED_RUN_MISMATCH'); }
   }
   return {directory, state:list, draft:latestDraft, run:getRun, export:exportRun, download, previewResource,
+    request:intake.get, requestAttachment:intake.attachment,
+    receiveRequest:input => serial(() => intake.receive(input)),
+    reviewRequest:input => serial(() => intake.review(input)),
+    prepareRequest:input => serial(() => intake.provision(input)),
     save:input => serial(() => mutateDraft(() => saveDraft(input))),
     initialize:input => serial(() => mutateDraft(() => activate(input))),
     execute:input => serial(() => launch(input)), cancel:input => serial(() => cancel(input)),

@@ -1,7 +1,7 @@
 // MIT. Merchant draft/review/publication UI using the ORIGINAL dataset controls.
 import { createServer } from 'node:http';
 import { constants } from 'node:fs';
-import { lstat, mkdir, mkdtemp, open, readFile, rm } from 'node:fs/promises';
+import { lstat, open, readFile, rm } from 'node:fs/promises';
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { isAbsolute, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -9,6 +9,8 @@ import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { datasetQueryParameters } from '../dataset-cli.mjs';
 import { datasetControl } from './service.mjs';
 import { datasetBuyerEndpoint, readDatasetBuyerOffer, prepareDatasetBuyer } from './buyer-handoff.mjs';
+import { openPublisherDrafts, pendingDraftPublication } from './workspace-state.mjs';
+import { hashPrivate } from '../postgres/publisher/files.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -17,6 +19,8 @@ const fault = (code, message, status = 400) => Object.assign(new Error(message),
 const exact = (value, keys) => object(value) && Object.keys(value).sort().join(',') === [...keys].sort().join(',');
 const jsonBytes = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
 const publicDraft = draft => draft ? { id: draft.id, filename: draft.filename,
+  name: draft.name, notes: draft.notes, revision: draft.revision, createdAt: draft.createdAt,
+  publications: draft.publications, publicationNeedsReview: pendingDraftPublication(draft),
   sourceBytes: draft.sourceBytes, csvHash: draft.csvHash, dataset: draft.dataset.describe(),
   expectedSnapshot: draft.expectedSnapshot, expectedRevision: draft.expectedRevision } : null;
 
@@ -67,7 +71,8 @@ function revisionFields(input) {
 /** Attach to a running ORIGINAL versioned seller. This process owns only drafts;
  * it never opens a second version writer, edits state.json or touches payment. */
 export async function startDatasetPublishingWorkspace({ directory, port = 8431,
-  maxUploadBytes = 64 * 1024 * 1024, resource = null, seller = null } = {}) {
+  maxUploadBytes = 64 * 1024 * 1024, resource = null, seller = null,
+  workspaceDirectory, maxDrafts = 32, maxDraftBytes = 256 * 1024 * 1024 } = {}) {
   if (typeof directory !== 'string' || !isAbsolute(directory) || resolve(directory) !== directory || directory === '/')
     throw new TypeError('A normalized absolute dataset state directory is required');
   if (!Number.isInteger(port) || port < 0 || port > 65535 || !Number.isSafeInteger(maxUploadBytes) ||
@@ -90,7 +95,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
     return next;
   };
   await status();
-  let draft = null, preview = null, running = null, closing = false, closePromise, origin;
+  let draft = null, draftError = null, preview = null, running = null, closing = false, closePromise, origin;
   const token = randomBytes(32).toString('base64url');
   const expectedAuth = Buffer.from('Bearer ' + token);
   const assets = new Map(await Promise.all([
@@ -98,7 +103,32 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
     ['/workspace.js', 'workspace.js', 'text/javascript; charset=utf-8'],
     ['/workspace.css', 'workspace.css', 'text/css; charset=utf-8'],
   ].map(async ([route, file, type]) => [route, { bytes: await readFile(new URL('./workspace-ui/' + file, import.meta.url)), type }])));
-  const working = await mkdtemp(join(directory, '.publisher-'));
+  const drafts = await openPublisherDrafts({ datasetDirectory: directory, directory: workspaceDirectory,
+    maxCandidates: maxDrafts, maxSourceBytes: maxDraftBytes });
+
+  async function loadDraft(id) {
+    const record = drafts.candidate(id), paths = drafts.files(id);
+    await privateDirectory(paths.directory);
+    await privateJson(paths.configPath, record.configHash);
+    const checked = await hashPrivate(paths.csvPath, Math.max(maxDraftBytes, record.sourceBytes));
+    if (checked.hash !== record.csvHash || checked.bytes !== record.sourceBytes)
+      throw fault('SAVED_CANDIDATE_CHANGED', 'The retained CSV differs from its validated source bytes.', 409);
+    const dataset = await loadDatasetConfig(paths.configPath);
+    if (dataset.describe().snapshot !== record.dataset.snapshot)
+      throw fault('SAVED_CANDIDATE_CHANGED', 'The retained candidate differs from its original typed snapshot.', 409);
+    return { ...record, ...paths, dataset };
+  }
+  async function syncDraft() {
+    const id = drafts.view().selectedDraftId;
+    draftError = null;
+    if (!id) { draft = null; return; }
+    try { draft = draft?.id === id ? { ...draft, ...drafts.candidate(id), dataset: draft.dataset } : await loadDraft(id); }
+    catch (error) { draft = null; draftError = { id, code: error.code ?? 'SAVED_CANDIDATE_UNAVAILABLE',
+      message: 'The selected candidate needs repair. Its saved files and other candidates remain available.' }; }
+  }
+  const retained = () => ({ draft: publicDraft(draft), draftError, workspace: drafts.view() });
+  try { await drafts.reconcile(latest); await syncDraft(); }
+  catch (error) { await drafts.close(); throw error; }
 
   async function exclusive(operation) {
     if (closing || running) throw fault('WORKSPACE_BUSY', 'Another workspace action is still running. Wait for its result.', 409);
@@ -131,15 +161,14 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
 
   async function upload(req) {
     const observed = await status(), source = await generation(observed.current, observed);
-    const cap = Math.min(maxUploadBytes, source.config.maxBytes ?? 64 * 1024 * 1024);
+    const cap = Math.min(maxUploadBytes, source.config.maxBytes ?? 64 * 1024 * 1024, drafts.capacity());
     if (!/^text\/csv(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''))
       throw fault('CSV_REQUIRED', 'Choose a CSV file.', 415);
     const length = req.headers['content-length'];
     if (length !== undefined && (!/^\d+$/.test(length) || Number(length) > cap)) {
       req.resume(); throw fault('CSV_TOO_LARGE', `This dataset accepts at most ${cap} CSV bytes.`, 413);
     }
-    const draftDir = join(working, randomUUID());
-    await mkdir(draftDir, { mode: 0o700 });
+    const staged = await drafts.stage(), draftDir = staged.directory;
     let adopted = false;
     try {
       const file = await open(join(draftDir, 'data.csv'), 'wx', 0o600), digest = createHash('sha256');
@@ -155,24 +184,24 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
         await file.sync();
       } finally { await file.close(); }
       const configPath = join(draftDir, 'dataset.json');
-      await savePrivate(configPath, jsonBytes(source.config));
+      const configBytes = jsonBytes(source.config);
+      await savePrivate(configPath, configBytes);
       let dataset;
       try { dataset = await loadDatasetConfig(configPath); }
       catch (error) {
         if (error.code) throw fault('CSV_VALIDATION_FAILED', 'The uploaded CSV could not be read with the published schema.', 422);
         throw fault('CSV_VALIDATION_FAILED', String(error.message).slice(0,320), 422);
       }
-      const prior = draft;
       let filename;
       try { filename = decodeURIComponent(req.headers['x-upload-name'] ?? 'dataset.csv'); }
       catch { filename = 'dataset.csv'; }
       filename = filename.split(/[\\/]/).at(-1).replace(/[\x00-\x1f\x7f]/g, '').slice(0,160) || 'dataset.csv';
-      draft = { id: randomUUID(), directory: draftDir, configPath, filename, dataset,
+      const saved = await drafts.adopt(staged, { filename, dataset: dataset.describe(), configHash: hash(configBytes),
         csvHash: digest.digest('hex'), sourceBytes: size,
-        expectedSnapshot: observed.current, expectedRevision: observed.revision };
+        expectedSnapshot: observed.current, expectedRevision: observed.revision });
+      draft = { ...saved, ...drafts.files(saved.id), dataset }; draftError = null;
       adopted = true;
-      if (prior) await rm(prior.directory, { recursive: true, force: true });
-      return { draft: publicDraft(draft), status: await status() };
+      return { ...retained(), status: await status() };
     } finally { if (!adopted) await rm(draftDir, { recursive: true, force: true }); }
   }
 
@@ -231,7 +260,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
         throw fault('SESSION_REQUIRED', 'Reopen the private session URL printed by the workspace command.', 401);
       if (req.method === 'GET' && req.url === '/api/status') {
         const observed = await status();
-        return reply(200, { status: observed, draft: publicDraft(draft), resource,
+        return reply(200, { status: observed, ...retained(), resource,
           buyerSource, maxUploadBytes, busy: Boolean(running) });
       }
       if (req.method === 'PUT' && req.url === '/api/draft')
@@ -239,13 +268,45 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
       if (req.method !== 'POST') throw fault('NOT_FOUND', 'Workspace action not found.', 404);
       const input = await smallBody(req);
       const result = await exclusive(async () => {
+        if (req.url === '/api/draft/select') {
+          if (!exact(input, ['id'])) throw fault('INVALID_DRAFT', 'Choose a saved candidate.');
+          const selected = await loadDraft(input.id);
+          await drafts.select(input.id); draft = selected; draftError = null;
+          return { ...retained(), status: await status() };
+        }
+        if (req.url === '/api/draft/metadata') {
+          if (!exact(input, ['id','name','notes','expectedDraftRevision'])) throw fault('INVALID_DRAFT_REVIEW');
+          await drafts.metadata(input.id, input.name, input.notes, input.expectedDraftRevision); await syncDraft();
+          return retained();
+        }
+        if (req.url === '/api/draft/export') {
+          if (!exact(input, ['id'])) throw fault('INVALID_DRAFT');
+          return drafts.export(input.id);
+        }
+        if (req.url === '/api/draft/csv') {
+          if (!exact(input, ['id'])) throw fault('INVALID_DRAFT');
+          return { csv: await drafts.csv(input.id) };
+        }
+        if (req.url === '/api/draft/check-publication') {
+          if (!exact(input, ['id'])) throw fault('INVALID_DRAFT');
+          drafts.candidate(input.id); const observed = await status();
+          await drafts.reconcile(observed); await syncDraft();
+          return { ...retained(), status: observed };
+        }
+        if (req.url === '/api/buyer-saved' || req.url === '/api/buyer-remove') {
+          if (!exact(input, ['id'])) throw fault('INVALID_BUYER_CONFIG');
+          if (req.url === '/api/buyer-saved') return drafts.buyer(input.id);
+          await drafts.removeBuyer(input.id); return retained();
+        }
         if (req.url === '/api/buyer-offer' || req.url === '/api/buyer-prepare') {
           const preparing = req.url === '/api/buyer-prepare';
           if (!exact(input, preparing ? ['target','query','intentId','acceptIndex','offerSha256'] : ['target','query']))
             throw fault('BUYER_SELECTION_REQUIRED', 'Select the published query and an actual seller payment alternative.');
           const { review, selection } = await buyerSelection(input);
-          return preparing ? { ...prepareDatasetBuyer(review, input), selection }
-            : { ...review, selection };
+          if (!preparing) return { ...review, selection };
+          const prepared = { ...prepareDatasetBuyer(review, input), selection };
+          const savedBuyer = await drafts.saveBuyer(prepared, input);
+          return { ...prepared, savedBuyer, workspace: drafts.view() };
         }
         if (req.url === '/api/preview') {
           if (!exact(input, ['target','query']) || typeof input.target !== 'string' || typeof input.query !== 'string' || input.query.length > 8192)
@@ -258,6 +319,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
           const response = admitted === true ? dataset.handle(context) : admitted;
           if (response.status !== 200)
             throw fault(response.body?.error ?? 'QUERY_REJECTED', response.body?.message ?? 'The original dataset rejected this query.', response.status);
+          await drafts.selection({ target: input.target, query: query.toString(), snapshot: dataset.describe().snapshot });
           return { mode: 'LOCAL_OPERATOR_PREVIEW', dataset: dataset.describe(),
             queryParameters: datasetQueryParameters(dataset.describe()), query: query.toString(),
             result: response.body, draftId: isDraft ? draft.id : null };
@@ -268,43 +330,60 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
           // Refresh itself verifies the original full contract. The review keeps
           // the candidate unchanged and only records the displayed source revision.
           await generation(observed.current, observed);
-          selected.expectedSnapshot = observed.current;
-          selected.expectedRevision = observed.revision;
-          return { draft: publicDraft(selected), status: observed };
+          const publications = structuredClone(selected.publications);
+          if (pendingDraftPublication(selected)) publications[publications.length - 1] = {
+            ...publications.at(-1), state: 'REVIEWED_AFTER_INTERRUPTION', reviewedAt: new Date().toISOString(),
+            observed: { current: observed.current, revision: observed.revision } };
+          await drafts.update(selected.id, { expectedSnapshot: observed.current, expectedRevision: observed.revision, publications });
+          await syncDraft();
+          return { ...retained(), status: observed };
         }
         if (req.url === '/api/publish') {
           if (!exact(input, ['id','expectedSnapshot','expectedRevision'])) throw fault('INVALID_PUBLICATION', 'Review the draft and current revision before publishing.');
-          const selected = selectedDraft(input), expected = revisionFields(input);
+          selectedDraft(input);
+          const selected = await loadDraft(input.id), expected = revisionFields(input);
           if (selected.expectedSnapshot !== expected.expectedSnapshot || selected.expectedRevision !== expected.expectedRevision)
             throw fault('DRAFT_REVIEW_CHANGED', 'The draft review changed. Inspect it again before publishing.', 409);
-          const result = await datasetControl(directory, 'refresh', { configPath: selected.configPath, ...expected });
-          if (result.current !== selected.dataset.describe().snapshot)
-            throw fault('PUBLISHED_VERSION_DIFFERS', 'The seller returned a different current version. Inspect status before another publication.', 409);
-          draft = null;
-          await rm(selected.directory, { recursive: true, force: true });
-          return { publication: result, status: await status(), draft: null };
+          if (pendingDraftPublication(selected))
+            throw fault('PUBLICATION_REVIEW_REQUIRED', 'Check the original publication result, then explicitly review the current revision before another attempt.', 409);
+          const attempt = { id: randomUUID(), state: 'PENDING', startedAt: new Date().toISOString(),
+            targetSnapshot: selected.dataset.describe().snapshot, ...expected };
+          await drafts.publication(selected.id, attempt); await syncDraft();
+          let result;
+          try {
+            result = await datasetControl(directory, 'refresh', { configPath: selected.configPath, ...expected });
+            if (result.current !== attempt.targetSnapshot)
+              throw fault('PUBLISHED_VERSION_DIFFERS', 'The seller returned a different current version. Inspect status before another publication.', 409);
+          } catch (error) {
+            await drafts.publication(selected.id, { ...attempt, state: 'NEEDS_REVIEW', failedAt: new Date().toISOString(),
+              error: typeof error.code === 'string' ? error.code : 'PUBLICATION_RESPONSE_UNAVAILABLE' });
+            await syncDraft(); throw error;
+          }
+          await drafts.publication(selected.id, { ...attempt, state: 'CONFIRMED', completedAt: new Date().toISOString(), result });
+          await syncDraft();
+          return { publication: result, status: await status(), ...retained() };
         }
         if (req.url === '/api/draft/discard') {
           if (!exact(input, ['id'])) throw fault('INVALID_DRAFT', 'Select the current draft.');
-          const selected = selectedDraft(input); draft = null;
-          await rm(selected.directory, { recursive: true, force: true });
-          return { draft: null, status: await status() };
+          await drafts.remove(input.id); await syncDraft();
+          return { ...retained(), status: await status() };
         }
         if (req.url === '/api/activate') {
           if (!exact(input, ['snapshot','expectedSnapshot','expectedRevision']) || !HASH.test(input.snapshot ?? ''))
             throw fault('INVALID_ACTIVATION', 'Select a retained version and review the current revision.');
           const result = await datasetControl(directory, 'activate', { snapshot: input.snapshot, ...revisionFields(input) });
-          return { activation: result, status: await status(), draft: publicDraft(draft) };
+          return { activation: result, status: await status(), ...retained() };
         }
         if (req.url === '/api/collect') {
           if (!exact(input, [])) throw fault('INVALID_COLLECTION', 'Collection takes no additional parameters.');
           preview = null;
           const result = await datasetControl(directory, 'collect', {});
-          return { collection: result, status: await status(), draft: publicDraft(draft) };
+          return { collection: result, status: await status(), ...retained() };
         }
         throw fault('NOT_FOUND', 'Workspace action not found.', 404);
       });
-      reply(200, result);
+      if (req.url === '/api/draft/csv') reply(200, result.csv, 'text/csv; charset=utf-8');
+      else reply(200, result);
     };
     run().catch(error => {
       if (res.headersSent || res.destroyed) return;
@@ -323,7 +402,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
       server.listen(port, '127.0.0.1', () => { server.off('error', fail); done(); });
     });
     origin = `http://127.0.0.1:${server.address().port}`;
-  } catch (error) { await rm(working, { recursive: true, force: true }); throw error; }
+  } catch (error) { await drafts.close(); throw error; }
   return { origin, url: `${origin}/#${token}`, token, server,
     close() {
       if (!closePromise) closePromise = (async () => {
@@ -333,7 +412,7 @@ export async function startDatasetPublishingWorkspace({ directory, port = 8431,
         });
         if (running) await running.catch(() => {});
         preview = null; draft = null;
-        await rm(working, { recursive: true, force: true });
+        await drafts.close();
       })();
       return closePromise;
     } };
@@ -343,28 +422,34 @@ const HELP = `Dataset publishing workspace (Node 22+)
   node workspace.mjs --state DIR [--port 8431] [--max-upload-bytes 67108864]
                     [--resource https://merchant.example/data]
                     [--seller http://127.0.0.1:8430]
+                    [--workspace ABS_PRIVATE_DIRECTORY]
+                    [--max-drafts 32] [--max-draft-bytes 268435456]
 
 Attach to the running original versioned seller. Open the private local session
 URL, upload/review a CSV, then explicitly publish or activate a retained version.
-Ctrl+C closes this workspace and removes its unpublished session drafts. The
-original seller and its published generations keep running.`;
+Validated candidates, review notes, selected query and prepared buyer files are
+retained across restart. Linux util-linux flock holds the original kernel-owned
+workspace lock. Ctrl+C closes the local session and releases that lock.`;
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(HELP); return; }
   const options = {};
   for (let i = 0; i < args.length; i += 2) {
-    if (!['--state','--port','--max-upload-bytes','--resource','--seller'].includes(args[i]) ||
+    if (!['--state','--port','--max-upload-bytes','--resource','--seller','--workspace','--max-drafts','--max-draft-bytes'].includes(args[i]) ||
         Object.hasOwn(options,args[i]) || !args[i+1] || args[i+1].startsWith('--'))
       throw new TypeError('Invalid options; use --help');
     options[args[i]] = args[i+1];
   }
   if (!options['--state']) throw new TypeError('--state is required');
-  for (const name of ['--port','--max-upload-bytes'])
+  for (const name of ['--port','--max-upload-bytes','--max-drafts','--max-draft-bytes'])
     if (options[name] !== undefined && !/^(0|[1-9][0-9]*)$/.test(options[name])) throw new TypeError('Invalid '+name);
   const app = await startDatasetPublishingWorkspace({ directory: resolve(options['--state']),
     port: options['--port'] === undefined ? 8431 : Number(options['--port']),
     maxUploadBytes: options['--max-upload-bytes'] === undefined ? undefined : Number(options['--max-upload-bytes']),
+    workspaceDirectory: options['--workspace'] === undefined ? undefined : resolve(options['--workspace']),
+    maxDrafts: options['--max-drafts'] === undefined ? undefined : Number(options['--max-drafts']),
+    maxDraftBytes: options['--max-draft-bytes'] === undefined ? undefined : Number(options['--max-draft-bytes']),
     resource: options['--resource'] ?? null, seller: options['--seller'] ?? null });
-  console.log(`Dataset publishing workspace\n${app.url}\nKeep this session URL private. Ctrl+C closes unpublished drafts.`);
+  console.log(`Dataset publishing workspace\n${app.url}\nKeep this session URL private. Saved work remains available after Ctrl+C.`);
   const stop = () => app.close().catch(error => { console.error(error.message); process.exitCode = 1; });
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   return app;

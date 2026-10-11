@@ -211,6 +211,47 @@ Use `npx --no-install starforge cube-onboard` for the underlying capture, inspec
 workflow. See [Cube workspace](../sf102-cube-paid-query-adapter/workspace/README.md)
 for the full authoring and handoff flow.
 
+## MongoDB report workspace
+
+Use the original MongoDB driver to inspect collections, author fixed aggregation
+reports, preserve BSON values and operate the merchant from one retained browser
+workspace. The installed package exposes both the native command and browser:
+
+```sh
+npm install --ignore-scripts mongodb@7.7.0
+npx --no-install starforge doctor --feature mongodb
+npx --no-install starforge mongodb init --directory /private/mongodb-inputs
+npx --no-install starforge mongodb-workspace \
+  --state /private/mongodb-workspace \
+  --source /private/mongodb-inputs/source.json \
+  --plan /private/mongodb-inputs/merchant-plan.json
+```
+
+Edit the original source and plan for the merchant's database before opening the
+workspace. The source names a URI environment variable, database and TLS policy.
+Supply that variable through the existing host configuration; the browser retains
+its name. Use a read-only database role. Node 22.16+ and Linux are required by the
+native retained store; snapshot reads require a replica set or sharded MongoDB.
+
+Open the complete loopback URL printed by the command. Inspect actual collection
+metadata, sampled field types and indexes; define named fixed pipelines with
+typed public inputs; review every original payment option; run a saved report;
+download a complete merchant package; and operate the original seller and buyer
+handoff. Int64, Decimal128, ObjectId, Date, missing fields and explicit null retain
+their native meaning in canonical Extended JSON. Atomic prices remain strings.
+
+Saving commits the whole source and merchant plan as one native revision.
+Concurrent edits retain their original expected revision, and an operator can
+reopen an older version and save it as a new head. Reopen later with only
+`starforge mongodb-workspace --state /private/mongodb-workspace`.
+Prepared packages and exact GET/POST buyer requests remain attached to that state.
+
+The original application exports are `./seller/mongodb`, `/source`, `/prepare`,
+`/onboarding`, `/workspace` and `/buyer`. They expose the same implementations used
+by the CLI and browser. Full source, pipeline, package, buyer and operating guides
+are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
+The optional driver pin is derived from that component's own `package.json`.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -259,6 +300,8 @@ or automatically retry a request.
 | `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
+| `starforge mongodb` | Inspect native collections, prepare fixed BSON reports and operate the original MongoDB seller |
+| `starforge mongodb-workspace` | Author, review, save and run MongoDB reports; export merchant packages and exact buyer requests |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
@@ -1352,6 +1395,64 @@ and private storage. Applications can import
 and `/schedule` subpaths. These expose the original open-publisher, browser
 server and schedule controller; no additional dependency group is required.
 
+### Build a SQLite merchant and retained data product
+
+The original SQLite workbench is installed with the same package. Start from an
+existing database and keep its saved source and configuration on the operator host:
+
+```sh
+starforge sqlite-workbench --database /private/inventory.sqlite \
+  --workspace /private/sqlite-setup --port 0
+```
+
+Open the printed private launch URL. Select source columns, author the original
+named query and typed parameters, preview actual rows, set public merchant terms
+and deliberately public input examples, and export a named release. The exported
+`source.json`, `service.json`, handler bindings and `launch.mjs` run the original
+SQLite merchant. Repeating the same workbench command restores the saved draft
+and completed exports. The database is referenced, not copied.
+
+To sell a reviewed data product with stable pages, use that same exported source:
+
+```sh
+starforge sqlite-publisher serve --workspace /private/sqlite-publications --create \
+  --source /private/sqlite-setup/exports/inventory/source.json \
+  --state /private/inventory-dataset --port 8446
+```
+
+The publisher shares the maintained dataset review browser. Select the fixed query
+and inputs, choose public scalar types and ordering, extract the complete native
+read transaction, inspect the rows, record a review and publish. Exact 64-bit
+identifiers and decimal text stay exact; private columns remain outside the public
+mapping. Subsequent source changes can produce a new candidate while an older
+published version stays available under the original retention policy.
+
+After the first publication, configure the original seller with the merchant's
+actual public payment terms and retained snapshot selection:
+
+```sh
+starforge dataset-refresh configure --state /private/inventory-dataset \
+  --payment /private/inventory-payment.json --origin https://merchant.example \
+  --path /data --snapshot-selection --out /private/inventory-seller.json
+starforge dataset-refresh serve --state /private/inventory-dataset \
+  --seller /private/inventory-seller.json --port 8423 --control-transport loopback
+```
+
+Native payment operation uses the original facilitator options and HTTPS
+merchant deployment. Stop and reopen the publisher without `--create`, adding
+`--seller http://127.0.0.1:8423 --resource https://merchant.example/data`.
+Its Buyer handoff loads that running seller's actual terms and downloads the
+original SF88 configuration pinned to the selected retained version. Use it in
+the existing buyer workspace. Saved plans, candidates, publication reviews and
+buyer files stay in the same publisher workspace across restart.
+
+Applications can import `@tokenjunkielabs/starforge-merchant/seller/sqlite/workbench`
+(`openWorkbench`), `/seller/sqlite/workbench/server` (`startWorkbench`) and
+`/seller/sqlite/publisher` (`openSqlitePublisher`). These exports invoke the
+original engines. The full native value/limit/recovery and seller/buyer instructions
+ship in `source/stellar/scf-starforge-20261009/sf30-seller-sdk/sqlite/publisher/README.md`;
+the original authoring guide is beside `sqlite/workbench/server.mjs`.
+
 ### Build and operate a MySQL or MariaDB merchant
 
 The installed MySQL product uses the original native `mysql2` prepared-statement
@@ -1486,6 +1587,85 @@ lifecycle guide is included at
 `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/workspace/README.md`.
 Both commands and public imports target these original implementations; the
 driver dependency is derived from the selected source's `mysql/package.json`.
+
+### Publish a MySQL or MariaDB data product
+
+The same approved MySQL source can publish an immutable dataset with retained
+buyer pages. This product uses the original MySQL pool and prepared statements,
+the shared publisher browser and schedule, and the original dataset version
+writer. Use the MySQL runtime above, Linux and util-linux `flock`.
+
+```sh
+npx --no-install starforge mysql-publisher serve \
+  --workspace /private/catalog-publications --create \
+  --source /private/mysql-workspace/releases/catalog_v1/package/source.json \
+  --state /private/catalog-dataset --port 8447
+```
+
+Open the printed loopback URL. Choose the original named query and fixed inputs,
+approve its public columns and dataset types, select ordering and extraction
+limits, then save the plan. Extract the complete result, inspect the typed
+candidate, record a reviewer and note, and publish against the displayed target.
+The original endpoint page cap does not truncate this extraction. A row, byte,
+type or deadline failure leaves the current published dataset available.
+
+Use transactional source tables such as InnoDB for a consistent database view.
+The extraction sets repeatable-read isolation and opens
+`WITH CONSISTENT SNAPSHOT, READ ONLY`. Its native row stream waits for the
+consumer and commits after the complete result is accepted. Nontransactional
+tables retain their engine's own behavior. The candidate records the observed
+server/connection/isolation, completed transaction, selected output and hashes.
+
+Choose Text for exact DECIMAL values and large integer identifiers. Safe native
+integers, finite native FLOAT/DOUBLE and integer or BIT boolean values have
+explicit dataset mappings. Binary Text uses canonical base64. NULL requires a
+nullable field; the original CSV format refuses an ambiguous real empty string
+in that nullable column. Saved plans retain source/configuration bytes and a
+copied CA, while passwords stay in their original environment reference.
+
+After first publication, configure the original seller with the merchant's
+actual payment terms and retained snapshot selection:
+
+```sh
+npx --no-install starforge dataset-refresh configure \
+  --state /private/catalog-dataset --payment /private/catalog-payment.json \
+  --origin https://merchant.example --path /data --snapshot-selection \
+  --out /private/catalog-seller.json
+npx --no-install starforge dataset-refresh serve \
+  --state /private/catalog-dataset --seller /private/catalog-seller.json \
+  --port 8423 --control-transport loopback
+```
+
+Use the existing facilitator and HTTPS deployment options for native paid
+operation. Stop and reopen the same publisher with the running seller's actual
+loopback address and advertised HTTPS resource:
+
+```sh
+npx --no-install starforge mysql-publisher serve \
+  --workspace /private/catalog-publications --port 8447 \
+  --seller http://127.0.0.1:8423 --resource https://merchant.example/data
+```
+
+In **Buyer handoff**, load the original seller's terms, select the payment
+alternative and enter an intent ID. Download the original SF88 configuration
+and open it in the existing buyer workspace. The selected retained snapshot is
+pinned in the URL; the original buyer owns approval, acquisition and response
+delivery. Later refreshes preserve older retained pages and cursors according
+to the version store's retention policy.
+
+The same browser and CLI offer the original saved publication policy, exact
+target binding, row-change limits, pause/enable, retained history and recovery.
+`starforge mysql-publisher --help` lists all manual and scheduled actions.
+Reopen without `--create` to continue the same source/target-bound workspace.
+The original MySQL command also forwards `starforge mysql publisher ...`.
+
+The public `@tokenjunkielabs/starforge-merchant/seller/mysql/publisher` export
+provides `openMysqlPublisher(options)`. It delegates to the one maintained
+publisher engine with the trusted MySQL source driver. Complete transaction,
+scalar, source/CA, native export, operator and customer instructions are included
+at `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/publisher/README.md`.
+The existing `mysql` runtime group supplies the pinned driver; the shared
+publisher source is already part of the whole SF30 component.
 
 ### Build a DuckDB or Parquet merchant
 
@@ -1830,6 +2010,55 @@ separate captured and recovered origins and time bases, and apply the
 existing verification and transaction matching rules across both. Pricing
 imports and recovery records keep their own source identities in the same
 merchant review.
+
+### Exchange a completed reconciliation with an accountant
+
+Open the same retained accounting workspace:
+
+```sh
+npx --no-install starforge merchant-accounting-workspace \
+  --workspace /private/merchant/accounting-workspace --port 0
+```
+
+Choose **Accountant handoffs**. Select a completed reconciliation or an original
+retained recorded-activity close, name the handoff, and supply the asset, atomic
+unit and account labels for its actual payment options. Save, then download the
+accountant CSV, offline review or complete handoff archive. The archive retains
+the original report and manifests, handoff identity, and any selected original
+close and frozen review notes.
+
+The accountant edits only `externalStatus`, `externalBookRef`,
+`externalAccountCode` and `externalNote`. Statuses are `UNREVIEWED`, `REVIEWED`,
+`BOOKED` and `EXCLUDED`; `BOOKED` requires the accountant's external book
+reference. Several events may share a reference for a batch entry. Keep the
+original event, payment option, network, asset, native amount, evidence and
+supplied labels intact. Numeric text beyond 15 digits is escaped for spreadsheet
+precision, and the original source remains attached to every row.
+
+Select the latest retained handoff version, upload the returned CSV and preview
+its exact matches, changes, conflicts and omitted events. Save the preview to
+retain the original returned bytes and complete results. Valid matching rows
+update the accountant's returned information; conflicting and omitted events
+retain their preceding assignments. A later partial return continues from that
+saved version. Reopen any earlier version or download the latest complete CSV,
+offline review and archive from the same workspace. The upload limit is 64 MiB.
+
+Applications use the maintained public import:
+
+```js
+import { createHandoff, importReturn, inspectHandoff, renderCsv, renderHtml }
+  from '@tokenjunkielabs/starforge-merchant/merchant/accountant';
+```
+
+These pure functions consume the original report bytes, original run/manifest
+hashes, optional saved close bytes and retained labels. `importReturn` accepts
+the previous immutable return as `parentRevision`; its result includes complete
+assignments and row-level outcomes. The existing workspace supplies persistence,
+preview/save and downloads. The included
+[accountant contract](../merchant-settlement-accounting/accountant/SCHEMA.md)
+defines the exact source and return schemas. Original verification, network,
+atomic asset units and quoted USD remain visible beside the accountant's
+reported external entry.
 
 ### Application imports
 

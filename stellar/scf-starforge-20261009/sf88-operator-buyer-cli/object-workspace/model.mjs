@@ -136,7 +136,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
     });
   }
   const index = new Map(), reports = new Map(), reviews = new Map(), dispatches = new Map(), finalizations = new Map();
-  const finalizationIssues = new Map();
+  const finalizationIssues = new Map(), fileTransfers = new Map();
   let active = null, mutation = null, closed = false, closePromise;
   const sessionPath = id => join(sessionsRoot, slug(id));
   const chooseProfile = id => profiles.find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
@@ -264,7 +264,8 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
     return { id: work.id, session: work.session, kind: work.kind ?? 'DOWNLOAD', state: work.stopping ? 'STOPPING' : 'RUNNING',
       startedAt: work.startedAt, progressAt: work.progressAt, completeChunks: work.report?.completeChunks,
       chunkCount: work.report?.chunkCount ?? work.total, processedChunks: work.processed,
-      totals: work.totals, currentOffset: work.offset };
+      totals: work.totals, currentOffset: work.offset, phase: work.phase,
+      verifiedBytes: work.verifiedBytes, streamedBytes: work.streamedBytes, totalBytes: work.totalBytes };
   }
   async function readAccounting(session, offset = 0, limit = ACCOUNTING_PAGE) {
     slug(session); need(index.has(session), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
@@ -297,7 +298,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
         pagination: { page: selectedPage, pages: Math.max(1, Math.ceil(record.range.total / ACCOUNTING_PAGE)),
           total: record.range.total, pageSize: ACCOUNTING_PAGE },
         controls: { finalize: !active && !mutation && record.workspace !== null,
-          stop: active?.session === session && active.kind !== 'DOWNLOAD' && !active.stopping,
+          stop: active?.session === session && ['FINALIZE', 'EXPORT'].includes(active.kind) && !active.stopping,
           refresh: !mutation, export: !active && !mutation } };
       state.active = runView(active); state.mutation = mutation; state.updatedAt = now();
       return state;
@@ -316,7 +317,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
       objectSha256: report.objectSha256, selection: report.selection, lock: report.lock ?? null,
       stoppedChunk: report.stoppedChunk ? { index: report.stoppedChunk.index, code: report.stoppedChunk.code,
         intentId: report.stoppedChunk.intentId } : null,
-      lastRun: dispatches.get(session) ?? null,
+      lastRun: dispatches.get(session) ?? null, lastFileTransfer: fileTransfers.get(session) ?? null,
       assembly: ownedOutput ? { name: basename(ownedOutput.destination), bytes: ownedOutput.bytes,
         sha256: ownedOutput.sha256, createdAt: ownedOutput.createdAt, status: 'RECORDED' } : null,
       chunks: chunks.slice(selectedPage * 50, selectedPage * 50 + 50).map(chunk => ({ index: chunk.index,
@@ -324,7 +325,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
         sha256: chunk.sha256, code: chunk.code ?? null, outcome: chunk.originalOutcome?.status ?? null })),
       pagination: { page: selectedPage, pages, total: chunks.length, pageSize: 50 },
       controls: { run: !active && !mutation && ['READY', 'INTERRUPTED'].includes(report.status) && !report.lock,
-        stop: active?.session === session && active.kind === 'DOWNLOAD' && !active.stopping,
+        stop: active?.session === session && ['DOWNLOAD', 'FILE_DOWNLOAD'].includes(active.kind) && !active.stopping,
         recover: !active && !mutation && report.lock?.state !== 'ACTIVE' && report.lock?.state !== 'OTHER_HOST',
         assemble: !active && !mutation && report.status === 'COMPLETE' && !report.lock && !ownedOutput,
         download: Boolean(ownedOutput) && !active && !mutation,
@@ -373,6 +374,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
     assertOpen();
     if (!active && dispatches.get(session)?.id === runId) return dispatches.get(session);
     if (!active && finalizations.get(session)?.id === runId) return finalizations.get(session);
+    if (!active && fileTransfers.get(session)?.id === runId) return fileTransfers.get(session);
     need(active?.session === session && active.id === runId, 'OBJECT_WORKSPACE_RUN_CHANGED', 409);
     active.stopping = true; active.controller.abort(); return runView(active);
   }
@@ -476,26 +478,108 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null }
       name: slug(session) + (kind === 'html' ? '.html' : '.json'),
       type: kind === 'html' ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8' };
   }
-  async function openDownload(session) {
-    assertIdle(); const report = await original(session), record = assemblyRecord(session, report);
-    need(record && HASH.test(record.sha256), 'OBJECT_WORKSPACE_ASSEMBLY_REQUIRED', 409);
-    const path = destination(session, report); await privateDirectory(dirname(path));
-    const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+  async function openDownload(session, { signal } = {}) {
+    assertIdle(); slug(session); need(index.has(session), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
+    const controller = new AbortController(), work = { id: randomUUID(), kind: 'FILE_DOWNLOAD', session,
+      controller, startedAt: now(), stopping: false, phase: 'VERIFYING', verifiedBytes: 0, streamedBytes: 0 };
+    let handle, handleClose, finishPromise, prepared = false, release;
+    work.promise = new Promise(resolveFinished => { release = resolveFinished; });
+    // Reserve before the first awaited read. Two live download links cannot
+    // both start hashing, and close() owns preparation as well as the stream.
+    active = work;
+    const closeHandle = () => handle ? handleClose ??= handle.close() : Promise.resolve();
+    const stopped = () => Object.assign(new Error('OBJECT_WORKSPACE_DOWNLOAD_STOPPED'),
+      { code: 'OBJECT_WORKSPACE_DOWNLOAD_STOPPED', status: 409 });
+    const check = () => { if (controller.signal.aborted) throw stopped(); };
+    const abortFromRequest = () => controller.abort();
+    const finish = error => {
+      if (finishPromise) return finishPromise;
+      finishPromise = (async () => {
+        let failure = error;
+        try { await closeHandle(); } catch (closeError) { failure ??= closeError; }
+        signal?.removeEventListener('abort', abortFromRequest);
+        controller.signal.removeEventListener('abort', abortRead);
+        const result = { ...runView(work), endedAt: now(),
+          state: controller.signal.aborted ? 'STOPPED' : failure ? 'FAILED' : 'COMPLETED',
+          ...(failure && !controller.signal.aborted ? { error: workspaceError(failure) } : {}) };
+        fileTransfers.delete(session); fileTransfers.set(session, result);
+        while (fileTransfers.size > 8) fileTransfers.delete(fileTransfers.keys().next().value);
+        if (active === work) active = null;
+        release(); return result;
+      })();
+      return finishPromise;
+    };
+    function abortRead() {
+      work.stopping = true;
+      // FileHandle.close waits only for an in-flight bounded read. The next
+      // read checks cancellation; a suspended consumer cannot retain the fd.
+      void closeHandle().catch(() => {});
+      if (prepared) void finish(stopped());
+    }
+    controller.signal.addEventListener('abort', abortRead, { once: true });
+    if (signal?.aborted) controller.abort();
+    else signal?.addEventListener('abort', abortFromRequest, { once: true });
     try {
+      check(); const report = await original(session); check();
+      const record = assemblyRecord(session, report);
+      need(record && HASH.test(record.sha256), 'OBJECT_WORKSPACE_ASSEMBLY_REQUIRED', 409);
+      work.totalBytes = record.bytes;
+      const path = destination(session, report); await privateDirectory(dirname(path)); check();
+      handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0)); check();
       const before = await handle.stat({ bigint: true }), info = await handle.stat();
+      check();
       need(info.isFile() && info.nlink === 1 && info.size === record.bytes && privateInfo(info),
         'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+      const unchanged = after => ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs'].every(key => before[key] === after[key]);
       const hash = createHash('sha256'), buffer = Buffer.alloc(65536); let offset = 0;
       while (offset < record.bytes) {
+        check();
         const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, record.bytes - offset), offset);
+        check();
         need(bytesRead > 0, 'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
         hash.update(buffer.subarray(0, bytesRead)); offset += bytesRead;
+        work.verifiedBytes = offset; work.progressAt = now();
       }
-      const after = await handle.stat({ bigint: true });
-      need(hash.digest('hex') === record.sha256 && ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs']
-        .every(key => before[key] === after[key]), 'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
-      return { handle, bytes: record.bytes, sha256: record.sha256, name: basename(path) };
-    } catch (error) { await handle.close(); throw error; }
+      const after = await handle.stat({ bigint: true }); check();
+      need(hash.digest('hex') === record.sha256 && unchanged(after), 'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+      work.phase = 'STREAMING'; work.progressAt = now(); prepared = true;
+      const body = (async function* () {
+        const streamedHash = createHash('sha256'); let position = 0, complete = false;
+        try {
+          while (position < record.bytes) {
+            check();
+            // A distinct bounded buffer keeps a yielded block stable while
+            // the HTTP pipeline applies backpressure to the next read.
+            const block = Buffer.allocUnsafe(Math.min(65536, record.bytes - position));
+            const { bytesRead } = await handle.read(block, 0, block.length, position); check();
+            need(bytesRead > 0, 'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+            position += bytesRead; streamedHash.update(block.subarray(0, bytesRead));
+            if (position === record.bytes) {
+              const finalInfo = await handle.stat({ bigint: true }); check();
+              // Retain the final block until the bytes actually streamed
+              // match the recorded file. A changed file ends incomplete.
+              need(streamedHash.digest('hex') === record.sha256 && unchanged(finalInfo),
+                'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+            }
+            work.streamedBytes = position; work.progressAt = now();
+            yield block.subarray(0, bytesRead);
+          }
+          complete = true;
+        } catch (error) {
+          const failure = controller.signal.aborted ? stopped() : error;
+          await finish(failure); throw failure;
+        } finally {
+          if (!complete) await finish(Object.assign(new Error('OBJECT_WORKSPACE_DOWNLOAD_INTERRUPTED'),
+            { code: 'OBJECT_WORKSPACE_DOWNLOAD_INTERRUPTED' }));
+        }
+      })();
+      // The HTTP owner calls finish after pipeline completion, including when
+      // a disconnected request never starts consuming the body.
+      return { body, signal: controller.signal, finish, bytes: record.bytes, sha256: record.sha256, name: basename(path) };
+    } catch (error) {
+      const failure = controller.signal.aborted ? stopped() : error;
+      await finish(failure); throw failure;
+    }
   }
   async function close() {
     if (closePromise) return closePromise;

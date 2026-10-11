@@ -9,7 +9,9 @@ import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
 import { preparePythonRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-python.mjs';
 import { prepareDuckdbRelease, selectDuckdbInterpreter } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-duckdb.mjs';
+import { prepareS3Release } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-s3.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
+import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const SUPPORT_CONFIG_SCHEMA = 'stellar-forge.merchant-support-connection.v1';
@@ -66,7 +68,7 @@ export async function privateSupportDirectory(path) {
 export async function readSupportConfiguration(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'handoffs', 'workspaces'], ['schema', 'casesDirectory']);
+  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
   if (raw.schema !== SUPPORT_CONFIG_SCHEMA) throw failure('CONFIGURATION_ERROR', 'Expected an original merchant support connection.');
   const base = dirname(path), aliases = kind => {
     const source = raw[kind] ?? {};
@@ -79,7 +81,7 @@ export async function readSupportConfiguration(path) {
   return { casesDirectory: await privateSupportDirectory(hostPath(raw.casesDirectory, base)),
     incidentsDirectory: raw.incidentsDirectory === undefined ? null
       : await privateSupportDirectory(hostPath(raw.incidentsDirectory, base)),
-    handoffs: aliases('handoffs'), workspaces: aliases('workspaces') };
+    handoffs: aliases('handoffs'), workspaces: aliases('workspaces'), profiles: aliases('profiles') };
 }
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const parse = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
@@ -94,7 +96,7 @@ export function duckdbSourceView(duckdb) {
   return { ...metadata, interpreter: { configured: true, selectionSha256: hash(interpreter) } };
 }
 function sourceDefinition(source, base, alias) {
-  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 'runtime']);
+  exact(source, ['label', 'spec', 'selections', 'bindings', 'workspace', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'runtime']);
   const runtime = structuredClone(source.runtime ?? {});
   exact(runtime, ['port', 'handlers', 'facilitator', 'allowLocalFacilitator', 'allowLoopbackUpstream']);
   for (const flag of ['allowLocalFacilitator', 'allowLoopbackUpstream'])
@@ -107,7 +109,12 @@ function sourceDefinition(source, base, alias) {
     throw failure('CONFIGURATION_ERROR', 'A Python source root requires a Python merchant declaration.');
   if (source.duckdbPython !== undefined && source.duckdbPackage === undefined)
     throw failure('CONFIGURATION_ERROR', 'A DuckDB interpreter selection requires a prepared DuckDB package.');
-  if (source.duckdbPackage !== undefined) {
+  if (source.s3Package !== undefined) {
+    if (['workspace', 'spec', 'selections', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython'].some(key => source[key] !== undefined) ||
+        runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
+      throw failure('CONFIGURATION_ERROR', 'Choose the original S3 configured package or another source. S3 owns its pinned object bindings.');
+    result.s3Package = hostPath(source.s3Package, base);
+  } else if (source.duckdbPackage !== undefined) {
     if (['workspace', 'spec', 'selections', 'bindings', 'upstreams', 'python', 'pythonRoot'].some(key => source[key] !== undefined) ||
         runtime.handlers !== undefined || runtime.allowLoopbackUpstream)
       throw failure('CONFIGURATION_ERROR', 'Choose a prepared DuckDB package or another source. The package owns its original query bindings.');
@@ -137,6 +144,18 @@ function sourceDefinition(source, base, alias) {
 }
 /** Inspect configured source through the ORIGINAL workspace and upstream readers. */
 export async function inspectMerchantSource(source) {
+  if (source.s3Package) {
+    const prepared = await prepareS3Release(source.s3Package), { s3 } = prepared;
+    return { source: source.alias, label: source.label, sourceType: 'S3_OBJECT_PACKAGE',
+      mode: source.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
+      sourceDigests: { declaration: s3.sourceConfigSha256, objects: s3.objectsSha256, execution: s3.executionSha256 },
+      inputPackage: { schema: s3.schema, sourceConfigSha256: s3.sourceConfigSha256 },
+      application: { type: 'S3_OBJECT_PACKAGE', ...s3 },
+      environment: s3.credentialProvider === 'environment' ? ['AWS_ACCESS_KEY_ID', 'AWS_SECRET_ACCESS_KEY', 'AWS_SESSION_TOKEN'] : [],
+      credentialValuesChecked: false,
+      routes: prepared.service.routes.map(route => ({ method: 'GET', path: route.path, publicPath: route.path,
+        resource: route.offer.resource, accepts: route.offer.accepts })) };
+  }
   if (source.duckdbPackage) {
     const { bundle, duckdb } = await prepareDuckdbRelease(source.duckdbPackage, { python: source.duckdbPython });
     return { source: source.alias, label: source.label, sourceType: 'DUCKDB_PACKAGE',
@@ -198,7 +217,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'supportConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -214,14 +233,15 @@ export async function readMerchantConfig(path) {
       : await readSupportConfiguration(hostPath(raw.supportConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
+  config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
   if (config.support) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, runtime = {}, catalog, fleetPlan, support }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, runtime = {}, catalog, fleetPlan, accounting, support }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
-  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, runtime }, process.cwd(), 'initial');
+  const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, runtime }, process.cwd(), 'initial');
   if (source.pythonRoot) {
     const sourceRoot = await realpath(source.pythonRoot);
     const destination = join(await realpath(dirname(root)), basename(root));
@@ -234,6 +254,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (catalogConnection) await readReleaseCatalogConfig(catalogConnection);
   const planFile = fleetPlan === undefined ? undefined : hostPath(fleetPlan, process.cwd());
   if (planFile) await readFleetReleasePlan(planFile);
+  const accountingConfig = accounting === undefined ? null : await readAccountingConfig(accounting);
   const supportConnection = support === undefined ? undefined : hostPath(support, process.cwd());
   if (supportConnection) await readSupportConfiguration(supportConnection);
   await mkdir(root, { mode: 0o700 });
@@ -242,34 +263,56 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   const path = join(root, 'merchant-mcp.json');
   await writePrivate(path, { schema: CONFIG_SCHEMA, name,
     releaseStore: './releases', exportsDirectory: './customer-exports',
-    ...(catalogConnection ? { catalogConnection } : {}), ...(supportConnection ? { supportConnection } : {}),
+    ...(catalogConnection ? { catalogConnection } : {}),
+    ...(accountingConfig ? { accounting: accountingConfig } : {}),
+    ...(supportConnection ? { supportConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
-        ...(source.duckdbPackage ? { duckdbPackage: source.duckdbPackage, duckdbPython: source.duckdbPython }
+        ...(source.s3Package ? { s3Package: source.s3Package }
+          : source.duckdbPackage ? { duckdbPackage: source.duckdbPackage, duckdbPython: source.duckdbPython }
           : source.python ? { python: source.python, ...(source.pythonRoot ? { pythonRoot: source.pythonRoot } : {}) }
           : source.workspace ? { workspace: source.workspace } : { spec: source.spec, selections: source.config,
           bindings: source.bindings, ...(source.upstreams ? { upstreams: source.upstreams } : {}) }) },
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), supportConfigured: Boolean(supportConnection),
+    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
 
 /** Configure the same provider for an existing fleet without an individual source. */
-export async function initializeFleetMerchant({ directory, planFile, name = 'Starforge merchant fleet' }) {
+export async function initializeFleetMerchant({ directory, planFile, name = 'Starforge merchant fleet', accounting }) {
   const root = resolve(directory);
   name = line(name, 'Merchant fleet name');
   planFile = hostPath(planFile, process.cwd());
   const plan = await readFleetReleasePlan(planFile);
+  const accountingConfig = accounting === undefined ? null : await readAccountingConfig(accounting);
   await mkdir(root, { mode: 0o700 });
   await initReleaseStore(join(root, 'releases'));
   await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
   const configuration = join(root, 'merchant-mcp.json');
   await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
-    exportsDirectory: './customer-exports', sources: {}, fleet: { planFile, directory: './fleet' } });
+    exportsDirectory: './customer-exports', sources: {}, fleet: { planFile, directory: './fleet' },
+    ...(accountingConfig ? { accounting: accountingConfig } : {}) });
   await readMerchantConfig(configuration);
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', fleetConfigured: true,
-    planDigest: plan.digest, tenants: plan.tenants.length, fleet: 'STARTED_ONLY_BY_EXPLICIT_TOOL' };
+    planDigest: plan.digest, tenants: plan.tenants.length, fleet: 'STARTED_ONLY_BY_EXPLICIT_TOOL', accountingConfigured: Boolean(accountingConfig) };
+}
+
+/** Use the same merchant provider for existing accounting sources, without staging a seller. */
+export async function initializeAccountingMerchant({ directory, accounting, name = 'Starforge merchant accounting' }) {
+  const root = resolve(directory), accountingConfig = await readAccountingConfig(accounting);
+  name = line(name, 'Merchant accounting name');
+  if (!accountingConfig || !Object.keys(accountingConfig.workspaces).length)
+    throw failure('CONFIGURATION_ERROR', 'Declare at least one original accounting workspace.');
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, accounting: accountingConfig });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED',
+    accountingWorkspaces: Object.keys(accountingConfig.workspaces), accounting: 'OPENED_ONLY_BY_EXPLICIT_TOOL' };
 }

@@ -8,11 +8,12 @@ const here = dirname(fileURLToPath(import.meta.url));
 const isObject = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const nonempty = v => typeof v === 'string' && v.trim().length > 0;
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+export const BASE_FIELDS = ['agency', 'project_title', 'solicitation_id', 'procurement_contact', 'approved_submission_instructions'];
 const help = `Usage:
-  node template-library.mjs inspect
-  node template-library.mjs render --context example-context.json --out /new/output/directory
+  node template-library.mjs inspect [--kit template-kit.json]
+  node template-library.mjs render --context example-context.json --out /new/output/directory [--kit selected-kit.json] [--templates id,id]
 
-Outputs seven review-copy Markdown documents, a configuration map and a handover.
+Outputs the selected review-copy Markdown documents, a configuration map and a handover.
 No network, platform API, signatures, bidder submission, scheduler or AI service.
 Output is create-only. Supplied text is copied literally, not evaluated.
 Missing input remains visible as an unresolved field rather than fabricated content.`;
@@ -29,22 +30,30 @@ function literal(value) {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('\\', '\\\\').replace(/([`*_{}\[\]()#+!|])/g, '\\$1');
 }
-export async function loadKit() {
-  const loaded = await jsonFile(join(here, 'template-kit.json'));
-  const kit = loaded.value;
-  if (kit.schema !== 'tjl.procurement-template-kit.v1' || !Array.isArray(kit.templates) || kit.templates.length !== 7)
-    throw new TypeError('Expected the seven-template configuration kit');
+export function validateKit(value) {
+  const kit = structuredClone(value);
+  if (!isObject(kit) || kit.schema !== 'tjl.procurement-template-kit.v1' || !Array.isArray(kit.templates) || !kit.templates.length)
+    throw new TypeError('Expected a nonempty reusable template kit');
   const ids = new Set();
   for (const t of kit.templates) {
-    if (!isObject(t) || !/^[a-z][a-z0-9-]{1,70}$/.test(t.id) || ids.has(t.id) || !nonempty(t.title) ||
+    if (!isObject(t) || !/^[a-z][a-z0-9-]{1,70}$/.test(t.id) || ids.has(t.id) || !nonempty(t.title) || !nonempty(t.purpose) ||
         !Array.isArray(t.required_fields) || !Array.isArray(t.sections) || !Array.isArray(t.approved_clause_keys) ||
         !Array.isArray(t.attachment_prompts) || !Array.isArray(t.proposed_workflow)) throw new TypeError('Invalid template blueprint');
     if (t.required_fields.some(x => !/^[a-z][a-z0-9_]{0,80}$/.test(x)) ||
         t.approved_clause_keys.some(x => !/^[a-z][a-z0-9_]{0,80}$/.test(x)) ||
-        t.sections.some(x => !isObject(x) || !nonempty(x.heading) || !t.required_fields.includes(x.field)))
+        t.sections.some(x => !isObject(x) || !nonempty(x.heading) || !t.required_fields.includes(x.field)) ||
+        [...t.attachment_prompts, ...t.proposed_workflow].some(x => !nonempty(x)) ||
+        [t.title,t.purpose,...t.attachment_prompts,...t.proposed_workflow,...t.sections.map(x => x.heading)].some(x => x.length > 50000))
       throw new TypeError('Invalid template fields');
+    t.required_fields = [...new Set([...BASE_FIELDS, ...t.required_fields])];
+    t.approved_clause_keys = [...new Set(t.approved_clause_keys)];
     ids.add(t.id);
   }
+  return kit;
+}
+export async function loadKit(kitPath = join(here, 'template-kit.json')) {
+  const loaded = await jsonFile(kitPath, 8 * 1024 * 1024);
+  const kit = validateKit(loaded.value);
   return { kit, sha256: loaded.sha256 };
 }
 function contextValue(value, kit) {
@@ -64,8 +73,13 @@ function contextValue(value, kit) {
   }
   return value;
 }
-export async function renderLibrary({ contextPath, outPath } = {}) {
-  const { kit, sha256: kitSha } = await loadKit();
+export async function renderLibrary({ contextPath, outPath, kitPath, templateIds } = {}) {
+  const { kit, sha256: kitSha } = await loadKit(kitPath);
+  if (templateIds) {
+    if (!Array.isArray(templateIds) || !templateIds.length || templateIds.some(id => !kit.templates.some(t => t.id === id)))
+      throw new TypeError('Select existing template IDs');
+    kit.templates = kit.templates.filter(t => templateIds.includes(t.id));
+  }
   const loaded = await jsonFile(resolve(contextPath));
   const context = contextValue(loaded.value, kit);
   const destination = resolve(outPath);
@@ -85,13 +99,13 @@ export async function renderLibrary({ contextPath, outPath } = {}) {
         if (!nonempty(context.fields[key])) { missing.push(`field:${key}`); return `[TO COMPLETE: ${key}]`; }
         return literal(context.fields[key]);
       };
-      const lines = [`# ${t.title}`, '', '**DRAFT CONFIGURATION COPY — NOT A BID OR AUTHORIZED PUBLICATION**', '',
+      const lines = [`# ${literal(t.title)}`, '', '**DRAFT CONFIGURATION COPY — NOT A BID OR AUTHORIZED PUBLICATION**', '',
         context.mode === 'demonstration' ? '**FICTIONAL DEMONSTRATION INPUTS. Do not submit or treat as approved agency content.**' : '**Operator input. Review against agency-approved text and the selected platform before use.**', '',
-        t.purpose, '', '## Identification', '',
+        literal(t.purpose), '', '## Identification', '',
         `Agency: ${field('agency')}`, '', `Project: ${field('project_title')}`, '',
         `Solicitation: ${field('solicitation_id')}`, '', `Procurement contact: ${field('procurement_contact')}`, '',
         '## Submission or handling instructions', '', field('approved_submission_instructions'), ''];
-      for (const section of t.sections) lines.push(`## ${section.heading}`, '', field(section.field), '');
+      for (const section of t.sections) lines.push(`## ${literal(section.heading)}`, '', field(section.field), '');
       lines.push('## Supplied clause library', '');
       for (const key of t.approved_clause_keys) {
         const clause = context.clauses[key];
@@ -101,9 +115,9 @@ export async function renderLibrary({ contextPath, outPath } = {}) {
         } else lines.push(literal(clause.text), '', `Source supplied by operator: ${literal(clause.source_reference)}`, '',
           `Approval attribution supplied by operator: ${literal(clause.approved_by)}`, '');
       }
-      lines.push('## Attachment prompts', '', ...t.attachment_prompts.map(x => `- ${x}`), '',
+      lines.push('## Attachment prompts', '', ...t.attachment_prompts.map(x => `- ${literal(x)}`), '',
         '## Configuration handover', '', 'The following workflow is a proposed operator mapping, not an implemented platform automation.', '',
-        ...t.proposed_workflow.map((x, i) => `${i + 1}. ${x}`), '',
+        ...t.proposed_workflow.map((x, i) => `${i + 1}. ${literal(x)}`), '',
         'Keep protected attachments separate from public release copies. Use actual platform permissions and approved publication instructions.', '');
       const bytes = lines.join('\n');
       const filename = t.id + '.md';
@@ -115,8 +129,8 @@ export async function renderLibrary({ contextPath, outPath } = {}) {
     }
     map.unresolvedCount = map.templates.reduce((n, t) => n + t.unresolved.length, 0);
     await writeFile(join(staging, 'configuration-map.json'), JSON.stringify(map, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-    await writeFile(join(staging, 'HANDOVER.md'), `# Configuration handover\n\nMode: ${context.mode}. Seven review copies; ${map.unresolvedCount} unresolved field/clause references.\n\n` +
-      'The seven families are a proposed selection, not a district-mandated list. Confirm the actual selection and approval roles, then transfer reviewed text into the selected platform using its supported operator interface. No API or import compatibility is assumed.\n\n' +
+    await writeFile(join(staging, 'HANDOVER.md'), `# Configuration handover\n\nMode: ${context.mode}. ${map.templates.length} review copies; ${map.unresolvedCount} unresolved field/clause references.\n\n` +
+      'The selected families are operator blueprints, not a district-mandated list. Confirm the selection and approval roles, then transfer reviewed text into the selected platform using its supported operator interface. No API or import compatibility is assumed.\n\n' +
       'A zero unresolved count means text fields are present, not that legal language, authority, dates, security or platform conformance have been verified. There are no signatures, submission actions or paid services in this tool.\n\n' +
       'For each platform template, preserve the actual template ID, responsible operator, source clause version, permission mapping, attachment handling and a rendered review copy. Show the two operators how to prepare, amend, archive and publish through their approved roles.\n', { flag: 'wx', mode: 0o600 });
     // The reserved directory is empty and owned by this call; rename replaces only it.
@@ -128,19 +142,19 @@ export async function renderLibrary({ contextPath, outPath } = {}) {
 }
 export async function main(args = process.argv.slice(2)) {
   if (args.length === 1 && args[0] === '--help') { console.log(help); return; }
-  if (args.length === 1 && args[0] === 'inspect') {
-    const { kit, sha256 } = await loadKit();
+  if (args[0] === 'inspect' && (args.length === 1 || (args.length === 3 && args[1] === '--kit'))) {
+    const { kit, sha256 } = await loadKit(args[2]);
     console.log(JSON.stringify({ schema: kit.schema, status: kit.status, sha256, basis: kit.basis,
       templates: kit.templates.map(t => ({ id: t.id, title: t.title, fields: t.required_fields, clauses: t.approved_clause_keys })) }, null, 2)); return;
   }
-  if (args.length !== 5 || args[0] !== 'render') throw new TypeError('Use --help for commands');
+  if (args.length < 5 || args.length % 2 !== 1 || args[0] !== 'render') throw new TypeError('Use --help for commands');
   const options = {};
   for (let i = 1; i < args.length; i += 2) {
-    if (!['--context', '--out'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1]) throw new TypeError('Invalid options');
+    if (!['--context', '--out', '--kit', '--templates'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1]) throw new TypeError('Invalid options');
     options[args[i]] = args[i + 1];
   }
   if (!options['--context'] || !options['--out']) throw new TypeError('Both --context and --out are required');
-  console.log(JSON.stringify(await renderLibrary({ contextPath: options['--context'], outPath: options['--out'] })));
+  console.log(JSON.stringify(await renderLibrary({ contextPath: options['--context'], outPath: options['--out'], kitPath: options['--kit'], templateIds: options['--templates']?.split(',') })));
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
   main().catch(error => { console.error(`Template library: ${error.message}`); process.exitCode = 1; });

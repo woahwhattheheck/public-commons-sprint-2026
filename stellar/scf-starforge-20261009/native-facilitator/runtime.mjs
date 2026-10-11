@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { validateConfig, requireValue, FacilitatorError } from './config.mjs';
 import { createRpcReadiness } from './readiness.mjs';
 import { acquireSignerOwnership } from './ownership.mjs';
+import { createSettlementSlots } from './settlement-slots.mjs';
 import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
@@ -39,7 +40,11 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
     c.payments.recipients.every(stellar.validateStellarDestinationAddress), 'STELLAR_ADDRESS_INVALID');
   const signers = c.signers.map(loadSigner);
   const feeBumpSigner = c.feeBumpSigner ? loadSigner(c.feeBumpSigner) : undefined;
+  const slots = createSettlementSlots(c.signers.map(signer => signer.address),c.limits.maxSettleInFlight);
   const scheme = new ExactStellarScheme(signers, { rpcConfig:{url:c.rpcUrl}, areFeesSponsored:true,
+    // Keep every configured signer in this single SDK safety set. Assign an
+    // available source account to the whole admitted native call, across awaits.
+    selectSigner:slots.selectSigner,
     // SDK checks the inner resource + inclusion fee. The optional outer fee bump
     // adds one further inclusion fee; reserve it inside the operator's total cap.
     maxTransactionFeeStroops:c.limits.maxTransactionFeeStroops -
@@ -66,7 +71,7 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
   async function call(kind, payload, requirements) {
     if (closing) throw new FacilitatorError('FACILITATOR_DRAINING', 503);
     // Never queue a payment or retry after a caller disconnect. Admission is immediate.
-    if (kind === 'settle' ? settling >= 1 : verifying >= c.limits.maxVerifyInFlight)
+    if (kind === 'settle' ? !slots.hasCapacity() : verifying >= c.limits.maxVerifyInFlight)
       throw new FacilitatorError('FACILITATOR_BUSY', 503);
     validatePayment(payload, requirements);
     // Avoid a caller mutating terms while native verification awaits the RPC.
@@ -75,12 +80,15 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       if (!(await readiness.probe()).ready) throw new FacilitatorError('FACILITATOR_RPC_NOT_READY',503);
       // A probe may yield while the process drains or another call takes capacity.
       if (closing) throw new FacilitatorError('FACILITATOR_DRAINING',503);
-      if (kind === 'settle' ? settling >= 1 : verifying >= c.limits.maxVerifyInFlight)
+      if (kind === 'settle' ? !slots.hasCapacity() : verifying >= c.limits.maxVerifyInFlight)
         throw new FacilitatorError('FACILITATOR_BUSY',503);
     }
+    // No await between the final admission check and reserving its source account.
+    const slot = kind === 'settle' ? slots.acquire() : null;
     kind === 'settle' ? settling++ : verifying++;
     counters[kind === 'settle' ? 'settleCalls' : 'verifyCalls']++;
-    const work = Promise.resolve().then(() => native[kind](originalPayload, originalRequirements));
+    const invoke = () => native[kind](originalPayload, originalRequirements);
+    const work = Promise.resolve().then(() => slot ? slots.run(slot,invoke) : invoke());
     active.add(work);
     try {
       const result = await work;
@@ -94,14 +102,18 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
     } finally {
       active.delete(work);
       kind === 'settle' ? settling-- : verifying--;
+      if (slot) slots.release(slot);
       // A timed-out drain retains signer ownership until the accepted SDK work ends.
-      if (closing && active.size === 0) await ownership.release();
+      if (closing && active.size === 0) { slots.close(); await ownership.release(); }
     }
   }
   const getSupported = async () => structuredClone(native.getSupported());
   const status = () => ({ mode:'NATIVE_X402_FACILITATOR', network:c.network,
     state:closing ? 'DRAINING' : 'ACCEPTING', activeVerify:verifying, activeSettle:settling,
-    settlementConcurrency:1, counters:{...counters},chainReadiness:readiness.status().state,
+    settlementConcurrency:c.limits.maxSettleInFlight,
+    availableSettlementSlots:closing ? 0 : c.limits.maxSettleInFlight - settling,
+    settlementAccounts:slots.status(),
+    counters:{...counters},chainReadiness:readiness.status().state,
     readiness:readiness.status(),ownership:ownership.status() });
   const drain = async () => {
     closing = true;
@@ -111,13 +123,14 @@ async function createConfiguredNative(c,{environment,readiness,ownership}) {
       const complete = Promise.allSettled([...active]).then(() => true);
       const deadline = new Promise(resolve => { timer = setTimeout(() => resolve(false), c.limits.drainGraceMs); });
       const drained = await Promise.race([complete, deadline]);
-      if (drained) await ownership.release();
+      if (drained) { slots.close(); await ownership.release(); }
       return {drained,...status()};
     } finally { clearTimeout(timer); }
   };
   const waitForIdle = async () => {
     requireValue(closing,'DRAIN_REQUIRED');
     await Promise.allSettled([...active]);
+    slots.close();
     await ownership.release();
     return {drained:true,...status()};
   };
@@ -137,7 +150,7 @@ export async function startSelfFacilitatedSeller({ facilitatorConfig, config, po
     const [{startSellerService}, {createNativeSellerServer}] = await Promise.all([
       import('../sf30-seller-sdk/serve.mjs'), import('../sf30-seller-sdk/native-factory.mjs'),
     ]);
-    seller = await startSellerService({config,port,handlers,maxInFlight:1,
+    seller = await startSellerService({config,port,handlers,maxInFlight:policy.limits.maxSettleInFlight,
       drainGraceMs:facilitator.drainGraceMs, availabilityDirectory,
       nativeFactory:compiled => {
         // Refuse a service whose advertised quotes this backend cannot accept.

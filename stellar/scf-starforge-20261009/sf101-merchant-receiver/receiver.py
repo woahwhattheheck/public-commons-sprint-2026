@@ -18,6 +18,7 @@ import secrets
 import sqlite3
 import stat
 import sys
+import tempfile
 import time
 from datetime import datetime, timezone
 from urllib.parse import unquote
@@ -25,6 +26,9 @@ from urllib.parse import unquote
 SCHEMA = "stellar-forge.sf98.webhook.v1"
 MAX_BODY = 8192
 MAX_FILE = 32 * 1024 * 1024
+FILE_CHUNK = 64 * 1024
+SPOOL_MEMORY = 1024 * 1024
+TRANSFER_SCHEMA = "stellar-forge.sf101.byte-ranges.v1"
 CLOCK_WINDOW = 300
 ID_RE = re.compile(r"[a-f0-9]{64}\Z")
 REF_RE = re.compile(r"[A-Za-z0-9._:-]{1,80}\Z")
@@ -129,22 +133,80 @@ def init_state(state: Path) -> None:
         db.close()
 
 
-def read_private_file(path: str) -> tuple[bytes, str]:
-    if not Path(path).is_absolute() or os.path.normpath(path) != path:
+class VerifiedPrivateFile:
+    """One verified byte snapshot; the caller closes its private temporary spool."""
+
+    def __init__(self, stream, digest: str, size: int):
+        self.stream = stream
+        self.sha256 = digest
+        self.size = size
+
+    @property
+    def etag(self) -> str:
+        return '"sha256-' + self.sha256 + '"'
+
+    def close(self) -> None:
+        self.stream.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.close()
+
+
+def file_identity(info) -> tuple:
+    return (info.st_dev, info.st_ino, info.st_mode, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
+def snapshot_private_file(path: str, *, directory: Path | None = None) -> VerifiedPrivateFile:
+    """Hash into a private spool before release, independent of later source edits.
+
+    The original 32 MiB product cap remains. Only the first MiB is held in RAM;
+    larger snapshots spill to an anonymous private temporary file. Reading the
+    original descriptor again after hashing would allow a source edit to change
+    already-authorized response bytes, so transfer reads only this snapshot.
+    """
+    target = Path(path)
+    if not target.is_absolute() or os.path.normpath(path) != path:
         fail("Absolute normalized content file required")
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    named = target.lstat()
+    if not stat.S_ISREG(named.st_mode) or named.st_mode & 0o077 or not 0 < named.st_size <= MAX_FILE:
+        fail("Content must be a private regular file, 1 byte to 32 MiB")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     fd = os.open(path, flags)
+    snapshot = None
     try:
         info = os.fstat(fd)
-        if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or not 0 < info.st_size <= MAX_FILE:
-            fail("Content must be a private regular file, 1 byte to 32 MiB")
-        with os.fdopen(os.dup(fd), "rb") as f:
-            data = f.read(MAX_FILE + 1)
-        if len(data) != info.st_size or len(data) > MAX_FILE:
-            fail("Content changed during read or exceeded 32 MiB")
-        return data, sha(data)
+        if file_identity(info) != file_identity(named):
+            fail("Content changed while opening")
+        snapshot = tempfile.SpooledTemporaryFile(max_size=SPOOL_MEMORY, mode="w+b", dir=directory)
+        digest = hashlib.sha256()
+        size = 0
+        with os.fdopen(fd, "rb", closefd=False) as source:
+            while chunk := source.read(FILE_CHUNK):
+                size += len(chunk)
+                if size > info.st_size or size > MAX_FILE:
+                    fail("Content changed during read or exceeded 32 MiB")
+                digest.update(chunk)
+                snapshot.write(chunk)
+        if size != info.st_size or file_identity(os.fstat(fd)) != file_identity(info):
+            fail("Content changed during read")
+        snapshot.seek(0)
+        return VerifiedPrivateFile(snapshot, digest.hexdigest(), size)
+    except BaseException:
+        if snapshot is not None:
+            snapshot.close()
+        raise
     finally:
         os.close(fd)
+
+
+def read_private_file(path: str) -> tuple[bytes, str]:
+    """Compatibility interface for original callers that need the whole payload."""
+    with snapshot_private_file(path) as content:
+        return content.stream.read(), content.sha256
 
 
 def get_private_env(name: str, *, minimum: int = 32) -> str:
@@ -166,17 +228,18 @@ def enroll(args: argparse.Namespace, state: Path) -> dict:
     if not is_match(ID_RE, args.recipient_digest):
         fail("64-character SHA-256 of the selected payTo recipient required")
     token = get_private_env(args.claim_env)
-    data, digest = read_private_file(args.file)
+    with snapshot_private_file(args.file, directory=state) as content:
+        digest, size = content.sha256, content.size
     created = datetime.now(timezone.utc).isoformat()
     with connect(state) as db:
         db.execute("""INSERT INTO orders (order_ref,route_id,method,network,amount_atomic,
                   asset_digest,recipient_digest,file_path,file_sha256,file_bytes,token_sha256,created_at)
                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""", (
             args.ref, args.route, args.method, args.network, args.amount,
-            args.asset_digest, args.recipient_digest, args.file, digest, len(data), sha(token.encode()), created,
+            args.asset_digest, args.recipient_digest, args.file, digest, size, sha(token.encode()), created,
         ))
     return {"orderRef": args.ref, "state": "PENDING", "sourceSha256": digest,
-            "sourceBytes": len(data), "deliveryPath": "/deliver/" + args.ref}
+            "sourceBytes": size, "deliveryPath": "/deliver/" + args.ref}
 
 
 def bind_recipient(args: argparse.Namespace, state: Path) -> dict:
@@ -300,7 +363,7 @@ def access_allowed(db: sqlite3.Connection, ref: str, now: float | None = None) -
                               (policy["expires_at"] is None or at < policy["expires_at"]))
 
 
-def get_entitled_file(state: Path, ref: str, token: str) -> bytes | None:
+def get_entitled_snapshot(state: Path, ref: str, token: str) -> VerifiedPrivateFile | None:
     if not is_match(REF_RE, ref) or not 32 <= len(token.encode()) <= 1024:
         return None
     db = connect(state)
@@ -320,10 +383,68 @@ def get_entitled_file(state: Path, ref: str, token: str) -> bytes | None:
     expected = bytes.fromhex(order["token_sha256"])
     if not hmac.compare_digest(actual, expected):
         return None
-    data, digest = read_private_file(order["file_path"])
-    if len(data) != order["file_bytes"] or digest != order["file_sha256"]:
+    content = snapshot_private_file(order["file_path"], directory=state)
+    if content.size != order["file_bytes"] or content.sha256 != order["file_sha256"]:
+        content.close()
         fail("Merchant source file no longer matches authorized order digest")
-    return data
+    return content
+
+
+def get_entitled_file(state: Path, ref: str, token: str) -> bytes | None:
+    """Preserve original embedding callers while HTTP uses a bounded-memory spool."""
+    content = get_entitled_snapshot(state, ref, token)
+    if content is None:
+        return None
+    with content:
+        return content.stream.read()
+
+
+class UnsatisfiableRange(ValueError):
+    pass
+
+
+def select_byte_range(value: str | None, size: int) -> tuple[int, int] | None:
+    """Return one inclusive byte range; ignore unknown units and multipart sets."""
+    if value is None:
+        return None
+    if len(value) > 512:
+        fail("INVALID_BYTE_RANGE")
+    unit, separator, specification = value.partition("=")
+    if not separator:
+        fail("INVALID_BYTE_RANGE")
+    if unit.casefold() != "bytes":
+        return None
+    # RFC 9110 permits ignoring Range. This endpoint supports one part only.
+    if "," in specification:
+        return None
+    match = re.fullmatch(r"([0-9]*)-([0-9]*)", specification.strip())
+    if match is None or not any(match.groups()):
+        fail("INVALID_BYTE_RANGE")
+    first, last = match.groups()
+    if not first:
+        suffix = int(last)
+        if suffix == 0 or size == 0:
+            raise UnsatisfiableRange()
+        return max(0, size - suffix), size - 1
+    start = int(first)
+    end = int(last) if last else size - 1
+    if last and end < start:
+        fail("INVALID_BYTE_RANGE")
+    if start >= size:
+        raise UnsatisfiableRange()
+    return start, min(end, size - 1)
+
+
+def etag_matches(values: list[str], etag: str, *, weak: bool = False) -> bool:
+    """Evaluate an HTTP entity-tag list, preserving commas inside quoted tags."""
+    value = ",".join(values).strip()
+    if value == "*":
+        return True
+    tag = r'(?:W/)?"[\x21\x23-\x7e\x80-\xff]*"'
+    if re.fullmatch(rf"[ \t]*{tag}[ \t]*(?:,[ \t]*{tag}[ \t]*)*", value) is None:
+        return False
+    return any((item.removeprefix("W/") if weak else item) == etag
+               for item in re.findall(tag, value))
 
 
 def make_handler(state: Path, secret: str):
@@ -336,7 +457,7 @@ def make_handler(state: Path, secret: str):
             # Do not place order references, bearer tokens, payment details or paths in stdout.
             return
 
-        def reply(self, status: int, body: dict | bytes, content_type="application/json") -> None:
+        def reply(self, status: int, body: dict | bytes, content_type="application/json", *, extra_headers=None) -> None:
             raw = body if isinstance(body, bytes) else json.dumps(body, separators=(",", ":")).encode()
             self.send_response(status)
             self.send_header("Content-Type", content_type)
@@ -344,9 +465,12 @@ def make_handler(state: Path, secret: str):
             self.send_header("Cache-Control", "no-store")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Connection", "close")
+            for name, value in (extra_headers or {}).items():
+                self.send_header(name, value)
             self.end_headers()
-            self.wfile.write(raw)
             self.close_connection = True
+            if self.command != "HEAD":
+                self.wfile.write(raw)
 
         def one_header(self, name: str) -> str | None:
             values = self.headers.get_all(name, [])
@@ -394,7 +518,8 @@ def make_handler(state: Path, secret: str):
         def do_GET(self) -> None:
             if self.path == "/health":
                 return self.reply(200, {"service": "sf101-merchant-receiver", "status": "READY",
-                                        "accessControls": "stellar-forge.sf101.access-policy.v1"})
+                                        "accessControls": "stellar-forge.sf101.access-policy.v1",
+                                        "fileTransfer": TRANSFER_SCHEMA})
             if not self.path.startswith("/deliver/") or self.path.count("/") != 2:
                 return self.reply(404, {"code": "NOT_FOUND"})
             reference = unquote(self.path[len("/deliver/"):])
@@ -402,21 +527,84 @@ def make_handler(state: Path, secret: str):
             if auth is None or not auth.startswith("Bearer "):
                 return self.reply(404, {"code": "NOT_FOUND"})
             try:
-                data = get_entitled_file(state, reference, auth[7:])
-                if data is None:
+                content = get_entitled_snapshot(state, reference, auth[7:])
+                if content is None:
                     return self.reply(404, {"code": "NOT_FOUND"})
             except Exception:
                 return self.reply(503, {"code": "MERCHANT_SOURCE_UNAVAILABLE"})
-            self.send_response(200)
+            # All metadata and conditionals follow the original authorization and
+            # exact-source checks. A resumed request re-evaluates current policy.
+            with content:
+                try:
+                    return self.transfer(content)
+                except (ConnectionError, TimeoutError, OSError):
+                    # A disconnected buyer retains its own verified checkpoint.
+                    # Never write an error body into an already-started file.
+                    self.close_connection = True
+
+        def do_HEAD(self) -> None:
+            return self.do_GET()
+
+        def transfer(self, content: VerifiedPrivateFile) -> None:
+            self.connection.settimeout(30)
+            etag = content.etag
+            metadata = {"ETag": etag, "Accept-Ranges": "bytes"}
+            if_match = self.headers.get_all("If-Match", [])
+            if if_match and not etag_matches(if_match, etag):
+                return self.reply(412, {"code": "FILE_PRECONDITION_FAILED"}, extra_headers=metadata)
+            if_none = self.headers.get_all("If-None-Match", [])
+            if if_none and etag_matches(if_none, etag, weak=True):
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.send_header("Cache-Control", "private, no-store, no-transform")
+                self.send_header("Connection", "close")
+                self.end_headers()
+                self.close_connection = True
+                return
+
+            selected = None
+            if self.command == "GET":
+                ranges = self.headers.get_all("Range", [])
+                if len(ranges) > 1:
+                    return self.reply(400, {"code": "INVALID_BYTE_RANGE"})
+                requested = ranges[0] if ranges else None
+                if_range = self.headers.get_all("If-Range", [])
+                if requested is not None and if_range and (len(if_range) != 1 or if_range[0].strip() != etag):
+                    # There is no Last-Modified validator for an enrolled digest.
+                    # A weak/date/mismatched validator selects the complete file.
+                    requested = None
+                try:
+                    selected = select_byte_range(requested, content.size)
+                except UnsatisfiableRange:
+                    return self.reply(416, {"code": "BYTE_RANGE_NOT_SATISFIABLE"},
+                                      extra_headers={**metadata, "Content-Range": f"bytes */{content.size}"})
+                except ValueError:
+                    return self.reply(400, {"code": "INVALID_BYTE_RANGE"})
+
+            start, end = selected if selected is not None else (0, content.size - 1)
+            remaining = end - start + 1
+            self.send_response(206 if selected is not None else 200)
             self.send_header("Content-Type", "application/octet-stream")
             self.send_header("Content-Disposition", "attachment")
-            self.send_header("Content-Length", str(len(data)))
-            self.send_header("Cache-Control", "private, no-store")
+            self.send_header("Content-Length", str(remaining))
+            self.send_header("ETag", etag)
+            self.send_header("Accept-Ranges", "bytes")
+            if selected is not None:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{content.size}")
+            self.send_header("Cache-Control", "private, no-store, no-transform")
             self.send_header("X-Content-Type-Options", "nosniff")
             self.send_header("Connection", "close")
             self.end_headers()
-            self.wfile.write(data)
             self.close_connection = True
+            if self.command == "HEAD":
+                return
+            content.stream.seek(start)
+            while remaining:
+                chunk = content.stream.read(min(FILE_CHUNK, remaining))
+                if not chunk:
+                    raise OSError("Verified snapshot ended during transfer")
+                self.wfile.write(chunk)
+                remaining -= len(chunk)
 
     return MerchantHandler
 
