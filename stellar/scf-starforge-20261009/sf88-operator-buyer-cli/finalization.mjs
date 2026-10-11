@@ -52,11 +52,16 @@ export async function saveFinalizationView(path,value) {
   } finally {await unlink(temporary).catch(()=>{});}
 }
 
-function runWorker(python,args,operatorEnvironment,signal,rpcProxyUrl) {
+function runWorker(python,args,operatorEnvironment,signal,rpcProxyUrl,observerEnvironment=process.env) {
   need(signal===undefined||signal instanceof AbortSignal,'INVALID_ABORT_SIGNAL');
   need(!signal?.aborted,'OPERATOR_ABORTED');
+  const systemCA=observerEnvironment?.SF36_OBSERVER_USE_SYSTEM_CA;
+  need(systemCA===undefined||systemCA==='0'||systemCA==='1','INVALID_OBSERVER_SYSTEM_CA_OPTION');
+  // Forward one explicit trust selection as a fixed argument. The isolated
+  // observer still receives no general Node options, CA-file paths or keys.
+  const trustArgs=systemCA==='1'?['--node-use-system-ca']:[];
   return new Promise((accept,reject)=>{
-    const child=spawn(python,['-B','-E','-s',WORKER,...args],{shell:false,
+    const child=spawn(python,['-B','-E','-s',WORKER,...args,...trustArgs],{shell:false,
       env:{LANG:'C.UTF-8',LC_ALL:'C.UTF-8',...operatorEnvironment,
         ...(rpcProxyUrl===undefined?{}:{SF36_RPC_PROXY_URL:rpcProxyUrl})},
       stdio:['ignore','pipe','ignore']});
