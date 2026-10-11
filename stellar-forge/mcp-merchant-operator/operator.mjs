@@ -1,13 +1,11 @@
 // MIT. MCP merchant operations over the original SF82 release lifecycle and SF30 SDK.
 import { createHash } from 'node:crypto';
-import { join } from 'node:path';
-import { mkdtemp, rm } from 'node:fs/promises';
 import { stageRelease, inspectRelease, compareReleases, activateRelease, rollbackRelease,
   readReleaseState, releaseStatus, runActiveRelease } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
-import { exportSellerClient, inspectSellerClientExport, adoptSellerClientExport, readSellerClientManifest,
-  readSellerClientFile, CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
-import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { exact, failure, identifier, line, writePrivate, readMerchantConfig, inspectMerchantSource, pythonSourceView, duckdbSourceView } from './config.mjs';
+import { CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
+import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
+import { MerchantClientExports, readOwnedSellerCatalog } from './client-exports.mjs';
+import { exact, failure, identifier, line, readMerchantConfig, inspectMerchantSource, pythonSourceView, duckdbSourceView } from './config.mjs';
 import { MerchantDiscovery, discoveryTools } from './discovery.mjs';
 import { cacheControlTools, merchantCacheStatus, merchantCacheInvalidate } from './controls.mjs';
 import { MerchantFleet, fleetControlTools } from './fleet.mjs';
@@ -51,8 +49,10 @@ export const MERCHANT_TOOLS = [
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
   tool('merchant_client_export', 'Export the original JavaScript client, TypeScript declarations and OpenAPI for this running seller into a new named directory under the host-configured customer export root.',
     { instanceId: instanceSchema, id: idSchema }, ['instanceId', 'id']),
+  tool('merchant_client_export_list', 'List retained customer exports in the original host-selected directory. Reads completion receipts, with explicit legacy/incomplete entries; full payload inspection remains available through status.',
+    { after: idSchema, limit: { type: 'integer', minimum: 1, maximum: 50 } }, [], { readOnly: true, idempotent: true }),
   tool('merchant_client_export_status', 'Inspect the complete original customer export after a lost response or seller shutdown. Verifies saved files and reports a completion receipt, retained legacy files or an incomplete export without running the seller or generated code.',
-    { exportId: idSchema }, ['exportId'], { readOnly: true, idempotent: true }),
+    { exportId: idSchema, includeOffers: { type: 'boolean' } }, ['exportId'], { readOnly: true, idempotent: true }),
   tool('merchant_client_export_adopt', 'Record the exact inspected five legacy customer files as retained today. Requires their complete files digest, preserves all payloads, and does not invent a historical export time or release identity.',
     { exportId: idSchema, expectedFilesSha256: digestSchema }, ['exportId', 'expectedFilesSha256'], { idempotent: true }),
   tool('merchant_client_export_manifest', 'Read the saved original customer completion receipt and its exact file identity without rereading all payloads. Available after seller or MCP process restart.',
@@ -105,23 +105,11 @@ function expectedDigest(value) {
   if (typeof value !== 'string' || !/^[0-9a-f]{64}$/.test(value)) throw failure('INVALID_PARAMS', 'Use the inspected release digest.');
   return value;
 }
-async function originalJson(url, maximum = 16 * 1024 * 1024) {
-  const response = await fetch(url, { redirect: 'error', signal: AbortSignal.timeout(5000), headers: { accept: 'application/json' } });
-  if (!response.ok) throw failure('SELLER_UNAVAILABLE', 'Original seller metadata returned HTTP ' + response.status + '.');
-  const parts = []; let size = 0;
-  for await (const chunk of response.body) {
-    size += chunk.length;
-    if (size > maximum) throw failure('SELLER_METADATA_TOO_LARGE', 'Original metadata exceeds its size limit.');
-    parts.push(chunk);
-  }
-  const bytes = Buffer.concat(parts);
-  return { value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)), bytes };
-}
 
 export class MerchantReleaseOperator {
   #config; #managed = null; #busy = false; #closing = false; #active = Promise.resolve(); #close; #lastFailure = null; #discovery; #fleet; #accounting; #support; #receiving; #pythonWorkspaces; #publishers; #pricing;
-  #clientReads = new RetainedFileReads({ errorPrefix: 'CLIENT' });
-  constructor(config) { this.#config = config; this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#pricing = new MerchantPricing(config); }
+  #clientExports;
+  constructor(config) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#pricing = new MerchantPricing(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
@@ -129,7 +117,7 @@ export class MerchantReleaseOperator {
       state: result.state, releases: result.releases.map(releaseView), errors: result.errors,
       runtime: runtimeView(result.runtime), operator: { managesRunningSeller: Boolean(this.#managed),
         instanceId: this.#managed?.observation.instanceId ?? null, busy: this.#busy,
-        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, clientExports: this.#clientReads.summary } };
+        closing: this.#closing, lastFailure: this.#lastFailure, discovery: this.#discovery.summary, fleet: this.#fleet.summary, accounting: this.#accounting.summary, support: this.#support.summary, receiving: this.#receiving.summary, pythonWorkspaces: this.#pythonWorkspaces.summary, publishers: this.#publishers.summary, pricing: this.#pricing.summary, clientExports: this.#clientExports.summary } };
   }
   #owned(instanceId) {
     if (typeof instanceId !== 'string' || !this.#managed || instanceId !== this.#managed.observation.instanceId)
@@ -162,10 +150,7 @@ export class MerchantReleaseOperator {
   }
   async #catalog(instanceId) {
     const session = this.#owned(instanceId);
-    if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(session.url)) throw failure('SELLER_UNAVAILABLE', 'Original seller must use its loopback listener.');
-    const [health, offers, openapi] = await Promise.all(['health', 'offers', 'openapi.json'].map(name => originalJson(session.url + '/_seller/' + name)));
-    if (this.#managed !== session) throw failure('INSTANCE_CONFLICT', 'Seller stopped while reading its metadata.');
-    return { session, health, offers, openapi };
+    return readOwnedSellerCatalog({ session, isCurrent: candidate => this.#managed === candidate });
   }
   async #sources(source) {
     const aliases = Object.keys(this.#config.sources);
@@ -175,34 +160,8 @@ export class MerchantReleaseOperator {
     if (!candidate) throw failure('SOURCE_NOT_FOUND', 'Choose one of the host-configured source aliases.');
     return inspectMerchantSource(candidate);
   }
-  async #clientExport(name, args) {
-    const exportId = identifier(args.exportId, 'Export ID'), directory = join(this.#config.exportsDirectory, exportId);
-    if (name === 'merchant_client_export_status') return { ...await inspectSellerClientExport({ directory, exportId }),
-      exportId, fileReads: this.#clientReads.status(exportId) };
-    if (name === 'merchant_client_export_adopt') return { ...await adoptSellerClientExport({ directory,
-      expectedFilesSha256: args.expectedFilesSha256, provenance: { exportId } }), exportId };
-    if (name === 'merchant_client_export_manifest') {
-      const { manifest, manifestFile } = await readSellerClientManifest({ directory, exportId });
-      return { state: 'MANIFEST_RETAINED', exportId, manifest, manifestFile, fileReads: this.#clientReads.status(exportId) };
-    }
-    if (name === 'merchant_client_export_file_release') {
-      if (typeof args.readId !== 'string') throw failure('INVALID_PARAMS', 'Supply the original file read ID.');
-      await this.#clientReads.release(exportId, args.readId); return { exportId, readId: args.readId, released: true };
-    }
-    if (name === 'merchant_client_export_file') {
-      if (typeof args.expectedManifestSha256 !== 'string' || !/^[a-f0-9]{64}$/.test(args.expectedManifestSha256) ||
-          ![CLIENT_EXPORT_MANIFEST, ...CLIENT_EXPORT_FILES].includes(args.file))
-        throw failure('INVALID_PARAMS', 'Select the original customer file and inspected completion digest.');
-      const result = await this.#clientReads.read({ scope: exportId, kind: 'client-export',
-        key: JSON.stringify([exportId, args.file, args.expectedManifestSha256]), directory: this.#config.exportsDirectory,
-        readId: args.readId, offset: args.offset, limit: args.limit, expectedSha256: args.expectedSha256,
-        load: () => readSellerClientFile({ directory, exportId, file: args.file, expectedManifestSha256: args.expectedManifestSha256 }) });
-      return { exportId, manifestSha256: args.expectedManifestSha256, ...result };
-    }
-    throw failure('TOOL_NOT_FOUND', 'Unknown original client export operation.');
-  }
   async #execute(name, args) {
-    if (name.startsWith('merchant_client_export_')) return this.#clientExport(name, args);
+    if (name.startsWith('merchant_client_export_')) return this.#clientExports.call(name, args);
     if (name.startsWith('merchant_accounting_')) return this.#accounting.call(name, args);
     if (name.startsWith('merchant_pricing_')) return this.#pricing.call(name, args);
     if (name.startsWith('merchant_receiving_')) return this.#receiving.call(name, args);
@@ -265,15 +224,7 @@ export class MerchantReleaseOperator {
       case 'merchant_client_export': {
         const exportId = identifier(args.id, 'Export ID');
         const { session, openapi } = await this.#catalog(args.instanceId);
-        // The original exporter owns its five payloads and completion receipt.
-        const temporary = await mkdtemp(join(this.#config.exportsDirectory, '.openapi-'));
-        try {
-          const input = join(temporary, 'seller-openapi.json'); await writePrivate(input, openapi.bytes);
-          const result = await exportSellerClient({ openapi: input, out: join(this.#config.exportsDirectory, exportId),
-            provenance: { exportId, releaseId: session.release.id, releaseDigest: session.release.digest, instanceId: session.observation.instanceId } });
-          return { ...result, exportId, releaseId: session.release.id, releaseDigest: session.release.digest,
-            instanceId: session.observation.instanceId };
-        } finally { await rm(temporary, { recursive: true, force: true }); }
+        return this.#clientExports.generate({ exportId, session, openapi });
       }
       default: throw failure('TOOL_NOT_FOUND', 'Unknown merchant operation.');
     }
@@ -303,7 +254,7 @@ export class MerchantReleaseOperator {
     this.#fleet.cancelStaging();
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#publishers.close(), this.#pricing.close(), this.#clientReads.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#accounting.close(), this.#support.close(), this.#receiving.close(), this.#pythonWorkspaces.close(), this.#publishers.close(), this.#pricing.close(), this.#clientExports.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');
