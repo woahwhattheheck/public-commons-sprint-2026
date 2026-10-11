@@ -25,7 +25,7 @@ const help = [
   'run uses the original SF88 buyer for each new page, including its current quote review and durable reservation.',
   'Completed pages are reused. Signed or unresolved attempts remain retained for accounting.',
   'An explicitly reviewed unsigned page can continue after its original ledger proves the intent absent.',
-  'Its failed attempt and evidence remain in the same page unpaid-history directory.'
+  'Its failed attempt and evidence remain in the same page unpaid-history directory.',
   'accounting reads original saved receipts; finalize reconciles those original reservations without buying again.',
   'Accounting ranges are zero-based; continue from range.nextOffset and review unresolved entries.',
 ].join('\n') + '\n';

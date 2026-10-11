@@ -627,6 +627,13 @@ def serve(workspace, *, port=0):
                         raise StateError("ANALYSIS_WORKBOOK_REVISION_REQUIRED")
                     return self._reply(200, workspace.workbooks.definition(parts[2],
                         revision=int(get("revision")) if get("revision") else None))
+                if len(parts) == 4 and parts[:2] == ["api", "workbooks"] and parts[3] == "refresh":
+                    if set(query) - {"revision", "sheet", "before", "limit"}:
+                        raise StateError("ANALYSIS_WORKBOOK_PAGE_INVALID")
+                    return self._reply(200, workspace.workbooks.refresh.candidates(parts[2],
+                        revision=int(get("revision")) if get("revision") else None,
+                        sheet=int(get("sheet", "0")), before=int(get("before")) if get("before") else None,
+                        limit=int(get("limit", "25"))))
                 if len(parts) == 4 and parts[:2] == ["api", "workbooks"] and parts[3] == "preview":
                     if set(query) - {"revision", "sheet", "limit"}:
                         raise StateError("ANALYSIS_WORKBOOK_PREVIEW_PAGE_INVALID")
@@ -721,6 +728,11 @@ def serve(workspace, *, port=0):
                     return self._reply(200, workspace.responses.register(body.get("name"), "object",
                         session=body.get("session"), destination=body.get("destination"),
                         format=body.get("format", "json"), expected_revision=body.get("expected_revision", 0)))
+                if len(parts) == 4 and parts[:2] == ["api", "workbooks"]:
+                    if parts[3] == "refresh-review":
+                        return self._reply(200, workspace.workbooks.refresh.review(parts[2], body))
+                    if parts[3] == "refresh":
+                        return self._reply(200, workspace.workbooks.refresh.save(parts[2], body))
                 if len(parts) == 3 and parts[:2] == ["api", "workbooks"]:
                     return self._reply(200, workspace.workbooks.save(parts[2], body))
                 if len(parts) == 4 and parts[:2] == ["api", "workbook-runs"] and parts[3] == "cancel":

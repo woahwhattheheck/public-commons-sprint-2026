@@ -212,6 +212,16 @@ The original SF88 policy, reservations ledger, signer and recorded page attempts
 control the acquisition. Recover or account the same session after interruption.
 Export a completed session through the original SF88/SF100 delivery operation.
 
+If an original attempt stopped before signature, the session report can expose
+unpaidContinuation with its page index, intentId and attemptSha256. To continue
+that page explicitly, choose publisher.buyer.run with the same id,
+retryUnpaid:true and expectedAttemptSha256 copied from that report. The original
+buyer checks the exact retained attempt and absence of any matching ledger row
+under its approval lease, preserves the failed attempt in immutable history, and
+then uses its normal consent, reservation and signing flow. Completed pages stay
+in the same acquisition. retryUnpaid defaults to false; publisher.buyer.recover
+continues to inspect the original attempt evidence.
+
 merchant_socrata_file also reads draft-csv, draft-review, buyer-config,
 session-manifest, session-csv, session-jsonl and session-review using each original
 record's UUID. The completed CSV, JSONL and HTML review are read from the original

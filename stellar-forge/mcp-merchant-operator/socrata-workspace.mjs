@@ -147,7 +147,7 @@ export function socrataWorkspaceTools(tool) {
         id: text, filename: { type: 'string', maxLength: 160 }, ...chunk }), ['workspace', 'kind', 'id'], read),
     tool('merchant_socrata_file_release', 'Release a selected unfinished retained-file read. Its original source export remains available.',
       scoped({ readId: uuid }), ['workspace', 'readId'], { idempotent: true }),
-    tool('merchant_socrata_publisher', 'Use the original dataset publisher, SF82 release lifecycle or SF88 acquisition. Prepare selects exportId from this workspace. Release staging uses host runtime settings. Buyer sessions select a host buyerWorkspace alias; original reviews, policy, ledger and page attempts govern execution.',
+    tool('merchant_socrata_publisher', 'Use the original dataset publisher, SF82 release lifecycle or SF88 acquisition. Prepare selects exportId from this workspace. Release staging uses host runtime settings. Buyer sessions select a host buyerWorkspace alias; original reviews, policy, ledger and page attempts govern execution. Explicit unpaid-page continuation uses publisher.buyer.run payload retryUnpaid:true and expectedAttemptSha256 from the original session report.',
       scoped({ action: { enum: [...publisherActions] }, payload: object }), ['workspace', 'action'], { openWorld: true }),
     tool('merchant_socrata_browser', 'Open or close the industrial browser over this exact original operator object and its lazy publisher. Returns a private local session URL. Closing this borrowed browser leaves the MCP-owned operator open.',
       scoped({ action: { enum: ['open', 'close'] }, port: { type: 'integer', minimum: 0, maximum: 65535 } }), ['workspace', 'action']),

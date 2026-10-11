@@ -31,6 +31,13 @@ node cli.mjs recover --prepared /private/merchant --operation-key SHA256
   --generation N --request-hash SHA256 --action complete|retry --reference PROVIDER_REFERENCE
   [--response /private/response-envelope.json]
 
+node cli.mjs lookup --prepared /private/merchant --operation-key SHA256 --simulation-id PROVIDER_ID [--refresh true]
+node cli.mjs lookups --prepared /private/merchant --operation-key SHA256 [--before LOOKUP_ID] [--limit 25]
+node cli.mjs lookup-inspect --prepared /private/merchant --lookup-id SHA256
+node cli.mjs lookup-result --prepared /private/merchant --lookup-id SHA256 --observation-id UUID --out /private/saved-result.json
+node cli.mjs recover-saved --prepared /private/merchant --lookup-id SHA256 --observation-id UUID
+  --generation N --reference ORIGINAL_PROVIDER_RECORD
+
 node cli.mjs buyer-prepare --prepared /private/merchant --body /private/request.json
   --ticket /private/ticket.json --intent INTENT_ID --out /private/buyer.json
   [--response-out /private/buyer-response.json]
@@ -50,6 +57,11 @@ const FLAGS = {
   audit: [['prepared', 'operation-key'], ['after', 'limit']],
   result: [['prepared', 'operation-key', 'out'], ['response-out']],
   recover: [['prepared', 'operation-key', 'generation', 'request-hash', 'action', 'reference'], ['response']],
+  lookup: [['prepared', 'operation-key', 'simulation-id'], ['refresh']],
+  lookups: [['prepared', 'operation-key'], ['before', 'limit']],
+  'lookup-inspect': [['prepared', 'lookup-id'], []],
+  'lookup-result': [['prepared', 'lookup-id', 'observation-id', 'out'], []],
+  'recover-saved': [['prepared', 'lookup-id', 'observation-id', 'generation', 'reference'], []],
   'buyer-prepare': [['prepared', 'body', 'ticket', 'intent', 'out'], ['response-out']],
   'buyer-inspect': [['config'], []],
 };
@@ -122,6 +134,22 @@ export async function main(args = process.argv.slice(2)) {
   const application = createTenderlyApplication({ plan: prepared.plan, stateDirectory: prepared.stateDirectory });
   try {
     const operations = application.operations;
+    if (command === 'lookup') {
+      if (o.refresh !== undefined && !['true', 'false'].includes(o.refresh)) throw new TypeError('--refresh must be true or false');
+      return output(await application.providerRecovery.lookup({ operationKey: o['operation-key'],
+        simulationId: o['simulation-id'], refresh: o.refresh === 'true' }));
+    }
+    if (command === 'lookups') return output(await application.providerRecovery.list({
+      operationKey: o['operation-key'], before: o.before ?? '', limit: number(o.limit, 25, 1, 100) }));
+    if (command === 'lookup-inspect') return output(await application.providerRecovery.inspect(o['lookup-id']));
+    if (command === 'lookup-result') {
+      const saved = await application.providerRecovery.response({ lookupId: o['lookup-id'], observationId: o['observation-id'] });
+      return output({ status: 'PROVIDER_RESULT_SAVED', path: await writePrivate(o.out, saved.bytes),
+        bytes: saved.bytes.length, sha256: saved.sha256, observation: saved.record });
+    }
+    if (command === 'recover-saved') return output(await application.providerRecovery.complete({
+      lookupId: o['lookup-id'], observationId: o['observation-id'],
+      expectedGeneration: number(o.generation, undefined, 1), reference: o.reference }));
     if (command === 'issue') {
       const issued = await operations.issue({ body: await readJson(o.body), id: o.id, subject: o.subject, expiresAt: Date.parse(o.expires) });
       const path = await writeTicket(resolve(o.out), issued);
