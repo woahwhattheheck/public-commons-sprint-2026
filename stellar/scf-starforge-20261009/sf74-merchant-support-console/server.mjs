@@ -9,16 +9,19 @@ import {createHash} from 'node:crypto';
 import {parseArgs, capture} from '../sf70-merchant-intake/run.mjs';
 import {compare, validateIntake} from '../sf76-merchant-remediation-delta/compare.mjs';
 import {evaluate as postPreflight} from '../sf72-post-only-preflight/preflight.mjs';
+import {buildPacket, renderHtml, renderChecklist} from '../sf77-merchant-workorder/workorder.mjs';
 
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
   '/console.mjs': ['console.mjs', 'text/javascript; charset=utf-8'],
+  '/terms-editor.mjs': ['terms-editor.mjs', 'text/javascript; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const ROOT = new URL('.', import.meta.url);
 const MAX_BODY = 8192;
 const MAX_SOURCE = 2_000_000; // Same per-file limit as the original SF76 CLI.
 const MAX_COMPARISON_BODY = 4 * Math.ceil(MAX_SOURCE / 3) * 4 + 512;
+const MAX_WORKORDER_BODY = 5 * Math.ceil(MAX_SOURCE / 3) * 4 + 512;
 const HEADERS = Object.freeze({
   'cache-control': 'no-store, max-age=0',
   'content-security-policy': "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; object-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'",
@@ -101,6 +104,24 @@ function compareUploadedSources(input) {
     postBefore: pb?.data, postAfter: pa?.data, postBeforeSha: pb?.sha, postAfterSha: pa?.sha});
 }
 
+function workorderFromSources(input) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new TypeError('Expected original capture files and owner terms');
+  const fields = ['before', 'after', 'postBefore', 'postAfter', 'terms'];
+  if (Object.keys(input).some(key => !fields.includes(key))) throw new TypeError('Unexpected workorder field');
+  const before = uploadedSource(input.before, 'before', true), terms = uploadedSource(input.terms, 'terms', true);
+  const after = uploadedSource(input.after, 'after');
+  const pb = uploadedSource(input.postBefore, 'postBefore'), pa = uploadedSource(input.postAfter, 'postAfter');
+  if (!after && (pb || pa)) throw new TypeError('Browser check comparison requires an after capture');
+  validateIntake(before.data);
+  // Original SF77 owns terms, economics, acceptance and its optional SF76 repair review.
+  const packet = buildPacket(before.data, terms.data, before.sha, new Date().toISOString(), after ? {
+    after: after.data, afterSha: after.sha, postBefore: pb?.data, postAfter: pa?.data,
+    postBeforeSha: pb?.sha, postAfterSha: pa?.sha,
+  } : null);
+  return {packet, html: renderHtml(packet), checklist: renderChecklist(packet)};
+}
+
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
 export function createConsoleServer({runCapture = capture, allowLoopback = false} = {}) {
   let active = false;
@@ -134,6 +155,17 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         json(res, 200, {report});
       } catch (error) {
         json(res, Number(error?.status) || 422, {error: 'INVALID_COMPARISON',
+          detail: String(error?.message ?? error).slice(0, 240)});
+      }
+      return;
+    }
+    if (route === '/api/workorder' && req.method === 'POST') {
+      if (req.headers.origin !== ownOrigin) { json(res, 403, {error: 'ORIGIN_MISMATCH'}); return; }
+      try {
+        // Offline and in-memory: no filesystem paths, fetching, sending or acceptance side effects.
+        json(res, 200, workorderFromSources(await boundedBody(req, MAX_WORKORDER_BODY)));
+      } catch (error) {
+        json(res, Number(error?.status) || 422, {error: 'INVALID_WORKORDER',
           detail: String(error?.message ?? error).slice(0, 240)});
       }
       return;
