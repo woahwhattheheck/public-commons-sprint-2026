@@ -41,6 +41,35 @@ the before/after case results, patch and envelope. The UI executes no paid model
 calls. A per-process action token and stable operation IDs protect dispatch.
 A retained CLI-created provider run can be opened by its operation ID.
 
+The operation ID is now displayed and saved in browser storage **before** a run
+request is sent. If the response is interrupted, reload the page or use
+**Inspect operation** to read the original journal and result. Reopening only
+performs reads: it does not retry execution, call a model, approve a change or
+create another operation. When storage is unavailable, copy the visible ID.
+**Choose a new run** clears the current selection while retaining recent IDs;
+only the separate Run action starts a new operation.
+
+The retained-operation list reads original journal metadata and shows observed
+filesystem timestamps. Journal state and the presence of a result file do not
+establish completion. Opening one operation checks its original envelope with
+`verify_run()` before showing or downloading the result. This checks hash and
+receipt consistency, not provider authenticity. An incomplete, missing or
+unreadable result remains explicit; absence does not establish that dispatch
+never happened. No automatic polling or retry is performed.
+
+The index scans at most 500 directory entries and displays up to 100 operations
+from that scan, with an explicit partial-list notice when bounded. A known ID
+can be opened directly even when it is not listed. Reads are bounded to 16 KiB
+per journal and 2 MiB per result, and linked artifact paths are not followed.
+The browser stores only the selected ID and up to 20 recent ID/task/control
+records, never the action token or run contents. Browser history is distinct
+from retained server artifacts and does not prove execution.
+
+`GET /api/operations` lists recorded metadata; `GET /api/operation?id=...` opens
+one journal and any verified result. Both retain the original action-token and
+local-origin checks. The original `/api/result` verified-result endpoint is
+preserved. The runtime, workload, provider and execution authority are unchanged.
+
 The original MemorySandbox demo and replay commands remain available for their
 existing deterministic-fixture purpose. The focused execution path supplies the
 actual computation and observed checks.
