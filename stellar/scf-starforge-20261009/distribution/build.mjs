@@ -9,14 +9,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|json|toml|md|html|css|txt|sql|csv|svg|png|woff2)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|php|json|toml|md|html|css|txt|sql|csv|svg|png|woff2)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
-function isRuntimeFile(path) {
+function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
   return !parts.some(part => excludedDirs.has(part) || part.startsWith('.')) &&
-    !excludedName.test(parts.at(-1)) && (supported.test(path) || parts.at(-1) === 'LICENSE');
+    (explicitRuntime || !excludedName.test(parts.at(-1))) &&
+    (supported.test(path) || parts.at(-1) === 'LICENSE');
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);
@@ -60,8 +61,12 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   });
   const byPath = new Map(tree.map(item => [item.path, item]));
   const excluded = new Set(spec.excludeFiles ?? []);
-  const selected = tree.filter(item => isRuntimeFile(item.path) && !excluded.has(item.path) &&
-    (spec.components.some(root => item.path.startsWith(root + '/')) || spec.supportFiles.includes(item.path)));
+  const explicitRuntime = new Set(spec.supportFiles);
+  // Exact maintained runtime files can override a test-like filename, such as
+  // the MCP buyer's imported acceptance descriptor. Directory, extension,
+  // explicit exclusion and regular-file checks still apply.
+  const selected = tree.filter(item => isRuntimeFile(item.path, explicitRuntime.has(item.path)) && !excluded.has(item.path) &&
+    (spec.components.some(root => item.path.startsWith(root + '/')) || explicitRuntime.has(item.path)));
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
