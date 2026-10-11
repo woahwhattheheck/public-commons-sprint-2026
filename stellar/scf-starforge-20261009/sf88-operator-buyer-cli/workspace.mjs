@@ -7,6 +7,7 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abs, buyerTransport, config, execution, need, operation, operator, InputError } from './config.mjs';
 import { resolveBuyerProxy } from '../sf31-buyer-client/public-transport.mjs';
+import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const SCHEMA = 'stellar-forge.sf88.operator-workspace.v1';
 const KEY_NAMES = ['SF36_CONSENT_KEY_B64', 'SF36_AUDIT_KEY_B64', 'SF36_OPERATOR_KEY_B64'];
@@ -140,6 +141,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     ...source, buyerTransport:{mode:'explicit-connect', origin:new URL(op.url).origin,
       ...(proxyEnv === undefined ? {proxyUrl} : {proxyEnv})},
   });
+  const ticket = await loadOperationTicket(op, {requireCurrent:true});
   need(op.expect.network === 'stellar:testnet', 'WORKSPACE_TESTNET_REQUIRED');
   need(/^C[A-Z2-7]{55}$/.test(op.expect.asset) && /^[GC][A-Z2-7]{55}$/.test(op.expect.payTo),
     'WORKSPACE_STELLAR_TERMS_INVALID');
@@ -169,7 +171,8 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     max_single:maximum, max_total:total, max_per_utc_day:daily,
     max_per_actor_utc_day:daily, max_per_service_utc_day:daily,
   }]};
-  const cfg = {...source, operation:op, operator:owner,
+  const cfg = {...source, operation:{...op,
+    ...(ticket ? {ticketFile:join(directory, 'operation-ticket.json')} : {})}, operator:owner,
     ...(transport === null ? {} : {buyerTransport:transport}),
     signerModule:join(directory, 'signer.mjs'), evidenceDir:join(directory, 'evidence'),
     trustedPayer:payer};
@@ -207,6 +210,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     for (const [name, contents] of [
       ['operator.json', configuredBytes], ['policy.json', json(policy)],
       ['operator-keys.json', json({schema:SCHEMA, keys:keySet.values})], ['signer.mjs', signerSource],
+      ...(ticket ? [['operation-ticket.json', ticket.sourceBytes]] : []),
     ]) await writeFile(join(directory, name), contents, {flag:'wx', mode:0o600});
     const ledger = await initializeLedger(owner.python, owner.policy, owner.ledger, keySet.values);
     // The manifest is written last; partial initialization is never executable.
@@ -214,6 +218,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     return {mode:'PRIVATE_OPERATOR_WORKSPACE_CREATED', directory,
       config:join(directory, 'operator.json'), network:manifest.network, payer,
       operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv,
+      operationTicket:operationTicketView(ticket),
       signerSource:signerProvider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
       buyerTransport:transport, walletKeyStored:false, policy, ledger,
       commands:{review:[process.execPath, cliPath, '--review-workspace', '--dir', directory],
