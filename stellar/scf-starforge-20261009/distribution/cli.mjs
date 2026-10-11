@@ -50,6 +50,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-host                             Install, observe and recover the original Linux merchant group
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
+  routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
+  routescan-workspace Operate its saved project through the original local workspace
+  buyer-n8n-workflows Generate six original customer workflows for the selected n8n credential
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
