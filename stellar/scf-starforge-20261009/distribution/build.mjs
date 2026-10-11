@@ -9,7 +9,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
 const digest = data => createHash('sha256').update(data).digest('hex');
-const supported = /\.(?:mjs|js|cjs|ts|mts|py|json|md|html|css|txt|sql|csv|svg|png|woff2)$/i;
+const supported = /\.(?:mjs|js|cjs|ts|mts|py|json|toml|md|html|css|txt|sql|csv|svg|png|woff2)$/i;
 const excludedName = /(?:^test[_.-]|[.]test[.]|[.]spec[.]|(?:^|[-_])acceptance(?:[-_.]|$)|(?:^|[-_])focused[-_]?check[.]|_check[.])/i;
 const excludedDirs = new Set(['test', 'tests', 'fixtures', 'snapshots', 'node_modules', '__pycache__']);
 
@@ -20,6 +20,29 @@ function isRuntimeFile(path) {
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);
+}
+
+function staticModuleRequests(sources) {
+  // Parse without linking or evaluating any application. Code examples inside
+  // template strings are data, not imports. The old regex treated generated SDK
+  // snippets as files in this checkout and prevented the product from packaging.
+  const parse = String.raw`
+const { readFileSync } = require('node:fs');
+const { SourceTextModule, createContext } = require('node:vm');
+const sources = JSON.parse(readFileSync(0, 'utf8'));
+const context = createContext();
+const result = sources.map(([path, source]) => {
+  const module = new SourceTextModule(source, { identifier: path, context });
+  return [path, [...module.dependencySpecifiers]];
+});
+process.stdout.write(JSON.stringify(result));
+`;
+  const modules = [...sources].filter(([path]) => /\.(?:mjs|js)$/.test(path))
+    .map(([path, bytes]) => [path, bytes.toString('utf8')]);
+  return JSON.parse(execFileSync(process.execPath,
+    ['--no-warnings', '--experimental-vm-modules', '--input-type=commonjs', '--eval', parse],
+    { input: JSON.stringify(modules), encoding: 'utf8', timeout: 10000,
+      maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }));
 }
 
 export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref = 'HEAD', output }) {
@@ -36,7 +59,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     return { mode, type, blob, path: line.slice(tab + 1) };
   });
   const byPath = new Map(tree.map(item => [item.path, item]));
-  const selected = tree.filter(item => isRuntimeFile(item.path) &&
+  const excluded = new Set(spec.excludeFiles ?? []);
+  const selected = tree.filter(item => isRuntimeFile(item.path) && !excluded.has(item.path) &&
     (spec.components.some(root => item.path.startsWith(root + '/')) || spec.supportFiles.includes(item.path)));
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
@@ -55,14 +79,23 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       throw new RangeError('Distribution source size exceeded');
     sources.set(item.path, bytes);
   }
-  // Check literal ESM imports in the selected source. Dynamic application imports
-  // remain operator inputs; known dynamic module families are explicit components.
-  for (const [path, bytes] of sources) {
-    if (!/\.(?:mjs|js|cjs)$/.test(path)) continue;
-    const source = bytes.toString('utf8');
-    for (const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"](\.[^'"]+)['"]/g)) {
-      const target = posix.normalize(posix.join(posix.dirname(path), match[1]));
-      if (!names.has(target)) throw new TypeError('Unpackaged relative module: ' + path + ' -> ' + target);
+  // Native parsing checks real static ESM imports and re-exports. The explicit
+  // component inventory retains dynamic runtime modules and browser assets.
+  // Operator-selected handler/signing modules remain external application inputs.
+  const missingModules = [];
+  for (const [path, requests] of staticModuleRequests(sources)) {
+    for (const request of requests.filter(value => value.startsWith('.'))) {
+      const target = posix.normalize(posix.join(posix.dirname(path), request));
+      if (!names.has(target)) missingModules.push(path + ' -> ' + target);
+    }
+  }
+  if (missingModules.length) throw new TypeError('Unpackaged relative modules:\n' + missingModules.join('\n'));
+  const optionalPeers = { ...spec.nativePeers };
+  for (const peers of Object.values(spec.featurePeers ?? {})) {
+    for (const [name, value] of Object.entries(peers)) {
+      if (optionalPeers[name] && optionalPeers[name].version !== value.version)
+        throw new TypeError('Conflicting optional dependency versions: ' + name);
+      optionalPeers[name] = value;
     }
   }
   const version = spec.version + '-source.g' + commit.slice(0, 12);
@@ -72,8 +105,8 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     engines: { node: '>=22.16.0' },
     bin: { starforge: './source/' + ownPath + '/cli.mjs' },
     exports: spec.exports, files: ['source/', 'manifest.json', 'README.md', 'LICENSE'],
-    peerDependencies: Object.fromEntries(Object.entries(spec.nativePeers).map(([name, value]) => [name, value.version])),
-    peerDependenciesMeta: Object.fromEntries(Object.keys(spec.nativePeers).map(name => [name, { optional: true }])),
+    peerDependencies: Object.fromEntries(Object.entries(optionalPeers).map(([name, value]) => [name, value.version])),
+    peerDependenciesMeta: Object.fromEntries(Object.keys(optionalPeers).map(name => [name, { optional: true }])),
     repository: { type: 'git', url: 'https://github.com/woahwhattheheck/public-commons-sprint-2026.git', directory: ownPath },
   };
   const metadataBytes = Buffer.from(json(metadata));
@@ -88,7 +121,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     files: selected.map(item => ({ path: item.path, packagePath: 'source/' + item.path,
       gitBlob: item.blob, sha256: digest(sources.get(item.path)), bytes: sources.get(item.path).length, mode: item.mode })),
     packageFiles: { 'package.json': digest(metadataBytes), 'README.md': digest(readme), 'LICENSE': digest(license) },
-    optionalNativePeers: metadata.peerDependencies,
+    optionalNativePeers: Object.fromEntries(Object.entries(spec.nativePeers).map(([name, value]) => [name, value.version])),
+    optionalFeaturePeers: Object.fromEntries(Object.entries(spec.featurePeers ?? {}).map(([feature, peers]) =>
+      [feature, Object.fromEntries(Object.entries(peers).map(([name, value]) => [name, value.version]))])),
   };
   // The caller chooses a new output directory. No prior archive or workspace is replaced.
   await mkdir(out, { mode: 0o700 });
