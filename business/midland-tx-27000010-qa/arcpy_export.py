@@ -25,7 +25,8 @@ def main():
         'horizontal_crs': desc.spatialReference.name,
         'vertical_crs': getattr(desc.spatialReference, 'verticalName', '') or '',
         'fields': [{'name': f.name, 'type': f.type, 'length': f.length,
-                    'nullable': bool(f.isNullable)} for f in fields],
+                    'nullable': bool(f.isNullable), 'precision': f.precision,
+                    'scale': f.scale} for f in fields],
         'source_kind': 'ArcPy Described ORIGINAL geodatabase; row attributes only'
     }
     with prefix.with_suffix('.json').open('x', encoding='utf-8') as out:
