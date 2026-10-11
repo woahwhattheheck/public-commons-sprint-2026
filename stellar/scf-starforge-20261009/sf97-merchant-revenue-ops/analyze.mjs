@@ -148,6 +148,35 @@ function checkTerms(terms, seller, payments) {
   return {fixed};
 }
 
+// The merchant workspace uses the same normalization and commercial validation
+// as the CLI. Payment choices are always copied from the reviewed seller source.
+export function merchantRoutes(seller) {
+  const payments = sellerConfig(seller);
+  return seller.routes.map(route => ({routeId:route.id, method:methodFor(route),
+    path:route.path, paymentOptions:payments.get(route.id)}));
+}
+
+export function merchantTerms(seller, commercial) {
+  object(commercial, 'commercial inputs');
+  const inputs = object(commercial.routes, 'commercial routes');
+  const payments = sellerConfig(seller);
+  if (Object.keys(inputs).length !== seller.routes.length)
+    throw new TypeError('Enter commercial inputs for every current seller route');
+  const routes = Object.create(null);
+  for (const route of seller.routes) {
+    if (!own(inputs, route.id)) throw new TypeError(`Missing commercial inputs for ${route.id}`);
+    const input = object(inputs[route.id], `commercial routes.${route.id}`);
+    routes[route.id] = {expectedPayments:payments.get(route.id),
+      priceBasis:input.priceBasis, unitPriceUsd:input.unitPriceUsd,
+      perFulfilledUsd:input.perFulfilledUsd, perChallengeUsd:input.perChallengeUsd,
+      monthlyPaidTarget:input.monthlyPaidTarget};
+  }
+  const terms = {schema:SCHEMA, merchantName:commercial.merchantName,
+    sharedMonthlyFixedUsd:commercial.sharedMonthlyFixedUsd, routes};
+  checkTerms(terms, seller, payments);
+  return terms;
+}
+
 export function analyze(seller, snapshot, terms, provenance = {}) {
   const payments=sellerConfig(seller);
   validateSnapshot(snapshot,seller);
@@ -224,10 +253,10 @@ export function html(report) {
 @media print{body{background:white}main{padding:0}.card,.panel{break-inside:avoid}.scroll{overflow:visible}thead{display:table-header-group}}
 </style></head><body><main><header><div><div class="eyebrow">SF97 / Merchant Revenue Operations / Source-bound operator report</div><h1>${escaped(report.merchantName)}</h1><div class="muted">Session ${escaped(report.sessionId)} · ${escaped(report.originalSellerMode)} · ${escaped(report.observedFrom)} to ${escaped(report.observedUntil)}</div></div><div class="tag">Private local report</div></header><p class="sub">Route-level commercial review from the original SF30 seller traffic counters and seller payment terms, joined to merchant-entered USD valuations and costs. This is not an invoice or a transaction ledger.</p><section class="cards"><article class="card"><span class="eyebrow">Target monthly gross</span><strong>$${escaped(pre.plannedMonthlyTargetGrossUsd)}</strong><p>Merchant targets × owner-valued USD per route, not observed receipts.</p></article><article class="card"><span class="eyebrow">Target contribution</span><strong>${pre.plannedMonthlyTargetContributionAfterFixedUsd===null?'Unknown':'$'+escaped(pre.plannedMonthlyTargetContributionAfterFixedUsd)}</strong><p>After entered variable costs and shared fixed cost; incomplete inputs stay unknown.</p></article><article class="card"><span class="eyebrow">Observed 2xx nominal value</span><strong>$${escaped(pre.modeledNominal2xxResponseValueUsd)}</strong><p>Only if every observed 2xx were billed at today's owner-entered quote; NOT revenue.</p></article></section><section class="panel"><h2>Native seller routes × merchant economics</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Requests</th><th>402</th><th>2xx</th><th>5xx</th><th>D/C</th><th>Quote USD</th><th>Target gross USD</th><th>Target contribution USD*</th></tr></thead><tbody>${rs}</tbody></table></div><p class="muted" style="font-size:.8rem">*Before shared monthly fixed cost. Unmatched/method/invalid request buckets are excluded from product demand. 402 responses are payment challenges, not purchases.</p></section><section class="panel"><h2>Approved payment options</h2><p class="muted">One merchant-entered USD quote, cost schedule and monthly volume target applies to every approved alternative on its route. HTTP counters do not identify a selected option. Full asset, recipient and extra metadata remain in the private report.json.</p><div class="scroll"><table><thead><tr><th>Route / option</th><th>Network / timeout</th><th>Atomic amount</th><th>Asset SHA-256</th><th>Recipient SHA-256</th><th>Extra metadata</th></tr></thead><tbody>${optionRows}</tbody></table></div></section><section class="panel"><h2>Operator review queue</h2><ul>${issues}</ul></section><section class="panel"><h2>Accounting boundary and next commercial decision</h2><p>${escaped(report.accounting)}</p><p>Pair this worksheet with independently checked settlement records and actual cost quotes before making an invoice or a customer revenue claim. Use SF87 when comparing x402 to MPP rail economics; this report does not reimplement that calculator.</p></section><footer class="footer">Seller SHA256 <code>${escaped(report.sourceSha256.seller??'')}</code> · Native operations export SHA256 <code>${escaped(report.sourceSha256.snapshot??'')}</code> · Owner terms SHA256 <code>${escaped(report.sourceSha256.terms??'')}</code><br>Generated ${escaped(report.generatedAt)} · SF97 standalone local output · No network writes, wallets, hosted CI or payments.</footer></main></body></html>`;
 }
-async function readJson(path, label) {
+export async function readJson(path, label) {
   const bytes=await readFile(path);
   if (bytes.length > MAX_INPUT) throw new RangeError(`${label} exceeds 2MiB maximum`);
-  return {value:JSON.parse(bytes.toString('utf8')), hash:digest(bytes)};
+  return {value:JSON.parse(bytes.toString('utf8')), hash:digest(bytes), bytes};
 }
 function args(argv) {
   const o={};
@@ -238,7 +267,7 @@ function args(argv) {
   if (!o['--config']||!o['--terms']||!o['--output']||Boolean(o['--snapshot'])===Boolean(o['--ops-url'])) throw new TypeError('Specify seller config, owner terms, output and exactly one snapshot source');
   return o;
 }
-async function liveSnapshot(url) {
+export async function liveSnapshot(url) {
   const target=new URL(url);
   if (target.protocol!=='http:' || !['127.0.0.1','localhost'].includes(target.hostname) || target.username || target.password || target.search || target.hash || !target.port || !['/api/snapshot','/export.json'].includes(target.pathname))
     throw new TypeError('Live source must be original loopback operator /api/snapshot or /export.json; do not expose to internet');
@@ -251,10 +280,10 @@ async function liveSnapshot(url) {
     if (Number.isFinite(len) && len>MAX_INPUT) throw new RangeError('Snapshot too large');
     const buffer=Buffer.from(await res.arrayBuffer());
     if (buffer.length>MAX_INPUT) throw new RangeError('Snapshot too large');
-    return {value:JSON.parse(buffer.toString('utf8')),hash:digest(buffer)};
+    return {value:JSON.parse(buffer.toString('utf8')),hash:digest(buffer),bytes:buffer};
   } finally {clearTimeout(timeout);}
 }
-export async function main(argv=process.argv.slice(2)) {
+export async function createReport(argv) {
   const a=args(argv);
   const [seller,terms,snapshot]=await Promise.all([
     readJson(a['--config'],'seller config'),readJson(a['--terms'],'merchant terms'),
@@ -277,7 +306,7 @@ export async function main(argv=process.argv.slice(2)) {
       outDir: join(out, 'native-settlement')
     });
   }
-  process.stdout.write(JSON.stringify({status:'REPORT_CREATED',directory:out,
+  return {status:'REPORT_CREATED',directory:out,
     files:['report.json','review.html',...(native?['native-settlement/']:[])],
     session:report.sessionId,routes:report.routes.length,issues:report.issues.length,
     mode:report.originalSellerMode,
@@ -285,7 +314,12 @@ export async function main(argv=process.argv.slice(2)) {
       originalEvents:native.originalEvents,issues:native.issues,paymentOptions:native.paymentOptions,
       exactRecipientEvents:native.exactRecipientEvents,
       legacyUniqueRecipientEvents:native.legacyUniqueRecipientEvents,
-      ambiguousLegacyEvents:native.ambiguousLegacyEvents} : null})+'\n');
+      ambiguousLegacyEvents:native.ambiguousLegacyEvents} : null};
+}
+export async function main(argv=process.argv.slice(2)) {
+  const result = await createReport(argv);
+  process.stdout.write(JSON.stringify(result)+'\n');
+  return result;
 }
 if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(e=>{console.error('SF97:',e.message);process.exitCode=1;});

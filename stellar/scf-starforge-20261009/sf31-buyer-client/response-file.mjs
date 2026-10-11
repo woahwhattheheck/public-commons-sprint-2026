@@ -190,15 +190,14 @@ export async function prepareBuyerResponseFile({ destination, maxBytes = 64 * 10
       if (pins.expectedSha256 !== undefined && saved.sha256 !== pins.expectedSha256)
         throw new BuyerResponseFileError('RESPONSE_FILE_DIGEST_MISMATCH');
       if (Object.keys(pins).length) saved.verifiedAgainst = { ...pins };
-      // Preserve the native object product's selected metadata for the existing
-      // acquisition consumer. These strings are context, not validated claims.
       const objectMetadata = {
         contentRange: response.headers.get('content-range'),
         contentSha256: response.headers.get('x-content-sha256'),
         snapshot: response.headers.get('x-sf30-object-snapshot'),
         totalBytes: response.headers.get('x-sf30-object-bytes'),
       };
-      if (Object.values(objectMetadata).some(value => value !== null)) saved.objectMetadata = objectMetadata;
+      if (Object.values(objectMetadata).some(value => value !== null))
+        saved.objectMetadata = objectMetadata;
       // link is atomic and fails when the destination exists; rename would
       // silently overwrite a file created after the original preflight.
       try { await link(partialPath, finalPath); }

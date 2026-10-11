@@ -2,9 +2,11 @@
 import { createHash } from 'node:crypto';
 import { open, unlink } from 'node:fs/promises';
 import { abs, bytes, InputError, need, operation, preparedFrom, responseFile } from './config.mjs';
+import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const required = ['--discovery','--row','--accept','--intent-id','--url','--method','--out'];
+const optional = ['--body-file','--content-type','--ticket-file','--ticket-header','--response-out'];
 function index(value) {
   need(typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) &&
     Number.isSafeInteger(Number(value)), 'EXPLICIT_SELECTION_INDEX_REQUIRED');
@@ -22,9 +24,9 @@ function https(value) {
 export function prepareReview(raw, selection) {
   need(raw instanceof Uint8Array && raw.byteLength <= 1048576, 'INVALID_DISCOVERY_FILE');
   need(object(selection) && Object.keys(selection).every(key =>
-    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers','responseOut'].includes(key)),
+    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers','ticketFile','ticketHeader','responseOut'].includes(key)),
     'PREPARE_EXPLICIT_SELECTION_REQUIRED');
-  const {rowIndex, acceptIndex, intentId, url, method, bodyFile, headers} = selection;
+  const {rowIndex, acceptIndex, intentId, url, method, bodyFile, headers, ticketFile, ticketHeader} = selection;
   need(typeof method === 'string' && ['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(method),
     'INVALID_METHOD');
   need(Number.isSafeInteger(rowIndex) && rowIndex >= 0 &&
@@ -75,7 +77,8 @@ export function prepareReview(raw, selection) {
     payTo:accepted.payTo, maxAtomic:accepted.amount, maxTimeoutSeconds:accepted.maxTimeoutSeconds };
   if (accepted.extra?.paymentFlow !== undefined) expect.paymentFlow = accepted.extra.paymentFlow;
   const op = operation({intentId, url:requested.href, method, expect,
-    ...(bodyFile === undefined ? {} : {bodyFile}), ...(headers === undefined ? {} : {headers})});
+    ...(bodyFile === undefined ? {} : {bodyFile}), ...(headers === undefined ? {} : {headers}),
+    ...(ticketFile === undefined ? {} : {ticketFile}), ...(ticketHeader === undefined ? {} : {ticketHeader})});
   const origin = preparedFrom({schema:'stellar-forge.sf88.saved-discovery.v1',
     discoveryFileSha256:createHash('sha256').update(raw).digest('hex'), source, sourceEnvelope,
     rowIndex, acceptIndex, originalListing:structuredClone(row)});
@@ -106,12 +109,11 @@ export function prepareReview(raw, selection) {
 
 /** Original file-based CLI; output remains private, create-only and fsynced. */
 export async function prepare(args) {
-  need(args.length === required.length * 2 || args.length === required.length * 2 + 2,
-    'PREPARE_EXPLICIT_SELECTION_REQUIRED');
+  need(args.length >= required.length * 2 && args.length % 2 === 0, 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
   const flags = new Map();
   for (let i = 0; i < args.length; i += 2) {
-    need((required.includes(args[i]) || args[i] === '--response-out') && !flags.has(args[i]) &&
-      typeof args[i+1] === 'string' && args[i+1].length > 0, 'INVALID_PREPARE_FLAGS');
+    need([...required, ...optional].includes(args[i]) && !flags.has(args[i]) &&
+      typeof args[i + 1] === 'string' && args[i + 1].length > 0, 'INVALID_PREPARE_FLAGS');
     flags.set(args[i], args[i+1]);
   }
   need(required.every(key => flags.has(key)), 'PREPARE_EXPLICIT_SELECTION_REQUIRED');
@@ -120,8 +122,13 @@ export async function prepare(args) {
   const raw = await bytes(flags.get('--discovery'), 1048576, 'INVALID_DISCOVERY_FILE');
   const {draft, data, configSha256} = prepareReview(raw, {rowIndex,acceptIndex,
     intentId:flags.get('--intent-id'),url:flags.get('--url'),method:flags.get('--method'),
+    ...(flags.has('--body-file') ? {bodyFile:flags.get('--body-file')} : {}),
+    ...(flags.has('--content-type') ? {headers:{'Content-Type':flags.get('--content-type')}} : {}),
+    ...(flags.has('--ticket-file') ? {ticketFile:flags.get('--ticket-file')} : {}),
+    ...(flags.has('--ticket-header') ? {ticketHeader:flags.get('--ticket-header')} : {}),
     ...(flags.has('--response-out') ? {responseOut:flags.get('--response-out')} : {})});
   const op = draft.operation, origin = draft.preparedFrom;
+  const ticket = await loadOperationTicket(op, {requireCurrent:true});
   let file;
   try { file = await open(destination, 'wx', 0o600); }
   catch (error) { throw new InputError(error.code === 'EEXIST' ? 'DRAFT_DESTINATION_EXISTS' : 'DRAFT_DESTINATION_UNAVAILABLE'); }
@@ -136,6 +143,7 @@ export async function prepare(args) {
     configSha256,
     sourceFileSha256:origin.discoveryFileSha256, rowIndex, acceptIndex,
     intentId:op.intentId, sellerUrl:op.url, method:op.method, acceptedTerms:op.expect,
+    operationTicket:operationTicketView(ticket),
     ...(draft.responseFile ? {responseFile:draft.responseFile} : {}),
     sourceStatus:'SAVED_UNVERIFIED_DISCOVERY',
     next:'Review this config with --review; add trusted operator settings separately before execution'};

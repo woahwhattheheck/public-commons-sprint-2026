@@ -121,7 +121,11 @@ function normalizeMessage(raw, account, capture) {
 
 function mergeMessage(before, after) {
   if (!before) return after;
-  must(before.thread_id === after.thread_id || !before.thread_id || !after.thread_id, 'Provider message changed thread identity');
+  if(before.thread_id && after.thread_id && before.thread_id !== after.thread_id) {
+    const error=Error('Provider message changed thread identity');
+    Object.assign(error,{code:'MESSAGE_IDENTITY_CONFLICT',previousThreadId:before.thread_id,incomingThreadId:after.thread_id});
+    throw error;
+  }
   const newer = Date.parse(after.lastCapturedAt) >= Date.parse(before.lastCapturedAt);
   const rank = message => ({SEARCH_SUMMARY:0,METADATA_HEADERS:1,FULL_HEADERS:2}[message.detail] ?? 0);
   const fuller = rank(after) > rank(before) || (rank(after) === rank(before) && newer);
@@ -215,7 +219,7 @@ export function importGmailCaptures(input, {previous, now = new Date()} = {}) {
         const m = normalizeMessage(raw, account, capture);
         must(Date.parse(m.email_ts) <= now.getTime(), 'Provider event is in the future');
         messages.set(key(m), mergeMessage(messages.get(key(m)), m));
-      } catch (error) { issues.push({code:'MESSAGE_READ_REQUIRED',captureId:capture.id,accountId:account.id,messageId:raw.id || null,detail:error.message}); }
+      } catch (error) { issues.push({code:error.code==='MESSAGE_IDENTITY_CONFLICT'?error.code:'MESSAGE_READ_REQUIRED',captureId:capture.id,capturedAt:capture.capturedAt,accountId:account.id,messageId:raw.id || null,detail:error.message,...(error.code==='MESSAGE_IDENTITY_CONFLICT'?{previousThreadId:error.previousThreadId,incomingThreadId:error.incomingThreadId}:{})}); }
     }
     const operation = text(capture.operation).replace(/^.*gmail_/, '');
     const cursor = result.next_page_token ?? result.nextPageToken;
@@ -229,8 +233,12 @@ export function importGmailCaptures(input, {previous, now = new Date()} = {}) {
     if (item.possibleThreadWindowLimit) issues.push({code:'THREAD_WINDOW_MAY_BE_CAPPED',captureId:item.id,accountId:item.accountId,request:item.request});
   }
   const ordered = [...messages.values()].sort((a,b) => a.email_ts.localeCompare(b.email_ts) || key(a).localeCompare(key(b)));
-  const captureIssueCodes = new Set(['CAPTURE_ERROR','MESSAGE_READ_REQUIRED','REQUESTED_MESSAGE_NOT_RETURNED']);
+  const captureIssueCodes = new Set(['CAPTURE_ERROR','MESSAGE_READ_REQUIRED','REQUESTED_MESSAGE_NOT_RETURNED','MESSAGE_IDENTITY_CONFLICT']);
   const unresolved = issues.filter(issue => {
+    if(issue.code==='MESSAGE_IDENTITY_CONFLICT') {
+      const retained=messages.get(issue.accountId+':'+issue.messageId);
+      return !(retained?.detail==='FULL_HEADERS'&&Date.parse(retained.headersCapturedAt)>Date.parse(issue.capturedAt));
+    }
     if (issue.code === 'CAPTURE_ERROR') return !imports.has(issue.captureId) &&
       ![...imports.values()].some(item => item.accountId === issue.accountId &&
         item.operation === text(issue.operation).replace(/^.*gmail_/, '') &&
@@ -246,6 +254,10 @@ export function importGmailCaptures(input, {previous, now = new Date()} = {}) {
   const reviews = new Map((previous?.reviews || []).map(review => [review.accountId+':'+review.messageId,review]));
   for (const review of input.reviews || []) reviews.set(review.accountId+':'+review.messageId,review);
   const {bound,unbound} = bindMessages(ordered,input.cases,[...reviews.values()],issues);
+  for(const m of bound) {
+    const conflicts=captureIssues.filter(issue=>issue.code==='MESSAGE_IDENTITY_CONFLICT'&&issue.accountId===m.accountId&&issue.messageId===m.id);
+    if(conflicts.length)m.captureIssues=['MESSAGE_IDENTITY_CONFLICT'];
+  }
   const needed = ordered.filter(m => m.detail !== 'FULL_HEADERS');
   for (const account of accounts.values()) {
     const ids = unique([...needed.filter(m => m.accountId === account.id).map(m => m.id),...captureIssues.filter(issue=>issue.accountId===account.id&&issue.messageId).map(issue=>issue.messageId)]);
@@ -254,7 +266,7 @@ export function importGmailCaptures(input, {previous, now = new Date()} = {}) {
   for (const issue of captureIssues) if (issue.code==='CAPTURE_ERROR') continuations.push({operation:issue.operation,accountId:issue.accountId,linkId:accounts.get(issue.accountId)?.linkId,request:issue.request});
   const coverage = {generatedAt:now.toISOString(),capturedMessages:ordered.length,boundMessages:bound.length,unboundMessages:unbound.length,fullHeaderMessages:ordered.length-needed.length,captureCount:imports.size,continuations,issues,unbound};
   const state = {schema:SCHEMA,generatedAt:now.toISOString(),accounts:[...accounts.values()],imports:[...imports.values()],messages:ordered,reviews:[...reviews.values()],captureIssues};
-  const replySnapshot = {cases:input.cases.map(({bindings,...c})=>c),messages:bound,coverage};
+  const replySnapshot = {accounts:[...accounts.values()],cases:input.cases.map(({bindings,...c})=>c),messages:bound,coverage};
   return {state,replySnapshot,coverage};
 }
 

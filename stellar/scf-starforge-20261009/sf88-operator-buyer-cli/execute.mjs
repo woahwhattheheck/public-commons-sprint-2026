@@ -6,6 +6,8 @@ import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { execution, bytes, need } from './config.mjs';
+import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
+  requireCurrentOperationTicket } from './operation-ticket.mjs';
 
 const codeOf = (error, fallback) => {
   const value = error?.code ?? error?.message;
@@ -23,10 +25,14 @@ const reservationOf = value => {
   return Object.keys(result).length ? result : null;
 };
 
-export async function execute(cfg, { signal, emitSummary = true, environment = process.env } = {}) {
+export async function execute(cfg, { signal, emitSummary = true, environment = process.env,
+  operationTicketSha256 } = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof emitSummary === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
   const { op, owner, download:responseFile, transport } = execution(cfg);
+  const ticket = await loadOperationTicket(op, {requireCurrent:true});
+  requireOperationTicketFingerprint(ticket, operationTicketSha256);
+  const headers = operationTicketHeaders(op, ticket);
   const directory = await stat(cfg.evidenceDir);
   need(directory.isDirectory() && (process.platform === 'win32' ||
     (directory.mode & 0o077) === 0), 'PRIVATE_EVIDENCE_DIRECTORY_REQUIRED');
@@ -76,8 +82,15 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
         buyer:recordingBuyer,
         call: {
           intentId:op.intentId, url:op.url, method:op.method,
-          headers:op.headers, expect:op.expect, body,
-          sign: args => sign(args), ...(signal ? {signal} : {}),
+          headers, expect:op.expect, body,
+          sign: async args => {
+            // Approval and wallet access can outlast a merchant ticket. Recheck
+            // this same imported capability before signing and before sending.
+            requireCurrentOperationTicket(ticket);
+            const signed = await sign(args);
+            requireCurrentOperationTicket(ticket);
+            return signed;
+          }, ...(signal ? {signal} : {}),
         },
         outputDir:cfg.evidenceDir,
         trustedPayer:cfg.trustedPayer,

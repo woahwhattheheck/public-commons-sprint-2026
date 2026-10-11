@@ -5,6 +5,7 @@ import {resolve, join, isAbsolute, dirname} from 'node:path';
 import {createHash, randomUUID} from 'node:crypto';
 import {hostname} from 'node:os';
 import {parseWorkspace, MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
+import {parseRuntime, MAX_RUNTIME_BYTES} from './runtime-support.mjs';
 
 const ID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const REVISION = /^[a-f0-9]{64}$/;
@@ -226,7 +227,7 @@ function summary(value, rev) {
   return {id:value.id, revision:rev, previousRevision:value.previousRevision,
     name:value.name, createdAt:value.createdAt, updatedAt:value.updatedAt,
     metadata:value.metadata, inputs:value.inputs, sources:value.sources,
-    workspaceBytes:value.workspaceBytes};
+    workspaceBytes:value.workspaceBytes, runtimeSupport:value.runtimeSupport?.summary ?? null};
 }
 
 export async function openCaseStore(path) {
@@ -254,6 +255,13 @@ export async function openCaseStore(path) {
         !Number.isFinite(Date.parse(result.createdAt)) || !Number.isFinite(Date.parse(result.updatedAt)))
       throw fail('CASE_STORAGE_INVALID', 'Stored case version is invalid', 503);
     revision(result.workspaceSha256);
+    if(result.runtimeSupport!=null) {
+      record(result.runtimeSupport,['sha256','bytes','summary'],'stored runtime support');
+      revision(result.runtimeSupport.sha256);
+      if(!Number.isSafeInteger(result.runtimeSupport.bytes)||result.runtimeSupport.bytes<1||
+        result.runtimeSupport.bytes>MAX_RUNTIME_BYTES||!result.runtimeSupport.summary)
+        throw fail('CASE_STORAGE_INVALID','Stored runtime support metadata is invalid',503);
+    }
     caseMetadata(result.metadata);
     return result;
   }
@@ -269,7 +277,19 @@ export async function openCaseStore(path) {
       const workspaceText = decoder.decode(bytes), workspace = await parseWorkspace(workspaceText);
       if (workspace.name !== stored.name || JSON.stringify(workspace.inputs) !== JSON.stringify(stored.inputs))
         throw fail('CASE_STORAGE_INVALID', 'Saved workspace and case summary disagree', 503);
-      return {...summary(stored, selected), currentRevision, workspaceText};
+      let supportText=null;
+      if(stored.runtimeSupport) {
+        await directory(join(casePath(id),'runtime'));
+        const ref=stored.runtimeSupport;
+        const runtimeBytes=await readBytes(join(casePath(id),'runtime',ref.sha256+'.json'),MAX_RUNTIME_BYTES);
+        if(runtimeBytes.length!==ref.bytes||digest(runtimeBytes)!==ref.sha256)
+          throw fail('CASE_STORAGE_INVALID','Saved runtime support bytes changed',503);
+        supportText=decoder.decode(runtimeBytes);
+        const support=parseRuntime(supportText);
+        if(JSON.stringify(support.summary)!==JSON.stringify(ref.summary))
+          throw fail('CASE_STORAGE_INVALID','Saved runtime support summary disagrees',503);
+      }
+      return {...summary(stored, selected), currentRevision, workspaceText, supportText};
     } catch (error) {
       if (error.code === 'ENOENT') throw fail('CASE_NOT_FOUND', 'Case or saved revision was not found', 404);
       throw error;
@@ -313,20 +333,28 @@ export async function openCaseStore(path) {
     return {id, currentRevision, revisions, nextBefore:next};
   }
   async function save(input) {
-    record(input, ['id','expectedRevision','workspaceText','metadata'], 'case save');
+    record(input, ['id','expectedRevision','workspaceText','metadata','supportText'], 'case save');
     const id = identifier(input.id);
     if (input.expectedRevision !== null) revision(input.expectedRevision);
     const metadata = caseMetadata(input.metadata);
     const workspace = await parseWorkspace(input.workspaceText);
     const workspaceBytes = encoder.encode(input.workspaceText), workspaceSha256 = digest(workspaceBytes);
+    // Omitted preserves a support attachment for existing API clients; explicit
+    // null removes it from this new version without erasing retained history.
+    const hasSupport=Object.hasOwn(input,'supportText');
+    const support=hasSupport&&input.supportText!==null?parseRuntime(input.supportText):null;
+    const supportBytes=support?encoder.encode(input.supportText):null;
+    const suppliedSupport=support?{sha256:digest(supportBytes),bytes:supportBytes.length,summary:support.summary}:null;
     const lock = await acquireWriter(root);
     let temp;
     try {
       let currentRevision = null, current = null;
       try { currentRevision = await head(id); current = await version(id,currentRevision); }
       catch (error) { if (error.code !== 'ENOENT') throw error; }
+      const runtimeSupport=hasSupport?suppliedSupport:current?.runtimeSupport??null;
       // Retrying the same request after a lost HTTP response returns its existing revision.
       if (current && current.workspaceSha256 === workspaceSha256 && JSON.stringify(current.metadata) === JSON.stringify(metadata) &&
+          JSON.stringify(current.runtimeSupport??null)===JSON.stringify(runtimeSupport) &&
           [currentRevision,current.previousRevision].includes(input.expectedRevision))
         return {case:summary(current,currentRevision), unchanged:true};
       if (input.expectedRevision !== currentRevision)
@@ -338,10 +366,15 @@ export async function openCaseStore(path) {
       const now = new Date().toISOString();
       const value = {schema:'stellar-forge.merchant-case-version.v1', id, previousRevision:currentRevision,
         createdAt:current?.createdAt || now, updatedAt:now, metadata, name:workspace.name, inputs:workspace.inputs,
-        sources:workspace.summary, workspaceBytes:workspaceBytes.length, workspaceSha256};
+        sources:workspace.summary, workspaceBytes:workspaceBytes.length, workspaceSha256, runtimeSupport};
       const versionBytes = encoder.encode(JSON.stringify(value) + '\n'), newRevision = digest(versionBytes);
       await writeOnce(join(folder,'workspaces',workspaceSha256 + '.json'),workspaceBytes);
       await syncDirectory(join(folder,'workspaces'));
+      if(supportBytes) {
+        await directory(join(folder,'runtime'),true);
+        await writeOnce(join(folder,'runtime',runtimeSupport.sha256+'.json'),supportBytes);
+        await syncDirectory(join(folder,'runtime'));
+      }
       await writeOnce(join(folder,'versions',newRevision + '.json'),versionBytes);
       await syncDirectory(join(folder,'versions'));
       temp = join(folder,'.head-' + randomUUID());
