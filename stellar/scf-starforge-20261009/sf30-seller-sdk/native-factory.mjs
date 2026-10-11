@@ -17,7 +17,8 @@ export async function createNativeSellerServer(compiled, { facilitatorClient } =
   const routes = structuredClone(compiled.nativeRoutes);
   validateBazaarRouteExtensions(routes);
   const resourceServer = new x402ResourceServer(facilitatorClient);
-  for (const network of new Set(compiled.routes.map(route => route.offer.accepts[0].network))) {
+  for (const network of new Set(compiled.routes.flatMap(route =>
+    route.offer.accepts.map(option => option.network)))) {
     resourceServer.register(network, new ExactStellarScheme());
   }
   resourceServer.registerExtension(bazaarResourceServerExtension);

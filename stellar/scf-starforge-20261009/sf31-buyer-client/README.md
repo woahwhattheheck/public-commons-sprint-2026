@@ -12,6 +12,24 @@ The interface deliberately cannot infer consent from agent text, sign Stellar tr
 
 ## Usage
 
+### A seller with several payment options
+
+The original buyer selects the one actual `accepts` entry matching the explicit
+`expect.network`, `expect.asset` and `expect.payTo`, within `maxAtomic` and the
+optional timeout cap. For an SF30 route configured with `paymentOptions`, choose
+those values from the same complete option. Array position is not an approval:
+the second offered network works through the same `call()` path as the first.
+All other payment options remain in the challenge delivered to the signer, while
+`accepted` and the immutable approval intent contain only the selected option.
+
+Use a current 402 and the verified merchant terms when deciding what to approve.
+Changing the expectation to another network is an explicit caller choice; the
+buyer does not fall back across networks after a failure. Two options satisfying
+the same expectation are rejected as ambiguous. The original SF98 merchant
+delivery outbox now records the network, asset digest and amount from the
+requirements actually selected by the native SDK, so a second-option purchase
+cannot be accounted under the first option's terms.
+
 To keep a returned dataset or other response as a local file, use the additive
 [response-file writer](SAVING_RESPONSES.md). Prepare the destination before the
 buyer call, then stream the original response to a create-only file with a byte
