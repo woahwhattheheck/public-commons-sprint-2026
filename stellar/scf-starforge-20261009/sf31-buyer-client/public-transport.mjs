@@ -13,6 +13,13 @@ for (const [ip, prefix] of [
   ['198.18.0.0',15], ['198.51.100.0',24], ['203.0.113.0',24],
   ['224.0.0.0',4], ['240.0.0.0',4]
 ]) denied4.addSubnet(ip, prefix, 'ipv4');
+// The managed-cloud 198.18/15 HTTPS egress overlay is never public by default.
+// A trusted caller must approve its ONE exact current DNS address per fetch.
+const managedOverlay4 = new BlockList();
+managedOverlay4.addSubnet('198.18.0.0', 15, 'ipv4');
+const isManagedOverlayAddress = address =>
+  typeof address === 'string' && isIP(address) === 4 &&
+  managedOverlay4.check(address, 'ipv4');
 const global6 = new BlockList();
 global6.addSubnet('2000::', 3, 'ipv6');
 const denied6 = new BlockList();
@@ -91,9 +98,14 @@ function abortable(promise, signal) {
  * dependency-injection seams for local tests, NEVER untrusted request options.
  * createPublicBuyer() exposes neither seam. Defaults use actual OS DNS and TLS.
  */
-export function createPublicHttpsFetch({timeoutMs=30_000, lookup=systemLookup, requestImpl=httpsRequest}={}) {
+export function createPublicHttpsFetch({
+  timeoutMs=30_000, lookup=systemLookup, requestImpl=httpsRequest,
+  sandboxGatewayIPv4=null
+}={}) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000 ||
-      typeof lookup !== 'function' || typeof requestImpl !== 'function') throw new TypeError('Invalid transport configuration');
+      typeof lookup !== 'function' || typeof requestImpl !== 'function' ||
+      (sandboxGatewayIPv4 !== null && !isManagedOverlayAddress(sandboxGatewayIPv4)))
+    throw new TypeError('Invalid transport configuration');
   return async function publicHttpsFetch(input, init={}) {
     const url = checkedURL(input);
     const {method, headers, body} = requestData(init);
@@ -111,8 +123,17 @@ export function createPublicHttpsFetch({timeoutMs=30_000, lookup=systemLookup, r
       const answers = await abortable(lookup(url.hostname, {all:true, verbatim:true}), signal);
       signal.throwIfAborted();
       if (!Array.isArray(answers) || !answers.length || answers.length > 64 || answers.some(
-        row => !row || !isPublicAddress(row.address) || ![4,6].includes(row.family) || isIP(row.address) !== row.family))
+        row => !row || ![4,6].includes(row.family) || isIP(row.address) !== row.family))
         fail('NONPUBLIC_DNS_ANSWER');
+      if (sandboxGatewayIPv4 === null) {
+        if (answers.some(row => !isPublicAddress(row.address))) fail('NONPUBLIC_DNS_ANSWER');
+      } else {
+        // Fail closed on stale/mixed DNS, including one public plus one gateway.
+        // Original hostname, port, SNI, TLS and pinned lookup remain unchanged.
+        if (answers.length !== 1 || answers[0].family !== 4 ||
+            answers[0].address !== sandboxGatewayIPv4)
+          fail('SANDBOX_GATEWAY_DNS_MISMATCH');
+      }
       // Copy validated primitives: the trusted resolver's mutable return object
       // cannot alter the address after policy validation.
       const {address, family} = answers[0];
