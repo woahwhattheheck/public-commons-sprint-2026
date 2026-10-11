@@ -9,13 +9,13 @@ import { startSellerService } from '../serve.mjs';
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const socketFor = directory => join(directory, 'control.sock');
 const descriptorFor = directory => join(directory, 'control.json');
-const respond = (res, status, value) => {
+const respond = (res, status, value, headers = {}) => {
   const body = JSON.stringify(value);
   res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store',
-    'content-length': Buffer.byteLength(body) }); res.end(body);
+    'content-length': Buffer.byteLength(body), ...headers }); res.end(body);
 };
 
-async function controlServer(versions, transport) {
+async function controlServer(versions, transport, resources) {
   if (!['unix', 'loopback'].includes(transport)) throw new TypeError('Control transport must be unix or loopback');
   if (process.platform === 'win32' && transport === 'unix')
     throw new Error('Use --control-transport loopback on Windows');
@@ -34,7 +34,7 @@ async function controlServer(versions, transport) {
     if (!existing.isFile() || existing.isSymbolicLink()) throw new TypeError('Control descriptor must be a regular file');
     await rm(descriptorPath);
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
-  const server = createServer((req, res) => {
+  const server = createServer(versions.wrapRequest((req, res) => {
     const run = async () => {
       req.setTimeout(120000, () => req.destroy());
       const supplied = req.headers.authorization;
@@ -44,7 +44,10 @@ async function controlServer(versions, transport) {
           (transport === 'loopback' && req.headers.host !== `127.0.0.1:${server.address().port}`))
         return respond(res, 403, { error: 'PRIVATE_CONTROL_REQUIRED' });
       if (req.method === 'GET' && req.url === '/status') return respond(res, 200, versions.status());
-      if (req.method !== 'POST' || !['/refresh', '/activate', '/collect'].includes(req.url))
+      if (req.method === 'GET' && req.url === '/schema') return respond(res, 200, {
+        mode: 'LOCAL_OPERATOR_PREVIEW', dataset: versions.describe(), versions: versions.status(), resources,
+      });
+      if (req.method !== 'POST' || !['/preview', '/refresh', '/activate', '/collect'].includes(req.url))
         return respond(res, 404, { error: 'CONTROL_ROUTE_NOT_FOUND' });
       if (!/^application\/json(?:\s*;|$)/i.test(req.headers['content-type'] ?? ''))
         return respond(res, 415, { error: 'JSON_CONTENT_TYPE_REQUIRED' });
@@ -58,6 +61,22 @@ async function controlServer(versions, transport) {
       try { body = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
       catch { return respond(res, 400, { error: 'INVALID_CONTROL_JSON' }); }
       if (!object(body)) return respond(res, 400, { error: 'INVALID_CONTROL_REQUEST' });
+      if (req.url === '/preview') {
+        if (Object.keys(body).join(',') !== 'query' || typeof body.query !== 'string' || body.query.length > 8192)
+          return respond(res, 400, { error: 'EXPECTED_QUERY_STRING' });
+        const controller = new AbortController();
+        const disconnected = () => { if (!res.writableFinished) controller.abort(); };
+        res.once('close', disconnected);
+        try {
+          // The operator uses the SAME original parser, snapshot selection and
+          // resident-data budget. This private request never enters payment.
+          const context = { query: new URLSearchParams(body.query), signal: controller.signal };
+          const admission = await versions.admit(context);
+          const response = admission === true ? await versions.handle(context) : admission;
+          if (!res.destroyed) respond(res, response.status, response.body, response.headers);
+        } finally { res.removeListener('close', disconnected); }
+        return;
+      }
       if (req.url === '/collect') {
         if (Object.keys(body).length) return respond(res, 400, { error: 'INVALID_CONTROL_REQUEST' });
         return respond(res, 200, { removed: await versions.collect(), ...versions.status() });
@@ -69,12 +88,12 @@ async function controlServer(versions, transport) {
         return respond(res, 400, { error: 'INVALID_CONTROL_REQUEST' });
       respond(res, 200, await (req.url === '/activate' ? versions.activate(body) : versions.refresh(body)));
     };
-    run().catch(error => {
+    return run().catch(error => {
       if (!res.writableEnded && !res.destroyed)
         respond(res, [400, 409, 410].includes(error.status) ? error.status : 422,
           { error: error.code ?? 'DATASET_REFRESH_REJECTED', message: error.message });
     });
-  });
+  }));
   server.requestTimeout = 15000; server.headersTimeout = 10000; server.keepAliveTimeout = 1000;
   await new Promise((done, fail) => {
     server.once('error', fail);
@@ -132,7 +151,10 @@ export async function startVersionedDatasetSeller({ versions, config, port = 842
     if (listeners.length !== 1) throw new TypeError('Expected the original SF30 single request dispatcher');
     service.server.removeListener('request', listeners[0]);
     service.server.on('request', versions.wrapRequest(listeners[0]));
-    if (control) controls = await controlServer(versions, controlTransport);
+    if (control) controls = await controlServer(versions, controlTransport,
+      service.compiled.routes.filter(route => routes.some(datasetRoute => datasetRoute.id === route.id))
+        .map(route => ({ id: route.id, resource: route.offer.resource.url,
+          snapshotSelection: snapshotPaths.has(route.path) })));
     return { ...service, versions, controlPath: controls?.path ?? null,
       async close() {
         try { await controls?.close(); } finally {
@@ -148,8 +170,8 @@ export async function startVersionedDatasetSeller({ versions, config, port = 842
 }
 
 /** Operator-only request to the socket in a known private state directory. */
-export async function datasetControl(directory, action = 'status', body = undefined) {
-  if (!['status', 'refresh', 'activate', 'collect'].includes(action)) throw new TypeError('Unknown dataset control action');
+export async function datasetControl(directory, action = 'status', body = undefined, { signal } = {}) {
+  if (!['status', 'schema', 'preview', 'refresh', 'activate', 'collect'].includes(action)) throw new TypeError('Unknown dataset control action');
   const file = await open(descriptorFor(directory), constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   let descriptor;
   try {
@@ -164,17 +186,18 @@ export async function datasetControl(directory, action = 'status', body = undefi
       !['unix', 'loopback'].includes(descriptor.transport) || !/^[a-f0-9]{64}$/.test(descriptor.token ?? '') ||
       (descriptor.transport === 'loopback' && (!Number.isInteger(descriptor.port) || descriptor.port < 1 || descriptor.port > 65535)))
     throw new TypeError('Invalid private dataset control descriptor');
-  const payload = action === 'status' ? null : JSON.stringify(body ?? {});
+  const payload = ['status', 'schema'].includes(action) ? null : JSON.stringify(body ?? {});
+  const maxResponseBytes = action === 'preview' ? 1024 * 1024 : 256 * 1024;
   return new Promise((done, fail) => {
     const req = httpRequest({ ...(descriptor.transport === 'unix' ? { socketPath: socketFor(directory) } :
       { hostname: '127.0.0.1', port: descriptor.port }), path: '/' + action,
-      method: payload === null ? 'GET' : 'POST', timeout: 120000,
+      method: payload === null ? 'GET' : 'POST', timeout: 120000, signal,
       headers: { authorization: 'Bearer ' + descriptor.token,
         ...(payload === null ? {} : { 'content-type': 'application/json', 'content-length': Buffer.byteLength(payload) }) } }, res => {
       const chunks = []; let size = 0;
       res.on('data', chunk => {
         size += chunk.length;
-        if (size > 256 * 1024) res.destroy(new RangeError('Control response exceeds limit'));
+        if (size > maxResponseBytes) res.destroy(new RangeError('Control response exceeds limit'));
         else chunks.push(chunk);
       });
       res.on('error', fail);

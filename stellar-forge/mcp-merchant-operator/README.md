@@ -1,0 +1,225 @@
+# Starforge merchant operations through MCP
+
+Operate the existing Starforge merchant release system from an MCP client. This
+interface takes a prepared merchant API through staging, exact price and route
+comparison, activation, original seller startup, customer SDK export, rollback
+and graceful shutdown. Twelve tools use the original SF82 release store, SF61
+OpenAPI compiler, SF30 seller and customer SDK exporter. The MCP endpoint reuses
+the same authenticated HTTP transport as the existing SF32 buyer bridge.
+
+The seller runs on the operator's Linux or POSIX host. This starts the configured
+merchant service; a reverse proxy or deployment remains the host's existing
+configuration. Native payments use the original seller's configured facilitator
+and trusted application. The MCP tools never request a paid resource or accept
+wallet keys, handler paths, arbitrary file paths, URLs or payment overrides as
+tool arguments.
+
+## Prepare a merchant
+
+Use Node 22+ and the complete source checkout, or the installed Starforge package
+containing the `merchant-mcp` command. The merchant's existing OpenAPI document,
+payment selections and service bindings use the original SF61 formats. Initialize
+a new operator directory:
+
+```sh
+node stellar-forge/mcp-merchant-operator/serve.mjs init \
+  --dir /private/my-merchant \
+  --spec /private/api/openapi.json \
+  --selections /private/api/selections.json \
+  --bindings /private/api/bindings.json \
+  --name "My merchant" --seller-port 0
+```
+
+For the original native seller, add `--facilitator` with the existing HTTPS
+facilitator URL. Application bindings use `--upstreams` for an existing HTTP API
+or `--handlers` for an existing trusted module. These are host configuration at initialization,
+never MCP tool inputs. The original native SDK packages must be installed for
+native operation. An explicitly configured loopback facilitator uses the
+original `--allow-local-facilitator` option.
+
+Initialization creates the original private release store, a customer export
+directory, and `merchant-mcp.json`. It refuses an existing directory and does
+not copy or rewrite the original inputs. The configuration registers them under
+the source alias `initial`. To add another candidate, edit the local file and
+restart MCP:
+
+```json
+{
+  "schema": "stellar-forge.merchant-mcp.v1",
+  "name": "My merchant",
+  "releaseStore": "./releases",
+  "exportsDirectory": "./customer-exports",
+  "sources": {
+    "initial": {
+      "label": "Reviewed merchant API",
+      "spec": "/private/api/openapi.json",
+      "selections": "/private/api/selections.json",
+      "bindings": "/private/api/bindings.json",
+      "runtime": { "port": 0 }
+    }
+  }
+}
+```
+
+Up to 32 aliases can be configured. Relative paths resolve beside the host
+configuration. The original importer snapshots static response files during
+staging, and the original release system retains the trusted handler entry
+hash. Executable module dependencies remain the operator's application.
+
+### Use a saved API onboarding package
+
+Save the merchant's selected routes, prices and backend authentication mappings
+in the original SF61 API workspace. Point initialization to that saved package:
+
+```sh
+node stellar-forge/mcp-merchant-operator/serve.mjs init \
+  --dir /private/my-merchant \
+  --workspace /private/api-packages/merchant-v1 \
+  --name "My merchant" --seller-port 0
+```
+
+The original package reader verifies its manifest and each input file.
+Initialization returns the package identity, input digests and required
+environment-variable names. It validates the source before creating the new
+operator directory. Supply those variables through the host's existing service
+environment before starting MCP; their values are resolved by the original
+upstream launcher when the seller starts.
+
+The configured source now has this shape:
+
+```json
+{
+  "label": "Saved onboarding package",
+  "workspace": "/private/api-packages/merchant-v1",
+  "runtime": { "port": 0 }
+}
+```
+
+Use `workspace` as the whole source selection. Its original facade, payment
+selections, route bindings and upstream configuration travel together. Do not
+combine it with separate source files or a handler module. A new saved package
+can be registered as another alias for the next release; already staged releases
+retain their original snapshots and do not depend on the source package at launch.
+
+### Connect an existing HTTP backend
+
+For explicit SF61 files, add `--upstreams /private/api/upstreams.json` to the
+first initialization command. The file uses the original SF30
+`stellar-forge.seller-upstreams.v1` format. Each service binding's `handler`
+selects one upstream binding. The configuration stores its path as `upstreams`
+alongside `spec`, `selections` and `bindings`.
+
+An explicitly configured local development backend also needs
+`--allow-loopback-upstream`; saved workspace packages retain their own original
+choice. Public backends use the original HTTPS rules. Authentication maps header
+names to environment-variable names through `headerEnv`. Keep values in the
+host environment, including the complete `Bearer` or `Basic` prefix where needed.
+
+`merchant_sources` displays the public route and complete payment choices next
+to the original upstream review: origin, path, method, query mapping, header
+names, credential variable names, response constraints and operation settings.
+It uses the original compiler without reading credential values or contacting
+the backend. `merchant_stage` retains the exact upstream bytes through the
+original release store. `merchant_compare` then shows backend changes as well
+as price and route changes. Activation, restart and rollback use the same tools
+and generation checks below.
+
+For credential rotation, replace the value through the host's deployment
+mechanism, stop the owned seller, and relaunch MCP with the updated environment.
+Start the same selected release. A new origin, path, header mapping or payment
+term is a configuration change: stage, compare and select a new release.
+
+## Connect an MCP client
+
+Provide the existing operator bearer token through `MCP_ACCESS_TOKEN`, or select
+its existing environment-variable name with `--token-env`. The token must contain
+at least 24 characters. It is never written into the configuration or startup
+output.
+
+```sh
+node stellar-forge/mcp-merchant-operator/serve.mjs serve \
+  --config /private/my-merchant/merchant-mcp.json --port 3211
+```
+
+The startup JSON gives `http://127.0.0.1:3211`. Configure the MCP client's
+Streamable HTTP connection at that URL with its `Authorization: Bearer` header.
+The original transport uses MCP `2025-11-25`, JSON responses and the usual
+`Accept: application/json, text/event-stream` request header. Clients sending an
+`Origin` must have it listed in the host's comma-separated `MCP_CLIENT_ORIGINS`.
+The endpoint has no SSE stream, server push, remote process takeover or periodic
+polling. The host keeps the command running and closes it with SIGINT/SIGTERM.
+
+The same command is available as `starforge merchant-mcp init ...` and
+`starforge merchant-mcp serve ...` in the distribution. The original buyer MCP
+workspace remains separate and uses its existing approval, budget and signer.
+
+## Complete operator workflow
+
+| Tool | Operation |
+| --- | --- |
+| `merchant_sources` | Inspect configured files or a saved API package, with public routes, payment choices, backend mappings and input hashes. |
+| `merchant_stage` | Compile an alias to a new immutable release ID, retaining the original upstream snapshot when configured. |
+| `merchant_inspect` | Verify the original retained release and inspect its exact digest and terms. |
+| `merchant_compare` | Compare route, price and application changes with the active or specified previous release. |
+| `merchant_activate` | Select a release using its digest and the current selection generation. |
+| `merchant_start` | Start that selection through the original foreground seller launcher. |
+| `merchant_status` | Inspect selected and running releases, history, readiness, and which process owns the seller. |
+| `merchant_catalog` | Read actual seller health, offers and OpenAPI from that process-owned instance. |
+| `merchant_client_export` | Export the original JS client, TypeScript declarations, OpenAPI and guide into a new named customer directory. |
+| `merchant_rollback` | Select an exact retained release through original rollback history. |
+| `merchant_restart` | Drain the owned instance and start the selected version. |
+| `merchant_stop` | Gracefully drain only the instance owned by this MCP process. |
+
+For example, call `merchant_sources` with `{"source":"initial"}`, then
+`merchant_stage` with `{"source":"initial","id":"release-1"}`. Inspect and
+compare `release-1`; use its returned `digest` as `expectedDigest`, and the
+current status or comparison `generation` as `expectedGeneration` when
+activating it. Supply a short reason. `merchant_start` takes the resulting
+selection generation and the same release digest. It returns a status with
+`operator.instanceId`; use that exact instance for catalog, client export, stop
+or restart. Client export also takes a new ID such as `customer-1`.
+
+Changing selection leaves the currently running seller on its original release.
+Status reports `RESTART_REQUIRED`. Inspect the comparison and call
+`merchant_restart` with the current generation, target digest and owned instance
+to apply it. Rollback follows the same sequence and preserves the original
+release history. If startup fails after a restart's stop, the seller stays
+stopped; `merchant_status` records the failure and selected version.
+
+Only one mutating tool runs at a time within this operator. The original release
+store's generation and process locks preserve changes made by other consoles.
+An existing process owned by another console is visible but cannot be stopped
+or adopted through MCP. A request interrupted after a side effect is reconciled
+by inspecting the original release ID, generation or instance; the server does
+not automatically replay tools. Customer output publication is exclusive, so a
+repeated export ID cannot replace an existing delivery.
+
+Closing MCP waits for its accepted mutation and drains the original seller it
+owns. A crash preserves the existing release store and original process record;
+the original SF82 recovery behavior determines whether a seller is still alive.
+Private response content and handler paths are omitted from normal release
+results. Exact public payment terms, application hashes and original native or
+challenge-only mode remain visible.
+
+## Source and focused integration exercise
+
+`exercise.mjs` runs one complete loopback session using the original SF61
+compiler, immutable SF82 release store, real SF30 challenge-only child process,
+MCP HTTP transport and generated customer SDK. It stages two prices, handles a
+stale generation, starts, exports the actual client, activates/restarts,
+rolls back, rejects another process's stop attempt and gracefully closes.
+It also checks the existing buyer MCP entrypoint after transport extraction.
+No wallet, payment, hosted Actions or broad test suite is involved.
+
+```sh
+node stellar-forge/mcp-merchant-operator/exercise.mjs
+```
+
+Original integration sources:
+
+- [SF82 releases](../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs)
+- [SF61 importer](../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/README.md)
+- [SF30 seller and SDK](../../stellar/scf-starforge-20261009/sf30-seller-sdk/README.md)
+- [Shared authenticated MCP HTTP transport](../mcp-paid-agent/http-tools.mjs)
+- [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+- [MCP transport](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)

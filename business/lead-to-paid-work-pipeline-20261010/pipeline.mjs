@@ -9,6 +9,7 @@ import { applyReplyReview } from './reply-review.mjs';
 import { markdown as replyMarkdown } from './reply-triage.mjs';
 import { resolveCommunicationAuthority } from './communication-authority.mjs';
 import { importGmailCaptures, writeGmailCapture } from './gmail-capture.mjs';
+import { applyContactHistory } from './contact-history.mjs';
 
 const TYPES = new Set(['OPEN','CANCELLED','CLOSED','UNKNOWN']);
 const PROOF = new Set(['DOCUMENTED','SELF_REPORTED','UNKNOWN']);
@@ -25,10 +26,17 @@ export function engagementDisplay(d) {
   if (s === 'RECONNECT_NAMED_CONTACT') return 'RECONNECT NAMED CONTACT';
   if (s === 'FIX_DELIVERY') return 'FIX DELIVERY';
   if (s === 'CLOSED_DECLINED') return 'DECLINED CONTACT';
-  if (s === 'AWAITING_REPLY') return 'AWAITING CUSTOMER REPLY';
-  if (s === 'REVIEW_FOLLOWUP') return 'REVIEW FOLLOW-UP';
+  if (s === 'READ_GMAIL_CONTENT') return 'READ CUSTOMER MESSAGE';
+  const contactLane = d.contactHistory?.engagementLane;
+  if (contactLane === 'COORDINATE_CONTACT') return 'CONTACT IN PROGRESS';
+  if (contactLane === 'READ_CONTACT_HISTORY') return 'READ CONTACT HISTORY';
+  if (s === 'AWAITING_REPLY' || contactLane === 'AWAITING_REPLY') return 'AWAITING CUSTOMER REPLY';
+  if (s === 'REVIEW_FOLLOWUP' || contactLane === 'REVIEW_FOLLOWUP') return 'REVIEW FOLLOW-UP';
   return d.readyForOwnerApproach ? (d.outreachAuthority?.action === 'QUALIFY_PARTNER' ? 'QUALIFY PARTNER' : 'PROPOSE WORKSHARE') : 'RESOLVE INTRODUCTION ITEMS';
 }
+const introductionDisplay = d => d.contactHistory?.completedContacts || d.replyTriage?.sentCount
+  ? 'ALREADY CONTACTED' : d.contactHistory?.reservedContacts ? 'CONTACT IN PROGRESS'
+  : d.readyForOwnerApproach ? 'AUTHORIZED ACTION' : 'ITEMS TO RESOLVE';
 const money = n => Number.isFinite(n) ? `$${n.toFixed(2)}` : 'UNSET';
 const url = s => { try { const u=new URL(s); return u.protocol === 'https:' && !!u.hostname; } catch { return false; } };
 const decimal = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
@@ -167,7 +175,8 @@ export function evaluateAll(opportunities, now = new Date(), options = {}) {
   });
   const outreach = applyOutreachReview(opportunities, decisions, options.outreachSnapshot, now);
   const reply = applyReplyReview(opportunities, decisions, options.replySnapshot, now);
-  return { decisions, collections, outreach, reply };
+  const contactHistory = applyContactHistory(opportunities, decisions, options.contactRecords, now, reply);
+  return { decisions, collections, outreach, reply, contactHistory };
 }
 
 export function renderMarkdown(rs,now){
@@ -176,9 +185,10 @@ export function renderMarkdown(rs,now){
     out+=`\n## ${r.buyer.name} · ${r.buyer.id} (${r.buyer.revision})\n\n`;
     out+=`**Owner:** ${r.owner} · **Stage:** ${r.stage} · **Decision:** ${engagementDisplay(r)} · **Recorded net USD:** ${money(r.recordedNetUsd)} (${r.cashReconciliation})\n\n`;
     if(r.outreachAuthority) out+=`**Contact authority:** ${r.outreachAuthority.kind}; ${r.outreachAuthority.action}; ${r.outreachAuthority.grantId||'legacy record'}.\n\n`;
+    if (r.contactHistory) out+=`**Shared contact history:** ${r.contactHistory.status}; ${r.contactHistory.completedContacts} completed contact(s), ${r.contactHistory.providers.join(', ')||'no provider receipt'}, observed ${r.contactHistory.latestObservedAt||'not recorded'}. ${r.contactHistory.nextAction||'No completed contact in the supplied records'}.\n\n`;
     if (r.collections) out+=`**Collections:** ${r.collections.invoices.map(x=>`${x.invoiceId}: ${x.state}, ${x.outstandingMinor ?? 'unknown'} ${x.currency} minor units outstanding${x.overdue?' (overdue)':''}`).join('; ')||'No valid invoice recorded'}. Review required: ${r.collections.reviewRequired}.\n\n`;
     if (r.outreachPreflight) out+=`**Outreach snapshot:** ${r.outreachPreflight.decision}; ${r.outreachPreflight.reasons.join('; ')||'no collision observed in supplied snapshot; this is not send authorization'}.\n\n`;
-    if (r.replyTriage) out+=`**First-contact eligibility:** ${r.readyForOwnerApproach?'Authorized action':'Resolve the specific items below'}; **Reply status:** ${r.replyTriage.status}; ${r.replyTriage.sentCount??0} verified SENT, ${r.replyTriage.humanReplyCount??0} human, ${r.replyTriage.bounceCount??0} bounce. ${r.replyTriage.nextAction||'Provider reply snapshot not supplied or case not mapped'}.\n\n`;
+    if (r.replyTriage) out+=`**First-contact eligibility:** ${introductionDisplay(r)}; **Reply status:** ${r.replyTriage.status}; ${r.replyTriage.sentCount??0} verified SENT, ${r.replyTriage.humanReplyCount??0} human, ${r.replyTriage.bounceCount??0} bounce. ${r.replyTriage.nextAction||'Provider reply snapshot not supplied or case not mapped'}.\n\n`;
     out+=`Source: ${r.buyer.sourceUrl}\n\nDeadline: ${r.buyer.deadlineText} (${r.deadlineState}). Source review: ${r.sourceReview}.\n\n`;
     out+=`Proposed specialist slice: ${r.workshare.summary||'UNDEFINED'}; fee ${money(r.workshare.feeUsd)}, delivery cost ${money(r.workshare.costUsd)}, margin ${r.workshare.margin===null?'UNKNOWN':(100*r.workshare.margin).toFixed(1)+'%'}; ${r.workshare.feeStatus}.\n\n`;
     out+=`Prime fit: ${r.partners.map(p=>`${p.name} ${p.documented}/${p.required} documented requirements`).join('; ')||'UNASSIGNED'}\n\n`;
@@ -193,7 +203,7 @@ export function renderWorkshareSheet(rs,now){
   let out=`# Internal prime-led specialist workshare sheets\n\nGenerated ${now.toISOString()}. UNSENT OPERATOR MATERIAL. No bid, quote, contact, contract, payment or authorization is created by generating this file. Applicable owner authorization and current provider history determine the contact action; proposal and contracting readiness are assessed separately.\n`;
   for(const r of rs){
     out+=`\n---\n\n## ${r.buyer.name} | ${r.buyer.id} | ${r.buyer.revision}\n\n`;
-    out+=`**Readiness for NEW introduction:** ${r.readyForOwnerApproach?'AUTHORIZED ACTION':'ITEMS TO RESOLVE'}; **existing-customer engagement:** ${engagementDisplay(r)}; **relationship owner:** ${r.owner}.\n\n`;
+    out+=`**Readiness for NEW introduction:** ${introductionDisplay(r)}; **existing-customer engagement:** ${engagementDisplay(r)}; **relationship owner:** ${r.owner}.\n\n`;
     out+=`**Buyer source:** ${r.buyer.sourceUrl}\n\n**Issuer deadline:** ${r.buyer.deadlineText} (${r.deadlineState}).\n\n`;
     out+=`**Potential contracting prime:** ${r.selectedPrime||'NO CANDIDATE RECORDED'}.\n\n`;
     out+=`**Specialist workshare:** ${r.workshare.summary||'NOT YET SCOPED'}.\n\n`;
@@ -201,6 +211,7 @@ export function renderWorkshareSheet(rs,now){
     out+=r.workshare.milestones.length ? r.workshare.milestones.map((m,i)=>`${i+1}. Deliverable: ${m.deliverable}\n   Acceptance: ${m.acceptance}`).join('\n')+'\n' : 'No signed-off deliverables or acceptance yet.\n';
     out+=`\n**Externally usable fee:** ${r.workshare.feeUsableForProposal && r.workshare.feeUsd !== null ? money(r.workshare.feeUsd)+' ('+r.workshare.feeAuthority+'; proposal only)' : 'NOT PROPOSED'}.\n\n`;
     out+=`**Partner fit:** ${r.partners.map(p=>`${p.name}: ${p.documented}/${p.required} mandatory clauses documented, ${p.eligibleToConsider?'potential candidate':'not qualified on provided records'}`).join('; ')||'No candidates assessed'}.\n\n`;
+    if (r.contactHistory) out+=`**Shared contact history:** ${r.contactHistory.status}; ${r.contactHistory.channels.join(', ')||'no completed contact'}; observed ${r.contactHistory.latestObservedAt||'not recorded'}. ${r.contactHistory.nextAction||''}\n\n`;
     if (r.replyTriage) out+=`**Provider reply lane:** ${r.replyTriage.status}; ${r.replyTriage.nextAction||'Supply actual provider data and bind caseId before further contact'}.\n\n`;
     out+=`**Blocking items:** ${r.blockers.length?r.blockers.join('; '):'None in these supplied records; use the recorded owner authorization and current provider history'}.\n\n`;
     out+='**Next action:** '+(r.nextActions[0]||'Owner review real source, counterpart and commercial conditions')+'.\n';
@@ -211,20 +222,21 @@ export function renderWorkshareSheet(rs,now){
 export function renderHtml(rs,now){
   const blocks=rs.map(r=>{
     const authorityView=r.outreachAuthority?'<h3>Contact authority</h3><p>'+safe(r.outreachAuthority.kind)+' · '+safe(r.outreachAuthority.action)+' · '+safe(r.outreachAuthority.grantId||'legacy record')+'</p>':'';
+    const contactView=r.contactHistory?`<h3>Shared contact history</h3><p><strong>${safe(r.contactHistory.status)}</strong> ${safe(r.contactHistory.completedContacts)} completed contact(s) · ${safe(r.contactHistory.providers.join(', ')||'No provider receipt')} · observed ${safe(r.contactHistory.latestObservedAt||'not recorded')}.</p><p>${safe(r.contactHistory.nextAction||'No completed contact in the supplied records.')}</p>`:'';
     const collectionRows=(r.collections?.invoices||[]).map(x=>`<tr><td>${safe(x.invoiceId)}</td><td>${safe(x.currency)}</td><td>${safe(x.netMinor)}</td><td>${safe(x.outstandingMinor??'Unknown')}</td><td>${safe(x.state)}${x.overdue?' · overdue':''}</td></tr>`).join('');
     const collectionView=r.collections?`<h3>Recorded collections</h3><p>Workflow stage is separate from invoice settlement. Integer minor units per stated currency; no currency conversion. ${r.collections.reviewRequired?'Review required: see collections.json for rejected or conflicting receipts.':'Receipts remain operator supplied; independently verify with the provider.'}</p><table><tr><th>Invoice</th><th>Currency</th><th>Net received</th><th>Outstanding</th><th>State</th></tr>${collectionRows||'<tr><td colspan="5">No valid invoice recorded</td></tr>'}</table>`:'';
     const outreachView=r.outreachPreflight?`<h3>Outreach snapshot</h3><p>${safe(r.outreachPreflight.decision)}: ${safe(r.outreachPreflight.reasons.join('; ')||'No collision observed in supplied snapshot. Separate live checks, reservation and owner authorization still apply.')}</p>`:'';
-    const replyView=r.replyTriage?`<h3>Provider reply lane</h3><p><strong>${safe(r.replyTriage.engagementLane||'PROVIDER DATA NOT SUPPLIED')}</strong> · ${safe(r.replyTriage.status)}</p><p><strong>Original introduction: ${r.readyForOwnerApproach?'AUTHORIZED':'RESOLVE ITEMS'}</strong> · ${safe(r.replyTriage.sentCount??0)} verified SENT · ${safe(r.replyTriage.humanReplyCount??0)} human · ${safe(r.replyTriage.bounceCount??0)} bounce.</p><p>${safe(r.replyTriage.nextAction||'No mapped provider reply data. Use the relationship owner and actual mailbox receipts.')}</p>`:'';
+    const replyView=r.replyTriage?`<h3>Provider reply lane</h3><p><strong>${safe(r.replyTriage.engagementLane||'PROVIDER DATA NOT SUPPLIED')}</strong> · ${safe(r.replyTriage.status)}</p><p><strong>Original introduction: ${introductionDisplay(r)}</strong> · ${safe(r.replyTriage.sentCount??0)} verified SENT · ${safe(r.replyTriage.humanReplyCount??0)} human · ${safe(r.replyTriage.bounceCount??0)} bounce.</p><p>${safe(r.replyTriage.nextAction||'No mapped provider reply data. Use the relationship owner and actual mailbox receipts.')}</p>`:'';
     const issues=r.blockers.map(s=>`<li>${safe(s)}</li>`).join('');
     const partnerRows=r.partners.map(p=>`<tr><td>${safe(p.name)}</td><td>${p.documented}/${p.required}</td><td>${p.eligibleToConsider?'DOCUMENTED':'ASK PARTNER'}</td><td>${safe(p.gaps.map(g=>g.requirementId).join(', '))}</td></tr>`).join('');
-    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${safe(engagementDisplay(r))}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not selected')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${authorityView}${collectionView}${outreachView}${replyView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Items to resolve</h3><ul>${issues||'<li>None recorded</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
+    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${safe(engagementDisplay(r))}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not selected')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${authorityView}${contactView}${collectionView}${outreachView}${replyView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Items to resolve</h3><ul>${issues||'<li>None recorded</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
   }).join('');
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buyer-to-prime operator board</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#f4f4f4}body{max-width:1090px;margin:38px auto;padding:0 18px}h1{font-size:2rem}p{line-height:1.5;color:#444}section{background:#fff;padding:28px;border:1px solid #ccc;border-radius:3px;margin:20px 0}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.top h2{margin:0}.status{font-weight:700;color:#222;background:#eee;padding:8px 12px;border-radius:3px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:22px 0}.metrics div{padding:16px;background:#f5f5f5;border-radius:2px}label{display:block;font-size:.8rem;color:#555;margin-bottom:8px}strong{display:block;font-size:1.1rem;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;text-align:left}td,th{border-bottom:1px solid #ccc;padding:10px 6px;overflow-wrap:anywhere}th{color:#444}li{line-height:1.5;margin:7px 0}a{color:#222}.disclaimer{padding:16px;border-left:4px solid #666}</style><main><h1>Buyer → prime → paid work</h1><p class="disclaimer">Offline operator decision board, generated ${safe(now.toISOString())}. Documentation status is declared by inputs, not validated by this program. Nothing is submitted, contacted, purchased or paid.</p>${blocks}</main></html>`;
 }
 
 async function main(){
   const args=process.argv.slice(2);
-  if(args.includes('--help')||args.length===0){console.log('Usage: node pipeline.mjs <opportunities.json> <output-dir> [--now=ISO] [--outreach-snapshot=path.json] [--reply-snapshot=path.json | --gmail-captures=path.json] [--previous-mailbox=path.json]');return;}
+  if(args.includes('--help')||args.length===0){console.log('Usage: node pipeline.mjs <opportunities.json> <output-dir> [--now=ISO] [--outreach-snapshot=path.json] [--reply-snapshot=path.json | --gmail-captures=path.json] [--previous-mailbox=path.json] [--contact-records=path.json]');return;}
   insist(args.length>=2,'Provide input and output directory');
   const raw=JSON.parse(await readFile(args[0],'utf8'));
   insist(Array.isArray(raw.opportunities) && raw.opportunities.length>0,'opportunities[] required');
@@ -242,7 +254,9 @@ async function main(){
     previous:previousArg?JSON.parse(await readFile(previousArg.slice('--previous-mailbox='.length),'utf8')):undefined,now
   }):null;
   const replySnapshot=native?.replySnapshot??(replyArg?JSON.parse(await readFile(replyArg.slice('--reply-snapshot='.length),'utf8')):undefined);
-  const { decisions: rs, collections, outreach, reply } = evaluateAll(raw.opportunities,now,{outreachSnapshot,replySnapshot,communicationAuthority:raw.communicationAuthority});
+  const contactArg=args.find(x=>x.startsWith('--contact-records='));
+  const contactRecords=contactArg?JSON.parse(await readFile(contactArg.slice('--contact-records='.length),'utf8')):undefined;
+  const { decisions: rs, collections, outreach, reply, contactHistory } = evaluateAll(raw.opportunities,now,{outreachSnapshot,replySnapshot,contactRecords,communicationAuthority:raw.communicationAuthority});
   const out=path.resolve(args[1]);
   await mkdir(out,{recursive:true,mode:0o700});
   if(native) await writeGmailCapture(native,out);
@@ -255,6 +269,7 @@ async function main(){
   await writeFile(path.join(out,'outreach-preflight.json'),JSON.stringify(outreach??{generatedAt:now.toISOString(),decision:'NOT_EVALUATED',reason:'NO_MAILBOX_SNAPSHOT_SUPPLIED'},null,2)+'\n');
   await writeFile(path.join(out,'reply-queue.json'),JSON.stringify(reply??{generatedAt:now.toISOString(),status:'NOT_EVALUATED',reason:'NO_PROVIDER_REPLY_SNAPSHOT_SUPPLIED'},null,2)+'\n');
   await writeFile(path.join(out,'reply-queue.md'),reply?replyMarkdown(reply):'# Reply status\n\nNot evaluated: no provider reply snapshot supplied. This is not evidence that no email was sent.\n');
-  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:native?12:9,mailboxCaptures:native?.coverage.captureCount??null,mailboxContinuations:native?.coverage.continuations.length??null,opportunities:rs.length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:(collections.currencies.find(c=>c.currency==='USD')?.netMinor??0)/100,recordedByCurrency:collections.currencies,collectionReviewItems:collections.issues.length,replyInterestCases:reply?.totals?.interestCases??null,replyMappingIssues:reply?.boardJoin?.issues.length??null,outputDir:out},null,2));
+  if(contactHistory) await writeFile(path.join(out,'contact-history.json'),JSON.stringify(contactHistory,null,2)+'\n');
+  console.log(JSON.stringify({generatedAt:now.toISOString(),fileCount:(native?12:9)+(contactHistory?1:0),canonicalContacts:contactHistory?.records.filter(record=>record.completed).length??null,contactReadIssues:contactHistory?.issues.length??null,mailboxCaptures:native?.coverage.captureCount??null,mailboxContinuations:native?.coverage.continuations.length??null,opportunities:rs.length,alreadyContacted:rs.filter(r=>introductionDisplay(r)==='ALREADY CONTACTED').length,hold:rs.filter(r=>!r.readyForOwnerApproach).length,ownerReview:rs.filter(r=>r.readyForOwnerApproach).length,recordedCash:(collections.currencies.find(c=>c.currency==='USD')?.netMinor??0)/100,recordedByCurrency:collections.currencies,collectionReviewItems:collections.issues.length,replyInterestCases:reply?.totals?.interestCases??null,replyMappingIssues:reply?.boardJoin?.issues.length??null,outputDir:out},null,2));
 }
 if(process.argv[1] && import.meta.url===new URL(`file://${path.resolve(process.argv[1])}`).href){main().catch(e=>{console.error(e.message);process.exitCode=1;});}
