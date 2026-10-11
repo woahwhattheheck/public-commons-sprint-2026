@@ -411,6 +411,7 @@
   },
   "runtimePackageManifests": {
     "schema": "stellar-forge/payment-auto-catalog/package.json",
+    "openapi": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/package.json",
     "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json",
     "mysql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/package.json",
     "mongodb": "stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/package.json",
