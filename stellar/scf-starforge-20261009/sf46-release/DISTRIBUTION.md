@@ -95,12 +95,16 @@ Run `node forge.mjs status` to see the paths present in the selected release.
 | `fleet-release` | Original saved-workspace staging, release review and owned seller lifecycle |
 | `revenue-workspace` | Original private merchant pricing workspace and saved operational reports |
 | `revenue-report` | Original SF97 merchant revenue analyzer and optional native settlement companion |
+| `merchant-accounting` | Original settlement reconciliation and report writer |
+| `merchant-accounting-workspace` | Retained source imports, reconciliation, review and comparison workspace |
+| `merchant-accounting-pricing` | Saved original pricing report to validated accounting terms |
+| `merchant-accounting-recovery` | Original completed-purchase review, recovery and retained response CLI |
 | `postgres` | Original PostgreSQL seller and operations launcher |
 | `postgres-init` | Original create-only PostgreSQL source/service starter |
 | `postgres-inspect` | Original PostgreSQL declaration/query inspection |
 | `postgres-workspace` | Original database metadata-to-merchant-package workspace |
 
-Dataset, catalog, fleet, revenue, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
+Dataset, catalog, fleet, revenue, accounting, `buyer-inbox`, `buyer-runbook`, `deploy` and PostgreSQL
 commands are included when their original named CLI files exist in the selected
 commit. `status.commands` is the installed release's exact command map. `dataset`
 retains its CSV inspection/compiler meaning; use `buyer-dataset` for acquisition
@@ -423,14 +427,14 @@ existing HTTPS deployment; keep the private control and browser listeners local.
 
 ## Review merchant pricing and operating costs
 
-The installed pricing commands use the original SF97 workspace and analyzer.
-They read the merchant's actual seller configuration and operating capture; no
-additional npm dependency is required. Keep their saved workspace under the
-installation's private `state/` directory so release activation and rollback
-preserve the merchant's pricing decisions.
+The installed commands use the original SF97 workspace and analyzer, pricing
+importer and merchant accounting engine. Keep saved pricing, imported terms and
+accounting state in the installation's private `state/` directory so software
+activation and rollback retain the merchant's decisions. `forge.mjs status`
+reports the exact commands included in the selected source release.
 
-Start the workspace with the same seller configuration used by the original
-operations launcher:
+Use Node 22+ and the merchant's actual seller configuration and existing
+operations listener:
 
 ```sh
 node /tmp/stellar-forge-home/forge.mjs run revenue-workspace -- \
@@ -439,38 +443,137 @@ node /tmp/stellar-forge-home/forge.mjs run revenue-workspace -- \
   --ops-url http://127.0.0.1:8424 --port 8457
 ```
 
-Replace the configuration path and operations port with the original seller's
-actual values. Open the private browser URL printed by the workspace. For an
-existing operating export, replace `--ops-url` with
-`--snapshot /absolute/private/original-seller-traffic.json`. The optional
-`--native-outbox /absolute/private/native-outbox` reads that merchant's existing
-SF98 journal for the original native settlement companion.
+Open the private browser URL printed by the original workspace. Replace the
+configuration and operations port with that merchant's actual values. The parent
+of each private state directory must already exist; pricing state uses a local
+filesystem with atomic hard links and directory synchronization.
 
-The screen presents every configured payment option. Enter its USD quote and
-basis, target request volume, fulfillment and challenge costs, and fixed
-operating costs. The original analyzer calculates the preview; unspecified costs
-remain unknown. Save the review to retain its original seller configuration,
-capture, terms and reports. Reopen a saved version to inspect those inputs and
-download its terms or reports. Reopening the same private `--state` directory
-after a service restart retains the saved versions and their source identities.
+Choose the current session or retained history in the source panel. For live
+history, select the actual UTC interval and optional original route filter. The
+existing operations service supplies the retained history and effective range.
+For saved exports, replace `--ops-url` with `--snapshot /private/original-session.json`
+or `--history /private/original-history.json`; both file flags may be supplied to
+switch between those fixed exports. File selections retain their exported range.
+Add `--native-outbox /private/merchant/sf98-outbox` to include the original native
+settlement companion for that merchant.
 
-To reproduce a saved session report with the command-line analyzer, use the
-matching seller, terms and snapshot from that same saved version and a new output
-directory:
+Refresh the selected source, enter the merchant's quoted USD values, quote
+bases, known costs and monthly targets, and review every ordered payment option.
+Calculate with the original analyzer, then save. A saved version retains the
+exact seller, terms, original capture, report and optional native companion.
+Compare saved periods with their original coverage and source identities; reopen
+versions or reuse their assumptions for a new review. The monthly target applies
+once to its original service scope. Unknown costs remain unknown, and observed
+HTTP outcomes retain their original meaning.
+
+After restart, reopen the same `--state` directory. To reproduce a retained-period
+report, use the matched files from one saved version and a new output directory:
 
 ```sh
 node /tmp/stellar-forge-home/forge.mjs run revenue-report -- \
-  --config /absolute/private/saved-review/seller.json \
-  --terms /absolute/private/saved-review/terms.json \
-  --snapshot /absolute/private/saved-review/snapshot.json \
-  --output /absolute/private/new-review-report
+  --config /private/review/seller.json --terms /private/review/terms.json \
+  --history /private/review/history.json --output /private/new-pricing-report
 ```
 
-Both aliases are advertised only when their original entrypoint exists in the
-selected source release. `forge.mjs status` reports the exact installed command
-map. The complete [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
-and [revenue analyzer guide](../sf97-merchant-revenue-ops/README.md) are included
-with the source and describe the supported capture inputs and report fields.
+For a session review, replace `--history` with that version's `--snapshot` file.
+The included [original pricing guide](../sf97-merchant-revenue-ops/WORKSPACE.md)
+describes history enablement, range selection, source retention and comparisons.
+
+## Use saved pricing in merchant accounting
+
+Download **Report JSON** from the chosen saved pricing version, or select its
+private `versions/VERSION/report/report.json`. The original report supplies the
+normalized payment options and calculated route values; pricing `terms.json` is
+an input to that report and does not contain the complete accounting import.
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-pricing -- \
+  --report /tmp/stellar-forge-home/state/pricing/versions/VERSION/report/report.json \
+  --out /private/merchant/pricing-import-2026-10-11
+```
+
+Use a new output directory with an existing parent. The import retains the exact
+original report as `pricing-report.json`, produces validated `accounting-terms.json`
+and writes their identities and import summary to `manifest.json`. The directory
+uses mode 0700 and files use 0600. If the quote basis needs a shorter accounting
+reference, add `--reference "Approved merchant quote October 2026"`; the complete
+original basis remains in the retained pricing context. The
+[pricing import guide](../merchant-settlement-accounting/PRICING.md) documents the
+reference rules and the exact mapping.
+
+Every original option keeps its route, method, network, asset, recipient and
+atomic amount. The quote and per-fulfilled variable cost become accounting unit
+terms; unknown costs remain null. Shared fixed costs, challenge costs, targets
+and the pricing observation interval remain attached pricing context. The
+accounting event scope comes from the selected journals and verification inputs.
+
+Open a new accounting workspace using those imported terms and the merchant's
+actual original sources:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-workspace -- \
+  --workspace /tmp/stellar-forge-home/state/accounting \
+  --outbox /private/merchant/sf98-outbox --proof-dir /private/merchant/sf86-results \
+  --terms /private/merchant/pricing-import-2026-10-11/accounting-terms.json
+```
+
+For an existing workspace, open **Sources & imports**, select the generated
+`accounting-terms.json` under **Merchant accounting terms**, and choose
+**Import & select terms**. Then create a new capture from **Reconcile & review**.
+Earlier runs retain their own terms and sources, so the existing comparison
+shows which assumptions and settlement inputs changed. Search the ledger and
+exceptions, retain review notes, and export the original reports and source TAR.
+Reopen after restart with `--workspace` alone. The accounting workspace requires
+Linux `flock` and `tar` in addition to Node 22+.
+
+For a terminal review, the original accounting command consumes the same terms:
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting -- \
+  --outbox /private/merchant/sf98-outbox --proof-dir /private/merchant/sf86-results \
+  --terms /private/merchant/pricing-import-2026-10-11/accounting-terms.json \
+  --out /private/merchant/new-accounting-review
+```
+
+The original outputs are `report.json`, `ledger.csv`, `options.csv`,
+`exceptions.csv`, `review.html` and `manifest.json`. The included
+[accounting workspace guide](../merchant-settlement-accounting/workspace/README.md)
+covers retained imports, captures, review, comparison, export and restart.
+
+### Include an original completed purchase
+
+The same accounting workspace can connect an existing recovered-settlement
+collection in **Sources & imports**, retain and review the original recovery
+request, run the original import, and download the retained response. For CLI
+operation, use the existing request configuration from the
+[recovery guide](../merchant-settlement-accounting/RECOVERY.md):
+
+```sh
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- review \
+  --config /private/purchase/recovery-request.json
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- import \
+  --config /private/purchase/recovery-request.json \
+  --recovered-dir /private/merchant/recovered
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- list \
+  --recovered-dir /private/merchant/recovered
+node /tmp/stellar-forge-home/forge.mjs run merchant-accounting-recovery -- response \
+  --recovered-dir /private/merchant/recovered --id ACTUAL_RECOVERY_ID \
+  --out /private/purchase/reopened-response.json
+```
+
+Use the original approved request, outcome, matching merchant terms, known payer
+and optional saved response. Review checks those retained records. Import uses the existing native SDK and original verifier to read the
+completed transaction from its declared public RPC, then retains the verified
+entry and response. An identical retained import is reused. Use the recovery ID returned by import or list; `response` exports the saved
+body to a new private file. This workflow operates the completed purchase's records.
+
+Connect that collection in the workspace or add
+`--recovered-dir /private/merchant/recovered` to its initial launch. The original
+`merchant-accounting` command accepts the same optional input. Reports retain
+separate captured and recovered origins and time bases, and apply the
+existing verification and transaction matching rules across both. Pricing
+imports and recovery records keep their own source identities in the same
+merchant review.
 
 ## PostgreSQL merchant installation
 
