@@ -13,7 +13,8 @@ import { openAcquisitions } from './acquisition.mjs';
 export const HANDOVER_SCHEMA = 'stellar-forge.blockworks-migration-handover.v1';
 const encode = promisify(gzip), decode = promisify(gunzip);
 const MAX_FILE = 32 * 1024 * 1024, MAX_TOTAL = 96 * 1024 * 1024;
-const MAX_ARCHIVE = 32 * 1024 * 1024, MAX_ENVELOPE = 136 * 1024 * 1024, MAX_FILES = 3000;
+export const HANDOVER_MAX_ARCHIVE_BYTES = 32 * 1024 * 1024;
+const MAX_ARCHIVE = HANDOVER_MAX_ARCHIVE_BYTES, MAX_ENVELOPE = 136 * 1024 * 1024, MAX_FILES = 3000;
 const HASH = /^[a-f0-9]{64}$/, ID = /^[a-z0-9][a-z0-9_-]{0,79}$/;
 const jsonBytes = value => Buffer.from(canonical(value) + '\n');
 function need(value, message) { if (!value) throw new TypeError(message); }
