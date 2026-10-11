@@ -150,14 +150,15 @@ The terminal accepts these commands; substitute an intent ID from readiness:
 
 | Command | Behavior |
 | --- | --- |
-| `status` | Current original merchant counters, selected requests and retained outcomes |
+| `status` | Current original merchant counters, selected requests, retained outcomes and paid-file transfer state |
 | `readiness` | Refresh the embedded native facilitator's configured RPC network, health and latest ledger |
 | `review ID` | Original SF88 offline review of the inbox's exact request snapshot |
 | `signer ID` | Original SF103 SDK/provider loading check, without signing or payment |
 | `execute ID` | One original inbox attempt through SF88/SF81 approval, SF36, signer and HTTP |
 | `cancel ID` | Original inbox cancellation before execution |
 | `recover ID` | Original inbox recovery from that intent's existing SF82 evidence |
-| `retrieve ID` | Original SF101 entitled-file retrieval or local receipt recovery for the selected handoff |
+| `retrieve ID` | Original SF101 entitled-file retrieval, interrupted-download resume or local receipt recovery for the selected handoff |
+| `reset-transfer ID` | Clear the selected order's original retained download bytes; a later `retrieve ID` starts from the beginning |
 | `quit` | Cancel the foreground buyer if needed, drain the merchant and close services |
 
 `execute` releases the command reader before the original approval helper opens

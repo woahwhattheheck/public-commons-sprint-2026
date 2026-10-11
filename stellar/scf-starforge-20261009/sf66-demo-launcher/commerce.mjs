@@ -16,7 +16,7 @@ import { config as readBuyer, execution } from '../sf88-operator-buyer-cli/confi
 import { absolute, readPrivateFile, parseJson, inspectOperatorConfig } from '../sf103-native-buyer-signer/operator.mjs';
 import { readCheckout, compileCheckout } from '../sf101-merchant-receiver/checkout-config.mjs';
 import { startCheckout } from '../sf101-merchant-receiver/checkout.mjs';
-import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase } from './commerce-purchase.mjs';
+import { readPurchaseInput, freezePurchase, inspectCommercePurchase, retrieveCommercePurchase, resetCommercePurchase } from './commerce-purchase.mjs';
 import { preparePythonCommerce, savePythonCommerce, readPythonCommerce,
   describePythonCommerce, openPythonCommerce } from './commerce-python.mjs';
 import { readUpstreamCommerce, retainUpstreamCommerce, openUpstreamCommerce,
@@ -543,6 +543,16 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       need(saved.buyers.some(entry => entry.intentId === intentId), 'COMMERCE_INTENT_NOT_IN_SESSION');
       return { ...job, merchant: bindMerchantPurchase(seller.compiled, job) };
     };
+    const fileAction = (intentId, operation) => {
+      need(!activeRetrievals.has(intentId), 'COMMERCE_FILE_RETRIEVAL_BUSY');
+      const work = (async () => {
+        const job = await jobFor(intentId), entry = saved.buyers.find(item => item.intentId === intentId);
+        need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
+        return operation(entry, job);
+      })();
+      pending.add(work); activeRetrievals.set(intentId, work);
+      return work.finally(() => { pending.delete(work); activeRetrievals.delete(intentId); });
+    };
     const rpcAction = (intentId, method, selection) => {
       need(jsonrpcRecovery && !activeRpcActions.has(intentId), 'COMMERCE_RPC_RECOVERY_BUSY');
       const work = (async () => {
@@ -594,15 +604,10 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       async cancel(intentId) { await jobFor(intentId); return queue.cancel(intentId); },
       async recover(intentId) { await jobFor(intentId); return queue.recover(intentId); },
       retrieve(intentId) {
-        need(!activeRetrievals.has(intentId), 'COMMERCE_FILE_RETRIEVAL_BUSY');
-        const work = (async () => {
-          const job = await jobFor(intentId), entry = saved.buyers.find(item => item.intentId === intentId);
-          need(!controller.signal.aborted, 'COMMERCE_INTERRUPTED');
-          return retrieveCommercePurchase(entry, job, { environment, signal: controller.signal, fetchImpl: purchaseFetch });
-        })();
-        pending.add(work); activeRetrievals.set(intentId, work);
-        return work.finally(() => { pending.delete(work); activeRetrievals.delete(intentId); });
+        return fileAction(intentId, (entry, job) => retrieveCommercePurchase(entry, job,
+          { environment, signal: controller.signal, fetchImpl: purchaseFetch }));
       },
+      resetTransfer(intentId) { return fileAction(intentId, resetCommercePurchase); },
     });
   } catch (error) {
     await completeCommerceShutdown({ waitForIdle }, close()).catch(() => {});
