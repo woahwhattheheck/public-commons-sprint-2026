@@ -1,11 +1,19 @@
-import {checkOriginalTerms, requireTruth, digest, rpcNetwork, object,
+import {checkOriginalTerms, checkReportedTerms, requireTruth, digest, rpcNetwork, object,
   ReconciliationError} from './terms.mjs';
 import {rpc} from './rpc-transport.mjs';
 export {validStrKey,ReconciliationError,DEFAULT_RPC} from './terms.mjs';
 const EVENT_PAGE_LIMIT=200;
-export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractEvent,
-  rpcEndpoint,maxEventPages=24,signal} = {}) {
-  const {intentId, requirement:q, receipt:r}=checkOriginalTerms(record,payer);
+export async function reconcileRpc({record,payer,...options} = {}) {
+  const terms=checkOriginalTerms(record,payer);
+  return reconcileTransfer({...options,...terms,payer,reservation:'UNCHANGED_VERIFY_SEPARATELY'});
+}
+export async function reconcileReportedReceipt({intentId,requirement,receipt,payer,...options}={}) {
+  const terms=checkReportedTerms({intentId,requirement,receipt},payer);
+  return reconcileTransfer({...options,...terms,payer,reservation:'ABSENT_NO_SF81_RECORD',
+    origin:'RECOVERED_ORIGINAL_SF31_OUTCOME'});
+}
+async function reconcileTransfer({intentId,requirement:q,receipt:r,payer,fetchImpl=fetch,
+  decodeContractEvent,rpcEndpoint,maxEventPages=24,signal,reservation,origin}) {
   const profile=rpcNetwork(q.network,rpcEndpoint),{live}=profile;
   rpcEndpoint=profile.endpoint;
   const readRpc=(method,params)=>rpc(method,params,rpcEndpoint,fetchImpl,{signal});
@@ -79,6 +87,6 @@ export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractE
     matchingTransfers:1,matchingEventId:matchedId,eventPages,
     transactionResultSha256:digest(tx),eventPageSha256:eventHashes,
     sellerReport:r.success?'REPORTED_SUCCESS':'SETTLEMENT_PENDING',
-    reservation:'UNCHANGED_VERIFY_SEPARATELY',
+    reservation,...(origin?{origin}:{}),
     limitation:'Verified transfer for seller-reported hash; original HTTP intent binding and accounting remain separate.'};
 }
