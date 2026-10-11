@@ -99,6 +99,52 @@ export function checkOriginalTerms(record, payer) {
 export function checkReportedTerms(record,payer) {
   return checkNativeTerms(record,payer,{allowPending:false});
 }
+/** Read an original settlement attempt without turning a failure into a receipt. */
+export function checkPaymentAttemptTerms(record,payer) {
+  requireTruth(object(record), 'INVALID_PAYMENT_ATTEMPT_RECORD');
+  const {intentId, requirement:q, receipt:r, transaction:reference}=record;
+  requireTruth(typeof intentId === 'string' && INTENT.test(intentId), 'INVALID_INTENT_ID');
+  requireTruth(object(q), 'MISSING_NATIVE_PAYMENT_TERMS');
+  requireTruth(q.scheme === 'exact', 'NOT_AN_EXACT_PAYMENT');
+  networkProfile(q.network);
+  // Native MCP also supports a host-owned contract signer. The legacy SF81
+  // receipt/reservation APIs retain their existing G-address requirement.
+  requireTruth(validStrKey(payer,'G') || validStrKey(payer,'C'), 'INVALID_TRUSTED_PAYER');
+  requireTruth(validStrKey(q.asset,'C'), 'INVALID_ASSET_STRKEY');
+  requireTruth(validStrKey(q.payTo,'G') || validStrKey(q.payTo,'C'), 'INVALID_RECIPIENT');
+  requireTruth(typeof q.amount === 'string' && AMOUNT.test(q.amount) &&
+    BigInt(q.amount) <= I128MAX, 'INVALID_ATOMIC_AMOUNT');
+  requireTruth(r === undefined || r === null || object(r), 'INVALID_NATIVE_RECEIPT');
+  if (r !== undefined && r !== null) {
+    requireTruth(typeof r.success === 'boolean' && r.network === q.network,
+      'RECEIPT_NETWORK_OR_STATUS_MISMATCH');
+    requireTruth(r.payer === undefined || r.payer === null || r.payer === payer, 'RECEIPT_PAYER_MISMATCH');
+    requireTruth(r.amount === undefined || r.amount === q.amount, 'RECEIPT_AMOUNT_MISMATCH');
+    requireTruth(r.errorReason === undefined || r.errorReason === null || typeof r.errorReason === 'string',
+      'INVALID_REPORTED_PAYMENT_ERROR');
+    requireTruth(r.errorMessage === undefined || r.errorMessage === null || typeof r.errorMessage === 'string',
+      'INVALID_REPORTED_PAYMENT_ERROR_MESSAGE');
+    requireTruth(r.truncatedFields === undefined || (Array.isArray(r.truncatedFields) &&
+      r.truncatedFields.length <= 32 && r.truncatedFields.every(value =>
+        typeof value === 'string' && value.length <= 128)), 'INVALID_REPORTED_TRUNCATION_MARKER');
+  }
+  const original = r?.transaction;
+  const hasOriginal = original !== undefined && original !== null && original !== '';
+  let transaction, transactionSource;
+  if (hasOriginal) {
+    requireTruth(typeof original === 'string' && /^[0-9a-f]{64}$/i.test(original), 'INVALID_TRANSACTION_HASH');
+    transaction=original.toLowerCase();
+    requireTruth(reference === undefined || reference === null ||
+      (typeof reference === 'string' && /^[0-9a-f]{64}$/i.test(reference) &&
+       reference.toLowerCase() === transaction), 'TRANSACTION_REFERENCE_MISMATCH');
+    transactionSource='ORIGINAL_RECEIPT';
+  } else {
+    requireTruth(typeof reference === 'string' && /^[0-9a-f]{64}$/i.test(reference), 'OPERATOR_TRANSACTION_REFERENCE_REQUIRED');
+    transaction=reference.toLowerCase(); transactionSource='OPERATOR_REFERENCE';
+  }
+  return {intentId, requirement:structuredClone(q), receipt:r == null ? null : structuredClone(r),
+    transaction, transactionSource};
+}
 function checkNativeTerms(record,payer,{allowPending}) {
   requireTruth(object(record), 'INVALID_NATIVE_RECEIPT_RECORD');
   const {intentId, requirement:q, receipt:r}=record;
@@ -119,3 +165,4 @@ function checkNativeTerms(record,payer,{allowPending}) {
   requireTruth(typeof r.transaction === 'string' && TX.test(r.transaction), 'INVALID_TRANSACTION_HASH');
   return {intentId, requirement:q, receipt:r};
 }
+

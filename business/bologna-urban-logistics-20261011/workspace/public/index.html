@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bologna · Logistics assessment</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to workspace</a>
+  <header class="app-header">
+    <div><p class="eyebrow">BOLOGNA · URBAN LOGISTICS</p><h1>Assessment workspace</h1></div>
+    <div class="header-actions"><span id="revision" class="chip">Loading</span><button id="reload" class="secondary" type="button">Refresh saved work</button></div>
+  </header>
+  <main class="workspace-layout">
+    <aside class="sidebar">
+      <p class="nav-caption">Evidence and delivery</p>
+      <nav id="tabs" aria-label="Assessment sections">
+        <button type="button" data-tab="baseline" class="active" aria-current="page"><span>01</span>Source baseline</button>
+        <button type="button" data-tab="decisions"><span>02</span>Evidence review</button>
+        <button type="button" data-tab="method"><span>03</span>Method and tools</button>
+        <button type="button" data-tab="scenarios"><span>04</span>Scenario assessment</button>
+        <button type="button" data-tab="streets"><span>05</span>Street frameworks</button>
+        <button type="button" data-tab="roadmap"><span>06</span>2030 roadmap</button>
+        <button type="button" data-tab="survey"><span>07</span>Stakeholder input</button>
+        <button type="button" data-tab="learning"><span>08</span>Learning and reports</button>
+        <button type="button" data-tab="publication"><span>09</span>Export and publication</button>
+      </nav>
+      <p class="sidebar-note"><a href="/interviews" style="color:inherit">Interviews and validation</a></p>
+      <p class="sidebar-note">One saved assessment.<br>Changes retain their revision and source references.</p>
+    </aside>
+    <div class="workspace-main">
+      <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+      <section id="content" aria-busy="true"><p class="empty-state">Opening the saved assessment…</p></section>
+    </div>
+  </main>
+  <script src="/delivery.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

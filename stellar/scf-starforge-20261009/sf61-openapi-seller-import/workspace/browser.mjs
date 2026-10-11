@@ -1,9 +1,11 @@
 import { createAuthenticationPanel, appendAuthenticationReview, renderCredentialRuntime } from './authentication-browser.mjs';
 import { createOperationSettings, createOperationPanel } from './operation-panel.mjs';
+import { createStreamSettings, isStreamFormat, merchantResponseLabel } from './stream-browser.mjs';
+import { createStreamCustomerPanel } from './stream-customer-browser.mjs';
 const $=id=>document.getElementById(id);
 const countLabel=(n,label)=>n+' '+label+(n===1?'':'s');
 const token=location.hash.slice(1);
-let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false;
+let specText='', inspection=null, routeFields=[], selectedPackage=null, busy=false, customerOpen=false;
 const notice=(message,error=false)=>{$('notice').textContent=message;$('notice').classList.toggle('error',error);};
 const make=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
 async function api(path,body) {
@@ -16,14 +18,15 @@ async function api(path,body) {
 function available() {
   $('preview').disabled=busy||!specText;
   $('save').disabled=busy||!specText;
-  $('start-preview').disabled=busy||!selectedPackage;
-  $('start-native').disabled=busy||!selectedPackage||!$('facilitator').value.trim();
+  $('start-preview').disabled=busy||!selectedPackage||customerOpen;
+  $('start-native').disabled=busy||!selectedPackage||customerOpen||!$('facilitator').value.trim();
 }
 function dirty() {
   selectedPackage=null;
   $('run-label').textContent='Save this configuration as a new package before starting it.';
   $('saved-path').hidden=true;
   $('review').replaceChildren();
+  customerPanel.clear();
   available();
 }
 async function act(work) {
@@ -51,6 +54,7 @@ function selectField(label,values,value) {
   for(const [key,text] of values){const o=make('option',text);o.value=String(key);input.append(o);}
   input.value=String(value??values[0]?.[0]??'');container.append(input);return {container,input};
 }
+const customerPanel=createStreamCustomerPanel({container:$('stream-customer-content'),make,field,selectField,api,act,notice});
 function drawRoutes(saved=[]) {
   const map=new Map(saved.map(v=>[v.method.toUpperCase()+' '+v.path,v]));
   $('routes').replaceChildren();routeFields=[];
@@ -76,9 +80,11 @@ function drawRoutes(saved=[]) {
       headers.append(make('span','Example: {"authorization":"MY_API_AUTH"}. Set the complete header value in that environment variable before launch.','hint'));
       const alternatives=(op.authentication??[]).map(value=>[value.index,(value.names.length?value.names.join(' + '):'No additional backend authentication')+(value.supported?'':' (setup unavailable)')]);
       const security=selectField('Backend security alternative',alternatives,previous?.securityAlternative??0);
-      const mode=selectField('Response format',[['json','JSON'],['bytes','Bytes']],previous?.responseMode??'json');
+      const formats=[['json','JSON'],['bytes','Bytes'],...(op.method==='HEAD'?[]:(op.responseStreams??[]).map(value=>[value.format,value.format.toUpperCase()+' stream']))];
+      const mode=selectField('Response format',formats,previous?.responseMode??'json');
       const validation=selectField('Response validation',[['declared','Match declared OpenAPI response'],['none','Transport limits only']],previous?previous.responseValidation??(previous.enforceResponseContract===true?'declared':'none'):'declared');
-      if(mode.input.value==='bytes')validation.input.value='none';
+      if(mode.input.value!=='json')validation.input.value='none';
+      const stream=createStreamSettings({make,field},previous);
       const request=make('label','Public request example'),requestInput=make('textarea');request.className='wide';
       requestInput.value=previous?.requestExample===undefined?'':JSON.stringify(previous.requestExample,null,2);requestInput.spellcheck=false;
       requestInput.placeholder=['POST','PUT','PATCH'].includes(op.method)?'{"pathParams":{},"query":{},"body":{}}':'{"pathParams":{},"query":{}}';
@@ -97,7 +103,8 @@ function drawRoutes(saved=[]) {
       const resetAfter=field('Initial recovery wait, milliseconds',previous?.availability?.resetAfterMs??30000,'number');
       const maxResetAfter=field('Maximum recovery wait, milliseconds',previous?.availability?.maxResetAfterMs??300000,'number');
       fields.append(headers,security.container,mode.container,validation.container,timeout.container,size.container,requestSize.container,capacity.container,
-        request,forwarded.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
+        stream.element,request,forwarded.container,guard.container,failureThreshold.container,resetAfter.container,maxResetAfter.container);
+      if(op.streamError) fields.append(make('p','Stream declaration: '+op.streamError,'hint wide'));
       advanced.append(summary,fields);settings.append(advanced);card.append(settings);
       const authentication=createAuthenticationPanel({operation:op,definitions:inspection.backendSecurity??[],previous,
         server:server.input,security:security.input,make,field,selectField});settings.append(authentication.element);
@@ -122,19 +129,22 @@ function drawRoutes(saved=[]) {
       const controls=[server.input,amount.input,description.input,requestInput,validation.input,headerInput,security.input,mode.input,timeout.input,size.input,requestSize.input,capacity.input,forwarded.input,guard.input];
       const guardControls=[failureThreshold.input,resetAfter.input,maxResetAfter.input];
       const toggle=()=>{
+        const streaming=isStreamFormat(mode.input.value);
         controls.forEach(c=>{c.disabled=!check.checked;});
         validation.input.disabled=!check.checked||mode.input.value!=='json';
+        size.container.hidden=streaming;
+        stream.setEnabled(check.checked,mode.input.value);
         guardControls.forEach(c=>{c.disabled=!check.checked||!guard.input.checked;});
         authentication.toggle(check.checked);
-        operation?.setEnabled(check.checked);
-        if(cache){cache.enabled.disabled=!check.checked;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked;});}
+        operation?.setEnabled(check.checked&&!streaming);
+        if(cache){cache.enabled.disabled=!check.checked||streaming;Object.values(cache.values).forEach(c=>{c.disabled=!check.checked||!cache.enabled.checked||streaming;});}
       };
       check.addEventListener('change',toggle);guard.input.addEventListener('change',toggle);
       mode.input.addEventListener('change',()=>{if(mode.input.value!=='json')validation.input.value='none';toggle();});
       cache?.enabled.addEventListener('change',toggle);toggle();
       routeFields.push({op,previous,check,server:server.input,amount:amount.input,description:description.input,request:requestInput,validation:validation.input,headers:headerInput,security:security.input,
         mode:mode.input,timeout:timeout.input,size:size.input,requestSize:requestSize.input,capacity:capacity.input,forwarded:forwarded.input,
-        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation});
+        guard:guard.input,failureThreshold:failureThreshold.input,resetAfter:resetAfter.input,maxResetAfter:maxResetAfter.input,cache,authentication,operation,stream});
     }
     $('routes').append(card);
   }
@@ -142,18 +152,19 @@ function drawRoutes(saved=[]) {
 }
 function planFromForm() {
   return {schema:'stellar-forge.api-merchant-plan.v1',sellerServer:$('seller-server').value.trim(),serviceName:$('service-name').value.trim(),
-    payment:{network:$('network').value.trim(),asset:$('asset').value.trim(),payTo:$('recipient').value.trim(),maxTimeoutSeconds:Number($('payment-timeout').value)},
+    payment:{network:$('network').value.trim(),asset:$('asset').value.trim(),payTo:$('recipient').value.trim(),maxTimeoutSeconds:Number($('payment-timeout').value),paymentFlow:$('payment-flow').value},
     allowLoopbackUpstream:$('allow-loopback').checked,
     operations:routeFields.filter(r=>r.check.checked).map(r=>({method:r.op.method,path:r.op.path,
       ...(r.previous?.id?{id:r.previous.id}:{}),serverIndex:Number(r.server.value),amountAtomic:r.amount.value.trim(),headerEnv:JSON.parse(r.headers.value),
       publicDescription:r.description.value.trim(),responseValidation:r.validation.value,
       ...(r.request.value.trim()?{requestExample:JSON.parse(r.request.value)}:{}),
       ...r.authentication.toPlan(),
-      ...(r.operation?.read()?{idempotency:r.operation.read()}:{}),
-      securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),maxResponseBytes:Number(r.size.value),maxRequestBytes:Number(r.requestSize.value),maxInFlight:Number(r.capacity.value),
+      ...(!isStreamFormat(r.mode.value)&&r.operation?.read()?{idempotency:r.operation.read()}:{}),
+      securityAlternative:Number(r.security.value),responseMode:r.mode.value,timeoutMs:Number(r.timeout.value),
+      ...(isStreamFormat(r.mode.value)?{stream:r.stream.read()}:{maxResponseBytes:Number(r.size.value)}),maxRequestBytes:Number(r.requestSize.value),maxInFlight:Number(r.capacity.value),
       requestHeaders:r.forwarded.value.split(',').map(v=>v.trim().toLowerCase()).filter(Boolean),
       ...(r.guard.checked?{availability:{failureThreshold:Number(r.failureThreshold.value),resetAfterMs:Number(r.resetAfter.value),maxResetAfterMs:Number(r.maxResetAfter.value)}}:{}),
-      ...(r.cache?.enabled.checked?{cache:{shareAcrossBuyers:true,...Object.fromEntries(Object.entries(r.cache.values).map(([name,input])=>[name,Number(input.value)])),
+      ...(!isStreamFormat(r.mode.value)&&r.cache?.enabled.checked?{cache:{shareAcrossBuyers:true,...Object.fromEntries(Object.entries(r.cache.values).map(([name,input])=>[name,Number(input.value)])),
         ...(r.previous?.cache?.maxSourceInFlight!==undefined?{maxSourceInFlight:r.previous.cache.maxSourceInFlight}:{})}}:{})}))};
 }
 function fillPlan(plan) {
@@ -163,6 +174,7 @@ function fillPlan(plan) {
   $('asset').value=plan?.payment?.asset??'';
   $('recipient').value=plan?.payment?.payTo??'';
   $('payment-timeout').value=plan?.payment?.maxTimeoutSeconds??60;
+  $('payment-flow').value=plan?.payment?.paymentFlow??'authorization';
   $('allow-loopback').checked=plan?.allowLoopbackUpstream===true;
   drawRoutes(plan?.operations??[]);
 }
@@ -180,7 +192,7 @@ function preview(value) {
     const row=make('tr');
     const cache=route.cache?`Shared for at most ${route.cache.ttlMs} ms · ${route.cache.maxEntries} entries · ${route.cache.maxBytes} bytes`:'Fresh backend request';
     for(const text of [route.method+' '+route.path,route.publicUrl,route.upstream,route.requestBody?route.requestBody.mediaType+' · '+(route.requestBody.required?'required':'optional')+' · '+route.maxRequestBytes+' bytes':'No body',route.amountAtomic+' / '+route.network,
-      route.responseValidation==='declared'?'Declared '+route.responseStatuses.join(', '):'Transport limits',cache])row.append(make('td',text));
+      merchantResponseLabel(route)+' · '+(route.paymentFlow??'authorization')+' payment',cache])row.append(make('td',text));
     rows.append(row);
   }
   table.append(rows);const wrap=make('div',undefined,'table-wrap');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Selected route terms');wrap.append(table);
@@ -191,10 +203,12 @@ function preview(value) {
     for(const route of value.routeChecks.filter(r=>r.state!=='READY'))$('review').append(make('p',route.method+' '+route.id+': '+(route.reason==='MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'?'select and retain an actual private file in the running operation form.':'add a public request example with its path, query and body values.'),'hint'));}
   appendAuthenticationReview($('review'),value.routes,{make});
 }
-function saved(name) {
+async function saved(name) {
   selectedPackage=name;$('run-label').textContent='Saved package: '+name;available();
+  await customerPanel.setPackage(name);
 }
 function runtime(value) {
+  customerOpen=Boolean(value.customer);customerPanel.renderRuntime(value.customer);available();
   renderCredentialRuntime($('credential-runtime'),value.credentials,{make});
   operationPanel.render(value);
   $('runtime').replaceChildren();$('cache-runtime').replaceChildren();$('stop').disabled=value.state!=='RUNNING';
@@ -242,7 +256,7 @@ async function refresh() {
       make('span',project.title+' · '+countLabel(project.routes,'route')));
     button.addEventListener('click',()=>act(async()=>{
       const loaded=await api('load?name='+encodeURIComponent(project.name));
-      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);saved(loaded.name);
+      await loadSource(loaded.specText,loaded.plan);preview(loaded.preview);await saved(loaded.name);
       $('package-name').value=loaded.name;
       notice('Reopened '+loaded.name+'. Save edits under a new package name.');
     }));$('packages').append(button);
@@ -260,6 +274,10 @@ $('example').addEventListener('click',()=>act(async()=>{
   const example=await api('example');await loadSource(example.specText,example.plan);
   notice('Example loaded with nonpayable demonstration terms. Configure your own API and payment destination for a real merchant.');
 }));
+$('stream-example').addEventListener('click',()=>act(async()=>{
+  const example=await api('stream-example');await loadSource(example.specText,example.plan);
+  notice('Finite stream example loaded. Run its local backend, then choose your merchant address and payment terms.');
+}));
 $('configuration').addEventListener('input',dirty);
 $('routes').addEventListener('input',dirty);
 $('preview').addEventListener('click',()=>act(async()=>{
@@ -267,7 +285,7 @@ $('preview').addEventListener('click',()=>act(async()=>{
 }));
 $('save').addEventListener('click',()=>act(async()=>{
   const result=await api('save',{specText,plan:planFromForm(),name:$('package-name').value.trim()});
-  preview(result.preview);saved(result.name);$('saved-path').textContent='Saved to '+result.folder+'\n\nStart from a shell:\n'+result.command;$('saved-path').hidden=false;
+  preview(result.preview);await saved(result.name);$('saved-path').textContent='Saved to '+result.folder+'\n\nStart from a shell:\n'+result.command;$('saved-path').hidden=false;
   await refresh();notice('Saved '+result.name+'. The compiled seller and private configuration are ready.');
 }));
 async function start(native) {

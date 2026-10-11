@@ -14,6 +14,11 @@ environment values, enroll orders or execute a payment. The generated runbook
 carries the remaining deployment steps through startup, observation, shutdown,
 upgrade and recovery.
 
+For the same original merchant in a Linux container, use the
+[container deployment guide](CONTAINERS.md). It covers immutable image and source
+selection, exact private bindings, Compose startup and drain, the existing Caddy
+boundary, and the original encrypted maintenance and recovery journal.
+
 ## API or data merchant
 
 Use the existing SF30 seller configuration, trusted application module or upstream
@@ -288,3 +293,4 @@ Service behavior uses the original
 [systemd unit](https://www.freedesktop.org/software/systemd/man/systemd.unit.html)
 and [service](https://www.freedesktop.org/software/systemd/man/systemd.service.html)
 contracts. No workflow or hosted Actions execution is part of this module.
+

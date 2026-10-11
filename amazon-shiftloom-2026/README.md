@@ -4,6 +4,19 @@
 
 ShiftLoom is a browser-hosted **simulated Alexa+ experience** that receives natural-language volunteer-shift requests, runs a transparent series of real local planning tools, proposes a full-coverage assignment, then waits for human approval before changing anything. The product is designed for neighborhood event organizers facing last-minute absences. All displayed people and schedules are invented.
 
+## Retained volunteer coverage workspace
+
+The [retained workspace](workspace/README.md) carries the original planning engine into a complete operating workflow: source-native Get Connected capture and CSV/JSON import, explicit coordinator mappings, persistent roster versions, exact candidate source review, named approval and undo, corrected-source reruns, complete handoffs and SQLite backup/reopen.
+
+Run its Python standard-library server with Node 22.16 or later available for the original planner:
+
+```sh
+cd workspace
+python3 -B app.py --db /absolute/private/path/coverage.sqlite --port 8802
+```
+
+The [operator guide](workspace/WORKFLOW.md), [actual source contract](workspace/SOURCE_CONTRACT.md), [API](workspace/API.md) and [worked input recipe](workspace/examples/recipe.json) travel with the application. The commands and narrative below continue to describe the original simulated Alexa demonstration.
+
 ## Run the complete application
 
 ```sh

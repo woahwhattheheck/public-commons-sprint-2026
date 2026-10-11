@@ -79,12 +79,13 @@ async function replacePrivate(path, value) {
 function validateVersion(value, id) {
   if (!plain(value) || value.schema !== SCHEMA || value.id !== id || !Number.isSafeInteger(value.revision) || value.revision < 1 ||
       value.inputDigest !== inputDigest(value.input) || !Array.isArray(value.exports) ||
-      value.deployments !== undefined && !Array.isArray(value.deployments)) fail('Saved project content is inconsistent.');
+      value.deployments !== undefined && !Array.isArray(value.deployments) ||
+      value.previews !== undefined && !Array.isArray(value.previews)) fail('Saved project content is inconsistent.');
   return value;
 }
 const summary = value => ({ id: value.id, title: value.input.title, revision: value.revision,
   updatedAt: value.updatedAt, inputDigest: value.inputDigest, exports: value.exports.length,
-  deployments: value.deployments?.length ?? 0 });
+  deployments: value.deployments?.length ?? 0, previews: value.previews?.length ?? 0 });
 
 async function acquireWriter(root) {
   if (process.platform !== 'linux') fail('This workspace requires Linux with util-linux flock.', 501);
@@ -114,6 +115,7 @@ export async function openWorkspaceStore(directory) {
   const packages = await privateDir(join(root, 'packages'), true);
   const deployments = await privateDir(join(root, 'deployments'), true);
   const releaseStores = await privateDir(join(root, 'release-stores'), true);
+  const previews = await privateDir(join(root, 'previews'), true);
   const writer = await acquireWriter(root);
   let busy = false, closed = false;
   async function read(id, revision) {
@@ -148,7 +150,7 @@ export async function openWorkspaceStore(directory) {
     busy = true;
     try { return await operation(); } finally { busy = false; }
   }
-  async function save({ id, input, expectedRevision = 0, exportRecord, deploymentRecord } = {}) {
+  async function save({ id, input, expectedRevision = 0, exportRecord, deploymentRecord, previewRecord } = {}) {
     return mutate(async () => {
       projectName(id);
       if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) fail('A current project revision is required.');
@@ -164,7 +166,7 @@ export async function openWorkspaceStore(directory) {
       const now = new Date().toISOString(), revision = expectedRevision + 1;
       let value = { schema: SCHEMA, id, revision, createdAt: previous?.createdAt ?? now,
         updatedAt: now, inputDigest: inputDigest(draft), input: draft, exports: previous?.exports ?? [],
-        deployments: previous?.deployments ?? [] };
+        deployments: previous?.deployments ?? [], previews: previous?.previews ?? [] };
       if (exportRecord) value.exports = [...value.exports, exportRecord];
       if (deploymentRecord) {
         const prior = value.deployments.find(item => item.id === deploymentRecord.id);
@@ -174,6 +176,13 @@ export async function openWorkspaceStore(directory) {
           fail('Deployment does not continue this project\'s retained package.', 409);
         value.deployments = [...value.deployments.filter(item => item.id !== deploymentRecord.id), deploymentRecord];
       }
+      if (previewRecord) {
+        if (previewRecord.project !== id || previewRecord.state !== 'COMPLETED')
+          fail('The completed preview belongs to another project.', 409);
+        const prior = value.previews.find(item => item.id === previewRecord.id);
+        if (prior && json(prior) !== json(previewRecord)) fail('The retained preview changed.', 409);
+        if (!prior) value.previews = [...value.previews, previewRecord];
+      }
       const path = join(folder, revision + '.json');
       // A process crash after a version write leaves an unreferenced immutable file.
       // Its exact bytes may be adopted; divergent content is never overwritten.
@@ -182,7 +191,8 @@ export async function openWorkspaceStore(directory) {
         if (error.code !== 'EEXIST') throw error;
         const orphan = validateVersion(await regular(path), id);
         if (orphan.revision !== revision || json(draftInput(orphan.input)) !== json(draft) ||
-            json(orphan.exports) !== json(value.exports) || json(orphan.deployments ?? []) !== json(value.deployments))
+            json(orphan.exports) !== json(value.exports) || json(orphan.deployments ?? []) !== json(value.deployments) ||
+            json(orphan.previews ?? []) !== json(value.previews))
           fail('An interrupted save retained a different next revision; save this draft as a new project.', 409);
         value = orphan;
       }
@@ -197,5 +207,5 @@ export async function openWorkspaceStore(directory) {
     // different inode while an existing writer still owns the previous one.
     await writer.close();
   }
-  return { root, packages, deployments, releaseStores, read, list, history, save, close };
+  return { root, packages, deployments, releaseStores, previews, read, list, history, save, close };
 }

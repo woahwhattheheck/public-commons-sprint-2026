@@ -90,9 +90,7 @@ async function dependencySame(dependency, limit) {
   const current = await fingerprint(dependency.path, limit);
   need(current.sha256 === dependency.sha256 && current.bytes === dependency.bytes, 'INBOX_DEPENDENCY_CHANGED_REVIEW_REQUIRED');
 }
-async function workspaceExecution(cfg, path) {
-  const {openWorkspace} = await import('./workspace.mjs');
-  const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
+function bindWorkspaceConfiguration(cfg, workspace) {
   const {op, owner, transport} = execution(cfg);
   const {op:workspaceOp, owner:workspaceOwner, transport:workspaceTransport} = execution(workspace.config);
   const signer = workspace.manifest.signer;
@@ -105,12 +103,30 @@ async function workspaceExecution(cfg, path) {
   need(JSON.stringify(transport) === JSON.stringify(workspaceTransport),
     'INBOX_WORKSPACE_TRANSPORT_MISMATCH');
   need(['scheme','network','asset','payTo'].every(key => op.expect[key] === workspaceOp.expect[key]) &&
-    ['network','asset','payTo'].every(key => op.expect[key] === signer[key]),
+    ['network','asset','payTo'].every(key => op.expect[key] === signer[key]) &&
+    (op.expect.paymentFlow ?? 'authorization') === (workspaceOp.expect.paymentFlow ?? 'authorization') &&
+    (op.expect.paymentFlow ?? 'authorization') === (signer.paymentFlow ?? 'authorization'),
     'INBOX_WORKSPACE_TERMS_MISMATCH');
   // Respect a lower current workspace cap as well as its generated signer cap.
   const maximum = BigInt(op.expect.maxAtomic);
   need(maximum > 0n && maximum <= BigInt(workspaceOp.expect.maxAtomic) &&
     maximum <= BigInt(signer.maxAtomic), 'INBOX_WORKSPACE_CAP_EXCEEDED');
+  return op;
+}
+/** Merge an explicitly selected request with original workspace settings, without keys or execution. */
+export async function workspaceConfiguration(path, {configuration} = {}) {
+  const {openWorkspace} = await import('./workspace.mjs');
+  const workspace = await openWorkspace(['--dir', rootPath(path)]);
+  need(configuration === undefined || object(configuration), 'INBOX_WORKSPACE_CONFIG_INVALID');
+  const cfg = configuration === undefined ? workspace.config : {...workspace.config, ...configuration};
+  bindWorkspaceConfiguration(cfg, workspace);
+  return {directory:workspace.manifest.directory, configuration:cfg};
+}
+/** Original selected keys and evidence RPC stay together through every native caller. */
+export async function workspaceExecution(cfg, path) {
+  const {openWorkspace} = await import('./workspace.mjs');
+  const workspace = await openWorkspace(['--dir', rootPath(path)], {execute:true});
+  const op = bindWorkspaceConfiguration(cfg, workspace);
   return {environment:workspace.operatorEnvironment,
     evidenceRpcEndpoint:selectStellarEvidenceEndpoint(op.expect.network,workspace.manifest.signer.rpcUrl)};
 }

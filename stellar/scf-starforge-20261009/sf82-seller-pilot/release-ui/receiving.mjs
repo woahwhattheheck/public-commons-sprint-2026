@@ -249,7 +249,7 @@ export function bindReceivingControls({ request, notice, isBusy, setBusy }) {
     if (isBusy() || operation || !reviewId) return;
     operation = true; buttons();
     try {
-      const blob = await request('/api/receiving/export?' + params({ releaseId: selectedRelease.id, bindingId, reviewId }), undefined, 'blob');
+      const blob = await request('/api/receiving/export?' + params({ releaseId: selectedRelease.id, bindingId, reviewId }), undefined, { blob: true });
       const url = URL.createObjectURL(blob), link = node('a'); link.href = url; link.download = 'release-receiving-' + reviewId + '.json'; link.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) { notice(error.message, true); }
