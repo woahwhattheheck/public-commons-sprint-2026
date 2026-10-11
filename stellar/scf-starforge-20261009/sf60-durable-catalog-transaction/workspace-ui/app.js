@@ -2,7 +2,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const pretty = value => JSON.stringify(value, null, 2);
-const pages = ['catalog', 'admit', 'withdraw', 'operations'];
+const pages = ['catalog', 'admit', 'batch', 'withdraw', 'operations'];
 let token = '', tab = 'catalog', status, page, offset = 0, cursors = [null], searchPage = 0;
 let filters = { query: '', network: '', type: '' }, chosen, reviewed, withdrawal, operationsOffset = 0;
 let catalogGeneration = 0, detailGeneration = 0, operationGeneration = 0, operationsTotal = 0;
@@ -164,14 +164,16 @@ function syncReviewButtons() {
   $('operations-next').disabled = operationsOffset + 20 >= operationsTotal;
   if (!reviewed) return;
   $('execute-operation').hidden = reviewed.phase !== 'prepared';
-  $('reconcile-operation').hidden = reviewed.phase === 'prepared' || !['admit', 'apply-withdrawal'].includes(reviewed.operation);
+  $('reconcile-operation').hidden = reviewed.phase === 'prepared' || !['admit', 'apply-withdrawal', 'apply-batch'].includes(reviewed.operation);
   $('inspect-operation').hidden = !['unknown', 'rejected', 'succeeded', 'sending'].includes(reviewed.phase);
 }
 function showReview(record) {
   reviewed = record;
-  CatalogRevisionUI.renderReview($('revision-comparison'), record.revisionReview);
-  CatalogRevisionUI.renderReconciliation($('reconciliation-panel'), record.reconciliation);
-  $('review-title').textContent = record.operation === 'admit' ? 'Offer admission / revision' : 'Signed withdrawal';
+  const batch = record.operation === 'apply-batch';
+  if (batch) CatalogBatchUI.renderReview($('revision-comparison'), record);
+  else CatalogRevisionUI.renderReview($('revision-comparison'), record.revisionReview);
+  renderReconciliation(record.reconciliation);
+  $('review-title').textContent = batch ? 'Signed catalog batch' : record.operation === 'admit' ? 'Offer admission / revision' : 'Signed withdrawal';
   $('review-phase').textContent = record.phase.toUpperCase();
   const explanations = {
     prepared: 'Compare the original declaration, seller, source, and sequence below. Submit sends this exact saved intent once to the original catalog operator. Signature verification has not yet been performed.',
@@ -180,9 +182,11 @@ function showReview(record) {
     rejected: 'The native request was rejected or failed before a complete send. Inspect the exact error and current catalog. This record will not be automatically retried.',
     unknown: 'The command may have reached the writer, but its outcome is not known. Inspect the current catalog and lifecycle history before preparing anything new. This record cannot be resubmitted.',
   };
+  if (batch) explanations.prepared = 'The original operator verified every included seller proof during preview. Review the ordered native changes below. Submit applies this exact saved batch once and rechecks proofs, expiry, catalog head, policy and plan.';
   $('review-explanation').textContent = explanations[record.phase] + (record.persistenceError ? ' WARNING: The latest outcome could not be saved to disk. Export this operation now.' : '');
   detailList($('review-summary'), [['Operation ID', record.id], ['Intent SHA-256', record.digest], ['Seller', record.summary.sellerId], ['Sequence', record.summary.sequence ?? record.summary.request?.sequence], ['Catalog key', record.summary.catalogKey], ['Original source SHA-256', record.summary.sourceSha256], ['Created', record.createdAt], ['Updated', record.updatedAt], ['Policy SHA-256', record.policySha256]]);
   $('review-input').textContent = pretty({ ...record.summary, ...(record.operation === 'apply-withdrawal' ? { envelope: record.input.envelope } : { proofs: record.input.proofs }) });
+  CatalogBatchUI.decorateRecord(record);
   $('result-section').hidden = record.phase === 'prepared';
   $('review-result').textContent = pretty({ phase: record.phase, result: record.result ?? null, error: record.error ?? null, persistenceError: record.persistenceError ?? null });
   $('operation-inspection').hidden = true; $('review-panel').hidden = false; syncReviewButtons();
@@ -196,9 +200,9 @@ async function loadOperations() {
   const rows = $('operation-rows'); rows.replaceChildren();
   for (const record of result.items) {
     const tr = el('tr'), created = el('td', new Date(record.createdAt).toLocaleString());
-    const type = el('td'); type.append(el('div', record.operation, 'title'), el('div', record.summary.sellerId || '', 'small'));
+    const type = el('td'); type.append(el('div', record.operation, 'title'), el('div', record.operation === 'apply-batch' ? `${record.summary.members} offers · ${record.summary.sellerCount} sellers` : record.summary.sellerId || '', 'small'));
     const state = el('td'); state.append(el('span', record.phase, 'badge'));
-    if (record.reconciliation) state.append(el('div', record.reconciliation === 'MATCHING_ORIGINAL_REVISION_PRESENT' ? 'Matching revision found' : 'No matching revision observed', 'small'));
+    if (record.reconciliation) state.append(el('div', CatalogBatchUI.reconciliationLabel(record.reconciliation), 'small'));
     const controls = el('td'), button = el('button', record.phase === 'prepared' ? 'Review' : 'Open', 'secondary');
     action(button, async () => showReview(await api('/api/operations/' + record.id))); controls.append(button);
     tr.append(created, type, state, controls); rows.append(tr);
@@ -276,13 +280,18 @@ action($('inspect-operation'), async () => {
   const id = reviewed.id;
   const result = await api('/api/operations/' + id + '/inspect');
   if (reviewed?.id !== id) return;
-  $('inspection-json').textContent = pretty(result); CatalogRevisionUI.renderReconciliation($('reconciliation-panel'), result.reconciliation); $('operation-inspection').hidden = false;
+  $('inspection-json').textContent = pretty(result); renderReconciliation(result.reconciliation); $('operation-inspection').hidden = false;
 });
 action($('export-operation'), () => { if (reviewed) download(`catalog-operation-${reviewed.id}.json`, reviewed); });
 action($('close-review'), () => { $('review-panel').hidden = true; });
 action($('refresh-operations'), loadOperations);
 action($('operations-prev'), async () => { operationsOffset = Math.max(0, operationsOffset - 20); await loadOperations(); });
 action($('operations-next'), async () => { operationsOffset += 20; await loadOperations(); });
+function renderReconciliation(value) {
+  if (value?.schema === 'stellar-forge.catalog-effect-recovery/v1') CatalogBatchUI.renderRecovery($('reconciliation-panel'), value);
+  else CatalogRevisionUI.renderReconciliation($('reconciliation-panel'), value);
+}
+CatalogBatchUI.connect({api, action, form, showReview, getRecord:()=>reviewed, detailList});
 (async () => {
   if (!/^[a-f0-9]{64}$/.test(token)) throw Error('WORKSPACE_SESSION_REQUIRED');
   await refreshStatus(); await loadCatalog();
