@@ -1,5 +1,5 @@
 // MIT. Publish licensed forecast editions through original SF30 file products.
-import { join, resolve } from 'node:path';
+import { join, resolve, relative, isAbsolute } from 'node:path';
 import { unlink } from 'node:fs/promises';
 import { inspectResponseAsset } from '../response-asset.mjs';
 import { createAssetBundle, exportAssetCatalog, verifyAssetBundle } from '../asset-cli.mjs';
@@ -140,17 +140,71 @@ export async function serveWeatherPackage({ directory, port = 0, nativeFactory =
   return { ...service, close, productSha256: bundle.product.sha256, expiresAt: edition.rawExpiresAt };
 }
 
-/** Remove only hash-verified owned package payloads; preserve its accounting metadata. */
+/** Persist the exact verified deletion plan before removing any owned response file. */
+export async function prepareWeatherPackagePurge(directory) {
+  directory = resolve(directory);
+  const planPath = join(directory, 'weather-purge-plan.json');
+  if (!await exists(planPath)) {
+    const bundle = await openWeatherPackage(directory), edition = bundle.product.payload.handover.payload.editions[0];
+    need(Date.now() >= Date.parse(edition.rawExpiresAt), 'WEATHER_RETENTION_ACTIVE');
+    const files = [], seen = new Set();
+    for (const route of bundle.config.routes) {
+      const item = bundle.product.payload.items.find(value => value.routeId === route.id);
+      const path = relative(directory, route.responseAsset.file);
+      need(path && !isAbsolute(path) && path !== '..' && !path.startsWith('../'), 'WEATHER_PURGE_PATH_INVALID');
+      if (!seen.has(path)) {
+        seen.add(path); files.push({ path, sha256: item.sha256, bytes: item.bytes, contentType: item.contentType });
+      }
+    }
+    const metadata = {};
+    for (const name of ['weather-product.json', 'catalog.json', 'manifest.json', 'seller.json'])
+      metadata[name] = digest(await readBytes(join(directory, name), 16777216));
+    const payload = { schema: 'stellar-forge.tomorrow-package-purge-plan.v1', productSha256: bundle.product.sha256,
+      expiredAt: edition.rawExpiresAt, preparedAt: new Date().toISOString(), metadata, files };
+    try { await writeJson(planPath, { payload, sha256: digest(jsonBytes(payload)) }, { exclusive: true }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+  }
+  const plan = await readJson(planPath, 1048576), p = plan?.payload;
+  need(p?.schema === 'stellar-forge.tomorrow-package-purge-plan.v1' && plan.sha256 === digest(jsonBytes(p)) &&
+    Array.isArray(p.files) && p.files.length > 0 && object(p.metadata), 'WEATHER_PURGE_PLAN_INVALID');
+  for (const name of ['weather-product.json', 'catalog.json', 'manifest.json', 'seller.json'])
+    need(p.metadata[name] === digest(await readBytes(join(directory, name), 16777216)), 'WEATHER_PURGE_METADATA_CHANGED');
+  const product = readWeatherProduct(await readBytes(join(directory, 'weather-product.json'), 16777216));
+  verifyWeatherCatalog(product, await readBytes(join(directory, 'catalog.json'), 1048576));
+  const config = await readSellerConfig(join(directory, 'seller.json')), edition = product.payload.handover.payload.editions[0];
+  need(p.productSha256 === product.sha256 && p.expiredAt === edition.rawExpiresAt &&
+    Date.now() >= Date.parse(p.expiredAt), 'WEATHER_RETENTION_ACTIVE');
+  const expected = new Map();
+  for (const route of config.routes) {
+    const item = product.payload.items.find(value => value.routeId === route.id);
+    need(item && new URL(route.path, config.publicOrigin).href === item.url, 'WEATHER_PACKAGE_ROUTE_CHANGED');
+    const path = relative(directory, route.responseAsset.file);
+    need(path && !isAbsolute(path) && path !== '..' && !path.startsWith('../'), 'WEATHER_PURGE_PATH_INVALID');
+    expected.set(path, { path, sha256: item.sha256, bytes: item.bytes, contentType: item.contentType });
+  }
+  need(expected.size === p.files.length && new Set(p.files.map(file => file.path)).size === p.files.length &&
+    p.files.every(file => expected.has(file.path) && same(expected.get(file.path), file)), 'WEATHER_PURGE_PLAN_CHANGED');
+  return plan;
+}
+
+/** Resume the retained plan after a crash, preserving source/catalog/accounting metadata. */
 export async function purgeExpiredWeatherPackage(directory) {
   directory = resolve(directory);
   const marker = join(directory, 'weather-expired.json');
   if (await exists(marker)) return readJson(marker);
-  const bundle = await openWeatherPackage(directory), edition = bundle.product.payload.handover.payload.editions[0];
-  need(Date.now() >= Date.parse(edition.rawExpiresAt), 'WEATHER_RETENTION_ACTIVE');
-  const files = [...new Set(bundle.config.routes.map(route => route.responseAsset.file))];
-  for (const file of files) await unlink(file);
-  const result = { schema: 'stellar-forge.tomorrow-expired-package.v1', productSha256: bundle.product.sha256,
-    expiredAt: edition.rawExpiresAt, removedAt: new Date().toISOString(), files: files.length };
-  await writeJson(marker, result, { exclusive: true });
-  return result;
+  const plan = await prepareWeatherPackagePurge(directory), files = plan.payload.files;
+  for (const file of files) {
+    const path = resolve(directory, file.path);
+    if (!await exists(path)) continue;
+    const actual = await inspectResponseAsset(path, file.contentType, 'expired-weather-response');
+    need(actual.sha256 === file.sha256 && actual.bytes === file.bytes, 'WEATHER_PURGE_PAYLOAD_CHANGED');
+    await unlink(path).catch(error => { if (error.code !== 'ENOENT') throw error; });
+  }
+  const result = { schema: 'stellar-forge.tomorrow-expired-package.v1', productSha256: plan.payload.productSha256,
+    planSha256: plan.sha256, expiredAt: plan.payload.expiredAt, removedAt: new Date().toISOString(), files: files.length };
+  try { await writeJson(marker, result, { exclusive: true }); }
+  catch (error) { if (error.code !== 'EEXIST') throw error; }
+  const saved = await readJson(marker);
+  need(saved.productSha256 === result.productSha256 && saved.planSha256 === plan.sha256, 'WEATHER_PURGE_RESULT_CHANGED');
+  return saved;
 }
