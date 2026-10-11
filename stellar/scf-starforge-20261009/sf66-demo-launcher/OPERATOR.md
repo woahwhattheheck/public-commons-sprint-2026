@@ -14,6 +14,11 @@ daily ceilings. Each individual request retains its selected original price.
 The original workspace currently binds one testnet asset and merchant recipient,
 so select purchases sharing those exact terms.
 
+For a private request downloaded from the original API merchant workspace, use
+[`requestFile` intake](COMMERCE_REQUESTS.md). It carries multipart files, fields,
+ordinary headers, operation tickets and optional body presence into this same
+session, with retained input inspection and download in the existing console.
+
 ## Inputs from the merchant and operator
 
 Use the same Node 22.16+ / Python 3.11+ installation as the

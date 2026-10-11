@@ -108,9 +108,15 @@ function validateDefinition(value, directory) {
   need(new URL(op.url).search === '', 'OBJECT_INITIAL_QUERY_MUST_BE_EMPTY');
   need(value.workspace === null || typeof value.workspace === 'string', 'OBJECT_WORKSPACE_INVALID');
   if (value.workspace !== null) absolute(value.workspace, 'OBJECT_ABSOLUTE_WORKSPACE_REQUIRED');
-  need(count(value.bytes) && count(value.chunkBytes) && count(value.chunkCount) && value.chunkCount <= MAX_CHUNKS &&
-    BigInt(value.chunkCount) === (BigInt(value.bytes) + BigInt(value.chunkBytes) - 1n) / BigInt(value.chunkBytes),
-  'OBJECT_BYTE_PLAN_INVALID');
+  // Sessions written before whole-file support keep their exact range plan.
+  const deliveryMode = value.deliveryMode === undefined ? 'chunks' : value.deliveryMode;
+  need(['chunks','whole'].includes(deliveryMode), 'OBJECT_DELIVERY_MODE_INVALID');
+  need(Number.isSafeInteger(value.bytes) && count(value.chunkBytes) && count(value.chunkCount) &&
+    (deliveryMode === 'whole'
+      ? value.bytes >= 0 && value.chunkCount === 1 && value.chunkBytes === Math.max(1,value.bytes)
+      : value.bytes > 0 && value.chunkCount <= MAX_CHUNKS &&
+        BigInt(value.chunkCount) === (BigInt(value.bytes) + BigInt(value.chunkBytes) - 1n) / BigInt(value.chunkBytes)),
+    'OBJECT_BYTE_PLAN_INVALID');
   need(typeof value.expectedSnapshot === 'string' && HASH.test(value.expectedSnapshot), 'OBJECT_EXPECTED_SNAPSHOT_REQUIRED');
   need(value.expectedSha256 === null || typeof value.expectedSha256 === 'string' && HASH.test(value.expectedSha256),
     'OBJECT_EXPECTED_SHA256_INVALID');
@@ -123,21 +129,26 @@ function validateDefinition(value, directory) {
     limits.plannedMaxAtomic === (BigInt(op.expect.maxAtomic) * BigInt(value.chunkCount)).toString() &&
     BigInt(limits.plannedMaxAtomic) <= BigInt(limits.maxTotalAtomic), 'OBJECT_TOTAL_BUDGET_INSUFFICIENT');
   validateSelection(value.selection, op.url);
-  return value;
+  return {...value,deliveryMode};
 }
 function chunkPlan(definition, index) {
+  const whole = definition.deliveryMode === 'whole';
   const offset = index * definition.chunkBytes;
   const length = Math.min(definition.chunkBytes, definition.bytes - offset);
   const id = indexName(index), intentId = `object:${definition.sessionId}:${id}`;
   const url = new URL(definition.config.operation.url);
-  url.searchParams.set('offset', String(offset));
-  url.searchParams.set('length', String(length));
+  if (!whole) {
+    url.searchParams.set('offset', String(offset));
+    url.searchParams.set('length', String(length));
+  }
   const configuration = structuredClone(definition.config);
   const {op} = execution(configuration);
   configuration.operation = {...op, intentId, url:url.href};
   configuration.captureBody = false;
   configuration.responseFile = {destination:join(definition.directory, 'chunks', id + '.bin'),
-    maxBytes:length, timeoutMs:30000};
+    maxBytes:Math.max(1,length), timeoutMs:30000,
+    ...(whole ? {expectedBytes:definition.bytes,
+      ...(definition.expectedSha256 === null ? {} : {expectedSha256:definition.expectedSha256})} : {})};
   return {index, offset, length, intentId, url:url.href, configuration,
     configPath:join(definition.directory, 'configs', id + '.json'),
     responsePath:configuration.responseFile.destination,
@@ -149,7 +160,8 @@ function baseReport(definition) {
     sourceIntentId:op.intentId, createdAt:definition.createdAt, inspectedAt:now(),
     configurationSha256:definition.configurationSha256, sourceUrl:op.url,
     queueRoot:join(definition.directory, 'inbox'), workspace:definition.workspace, selection:definition.selection,
-    bytes:definition.bytes, chunkBytes:definition.chunkBytes, chunkCount:definition.chunkCount,
+    deliveryMode:definition.deliveryMode, bytes:definition.bytes,
+    chunkBytes:definition.chunkBytes, chunkCount:definition.chunkCount,
     expectedSnapshot:definition.expectedSnapshot, expectedSha256:definition.expectedSha256,
     expectedContentType:definition.expectedContentType, snapshot:definition.expectedSnapshot,
     terms:{scheme:op.expect.scheme,network:op.expect.network,asset:op.expect.asset,payTo:op.expect.payTo},
@@ -157,7 +169,7 @@ function baseReport(definition) {
     status:'READY', attemptedChunks:0, completeChunks:0, completedChunks:0, assemblies:[], assembly:null,
     downloadedBytes:0, capAllocatedAtomic:'0', chunks:[], nextChunk:null, objectSha256:null,
     retry:'NO_AUTOMATIC_RETRY',
-    paymentAccounting:'Allocated caps are maximum authorizations, not charges. Each chunk retains the original SF36 reservation and SF52 outcome.'};
+    paymentAccounting:'Allocated caps are maximum authorizations, not charges. Each request retains the original SF36 reservation and SF52 outcome.'};
 }
 function chunkView(plan, job) {
   return {index:plan.index, offset:plan.offset, length:plan.length, intentId:plan.intentId,
@@ -184,7 +196,7 @@ async function streamChunk(path, length, expectedSha256, consume = null) {
     const info = await file.stat();
     need(info.isFile() && info.nlink === 1 && info.size === length && privateInfo(info), 'OBJECT_CHUNK_FILE_INVALID');
     const before = await file.stat({bigint:true}), hash = createHash('sha256');
-    const buffer = Buffer.allocUnsafe(Math.min(65536, length));
+    const buffer = Buffer.allocUnsafe(Math.max(1, Math.min(65536, length)));
     let bytes = 0;
     for (;;) {
       const {bytesRead} = await file.read(buffer, 0, buffer.length, null);
@@ -204,6 +216,7 @@ async function streamChunk(path, length, expectedSha256, consume = null) {
   } finally { await file.close(); }
 }
 async function nativeChunk(definition, plan, job, {hash, contentType, verifyBytes = true}) {
+  const whole = definition.deliveryMode === 'whole';
   bindJob(plan, job);
   need(job.attempt?.kind === 'EXECUTE', job.attempt?.kind === 'CANCELLED' ? 'OBJECT_CHUNK_CANCELLED' : 'OBJECT_NATIVE_ATTEMPT_REQUIRED');
   const summary = job.outcome;
@@ -211,7 +224,7 @@ async function nativeChunk(definition, plan, job, {hash, contentType, verifyByte
   // Only the original complete download summary can authenticate a saved chunk.
   need(object(summary), 'OBJECT_ORIGINAL_DOWNLOAD_SUMMARY_REQUIRED');
   need(summary.mode === 'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT' && summary.intentId === plan.intentId &&
-    summary.httpStatus === 206 && ['NO_PAYMENT_REQUIRED','DELIVERED_REPORTED_SETTLED'].includes(summary.status) &&
+    summary.httpStatus === (whole ? 200 : 206) && ['NO_PAYMENT_REQUIRED','DELIVERED_REPORTED_SETTLED'].includes(summary.status) &&
     summary.evidencePath === plan.evidencePath && !summary.error && !summary.evidenceError &&
     !summary.responseCleanupError && !job.lastError, 'OBJECT_ORIGINAL_RESULT_NOT_COMPLETE');
   const file = summary.responseFile;
@@ -221,7 +234,8 @@ async function nativeChunk(definition, plan, job, {hash, contentType, verifyByte
       !/[\x00-\x1f\x7f]/.test(file.contentType)), 'OBJECT_ORIGINAL_FILE_SUMMARY_INVALID');
   const metadata = file.objectMetadata;
   need(object(metadata), 'OBJECT_ORIGINAL_HEADERS_REQUIRED');
-  need(metadata.contentRange === `bytes ${plan.offset}-${plan.offset + plan.length - 1}/${definition.bytes}`,
+  if (whole) need(metadata.contentRange === null, 'OBJECT_WHOLE_CONTENT_RANGE_REFUSED');
+  else need(metadata.contentRange === `bytes ${plan.offset}-${plan.offset + plan.length - 1}/${definition.bytes}`,
     'OBJECT_CONTENT_RANGE_MISMATCH');
   need(metadata.totalBytes === String(definition.bytes), 'OBJECT_TOTAL_BYTES_MISMATCH');
   need(metadata.snapshot === definition.expectedSnapshot, 'OBJECT_SNAPSHOT_MISMATCH');
@@ -465,17 +479,22 @@ async function bareOperatorPreflight(configuration) {
   catch (error) { error.code ??= 'OBJECT_ORIGINAL_OPERATOR_PREFLIGHT_FAILED'; throw error; }
 }
 
-/** Prepare every fixed range and original inbox job without keys, HTTP or signing. */
+/** Prepare the selected whole response or fixed ranges in the original inbox. */
 export async function createObjectSession({directory,configPath,bytes,chunkBytes,expectedSnapshot,
-  expectedSha256 = null,expectedContentType = null,selection = null,workspace = null,maxTotalAtomic} = {}) {
+  expectedSha256 = null,expectedContentType = null,selection = null,workspace = null,maxTotalAtomic,
+  deliveryMode = 'chunks'} = {}) {
   absolute(directory);
   absolute(configPath, 'OBJECT_ABSOLUTE_CONFIG_REQUIRED');
   const source = await config(configPath);
   const {op} = execution(source);
-  need(count(bytes) && count(chunkBytes), 'OBJECT_BYTE_PLAN_INVALID');
-  const chunkCount = Number((BigInt(bytes) + BigInt(chunkBytes) - 1n) / BigInt(chunkBytes));
+  need(['chunks','whole'].includes(deliveryMode), 'OBJECT_DELIVERY_MODE_INVALID');
+  if (deliveryMode === 'whole') chunkBytes ??= Math.max(1,bytes);
+  need(Number.isSafeInteger(bytes) && (deliveryMode === 'whole' ? bytes >= 0 : bytes > 0) &&
+    count(chunkBytes), 'OBJECT_BYTE_PLAN_INVALID');
+  const chunkCount = deliveryMode === 'whole' ? 1 :
+    Number((BigInt(bytes) + BigInt(chunkBytes) - 1n) / BigInt(chunkBytes));
   const definition = validateDefinition({schema:SESSION,directory,sessionId:randomUUID(),createdAt:now(),
-    configurationSha256:sha(encoded(source)),config:source,bytes,chunkBytes,chunkCount,
+    configurationSha256:sha(encoded(source)),config:source,deliveryMode,bytes,chunkBytes,chunkCount,
     expectedSnapshot,expectedSha256,expectedContentType,selection,workspace,
     limits:{maxAtomic:op.expect.maxAtomic,maxTotalAtomic,
       plannedMaxAtomic:(BigInt(op.expect.maxAtomic) * BigInt(chunkCount)).toString()}}, directory);
@@ -565,6 +584,7 @@ export async function runObjectSession(directory, {signal,workspace,onChunk = ()
       // Previous chunks have already been hashed during this run. Keeping the
       // in-memory prefix avoids re-reading N completed files after every chunk.
       await onChunk(structuredClone({schema:REPORT,directory:report.directory,sessionId:report.sessionId,
+        deliveryMode:report.deliveryMode,
         status:report.status,completeChunks:report.completeChunks,completedChunks:report.completedChunks,
         attemptedChunks:report.attemptedChunks,chunkCount:report.chunkCount,bytes:report.bytes,
         downloadedBytes:report.downloadedBytes,capAllocatedAtomic:report.capAllocatedAtomic,
@@ -598,7 +618,7 @@ export async function recoverObjectSession(directory) {
   } finally { await release(); }
 }
 
-/** Read or finish original chunk reservations without reading product bytes.
+/** Read or finish original object reservations without reading product bytes.
  * Each call returns a bounded range. Existing inbox finalization files retain
  * complete native results; the caller continues from nextOffset when present. */
 export async function accountObjectSession(directory, {workspace,offset=0,limit=100,
@@ -650,11 +670,12 @@ export async function accountObjectSession(directory, {workspace,offset=0,limit=
     const next=offset+entries.length;
     return {schema:'stellar-forge.sf88.session-accounting.v1',kind:'object',directory,
       sessionId:definition.sessionId,configurationSha256:definition.configurationSha256,
+      deliveryMode:definition.deliveryMode,
       workspace:selectedWorkspace,mode:finalize?'FINALIZE':'VIEW',observedAt:now(),
       terms:execution(definition.config).op.expect,
       range:{offset,limit,total:definition.chunkCount,nextOffset:next<definition.chunkCount?next:null},
       entries,interrupted:signal?.aborted===true,
-      recordAuthority:'ORIGINAL_SF36_LEDGER; PER-CHUNK VIEWS ARE SAVED IN THE ORIGINAL INBOX'};
+      recordAuthority:'ORIGINAL_SF36_LEDGER; PER-REQUEST VIEWS ARE SAVED IN THE ORIGINAL INBOX'};
   } finally {if(release)await release();}
 }
 

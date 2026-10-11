@@ -40,7 +40,11 @@ export function validateConfig(input) {
   requireValue(new Set(signers.map(x => x.address)).size === signers.length &&
     new Set(signers.map(x => x.secretEnv)).size === signers.length, 'DUPLICATE_SIGNER');
   const feeBumpSigner = input.feeBumpSigner == null ? null : signer(input.feeBumpSigner);
-  fields(input.payments, ['assets','recipients','maxAtomic'], 'PAYMENT_POLICY_REQUIRED');
+  fields(input.payments, ['assets','recipients','maxAtomic','paymentFlows'], 'PAYMENT_POLICY_REQUIRED');
+  const paymentFlows = input.payments.paymentFlows === undefined ? ['authorization'] : input.payments.paymentFlows;
+  requireValue(Array.isArray(paymentFlows) && paymentFlows.length >= 1 && paymentFlows.length <= 2 &&
+    paymentFlows.every(flow => ['authorization','upfront'].includes(flow)) &&
+    new Set(paymentFlows).size === paymentFlows.length, 'PAYMENT_FLOWS_INVALID');
   const assets = addresses(input.payments.assets, 'C', 'ASSET_CONTRACTS_REQUIRED');
   const recipients = addresses(input.payments.recipients, 'GC', 'MERCHANT_RECIPIENTS_REQUIRED');
   const maxAtomic = input.payments.maxAtomic;
@@ -75,7 +79,7 @@ export function validateConfig(input) {
   integer(maxLedgerAgeSeconds, 5, 3600, 'LEDGER_MAX_AGE_INVALID');
   requireValue(op.requireReady === undefined || typeof op.requireReady === 'boolean', 'REQUIRE_READY_INVALID');
   return { schema:input.schema, network:input.network, rpcUrl:rpc.href, signers, feeBumpSigner,
-    payments:{assets,recipients,maxAtomic}, limits:{maxTransactionFeeStroops:limits.maxTransactionFeeStroops,
+    payments:{assets,recipients,maxAtomic,paymentFlows:[...paymentFlows]}, limits:{maxTransactionFeeStroops:limits.maxTransactionFeeStroops,
       inclusionFeeStroops,maxVerifyInFlight,maxSettleInFlight,drainGraceMs}, operations:{
       ownershipDirectory:ownershipDirectory === null ? null : resolve(ownershipDirectory),
       rpcTimeoutMs,readinessMaxAgeMs,maxLedgerAgeSeconds,requireReady:op.requireReady ?? false} };

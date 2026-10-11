@@ -15,10 +15,12 @@ import { prepareJsonrpcRelease } from '../../stellar/scf-starforge-20261009/sf82
 import { prepareSqliteRelease, sqliteSnapshotOptions } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-sqlite.mjs';
 import { readFleetReleasePlan } from '../../stellar/scf-starforge-20261009/merchant-fleet-gateway/release-operator.mjs';
 import { readReceivingConfiguration } from './receiving.mjs';
+import { readPythonWorkspaceConfiguration } from './python-workspace.mjs';
 import { normalizeAccountingConfig, readAccountingConfig } from './accounting.mjs';
 
 export const CONFIG_SCHEMA = 'stellar-forge.merchant-mcp.v1';
 export const SUPPORT_CONFIG_SCHEMA = 'stellar-forge.merchant-support-connection.v1';
+export const PUBLISHER_CONFIG_SCHEMA = 'stellar-forge.merchant-publisher-connection.v1';
 export const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export const failure = (code, message) => Object.assign(new Error(message), { code });
 export function exact(value, keys, required = []) {
@@ -88,6 +90,39 @@ export async function readSupportConfiguration(path) {
     handoffs: aliases('handoffs'), workspaces: aliases('workspaces'), profiles: aliases('profiles') };
 }
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
+/** Bind existing native workspaces without opening their database or scheduler. */
+export async function readPublisherConfiguration(path) {
+  path = resolve(path);
+  const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 65536)));
+  exact(raw, ['schema', 'workspaces'], ['schema', 'workspaces']);
+  if (raw.schema !== PUBLISHER_CONFIG_SCHEMA || !plain(raw.workspaces) ||
+      Object.keys(raw.workspaces).length < 1 || Object.keys(raw.workspaces).length > 32)
+    throw failure('CONFIGURATION_ERROR', 'Declare between 1 and 32 original publisher workspaces.');
+  const base = dirname(path), workspaces = Object.create(null), directories = new Set();
+  for (const [alias, input] of Object.entries(raw.workspaces)) {
+    identifier(alias, 'Publisher alias');
+    exact(input, ['label', 'kind', 'directory', 'seller', 'resource'], ['kind', 'directory']);
+    if (!['postgres', 'sqlite', 'mysql', 'sheets'].includes(input.kind))
+      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql or sheets.');
+    const directory = hostPath(input.directory, base), info = await lstat(directory);
+    if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077))
+      throw failure('CONFIGURATION_ERROR', 'Bind an existing private original publisher directory (0700).');
+    const canonical = await realpath(directory);
+    if (directories.has(canonical)) throw failure('CONFIGURATION_ERROR', 'Each publisher workspace must have one declared alias.');
+    directories.add(canonical);
+    const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(directory, 'workspace.json'), 4096)));
+    if (saved.schema !== 'stellar-forge.' + input.kind + '-publisher-workspace.v1')
+      throw failure('CONFIGURATION_ERROR', 'The declared kind must match the original retained publisher workspace.');
+    let buyer = {};
+    if (input.seller !== undefined || input.resource !== undefined) {
+      const { datasetBuyerEndpoint } = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/buyer-handoff.mjs');
+      buyer = datasetBuyerEndpoint(input.seller, input.resource);
+    }
+    workspaces[alias] = { label: line(input.label ?? alias, 'Publisher label'), kind: input.kind,
+      directory: canonical, ...buyer };
+  }
+  return { workspaces };
+}
 const parse = bytes => JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 export function pythonSourceView(python) {
   if (!python) return null;
@@ -275,7 +310,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -290,15 +325,19 @@ export async function readMerchantConfig(path) {
     support: raw.supportConnection === undefined ? null
       : await readSupportConfiguration(hostPath(raw.supportConnection, base)),
     receiving: raw.receivingConnection === undefined ? null
-      : await readReceivingConfiguration(hostPath(raw.receivingConnection, base)) };
+      : await readReceivingConfiguration(hostPath(raw.receivingConnection, base)),
+    pythonWorkspaces: raw.pythonWorkspaceConnection === undefined ? null
+      : await readPythonWorkspaceConfiguration(hostPath(raw.pythonWorkspaceConnection, base)),
+    publishers: raw.publisherConnection === undefined ? null
+      : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)) };
   await readReleaseState(config.releaseStore);
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.support || config.receiving) await privateSupportDirectory(config.exportsDirectory);
+  if (config.support || config.receiving || config.pythonWorkspaces) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support, receiving }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime = {}, catalog, fleetPlan, accounting, support, receiving, pythonWorkspaces }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, runtime }, process.cwd(), 'initial');
@@ -319,6 +358,8 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
   if (supportConnection) await readSupportConfiguration(supportConnection);
   const receivingConnection = receiving === undefined ? undefined : hostPath(receiving, process.cwd());
   if (receivingConnection) await readReceivingConfiguration(receivingConnection);
+  const pythonWorkspaceConnection = pythonWorkspaces === undefined ? undefined : hostPath(pythonWorkspaces, process.cwd());
+  if (pythonWorkspaceConnection) await readPythonWorkspaceConfiguration(pythonWorkspaceConnection);
   await mkdir(root, { mode: 0o700 });
   await initReleaseStore(join(root, 'releases'));
   await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
@@ -329,6 +370,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     ...(accountingConfig ? { accounting: accountingConfig } : {}),
     ...(supportConnection ? { supportConnection } : {}),
     ...(receivingConnection ? { receivingConnection } : {}),
+    ...(pythonWorkspaceConnection ? { pythonWorkspaceConnection } : {}),
     ...(planFile ? { fleet: { planFile, directory: './fleet' } } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
         ...(source.mysqlPackage ? { mysqlPackage: source.mysqlPackage }
@@ -343,7 +385,7 @@ export async function initializeMerchant({ directory, name = 'Starforge merchant
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
-    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection),
+    catalogConfigured: Boolean(catalogConnection), fleetConfigured: Boolean(planFile), accountingConfigured: Boolean(accountingConfig), supportConfigured: Boolean(supportConnection), receivingConfigured: Boolean(receivingConnection), pythonWorkspacesConfigured: Boolean(pythonWorkspaceConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
@@ -399,4 +441,38 @@ export async function initializeReceivingMerchant({ directory, receiving, name =
     exportsDirectory: './customer-exports', sources: {}, receivingConnection });
   await readMerchantConfig(configuration);
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', receivingConfigured: true };
+}
+
+/** Attach the same provider to existing saved Python authoring workspaces. */
+export async function initializePythonWorkspaceMerchant({ directory, pythonWorkspaces, name = 'Starforge Python authoring' }) {
+  const root = resolve(directory), pythonWorkspaceConnection = hostPath(pythonWorkspaces, process.cwd());
+  name = line(name, 'Merchant name');
+  const connection = await readPythonWorkspaceConfiguration(pythonWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, pythonWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED',
+    pythonWorkspaces: Object.keys(connection.workspaces), python: 'OPENED_ONLY_BY_EXPLICIT_TOOL' };
+}
+
+/** Configure the same MCP provider for retained data authoring and maintenance. */
+export async function initializePublisherMerchant({ directory, connection, name = 'Starforge data publisher' }) {
+  const root = resolve(directory);
+  name = line(name, 'Merchant publisher name');
+  const publisherConnection = hostPath(connection, process.cwd());
+  const publishers = await readPublisherConfiguration(publisherConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, publisherConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', publishersConfigured: true,
+    publishers: Object.entries(publishers.workspaces).map(([publisher, entry]) =>
+      ({ publisher, label: entry.label, kind: entry.kind, buyerConfigured: Boolean(entry.seller) })) };
 }

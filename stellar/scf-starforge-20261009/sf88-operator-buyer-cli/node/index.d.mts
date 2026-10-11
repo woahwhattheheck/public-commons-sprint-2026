@@ -21,6 +21,8 @@ export interface BuyerOptions {
   outputLimit?: number;
   /** Separate original dataset report budget; 32 MiB default, 1–256 MiB allowed. */
   datasetReportLimit?: number;
+  /** Separate inbox snapshot/report result budget; 32 MiB default, 1–256 MiB allowed. */
+  inboxReportLimit?: number;
 }
 export interface NativeRequest {
   intentId: string;
@@ -89,6 +91,13 @@ export interface ImportOptions {
   /** Reviewed merchant HTTP deadline; independent of the native subprocess deadline. */
   requestTimeoutMs?: number;
 }
+export interface WorkspaceImportOptions extends Omit<ImportOptions, 'operatorProfile'> {
+  /** Optional explicit native request/config merged with the workspace by its original binding. */
+  configuration?: string | JsonObject;
+  /** Explicit new intent for the selected request; never inferred during recovery. */
+  intentId?: string;
+  signal?: AbortSignal;
+}
 export interface Review {
   readonly intentId: string;
   readonly configSha256: string;
@@ -96,10 +105,15 @@ export interface Review {
   readonly ticketSha256: string | null;
   readonly reviewedAt: string;
   readonly native: JsonObject;
+  /** Original workspace chosen at preparation; its keys are not in application metadata. */
+  readonly nativeWorkspace?: string;
 }
 export interface OperationStatus {
   intentId: string; directory: string; state: string;
   resultRecoverable: boolean; nativeStatus: unknown; deliveryStatus: string | null;
+  /** Present after this prepared operation is assigned to an original inbox. */
+  inboxDirectory?: string;
+  nativeWorkspace?: string;
   retry: 'NO_AUTOMATIC_RETRY';
 }
 export interface NativeSummary extends JsonObject {
@@ -141,8 +155,14 @@ export class Buyer {
   ready(): Promise<this>;
   /** Recovery of the original operator plus this existing application state. */
   workspaceRecovery(): WorkspaceRecovery;
+  /** Reopen an existing original SF88 inbox without creating a second store. */
+  inbox(directory: string): Inbox;
+  createInbox(options: { directory: string; signal?: AbortSignal }): Promise<Inbox>;
+  inspectOperationHandoff(file: string, options?: { accept?: number; signal?: AbortSignal }): Promise<OperationHandoffView>;
   operation(intentId: string): Operation;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
+  /** Adopt original operator configuration; keys are loaded only by its native child. */
+  fromWorkspace(directory: string, options?: WorkspaceImportOptions): Promise<Operation>;
   fromOperationHandoff(file: string, options: {
     accept: number; operatorProfile?: OperatorProfile | string; signal?: AbortSignal;
     responseFile?: ResponseCaptureOptions;
@@ -201,6 +221,108 @@ export abstract class VerifiedFile {
   csvRows(options: { headers: true; maxFieldCharacters?: number; signal?: AbortSignal }): AsyncIterable<Record<string, string>>;
   csvRows(options?: { headers?: false; maxFieldCharacters?: number; signal?: AbortSignal }): AsyncIterable<string[]>;
   saveAs(destination: string, options?: { signal?: AbortSignal }): Promise<string>;
+}
+
+export interface OperationHandoffView extends JsonObject {
+  handoffPath: string;
+  handoffSha256: string;
+  handoffBytes: number;
+  intentId: string;
+  sellerUrl: string;
+  method: string;
+  bodyPresent: boolean;
+  bodyBytes: number;
+  bodySha256: string;
+  acceptIndex: number | null;
+  acceptedTerms: NativeRequest['expect'] | null;
+  choices: Array<{ acceptIndex: number; acceptedTerms?: NativeRequest['expect']; error?: string }>;
+  /** Native redacted ticket metadata, never its bearer value. */
+  operationTicket: JsonObject | null;
+}
+export interface InboxJob extends JsonObject {
+  schema: 'stellar-forge.sf88.buyer-inbox.v1';
+  id: string;
+  state: string;
+  operation: JsonObject & { intentId: string };
+  /** Unreadable native list rows may contain only an ID and error. */
+  configSha256?: string;
+  sourceConfigSha256?: string;
+  bodyBytes?: number;
+  bodySha256?: string | null;
+  responseDestination?: string | null;
+  operationTicket?: JsonObject | null;
+  attempt?: JsonObject | null;
+  outcome?: NativeSummary | null;
+  lastError?: JsonObject | null;
+  recovery?: JsonObject | null;
+  finalization?: JsonObject | null;
+  retry: 'NO_AUTOMATIC_RETRY';
+}
+export interface InboxReview {
+  readonly root: string;
+  readonly intentId: string;
+  readonly configSha256: string;
+  readonly bodySha256: string | null;
+  readonly ticketSha256: string | null;
+  readonly reviewedAt: string;
+  readonly native: JsonObject;
+}
+export class InboxResult<T = JsonObject> {
+  readonly native: T;
+  /** Outcome of this command, separate from the historical buyer attempt. */
+  readonly process: {
+    readonly exitCode: number | null;
+    readonly exitSignal: string | null;
+    readonly errorCode: string | null;
+  };
+  /** Failed/uncertain logs remain private here; also set if successful temporary cleanup failed. */
+  readonly commandDirectory: string | null;
+}
+export class InboxError extends BuyerError {
+  readonly result: InboxResult<JsonObject | null>;
+  readonly inboxDirectory?: string;
+  readonly intentId?: string;
+  constructor(code: string, result: InboxResult<JsonObject | null>, details?: Record<string, unknown>);
+}
+export class Inbox {
+  readonly directory: string;
+  constructor(buyer: Buyer, directory: string);
+  list(options?: {signal?: AbortSignal}): Promise<InboxResult<{
+    schema: 'stellar-forge.sf88.buyer-inbox.v1'; root: string; jobs: InboxJob[];
+  }>>;
+  show(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxJob>>;
+  /** Assign a prepared Node operation once; repeat only the identical inbox intake. */
+  enqueue(operation: Operation, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxJob>>;
+  /** Import a separately prepared original native config, retaining its output/operator paths. */
+  enqueueConfig(configFile: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxJob>>;
+  review(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxReview>;
+  execute(intentId: string, options: {
+    review: InboxReview; workspaceDirectory?: string; signal?: AbortSignal;
+  }): Promise<InboxResult<InboxJob>>;
+  /** Cancels an unattempted intent; cannot cancel or undo a recorded purchase. */
+  cancel(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxJob>>;
+  /** Read and reduce original saved evidence; never repeat buyer execution. */
+  recover(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResult<InboxJob>>;
+  finalize(intentId: string, options: {
+    workspaceDirectory: string; outboxDirectory?: string; merchantRoute?: string; signal?: AbortSignal;
+  }): Promise<InboxResult<InboxJob>>;
+  exportReport(destination: string, options?: {
+    workspaceDirectory?: string; signal?: AbortSignal;
+  }): Promise<InboxResult<{path: string; bytes: number; sha256: string}>>;
+  /** Original terminal summary + configured saved response; null if no response record exists. */
+  response(intentId: string, options?: {signal?: AbortSignal}): Promise<InboxResponse | null>;
+}
+/** Verified original bytes and native facts, without a fabricated historical process verdict. */
+export class InboxResponse extends VerifiedFile {
+  readonly job: InboxJob;
+  readonly native: NativeSummary;
+  readonly status: unknown;
+  readonly delivery: {status: string; [key: string]: unknown};
+  readonly stream: BuyerStreamSummary | null;
+  constructor(job: InboxJob, responseFile: ResponseCaptureOptions & {destination: string; maxBytes: number},
+    runtimeDirectory: string);
+  events(options?: StreamReadOptions): AsyncIterable<BuyerStreamEvent>;
+  ndjson<T = unknown>(options?: StreamReadOptions): AsyncIterable<T>;
 }
 
 export type DatasetScalar = string | number | boolean | null;

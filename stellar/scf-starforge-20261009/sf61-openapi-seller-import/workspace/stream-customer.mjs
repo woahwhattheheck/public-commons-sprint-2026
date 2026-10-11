@@ -172,7 +172,10 @@ export async function prepareMerchantStreamCustomer(project,name,expectedSha256,
   if(customer.configSha256!==expectedSha256) fail('Select the exact reviewed customer configuration');
   if(customer.state==='PREPARED') return customer;
   const fresh=await reviewCommerceSetup(customer);
-  if(!same(fresh.source,customer.reviewedSource)||!same(fresh.summary,customer.review))
+  // Compare the same persisted JSON representation. Native optional fields can
+  // be undefined, and some projections use objects without a prototype.
+  if(!same(JSON.parse(json(fresh.source)),customer.reviewedSource)||
+    !same(JSON.parse(json(fresh.summary)),customer.review))
     fail('Customer inputs changed after review; save and review a new customer configuration');
   await prepareCommerceSetup(customer,{environment,resume:true});
   return readMerchantStreamCustomer(project,name);
