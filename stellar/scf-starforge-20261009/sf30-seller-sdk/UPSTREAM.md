@@ -229,7 +229,14 @@ the same session's state through the existing private operations dashboard.
 Omitting the option preserves current binding behavior. No probes or automatic
 request retries are introduced.
 
-There is one backend invocation and **no automatic redirect or retry** per
+For merchant-owned POST operations that need persistent duplicate protection,
+the existing launcher supports [durable operation tickets and response replay](./IDEMPOTENCY.md).
+Its original transport binds the exact request, claims it in private SQLite,
+forwards one stable backend idempotency key, and preserves completed or uncertain
+outcomes across restarts. Explicit recovery never initiates another payment or
+backend call. Existing SF89 input validation composes with the ticket admission.
+
+There is at most one backend invocation and **no automatic redirect or retry** per
 handler call. Timeouts include connection and body handling. Shared per-binding
 capacity limits return a failure rather than unbounded parallel backend work.
 Malformed, truncated, oversized, unsupported or failed responses return the
@@ -242,9 +249,11 @@ fails. This adapter cannot undo that work, promise a refund for every native
 settlement flow, or prevent a buyer making a second separate request. Use GET,
 HEAD or read-only/stateless POST queries first. A mutating backend needs its
 own authenticated idempotency/business-transaction design; do not rely on
-HTTP payment verification as a rollback mechanism. The original application
-context has no abort signal, so an upstream call may continue until its own
-deadline after the buyer disconnects.
+HTTP payment verification as a rollback mechanism. The shared upstream transport
+consumes the application's optional `context.signal`; when the original handler
+lifecycle supplies it, cancellation closes the backend socket and response
+streams. A disconnected or timed-out POST can still have committed upstream, so
+the durable adapter preserves uncertainty until the merchant reconciles it.
 
 ## Programmatic composition and focused execution
 

@@ -7,6 +7,7 @@ import { isPublicAddress } from '../sf31-buyer-client/public-transport.mjs';
 import { createUpstreamHandler } from './upstream-handler.mjs';
 import { compileAvailabilityPolicy, protectUpstream } from './upstream-readiness.mjs';
 import { compileResponseContract } from './response-contract.mjs';
+import { compileUpstreamIdempotency, configuredUpstreamIdempotency } from './upstream-idempotency-config.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -14,7 +15,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract','idempotency']);
 const bad = text => { throw new TypeError(text); };
 
 function integer(value,fallback,max,name) {
@@ -86,6 +87,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       Object.keys(config).some(k => !['schema','bindings'].includes(k)) ||
       Object.keys(config.bindings).length < 1 || Object.keys(config.bindings).length > 64 || env === null || typeof env !== 'object' || Array.isArray(env)) bad('Expected seller-upstreams.v1 with 1–64 bindings');
   const compiled = Object.create(null);
+  const operationDirectories = new Set(), admissionNames = new Set();
   for (const [name,raw] of Object.entries(config.bindings)) {
     if (!/^[A-Za-z_$][\w$]{0,127}$/.test(name) || ['__proto__','prototype','constructor'].includes(name) || !plain(raw) ||
         Object.keys(raw).some(k => !bindingKeys.has(k))) bad('Invalid upstream binding');
@@ -107,13 +109,20 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     if (!['GET','HEAD','POST'].includes(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
     const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
+    const maxResponseBytes = integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes');
+    const idempotency = compileUpstreamIdempotency(raw.idempotency,{env,method,maxResponseBytes,requestHeaders,credentials});
+    if (idempotency) {
+      if (OWN(config.bindings,idempotency.admission) || admissionNames.has(idempotency.admission) ||
+          operationDirectories.has(idempotency.stateDir)) bad('Idempotency admission names and state directories must be distinct');
+      admissionNames.add(idempotency.admission); operationDirectories.add(idempotency.stateDir);
+    }
     compiled[name] = Object.freeze({origin:url.origin,hostname:url.hostname,local:url.protocol === 'http:',
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
-      credentials:Object.freeze(credentials),responseMode,
+      credentials:Object.freeze(credentials),responseMode,...(idempotency ? {idempotency} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
-      maxResponseBytes:integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes'),
+      maxResponseBytes,
       maxInFlight:integer(raw.maxInFlight,16,256,'maxInFlight'),
       availability:compileAvailabilityPolicy(raw.availability)});
   }
@@ -126,10 +135,15 @@ export function validateUpstreamService(config,compiled) {
   const used = new Set();
   for (const route of config.routes) {
     if (!plain(route)) bad('Seller route must be an object');
-    if (OWN(route,'admit')) bad('Custom admission functions use original serve.mjs with createUpstreamHandlers');
-    if (!OWN(route,'handler')) continue;
+    if (!OWN(route,'handler')) {
+      if (OWN(route,'admit')) bad('Custom admission requires an upstream handler binding');
+      continue;
+    }
     if (!OWN(compiled,route.handler)) bad(`Upstream binding missing for handler: ${route.handler}`);
     const bound = compiled[route.handler];
+    if (bound.idempotency ? route.admit !== bound.idempotency.admission : OWN(route,'admit')) {
+      bad(`Use the configured idempotency admission for handler: ${route.handler}`);
+    }
     const method = route.definition?.method ?? route.offer?.extensions?.bazaar?.info?.input?.method;
     if (method !== bound.method) bad(`Seller/upstream method mismatch for handler: ${route.handler}`);
     const serviceKeys = new Set(String(route.path).split('/').filter(s => s.startsWith(':')).map(s => s.slice(1)));
@@ -166,9 +180,11 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
       timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,
+      ...(binding.idempotency ? {idempotency:configuredUpstreamIdempotency(binding.idempotency)} : {}),
       allowLocal:binding.local,...(binding.local ? {} : {lookup:publicLookup(binding,lookup)})});
     handlers[name] = binding.availability ? protectUpstream(handler,binding.availability,
       {maxInFlight:binding.maxInFlight}) : handler;
+    if (binding.idempotency) handlers[binding.idempotency.admission] = handlers[name].admit;
   }
   return Object.freeze(handlers);
 }
