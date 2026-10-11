@@ -26,6 +26,12 @@ test('SF63 local exact byte copy, manifest-last integrity, collision and no-foll
     await assert.rejects(()=>createSnapshot(original,backup,replay),{code:'EEXIST'});
     assert.equal((await restoreSnapshot(backup,restore,replay)).decision,'RESTORED_AND_VERIFIED');
     assert.deepEqual(await readFile(join(restore,'catalog-commits.json')),valid);
+    const staleTarget=join(root,'stale-target'),currentTarget=join(root,'current-target');
+    await assert.rejects(()=>restoreSnapshot(backup,staleTarget,replay,'bad-head'),/RESTORE_EXPECTED_HEAD_INVALID/);
+    await assert.rejects(()=>restoreSnapshot(backup,staleTarget,replay,'a'.repeat(64)),/RESTORE_HEAD_MISMATCH/);
+    await assert.rejects(()=>readFile(join(staleTarget,'catalog-commits.json')),{code:'ENOENT'});
+    assert.equal((await restoreSnapshot(backup,currentTarget,replay,created.head)).head,created.head);
+    assert.deepEqual(await readFile(join(currentTarget,'catalog-commits.json')),valid);
     await assert.rejects(()=>restoreSnapshot(backup,restore,replay),{code:'EEXIST'});
     // A manifest update cannot override a real chain corruption in the journal.
     const bad=Buffer.from(JSON.stringify({schema,records:[],head:'a'.repeat(64)}));
