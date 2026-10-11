@@ -36,6 +36,11 @@ export function validateQuery(entity,input,{kind='list',requireFilter=false}={})
       query[key]=String(integer(Number(s),1,key==='per_page'?100:10000,key));
     }else query[key]=text(value,key,key==='id'?100:key==='cursor'?3000:3500);
   }
+  if(query.select){
+    const selectedFields=query.select.split(',');
+    if(selectedFields.some(k=>!/^[a-z][a-z0-9_]*$/.test(k)))fail('select accepts comma-separated top-level field names.');
+    if(!selectedFields.includes('id'))fail('Include id in select so each received record retains its OpenAlex identity.');
+  }
   if(kind==='entity'){
     const id=entityId(entity,query.id);delete query.id;return {query,id,estimatedCredits:0};
   }
@@ -46,7 +51,6 @@ export function validateQuery(entity,input,{kind='list',requireFilter=false}={})
   if(query.group_by&&query.select)fail('select is unavailable with group_by.');
   if(query.corpus&&!['core','all'].includes(query.corpus))fail('Choose the core or all corpus.');
   if(requireFilter&&!query.filter&&!SEARCH_PARAMETERS.some(k=>query[k]))fail('Choose a research filter or search before requesting this product.');
-  if(query.select&&query.select.split(',').some(k=>!/^[a-z][a-z0-9_]*$/.test(k)))fail('select accepts comma-separated top-level field names.');
   if(entity!=='works'&&SEARCH_PARAMETERS.some(k=>k!=='search'&&query[k]))fail('Scoped search parameters apply to works.');
   const searched=SEARCH_PARAMETERS.some(k=>query[k])||/(?:^|,)[^,:]*\.search(?:\.exact)?:/.test(query.filter??'');
   return {query,id:null,estimatedCredits:searched?10:1};
@@ -74,7 +78,7 @@ export function compileOpenAlexMerchant(input){
   integer(config.budget.creditsPerDay,1,100000000,'daily credit limit');
   integer(config.budget.requestsPerSecond,1,100,'requests per second');
   config.timeoutMs=integer(config.timeoutMs??30000,1000,120000,'source timeout');
-  config.maxResponseBytes=integer(config.maxResponseBytes??16777216,1024,67108864,'response byte limit');
+  config.maxResponseBytes=integer(config.maxResponseBytes??16777216,1024,16777216,'response byte limit');
   if(!Array.isArray(config.products)||!config.products.length||config.products.length>32)fail('Configure 1–32 research products.');
   const ids=new Set(),paths=new Set(),products=[],routes=[];
   for(const p of config.products){
