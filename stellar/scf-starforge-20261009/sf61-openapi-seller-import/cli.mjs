@@ -8,6 +8,9 @@ import { parseOpenApiSource } from './source-document.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
 
 export async function run(args = process.argv.slice(2)) {
+  if (args[0] === 'refresh') return (await import('./refresh-cli.mjs')).run(args.slice(1));
+  if (args[0] === 'source')
+    return (await import('./source-bundle-cli.mjs')).runSourceBundleCLI(args.slice(1));
   const options = new Map();
   for (let i = 0; i < args.length; i += 2) {
     if (!['--spec', '--config', '--out', '--service-bindings', '--upstream-bindings'].includes(args[i]) || !args[i + 1] || args[i + 1].startsWith('--') || options.has(args[i]))

@@ -10,6 +10,7 @@ import {MANIFEST_SCHEMA, previewRunbook, initializeRunbook, runbookPlanDigest,
   finalizeRunbook,bindRunbookWorkspace} from './runbook.mjs';
 import {renderReport,renderAccountingCSV} from './report.mjs';
 import {openHandoffIntake} from './handoff-intake.mjs';
+import {openPaidFileIntake} from './paid-file-intake.mjs';
 import {createRunbookRecovery,verifyRunbookRecovery} from './recovery.mjs';
 
 const SCHEMA = 'stellar-forge.buyer-runbook-workspace.v1';
@@ -65,7 +66,8 @@ async function terminalAvailable() {
   finally { await terminal?.close(); }
 }
 
-export async function openRunbookWorkspace({directory, configsDirectory, operatorSettings, runs = []} = {}) {
+export async function openRunbookWorkspace({directory, configsDirectory, operatorSettings, paidFileClaimEnvs,
+  runs = []} = {}) {
   directory = await privateDirectory(directory, true);
   for (const name of ['drafts', 'runs', 'imports']) await privateDirectory(join(directory, name), true);
   let meta;
@@ -80,7 +82,18 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   check(meta.schema === SCHEMA && meta.directory === directory, 'WORKSPACE_IDENTITY_MISMATCH');
   configsDirectory = await privateDirectory(configsDirectory ?? meta.configsDirectory);
   check(meta.configsDirectory === configsDirectory, 'WORKSPACE_CONFIG_DIRECTORY_MISMATCH');
-  const intake = await openHandoffIntake({directory:join(directory,'handoffs'), configsDirectory, operatorSettings});
+  const requestIntake = await openHandoffIntake({directory:join(directory,'handoffs'), configsDirectory, operatorSettings});
+  const settingsFile = (await requestIntake.state()).settingsFile;
+  const paidFiles = await openPaidFileIntake({directory:join(directory,'handoffs','paid-files'), configsDirectory,
+    settingsFile:async()=>settingsFile, claimEnvs:paidFileClaimEnvs});
+  // The original recovery collector and executor use one combined receiving
+  // interface. Every native operator stays under its existing retained source.
+  const intake = {...requestIntake,
+    async state() { const [requests,files]=await Promise.all([requestIntake.state(),paidFiles.state()]);
+      return {...requests,requests:[...requests.requests,...files.requests],errors:[...requests.errors,...files.errors]}; },
+    environmentForOperation:row=>paidFiles.ownsOperation(row)?paidFiles.environmentForOperation(row):requestIntake.environmentForOperation(row),
+    workspaceForOperation:row=>paidFiles.ownsOperation(row)?paidFiles.workspaceForOperation(row):requestIntake.workspaceForOperation(row),
+  };
   let active = null, task = null, recoveryActive=null,recoveryTask=null,closing = false, sequence = Promise.resolve();
   const recovery=createRunbookRecovery({directory,configsDirectory,state:list,resolveRun,intake});
   const serial = action => {
@@ -225,6 +238,10 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   }
   async function getRun(id) {
     const state = await inspectRunbook(await resolveRun(id));
+    for(const row of state.operations)if(paidFiles.ownsOperation(row)) {
+      try { row.paidFile=await paidFiles.view(row,state.plan.directory); }
+      catch(error) { row.paidFile={error:codeOf(error)}; }
+    }
     return {id, state, active:active?.runId === id ? {...active, events:[...active.events]} : null,
       terminalAvailable:await terminalAvailable()};
   }
@@ -247,7 +264,8 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     }
     drafts.sort((a,b) => b.savedAt.localeCompare(a.savedAt));
     return {directory, configsDirectory, drafts, acquisitions, errors, active,
-      terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await intake.state(),
+      terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await requestIntake.state(),
+      paidFiles:await paidFiles.state(),
       recovery:{active:recoveryActive,history:await recovery.history()}};
   }
   async function launch({id, only},kind='BUYER') {
@@ -271,10 +289,47 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     current.cancel = () => { current.cancelRequested = true; current.status = 'CANCELLING'; controller.abort(); };
     return {executionId:current.executionId, runId:id, kind, status:current.status};
   }
+  async function waitForExecution({id,executionId}) {
+    const current=active,pending=task;
+    check(current?.runId===id&&current.executionId===executionId&&pending,
+      'EXECUTION_CHANGED_RELOAD',409);
+    await pending;
+    const execution={...current,events:[...current.events]};
+    try {return {...await getRun(id),execution,stateRefreshError:null};}
+    catch(error) {return {id,state:null,active:null,terminalAvailable:null,execution,
+      stateRefreshError:codeOf(error)};}
+  }
   async function bindAccounting({id,only,workspace}) {
     check(!active||active.finishedAt,'WORKSPACE_EXECUTION_BUSY',409);
     const binding=await bindRunbookWorkspace(await resolveRun(id),{only,workspace});
     return {...await getRun(id),binding};
+  }
+  async function launchPaidFile(input,reset=false) {
+    check(input&&Object.keys(input).every(name=>['id','only','configSha256','handoffSha256'].includes(name)),
+      'PAID_FILE_FIELDS_INVALID');
+    check(!active||active.finishedAt,'WORKSPACE_EXECUTION_BUSY',409);
+    const path=await resolveRun(input.id),state=await inspectRunbook(path);
+    check(!state.executionLock,'RUNBOOK_EXECUTION_LOCK_EXISTS',409);
+    const row=state.operations.find(item=>item.id===input.only);
+    check(row&&row.integrity==='UNCHANGED','PAID_FILE_RUNBOOK_CONFIG_CHANGED',409);
+    const view=await paidFiles.view(row,path);
+    check(view&&view.configSha256===input.configSha256&&view.handoffSha256===input.handoffSha256,
+      'PAID_FILE_SELECTED_REQUEST_CHANGED',409);
+    const controller=new AbortController(),current={executionId:randomUUID(),runId:input.id,
+      kind:reset?'PAID_FILE_RESET':'PAID_FILE_RETRIEVE',only:input.only,startedAt:now(),
+      status:'RUNNING',cancelRequested:false,events:[],finishedAt:null};
+    active=current;
+    task=paidFiles.transfer(row,path,{configSha256:input.configSha256,handoffSha256:input.handoffSha256,
+      reset,signal:controller.signal}).then(result=>{current.result=result;current.status='FINISHED';},
+      error=>{current.error=codeOf(error);current.status=controller.signal.aborted?'CANCELLED':'FAILED';
+        current.events.push({id:row.id,status:current.status,code:current.error,at:now()});
+      }).finally(()=>{current.finishedAt=now();});
+    current.cancel=()=>{current.cancelRequested=true;current.status='CANCELLING';controller.abort();};
+    return {executionId:current.executionId,runId:current.runId,kind:current.kind,status:current.status};
+  }
+  async function downloadPaidFile(id,operationId) {
+    const path=await resolveRun(id),state=await inspectRunbook(path),row=state.operations.find(item=>item.id===operationId);
+    check(row,'UNKNOWN_JOB_ID',404);return paidFiles.download(row,path);
   }
   function cancel({id, executionId}) {
     check(active?.runId === id && active.executionId === executionId && !active.finishedAt, 'EXECUTION_CHANGED_RELOAD', 409);
@@ -373,13 +428,20 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
       const old = await json(importPath(id)); check(old.path === canonical && old.planId === plan.id, 'IMPORTED_RUN_MISMATCH'); }
   }
   return {directory, state:list, draft:latestDraft, run:getRun, export:exportRun, download, previewResource,
-    request:intake.get, requestAttachment:intake.attachment,
-    receiveRequest:input => mutate(() => intake.receive(input)),
-    reviewRequest:input => mutate(() => intake.review(input)),
-    prepareRequest:input => mutate(() => intake.provision(input)),
+    request:requestIntake.get, requestAttachment:requestIntake.attachment,
+    receiveRequest:input => mutate(() => requestIntake.receive(input)),
+    reviewRequest:input => mutate(() => requestIntake.review(input)),
+    prepareRequest:input => mutate(() => requestIntake.provision(input)),
+    paidFile:paidFiles.get,paidFileAttachment:paidFiles.attachment,downloadPaidFile,
+    receivePaidFile:input=>mutate(()=>paidFiles.receive(input)),
+    reviewPaidFile:input=>mutate(()=>paidFiles.review(input)),
+    preparePaidFile:input=>mutate(()=>paidFiles.provision(input)),
+    retrievePaidFile:input=>mutate(()=>launchPaidFile(input)),
+    resetPaidFile:input=>mutate(()=>launchPaidFile(input,true)),
     save:input => mutate(() => mutateDraft(() => saveDraft(input))),
     initialize:input => mutate(() => mutateDraft(() => activate(input))),
     execute:input => mutate(() => launch(input)), cancel:input => serial(() => cancel(input)),
+    waitForExecution,
     finalize:input => mutate(() => launch(input,'ACCOUNTING')),
     bindAccounting:input => mutate(() => bindAccounting(input)),
     recover:input => mutate(() => recover(input)), unlock:input => mutate(() => unlock(input)),

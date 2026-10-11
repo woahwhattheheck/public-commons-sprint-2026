@@ -1,0 +1,118 @@
+{
+  "name": "Starforge — retain merchant request",
+  "active": false,
+  "nodes": [
+    {
+      "id": "373b2d7e-7050-4e2c-928d-ec483ebdc9c8",
+      "name": "Actual merchant packet",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "starforge-buyer-intake",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "webhookId": "1bb06a3c-3704-4e12-af09-f7338d881add"
+    },
+    {
+      "id": "dccd896e-5659-4517-ae20-9d992bd9abf7",
+      "name": "Retain in original inbox",
+      "type": "n8n-nodes-starforge-buyer.starforgeBuyer",
+      "typeVersion": 1,
+      "position": [
+        240,
+        240
+      ],
+      "parameters": {
+        "operation": "enqueueHandoff",
+        "packetSource": "json",
+        "packetJson": "={{ $json.body.packet }}",
+        "acceptIndex": "={{ $json.body.acceptIndex }}",
+        "options": {}
+      },
+      "credentials": {
+        "starforgeBuyerWorkspace": {
+          "name": "Original Starforge buyer workspace"
+        }
+      },
+      "retryOnFail": false,
+      "onError": "stopWorkflow"
+    },
+    {
+      "id": "033bb373-d6d3-4669-94d3-1e41b949bb52",
+      "name": "Return intake identity",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        480,
+        240
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d770a8fb-546e-4fcd-8270-1ed98d357c15",
+              "name": "intentId",
+              "value": "={{ $json.intentId }}",
+              "type": "string"
+            },
+            {
+              "id": "713c7881-c714-48ac-a18a-7b7ba96620c8",
+              "name": "state",
+              "value": "={{ $json.native.state }}",
+              "type": "string"
+            },
+            {
+              "id": "fcbbba66-473b-4d11-b26c-2abcfe9213d5",
+              "name": "packetSha256",
+              "value": "={{ $json.packet.handoffSha256 }}",
+              "type": "string"
+            },
+            {
+              "id": "f252108e-1f37-4796-9509-a0e209820fb9",
+              "name": "received",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "includeOtherFields": false,
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Actual merchant packet": {
+      "main": [
+        [
+          {
+            "node": "Retain in original inbox",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retain in original inbox": {
+      "main": [
+        [
+          {
+            "node": "Return intake identity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "tags": []
+}

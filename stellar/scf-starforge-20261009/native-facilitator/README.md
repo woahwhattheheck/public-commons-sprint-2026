@@ -11,6 +11,26 @@ For the complete host operating workflow, see [RPC readiness and shared signer
 ownership](OPERATIONS.md): review and probe the configured RPC, start the same
 service with private account ownership, inspect `/readyz`, then drain and restart.
 
+## Operate from the local browser
+
+The [native facilitator operator workspace](workspace/README.md) brings the original
+configuration review, immutable named profile files, SDK startup, account capacity,
+RPC observations and drain/reopen workflow into one local screen. It uses the same
+native configuration and shared signer ownership as the CLI. The saved file can also
+be selected in the existing SF66 merchant/customer setup.
+
+```sh
+node stellar/scf-starforge-20261009/native-facilitator/workspace/server.mjs \
+  --directory /private/facilitator-operator \
+  --ownership-directory /private/stellar-signer-ownership \
+  --create --port 0
+```
+
+Open the complete local URL printed by the launcher. The host selects the shared
+ownership directory and supplies its existing key environment; the form receives
+public account references and policy. Saved profiles reopen with the backend stopped.
+Use **Drain and stop** before changing the active profile or listener.
+
 ## Install and configure
 
 Use Node 22+ and install these pinned packages from the repository root so the
