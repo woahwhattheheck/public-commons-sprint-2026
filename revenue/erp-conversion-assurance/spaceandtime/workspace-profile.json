@@ -1,0 +1,33 @@
+{
+  "id": "spaceandtime-ledger-workflow",
+  "title": "Stellar ledger reconciliation",
+  "source": {
+    "url": "https://www.spaceandtime.io/blog/space-and-time-enables-new-sophisticated-financial-apps-for-the-stellar-ecosystem",
+    "label": "Space and Time Stellar indexing and original native ledger acquisition",
+    "sections": ["Installed schema and agreed ledger window", "Original retained finance comparison"]
+  },
+  "cohorts": [
+    {
+      "id": "stellar_payment_operations",
+      "title": "Payment operations",
+      "purpose": "Compare the agreed ledger with acquired successful payment operations at operation identity and native asset identity. Map the actual installed fields and retained CSV headers; select payment operations explicitly before preparing the input.",
+      "keys": ["operation_id", "asset_identity"],
+      "amounts": [{"name": "amount", "scale": 7, "tolerance": "0.0000000"}],
+      "attributes": ["transaction", "from", "to"],
+      "groupBy": ["asset_identity"]
+    },
+    {
+      "id": "ledger_identity_coverage",
+      "title": "Ledger identity and status",
+      "purpose": "Compare the complete agreed identifier sets and selected native state before adding a financial amount comparison. Choose the actual unique grain for the installed ledger pair.",
+      "keys": ["record_id"],
+      "amounts": [],
+      "attributes": ["status", "transaction"],
+      "groupBy": []
+    }
+  ],
+  "scenarios": [
+    {"id": "initial_mapping", "title": "Initial native mapping and complete-window comparison", "cohorts": ["stellar_payment_operations", "ledger_identity_coverage"]},
+    {"id": "reviewed_refresh", "title": "Reviewed refresh using the agreed mapping", "cohorts": ["stellar_payment_operations", "ledger_identity_coverage"]}
+  ]
+}
