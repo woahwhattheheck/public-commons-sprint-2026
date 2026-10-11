@@ -32,7 +32,8 @@ function friendly(error) {
   const code=error.code ?? error.message;
   const known={
     PRIVATE_SESSION_REQUIRED:'Reopen the private URL printed by this workspace process.',
-    GOLDRUSH_SCHEMA_RUNTIME_REQUIRED:'This installation is missing required schema validation support. Use the schema installation in the workspace guide, then reopen.',
+    GOLDRUSH_PREPARED_OPERATOR_REQUIRED:'This saved request is an offline preparation. Open an execution workspace with your original operator profile and prepare its configured request.',
+GOLDRUSH_SCHEMA_RUNTIME_REQUIRED:'This installation is missing required schema validation support. Use the schema installation in the workspace guide, then reopen.',
     GOLDRUSH_RELEASE_CHANGED_REFRESH:'The provider release changed. Refresh and review its current terms before preparing.',
     INTENT_ALREADY_EXISTS_USE_RECOVER:'This request ID already exists. Select it in saved requests and recover its result.',
     GOLDRUSH_INTENT_REQUEST_CONFLICT:'This ID belongs to a different request. Clear the form to begin a new request.',
@@ -169,7 +170,8 @@ function renderJob() {
   $('request-url').textContent=(job.method??'GET')+' '+job.url;
   const expect=job.expect??{};
   facts($('review-facts'),[['Network',expect.network],['Maximum atomic amount',expect.maxAtomic],
-    ['Asset',expect.asset],['Recipient',expect.payTo],['Saved outcome',job.outcome?.status??'No outcome recorded'],
+    ['Asset',expect.asset],['Recipient',expect.payTo],['Request owner',job.source==='node'?'Original Node preparation':'Original Inbox'],
+    ['Saved outcome',job.outcome?.status??'No outcome recorded'],
     ['Response',job.outcome?.deliveryStatus??'Not delivered']]);
   $('review-json').textContent=state.review?json(state.review):'Review this saved request to see its original operator review.';
   $('finalize').hidden=!state.context.workspaceConfigured;updateControls();
@@ -177,7 +179,7 @@ function renderJob() {
 function updateControls() {
   if(state.context){$('newer').disabled=state.busy || state.context.jobs.offset===0;$('older').disabled=state.busy || state.context.jobs.offset+state.context.jobs.limit>=state.context.jobs.total;}
   $('prepare').disabled=state.busy || !state.context;
-  $('execute').disabled=state.busy || !state.review || Boolean(state.job?.outcome);
+  $('execute').disabled=state.busy || !state.review || state.job?.source!=='inbox' || Boolean(state.job?.outcome);
   $('review').disabled=state.busy || !state.job;$('recover').disabled=state.busy || !state.job;
   $('finalize').disabled=state.busy || !state.job?.outcome;
   $('compare').disabled=state.busy || !state.comparison.left || !state.comparison.right;

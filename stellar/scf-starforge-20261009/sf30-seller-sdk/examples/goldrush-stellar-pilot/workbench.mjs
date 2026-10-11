@@ -1,5 +1,5 @@
 // MIT. GoldRush wallet work on the original Node buyer, inbox and resource library.
-import { mkdir, lstat, readFile } from 'node:fs/promises';
+import { mkdir, lstat, readFile, readdir } from 'node:fs/promises';
 import { resolve, join, dirname } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
@@ -43,7 +43,7 @@ function requestScope(operation) {
     chain:parts[1],wallet:parts[2],query};
 }
 function jobView(job) {
-  const value = {id:job.id,intentId:job.operation?.intentId,state:job.state,
+  const value = {id:job.id,intentId:job.operation?.intentId,state:job.state,source:'inbox',
     createdAt:job.createdAt,configSha256:job.configSha256,
     method:job.operation?.method,url:job.operation?.url,expect:job.operation?.expect,
     outcome:job.outcome ? {status:job.outcome.status,httpStatus:job.outcome.httpStatus,
@@ -142,21 +142,51 @@ export async function openWorkbench({state,config,referenceFile,root}) {
     }
     return jobs.map(job => ({...jobView(job),resources:byIntent.get(job.operation?.intentId) ?? []}));
   }
+  async function nodeJob(id) {
+    const retained=buyer.operation(id);
+    // The original SDK validates its retained configuration and file bindings.
+    const {meta,config:saved}=await retained._bound();
+    const inspected=await retained.inspect(), result=await retained.recover();
+    return {...jobView({id:sha256(id),operation:saved.operation,state:inspected.state,
+      createdAt:meta.createdAt,configSha256:meta.configSha256,outcome:result?.native ?? null}),
+      source:'node',operatorConfigured:Boolean(saved.operator && saved.signerModule),
+      inboxDirectory:inspected.inboxDirectory ?? null,resources:[]};
+  }
+  async function nodePreparations(queuedIds) {
+    const rows=[];
+    for(const entry of await readdir(join(state,'requests'),{withFileTypes:true})) {
+      if(!/^[a-f0-9]{64}\.json$/.test(entry.name))continue;
+      need(entry.isFile() && !entry.isSymbolicLink(),'GOLDRUSH_REQUEST_FILE_INVALID');
+      const {value:authored}=await readJson(join(state,'requests',entry.name),65536);
+      const id=intent(authored.operation?.intentId);
+      need(entry.name===sha256(id)+'.json','GOLDRUSH_REQUEST_ID_CHANGED');
+      if(queuedIds.has(id))continue;
+      try {rows.push(await nodeJob(id));}
+      catch(error) {
+        rows.push({...jobView({id:sha256(id),operation:authored.operation,
+          state:'REVIEW_REQUIRED',createdAt:null,configSha256:null}),
+          source:'node',resources:[],error:error.code ?? 'GOLDRUSH_PREPARATION_UNAVAILABLE'});
+      }
+    }
+    return rows;
+  }
   async function context({offset=0,q=''}={}) {
     need(Number.isSafeInteger(offset) && offset >= 0 && offset <= 100000 &&
       typeof q === 'string' && q.length <= 200,'GOLDRUSH_LIST_QUERY_INVALID');
     const release = await loadCustomerRelease(config.release);
-    const jobs = (await queue.list()).filter(job => {
-      try { requestScope(job.operation); return true; } catch { return false; }
-    }).filter(job => !q || [job.operation.intentId,job.operation.url,job.state].join(' ').toLowerCase().includes(q.toLowerCase()))
-      .sort((a,b) => String(b.createdAt).localeCompare(String(a.createdAt)) || a.id.localeCompare(b.id));
+    const queued=await queue.list();
+    const jobs=[...await resourcesFor(queued),
+      ...await nodePreparations(new Set(queued.map(job=>job.operation?.intentId)))]
+      .filter(job=>job.scope)
+      .filter(job=>!q || [job.intentId,job.url,job.state].join(' ').toLowerCase().includes(q.toLowerCase()))
+      .sort((a,b)=>String(b.createdAt).localeCompare(String(a.createdAt)) || a.id.localeCompare(b.id));
     let refs = [], observationsError = null;
     try { refs = await observations(referenceFile); }
     catch (error) { observationsError = error.code ?? 'GOLDRUSH_OBSERVATION_MANIFEST_INVALID'; }
     return {schema:SCHEMA,id:config.id,release:{sha256:release.sha256,manifest:release.manifest,
       operations:release.client.operations},workspaceConfigured:Boolean(config.workspace),
       profileConfigured:Boolean(config.profile),library:library.status(),
-      jobs:{offset,limit:50,total:jobs.length,items:await resourcesFor(jobs.slice(offset,offset+50))},
+      jobs:{offset,limit:50,total:jobs.length,items:jobs.slice(offset,offset+50)},
       observations:refs.map(({path,...row}) => row),observationsError,activeIntents:[...active]};
   }
   async function prepare(input,{signal}={}) {
@@ -187,6 +217,13 @@ export async function openWorkbench({state,config,referenceFile,root}) {
         need(canonical(saved.operation) === canonical(operation),'GOLDRUSH_EXISTING_INTENT_DIFFERS',409);
       }
       signal?.throwIfAborted();
+      const {config:saved}=await retained._bound();
+      if(!saved.operator || !saved.signerModule) {
+        const review=await retained.review();
+        return {status:'PREPARED_OFFLINE',job:await nodeJob(id),review};
+      }
+      const {execution}=await nativeImport(root,'sf88-operator-buyer-cli/config.mjs');
+      execution(saved);
       await inbox.enqueue(retained,{signal});
       const review = await inbox.review(id,{signal});
       return {status:'PREPARED',job:jobView((await inbox.show(id,{signal})).native),review};
@@ -237,6 +274,14 @@ export async function openWorkbench({state,config,referenceFile,root}) {
       exact(input,route === 'execute' ? ['intentId','review'] : ['intentId']);
       const id = intent(input.intentId);
       const result = await exclusive(id,async () => {
+        const published=(await queue.list()).some(job=>job.operation?.intentId===id);
+        if(!published) {
+          const job=await nodeJob(id);
+          need(job.scope,'GOLDRUSH_REQUEST_SCOPE_INVALID');
+          need(['review','recover'].includes(route),'GOLDRUSH_PREPARED_OPERATOR_REQUIRED',409);
+          if(route==='review')return {job,review:await buyer.operation(id).review()};
+          return {job:await nodeJob(id)};
+        }
         const job = (await inbox.show(id,{signal})).native;
         requestScope(job.operation);
         if (route === 'review') return {job:jobView(job),review:await inbox.review(id,{signal})};

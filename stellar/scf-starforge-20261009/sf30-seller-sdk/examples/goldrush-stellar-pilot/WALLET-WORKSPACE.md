@@ -40,18 +40,18 @@ Repeat --source-root when using a separate installed runtime. --port 8242 select
 1. Select balances or one page of transfers. The form reads chains, quote currencies, page size limits and payment choices from the actual release's generated client.
 2. Enter the wallet. Transfers also require the token contract, zero-based page number and page size.
 3. Select a provider payment option and review the maximum amount in atomic units. The original generated client authors the request; existing live admission validates its input.
-4. Choose **Prepare and review**. This saves one exact request configuration, creates the original Node Buyer operation and delegates that operation to the original Inbox. The application receives the original offline review.
-5. Inspect the request, payment tuple and original review. **Execute reviewed request** invokes the existing Inbox/operator workflow for that saved review. Refreshing, reopening, viewing, comparing or exporting never invokes execution.
-6. After an interrupted browser wait, select the same request and choose **Recover saved result**. The existing Inbox reads the retained attempt and owns recovery and identical-intent behavior.
+4. Choose **Prepare and review**. This saves one exact request configuration and creates or reopens the original Node Buyer operation. Without an execution profile, the original Node Buyer supplies the offline review and the saved request remains visible in the workspace. When its retained configuration includes the original operator and signer, the application validates that configuration before delegating it to the existing Inbox for review.
+5. Inspect the request, payment tuple and original review. The review identifies whether the original Node preparation or Inbox owns the request. For an Inbox request, **Execute reviewed request** invokes the existing Inbox/operator workflow for that saved review. Refreshing, reopening, viewing, comparing or exporting never invokes execution.
+6. After an interrupted browser wait, select the same request and choose **Recover saved result**. The owning Node operation or Inbox reads its retained attempt. The application preserves native state and history, including a prior interrupted or failed delegation.
 7. When an existing operator workspace has a recorded outcome, **Finalize workspace** exposes its original finalization operation.
 
-A request ID binds one exact authored request. A replay with the same ID and configuration rejoins the saved operation. An edited request with that ID returns a conflict; clear the form for a new request. Changes to the provider release require a fresh refresh before authoring a new request. Previously prepared operations keep their native configuration.
+A request ID binds one exact authored request. A replay with the same ID and configuration rejoins the saved operation. An edited request with that ID returns a conflict; clear the form for a new request. Changes to the provider release require a fresh refresh before authoring a new request. Previously prepared operations keep their native configuration. An operator-less preparation stays bound to that configuration. To prepare a payable request later, open a workspace with its original operator profile and use a new request ID; the existing offline preparation remains available for review. The app does not rewrite an existing intent's configuration or delegation history.
 
 The sample release contains example merchant/payment values. Actual provider deployment and existing operator configuration are required for paid execution. This app does not replace upstream provider authorization or create a GoldRush account.
 
 ## Read wallet data
 
-**Refresh saved work** scans the original Inbox into the existing resource library. A successful saved response opens after its original size/hash, current Inbox binding and complete JSON are checked. The existing library supplies resource IDs, saved files and downloads.
+**Refresh saved work** scans the original Inbox into the existing resource library. Saved request navigation includes both original Node preparations and published Inbox jobs, without duplicating an intent that has already entered the Inbox. A successful saved response opens after its original size/hash, current Inbox binding and complete JSON are checked. The existing library supplies resource IDs, saved files and downloads.
 
 Balances show exact quantities, 24-hour balances and provider quote values where supplied. Transfer rows retain individual identity, including the containing transaction and event/transfer position. The containing-transactions table retains value, fees, gas and result metadata, including transactions with no transfer rows.
 
