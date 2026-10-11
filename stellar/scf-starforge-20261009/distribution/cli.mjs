@@ -75,6 +75,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
+  api-pass                                  Sell and operate purchased API allowances on original orders
+  api-pass-client                           Use an allowance, inspect usage and recover an original response
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current

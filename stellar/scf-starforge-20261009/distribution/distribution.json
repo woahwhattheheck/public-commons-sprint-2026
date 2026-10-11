@@ -208,6 +208,8 @@
     "merchant-desk": "stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/cli.mjs",
     "paid-file-checkout": "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
     "paid-file-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
+    "api-pass": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/cli.mjs",
+    "api-pass-client": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/customer.mjs",
     "buyer-node": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/customer.mjs",
     "commerce-setup": "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-setup.mjs",
     "upstream-operation": "stellar/scf-starforge-20261009/sf30-seller-sdk/upstream-operation.mjs",
