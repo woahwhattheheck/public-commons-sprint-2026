@@ -59,7 +59,7 @@ function inspectQueryParameters(spec, item, operation) {
         const parameter = refs.reference(raw);
         if (parameter.in !== 'query') continue;
         if (typeof parameter.name !== 'string' || !parameter.name || forbidden.has(parameter.name) ||
-            /[\\x00-\\x1f\\x7f]/.test(parameter.name)) throw new TypeError('Invalid parameter name');
+            /[\x00-\x1f\x7f]/.test(parameter.name)) throw new TypeError('Invalid parameter name');
         if (seen.has(parameter.name)) { errors.push(failed(parameter.name, 'Duplicate query parameter in one declaration')); continue; }
         seen.add(parameter.name);
         merged.set(parameter.name, parameter);
