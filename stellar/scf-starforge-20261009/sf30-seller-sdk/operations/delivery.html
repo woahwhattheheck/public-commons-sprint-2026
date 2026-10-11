@@ -10,7 +10,8 @@
 <span class="badge" id="control-status">Local operator</span></header>
 <main>
 <nav aria-label="Operations"><a href="/">Seller traffic</a><a href="/merchant-operations">Merchant requests</a>
-<a href="/delivery.json" download>Queue summary JSON</a><a href="/delivery.metrics">Metrics</a></nav>
+<a href="/delivery.json" download>Queue summary JSON</a><a href="/delivery.metrics">Metrics</a>
+<a id="receiver-workspace-link" href="/delivery-workspace/" target="_blank" rel="noopener" title="Open receiver controls in another tab while retaining this incident" hidden>Receiver workspace</a></nav>
 <section class="status-line"><p id="fulfillment-status" role="status">Reading delivery journal…</p>
 <button id="refresh" type="button">Refresh</button></section>
 <section class="cards" aria-label="Payment and delivery outcomes">
@@ -18,6 +19,27 @@
 <article><h2>Receiver accepted</h2><strong id="fulfillment-sent">—</strong><p>Delivery acknowledged with HTTP 2xx</p></article>
 <article><h2>Pending</h2><strong id="fulfillment-pending">—</strong><p>Waiting or eligible for another attempt</p></article>
 <article><h2>Needs attention</h2><strong id="fulfillment-exhausted">—</strong><p>Delivery attempts exhausted</p></article>
+</section>
+<section class="panel incident-monitor" id="incident-monitor" aria-labelledby="incident-heading" hidden>
+<div class="panel-heading"><div><h2 id="incident-heading">Merchant incidents</h2>
+<p id="incident-watch-status" role="status">Reading the original monitor…</p></div>
+<span class="badge" id="incident-count">—</span></div>
+<div class="incident-layout"><section aria-label="Incident history"><div class="filters">
+<label>Show<select id="incident-filter"><option value="active">Active incidents</option>
+<option value="all">All retained incidents</option><option value="recovered">Observed recoveries</option></select></label></div>
+<div id="incident-list" class="incident-list"></div><p id="incident-empty" class="empty" hidden>No incidents match this view.</p>
+<div class="pagination"><span id="incident-page-status">—</span><div>
+<button id="incident-previous" type="button" disabled>Previous</button><button id="incident-next" type="button" disabled>Next</button>
+</div></div></section>
+<section class="incident-detail" aria-label="Selected incident"><p id="incident-prompt">Select an incident to inspect its original observation and ownership.</p>
+<div id="incident-detail" hidden><span class="badge" id="incident-state"></span><h3 id="incident-kind"></h3>
+<dl id="incident-fields"></dl><p id="incident-scope" class="incident-note"></p>
+<div id="incident-ack-form"><label>Operator name<input id="incident-by" maxlength="160" autocomplete="name"></label>
+<label>Repair note <span>(optional)</span><textarea id="incident-notes" rows="3" maxlength="2000"></textarea></label>
+<button id="incident-ack" class="primary" type="button">Acknowledge incident</button></div>
+<p id="incident-action-result" role="status" aria-live="polite"></p>
+<div class="incident-actions"><button id="incident-open-queue" type="button" hidden>Inspect delivery queue</button>
+<button id="incident-export" type="button">Download incident JSON</button></div></div></section></div>
 </section>
 <section class="workspace" aria-label="Delivery workspace">
 <section class="panel queue"><div class="panel-heading"><div><h2>Delivery queue</h2>

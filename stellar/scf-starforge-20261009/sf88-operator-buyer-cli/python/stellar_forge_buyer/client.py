@@ -95,6 +95,17 @@ class Buyer:
             op._store_config(config, body=body)
         return op
 
+    def from_operation_handoff(self, handoff_file, *, accept: int):
+        """Import a private merchant request through the original native buyer."""
+        if type(accept) is not int or accept < 0:
+            raise StateError("EXPLICIT_SELECTION_INDEX_REQUIRED")
+        with tempfile.TemporaryDirectory(prefix="operation-import-", dir=self.state_dir) as temporary:
+            imported = self.runtime.checked(["--import-operation", "--file",
+                Path(handoff_file).expanduser().absolute(), "--dir", Path(temporary) / "request",
+                "--accept", accept], mode="OFFLINE_OPERATION_IMPORTED")
+            # from_config retains body and original validated ticket locally.
+            return self.from_config(imported["configPath"])
+
     def _workspace(self, directory, intent_id=None):
         path = private_directory(Path(directory), create=False)
         native = self.runtime.checked(["workspace-read", "--dir", path],
@@ -265,7 +276,23 @@ class Operation:
         try:
             dump(candidate, config)
             # Keep the old valid configuration if an update fails native review.
-            self.buyer.runtime.checked(["--review", "--config", candidate], mode="OFFLINE_REVIEW")
+            native = self.buyer.runtime.checked(["--review", "--config", candidate], mode="OFFLINE_REVIEW")
+            if request.get("ticketFile"):
+                ticket = read(Path(request["ticketFile"]), 16384)
+                fingerprint = digest(ticket)
+                if fingerprint != (native.get("operationTicket") or {}).get("sha256"):
+                    raise StateError("OPERATION_TICKET_CHANGED")
+                retained = self.directory / ("operation-ticket." + fingerprint + ".json")
+                try:
+                    write(retained, ticket, exclusive=True)
+                except FileExistsError:
+                    if read(retained, 16384) != ticket:
+                        raise StateError("OPERATION_TICKET_CHANGED") from None
+                request["ticketFile"] = str(retained)
+                dump(candidate, config)
+                checked = self.buyer.runtime.checked(["--review", "--config", candidate], mode="OFFLINE_REVIEW")
+                if fingerprint != (checked.get("operationTicket") or {}).get("sha256"):
+                    raise StateError("OPERATION_TICKET_CHANGED")
             os.replace(candidate, self.config_path)
             sync_directory(self.directory)
         finally:

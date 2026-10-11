@@ -6,8 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { createPythonSource } from '../sf30-seller-sdk/python/source.mjs';
 import { startSellerService } from '../sf30-seller-sdk/serve.mjs';
 import { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
+import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { openOutbox, instrumentNativeSettlement } from '../sf98-merchant-delivery/outbox.mjs';
 import { application, readCheckout, orderHandoff, reference, privatePath, need } from './checkout-config.mjs';
+import {idPattern} from '../sf93-seller-support-bundle/incident-config.mjs';
 
 const receiver = fileURLToPath(new URL('./receiver.py', import.meta.url));
 const USAGE = `node checkout.mjs inspect --config PRIVATE_CHECKOUT.json
@@ -16,6 +18,9 @@ node checkout.mjs enroll --config PRIVATE_CHECKOUT.json --ref ORDER --file PRIVA
 node checkout.mjs handoff --config PRIVATE_CHECKOUT.json --ref ORDER --out NEW_HANDOFF.json
 node checkout.mjs serve --config PRIVATE_CHECKOUT.json [--port 8423] [--operations-port 8424]
   [--facilitator HTTPS_URL] [--allow-local-facilitator]
+  [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
+  [--delivery-workspace PRIVATE_DIRECTORY]
+  [--incident-state PRIVATE_MONITOR_DIRECTORY --incident-merchant REGISTERED_ID]
 
 The original receiver.py serve and original SF98 delivery worker use the SAME
 private state/outbox. Their existing HTTPS proxy and HMAC setup are in CHECKOUT.md.`;
@@ -88,7 +93,13 @@ export async function prepareHandoff(compiled, {ref, output, file, claimEnv = 'S
 
 export async function startCheckout(compiled, {port = 8423, operationsPort = 8424,
   nativeFactory = null, env = process.env, maxInFlight = 64, drainGraceMs = 60000,
-  historyDirectory, historyRetentionDays = 90, deliveryRecovery = null} = {}) {
+  historyDirectory, historyRetentionDays = 90, deliveryRecovery = null, availabilityDirectory,
+  deliveryWorkspaceDirectory = null, deliveryWorkspaceOptions = {}, incidentSource = null} = {}) {
+  if (availabilityDirectory !== undefined) {
+    validateAvailabilityDirectory(availabilityDirectory);
+    need(![compiled.state, compiled.outbox, historyDirectory, deliveryWorkspaceDirectory, incidentSource?.directory].includes(availabilityDirectory),
+      'SEPARATE_AVAILABILITY_DIRECTORY_REQUIRED');
+  }
   let source, seller, operations, closing;
   const outbox = await openOutbox(compiled.outbox);
   const close = () => closing ??= (async () => {
@@ -116,12 +127,13 @@ export async function startCheckout(compiled, {port = 8423, operationsPort = 842
         }
       },
     };
-    seller = await startSellerService({config:compiled.service, handlers, port, maxInFlight, drainGraceMs,
+    seller = await startSellerService({config:compiled.service, handlers, port, maxInFlight, drainGraceMs, availabilityDirectory,
       nativeFactory:nativeFactory ? async routes => instrumentNativeSettlement(await nativeFactory(routes), {
         compiled:routes, outbox, onWriteFailure:() => process.stderr.write('SF101_NATIVE_OUTBOX_WRITE_FAILED\n'),
       }) : null});
     operations = await startSellerOperations(seller, {port:operationsPort, deliveryOutbox:outbox,
-      historyDirectory, historyRetentionDays, deliveryRecovery});
+      historyDirectory, historyRetentionDays, deliveryRecovery,
+      deliveryWorkspaceDirectory, deliveryWorkspaceOptions, incidentSource});
     return {seller, operations, source, outbox, close};
   } catch (error) { await close().catch(() => {}); throw error; }
 }
@@ -131,7 +143,8 @@ function options(args) {
   need(['inspect','init','enroll','handoff','serve'].includes(action), 'CHECKOUT_ACTION_REQUIRED');
   const allowed = {inspect:['--config'], init:['--config'],
     enroll:['--config','--ref','--file','--out','--claim-env'], handoff:['--config','--ref','--out'],
-    serve:['--config','--port','--operations-port','--facilitator','--allow-local-facilitator']}[action];
+    serve:['--config','--port','--operations-port','--facilitator','--allow-local-facilitator',
+      '--availability-dir','--delivery-workspace','--incident-state','--incident-merchant']}[action];
   for (let i=1; i<args.length; i++) {
     const flag = args[i];
     need(allowed.includes(flag) && !result.has(flag), 'CHECKOUT_OPTION_INVALID');
@@ -155,6 +168,8 @@ export async function main(args = process.argv.slice(2)) {
     {ref:v.get('--ref'), output:resolve(v.get('--out')), ...(action === 'enroll' ? {file:resolve(v.get('--file'))} : {}),
       ...(v.has('--claim-env') ? {claimEnv:v.get('--claim-env')} : {})});
   if (action === 'serve') {
+    const availabilityDirectory = v.has('--availability-dir')
+      ? validateAvailabilityDirectory(v.get('--availability-dir')) : undefined;
     let nativeFactory = null;
     need(!v.has('--allow-local-facilitator') || v.has('--facilitator'), 'FACILITATOR_URL_REQUIRED');
     if (v.has('--facilitator')) {
@@ -167,10 +182,18 @@ export async function main(args = process.argv.slice(2)) {
       nativeFactory = routes => createNativeSellerServer(routes, {facilitatorClient:new HTTPFacilitatorClient({url:url.href.replace(/\/$/,'')})});
     }
     for (const key of ['--port','--operations-port']) if (v.has(key)) need(/^\d{1,5}$/.test(v.get(key)) && Number(v.get(key)) <= 65535, 'CHECKOUT_PORT_INVALID');
-    const session = await startCheckout(c, {nativeFactory, port:Number(v.get('--port') ?? 8423), operationsPort:Number(v.get('--operations-port') ?? 8424)});
+    need(v.has('--incident-state')===v.has('--incident-merchant') &&
+      (!v.has('--incident-merchant')||idPattern.test(v.get('--incident-merchant'))),'INCIDENT_DIRECTORY_AND_REGISTERED_MERCHANT_REQUIRED');
+    for(const key of ['--delivery-workspace','--incident-state'])if(v.has(key))privatePath(v.get(key));
+    const directories=[c.state,c.outbox,availabilityDirectory,v.get('--delivery-workspace'),v.get('--incident-state')].filter(Boolean);
+    need(new Set(directories).size===directories.length,'SEPARATE_PRIVATE_SERVICE_DIRECTORIES_REQUIRED');
+    const session = await startCheckout(c, {nativeFactory, port:Number(v.get('--port') ?? 8423), operationsPort:Number(v.get('--operations-port') ?? 8424),availabilityDirectory,
+      deliveryWorkspaceDirectory:v.get('--delivery-workspace') ?? null,
+      incidentSource:v.has('--incident-state')?{directory:v.get('--incident-state'),merchantId:v.get('--incident-merchant')}:null});
     result = {mode:session.seller.mode, seller:session.seller.url, operations:session.operations.url,
       developer:session.seller.url + '/_seller/docs', delivery:session.operations.url + '/fulfillment',
-      deliveryControl:session.operations.deliveryControlUrl};
+      deliveryControl:session.operations.deliveryControlUrl,receiverWorkspace:session.operations.deliveryWorkspaceUrl,
+      availability:session.operations.availabilityUrl,availabilityControl:session.operations.availabilityControlUrl};
     for (const signal of ['SIGINT','SIGTERM']) process.once(signal, () => session.close().catch(() => {process.exitCode=1;}));
   }
   console.log(JSON.stringify(result)); return result;

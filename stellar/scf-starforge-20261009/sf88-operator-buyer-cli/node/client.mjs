@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { NativeRuntime } from './runtime.mjs';
 import { BuyerResult } from './result.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
+import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
 import { absolute, privateDirectory, digest, now, intent, object, need, BuyerError,
   jsonBytes, parseJson, readBytes, readJson, exists, writeBytes, writeJson, syncDirectory } from './store.mjs';
 
@@ -25,6 +26,10 @@ export class Buyer {
   createDataset(options) { return createDataset(this, options); }
   attachDataset(options) { return createDataset(this, options, true); }
   listDatasets() { return listDatasets(this); }
+  object(id) { return new ObjectAcquisition(this, id); }
+  createObject(options) { return createObject(this, options); }
+  attachObject(options) { return createObject(this, options, true); }
+  listObjects() { return listObjects(this); }
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
@@ -105,6 +110,20 @@ export class Buyer {
   async fromConfig(input, options) {
     const config = typeof input === 'string' ? await readJson(absolute(input)) : input;
     return this._create(config, options);
+  }
+
+  async fromOperationHandoff(file, { accept, operatorProfile, signal } = {}) {
+    need(Number.isSafeInteger(accept) && accept >= 0, 'EXPLICIT_SELECTION_INDEX_REQUIRED');
+    await this.ready();
+    const temporary=await mkdtemp(join(this.stateDirectory,'.operation-import-'));
+    try {
+      const imported=await this.runtime.checked(['--import-operation','--file',absolute(file),
+        '--dir',join(temporary,'request'),'--accept',String(accept)],
+      {stateDirectory:this.stateDirectory,mode:'OFFLINE_OPERATION_IMPORTED',signal});
+      // _create retains the exact body and original validated ticket before
+      // removing the import directory. Operator settings come from this buyer.
+      return await this._create(await readJson(imported.configPath),{operatorProfile});
+    } finally { await rm(temporary,{recursive:true,force:true}); }
   }
 
   async fromRequest(request, options) {

@@ -8,7 +8,7 @@ from pathlib import Path
 import stat
 
 from .errors import DeliveryError, NativeError, StateError
-from .result import FileDelivery
+from .result import FileDelivery, SessionAccountingResult
 from .runtime import Runtime
 from .storage import parse, private_directory
 
@@ -20,7 +20,7 @@ _OUTPUTS = {"dataset.jsonl", "dataset.csv", "review.html", "manifest.json"}
 
 
 def _path(value) -> Path:
-    return Path(value).expanduser().absolute()
+    return Path(os.path.abspath(Path(value).expanduser()))
 
 
 class DatasetError(NativeError):
@@ -95,6 +95,7 @@ class DatasetAcquisition:
         self.runtime = Runtime(checkout, node=node, environment=environment,
                                timeout=timeout, output_limit=output_limit)
         self.last_report = None
+        self.last_accounting = None
 
     @classmethod
     def create(cls, *, checkout, session, max_pages, max_total_atomic,
@@ -155,6 +156,54 @@ class DatasetAcquisition:
     def recover(self):
         """Offline native recovery. It never retries an attempted payment/page."""
         return self._invoke("recover")
+
+    def _accounting(self, *, finalize=False, workspace=None, offset=0, limit=100,
+                    outbox=None, merchant_route=None):
+        if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 250:
+            raise StateError("DATASET_ACCOUNTING_RANGE_INVALID")
+        if (outbox is None) != (merchant_route is None):
+            raise StateError("OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER")
+        command = "finalize" if finalize else "accounting"
+        options = ["--offset", offset, "--limit", limit]
+        if workspace is not None:
+            options += ["--workspace", _path(workspace)]
+        if outbox is not None:
+            options += ["--outbox", _path(outbox), "--merchant-route", _path(merchant_route)]
+        run = self.runtime.run([command, "--session", self.directory, *options], target="dataset")
+        output = run.output
+        if (not isinstance(output, dict) or output.get("mode") != _MODE
+                or output.get("command") != command or not isinstance(output.get("report"), dict)):
+            raise DatasetError(run.error or "ORIGINAL_DATASET_ACCOUNTING_FAILED",
+                               acquisition=self, native=output, returncode=run.returncode)
+        view = SessionAccountingResult.from_native(output["report"], kind="dataset", directory=self.directory,
+            returncode=run.returncode, runtime_error=run.error, interrupted=run.interrupted)
+        self.last_accounting = view
+        return view
+
+    def accounting(self, *, offset=0, limit=100) -> SessionAccountingResult:
+        """Read the original retained per-page receipts without wallet or RPC."""
+        return self._accounting(offset=offset, limit=limit)
+
+    def finalize(self, *, workspace=None, offset=0, limit=100,
+                 outbox=None, merchant_route=None) -> SessionAccountingResult:
+        """Finish these original page reservations; never run a page again."""
+        return self._accounting(finalize=True, workspace=workspace, offset=offset, limit=limit,
+                                outbox=outbox, merchant_route=merchant_route)
+
+    def finalize_all(self, *, workspace=None, page_size=25, outbox=None, merchant_route=None):
+        """Yield progress while accounting for every existing page, including failures.
+
+        Inspect each view's attention entries. Reopening accounting() reads any
+        views saved before interruption, independently of delivered product files.
+        """
+        offset = 0
+        while True:
+            view = self.finalize(workspace=workspace, offset=offset, limit=page_size,
+                                 outbox=outbox, merchant_route=merchant_route)
+            yield view
+            if view.interrupted or view.next_offset is None:
+                return
+            offset = view.next_offset
 
     def export_manifest(self, destination):
         return self._invoke("export", ["--out", _path(destination)])

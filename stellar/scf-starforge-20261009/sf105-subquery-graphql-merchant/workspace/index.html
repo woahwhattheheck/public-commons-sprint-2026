@@ -76,6 +76,36 @@
         <div id="runtime"></div>
       </section>
 
+      <section class="panel" id="deployment-panel">
+        <div class="panel-heading"><div><span class="step">06</span><h2>Deployment and operations</h2></div></div>
+        <p>Prepare a retained merchant for release management and a Linux host. Each package keeps its original query service, buyer terms and handler bindings.</p>
+        <label>Merchant export to deploy<select id="deployment-export"></select></label>
+        <label class="checkbox"><input id="deployment-loopback" type="checkbox">Allow this package's backend on 127.0.0.1 for local development</label>
+        <div class="toolbar"><button id="prepare-deployment" type="button" disabled>Prepare deployment package</button></div>
+        <div class="subheading"><h3>Retained deployment</h3><button id="inspect-deployment" type="button" class="secondary" disabled>Refresh deployment</button></div>
+        <label>Saved package<select id="deployment-select"></select></label>
+        <div id="deployment-summary"></div>
+        <div class="toolbar"><button id="recover-deployment" type="button" disabled>Recover finished operation</button></div>
+
+        <div class="subheading"><h3>Release staging and rollout</h3></div>
+        <p>Stage an immutable release in this project's shared release store. The release console provides comparison, selection, startup, drain and rollback.</p>
+        <div class="grid three"><label>Release ID<input id="deployment-release-id" autocomplete="off"></label><label>Release label<input id="deployment-release-label" autocomplete="off"></label><label>Seller port<input id="deployment-release-port" type="number" min="0" max="65535" value="8423"></label></div>
+        <label>Release facilitator URL<input id="deployment-facilitator" type="url" placeholder="Leave blank for challenge-only mode"></label>
+        <label class="checkbox"><input id="deployment-local-facilitator" type="checkbox">Allow an HTTP facilitator on 127.0.0.1 for local development</label>
+        <div class="toolbar"><button id="stage-deployment" type="button" disabled>Stage release</button><button id="deployment-console" type="button" disabled>Open release console</button></div>
+        <div id="deployment-console-link"></div>
+        <div id="deployment-release-status"></div>
+
+        <div class="subheading"><h3>Linux host package</h3></div>
+        <p>Enter the target host's actual account and paths. Preparation creates the original service, HTTPS proxy, operations and recovery files, plus the installation runbook.</p>
+        <div class="grid three"><label>Merchant ID<input id="host-merchant" placeholder="data-merchant"></label><label>Existing service user<input id="host-user" placeholder="stellar-merchant"></label><label>Host mode<select id="host-mode"><option value="challenge">Challenge only</option><option value="native">Native x402</option></select></label></div>
+        <div class="grid two"><label>Private merchant state directory<input id="host-state" placeholder="Absolute path on the target host"></label><label>Private environment file<input id="host-environment" placeholder="Optional absolute path; values stay in that file"></label></div>
+        <div class="grid three"><label>Seller port<input id="host-seller-port" type="number" min="1024" max="65535" value="8423"></label><label>Operations port<input id="host-operations-port" type="number" min="1024" max="65535" value="8424"></label><label>Host facilitator HTTPS URL<input id="host-facilitator" type="url" placeholder="Required for native x402"></label></div>
+        <details><summary>Additional original host settings</summary><p>Optional serviceGroup, runtime, delivery, maxInFlight, drainGraceMs and historyDays. The selected package supplies the merchant files and handlers.</p><label class="sr-only" for="host-extra">Additional host settings JSON</label><textarea id="host-extra" class="code" rows="5" spellcheck="false">{}</textarea></details>
+        <div class="toolbar"><button id="prepare-host" type="button" disabled>Prepare host package</button></div>
+        <div id="deployment-hosts"></div>
+        <div id="host-runbook"></div>
+      </section>
       <section class="panel"><div class="panel-heading"><h2>Project revisions</h2><button id="history-refresh" type="button" class="secondary">Refresh history</button></div><div id="history"></div></section>
     </main>
   </div>

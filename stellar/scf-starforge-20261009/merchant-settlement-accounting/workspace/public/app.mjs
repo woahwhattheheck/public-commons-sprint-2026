@@ -1,5 +1,8 @@
+import {mountPricing} from './pricing.mjs';
+let pricingPane;
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
+import {mountCollection} from './collection.mjs';
 const $ = id => document.getElementById(id);
 const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
 const shown = value => value === null || value === undefined ? 'Not recorded' : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : typeof value === 'object' ? JSON.stringify(value, null, 2) : String(value);
@@ -11,7 +14,7 @@ const classification = value => ({OFFICIAL_TRANSFER_MATCHED:'Official transfer m
 const badge = (value, label = friendly(value)) => '<span class="badge" title="' + esc(value) + '">' + esc(label) + '</span>';
 const endpoint = value => encodeURIComponent(value);
 const LIMIT = 50;
-let state = null, selectedRun = '', selectedReport = null, view = 'ledger';
+let state = null, selectedRun = '', selectedReport = null, view = 'ledger', collectionUI = null;
 let records = {items:[], total:0, offset:0, limit:LIMIT}, selectedKey = null, recordRequest = 0, runRequest = 0;
 let comparison = null, compareRequest = 0, busy = false, pollTimer = null, pendingIntent = null, runLimit = 30;
 let recoveryOffset = 0, recoverySelection = '', recoveryJobLimit = 20, recoverySearch = '';
@@ -87,6 +90,7 @@ function updateButtons() {
   for (const button of document.querySelectorAll('[data-recovery-cancel]')) button.disabled = busy || button.dataset.requested === 'true';
   for (const button of document.querySelectorAll('[data-recovery-retry]')) button.disabled = busy || !connected || recoveryActive();
   document.body.classList.toggle('working', busy);
+  pricingPane?.setBusy(busy);
 }
 
 function renderRuns() {
@@ -125,11 +129,12 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
   const run = selectedReport?.run;
+  pricingPane?.renderRun(selectedReport);
   $('empty-run').hidden = Boolean(run);
   $('selected-run').hidden = !run;
   if (!run) return;
@@ -166,6 +171,7 @@ async function loadRun(id, {reset = false} = {}) {
 async function refreshState() {
   const result = await api('/api/state'); adopt(result);
   await loadRun(selectedRun);
+  await collectionUI?.refresh();
 }
 function schedulePoll() {
   clearTimeout(pollTimer);
@@ -178,6 +184,7 @@ function schedulePoll() {
   }), 1000);
 }
 function openArea(area) {
+  if (area === 'collection') attempt(() => collectionUI?.refresh());
   for (const button of document.querySelectorAll('[data-area]')) { const active = button.dataset.area === area; button.classList.toggle('active',active); if (active) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); }
   for (const section of document.querySelectorAll('.area')) section.hidden = section.id !== 'area-' + area;
 }
@@ -395,6 +402,8 @@ async function importRecovery(previewId) {
   await perform({path:'/api/recovered/import',body:{revision:state.revision,previewId,actor:operator()},description:'original recovered-payment import',message:'Original transfer verification started. Its result and any retained import are shown in the saved attempts.',success:() => openArea('recovery')});
 }
 
+pricingPane = await mountPricing({api,perform,operator,attempt,notify,openArea,loadRun});
+
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
 document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click',() => attempt(async () => {
@@ -523,4 +532,11 @@ $('export-form').addEventListener('submit',event => { event.preventDefault(); at
 }); });
 
 selectedRun = remembered('selected-run');
-attempt(async () => { adopt(await api('/api/state')); await loadRun(selectedRun); });
+attempt(async () => {
+  const fragment = await fetch('/collection.html',{cache:'no-store'});
+  if (!fragment.ok) throw new Error('The collection interface could not be loaded.');
+  $('area-collection').innerHTML = await fragment.text();
+  collectionUI = mountCollection({root:$('area-collection'),api,perform,operator,adopt,getState:() => state,notify,
+    openRun:async id => { await loadRun(id,{reset:true}); openArea('reconcile'); }});
+  adopt(await api('/api/state')); await loadRun(selectedRun); await collectionUI.refresh();
+});

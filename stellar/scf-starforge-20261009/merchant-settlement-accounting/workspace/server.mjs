@@ -5,21 +5,26 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {join,resolve} from 'node:path';
 import {openAccountingWorkspace,WorkspaceError} from './store.mjs';
+import {openCollectionWorkspace} from './collection-workspace.mjs';
+import {handlePricingRequest,PRICING_REQUEST_BYTES} from './pricing-workspace.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
 const check=(ok,code,message,status=400)=>{if(!ok)throw new WorkspaceError(code,message,status);};
-async function body(request){
+async function body(request,limit=600_000){
   check(request.headers['content-type']?.split(';')[0]==='application/json','JSON_REQUIRED','Send a JSON workspace request.');
   let length=0;const parts=[];
-  for await(const part of request){length+=part.length;check(length<=600_000,'BODY_TOO_LARGE','The upload exceeds the supported file size.',413);parts.push(part);}
+  for await(const part of request){length+=part.length;check(length<=limit,'BODY_TOO_LARGE','The upload exceeds the supported file size.',413);parts.push(part);}
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
-export async function startAccountingWorkspace({port=8446,host='127.0.0.1',...options}){
+export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,...options}){
   check(host==='127.0.0.1'||host==='localhost','LOOPBACK_REQUIRED','This operator workspace binds to loopback.');
   check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a valid port.');
   const workspace=await openAccountingWorkspace(options),hosts=new Set();
+  let collection;
+  try{collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});}
+  catch(error){await workspace.close();throw error;}
   const send=(response,status,value,{type='application/json; charset=utf-8',name}={})=>{
     if(response.destroyed)return;
     const bytes=Buffer.isBuffer(value)?value:Buffer.from(JSON.stringify(value));
@@ -31,17 +36,25 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',...op
     try{
       check(hosts.has(request.headers.host),'INVALID_HOST','Open the printed local workspace address.',403);
       const url=new URL(request.url,'http://'+request.headers.host),path=url.pathname;
-      const assets={'/':['index.html','text/html; charset=utf-8'],'/app.mjs':['app.mjs','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8']};
+      const assets={'/':['index.html','text/html; charset=utf-8'],'/app.mjs':['app.mjs','text/javascript; charset=utf-8'],'/style.css':['style.css','text/css; charset=utf-8'],
+        '/collection.mjs':['collection.mjs','text/javascript; charset=utf-8'],'/collection.html':['collection.html','text/html; charset=utf-8'],'/collection.css':['collection.css','text/css; charset=utf-8'],
+        '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
       let value;
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
         check(!request.headers.origin||request.headers.origin==='http://'+request.headers.host,'INVALID_ORIGIN','Use this local workspace address.',403);
-        value=await body(request);
+        value=await body(request,path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
+      const pricing=await handlePricingRequest(workspace,{method:request.method,path,query,value});
+      if(pricing){if(pricing.file)send(response,200,pricing.file.bytes,{type:TYPES['.json'],name:pricing.file.name});else send(response,200,pricing.value);return;}
       let result;
-      if(path==='/api/state'&&request.method==='GET')result=workspace.view();
+      if(parts[0]==='api'&&parts[1]==='collection'){
+        result=await collection.route(request.method,parts,value);
+        if(result?.download){const file=result.download;send(response,200,file.bytes,{type:file.type,name:file.name});return;}
+      }
+      else if(path==='/api/state'&&request.method==='GET')result=workspace.view();
       else if(path==='/api/recovered/source'&&request.method==='POST')result=await workspace.connectRecovered(value);
       else if(path==='/api/recovered/refresh'&&request.method==='POST')result=await workspace.refreshRecovered(value);
       else if(path==='/api/recovered/review'&&request.method==='POST')result=await workspace.reviewRecovery(value);
@@ -76,10 +89,10 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',...op
   });
   server.requestTimeout=30_000;server.headersTimeout=15_000;
   try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});}
-  catch(error){await workspace.close();throw error;}
+  catch(error){await collection.close();await workspace.close();throw error;}
   const actual=server.address().port;hosts.add('127.0.0.1:'+actual);hosts.add('localhost:'+actual);
   let closing;
-  return {workspace,server,url:'http://127.0.0.1:'+actual,close(){if(!closing)closing=(async()=>{await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await workspace.close();})();return closing;}};
+  return {workspace,collection,server,url:'http://127.0.0.1:'+actual,close(){if(!closing)closing=(async()=>{await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await collection.close();await workspace.close();})();return closing;}};
 }
 
 const HELP=`Merchant settlement workspace
@@ -93,17 +106,19 @@ Reopen:
   node workspace/server.mjs --workspace /private/accounting-workspace
 
 Optional: --port 8446 and --recovered-dir /private/original-recovered-settlements.
+For an explicitly configured cloud HTTPS proxy, add --rpc-proxy-env HTTPS_PROXY.
 Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
 `;
 export async function main(argv=process.argv.slice(2)){
   if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP);return;}
-  const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir']),values={};
+  const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env']),values={};
   for(let i=0;i<argv.length;i+=2){check(keys.has(argv[i])&&argv[i+1]&&!Object.hasOwn(values,argv[i]),'INVALID_ARGUMENTS',HELP);values[argv[i]]=argv[i+1];}
   check(values['--workspace'],'WORKSPACE_REQUIRED',HELP);
   const app=await startAccountingWorkspace({directory:resolve(values['--workspace']),
     outboxDir:values['--outbox']&&resolve(values['--outbox']),proofDir:values['--proof-dir']&&resolve(values['--proof-dir']),termsFile:values['--terms']&&resolve(values['--terms']),
     recoveredDir:values['--recovered-dir']&&resolve(values['--recovered-dir']),
+    rpcProxyEnv:values['--rpc-proxy-env'],
     port:values['--port']===undefined?8446:Number(values['--port'])});
   process.stdout.write('Merchant accounting workspace: '+app.url+'\n');
   const close=()=>app.close().then(()=>process.exit(0),error=>{console.error(error.message);process.exit(1);});

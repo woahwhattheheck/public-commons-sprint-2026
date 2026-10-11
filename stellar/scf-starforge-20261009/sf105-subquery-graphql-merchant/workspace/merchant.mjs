@@ -43,7 +43,7 @@ export async function reviewDraft(value) {
   const source = draftSources(value), compiled = compileSubQueryMerchantPlan(source);
   return { ...merchantReview(source.input, source.schemaSource, compiled), inspection: inspectSchema(source.schemaSource) };
 }
-async function fingerprints(folder, prefix = '') {
+export async function fingerprints(folder, prefix = '') {
   const files = [];
   for (const entry of await readdir(join(folder, prefix), { withFileTypes: true })) {
     const name = join(prefix, entry.name), path = join(folder, name);
@@ -104,7 +104,7 @@ export function exportView(record) {
     prepared: record.prepared, review: record.review, ...(record.evolution ? { evolution: record.evolution } : {}),
     command: `node ${quote(record.prepared.launcher ?? launcher)} --seller ${quote(record.prepared.service)} --queries ${quote(record.prepared.queries)}` };
 }
-async function verifyFiles(directory, files) {
+export async function verifyFiles(directory, files) {
   if (!isAbsolute(directory) || !Array.isArray(files)) throw new TypeError('Choose a saved merchant export.');
   if (!(await lstat(directory)).isDirectory()) throw new TypeError('Saved package must remain a regular directory.');
   for (const expected of files) {
@@ -115,7 +115,7 @@ async function verifyFiles(directory, files) {
       throw new TypeError('Exported merchant files changed. Create a fresh reviewed export.');
   }
 }
-async function verifyExport(record) {
+export async function verifyExport(record) {
   if (!plain(record)) throw new TypeError('Choose a saved merchant export.');
   await verifyFiles(record.directory, record.files);
   if (record.evolution) await verifyFiles(record.evolution.directory, record.evolution.files);

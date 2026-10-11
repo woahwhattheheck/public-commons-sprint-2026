@@ -11,18 +11,16 @@ import { RELEASE_SCHEMA, MANIFEST, MAX_BYTES, canonical, sha256, relativePath,
 const exec = promisify(execFile);
 const BASE = 'stellar/scf-starforge-20261009/';
 const SCOPES = ['scf46-stellar-bazaar', 'stellar-forge', BASE.slice(0, -1), 'LICENSE'];
-const COMMANDS = {
-  seller: ['sf30-seller-sdk/serve.mjs', 'Serve a configured native seller'],
-  operations: ['sf30-seller-sdk/operations/launch.mjs', 'Run seller and its operations console together'],
-  upstream: ['sf30-seller-sdk/upstream-serve.mjs', 'Protect an existing authorized API'],
-  openapi: ['sf61-openapi-seller-import/cli.mjs', 'Compile original OpenAPI routes and bindings'],
+const CATALOG = BASE + 'distribution/distribution.json';
+const DOCTOR = BASE + 'distribution/cli.mjs';
+// Preserve the existing portable meanings that differ from, or supplement, the
+// maintained catalog. All other command names come from that catalog directly.
+const PORTABLE_ALIASES = {
   pilot: ['sf82-seller-pilot/pilot.mjs', 'Create or resume an OpenAPI seller pilot'],
   'pilot-ops': ['sf96-seller-pilot-ops/pilot-ops.mjs', 'Run the same pilot with operations and support capture'],
-  buyer: ['sf88-operator-buyer-cli/cli.mjs', 'Review, discover, or explicitly execute an original buyer operation'],
-  capture: ['sf85-live-402-capture/capture.mjs', 'Capture a real merchant payment challenge'],
-  handoff: ['sf96-merchant-challenge-handoff/handoff.mjs', 'Prepare a captured challenge for original buyer review'],
-  support: ['sf93-seller-support-bundle/bundle.mjs', 'Export private support data from a running seller'],
   'seller-check': ['sf96-seller-acceptance/audit.mjs', 'Inspect configured seller challenge routes'],
+  'catalog-operator': ['sf60-durable-catalog-transaction/operator-cli.mjs', 'Operate the original live catalog'],
+  deploy: ['sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
 };
 const USAGE = 'node distribution.mjs pack --source REPOSITORY --out NEW_DIRECTORY [--ref COMMIT] [--version 0.1.0]';
 
@@ -74,64 +72,68 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   const nativeSource = sourceBytes.get(BASE + 'sf30-seller-sdk/native-factory.mjs')?.toString('utf8') ?? '';
   const nativeVersion = /NATIVE_SDK_VERSION\s*=\s*'([0-9]+\.[0-9]+\.[0-9]+)'/.exec(nativeSource)?.[1];
   if (!nativeVersion) throw new Error('Native seller has no explicit SDK version');
-  const commands = {};
-  for (const [name, [path, summary]] of Object.entries(COMMANDS)) {
-    if (!sourceBytes.has(BASE + path)) throw new Error('Original native command missing: ' + path);
+  const catalogBytes = sourceBytes.get(CATALOG);
+  if (!catalogBytes || !sourceBytes.has(DOCTOR)) throw new Error('Original command catalog and doctor are required');
+  const catalog = JSON.parse(catalogBytes);
+  if (catalog.schema !== 'stellar-forge.merchant-distribution.v1' || !catalog.commands ||
+      typeof catalog.commands !== 'object' || Array.isArray(catalog.commands) || !Object.keys(catalog.commands).length)
+    throw new Error('Invalid original command catalog');
+  const commands = Object.create(null), aliases = [], preservedMappings = [];
+  for (const [name, path] of Object.entries(catalog.commands)) {
+    if (!/^[a-z][a-z0-9-]*$/.test(name) || !sourceBytes.has(relativePath(path)) || !path.endsWith('.mjs'))
+      throw new Error('Original catalog command is not packaged: ' + name);
+    commands[name] = { path, summary: 'Original native ' + name + ' command' };
+  }
+  for (const [name, [path, summary]] of Object.entries(PORTABLE_ALIASES)) {
+    if (!sourceBytes.has(BASE + path)) continue;
+    if (commands[name] && commands[name].path !== BASE + path)
+      preservedMappings.push({ name, catalogPath: commands[name].path, portablePath: BASE + path });
+    else if (!commands[name]) aliases.push(name);
     commands[name] = { path: BASE + path, summary };
   }
-  // New modules can participate once they actually exist at the selected commit.
-  const optional = [
-    ['dataset', 'sf30-seller-sdk/dataset-cli.mjs', 'Inspect an original CSV dataset or compile its seller configuration'],
-    ['dataset-refresh', 'sf30-seller-sdk/dataset-refresh/cli.mjs', 'Initialize, serve, refresh and activate retained native dataset versions'],
-    ['dataset-workspace', 'sf30-seller-sdk/dataset-workspace.mjs', 'Inspect, preview and activate retained native dataset versions'],
-    ['dataset-publisher', 'sf30-seller-sdk/dataset-refresh/workspace.mjs', 'Publish CSV revisions and prepare original buyer acquisition from a selected offer'],
-    ['catalog', 'sf60-durable-catalog-transaction/operator-cli.mjs', 'Inspect or update the original live catalog through private control'],
-    ['catalog-operator', 'sf60-durable-catalog-transaction/operator-cli.mjs', 'Alias of catalog for the original live operator commands'],
-    ['catalog-serve', 'sf60-durable-catalog-transaction/operator.mjs', 'Serve live discovery and the original private catalog writer'],
-    ['catalog-withdrawal', 'sf95-signed-seller-withdrawal/cli.mjs', 'Prepare or sign an original seller withdrawal request'],
-    ['buyer-dataset', 'sf88-operator-buyer-cli/dataset-cli.mjs', 'Acquire, resume and deliver native dataset pages with the original buyer'],
-    ['dataset-delivery', 'sf88-operator-buyer-cli/queue-dataset-cli.mjs', 'Assemble saved original inbox pages through native dataset delivery'],
-    ['buyer-inbox', 'sf88-operator-buyer-cli/queue-cli.mjs', 'Inspect the original inbox and execute one selected intent'],
-    ['buyer-runbook', 'buyer-runbook/cli.mjs', 'Plan and resume an original multi-resource buying run'],
-    ['buyer-node', 'sf88-operator-buyer-cli/node/examples/customer.mjs', 'Review, execute and recover a durable generated-client application request'],
-    ['merchant-fleet', 'merchant-fleet-gateway/cli.mjs', 'Run the original merchant gateway with retained rollout state'],
-    ['merchant-fleet-control', 'merchant-fleet-gateway/control.mjs', 'Prepare, activate, inspect or roll back native merchant configuration'],
-    ['merchant-fleet-workspace', 'merchant-fleet-gateway/workspace/server.mjs', 'Inspect and manage the original retained merchant fleet'],
-    ['fleet-release', 'merchant-fleet-gateway/release-cli.mjs', 'Stage and manage original seller releases, draining and restart rollback'],
-    ['revenue-workspace', 'sf97-merchant-revenue-ops/workspace/cli.mjs', 'Review merchant pricing and save original operational reports'],
-    ['revenue-report', 'sf97-merchant-revenue-ops/analyze.mjs', 'Create the original merchant revenue and native settlement report'],
-    ['deploy', 'sf99-merchant-deploy/cli.mjs', 'Generate the original HTTPS host deployment'],
-    ['postgres', 'sf30-seller-sdk/postgres/start.mjs', 'Run the original PostgreSQL merchant seller'],
-    ['postgres-init', 'sf30-seller-sdk/postgres/create-example.mjs', 'Create a PostgreSQL source and seller starter'],
-    ['postgres-inspect', 'sf30-seller-sdk/postgres/inspect.mjs', 'Inspect or preflight an original PostgreSQL source'],
-    ['postgres-workspace', 'sf30-seller-sdk/postgres/workspace/server.mjs', 'Build a merchant API from selected database fields'],
-  ];
-  for (const [name, path, summary] of optional) if (sourceBytes.has(BASE + path)) commands[name] = { path: BASE + path, summary };
+  const commandCatalog = { path: CATALOG, sha256: sha256(catalogBytes),
+    commands: Object.keys(catalog.commands).length, aliases, preservedMappings };
   const launcher = sourceBytes.get(BASE + 'sf46-release/product.mjs');
   const core = sourceBytes.get(BASE + 'sf46-release/release-core.mjs');
   if (!launcher || !core) throw new Error('Commit the product release source before packaging');
   const nativePackages = Object.fromEntries(['@x402/core', '@x402/stellar', '@x402/extensions', '@x402/fetch'].map(name => [name, nativeVersion]));
-  const adapterPackages = Object.create(null), adapterPackageSources = {};
-  const postgresManifest = BASE + 'sf30-seller-sdk/postgres/package.json';
-  if (commands.postgres) {
-    const bytes = sourceBytes.get(postgresManifest);
-    if (!bytes) throw new Error('Original PostgreSQL dependency manifest missing');
+  const adapterPackages = Object.create(null), adapterPackageSources = {}, adapterPackageHashes = {};
+  const featurePeers = { ...catalog.featurePeers };
+  for (const [group, declaredPath] of Object.entries(catalog.runtimePackageManifests ?? {})) {
+    const path = relativePath(declaredPath), bytes = sourceBytes.get(path);
+    if (!bytes) throw new Error('Original runtime dependency manifest missing: ' + path);
     const dependencies = JSON.parse(bytes).dependencies;
-    if (!dependencies?.pg) throw new Error('Original PostgreSQL production driver missing');
+    if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies) || !Object.keys(dependencies).length)
+      throw new Error('Original production dependencies missing: ' + path);
+    const declaredPeers = featurePeers[group] ?? {};
+    featurePeers[group] = {};
     for (const [name, version] of Object.entries(dependencies)) {
       if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name) ||
-          !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) || Object.hasOwn(nativePackages, name))
-        throw new Error('Invalid original PostgreSQL dependency');
+          !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(version) ||
+          Object.hasOwn(adapterPackages, name) && adapterPackages[name] !== version)
+        throw new Error('Conflicting or unpinned original runtime dependency: ' + path);
       adapterPackages[name] = version;
+      featurePeers[group][name] = { version, probe: declaredPeers[name]?.probe ?? name };
     }
-    adapterPackageSources.postgres = postgresManifest;
+    adapterPackageSources[group] = path;
+    adapterPackageHashes[group] = sha256(bytes);
+  }
+  const optionalDependencies = { ...nativePackages };
+  for (const peers of [catalog.nativePeers ?? {}, ...Object.values(featurePeers)]) {
+    for (const [name, value] of Object.entries(peers)) {
+      if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name) ||
+          typeof value?.version !== 'string' || !value.version ||
+          Object.hasOwn(optionalDependencies, name) && optionalDependencies[name] !== value.version)
+        throw new Error('Conflicting original optional dependency: ' + name);
+      optionalDependencies[name] = value.version;
+    }
   }
   const additions = new Map([
     ['forge.mjs', launcher], ['release-core.mjs', core],
     ['package.json', Buffer.from(JSON.stringify({ name: 'stellar-forge-portable', version, private: true,
-      type: 'module', license: 'MIT', engines: { node: '>=22' },
-      optionalDependencies: { ...nativePackages, ...adapterPackages } }, null, 2) + '\n')],
-    ['START_HERE.md', Buffer.from(`# Stellar Forge ${version}\n\nSource commit: ${commit}\n\nRun \`node forge.mjs help\` for the product commands.\n\nA cold start, installation, upgrade and rollback guide is included at\n\`${BASE}sf46-release/DISTRIBUTION.md\`.\n\nConfiguration and merchant data belong outside the release. All native command\narguments retain their original meanings and are resolved from your working directory.\nChallenge-only seller, compiler, review and local operations need Node 22+ only.\nOptional native payments use the original configured facilitator and signer.\nTo install the optional native SDK and database drivers explicitly, run \`npm install --ignore-scripts --omit=dev\`\nin this release directory, then \`node forge.mjs doctor\`. Dependency installation\ndoes not configure a facilitator, supply a signer or authorize a payment.\n\nOriginal source and licenses are included. No tests or hosted CI entrypoints are run by this launcher.\n`)],
+      type: 'module', license: 'MIT', engines: { node: '>=22.16.0' },
+      optionalDependencies }, null, 2) + '\n')],
+    ['START_HERE.md', Buffer.from(`# Stellar Forge ${version}\n\nSource commit: ${commit}\n\nRun \`node forge.mjs help\` for the product commands.\n\nA cold start, installation, upgrade and rollback guide is included at\n\`${BASE}sf46-release/DISTRIBUTION.md\`.\n\nConfiguration and merchant data belong outside the release. All native command\narguments retain their original meanings and are resolved from your working directory.\nChallenge-only seller, compiler, review and local operations need Node 22.16+ only.\nOptional native payments use the original configured facilitator and signer.\nCommands and optional feature dependencies follow the original maintained catalog at this commit.\nTo install its optional native SDK and adapter dependencies explicitly, run \`npm install --ignore-scripts --omit=dev\`\nin this release directory, then \`node forge.mjs doctor\`. Select specific feature requirements with\n\`node forge.mjs doctor --feature NAME\` or native packages with \`--native\`. Dependency installation\ndoes not configure a facilitator, supply a signer or authorize a payment.\n\nOriginal source and licenses are included. No tests or hosted CI entrypoints are run by this launcher.\n`)],
   ]);
   const files = [...entries.map(entry => ({ path: entry.path, mode: entry.mode, gitBlob: entry.oid,
     bytes: sourceBytes.get(entry.path).length, sha256: sha256(sourceBytes.get(entry.path)) })),
@@ -140,9 +142,11 @@ export async function pack({ source, out, ref = 'HEAD', version = '0.1.0' }) {
   if (files.reduce((sum, item) => sum + item.bytes, 0) > MAX_BYTES) throw new Error('Release exceeds size limit');
   const body = { schema: RELEASE_SCHEMA, product: 'Stellar Forge', version,
     source: { repository: 'woahwhattheheck/public-commons-sprint-2026', commit },
-    runtime: { minimumNodeMajor: 22, nativePackages, nativePackageSource: BASE + 'sf30-seller-sdk/native-factory.mjs',
-      adapterPackages, adapterPackageSources },
-    commands, files };
+    runtime: { minimumNodeMajor: 22, minimumNodeMinor: 16, nativePackages,
+      nativePackageSource: BASE + 'sf30-seller-sdk/native-factory.mjs',
+      nativePeers: catalog.nativePeers ?? {}, optionalDependencies, featurePeers,
+      adapterPackages, adapterPackageSources, adapterPackageHashes, doctorPath: DOCTOR },
+    commandCatalog, commands, files };
   const manifest = { ...body, digest: sha256(canonical(body)) };
   await mkdir(out, { mode: 0o755 });
   try {
