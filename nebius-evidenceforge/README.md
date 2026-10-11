@@ -1,131 +1,163 @@
-# EvidenceForge — Nebius × NVIDIA Global AI Hackathon
+# EvidenceForge
 
-**Track target:** Coding and Agentic Engineering  
-**Submission state:** source/demo foundation ready; **a real Nebius Token Factory inference is still required before any competition submission claim**.
+EvidenceForge is a local workspace for running a coding task with an NVIDIA
+model on Nebius Token Factory, inspecting the actual source change and checks,
+and reopening the complete result later. The model receives the selected source,
+the observed baseline failures and an explicit change contract. The original
+execution engine applies its plan to a disposable task copy and runs the named
+Python checks. The interface keeps the source, patch, case results, provider
+response and downloadable working record together.
 
-EvidenceForge is a coding-agent control plane for teams that want the speed of a reasoning model without giving model text direct production authority. A human declares the files the agent may touch, the exact tests it must run, and a write budget. A Nemotron/NVIDIA model on Nebius Token Factory proposes a JSON plan. EvidenceForge validates that plan, executes it only through an isolated sandbox adapter, and emits a content-addressed receipt that separates **what ran** from **what is approved**.
+This release joins the original provider, task runner and retained journal into
+one application. [SUBMISSION.md](SUBMISSION.md) records the current competition
+entry and observed provider runs. [FOCUSED_EXECUTION.md](FOCUSED_EXECUTION.md)
+explains the execution contract.
 
-The product is intentionally useful even when the model is wrong: unknown paths, undeclared tests, arbitrary tool kinds, duplicate JSON keys, path traversal, non-finite JSON, skipped tests, and attempts to smuggle approval fields all fail closed.
+## Start the application
 
-## Judge/evaluator path
+Use Python **3.11 or newer** on Linux, macOS or Windows. The runtime uses Python's
+standard library; no package installation or hosted build is required.
 
-For actual source computation and measured checks, start with [Focused execution](FOCUSED_EXECUTION.md): three released repository bugs, a restricted pure-Python adapter, source diffs and verifiable run envelopes. The local interface is `python -B -m evidenceforge.web_runtime`; a real Nebius inference remains pending. The reviewer server accepts only `http://localhost:8081` or `http://127.0.0.1:8081` with the actual bound port, and rejects requests claiming another browser origin. It remains loopback-only with an independent action token; it is NOT an authenticated public deployment. Run `python -m unittest tests.test_loopback_guard` to check the local-origin boundary without network access.
+From this directory:
 
-The local interface keeps the operation ID visible before dispatch and can
-reopen an interrupted run from its original journal and retained result. A
-bounded operation list replaces manual ID hunting; reload and inspection are
-read-only. Browser storage, when available, retains recent IDs without tokens or
-run content. Journal progress stays separate from verified envelope consistency,
-and no saved provider claim is promoted to proof of a new model call.
-
-1. Run the zero-credential CLI demo and verify its receipt.
-2. Open the local browser demo and inspect the same authority boundary visually.
-3. Review `ARCHITECTURE.md` for the trust model.
-4. Review `SUBMISSION.md` for the current competition gate ledger.
-5. Use `DEMO_STORYBOARD.md` for the <=3-minute public demo-video capture plan.
-6. Before submission, replace the remaining `PROVIDER_EXECUTION_REQUIRED` gate with evidence from an authorized live Token Factory call using an NVIDIA/Nemotron model.
-
-## Why this fits the hackathon
-
-The current official rules require a working software application that either calls the Token Factory inference API or runs on Nebius AI Cloud, and uses at least one NVIDIA open-source model. The Coding and Agentic Engineering track asks for coding agents and developer tools. EvidenceForge's provider adapter uses the official OpenAI-compatible Token Factory API at `https://api.tokenfactory.nebius.com/v1/`.
-
-The adapter deliberately **does not hard-code a model ID**. It queries `/v1/models` at runtime, requires the configured `NEBIUS_MODEL` to be present, and requires an NVIDIA/Nemotron model identity. This avoids silently claiming a model that Token Factory has since removed or renamed.
-
-Official competition sources (re-check immediately before submission):
-- https://nebiusglobalaihackathon.devpost.com/
-- https://nebiusglobalaihackathon.devpost.com/rules
-- https://docs.tokenfactory.nebius.com/api-reference/introduction
-- https://docs.tokenfactory.nebius.com/api-reference/models/list-models
-
-## Product flow
-
-1. **Human policy:** request JSON defines `allowed_paths`, `required_tests`, and `max_writes`.
-2. **Nebius inference:** `provider.generate_plan()` checks live Token Factory model inventory and asks the selected NVIDIA/Nemotron model for a strict JSON plan.
-3. **Fail-closed validation:** model output is parsed with duplicate-key and non-finite-number rejection. Only `read`, `write`, and predeclared `test` operations exist.
-4. **Sandbox execution:** the included `MemorySandbox` gives a deterministic zero-credential replay. A competition runtime adapter can bind the same interface to Token Factory Sandboxes or another isolated Nebius runner without changing the authority contract.
-5. **Receipt:** every read/write/test is reduced to content hashes and an immutable `evidenceforge-receipt/v1`.
-6. **Human approval ceiling:** receipts always state `real_repository_mutation=false` and `human_approval_required=true`. Provider output is evidence, never self-granted authority.
-
-## Run the zero-credential demo
-
-```bash
-cd nebius-evidenceforge
-python -m evidenceforge.cli demo --out /tmp/evidenceforge-receipt.json
-python -m evidenceforge.cli verify /tmp/evidenceforge-receipt.json
-python -m unittest discover -s tests -v
-python -O -m unittest discover -s tests -v
+```sh
+python -B launch.py --runs ./runs --port 8081
 ```
 
-Browser demo:
+Open the printed `http://127.0.0.1:8081` address. Stop with Ctrl-C and start the
+same command with the same runs directory to reopen the retained work. The full
+module entrypoint is also available:
 
-```bash
-python -m evidenceforge.webapp
-# open http://127.0.0.1:8080
-# machine-readable receipt: http://127.0.0.1:8080/api/demo
+```sh
+python -B -m evidenceforge.web_runtime --runs ./runs --port 8081
 ```
 
-## Run with Nebius Token Factory
+For a model run, start the process in the existing Nebius account environment
+with `NEBIUS_API_KEY` set. The **Provider** panel reads the account's current
+NVIDIA/Nemotron inventory. Select an enabled model there; `NEBIUS_MODEL` may
+optionally provide the default. The key stays in the server process and is not
+sent to the browser or written into the run package. The adapter uses the
+[official Token Factory API](https://docs.tokenfactory.nebius.com/api-reference/introduction).
 
-Do this only from an authorized competition/account environment:
+## Complete coding workflow
 
-```bash
-export NEBIUS_API_KEY='...'
-export NEBIUS_MODEL='CURRENT_NVIDIA_OR_NEMOTRON_MODEL_ID_FROM_/v1/models'
+1. **Choose the task.** Inspect its starting source, requested behavior, allowed
+   file and original named checks. The checker is separate from model-writable source.
+2. **Choose the execution.** Select a current Nebius model, or an explicitly
+   labeled authored baseline/corrected control. Controls execute real local
+   Python checks and let you explore the application without a key.
+3. **Run.** The operation ID is retained before dispatch. The interface shows
+   its original journal while the provider and checker execute.
+4. **Inspect the result.** Read the before/after source and patch, individual
+   baseline and final cases, actual durations, returned model identity, usage
+   and provider response. A failed check remains a failed check.
+5. **Compare and retain.** Reopen prior operations and compare results on the
+   same task contract. Refreshing or reopening reads the saved result and does
+   not dispatch another inference.
+6. **Download the complete run.** The native ZIP includes exact source, task
+   contract and checker source, case outputs, plan, patch and retained provider
+   records when that run used Nebius.
+
+If a browser connection ends during execution, reopen the visible operation ID.
+The server retains a received provider response even if its plan cannot be
+admitted or a later check fails. An incomplete operation remains inspectable;
+starting another attempt is a separate explicit action.
+
+## Released tasks
+
+These are the project's original coding workloads, with actual Python execution.
+They exercise application behavior rather than a competition leaderboard score.
+
+| Task | Work to complete | Original check |
+| --- | --- | --- |
+| Invoice import | BOM/header handling, normalized duplicate IDs and exact finite Decimal cents | `invoice-regressions` |
+| Dependency ordering | Stable topological order, unknown references and cycles | `dependency-regressions` |
+| Operation ledger | Canonical replay, changed-payload conflicts, boolean/integer distinction and empty IDs | `ledger-regressions` |
+
+The declared source and cases live in `evidenceforge/workloads.py`. The runner
+retains their content identities with every new operation so a changed workload
+cannot silently stand in for the one that produced a result.
+
+## Run from the command line
+
+The CLI and browser use the same `run_task()` implementation and runs directory.
+For an authored corrected control:
+
+```sh
+python -B -m evidenceforge.focused_execution \
+  --task invoice-import --operation-id invoice-control-001 \
+  --out ./runs --control corrected --seconds 120
 ```
 
-Run the provider planner on a human request JSON containing `request_id`, `goal`,
-`allowed_paths`, `required_tests`, and `max_writes`:
+For a current account model, after selecting its actual ID from inventory:
 
-```bash
-python -m evidenceforge.cli plan --request request.json --out provider-plan.json
+```sh
+python -B -m evidenceforge.focused_execution \
+  --task dependency-order --operation-id nebius-dependency-001 \
+  --out ./runs --live --model "$NEBIUS_MODEL" --seconds 120 --max-tokens 4096
 ```
 
-The command validates the request before any network call, checks the live model
-inventory, and validates the returned plan with the compiler's existing contract.
-Its output contains `request`, `plan`, and `provider_evidence`; it does not execute
-operations or claim a sandbox receipt. Provider evidence separates `requested_model`
-from the actual response `model` and retains the actual response ID and Unix
-`created` timestamp. Truncated, refused, or otherwise incomplete completions are
-rejected without a plan output. There is no automatic retry of inference.
+Use a different operation ID for a new attempt. Reusing a completed matching
+operation reopens its result. The provider does not automatically repeat an
+inference after an interrupted response.
 
-To replay that saved plan with the existing deterministic sandbox:
+## Portable test build
 
-```bash
-python -m evidenceforge.cli replay --plan provider-plan.json --fixture demo/scenario.json --out provider-receipt.json
-python -m evidenceforge.cli verify provider-receipt.json
+Create a complete distribution from the actual working source:
+
+```sh
+python -B tools/build_test_build.py --output /absolute/path/EvidenceForge.zip
 ```
 
-The saved request must exactly match the human-selected scenario's `request`.
-Use that request for the preceding `plan` command; a different task requires its
-own explicitly selected scenario. Replay revalidates the plan against that policy,
-uses the scenario's files and synthetic test outputs, and retains the saved
-provider evidence in the receipt. It makes no network call and does not run real
-tests. Neither replay nor receipt verification authenticates a caller-supplied
-provider claim: retain the actual provider run log separately. Output cannot
-overwrite either replay input.
+To include a selected completed operation, add its original runs directory and
+ID. Repeat `--include-operation` for each operation intended for the recipient:
 
-For an isolated runner that executes real tests, feed the saved `plan` and
-`provider_evidence` into `compile_change(...)` with that sandbox adapter. The Python `generate_plan(request_json)` API remains
-available. Its `content` is the provider's original validated plan text.
-API response fields: https://docs.tokenfactory.nebius.com/api-reference/introduction
+```sh
+python -B tools/build_test_build.py --output /absolute/path/EvidenceForge.zip \
+  --runs ./runs --include-operation nebius-dependency-001
+```
 
-**Provider evidence needed before submission readiness:** capture the real Token Factory response ID, configured live NVIDIA model ID, timestamp/run log, and a demo receipt produced from that call. Until then the project state is `PROVIDER_EXECUTION_REQUIRED`, not “Nebius-integrated and tested.”
+The builder copies the application, runtime assets, documentation, original
+tests, MIT license and only explicitly selected native run bundles. It does not
+collect environment variables, arbitrary workspace files or an entire private
+runs directory. It checks each selected run with the original reader before
+packaging it. Existing output files are preserved.
 
-## Security / authority boundary
+Unzip the build, enter `EvidenceForge`, and run:
 
-EvidenceForge does **not** include an arbitrary host shell executor. The offline adapter cannot run commands at all; it can only return outputs for human-declared test names. A real sandbox adapter must map those names to a preconfigured command table inside the isolated environment. Model output must never supply a shell string.
+```sh
+python -B launch.py --runs ./example-runs --port 8081
+```
 
-The model cannot:
-- widen `allowed_paths`;
-- invent or reorder required tests;
-- exceed the write budget;
-- deploy, contact third parties, spend money, or mutate a real repository;
-- convert its own output or provider metadata into approval.
+Included operations open in the original interface. New authored controls work
+without an account; new Nebius calls use the account configuration above.
+`BUILD_INFO.json` identifies the distribution's source and retained operations.
 
-## Submission materials
+## Execution and operation
 
-`SUBMISSION.md` is the canonical readiness ledger. It deliberately keeps provider execution, hosted demo URL, public video, registration/rules acceptance, and final Devpost submission as explicit gates until those events actually occur. `DEMO_STORYBOARD.md` provides a shot-by-shot video plan without claiming those external actions have happened.
+The original compiler admits the declared read/write/test operations and checks
+the selected path and write count. Every write precedes the named checks. The
+current adapter executes the released pure-Python task modules with the original
+restricted runner. General repository execution requires an appropriate isolated
+adapter for that repository.
 
-## License
+The application binds to loopback and validates its browser origin and
+per-process action token. It is a local operator. Downloads retain actual run
+artifacts; hash verification establishes their consistency, not the authenticity
+of arbitrary provider claims supplied by someone else. The original receipt's
+human-approval field remains unchanged.
+[ARCHITECTURE.md](ARCHITECTURE.md) describes that original contract.
 
-MIT. See the repository-root `LICENSE` file. Preserve the license notice in any public submission or derived distribution.
+The older `evidenceforge.cli demo`, `replay` and `evidenceforge.webapp` entrypoints
+remain available for their MemorySandbox examples. Use `web_runtime` and
+`focused_execution` for actual task computation and provider operations.
+
+## Competition and license
+
+The [current official rules](https://nebiusglobalaihackathon.devpost.com/rules)
+provide a Coding and Agentic Engineering track and accept a working demo,
+hosted application or test build. The project uses the original entry;
+[SUBMISSION.md](SUBMISSION.md) holds its current account, run and public-video
+details, and [DEMO_STORYBOARD.md](DEMO_STORYBOARD.md) describes the actual demo.
+
+MIT. The standalone build includes the original repository license in `LICENSE`.
