@@ -37,6 +37,22 @@ python3 stellar/scf-starforge-20261009/sf36-spend-governor/finalize.py \
   --reports /private/operator/finalization-reports
 ```
 
+On a managed host that requires its operator-selected HTTP CONNECT proxy, add
+`--rpc-proxy-env HTTPS_PROXY` and the existing `--rpc-endpoint` selection. The
+worker reads only that explicitly named variable; it never auto-detects a proxy.
+The value must be a credential-free HTTP proxy URL accepted by the original
+SF31/SF85 parser, with no additional path, query or fragment. The SF88 workspace
+command forwards its existing validated profile automatically.
+
+The endpoint is sent only in the private JSON input to the original Node
+observer, which still receives no SF36 keys or unrelated environment. The observer
+constructs an original SF31 transport pinned to the selected public RPC origin;
+the existing SF86 network, transaction and exact SEP-41 matching checks remain
+unchanged. TLS verification, response bounds and redirect refusal remain in the
+original transport. Proxy values never appear in reports or command output. Each
+new worker invocation resolves the selected environment variable again, so an
+ephemeral cloud proxy port is not persisted as accounting configuration.
+
 For the existing SF88 inbox/evidence directory, replace `--record` with
 `--records-dir /private/operator/evidence`. One invocation processes every
 original JSON capture once. `--watch-seconds 60` keeps observing unresolved
@@ -63,17 +79,19 @@ private because original request IDs and merchant order references may appear.
    from guessed fields or reexecute a paid request to obtain it.
 2. Compare the native amount, network, asset and recipient with that original
    request, then require the independently configured payer. The actual SF86
-   observer uses a selected supported public Stellar testnet RPC and the original
-   SDK XDR decoder. SDF is the default; `--rpc-endpoint
-   https://soroban-rpc.testnet.stellar.gateway.fm` explicitly selects Gateway.
-   Both are in the [Stellar provider directory](https://developers.stellar.org/docs/data/apis/rpc/providers).
-   The observer checks the canonical testnet passphrase before the transaction.
+   observer uses a supported public RPC for that network and the original SDK
+   XDR decoder. Testnet defaults to SDF; pubnet defaults to Gateway mainnet.
+   `--rpc-endpoint` explicitly selects another provider in the shared
+   [network catalog](../sf86-rpc-transfer-reconcile/networks.json), sourced from
+   the [Stellar provider directory](https://developers.stellar.org/docs/data/apis/rpc/providers).
+   The observer checks that network's canonical passphrase before the transaction.
    There is no arbitrary endpoint, fetch, decoder or saved-verdict override.
 3. Require successful inclusion and exactly one native transfer for that
    transaction, payer, recipient, asset and exact amount. Reaudit the original
    reservation after RPC, and call original `Governor.reconcile()` inside its
    existing immediate SQLite transaction.
-4. The receipt key is `stellar:testnet/` plus the lowercase transaction hash.
+4. The receipt key is the original network (`stellar:testnet/` or
+   `stellar:pubnet/`) plus the lowercase transaction hash.
    This preserves original cross-request receipt reuse protection. The proof
    digest covers immutable verified transaction/ledger/event/transfer facts and
    the complete request digest; advancing RPC pages cannot create a different
@@ -85,9 +103,10 @@ An inbox caller can pass `--expected-request-sha` with one original `--record`.
 The worker verifies that exact approved-request digest before reading or
 changing its reservation and retains it in the final accounting result.
 
-This version follows SF86's **exact testnet** support. Mainnet and `upto`
-continue through their original operator paths; neither is silently treated as
-testnet or exact. The Stellar event proves a transfer, while the protected
+This worker supports **exact payments on testnet and pubnet**. The original
+approved network must agree with the provider, canonical passphrase and positive
+SF86 verdict. Python and Node consume the same maintained network catalog.
+`upto` retains its separate original operator path. The Stellar event proves a transfer, while the protected
 original buyer-host capture supplies its association with the HTTP request.
 The chain does not encode the HTTP URL, method or request-body digest. These
 trust boundaries are explicit: source files or keys controlled by an attacker

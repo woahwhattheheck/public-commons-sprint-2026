@@ -9,8 +9,11 @@ import { fleetControl } from '../control.mjs';
 const HOST = '127.0.0.1';
 const USAGE = `Usage: node workspace/server.mjs --state PRIVATE_FLEET_DIRECTORY
   [--manifest NAME=FILE ...] [--port 8402]
+Or: node workspace/server.mjs --releases ORIGINAL_PLAN --release-state PRIVATE_DIRECTORY
+  [--state PRIVATE_GATEWAY_DIRECTORY] [--port 8402]
 The existing gateway must be running with --state. Manifest names are declared
-by the operator at startup; the browser never supplies filesystem paths.`;
+by the operator at startup. Managed mode starts the original release sessions
+and gateway itself. The browser never supplies filesystem paths.`;
 const failure = (code, status = 400) => Object.assign(new Error(code), { status });
 const positive = value => Number.isSafeInteger(value) && value > 0;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -37,26 +40,40 @@ async function body(req) {
   catch { throw failure('WORKSPACE_JSON_INVALID'); }
 }
 
-export async function startFleetWorkspace({ stateDirectory, manifests = {}, port = 8402 } = {}) {
-  if (typeof stateDirectory !== 'string' || !stateDirectory.trim()) throw new TypeError('--state is required');
+export async function startFleetWorkspace({ stateDirectory, manifests = {}, port = 8402,
+  releasePlan, releaseDirectory } = {}) {
+  const managed = releasePlan !== undefined;
+  if (!managed && (typeof stateDirectory !== 'string' || !stateDirectory.trim())) throw new TypeError('--state is required');
+  if (managed && (typeof releasePlan !== 'string' || !releasePlan.trim() ||
+      typeof releaseDirectory !== 'string' || !releaseDirectory.trim())) throw new TypeError('--releases and --release-state are required together');
+  if (!managed && releaseDirectory !== undefined) throw new TypeError('--release-state requires --releases');
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Invalid workspace port');
   if (!object(manifests) || Object.keys(manifests).length > 32) throw new TypeError('At most 32 named manifests');
-  const directory = resolve(stateDirectory), sources = new Map();
+  if (managed && Object.keys(manifests).length) throw new TypeError('Managed releases use their original plan instead of manifest aliases');
+  const sources = new Map();
   for (const [name, path] of Object.entries(manifests)) {
     if (!/^[a-z][a-z0-9-]{0,39}$/.test(name) || typeof path !== 'string' || !path.trim())
       throw new TypeError('Manifest requires a lowercase name and a file path');
     sources.set(name, resolve(path));
   }
-  // Read the original private control file and verify the actual running engine.
-  // This creates no second state store and never reads or changes a seller key.
-  await fleetControl(directory, 'status');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/browser.mjs', 'browser.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
+  const releases = managed ? await (await import('../release-operator.mjs')).openFleetReleaseOperator({
+    planFile: releasePlan, directory: releaseDirectory, gatewayStateDirectory: stateDirectory,
+  }) : null;
+  const directory = releases ? releases.stateDirectory : resolve(stateDirectory);
+  const snapshot = async () => {
+    const releaseStatus = releases ? await releases.status() : undefined;
+    return { status: releaseStatus ? releaseStatus.native : await fleetControl(directory, 'status'),
+      ...(releaseStatus ? { releaseStatus } : {}), capturedAt: new Date().toISOString() };
+  };
+  // Use original private control and lifecycle ownership in both modes.
+  try { await snapshot(); } catch (error) { await releases?.close(); throw error; }
   const sessionKey = randomBytes(32).toString('base64url');
-  let url, closing = false;
+  let url, closing = false, closingPromise;
   const headers = {
     'cache-control': 'no-store', 'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin',
@@ -84,13 +101,33 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
       const asset = assets.get(req.url);
       if (req.method === 'GET' && asset) return send(res, 200, asset.bytes, asset.type);
       if (req.method === 'GET' && req.url === '/api/session')
-        return send(res, 200, { session: sessionKey, manifests: [...sources.keys()] });
+        return send(res, 200, { session: sessionKey, manifests: [...sources.keys()], managed });
       if (!sameSession(req)) return send(res, 403, { error: 'WORKSPACE_SESSION_REQUIRED' });
       if (req.method === 'GET' && req.url === '/api/status')
-        return send(res, 200, { status: await fleetControl(directory, 'status'), capturedAt: new Date().toISOString() });
+        return send(res, 200, await snapshot());
+      if (releases && req.method === 'GET' && req.url.startsWith('/api/releases/catalog?')) {
+        const params = new URL(req.url, url).searchParams;
+        if ([...params.keys()].length !== 2 || !params.has('tenant') || !params.has('slot'))
+          throw failure('WORKSPACE_REQUEST_INVALID');
+        return send(res, 200, await releases.catalog({ tenant: params.get('tenant'), slot: params.get('slot') }));
+      }
+      const releaseActions = {
+        stage: ['tenant', 'slot', 'package', 'releaseId'], review: ['tenant', 'slot', 'releaseId'],
+        prepare: ['reviewId'], 'review-rollback': ['targetRevision'], rollback: ['reviewId'],
+        retire: ['tenant', 'slot', 'instanceId', 'expectedRevision'],
+      };
+      if (releases && req.method === 'POST' && req.url.startsWith('/api/releases/')) {
+        const action = req.url.slice('/api/releases/'.length), allowed = releaseActions[action];
+        if (!Object.hasOwn(releaseActions, action)) return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
+        const input = await body(req); keys(input, allowed);
+        const method = action === 'review-rollback' ? 'reviewRollback' : action;
+        operationDispatched = !['review', 'review-rollback'].includes(action);
+        return send(res, 200, { result: await releases[method](input) });
+      }
       if (req.method !== 'POST' || !['/api/prepare', '/api/activate', '/api/rollback'].includes(req.url))
         return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
       const input = await body(req), action = req.url.slice('/api/'.length);
+      if (releases && action !== 'activate') throw failure('WORKSPACE_MANAGED_RELEASE_REVIEW_REQUIRED', 409);
       keys(input, action === 'prepare' ? ['manifest', 'expectedRevision'] : action === 'activate' ?
         ['candidateId', 'expectedRevision'] : ['targetRevision', 'expectedRevision']);
       if (!positive(input.expectedRevision)) throw failure('WORKSPACE_REVISION_REQUIRED');
@@ -107,7 +144,7 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
         payload.targetRevision = input.targetRevision;
       }
       operationDispatched = true;
-      const result = await fleetControl(directory, action, payload);
+      const result = releases ? (await releases.activate(payload)).native : await fleetControl(directory, action, payload);
       send(res, 200, { status: result, capturedAt: new Date().toISOString() });
     };
     handle().catch(error => {
@@ -118,13 +155,20 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
     });
   });
   server.requestTimeout = 45000; server.headersTimeout = 10000; server.keepAliveTimeout = 5000;
-  await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); });
+  try { await new Promise((done, fail) => { server.once('error', fail); server.listen(port, HOST, done); }); }
+  catch (error) { await releases?.close(); throw error; }
   url = 'http://' + HOST + ':' + server.address().port;
   return {
-    url,
-    async close() {
-      if (closing) return; closing = true;
-      await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections(); });
+    url, ...(releases ? { publicURL: releases.publicURL } : {}),
+    close() {
+      if (closingPromise) return closingPromise;
+      closing = true;
+      closingPromise = (async () => {
+        try {
+          await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections(); });
+        } finally { await releases?.close(); }
+      })();
+      return closingPromise;
     },
   };
 }
@@ -134,7 +178,7 @@ export async function main(args = process.argv.slice(2)) {
   const manifests = Object.create(null), options = new Map();
   for (let i = 0; i < args.length; i += 2) {
     const flag = args[i], value = args[i + 1];
-    if (!['--state', '--manifest', '--port'].includes(flag) || !value || value.startsWith('--')) throw new TypeError(USAGE);
+    if (!['--state', '--manifest', '--port', '--releases', '--release-state'].includes(flag) || !value || value.startsWith('--')) throw new TypeError(USAGE);
     if (flag === '--manifest') {
       const split = value.indexOf('=');
       if (split < 1 || Object.hasOwn(manifests, value.slice(0, split))) throw new TypeError(USAGE);
@@ -146,14 +190,30 @@ export async function main(args = process.argv.slice(2)) {
   }
   const portText = options.get('--port') ?? '8402';
   if (!/^\d{1,5}$/.test(portText)) throw new TypeError(USAGE);
-  const service = await startFleetWorkspace({ stateDirectory: options.get('--state'), manifests, port: Number(portText) });
-  process.stdout.write(JSON.stringify({ workspace: service.url, manifests: Object.keys(manifests) }) + '\n');
-  let closing = false;
-  for (const signal of ['SIGTERM', 'SIGINT']) process.once(signal, () => {
-    if (closing) return; closing = true;
-    service.close().catch(() => { process.exitCode = 1; });
-  });
-  return service;
+  let service, requestedClose = false, stopping;
+  const signals = ['SIGTERM', 'SIGINT'];
+  const stop = () => {
+    requestedClose = true;
+    if (service && !stopping) stopping = service.close().finally(() => {
+      for (const signal of signals) process.off(signal, onSignal);
+    });
+    return stopping;
+  };
+  const onSignal = () => { stop()?.catch(() => { process.exitCode = 1; }); };
+  // Embedded original SF82 sessions use handleSignals:false. Own signals before
+  // startup can create its first session, including a signal received mid-boot.
+  for (const signal of signals) process.once(signal, onSignal);
+  try {
+    service = await startFleetWorkspace({ stateDirectory: options.get('--state'), manifests, port: Number(portText),
+      releasePlan: options.get('--releases'), releaseDirectory: options.get('--release-state') });
+    if (requestedClose) { await stop(); return null; }
+    process.stdout.write(JSON.stringify({ workspace: service.url, manifests: Object.keys(manifests),
+      ...(service.publicURL ? { merchantIngress: service.publicURL } : {}) }) + '\n');
+    return service;
+  } catch (error) {
+    for (const signal of signals) process.off(signal, onSignal);
+    throw error;
+  }
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(error => { process.stderr.write(nativeError(error) + '\n'); process.exitCode = 1; });

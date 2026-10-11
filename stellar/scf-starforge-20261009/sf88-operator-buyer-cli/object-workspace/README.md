@@ -1,0 +1,201 @@
+# Object buyer workspace
+
+Select a merchant's large file, review its request plan, operate the original
+buyer, retain completed parts through interruption, and download the assembled
+file from one private browser workspace.
+
+This workspace uses the original `object-session.mjs`, `object-description.mjs`
+and `object-report.mjs` APIs. Each range remains an original SF88 inbox job with
+its original SF31 transport, SF81 terminal approval, SF36 spending ledger and
+SF82 outcome record. The workspace keeps presentation state in memory; the
+original object session and inbox retain the durable work.
+
+## Prepare the existing operator inputs
+
+Use Node 22 or newer on the operator's Linux/POSIX host. Set up the existing
+[native buyer workspace](../README.md) and obtain the original merchant's
+`objects.json` from its [S3 release](../../sf30-seller-sdk/s3/README.md).
+
+Each configured product needs these existing files:
+
+| Input | Purpose |
+| --- | --- |
+| Original `objects.json` | Merchant alias, chunk limit, complete size, filename, content type and selected snapshot |
+| Original buyer configuration | Base GET route, selected native payment terms, signer reference, operator policy, ledger and evidence directory |
+| Existing private buyer workspace | Original native signer and operator environment, when configured through the workspace initializer |
+
+The base buyer request must be a GET for the descriptor's exact path, with no
+query, body, response destination or order ticket. Its normal `buyerTransport`
+setting is retained for explicit proxy environments. Every generated chunk gets
+the original `offset` and `length` query and its own private destination.
+
+The configured original operator workspace must be compatible with that request's
+signer, payment terms, spending ledger and evidence directory. The original
+object initializer checks this binding. Its total and daily spending limits also
+apply during execution. See [OBJECTS.md](../OBJECTS.md) for the existing byte-range
+and budget contract.
+
+Create a private JSON profile referencing the reviewed inputs. The profile
+contains paths and public product labels. Keep it outside the installed package.
+
+```json
+{
+  "schema": "stellar-forge.sf88.object-workspace.v1",
+  "products": [
+    {
+      "id": "archive",
+      "label": "Merchant research archive",
+      "descriptionFile": "/absolute/private/merchant-release/objects.json",
+      "objectId": "archive",
+      "configFile": "/absolute/private/archive-buyer/operator.json",
+      "workspace": "/absolute/private/archive-buyer"
+    }
+  ]
+}
+```
+
+Replace the paths and alias with the actual selected files. Multiple products
+can refer to the same description, with a distinct original configuration for
+each route. The profile supports up to 64 configured product aliases.
+
+For an existing application that configures the original operator through its
+process environment, omit `workspace` or set it to `null`. The original buyer
+still requires its configured policy, ledger, signer module and operator keys.
+The browser receives no credential values or editable filesystem paths.
+
+Use mode `0600` for the profile and buyer configuration. Choose an existing
+private parent directory for the workspace; the command creates a new child
+state directory when needed, using mode `0700`.
+
+## Open the workspace
+
+From the repository root:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs \
+  --state /absolute/private/download-workspace \
+  --profile /absolute/private/object-products.json \
+  --port 8438
+```
+
+Open the complete printed URL. The server binds `127.0.0.1`; use the same host
+and port in the printed link. Keep the launching terminal open for the original
+approval prompt. A fresh server creates a new browser capability; reopen its
+new printed URL after restart.
+
+The browser workflow has five stages:
+
+1. **Select and review.** Choose a configured product, a new session name, bytes
+   per request and a whole-download cap. Review the exact number of requests,
+   first and last byte ranges, asset, recipient, per-request maximum and total
+   maximum. The calculation uses integer atomic units. The cap must cover every
+   planned request at its configured maximum.
+2. **Create the session.** The original initializer saves the exact reviewed
+   configuration and descriptor selection, native inbox jobs and destinations.
+   A changed source file invalidates an uncommitted review. A lost successful
+   create response resolves to the same original session when repeated with the
+   same review. An occupied name with different inputs is rejected.
+3. **Start or continue.** The explicit start dialog names the selected file,
+   remaining parts and native terms. Original terminal approval remains in the
+   buyer. Only the original next unattempted request advances. Completed parts,
+   their hashes and original outcomes appear in request history.
+4. **Stop or recover.** Stop signals this server's exact active run. Wait for its
+   result, then refresh or recover the original saved session. A stale tab's
+   state cannot start, recover or assemble a changed session. The existing
+   original lock prevents another process from owning the same object run.
+5. **Assemble and download.** When every original part is verified, assemble
+   through the existing streaming writer. Download opens the recorded file,
+   checks its length and SHA-256 again, and streams it to the browser's normal
+   download destination. Large files are not buffered into a browser Blob.
+
+The whole-download cap and attempt allocations describe maximum permitted
+amounts. The request table shows each original financial outcome separately.
+For interrupted or uncertain attempts, use **Recover saved results** and the
+original [inbox recovery workflow](../QUEUE.md) with the same intent. The
+existing original engine decides which saved files are complete.
+
+## Retained files and restart
+
+The workspace creates this layout beneath its selected private state directory:
+
+```text
+sessions/SESSION_NAME/       original object session, inbox, chunks and receipts
+downloads/SESSION_NAME/      completed file produced by original assembly
+preparations/               temporary reviewed configuration snapshots
+```
+
+The native session manifest is the session index. The browser workspace creates
+no separate attempt ledger, payment engine or journal. Temporary configuration
+snapshots are removed after creation; the original session retains the actual
+selected configuration.
+
+Restart with the same `--state` to reopen saved sessions. Supply `--profile` when
+you also want to create new downloads. Reopening a session uses its original
+saved configuration even if the profile is absent or the original input file
+has moved.
+
+Startup enumerates retained manifests. Selecting a session performs one original
+inspection, including saved-byte verification. While a run is active, browser
+updates consume the original progress callback. **Refresh and verify** performs
+another deliberate original inspection; idle browser refreshes do not repeatedly
+hash every saved chunk. The server retains at most eight full reports in memory,
+and request history is filtered and paginated before it is sent to the page.
+
+The original command line remains directly usable for these sessions:
+
+```sh
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs status \
+  --session /absolute/private/download-workspace/sessions/archive-2026-10-11
+
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs recover \
+  --session /absolute/private/download-workspace/sessions/archive-2026-10-11
+```
+
+Use the actual session name shown in the sidebar. **Download HTML report** and
+**Download JSON** export the original complete report, including the original
+intent and local recovery references. These exports are operator files; retain
+them with the corresponding session.
+
+`Ctrl+C` or `SIGTERM` stops this server's owned run, waits for the original result
+and lease release, and closes the listener. Incomplete requests are closed after
+the buyer drains; active browser file streams receive a 15-second shutdown grace.
+Closing only the browser leaves the
+host process running; reopen the printed URL to inspect it. An abrupt host or
+process interruption is handled by the original session recovery command.
+
+## Embedding and deployment
+
+```js
+import { startObjectWorkspace } from './object-workspace/server.mjs';
+
+const workspace = await startObjectWorkspace({
+  stateDirectory: '/absolute/private/download-workspace',
+  profilePath: '/absolute/private/object-products.json',
+  port: 0,
+});
+console.log(workspace.url);
+// On application shutdown:
+await workspace.close();
+```
+
+The workspace has no additional runtime dependency. Its package closure is the
+original SF88 object modules and their existing imports, plus the three static
+files in `public/`. Native signing and transport use the existing original buyer
+dependencies. Distribution owners can expose `server.mjs` as a command and its
+`startObjectWorkspace` export without an additional wrapper or bundle.
+
+The listener is intended for the operator's own browser. A per-instance
+capability protects API access; mutations require the exact local Origin. A
+short-lived, single-use local download link permits native browser streaming
+after an authenticated request. The server accepts product and session IDs,
+review revisions and operation IDs, rather than arbitrary paths, modules, URLs,
+seeds or replacement approval callbacks.
+
+## Source integration
+
+The original PR928 object engine and its accepted source-native S3/chunk journey
+remain the component baseline. This workspace adds the browser selection,
+review, dispatch, retained-session and download workflow over that engine.
+The narrow `buyerTransport` allowed-field addition in `object-session.mjs` lets
+the original normalizer and inbox carry a configured native proxy through the
+same saved object plan.

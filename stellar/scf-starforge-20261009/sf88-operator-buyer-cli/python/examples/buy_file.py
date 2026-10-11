@@ -13,7 +13,7 @@ from stellar_forge_buyer import Buyer, BuyerError
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action", choices=["prepare", "review", "purchase", "download", "consume"])
+    parser.add_argument("action", choices=["prepare", "review", "purchase", "download", "consume", "finalize", "history"])
     parser.add_argument("--checkout", required=True)
     parser.add_argument("--state", required=True)
     parser.add_argument("--intent", required=True)
@@ -39,6 +39,12 @@ def main():
     elif args.action == "download":
         delivery = operation.retrieve_file(destination=args.out)
         print(json.dumps(delivery.record, indent=2))
+    elif args.action == "finalize":
+        accounting = operation.finalize()
+        print(json.dumps(accounting.record, indent=2))
+        return 0 if accounting.finalized else 2
+    elif args.action == "history":
+        print(json.dumps(operation.inspect(), indent=2))
     else:
         delivery = operation.recover_file()
         if delivery is None:

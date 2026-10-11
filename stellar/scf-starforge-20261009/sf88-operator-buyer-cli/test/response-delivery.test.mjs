@@ -1,5 +1,5 @@
 // Focused local composition: actual SF31 transport/writer and SF82 evidence.
-// Only the privileged SF81 constructor is replaced; no signer/payment/network.
+// The privileged SF81 constructor and terminal probe are replaced; no signer/payment/network.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, readdir, stat, rm } from 'node:fs/promises';
@@ -16,7 +16,7 @@ test('one original buyer result becomes an exact local file; failed delivery nev
   await writeFile(signerModule, 'export function sign(){throw Error("SIGNER_MUST_NOT_RUN")}');
   let response, calls = 0, evidenceConflict = false, nativeFailure;
   t.mock.module('../../sf81-buyer-operator-bridge/bridge.mjs', {
-    namedExports:{OperatorApprovedBuyer:class {
+    namedExports:{checkOperatorTerminal:async () => {},OperatorApprovedBuyer:class {
       async call(options) {
         calls++;
         if (evidenceConflict) await writeFile(join(evidenceDir,

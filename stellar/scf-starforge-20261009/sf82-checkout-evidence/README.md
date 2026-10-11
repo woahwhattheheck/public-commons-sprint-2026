@@ -4,7 +4,7 @@
 
 The October 11 merged SF81 `OperatorApprovedBuyer` can make exactly one original
 operator-approved x402 HTTP retry and retain SF36's durable reservation. SF43
-independently checks an actual Stellar testnet transaction and canonical SEP-41
+independently checks an actual transaction on the approved Stellar network and its SEP-41
 transfer event. SF52 preserves the difference between seller-reported settlement,
 verified transfer and observed HTTP payload. SF82 **composes those three existing
 pieces in one operator call**, without copying their implementations or altering
@@ -49,8 +49,10 @@ Invalid metadata therefore cannot fail for the first time after signing.
 If no decoder is explicitly supplied it attempts the original
 `createOfficialEventDecoder()`; if the installed Stellar SDK is not present,
 SF43 can still establish transaction inclusion, **never** a token transfer
-match. SF43 RPC's own endpoint restriction applies: official Stellar testnet
-or a loopback address used for an explicit local verification exercise.
+match. SF43 selects a supported RPC for `stellar:testnet` or `stellar:pubnet`
+and checks its canonical passphrase. The explicit loopback option retains its
+local verification purpose. Existing operator proxy routing is kept separate
+from the merchant origin and never carries merchant headers into RPC.
 
 `executeWithEvidence()` returns the original `result` or `error`, the actual
 `evidencePath`, and original SF52 `report`. Errors do not become successful

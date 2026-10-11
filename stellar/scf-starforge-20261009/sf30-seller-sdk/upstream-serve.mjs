@@ -2,18 +2,20 @@
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readUpstreamBindings, createUpstreamApplication } from './upstream.mjs';
+import { validateAvailabilityDirectory } from './availability/store.mjs';
 
 const USAGE = `Usage: node upstream-serve.mjs --config SELLER.json --upstreams BINDINGS.json
   [--port 8423] [--allow-loopback-upstream] [--check]
   [--facilitator HTTPS_URL] [--allow-local-facilitator]
   [--max-in-flight 64] [--drain-grace-ms 60000]
+  [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
 
 Wrap existing GET/HEAD/DELETE and JSON POST/PUT/PATCH APIs with the original SF30 payment lifecycle.
 Both JSON paths resolve from the current directory. Backend origins are fixed;
 credential headers name environment variables, not values in JSON.
 --check validates both configs and their route bindings without network/listening.
 Without --facilitator, requests return payment challenges and never call a backend.
-See UPSTREAM.md for the complete merchant setup and backend side-effect contract.`;
+See UPSTREAM.md for merchant setup and OAUTH.md for OAuth client-credentials backends.`;
 
 function parse(args) {
   const options = new Map(), switches = new Set(['--allow-loopback-upstream','--allow-local-facilitator','--check']);
@@ -21,7 +23,7 @@ function parse(args) {
     const key = args[i];
     if (options.has(key)) throw new TypeError('Duplicate option: ' + key);
     if (switches.has(key)) { options.set(key,true); continue; }
-    if (!['--config','--upstreams','--port','--facilitator','--max-in-flight','--drain-grace-ms'].includes(key) || !args[i+1] || args[i+1].startsWith('--')) throw new TypeError(USAGE);
+    if (!['--config','--upstreams','--port','--facilitator','--max-in-flight','--drain-grace-ms','--availability-dir'].includes(key) || !args[i+1] || args[i+1].startsWith('--')) throw new TypeError(USAGE);
     options.set(key,args[++i]);
   }
   if (!options.has('--config') || !options.has('--upstreams') || options.has('--allow-local-facilitator') && !options.has('--facilitator')) throw new TypeError(USAGE);
@@ -43,6 +45,7 @@ function parse(args) {
   }
   return {configPath:resolve(options.get('--config')), upstreamPath:resolve(options.get('--upstreams')),
     port:Number(port), allowLoopback:options.has('--allow-loopback-upstream'), check:options.has('--check'),
+    availabilityDirectory:options.has('--availability-dir') ? validateAvailabilityDirectory(options.get('--availability-dir')) : undefined,
     facilitator, maxInFlight, drainGraceMs};
 }
 
@@ -76,7 +79,8 @@ export async function main(args = process.argv.slice(2)) {
     const upstreams = application.snapshot().bindings;
     process.stdout.write(JSON.stringify({status:'CONFIG_VALID',routes:config.routes.length,
       upstreamBindings:upstreams.length,protectedUpstreamBindings:upstreams.filter(row => row.protected).length,
-      cachedUpstreamBindings:upstreams.filter(row => row.cache).length}) + '\n');
+      cachedUpstreamBindings:upstreams.filter(row => row.cache).length,
+      oauthUpstreamBindings:upstreams.filter(row => row.oauth2).length}) + '\n');
     await application.close();
     return null;
   }
@@ -93,6 +97,7 @@ export async function main(args = process.argv.slice(2)) {
   try {
     session = await startSellerService({config:application.config,port:options.port,
       handlers:application.handlers,nativeFactory,
+      availabilityDirectory:options.availabilityDirectory,
       maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
   } catch(error) { await application.close(); throw error; }
   session.upstreamSnapshot = application.snapshot;

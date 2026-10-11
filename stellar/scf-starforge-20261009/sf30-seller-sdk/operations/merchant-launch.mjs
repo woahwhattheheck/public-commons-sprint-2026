@@ -10,6 +10,7 @@ import { readUpstreamBindings, compileUpstreamBindings,
   validateUpstreamService, createUpstreamHandlers } from '../upstream.mjs';
 import { openOutbox, instrumentNativeSettlement } from '../../sf98-merchant-delivery/outbox.mjs';
 import { startSellerOperations } from './server.mjs';
+import { validateAvailabilityDirectory } from '../availability/store.mjs';
 
 const HELP = [
   'Usage: node operations/merchant-launch.mjs --config SELLER.json',
@@ -18,11 +19,12 @@ const HELP = [
   ' [--port 8423] [--operations-port 8424] [--max-in-flight 64]',
   ' [--drain-grace-ms 60000] [--allow-loopback-upstream]',
   ' [--history-dir /private/merchant/usage] [--history-days 90]',
+  ' [--availability-dir /private/merchant/availability]',
   ' [--allow-local-facilitator] [--check]',
   'Explicit operator-run native x402, original SF98 outbox and local fulfillment view.',
 ].join('\n');
 const VALUE = new Set(['--config','--facilitator','--state','--handlers','--upstreams',
-  '--port','--operations-port','--max-in-flight','--drain-grace-ms','--history-dir','--history-days']);
+  '--port','--operations-port','--max-in-flight','--drain-grace-ms','--history-dir','--history-days','--availability-dir']);
 const SWITCH = new Set(['--check','--allow-loopback-upstream','--allow-local-facilitator']);
 const fail = m => { throw new TypeError(m); };
 
@@ -61,15 +63,19 @@ function cliOptions(args) {
   if(!isAbsolute(directory)||resolve(directory)!==directory||directory==='/')
     fail('Absolute normalized private SF98 outbox directory required');
   const historyDirectory=o.get('--history-dir');
+  const availabilityDirectory=o.has('--availability-dir') ? validateAvailabilityDirectory(o.get('--availability-dir')) : undefined;
   if(o.has('--history-days') && historyDirectory===undefined)
     fail('--history-days requires --history-dir');
   if(historyDirectory!==undefined && (!isAbsolute(historyDirectory) ||
      resolve(historyDirectory)!==historyDirectory || historyDirectory==='/' ||
      historyDirectory===directory))
     fail('Absolute normalized private history directory separate from the outbox required');
+  if(availabilityDirectory!==undefined && [directory,historyDirectory].includes(availabilityDirectory))
+    fail('Use a separate private availability directory');
   return {
     configPath:resolve(o.get('--config')),stateDirectory:directory,
     historyDirectory,historyRetentionDays:int('--history-days',90,1,365),
+    availabilityDirectory,
     handlersPath:o.has('--handlers')?o.get('--handlers'):null,
     upstreamPath:o.has('--upstreams')?resolve(o.get('--upstreams')):null,
     facilitator:url.href.replace(/\/$/,''),check:o.has('--check'),
@@ -121,6 +127,7 @@ export async function main(args=process.argv.slice(2)) {
       privateStateNotOpened:true,
       facilitatorNotContacted:true,
       usageHistoryEnabled:o.historyDirectory!==undefined,
+      availabilityEnabled:o.availabilityDirectory!==undefined,
       historyRetentionDays:o.historyDirectory===undefined?null:o.historyRetentionDays,
     };
     process.stdout.write(JSON.stringify(info)+'\n');
@@ -149,6 +156,7 @@ export async function main(args=process.argv.slice(2)) {
     seller=await startSellerService({
       config:prepared.config,port:o.port,handlers,nativeFactory,
       maxInFlight:o.maxInFlight,drainGraceMs:o.drainGraceMs,
+      availabilityDirectory:o.availabilityDirectory,
     });
     operations=await startSellerOperations(seller,{
       port:o.operationsPort,deliveryOutbox:outbox,
@@ -176,6 +184,7 @@ export async function main(args=process.argv.slice(2)) {
     nativeSeller:seller.url, mode:seller.mode,
     ready:seller.url+'/_seller/ready', offers:seller.url+'/_seller/offers',
     operator:operations.url,fulfillment:operations.url+'/fulfillment',
+    availability:operations.availabilityUrl,availabilityControl:operations.availabilityControlUrl,
     usageHistory:o.historyDirectory===undefined?null:operations.url+'/api/history',
     privateOriginalOutboxAttached:true,
     webhookDelivery:'OPERATOR_ONLY',
