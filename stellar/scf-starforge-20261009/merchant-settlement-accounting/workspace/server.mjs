@@ -12,6 +12,8 @@ import {AccountantWorkspace,handleAccountantRequest,ACCOUNTANT_REQUEST_BYTES} fr
 import {RECOVERY_COMMANDS,RECOVERY_HELP,recoveryMain} from './recovery-cli.mjs';
 import {openAccountingMaintenance} from './recovery-controller.mjs';
 import {BitwaveWorkspace,handleBitwaveRequest,BITWAVE_REQUEST_BYTES} from './bitwave-workspace.mjs';
+import {handleAdjustmentRequest} from './adjustments-workspace.mjs';
+import {ADJUSTMENTS_HELP,adjustmentsMain} from './adjustments-cli.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
@@ -35,7 +37,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
   const openRuntime=async()=>{
     const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
     const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{});let collection;
-    try{collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();return {workspace,accountant,bitwave,collection};}
+    try{workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();return {workspace,accountant,bitwave,collection};}
     catch(error){await closeRuntime({workspace,bitwave,collection}).catch(()=>{});throw error;}
   };
   const maintenance=await openAccountingMaintenance({directory:options.directory,stateRoot:recoveryStateRoot,backupRoot:recoveryBackupRoot,
@@ -58,7 +60,8 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
         '/periods.mjs':['periods.mjs','text/javascript; charset=utf-8'],'/periods.html':['periods.html','text/html; charset=utf-8'],'/periods.css':['periods.css','text/css; charset=utf-8'],
         '/accountant.mjs':['accountant.mjs','text/javascript; charset=utf-8'],'/accountant.html':['accountant.html','text/html; charset=utf-8'],'/accountant.css':['accountant.css','text/css; charset=utf-8'],
         '/bitwave.mjs':['bitwave.mjs','text/javascript; charset=utf-8'],'/bitwave.html':['bitwave.html','text/html; charset=utf-8'],'/bitwave.css':['bitwave.css','text/css; charset=utf-8'],
-        '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8']};
+        '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8'],
+        '/adjustments.mjs':['adjustments.mjs','text/javascript; charset=utf-8'],'/adjustments.html':['adjustments.html','text/html; charset=utf-8'],'/adjustments.css':['adjustments.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
       const maintenancePath=path==='/api/maintenance'||path.startsWith('/api/maintenance/');
       if(!maintenancePath)operation=maintenance.enter();
@@ -71,6 +74,8 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
       const {workspace,accountant,bitwave,collection}=operation;
+      const adjustment=await handleAdjustmentRequest(workspace.adjustments,{method:request.method,path,query,value});
+      if(adjustment){if(adjustment.file)send(response,200,adjustment.file.bytes,{type:adjustment.file.type,name:adjustment.file.name});else send(response,200,adjustment.value);return;}
       const bitwaveResult=await handleBitwaveRequest(bitwave,{method:request.method,path,query,value});
       if(bitwaveResult){if(bitwaveResult.file)send(response,200,bitwaveResult.file.bytes,{type:bitwaveResult.file.type,name:bitwaveResult.file.name});else send(response,200,bitwaveResult.value);return;}
       const accountingHandoff=await handleAccountantRequest(accountant,{method:request.method,path,query,value});
@@ -153,7 +158,8 @@ Operating backup and recovery: backup | inspect-backup | verify-backup | restore
 Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
-  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP);return;}
+  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP);return;}
+  if(argv[0]==='adjustments')return adjustmentsMain(argv.slice(1));
   if(RECOVERY_COMMANDS.has(argv[0])){
     const controller=new AbortController(),stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
     try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
