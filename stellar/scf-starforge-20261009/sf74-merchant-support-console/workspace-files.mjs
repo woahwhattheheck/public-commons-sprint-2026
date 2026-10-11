@@ -10,7 +10,7 @@ const add = (parent, tag, text) => {
 };
 
 /**
- * readState(): {inputs, sources, termsText, baselineOnly}; may be async.
+ * readState(): {inputs, sources, termsText, baselineOnly, workorderSource?}; may be async.
  * applyState(state): atomically replace current case; cancel/invalidate old jobs,
  * reset transient probe checkboxes and clear derived comparison/workorder views.
  * Neither callback should initiate a probe or interpret imported terms as a send.

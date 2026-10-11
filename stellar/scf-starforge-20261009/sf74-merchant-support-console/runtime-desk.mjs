@@ -304,6 +304,7 @@ export function mountRuntimeDesk({root,readInputs,onChange=()=>{},exportCase,imp
   renderCaptures();controls();
   return {
     getText,
+    hasCaptures:()=>Boolean(captures.before||captures.after),
     async prepare(text,inputs){return text===null?null:(await api('/api/runtime/review',{supportText:text,inputs})).report;},
     apply(text,report){
       generation++;const file=text===null?{before:null,after:null}:JSON.parse(text);
