@@ -25,6 +25,13 @@ for (const [address, prefix] of [
 ]) denied.addSubnet(address, prefix, 'ipv4');
 
 const publicV4 = (address) => isIP(address) === 4 && !denied.check(address, 'ipv4');
+// A few managed cloud runtimes resolve *public* hosts to an OS-owned
+// 198.18/15 HTTPS egress gateway. Never trust it implicitly: a caller
+// must approve the exact returned gateway address for this one request.
+const gatewaySubnet = new BlockList();
+gatewaySubnet.addSubnet('198.18.0.0', 15, 'ipv4');
+const benchmarkGatewayV4 = (address) =>
+  isIP(address) === 4 && gatewaySubnet.check(address, 'ipv4');
 const CHALLENGE = new Set(['payment-required', 'www-authenticate']);
 // Query parameters can carry access credentials under names beyond "token".
 // Normalize separated/camel-case keys before attempting an original HTTPS capture.
@@ -40,7 +47,7 @@ function hasCredentialQuery(target) {
 }
 
 export function parseArgs(argv) {
-  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms']);
+  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms', '--egress-gateway-ip']);
   if (argv.length % 2 !== 0) throw new CaptureError('USAGE_REQUIRES_VALUE_PAIRS');
   const args = new Map();
   for (let i = 0; i < argv.length; i += 2) {
@@ -59,19 +66,34 @@ export function parseArgs(argv) {
   if (!['GET', 'HEAD'].includes(method)) throw new CaptureError('ONLY_GET_OR_HEAD_SUPPORTED');
   const timeout = args.has('--timeout-ms') ? Number(args.get('--timeout-ms')) : 8000;
   if (!Number.isSafeInteger(timeout) || timeout < 1000 || timeout > 30000) throw new CaptureError('TIMEOUT_OUT_OF_RANGE');
+  const egressGatewayIP = args.get('--egress-gateway-ip') ?? null;
+  if (egressGatewayIP !== null && !benchmarkGatewayV4(egressGatewayIP)) {
+    throw new CaptureError('EGRESS_GATEWAY_MUST_BE_BENCHMARK_IPV4');
+  }
   const out = args.get('--out');
   if (!isAbsolute(out) || out.includes('\0')) throw new CaptureError('OUTPUT_MUST_BE_ABSOLUTE_PATH');
-  return { target, out, method, timeout };
+  return { target, out, method, timeout, egressGatewayIP };
 }
 
-export async function capture({ target, method, timeout }, { resolve = lookup, httpsRequest = request } = {}) {
+export async function capture({ target, method, timeout, egressGatewayIP = null }, { resolve = lookup, httpsRequest = request } = {}) {
   // Resolve the ORIGINAL hostname once. Reject mixed internal/public answers and pin
   // a public IPv4 into the TLS connection, preventing later DNS rebinding.
   let answers;
   try { answers = await resolve(target.hostname, { family: 4, all: true }); }
   catch { throw new CaptureError('PUBLIC_IPV4_RESOLUTION_FAILED'); }
-  if (!Array.isArray(answers) || answers.length === 0 || answers.some(a => a.family !== 4 || !publicV4(a.address))) {
+  if (!Array.isArray(answers) || answers.length === 0 ||
+      answers.some(a => a.family !== 4 || isIP(a.address) !== 4)) {
     throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
+  }
+  if (egressGatewayIP === null) {
+    if (answers.some(a => !publicV4(a.address))) throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
+  } else {
+    if (!benchmarkGatewayV4(egressGatewayIP)) throw new CaptureError('EGRESS_GATEWAY_MUST_BE_BENCHMARK_IPV4');
+    // A single *exact* OS DNS result, not a replacement address or a
+    // broad private-range exception. A mixed result still fails closed.
+    if (answers.length !== 1 || answers[0].address !== egressGatewayIP) {
+      throw new CaptureError('EGRESS_GATEWAY_DNS_MISMATCH');
+    }
   }
   const pinnedIP = answers[0].address;
   const raw = await new Promise((resolveResult, reject) => {
