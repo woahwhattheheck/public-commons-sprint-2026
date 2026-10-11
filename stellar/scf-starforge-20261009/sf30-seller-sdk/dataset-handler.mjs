@@ -70,7 +70,7 @@ function csvParser(onRecord, maxCellChars) {
 }
 
 /** Load one immutable snapshot. Only declared columns are retained and exposed. */
-export async function loadCsvDataset({ file, name, columns, filters = [],
+export async function loadCsvDataset({ file, name, columns, filters = [], ranges = [], sorts = [],
   maxBytes = 64 * 1024 * 1024, maxRows = 250000, maxCellChars = 65536,
   defaultLimit = 50, maxLimit = 250, maxPageBytes = 900 * 1024 } = {}) {
   if (typeof name !== 'string' || !name.trim() || name.length > 128 || /[\x00-\x1f\x7f]/.test(name))
@@ -90,6 +90,17 @@ export async function loadCsvDataset({ file, name, columns, filters = [],
   if (!Array.isArray(filters) || filters.length > 8 || new Set(filters).size !== filters.length ||
       filters.some(key => !byName.has(key))) throw new TypeError('Choose up to eight unique exposed filter columns');
   filters = [...filters].sort();
+  for (const [label, keys] of [['ranges', ranges], ['sorts', sorts]]) {
+    if (!Array.isArray(keys) || keys.length > 8 || new Set(keys).size !== keys.length ||
+        keys.some(key => !byName.has(key)))
+      throw new TypeError(`${label} must contain up to eight unique exposed columns`);
+  }
+  if (ranges.some(key => byName.get(key).type === 'boolean'))
+    throw new TypeError('Range filters require string, integer or number columns');
+  ranges = [...ranges].sort(); sorts = [...sorts].sort();
+  // Original SF30 Bazaar offers permit at most 32 advertised query parameters.
+  if (3 + filters.length + 4 * ranges.length + (sorts.length ? 1 : 0) > 32)
+    throw new TypeError('Dataset capabilities exceed the native 32-query-parameter budget');
   integer(maxBytes, 'maxBytes', 1, 256 * 1024 * 1024);
   integer(maxRows, 'maxRows', 1, 1000000);
   integer(maxCellChars, 'maxCellChars', 1, 1024 * 1024);
@@ -99,7 +110,9 @@ export async function loadCsvDataset({ file, name, columns, filters = [],
   const info = await stat(file);
   if (!info.isFile() || info.size > maxBytes) throw new TypeError('CSV must be a regular file within maxBytes');
   const rows = [], indexes = new Map(filters.map(key => [key, new Map()]));
-  const digest = createHash('sha256').update(JSON.stringify({ name, schema, filters })).update('\0');
+  // Keep old snapshots/cursors byte-compatible when no new capability is enabled.
+  const policy = { name, schema, filters, ...(ranges.length || sorts.length ? { ranges, sorts } : {}) };
+  const digest = createHash('sha256').update(JSON.stringify(policy)).update('\0');
   const decoder = new TextDecoder('utf-8', { fatal: true });
   let headers, positions, recordNumber = 0, byteCount = 0;
   const parser = csvParser(cells => {
@@ -134,11 +147,49 @@ export async function loadCsvDataset({ file, name, columns, filters = [],
   parser.feed(decoder.decode()); parser.end();
   if (!headers) throw new TypeError('CSV requires a header record');
   const snapshot = digest.digest('hex');
+  // One immutable index per ordered column; original record ID breaks equal-value ties.
+  const compare = (a, b) => a === b ? 0 : a === null ? 1 : b === null ? -1 : a < b ? -1 : 1;
+  const ordered = new Map([...new Set([...ranges, ...sorts])].map(key => {
+    const ids = Array.from({ length: rows.length }, (_, id) => id);
+    ids.sort((a, b) => compare(rows[a][key], rows[b][key]) || a - b);
+    let nonNull = ids.length;
+    while (nonNull && rows[ids[nonNull - 1]][key] === null) nonNull--;
+    return [key, { ids, nonNull }];
+  }));
+  function boundary(index, key, value, afterEqual) {
+    let lo = 0, hi = index.nonNull;
+    while (lo < hi) {
+      const mid = lo + Math.floor((hi - lo) / 2);
+      const c = compare(rows[index.ids[mid]][key], value);
+      if (c < 0 || (afterEqual && c === 0)) lo = mid + 1; else hi = mid;
+    }
+    return lo;
+  }
+  function* candidateIds(view) {
+    for (let i = view.start; i < view.end; i++) yield view.ids[i];
+  }
+  function* inOrder(key, direction) {
+    const { ids, nonNull } = ordered.get(key);
+    if (direction === 'asc') { yield* ids; return; }
+    // Reverse groups, not records: descending ties retain CSV order; nulls stay last.
+    let end = nonNull;
+    while (end > 0) {
+      let start = end - 1;
+      while (start > 0 && rows[ids[start - 1]][key] === rows[ids[end - 1]][key]) start--;
+      for (let i = start; i < end; i++) yield ids[i];
+      end = start;
+    }
+    for (let i = nonNull; i < ids.length; i++) yield ids[i];
+  }
   const description = Object.freeze({ name, snapshot, rowCount: rows.length,
-    columns: Object.freeze(schema.map(s => Object.freeze({ ...s, filterable: filters.includes(s.name) }))),
+    columns: Object.freeze(schema.map(s => Object.freeze({ ...s, filterable: filters.includes(s.name),
+      ...(ranges.length || sorts.length ? { rangeFilterable: ranges.includes(s.name), sortable: sorts.includes(s.name) } : {}),
+    }))),
     defaultLimit, maxLimit, order: 'csv-record-order' });
   const describe = () => structuredClone(description);
-  const permitted = new Set(['fields', 'limit', 'cursor', ...filters.map(key => `where_${key}`)]);
+  const rangeOps = ['gt', 'gte', 'lt', 'lte'];
+  const permitted = new Set(['fields', 'limit', 'cursor', ...filters.map(key => `where_${key}`),
+    ...ranges.flatMap(key => rangeOps.map(op => `${op}_${key}`)), ...(sorts.length ? ['sort'] : [])]);
   const cached = new WeakMap();
 
   function prepare(query = {}) {
@@ -164,7 +215,29 @@ export async function loadCsvDataset({ file, name, columns, filters = [],
         catch (error) { bad(error.message); }
       }
     }
-    const queryHash = hash(JSON.stringify({ fields, filters: selectedFilters }));
+    const selectedRanges = [];
+    for (const key of ranges) {
+      if ((own(params, `gt_${key}`) && own(params, `gte_${key}`)) ||
+          (own(params, `lt_${key}`) && own(params, `lte_${key}`)))
+        bad(`Choose one lower and one upper range bound for ${key}`);
+      for (const op of rangeOps) {
+        const label = `${op}_${key}`;
+        if (!own(params, label)) continue;
+        let value;
+        try { value = coerce(params[label], byName.get(key), label); }
+        catch (error) { bad(error.message); }
+        if (value === null) bad('Range bounds cannot be null; use equality to select nulls');
+        selectedRanges.push([key, op, value]);
+      }
+    }
+    let sort = null;
+    if (own(params, 'sort')) {
+      const desc = params.sort.startsWith('-'), key = desc ? params.sort.slice(1) : params.sort;
+      if (!sorts.includes(key)) bad('sort must name one operator-enabled column, optionally prefixed with -');
+      sort = { column: key, direction: desc ? 'desc' : 'asc', nulls: 'last', ties: 'csv-record-order' };
+    }
+    const queryHash = hash(JSON.stringify({ fields, filters: selectedFilters,
+      ...(selectedRanges.length || sort ? { ranges: selectedRanges, sort } : {}) }));
     let offset = 0;
     if (own(params, 'cursor')) {
       const text = params.cursor;
@@ -179,23 +252,64 @@ export async function loadCsvDataset({ file, name, columns, filters = [],
           !Number.isSafeInteger(cursor.n) || cursor.n < 0 || typeof cursor.s !== 'string' || typeof cursor.q !== 'string')
         bad('Invalid cursor');
       if (cursor.s !== snapshot) throw fail('DATASET_SNAPSHOT_CHANGED', 'Start a new query against the current dataset snapshot', 409);
-      if (cursor.q !== queryHash) bad('Cursor belongs to a different filter or field selection');
+      if (cursor.q !== queryHash) bad('Cursor belongs to a different query, field selection or ordering');
       offset = cursor.n;
     }
     let candidates = null;
+    const choose = view => {
+      if (candidates === null || view.end - view.start < candidates.end - candidates.start) candidates = view;
+    };
     for (const [key, value] of selectedFilters) {
       const ids = indexes.get(key).get(value) ?? [];
-      if (candidates === null || ids.length < candidates.length) candidates = ids;
+      choose({ ids, start: 0, end: ids.length });
     }
+    for (const key of ranges) {
+      const bounds = selectedRanges.filter(([column]) => column === key);
+      if (!bounds.length) continue;
+      const index = ordered.get(key);
+      let start = 0, end = index.nonNull;
+      for (const [, op, value] of bounds) {
+        if (op === 'gt' || op === 'gte') start = boundary(index, key, value, op === 'gt');
+        else end = boundary(index, key, value, op === 'lte');
+      }
+      choose({ ids: index.ids, start, end: Math.max(start, end) });
+    }
+    const matches = id => selectedFilters.every(([key, value]) => rows[id][key] === value) &&
+      selectedRanges.every(([key, op, value]) => {
+        const actual = rows[id][key];
+        if (actual === null) return false;
+        const c = compare(actual, value);
+        return op === 'gt' ? c > 0 : op === 'gte' ? c >= 0 : op === 'lt' ? c < 0 : c <= 0;
+      });
     let total = 0;
     const page = [];
     const project = id => Object.fromEntries(fields.map(key => [key, rows[id][key]]));
-    if (candidates === null) {
+    if (!sort && !selectedRanges.length && candidates === null) {
       total = rows.length;
       for (let i = offset; i < Math.min(total, offset + limit); i++) page.push(project(i));
     } else {
-      for (const id of candidates) {
-        if (!selectedFilters.every(([key, value]) => rows[id][key] === value)) continue;
+      let scan;
+      if (!sort && !selectedRanges.length && candidates !== null) {
+        // Equality indexes already have CSV order; retain the original streaming path.
+        scan = candidateIds(candidates);
+      } else if (sort && (candidates === null || candidates.end - candidates.start > rows.length / 4)) {
+        // Dense results walk a prebuilt ordered index, avoiding a per-page full sort.
+        scan = inOrder(sort.column, sort.direction);
+      } else if (candidates !== null) {
+        // Selective equality/range results sort only their candidate record IDs.
+        const ids = [...candidateIds(candidates)].filter(matches);
+        if (sort) {
+          const { column, direction } = sort;
+          ids.sort((a, b) => {
+            const av = rows[a][column], bv = rows[b][column];
+            const c = compare(av, bv);
+            return (av === null || bv === null || direction === 'asc' ? c : -c) || a - b;
+          });
+        } else ids.sort((a, b) => a - b);
+        scan = ids;
+      } else scan = rows.keys();
+      for (const id of scan) {
+        if (!matches(id)) continue;
         if (total >= offset && page.length < limit) page.push(project(id));
         total++;
       }
@@ -204,7 +318,9 @@ export async function loadCsvDataset({ file, name, columns, filters = [],
     const nextOffset = offset + page.length;
     const nextCursor = nextOffset < total ? Buffer.from(JSON.stringify({ v: 1, s: snapshot, q: queryHash, n: nextOffset })).toString('base64url') : null;
     const body = { schema: 'stellar-forge.dataset-page.v1', dataset: describe(), fields: [...fields],
-      filters: Object.fromEntries(selectedFilters), rows: page,
+      filters: Object.fromEntries(selectedFilters),
+      ...(selectedRanges.length ? { ranges: selectedRanges.map(([column, operator, value]) => ({ column, operator, value })) } : {}),
+      ...(sort ? { order: sort } : {}), rows: page,
       page: { limit, total, returned: page.length, nextCursor } };
     if (Buffer.byteLength(JSON.stringify(body)) > maxPageBytes)
       throw fail('DATASET_PAGE_TOO_LARGE', 'Use a smaller limit or select fewer fields', 413);
@@ -237,7 +353,7 @@ export async function loadDatasetConfig(configPath) {
   const bytes = await readFile(path);
   if (bytes.length > 65536) throw new RangeError('Dataset config exceeds 64 KiB');
   const config = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  const keys = new Set(['schema', 'file', 'name', 'columns', 'filters', 'maxBytes', 'maxRows', 'maxCellChars', 'defaultLimit', 'maxLimit', 'maxPageBytes']);
+  const keys = new Set(['schema', 'file', 'name', 'columns', 'filters', 'ranges', 'sorts', 'maxBytes', 'maxRows', 'maxCellChars', 'defaultLimit', 'maxLimit', 'maxPageBytes']);
   if (!object(config) || config.schema !== 'stellar-forge.csv-dataset.v1' || typeof config.file !== 'string' ||
       !config.file || Object.keys(config).some(key => !keys.has(key))) throw new TypeError('Invalid csv-dataset.v1 configuration');
   return loadCsvDataset({ ...config, file: resolve(dirname(path), config.file) });

@@ -1,149 +1,201 @@
-# Queryable CSV data in the existing SF30 seller
+# Queryable CSV data and the operator workspace
 
-Expose selected columns from an operator-owned CSV as a paid, filtered JSON API.
-No merchant backend or database service is needed. This is a new application
-handler for **the existing SF30 server**, not another payment implementation.
-It uses Node 22 built-ins and adds no package dependency or hosted workflow.
+Expose selected columns of an operator-owned CSV as a paid JSON API through the
+**existing SF30 seller**. Prepare queries locally with the same immutable dataset
+engine before giving a buyer a public request example. Node 22 built-ins only;
+no database service, package installation, new payment implementation or hosted CI.
 
-## Run the example, then use your data
+## Prepare and inspect a dataset
 
 From `stellar/scf-starforge-20261009/sf30-seller-sdk`:
 
 ```sh
 node dataset-cli.mjs --dataset examples/inventory-dataset.json
+node dataset-cli.mjs --dataset examples/query-workspace-dataset.json
 ```
 
-This parses the entire example before returning its six-record count, column
-schema and snapshot ID. It does not print the source records or internal column.
-`inventory-dataset.csv` is fictional demonstration data.
+Both examples are fictional. The first is the original equality-only example;
+the second demonstrates ranges, nullable values and stable sorting. Inspection
+parses the entire CSV and prints schema, record count and snapshot ID, not rows.
 
-Create your own dataset specification following `examples/inventory-dataset.json`.
-`file` resolves beside that specification, not the current working directory.
-Only columns explicitly listed in `columns` are exposed. Do not list sensitive
-columns. Choose up to eight exact-match filter columns in `filters`.
+The CSV `file` resolves beside its JSON specification. Declare only columns you
+intend to expose. Extra CSV columns are parsed for structural validity but never
+retained in results. Column types are explicit; there is no automatic inference.
 
-Prepare a JSON file containing your **existing public SF30 payment terms**:
-`scheme`, `network`, `amount`, `asset`, `payTo`, `maxTimeoutSeconds`.
-Use `scheme: "exact"`, an explicit supported network, the real asset contract and
-recipient, and a positive **atomic-unit string** for the price per request.
-Do not include a seed, secret key or other wallet credential. The command checks
-these terms through the original SF30 offer compiler; it does not prove account
-ownership, contract validity or network settlement.
+```json
+{
+  "schema": "stellar-forge.csv-dataset.v1",
+  "file": "inventory.csv",
+  "name": "Published inventory",
+  "columns": {
+    "sku": "string",
+    "category": "string",
+    "units": {"type": "integer", "nullable": true},
+    "updated_at": "string"
+  },
+  "filters": ["category", "units"],
+  "ranges": ["units", "updated_at"],
+  "sorts": ["sku", "units", "updated_at"],
+  "defaultLimit": 50,
+  "maxLimit": 250
+}
+```
+
+`filters`, `ranges` and `sorts` each name up to eight unique exposed columns.
+Ranges accept strings, integers and numbers, not booleans. All capabilities are
+opt-in. The native seller advertises at most 32 query parameters, so the loader
+also enforces `3 + filters.length + 4*ranges.length + (sorts.length ? 1 : 0) <= 32`.
+This avoids preparing a dataset that its original offer compiler cannot advertise.
+
+## Use the local query workspace
 
 ```sh
-export SF30_DATASET_CONFIG="$(pwd)/examples/inventory-dataset.json"
+node dataset-workspace.mjs \
+  --dataset examples/query-workspace-dataset.json \
+  --resource https://your-api.example/data
+```
+
+Open the printed private session URL on the same computer. The process binds
+`127.0.0.1:8430`; use `--port 0` for an available port. It reads the CSV once and
+provides a neutral desktop/mobile interface to select columns, combine equality
+and lower/upper bounds, choose order, page backward/forward, save the exact query
+recipe and export the current result page. Tables scroll horizontally on narrow
+screens rather than hiding controls or columns.
+
+The workspace is an **operator preview**, not a paid buyer or public seller. It
+uses the original `loadDatasetConfig`, `admit` and `handle` methods. It does not
+contact `--resource`, start a facilitator, sign, verify or settle a payment, or
+modify the CSV. `--resource` is optional and adds an exact public URL and unpaid
+curl recipe to successful results; without it, query preparation and exports still
+work. Every public paid page remains a separate original SF30 request.
+
+APIs require the per-process session token; the browser removes it from the URL
+fragment and retains it only in session storage for that origin. Host/Origin
+checks, no-store responses and a restrictive content policy protect the local
+interface. These are local application boundaries, not protection from a hostile
+OS user, browser extension or other process able to inspect the operator's session.
+The command accepts a dataset path only at startup, never through HTTP input.
+Close the process with Ctrl+C when finished. Keep exports private as appropriate
+for the columns you chose to expose.
+
+## Publish through the original seller
+
+Prepare your existing **public payment terms** JSON: `scheme`, `network`, `asset`,
+`amount`, `payTo`, `maxTimeoutSeconds`. Use `scheme: "exact"`, an explicit supported
+Stellar network and a positive atomic-unit amount string. Never include a wallet
+seed or secret key. The original compiler checks structural terms; it does not
+establish recipient ownership or deployed asset validity.
+
+```sh
+export SF30_DATASET_CONFIG="$(pwd)/examples/query-workspace-dataset.json"
 node dataset-cli.mjs --dataset "$SF30_DATASET_CONFIG" \
   --payment /private/public-payment-terms.json \
   --origin https://your-api.example --path /data --out seller-dataset.json
 
-# Inspect the original 402 challenge without a facilitator or wallet call.
 node serve.mjs --config seller-dataset.json \
   --handlers examples/dataset-application.mjs
 ```
 
-Generated configuration is create-only: choose a new output name instead of
-silently overwriting a running configuration. It contains schema examples, not
-CSV records. Replace the example origin with your operator-managed public HTTPS
-origin and reverse proxy; the original server listens on `127.0.0.1:8423`.
+Seller configuration is create-only. The existing server binds `127.0.0.1:8423`;
+use the operator's existing HTTPS reverse proxy for public access. This command
+starts original challenge-only mode, not payment or data delivery. For native
+paid operation, use the same original command with
+`--facilitator YOUR_EXISTING_HTTPS_FACILITATOR`, keeping `SF30_DATASET_CONFIG` set.
+The original native factory and operator-managed SDK remain responsible for
+verification and settlement. No facilitator is chosen or contacted by these tools.
 
-For the paid route, restart that **same original command** with the original
-`--facilitator YOUR_EXISTING_HTTPS_FACILITATOR` option. The existing SF30 native
-factory and operator-managed SDK installation remain responsible for payment
-verification and settlement. No facilitator is selected or contacted by this
-package. Keep `SF30_DATASET_CONFIG` set to the spec used when generating config.
+Inspect `/_seller/health`, `/_seller/offers`, `/_seller/docs` and
+`/_seller/openapi.json` on that same seller. Generated query metadata now includes
+only its configured equality, range and sort capabilities, so the existing seller
+docs inherit the new interface without a parallel documentation server.
 
-Inspect `/_seller/health` and `/_seller/offers` as with any other SF30 seller.
-Point an existing SF31/SF81 buyer at the public `/data` URL and use its normal
-signing flow. Without native verification, the application data is not served.
-
-## Query interface
+## Query semantics
 
 ```text
-/data?where_category=widget&where_available=true&fields=sku,description,units&limit=1
+/data?where_category=widget&gte_units=10&lt_units=50&sort=-units&fields=sku,units&limit=25
 ```
 
-This asks for the first available widget, with only the three selected columns.
-`where_COLUMN` performs typed equality. Multiple filters are ANDed, and only
-operator-enabled filter columns are accepted. Values are case-sensitive; strings
-are not trimmed or case-folded. There is no SQL, regex execution, arbitrary sort,
-remote fetch, request-supplied path or filesystem traversal.
+`where_COLUMN` performs typed equality. `gt_`, `gte_`, `lt_` and `lte_` perform
+strict/inclusive lower and upper comparisons. All supplied conditions are ANDed.
+Use at most one lower and one upper bound per column. An impossible interval
+returns an empty successful page; malformed, repeated or unsupported parameters
+return an error. Null values never match ranges. Empty equality matches null
+only on a nullable column. Strings are case-sensitive and are not trimmed.
 
-`fields` is an ordered, comma-separated subset of exposed columns. Omit it for
-all exposed columns. `limit` defaults to the configured value and cannot exceed
-`maxLimit`. Unknown, duplicate or array-valued query parameters are errors.
+`sort=COLUMN` is ascending, `sort=-COLUMN` descending. Only configured sort columns
+are accepted. Nulls come last in both directions; equal values retain original
+CSV record order, so page boundaries do not shuffle ties. With no sort parameter,
+results retain original CSV record order even when using range indexes.
 
-Responses contain `dataset` (name, snapshot, schema, record count), `fields`,
-`filters`, projected `rows`, and `page` (`total`, `returned`, `limit`, `nextCursor`).
-The result order is always the original CSV record order. An empty match is a
-normal successful result with `rows: []` and `total: 0`; it is still a paid API
-request, not an automatic credit or refund.
+String ranges and sorting use JavaScript UTF-16 code-unit order, **not locale
+collation or date parsing**. Uniform `YYYY-MM-DD` dates can be compared as strings;
+do not mix date formats or UTC offsets and assume chronological sorting. Numeric
+sort/range follows the declared type. Integers must be JavaScript-safe integers;
+`number` is finite IEEE-754. Keep exact decimal money, larger identifiers and
+leading-zero codes as strings instead of silently losing precision. String money
+will sort lexicographically, not numerically.
 
-To continue, copy `page.nextCursor` into `cursor` and keep the exact same filters
-and field selection. A caller may change `limit` between pages. A changed dataset
-returns `409 DATASET_SNAPSHOT_CHANGED`, instructing the caller to start a new query.
-A cursor is a plain encoded position bound to the snapshot and query, **not an
-access credential**. It can be inspected or edited; it grants no extra columns
-or filter capabilities. Each page is a distinct paid request under original SF30.
+`fields` is an ordered, unique comma-separated subset of exposed columns. Omit it
+for all. `limit` must be within the configured maximum. There is no arbitrary SQL,
+regular-expression execution, remote fetch, request-supplied file or schema change.
 
-## Types, snapshots and resource use
+Results retain the original `dataset`, `fields`, `filters`, `rows` and `page`
+structure. Range requests add explicit typed `ranges`; sorted requests add `order`
+with direction, null and tie behavior. `page` contains `total`, `returned`, `limit`
+and `nextCursor`. Empty matches are successful paid requests, not automatic refunds.
 
-Supported column types are `string`, `integer`, `number`, and `boolean`.
-Booleans are exactly `true` or `false`; integers must be JavaScript-safe integers.
-`number` uses finite IEEE-754 values. Keep exact decimal money, very large
-integers, identifiers with leading zeros and timestamps as **strings** rather
-than losing their original representation. No automatic type inference occurs.
+For continuation, copy `nextCursor` unchanged into `cursor` and keep the same
+fields, equality/range conditions and ordering. `limit` may change between pages.
+A different query yields 400; a changed snapshot yields
+`409 DATASET_SNAPSHOT_CHANGED`. A cursor is an encoded position, not an access
+credential. Enabling or changing range/sort capabilities changes snapshot identity.
+Configurations that omit both new capabilities retain the previous snapshot,
+description and equality-only cursor format.
 
-A declaration such as `{ "type": "number", "nullable": true }` maps an empty
-CSV cell to JSON null. For a nullable filter, an empty URL value also matches
-null. A nullable string therefore does not distinguish null from an empty string.
-Unlisted CSV columns are parsed for valid structure but not retained in results.
-Malformed records, missing/duplicate headers, invalid UTF-8 or type mismatches
-fail startup instead of silently dropping rows.
+## Storage, indexes and application integration
 
-The loader supports UTF-8 BOM, quoted commas and newlines, doubled quotes,
-CRLF/LF/CR record separators, and a final record without a newline. It reads the
-CSV incrementally, builds in-memory equality indexes and retains one immutable
-snapshot. Replace the source **atomically**, then restart the seller to publish a
-new snapshot. Do not edit a file in place while it is being loaded. No implicit
-reload changes data between a reviewed request and its response.
+The loader accepts UTF-8 BOM, quoted delimiters/newlines, escaped quotes, LF/CRLF/CR
+records and a final line without a newline. It rejects malformed structure,
+missing/duplicate headers, invalid UTF-8 and type errors at startup. Nullable
+columns map empty CSV cells to null; a nullable string does not distinguish null
+from an empty string.
 
-Default bounds are 64 MiB of CSV, 250,000 records, 65,536 characters per cell,
-50 rows per page and a maximum page limit of 250. The operator can configure
-these in the dataset spec; hard ceilings are 256 MiB, one million records,
-1,048,576 characters per cell, 1,000 rows per page, and a 900 KiB response.
-Returned metadata counts toward that response size. When a page is too large,
-request fewer rows or columns. Equality queries start from the smallest matching
-index; counting conjunctions still scans that candidate list. Memory depends on
-data and the number of indexes. This is an in-memory snapshot API, not a database
-for arbitrary joins, changing records or unbounded datasets.
+The CSV is streamed into one immutable in-memory snapshot. Equality uses the
+original indexes. Each range/sort column adds one ordered record-ID index, shared
+when a column enables both capabilities. Range bounds use binary search. Selective
+queries sort only candidate IDs; dense ordered queries walk a prebuilt index,
+not a full sort on every page. Counting results can still scan many records, and
+index memory grows with row count and the number of indexed columns. This is not
+a database for arbitrary joins, live mutations or unbounded data.
 
-## Composition and payment behavior
+Defaults: 64 MiB CSV, 250,000 rows, 65,536 characters per cell, 50 rows/page,
+250 maximum page size. Hard ceilings: 256 MiB CSV, one million rows, 1,048,576
+characters/cell, 1,000 rows/page and 900 KiB response including metadata. Reduce
+fields or page size on `413 DATASET_PAGE_TOO_LARGE`.
 
-`loadDatasetConfig(path)` returns `describe()`, `admit(context)` and
-`handle(context)`. The example exports them as `admitDataset` and `queryDataset`
-for the original `--handlers` mechanism. Existing applications can import the
-loader and expose the same functions without adopting the example launcher.
+Replace the source file atomically and restart to publish a new snapshot. Do not
+edit the CSV in place while it loads. No implicit reload changes data between
+query review and delivery.
 
-The original SF30 admission hook validates the query and prepares its page before
-native verification. The same original context object carries that prepared page
-to the handler; no request body or payment token is retained in a global log.
-Validation errors return ordinary 400/409/413 responses before payment processing
-in native mode. The original challenge-only mode returns its normal 402 without
-executing the admission or application. No new consent gate is introduced.
+`loadDatasetConfig(path)` still returns `describe()`, `admit(context)` and
+`handle(context)`. Original native admission prepares the page before verification;
+the same context object carries it to the handler. Validation errors return
+400/409/413 before native payment processing. Original challenge-only mode returns
+its ordinary 402 without running admission or the application. No payment headers
+or settlement state are produced by the dataset engine or preview workspace.
 
-The application never sets payment headers. The original resource server controls
-verification, cancellation, settlement and whether the data is delivered after
-settlement. This feature does not assert live settlement or customer revenue.
-
-## One focused acceptance command
+## Focused checks
 
 ```sh
+node test/dataset-query-workspace.mjs
 node test/dataset-acceptance.mjs
 ```
 
-Exercises the original `serve.mjs` HTTP lifecycle with a clearly labelled local
-payment-adapter fixture: invalid query before verification, unpaid body withheld,
-verified dataset delivery, failed settlement body withheld. It also covers the
-actual loader, typed projections, indexed equality, pagination and original offer
-compiler. It does not use a wallet or external network. `--core-only` runs the
-loader/compiler portion where the rest of the repository is not installed.
+The first exercises typed ranges, stable/null ordering, continuation, source and
+query changes, original offer generation and a real authenticated loopback
+workspace request. Its public payment identifiers are explicitly fictional;
+no wallet, external request or settlement is performed. The second is the existing
+SF30 dataset/seller acceptance journey, unchanged, including its labelled local
+payment-adapter fixture and `--core-only` option. Browser navigation can be checked
+with the normal workspace command; do not equate an offline renderer exercise
+with a full browser-to-server run.
