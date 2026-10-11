@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tenderly merchant · Starforge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">STARFORGE / MERCHANT OPERATIONS</span><h1>Tenderly saved simulations</h1></div>
+    <div class="runtime"><span id="runtime-state" class="badge">Opening</span><button id="refresh" type="button">Refresh</button></div>
+  </header>
+  <main>
+    <p id="notice" role="status" aria-live="polite">Opening the private workspace…</p>
+    <section class="workspace-bar" aria-label="Current workspace">
+      <div><span class="eyebrow">WORKSPACE</span><p id="workspace-path" class="mono">—</p></div>
+      <div><span class="eyebrow">SELECTED PROFILE</span><p id="selected-name">Choose or create a merchant profile</p></div>
+      <div><span class="eyebrow">MERCHANT</span><p id="merchant-address">Closed</p></div>
+    </section>
+    <nav aria-label="Workspace sections" class="tabs">
+      <button type="button" data-tab="profiles" aria-current="page">1. Merchant</button>
+      <button type="button" data-tab="requests">2. Requests</button>
+      <button type="button" data-tab="operations">3. Results &amp; recovery</button>
+    </nav>
+
+    <section id="tab-profiles" class="tab">
+      <div class="two-column">
+        <aside class="panel">
+          <div class="section-heading"><h2>Saved profiles</h2><button type="button" id="new-profile">New</button></div>
+          <p class="help">Each saved version keeps its own exact plan, prepared package and original operation history.</p>
+          <div id="profile-list" class="record-list"></div>
+          <button type="button" id="more-profiles" class="wide" hidden>More profiles</button>
+          <hr>
+          <label class="file-button">Import a merchant plan<input id="import-plan" type="file" accept=".json,application/json"></label>
+          <button type="button" id="download-plan" class="wide" disabled>Download selected plan</button>
+          <div class="launch">
+            <h3>Operate the selected profile</h3>
+            <button type="button" id="open-profile" class="wide" disabled>Prepare and open</button>
+            <div class="fields pair">
+              <label>Seller port<input id="seller-port" type="text" inputmode="numeric" value="0"></label>
+              <label>Operations port<input id="operations-port" type="text" inputmode="numeric" value="0"></label>
+            </div>
+            <p class="help">Port 0 selects an available local port. The launch command selects the facilitator.</p>
+            <button type="button" id="start-merchant" class="primary wide" disabled>Start merchant</button>
+            <button type="button" id="stop-merchant" class="wide" disabled>Drain and stop merchant</button>
+            <div id="prepared-output" class="help mono"></div>
+          </div>
+        </aside>
+        <section class="panel">
+          <div class="section-heading"><h2>Merchant profile</h2><span id="profile-version" class="mono subdued"></span></div>
+          <form id="profile-form">
+            <div class="fields pair">
+              <label>Profile name<input id="profile-label" maxlength="120" autocomplete="off"></label>
+              <label>Service name<input id="service-name" maxlength="32" required autocomplete="off"></label>
+              <label>Public merchant origin<input id="public-origin" type="url" required placeholder="https://merchant.example"></label>
+              <label>Simulation route<input id="route-path" required placeholder="/evm/simulate"></label>
+            </div>
+            <fieldset>
+              <legend>Tenderly project</legend>
+              <div class="fields pair">
+                <label>Account<input id="provider-account" required autocomplete="off"></label>
+                <label>Project<input id="provider-project" required autocomplete="off"></label>
+                <label>EVM network ID<input id="network-id" inputmode="numeric" required></label>
+                <label>Simulation output<select id="simulation-type"><option value="quick">Quick</option><option value="abi">ABI decoded</option><option value="full">Full trace</option></select></label>
+                <label>Access-key environment variable<input id="access-key-env" required autocomplete="off"></label>
+                <label>Operation-key environment variable<input id="operation-key-env" required autocomplete="off"></label>
+              </div>
+              <p class="help">Set both variables in the private launch environment. Keep the same operation key for existing requests and recovery.</p>
+            </fieldset>
+            <fieldset>
+              <legend>Stellar payment</legend>
+              <div class="fields pair">
+                <label>Payment network<input id="payment-network" required></label>
+                <label>Atomic price<input id="payment-amount" inputmode="numeric" required></label>
+                <label class="full">Asset<input id="payment-asset" required autocomplete="off"></label>
+                <label class="full">Recipient<input id="payment-recipient" required autocomplete="off"></label>
+              </div>
+            </fieldset>
+            <details>
+              <summary>Operation scope and service limits</summary>
+              <label>Original limits and operation settings<textarea id="advanced-plan" rows="14" spellcheck="false" class="mono"></textarea></label>
+              <p class="help">Retain the operation scope when continuing the same merchant. These settings also control saved response capacity and ticket lifetime.</p>
+            </details>
+            <div class="actions"><button id="review-profile" type="button">Review terms</button><button type="submit" class="primary">Save profile</button></div>
+          </form>
+          <div id="profile-review" class="review" hidden></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="tab-requests" class="tab" hidden>
+      <div class="two-column">
+        <section class="panel">
+          <h2>Retained requests</h2>
+          <p class="help">Reopen an issued request to download its same ticket and exact body.</p>
+          <button id="reload-requests" type="button">Load saved requests</button>
+          <div id="request-list" class="record-list"></div>
+          <button id="more-requests" type="button" hidden>More requests</button>
+          <hr>
+          <h3>Selected request</h3>
+          <pre id="request-detail" class="output">No request selected.</pre>
+          <button id="download-request" type="button" disabled>Download complete request</button>
+        </section>
+        <section class="panel">
+          <h2>Issue a simulation request</h2>
+          <p class="help">Pin the exact EVM state and transaction. Issuing a ticket records the request for the existing buyer workflow.</p>
+          <form id="request-form">
+            <div class="fields pair">
+              <label>Operation ID<input id="operation-id" required maxlength="128" autocomplete="off"></label>
+              <label>Customer reference<input id="request-subject" required maxlength="128" autocomplete="off"></label>
+              <label>Block number<input id="block-number" inputmode="numeric" required placeholder="Explicit historical block"></label>
+              <label>Transaction index<input id="transaction-index" inputmode="numeric" required value="0"></label>
+              <label class="full">From address<input id="request-from" required placeholder="0x…" autocomplete="off"></label>
+              <label class="full">To address<input id="request-to" required placeholder="0x…" autocomplete="off"></label>
+              <label class="full">Calldata<textarea id="request-input" rows="3" spellcheck="false" required class="mono">0x</textarea></label>
+              <label>Gas limit<input id="request-gas" inputmode="numeric" value="100000" required></label>
+              <label>Value in wei<input id="request-value" inputmode="numeric" value="0" required></label>
+              <label>Ticket lifetime in minutes<input id="request-minutes" inputmode="numeric" value="60" required></label>
+            </div>
+            <div class="actions"><label class="file-button">Import transaction<input id="import-request" type="file" accept=".json,application/json"></label><button type="submit" class="primary">Issue and retain ticket</button></div>
+          </form>
+        </section>
+      </div>
+    </section>
+
+    <section id="tab-operations" class="tab" hidden>
+      <section class="panel">
+        <div class="section-heading">
+          <div><h2>Original operation history</h2><p class="help">Completed responses reopen from the merchant ledger. Every page retains the original operation identity.</p></div>
+          <div class="actions"><label>State<select id="state-filter"><option value="">All states</option><option>COMPLETE</option><option>UNCERTAIN</option><option>IN_FLIGHT</option><option>RETRY_READY</option></select></label><button type="button" id="reload-operations">Load operations</button></div>
+        </div>
+        <div id="operation-totals" class="totals"></div>
+        <div class="table-wrap"><table><thead><tr><th>Operation</th><th>State</th><th>Attempt</th><th>Generation</th><th>Response</th><th>Updated</th></tr></thead><tbody id="operation-list"></tbody></table></div>
+        <button type="button" id="more-operations" hidden>Next page</button>
+      </section>
+      <div class="equal-columns">
+        <section class="panel">
+          <div class="section-heading"><h2>Saved result</h2><button type="button" id="download-response" disabled>Download response</button></div>
+          <p id="selected-operation" class="mono subdued">Select an operation above.</p>
+          <dl id="result-summary" class="key-values"></dl>
+          <pre id="result-preview" class="output">The complete original response is available as a download.</pre>
+          <h3>Operation changes</h3>
+          <div id="operation-audit" class="record-list"></div>
+          <button type="button" id="more-audit" hidden>More changes</button>
+        </section>
+        <section class="panel">
+          <h2>Reconcile an interrupted operation</h2>
+          <p class="help">Use the selected operation's current generation and the actual provider outcome. A retained response file completes that same operation.</p>
+          <form id="recovery-form">
+            <label>Provider outcome<select id="recovery-action"><option value="complete">Saved simulation result recovered</option><option value="retry">Provider confirmed no simulation was dispatched</option></select></label>
+            <label>Provider reference<input id="recovery-reference" minlength="8" maxlength="512" required placeholder="Saved simulation ID or original support reference"></label>
+            <div id="recovery-response-fields">
+              <label>Original response JSON<input id="recovery-file" type="file" accept=".json,application/json"></label>
+              <label>Original HTTP status<input id="recovery-status" inputmode="numeric" value="200"></label>
+            </div>
+            <p id="recovery-selection" class="help">Select an uncertain operation to reconcile.</p>
+            <button type="submit" id="apply-recovery" class="primary" disabled>Record provider outcome</button>
+          </form>
+        </section>
+      </div>
+    </section>
+  </main>
+  <footer>Starforge merchant toolkit · Local operator workspace</footer>
+</body>
+</html>
