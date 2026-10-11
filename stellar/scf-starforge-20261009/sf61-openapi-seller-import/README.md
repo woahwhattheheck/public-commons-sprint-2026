@@ -135,7 +135,10 @@ authentication, header/cookie parameters, server variables, custom serialization
 optional request bodies, bodies on GET/HEAD/DELETE, multipart/text bodies and
 semantic OpenAPI 3.1 `$ref` siblings require manual integration. Operation `security: []` and
 an empty security alternative preserve OpenAPI's optional-authentication semantics.
-Responses and callbacks are not imported. Every selected operation must succeed;
+Response contracts can be compiled into the original upstream seller with the
+optional `--upstream-bindings` export; see [response contract delivery](RESPONSE_CONTRACTS.md).
+The metadata-only import does not add response schemas to payment headers, and
+callbacks remain outside its scope. Every selected operation must succeed;
 the tool never writes a partial list of accepted routes.
 
 The output passes original SF25 schema/example acceptance, including required
@@ -215,3 +218,4 @@ timeout/cancellation, isolation and the unchanged challenge-only behavior.
 checks actual CLI export/readback and loopback HTTP rejection before native payment,
 then the accepted dynamic/static paths through a controlled native collaborator.
 It performs no wallet/provider call and proves no network settlement.
+
