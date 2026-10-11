@@ -112,7 +112,7 @@ A source alias is a locator, not an identity. The command's sourceSha256, origin
 
 ## QuickBooks: original journal and response workflow
 
-The customer presents the original manual/import workflow. The native QuickBooks plan retains its normalized company and accounts, original handoff and accountant rows, editable journal and review. Provider-response import retains the actual response bytes and original accountant-return result.
+The customer covers the original manual response-import workflow and configured native posting. The native QuickBooks plan retains its normalized company and accounts, original handoff and accountant rows, editable journal and review. Both paths retain the actual provider response bytes and original accountant-return result.
 
 | Customer preview action | Read before preparing | Identity retained for reconciliation |
 | --- | --- | --- |
@@ -169,6 +169,57 @@ starforge merchant-accounting-platforms plan \
   --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform qbo \
   --plan-id "$QBO_PLAN_ID" --view files
 ~~~
+
+### Configured native company and journal posting
+
+The same QBO client can inspect the host's native connection, capture the actual company and account pages, preview a reviewed journal and retain its native posting. The host declares platforms.qbo with the original realmId, environment and token environment name; optional minorVersion remains part of the original connection identity. The SDK does not accept a substitute HTTP transport or credential value from the model.
+
+Use read --action connection, or SDK connection(), to inspect the current configured destination. Native company capture is read --action company-fetch or SDK companyFetch(args). Supply the actual realmId and environment, and choose summary, accounts or snapshot. The snapshot view includes the full original company and its sourceDocuments; the accounts view is paged. expectedCompanySha256 can pin a subsequent requested view to the same original company content. This capture performs native GET requests and does not create a journal.
+
+Native posting has two customer preview actions:
+
+| Action | Selection | Execution behavior |
+| --- | --- | --- |
+| post | Original reviewed plan, current revision, stable posting UUID, actor, ISO createdAt and expectedParentId | Native preview binds the company, original journal bytes and full posting intent before the first submission. |
+| post-resume | Existing nativePost UUID, current revision, actor and original previewSha256 | Only explicit execute invokes the original native continuation; reconcile reads its retained outcome. |
+
+Use post only for a journal with no retained native posting. Its native preview returns the original planSha256, exact journal requestSha256, previewSha256 and postId. Prepare and execute that returned preview through the same durable operation directory. The original controller retains the posting intent and request bytes before external dispatch.
+
+After an uncertain response, select the existing nativePost from the original plan. Preview post-resume using that operation's exact ID and digest, then prepare a new directory for that explicit resume decision. Reconcile alone will return executionRequired:true when this original operation still needs the prepared provider continuation. It will not call resumePost, query QuickBooks or repeat a journal POST.
+
+~~~sh
+starforge merchant-accounting-platforms preview \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform qbo \
+  --action post-resume --request "$CASE_DIR/native-resume-arguments.json" \
+  --out "$CASE_DIR/native-resume-preview.json"
+
+starforge merchant-accounting-platforms prepare \
+  --dir "$CASE_DIR/native-resume-operation" \
+  --url "$ACCOUNTING_MCP_URL" --workspace "$ACCOUNTING_WORKSPACE" --platform qbo \
+  --preview "$CASE_DIR/native-resume-preview.json"
+
+starforge merchant-accounting-platforms reconcile \
+  --dir "$CASE_DIR/native-resume-operation"
+
+starforge merchant-accounting-platforms execute \
+  --dir "$CASE_DIR/native-resume-operation"
+~~~
+
+The argument file contains planId, revision, id, actor and previewSha256 from the selected native posting and current operator decision. The caller does not choose a new posting ID when resolving the original request. A BOOKED operation is adopted by both execute and reconcile without another submission.
+
+The native continuation first uses any retained response that can finish locally. When provider access remains necessary, the original controller keeps the same request UUID, reviewed request bytes, company, environment and request URL. It queries the original journal identity and retains native query/read/post attempts. An already observed journal is not silently replaced by another posting. The customer does not implement its own provider retry algorithm.
+
+| Native posting state | Customer interpretation |
+| --- | --- |
+| PREPARED or RUNNING | Original intent is retained or its native call is running; inspect the same operation. |
+| UNCERTAIN or RETRYABLE | Original outcome requires continued observation or an explicit native resume. Retained retryAt remains authoritative. |
+| RECEIVED | Original provider source is retained; the native controller can finish its accountant-return linkage. |
+| BOOKED | The original native posting is linked to its retained accountant return. |
+| FAULT or CONFLICT | Inspect the original native response, attempt records and lastError before selecting a further native action. |
+
+This distinction also appears in CLI status: pending native posting returns exit3; native FAULT or CONFLICT returns exit2. Original QBO response PENDING recovery remains a separate local-return path and can run during reconcile. That local recovery never invokes the native posting continuation.
+
+Read plan view native-attempts to inspect the complete original attempt inventory. Native files use kind:qbo, planId and nativePost:true. The posting's root files are intent.json and request.json. For an actual retained attempt, additionally supply its original attemptId and choose response.json or receipt.json. The same download helper checks the returned source digest and releases only its owned reader. Keep the returned file metadata rather than constructing paths from a guessed attempt number.
 
 ## Xero: context, plan, original operation and return
 
@@ -278,7 +329,7 @@ SDK read accepts only declared native read actions. Mutation calls go through a 
 
 The client uses the same maintenance reader as accounting downloads. Complete downloads release their original read. Partial streams can be returned early and are released when their iterator closes. If the caller opens a retained read through its existing connection, registerFileRead/readId and releaseFile let it keep that reader under the same ownership.
 
-disconnect drains only this caller's owned file reads and preserves the original workspace and provider operations. The client returns the operation IDs it observed from its own operate calls through retainedOperations; those remain addressable through the original native controller after this caller disconnects.
+disconnect drains only this caller's owned file reads and preserves the original workspace and provider operations. The client returns the operation IDs it observed from its own operate calls through retainedOperations; the same custody view includes original native QBO posts observed from post and post-resume calls. Those IDs remain addressable through the original native controllers after this caller disconnects.
 
 close is an explicit workspace close. It drains the caller's work and invokes the existing workspace close path. The native controller owns cancellation, completion and retained operation state. Read the original controller state after reopening instead of assuming that ending a transport erased its jobs.
 

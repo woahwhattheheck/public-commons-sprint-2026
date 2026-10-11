@@ -31,6 +31,11 @@ is selected by the host; customer tool calls carry aliases.
     "xero-posting": "../bookkeeping/xero-responses.json"
   },
   "platforms": {
+    "qbo": {
+      "tokenEnv": "STARFORGE_QBO_ACCESS_TOKEN",
+      "realmId": "9130350000000001",
+      "environment": "sandbox"
+    },
     "xero": {
       "tokenEnv": "STARFORGE_XERO_ACCESS_TOKEN",
       "tenants": {
@@ -41,7 +46,7 @@ is selected by the host; customer tool calls carry aliases.
 }
 ~~~
 
-Replace the illustrated tenant UUID with the actual authorized tenant. Native
+Replace the illustrated QuickBooks company and Xero tenant with the actual authorized identities. The QuickBooks connection selects its exact realmId and sandbox or production environment; an optional minorVersion is retained in the native request URL. Its original HTTP client reads the configured token environment variable. Native
 Xero context capture and journal operations select that declared alias. The
 retained plan must name the same native tenant. The original Xero client reads
 the configured environment variable and uses its fixed Accounting API endpoint.
@@ -97,11 +102,12 @@ authentication and the configured workspace alias.
 Open the workspace with merchant_accounting_open. Its operating maintenance
 controller opens the original accounting store and constructs the accountant,
 QuickBooks and Xero controllers under that same lease. QuickBooks recovers
-retained PENDING response/accountant intents. Xero initializes its retained
-state and marks an interrupted original native operation appropriately.
+retained PENDING response/accountant intents and completes an already received
+native posting from its retained local files. Both native controllers preserve
+interrupted provider-operation state for the original reviewed continuation.
 
 Pause and close use the existing maintenance workflow. They stop new admission,
-drain accepted calls and file reads, then close Xero's owned native tasks before
+drain accepted calls and file reads, then close both controllers' owned native tasks before
 closing the original accounting workspace. Resume constructs the original
 controllers against those same directories and identities.
 
@@ -110,67 +116,129 @@ Explicit workspace close is the owner operation. The customer guide distinguishe
 those actions and keeps original native operations available for reconciling an
 uncertain client response.
 
-## QuickBooks: original handoff to saved accountant return
+## QuickBooks: connected company to the original accountant return
 
 1. Open merchant_accounting_qbo_status and page handoffs/plans. Read the selected
    handoff with merchant_accounting_qbo_handoff. The row view preserves original
    native amounts, source classifications, frozen adjustment context and the
    current accountant parent.
 
-2. Review the actual company/chart source with
-   merchant_accounting_qbo_company_preview. The native company importer displays
-   each account's actual identity, currency, activity, type and eligibility reason.
-   Use this same companySource in journal preview when the plan request does not
-   already contain a retained companySnapshot.
+2. Read merchant_accounting_qbo_connection to check the host's exact company,
+   environment and credential availability. merchant_accounting_qbo_company_fetch
+   performs the original native CompanyInfo, Preferences and complete Account
+   query, including inactive accounts. Default output is a compact summary;
+   accounts view pages the captured chart and snapshot view returns the full
+   validated company with its original sourceDocuments. Each fetch is a fresh
+   native read. Carry expectedCompanySha256 when comparing another page so a
+   changed company/chart is reported instead of silently mixing captures.
 
-3. Call merchant_accounting_qbo_preview with the declared journal source and,
-   when used, companySource. Page rows, native journal lines and accounts. The
-   native preview retains the selected company's original mapping, explicit
-   home-currency values, source context and balanced journal.
+3. The operator retains that company snapshot inside the declared journal input,
+   or writes the original sourceDocuments into the existing qbo-company import
+   format. merchant_accounting_qbo_company_preview reads that host-selected source
+   and displays actual account identity, currency, activity, type and eligibility.
+   Use the same companySource in journal preview when the request does not already
+   contain its companySnapshot. The full native source is available to the SDK;
+   tool arguments continue to carry the host alias and exact source hash.
 
-4. Retain the returned command exactly. It names
-   merchant_accounting_qbo_create and contains the source hashes, native
-   previewSha256 and workspace revision. Execute that command to retain the
-   original DRAFT plan. A repeated exact request reopens the original plan UUID.
+4. Call merchant_accounting_qbo_preview with the declared journal source and
+   optional companySource. Review the actual home-currency values, balanced native
+   lines, selected accounts and original source context. Retain and execute its
+   exact merchant_accounting_qbo_create command. The native preview digest and
+   source pins identify the original DRAFT plan; the same exact request reopens
+   that UUID.
 
-5. Read merchant_accounting_qbo_plan. Review the actual retained plan and send
-   merchant_accounting_qbo_review with its current revision, stable review UUID,
-   actor, note and planSha256. The original controller reserves the selected
-   company/events and makes journal-entry.json available.
+5. Read merchant_accounting_qbo_plan and send merchant_accounting_qbo_review with
+   its current revision, stable review UUID, actor, note and planSha256. The original
+   controller reserves the selected company/events and exposes journal-entry.json.
 
-6. Retrieve that original journal-entry.json through merchant_accounting_file.
-   The authorized QuickBooks client performs the posting using the original
-   native company/environment and request identity described in the
-   [QuickBooks guide](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/QBO_WORKFLOW.md).
-   This customer adapter does not add another QuickBooks executor.
+6. Call merchant_accounting_qbo_post_preview for that reviewed plan with the current
+   revision and expectedParentId plus a stable posting id, actor and createdAt.
+   The native preview selects the configured company and exact retained journal
+   bytes. Retain its complete command and binding, then explicitly execute
+   merchant_accounting_qbo_post. The original controller publishes its immutable
+   intent/request, records native attempts, reconciles the exact original journal
+   and links the same accountant return.
 
-7. Select the exact original returned JSON through the declared response source.
-   Call merchant_accounting_qbo_response_preview with the stable response UUID,
-   name, actor, createdAt, original realm and current expectedParentId. Review the
-   native matched result or original Fault and the proposed accountant return.
+7. After a lost reply, read that plan's nativePost before attempting another
+   operation. The SDK's reconcile reads the saved native identity. An explicit
+   merchant_accounting_qbo_post_resume selects the same id and previewSha256
+   with the current workspace revision and resuming actor. The original native
+   controller may query/read the provider and, when its retained operation permits,
+   submit the original request. Customer reconciliation does not automatically
+   invoke this execution action.
 
-8. Execute the returned merchant_accounting_qbo_response_save command unchanged.
-   The original controller first retains the response and return intent, applies
-   the original accountant import and links its saved return. PENDING becomes
-   SAVED and the plan becomes BOOKED when that original return is linked.
+8. When nativePost is BOOKED, its responseId/journalEntryId and original accountant
+   return remain attached to the same plan. Retrieve intent.json/request.json with
+   nativePost:true; retrieve a native attempt's response.json/receipt.json with
+   its attemptId. Plan view native-attempts pages the complete original history,
+   and view files supplies the exact selectors for all retained files.
 
-9. For an interrupted existing response, read the full paged response history
-   before repeating a save. merchant_accounting_qbo_response_resume selects the
-   same planId/responseId with the current revision and actor. It continues the
-   retained original return.
+The native preview exposes three distinct digests. Keep each in its original role:
 
-A native Fault remains a retained FAULT response; the original plan remains
-available for the operator to resolve that provider result. A cancellation uses
-merchant_accounting_qbo_cancel, a stable cancellation UUID, the original plan
-digest, reason and explicit unusedConfirmed:true. Matched pending or saved
-returns remain in their original accountant workflow.
+| Field | Native meaning |
+| --- | --- |
+| planSha256 | The retained reviewed QuickBooks plan |
+| requestSha256 | Exact original journal-entry.json bytes sent to the provider |
+| previewSha256 | The native posting intent, including its UUID/time, actor, company, request URL, parent and request/plan hashes |
+
+The native posting remains the original controller's operation:
+
+| Native status | Customer operation |
+| --- | --- |
+| PREPARED or RUNNING | Observe the original retained operation; allow its owner to finish |
+| UNCERTAIN or RETRYABLE | Inspect retained attempts and retryAt, then explicitly continue the same reviewed posting when appropriate |
+| RECEIVED | The original provider response is retained; continue its local accountant import using the native operation |
+| BOOKED | Retrieve and reconcile the original journal and accountant return |
+| FAULT or CONFLICT | Inspect the exact retained native response and reconcile the company's original records before another reviewed action |
+
+The native controller applies its provider throttle and Retry-After handling.
+Neither a customer timeout nor a missing transport reply creates a new posting
+UUID. Once the original native journal has been observed, its retained identity
+continues to govern recovery.
+
+### Import an existing native posting response
+
+A previously received provider JournalEntry or Fault can use the original saved
+response workflow on the reviewed plan:
+
+1. Select its exact original JSON through the declared response source. Call
+   merchant_accounting_qbo_response_preview with the stable response UUID, name,
+   actor, createdAt, realm and current expectedParentId.
+
+2. Review and execute the returned merchant_accounting_qbo_response_save command.
+   The original controller retains the response and return intent, applies the
+   accountant import and links its saved return. PENDING becomes SAVED and the
+   plan becomes BOOKED when that original return is linked.
+
+3. For an interrupted response, read its full paged history.
+   merchant_accounting_qbo_response_resume continues the same planId/responseId
+   with the current revision and actor. It operates the retained original return.
+
+A native Fault remains a retained FAULT response. Cancellation of an unused
+journal uses merchant_accounting_qbo_cancel with a stable cancellation UUID,
+the original plan digest, reason and unusedConfirmed:true. Retained native
+posting attempts and matched pending/saved returns remain subject to the
+original controller's cancellation rules.
 
 ### QuickBooks call examples
 
 These examples use the existing connection's call(name, arguments) operation.
-The caller retains the exact returned command and binding before submitting it.
+The caller retains each exact returned command and binding before execution.
 
 ~~~js
+const connection = await call('merchant_accounting_qbo_connection', {
+  workspace: 'sales'
+});
+
+const company = await call('merchant_accounting_qbo_company_fetch', {
+  workspace: 'sales',
+  realmId: connection.realmId,
+  environment: connection.environment,
+  view: 'accounts',
+  offset: 0,
+  limit: 25
+});
+
 const preview = await call('merchant_accounting_qbo_preview', {
   workspace: 'sales',
   source: 'qbo-plan',
@@ -180,9 +248,8 @@ const preview = await call('merchant_accounting_qbo_preview', {
   limit: 25
 });
 
-// After reviewing that native preview:
+// Execute after reviewing the native source and retaining its complete command.
 const created = await call(preview.command.tool, preview.command.arguments);
-
 const plan = await call('merchant_accounting_qbo_plan', {
   workspace: 'sales',
   planId: created.record.id,
@@ -192,9 +259,42 @@ const plan = await call('merchant_accounting_qbo_plan', {
 });
 ~~~
 
-The company source has its own digest in the command. A source request containing
-companySnapshot uses that retained snapshot directly; supplying a second
-companySource for the same request is rejected.
+After the original review, native posting uses the same selected plan:
+
+~~~js
+const nativePreview = await call('merchant_accounting_qbo_post_preview', {
+  workspace: 'sales',
+  planId: reviewedPlan.record.id,
+  revision: reviewedPlan.revision,
+  expectedParentId: reviewedPlan.expectedParentId,
+  id: retainedPosting.id,
+  createdAt: retainedPosting.createdAt,
+  actor: retainedPosting.actor
+});
+
+// Retain and review nativePreview.command and nativePreview.binding first.
+const submitted = await call(
+  nativePreview.command.tool,
+  nativePreview.command.arguments
+);
+
+const reopened = await call('merchant_accounting_qbo_plan', {
+  workspace: 'sales',
+  planId: reviewedPlan.record.id,
+  view: 'native-attempts',
+  offset: 0,
+  limit: 25
+});
+~~~
+
+The illustrated reviewedPlan is the current original plan read after review.
+retainedPosting contains the caller's already saved original UUID/time and actor.
+The SDK's durable operations command retains those fields before dispatch and
+reconciles the same nativePost if the reply is lost.
+
+The company source has its own digest in a creation command. A source request
+containing companySnapshot uses that complete native snapshot directly; supplying
+a second companySource for the same request is rejected.
 
 ## Xero: original source, draft operation and bookkeeping return
 
@@ -307,6 +407,7 @@ infer absence from a transport error or silently create another operation UUID.
 | QuickBooks draft | Plan UUID and native preview/plan digest | qbo_plan record.integrity |
 | QuickBooks review | Plan UUID and original review UUID | record.review |
 | QuickBooks cancellation | Plan UUID and original cancellation UUID | record.cancellation |
+| QuickBooks native posting | Plan UUID, native posting UUID and original preview, plan and request SHA256 | qbo_plan record.nativePost; observe the original status, then explicitly execute post-resume only when continuation is needed |
 | QuickBooks response | Plan UUID and original response UUID, byte/result hashes | qbo_plan view:responses |
 | QuickBooks resume | Same response UUID | Original PENDING/SAVED response and linked return |
 | Xero context import/capture | Original context UUID and import/tenant identity | xero_context record |
@@ -338,6 +439,8 @@ through that read.
 | Kind | Required selectors | Files |
 | --- | --- | --- |
 | qbo | planId, file | Original plan.json, reviewed journal-entry.json, handoff.json, accountant.csv, optional accountant-return.json and review.html |
+| qbo native intent | kind:qbo, planId, nativePost:true, file | Original intent.json and request.json |
+| qbo native attempt | kind:qbo, planId, nativePost:true, attemptId, file | Original response.json and receipt.json from the selected retained provider attempt |
 | qbo response | kind:qbo, planId, responseId, file | Original response.json, result.json and, for matched returns, returned.csv and return-request.json |
 | xero | planId, exact file name | Any original file named in xero_plan view:files, including retained context, native request/response, comparison and accountant intent files |
 | xero archive | planId, file:xero-handoff.tar | Complete original Xero handoff and linked accountant returns |
@@ -379,5 +482,5 @@ response, period, accountant, recovery and adjustment workflows.
 
 | Platform | Native controller | Native engine and source contract |
 | --- | --- | --- |
-| QuickBooks | [qbo-workspace.mjs](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/qbo-workspace.mjs) | [qbo.mjs](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo.mjs), [company import](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-company.mjs) |
+| QuickBooks | [qbo-workspace.mjs](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/qbo-workspace.mjs), [native HTTP client](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-http.mjs) | [qbo.mjs](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo.mjs), [company import](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/qbo-company.mjs) |
 | Xero | [xero-workspace.mjs](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/xero-workspace.mjs) | [xero.mjs](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/xero.mjs), [native HTTP client](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/xero-http.mjs) |
