@@ -11,6 +11,7 @@ import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from '
 import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
 import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
+import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -20,6 +21,7 @@ const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.u
 const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
 const S3_PILOT = fileURLToPath(new URL('./release-s3.mjs', import.meta.url));
 const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
+const SQLITE_PILOT = fileURLToPath(new URL('./release-sqlite.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -190,6 +192,11 @@ function runtimeOptions(value = {}) {
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === SQLITE_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A SQLite release owns its original query bindings.');
+    const snapshot = await inspectSqliteRelease(path);
+    return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, null, null, null, snapshot.sqlite) };
+  }
   if (manifest.schema === JSONRPC_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('An RPC package owns its original method and provider bindings.');
     const snapshot = await inspectJsonrpcRelease(path);
@@ -238,7 +245,7 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const hasApplication = service.routes.some(route => route.handler || route.admit);
   return { manifest, offers, service, files: files.sort((a, b) => a.file.localeCompare(b.file)), routes, hasApplication };
 }
-function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null, s3 = null, jsonrpc = null) {
+function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null, s3 = null, jsonrpc = null, sqlite = null) {
   return service.routes.map(route => {
     if (route.responseFile && !snapshots.has(route.responseFile)) throw new Error('Unpinned response file: ' + route.id);
     if (!route.offer || typeof route.offer.extensions?.bazaar?.info?.input?.method !== 'string')
@@ -261,6 +268,7 @@ function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb
           object: s3.objects.find(item => item.id === route.id) } : {}),
         ...(jsonrpc ? { jsonrpcExecutionSha256: jsonrpc.executionSha256, dataNetwork: jsonrpc.dataNetwork,
           rpcMethod: jsonrpc.methods.find(item => item.method === route.id)?.method } : {}),
+        ...(sqlite ? { sqliteExecutionSha256: sqlite.executionSha256 } : {}),
         responseSha256: route.responseFile ? snapshots.get(route.responseFile) :
           Object.hasOwn(route, 'response') ? hash(stable(route.response)) : null } };
   });
@@ -274,7 +282,8 @@ function publicRelease(record) {
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
     ...(record.s3 ? { s3: record.s3 } : {}),
-    ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}) };
+    ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
+    ...(record.sqlite ? { sqlite: record.sqlite } : {}) };
 }
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
@@ -288,7 +297,8 @@ async function releaseRecord(root, releaseId, verify = false) {
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
         stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null) ||
         stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
-        stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null))
+        stable(snapshot.jsonrpc ?? null) !== stable(record.jsonrpc ?? null) ||
+        stable(snapshot.sqlite ?? null) !== stable(record.sqlite ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -304,6 +314,12 @@ export async function stageRelease(root, options) {
   const duckdbSource = options.duckdbPackage !== undefined;
   const s3Source = options.s3Package !== undefined;
   const jsonrpcSource = options.jsonrpcPackage !== undefined;
+  const sqliteSource = options.sqlitePackage !== undefined;
+  if (sqliteSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package', 'jsonrpcPackage'].some(key => options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original SQLite workbench package or another source; SQLite owns its native query bindings.');
+  if (!sqliteSource && (options.sqliteSnapshotMaxBytes !== undefined || options.sqliteSnapshotTimeoutMs !== undefined))
+    throw new TypeError('SQLite snapshot selections require sqlitePackage.');
   if (jsonrpcSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython', 's3Package'].some(key => options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams))
     throw new TypeError('Choose the original prepared RPC package or another source; the package owns its method and provider bindings.');
@@ -332,8 +348,10 @@ export async function stageRelease(root, options) {
   const temp = join(root, 'releases', '.stage-' + randomUUID());
   let committed = false;
   try {
-    let stagedDuckdb;
-    if (jsonrpcSource) await stageJsonrpcRelease(temp, options.jsonrpcPackage);
+    let stagedDuckdb, stagedSqlite;
+    if (sqliteSource) stagedSqlite = await stageSqliteRelease(temp, options.sqlitePackage,
+      { maxBytes: options.sqliteSnapshotMaxBytes, timeoutMs: options.sqliteSnapshotTimeoutMs, signal: options.signal });
+    else if (jsonrpcSource) await stageJsonrpcRelease(temp, options.jsonrpcPackage);
     else if (s3Source) await stageS3Release(temp, options.s3Package);
     else if (duckdbSource) stagedDuckdb = await stageDuckdbRelease(temp, options.duckdbPackage, { python: options.duckdbPython });
     else if (pythonSource) await stagePythonRelease(temp, options.python, { sourceRoot: options.pythonRoot });
@@ -342,7 +360,9 @@ export async function stageRelease(root, options) {
       await compile(['--spec', resolve(inputs.spec), '--config', resolve(inputs.config),
         '--service-bindings', resolve(inputs.bindings), '--out', temp]);
     }
-    let source = stagedDuckdb
+    let source = stagedSqlite
+      ? { ...stagedSqlite, routes: sourceRoutes(stagedSqlite.service, new Map(), null, null, null, null, null, stagedSqlite.sqlite) }
+      : stagedDuckdb
       ? { ...stagedDuckdb, routes: sourceRoutes(stagedDuckdb.service, new Map(), null, null, stagedDuckdb.duckdb) }
       : await sourceSnapshot(temp);
     if (inputs.upstreams) {
@@ -355,7 +375,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.s3 && !source.jsonrpc && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.s3 && !source.jsonrpc && !source.sqlite && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -370,8 +390,11 @@ export async function stageRelease(root, options) {
       ...(source.duckdb ? { duckdb: source.duckdb } : {}),
       ...(source.s3 ? { s3: source.s3 } : {}),
       ...(source.jsonrpc ? { jsonrpc: source.jsonrpc } : {}),
+      ...(source.sqlite ? { sqlite: source.sqlite } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.jsonrpc ? { kind: 'JSONRPC_MERCHANT_PACKAGE', planSha256: source.jsonrpc.planSha256,
+        ...(source.sqlite ? { kind: 'SQLITE_MERCHANT_PACKAGE', packageManifestSha256: source.sqlite.packageManifestSha256,
+          sourceConfigSha256: source.sqlite.sourceConfigSha256, querySha256: source.sqlite.querySha256,
+          databaseSha256: source.sqlite.databaseSha256, executionSha256: source.sqlite.executionSha256 } : source.jsonrpc ? { kind: 'JSONRPC_MERCHANT_PACKAGE', planSha256: source.jsonrpc.planSha256,
           packageManifestSha256: source.jsonrpc.packageManifestSha256, executionSha256: source.jsonrpc.executionSha256 }
           : source.s3 ? { kind: 'S3_OBJECT_PACKAGE', sourceConfigSha256: source.s3.sourceConfigSha256,
           objectsSha256: source.s3.objectsSha256, executionSha256: source.s3.executionSha256 }
@@ -441,6 +464,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 's3', before: before?.s3 ?? null, after: after.s3 ?? null });
   if (stable(before?.jsonrpc ?? null) !== stable(after.jsonrpc ?? null))
     runtimeChanges.push({ field: 'jsonrpc', before: before?.jsonrpc ?? null, after: after.jsonrpc ?? null });
+  if (stable(before?.sqlite ?? null) !== stable(after.sqlite ?? null))
+    runtimeChanges.push({ field: 'sqlite', before: before?.sqlite ?? null, after: after.sqlite ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
@@ -610,7 +635,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
         (previous.host === undefined || previous.host === hostname()) && alive(previous.pid))
       throw Object.assign(new Error('The previously recorded seller process is still present. This manager cannot start a duplicate or stop a process it does not own.'), { code: 'RELEASE_BUSY' });
     const { record, path } = await releaseRecord(root, state.active, true);
-    ownsWorkerGroup = Boolean(record.python || record.duckdb);
+    ownsWorkerGroup = Boolean(record.python || record.duckdb || record.sqlite);
     if (record.python && shutdownGraceMs === undefined)
       effectiveShutdownGraceMs = Math.max(70000, 60000 + record.python.shutdownTimeoutMs + 5000);
     // Replace only original mutable runtime settings, never compiled source. This
@@ -624,7 +649,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
