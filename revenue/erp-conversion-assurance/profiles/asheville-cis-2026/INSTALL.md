@@ -83,3 +83,22 @@ node revenue/erp-conversion-assurance/profiles/asheville-cis-2026/practice.mjs /
 Set UTILITY_CHROMIUM if the existing browser is not /usr/bin/chromium. The optional browser continuation starts the application and native browser within the same local operation. It never attaches to a signed-in customer session.
 
 The Practice folder is deliberately new. It retains generated source files, actual native operation results, screenshots when requested, frozen handoffs, a full encrypted backup, a private Practice-only passphrase and the original closed workspace. These files are useful for reopening the worked demonstration and can be retired as an owner-controlled completed Practice allocation after their chosen deliverables are retained.
+
+## Build a complete portable source release
+
+The repository includes a standard-library source packager. It selects the whole
+application closure, including the shared ERP runtime and license, and excludes
+operating databases, customer exports and browser state by using an explicit
+source inventory. Repeated builds with identical source bytes and the same release
+label in the same Python/zlib runtime produce the same ZIP bytes.
+
+~~~bash
+python3 revenue/erp-conversion-assurance/profiles/asheville-cis-2026/build_release.py --source-root /absolute/source/root --output /absolute/new/Asheville_Utility_Operator.zip --source-reference YOUR_RELEASE_REVISION
+python3 revenue/erp-conversion-assurance/profiles/asheville-cis-2026/build_release.py --verify /absolute/new/Asheville_Utility_Operator.zip
+~~~
+
+The output path must be new. Publication is atomic and preserves an existing
+artifact. SOURCE_MANIFEST.json records every included source filename, byte count,
+SHA-256 and Git blob identity. The supplied source reference is a release label;
+the per-file identities describe the actual packaged bytes. START_HERE.md gives
+the complete application and Practice commands for a new receiving machine.
