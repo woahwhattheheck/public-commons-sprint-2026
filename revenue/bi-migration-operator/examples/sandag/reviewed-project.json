@@ -1,0 +1,1168 @@
+{
+  "name": "SANDAG_Published_Offense_Counts",
+  "source_path": "SANDAG_Public_Aggregates.xml",
+  "data_source": {
+    "kind": "none",
+    "server": "",
+    "database": "",
+    "schema_name": ""
+  },
+  "tables": [
+    {
+      "name": "OffenseCells",
+      "source_query": "OffenseCells",
+      "role": "fact",
+      "columns": [
+        {
+          "name": "Source Row",
+          "source_column": "source_record_id",
+          "data_type": "string",
+          "is_key": true,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Table",
+          "source_column": "table",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Page",
+          "source_column": "page",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Year",
+          "source_column": "year",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Source Column",
+          "source_column": "source_column",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Measure",
+          "source_column": "measure",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Unit",
+          "source_column": "unit",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction ID",
+          "source_column": "jurisdiction_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction",
+          "source_column": "jurisdiction",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Label",
+          "source_column": "jurisdiction_label",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Raw",
+          "source_column": "jurisdiction_raw",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Level",
+          "source_column": "jurisdiction_level",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Parent Jurisdiction ID",
+          "source_column": "jurisdiction_parent_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Regional Component",
+          "source_column": "is_regional_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Sheriff Component",
+          "source_column": "is_sheriff_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense ID",
+          "source_column": "offense_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense",
+          "source_column": "offense",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense Raw",
+          "source_column": "offense_raw",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense Level",
+          "source_column": "offense_level",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense Parent Id",
+          "source_column": "offense_parent_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Category",
+          "source_column": "category",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Group",
+          "source_column": "group",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Raw Value",
+          "source_column": "raw_value",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Value",
+          "source_column": "value",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Value State",
+          "source_column": "value_state",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Numeric Format Anomaly",
+          "source_column": "numeric_format_anomaly",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Source Table Alignment Review",
+          "source_column": "source_table_alignment_review",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Source URL",
+          "source_column": "source_url",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": true
+        },
+        {
+          "name": "Source SHA256",
+          "source_column": "source_sha256",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": true
+        },
+        {
+          "name": "Footnote Ids",
+          "source_column": "footnote_ids",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Detail Leaf",
+          "source_column": "is_detail_leaf",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Regional Group Component",
+          "source_column": "is_regional_group_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        }
+      ],
+      "measures": [
+        {
+          "name": "Detailed Group A",
+          "dax_expression": "VAR HasRegion = CONTAINS(VALUES('Jurisdictions'[Jurisdiction ID]), 'Jurisdictions'[Jurisdiction ID], \"san-diego-region\")\nVAR HasSheriff = CONTAINS(VALUES('Jurisdictions'[Jurisdiction ID]), 'Jurisdictions'[Jurisdiction ID], \"sheriff-total\")\nVAR SelectedUnits = FILTER('Jurisdictions', 'Jurisdictions'[Jurisdiction ID] <> \"san-diego-region\" && (NOT HasSheriff || NOT 'Jurisdictions'[Is Sheriff Component]))\nRETURN IF(HasRegion, CALCULATE(SUM('OffenseCells'[Value]), REMOVEFILTERS('Jurisdictions'), 'OffenseCells'[Regional Group Component] = TRUE(), 'OffenseCells'[Group] = \"A\"), CALCULATE(SUM('OffenseCells'[Value]), KEEPFILTERS(SelectedUnits), 'OffenseCells'[Offense Level] = \"group_total\", 'OffenseCells'[Group] = \"A\"))",
+          "format_string": "#,0"
+        },
+        {
+          "name": "Detailed minus Published A",
+          "dax_expression": "IF(NOT ISBLANK([Detailed Group A]) && NOT ISBLANK([Published Group A]), [Detailed Group A] - [Published Group A])",
+          "format_string": "#,0"
+        },
+        {
+          "name": "Detailed Group B",
+          "dax_expression": "VAR HasRegion = CONTAINS(VALUES('Jurisdictions'[Jurisdiction ID]), 'Jurisdictions'[Jurisdiction ID], \"san-diego-region\")\nVAR HasSheriff = CONTAINS(VALUES('Jurisdictions'[Jurisdiction ID]), 'Jurisdictions'[Jurisdiction ID], \"sheriff-total\")\nVAR SelectedUnits = FILTER('Jurisdictions', 'Jurisdictions'[Jurisdiction ID] <> \"san-diego-region\" && (NOT HasSheriff || NOT 'Jurisdictions'[Is Sheriff Component]))\nRETURN IF(HasRegion, CALCULATE(SUM('OffenseCells'[Value]), REMOVEFILTERS('Jurisdictions'), 'OffenseCells'[Regional Group Component] = TRUE(), 'OffenseCells'[Group] = \"B\"), CALCULATE(SUM('OffenseCells'[Value]), KEEPFILTERS(SelectedUnits), 'OffenseCells'[Offense Level] = \"group_total\", 'OffenseCells'[Group] = \"B\"))",
+          "format_string": "#,0"
+        },
+        {
+          "name": "Reported source cells",
+          "dax_expression": "CALCULATE(COUNTROWS('OffenseCells'), KEEPFILTERS('OffenseCells'[Value State] = \"reported\"))",
+          "format_string": "#,0"
+        },
+        {
+          "name": "Other source states",
+          "dax_expression": "CALCULATE(COUNTROWS('OffenseCells'), KEEPFILTERS('OffenseCells'[Value State] <> \"reported\"))",
+          "format_string": "#,0"
+        }
+      ]
+    },
+    {
+      "name": "Jurisdictions",
+      "source_query": "Jurisdictions",
+      "role": "dimension",
+      "columns": [
+        {
+          "name": "Jurisdiction ID",
+          "source_column": "jurisdiction_id",
+          "data_type": "string",
+          "is_key": true,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction",
+          "source_column": "jurisdiction",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Label",
+          "source_column": "jurisdiction_label",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Level",
+          "source_column": "jurisdiction_level",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Parent Jurisdiction ID",
+          "source_column": "jurisdiction_parent_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Regional Component",
+          "source_column": "is_regional_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Sheriff Component",
+          "source_column": "is_sheriff_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        }
+      ],
+      "measures": []
+    },
+    {
+      "name": "Population",
+      "source_query": "Population",
+      "role": "fact",
+      "columns": [
+        {
+          "name": "Source Row",
+          "source_column": "source_record_id",
+          "data_type": "string",
+          "is_key": true,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Table",
+          "source_column": "table",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Page",
+          "source_column": "page",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Year",
+          "source_column": "year",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Year Label",
+          "source_column": "year_label",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Applicable Years",
+          "source_column": "applicable_years",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction ID",
+          "source_column": "jurisdiction_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction",
+          "source_column": "jurisdiction",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Label",
+          "source_column": "jurisdiction_label",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Raw",
+          "source_column": "jurisdiction_raw",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Level",
+          "source_column": "jurisdiction_level",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Parent Jurisdiction ID",
+          "source_column": "jurisdiction_parent_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Regional Component",
+          "source_column": "is_regional_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Sheriff Component",
+          "source_column": "is_sheriff_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Raw Value",
+          "source_column": "raw_value",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Value",
+          "source_column": "value",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Value State",
+          "source_column": "value_state",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Numeric Format Anomaly",
+          "source_column": "numeric_format_anomaly",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Measure",
+          "source_column": "measure",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Unit",
+          "source_column": "unit",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Population Source",
+          "source_column": "population_source",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Footnote Ids",
+          "source_column": "footnote_ids",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Source URL",
+          "source_column": "source_url",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": true
+        },
+        {
+          "name": "Source SHA256",
+          "source_column": "source_sha256",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": true
+        }
+      ],
+      "measures": []
+    },
+    {
+      "name": "PublishedControls",
+      "source_query": "PublishedControls",
+      "role": "fact",
+      "columns": [
+        {
+          "name": "Source Row",
+          "source_column": "source_record_id",
+          "data_type": "string",
+          "is_key": true,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Table",
+          "source_column": "table",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Page",
+          "source_column": "page",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Year",
+          "source_column": "year",
+          "data_type": "int64",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction ID",
+          "source_column": "jurisdiction_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction",
+          "source_column": "jurisdiction",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Label",
+          "source_column": "jurisdiction_label",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Raw",
+          "source_column": "jurisdiction_raw",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Jurisdiction Level",
+          "source_column": "jurisdiction_level",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Parent Jurisdiction ID",
+          "source_column": "jurisdiction_parent_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Regional Component",
+          "source_column": "is_regional_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Is Sheriff Component",
+          "source_column": "is_sheriff_component",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense ID",
+          "source_column": "offense_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense",
+          "source_column": "offense",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense Raw",
+          "source_column": "offense_raw",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense Level",
+          "source_column": "offense_level",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Offense Parent Id",
+          "source_column": "offense_parent_id",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Category",
+          "source_column": "category",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Group",
+          "source_column": "group",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Raw Value",
+          "source_column": "raw_value",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Value",
+          "source_column": "value",
+          "data_type": "double",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Value State",
+          "source_column": "value_state",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Numeric Format Anomaly",
+          "source_column": "numeric_format_anomaly",
+          "data_type": "boolean",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Unit",
+          "source_column": "unit",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Footnote Ids",
+          "source_column": "footnote_ids",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": false
+        },
+        {
+          "name": "Source URL",
+          "source_column": "source_url",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": true
+        },
+        {
+          "name": "Source SHA256",
+          "source_column": "source_sha256",
+          "data_type": "string",
+          "is_key": false,
+          "summarize_by": "none",
+          "is_hidden": true
+        }
+      ],
+      "measures": [
+        {
+          "name": "Published Group A",
+          "dax_expression": "VAR HasRegion = CONTAINS(VALUES('Jurisdictions'[Jurisdiction ID]), 'Jurisdictions'[Jurisdiction ID], \"san-diego-region\")\nVAR HasSheriff = CONTAINS(VALUES('Jurisdictions'[Jurisdiction ID]), 'Jurisdictions'[Jurisdiction ID], \"sheriff-total\")\nVAR SelectedUnits = FILTER('Jurisdictions', 'Jurisdictions'[Jurisdiction ID] <> \"san-diego-region\" && (NOT HasSheriff || NOT 'Jurisdictions'[Is Sheriff Component]))\nRETURN IF(HasRegion, CALCULATE(SUM('PublishedControls'[Value]), 'PublishedControls'[Offense ID] = \"total-group-a-offenses\", 'PublishedControls'[Unit] = \"count\", REMOVEFILTERS('Jurisdictions'), 'PublishedControls'[Jurisdiction ID] = \"san-diego-region\"), CALCULATE(SUM('PublishedControls'[Value]), 'PublishedControls'[Offense ID] = \"total-group-a-offenses\", 'PublishedControls'[Unit] = \"count\", KEEPFILTERS(SelectedUnits)))",
+          "format_string": "#,0"
+        }
+      ]
+    },
+    {
+      "name": "Years",
+      "source_query": "Years",
+      "role": "dimension",
+      "columns": [
+        {
+          "name": "Year",
+          "source_column": "year",
+          "data_type": "int64",
+          "is_key": true,
+          "summarize_by": "none"
+        }
+      ],
+      "measures": []
+    }
+  ],
+  "relationships": [
+    {
+      "from_table": "OffenseCells",
+      "from_column": "Jurisdiction ID",
+      "to_table": "Jurisdictions",
+      "to_column": "Jurisdiction ID",
+      "cardinality": "manyToOne",
+      "cross_filter": "oneDirection"
+    },
+    {
+      "from_table": "OffenseCells",
+      "from_column": "Year",
+      "to_table": "Years",
+      "to_column": "Year",
+      "cardinality": "manyToOne",
+      "cross_filter": "oneDirection"
+    },
+    {
+      "from_table": "Population",
+      "from_column": "Jurisdiction ID",
+      "to_table": "Jurisdictions",
+      "to_column": "Jurisdiction ID",
+      "cardinality": "manyToOne",
+      "cross_filter": "oneDirection"
+    },
+    {
+      "from_table": "PublishedControls",
+      "from_column": "Jurisdiction ID",
+      "to_table": "Jurisdictions",
+      "to_column": "Jurisdiction ID",
+      "cardinality": "manyToOne",
+      "cross_filter": "oneDirection"
+    },
+    {
+      "from_table": "PublishedControls",
+      "from_column": "Year",
+      "to_table": "Years",
+      "to_column": "Year",
+      "cardinality": "manyToOne",
+      "cross_filter": "oneDirection"
+    }
+  ],
+  "pages": [
+    {
+      "name": "GroupA",
+      "display_name": "Group A offense counts",
+      "visuals": [
+        {
+          "title": "Group A offense counts \u2014 published years 2021 / 2023 / 2024",
+          "visual_type": "lineChart",
+          "fields": [
+            {
+              "table": "Years",
+              "name": "Year",
+              "role": "category"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Detailed Group A",
+              "role": "values"
+            },
+            {
+              "table": "PublishedControls",
+              "name": "Published Group A",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 24,
+          "width": 1232,
+          "height": 265
+        },
+        {
+          "title": "Detailed tables and independently published Group A controls",
+          "visual_type": "tableEx",
+          "fields": [
+            {
+              "table": "Years",
+              "name": "Year",
+              "role": "values"
+            },
+            {
+              "table": "Jurisdictions",
+              "name": "Jurisdiction",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Detailed Group A",
+              "role": "values"
+            },
+            {
+              "table": "PublishedControls",
+              "name": "Published Group A",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Detailed minus Published A",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 310,
+          "width": 1232,
+          "height": 370
+        }
+      ]
+    },
+    {
+      "name": "GroupB",
+      "display_name": "Group B arrest-based offense counts",
+      "visuals": [
+        {
+          "title": "Group B arrest-based offense counts \u2014 published years 2021 / 2023 / 2024",
+          "visual_type": "lineChart",
+          "fields": [
+            {
+              "table": "Years",
+              "name": "Year",
+              "role": "category"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Detailed Group B",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 24,
+          "width": 1232,
+          "height": 265
+        },
+        {
+          "title": "Group B detailed offense counts by jurisdiction \u2014 one offense per recorded arrest",
+          "visual_type": "tableEx",
+          "fields": [
+            {
+              "table": "Years",
+              "name": "Year",
+              "role": "values"
+            },
+            {
+              "table": "Jurisdictions",
+              "name": "Jurisdiction",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Detailed Group B",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 310,
+          "width": 1232,
+          "height": 370
+        }
+      ]
+    },
+    {
+      "name": "SourceCoverage",
+      "display_name": "Source coverage and row trace",
+      "visuals": [
+        {
+          "title": "Published source cells by year and reporting state",
+          "visual_type": "tableEx",
+          "fields": [
+            {
+              "table": "Years",
+              "name": "Year",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Value State",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Reported source cells",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Other source states",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 24,
+          "width": 1232,
+          "height": 240
+        },
+        {
+          "title": "Original table cells \u2014 labels, raw tokens, page and hierarchy",
+          "visual_type": "tableEx",
+          "fields": [
+            {
+              "table": "OffenseCells",
+              "name": "Source Row",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Year",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Jurisdiction",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Offense",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Group",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Value",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Value State",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Raw Value",
+              "role": "values"
+            },
+            {
+              "table": "OffenseCells",
+              "name": "Page",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 285,
+          "width": 1232,
+          "height": 390
+        }
+      ]
+    },
+    {
+      "name": "Population",
+      "display_name": "Published population denominators",
+      "visuals": [
+        {
+          "title": "Published denominator and estimate vintage",
+          "visual_type": "tableEx",
+          "fields": [
+            {
+              "table": "Population",
+              "name": "Year Label",
+              "role": "values"
+            },
+            {
+              "table": "Population",
+              "name": "Applicable Years",
+              "role": "values"
+            },
+            {
+              "table": "Population",
+              "name": "Jurisdiction",
+              "role": "values"
+            },
+            {
+              "table": "Population",
+              "name": "Value",
+              "role": "values"
+            },
+            {
+              "table": "Population",
+              "name": "Population Source",
+              "role": "values"
+            },
+            {
+              "table": "Population",
+              "name": "Source Row",
+              "role": "values"
+            }
+          ],
+          "x": 24,
+          "y": 24,
+          "width": 1232,
+          "height": 580
+        }
+      ]
+    }
+  ],
+  "query_graph": {
+    "nodes": [
+      {
+        "name": "OffenseCells",
+        "role": "output",
+        "is_output": true
+      },
+      {
+        "name": "Jurisdictions",
+        "role": "output",
+        "is_output": true
+      },
+      {
+        "name": "Population",
+        "role": "output",
+        "is_output": true
+      },
+      {
+        "name": "PublishedControls",
+        "role": "output",
+        "is_output": true
+      },
+      {
+        "name": "Years",
+        "role": "output",
+        "is_output": true
+      }
+    ],
+    "edges": []
+  },
+  "filters": [],
+  "prompts": [],
+  "review_flags": [
+    {
+      "code": "PUBLIC_SOURCE_SCOPE",
+      "severity": "info",
+      "message": "This example specification was authored for the published SANDAG aggregate tables; it is not an agency Cognos production export."
+    },
+    {
+      "code": "COUNTING_UNITS",
+      "severity": "warning",
+      "message": "Group A counting units differ by category; Group B is arrest-based. These are published offense counts, not unique incidents or people. See counting-basis.json."
+    },
+    {
+      "code": "PUBLISHER_CONTROL_DIFFERENCES",
+      "severity": "warning",
+      "message": "The retained summary controls cover Group A only. The 66 detailed-versus-summary comparison observations and coverage differences remain in published_table_comparison.json. Preserve the publisher's values; do not infer corrections."
+    },
+    {
+      "code": "SOURCE_NULL_AND_HIERARCHY",
+      "severity": "warning",
+      "message": "Retain unreported, partial-year and blank source states. Twelve original unlabeled cells retain their source-row IDs. Regional totals use Sheriff-Total once and exclude its children."
+    },
+    {
+      "code": "POPULATION_PERIOD",
+      "severity": "info",
+      "message": "Population observations use the issuer's original 2021 and combined 2023/2024 periods. The reference page shows Year Label and Applicable Years; no active single-year relationship discards or duplicates the combined-period observation."
+    }
+  ]
+}
