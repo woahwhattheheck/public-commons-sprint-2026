@@ -39,6 +39,28 @@ function shape(head, item) {
     snapshot: hash(JSON.stringify({ id: item.id, bytes: head.ContentLength, etag: head.ETag, versionId: versionId ?? null })) });
 }
 
+function objectDescription(item, pinned) {
+  return { id: item.id, path: item.path, description: item.description, mode: item.mode,
+    bytes: pinned.bytes, maxBytes: item.maxBytes, contentType: item.contentType,
+    filename: item.filename, snapshot: pinned.snapshot,
+    versioned: pinned.versionId !== undefined && pinned.versionId !== 'null',
+    ...(item.sha256 ? { expectedSha256: item.sha256 } : {}) };
+}
+
+/** Reopen an already pinned configuration without loading an SDK or reading S3. */
+export function describePinnedS3Config(input) {
+  const config = validateS3Config(input);
+  const objects = config.objects.map(item => {
+    if (item.etag === undefined || item.expectedBytes === undefined)
+      throw new TypeError('Retained S3 objects require their selected ETag and exact byte count.');
+    const pinned = shape({ ETag: item.etag, ContentLength: item.expectedBytes,
+      ...(item.versionId === undefined ? {} : { VersionId: item.versionId }) }, item);
+    return objectDescription(item, pinned);
+  });
+  return { schema: 'stellar-forge.s3-description.v1', closed: false, inFlight: 0,
+    maxInFlight: config.maxInFlight, objects };
+}
+
 function selection(context, item, pinned) {
   if (!object(context) || context.method !== 'GET' || context.body !== null && context.body !== undefined)
     throw failure('S3_GET_REQUIRED', 405);
@@ -192,11 +214,7 @@ export async function createS3ObjectSource(input, { client: suppliedClient, sdk:
   };
   const describe = () => ({ schema: 'stellar-forge.s3-description.v1', closed,
     inFlight: active.size, maxInFlight: config.maxInFlight,
-    objects: [...bindings.values()].map(({ item, pinned }) => ({ id: item.id, path: item.path,
-      description: item.description, mode: item.mode, bytes: pinned.bytes, maxBytes: item.maxBytes,
-      contentType: item.contentType, filename: item.filename, snapshot: pinned.snapshot,
-      versioned: pinned.versionId !== undefined && pinned.versionId !== 'null',
-      ...(item.sha256 ? { expectedSha256: item.sha256 } : {}) })) });
+    objects: [...bindings.values()].map(({ item, pinned }) => objectDescription(item, pinned)) });
   // Privileged operator export for durable setup; contains private bucket/keys,
   // never credential values and never attached to a public HTTP response.
   const snapshotConfig = () => structuredClone({ ...config,

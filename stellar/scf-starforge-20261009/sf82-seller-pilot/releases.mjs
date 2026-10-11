@@ -9,6 +9,7 @@ import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams
 import { releaseCacheControlPath } from './release-cache.mjs';
 import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from './release-python.mjs';
 import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
+import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -16,6 +17,7 @@ const RUN = 'stellar-forge.seller-release-process.v1';
 const PILOT = fileURLToPath(new URL('./pilot.mjs', import.meta.url));
 const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.url));
 const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
+const S3_PILOT = fileURLToPath(new URL('./release-s3.mjs', import.meta.url));
 const CHILD = fileURLToPath(new URL('./release-child.mjs', import.meta.url));
 const LIMIT = 4 * 1024 * 1024;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -186,6 +188,11 @@ function runtimeOptions(value = {}) {
 async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const manifestBytes = await regular(join(path, 'manifest.json'), 2 * 1024 * 1024);
   const manifest = JSON.parse(manifestBytes);
+  if (manifest.schema === S3_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('An S3 release owns its original object bindings.');
+    const snapshot = await inspectS3Release(path);
+    return { ...snapshot, routes: sourceRoutes(snapshot.service, new Map(), null, null, null, snapshot.s3) };
+  }
   if (manifest.schema === DUCKDB_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('A DuckDB package owns its original query bindings.');
     const snapshot = await inspectDuckdbRelease(path);
@@ -224,7 +231,7 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
   const hasApplication = service.routes.some(route => route.handler || route.admit);
   return { manifest, offers, service, files: files.sort((a, b) => a.file.localeCompare(b.file)), routes, hasApplication };
 }
-function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null) {
+function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb = null, s3 = null) {
   return service.routes.map(route => {
     if (route.responseFile && !snapshots.has(route.responseFile)) throw new Error('Unpinned response file: ' + route.id);
     if (!route.offer || typeof route.offer.extensions?.bazaar?.info?.input?.method !== 'string')
@@ -243,6 +250,8 @@ function sourceRoutes(service, snapshots, upstream = null, python = null, duckdb
         configurationSha256: hash(stable(configuration)),
         ...(python ? { pythonExecutionSha256: python.executionSha256 } : {}),
         ...(duckdb ? { duckdbExecutionSha256: duckdb.executionSha256 } : {}),
+        ...(s3 ? { s3ExecutionSha256: s3.executionSha256,
+          object: s3.objects.find(item => item.id === route.id) } : {}),
         responseSha256: route.responseFile ? snapshots.get(route.responseFile) :
           Object.hasOwn(route, 'response') ? hash(stable(route.response)) : null } };
   });
@@ -254,7 +263,8 @@ function publicRelease(record) {
     mode: record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
     source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
     ...(record.python ? { python: record.python } : {}),
-    ...(record.duckdb ? { duckdb: record.duckdb } : {}) };
+    ...(record.duckdb ? { duckdb: record.duckdb } : {}),
+    ...(record.s3 ? { s3: record.s3 } : {}) };
 }
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
@@ -266,7 +276,8 @@ async function releaseRecord(root, releaseId, verify = false) {
     const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
-        stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null))
+        stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null) ||
+        stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null))
       throw new Error('Release files changed after staging. Restore the selected immutable release.');
     if (record.handlerEntry && hash(await regular(record.handlerEntry.path)) !== record.handlerEntry.sha256)
       throw new Error('Trusted handler entry changed after staging. Restore it or stage a new release.');
@@ -280,6 +291,10 @@ export async function stageRelease(root, options) {
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
   const pythonSource = options.python !== undefined;
   const duckdbSource = options.duckdbPackage !== undefined;
+  const s3Source = options.s3Package !== undefined;
+  if (s3Source && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot', 'duckdbPackage', 'duckdbPython'].some(key => options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original S3 configured package or another source; the package owns its pinned object bindings.');
   if (duckdbSource && (['workspace', 'spec', 'config', 'bindings', 'upstreams', 'python', 'pythonRoot'].some(key => options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the original prepared DuckDB package or another source; the package owns its native query bindings.');
@@ -302,7 +317,8 @@ export async function stageRelease(root, options) {
   let committed = false;
   try {
     let stagedDuckdb;
-    if (duckdbSource) stagedDuckdb = await stageDuckdbRelease(temp, options.duckdbPackage, { python: options.duckdbPython });
+    if (s3Source) await stageS3Release(temp, options.s3Package);
+    else if (duckdbSource) stagedDuckdb = await stageDuckdbRelease(temp, options.duckdbPackage, { python: options.duckdbPython });
     else if (pythonSource) await stagePythonRelease(temp, options.python, { sourceRoot: options.pythonRoot });
     else {
       const compile = (await import('../sf61-openapi-seller-import/cli.mjs')).run;
@@ -322,7 +338,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.s3 && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -335,8 +351,11 @@ export async function stageRelease(root, options) {
       ...(workspace ? { inputPackage: workspace.provenance } : {}),
       ...(source.python ? { python: source.python } : {}),
       ...(source.duckdb ? { duckdb: source.duckdb } : {}),
+      ...(source.s3 ? { s3: source.s3 } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
-        ...(source.duckdb ? { kind: 'DUCKDB_PACKAGE', packageManifestSha256: source.duckdb.packageManifestSha256,
+        ...(source.s3 ? { kind: 'S3_OBJECT_PACKAGE', sourceConfigSha256: source.s3.sourceConfigSha256,
+          objectsSha256: source.s3.objectsSha256, executionSha256: source.s3.executionSha256 }
+          : source.duckdb ? { kind: 'DUCKDB_PACKAGE', packageManifestSha256: source.duckdb.packageManifestSha256,
           sourceConfigSha256: source.duckdb.sourceConfigSha256, planSha256: source.duckdb.planSha256,
           datasetSha256: source.duckdb.datasetSha256 } : source.python ? { kind: 'PYTHON_APPLICATION', declarationSha256: source.python.configSha256,
           applicationSha256: source.python.applicationSha256, sourceSha256: source.python.sourceSha256 }
@@ -398,6 +417,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'python', before: before?.python ?? null, after: after.python ?? null });
   if (stable(before?.duckdb ?? null) !== stable(after.duckdb ?? null))
     runtimeChanges.push({ field: 'duckdb', before: before?.duckdb ?? null, after: after.duckdb ?? null });
+  if (stable(before?.s3 ?? null) !== stable(after.s3 ?? null))
+    runtimeChanges.push({ field: 's3', before: before?.s3 ?? null, after: after.s3 ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
@@ -576,7 +597,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
+    child = spawn(process.execPath, [CHILD, record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId)],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc'], windowsHide: true, detached: process.platform !== 'win32' });
     let readyResolve, readyReject, stdout = '', stderr = '';
     const ready = new Promise((done, fail) => { readyResolve = done; readyReject = fail; });
