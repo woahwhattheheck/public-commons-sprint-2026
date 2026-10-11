@@ -15,13 +15,13 @@ Use `--node /absolute/path/to/node` when the equipped worker selects a specific 
 
 The wrapper launches `playground-bridge.py` and `merchant-journey.mjs` as children of the same process, so the merchant can reach the bridge's private loopback listener even on executors with separate network namespaces.
 
-The bridge follows the official anonymous homepage → `/auth/anonymous` → homepage flow. Its CookieJar stays in process memory. Native requests then use the ordinary OpenSearch Dashboards console proxy with the original native method, path and body. Response status and body bytes pass through unchanged.
+The bridge follows the official anonymous homepage → `/auth/anonymous` → homepage flow. Its CookieJar stays in process memory. Native requests then use the ordinary OpenSearch Dashboards console proxy with the original native method, path and body. Response status and body bytes pass through unchanged. Two independently leased HTTPS connections reuse the same private session; concurrent field-capability and mapping reads do not wait behind a network-wide lock. The bridge honors the existing proxy configuration and TLS verification. Other configured proxy schemes use concurrent standard-library requests. An uncertain native request is retained as a failure instead of being automatically replayed.
 
 The allowlist covers engine metadata, source field capabilities/mappings, indexed preparation search, PIT creation, PIT search and deletion by owned ID. Source indexes remain the existing public sample indexes. The merchant creates and releases its own temporary PIT; it uses a zero-row native search probe for preparation.
 
 ## Retained output
 
-Each invocation records a private `native/<attempt>/` directory containing the actual engine/build metadata, selected index and mapping, source-file hashes, wrapper state, bridge error output and native method/path/status journal. The journal preserves native error bodies without request cookies or authorization headers.
+Each invocation records a private `native/<attempt>/` directory containing the actual engine/build metadata, selected index and mapping, source-file hashes, wrapper state, bridge error output and native method/path/status journal. The journal preserves native error bodies and per-request duration, queue time and connection reuse without request cookies or authorization headers. Each driver capture uses that actual attempt directory in its request identity, and its reopen step reuses the same successful identity.
 
 The Node driver receives:
 
