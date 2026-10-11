@@ -12,15 +12,20 @@ import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequ
 import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
 import { readSellerConfig } from '../../sf30-seller-sdk/serve.mjs';
 import { readUpstreamBindings } from '../../sf30-seller-sdk/upstream.mjs';
+import { reviewMerchantRevision, saveMerchantRevision, stageMerchantRevision, releaseCommands,
+  saveMerchantRevisionDraft, readMerchantRevisionDraft, listMerchantRevisionDrafts } from './revisions.mjs';
 import { describeMerchantStreamCustomers, createMerchantStreamCustomer, readMerchantStreamCustomer,
   prepareMerchantStreamCustomer } from './stream-customer.mjs';
 import { openCommerce, completeCommerceShutdown } from '../../sf66-demo-launcher/commerce.mjs';
 import { startCommerceConsole } from '../../sf66-demo-launcher/commerce-console.mjs';
+import { openOAuthConnectionRegistry, readOAuthHostConnections } from '../../sf30-seller-sdk/oauth-connections/host.mjs';
+import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
+const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
+STATIC.set('/revision-browser.mjs','revision-browser.mjs');
 const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
-const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
+const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0] [--oauth-connections HOST_JSON] [--allow-loopback-oauth]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nOAuth host JSON carries approved aliases and directory environment references only. Explicit loopback OAuth is for local development.\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
   const chunks = []; let size = 0;
   for await (const chunk of req) {
@@ -55,11 +60,15 @@ async function uploadSelection(req) {
 const constantEqual = (a,b) => typeof a === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) &&
   timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
-export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
+export async function startWorkspace({ parent, port=0, noSignals=false, oauthConnections=[], env=process.env, allowLoopbackOAuth=false, oauthLookup }={}) {
+  const runtimeEnv={...env};
   const output = await privateParent(parent);
   if (!Number.isInteger(port) || port<0 || port>65535) throw new TypeError('Port must be 0–65535');
   const token = randomBytes(32).toString('hex');
   let origin, active=null, customerActive=null, busy=false, shuttingDown=false, mutationDone=Promise.resolve();
+  if(typeof allowLoopbackOAuth!=='boolean')throw new TypeError('Loopback OAuth must be an explicit host option');
+  const registry=await openOAuthConnectionRegistry({connections:oauthConnections,env:runtimeEnv,allowLoopback:allowLoopbackOAuth,lookup:oauthLookup});
+  const oauth=createOAuthWorkspaceAdapter({registry,origin:()=>origin,allowLoopback:allowLoopbackOAuth});
   const cacheView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
     return rows.filter(row=>row.cachePolicy).map(row=>({binding:row.name,method:row.method,routes:row.routes,
@@ -67,10 +76,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
   };
   const credentialView = () => {
     const rows = active?.session.session?.upstreamSnapshot?.().bindings ?? [];
-    return rows.filter(row=>row.oauth2).map(row=>({binding:row.name,method:row.method,routes:row.routes,
-      oauth2:Object.fromEntries(['state','hasToken','expiresInMs','refreshInMs','retryInMs','waiters',
+    return rows.filter(row=>row.oauth2||row.oauthConnection).map(row=>({binding:row.name,method:row.method,routes:row.routes,
+      ...(row.oauth2?{oauth2:Object.fromEntries(['state','hasToken','expiresInMs','refreshInMs','retryInMs','waiters',
         'tokenRequests','cacheHits','renewals','failures','cancellations','rotations','invalidations','lastError']
-        .filter(key=>Object.hasOwn(row.oauth2,key)).map(key=>[key,row.oauth2[key]]))}));
+        .filter(key=>Object.hasOwn(row.oauth2,key)).map(key=>[key,row.oauth2[key]]))}:{}),
+      ...(row.oauthConnection?{oauthConnection:Object.fromEntries(['state','hasToken','expiresInMs','profileSha256','grantId','generation',
+        'tokenRequests','cacheHits','renewals','failures','cancellations','invalidations','lastError']
+        .filter(key=>Object.hasOwn(row.oauthConnection,key)).map(key=>[key,row.oauthConnection[key]]))}:{})}));
   };
   const customerView=()=>customerActive ? {packageName:customerActive.packageName,name:customerActive.name,
     configSha256:customerActive.configSha256,operatorUrl:customerActive.console.operatorUrl,
@@ -105,6 +117,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (shuttingDown) return send(503,{error:'Workspace is stopping'});
       if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin) return send(403,{error:'Use the exact local workspace origin'});
       const url=new URL(req.url,origin), pathname=url.pathname;
+      if(req.method==='GET'&&oauth.returned(res,url))return;
+      if(await oauth.callback(req,res,url))return;
       if (req.method==='GET' && STATIC.has(pathname)) {
         const file=STATIC.get(pathname), extension=file.slice(file.lastIndexOf('.'));
         res.writeHead(200,{'Content-Type':MIME[extension]});res.end(await readFile(join(here,file)));return;
@@ -112,6 +126,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if(pathname==='/api/oauth/connections')return send(200,await oauth.list());
+        if(pathname==='/api/oauth/connection')return send(200,await oauth.status(url.searchParams.get('alias'),url.searchParams.get('flowId')));
         if (pathname==='/api/example') {
           const specText=await readFile(new URL('../../sf82-seller-pilot/examples/upstream-openapi.json',import.meta.url),'utf8');
           return send(200,{specText,plan:{schema:'stellar-forge.api-merchant-plan.v1',sellerServer:'https://merchant.example/api',
@@ -123,6 +139,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           plan:JSON.parse(await readFile(new URL('./examples/streaming-plan.json',import.meta.url),'utf8'))});
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/revisions/drafts') return send(200,{drafts:await listMerchantRevisionDrafts(output)});
+        if (pathname==='/api/revisions/load') return send(200,await readMerchantRevisionDraft(output,url.searchParams.get('name'),{validatePlan:oauth.validatePlan}));
         if (pathname==='/api/customer/options') {
           const project=await readPackage(output,url.searchParams.get('name'));
           return send(200,{...await describeMerchantStreamCustomers(project),customer:customerView(),
@@ -141,7 +159,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         }
         if (pathname==='/api/load') {
           const p=await readPackage(output,url.searchParams.get('name'));
-          return send(200,{name:p.name,specText:p.specText,plan:p.plan,preview:p.manifest.preview});
+          return send(200,{name:p.name,specText:p.specText,plan:p.plan,preview:p.manifest.preview,
+            ...(p.sourceRevision?{sourceRevision:p.sourceRevision,folder:p.folder,release:releaseCommands(p.folder,p.name)}:{})});
         }
         return send(404,{error:'Not found'});
       }
@@ -160,20 +179,29 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
       const body=await limited(req);
       if (body===null || typeof body!=='object' || Array.isArray(body)) return send(400,{error:'Expected a JSON object'});
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
-      if (pathname==='/api/preview') return send(200,prepareMerchant(body.specText,body.plan).preview);
+      if (pathname==='/api/preview') {await oauth.validatePlan(body.specText,body.plan);return send(200,prepareMerchant(body.specText,body.plan).preview);}
+      if (pathname==='/api/oauth/binding')return send(200,await oauth.binding(body));
+      if (pathname==='/api/revisions/review')return send(200,await reviewMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
-        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close'].includes(pathname)) return send(404,{error:'Not found'});
+        '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close','/api/oauth/command',
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname)) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if(pathname==='/api/oauth/command')return send(200,await oauth.command(body));
+        if(pathname==='/api/revisions/draft')return send(201,await saveMerchantRevisionDraft({...body,parent:output,validatePlan:oauth.validatePlan}));
+        if(pathname==='/api/revisions/save')return send(201,await saveMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
+        if(pathname==='/api/revisions/stage')return send(201,await stageMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
         if (pathname==='/api/save') {
+          await oauth.validatePlan(body.specText,body.plan);
           const result=await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
           return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
         }
         if(pathname.startsWith('/api/customer/')) {
           const project=await readPackage(output,body.packageName);
+          if(pathname!=='/api/customer/close')await oauth.validatePlan(project.specText,project.plan);
           if(pathname==='/api/customer/create')
             return send(201,await createMerchantStreamCustomer(project,body.customer));
           if(pathname==='/api/customer/close') {
@@ -191,7 +219,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           }
           if(active&&active.name!==project.name) return send(409,{error:'Stop the other managed seller before opening this customer session'});
           if(active) {await active.session.close();active=null;}
-          const session=await openCommerce(customer.sessionDirectory);
+          const session=await openCommerce(customer.sessionDirectory,{environment:runtimeEnv});
           let console;
           try {console=await startCommerceConsole(session,{port:0});}
           catch(error) {await completeCommerceShutdown(session,session.close());throw error;}
@@ -250,6 +278,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         if(customerActive) return send(409,{error:'Close the managed customer console before starting a separate seller'});
         if (active) return send(409,{error:'Stop the current managed seller before starting another package'});
         const project=await readPackage(output,body.name);
+        await oauth.validatePlan(project.specText,project.plan);
         const [service,upstreams]=await Promise.all([
           readSellerConfig(join(project.folder,'compiled','seller-service.json')),
           readUpstreamBindings(join(project.folder,'upstreams.json')),
@@ -273,7 +302,10 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
           startSellerOperations:(seller,options)=>startSellerOperations(seller,{...options,navigationOrigin:origin,
             operationControls:Object.values(upstreams.bindings).some(binding=>binding.idempotency)}),
           launchSeller:async forwarded=>{
-          const original=await launch(forwarded), nativeClose=original.close.bind(original);
+          const original=await launch(forwarded,{upstreamServe:async args=>{
+            const {main}=await import('../../sf30-seller-sdk/upstream-serve.mjs');
+            return main(args,{env:runtimeEnv});
+          }}), nativeClose=original.close.bind(original);
           let closed;
           original.close=()=>closed??=Promise.resolve().then(nativeClose);
           return original;
@@ -291,14 +323,16 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
         return send(200,view());
       } finally {busy=false;finishMutation();}
     } catch(error) {
-      if (!res.headersSent) send(error.code==='EEXIST'?409:error.status??400,{error:error.code==='EEXIST'?'That package name exists. Choose a new name or reopen the existing package.':String(error.message)});
+      if (!res.headersSent) send(error.code==='EEXIST'?409:error.status??400,{error:error.code==='EEXIST'?'That package name exists. Choose a new name or reopen the existing package.':String(error.message),
+        ...(typeof error.code==='string'?{code:error.code}:{}),...(error.outcomeUnknown?{outcomeUnknown:true}:{})});
       else res.end();
     }
   });
   server.requestTimeout=30000;
   server.headersTimeout=15000;
   server.maxHeadersCount=40;
-  await new Promise((yes,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',()=>{server.off('error',no);yes();});});
+  try {await new Promise((yes,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',()=>{server.off('error',no);yes();});});}
+  catch(error){await oauth.close();throw error;}
   origin='http://127.0.0.1:'+server.address().port;
   let closing;
   const close=()=>closing??=(async()=>{
@@ -307,6 +341,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
     await mutationDone;
     await closeCustomer();
     if (active) {await active.session.close();active=null;}
+    await oauth.close();
     await closed;
   })();
   if (!noSignals) for (const signal of ['SIGINT','SIGTERM']) process.once(signal,()=>close().catch(()=>{process.exitCode=1;}));
@@ -315,12 +350,16 @@ export async function startWorkspace({ parent, port=0, noSignals=false }={}) {
 export async function main(args=process.argv.slice(2)) {
   if (args.length===1 && args[0]==='--help') {console.log(HELP);return;}
   const options=new Map();
-  for(let i=0;i<args.length;i+=2) {
-    if(!['--out-parent','--port'].includes(args[i]) || options.has(args[i]) || !args[i+1] || args[i+1].startsWith('--')) throw new TypeError(HELP);
-    options.set(args[i],args[i+1]);
+  for(let i=0;i<args.length;) {
+    const flag=args[i++];
+    if(flag==='--allow-loopback-oauth'&&!options.has(flag)){options.set(flag,true);continue;}
+    if(!['--out-parent','--port','--oauth-connections'].includes(flag)||options.has(flag)||!args[i]||args[i].startsWith('--'))throw new TypeError(HELP);
+    options.set(flag,args[i++]);
   }
   if(!options.has('--out-parent') || options.has('--port') && !/^\d{1,5}$/.test(options.get('--port'))) throw new TypeError(HELP);
-  const session=await startWorkspace({parent:resolve(options.get('--out-parent')),port:Number(options.get('--port')??0)});
+  const oauthConnections=options.has('--oauth-connections')?await readOAuthHostConnections(resolve(options.get('--oauth-connections'))):[];
+  const session=await startWorkspace({parent:resolve(options.get('--out-parent')),port:Number(options.get('--port')??0),
+    oauthConnections,allowLoopbackOAuth:options.has('--allow-loopback-oauth')});
   console.log('API merchant workspace: '+session.url+'\nPrivate output: '+session.output+'\nCtrl-C closes the workspace and its managed seller.');
   return session;
 }

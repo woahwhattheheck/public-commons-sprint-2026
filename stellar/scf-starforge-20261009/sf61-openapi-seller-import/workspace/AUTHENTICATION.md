@@ -1,7 +1,9 @@
 # OAuth API merchant setup
 
 The API workspace can configure an OpenAPI `oauth2` security scheme with a
-declared `clientCredentials` flow. The saved merchant uses the original SF30
+declared `clientCredentials` flow. Authorization-code grants use the companion
+[authorization connection workflow](AUTHORIZATION_CONNECTIONS.md) in the same workspace.
+The saved merchant uses the original SF30
 OAuth provider for token acquisition and renewal, the original upstream for
 backend requests, and the existing native seller for each delivery.
 
@@ -14,7 +16,7 @@ own security alternative and required scopes.
 1. In **Backend credentials and response settings**, select the declared
    security alternative. An alternative containing several schemes requires
    all of them; a different alternative is a separate choice.
-2. Open **OAuth client credentials**. Review the **Declared token endpoint**.
+2. Open **Backend OAuth authorization** and choose **Client credentials** when both flows are declared. Review the **Declared token endpoint**.
    Relative token URLs resolve against the selected original backend server.
    The public address of the paid seller does not change that resolution.
 3. Enter two distinct environment-variable names for the client ID and client
@@ -43,9 +45,10 @@ API key's environment reference in the existing header map. OAuth supplies the
 header require a different declared alternative or a trusted custom handler.
 
 The source inspector reports unsupported flows with the relevant scheme name.
-Authorization-code, implicit, password and OpenID Connect login flows need
-their own trusted application integration. They are not converted into client
-credentials by this workspace.
+Declared authorization-code flows use an explicitly configured host connection and
+reviewed grant; follow [the complete operator guide](AUTHORIZATION_CONNECTIONS.md).
+Implicit, password and OpenID Connect login flows need their own trusted application
+integration. They are not converted into client credentials by this workspace.
 
 ## Saved plan and launch environment
 
