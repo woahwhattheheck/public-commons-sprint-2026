@@ -1,155 +1,173 @@
-# Routescan operator workspace
+# Routescan operator workspace and customer delivery
 
-The workspace connects a saved Routescan merchant configuration, original provider responses, the SF30 merchant and a customer package. Open the same project after restarting the process to recover its revisions, source results and releases.
+The browser workspace connects the original Routescan project, merchant, saved source responses, revision history, customer exports and portable backups. Node and Python customers use one original SF88 buyer inbox.
 
-## Open an existing project
+Use the provider contract and quota guidance in [README.md](README.md) with this operating guide.
 
-Run from `sf30-seller-sdk` in a complete Stellar Forge source release:
+## Install and open
+
+Use a complete Stellar Forge release containing this directory and the original SF88 buyer.fromWorkspace API. Install its original SF30 and buyer dependencies through the release's installation instructions. The operator host requires Linux with flock, Node 24.5+ or 22.21+, and Python 3.11+ for the archive worker.
+
+Run from sf30-seller-sdk:
 
 ~~~sh
 node routescan/workspace-cli.mjs \
-  --project /srv/routescan-project \
-  --port 8425 --merchant-port 8423 --operations-port 8424
+  --project /srv/private/routescan-project \
+  --config /srv/private/routescan-merchant.json \
+  --port 8420 --merchant-port 8423 --operations-port 8424
 ~~~
 
-On first startup, add `--config /srv/routescan-merchant.json`. The [provider guide](./README.md) describes the merchant configuration, provider account, quota and payment terms. An existing project retains its configuration; use its workspace to save the intended next revision.
+The configuration is an operator-owned copy of merchant.example.json. Select the real customer-facing HTTPS origin, provider account, exact network and chain, allocated quota and original payment terms. Replace the example asset and recipient before configuring a paid merchant. Keep an optional provider API key in the named host environment variable.
 
-The printed URL opens a private loopback workspace. Its merchant and Operations buttons use the original SF30 listeners. Add the deployment's `--facilitator https://YOUR-FACILITATOR` to configure the native seller. The explicit `--allow-local-facilitator` switch permits the original HTTP facilitator on `127.0.0.1`. Route a deployed customer endpoint through its configured HTTPS origin.
+Open the loopback URL printed by the command. The private workspace uses its own origin and request token for local changes. The original merchant and Operations have separate loopback listeners. Use the deployment's existing authenticated access and HTTPS boundary for authorized remote surfaces.
 
-The host supplies the original SF30 dependencies, Linux `flock` and Python 3.11+ for portable archives. Node 24.5+ or 22.21+ supports the provider source's environment proxy. The original SF88 customer workspace import requires a source release containing `Buyer.fromWorkspace`.
+Later startup reopens the same project:
 
-## Review and operate a merchant
+~~~sh
+node routescan/workspace-cli.mjs --project /srv/private/routescan-project --port 8420
+~~~
 
-Use the workspace's saved configuration as the input to an operation.
+A supplied --config initializes an empty project; it does not replace a different saved input. Omitted ports default to zero so the host can select available listeners. SIGINT and SIGTERM drain accepted work and close the owned merchant, Operations and project.
 
-1. Select the provider network and chain. The operator controls these path values. A numeric chain is the ordinary selection; use `all` only as an explicit operator choice.
-2. Enter the provider account label, optional key environment-variable name and quota for the account's chosen plan. The host environment supplies the key value.
-3. Set each customer product's route, operation, native network, asset, amount and recipient. Review the resulting native terms.
-4. Save the change with the current revision. The workspace shows retained revision history and the configuration hash.
-5. Start the merchant. Its displayed state identifies the original challenge-only or native mode and the active revision.
+## Six connected views
 
-A running merchant serves the revision it started with. Saving another draft preserves that active revision until the operator stops and starts the service. The stop action drains the original service before closing its provider source.
-
-## Retain a provider response
-
-A preview is an actual request to Routescan. Choose its product, exact date range and a stable operation name.
-
-A series request includes a time aggregation interval. Both series and total requests can include an ecosystem and included/excluded chain filters. Chain lists use comma-separated strings, such as `1,43114`. Dates keep their explicit timezone. The selected chain/network, exact source URL and response bytes stay attached to the saved result.
-
-Review the retained response's status, source selection and original value strings. Open an existing preview to reuse that same response. Its JSON download preserves the original bytes. The CSV view is a derived spreadsheet export; it escapes formula-like text and retains the provider's string values.
-
-Keep the provider quota with the project. The active native merchant owns the quota lease while it runs. Stop and drain that merchant before issuing a separate workspace preview through the same quota directory. The existing source result remains available throughout.
-
-## Prepare the customer handoff
-
-Select the reviewed merchant revision and, when relevant, the completed source preview whose selected request should become the customer's example. Give the release a stable name.
-
-The customer release contains:
-
-| File or directory | Purpose |
+| View | Operator workflow |
 | --- | --- |
-| `merchant.json` | Frozen operator-selected merchant configuration |
-| `review.json` | Original native term and provider review |
-| `seller-openapi.json` | Original customer HTTP schema |
-| `client/` | Original generated Node client, declarations and export receipt |
-| `customer/request.json` | Selected editable request in the generated client's input shape |
-| `customer/customer.mjs` | Node customer workflow on the original SF88 inbox |
-| `customer/customer.py` | Python interface to the same Node workflow and inbox |
-| `customer/README.md` | Release-specific customer instructions |
-| `customer-handoff.json` | Selected request, revision and retained customer file hashes |
+| Overview | Read provider configuration and quota allocation; start, drain and restart the original merchant; see the active service revision. |
+| Source requests | Select exact dates, an allowed interval and optional filters; retain the original provider outcome; reopen JSON, CSV or its source record. |
+| Configuration | Save provider choices and original payment terms as a new revision. Full JSON editing preserves the complete native contract. |
+| Customer handoff | Freeze an original client, select a completed source request from the same revision, and download the complete Node/Python package. |
+| Revision history | Compare earlier input and restore it as a new revision, preserving request, export and quota identities. |
+| Backup and restore | Download the saved project and restore its original records into a new private directory. |
 
-Download the customer archive or individual retained files. A reopened release keeps its original source selection and content. Choose a new release name when the intended revision or customer handoff changes.
+Neutral controls and tables support desktop and narrow screens without changing the workflow.
 
-The generated client uses the merchant's configured public origin. Check that this origin reaches the intended running merchant before preparing a purchase.
+## Query the original provider
 
-## Run the original customer workflow
+The operator selects the provider network and a numeric chain ID or explicit all-chain selection. Customers cannot replace these route values.
 
-The customer supplies a complete original SF88 runtime, its application state directory, native inbox and existing operator workspace. Keep the release's generated client and customer adapters together.
+Enter the original timezone-bearing dateFrom and dateTo strings. For a series, choose an allowed second, minute, hour or day interval. Optional ecosystem, includedChainIds and excludedChainIds retain the provider's own representation; chain lists remain comma-separated strings. Blank filters remain absent.
 
-Initialize the inbox:
+Running a source request consumes the configured provider quota. The original project retains its request before dispatch and then records the provider outcome. Reopening a completed request reads its saved bytes. Failed or interrupted operations remain in history under their original IDs.
+
+The result dialog shows the exact source URL, configuration, status, byte length, SHA-256 and original string values. It preserves every returned column. The API describes the series as an array of string arrays and the total as an object with a string value.
+
+The series interval controls time grouping. The published operation does not label a gas-price denomination. JSON downloads preserve the original bytes. CSV is derived; formula-like cells are escaped for spreadsheet use while the original JSON stays unchanged.
+
+## Edit and restart
+
+Review the actual provider account, allocated quota and payment terms before saving. Each change includes the revision the operator opened. When another editor saves first, refresh and apply the intended change to the current input.
+
+A running merchant stays on its active revision until it drains and restarts. Overview shows when newer saved input needs that restart. Restoring an earlier configuration creates a new revision; it does not rewind provider usage or customer purchases.
+
+The public merchant origin identifies the actual HTTPS deployment. Changing the local workspace port does not change that customer contract.
+
+Supply the deployment's original native facilitator for paid delivery:
+
+~~~sh
+node routescan/workspace-cli.mjs \
+  --project /srv/private/routescan-project \
+  --facilitator https://YOUR_CONFIGURED_FACILITATOR \
+  --port 8420 --merchant-port 8423 --operations-port 8424
+~~~
+
+The explicit --allow-local-facilitator option supports the original private http://127.0.0.1 facilitator. Follow the existing [native facilitator instructions](../native-facilitator/README.md) for actual network, asset, recipient, signer and settlement settings. Without a configured native facilitator, the merchant publishes the original challenge for contract review.
+
+## Export a customer handoff
+
+Choose a stable new export name and either a completed source request from the current revision or the configured example. The project creates its original generated client and export records, then adds the selected request and customer adapters.
+
+The package contains:
+
+- Original merchant input, review, OpenAPI and export records.
+- Original generated client, declarations, package metadata, README and client export receipt.
+- customer/customer.mjs and customer/customer.py.
+- customer/request.json and a command guide in customer/README.md.
+- customer-handoff.json identifying the revision, selected request and added file hashes.
+
+The same export reopens its retained files after restart. A different request uses a distinct export name. Previously exported customer code remains attached to its original export even after the operator upgrades the workspace.
+
+Provider key values are not included. Each customer host supplies its original runtime and private operator workspace. Optional --runtime, --state and --profile arguments display customer installation references; the browser does not load signing keys.
+
+## Prepare, approve and execute one purchase
+
+Initialize the customer operator using the original [SF88 workspace workflow](../../sf88-operator-buyer-cli/node/WORKSPACE.md). Its signer, payer, network, asset, recipient, payment flow, limits, evidence, policy, ledger and transport remain in that private workspace.
+
+The adapter calls the original instance method buyer.fromWorkspace to adopt the generated request while retaining those native bindings. Use a release containing that API.
+
+Run from the exported package, replacing paths, intent and ceiling:
 
 ~~~sh
 node customer/customer.mjs init \
-  --runtime /absolute/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --runtime /absolute/sf88-operator-buyer-cli \
   --state /private/routescan-buyer --inbox /private/routescan-inbox
-~~~
 
-Edit `customer/request.json` to the actual desired query. Prepare one operation using an explicit intent and payment ceiling:
-
-~~~sh
 node customer/customer.mjs prepare \
-  --runtime /absolute/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --runtime /absolute/sf88-operator-buyer-cli \
   --state /private/routescan-buyer --inbox /private/routescan-inbox \
-  --workspace /private/original-operator-workspace \
-  --client /absolute/routescan-release/client/seller-client.mjs \
-  --operation gasSeries --inputs /absolute/routescan-release/customer/request.json \
-  --intent customer-gas-request-1 --max-atomic YOUR_ATOMIC_CEILING --accept 0
-~~~
+  --workspace /private/original-operator \
+  --client /absolute/export/client/seller-client.mjs \
+  --operation gasSeries --inputs /absolute/export/customer/request.json \
+  --intent YOUR_STABLE_INTENT --max-atomic YOUR_EXPLICIT_CEILING --accept 0
 
-Use the operation ID exposed by the release's original OpenAPI. The maximum amount is expressed in the chosen native asset's atomic units.
-
-Review the prepared operation:
-
-~~~sh
 node customer/customer.mjs review \
-  --runtime /absolute/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --runtime /absolute/sf88-operator-buyer-cli \
   --state /private/routescan-buyer --inbox /private/routescan-inbox \
-  --intent customer-gas-request-1 --output /private/customer-gas-review.json
-~~~
+  --intent YOUR_STABLE_INTENT
 
-Execute through the original operator terminal:
-
-~~~sh
 node customer/customer.mjs execute \
-  --runtime /absolute/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --runtime /absolute/sf88-operator-buyer-cli \
   --state /private/routescan-buyer --inbox /private/routescan-inbox \
-  --intent customer-gas-request-1 \
-  --workspace /private/original-operator-workspace \
-  --review-file /private/customer-gas-review.json
+  --workspace /private/original-operator --intent YOUR_STABLE_INTENT
 ~~~
 
-The original operator workspace supplies the signer, policy and native approval. The prepared request carries the generated client's expected terms into that same workspace. Profile-based preparation is also available through the documented `--profile` option.
+Execution uses the original controlling terminal, explicit approval, native signer and permanent attempt. The adapter retains the original result and returns a nonzero exit status for execution or delivery errors.
 
-If preparation created the operation before inbox intake was interrupted, `attach --intent customer-gas-request-1` enqueues that saved operation. After an execution interruption, inspect and recover the same intent.
+Profile-based preparation remains available with --profile when an application uses an original operator profile instead of an initialized workspace.
 
-## Reopen a completed response in Node or Python
+## Reopen from Node or Python
 
-Both language entry points reference the same runtime, buyer state and native inbox. For example:
+Both languages use the same buyer state and inbox paths. Python invokes the adjacent Node adapter and keeps no additional purchase ledger. Applications can import the RoutescanCustomer class in either language.
 
 ~~~sh
 python3 customer/customer.py recover \
-  --runtime /absolute/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --runtime /absolute/sf88-operator-buyer-cli \
   --state /private/routescan-buyer --inbox /private/routescan-inbox \
-  --intent customer-gas-request-1
+  --intent YOUR_STABLE_INTENT
 
 python3 customer/customer.py download \
-  --runtime /absolute/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --runtime /absolute/sf88-operator-buyer-cli \
   --state /private/routescan-buyer --inbox /private/routescan-inbox \
-  --intent customer-gas-request-1 --output /private/customer-gas-result.json
+  --intent YOUR_STABLE_INTENT --output /private/new-result.json
+
+node customer/customer.mjs json \
+  --runtime /absolute/sf88-operator-buyer-cli \
+  --state /private/routescan-buyer --inbox /private/routescan-inbox \
+  --intent YOUR_STABLE_INTENT
 ~~~
 
-The original response reader validates the retained body. `json` returns parsed source data and `csv` provides its derived spreadsheet representation. `response` and `inspect` expose the original delivery, payment and operation fields.
+Inspect or recover the same intent after interrupted execution. If preparation completed but enqueueing was interrupted, attach adds that same saved Node operation to the original inbox. Response methods verify retained files before reading or downloading them and send no provider request.
 
-Use `finalize` with the same operator workspace for the original accounting continuation. Use `report --output /private/routescan-purchase-history.html` for the original inbox report. The report and saved response provide the customer with the original request history, native outcome and delivered data.
+Finalize continues original financial observation and reservation for the same purchase using --workspace. Report exports the original inbox history to a new HTML destination. Neither purchases again. Delivery, payment outcome and financial finalization keep their distinct original fields.
 
-Python applications can import `RoutescanCustomer` from `customer.py`. Its methods invoke the same original adapter and inbox. Its execute method retains the operator terminal, then reopens the original intent.
+## Back up and move the provider workspace
 
-## Back up and restore the project
+Drain and stop the merchant before creating its portable backup. The archive worker locks the original project and quota, records each complete file's size and hash, and checks those bytes again before publication.
 
-Stop and drain the merchant, then use the workspace's backup action. The project archive includes saved merchant revisions, source requests and results, original generated releases, customer handoffs and the retained quota ledger.
+The archive includes saved configurations, revisions, previews, exports, customer handoffs and local quota. It excludes transient locks and host secret values. Restoration validates the manifest and original records, creates private files in a new directory and leaves the merchant stopped.
 
-Store the archive on the deployment's durable storage. A backup using the default project quota preserves that account's local usage history. An externally shared quota directory needs an account-level backup coordinated with its host.
+In the browser, choose the complete ZIP and select Restore into a new workspace. The previous project stays available. Restoration makes no source request or payment.
 
-Restore into a new private project directory:
+For a new host:
 
 ~~~sh
 node routescan/workspace-cli.mjs \
-  --project /srv/routescan-restored \
-  --restore /srv/backups/routescan-project.zip --port 8425
+  --restore /private/Routescan_Prepared_Workspace.zip \
+  --project /private/new-routescan-project --port 8420
 ~~~
 
-The original archive worker validates member paths, sizes and digests before opening the restored project. Reopen the retained source previews and customer releases from that project, configure its intended facilitator on the new host, and start the merchant at the chosen saved revision.
+Install the matching source release and original dependencies first. Configure the provider environment reference and actual facilitator separately. Preserve the customer's original operator workspace, buyer state and inbox through the SF88 migration workflow; these private customer directories are separate from the provider backup.
 
-SIGINT and SIGTERM drain accepted workspace operations and close the merchant, provider source and project before exit.
+For an account shared by several processes, retain one authoritative quota volume. This portable workspace backs up its local quota. When the project uses an externally shared quota directory, preserve that account's existing host-owned backup before moving dispatch.
 
-Powered by [Routescan.io APIs](https://routescan.io).
+Powered by Routescan.io APIs — https://routescan.io
