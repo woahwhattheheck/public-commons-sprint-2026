@@ -144,3 +144,23 @@ reuse of one original reserve/finalize pair. Its transport fixture exercises
 accounting behavior and does not claim a network payment. Production always
 uses the actual original SF86 observer and official decoder. No hosted workflow
 or broader repository test run is introduced.
+
+## Use installed system certificate trust
+
+When an authorized deployment's HTTPS proxy presents a chain trusted by the
+operating system, the isolated observer can explicitly use that installed trust
+store. This does not add a CA, change an approved RPC endpoint or disable TLS
+hostname and certificate verification. Use Node 22.19+ or 24.6+ with its supported
+`--use-system-ca` option. Node's official deployment guidance is
+https://nodejs.org/learn/http/enterprise-network-configuration.
+
+Add `--node-use-system-ca` to the same original `finalize.py` invocation.
+The fixed observer is launched as `node --use-system-ca` followed by its
+original adapter path. Its environment remains exactly
+`LANG=C.UTF-8` and `LC_ALL=C.UTF-8`: no signer keys, arbitrary `NODE_OPTIONS`,
+extra CA file paths or unrelated credentials enter it. The option applies to
+ordinary receipt observation and original missing-receipt recovery; omitted,
+the existing Node default trust is unchanged.
+
+The existing explicit `--node` executable selection remains supported. This
+flag removes the need to create a wrapper solely to select system CA trust.

@@ -2,7 +2,8 @@ import {mountPricing} from './pricing.mjs';
 import {mountAccountant} from './accountant.mjs';
 import {mountPeriods} from './periods.mjs';
 import {mountRecovery} from './recovery.mjs';
-let pricingPane,accountantPane,periodPane,maintenancePane;
+import {mountAdjustments} from './adjustments.mjs';
+let pricingPane,accountantPane,periodPane,maintenancePane,adjustmentsPane;
 let maintenanceMode = 'RUNNING';
 // MIT. Operator UI over the original merchant accounting workspace.
 // Monetary and atomic values remain the original strings from the native report.
@@ -104,7 +105,7 @@ function updateButtons() {
   for (const area of document.querySelectorAll('.area:not(#area-maintenance)')) area.inert = locked;
   $('run-list').inert = $('period-current').inert = locked;
   for (const button of document.querySelectorAll('.tabs [data-area]')) button.disabled = locked && button.dataset.area !== 'maintenance';
-  pricingPane?.setBusy(blocked);periodPane?.setBusy(blocked);accountantPane?.setBusy(blocked);
+  pricingPane?.setBusy(blocked);periodPane?.setBusy(blocked);accountantPane?.setBusy(blocked);adjustmentsPane?.setBusy(blocked);
   maintenancePane?.setBusy(busy);
 }
 
@@ -144,7 +145,7 @@ function adopt(next) {
   if (state && next.revision < state.revision) return;
   state = next;
   if (!state.runs.some(run => run.id === selectedRun)) selectedRun = state.runs[0]?.id || '';
-  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); accountantPane?.render(state); updateButtons();
+  renderRuns(); renderSources(); renderSelectors(); renderExports(); renderRecovery(); pricingPane?.render(state); periodPane?.render(state); accountantPane?.render(state); adjustmentsPane?.render(state); updateButtons();
   schedulePoll();
 }
 function renderRun() {
@@ -193,7 +194,7 @@ async function refreshState() {
 function schedulePoll() {
   clearTimeout(pollTimer);
   if (maintenanceMode !== 'RUNNING') return;
-  if (!state?.runs.some(run => ['queued','running'].includes(run.status)) && !recoveryActive()) return;
+  if (!state?.runs.some(run => ['queued','running'].includes(run.status)) && !recoveryActive() && !adjustmentsPane?.active()) return;
   pollTimer = setTimeout(() => attempt(async () => {
     const before = state.runs.find(run => run.id === selectedRun)?.status;
     adopt(await api('/api/state'));
@@ -204,6 +205,7 @@ function schedulePoll() {
 function openArea(area) {
   if (maintenanceMode !== 'RUNNING' && area !== 'maintenance') area = 'maintenance';
   maintenancePane?.setVisible(area === 'maintenance');
+  adjustmentsPane?.setVisible(area === 'adjustments');
   if (area === 'collection') attempt(() => collectionUI?.refresh());
   if (area === 'accountant') attempt(() => accountantPane?.refresh());
   for (const button of document.querySelectorAll('[data-area]')) { const active = button.dataset.area === area; button.classList.toggle('active',active); if (active) button.setAttribute('aria-current','page'); else button.removeAttribute('aria-current'); }
@@ -263,6 +265,7 @@ function renderDetail(row = currentRecord()) {
   if (!row) { $('record-detail').innerHTML = '<p class="empty">Select a record to inspect its complete values.</p>'; return; }
   const title = view === 'exceptions' ? friendly(row.reason) : view === 'proofs' ? row.name : row.method + ' ' + row.routeId;
   let html = '<h3>' + esc(title) + '</h3>' + values(row);
+  if (view === 'ledger') html += '<div class="actions"><button type="button" data-open-adjustment="' + esc(row.eventId) + '" data-adjustment-run="' + esc(selectedRun) + '">Open adjustments</button></div>';
   if (view === 'recovered' && row.response) html += '<div class="actions"><a class="button" download href="/api/runs/' + endpoint(selectedRun) + '/recovered/' + endpoint(row.recoveryId) + '/response">Download retained response</a></div><p class="hint">This response comes from the selected run’s immutable source capture.</p>';
   if (view === 'exceptions') {
     const key = reviewDraftKey(selectedRun,row.id), saved = row.review, draft = drafts.get(key) || saved;
@@ -293,7 +296,10 @@ async function perform(intent) {
     if (intent.success) await intent.success(result);
     notify(typeof intent.message === 'function' ? intent.message(result) : intent.message || 'Saved.');
   } catch (error) {
-    if (error.status === 409 && ['STALE_WORKSPACE','STALE_REVIEW','STALE_PERIOD'].includes(error.code)) {
+    if (error.status === 409 && intent.onConflict) {
+      await intent.onConflict(error);
+      notify(error.message + ' Review the retained draft again before saving.',true);
+    } else if (error.status === 409 && ['STALE_WORKSPACE','STALE_REVIEW','STALE_PERIOD'].includes(error.code)) {
       intent.reloaded = false; pendingIntent = intent;
       $('conflict-text').textContent = error.message + ' Your submitted changes remain in this tab. Load the saved version, inspect it, then explicitly reapply your changes.';
       $('conflict').hidden = false; notify('The saved version changed. Your submitted draft is retained.',true);
@@ -444,9 +450,14 @@ periodPane = await mountPeriods({api,perform,operator,attempt,notify,openArea,lo
     await compareRuns(0);openArea('compare');
   }});
 accountantPane = await mountAccountant({api,perform,operator,attempt,notify});
+adjustmentsPane = await mountAdjustments({api,perform,operator,attempt,notify,adopt,openArea,loadRun});
 
 document.querySelectorAll('[data-area]').forEach(button => button.addEventListener('click',() => openArea(button.dataset.area)));
 document.querySelectorAll('[data-open-sources]').forEach(button => button.addEventListener('click',() => openArea('sources')));
+$('record-detail').addEventListener('click',event => {
+  const button=event.target.closest('[data-open-adjustment]');
+  if(button)attempt(async()=>{openArea('adjustments');await adjustmentsPane.openEvent(button.dataset.adjustmentRun,button.dataset.openAdjustment);});
+});
 document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click',() => attempt(async () => {
   retainReviewDraft(); view = button.dataset.view; selectedKey = null; records.offset = 0;
   document.querySelectorAll('[data-view]').forEach(item => { item.classList.toggle('active',item === button); item.setAttribute('aria-pressed',String(item === button)); });

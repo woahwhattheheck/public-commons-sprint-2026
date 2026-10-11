@@ -62,12 +62,17 @@ export class AcquisitionError extends BuyerError {
  * original customer bridge; verify/restore need no live receiving workspace.
  */
 export class AcquisitionWorkspace {
-  constructor({runtime, directory, configsDirectory, operatorSettings, temporaryDirectory,
+  constructor({runtime, directory, configsDirectory, operatorSettings, paidFileClaimEnvs, temporaryDirectory,
     resultLimit=33554432, ...runtimeOptions} = {}) {
     this.runtime = runtime instanceof NativeRuntime ? runtime : new NativeRuntime(runtimeOptions);
     this.directory = directory === undefined ? null : canonical(directory);
     this.configsDirectory = configsDirectory === undefined ? null : canonical(configsDirectory);
     this.operatorSettings = operatorSettings === undefined ? null : canonical(operatorSettings);
+    need(paidFileClaimEnvs === undefined || Array.isArray(paidFileClaimEnvs) &&
+      paidFileClaimEnvs.length > 0 && paidFileClaimEnvs.length <= 32 &&
+      paidFileClaimEnvs.every(name => typeof name === 'string' && /^[A-Z][A-Z0-9_]{1,64}$/.test(name)) &&
+      new Set(paidFileClaimEnvs).size === paidFileClaimEnvs.length, 'PAID_FILE_CLAIM_ENVS_INVALID');
+    this.paidFileClaimEnvs = paidFileClaimEnvs === undefined ? null : Object.freeze([...paidFileClaimEnvs]);
     this.temporaryDirectory = temporaryDirectory === undefined ? null : canonical(temporaryDirectory);
     need(Number.isSafeInteger(resultLimit) && resultLimit >= 1048576 && resultLimit <= 268435456,
       'ACQUISITION_RESULT_LIMIT_INVALID');
@@ -84,6 +89,7 @@ export class AcquisitionWorkspace {
       directory:this.directory,
       ...(this.configsDirectory === null ? {} : {configsDirectory:this.configsDirectory}),
       ...(this.operatorSettings === null ? {} : {operatorSettings:this.operatorSettings}),
+      ...(this.paidFileClaimEnvs === null ? {} : {paidFileClaimEnvs:this.paidFileClaimEnvs}),
     };
     need(['verify','restore'].includes(command) || workspace, 'ACQUISITION_WORKSPACE_REQUIRED');
     const input = clean({schema:SCHEMA, command, commandId, workspace, parameters, resultLimit:this.resultLimit});
@@ -129,6 +135,29 @@ export class AcquisitionWorkspace {
   }
   prepareRequest(id, {reviewSha256, signal}={}) {
     return this._command('prepare-request', {id,reviewSha256}, {signal});
+  }
+  paidFile(id, options) {return this._command('paid-file', {id}, options);}
+  receivePaidFile(file, {filename, signal}={}) {
+    return this._command('receive-paid-file', {file:canonical(file),filename}, {signal});
+  }
+  reviewPaidFile(id, {expectedRevision, totalAtomic, dailyAtomic, filename, claimEnv, signal}={}) {
+    return this._command('review-paid-file',
+      {id,expectedRevision,totalAtomic,dailyAtomic,filename,claimEnv}, {signal});
+  }
+  preparePaidFile(id, {reviewSha256, signal}={}) {
+    return this._command('prepare-paid-file', {id,reviewSha256}, {signal});
+  }
+  retrievePaidFile(id, {only, configSha256, handoffSha256, signal}={}) {
+    return this._command('retrieve-paid-file', {id,only,configSha256,handoffSha256}, {signal});
+  }
+  resetPaidFile(id, {only, configSha256, handoffSha256, signal}={}) {
+    return this._command('reset-paid-file', {id,only,configSha256,handoffSha256}, {signal});
+  }
+  downloadPaidFile(id, operationId, destination, options) {
+    return this._command('download-paid-file', {id,operationId,destination:canonical(destination)}, options);
+  }
+  exportPaidFile(id, {destination, signal}={}) {
+    return this._command('export-paid-file', {id,destination:canonical(destination)}, {signal});
   }
   draft(id, {revision, signal}={}) {return this._command('draft', {id,revision}, {signal});}
   save({id, expectedRevision=0, manifest, signal}={}) {
