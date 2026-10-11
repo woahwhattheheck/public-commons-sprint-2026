@@ -1993,6 +1993,34 @@ and `runMaintenance` from
 These are the original implementations used by the installed command and do
 not create another supervisor or recovery engine.
 
+## Keep encrypted merchant recovery points off the host
+
+The installed `merchant-recovery` command exposes the original SF101 snapshot,
+verification and cold-restore engine. `merchant-recovery-remote` sends those
+unchanged encrypted bundles to an existing private S3-compatible bucket, lists
+completed recovery points, retrieves them and invokes that same restore engine.
+Use the existing `s3` runtime dependency and Linux `flock`.
+
+Create the snapshot with the original host maintenance command above or with an
+actually quiesced local recovery plan. Then follow the
+[remote recovery guide](../sf101-merchant-recovery/REMOTE.md) for the private
+store configuration, credentials, stable operation IDs and new destination
+paths. A typical upload is:
+
+```sh
+npx --no-install starforge merchant-recovery-remote push \
+  --config /private/merchant/recovery-s3.json \
+  --bundle /private/backups/merchant-20261011-001 \
+  --operations /private/recovery-transfers --id merchant-20261011-001 \
+  --pass-env SF101_RECOVERY_PASSPHRASE
+```
+
+The remote inventory publishes a completion record only after the encrypted
+files and original manifest have been uploaded and read back. Interrupted
+operations retain their progress under the same ID. Cold restore authenticates
+the original bundle and creates a new private destination; the original SF99
+maintenance operator handles the later merchant cutover.
+
 ## Operate several merchants
 
 The fleet commands package the existing merchant gateway and its private
@@ -4013,3 +4041,98 @@ installed at `source/stellar/scf_2026/sf47_budget_model/workspace/CLI.md`.
 The CLI also runs directly as `python3 .../workspace/cli.py`; `SF47_PYTHON` selects
 an explicit Python executable for the installed command. All financial calculation
 continues through the original `budget.py` and workspace model.
+
+## Installed direct-provider workspace
+
+The `provider-operator` and `provider-workspace` commands operate the maintained
+SF96 direct-provider flow through the original SF88 buyer. The local desk joins
+retained challenge intake, exact offer and cap review, original private cases,
+native terminal operations, useful-output review and complete encrypted recovery.
+
+Use a POSIX host with Node 22.16 or later, Python 3 and this installed release's
+original SF88 dependency closure. `starforge doctor --native` reports the current
+native dependency setup; the original [signer guide](../sf88-operator-buyer-cli/NATIVE_SIGNER.md)
+and [runtime installer](RUNTIME_INSTALL.md) retain their existing setup
+procedures. The workspace introduces no additional npm package.
+
+Create a private parent and a public host profile. Replace the example identity
+values and paths with the actual selected operator configuration:
+
+```sh
+SF96_PRIVATE="/absolute/private/provider-operations"
+mkdir -m 700 "$SF96_PRIVATE"
+starforge provider-workspace profile \
+  --out "$SF96_PRIVATE/host-profiles.json" \
+  --id provider-operator --label "Provider operator" \
+  --actor ACTUAL_OPERATOR --service ACTUAL_SERVICE \
+  --payer ACTUAL_PUBLIC_G_ADDRESS --python /absolute/python3 \
+  --secret-env EXISTING_WALLET_ENV_NAME
+
+starforge provider-workspace serve \
+  --state "$SF96_PRIVATE/desk" \
+  --profiles "$SF96_PRIVATE/host-profiles.json" --port 8469
+```
+
+Open the printed loopback capability URL and keep its launching terminal open.
+Profiles retain public values and an existing environment-variable name or
+trusted signer reference, never wallet values. Their budgets apply separately
+to each prepared case. A later profile change does not rewrite an existing case.
+Starting without `--profiles` supports attaching and reopening original cases;
+new preparation requires explicitly configured public setup.
+
+In the desk, import an original SF85 capture and its exact header source when
+required, import a complete original SF96 handoff, or explicitly observe an
+allowed endpoint once. Review the actual eligible offer, source provenance and
+independent atomic cap. Preparation uses the original private workspace and
+inbox. An already registered intent returns its existing case.
+
+The original operator remains available alongside the browser:
+
+```sh
+starforge provider-operator show --dir /absolute/original/case
+starforge provider-operator diagnose --dir /absolute/original/case
+starforge provider-operator review --dir /absolute/original/case
+```
+
+The desk's applicable native actions and `provider-operator execute` use the
+same original terminal approval, signer, permanent attempt and spending ledger.
+Read delivery, settlement and accounting outcomes separately, then record useful
+output criteria, local review and private handover. A local reviewer entry does
+not establish customer acceptance. Reopen the same case after interruption;
+original recovery/finalization do not start another purchase.
+
+Complete recovery is also an installed command:
+
+```sh
+starforge provider-workspace backup --dir /absolute/original/case \
+  --out /absolute/private/NEW.sf96case
+starforge provider-workspace inspect --archive /absolute/private/NEW.sf96case
+starforge provider-workspace restore --archive /absolute/private/NEW.sf96case \
+  --expect-directory /absolute/original/case
+```
+
+The passphrase is read without echo from the terminal. The authenticated archive
+contains the original native case, accounting keys, evidence, output and case
+notes/reviews; host wallet values and external signer-module contents are not
+copied. Restore keeps the exact original absolute path and refuses an existing
+destination. Its manifest identifies the actual Python, original source CLI
+and generated/trusted signer dependencies. Keep those required external paths
+and the passphrase in their intended private custody. The separate desk
+navigation/request index is not the archival unit.
+
+The full [provider workspace guide](../sf96-merchant-challenge-handoff/workspace/GUIDE.md)
+covers explicit stopped-owner recovery, retained encrypted upload retry,
+interrupted restore stages and authentication of an already complete archive
+whose presentation index was interrupted. Use `provider-workspace --help`
+for the exact terminal flags.
+
+Native host integrations use `./buyer/provider-operator` for the maintained
+operator functions; `./buyer/provider-workspace` exports `openProviderDesk`
+and `validateProfiles`; `./buyer/provider-workspace/server` exports
+`startProviderWorkspace`; and `./buyer/provider-workspace/recovery` exports
+the original complete-case create/inspect/restore and interrupted-restore
+functions. All resolve to this same packaged source and original native case.
+
+## Tomorrow.io weather operations
+
+`starforge tomorrow --help` opens the complete maintained command surface for location/work selection, reviewed Timeline and PNG capture, staff decisions, operations reports, single-resource recovery, licensed merchant packaging, native customer purchase/recovery and portable handover. `starforge tomorrow serve --workspace PRIVATE_DIRECTORY` serves the industrial browser workspace. The original setup, usage, request semantics and customer/Austin workflows are documented in [Tomorrow weather operations](../sf30-seller-sdk/tomorrow/README.md). All source is included by the existing SF30 component.

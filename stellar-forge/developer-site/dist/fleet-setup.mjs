@@ -1,6 +1,6 @@
 // MIT. The workbench exports declarations consumed by the original native tools.
 import { SOURCE_LABELS, LIMIT_RANGES, SQLITE_SNAPSHOT_OPTIONS, createFleetDraft, newFleetTenant, newFleetSource,
-  importFleetDraft, importFleetSource, validClickHouseColumnTypes, validateFleetDraft, createFleetPacket, fleetCommands, commandText } from './fleet-onboarding.mjs';
+  importFleetDraft, importFleetSource, validPostgresInputManifest, validClickHouseColumnTypes, validateFleetDraft, createFleetPacket, fleetCommands, commandText } from './fleet-onboarding.mjs';
 import { zipWorkspace } from './onboarding.mjs';
 
 const $ = id => document.getElementById(id);
@@ -176,7 +176,8 @@ function sourceCard(tenant, source, index, prefix) {
   card.append(heading);
   const sourceFile = el('input'); sourceFile.type = 'file'; sourceFile.accept = '.json,application/json'; sourceFile.hidden = true;
   const importButton = button('Import source JSON', () => sourceFile.click());
-  importButton.dataset.field = key + '.clickhouseColumnTypes';
+  if (source.kind === 'postgresPackage') importButton.dataset.field = key + '.postgresInputManifestSha256';
+  else if (source.kind === 'clickhousePackage') importButton.dataset.field = key + '.clickhouseColumnTypes';
   sourceFile.addEventListener('change', async () => {
     const file = sourceFile.files?.[0]; if (!file) return;
     try {
@@ -206,6 +207,7 @@ function sourceCard(tenant, source, index, prefix) {
     if (value !== 'python') source.pythonRoot = '';
     if (value !== 'duckdbPackage') source.duckdbPython = '';
     if (value !== 'sqlitePackage') for (const key of Object.keys(SQLITE_SNAPSHOT_OPTIONS)) delete source[key];
+    if (value !== 'postgresPackage') delete source.postgresInputManifestSha256;
     if (value !== 'clickhousePackage') delete source.clickhouseColumnTypes;
     if (!['workspace', 'jsonrpcPackage'].includes(value)) delete source.allowLoopbackUpstream;
     renderMerchants();
@@ -214,6 +216,7 @@ function sourceCard(tenant, source, index, prefix) {
     duckdbPackage: 'Prepared DuckDB package directory', s3Package: 'Configured S3 package directory',
     jsonrpcPackage: 'Prepared Stellar RPC package directory',
     sqlitePackage: 'SQLite workbench export directory', mysqlPackage: 'Prepared MySQL package directory',
+    postgresPackage: 'Prepared PostgreSQL package directory',
     clickhousePackage: 'Prepared ClickHouse package directory' };
   fields.append(field(labels[source.kind] ?? 'Source path', source.path, key + '.path', value => { source.path = value; },
     { hint: 'A host path. Relative paths resolve from fleet-setup.json.', maxLength: 4096, placeholder: '../packages/merchant-current' }));
@@ -236,6 +239,16 @@ function sourceCard(tenant, source, index, prefix) {
     'Staging captures the committed SQLite data, including committed WAL changes, into the retained release. Later database changes appear in the next staged release.', 'hint'));
   if (source.kind === 'mysqlPackage') card.append(el('p',
     'The prepared package retains named queries, payment terms and connection environment references. Running releases read the live MySQL or MariaDB database using credentials on the merchant host.', 'hint'));
+  if (source.kind === 'postgresPackage') {
+    card.append(el('p', 'Staging retains the original PostgreSQL named queries, payment terms, connection policy and selected database CA. Running releases read the live database using the configured environment references on the merchant host.', 'hint'));
+    if (validPostgresInputManifest(source.postgresInputManifestSha256)) {
+      const review = el('details', undefined, 'fleet-fields');
+      review.append(el('summary', 'Reviewed PostgreSQL package'),
+        el('p', 'The original stage compares this manifest with the selected package before retaining it. A changed package needs a fresh native review and source download.', 'hint'),
+        el('pre', source.postgresInputManifestSha256, 'fleet-command'));
+      card.append(review);
+    } else card.append(el('p', 'Review the prepared package in the original PostgreSQL workspace or Seller releases, download its fleet source, then import it here to keep that review attached.', 'hint'));
+  }
   if (source.kind === 'clickhousePackage') {
     card.append(el('p', 'The retained package keeps ClickHouse queries, typed inputs, limits and payment terms. Its endpoint and credentials come from the merchant host environment. Every start checks the live database schema.', 'hint'));
     if (validClickHouseColumnTypes(source.clickhouseColumnTypes)) {

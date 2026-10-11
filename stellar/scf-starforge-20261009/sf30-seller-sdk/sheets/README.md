@@ -18,6 +18,18 @@ directory outside the source checkout, with mode 0700 and regular files mode
 0600. Paths are examples. Keep original Sheet contents, captures, source
 configuration, credentials and publisher state there.
 
+## Author a merchant source in the browser
+
+Use `starforge sheets-source workspace serve --directory /private/sheets/source-workspace --create`
+to import a retained CellData observation, inspect its actual columns, choose the
+public projection, and save reviewed source versions. Optional host-declared
+Google connections provide workbook metadata and explicit bounded live reads.
+The workspace previews through the original typed extractor and opens this same
+publisher against the selected source. It includes version comparison, private
+source-package handoff and original-request recovery. Follow the complete
+[source-authoring workspace guide](workspace/WORKSPACE.md) for first use,
+connections, publication, reopening and CLI/API commands.
+
 ## Select a connected Sheet and retain its actual cells
 
 Use the existing connected Google tools to read workbook/tab metadata and one

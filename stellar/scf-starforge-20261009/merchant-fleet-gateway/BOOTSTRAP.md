@@ -75,6 +75,17 @@ named queries, offers, connection references, and any package-local CA. Starting
 the resulting fleet opens the configured live database using the host's declared
 environment variables. Each package must declare its own exact merchant host.
 
+For PostgreSQL, review the original saved package in its workspace or Seller
+releases, then choose **Download fleet source** and import it into the intended
+fleet source card. The source selects `postgresPackage` and carries the optional
+`postgresInputManifestSha256` from that exact native review. The download uses
+the canonical package path returned by the original preparation API; changing
+the declaration directory does not change that selection. Setup compares the
+reviewed manifest before retaining the original files, connection policy and
+selected database CA. Starting the fleet uses the original PostgreSQL adapter
+and the host's configured credential environment to read the live database.
+Each package's public HTTPS origin must match its declared merchant host.
+
 For ClickHouse, register `{ "clickhousePackage": "./packages/transfers" }` or
 import the original workspace's source definition in the fleet workbench. Keep
 its `clickhouseColumnTypes` companion to bind the original ordered native schema
@@ -125,8 +136,9 @@ is preserved. The same setup declaration, directory, and output path resume the
 same operation. After a port conflict, free the conflicting port and repeat the
 command. After a process interruption, repeat it directly.
 SIGINT, SIGTERM, or an embedding `AbortSignal` also reach a pending original
-SQLite capture. The native worker closes and the incomplete stage is removed;
-the retained setup intent permits the same command to resume. Successfully
+SQLite snapshot or PostgreSQL package capture. The original adapter cancels its
+work and removes the incomplete stage; the retained setup intent permits the
+same command to resume. Successfully
 committed releases remain available for the original checkpoint reconciliation.
 
 Setup recovers an original immutable release committed before its progress

@@ -172,14 +172,26 @@ Open `/fleet.html` to prepare the first retained multi-merchant fleet. The
 workbench edits two to thirty-two merchants, two to four fixed slots per
 merchant, public hosts, current/later source aliases, initial releases and the
 original gateway limits. Registered sources use the original API workspace,
-Python application, DuckDB/Parquet, S3, Stellar RPC, SQLite, MySQL and ClickHouse package selectors.
+Python application, DuckDB/Parquet, S3, Stellar RPC, SQLite, MySQL, PostgreSQL and ClickHouse package selectors.
 SQLite source cards expose the original snapshot byte ceiling and timeout; the
 export keeps those integer fields beside `sqlitePackage`. SQLite stages committed
 database snapshots, while MySQL and MariaDB retain the prepared named queries and
 read the live database through the merchant host's connection environment.
 
-Each source card also imports an original host source JSON definition while
-preserving that card's package alias and the rest of the fleet. ClickHouse source
+Each source card imports an original host source JSON definition while preserving
+that card's package alias and the rest of the fleet.
+
+PostgreSQL source cards preserve `postgresInputManifestSha256` from the original
+workspace or Seller releases review. **Download fleet source** uses the native
+review's canonical package path, so moving the fleet declaration to another
+operator directory keeps the selected package exact. The existing import keeps
+the chosen card alias, facilitator options and manifest through draft reopen and
+ZIP export. Switching to another source type clears its PostgreSQL companion.
+The original native stage checks the reviewed manifest before retaining the
+package, including its named queries, connection policy and selected database CA.
+Running releases read live PostgreSQL data through the original adapter.
+
+ClickHouse source
 definitions retain the original `clickhouseColumnTypes` map. Its ordered columns
 are displayed for review and remain unchanged through draft reopen and native
 launch export. Changing to another source type clears that companion. The
