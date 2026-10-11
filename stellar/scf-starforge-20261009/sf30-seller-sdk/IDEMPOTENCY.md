@@ -11,6 +11,12 @@ local directory and the merchant's existing backend. No additional npm package,
 wallet implementation or hosted CI is needed. Issuance, status and recovery make
 no network request or payment.
 
+The original [merchant operations console](operations/MERCHANT_OPERATIONS.md)
+provides stored-operation browse, current detail, original audit history and
+opt-in recovery through this same ledger. Start the original operations launcher
+with `--upstream --operation-controls`; it prints a private capability URL for
+exact-generation reconciliation. The CLI below remains available.
+
 ## Configure the existing seller
 
 Add `idempotency` to an original upstream binding:
@@ -85,7 +91,9 @@ the configured ticket admission with optional `availability`. It clones the
 seller config, installs the composed admission under an internal export, and
 preserves `validateInput:true`. In a custom embedding, pass both its returned
 `config` and `handlers` to the original `startSellerService()`; attach its
-`snapshot` as the session's `upstreamSnapshot` for the existing operations view.
+`snapshot` as the session's `upstreamSnapshot` for the existing operations view,
+and its `operationControl` as the session's `operationControl` for merchant
+operation browse and reconciliation.
 The lower-level `createUpstreamHandlers()` still exports the configured admission
 name for original `serve.mjs` integrations.
 
@@ -262,7 +270,8 @@ await handler.idempotency.close();        // after the embedding has stopped req
 ```
 
 The public handler signature is unchanged. `.snapshot()` adds in-memory operation
-counts; `.idempotency` exposes offline issue/status/recovery/close. Source lives in
+counts; `.idempotency` exposes offline issue/status/recovery/close plus bounded
+metadata `list()` and original ledger `audit()` reads. Source lives in
 the original upstream product: durable engine, JSON compiler, CLI and merchant
 example. Existing SF30 lifecycle, SF89, SF98 delivery and payment modules are
 reused without copied implementations.
