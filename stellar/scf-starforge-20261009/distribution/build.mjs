@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { resolve, join, dirname, posix } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { openGitSource } from './git-source.mjs';
 
 const ownPath = 'stellar/scf-starforge-20261009/distribution';
 const json = value => JSON.stringify(value, null, 2) + '\n';
@@ -46,20 +47,16 @@ process.stdout.write(JSON.stringify(result));
       maxBuffer: 32 * 1024 * 1024, stdio: ['pipe', 'pipe', 'pipe'] }));
 }
 
-export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref = 'HEAD', output }) {
+export async function buildDistribution({ repository = fileURLToPath(new URL('../../../', import.meta.url)), ref = 'HEAD', output,
+  offline = false, onProgress = () => {} }) {
   if (typeof output !== 'string' || !output) throw new TypeError('An output directory is required');
   const repo = resolve(repository), out = resolve(output);
-  const git = args => execFileSync('git', args, { cwd: repo, maxBuffer: 32 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
-  const commit = git(['rev-parse', '--verify', '--end-of-options', ref + '^{commit}']).toString().trim();
-  const readSource = path => git(['show', commit + ':' + path]);
-  const spec = JSON.parse(readSource(ownPath + '/distribution.json'));
-  if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
-  const tree = git(['ls-tree', '-r', '-z', '--full-tree', commit]).toString('utf8').split('\0').filter(Boolean).map(line => {
-    const tab = line.indexOf('\t');
-    const [mode, type, blob] = line.slice(0, tab).split(' ');
-    return { mode, type, blob, path: line.slice(tab + 1) };
-  });
+  const source = openGitSource({ repository: repo, ref, offline, onProgress });
+  const { commit, tree } = source;
   const byPath = new Map(tree.map(item => [item.path, item]));
+  const initial = source.readFiles([byPath.get(ownPath + '/distribution.json'), byPath.get('LICENSE')]);
+  const spec = JSON.parse(initial.get(ownPath + '/distribution.json'));
+  if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
   const explicitRuntime = new Set(spec.supportFiles);
   // Exact maintained runtime files can override a test-like filename, such as
@@ -75,17 +72,18 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   let totalBytes = 0;
-  const loadSource = item => {
-    if (!['100644', '100755'].includes(item.mode) || item.type !== 'blob')
-      throw new TypeError('Only regular source files may be packaged: ' + item.path);
-    const bytes = git(['cat-file', 'blob', item.blob]);
-    totalBytes += bytes.length;
-    if (bytes.length > 2 * 1024 * 1024 || totalBytes > 32 * 1024 * 1024)
-      throw new RangeError('Distribution source size exceeded');
-    sources.set(item.path, bytes);
-    return bytes;
+  const loadSources = items => {
+    const loaded = source.readFiles(items);
+    for (const [path, bytes] of loaded) {
+      totalBytes += bytes.length;
+      if (bytes.length > 2 * 1024 * 1024 || totalBytes > 32 * 1024 * 1024)
+        throw new RangeError('Distribution source size exceeded');
+      sources.set(path, bytes);
+    }
+    return loaded;
   };
-  for (const item of selected) loadSource(item);
+  source.progress('selected', { files: selected.length, components: spec.components.length });
+  loadSources(selected);
   // Follow actual static ESM imports into the same immutable Git tree. A new
   // shared runtime helper should travel with its importing product without a
   // second hand-maintained list. The original file, mode and size guards apply
@@ -95,7 +93,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const missingModules = [];
   let frontier = sources;
   while (frontier.size) {
-    const discovered = new Map();
+    const discovered = [];
     for (const [path, requests] of staticModuleRequests(frontier)) {
       for (const request of requests.filter(value => value.startsWith('.'))) {
         const target = posix.normalize(posix.join(posix.dirname(path), request));
@@ -105,12 +103,12 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
           missingModules.push(path + ' -> ' + target);
           continue;
         }
-        discovered.set(target, loadSource(item));
+        discovered.push(item);
         names.add(target);
         selected.push(item);
       }
     }
-    frontier = discovered;
+    frontier = discovered.length ? loadSources(discovered) : new Map();
   }
   if (missingModules.length) throw new TypeError('Unpackaged relative modules:\n' + missingModules.join('\n'));
   // Runtime drivers follow the exact source commit, including new production
@@ -157,7 +155,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   };
   const metadataBytes = Buffer.from(json(metadata));
   const readme = sources.get(ownPath + '/README.md');
-  const license = readSource('LICENSE');
+  const license = initial.get('LICENSE');
   if (!readme || !byPath.get('LICENSE')) throw new TypeError('Distribution README and license required');
   const manifest = {
     schema: 'stellar-forge.merchant-distribution-manifest.v1',
@@ -173,6 +171,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
     optionalRuntimeDependencies: runtimeDependencies, runtimePackageSources,
   };
   // The caller chooses a new output directory. No prior archive or workspace is replaced.
+  source.progress('materializing', { files: selected.length, bytes: totalBytes });
   await mkdir(out, { mode: 0o700 });
   const stage = join(out, 'package');
   await mkdir(stage, { mode: 0o700 });
@@ -184,6 +183,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const [name, content] of Object.entries({ 'package.json': metadataBytes, 'manifest.json': json(manifest), 'README.md': readme, 'LICENSE': license }))
     await writeFile(join(stage, name), content, { flag: 'wx', mode: 0o644 });
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+  source.progress('packing', { files: selected.length });
   const packed = JSON.parse(execFileSync(npm, ['pack', '--ignore-scripts', '--json', '--pack-destination', out],
     { cwd: stage, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] }));
   if (!Array.isArray(packed) || packed.length !== 1 || !/^[A-Za-z0-9_.-]+\.tgz$/.test(packed[0]?.filename ?? ''))
@@ -192,22 +192,27 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const receipt = { status: 'PACKAGED', packageName: spec.name, packageVersion: version,
     sourceCommit: commit, archive, sha256: digest(await readFile(archive)),
     integrity: packed[0].integrity, sourceFiles: selected.length, sourceBytes: totalBytes,
-    archiveBytes: packed[0].size, installedBytes: packed[0].unpackedSize };
+    archiveBytes: packed[0].size, installedBytes: packed[0].unpackedSize, sourceAcquisition: source.metrics() };
   await writeFile(join(out, 'distribution.json'), json(receipt), { flag: 'wx', mode: 0o600 });
+  source.progress('packaged', { files: selected.length, archiveBytes: receipt.archiveBytes, sha256: receipt.sha256 });
   return receipt;
 }
 
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
-    console.log('node build.mjs --out NEW_DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH]'); return;
+    console.log('node build.mjs --out NEW_DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--offline]'); return;
   }
   const options = {};
-  for (let i = 0; i < args.length; i += 2) {
+  let offline = false;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--offline' && !offline) { offline = true; continue; }
     if (!['--out', '--repo', '--ref'].includes(args[i]) || Object.hasOwn(options, args[i]) || !args[i + 1])
-      throw new TypeError('Expected --out NEW_DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH]');
+      throw new TypeError('Expected --out NEW_DIRECTORY [--repo CHECKOUT] [--ref COMMIT_OR_BRANCH] [--offline]');
     options[args[i]] = args[i + 1];
+    i++;
   }
-  console.log(json(await buildDistribution({ output: options['--out'], repository: options['--repo'], ref: options['--ref'] })).trimEnd());
+  console.log(json(await buildDistribution({ output: options['--out'], repository: options['--repo'], ref: options['--ref'], offline,
+    onProgress: event => process.stderr.write('[starforge build] ' + JSON.stringify(event) + '\n') })).trimEnd());
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
   main(process.argv.slice(2)).catch(error => { console.error(error.message); process.exitCode = 1; });
