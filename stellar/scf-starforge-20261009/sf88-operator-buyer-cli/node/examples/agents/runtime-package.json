@@ -1,0 +1,17 @@
+{
+  "name": "scf-node-framework-runtime-396c",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "@langchain/langgraph": "1.4.21",
+    "@langchain/core": "1.2.17",
+    "@langchain/langgraph-checkpoint-sqlite": "1.0.4",
+    "better-sqlite3": "12.10.0",
+    "zod": "4.6.6"
+  }
+}
+
