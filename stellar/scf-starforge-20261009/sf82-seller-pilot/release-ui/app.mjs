@@ -1,4 +1,5 @@
 import { bindDiscoveryControls } from './discovery.mjs';
+import { renderPostgresContract, renderPostgresComparison, bindPostgresStaging } from './postgres.mjs';
 import { bindFacilitatorControls, renderFacilitatorChange } from './facilitator.mjs';
 import { bindClientControls } from './client.mjs';
 const $ = selector => document.querySelector(selector);
@@ -13,6 +14,7 @@ const literal = value => value === null || value === undefined ? '—' : typeof 
 const quoted = value => "'" + value.replaceAll("'", "'\\''") + "'";
 function stageCommand(release) {
   const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
+  if (release?.postgres) return command + ' --postgres-package prepared-postgres-package';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
   if (release?.jsonrpc) return command + ' --jsonrpc-package prepared-rpc-package';
   if (release?.redis) return command + ' --redis-package prepared-redis-package';
@@ -27,13 +29,17 @@ async function request(path, payload, { raw = false, signal } = {}) {
   const options = { headers: { 'x-release-token': token }, cache: 'no-store', ...(signal ? { signal } : {}) };
   if (payload !== undefined) { options.method = 'POST'; options.headers['content-type'] = 'application/json'; options.body = JSON.stringify(payload); }
   const response = await fetch(path, options);
-  if (!response.ok) { const value = await response.json().catch(() => ({})); throw new Error(value.message ?? 'Operator action failed.'); }
+  if (!response.ok) {
+    const value = await response.json().catch(() => ({}));
+    throw Object.assign(new Error(value.message ?? 'Operator action failed.'), { status: response.status, code: value.error });
+  }
   return raw ? response : response.json();
 }
 function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
   discovery.buttons(blocked);
+  postgresStaging.buttons(blocked);
   facilitator.buttons(blocked);
   clients.buttons(blocked);
   if (!snapshot || blocked) return;
@@ -183,13 +189,18 @@ function renderStatus(value) {
     link.hidden = !visible;
     if (visible) link.href = target; else link.removeAttribute('href');
   }
+  const listener = value.runtime.observed?.listener;
+  const explorer = $('#explorer-link');
+  const explorerVisible = value.runtime.state !== 'STOPPED' && typeof listener === 'string' && /^http:\/\/127\.0\.0\.1:\d+\/?$/.test(listener);
+  explorer.hidden = !explorerVisible;
+  if (explorerVisible) explorer.href = listener.replace(/\/$/, '') + '/_seller/docs'; else explorer.removeAttribute('href');
   $('#store').textContent = value.root;
   $('#stage-command').textContent = stageCommand(value.releases.find(release => release.id === (selected ?? value.state.active)));
   const list = $('#release-list'); list.replaceChildren();
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.postgres ? 'PostgreSQL live queries · ' : release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
@@ -256,15 +267,21 @@ function renderDiff(value) {
   const changes = $('#route-changes'); changes.replaceChildren();
   const rpcReview = Boolean(value.before?.jsonrpc || value.after.jsonrpc);
   const sqliteReview = Boolean(value.before?.sqlite || value.after.sqlite);
+  const postgresReview = Boolean(value.before?.postgres || value.after.postgres);
   for (const change of value.changes) {
     const section = node('section', undefined, 'change'); section.append(node('h3', change.state + ' · ' + change.route));
     if (change.state !== 'CHANGED') {
       const route = change.after ?? change.before;
-      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', (rpcReview || sqliteReview) ? terms(route.payment) : literal(route.payment)));
+      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', (rpcReview || sqliteReview || postgresReview) ? terms(route.payment) : literal(route.payment)));
       if (route.upstream) section.append(node('small', 'Original upstream configuration and sharing policy'), node('pre', literal(route.upstream)));
     }
     for (const field of change.fields) {
-      if (sqliteReview && ['application', 'requestContractSha256'].includes(field.field)) {
+      if (postgresReview && ['application', 'requestContractSha256'].includes(field.field)) {
+        const details = node('details'); details.append(node('summary', field.field === 'application'
+          ? 'PostgreSQL execution configuration changed' : 'PostgreSQL request or response contract changed'),
+          fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
+        section.append(details);
+      } else if (sqliteReview && ['application', 'requestContractSha256'].includes(field.field)) {
         const details = node('details'); details.append(node('summary', field.field === 'application'
           ? 'Retained SQLite execution changed' : 'SQLite request or response contract changed'),
           fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
@@ -274,9 +291,9 @@ function renderDiff(value) {
         details.append(node('summary', field.field === 'application' ? 'Retained RPC execution changed' : 'RPC request or response contract changed'),
           fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
         section.append(details);
-      } else section.append(fieldPair((rpcReview || sqliteReview) && field.field === 'payment' ? 'Payment alternatives' : field.field,
-        (rpcReview || sqliteReview) && field.field === 'payment' ? terms(field.before) : field.before,
-        (rpcReview || sqliteReview) && field.field === 'payment' ? terms(field.after) : field.after));
+      } else section.append(fieldPair((rpcReview || sqliteReview || postgresReview) && field.field === 'payment' ? 'Payment alternatives' : field.field,
+        (rpcReview || sqliteReview || postgresReview) && field.field === 'payment' ? terms(field.before) : field.before,
+        (rpcReview || sqliteReview || postgresReview) && field.field === 'payment' ? terms(field.after) : field.after));
     }
     changes.append(section);
   }
@@ -284,8 +301,19 @@ function renderDiff(value) {
   const runtime = $('#runtime-changes'); runtime.replaceChildren();
   for (const change of value.runtimeChanges) runtime.append(change.field === 'jsonrpc'
     ? rpcRuntimeChange(change.before, change.after) : change.field === 'sqlite'
-      ? sqliteRuntimeChange(change.before, change.after) : change.field === 'facilitatorReview'
-        ? renderFacilitatorChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+      ? sqliteRuntimeChange(change.before, change.after) : change.field === 'postgres'
+        ? renderPostgresComparison(change.before, change.after) : change.field === 'facilitatorReview'
+          ? renderFacilitatorChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+  if (value.after.postgres) {
+    const detail = node('details', undefined, 'postgres-contract');
+    detail.append(node('summary', 'Candidate PostgreSQL contract · ' + value.after.id));
+    const body = node('div'); detail.append(body);
+    detail.addEventListener('toggle', () => {
+      if (detail.open && !body.childNodes.length) body.append(renderPostgresContract(value.after.postgres, value.after.routes));
+      else if (!detail.open) body.replaceChildren();
+    });
+    runtime.append(detail);
+  }
   if (value.after.facilitatorReview && !value.runtimeChanges.some(change => change.field === 'facilitatorReview'))
     runtime.append(renderFacilitatorChange(null, value.after.facilitatorReview));
   if (value.after.handlerEntry) runtime.append(node('p', 'Handler entry module is pinned. Its imported files and installed package dependencies are managed separately by the operator.', 'section-note'));
@@ -335,6 +363,12 @@ async function act(action) {
   } catch (error) { notice(error.message, true); }
   finally { busy = false; buttons(); }
 }
+const postgresStaging = bindPostgresStaging({ request, notice, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); }, onStaged: async result => {
+    selected = result.release.id; renderStatus(result.status);
+    renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
+    await refreshCatalog();
+  } });
 const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
 const facilitator = bindFacilitatorControls({ request, notice, refresh, choose,
