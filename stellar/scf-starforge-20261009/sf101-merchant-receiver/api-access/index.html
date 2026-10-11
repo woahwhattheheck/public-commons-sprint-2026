@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Merchant API console · Starforge</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/console.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#workspace">Skip to merchant workspace</a>
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">Starforge · Merchant operations</p>
+      <h1>API access</h1>
+      <p class="subtitle">Purchased passes, request usage, and access controls.</p>
+    </div>
+    <div class="header-controls">
+      <p id="connection-status" class="connection-status" role="status">Connect to the local console</p>
+      <span id="operator-name" class="muted"></span>
+      <div class="button-row">
+        <button id="refresh-all" type="button" disabled>Refresh workspace</button>
+        <button id="disconnect" type="button" class="quiet" hidden>Disconnect</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="workspace">
+    <section id="connect-panel" class="panel connect-panel" aria-labelledby="connect-title">
+      <h2 id="connect-title">Open your merchant workspace</h2>
+      <p>Use the console link provided when the merchant service starts. You can also enter that link here.</p>
+      <form id="connect-form" class="inline-form">
+        <div class="field grow">
+          <label for="console-link">Console link or access key</label>
+          <input id="console-link" type="password" autocomplete="off" spellcheck="false" required>
+        </div>
+        <button type="submit" class="primary">Connect</button>
+      </form>
+      <p class="hint">The access key stays in this tab's memory. Reopen the console link after closing or reloading the tab.</p>
+    </section>
+
+    <div id="workspace-message" class="message" role="status" aria-live="polite" hidden></div>
+    <section id="pending-panel" class="panel pending-panel" aria-labelledby="pending-title" hidden>
+      <div class="section-heading">
+        <div>
+          <h2 id="pending-title">Requests to follow up</h2>
+          <p class="hint">Retries use the original operation ID and exact request.</p>
+        </div>
+      </div>
+      <ul id="pending-list" class="pending-list"></ul>
+    </section>
+
+    <div id="merchant-workspace" class="workspace-grid" hidden>
+      <aside class="panel inventory" aria-labelledby="inventory-title">
+        <div class="section-heading">
+          <div>
+            <h2 id="inventory-title">Purchased passes</h2>
+            <p id="inventory-summary" class="hint">Loading passes…</p>
+          </div>
+        </div>
+
+        <details class="attach-section">
+          <summary>Attach an existing order</summary>
+          <form id="attach-form" class="stack-form">
+            <div class="field">
+              <label for="attach-reference">Order reference</label>
+              <input id="attach-reference" name="orderRef" maxlength="80" autocomplete="off" spellcheck="false" required>
+              <p class="hint">Attach the API plan already enrolled with this order.</p>
+            </div>
+            <button type="submit">Attach pass</button>
+          </form>
+        </details>
+
+        <ul id="pass-list" class="pass-list" aria-label="Pass inventory"></ul>
+        <p id="inventory-empty" class="empty" hidden>No API passes are attached yet. Attach an enrolled order to begin.</p>
+        <button id="passes-more" type="button" class="full-width" hidden>Load more passes</button>
+      </aside>
+
+      <div class="detail-column">
+        <section id="selection-empty" class="panel empty-selection">
+          <h2>Select a pass</h2>
+          <p>Choose a purchased pass to view its allowance, routes, and requests.</p>
+        </section>
+
+        <div id="pass-workspace" hidden>
+          <section id="pass-detail" class="panel" aria-labelledby="pass-title">
+            <div class="section-heading">
+              <div>
+                <p id="pass-reference" class="eyebrow mono"></p>
+                <h2 id="pass-title" tabindex="-1"></h2>
+              </div>
+              <span id="pass-access-state" class="badge"></span>
+            </div>
+            <dl class="metrics">
+              <div><dt>Allowance</dt><dd id="metric-allowance">—</dd></div>
+              <div><dt>Consumed</dt><dd id="metric-consumed">—</dd></div>
+              <div><dt>Reserved</dt><dd id="metric-reserved">—</dd></div>
+              <div><dt>Available</dt><dd id="metric-available">—</dd></div>
+            </dl>
+            <p class="hint">Values are allowance units. Each route below has its own unit cost.</p>
+            <dl class="metadata">
+              <div><dt>Payment entitlement</dt><dd id="native-state"></dd></div>
+              <div><dt>Access expires</dt><dd id="access-expiry"></dd></div>
+              <div><dt>Enrolled plan</dt><dd id="manifest-state"></dd></div>
+            </dl>
+            <h3>Purchased routes</h3>
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">Routes included in the selected purchased pass</caption>
+                <thead><tr><th scope="col">Route</th><th scope="col">Method / path</th><th scope="col" class="numeric">Units</th><th scope="col">Gateway</th></tr></thead>
+                <tbody id="route-rows"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel" aria-labelledby="access-title">
+            <div class="section-heading">
+              <div><h2 id="access-title">Access controls</h2><p id="access-revision" class="hint"></p></div>
+            </div>
+            <form id="access-form" class="stack-form">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="access-action">Change</label>
+                  <select id="access-action" name="action">
+                    <option value="suspend">Suspend access</option>
+                    <option value="resume">Resume access</option>
+                    <option value="expire">Set expiry</option>
+                    <option value="clear-expiry">Remove expiry</option>
+                  </select>
+                </div>
+                <div id="expiry-field" class="field" hidden>
+                  <label for="access-expires">Expiry date and time</label>
+                  <input id="access-expires" type="datetime-local" step="1">
+                  <p id="expiry-zone" class="hint"></p>
+                </div>
+              </div>
+              <div class="field">
+                <label for="access-reason">Reason</label>
+                <textarea id="access-reason" maxlength="500" rows="2" required></textarea>
+              </div>
+              <div class="form-footer">
+                <p class="hint">The change applies to new API requests and retrieval of saved results.</p>
+                <button id="access-submit" type="submit">Apply access change</button>
+              </div>
+            </form>
+          </section>
+
+          <section id="calls-panel" class="panel" aria-labelledby="calls-title">
+            <div class="section-heading">
+              <div><h2 id="calls-title">Request history</h2><p id="calls-summary" class="hint"></p></div>
+              <button id="refresh-calls" type="button">Refresh requests</button>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <caption class="sr-only">API requests for the selected pass</caption>
+                <thead><tr><th scope="col">Request</th><th scope="col">Route</th><th scope="col">State</th><th scope="col" class="numeric">Units</th><th scope="col">Result</th></tr></thead>
+                <tbody id="call-rows"></tbody>
+              </table>
+            </div>
+            <p id="calls-empty" class="empty" hidden>This pass has no API requests yet.</p>
+            <button id="calls-more" type="button" class="full-width" hidden>Load more requests</button>
+          </section>
+
+          <section id="request-detail" class="panel" aria-labelledby="request-title" hidden>
+            <div class="section-heading">
+              <div><p class="eyebrow">Selected request</p><h2 id="request-title" class="mono" tabindex="-1"></h2></div>
+              <span id="request-state" class="badge"></span>
+            </div>
+            <dl class="metadata">
+              <div><dt>Route</dt><dd id="request-route"></dd></div>
+              <div><dt>Started</dt><dd id="request-started"></dd></div>
+              <div><dt>Execution deadline</dt><dd id="request-deadline"></dd></div>
+              <div><dt>Revision</dt><dd id="request-revision"></dd></div>
+              <div><dt>Last outcome</dt><dd id="request-outcome"></dd></div>
+              <div><dt>Saved result</dt><dd id="request-result"></dd></div>
+            </dl>
+            <p id="resolution-note" class="hint"></p>
+            <form id="resolve-form" class="stack-form" hidden>
+              <h3>Resolve interrupted work</h3>
+              <div class="field">
+                <label for="resolve-decision">Observed upstream outcome</label>
+                <select id="resolve-decision">
+                  <option value="consume">Work was performed — consume reserved units</option>
+                  <option value="release">Work was not performed — release reserved units</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="resolve-reason">Reason and outcome reference</label>
+                <textarea id="resolve-reason" maxlength="500" rows="3" required></textarea>
+                <p class="hint">Describe the actual upstream outcome used for this decision.</p>
+              </div>
+              <div class="form-footer">
+                <p id="resolve-revision" class="hint"></p>
+                <button id="resolve-submit" type="submit">Record resolution</button>
+              </div>
+            </form>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer class="app-footer">Starforge merchant API console <span>Local operator workspace</span></footer>
+  <noscript><p class="noscript">Enable JavaScript to use the merchant console.</p></noscript>
+</body>
+</html>

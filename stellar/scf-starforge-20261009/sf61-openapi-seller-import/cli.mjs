@@ -7,7 +7,10 @@ import { importOpenApi } from './importer.mjs';
 import { parseOpenApiSource } from './source-document.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
 
-export async function run(args = process.argv.slice(2)) {
+export async function run(args = process.argv.slice(2), {report = true} = {}) {
+  if (args[0] === 'har') return (await import('./har/cli.mjs')).runHarCLI(args.slice(1));
+  if (args[0] === 'postman') return (await import('./postman/cli.mjs')).runPostmanCLI(args.slice(1));
+  if (args[0] === 'weather') return (await import('./openweather/cli.mjs')).main(args.slice(1));
   if (args[0] === 'refresh') return (await import('./refresh-cli.mjs')).run(args.slice(1));
   if (args[0] === 'source')
     return (await import('./source-bundle-cli.mjs')).runSourceBundleCLI(args.slice(1));
@@ -96,7 +99,7 @@ export async function run(args = process.argv.slice(2)) {
   if (serviceBytes) await writeFile(resolve(output, 'seller-service.json'), serviceBytes, { flag: 'wx', mode: 0o600 });
   if (upstreamBytes) await writeFile(resolve(output, 'upstreams.json'), upstreamBytes, { flag: 'wx', mode: 0o600 });
   await writeFile(resolve(output, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
-  process.stdout.write(JSON.stringify({ output, operations: compiled.offers.length, paymentsInitiated: 0 }) + '\n');
+  if (report) process.stdout.write(JSON.stringify({ output, operations: compiled.offers.length, paymentsInitiated: 0 }) + '\n');
   return manifest;
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
