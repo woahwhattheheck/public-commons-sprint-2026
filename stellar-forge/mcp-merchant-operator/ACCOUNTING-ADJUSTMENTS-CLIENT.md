@@ -96,6 +96,8 @@ starforge merchant-accounting-adjustments reconcile --dir ./merchant-operations/
 
 The original controller stores its verification job before the read. The client checkpoints the send boundary before calling it, retains the returned job UUID, and reads that same job on reopening. If a response is lost before the UUID arrives, it searches the selected adjustment's retained jobs by the exact transaction. It verifies a stable revision while paging, preserving the original jobs' identities and order. A changed inventory asks for another current read instead of silently treating a missing page as absence.
 
+The original controller may apply a valid proof already on disk when it reconciles a saved job. This updates that original job and refund record using the saved result. It does not start another RPC or submit another request; the customer also saves its observation in the local journal.
+
 `reconcile` never calls verification. A repeated `execute` first reconciles the original operation. After an uncertain verification send, it continues to inspect that original attempt rather than issuing another native read. This matters because the native engine deduplicates active/completed attempts, while a genuinely failed read may be explicitly retried.
 
 To adopt a known original job, prepare with `--job-id "$JOB_ID"`. That operation only reads the selected job, even if invoked with `execute`. To explicitly retry a retained FAILED or INTERRUPTED job, inspect its original error, any recovered proof and current workspace revision, then prepare a new operation with `--after-job-id "$FAILED_JOB_ID"`. The predecessor must belong to this same refund and transaction. A caller timeout alone does not establish a failed native job.
