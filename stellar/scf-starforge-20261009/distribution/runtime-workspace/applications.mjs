@@ -58,6 +58,14 @@ export const APPLICATION_CATALOG = Object.freeze([
     fields: [field('stateDirectory', 'Original private object buyer state', 'path', true), field('profileFile', 'Original product profile'),
       field('operatorSettings', 'Original operator settings file'), field('analysisPython', 'Analysis Python executable'),
       field('terminalPython', 'Terminal Python executable', 'path', false, 'Defaults to /usr/bin/python3; the original managed worker supplies the terminal.'), ...common] },
+  { id: 'goldrush', command: 'goldrush',
+    requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/examples/goldrush-stellar-pilot/workbench.mjs',
+    title: 'GoldRush wallet research', terminal: true,
+    description: 'Reopen the original wallet, saved requests, source comparisons and notes. Execution uses its original buyer and connected terminal.',
+    fields: [field('stateDirectory', 'Initialized GoldRush workspace', 'path', true),
+      field('referenceFile', 'Original observation manifest'),
+      field('terminalPython', 'Terminal Python executable', 'path', false,
+        'Defaults to /usr/bin/python3; uses the existing managed PTY.'), ...common] },
   { id: 'commerce', command: 'commerce-console', title: 'Commerce session', terminal: true,
     description: 'Reopen an initialized original commerce session. Its buyer approval remains in the connected original terminal.',
     fields: [field('directory', 'Initialized commerce session', 'path', true), field('finalityNode', 'Finality Node executable'),
@@ -95,6 +103,20 @@ async function inputPath(value, type = 'directory', missing = false, privateOnly
     if (info.size <= 4 * 1024 * 1024) valueInfo.sha256 = digest(await regular(path, 4 * 1024 * 1024));
   }
   return valueInfo;
+}
+async function selectedExecutable(value) {
+  const executable = absolute(value);
+  need(await realpath(dirname(executable)) === dirname(executable), 'APPLICATION_REAL_PARENT_REQUIRED');
+  const info = await lstat(executable);
+  need(info.isFile() || info.isSymbolicLink(), 'APPLICATION_EXECUTABLE_REQUIRED');
+  const target = await realpath(executable), inputs = [await inputPath(target, 'file')];
+  if (info.isSymbolicLink()) inputs.push({ path: executable, kind: 'executable-link', exists: true,
+    target, dev: info.dev, ino: info.ino, mtimeMs: info.mtimeMs, ctimeMs: info.ctimeMs });
+  const configuration = join(dirname(dirname(executable)), 'pyvenv.cfg');
+  try { inputs.push(await inputPath(configuration, 'file')); }
+  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  await access(executable, constants.X_OK);
+  return { executable, inputs };
 }
 function normalizeSettings(type, input) {
   need(plain(input) && Object.keys(input).every(name => type.fields.some(field => field.name === name)), 'APPLICATION_SETTINGS_INVALID');
@@ -172,11 +194,29 @@ async function applicationCommand(type, settings) {
     }
     let analysisPython;
     if (settings.analysisPython) {
-      analysisPython = await realpath(settings.analysisPython);
-      inputs.push(await inputPath(analysisPython, 'file')); await access(analysisPython, constants.X_OK);
+      const selected = await selectedExecutable(settings.analysisPython);
+      analysisPython = selected.executable; inputs.push(...selected.inputs);
     }
     option('--state', settings.stateDirectory); option('--profile', settings.profileFile);
     option('--operator-settings', settings.operatorSettings); option('--analysis-python', analysisPython);
+  } else if (type.id === 'goldrush') {
+    await path('stateDirectory', 'directory', false, true);
+    const configFile = join(settings.stateDirectory, 'workbench.json');
+    inputs.push(await inputPath(configFile, 'file'));
+    const original = await readJSON(configFile);
+    need(original.schema === 'stellar-forge.goldrush-workbench.v1' &&
+      typeof original.id === 'string' && typeof original.release === 'string' &&
+      typeof original.buyerState === 'string' && typeof original.inbox === 'string' &&
+      !(original.workspace && original.profile), 'APPLICATION_GOLDRUSH_BINDING_CHANGED');
+    inputs.push(await inputPath(original.release, 'directory'));
+    for (const key of ['buyerState', 'inbox'])
+      inputs.push(await inputPath(original[key], 'directory', false, true));
+    if (original.workspace) inputs.push(await inputPath(original.workspace, 'directory', false, true));
+    if (original.profile) inputs.push(await inputPath(original.profile, 'file'));
+    const reference = settings.referenceFile ?? original.referenceFile;
+    if (reference) inputs.push(await inputPath(reference, 'file'));
+    args.push('workbench', '--state', settings.stateDirectory);
+    option('--reference-file', settings.referenceFile);
   } else if (type.id === 'commerce') {
     await path('directory', 'directory', false, true); await path('recoveryConfig', 'file');
     const finalityNode = settings.finalityNode ? await realpath(settings.finalityNode) : null;

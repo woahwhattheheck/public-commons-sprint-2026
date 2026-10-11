@@ -87,6 +87,13 @@ export function observeApplicationOutput(request, directory) {
       const match = text.match(new RegExp('"' + field + '"\\s*:\\s*"([^"]+)"'));
       if (match) candidate = match[1];
     }
+    if (request.command === 'goldrush' && request.args[0] === 'workbench') {
+      try {
+        const ready = JSON.parse(text), stateIndex = request.args.indexOf('--state');
+        if (ready.status === 'GOLDRUSH_WORKBENCH_READY' && stateIndex >= 0 &&
+            ready.state === request.args[stateIndex + 1] && typeof ready.url === 'string') candidate = ready.url;
+      } catch {}
+    }
     const url = candidate && privateUrl(candidate);
     if (!url) return;
     seen = true;
