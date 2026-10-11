@@ -11,7 +11,7 @@
 <body>
   <header>
     <div class="eyebrow">STELLAR FORGE / SCF SF70 / PUBLIC-ORIGIN READ ONLY</div>
-    <h1>One desk. Two native Bazaa﻿rs.</h1>
+    <h1>One desk. Two native Bazaars.</h1>
     <p>Browse independently published Stellar x402 resource advertisements from Vellar and Periplo side by side. Each price, asset and recipient stays attached to its original source and offer.</p>
     <div class="warning">Discovery does not authorize purchases. This page does not contact merchants or verify payments, chain finality, seller ownership, or equivalent offerings.</div>
   </header>
@@ -23,6 +23,13 @@
       <div class="stat"><strong id="time">—</strong><span>Capture time (local)</span></div>
     </section>
     <section id="sources" class="sources" aria-label="Native source coverage"></section>
+    <section id="shortlist" class="shortlist" aria-labelledby="shortlist-heading">
+      <div class="shortlist-top"><div><div class="eyebrow">YOUR COMPARISON</div><h2 id="shortlist-heading" tabindex="-1">Compare selected options <span id="shortlist-count">0 / 6</span></h2></div><a class="text-link" href="#filters">Browse offers ↓</a></div>
+      <p class="match">Keep up to six options while searching across both providers. Compare each declared operation and its complete payment tuple. Selections survive catalog refreshes and filter changes. Reloading or closing this page clears them; save review JSON to keep a copy.</p>
+      <div class="shortlist-actions"><button id="shortlist-export" type="button" disabled>Save review JSON</button><button id="shortlist-clear" type="button" disabled>Clear comparison</button><button id="shortlist-undo" type="button" hidden>Undo removal</button></div>
+      <p id="shortlist-status" class="match" role="status" aria-live="polite"></p>
+      <div id="shortlist-content"></div>
+    </section>
     <section class="delta" aria-label="Native source changes">
       <h2>Changes since previous live capture</h2>
       <p id="delta-status" class="match" aria-live="polite">First capture is loading. Refresh to compare.</p>
@@ -35,6 +42,7 @@
       <button id="refresh" type="button">Refresh genuine GETs</button>
       <button id="export-csv" type="button" disabled>Export matching offers CSV</button>
     </form>
+    <a id="compare-link" class="compare-link" href="#shortlist-heading">Compare selected (0) ↑</a>
     <p id="export-status" class="match" role="status" aria-live="polite"></p>
     <p id="matches" class="match" aria-live="polite"></p>
     <section id="results" class="cards" aria-label="Source-backed resource advertisements"></section>
