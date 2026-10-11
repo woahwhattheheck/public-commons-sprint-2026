@@ -1,7 +1,8 @@
 // MIT. Node HTTP integration for original SF30 offers and the native x402 server.
 // This adapter implements no payment scheme, signature verifier or chain client.
-import { compileHttpSellerOffer, paymentRequiredResponse } from './seller.mjs';
+import { compileHttpSellerOffer, paymentRequiredResponse, MAX_PAYMENT_OPTIONS } from './seller.mjs';
 import { validateHeaderName, validateHeaderValue } from 'node:http';
+import { isDeepStrictEqual } from 'node:util';
 import { evaluateAdmission, validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
@@ -17,9 +18,9 @@ const fault = (message, status = 400) => Object.assign(new Error(message), { sta
 /** Validate an original compiled offer without reducing its input schema. */
 function importedOffer(raw, allowLocalhost) {
   if (!plain(raw) || raw.x402Version !== 2 || !plain(raw.resource) ||
-      !Array.isArray(raw.accepts) || raw.accepts.length !== 1 ||
+      !Array.isArray(raw.accepts) || raw.accepts.length < 1 || raw.accepts.length > MAX_PAYMENT_OPTIONS ||
       !plain(raw.extensions) || Object.keys(raw.extensions).some(key => key !== 'bazaar')) {
-    throw new TypeError('Imported service offer requires x402 v2, one exact payment and Bazaar only');
+    throw new TypeError(`Imported service offer requires x402 v2, 1–${MAX_PAYMENT_OPTIONS} exact payments and Bazaar only`);
   }
   const offer = structuredClone(raw), bazaar = offer.extensions.bazaar;
   const input = bazaar?.info?.input;
@@ -31,13 +32,15 @@ function importedOffer(raw, allowLocalhost) {
     url: offer.resource.url, method: input.method,
     description: offer.resource.description ?? 'Imported API resource',
     serviceName: offer.resource.serviceName, tags: offer.resource.tags,
-    payment: offer.accepts[0],
+    paymentOptions: offer.accepts,
     ...(input.method === 'POST' ? { bodyType: 'json', body: input.body } : {}),
   }, { allowLocalhost });
-  const terms = checked.accepts[0], original = offer.accepts[0];
   if (checked.resource.url !== offer.resource.url ||
-      Object.keys(original).length !== Object.keys(terms).length ||
-      Object.entries(terms).some(([key, value]) => original[key] !== value)) {
+      checked.accepts.some((terms, index) => {
+        const original = offer.accepts[index];
+        return Object.keys(original).length !== Object.keys(terms).length ||
+          Object.entries(terms).some(([key, value]) => !isDeepStrictEqual(original[key], value));
+      })) {
     throw new TypeError('Imported offer contains noncanonical URL or unsupported payment terms');
   }
   if (offer.resource.mimeType !== undefined &&
@@ -76,6 +79,7 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       throw new TypeError('Seller service requires a fixed-path definition');
     const offer = originalOffer === undefined ? compileHttpSellerOffer(definition, { allowLocalhost }) :
       importedOffer(originalOffer, allowLocalhost);
+    paymentRequiredResponse(offer); // Validate the whole multi-option header before serving or native setup.
     const method = offer.extensions.bazaar.info.input.method;
     if (!METHODS.has(method) || (method === 'POST' && offer.extensions.bazaar.info.input.bodyType !== 'json')) {
       throw new TypeError('Seller service supports GET, HEAD and JSON POST only');
@@ -84,7 +88,6 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
     const path = binding.path;
     const key = `${method} ${path}`;
     if (Object.hasOwn(nativeRoutes, key)) throw new TypeError('Duplicate method/path');
-    const accepted = offer.accepts[0];
     nativeRoutes[key] = {
       // Native x402 uses the trusted adapter URL when resource is omitted.
       // Fixed paths can carry queries too; bind every request to its exact URL.
@@ -92,9 +95,10 @@ export function compileSellerRoutes(definitions, { allowLocalhost = false } = {}
       mimeType: offer.resource.mimeType,
       ...(offer.resource.serviceName ? { serviceName: offer.resource.serviceName } : {}),
       ...(offer.resource.tags ? { tags: [...offer.resource.tags] } : {}),
-      accepts: [{ scheme: accepted.scheme, network: accepted.network,
-        payTo: accepted.payTo, price: { asset: accepted.asset, amount: accepted.amount },
-        maxTimeoutSeconds: accepted.maxTimeoutSeconds }],
+      accepts: offer.accepts.map(accepted => ({ scheme: accepted.scheme, network: accepted.network,
+        payTo: accepted.payTo, price: { asset: accepted.asset, amount: accepted.amount,
+          ...(accepted.extra === undefined ? {} : { extra: structuredClone(accepted.extra) }) },
+        maxTimeoutSeconds: accepted.maxTimeoutSeconds })),
       extensions: structuredClone(offer.extensions),
     };
     ids.add(id); origins.add(url.origin);

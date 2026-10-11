@@ -1,9 +1,12 @@
 import { isIP } from 'node:net';
+import { isDeepStrictEqual } from 'node:util';
 // MIT — SF-30. Seller-side declarative x402 v2 Bazaar metadata for HTTP endpoints.
 // This prepares a PaymentRequired offer; only the canonical facilitator may
 // authenticate payment, verify finality and promote a listing to a trusted catalog.
 const DRAFT = 'https://json-schema.org/draft/2020-12/schema';
 const SOROBAN_I128_MAX = (1n << 127n) - 1n;
+export const MAX_PAYMENT_OPTIONS = 16;
+const PAYMENT_FIELDS = ['scheme', 'network', 'amount', 'asset', 'payTo', 'maxTimeoutSeconds', 'extra'];
 const METHODS = new Set(['GET', 'HEAD', 'DELETE', 'POST', 'PUT', 'PATCH']);
 const BODY = new Set(['POST', 'PUT', 'PATCH']);
 const TYPES = new Set(['string', 'integer', 'number', 'boolean']);
@@ -105,6 +108,46 @@ function parameters(input, method) {
     additionalProperties: false,
   } };
 }
+function paymentExtra(value) {
+  if (!plain(value)) throw new TypeError('Payment extra must be a JSON object');
+  const active = new Set();
+  let nodes = 0, textLength = 0;
+  const inspect = (item, depth) => {
+    if (++nodes > 4096 || depth > 32) throw new TypeError('Payment extra is too complex');
+    if (item === null || typeof item === 'boolean') return;
+    if (typeof item === 'string') {
+      textLength += item.length;
+      if (textLength > 8192) throw new RangeError('Payment extra exceeds 8192 bytes');
+      return;
+    }
+    if (typeof item === 'number' && Number.isFinite(item)) return;
+    if (typeof item !== 'object' || item === null || active.has(item))
+      throw new TypeError('Payment extra must contain only finite JSON values');
+    const array = Array.isArray(item), prototype = Object.getPrototypeOf(item);
+    if (prototype !== (array ? Array.prototype : Object.prototype) &&
+        !(prototype === null && !array)) throw new TypeError('Payment extra must contain only JSON objects and arrays');
+    const keys = Reflect.ownKeys(item);
+    if (array && (keys.length !== item.length + 1 ||
+        keys.some(key => key !== 'length' && (typeof key !== 'string' || !/^(0|[1-9][0-9]*)$/.test(key) || Number(key) >= item.length))))
+      throw new TypeError('Payment extra arrays must be dense JSON arrays');
+    active.add(item);
+    for (const key of keys) {
+      if (array && key === 'length') continue;
+      const descriptor = Object.getOwnPropertyDescriptor(item, key);
+      if (typeof key !== 'string' || !descriptor.enumerable || !hasOwn(descriptor, 'value'))
+        throw new TypeError('Payment extra must contain only enumerable JSON values');
+      textLength += key.length;
+      if (textLength > 8192) throw new RangeError('Payment extra exceeds 8192 bytes');
+      inspect(descriptor.value, depth + 1);
+    }
+    active.delete(item);
+  };
+  inspect(value, 0);
+  if (Buffer.byteLength(JSON.stringify(value)) > 8192)
+    throw new RangeError('Payment extra exceeds 8192 bytes');
+  return copy(value);
+}
+
 function terms(payment) {
   obj(payment);
   if (!['stellar:testnet', 'stellar:pubnet'].includes(payment.network))
@@ -123,15 +166,38 @@ function terms(payment) {
   // Address checksum, SEP-41 asset contract and seller ownership are intentionally
   // NOT purported to be verified by this schema helper; that is the payment SDK boundary.
   return { scheme: 'exact', network: payment.network, amount: payment.amount,
-    asset: payment.asset, payTo: payment.payTo, maxTimeoutSeconds: payment.maxTimeoutSeconds };
+    asset: payment.asset, payTo: payment.payTo, maxTimeoutSeconds: payment.maxTimeoutSeconds,
+    ...(hasOwn(payment, 'extra') ? { extra: paymentExtra(payment.extra) } : {}) };
 }
+
+/** Keep each quoted network/asset/payee/amount together, in merchant order. */
+function paymentOptions(input) {
+  const single = hasOwn(input, 'payment'), multiple = hasOwn(input, 'paymentOptions');
+  if (single === multiple) throw new TypeError('Choose payment or paymentOptions, not both');
+  const supplied = multiple ? input.paymentOptions : [input.payment];
+  if (!Array.isArray(supplied) || supplied.length < 1 || supplied.length > MAX_PAYMENT_OPTIONS)
+    throw new TypeError(`One to ${MAX_PAYMENT_OPTIONS} complete payment options required`);
+  const identities = new Set();
+  return supplied.map(payment => {
+    if (multiple && (!plain(payment) || Reflect.ownKeys(payment).some(key => !PAYMENT_FIELDS.includes(key))))
+      throw new TypeError('Payment option contains unsupported fields');
+    const accepted = terms(payment);
+    // A single rail/payee with several prices or timeouts cannot be selected
+    // unambiguously by the original buyer's network/asset/payee policy.
+    const identity = JSON.stringify([accepted.scheme, accepted.network, accepted.asset, accepted.payTo]);
+    if (identities.has(identity)) throw new TypeError('Duplicate payment network, asset and payTo option');
+    identities.add(identity);
+    return accepted;
+  });
+}
+
 export function compileHttpSellerOffer(input, { allowLocalhost = false } = {}) {
   obj(input);
   const method = String(input.method ?? '').toUpperCase();
   if (!METHODS.has(method)) throw new TypeError('Unsupported HTTP method');
   const url = resourceUrl(input.url, allowLocalhost);
   const metadata = serviceMetadata(input);
-  const accepted = terms(input.payment);
+  const accepts = paymentOptions(input);
   const { inputInfo, inputSchema } = parameters(input, method);
   if (input.routeTemplate !== undefined) {
     const tpl = input.routeTemplate;
@@ -160,7 +226,7 @@ export function compileHttpSellerOffer(input, { allowLocalhost = false } = {}) {
     x402Version: 2, error: 'Payment required',
     resource: { url, description: requiredString(input.description, 'description', 2048),
       mimeType: 'application/json', ...metadata },
-    accepts: [accepted], extensions: { bazaar: extension },
+    accepts, extensions: { bazaar: extension },
   };
   if (Buffer.byteLength(JSON.stringify(schema)) > 32768) throw new TypeError('Schema too large');
   return copy(offer);
@@ -191,18 +257,28 @@ export function paymentRequiredResponse(offer) {
 export function auditCatalogVisibility(body, offer) {
   const rows = body?.resources;
   if (!Array.isArray(rows)) throw new TypeError('Invalid discovery response');
-  const expected = offer?.accepts?.[0];
+  const expected = offer?.accepts;
   const eInput = offer?.extensions?.bazaar?.info?.input;
   const eURL = offer?.resource?.url;
-  if (!expected || !eInput || !eURL) throw new TypeError('Invalid seller offer');
+  if (!Array.isArray(expected) || !expected.length || !expected.every(plain) || !eInput || !eURL)
+    throw new TypeError('Invalid seller offer');
   const matches = rows.filter(r => r?.resource?.url === eURL &&
     r?.extensions?.bazaar?.info?.input?.type === 'http' &&
     r?.extensions?.bazaar?.info?.input?.method === eInput.method);
-  const verified = matches.some(r => (r.accepts || []).some(a =>
-    ['network', 'scheme', 'asset', 'amount', 'payTo'].every(k => a?.[k] === expected[k])));
+  const sameTerms = (actual, wanted) => PAYMENT_FIELDS.every(key =>
+    isDeepStrictEqual(actual?.[key], wanted[key]));
+  // All options must occur in one actual resource row. Do not combine halves
+  // of independently observed offers into a payment quote the seller never made.
+  const verified = matches.some(r => Array.isArray(r.accepts) &&
+    r.accepts.length === expected.length && expected.every(wanted =>
+      r.accepts.filter(actual => sameTerms(actual, wanted)).length === 1));
+  const paymentOptions = expected.map((wanted, index) => ({
+    index, ...copy(wanted),
+    visible: matches.some(r => Array.isArray(r.accepts) && r.accepts.some(actual => sameTerms(actual, wanted))),
+  }));
   return { visible: matches.length > 0, termsMatch: verified,
     decision: !matches.length ? 'NOT_INDEXED' : verified ? 'VISIBLE_TERMS_MATCH_UNVERIFIED' : 'TERMS_DRIFT',
-    matchingRows: matches.length, settlementAuthenticated: false };
+    matchingRows: matches.length, paymentOptions, settlementAuthenticated: false };
 }
 
 /** Probe an explicitly supplied loopback baseURL, never an arbitrary URL. */
@@ -213,7 +289,9 @@ export async function probeLocalVisibility(baseUrl, offer) {
     throw new TypeError('Only explicit http://127.0.0.1:PORT/ catalog is permitted');
   const path = new URL('/discovery/resources', u);
   path.searchParams.set('type', 'http');
-  path.searchParams.set('network', offer.accepts[0].network);
+  const networks = new Set(offer.accepts.map(option => option.network));
+  // Filtering by the first network could hide the other offered choices.
+  if (networks.size === 1) path.searchParams.set('network', [...networks][0]);
   path.searchParams.set('limit', '100');
   let offset = 0, pages = 0, matches = [];
   while (pages++ < 100) {
