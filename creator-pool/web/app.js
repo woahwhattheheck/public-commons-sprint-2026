@@ -1343,13 +1343,109 @@ function sponsorBudgetPanel(c) {
     h("p", { class: "sponsor-ledger-footnote", text: "These are contract-reported balances in the selected network, not a wallet balance or a promise of a pending transaction. The campaign contract still enforces every approval, claim and close." }));
 }
 
+// Original contract readback controls eligibility; only a human chooses work.
+function sponsorSelectionEligibility(c, s) {
+  if (!c || !s || s.campaignId !== c.id) return { error: "Selection is missing from current state." };
+  if (c.closed || s.status !== "submitted") return { error: "Only submitted work on an unclosed campaign may be approved." };
+  const auth = sponsorGate(c);
+  if (!auth.ok) return { error: auth.reason };
+  const p = poolBalance(c);
+  if (p.state !== "balanced") return { error: "Pool accounting is incomplete or inconsistent." };
+  const reward = c.rewardAtomic === null ? 0n : BigInt(c.rewardAtomic);
+  if (reward <= 0n) return { error: "Contract reward must be positive." };
+  if (p.available < reward) return { error: "Insufficient available funds to reserve one reward." };
+  return { free: p.available - reward, reserved: p.reserved + reward,
+    fingerprint: JSON.stringify([ui.state.chainId, ui.state.assetAddress, ui.state.assetDecimals,
+      c.id, c.sponsor, c.status, c.closed, c.rewardAtomic, c.fundedAtomic, c.availableAtomic,
+      c.reservedAtomic, c.paidAtomic, c.refundedAtomic, s.id, s.status,
+      s.creator && s.creator.address, s.metadataMatches, s.workUrl]) };
+}
+
+function sponsorApprovalReview(c, sub) {
+  const panel = h("div", {}, h("p", { class: "action-note", text: "Reading original pool and submission state…" }));
+  openDrawer("Sponsor work selection", panel);
+  async function reload(note) {
+    try {
+      const state = normalizeState(await Api.getState());
+      if (!panel.isConnected) return;
+      ui.state = state; reconcileActor(); renderAll();
+      const cc = state.campaigns.find(x => x.id === c.id);
+      const ss = state.submissions.find(x => x.id === sub.id);
+      const eligibility = sponsorSelectionEligibility(cc, ss);
+      const view = [];
+      if (note) view.push(h("p", { class: "action-note", role: "status", text: note }));
+      if (eligibility.error) {
+        view.push(h("p", { class: "action-note", role: "status", text: eligibility.error }));
+      } else {
+        const link = ss.metadataMatches === false ? null : safeHttpUrl(ss.workUrl);
+        view.push(
+          h("h3", { text: ss.metadataMatches === false ? "Submission details unavailable" : (ss.title || "Untitled work") }),
+          h("p", { class: "muted small", text: "Campaign " + cc.id + " · submission " + ss.id }),
+          h("p", { class: "muted small", text: "Creator " +
+            (ss.creator && (ss.creator.address || ss.creator.label) || "not reported") }),
+          link ? h("a", { href: link.href, target: "_blank", rel: "noopener noreferrer" }, "Inspect submitted work") :
+            h("p", { class: "action-note", text: "The work link is unavailable. Review the original submission." }),
+          h("div", { class: "sponsor-ledger-legend" },
+            h("div", { class: "sponsor-ledger-item" }, "Available now: ",
+              h("strong", { text: fmtWithUnit(cc.availableAtomic) })),
+            h("div", { class: "sponsor-ledger-item" }, "Selecting reserves: ",
+              h("strong", { text: fmtWithUnit(cc.rewardAtomic) })),
+            h("div", { class: "sponsor-ledger-item" }, "Available after: ",
+              h("strong", { text: fmtWithUnit(eligibility.free.toString()) })),
+            h("div", { class: "sponsor-ledger-item" }, "Reserved after: ",
+              h("strong", { text: fmtWithUnit(eligibility.reserved.toString()) }))),
+          h("p", { class: "action-note", text: "Approval reserves the selected reward; it does NOT pay the creator. The creator claims separately, including after campaign close." })
+        );
+        const button = h("button", { type: "button", class: "btn primary",
+          onClick: async () => {
+            if (button.disabled) return;
+            button.disabled = true;
+            button.textContent = "Rechecking original state…";
+            try {
+              const latest = normalizeState(await Api.getState());
+              if (!panel.isConnected) return;
+              ui.state = latest; reconcileActor(); renderAll();
+              const freshC = latest.campaigns.find(x => x.id === c.id);
+              const freshS = latest.submissions.find(x => x.id === sub.id);
+              const freshDecision = sponsorSelectionEligibility(freshC, freshS);
+              if (freshDecision.error || freshDecision.fingerprint !== eligibility.fingerprint) {
+                await reload("On-chain state or work details changed. Re-review before selecting.");
+                return;
+              }
+              closeDrawer();
+              await doApprove(freshC, freshS); // original idempotent contract and wallet path
+            } catch (error) {
+              if (panel.isConnected) await reload("Cannot confirm live state: " +
+                (error && error.message || "unavailable") + ". Nothing approved.");
+            } finally {
+              if (button.isConnected) { button.disabled = false; button.textContent = "Confirm selection and reserve"; }
+            }
+          } }, "Confirm selection and reserve");
+        view.push(button);
+      }
+      view.push(h("button", { type: "button", class: "btn ghost small",
+        onClick: () => void reload() }, "Refresh balances"));
+      view.push(h("button", { type: "button", class: "btn ghost small",
+        onClick: closeDrawer }, "Keep unselected"));
+      if (panel.isConnected) panel.replaceChildren(...view);
+    } catch (error) {
+      if (panel.isConnected) panel.replaceChildren(
+        h("p", { role: "status", class: "action-note", text:
+          "No action sent; source refresh failed: " + (error && error.message || "unavailable") }),
+        h("button", { type: "button", class: "btn ghost", onClick: () => void reload() }, "Retry readback"),
+        h("button", { type: "button", class: "btn ghost", onClick: closeDrawer }, "Keep unselected"));
+    }
+  }
+  void reload();
+}
+
 function approvalReserveAction(c, sub) {
-  const remaining = (BigInt(c.availableAtomic) - BigInt(c.rewardAtomic)).toString(10);
-  return h("div", { class: "reserve-preview" },
-    h("p", { class: "reserve-preview-copy", text:
-      `This approval reserves ${fmtWithUnit(c.rewardAtomic)} for the creator and leaves ${fmtWithUnit(remaining)} free. The creator claims later, even after close.` }),
-    busyButton(`approve:${sub.id}`, `Approve · ${fmtWithUnit(c.rewardAtomic)}`, "primary small",
-      () => doApprove(c, sub), { busyLabel: "Approving…" }));
+  return h("div", { class: "reserve-preview" },
+    h("p", { class: "reserve-preview-copy", text: "Review work before reserving " +
+      fmtWithUnit(c.rewardAtomic) + ". Selection never happens automatically." }),
+    h("button", { type: "button", class: "btn primary small",
+      "data-focus-key": "approve-review:" + sub.id,
+      onClick: () => sponsorApprovalReview(c, sub) }, "Review selection"));
 }
 
 function figure(label, value, opts = {}) {
@@ -1715,7 +1811,7 @@ function renderSubmission(c, sub) {
   const mine = submissionIsMine(sub);
   const approvedish = /^approved$|reserved/.test(st);
   const paidish = /claimed|paid|settled/.test(st);
-  const submittedish = st === "submitted" || st === "" || /pend|review|new/.test(st);
+  const submittedish = st === "submitted";
 
   let action = null;
   if (sponsorView && !c.closed && submittedish) {
@@ -1723,7 +1819,11 @@ function renderSubmission(c, sub) {
     const underfunded = !balanceUnknown &&
       Amount.cmp(c.rewardAtomic, c.availableAtomic) > 0;
     const sg = sponsorGate(c);
-    action = balanceUnknown
+    action = poolBalance(c).state !== "balanced"
+
+      ? h("span", { class: "action-note", text: "Pool accounting must reconcile before approval." })
+
+      : balanceUnknown
       ? h("span", { class: "action-note", text: "Waiting for the pool balance before approval." })
       : underfunded
       ? h("span", { class: "action-note", text: "Available budget is below the reward — cannot approve." })
