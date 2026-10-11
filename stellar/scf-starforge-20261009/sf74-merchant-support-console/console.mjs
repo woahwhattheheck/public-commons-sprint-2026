@@ -7,6 +7,7 @@ const actionList = $('actions');
 const raw = $('raw-report');
 let latest = null;
 let latestBytes = null;
+let intakeRevision = 0;
 
 const line = (parent, tag, klass, text) => {
   const el = document.createElement(tag);
@@ -55,10 +56,22 @@ function show(report) {
   line(credentialRow, 'span', '', scope.browserCredentialed === true ? 'Required' : scope.browserCredentialed === false ? 'Not required' : 'Unknown');
   const safe = report.safeguards || {};
   $('safeguards').textContent = `Original report: ${safe.paidRequests ?? '?'} paid request(s), ${safe.walletCalls ?? '?'} wallet call(s), settlement confirmed ${safe.settlementConfirmed === true ? 'yes' : 'no'}. This is an unpaid merchant diagnosis.`;
+  preparePreflight(report);
 }
+
+form.addEventListener('input', () => {
+  intakeRevision++;
+  clearPreflight();
+  $('post-run').disabled = true;
+  $('post-status').textContent = 'Intake inputs changed. Run the diagnosis again before a preflight.';
+  status.textContent = 'Intake inputs changed. Run the diagnosis to capture this scope.';
+  status.className = 'status';
+});
 
 form.addEventListener('submit', async event => {
   event.preventDefault();
+  const revision = ++intakeRevision;
+  clearPreflight();
   const submit = $('run');
   submit.disabled = true;
   $('copy').disabled = true;
@@ -81,12 +94,14 @@ form.addEventListener('submit', async event => {
       headers: {'content-type': 'application/json'}, body: JSON.stringify(payload),
     });
     const data = await response.json();
+    if (revision !== intakeRevision) return;
     if (!response.ok) throw new Error((data.error || 'INTAKE_ERROR') + ': ' + (data.detail || response.status));
     if (!data.report || typeof data.report !== 'object') throw new Error('Original report was not returned');
     show(data.report);
     status.textContent = 'Original intake completed. Review original findings and terms before proposing any paid work.';
     status.className = 'status good';
   } catch (error) {
+    if (revision !== intakeRevision) return;
     status.textContent = 'Intake unavailable: ' + String(error.message).slice(0, 280) + '. No completion or paid checkout is claimed.';
     status.className = 'status error';
   } finally {submit.disabled = false;}
@@ -134,6 +149,9 @@ async function encodedFile(file) {
   if (!file || !file.size || file.size > 2_000_000)
     throw new Error('Each source must contain 1..2,000,000 bytes');
   const bytes = new Uint8Array(await file.arrayBuffer());
+  return encodeBytes(bytes);
+}
+function encodeBytes(bytes) {
   let binary = '';
   for (let offset = 0; offset < bytes.length; offset += 32768)
     binary += String.fromCharCode(...bytes.subarray(offset, offset + 32768));
@@ -218,4 +236,77 @@ compareForm.addEventListener('submit', async event => {
 });
 $('download-comparison').addEventListener('click', () => {
   if (comparisonBytes) download(comparisonBytes, 'merchant-repair-comparison.json');
+});
+
+let postBytes = null, postRevision = 0, postAbort = null;
+function clearPreflight() {
+  postRevision++;
+  postAbort?.abort();
+  postAbort = null;
+  postBytes = null;
+  $('post-output').hidden = true;
+  $('download-post').disabled = true;
+  $('post-permission').checked = false;
+}
+function preparePreflight(report) {
+  clearPreflight();
+  $('post-preflight').hidden = report.scope?.intendedRetryMethod !== 'POST';
+  $('post-run').disabled = false;
+  $('post-target').textContent = 'OPTIONS ' + report.scope.resource + ' · Buyer origin: ' +
+    report.scope.buyerOrigin + ' · Browser credentials: ' + (report.scope.browserCredentialed ? 'required' : 'not required');
+  $('post-status').textContent = 'Review this captured target and authorize its separate OPTIONS-only check.';
+  $('post-status').className = 'status';
+}
+$('post-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  if (!latestBytes || !$('post-permission').checked || $('post-run').disabled) return;
+  const source = latestBytes;
+  const revision = ++postRevision;
+  postAbort?.abort();
+  const controller = new AbortController();
+  postAbort = controller;
+  postBytes = null;
+  $('post-output').hidden = true;
+  $('download-post').disabled = true;
+  $('post-run').disabled = true;
+  $('post-status').textContent = 'Applying original SF72 eligibility; at most one authorized OPTIONS request…';
+  $('post-status').className = 'status busy';
+  try {
+    const response = await fetch('/api/post-preflight', {
+      method: 'POST', credentials: 'omit', cache: 'no-store', signal: controller.signal,
+      headers: {'content-type': 'application/json'},
+      body: JSON.stringify({intake: encodeBytes(new TextEncoder().encode(source)), permission: true}),
+    });
+    const data = await response.json();
+    if (revision !== postRevision || source !== latestBytes) return;
+    if (!response.ok) throw new Error(data.detail || data.error || 'Original preflight unavailable');
+    const report = data.report;
+    if (report?.schema !== 'stellar-forge.post-only-browser-preflight.v1') throw new Error('Original preflight was not returned');
+    postBytes = JSON.stringify(report, null, 2) + '\n';
+    $('raw-post').textContent = postBytes;
+    $('post-outcome').textContent = report.status;
+    $('post-findings').replaceChildren();
+    for (const finding of report.findings) {
+      const item = line($('post-findings'), 'li', '', '');
+      line(item, 'strong', '', finding.severity + ' · ' + finding.code);
+      line(item, 'p', '', finding.action);
+    }
+    if (!report.findings.length) line($('post-findings'), 'li', '', report.eligibility.ok
+      ? 'No original SF72 CORS findings. The POST payment challenge remains unchecked.' : report.eligibility.reason);
+    $('post-limits').textContent = report.limitations;
+    $('post-output').hidden = false;
+    $('download-post').disabled = false;
+    $('post-status').textContent = 'Original preflight complete: ' + report.operations.OPTIONS +
+      ' OPTIONS request(s). Download this SF72 result together with the unchanged intake JSON.';
+    $('post-status').className = 'status good';
+  } catch (error) {
+    if (revision !== postRevision || source !== latestBytes) return;
+    $('post-status').textContent = 'Preflight unavailable: ' + String(error.message).slice(0, 280);
+    $('post-status').className = 'status error';
+  } finally {
+    if (postAbort === controller) {postAbort = null; $('post-run').disabled = false; $('post-permission').checked = false;}
+  }
+});
+$('download-post').addEventListener('click', () => {
+  if (postBytes) download(postBytes, 'merchant-post-preflight.json');
 });
