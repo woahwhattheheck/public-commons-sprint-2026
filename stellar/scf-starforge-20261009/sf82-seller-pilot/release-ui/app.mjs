@@ -83,6 +83,7 @@ function renderDiff(value) {
     if (change.state !== 'CHANGED') {
       const route = change.after ?? change.before;
       section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', literal(route.payment)));
+      if (route.upstream) section.append(node('small', 'Original upstream configuration'), node('pre', literal(route.upstream)));
     }
     for (const field of change.fields) section.append(fieldPair(field.field, field.before, field.after));
     changes.append(section);

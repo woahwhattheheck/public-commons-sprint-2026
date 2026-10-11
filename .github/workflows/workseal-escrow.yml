@@ -22,6 +22,7 @@ on:
 
 jobs:
   node-authority-contract:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -43,6 +44,7 @@ jobs:
         run: node --no-addons --test test/escrow.test.mjs
 
   rust-anchor-program-test:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

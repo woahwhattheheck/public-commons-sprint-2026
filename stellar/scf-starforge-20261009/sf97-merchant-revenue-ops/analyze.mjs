@@ -8,6 +8,9 @@ import { readFile, mkdir, open } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
+import { normalizeSellerPaymentOptions } from '../sf30-seller-sdk/seller.mjs';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 import { run as runNativeReconciliation } from './native-reconcile.mjs';
 
 const SCHEMA = 'stellar-forge.merchant-revenue-ops.v1';
@@ -47,13 +50,18 @@ function methodFor(route) {
   return String(method).toUpperCase();
 }
 function priceMetadata(route) {
-  if (route.definition) {
-    const p = object(route.definition.payment, `route ${route.id}.definition.payment`);
-    return {scheme: p.scheme, network: p.network, asset: p.asset, atomicAmount: String(p.amount), payTo: p.payTo};
-  }
-  const a = route.offer?.accepts?.[0];
-  if (!a) throw new TypeError(`route ${route.id} has no offered payment terms`);
-  return {scheme:a.scheme, network:a.network, asset:a.asset, atomicAmount:String(a.amount), payTo:a.payTo};
+  if (own(route,'definition') === own(route,'offer'))
+    throw new TypeError(`route ${route.id} needs exactly one definition or imported offer`);
+  const input = own(route,'definition') ? object(route.definition, `route ${route.id}.definition`)
+    : {paymentOptions: object(route.offer, `route ${route.id}.offer`).accepts};
+  return normalizeSellerPaymentOptions(input).map(p=>({
+    scheme:p.scheme,network:p.network,asset:p.asset,atomicAmount:p.amount,payTo:p.payTo,
+    maxTimeoutSeconds:p.maxTimeoutSeconds,...(own(p,'extra')?{extra:p.extra}:{})
+  }));
+}
+function legacyPayment(option) {
+  const {scheme,network,asset,atomicAmount,payTo}=option;
+  return {scheme,network,asset,atomicAmount,payTo};
 }
 function validRoute(route, name) {
   object(route,name);
@@ -98,16 +106,16 @@ function sellerConfig(config) {
   object(config, 'seller config');
   if (config.schema !== 'stellar-forge.seller-service.v1' || !Array.isArray(config.routes) || !config.routes.length)
     throw new TypeError('Expected original seller-service.v1 config');
-  const ids = new Set();
+  const payments = new Map();
   for (const r of config.routes) {
     validRoute(r, 'seller route');
-    if (ids.has(r.id)) throw new TypeError(`Duplicate seller route ${r.id}`);
-    ids.add(r.id);
-    priceMetadata(r);
+    if (payments.has(r.id)) throw new TypeError(`Duplicate seller route ${r.id}`);
+    if (!supportsSellerMethod(methodFor(r))) throw new TypeError(`Unsupported seller method on ${r.id}`);
+    payments.set(r.id,priceMetadata(r));
   }
-  return config;
+  return payments;
 }
-function checkTerms(terms, seller) {
+function checkTerms(terms, seller, payments) {
   object(terms,'terms');
   if (terms.schema !== SCHEMA) throw new TypeError('Wrong merchant terms schema');
   if (typeof terms.merchantName !== 'string' || !terms.merchantName.trim() || terms.merchantName.length > 160)
@@ -120,10 +128,18 @@ function checkTerms(terms, seller) {
     exactUsd(t.perFulfilledUsd, `${sellerRoute.id}.perFulfilledUsd`,true);
     exactUsd(t.perChallengeUsd, `${sellerRoute.id}.perChallengeUsd`,true);
     count(t.monthlyPaidTarget, `${sellerRoute.id}.monthlyPaidTarget`);
-    const expected = object(t.expectedPayment, `${sellerRoute.id}.expectedPayment`);
-    const actual = priceMetadata(sellerRoute);
-    for (const k of ['scheme','network','asset','atomicAmount','payTo']) {
-      if (String(expected[k]) !== String(actual[k])) throw new TypeError(`Payment terms drift on ${sellerRoute.id}.${k}`);
+    const actual = payments.get(sellerRoute.id);
+    if (own(t,'expectedPayment') === own(t,'expectedPayments'))
+      throw new TypeError(`${sellerRoute.id} needs exactly one expectedPayment or expectedPayments`);
+    if (own(t,'expectedPayments')) {
+      if (!Array.isArray(t.expectedPayments) || !isDeepStrictEqual(t.expectedPayments,actual))
+        throw new TypeError(`Payment terms drift on ${sellerRoute.id}: expectedPayments must match every complete option in seller order`);
+    } else {
+      if (actual.length!==1) throw new TypeError(`${sellerRoute.id} has multiple payment options; approve all with expectedPayments`);
+      const expected = object(t.expectedPayment, `${sellerRoute.id}.expectedPayment`);
+      for (const k of ['scheme','network','asset','atomicAmount','payTo']) {
+        if (String(expected[k]) !== String(actual[0][k])) throw new TypeError(`Payment terms drift on ${sellerRoute.id}.${k}`);
+      }
     }
     if (typeof t.priceBasis !== 'string' || t.priceBasis.length < 4 || t.priceBasis.length > 300)
       throw new TypeError(`${sellerRoute.id}.priceBasis is mandatory (quote or valuation context)`);
@@ -133,9 +149,9 @@ function checkTerms(terms, seller) {
 }
 
 export function analyze(seller, snapshot, terms, provenance = {}) {
-  sellerConfig(seller);
+  const payments=sellerConfig(seller);
   validateSnapshot(snapshot,seller);
-  const {fixed}=checkTerms(terms,seller);
+  const {fixed}=checkTerms(terms,seller,payments);
   const rows=[];
   let targetGross=0n, targetVariable=0n, nominalGross=0n;
   let targetComplete=true, nominalComplete=true;
@@ -162,7 +178,11 @@ export function analyze(seller, snapshot, terms, provenance = {}) {
     if (errors>0n) flags.push(`${errors} observed 5xx/disconnect outcomes; investigate reliability before estimating retention`);
     if (challenges>0n && success===0n) flags.push('Payment challenges observed without any 2xx service completion');
     if (stats.latencyP95UpperBoundMs === '>15000') flags.push('P95 latency above 15 seconds histogram cap');
-    rows.push({routeId:route.id,method:methodFor(route),path:route.path, payment:priceMetadata(route),
+    const paymentOptions=payments.get(route.id);
+    rows.push({routeId:route.id,method:methodFor(route),path:route.path,
+      payment:paymentOptions.length===1?legacyPayment(paymentOptions[0]):null,paymentOptions,
+      paymentBinding:own(term,'expectedPayments')?'EXACT_OPTIONS':'LEGACY_SINGLE_OPTION',
+      commercialScope:'ALL_CONFIGURED_PAYMENT_OPTIONS',httpPaymentOptionAttribution:null,
       quoteUsd:usd(quote),priceBasis:term.priceBasis,paidTargetMonth:String(target),
       variablePerFulfilledUsd:usd(fulfill),perChallengeUsd:usd(challenge),
       actualAttempts:String(started),actualCompleted:String(completed),actual2xx:String(success),actual402:String(challenges),
@@ -183,7 +203,8 @@ export function analyze(seller, snapshot, terms, provenance = {}) {
     schema:SCHEMA,merchantName:terms.merchantName,sessionId:snapshot.sessionId,
     originalSellerMode:snapshot.mode,observedFrom:snapshot.startedAt,observedUntil:snapshot.capturedAt,
     sourceSha256:provenance,generatedAt:new Date().toISOString(),observerErrors:snapshot.observerErrors,
-    overview:{routeCount:rows.length,plannedMonthlyTargetGrossUsd:usd(targetGross),
+    overview:{routeCount:rows.length,paymentOptionCount:rows.reduce((n,r)=>n+r.paymentOptions.length,0),
+      plannedMonthlyTargetGrossUsd:usd(targetGross),
       plannedMonthlyTargetVariableCostsUsd:targetComplete?usd(targetVariable):null,
       sharedMonthlyFixedUsd:usd(fixed),plannedMonthlyTargetContributionAfterFixedUsd:usd(plannedAfterFixed),
       modeledNominal2xxResponseValueUsd:usd(nominalGross),unknownCostRoutes:unknown,
@@ -194,13 +215,14 @@ export function analyze(seller, snapshot, terms, provenance = {}) {
 }
 function escaped(x) {return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 export function html(report) {
-  const rs=report.routes.map(r=>`<tr><th scope="row"><b>${escaped(r.routeId)}</b><small>${escaped(r.method)} ${escaped(r.path)}</small></th><td>${escaped(r.actualAttempts)}</td><td>${escaped(r.actual402)}</td><td>${escaped(r.actual2xx)}</td><td>${escaped(r.actual5xx)}</td><td>${escaped(r.actualDisconnected)}</td><td>${escaped(r.quoteUsd)}</td><td>${escaped(r.plannedMonthlyTargetGrossUsd)}</td><td>${escaped(r.plannedMonthlyTargetContributionBeforeFixedUsd??'Unknown')}</td></tr>`).join('');
+  const rs=report.routes.map(r=>`<tr><th scope="row"><b>${escaped(r.routeId)}</b><small>${escaped(r.method)} ${escaped(r.path)} · ${r.paymentOptions.length} payment option(s)</small></th><td>${escaped(r.actualAttempts)}</td><td>${escaped(r.actual402)}</td><td>${escaped(r.actual2xx)}</td><td>${escaped(r.actual5xx)}</td><td>${escaped(r.actualDisconnected)}</td><td>${escaped(r.quoteUsd)}</td><td>${escaped(r.plannedMonthlyTargetGrossUsd)}</td><td>${escaped(r.plannedMonthlyTargetContributionBeforeFixedUsd??'Unknown')}</td></tr>`).join('');
+  const optionRows=report.routes.flatMap(r=>r.paymentOptions.map((p,i)=>`<tr><th scope="row">${escaped(r.routeId)}<small>Option ${i+1} · ${escaped(r.paymentBinding)}</small></th><td>${escaped(p.network)}<small>${escaped(p.scheme)} · ${escaped(p.maxTimeoutSeconds)} seconds</small></td><td>${escaped(p.atomicAmount)}</td><td class="identity"><code>${escaped(digest(p.asset))}</code></td><td class="identity"><code>${escaped(digest(p.payTo))}</code></td><td>${own(p,'extra')?'Preserved in JSON':'None'}</td></tr>`)).join('');
   const issues=report.issues.length ? report.issues.map(i=>`<li><strong>${escaped(i.routeId)}</strong> ${escaped(i.flag)}</li>`).join('') : '<li>No counters requiring attention in this capture.</li>';
   const pre=report.overview;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'"><title>Merchant Revenue Operations | ${escaped(report.merchantName)}</title><style>
-:root{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#1c232a;background:#f2f4f5;font-size:15px}*{box-sizing:border-box}body{margin:0}main{max-width:1280px;margin:auto;padding:32px 24px 80px}header{border-bottom:2px solid #2b333b;padding-bottom:22px;display:flex;gap:12px;justify-content:space-between;align-items:end;flex-wrap:wrap}h1{font-size:1.8rem;letter-spacing:-.04em;margin:7px 0}h2{font-size:1.1rem;margin:0 0 15px}p,li{line-height:1.5}.eyebrow{font-size:.7rem;font-weight:750;letter-spacing:.14em;text-transform:uppercase;color:#48555e}.muted,small{color:#59666f}.sub{max-width:75ch;font-size:.9rem}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}.card,.panel{background:white;border:1px solid #d2d8dd;padding:22px;border-radius:4px}.card strong{font-size:1.5rem;display:block;margin:10px 0 6px;word-break:break-word}.card p{font-size:.82rem;margin:0;color:#54616a}.panel{margin-top:16px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;white-space:nowrap}th,td{font-size:.83rem;padding:13px 12px;border-bottom:1px solid #d9dee2;text-align:right}thead th{color:#52606a;font-size:.71rem;text-transform:uppercase;letter-spacing:.04em}th:first-child,td:first-child{text-align:left}tbody th{font-weight:500}tbody small{display:block;font-size:.72rem;margin-top:5px}tbody tr:nth-child(even){background:#f7f8f9}.scroll{overflow-x:auto}ul{padding-left:1.2em}.footer{margin-top:25px;border-top:1px solid #cbd4d8;padding-top:16px;color:#48565f;font-size:.79rem}.tag{padding:6px 10px;font-size:.73rem;border:1px solid #b9c3ca;border-radius:3px;font-weight:650}code{font-size:.8em;word-break:break-all}@media(max-width:680px){main{padding:20px 14px 40px}.cards{grid-template-columns:1fr}.card{padding:17px}h1{font-size:1.45rem}}
+:root{font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;color:#1c232a;background:#f2f4f5;font-size:15px}*{box-sizing:border-box}body{margin:0}main{max-width:1280px;margin:auto;padding:32px 24px 80px}header{border-bottom:2px solid #2b333b;padding-bottom:22px;display:flex;gap:12px;justify-content:space-between;align-items:end;flex-wrap:wrap}h1{font-size:1.8rem;letter-spacing:-.04em;margin:7px 0}h2{font-size:1.1rem;margin:0 0 15px}p,li{line-height:1.5}.eyebrow{font-size:.7rem;font-weight:750;letter-spacing:.14em;text-transform:uppercase;color:#48555e}.muted,small{color:#59666f}.sub{max-width:75ch;font-size:.9rem}.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:24px 0}.card,.panel{background:white;border:1px solid #d2d8dd;padding:22px;border-radius:4px}.card strong{font-size:1.5rem;display:block;margin:10px 0 6px;word-break:break-word}.card p{font-size:.82rem;margin:0;color:#54616a}.panel{margin-top:16px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;white-space:nowrap}th,td{font-size:.83rem;padding:13px 12px;border-bottom:1px solid #d9dee2;text-align:right}thead th{color:#52606a;font-size:.71rem;text-transform:uppercase;letter-spacing:.04em}th:first-child,td:first-child{text-align:left}tbody th{font-weight:500}tbody small{display:block;font-size:.72rem;margin-top:5px}tbody tr:nth-child(even){background:#f7f8f9}.scroll{overflow-x:auto}ul{padding-left:1.2em}.footer{margin-top:25px;border-top:1px solid #cbd4d8;padding-top:16px;color:#48565f;font-size:.79rem}.tag{padding:6px 10px;font-size:.73rem;border:1px solid #b9c3ca;border-radius:3px;font-weight:650}code{font-size:.8em;word-break:break-all}.identity{white-space:normal;min-width:180px;max-width:230px;text-align:left}@media(max-width:680px){main{padding:20px 14px 40px}.cards{grid-template-columns:1fr}.card{padding:17px}h1{font-size:1.45rem}}
 @media print{body{background:white}main{padding:0}.card,.panel{break-inside:avoid}.scroll{overflow:visible}thead{display:table-header-group}}
-</style></head><body><main><header><div><div class="eyebrow">SF97 / Merchant Revenue Operations / Source-bound operator report</div><h1>${escaped(report.merchantName)}</h1><div class="muted">Session ${escaped(report.sessionId)} · ${escaped(report.originalSellerMode)} · ${escaped(report.observedFrom)} to ${escaped(report.observedUntil)}</div></div><div class="tag">Private local report</div></header><p class="sub">Route-level commercial review from the original SF30 seller traffic counters and seller payment terms, joined to merchant-entered USD valuations and costs. This is not an invoice or a transaction ledger.</p><section class="cards"><article class="card"><span class="eyebrow">Target monthly gross</span><strong>$${escaped(pre.plannedMonthlyTargetGrossUsd)}</strong><p>Merchant targets × owner-valued USD per route, not observed receipts.</p></article><article class="card"><span class="eyebrow">Target contribution</span><strong>${pre.plannedMonthlyTargetContributionAfterFixedUsd===null?'Unknown':'$'+escaped(pre.plannedMonthlyTargetContributionAfterFixedUsd)}</strong><p>After entered variable costs and shared fixed cost; incomplete inputs stay unknown.</p></article><article class="card"><span class="eyebrow">Observed 2xx nominal value</span><strong>$${escaped(pre.modeledNominal2xxResponseValueUsd)}</strong><p>Only if every observed 2xx were billed at today's owner-entered quote; NOT revenue.</p></article></section><section class="panel"><h2>Native seller routes × merchant economics</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Requests</th><th>402</th><th>2xx</th><th>5xx</th><th>D/C</th><th>Quote USD</th><th>Target gross USD</th><th>Target contribution USD*</th></tr></thead><tbody>${rs}</tbody></table></div><p class="muted" style="font-size:.8rem">*Before shared monthly fixed cost. Unmatched/method/invalid request buckets are excluded from product demand. 402 responses are payment challenges, not purchases.</p></section><section class="panel"><h2>Operator review queue</h2><ul>${issues}</ul></section><section class="panel"><h2>Accounting boundary and next commercial decision</h2><p>${escaped(report.accounting)}</p><p>Pair this worksheet with independently checked settlement records and actual cost quotes before making an invoice or a customer revenue claim. Use SF87 when comparing x402 to MPP rail economics; this report does not reimplement that calculator.</p></section><footer class="footer">Seller SHA256 <code>${escaped(report.sourceSha256.seller??'')}</code> · Native operations export SHA256 <code>${escaped(report.sourceSha256.snapshot??'')}</code> · Owner terms SHA256 <code>${escaped(report.sourceSha256.terms??'')}</code><br>Generated ${escaped(report.generatedAt)} · SF97 standalone local output · No network writes, wallets, hosted CI or payments.</footer></main></body></html>`;
+</style></head><body><main><header><div><div class="eyebrow">SF97 / Merchant Revenue Operations / Source-bound operator report</div><h1>${escaped(report.merchantName)}</h1><div class="muted">Session ${escaped(report.sessionId)} · ${escaped(report.originalSellerMode)} · ${escaped(report.observedFrom)} to ${escaped(report.observedUntil)}</div></div><div class="tag">Private local report</div></header><p class="sub">Route-level commercial review from the original SF30 seller traffic counters and seller payment terms, joined to merchant-entered USD valuations and costs. This is not an invoice or a transaction ledger.</p><section class="cards"><article class="card"><span class="eyebrow">Target monthly gross</span><strong>$${escaped(pre.plannedMonthlyTargetGrossUsd)}</strong><p>Merchant targets × owner-valued USD per route, not observed receipts.</p></article><article class="card"><span class="eyebrow">Target contribution</span><strong>${pre.plannedMonthlyTargetContributionAfterFixedUsd===null?'Unknown':'$'+escaped(pre.plannedMonthlyTargetContributionAfterFixedUsd)}</strong><p>After entered variable costs and shared fixed cost; incomplete inputs stay unknown.</p></article><article class="card"><span class="eyebrow">Observed 2xx nominal value</span><strong>$${escaped(pre.modeledNominal2xxResponseValueUsd)}</strong><p>Only if every observed 2xx were billed at today's owner-entered quote; NOT revenue.</p></article></section><section class="panel"><h2>Native seller routes × merchant economics</h2><div class="scroll"><table><thead><tr><th>Route</th><th>Requests</th><th>402</th><th>2xx</th><th>5xx</th><th>D/C</th><th>Quote USD</th><th>Target gross USD</th><th>Target contribution USD*</th></tr></thead><tbody>${rs}</tbody></table></div><p class="muted" style="font-size:.8rem">*Before shared monthly fixed cost. Unmatched/method/invalid request buckets are excluded from product demand. 402 responses are payment challenges, not purchases.</p></section><section class="panel"><h2>Approved payment options</h2><p class="muted">One merchant-entered USD quote, cost schedule and monthly volume target applies to every approved alternative on its route. HTTP counters do not identify a selected option. Full asset, recipient and extra metadata remain in the private report.json.</p><div class="scroll"><table><thead><tr><th>Route / option</th><th>Network / timeout</th><th>Atomic amount</th><th>Asset SHA-256</th><th>Recipient SHA-256</th><th>Extra metadata</th></tr></thead><tbody>${optionRows}</tbody></table></div></section><section class="panel"><h2>Operator review queue</h2><ul>${issues}</ul></section><section class="panel"><h2>Accounting boundary and next commercial decision</h2><p>${escaped(report.accounting)}</p><p>Pair this worksheet with independently checked settlement records and actual cost quotes before making an invoice or a customer revenue claim. Use SF87 when comparing x402 to MPP rail economics; this report does not reimplement that calculator.</p></section><footer class="footer">Seller SHA256 <code>${escaped(report.sourceSha256.seller??'')}</code> · Native operations export SHA256 <code>${escaped(report.sourceSha256.snapshot??'')}</code> · Owner terms SHA256 <code>${escaped(report.sourceSha256.terms??'')}</code><br>Generated ${escaped(report.generatedAt)} · SF97 standalone local output · No network writes, wallets, hosted CI or payments.</footer></main></body></html>`;
 }
 async function readJson(path, label) {
   const bytes=await readFile(path);
@@ -260,7 +282,10 @@ export async function main(argv=process.argv.slice(2)) {
     session:report.sessionId,routes:report.routes.length,issues:report.issues.length,
     mode:report.originalSellerMode,
     native: native ? {matchedNativeEvents:native.matchedNativeEvents,
-      originalEvents:native.originalEvents,issues:native.issues} : null})+'\n');
+      originalEvents:native.originalEvents,issues:native.issues,paymentOptions:native.paymentOptions,
+      exactRecipientEvents:native.exactRecipientEvents,
+      legacyUniqueRecipientEvents:native.legacyUniqueRecipientEvents,
+      ambiguousLegacyEvents:native.ambiguousLegacyEvents} : null})+'\n');
 }
 if (process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(e=>{console.error('SF97:',e.message);process.exitCode=1;});

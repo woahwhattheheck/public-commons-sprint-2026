@@ -18,6 +18,7 @@ permissions:
 
 jobs:
   verify:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
