@@ -271,6 +271,16 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     current.cancel = () => { current.cancelRequested = true; current.status = 'CANCELLING'; controller.abort(); };
     return {executionId:current.executionId, runId:id, kind, status:current.status};
   }
+  async function waitForExecution({id,executionId}) {
+    const current=active,pending=task;
+    check(current?.runId===id&&current.executionId===executionId&&pending,
+      'EXECUTION_CHANGED_RELOAD',409);
+    await pending;
+    const execution={...current,events:[...current.events]};
+    try {return {...await getRun(id),execution,stateRefreshError:null};}
+    catch(error) {return {id,state:null,active:null,terminalAvailable:null,execution,
+      stateRefreshError:codeOf(error)};}
+  }
   async function bindAccounting({id,only,workspace}) {
     check(!active||active.finishedAt,'WORKSPACE_EXECUTION_BUSY',409);
     const binding=await bindRunbookWorkspace(await resolveRun(id),{only,workspace});
@@ -380,6 +390,7 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     save:input => mutate(() => mutateDraft(() => saveDraft(input))),
     initialize:input => mutate(() => mutateDraft(() => activate(input))),
     execute:input => mutate(() => launch(input)), cancel:input => serial(() => cancel(input)),
+    waitForExecution,
     finalize:input => mutate(() => launch(input,'ACCOUNTING')),
     bindAccounting:input => mutate(() => bindAccounting(input)),
     recover:input => mutate(() => recover(input)), unlock:input => mutate(() => unlock(input)),

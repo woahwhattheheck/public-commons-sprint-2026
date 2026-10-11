@@ -1,5 +1,11 @@
 # Buyer runbook
 
+Customer applications can use this complete original workflow through the
+maintained [Node](../sf88-operator-buyer-cli/node/ACQUISITIONS.md) and
+[Python](../sf88-operator-buyer-cli/python/ACQUISITIONS.md) acquisition APIs. Both
+join the same request intake, immutable revisions, execution leases, accounting,
+saved resources and complete operator recovery used by this workspace.
+
 Acquire several explicitly selected resources through the **existing SF88 buyer**,
 keep their original results together, and resume untouched operations after an
 interruption. The runbook supplies a local job plan, exact request snapshots,
