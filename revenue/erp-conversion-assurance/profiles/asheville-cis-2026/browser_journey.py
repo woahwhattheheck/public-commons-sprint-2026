@@ -15,6 +15,8 @@ def main():
             context=browser.new_context(viewport={'width':1440,'height':1000},accept_downloads=True)
             page=context.new_page();page.on('pageerror',lambda error:errors.append(str(error)))
             page.goto(url,wait_until='domcontentloaded')
+            page.wait_for_function("!document.body.hasAttribute('aria-busy') && document.querySelector('button[data-view=profile]')")
+            page.get_by_role('button',name='Utility operator',exact=True).click()
             ut=page.locator('.ut');expect(ut.get_by_role('heading',name='Utility conversion operator',exact=True)).to_be_visible(timeout=30000)
             def idle():
                 page.wait_for_function("document.querySelector('.ut') && !document.querySelector('.ut').inert")
@@ -23,7 +25,7 @@ def main():
             idle();ut.get_by_label('Choose utility project').select_option(scenario['projectId']);idle()
             ut.get_by_label('Utility operator or reviewer').fill('Practice browser operator')
             ut.get_by_role('button',name='Sources & mapping',exact=True).click();idle()
-            ut.get_by_role('button',name='Open '+scenario['accountDatasetId'][:8],exact=True).click();idle()
+            ut.get_by_role('button',name='Open '+scenario['accountDatasetId'][:8]+'…',exact=True).click();idle()
             ut.get_by_label('Search dataset',exact=True).fill('000000005000');ut.get_by_role('button',name='Search',exact=True).click();idle()
             expect(ut.get_by_text('Practice 5000',exact=True)).to_be_visible();result['steps'].append('retained 5000-account source searched through actual UI')
             if not readonly:
@@ -81,6 +83,16 @@ def main():
                 result['steps'].append('real offline reason/photo entry and downloaded native return')
             else:result['steps'].append('original retained offline route rendered after cold restoration')
             field.close();page.close();context.close()
+        except Exception as error:
+            result['status']='FAILED';result['error']=str(error);result['scriptErrors']=errors
+            if 'page' in locals() and not page.is_closed():
+                try:
+                    page.screenshot(path=str(out/'operator-failed.png'),full_page=False)
+                    result['failureScreenshot']=str(out/'operator-failed.png')
+                except Exception:
+                    pass
+            (out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
+            raise
         finally:browser.close()
     assert not errors,'Actual browser script errors: '+json.dumps(errors)
     result['status']='PASS';result['screenshots']=[str(out/n) for n in ['operator-desktop.png','operator-mobile.png','offline-field.png']]
