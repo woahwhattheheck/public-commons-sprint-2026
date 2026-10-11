@@ -48,7 +48,7 @@ export async function startClickHouseWorkspace({ model, port = 8443, ...options 
   const actions = { '/api/save': 'save', '/api/open': 'open', '/api/checkout': 'checkout',
     '/api/review': 'review', '/api/preview': 'preview', '/api/prepare': 'prepare',
     '/api/stage-release': 'stageMerchantRelease', '/api/release-console': 'openReleaseConsole', '/api/close-release-console': 'closeReleaseConsole',
-    '/api/release': 'release', '/api/run': 'run', '/api/stop': 'stop', '/api/export': 'exportClient' };
+    '/api/release': 'release', '/api/run': 'run', '/api/stop': 'stop', '/api/export': 'exportClient', '/api/fleet-source': 'exportFleetSource' };
   const server = createServer((req, res) => {
     Promise.resolve().then(async () => {
       if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin ||
@@ -73,7 +73,7 @@ export async function startClickHouseWorkspace({ model, port = 8443, ...options 
       }
       if (req.method === 'POST' && Object.hasOwn(actions, url.pathname)) {
         const result = await model[actions[url.pathname]](await body(req));
-        if (url.pathname === '/api/export') {
+        if (url.pathname === '/api/export' || url.pathname === '/api/fleet-source') {
           downloads.add(req.socket); res.once('close', () => downloads.delete(req.socket));
           res.writeHead(200, { 'content-type': result.contentType, 'content-length': result.bytes.length,
             'content-disposition': 'attachment; filename="' + result.filename + '"', 'x-content-sha256': result.sha256,
