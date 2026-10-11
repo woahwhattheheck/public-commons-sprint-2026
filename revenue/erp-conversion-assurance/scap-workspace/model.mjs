@@ -109,7 +109,11 @@ export function createConversionWorkspace({ service, profile: inputProfile, exte
     const previous = base ? { bundleId: baseBundleId, ...(previousJobId ? { jobId: previousJobId } : {}),
       revision: base.spec.workspace?.schema === WORKSPACE_SCHEMA ? base.spec.workspace.revision : 0 } : null;
     let spec = compileDraft(draft, { profile: selectedProfile, headers, inputs, previous });
-    if (extension?.compileSpec) spec = await extension.compileSpec({ spec, draft, base, service });
+    if (extension?.compileSpec) {
+      const inputPins = Object.fromEntries(['source', 'target'].map(side => [side, bytes[side]
+        ? { sha256: digest(bytes[side]), bytes: bytes[side].length } : clone(base.bundle[side])]));
+      spec = await extension.compileSpec({ spec, draft, base, service, inputPins });
+    }
     const specBytes = json(spec);
     if (specBytes.length > MAX_SPEC_BYTES) fail('MAPPING_LIMIT_EXCEEDED', 'The complete mapping, crosswalk and scope must fit within the retained service’s 256 KiB mapping limit.');
     const temporary = await mkdtemp(join(tmpdir(), 'erp-workspace-intake-'));

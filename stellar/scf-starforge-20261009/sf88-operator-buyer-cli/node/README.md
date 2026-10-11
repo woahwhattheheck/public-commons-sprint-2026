@@ -19,6 +19,12 @@ the matching `object-*` lifecycle, without a new package or payment engine.
 `accounting` and explicit `finalize` invoke the original chunk reservation
 continuation and return its native report separately from file completion.
 
+The complete [dataset and object accounting workflow](ACCOUNTING.md) reads or
+finalizes every original page/chunk range, reports progress to an async consumer,
+stops on cancellation, reopens saved native command output after a process loss,
+and streams the complete financial view to a new private JSONL file. These methods
+use the same native sessions and are usable independently of delivered data files.
+
 Finite SSE and NDJSON responses use the same native operation and retained file.
 Select `responseFile.stream` before review, then consume verified records with
 `result.events()` or `result.ndjson()`. Reopen them after a restart with
@@ -429,3 +435,16 @@ ledger when configured to do so, but their application state directories and
 attempt markers must not be interchanged. Filesystem durability assumes a local
 filesystem supporting atomic hard links and fsync; network/distributed filesystems
 require their own validation.
+
+## Whole customer workspace backup and restore
+
+`buyer.workspaceRecovery()` includes the existing Node application state alongside
+an explicitly selected original operator, inbox and other application/session
+roots. `WorkspaceRecovery` also works before a Buyer exists, so a missing root
+can be restored before application initialization recreates it. Inspect, encrypted
+snapshot, independent verification and original-root restore all invoke the
+existing SF88/SF101/SF36 implementation through the same native Runtime.
+
+See [the complete customer recovery workflow](RECOVERY.md) for passphrase-variable
+selection, quiescing writers, expected-record binding, typed interruption results
+and reopening the same Node and Python applications without repeating purchases.

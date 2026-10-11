@@ -4,6 +4,7 @@ let session, manifests = [], status = null, capturedAt = null, reviewed = null;
 let working = false, loading = false, connected = false, confirmAction = null, timer, outcomeUnknown = false;
 let pendingRead = null;
 let managed = false, releases = null, catalog = null, releaseReview = null, catalogLoading = false, catalogVersion = 0;
+const operationDesks = new Map(), loadingDesks = new Set();
 const explain = {
   FLEET_REVISION_CHANGED: 'The active revision changed in another operator session. Refresh and review the current state before choosing the change again.',
   FLEET_CANDIDATE_CHANGED: 'Another preparation replaced the reviewed candidate. Review the current candidate before activating.',
@@ -29,6 +30,8 @@ const explain = {
   FLEET_RELEASE_REPLACEMENT_SLOT_REQUIRED: 'Choose a different slot and port from the merchant currently serving traffic.',
   FLEET_RELEASE_OPERATION_IN_PROGRESS: 'Another release operation is running. Refresh its current state before submitting another change.',
   FLEET_RELEASE_SESSION_NOT_OWNED: 'This workspace no longer owns that exact running session. Refresh the process table.',
+  FLEET_RELEASE_OPERATIONS_INVALID: 'The original seller returned invalid operations links. Reopen its current managed instance.',
+  WORKSPACE_STARTING: 'The workspace is starting its original merchant sessions. Refresh when startup completes.',
   FLEET_RELEASE_SOURCE_CHANGED: 'The original release source changed after staging. Restore the exact release or stage a new immutable release ID.',
   FLEET_RELEASE_OUTCOME_UNKNOWN: 'The release operation response was lost. Inspect the current revision, candidate and process table before deciding whether another action is needed.',
   FLEET_RELEASE_REVISION_NOT_LINKED: 'Another control session selected a fleet outside this release plan. Use the original control history to restore a linked revision before managing these releases.',
@@ -241,12 +244,63 @@ function options(select, values) {
 const selectedTenant = () => releases?.tenants?.find(row => row.id === $('release-tenant').value);
 const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('release-slot').value);
 const sourceName = kind => ({ OPENAPI_WORKSPACE: 'API workspace', OPENAPI_SELLER: 'API seller',
-  PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product' }[kind] ?? 'Seller source');
+  PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product', S3_OBJECT_PACKAGE: 'S3 objects', JSONRPC_MERCHANT_PACKAGE: 'Stellar RPC' }[kind] ?? 'Seller source');
 function releaseReviewValid() {
   return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
 }
+const deskKey = (tenant, slot) => tenant + '/' + slot.name + '/' + slot.instanceId;
+function currentDeskSlot(tenant, slot, instanceId) {
+  return connected && !releases?.closing && releases?.tenants?.find(row => row.id === tenant)?.slots
+    .find(row => row.name === slot && row.instanceId === instanceId && row.owned && row.operations?.available);
+}
+async function loadOperations(tenant, slot, instanceId) {
+  const key = tenant + '/' + slot + '/' + instanceId;
+  if (loadingDesks.has(key) || !currentDeskSlot(tenant, slot, instanceId)) return;
+  loadingDesks.add(key); renderReleases();
+  try {
+    const value = await api('releases/operations?' + new URLSearchParams({ tenant, slot, instanceId }));
+    const current = currentDeskSlot(tenant, slot, instanceId);
+    if (!current) return;
+    const links = value.operations;
+    if (value.tenant !== tenant || value.slot !== slot || value.instanceId !== instanceId ||
+        value.explorer !== 'http://127.0.0.1:' + current.port + '/_seller/docs' ||
+        links !== null && (typeof links?.url !== 'string' || !/^http:\/\/127\.0\.0\.1:[1-9]\d{0,4}$/.test(links.url) ||
+        Number(new URL(links.url).port) > 65535 || links.availability !== links.url + '/availability' ||
+        links.availabilityControl !== null && (typeof links.availabilityControl !== 'string' ||
+          !links.availabilityControl.startsWith(links.availability + '#') ||
+          !/^[0-9a-f]{64}$/.test(links.availabilityControl.slice(links.availability.length + 1)))))
+      throw new Error('FLEET_RELEASE_OPERATIONS_INVALID');
+    operationDesks.set(key, { explorer: value.explorer, operations: links });
+  } catch (error) {
+    operationDesks.delete(key);
+    notify(explain[error.message] ?? 'The current merchant tools could not be opened. Refresh its running instance.', true);
+  } finally { loadingDesks.delete(key); renderReleases(); }
+}
+function operationsCell(tenant, slot) {
+  const cell = node('div', undefined, 'release-tools');
+  if (!currentDeskSlot(tenant.id, slot.name, slot.instanceId)) { cell.append(node('span', '—')); return cell; }
+  const key = deskKey(tenant.id, slot), links = operationDesks.get(key);
+  if (!links) {
+    const button = node('button', loadingDesks.has(key) ? 'Opening tools…' : 'Show merchant tools');
+    button.type = 'button'; button.disabled = loadingDesks.has(key);
+    button.addEventListener('click', () => loadOperations(tenant.id, slot.name, slot.instanceId));
+    cell.append(button); return cell;
+  }
+  const destinations = [['Developer explorer', links.explorer]], operations = links.operations;
+  if (operations) destinations.push(['Operations', operations.url],
+    [operations.availabilityControl ? 'Manage availability' : 'View availability', operations.availabilityControl ?? operations.availability]);
+  for (const [label, href] of destinations) {
+    const link = node('a', label, 'release-tool-link');
+    link.href = href; link.target = '_blank'; link.rel = 'noopener'; link.referrerPolicy = 'origin';
+    cell.append(link);
+  }
+  return cell;
+}
 function renderReleases() {
   if (!releases?.tenants) return;
+  const liveDesks = new Set(releases.tenants.flatMap(tenant => tenant.slots
+    .filter(slot => currentDeskSlot(tenant.id, slot.name, slot.instanceId)).map(slot => deskKey(tenant.id, slot))));
+  for (const key of operationDesks.keys()) if (!liveDesks.has(key)) operationDesks.delete(key);
   $('release-link').textContent = releases.relationship === 'LINKED' ? 'Managed releases linked' : 'Fleet changed outside plan';
   options($('release-tenant'), releases.tenants.map(row => [row.id, row.id + ' · ' + row.host]));
   const tenant = selectedTenant(), firstSlots = !$('release-slot').options.length;
@@ -277,9 +331,9 @@ function renderReleases() {
         'Revision: ' + expectedRevision + '\nRelease: ' + slot.runningReleaseId + '\nPort: ' + slot.port + '\nSession: ' + instanceId,
         () => releaseAction('retire', { tenant: merchant.id, slot: slot.name, instanceId, expectedRevision }));
     });
-    rows.push([identity, slot.port, source, state, slot.generation, button]);
+    rows.push([identity, slot.port, source, state, slot.generation, operationsCell(merchant, slot), button]);
   }
-  $('release-processes').replaceChildren(table(['Merchant / slot', 'Local port', 'Release', 'Process and traffic', 'Store generation', 'Action'], rows));
+  $('release-processes').replaceChildren(table(['Merchant / slot', 'Local port', 'Release', 'Process and traffic', 'Store generation', 'Merchant tools', 'Action'], rows));
   $('release-pending').textContent = releases.relationship !== 'LINKED' ? explain[releases.relationship] ?? releases.relationship :
     releases.pending ? 'Release operation: ' + releases.pending.phase + ' · Based on revision ' + releases.pending.baseRevision :
     'All serving merchants match their retained original releases. Retiring a process preserves its immutable release for rollback.';
@@ -417,7 +471,10 @@ $('export').addEventListener('click', () => {
 });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 function schedule() { timer = setTimeout(async () => { if (!document.hidden) await refresh(); schedule(); }, 4000); }
-window.addEventListener('pagehide', () => clearTimeout(timer));
+window.addEventListener('pagehide', () => {
+  clearTimeout(timer); operationDesks.clear(); loadingDesks.clear();
+  $('release-processes').querySelectorAll('.release-tool-link').forEach(link => link.remove());
+});
 try {
   const initial = await api('session'); session = initial.session; manifests = initial.manifests; managed = initial.managed === true;
   $('managed-releases').hidden = !managed; $('managed-processes').hidden = !managed;

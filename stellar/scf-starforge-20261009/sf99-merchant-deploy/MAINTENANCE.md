@@ -1,5 +1,16 @@
 # Merchant maintenance and restored-host cutover
 
+Retained `kind:release` hosts use this same operation journal and cutover. Their
+original SF82 seller and optional SF60 discovery writer are declared native units
+in the generated group. Both stores live under the selected `privateRoot` and
+are stopped before snapshot. Restore rebases only `release.store` and
+`discovery.setup` in the host plan, then verifies the original immutable release
+and setup at those restored paths. It preserves the retained release, signing
+identity, public enrollment and catalog journal bytes. The next maintenance plan
+selects the restored roots. This profile has no SF98 outbox; the existing host
+operation lease still serializes its maintenance, and the native process/writer
+ownership remains with the original SF82/SF60 services.
+
 The original SF99 command now carries a running merchant through maintenance,
 encrypted backup, restored-state preparation, service activation and recovery
 from an interrupted operation. It uses the original SF101 recovery engine,

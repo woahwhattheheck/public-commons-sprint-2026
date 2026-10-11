@@ -9,7 +9,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const check = (condition, code) => { if (!condition) throw new SacReadinessError(code); };
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
-const receivingActions = {
+export const receivingActions = Object.freeze({
   ASSET_TRUSTLINE_MISSING:'Create the exact code-and-issuer trustline on this receiving account through the existing wallet.',
   ASSET_TRUSTLINE_NOT_AUTHORIZED:'Ask the asset issuer to authorize this exact merchant trustline.',
   INSUFFICIENT_INBOUND_TRUSTLINE_CAPACITY:'Increase the exact trustline limit or reduce this configured incoming amount.',
@@ -31,7 +31,7 @@ const receivingActions = {
   RETAINED_SOURCE_REVIEW:'Use a new live receiving review for current merchant state.',
   OBSERVATION_STALE:'Run the command again to refresh the contributing account and contract observations.',
   SELLER_CONFIG_CHANGED_DURING_CHECK:'Review the current seller configuration in a new receiving run.',
-};
+});
 
 /** Extract only public route identity and original normalized accepted payments. */
 export function compileSellerReadinessPlan(input, {origin: suppliedOrigin} = {}) {

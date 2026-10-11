@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 import { openObjectWorkspace, workspaceError, fail } from './model.mjs';
+import { OBJECT_RECEIVING_REQUEST_LIMIT } from './intake.mjs';
 
 const HOST = '127.0.0.1';
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -15,21 +16,24 @@ const security = { 'cache-control': 'no-store', 'x-content-type-options': 'nosni
   'content-security-policy': CSP, 'referrer-policy': 'no-referrer', 'cross-origin-resource-policy': 'same-origin' };
 const HELP = `Starforge object buyer workspace
 
-  node server.mjs --state ABSOLUTE_PRIVATE_DIRECTORY [--profile ABSOLUTE_PROFILE_JSON] [--port 8438]
+  node server.mjs --state ABSOLUTE_PRIVATE_DIRECTORY [--profile ABSOLUTE_PROFILE_JSON]
+       [--operator-settings ABSOLUTE_PRIVATE_PRESET] [--port 8438]
 
 An optional trusted profile selects existing merchant objects and native buyer
 workspaces. Existing sessions reopen from --state without a profile. The native
 buyer keeps per-chunk approval in this launching terminal. Ctrl+C stops owned
 work, closes the private browser server and retains every original session.
+The original local operator preset also enables receiving public merchant object
+descriptions and offers, then creating a private buyer and reviewed download.
 `;
 
-async function input(req, allowed) {
+async function input(req, allowed, maximum = 8192) {
   if ((req.headers['content-type'] ?? '').split(';')[0].trim() !== 'application/json')
     fail('OBJECT_WORKSPACE_JSON_REQUIRED', 415);
   let size = 0; const chunks = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 8192) fail('OBJECT_WORKSPACE_REQUEST_TOO_LARGE', 413);
+    if (size > maximum) fail('OBJECT_WORKSPACE_REQUEST_TOO_LARGE', 413);
     chunks.push(chunk);
   }
   let value;
@@ -45,9 +49,9 @@ function params(url, names) {
 }
 
 /** Run the native model on a fixed loopback interface, with a per-instance capability. */
-export async function startObjectWorkspace({ stateDirectory, profilePath = null, port = 8438 } = {}) {
+export async function startObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings, port = 8438 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) fail('OBJECT_WORKSPACE_PORT_INVALID');
-  const model = await openObjectWorkspace({ stateDirectory, profilePath });
+  const model = await openObjectWorkspace({ stateDirectory, profilePath, operatorSettings });
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
@@ -107,6 +111,12 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         fail('OBJECT_WORKSPACE_CAPABILITY_REQUIRED', 401);
       if (req.method === 'GET' && url.pathname === '/api/products' && !url.search)
         return send(200, { products: await model.products() });
+      if (req.method === 'GET' && url.pathname === '/api/receiving' && !url.search)
+        return send(200, await model.receivingState());
+      if (req.method === 'GET' && url.pathname === '/api/receiving/options') {
+        const value = params(url, ['id', 'objectId']);
+        return send(200, await model.receivingOptions(value.id, value.objectId));
+      }
       if (req.method === 'GET' && url.pathname === '/api/state') {
         const values = params(url, ['session', 'page', 'filter', 'query', 'section']);
         if (values.page !== undefined && !/^(0|[1-9][0-9]{0,3})$/.test(values.page)) fail('OBJECT_WORKSPACE_PAGE_INVALID');
@@ -124,10 +134,17 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         '/api/finalize': ['session', 'expectedRevision', 'actionId'],
         '/api/recover': ['session', 'expectedRevision'], '/api/assemble': ['session', 'expectedRevision'],
         '/api/download-ticket': ['session'], '/api/accounting-export-ticket': ['session'],
+        '/api/receiving/receive': ['descriptionName', 'descriptionBase64', 'catalogName', 'catalogBase64'],
+        '/api/receiving/review': ['id', 'objectId', 'rowIndex', 'acceptIndex', 'chunkBytes', 'sessionName', 'maxTotalAtomic', 'dailyAtomic'],
+        '/api/receiving/create': ['reviewId'],
       };
       if (req.method !== 'POST' || url.search || !actions[url.pathname]) fail('OBJECT_WORKSPACE_ROUTE_NOT_FOUND', 404);
       if (req.headers.origin !== origin) fail('OBJECT_WORKSPACE_ORIGIN_REQUIRED', 403);
-      const value = await input(req, actions[url.pathname]);
+      const value = await input(req, actions[url.pathname],
+        url.pathname === '/api/receiving/receive' ? OBJECT_RECEIVING_REQUEST_LIMIT : 8192);
+      if (url.pathname === '/api/receiving/receive') return send(201, await model.receive(value));
+      if (url.pathname === '/api/receiving/review') return send(200, await model.reviewReceived(value));
+      if (url.pathname === '/api/receiving/create') return send(201, await model.createReceived(value));
       if (url.pathname === '/api/review') return send(200, await model.reviewSelection(value));
       if (url.pathname === '/api/create') return send(201, await model.create(value));
       if (url.pathname === '/api/refresh') { await model.refresh(value.session ?? null, value.section ?? 'delivery'); return send(200, { refreshed: true }); }
@@ -188,14 +205,15 @@ export async function main(argv = process.argv.slice(2)) {
   const options = {};
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i];
-    if (!['--state', '--profile', '--port'].includes(key) || options[key] !== undefined || !argv[i + 1])
+    if (!['--state', '--profile', '--operator-settings', '--port'].includes(key) || options[key] !== undefined || !argv[i + 1])
       fail('OBJECT_WORKSPACE_ARGUMENTS_INVALID');
     options[key] = argv[i + 1];
   }
   if (!options['--state']) fail('OBJECT_WORKSPACE_STATE_REQUIRED');
   if (options['--port'] !== undefined && !/^(0|[1-9][0-9]{0,4})$/.test(options['--port'])) fail('OBJECT_WORKSPACE_PORT_INVALID');
   const workspace = await startObjectWorkspace({ stateDirectory: options['--state'],
-    profilePath: options['--profile'] ?? null, port: options['--port'] === undefined ? 8438 : Number(options['--port']) });
+    profilePath: options['--profile'] ?? null, operatorSettings: options['--operator-settings'],
+    port: options['--port'] === undefined ? 8438 : Number(options['--port']) });
   process.stdout.write('Object buyer workspace: ' + workspace.url + '\nKeep this terminal open for original per-chunk approval.\n');
   let stopping = false;
   const stop = async () => {

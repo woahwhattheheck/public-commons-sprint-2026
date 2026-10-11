@@ -1,71 +1,91 @@
-# Berkeley / Clariti permitting cutover: independent acceptance evidence
+# Berkeley / Clariti permitting cutover workspace
 
-**Status:** Public MIT source, one local focused test executed, internal founder-reviewed commercial opportunity only. No relationship with Clariti, Berkeley, or its implementation partners is claimed. This is not a certified Clariti integration, City-provided acceptance criterion, contract award, or implementation milestone.
+A complete local operator application for comparing a supplied municipal permitting export with its migration candidate, reviewing the exact cases, correcting the candidate and recording a retained cutover decision.
 
-## Actual buyer, awarded vendor, and incremental budget
+The original `audit.mjs` comparator remains the comparison engine. The October 11 continuation adds original CSV/JSON intake, explicit mappings and case crosswalks, SQLite retention, a clean browser, detailed private findings, reviewer assignment and due-date comparison, configured departmental lifecycle checks, corrected-run continuity and portable handoff.
 
-**Buyer:** City of Berkeley, California. **Actual contracted provider:** Clariti Cloud Inc. The City Council's January 20, 2026 consent record (item 16, RFP specification **24-11661-C**) records Resolution 72,090–N.S., authorizing the comprehensive Permit Software Procurement project, **up to $5,359,128**, for permitting, licensing, inspections, cross-department operations, migration, system integrations, citizen portal, training, hosting, and five years of support. The associated Council report says the negotiated $4,871,934 plus contingency; a not-to-exceed contract ceiling is **not actual spending**. A May 12, 2026 council agenda and report identify amended Contract **32600118**, adding **special-event permitting** for up to **$121,000**, revising total ceiling to **$5,480,128**. A ceiling or change-order authorization is **not a subcontracting budget available to us**.
+## Run the application
 
-**First-party source evidence** (public):
-- [Berkeley Jan 20, 2026 Council item 16](https://berkeleyca.gov/city-council-regular-meeting-eagenda-january-20-2026)
-- [Berkeley Jan 20, 2026 Clariti contract staff report](https://berkeleyca.gov/sites/default/files/2026-01/2026-01-20%20Item%2016%20Contract%20Clariti%20Cloud%20Inc.pdf)
-- [Berkeley May 12, 2026 Contract 32600118 amendment report](https://berkeleyca.gov/sites/default/files/2026-04/2026-05-12%20Item%2005%20Contract%20No.%2032600118%20Amendment.pdf)
-- [Clariti official partner program](https://www.claritisoftware.com/partners) — specifically lists implementation and technology partner routes and `partnerships@claritisoftware.com`; does not verify willingness or capacity to buy an independent audit.
-- [Clariti Enterprise public product scope](https://www.claritisoftware.com/products/enterprise-permitting-software) — permits, inspections, code enforcement, planning, process automation, portal, flexible APIs.
+Requirements: Python 3.10+ and Node.js 22+. The service uses their standard libraries.
 
-## Narrow technical product: vendor-neutral independent cutover comparison
+```bash
+cd revenue/berkeley-clariti-32600118-20261010/workspace
+python3 app.py --db /path/to/permitting-review.sqlite --port 8798
+```
 
-`audit.mjs` is a **no-dependency, offline, read-only Node 22** source/target comparison of **normalized, same-cohort snapshots**. It accepts *locally furnished extracts prepared by an authorized data owner*, not Clariti APIs, private City datasets, or production logins. The supported canonical JSON shape is:
+Open `http://127.0.0.1:8798`. If Node is outside PATH, set `BERKELEY_NODE` to its executable. The local database contains the supplied original records and review notes; keep it in the project owner's approved storage location.
+
+Start with [the operator workflow](workspace/WORKFLOW.md), [API and input contract](workspace/API.md), or [the complete nine-case training cohort](workspace/examples/README.md).
+
+## Complete retained workflow
+
+1. Define the intended cohort, observation point, currency scale, included departments and conversion exclusions. Adopt and configure the applicable source-derived acceptance scenarios.
+2. Upload original source and target exports. Inspect exact original rows and confirm each column or JSON-path mapping. Explicitly map department/status vocabulary, departmental review columns, reviewer names, due dates and related IDs.
+3. Supply a one-to-one crosswalk when target case identifiers changed. Preview the complete normalized population with paginated rows and original row-level errors.
+4. Run the original comparator. Review each exact missing, changed, unexpected or orphaned case, its normalized before/after values and the original source-file context. Assign a decision and explanation to each finding.
+5. Review configured Building/Fire finalization and open-review ownership/due-date scenarios against the actual candidate records. Record the responsible operator's lifecycle observation.
+6. Upload and map a corrected candidate, reuse an earlier confirmed source when appropriate, and run again. The next run identifies unchanged findings, the previous review and findings no longer present while retaining its own current decisions.
+7. Record the selected cutover decision. Download the private source-linked handoff, findings CSV, aggregate report and complete workspace backup. Reopen the backup to continue with all original exports, comparisons and reviewer history.
+
+The browser pages both findings and the complete case population. Export metadata is indexed when captured, so refreshing the workspace does not repeatedly parse every retained file. Every comparison pins its original bytes, mappings, source revision and comparator hash. Concurrent writes use a workspace revision; a later reviewer change reopens a previously ready cutover decision.
+
+## Original comparison contract
+
+The canonical same-cohort JSON input remains available to existing consumers:
 
 ```json
 {
-  "cohort":"cutover-2026-accepted-snapshot-01",
-  "records":[{
-    "id":"CASE-001",
-    "type":"permit",
-    "department":"Planning",
-    "status":"in_review",
-    "relatedIds":["INSPECTION-001"],
-    "reviewStates":{"Fire":"approved","PublicWorks":"pending"},
-    "attachments":2,
-    "paymentMinor":"0"
+  "cohort": "core-permits-2026-10-11",
+  "records": [{
+    "id": "CASE-001",
+    "type": "permit",
+    "department": "Building",
+    "status": "Open",
+    "relatedIds": ["FIRE-001"],
+    "reviewStates": {"Fire": "Open"},
+    "reviewAssignments": {"Fire": "Assigned reviewer"},
+    "reviewDueAt": {"Fire": "2026-10-20"},
+    "attachments": 2,
+    "paymentMinor": "15000"
   }]
 }
 ```
 
-The `type` vocabulary is `permit`, `license`, `inspection`, `special_event`. `reviewStates` is an **observed department→state map**, not an assumption about which departments must approve which case. The case identifier must be the stable *normalized* join key on both sides; `cohort` must match, and both snapshots must represent the same intended observation point. `attachments` is an explicit nonnegative count; `paymentMinor` is an optional nonnegative decimal string (normalized minor currency units; no payment initiation). For linked cases, include both ends within the same cohort if you want an orphan check. All transformations and legal requirements remain an **owner-controlled source mapping**, not guessed from the public contract.
-
-Run:
+Types are `permit`, `license`, `inspection` and `special_event`. The `reviewAssignments` and `reviewDueAt` maps are optional additions. Old snapshots without those fields retain their original aggregate issue shape. The aggregate `auditSnapshots` and file CLI keep bounded anonymous example tags. The operator uses the additive `auditDetailedSnapshots` export from the same classifier to retain private case IDs and field values.
 
 ```bash
-node revenue/berkeley-clariti-32600118-20261010/audit.mjs --source old-normalized.json --target new-normalized.json > cutover-report.json
-# exit 0 = reconciled snapshot; 2 = discrepancies requiring human review; 3 = invalid input/errors
-node --test revenue/berkeley-clariti-32600118-20261010/audit.test.mjs
+node audit.mjs --source old-normalized.json --target candidate-normalized.json
 ```
 
-Checks: missing/unexpected cases, changed type/department/status, lost/added case relations, changed departmental reviewer status, changed attachment count, changed normalized payment minor units, and orphaned destination links. Strict duplicate-ID/cohort and schema defenses refuse malformed evidence rather than silently pass. Report is aggregated, and bounded example references use **ephemeral HMAC-derived tags**, not names, addresses, raw identifiers, raw amounts, or evidence rows; HMAC key is not published in report. Source and destination are never mutated. The code cannot contact the City or vendor or infer ledger correctness, permissions, audit trails, workflow legality, or final go-live suitability.
+Exit 0 means snapshot reconciliation; 2 means discrepancies; 3 means invalid input. The input contract supports files up to 25 MiB and 500,000 records each. Payment values remain exact integer minor-unit strings, with explicit decimal conversion in the workspace. Attachments are supplied counts; the project owner defines any separate document-content or transaction-level acceptance population.
 
-**Focused receipt:** On Ubuntu/Linux Node 22.16.0, `node --test audit.test.mjs` executed **3/3 PASS**, checking true matching case parity, five targeted evidence discrepancies (including cross-department special-events review drift), and wrong-cohort/duplicate/incomplete hard refusals. No broad suites or GitHub Actions run, no vendor data touched. No buyer has accepted or licensed this proof-of-capability.
+## Primary-source adoption
 
-## Workshare opportunity (owner review only)
+Berkeley's January contract report describes the replacement of legacy Accela and the multi-department permitting implementation. The May 12 council action adopted the special-event module amendment under contract **32600118**, bringing its authorized ceiling to **$5,480,128**. The May report anticipates special-event configuration after the core platform. These records identify relevant delivery work; the partner workshare has its own proposed scope and price.
 
-**Differentiation:** Clariti already has implementation and technology partners, so a generic claim that its platform needs external engineers would be weak. A plausible *independent* offer is 5 business days of supervised, audit-friendly cross-department cutover reconciliation for a **single authorized 200–500-case cohort** covering source/target permit metadata, inspections, licensing and new special-event reviewer handoffs. Complete work only on approved pseudonymized exports. Require an authorized Clariti/implementation partner sponsor, one signed statement of work, permitted data use, owner-approved acceptance scope and valid procurement treatment *before* engagement.
+The application incorporates two concrete departmental requirements from the original procurement sources. **Addendum E, question 71** identifies review assignment, due date and status data in departmental Excel tracking. **To-Be Appendix B, page 6** specifies the Building/Fire finalization dependency. Both are configurable against the real exported vocabulary, and the source links travel with the scenario settings. The same addendum's question 80 identifies a distinct daily Tyler Munis ERMA transaction-reconciliation requirement, whose exact transaction exports should form a separate commissioned acceptance population.
 
-**Illustrative, unquoted internal price hypothesis:** $3,200 fixed for a five-business-day pilot if data volume, format, owner and security gates are satisfied: $1,200 for cohort mapping and case-contract acceptance; $2,000 upon independent discrepancy report + human sign-off. This is not Clariti's price, an approved rate, guaranteed opportunity, invoice, signed deal, or proof that the $121,000 amendment can pay for it.
+| Original source | Use in the product and workshare |
+| --- | --- |
+| [January 20, 2026 Clariti contract report](https://berkeleyca.gov/sites/default/files/2026-01/2026-01-20%20Item%2016%20Contract%20Clariti%20Cloud%20Inc.pdf) | Existing-system migration and departmental delivery context |
+| [May 12 special-event amendment report](https://berkeleyca.gov/sites/default/files/2026-04/2026-05-12%20Item%2005%20Contract%20No.%2032600118%20Amendment.pdf) | Subsequent event intake, reviews, fees and inspections population |
+| [May 12 annotated action, page 4, item 5](https://berkeleyca.gov/sites/default/files/city-council-meetings/2026-05-12%20Annotated%20Agenda%20-%20Council.pdf) | Adopted Resolution 72,256–N.S. |
+| [Original RFP 24-11661-C](https://berkeleyca.gov/sites/default/files/documents/24-11661-C_Comprehensive%20Permit%20Management%20Software%20Solution.pdf) | Sections 2.2.4 and 8.6: field maps, transformations, conversion exclusions and extraction/validation roles |
+| [Addendum E](https://berkeleyca.gov/sites/default/files/documents/24-11661-C%20-%20Addendum%20E%20-%20Additional%20Vendor%20Questions%20and%20Second%20Extension.pdf) | Open review metadata and the separate financial transaction interface |
+| [To-Be process maps](https://berkeleyca.gov/sites/default/files/documents/Appendix%20B%20-%20Rapid%20Workflow%20To-Be%20Business%20Process%20Maps_0.pdf) | Linked Building/Fire lifecycle and cashiering workflows |
+| [Clariti Enterprise](https://www.claritisoftware.com/products/enterprise-permitting-software) | Native configurable report exports and supplied platform field/relationship definitions |
+| [Clariti partner program](https://www.claritisoftware.com/partners) | Published implementation/technology partner route: partnerships@claritisoftware.com |
 
-**Owner-controlled first route:** Exact first-party official Clariti `partnerships@claritisoftware.com` (not a proven buyer or willing subcontracting authority); alternate partner network includes Avocette, Accenture and Deloitte implementation partners and Carahsoft procurement partner, with no inference they participated in Berkeley. Current two connected Gmail accounts were scoped-read for `claritisoftware.com`, `Clariti Cloud`, `24-11661-C`, `32600118`; each returned zero matching messages, which does not establish no outside contact. Before an external approach, have Bryce validate prior relationship custody, specific recipient/sender, message text, commercial terms, and any relevant vendor/subcontracting requirements. Do not contact Berkeley directly for a vendor's independent acceptance bid without proper procurement route.
+Sources were refreshed October 11, 2026. Original January and May PDF bytes were retained with the source scout. The original comparator was adopted from Git blob `9c07dbf4c7dbb6a375fa6cfda29c905bf0173dfa` at this existing repository path; its public comparison interface is preserved.
 
-### UNSENT — internal outreach candidate, not delivered
+## Native operator result
 
-**To (owner to verify):** partnerships@claritisoftware.com  
-**Subject:** Independent cutover acceptance capacity for municipal permitting programs
+The complete nine-case training journey produced six original-engine discrepancies: two statuses, one attachment count, one exact payment value, one reviewer assignment and one due date. Its candidate also contained one Building/Fire lifecycle violation and one open-review metadata violation. A corrected export removed five findings and resolved both configured checks. The remaining event-status decision retained its earlier review for explicit reconfirmation.
 
-Hello Clariti partnerships team,
+The selected corrected run reached ready after the current discrepancy and both scenario observations were recorded. Updating its review note reopened the decision; explicit reconfirmation completed it. A portable backup restored the four original export versions, both runs and the seven corrected-run history entries. The training cohort and mappings are supplied for a hands-on repeat of this operating flow.
 
-I saw the City of Berkeley's public contract records for its permitting modernization and the later special-events permitting scope. We build vendor-neutral, read-only reconciliation tools that help implementation teams document what did and did not transfer correctly across permit records, departmental review states, inspections, case links, and supporting attachments.
+## Configured partner delivery
 
-If one of your implementation teams has a need for independent cutover acceptance or time-limited evidence reconciliation capacity, would you point me to the appropriate partnership owner? We can share a small working, dependency-free sample and discuss a tightly scoped pilot using only authorized, pseudonymized extracts. No access to City systems would be needed for that initial conversation.
+The [proposed workshare](WORKSHARE.md) covers one agreed export family and same-cohort acceptance population, mappings, original case review, two corrected candidates, departmental scenario configuration and an operator handoff: **$4,800 fixed, ten business days after agreed inputs, 50% at kickoff and 50% on acceptance**. This replaces the October 10 concept-stage price hypothesis with the completed workflow's delivery scope. The implementation partner selects the actual project population and reviewers.
 
-Thank you.
-
-**Operational status:** This draft is **not sent**, no partner acceptance or customer reply has occurred, no bid/submission/cash or owner commitment. The primary revenue gate is a real authorized prime/partner expressing actual interest; if absent, STOP the lane rather than treating an unsigned prospect as revenue. No Michael Clark outreach or previously claimed Berkeley ServiceNow RFP/Alcor work is implicated.
+MIT-licensed source. Customer exports and workspace databases are stored outside the repository.

@@ -12,9 +12,16 @@ This package adds durable application operations and result recovery around thos
 
 ## Choose the customer's product workflow
 
+[Uploads, typed stream records and resumable file delivery](CUSTOMER_WORKFLOWS.md)
+joins the original native 16 MiB multipart authoring, SSE/NDJSON reader and paid-file
+continuation in one Python customer workflow. `MultipartRequest` and `UploadFile`
+retain exact request bytes; `BuyerResult.events()`, `ndjson()` and `export_stream()`
+consume and reopen the original saved response through the native parser.
+
 | Product | Python entry point | Durable source and recovery |
 | --- | --- | --- |
 | One HTTP response | `Buyer.from_workspace` or `Buyer.from_config` | The original request and permanent attempt; `Operation.recover`, `finalize` and local accounting/history |
+| Multipart upload or finite stream | `MultipartRequest`, `BuyerResult.events` / `ndjson` | Original encoded body pins and stream capture; reusable typed exports, complete-prefix inspection and record-index continuation |
 | An approved private file | `Buyer.from_paid_file` | The original order handoff, native purchase and separate merchant entitlement; `retrieve_file` and local `recover_file` |
 | A paginated dataset | `DatasetAcquisition.create` | The original dataset session, selected snapshot, per-page attempts and SF100 data room; `recover`, explicit continuation, verified typed rows and original accounting |
 | A large object | `ObjectBuyer.prepare` | The original object descriptor, chunk queue and assembly receipts; reopen, recover, continue, consume verified streamed files and finalize original reservations |
@@ -600,3 +607,36 @@ stellar-forge-buyer --state /private/data-buyer history --out /private/customer/
 - Workspace and approved-file applications additionally require the original `python/bridge.mjs`, its shared queue/workspace source, and original `sf101-merchant-receiver/` checkout/retrieval source. Accounting consumes the same original `finalization.mjs`, SF36 worker and SF86 observer as the inbox. The current complete source distribution supplies these; the Python wheel still does not bundle Node or a signer.
 - Local state includes source/configuration, request body, original evidence and downloaded data. Store it outside public repositories and supply the existing operator's policy/signer configuration.
 - Original settlement and merchant limits are preserved. This integration performs no grant submission, production-wallet provisioning, outbound customer contact or new remote hosting.
+
+## Whole customer workspace recovery
+
+`buyer.workspace_recovery()` captures the existing Python application state with
+its explicitly selected original operator, inboxes and other application roots.
+The standalone `WorkspaceRecovery(checkout=...)` constructor creates no state;
+use it before constructing a Buyer when restoring an absent canonical root.
+
+```python
+from stellar_forge_buyer import WorkspaceRecovery
+
+recovery = WorkspaceRecovery(checkout="/srv/forge")
+verified = recovery.verify(
+    bundle="/private/backups/customer-2026-10-11",
+    expected_record_sha256=selected_digest_from_your_backup_inventory,
+    python="/usr/bin/python3",
+)
+# Only after the original canonical root is absent or empty and writers stopped:
+restored = recovery.restore(
+    bundle="/private/backups/customer-2026-10-11",
+    expected_record_sha256=verified.record_sha256,
+    python="/usr/bin/python3",
+)
+```
+
+The passphrase is supplied through the selected environment variable name
+`passphrase_env` (default `SF88_BACKUP_PASSPHRASE`), never as a value argument.
+The original SF88/SF101 encryption and SF36 authenticated checkpoint remain the
+implementations. `inspect`, `snapshot(quiesced=True)`, `verify` and `restore`
+return typed recovery/process results; `WorkspaceRecoveryError.result` retains
+completion metadata and interruption outcomes without raw stderr. No restore
+exception deletes state or retries a purchase. See [RECOVERY.md](RECOVERY.md) for
+the full capture, selected-checkpoint and same-application reopen workflow.

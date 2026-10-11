@@ -1,71 +1,159 @@
-# Nebius × NVIDIA submission gate
+# EvidenceForge — submission package
 
-Capture date for this file: 2026-09-17 EDT. Re-open the official rules immediately before any registration or submission.
+Prepared for the existing **Nebius × NVIDIA Global AI Hackathon** entry in
+**Coding and Agentic Engineering**. Source and rules reviewed on 2026-10-11.
+The concise competition contract is in [COMPETITION_CONTRACT.md](COMPETITION_CONTRACT.md).
 
-## First-party rules pinned during build
+## Project fields
 
-- Submission deadline: **2026-10-30 10:00 PDT**.
-- Project must make a runtime call to Nebius Token Factory **or** be deployed/run with Nebius AI Cloud compute, and use at least one NVIDIA open-source model.
-- Coding and Agentic Engineering is an eligible track.
-- Submission requires a project description, public source repository, open-source license, and README with setup/run instructions.
-- A working demo URL is required.
-- A public YouTube demo must be **3 minutes or less** and show the project functioning.
-- The submission should explain how Nebius/NVIDIA tooling is used and include feedback on that tooling.
-- If the project existed before the submission period, the submission must explain the significant updates made during the eligible period.
-- Judging criteria are equally weighted: technological implementation, design, potential impact, and quality of idea.
-- Overall cash prizes include $20,000 grand, $10,000 second, and $6,000 third; track/bonus prizes have separate eligibility.
+**Project name:** EvidenceForge
 
-Sources:
-- https://nebiusglobalaihackathon.devpost.com/
-- https://nebiusglobalaihackathon.devpost.com/rules
-- https://docs.tokenfactory.nebius.com/api-reference/introduction
+**Tagline:** Review a model's code change, run the original checks, and keep the exact result.
 
-## Current readiness ledger
+**Public source:** https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/nebius-evidenceforge
 
-| Gate | State | Evidence / next event |
-| --- | --- | --- |
-| Coding & Agentic Engineering track fit | READY | coding-agent control plane + sandbox contract |
-| Public OSS source | READY | public repository, MIT license at repository root |
-| Setup/run README | READY | `README.md` |
-| Deterministic offline product | READY | CLI + browser demo |
-| Hostile tests | READY | normal and `python -O` suites |
-| Submission description source material | READY | README + architecture + this ledger |
-| <=3m video capture plan | READY | `DEMO_STORYBOARD.md` |
-| Live NVIDIA/Nemotron model present in Token Factory | RUNTIME_CHECK_REQUIRED | adapter verifies `/v1/models` |
-| Real Token Factory inference | **PROVIDER_EXECUTION_REQUIRED** | no provider call claimed by offline fixture |
-| Provider-backed working demo URL | REQUIRED | not created by this source lane |
-| Tooling feedback from real provider use | REQUIRED | must be written from actual Token Factory/NVIDIA experience |
-| Public <=3m YouTube demo | OWNER_ACTION_REQUIRED | storyboard exists; video not uploaded |
-| Devpost registration / rules acceptance | OWNER_ACTION_REQUIRED | not performed |
-| Final Devpost submission | OWNER_ACTION_REQUIRED | not performed |
-| Prize / payment | NOT_AWARDED | advertised prizes are not revenue |
+**Working test build:** [EvidenceForge 0.2.0](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/nebius-evidenceforge/dist/EvidenceForge-0.2.0.zip).
+Extract the archive and run `python3 launch.py` with Python 3.11 or newer.
+The build contains the complete application and three retained local task
+operations; [README.md](README.md) explains setup and review.
 
-## Final submission field checklist
+**License:** [MIT](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/LICENSE).
+The distributed test build must carry the same license notice.
 
-Before pressing submit, bind every external field to an actual artifact rather than a placeholder:
+## Project description
 
-- **Project name:** EvidenceForge.
-- **Track:** Coding and Agentic Engineering.
-- **One-line description:** evidence-gated coding agents that turn model plans into bounded sandbox actions and content-addressed receipts without granting the model production authority.
-- **Public source URL:** use the public repository URL containing this project and its MIT license.
-- **Working demo URL:** insert only after a real public demo endpoint is live and re-tested.
-- **YouTube URL:** insert only after the <=3-minute public video is uploaded and playable without private access.
-- **Nebius/NVIDIA explanation:** name the exact live NVIDIA/Nemotron model and the Token Factory runtime path actually exercised.
-- **Provider evidence:** retain response ID, model ID, timestamp/run log, and receipt generated from the real call.
-- **Tooling feedback:** write concrete observations from the live Token Factory/NVIDIA run; do not fabricate feedback from the offline adapter.
-- **Significant-update statement:** describe the competition-period EvidenceForge product work actually present in the submitted repository: provider adapter, strict plan admission, sandbox execution contract, content-addressed receipts, hostile suite, browser demo, and submission materials. Do not claim dates or pre-existing work beyond retained repository history.
+EvidenceForge is a local coding workspace for repairing small Python modules
+with a clearly defined scope. A task starts with its original source, observed
+failures, an allowed file, a write budget, and named checks. An NVIDIA model
+reached through Nebius Token Factory proposes the change. EvidenceForge
+validates that plan, applies it to a fresh task copy, runs the original checker,
+and presents the patch beside the actual before-and-after results.
 
-## Demo narrative
+The concrete example is an invoice importer. Its task includes a byte-order
+mark in a CSV header, invoice identifiers that become duplicates after
+normalization, and monetary values that require exact finite decimal handling.
+Those are authored development cases with executable checks. They give a
+reviewer a compact business-logic problem whose outcome can be inspected
+directly in the source and results. The workload definitions and original
+checks are in [workloads.py](evidenceforge/workloads.py).
 
-The <=3-minute public demo should follow `DEMO_STORYBOARD.md` and prove, in order:
+The result stays attached to the source and policy that produced it. A stable
+operation ID lets a reviewer reopen the original journal, patch, and check
+results after navigating away or restarting the local interface. A corrected
+control uses the same task and checks, making the model's result comparable to
+a known implementation. A successful check result helps the reviewer decide
+whether to use a change; the application does not deploy it or grant itself
+permission to change a production repository.
 
-1. A human declares one allowed code path, exact required tests, and a write limit.
-2. A real Token Factory/NVIDIA response proposes a strict JSON plan.
-3. EvidenceForge rejects a malicious plan that attempts path traversal, an undeclared shell-style test, or an injected approval field.
-4. The admitted plan executes inside the isolated sandbox contract.
-5. A content-addressed receipt is emitted and verifies cleanly.
-6. The receipt still says `real_repository_mutation=false` and `human_approval_required=true`, demonstrating that successful model/test output does not self-authorize deployment.
+Our intended audience is developers reviewing narrowly scoped automation and
+data-processing fixes. The shipped executor supports the included small Python
+workloads. Supporting arbitrary repositories would require a stronger isolated
+execution adapter and repository-specific checks; that broader capability is
+outside the delivered application.
 
-## Submission truth fence
+## How it works
 
-Do not change `PROVIDER_EXECUTION_REQUIRED`, `OWNER_ACTION_REQUIRED`, or `NOT_AWARDED` merely to make the checklist look complete. A gate changes only after the corresponding provider/account/publication event has actually occurred and its evidence is retained.
+1. **Inspect the task.** Read the frozen source, goal, allowed path, and named
+   checks before dispatching a run.
+2. **Generate a scoped change.** The existing provider adapter discovers the
+   current model inventory and submits the task to the selected available
+   NVIDIA model through Nebius Token Factory.
+3. **Run the original computation.** The admitted plan writes only its task
+   copy. The checker is outside the model's writable scope, and writes must
+   finish before the declared checks run.
+4. **Review the outcome.** Inspect the actual failure or success, source patch,
+   check output, and comparison with the same-source corrected control.
+5. **Keep the work.** Reopen the retained operation and download the original
+   result artifacts without creating another inference request.
+
+The main implementation is Python, using the standard library for the local
+service and execution protocol. The provider uses the documented
+[OpenAI-compatible Token Factory API](https://docs.tokenfactory.nebius.com/api-reference/introduction)
+at `https://api.tokenfactory.nebius.com/v1/`. Runtime discovery avoids depending
+on a model identifier copied from an old catalog. The adapter records the
+requested model separately from the model reported by the actual response.
+
+Implementation details and supported execution limits are maintained in
+[FOCUSED_EXECUTION.md](FOCUSED_EXECUTION.md). Setup and the current browser
+entrypoint are maintained in [README.md](README.md).
+
+## Competition-period development
+
+The public source history records the provider-plan CLI, provider provenance,
+native task execution, and retained browser operations developed for this
+entry. The native execution release is
+[PR178](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/178);
+the retained-operation interface is
+[PR813](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/813).
+The current product work brings task inspection, live provider execution,
+review, comparison, and retained output into one interface. The submitted
+source revision will identify the integrated release, so the description and
+video refer to the same implementation.
+
+## Demonstration and measured result
+
+The public demonstration follows [DEMO_STORYBOARD.md](DEMO_STORYBOARD.md).
+Capture one real invoice-import workflow and retain its original operation.
+Use the actual result, including any unsuccessful attempt, when describing
+model behavior. Local corrected controls are labeled separately from provider
+runs. The earlier native control observations remain in
+[focused-validation-20261008.json](evidence/focused-validation-20261008.json).
+
+The 0.2.0 test build includes the invoice importer, dependency ordering, and
+operation ledger corrected controls run on this Linux worker on 2026-10-11.
+Each original baseline failed three named checks; each corrected implementation
+passed all four original checks, for 12 of 12 final checks across the three
+tasks. These are authored local controls. They are not NVIDIA model results.
+The invoice workflow was also exercised through the native browser: its
+downloaded patch applied to the original source, and its operation reopened
+after restarting the service. A fresh process launched the extracted test
+build and reopened all three retained operations without a provider request.
+
+The entry's selected live run will supply these exact values:
+
+| Field | Source to copy into the final entry |
+| --- | --- |
+| Submitted source revision | The integrated public commit used by the test build and recording |
+| Selected operation | Its original retained operation ID and task |
+| NVIDIA model | Actual response model, with requested model retained separately |
+| Provider execution | Actual response ID and creation time, plus the original runtime record |
+| Result | Observed baseline and final named-check outcomes; admitted patch or concrete failure |
+| Measurement | Recorded wall time and returned token usage, with their scope stated |
+| Working build | The 0.2.0 test build above; add the selected provider operation to the final package |
+| Video | Public YouTube URL and measured duration |
+| Entry | Existing Devpost project URL and provider-confirmed submission state |
+
+The source package is available at the public URL above. A selected qualifying
+Nebius run, video publication, and final Devpost state are being integrated;
+this document does not substitute a draft URL for one of those artifacts.
+
+## Tooling feedback
+
+The final feedback is written from the selected native provider operation.
+Record what happened when discovering the model, generating the plan, handling
+the response, and running the change. Include the returned finish reason,
+usage, and observed timing where those observations support the feedback.
+
+Useful feedback connects an observed behavior to a concrete improvement. For
+example, if the selected model produces a response that fails the plan schema,
+report the actual failure and the schema support that would make this workflow
+more reliable. If it produces a useful change, explain which task details and
+response features made the result usable. Do not infer API reliability,
+comparative model quality, or customer productivity from one operation.
+
+## Judge access and final publication
+
+The published test build opens the real product with three retained local
+control operations and the complete source, checks, and MIT license. Its setup
+instructions explain how to inspect the patch, rerun the original local checks,
+and download retained output. It contains no API key. Reviewing its delivered
+operations and running the local controls require no provider account. Fresh
+provider execution uses the operator's configured provider environment. The
+selected qualifying provider operation will be added to the final competition
+package so judges can review that result without supplying credentials.
+
+The existing entrant account supplies the final project fields, testing URL,
+video, and feedback. Preserve that project and its team rather than creating
+another entry. After publishing, read the actual submission state and public
+destinations back, and record the source revision and selected operation in
+the entry so the software, video, and description remain aligned.

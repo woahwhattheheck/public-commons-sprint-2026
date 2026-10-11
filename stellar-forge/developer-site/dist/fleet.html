@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Prepare registered merchant sources, fixed fleet slots and the original retained Stellar Forge setup.">
+  <meta name="theme-color" content="#f4f4f4">
+  <title>Fleet setup — Stellar Forge</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/fleet.css">
+  <script type="module" src="/fleet-setup.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/">Stellar Forge<span class="brand-caption">MERCHANT TOOLS</span></a>
+  <nav aria-label="Primary"><a href="/">JSON resources</a><a href="/woo.html">WooCommerce</a><a href="/fleet.html" aria-current="page">Fleet</a><a href="/#build">Native tools</a></nav>
+  <a class="nav-source" href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/merchant-fleet-gateway/BOOTSTRAP.md" target="_blank" rel="noopener noreferrer">Fleet guide ↗</a>
+</header>
+<main id="main" class="shell fleet-main">
+  <div class="fleet-heading">
+    <p class="eyebrow">MANAGED MERCHANT FLEET / FIRST SETUP</p>
+    <h1>Prepare your merchant fleet.</h1>
+    <p>Register the merchants you want to run together. Review their source packages, public hosts and fixed slots, then download a setup packet for the original fleet operator.</p>
+  </div>
+  <div class="setup-shell fleet-setup">
+    <div class="setup-top">
+      <div class="setup-title"><strong>Fleet launch workbench</strong><span class="mono">RETAINED NATIVE SETUP</span></div>
+      <div class="setup-actions"><button id="fleet-import-draft" class="button small" type="button">Open setup draft</button><button id="fleet-download-draft" class="button small" type="button">Download draft</button></div>
+    </div>
+    <p id="fleet-status" class="setup-status" role="status" aria-live="polite" hidden></p>
+    <div id="fleet-errors" class="setup-errors" role="alert" hidden><h2>Complete these items.</h2><ul id="fleet-error-list"></ul></div>
+    <nav class="setup-tabs fleet-tabs" aria-label="Fleet setup steps">
+      <button type="button" data-fleet-step="0" aria-current="step" aria-controls="fleet-host-pane"><span>01</span>Host setup</button>
+      <button type="button" data-fleet-step="1" aria-controls="fleet-merchants-pane"><span>02</span>Merchants</button>
+      <button type="button" data-fleet-step="2" aria-controls="fleet-review-pane"><span>03</span>Review and launch</button>
+    </nav>
+    <section id="fleet-host-pane" class="setup-pane" aria-labelledby="fleet-host-heading">
+      <h2 id="fleet-host-heading" tabindex="-1">Choose the host directories and listeners.</h2>
+      <p class="pane-intro">Use the paths and ports on your Linux merchant host. Setup creates a distinct original release store for every merchant slot and retains the completed plan in the private fleet directory.</p>
+      <div class="field-grid">
+        <div class="field"><label for="fleet-folder">Packet folder name</label><input id="fleet-folder" autocomplete="off" spellcheck="false" maxlength="64" placeholder="merchant-fleet" aria-describedby="fleet-folder-hint"><p id="fleet-folder-hint" class="hint">The downloaded packet contains the editable declaration and native launch instructions.</p></div>
+        <div class="field"><label for="fleet-directory">Private fleet directory</label><input id="fleet-directory" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="/var/lib/stellar-merchant/fleet" aria-describedby="fleet-directory-hint"><p id="fleet-directory-hint" class="hint">Start with an absent or empty directory. Use this same retained directory when resuming setup or changing interfaces.</p></div>
+        <div class="field"><label for="fleet-mcp-directory">Merchant MCP configuration directory</label><input id="fleet-mcp-directory" autocomplete="off" spellcheck="false" maxlength="4096" placeholder="/var/lib/stellar-merchant/mcp" aria-describedby="fleet-mcp-hint"><p id="fleet-mcp-hint" class="hint">Choose a new directory whose parent exists on the host. Its MCP configuration will open the same private fleet and published plan.</p></div>
+        <div class="field"><label for="fleet-workspace-port">Browser workspace port</label><input id="fleet-workspace-port" type="number" min="0" max="65535" step="1" inputmode="numeric" aria-describedby="fleet-workspace-hint"><p id="fleet-workspace-hint" class="hint">A separate loopback port for the original managed fleet workspace. Use 0 for automatic allocation.</p></div>
+      </div>
+      <fieldset class="fleet-fields"><legend>Fixed fleet ports and slots</legend>
+        <div class="field-grid fleet-port-grid">
+          <div class="field"><label for="fleet-gateway-port">Merchant ingress port</label><input id="fleet-gateway-port" type="number" min="1" max="65535" step="1" inputmode="numeric" aria-describedby="fleet-gateway-hint"><p id="fleet-gateway-hint" class="hint">The original gateway routes each configured public host to its selected merchant.</p></div>
+          <div class="field"><label for="fleet-admin-port">Gateway control port</label><input id="fleet-admin-port" type="number" min="1" max="65535" step="1" inputmode="numeric" aria-describedby="fleet-admin-hint"><p id="fleet-admin-hint" class="hint">The private control listener used by the original operator.</p></div>
+          <div class="field"><label for="fleet-merchant-port-start">First merchant slot port</label><input id="fleet-merchant-port-start" type="number" min="1" max="65535" step="1" inputmode="numeric" aria-describedby="fleet-ports-hint"><p id="fleet-ports-hint" class="hint">Each merchant receives the next group of consecutive slot ports. Review shows the exact allocation.</p></div>
+          <div class="field"><label for="fleet-slots">Slot names, separated by commas</label><input id="fleet-slots" autocomplete="off" spellcheck="false" maxlength="163" placeholder="blue, green" aria-describedby="fleet-slots-hint"><p id="fleet-slots-hint" class="hint">Use two to four distinct names. The first slot receives each merchant’s initial release.</p></div>
+        </div>
+      </fieldset>
+      <p class="setup-notice">Choose distinct ingress, control, workspace and merchant ports. Native setup reserves its declared fleet ports while preparing the stores. The original operator acquires the running listeners when you open the fleet.</p>
+    </section>
+    <section id="fleet-merchants-pane" class="setup-pane" aria-labelledby="fleet-merchants-heading" hidden>
+      <h2 id="fleet-merchants-heading" tabindex="-1">Register each merchant and its source packages.</h2>
+      <p class="pane-intro">Choose the actual public host declared by each prepared source. Register package aliases for the original operator, then choose the package and release ID that should serve first.</p>
+      <div class="resource-grid fleet-merchant-grid">
+        <aside class="resource-sidebar" aria-label="Declared merchants"><span class="small-label">MERCHANTS</span><div id="fleet-merchants" class="resource-list"></div><button id="fleet-add-merchant" class="button small" type="button">Add merchant</button><p>Declare two to thirty-two merchants. Every merchant keeps its own hosts, package aliases and release stores.</p></aside>
+        <div id="fleet-editor" class="fleet-editor"></div>
+      </div>
+      <p class="setup-notice">Enter source paths as they will exist on the merchant host. Relative package paths resolve from the saved setup declaration. Native setup validates each original source and its configured HTTPS origin before selecting its release.</p>
+    </section>
+    <section id="fleet-review-pane" class="setup-pane" aria-labelledby="fleet-review-heading" hidden>
+      <h2 id="fleet-review-heading" tabindex="-1">Review the fleet and download its launch packet.</h2>
+      <p class="pane-intro">Review the exact merchant hosts, startup packages, slot stores and listener ports. The local setup command passes the declaration through the original source and release APIs before publishing the fleet plan.</p>
+      <div id="fleet-review-content" class="fleet-review"></div>
+      <div class="review-downloads"><button id="fleet-download-packet" class="button primary" type="button">Download launch packet</button><p>Keep the editable draft with the setup declaration for the next host session.</p></div>
+    </section>
+    <div class="setup-footer"><span class="small-label">ONE RETAINED FLEET · TERMINAL, BROWSER AND MCP</span><div class="setup-actions"><button id="fleet-back" class="button small" type="button" hidden>Back</button><button id="fleet-next" class="button primary" type="button">Merchants →</button></div></div>
+  </div>
+  <section class="fleet-operating-notes" aria-labelledby="fleet-operating-heading">
+    <h2 id="fleet-operating-heading">Keep the fleet intact between sessions.</h2>
+    <div class="fleet-note-grid">
+      <article><h3>Resume the same setup</h3><p>Repeat the same setup command after an interruption. The original retained stores identify completed staging and selection, and setup continues from that progress.</p></article>
+      <article><h3>Open the original operator</h3><p>Use the published plan and private fleet directory in the terminal, browser workspace or merchant MCP. Close the current foreground owner before opening another interface.</p></article>
+      <article><h3>Review later releases</h3><p>Register the next package, stage it in an available slot, and use the original review and activation flow. The fleet retains its release mapping, drain state and rollback history.</p></article>
+    </div>
+    <a class="text-link" href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/merchant-fleet-gateway/BOOTSTRAP.md" target="_blank" rel="noopener noreferrer">Read native setup and recovery instructions ↗</a>
+  </section>
+</main>
+<footer class="site-footer shell"><a class="footer-brand" href="/">Stellar Forge</a><p>Original merchant tools. Retained fleet operations.</p><a href="/#build">Other native integrations</a></footer>
+<input id="fleet-file-input" type="file" accept=".json,application/json" hidden>
+<noscript><div class="noscript">Enable JavaScript to edit a fleet draft and prepare its launch packet, or use the linked native setup guide.</div></noscript>
+</body>
+</html>

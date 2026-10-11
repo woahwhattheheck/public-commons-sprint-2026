@@ -136,6 +136,20 @@ instructions to stop it there. Closing the console command stops its own
 seller; closing the browser tab leaves the command running. A separate
 `run` process can be used when the operator UI is not needed.
 
+## Release a prepared MySQL merchant
+
+The original MySQL CLI and browser produce a complete merchant package accepted by
+`stage --mysql-package PREPARED_DIRECTORY`. Its retained query declarations, exact
+parameter rules, public payment choices, connection profile, optional database CA
+and original client enter this same release store. The console compares source and
+price changes, operates the original native seller, and restores a reviewed version
+through its existing rollback controls.
+
+See [Operate retained MySQL merchants](MYSQL_RELEASES.md) for the complete
+CLI and merchant MCP workflow. Queries use current database rows; release rollback
+restores the selected query and customer terms. For immutable rows, use the original
+MySQL dataset publisher.
+
 ## Release an existing API merchant
 
 An API package saved by the original SF61 workspace can now become a retained
