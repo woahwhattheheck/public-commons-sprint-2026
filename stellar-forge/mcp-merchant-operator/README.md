@@ -285,7 +285,12 @@ the configured seller and delivery services keep their existing owners.
 | `merchant_start` | Start that selection through the original foreground seller launcher. |
 | `merchant_status` | Inspect selected and running releases, history, readiness, and which process owns the seller. |
 | `merchant_catalog` | Read actual seller health, offers and OpenAPI from that process-owned instance. |
-| `merchant_client_export` | Export the original JS client, TypeScript declarations, OpenAPI and guide into a new named customer directory. |
+| `merchant_client_export` | Export the original JS client, TypeScript declarations, OpenAPI and guide into a new named customer directory with a durable completion receipt. |
+| `merchant_client_export_status` | Verify the retained customer files after a lost response, seller shutdown or provider restart. |
+| `merchant_client_export_adopt` | Explicitly retain the inspected digest of an original legacy five-file export without regenerating it. |
+| `merchant_client_export_manifest` | Review the original saved completion receipt and exact manifest identity. |
+| `merchant_client_export_file` | Retrieve SHA-pinned chunks of one original customer payload or its receipt. |
+| `merchant_client_export_file_release` | Release only the selected temporary read snapshot. |
 | `merchant_rollback` | Select an exact retained release through original rollback history. |
 | `merchant_restart` | Drain the owned instance and start the selected version. |
 | `merchant_stop` | Gracefully drain only the instance owned by this MCP process. |
@@ -310,6 +315,12 @@ activating it. Supply a short reason. `merchant_start` takes the resulting
 selection generation and the same release digest. It returns a status with
 `operator.instanceId`; use that exact instance for catalog, client export, stop
 or restart. Client export also takes a new ID such as `customer-1`.
+
+The [customer SDK delivery workflow](./CLIENT_EXPORTS.md) completes export, lost-response
+inspection, explicit legacy adoption, download/resume and original generated-client
+use. `merchant-mcp inspect-client` reviews the saved receipt; `download-client`
+retains the five exact payloads locally with durable checkpoints. It remains
+available after the original seller stops and does not run generated code.
 
 Changing selection leaves the currently running seller on its original release.
 Status reports `RESTART_REQUIRED`. Inspect the comparison and call

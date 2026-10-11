@@ -32,7 +32,8 @@ function boundedJson(value, maximum, code) {
   return JSON.parse(text);
 }
 
-function validateTerms(terms, policy) {
+/** Validate prepared native terms against the original validated facilitator policy. */
+export function validateTerms(terms, policy) {
   requireValue(plain(terms) && terms.scheme === 'exact' && terms.network === policy.network &&
     policy.payments.assets.includes(terms.asset) && policy.payments.recipients.includes(terms.payTo) &&
     typeof terms.amount === 'string' && /^[1-9][0-9]{0,38}$/.test(terms.amount) &&

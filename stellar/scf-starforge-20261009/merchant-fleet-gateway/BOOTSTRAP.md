@@ -10,6 +10,9 @@ Run these commands from `stellar/scf-starforge-20261009/merchant-fleet-gateway`.
 Node and Linux `flock` are required by the existing fleet operator. Native source
 types retain their original dependencies: prepared DuckDB packages use their
 declared Python interpreter; Python applications use their original declaration.
+SQLite uses the original Node `node:sqlite` capture worker. MySQL and MariaDB use
+the original prepared package, installed `mysql2`, and connection environment
+references available to the foreground process.
 
 ## Declare the merchants
 
@@ -58,6 +61,20 @@ all supported native source selectors follow the same original registration
 rules. Optional `runtime` settings belong inside each package registration, as
 described in [RELEASE_OPERATOR.md](RELEASE_OPERATOR.md).
 
+For SQLite, register `{ "sqlitePackage": "./exports/inventory" }` using the
+original six-file workbench export. The database referenced by its `source.json`
+must be readable during setup. Optional `sqliteSnapshotMaxBytes` and
+`sqliteSnapshotTimeoutMs` fields belong beside `sqlitePackage`; the original
+capture defaults are 1073741824 bytes and 120000 milliseconds. Setup captures
+committed data, including committed WAL changes, in the initial retained release.
+Later database edits enter the fleet through a new staged snapshot.
+
+For a live MySQL or MariaDB merchant, register
+`{ "mysqlPackage": "./packages/catalog" }`. The original prepared package retains
+named queries, offers, connection references, and any package-local CA. Starting
+the resulting fleet opens the configured live database using the host's declared
+environment variables. Each package must declare its own exact merchant host.
+
 The declaration accepts 2–32 distinct tenant IDs and hosts, 1–32 package aliases
 per tenant, and 2–4 distinct common slots. The first slot is the startup slot.
 Slot ports are assigned consecutively in tenant order, then slot order: the
@@ -98,6 +115,10 @@ file is created atomically with private permissions; a different existing plan
 is preserved. The same setup declaration, directory, and output path resume the
 same operation. After a port conflict, free the conflicting port and repeat the
 command. After a process interruption, repeat it directly.
+SIGINT, SIGTERM, or an embedding `AbortSignal` also reach a pending original
+SQLite capture. The native worker closes and the incomplete stage is removed;
+the retained setup intent permits the same command to resume. Successfully
+committed releases remain available for the original checkpoint reconciliation.
 
 Setup recovers an original immutable release committed before its progress
 checkpoint by inspecting that release in its reserved store. It recovers an

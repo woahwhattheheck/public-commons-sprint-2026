@@ -2,16 +2,23 @@ import { createHash } from 'node:crypto';
 import {DEMO,inputs,plan} from './engine.mjs';
 const hash=(value)=>createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0,16);
 /** Explicit proposal -> approval -> simulated execution. Zero external device calls. */
-export function makeAgent(){
-  let proposal=null, approvedId=null, receipt=null, revision=0;
-  let scenario=inputs(DEMO);
-  const history=[];
+export function makeAgent({scenario=DEMO,initialRevision=0,namespace=''}={}){
+  if(!Number.isSafeInteger(initialRevision)||initialRevision<0)throw Error('Invalid initial plan revision');
+  if(typeof namespace!=='string'||namespace.length>160)throw Error('Invalid plan namespace');
+  return createAgent({proposal:null,approvedId:null,receipt:null,revision:initialRevision,
+    scenario:inputs(scenario),history:[],namespace});
+}
+// A private in-process fork lets the retained workspace commit its record before
+// replacing the active agent. Opening a saved household always uses makeAgent,
+// which starts with fresh proposal/approval state and its original saved inputs.
+function createAgent(snapshot){
+  let {proposal,approvedId,receipt,revision,scenario,history,namespace}=structuredClone(snapshot);
   function offer(input=scenario){
     const candidate=inputs(input);
     const result=plan(candidate);
     scenario=candidate;
     revision++;
-    proposal={...result,id:hash({revision,result}),revision};
+    proposal={...result,id:hash(namespace?{namespace,revision,result}:{revision,result}),revision};
     approvedId=null;receipt=null;
     history.push({kind:'plan',revision,planId:proposal.id,avoidedCost:result.avoidedCost});
     return view();
@@ -48,6 +55,7 @@ export function makeAgent(){
     if(planIntent)return offer(input);
     throw Error('Try "find a cheaper schedule", "explain the plan", or use explicit approval controls.');
   }
-  return {offer,view,approve,execute,cancel,say};
+  return {offer,view,approve,execute,cancel,say,
+    fork:()=>createAgent({proposal,approvedId,receipt,revision,scenario,history,namespace})};
 }
 

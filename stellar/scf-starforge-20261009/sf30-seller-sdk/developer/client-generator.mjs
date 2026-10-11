@@ -202,12 +202,17 @@ MIT. Generated from the original Starforge SF30 developer workspace.
 `;
 }
 
-/** Exact bytes in; standalone source and declaration artifacts out. No I/O beyond source reads. */
-export function generateSellerClient(input) {
+/** Original snapshot validation, also used when inspecting retained customer files. */
+export function sellerClientSnapshot(input) {
   const bytes = typeof input === 'string' ? Buffer.from(input) : Buffer.from(input ?? []);
   if (!bytes.length || bytes.length > LIMIT) throw new RangeError('OpenAPI source must be 1 byte–16 MiB');
   const specification = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-  const snapshot = makeSnapshot(specification, createHash('sha256').update(bytes).digest('hex'));
+  return makeSnapshot(specification, createHash('sha256').update(bytes).digest('hex'));
+}
+
+/** Exact bytes in; standalone source and declaration artifacts out. No I/O beyond source reads. */
+export function generateSellerClient(input) {
+  const snapshot = sellerClientSnapshot(input);
   const runtime = runtimeSource.replace(runtimeImport, requestSource.replace(/^export /gm, ''))
     .replace('export function createClientRuntime', 'function createClientRuntime');
   const javascript = `// MIT. Generated from original SF30 seller OpenAPI SHA-256 ${snapshot.sourceSha256}.\n` + runtime +
