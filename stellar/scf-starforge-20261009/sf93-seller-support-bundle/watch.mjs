@@ -65,15 +65,26 @@ async function drainNotifications(store,env,signal) {
     }
   });
 }
-export async function runIncidentWatch({directory,environment=process.env,signal,onReady=()=>{}}) {
+export async function runIncidentWatch({directory,environment=process.env,signal,onReady=()=>{},
+  expectedConfigRevision,expectedConfigHash}) {
+  if(expectedConfigRevision!==undefined||expectedConfigHash!==undefined) {
+    if(!Number.isSafeInteger(expectedConfigRevision)||expectedConfigRevision<1||
+        typeof expectedConfigHash!=='string'||!/^[0-9a-f]{64}$/.test(expectedConfigHash))
+      throw new Error('SF93_CONFIGURATION_EXPECTATION_INVALID');
+  }
   const store=await openIncidentStore(directory),lease=await store.acquireWorker();
   const instanceId=randomUUID();let started=false;
   try {
-    await store.transaction(state=>{
+    const selected=await store.transaction(state=>{
+      if(expectedConfigRevision!==undefined&&state.configRevision!==expectedConfigRevision)
+        throw new Error('SF93_CONFIGURATION_REVISION_CONFLICT');
+      if(expectedConfigHash!==undefined&&state.configHash!==expectedConfigHash)
+        throw new Error('SF93_CONFIGURATION_DIGEST_CONFLICT');
       state.worker={instanceId,pid:process.pid,status:'RUNNING',startedAt:new Date().toISOString(),
         lastSweepAt:null,stoppedAt:null,lastError:null};
+      return {configRevision:state.configRevision,configHash:state.configHash};
     });
-    started=true;onReady({directory:store.root,instanceId,pid:process.pid});
+    started=true;onReady({directory:store.root,instanceId,pid:process.pid,...selected});
     while(!signal?.aborted) {
       lease.assertHeld();
       const begun=Date.now(),snapshot=await store.read();

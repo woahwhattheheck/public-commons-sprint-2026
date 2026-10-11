@@ -150,7 +150,7 @@ export class MerchantReleaseOperator {
   async #execute(name, args) {
     if (name.startsWith('merchant_fleet_')) return this.#fleet.call(name, args);
     const root = this.#config.releaseStore;
-    if (name.startsWith('merchant_case') || name.startsWith('merchant_incident') || name.startsWith('merchant_support_'))
+    if (name.startsWith('merchant_case') || name.startsWith('merchant_incident') || name.startsWith('merchant_notification') || name.startsWith('merchant_support_'))
       return this.#support.call(name, args);
     switch (name) {
       case 'merchant_status': return this.status();
@@ -236,7 +236,7 @@ export class MerchantReleaseOperator {
     this.#closing = true;
     this.#close = (async () => {
       await this.#active;
-      const outcomes = await Promise.allSettled([this.#fleet.close(),
+      const outcomes = await Promise.allSettled([this.#fleet.close(), this.#support.close(),
         this.#managed ? this.#stop(this.#managed.observation.instanceId) : Promise.resolve()]);
       if (outcomes.some(result => result.status === 'rejected'))
         throw failure('OPERATOR_SHUTDOWN_INCOMPLETE', 'One or more original owned runtimes reported an incomplete shutdown.');

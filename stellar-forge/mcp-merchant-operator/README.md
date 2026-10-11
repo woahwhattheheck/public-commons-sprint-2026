@@ -226,11 +226,14 @@ Add the host's existing incident/case directories and retained input aliases thr
 `--support SUPPORT_CONNECTION_JSON` at initialization, or `supportConnection` in
 the existing configuration. The original MCP provider then exposes incident
 inspection/acknowledgment, case import/reopening/history, owner terms, workorder
-preparation and private exports. These use the same original SF93/SF74/SF77 engines
+preparation and private exports. Agents can also inspect/apply declared observation
+profiles, start/stop an owned original watcher, and recover its existing incident
+notifications by their actual event/attempt identities. These use the same original SF93/SF74/SF77 engines
 and case directory as the support console. Follow the complete
 [support and workorder workflow](./SUPPORT.md) for source/revision selection,
-console interoperability, export recovery and host setup. It starts no watcher,
-seller or payment run.
+console interoperability, watcher ownership, notification and export recovery, and
+host setup. Observation begins only through the explicit watcher start operation;
+the configured seller and delivery services keep their existing owners.
 
 ## Complete operator workflow
 
