@@ -211,11 +211,11 @@ export async function prepareMysqlMcpPackage({ packageDirectory, planFile, direc
   requireValue(within && (isAbsolute(within) || within === '..' || within.startsWith('..' + sep)),
     'MYSQL_MCP_DESTINATION_INSIDE_SOURCE');
   const lease = await publicationLease(destination);
-  let stage, committed = false;
+  let stage, captured = false, committed = false;
   try {
     await absent(destination);
     stage = join(parent, '.' + basename(destination) + '.prepare-' + randomUUID());
-    const retained = await stageMysqlRelease(stage, selected.prepared.directory);
+    const retained = await stageMysqlRelease(stage, selected.prepared.directory); captured = true;
     requireValue(retained.mysql.packageManifestSha256 === selected.review.packageManifestSha256 &&
       retained.mysql.executionSha256 === selected.review.sourceExecutionSha256, 'MYSQL_MCP_SOURCE_CHANGED');
     await mkdir(join(stage, 'customer'), { mode: 0o700 });
@@ -241,7 +241,7 @@ export async function prepareMysqlMcpPackage({ packageDirectory, planFile, direc
       customerDirectory: join(destination, 'customer'), manifest,
       review: { ...inspected.review, originalPlanSha256: manifest.originalPlanSha256 } };
   } finally {
-    if (stage && !committed) await rm(stage, { recursive: true, force: true });
+    if (captured && !committed) await rm(stage, { recursive: true, force: true });
     await lease.close();
   }
 }

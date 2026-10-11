@@ -212,10 +212,11 @@ function savedPlan(plan, directory) {
   return plan;
 }
 
-export async function readPlan(path) {
-  const directory = absolute(path);
-  await privateDirectory(directory);
-  return savedPlan(await readJson(join(directory, 'plan.json'), 8 * 1048576), directory);
+export async function readPlan(path,{storageDirectory=path}={}) {
+  const directory = absolute(path),storage=absolute(storageDirectory);
+  await privateDirectory(storage);
+  need(await realpath(storage)===storage,'RUNBOOK_PLAN_STORAGE_MUST_BE_CANONICAL');
+  return savedPlan(await readJson(join(storage, 'plan.json'), 8 * 1048576), directory);
 }
 
 async function initializationDirectory(path) {
@@ -431,7 +432,19 @@ export async function acquireExecutionLease(directory) {
   // Generations and release markers are never reused or removed. Contenders for
   // the same next generation meet one create-exclusive publication; a delayed
   // release of an older generation cannot affect its successor.
-  return () => releaseLease(directory, record, 'OPERATION_FINISHED');
+  const release=() => releaseLease(directory, record, 'OPERATION_FINISHED');
+  // Only this lease's closure can finish its exact captured generation. The
+  // original live lease stays held until capture and encryption have finished.
+  release.sealSnapshot=async stagedDirectory=>{
+    need(stagedDirectory!==directory&&isAbsolute(stagedDirectory)&&
+      await realpath(stagedDirectory)===stagedDirectory,'RECOVERY_STAGING_DIRECTORY_REQUIRED');
+    await privateDirectory(stagedDirectory);
+    const source=await latestLease(directory),captured=await latestLease(stagedDirectory);
+    need(JSON.stringify(source)===JSON.stringify(record)&&JSON.stringify(captured)===JSON.stringify(record)&&
+      !await wasReleased(directory,record),'RECOVERY_CAPTURE_LEASE_CHANGED');
+    await releaseLease(stagedDirectory,record,'RECOVERY_SNAPSHOT_COMPLETED');
+  };
+  return release;
 }
 
 /** Short metadata mutations share the original immutable lease generations.

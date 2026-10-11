@@ -13,6 +13,7 @@ import {openWorkspace} from './workspace.mjs';
 import {openQueue} from './queue.mjs';
 
 const SCHEMA='stellar-forge.sf88.workspace-recovery.v1';
+const COLLECTION='stellar-forge.sf88.workspace-recovery.v2';
 const KEY_NAMES=['SF36_CONSENT_KEY_B64','SF36_AUDIT_KEY_B64','SF36_OPERATOR_KEY_B64'];
 const CRYPTO=fileURLToPath(new URL('../sf101-merchant-recovery/recover.mjs',import.meta.url));
 const LEDGER=fileURLToPath(new URL('./workspace-recovery-ledger.py',import.meta.url));
@@ -104,11 +105,27 @@ async function checkPython(path) {
 }
 
 /** Read the actual original workspace and inboxes; do not load wallet custody. */
-export async function inspectWorkspaceRecovery({directory,stateRoot,inboxes=[],include=[]}={}) {
+export async function inspectWorkspaceRecovery({directory,stateRoot,inboxes=[],include=[],operators,optionalInclude=[]}={}) {
+  if(operators!==undefined) {
+    need(Array.isArray(operators)&&operators.length<=63&&operators.every(path=>typeof path==='string'),
+      'WORKSPACE_RECOVERY_OPERATOR_LIST_INVALID');
+    const paths=[directory,...operators];
+    need(new Set(paths).size===paths.length,'WORKSPACE_RECOVERY_DUPLICATE_OPERATOR');
+    const plans=[];
+    for(const path of paths)plans.push(await inspectWorkspaceRecovery({directory:path,stateRoot,
+      ...(path===directory?{inboxes,include,optionalInclude}:{})}));
+    const union=key=>[...new Set(plans.flatMap(plan=>plan[key]))].sort();
+    const selected=union('selected').filter((path,_i,all)=>!all.some(other=>other!==path&&inside(other,path)));
+    return {...plans[0],schema:COLLECTION,operators:plans.slice(1),selected,
+      missing:union('missing'),parentDirectories:union('parentDirectories'),
+      runtime:[...new Set(plans.flatMap(plan=>plan.runtime.map(item=>item.path)))].sort()
+        .map(path=>({path,retained:false}))};
+  }
   need(process.platform!=='win32','WORKSPACE_POSIX_OPERATOR_REQUIRED');
   absolute(directory);await privateDirectory(stateRoot);
   need(inside(stateRoot,directory),'WORKSPACE_RECOVERY_WORKSPACE_OUTSIDE_ROOT');
-  need(Array.isArray(inboxes)&&Array.isArray(include)&&inboxes.length<=64&&include.length<=64,
+  need(Array.isArray(inboxes)&&Array.isArray(include)&&Array.isArray(optionalInclude)&&
+    inboxes.length<=64&&include.length<=64&&optionalInclude.length<=MAX_FILES,
     'WORKSPACE_RECOVERY_ROOT_LIST_INVALID');
   const workspace=await openWorkspace(['--dir',directory]);
   const {owner}=execution(workspace.config);
@@ -163,6 +180,7 @@ export async function inspectWorkspaceRecovery({directory,stateRoot,inboxes=[],i
         job.finalization?.result?.receipt_ref??null}))});
   }
   for(const path of include)await dependency(path);
+  for(const path of optionalInclude)await dependency(path,{optional:true});
   const paths=[...selected].sort().filter((path,_i,all)=>!all.some(other=>other!==path&&inside(other,path)));
   for(const path of paths) {
     const st=await lstat(path);
@@ -177,11 +195,14 @@ export async function inspectWorkspaceRecovery({directory,stateRoot,inboxes=[],i
     walletEnvironment:workspace.manifest.signer.secretEnv??null,
     ledger:owner.ledger,policy:owner.policy,keys:join(directory,'operator-keys.json'),python:owner.python,
     runtime:runtime.map(path=>({path,retained:false})),
-    walletEnvironmentExported:false,restoreMode:'ORIGINAL_CANONICAL_STATE_ROOT'};
+    walletEnvironmentExported:false,restoreMode:'ORIGINAL_CANONICAL_STATE_ROOT',
+    ...(optionalInclude.length?{optionalInclude:[...new Set(optionalInclude)].sort()}:{})};
 }
 
+const originalOperators=plan=>[plan,...(plan.operators??[])];
 async function inventory(plan) {
-  const excluded=new Set([plan.ledger+'-wal',plan.ledger+'-shm']);
+  const ledgers=new Set(originalOperators(plan).map(operator=>operator.ledger));
+  const excluded=new Set([...ledgers].flatMap(path=>[path+'-wal',path+'-shm']));
   const entries=new Map();let total=0;
   async function walk(path,depth=0) {
     if(excluded.has(path))return;
@@ -198,8 +219,10 @@ async function inventory(plan) {
     } else {
       need(st.nlink===1&&st.size<=MAX_FILE,'WORKSPACE_RECOVERY_UNSAFE_SOURCE');
       total+=st.size;need(total<=MAX_BYTES,'WORKSPACE_RECOVERY_SIZE_LIMIT');
-      entries.set(rel,{path:rel,kind:path===plan.ledger?'ledger':'file',
-        ...(path===plan.ledger?{identity:{dev:st.dev,ino:st.ino}}:{stamp:stamp(st)})});
+      if(plan.schema===COLLECTION&&path.endsWith('/reservations.sqlite'))need(ledgers.has(path),
+        'WORKSPACE_RECOVERY_UNSELECTED_OPERATOR_LEDGER');
+      entries.set(rel,{path:rel,kind:ledgers.has(path)?'ledger':'file',
+        ...(ledgers.has(path)?{identity:{dev:st.dev,ino:st.ino}}:{stamp:stamp(st)})});
     }
   }
   for(const path of plan.selected)await walk(path);
@@ -318,21 +341,26 @@ async function stagedFiles(root,signal) {
   return files.sort((a,b)=>a.path.localeCompare(b.path));
 }
 function result(record,recordSha256) {
-  return {schema:SCHEMA,recordSha256,createdAt:record.createdAt,stateRoot:record.plan.stateRoot,
+  return {schema:record.schema,recordSha256,createdAt:record.createdAt,stateRoot:record.plan.stateRoot,
     directory:record.plan.directory,network:record.plan.network,payer:record.plan.payer,
     files:record.files.filter(f=>f.kind==='file').length,
     bytes:record.files.reduce((n,f)=>n+(f.size??0),0),checkpoint:record.checkpoint,
     inboxes:record.plan.inboxes.map(i=>({root:i.root,jobs:i.jobs.length})),
-    runtime:record.plan.runtime,walletEnvironmentExported:false};
+    runtime:record.plan.runtime,walletEnvironmentExported:false,
+    ...(record.schema===COLLECTION?{operators:originalOperators(record.plan).map(operator=>({
+      directory:operator.directory,ledger:operator.ledger,network:operator.network,payer:operator.payer,
+      checkpoint:record.checkpoints.find(item=>item.directory===operator.directory).checkpoint})),
+      ...(record.application?{application:record.application}:{})}: {})};
 }
 
 /** The caller stops original writers first; the database lock and full source
  * comparison additionally reject a capture that changes under this operation. */
-export async function snapshotWorkspaceRecovery(options,{environment=process.env,signal}={}) {
+export async function snapshotWorkspaceRecovery(options,{environment=process.env,signal,
+  prepareSnapshot,onProgress=()=>{}}={}) {
   need(!signal?.aborted,'WORKSPACE_RECOVERY_INTERRUPTED');
   need(options.quiesced===true,'WORKSPACE_RECOVERY_QUIESCED_SOURCE_REQUIRED');
   const plan=await inspectWorkspaceRecovery(options);
-  need((options.passEnv??'SF88_BACKUP_PASSPHRASE')!==plan.walletEnvironment,
+  need(originalOperators(plan).every(operator=>(options.passEnv??'SF88_BACKUP_PASSPHRASE')!==operator.walletEnvironment),
     'WORKSPACE_RECOVERY_SEPARATE_PASSPHRASE_REQUIRED');
   const output=absolute(options.output);
   need(!inside(plan.stateRoot,output)&&!inside(output,plan.stateRoot),
@@ -341,12 +369,16 @@ export async function snapshotWorkspaceRecovery(options,{environment=process.env
   need(await realpath(dirname(output))===dirname(output),'WORKSPACE_RECOVERY_OUTPUT_PARENT_INVALID');
   const temporary=await mkdtemp(join(dirname(output),'.sf88-capture-'));
   const staged=join(temporary,'state');await mkdir(staged,{mode:0o700});
-  let holder,outputPlaceholder;
+  const holders=[],checkpoints=[];let outputPlaceholder;
   try {
-    const database=join(staged,relative(plan.stateRoot,plan.ledger));
-    await mkdir(dirname(database),{recursive:true,mode:0o700});
-    holder=await startLedger('snapshot',{python:plan.python,database:plan.ledger,policy:plan.policy,
-      keys:plan.keys,destination:database,signal});
+    for(const operator of originalOperators(plan).sort((a,b)=>a.ledger.localeCompare(b.ledger))) {
+      const database=join(staged,relative(plan.stateRoot,operator.ledger));
+      await mkdir(dirname(database),{recursive:true,mode:0o700});
+      const holder=await startLedger('snapshot',{python:operator.python,database:operator.ledger,
+        policy:operator.policy,keys:operator.keys,destination:database,signal});
+      holders.push(holder);checkpoints.push({directory:operator.directory,ledger:operator.ledger,checkpoint:holder.checkpoint});
+      onProgress({stage:'LEDGER_CAPTURED',directory:operator.directory,checkpoint:holder.checkpoint});
+    }
     const before=await inventory(plan);
     for(const entry of before) {
       const destination=join(staged,entry.path);
@@ -360,14 +392,28 @@ export async function snapshotWorkspaceRecovery(options,{environment=process.env
     }
     need(same(before,await inventory(plan)),'WORKSPACE_RECOVERY_SOURCE_CHANGED');
     need(same(plan,await inspectWorkspaceRecovery(options)),'WORKSPACE_RECOVERY_SOURCE_CHANGED');
-    const checkpoint=holder.checkpoint;
-    await holder.release();holder=null;
-    const verified=await startLedger('verify',{python:plan.python,database,
-      policy:join(staged,relative(plan.stateRoot,plan.policy)),
-      keys:join(staged,relative(plan.stateRoot,plan.keys)),signal});
-    need(same(checkpoint,verified.checkpoint),'WORKSPACE_RECOVERY_CHECKPOINT_MISMATCH');
+    for(const holder of holders)await holder.release();holders.length=0;
+    for(const operator of originalOperators(plan)) {
+      const verified=await startLedger('verify',{python:operator.python,
+        database:join(staged,relative(plan.stateRoot,operator.ledger)),
+        policy:join(staged,relative(plan.stateRoot,operator.policy)),
+        keys:join(staged,relative(plan.stateRoot,operator.keys)),signal});
+      need(same(checkpoints.find(item=>item.directory===operator.directory).checkpoint,verified.checkpoint),
+        'WORKSPACE_RECOVERY_CHECKPOINT_MISMATCH');
+    }
+    let application;
+    if(prepareSnapshot!==undefined) {
+      need(plan.schema===COLLECTION&&typeof prepareSnapshot==='function','WORKSPACE_RECOVERY_CAPTURE_HOOK_INVALID');
+      application=await prepareSnapshot({staged,stateRoot:plan.stateRoot,plan});
+      need(object(application)&&Buffer.byteLength(JSON.stringify(application))<=1024*1024,
+        'WORKSPACE_RECOVERY_APPLICATION_RECORD_INVALID');
+    }
     const files=await stagedFiles(staged,signal);
-    const record={schema:SCHEMA,createdAt:new Date().toISOString(),plan,checkpoint,files};
+    for(const entry of [...files].reverse())if(entry.kind==='directory')await syncDirectory(join(staged,entry.path));
+    const checkpoint=checkpoints.find(item=>item.directory===plan.directory).checkpoint;
+    const record={schema:plan.schema,createdAt:new Date().toISOString(),plan,checkpoint,files,
+      ...(plan.schema===COLLECTION?{checkpoints,...(application?{application}:{})}:{})};
+    onProgress({stage:'ENCRYPTING',operators:checkpoints.length,files:files.length});
     const recordPath=join(temporary,'record.json');await save(recordPath,record);
     const planPath=join(temporary,'plan.json');
     await save(planPath,{schema:'stellar-forge.merchant-recovery-plan.v1',
@@ -382,7 +428,7 @@ export async function snapshotWorkspaceRecovery(options,{environment=process.env
     return {status:'BUYER_STATE_BACKUP_CREATED',bundle:output,
       ...result(record,sha(Buffer.from(json(record))))};
   } finally {
-    if(holder)await holder.stop();
+    for(const holder of holders)await holder.stop();
     if(outputPlaceholder) {
       const current=await existing(output);
       if(current?.ino===outputPlaceholder.ino&&current?.dev===outputPlaceholder.dev&&
@@ -393,16 +439,36 @@ export async function snapshotWorkspaceRecovery(options,{environment=process.env
 }
 
 function validateRecord(record) {
-  need(object(record)&&record.schema===SCHEMA&&object(record.plan)&&record.plan.schema===SCHEMA&&
+  need(object(record)&&[SCHEMA,COLLECTION].includes(record.schema)&&object(record.plan)&&record.plan.schema===record.schema&&
     Array.isArray(record.files)&&record.files.length<=MAX_FILES&&Array.isArray(record.plan.inboxes)&&
     Array.isArray(record.plan.runtime)&&record.checkpoint?.outcome==='JOURNAL_CONSISTENT',
     'WORKSPACE_RECOVERY_RECORD_INVALID');
   const p=record.plan;absolute(p.stateRoot);
-  for(const path of [p.directory,p.ledger,p.policy,p.keys,...p.inboxes.map(i=>i.root)]) {
-    absolute(path);need(inside(p.stateRoot,path),'WORKSPACE_RECOVERY_RECORD_PATH_INVALID');
+  if(record.schema===COLLECTION)need(Array.isArray(p.operators)&&p.operators.length<=63&&
+    Array.isArray(record.checkpoints)&&record.checkpoints.length===p.operators.length+1&&
+    (record.application===undefined||object(record.application)&&
+      Buffer.byteLength(JSON.stringify(record.application))<=1024*1024),'WORKSPACE_RECOVERY_RECORD_INVALID');
+  else need(p.operators===undefined&&record.checkpoints===undefined&&record.application===undefined,
+    'WORKSPACE_RECOVERY_RECORD_INVALID');
+  const operatorNames=new Set();
+  for(const operator of originalOperators(p)) {
+    need(!operatorNames.has(operator.directory)&&Array.isArray(operator.inboxes)&&
+      (operator===p||operator.schema===SCHEMA&&operator.operators===undefined&&operator.stateRoot===p.stateRoot),
+      'WORKSPACE_RECOVERY_RECORD_INVALID');
+    operatorNames.add(operator.directory);
+    for(const path of [operator.directory,operator.ledger,operator.policy,operator.keys,...operator.inboxes.map(i=>i.root)]) {
+      absolute(path);need(inside(p.stateRoot,path),'WORKSPACE_RECOVERY_RECORD_PATH_INVALID');
+    }
+    need(operator.ledger===join(operator.directory,'reservations.sqlite')&&operator.policy===join(operator.directory,'policy.json')&&
+      operator.keys===join(operator.directory,'operator-keys.json'),'WORKSPACE_RECOVERY_RECORD_PATH_INVALID');
+    if(record.schema===COLLECTION) {
+      const matches=record.checkpoints.filter(item=>object(item)&&item.directory===operator.directory);
+      need(matches.length===1&&matches[0].ledger===operator.ledger&&matches[0].checkpoint?.outcome==='JOURNAL_CONSISTENT',
+        'WORKSPACE_RECOVERY_RECORD_INVALID');
+    }
   }
-  need(p.ledger===join(p.directory,'reservations.sqlite')&&p.policy===join(p.directory,'policy.json')&&
-    p.keys===join(p.directory,'operator-keys.json'),'WORKSPACE_RECOVERY_RECORD_PATH_INVALID');
+  if(record.schema===COLLECTION)need(same(record.checkpoint,record.checkpoints.find(item=>item.directory===p.directory).checkpoint),
+    'WORKSPACE_RECOVERY_RECORD_INVALID');
   const names=new Set();let bytes=0;
   for(const f of record.files) {
     member(f.path,{root:f.kind==='directory'});
@@ -418,7 +484,7 @@ function validateRecord(record) {
     'WORKSPACE_RECOVERY_RECORD_INVALID');
   return record;
 }
-async function openBackup(options,{environment=process.env,signal}={}) {
+async function openBackup(options,{environment=process.env,signal,inspectSnapshot,onProgress=()=>{}}={}) {
   need(!signal?.aborted,'WORKSPACE_RECOVERY_INTERRUPTED');
   const bundle=absolute(options.bundle);await privateDirectory(bundle);
   const temporary=await mkdtemp(join(tmpdir(),'.sf88-open-'));
@@ -432,16 +498,24 @@ async function openBackup(options,{environment=process.env,signal}={}) {
       'WORKSPACE_RECOVERY_SELECTED_BACKUP_CHANGED');
     need(same(record.files,await stagedFiles(staged,signal)),'WORKSPACE_RECOVERY_CONTENT_MISMATCH');
     const map=path=>join(staged,relative(record.plan.stateRoot,path));
-    const original=await openWorkspace(['--dir',record.plan.directory],
-      {accounting:true,storageDirectory:map(record.plan.directory)});
-    const cfg=original.config;
-    const {owner,op}=execution(cfg);
-    need(op.expect.network===record.plan.network&&
-      cfg.trustedPayer===record.plan.payer&&owner.ledger===record.plan.ledger&&
-      owner.policy===record.plan.policy,'WORKSPACE_RECOVERY_ORIGINAL_BINDING_INVALID');
-    const checked=await startLedger('verify',{python:options.python??'/usr/bin/python3',
-      database:map(record.plan.ledger),policy:map(record.plan.policy),keys:map(record.plan.keys),signal});
-    need(same(record.checkpoint,checked.checkpoint),'WORKSPACE_RECOVERY_CHECKPOINT_MISMATCH');
+    for(const operator of originalOperators(record.plan)) {
+      const original=await openWorkspace(['--dir',operator.directory],
+        {accounting:true,storageDirectory:map(operator.directory)});
+      const cfg=original.config;
+      const {owner,op}=execution(cfg);
+      need(op.expect.network===operator.network&&cfg.trustedPayer===operator.payer&&
+        owner.ledger===operator.ledger&&owner.policy===operator.policy,
+        'WORKSPACE_RECOVERY_ORIGINAL_BINDING_INVALID');
+      const checked=await startLedger('verify',{python:options.python??'/usr/bin/python3',
+        database:map(operator.ledger),policy:map(operator.policy),keys:map(operator.keys),signal});
+      const expected=record.schema===COLLECTION?record.checkpoints.find(item=>item.directory===operator.directory).checkpoint:record.checkpoint;
+      need(same(expected,checked.checkpoint),'WORKSPACE_RECOVERY_CHECKPOINT_MISMATCH');
+      onProgress({stage:'LEDGER_VERIFIED',directory:operator.directory,checkpoint:checked.checkpoint});
+    }
+    if(inspectSnapshot!==undefined) {
+      need(typeof inspectSnapshot==='function','WORKSPACE_RECOVERY_CAPTURE_HOOK_INVALID');
+      await inspectSnapshot({staged,record,map});
+    }
     return {temporary,staged,record,recordSha256};
   } catch(e){await rm(temporary,{recursive:true,force:true});throw e;}
 }
@@ -460,12 +534,13 @@ async function copyState(from,to,files,signal) {
       need(observed.sha256===file.sha256&&observed.size===file.size,'WORKSPACE_RECOVERY_CONTENT_MISMATCH');
     }
   }
+  for(const file of [...files].reverse())if(file.kind==='directory')await syncDirectory(join(to,file.path));
 }
 /** Publish a complete authenticated state directory. Existing populated state
  * is never replaced or merged. Original request/config/key bytes are unchanged. */
 export async function restoreWorkspaceRecovery(options,context) {
   const opened=await openBackup(options,context);
-  let adjacent;
+  let adjacent,published;
   try {
     const {record}=opened,target=record.plan.stateRoot,parent=dirname(target);
     need(!inside(target,absolute(options.bundle))&&!inside(absolute(options.bundle),target),
@@ -487,25 +562,46 @@ export async function restoreWorkspaceRecovery(options,context) {
     await mkdir(target,{mode:0o700}).catch(e=>{if(e.code!=='EEXIST')throw e;});
     await privateDirectory(target);
     need((await readdir(target)).length===0,'WORKSPACE_RECOVERY_TARGET_NOT_EMPTY');
-    await rename(staged,target);await syncDirectory(parent);
-    // Reopen the original operators; these reads neither execute nor finalize.
-    await openWorkspace(['--dir',record.plan.directory],{accounting:true});
-    for(const inbox of record.plan.inboxes) {
-      const jobs=await (await openQueue(inbox.root)).list();
-      need(jobs.length===inbox.jobs.length&&jobs.every(j=>j.state!=='REVIEW_REQUIRED'),
-        'WORKSPACE_RECOVERY_REOPEN_FAILED');
+    await rename(staged,target);
+    const collection=record.schema===COLLECTION;
+    const diagnostic=failure=>/^[A-Z0-9_]{1,120}$/.test(failure?.code??'')?failure.code:'WORKSPACE_RECOVERY_REOPEN_FAILED';
+    published={status:'BUYER_STATE_RESTORED',...result(record,opened.recordSha256),
+      executionStarted:false,originalStateRetained:true,
+      ...(collection?{nativeReopenErrors:[],publicationSyncError:null,cleanupErrors:[]}: {})};
+    try {await syncDirectory(parent);}catch(failure) {
+      if(!collection)throw failure;published.publicationSyncError=diagnostic(failure);
     }
-    return {status:'BUYER_STATE_RESTORED',...result(record,opened.recordSha256),
-      executionStarted:false,originalStateRetained:true};
+    // Reopen every original operator. Preserve the published collection result
+    // if a local runtime check fails after the complete target became visible.
+    for(const operator of originalOperators(record.plan)) {
+      try {await openWorkspace(['--dir',operator.directory],{accounting:true});}
+      catch(failure) {if(!collection)throw failure;
+        published.nativeReopenErrors.push({directory:operator.directory,code:diagnostic(failure)});}
+    }
+    for(const inbox of originalOperators(record.plan).flatMap(operator=>operator.inboxes)) {
+      try {
+        const jobs=await (await openQueue(inbox.root)).list();
+        need(jobs.length===inbox.jobs.length&&jobs.every(j=>j.state!=='REVIEW_REQUIRED'),
+          'WORKSPACE_RECOVERY_REOPEN_FAILED');
+      } catch(failure) {if(!collection)throw failure;
+        published.nativeReopenErrors.push({directory:inbox.root,code:diagnostic(failure)});}
+    }
+    return published;
   } finally {
-    if(adjacent)await rm(adjacent,{recursive:true,force:true});
-    await rm(opened.temporary,{recursive:true,force:true});
+    for(const path of [adjacent,opened.temporary].filter(Boolean)) {
+      try {await rm(path,{recursive:true,force:true});}
+      catch(failure) {
+        if(published?.schema!==COLLECTION)throw failure;
+        published.cleanupErrors.push({directory:path,code:/^[A-Z0-9_]{1,120}$/.test(failure?.code??'')?
+          failure.code:'WORKSPACE_RECOVERY_CLEANUP_FAILED'});
+      }
+    }
   }
 }
 
 export async function workspaceRecoveryCommand(command,args,context) {
   const opt={inboxes:[],include:[]};
-  const names={'--dir':'directory','--state-root':'stateRoot','--inbox':'inboxes','--include':'include',
+  const names={'--dir':'directory','--state-root':'stateRoot','--inbox':'inboxes','--include':'include','--operator':'operators',
     '--out':'output','--bundle':'bundle','--pass-env':'passEnv','--python':'python','--expect':'expected'};
   for(let i=0;i<args.length;i++) {
     const flag=args[i];
@@ -513,12 +609,13 @@ export async function workspaceRecoveryCommand(command,args,context) {
     need(Object.hasOwn(names,flag)&&typeof args[i+1]==='string'&&args[i+1].length>0,
       'WORKSPACE_RECOVERY_ARGUMENT_INVALID');
     const key=names[flag],value=args[++i];
+    if(key==='operators')opt.operators??=[];
     if(Array.isArray(opt[key]))opt[key].push(value);
     else {need(opt[key]===undefined,'WORKSPACE_RECOVERY_ARGUMENT_INVALID');opt[key]=value;}
   }
   const allowed={
-    '--inspect-workspace-backup':['directory','stateRoot','inboxes','include'],
-    '--backup-workspace':['directory','stateRoot','inboxes','include','output','passEnv','quiesced'],
+    '--inspect-workspace-backup':['directory','stateRoot','inboxes','include','operators'],
+    '--backup-workspace':['directory','stateRoot','inboxes','include','operators','output','passEnv','quiesced'],
     '--verify-workspace-backup':['bundle','passEnv','python','expected','inboxes','include'],
     '--restore-workspace':['bundle','passEnv','python','expected','inboxes','include'],
   }[command];

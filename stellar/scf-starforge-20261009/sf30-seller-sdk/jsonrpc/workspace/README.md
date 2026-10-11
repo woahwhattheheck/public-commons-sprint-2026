@@ -124,11 +124,175 @@ Download them individually or use the retained absolute local paths shown in
 the operation. The generated review refers to its retained request file on
 this host. On another host, place the request at the buyer's chosen private
 path and prepare the original review there using the normal RPC buyer command.
-Continue in the original buyer initializer, signer and review workflow.
+Continue in **Native commerce** below, or use the original buyer initializer,
+signer and review commands directly.
 
 Metadata products use `{}`. Transaction reads require a current actual hash;
 history reads use a provider-retained ledger window or the previous returned
 cursor. Each deliberately new page or purchase uses a new intent.
+
+## Prepare and reopen native commerce
+
+The same workspace can now carry completed buyer reviews into the original
+SF66/SF88 preparation, operator ledger and commerce console. Choose the private
+operator/facilitator profile in the launching process:
+
+```sh
+npx --no-install starforge jsonrpc workspace \
+  --dir /absolute/private/rpc-workspace \
+  --commerce-profile /absolute/private/rpc-commerce-profile.json
+```
+
+The profile is a private regular JSON file. Its `prepare` section uses the
+original operator initializer's actual actor, service, public payer, Python
+executable, signer reference and atomic budgets. Use the existing reviewed
+native facilitator configuration and actual public payer. For example:
+
+```json
+{
+  "schema": "stellar-forge.rpc-commerce-profile.v1",
+  "prepare": {
+    "facilitatorConfig": "/absolute/private/facilitator.json",
+    "operator": {
+      "actor": "rpc-pilot-operator",
+      "service": "stellar-rpc-pilot",
+      "python": "/usr/bin/python3",
+      "payer": "REPLACE_WITH_THE_EXISTING_PUBLIC_PAYER",
+      "secretEnv": "STELLAR_BUYER_SECRET",
+      "totalAtomic": "100000",
+      "dailyAtomic": "100000"
+    },
+    "sellerPort": 8423,
+    "operationsPort": 8424,
+    "requestTimeoutMs": 120000,
+    "responseMaxBytes": 8388608,
+    "responseTimeoutMs": 30000
+  },
+  "consolePort": 8426,
+  "existing": []
+}
+```
+
+Set this file to mode `0600` and its private parent to `0700`. Supply the actual
+wallet and provider environment values through the original host's private
+environment. The profile contains their references. `signerProvider` can replace
+`secretEnv` with the original trusted provider declaration. `httpsProxyEnv` uses
+the original explicit CONNECT transport when that host requires it. An optional
+top-level `finalityNode` selects the existing trusted absolute executable for
+the original finality observer; the default is the launching Node executable.
+These executable, directory and signer choices stay in the launch profile.
+
+Unspecified seller, operations and console ports use free loopback ports.
+Keep the public merchant origin stable and route the existing HTTPS ingress to
+the reported listener. The profile rejects colliding nonzero listener ports.
+The original native preparation currently uses Stellar testnet payment terms;
+the RPC data network remains the independently declared network in the plan.
+
+The `requestTimeoutMs` default is 120,000 ms and is retained in each generated
+SF88 buyer configuration. It covers the original complete paid HTTP request.
+The separate `responseTimeoutMs` controls saving the returned response body.
+Both values appear in the retained native review. The original SF88 validators
+check their actual supported ranges before initializing the operator.
+
+### Browser workflow
+
+1. Save and review the public merchant plan, then prepare its original package.
+2. Prepare each actual buyer request above. Select the package in **Native
+   commerce**, then explicitly select the completed requests to include.
+3. Choose **Create a new retained preparation** and **Review selected commerce
+   requests**. Review the exact intent, method, parameters hash, payment option,
+   payer and shared total/daily budget. The native setup adds its original
+   `Accept: application/json` header; the handoff retains both header maps.
+   An omitted payment flow uses the original operator's `authorization`
+   default when comparing the saved buyer with the prepared native request.
+4. Choose **Prepare native workspace**. The original initializer creates one
+   operator workspace and one retained commerce session. Every selected intent
+   is reserved to that preparation in the existing authoring database before
+   initialization begins.
+5. Open the retained preparation with **Open original commerce**, then follow
+   **Original commerce console** under **Merchant operation**. The original
+   console provides review, explicit purchase execution, current accounting,
+   saved-response preview/download and paid-response recovery.
+6. **Drain and stop** closes that console and its original merchant resources.
+   Reopen the workspace with the same profile, select the retained preparation,
+   and open it again. Its operator keys, ledger, queue, payment attempts and
+   saved responses continue from their existing records.
+
+Preparations are scoped to an immutable saved plan/package and the complete
+selected buyer set. The same intent cannot be initialized into a second
+preparation in this workspace. Reopen its existing record to continue it.
+Preparing a deliberately new purchase requires a deliberately new intent.
+Review and preparation are offline; opening performs the original provider
+network check before acquiring its native merchant resources. The original
+console's **Execute** remains the action that starts a purchase.
+
+### Attach an existing original preparation
+
+An existing SF66 prepared setup can be named in the private launcher profile:
+
+```json
+{
+  "schema": "stellar-forge.rpc-commerce-profile.v1",
+  "consolePort": 8426,
+  "existing": [
+    {
+      "id": "retained-rpc-pilot",
+      "label": "Original RPC pilot",
+      "directory": "/absolute/private/original-rpc-prepared"
+    }
+  ]
+}
+```
+
+The `prepare` section is optional when the host only opens named existing
+preparations. Keep the original directory at its original canonical path. Import
+its retained `jsonrpc.json` as the workspace's public plan and prepare that
+merchant package. Prepare buyer reviews with the original intent IDs and exact
+request bytes, select the complete original buyer set, choose **Attach: Original
+RPC pilot**, then review and **Retain existing session**.
+
+Attachment checks the complete normalized original plan, all methods, exact
+payment options, original request bytes and resulting headers against the
+original prepared setup and inbox. It retains the independent original plan,
+`prepared.json` and `session/session.json` hashes. It reuses that existing
+operator workspace and ledger. A settled original attempt therefore opens its
+existing result and response recovery in the original console. That console
+keeps the original paid-attempt time and a subsequent recovery-read time
+separately for mutable RPC reads.
+
+Named attachments must remain present in the current launch profile when
+reopened. Browser requests select the profile's stable IDs. The original host
+resolves the private directories. The preparation history provides the original
+handoff download and a read-only **Inspect retained session** action.
+
+### Retention and concurrent operation
+
+The same native SQLite owner lock covers plan authoring, intent reservations
+and preparation records. The original action history retains independent
+review, prepare, inspect and open identities. Duplicate completed operations
+return their original result. A retained complete preparation found after a
+process interruption is checked against the original review, payer, budget,
+facilitator and source before being marked ready.
+
+For an interrupted preparation, choose **Reopen preparation review**, then
+**Prepare native workspace** again. The same original initializer resumes its
+unfinished stages with the retained input bytes, operator keys, ledger and
+reserved intents. A completed original setup is read and matched to that review
+before the authoring workspace marks it ready. Keep the retained preparation
+and its original operator directory together when restoring a private backup.
+
+Only one original merchant or commerce session can run through this workspace
+at a time. A stop identifies the precise current instance. Closing from either
+the workspace or original commerce console drains accepted original work and
+updates the same runtime record. Reopening after a process interruption uses
+the retained preparation; a new start is explicit. Provider credentials are
+captured afresh at each open. The provider closes after the native seller and
+observer complete their original shutdown.
+
+Earlier buyer reviews, preparations and operations have independent paginated
+history controls. **Reopen preparation review** restores the original selected
+version and buyer identities. Unsaved plan edits stay in the editor until the
+operator explicitly saves or discards them.
 
 ## Start, operate, drain and reopen
 
@@ -188,9 +352,15 @@ activation, rollback, original operations and availability controls. Stop the
 workspace's owned merchant before starting the release on the same public ingress.
 
 `startRpcWorkspace` in `server.mjs` accepts the same directory, creation/import
-and host settings and returns `{ origin, url, model, close }`. The model in
+and host settings, including `commerceProfileFile`, and returns
+`{ origin, url, model, close }`. The model in
 `model.mjs` exposes the saved plan, review, comparison, preparation, diagnosis,
 buyer, start/stop and verified artifact workflow for an existing trusted host.
+`commerceBuyers`, `commerceReview`, `commercePrepare`, `commercePreparations`,
+`commerceInspect` and `commerceOpen` compose the same original preparation and
+console. Review/prepare/open inputs carry the saved revision/review ID and
+operation ID; preparation additionally selects the exact retained commerce
+review ID/hash, and open/inspect select a retained preparation ID.
 Close it after its last action; it closes the original native merchant before
 releasing the store.
 
@@ -202,3 +372,10 @@ before copying live database files. The source distribution must retain the
 whole original SF30, SF61 and SF88 closure, including the reused
 `duckdb/workspace/store.mjs`; that store uses Node's built-in SQLite and does
 not load the DuckDB engine.
+
+Native commerce also uses the maintained original SF66/SF36/SF43/SF81/SF103 and
+native-facilitator closure. The original native modules load when the host
+selects commerce review/preparation/open. Keep the complete maintained merchant
+distribution and its original native runtime dependencies. The existing
+`jsonrpc workspace` command reaches this workflow through the same dispatcher.
+

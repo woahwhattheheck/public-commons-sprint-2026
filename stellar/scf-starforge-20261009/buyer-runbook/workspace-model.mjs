@@ -10,6 +10,7 @@ import {MANIFEST_SCHEMA, previewRunbook, initializeRunbook, runbookPlanDigest,
   finalizeRunbook,bindRunbookWorkspace} from './runbook.mjs';
 import {renderReport,renderAccountingCSV} from './report.mjs';
 import {openHandoffIntake} from './handoff-intake.mjs';
+import {createRunbookRecovery,verifyRunbookRecovery} from './recovery.mjs';
 
 const SCHEMA = 'stellar-forge.buyer-runbook-workspace.v1';
 const DRAFT = 'stellar-forge.buyer-runbook-draft.v1';
@@ -80,11 +81,13 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   configsDirectory = await privateDirectory(configsDirectory ?? meta.configsDirectory);
   check(meta.configsDirectory === configsDirectory, 'WORKSPACE_CONFIG_DIRECTORY_MISMATCH');
   const intake = await openHandoffIntake({directory:join(directory,'handoffs'), configsDirectory, operatorSettings});
-  let active = null, task = null, closing = false, sequence = Promise.resolve();
+  let active = null, task = null, recoveryActive=null,recoveryTask=null,closing = false, sequence = Promise.resolve();
+  const recovery=createRunbookRecovery({directory,configsDirectory,state:list,resolveRun,intake});
   const serial = action => {
     const next = sequence.then(() => { check(!closing, 'WORKSPACE_CLOSING', 503); return action(); });
     sequence = next.catch(() => {}); return next;
   };
+  const mutate=action=>serial(()=>{check(!recoveryActive||recoveryActive.finishedAt,'WORKSPACE_RECOVERY_BUSY',409);return action();});
   async function mutateDraft(action) {
     let release;
     try { release = await acquireRunbookMetadataLease(join(directory, 'drafts')); }
@@ -244,7 +247,8 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
     }
     drafts.sort((a,b) => b.savedAt.localeCompare(a.savedAt));
     return {directory, configsDirectory, drafts, acquisitions, errors, active,
-      terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await intake.state()};
+      terminalAvailable:await terminalAvailable(), configurations:await configurations(), intake:await intake.state(),
+      recovery:{active:recoveryActive,history:await recovery.history()}};
   }
   async function launch({id, only},kind='BUYER') {
     check(!active || active.finishedAt, 'WORKSPACE_EXECUTION_BUSY', 409);
@@ -340,6 +344,26 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
       return result;
     } finally { await file.close(); }
   }
+  async function launchRecovery({kind,...input}) {
+    check(['SNAPSHOT','VERIFY'].includes(kind),'RUNBOOK_RECOVERY_ACTION_REQUIRED');
+    check(!recoveryActive||recoveryActive.finishedAt,'WORKSPACE_RECOVERY_BUSY',409);
+    check(!active||active.finishedAt,'WORKSPACE_EXECUTION_BUSY',409);
+    const controller=new AbortController(),current={id:randomUUID(),kind,status:'RUNNING',
+      startedAt:now(),finishedAt:null,events:[],cancelRequested:false};
+    recoveryActive=current;
+    const operation=kind==='SNAPSHOT'?recovery.snapshot:verifyRunbookRecovery;
+    recoveryTask=operation(input,{signal:controller.signal,onProgress:event=>{
+      current.events.push({...event,at:now()});if(current.events.length>128)current.events.shift();
+    }}).then(result=>{current.result=result;current.status='FINISHED';},error=>{
+      current.error=codeOf(error);current.status=controller.signal.aborted?'CANCELLED':'FAILED';
+    }).finally(()=>{current.finishedAt=now();});
+    current.cancel=()=>{current.cancelRequested=true;current.status='CANCELLING';controller.abort();};
+    return {id:current.id,kind:current.kind,status:current.status};
+  }
+  function cancelRecovery({id}) {
+    check(recoveryActive?.id===id&&!recoveryActive.finishedAt,'RUNBOOK_RECOVERY_OPERATION_CHANGED',409);
+    recoveryActive.cancel();return {id,status:'CANCELLING'};
+  }
   for (const path of runs) {
     const canonical = await privateDirectory(path), plan = await readPlan(canonical);
     const id = 'import-' + digest(canonical).slice(0,32);
@@ -350,14 +374,20 @@ export async function openRunbookWorkspace({directory, configsDirectory, operato
   }
   return {directory, state:list, draft:latestDraft, run:getRun, export:exportRun, download, previewResource,
     request:intake.get, requestAttachment:intake.attachment,
-    receiveRequest:input => serial(() => intake.receive(input)),
-    reviewRequest:input => serial(() => intake.review(input)),
-    prepareRequest:input => serial(() => intake.provision(input)),
-    save:input => serial(() => mutateDraft(() => saveDraft(input))),
-    initialize:input => serial(() => mutateDraft(() => activate(input))),
-    execute:input => serial(() => launch(input)), cancel:input => serial(() => cancel(input)),
-    finalize:input => serial(() => launch(input,'ACCOUNTING')),
-    bindAccounting:input => serial(() => bindAccounting(input)),
-    recover:input => serial(() => recover(input)), unlock:input => serial(() => unlock(input)),
-    async close() { closing = true; await sequence; if (active && !active.finishedAt) active.cancel(); await task; }};
+    receiveRequest:input => mutate(() => intake.receive(input)),
+    reviewRequest:input => mutate(() => intake.review(input)),
+    prepareRequest:input => mutate(() => intake.provision(input)),
+    save:input => mutate(() => mutateDraft(() => saveDraft(input))),
+    initialize:input => mutate(() => mutateDraft(() => activate(input))),
+    execute:input => mutate(() => launch(input)), cancel:input => serial(() => cancel(input)),
+    finalize:input => mutate(() => launch(input,'ACCOUNTING')),
+    bindAccounting:input => mutate(() => bindAccounting(input)),
+    recover:input => mutate(() => recover(input)), unlock:input => mutate(() => unlock(input)),
+    inspectRecovery:input=>serial(()=>recovery.inspect(input)),
+    snapshotRecovery:(input,context)=>mutate(()=>recovery.snapshot(input,context)),
+    startRecovery:input=>serial(()=>launchRecovery(input)),
+    cancelRecovery:input=>serial(()=>cancelRecovery(input)),
+    async close() { closing = true; await sequence; if (active && !active.finishedAt) active.cancel();
+      if(recoveryActive&&!recoveryActive.finishedAt)recoveryActive.cancel();
+      await Promise.all([task,recoveryTask]); }};
 }
