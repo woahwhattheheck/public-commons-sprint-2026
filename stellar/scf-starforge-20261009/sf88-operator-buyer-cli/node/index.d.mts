@@ -4,6 +4,8 @@ export interface OperatorProfile {
   signerModule?: string;
   trustedPayer?: string;
   bodyCaptureTimeoutMs?: number;
+  /** Per native HTTP exchange, including response body; 1–300,000 ms. */
+  requestTimeoutMs?: number;
   buyerTransport?: { mode: 'explicit-connect'; origin: string; proxyUrl?: string; proxyEnv?: string };
 }
 export interface BuyerOptions {
@@ -26,7 +28,7 @@ export interface NativeRequest {
   method?: string;
   expect: {
     scheme: string; network: string; asset: string; payTo: string; maxAtomic: string;
-    maxTimeoutSeconds?: number; paymentFlow?: 'authorization';
+    maxTimeoutSeconds?: number; paymentFlow?: 'authorization' | 'upfront';
   };
   headers?: Readonly<Record<string, string>>;
   body?: string | Uint8Array;
@@ -38,7 +40,55 @@ export interface NativeRequest {
   approve?: unknown;
   sign?: unknown;
 }
-export interface ImportOptions { body?: string | Uint8Array; operatorProfile?: OperatorProfile | string }
+export interface ResponseStreamOptions {
+  format: 'sse' | 'ndjson';
+  maxRecordBytes?: number;
+  maxRecords?: number;
+}
+export interface ResponseCaptureOptions {
+  maxBytes?: number;
+  /** Native stream captures allow at most 300,000 ms. */
+  timeoutMs?: number;
+  expectedSha256?: string;
+  expectedBytes?: number;
+  expectedContentType?: string;
+  stream?: ResponseStreamOptions;
+}
+export interface StreamReadOptions {
+  /** Inspect the originally recorded complete prefix of a failed capture. */
+  allowPartial?: boolean;
+  maxRecordBytes?: number;
+  maxRecords?: number;
+  signal?: AbortSignal;
+}
+export interface BuyerStreamSummary {
+  readonly format: 'sse' | 'ndjson';
+  readonly records: number;
+  readonly bytes: number;
+  readonly complete: boolean;
+  readonly pendingRecord: boolean;
+  readonly lastCompleteByte: number;
+  readonly lastEventId?: string;
+  readonly retryMilliseconds?: number | null;
+  readonly emptyLines?: number;
+  readonly error?: string;
+}
+export interface BuyerStreamEvent {
+  readonly index: number;
+  readonly format: 'sse';
+  readonly event: string;
+  readonly data: string;
+  readonly id: string;
+  readonly retry?: number;
+}
+export interface ImportOptions {
+  body?: string | Uint8Array;
+  operatorProfile?: OperatorProfile | string;
+  /** The Node application owns the fixed private destination. */
+  responseFile?: ResponseCaptureOptions;
+  /** Reviewed merchant HTTP deadline; independent of the native subprocess deadline. */
+  requestTimeoutMs?: number;
+}
 export interface Review {
   readonly intentId: string;
   readonly configSha256: string;
@@ -57,7 +107,9 @@ export interface NativeSummary extends JsonObject {
   intentId: string;
   status: unknown;
   httpStatus: number | null;
-  responseFile?: { status: string; path?: string; bytes?: number; sha256?: string; [key: string]: unknown };
+  requestTimeoutMs?: number;
+  responseFile?: { status: string; path?: string; bytes?: number; sha256?: string;
+    stream?: BuyerStreamSummary; partialPath?: string; partialSha256?: string; [key: string]: unknown };
 }
 export interface ResultRecord {
   readonly schema: string;
@@ -84,14 +136,18 @@ export class Buyer {
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
   fromOperationHandoff(file: string, options: {
     accept: number; operatorProfile?: OperatorProfile | string; signal?: AbortSignal;
+    responseFile?: ResponseCaptureOptions;
+    requestTimeoutMs?: number;
   }): Promise<Operation>;
   fromRequest(request: NativeRequest, options?: Omit<ImportOptions, 'body'>): Promise<Operation>;
-  call(request: NativeRequest): Promise<BuyerResult>;
+  call(request: NativeRequest, options?: Omit<ImportOptions, 'body'>): Promise<BuyerResult>;
   discover(catalog: JsonObject, options?: { destination?: string; signal?: AbortSignal }): Promise<JsonObject>;
   prepare(input: {
     discoveryFile: string; row: number; accept: number; intentId: string; url: string;
     method?: string; headers?: Record<string, string>; body?: string | Uint8Array;
     operatorProfile?: OperatorProfile | string; signal?: AbortSignal; ticketFile?: string; ticketHeader?: string;
+    responseFile?: ResponseCaptureOptions;
+    requestTimeoutMs?: number;
   }): Promise<Operation>;
   list(): AsyncIterable<Operation>;
   dataset(id: string): Dataset;
@@ -119,9 +175,13 @@ export class BuyerResult extends VerifiedFile {
   readonly native: NativeSummary;
   readonly status: unknown;
   readonly delivery: { status: string; [key: string]: unknown };
+  readonly stream: BuyerStreamSummary | null;
   readonly ok: boolean;
-  constructor(record: ResultRecord, responseFile: { destination: string; maxBytes: number; timeoutMs?: number });
+  constructor(record: ResultRecord, responseFile: ResponseCaptureOptions & { destination: string; maxBytes: number },
+    runtimeDirectory?: string);
   raiseForStatus(): this;
+  events(options?: StreamReadOptions): AsyncIterable<BuyerStreamEvent>;
+  ndjson<T = unknown>(options?: StreamReadOptions): AsyncIterable<T>;
 }
 export abstract class VerifiedFile {
   verify(options?: { chunkSize?: number; signal?: AbortSignal }): Promise<{ bytes: number; sha256: string }>;

@@ -1,0 +1,57 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "requestTimeoutMs": 120000,
+  "handlerTimeoutMs": 90000,
+  "maxStreamBytes": 67108864,
+  "routes": [
+    {
+      "id": "telemetry-events",
+      "path": "/metrics/events",
+      "definition": {
+        "method": "GET",
+        "responseFormat": "sse",
+        "serviceName": "Live process telemetry",
+        "description": "A finite SSE stream of actual backend process observations with upfront fixed-price payment",
+        "tags": ["streaming", "telemetry", "development"],
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 120,
+          "extra": {"paymentFlow": "upfront"}
+        },
+        "queryParameters": [
+          {"name": "count", "type": "integer", "description": "Number of live observations, 1 through 1000", "required": false, "example": 8},
+          {"name": "intervalMs", "type": "integer", "description": "Milliseconds between observations, 1 through 5000", "required": false, "example": 250}
+        ],
+        "outputExample": {"type": "sample", "sequence": 1, "observedAt": "2026-10-11T18:00:00.000Z", "uptimeSeconds": 4.5, "residentBytes": 50000000, "heapUsedBytes": 6000000}
+      },
+      "handler": "telemetryEvents"
+    },
+    {
+      "id": "telemetry-records",
+      "path": "/metrics/records",
+      "definition": {
+        "method": "POST",
+        "responseFormat": "ndjson",
+        "serviceName": "Process telemetry export",
+        "description": "A finite NDJSON export generated before the default authorization payment settles",
+        "tags": ["streaming", "telemetry", "development"],
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 120
+        },
+        "bodyType": "json",
+        "body": {"count": 8, "intervalMs": 250},
+        "outputExample": {"type": "sample", "sequence": 1, "observedAt": "2026-10-11T18:00:00.000Z", "uptimeSeconds": 4.5, "residentBytes": 50000000, "heapUsedBytes": 6000000}
+      },
+      "handler": "telemetryRecords"
+    }
+  ]
+}

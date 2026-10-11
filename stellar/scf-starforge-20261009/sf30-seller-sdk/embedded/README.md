@@ -5,11 +5,20 @@ Connect or Express application. The application keeps its listener, authenticati
 free endpoints and framework. The original seller compiler, request adapter,
 native x402 server and lifecycle operate the configured paid routes.
 
-The module exports `createEmbeddedSeller` and `getEmbeddedRequestContext` from
+The module exports `createEmbeddedSeller`, `getEmbeddedRequestContext` and
+`streamingResponse` from
 `embedded/index.mjs`. The maintained merchant distribution exposes the same module
 as `@tokenjunkielabs/starforge-merchant/seller/embedded`. Its adjacent `index.d.mts`
 provides TypeScript declarations. Node 22.16 or later is required; embedding adds
 no framework or payment dependency. Use the existing application's Express version.
+
+Finite SSE and NDJSON handlers use `streamingResponse()` with an async byte
+source, limits and producer cleanup. The adjacent declarations expose
+`SellerResponseStream`, `SellerStreamingResponseOptions` and
+`SellerStreamingResponse`. The complete [streaming guide](../STREAMING.md)
+covers the helper, the original authorization/upfront flows, source cancellation
+and the buyer's retained capture. The [Exa Answer merchant](../EXA_ANSWER.md)
+provides a complete API-backed application and operator setup.
 
 ## Run the supplied Node application
 
