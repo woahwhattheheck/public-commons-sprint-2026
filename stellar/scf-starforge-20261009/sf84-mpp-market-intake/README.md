@@ -28,6 +28,10 @@ Input shape (supply actual captured values rather than placeholders):
 
 A capture may include only one protocol's header. This is merely a schema illustration; it does not represent a live merchant or a runnable payment fixture.
 
+## RFC 9110 coalesced merchant challenges
+
+A real intermediary may coalesce several `WWW-Authenticate` challenges into **one** header value, such as `Basic realm="existing", Payment id="...", realm="...", method="stellar", intent="charge", request="..."`, or two distinct `Payment` challenges for Charge and Session. The native SF84 intake now separates challenge boundaries while preserving quoted commas and auth parameter commas. It selects only the `Payment` challenges and retains every distinct challenge ID; repeated IDs remain ambiguous. `mpp.headerCount` counts identified Payment challenges, not original HTTP field lines. `capturedSha256` continues to bind the entire original captured file, while per-challenge `wireSha256` covers the parsed individual challenge text. The splitter is not issuer or signature verification and does not turn MPP into an x402 buyer capability.
+
 ## Merchant / SCF founder operating result
 
 | Observed 402 | Operator route | Commercial position |
