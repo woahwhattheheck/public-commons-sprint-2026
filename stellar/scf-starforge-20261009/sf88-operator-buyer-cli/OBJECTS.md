@@ -13,6 +13,14 @@ Node 22+ and the existing buyer prerequisites apply. See [README.md](README.md)
 for native signer/workspace setup and [QUEUE.md](QUEUE.md) for the underlying
 durable inbox.
 
+## Operate from the browser
+
+The [object buyer workspace](object-workspace/README.md) joins product selection,
+exact byte-plan and cap review, original buyer execution, saved-result recovery,
+assembly and browser file download. Launch it with a private state directory and
+a trusted profile referencing the existing merchant description and native buyer
+configuration. Its sessions remain directly usable by the commands below.
+
 ## Select the merchant's original file product
 
 Obtain the merchant's original `objects.json` from its selected S3 release. The
