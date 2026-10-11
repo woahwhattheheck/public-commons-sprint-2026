@@ -54,6 +54,13 @@
 </div>
 <div class="strip" id="strip" aria-hidden="true"></div>
 <p class="note"><span id="progress"></span> <span id="notice" aria-live="polite"></span></p>
+<div class="match-link">
+<button id="share" type="button" data-i18n="share" disabled>Copy match link</button>
+<span id="shareStatus" class="note" role="status" aria-live="polite"></span>
+<label for="matchLink" class="sr" data-i18n="share">Copy match link</label>
+<input id="matchLink" type="text" readonly hidden spellcheck="false" aria-describedby="shareHelp">
+<p id="shareHelp" class="note" data-i18n="shareHelp">Reopens this synthetic match at the selected event. The recipient needs access to this app.</p>
+</div>
 </section>
 <aside class="card" aria-label="Your view">
 <div class="persona">
@@ -75,3 +82,4 @@
 <script type="module" src="/app.js"></script>
 </body>
 </html>
+
