@@ -25,6 +25,11 @@ for (const [address, prefix] of [
 ]) denied.addSubnet(address, prefix, 'ipv4');
 
 const publicV4 = (address) => isIP(address) === 4 && !denied.check(address, 'ipv4');
+// Some isolated VM egress resolvers intentionally map external HTTPS names into
+// the 198.18/15 benchmark overlay. Never allow this range without operator opt-in.
+const sandboxEgress = new BlockList();
+sandboxEgress.addSubnet('198.18.0.0', 15, 'ipv4');
+const sandboxV4 = (address) => isIP(address) === 4 && sandboxEgress.check(address, 'ipv4');
 const CHALLENGE = new Set(['payment-required', 'www-authenticate']);
 // Query parameters can carry access credentials under names beyond "token".
 // Normalize separated/camel-case keys before attempting an original HTTPS capture.
@@ -40,7 +45,7 @@ function hasCredentialQuery(target) {
 }
 
 export function parseArgs(argv) {
-  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms']);
+  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms', '--sandbox-egress-range']);
   if (argv.length % 2 !== 0) throw new CaptureError('USAGE_REQUIRES_VALUE_PAIRS');
   const args = new Map();
   for (let i = 0; i < argv.length; i += 2) {
@@ -59,20 +64,26 @@ export function parseArgs(argv) {
   if (!['GET', 'HEAD'].includes(method)) throw new CaptureError('ONLY_GET_OR_HEAD_SUPPORTED');
   const timeout = args.has('--timeout-ms') ? Number(args.get('--timeout-ms')) : 8000;
   if (!Number.isSafeInteger(timeout) || timeout < 1000 || timeout > 30000) throw new CaptureError('TIMEOUT_OUT_OF_RANGE');
+  const sandboxRange = args.get('--sandbox-egress-range');
+  if (sandboxRange !== undefined && sandboxRange !== '198.18.0.0/15') {
+    throw new CaptureError('UNSUPPORTED_SANDBOX_EGRESS_RANGE');
+  }
   const out = args.get('--out');
   if (!isAbsolute(out) || out.includes('\0')) throw new CaptureError('OUTPUT_MUST_BE_ABSOLUTE_PATH');
-  return { target, out, method, timeout };
+  return { target, out, method, timeout, allowSandboxGateway: sandboxRange !== undefined };
 }
 
-export async function capture({ target, method, timeout }, { resolve = lookup, httpsRequest = request } = {}) {
-  // Resolve the ORIGINAL hostname once. Reject mixed internal/public answers and pin
-  // a public IPv4 into the TLS connection, preventing later DNS rebinding.
+export async function capture({ target, method, timeout, allowSandboxGateway = false }, { resolve = lookup, httpsRequest = request } = {}) {
+  // Resolve the ORIGINAL hostname once, then pin it for TLS. Default is public
+  // IPv4 only. Explicit sandbox opt-in permits an ALL-198.18/15 answer set,
+  // not mixed public/overlay answers or any other reserved/private ranges.
   let answers;
   try { answers = await resolve(target.hostname, { family: 4, all: true }); }
   catch { throw new CaptureError('PUBLIC_IPV4_RESOLUTION_FAILED'); }
-  if (!Array.isArray(answers) || answers.length === 0 || answers.some(a => a.family !== 4 || !publicV4(a.address))) {
-    throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
-  }
+  if (!Array.isArray(answers) || answers.length === 0) throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
+  const allPublic = answers.every(a => a.family === 4 && publicV4(a.address));
+  const allSandbox = allowSandboxGateway && answers.every(a => a.family === 4 && sandboxV4(a.address));
+  if (!allPublic && !allSandbox) throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
   const pinnedIP = answers[0].address;
   const raw = await new Promise((resolveResult, reject) => {
     const req = httpsRequest(target, {
