@@ -488,6 +488,50 @@ by the CLI and browser. Full source, pipeline, package, buyer and operating guid
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
 
+## Operate a retained Allium data product
+
+The Allium commands package the original Explorer acquisition and the same
+retained dataset, publisher and buyer workflow. Prepare the approved product
+JSON using the included
+[Allium operating guide](../partners/allium-explorer-pilot/workspace/OPERATING.md),
+then create a new private workspace:
+
+```sh
+npx --no-install starforge allium-workspace create \
+  --workspace /private/allium-product \
+  --product /private/approved-allium-product.json --name "Allium Stellar data"
+npx --no-install starforge allium-workspace serve \
+  --workspace /private/allium-product --port 8447
+```
+
+Open the complete private URL printed by the command. Review product and
+projection revisions, import the original saved Allium result or explicitly
+start/collect its approved saved query, and explore the typed retained rows.
+A native query uses the environment variable named by the product's
+`apiKeyEnv`; imported results and local dataset operations work offline.
+
+Select a completed acquisition and actual public merchant terms, publish its
+original versioned dataset, and open the same publisher for source review and
+original buyer preparation. The workspace owns its merchant and publisher
+processes. Browser export stops them and retains the complete source,
+product/acquisition history, versions and buyer records. After closing the
+server, the equivalent offline handoff is:
+
+```sh
+npx --no-install starforge allium-workspace export \
+  --workspace /private/allium-product --out /private/allium-product.json
+npx --no-install starforge allium-workspace import \
+  --workspace /private/reopened-allium-product --bundle /private/allium-product.json
+npx --no-install starforge allium-workspace serve \
+  --workspace /private/reopened-allium-product --port 8447
+```
+
+The new receiving directory opens stopped and retains the original source and
+typed snapshots. `allium-explorer inspect/import/start/collect/status/recover`
+exposes the underlying saved-query operator for terminal use. Application
+imports use `./seller/allium`, `./seller/allium/workspace` and
+`./seller/allium/workspace/server`.
+
 ## Native payment dependencies
 
 For an actual payment-capable seller, install the native packages in the same
@@ -579,6 +623,8 @@ or automatically retry a request.
 | `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
 | `starforge sqlite-init` / `sqlite-inspect` | Prepare and inspect an original SQLite named-query source |
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
+| `starforge allium-explorer` | Inspect an approved Allium product and import, run, collect or recover its original saved query |
+| `starforge allium-workspace` | Review retained Allium products/results, publish a versioned merchant, prepare its buyer and reopen a complete workspace |
 | `starforge dataset-publisher` | Upload and publish CSV versions, select the actual offer and export original buyer preparation |
 | `starforge buyer-dataset` | Acquire, pause, resume and deliver all pages of the selected original dataset |
 | `starforge buyer-dataset-workspace` | Review original offers, operate dataset acquisitions, open retained files and use the analysis workspace |

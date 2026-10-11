@@ -53,7 +53,8 @@
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge",
     "stellar-forge/mcp-paid-agent",
     "stellar/scf-starforge-20261009/partners/getblock-stellar",
-    "stellar/scf-starforge-20261009/merchant-settlement-accounting"
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting",
+    "stellar/scf-starforge-20261009/partners/allium-explorer-pilot"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -222,7 +223,9 @@
     "mcp-buyer": "stellar-forge/mcp-paid-agent/serve.mjs",
     "mcp-results": "stellar-forge/mcp-paid-agent/result-cli.mjs",
     "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs",
-    "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
+    "buyer-dataset-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
+    "allium-explorer": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/cli.mjs",
+    "allium-workspace": "stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/cli.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -410,7 +413,10 @@
     "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs",
     "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
     "./commerce-recovery": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery.mjs",
-    "./commerce-recovery-controller": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs"
+    "./commerce-recovery-controller": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
+    "./seller/allium": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/explorer.mjs",
+    "./seller/allium/workspace": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/model.mjs",
+    "./seller/allium/workspace/server": "./source/stellar/scf-starforge-20261009/partners/allium-explorer-pilot/workspace/server.mjs"
   },
   "nativePeers": {
     "@x402/core": {
