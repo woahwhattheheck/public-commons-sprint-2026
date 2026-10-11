@@ -1,0 +1,190 @@
+# Seller configuration releases
+
+Prepare a changed API, inspect its exact payment and application changes, select
+it for the next start, and return to a retained version when needed. This is an
+extension of the original SF82 seller launcher. It uses the original SF61
+OpenAPI compiler and starts the original SF30 seller through `pilot.mjs`.
+
+The release store keeps the OpenAPI-derived offers, service configuration and
+JSON response snapshots together. Selecting a release does not rewrite a
+running seller. Status and the operator console show the selected and running
+release separately, including when a restart is needed.
+
+## First release
+
+From the repository root, with Node.js 22 or later:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs init \
+  --store /tmp/merchant-releases
+
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs stage \
+  --store /tmp/merchant-releases --id first --label "Initial weather API" \
+  --spec stellar/scf-starforge-20261009/sf61-openapi-seller-import/openapi.example.json \
+  --config stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-selections.example.json \
+  --bindings stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-bindings.example.json \
+  --port 0
+
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs diff \
+  --store /tmp/merchant-releases --to first
+
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs activate \
+  --store /tmp/merchant-releases --id first --expect 0 --reason "Initial local pilot"
+
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs run \
+  --store /tmp/merchant-releases --expect 1
+```
+
+The example uses the original deliberately nonpayable terms. Its real seller
+responds with HTTP 402 in `CHALLENGE_ONLY` mode. Port 0 selects an available
+local port; the command prints the actual listener. Ctrl-C stops that seller.
+
+Use a directory that does not exist for `init`. Each staged release needs a
+new ID. Failed compilation leaves existing releases and active selection intact.
+Incomplete staging directories are removed by the staging command.
+
+## Prepare and roll out a change
+
+Copy or edit your original OpenAPI document, payment selections and bindings.
+Stage them under another ID using the same command, then compare:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs diff \
+  --store /tmp/merchant-releases --to second
+```
+
+The comparison defaults to the currently selected release. `--from first`
+compares any two retained releases. It reports:
+
+- added, removed and changed method/path pairs;
+- the exact original payment alternatives, including atomic amount strings,
+  asset, recipient, network, scheme and timeout;
+- changed request metadata and input contracts;
+- handler/admission bindings, input-validation settings and response digests;
+- facilitator, port and handler-entry changes.
+
+It does not print static customer response contents. Amounts remain their
+original atomic strings. The tool does not infer token decimals or convert
+prices to dollars.
+
+The comparison includes the current selection generation. Supply that value
+to `activate --expect GENERATION`. If another operator changed the selection
+after your comparison, the write reports `RELEASE_CONFLICT` and preserves that
+operator's work. Refresh the comparison to act on the new state.
+
+Selecting a release changes only the durable selection. The original seller
+continues serving its current configuration until its manager stops it. In a
+terminal, stop the foreground seller and run the selected release again.
+The console offers the same sequence with its **Restart selected** action.
+Restarting briefly interrupts service.
+
+## Retained rollback
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs status \
+  --store /tmp/merchant-releases
+
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs rollback \
+  --store /tmp/merchant-releases --expect 2 --reason "Return to previous configuration"
+```
+
+By default rollback selects the previous release. Use `--to RELEASE` to
+select another retained version. As with activation, stop and start the seller
+to apply it. Every selection records its generation, time, reason, previous
+release and selected release. Failed startup never deletes a retained version
+or silently changes the selection. If a restart fails, select the known
+configuration and start it.
+
+The store does not delete old releases. It is a local deployment workspace;
+the separate seller-recovery workflow handles moving or restoring a deployment
+between machines.
+
+## Operator console
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs console \
+  --store /tmp/merchant-releases --port 8425
+```
+
+Open the exact operator URL printed by the command. The interface includes
+prepared releases, a before/after change review, selection and rollback,
+process start/stop/restart, live original health/offers readback and retained
+selection history. Its restrained layout uses no external fonts, scripts,
+services or CDNs.
+
+The console binds to loopback. Each invocation generates an in-memory operator
+token, placed in the printed URL fragment and retained in that browser tab's
+session storage. Private reads require that token. Writes additionally require
+the exact local browser origin. The server rejects cross-origin requests and
+unexpected Host values. Do not expose or reverse-proxy this local control
+surface as a public merchant endpoint.
+
+The console can stop only the seller it started, and its actions bind to that
+specific instance. A seller owned by another terminal remains visible, with
+instructions to stop it there. Closing the console command stops its own
+seller; closing the browser tab leaves the command running. A separate
+`run` process can be used when the operator UI is not needed.
+
+## Application code and native payment runtime
+
+For handler or admission exports, supply `--handlers /absolute/application.mjs`
+when staging. Staging reads and pins that entry module without importing it.
+Activation and startup verify its original hash. Use immutable versioned
+application paths if older releases must remain runnable. The entry module is
+not bundled: its imported files, package dependencies and environment variables
+remain operator-managed. A release is not a snapshot of the entire application
+or its secrets.
+
+For native x402, stage the real existing facilitator with
+`--facilitator https://YOUR_ACTUAL_FACILITATOR`. The original runtime loads its
+installed official x402 packages. For an explicitly local facilitator, use
+`--allow-local-facilitator` with a `http://127.0.0.1:PORT` URL. No signing,
+payment verification, settlement, request routing or payment retry engine is
+added by the release manager.
+
+Each start launches the original foreground pilot in a fresh Node process, so
+trusted handler imports do not reuse a prior release's module cache. Startup
+checks the original source identities, actual local health and original
+offered payment terms. Those observations show which configuration is running;
+they do not establish a payment or a customer's delivery.
+
+The manager owns one seller process per store. It gives that process a normal
+shutdown interval, then terminates that owned child if needed. A surviving
+child after a manager crash is shown as an orphan rather than permitting a
+second seller to start over it. Use the recorded process and original terminal
+to recover it; the console does not kill arbitrary local PIDs.
+
+## Store layout
+
+| Path | Content |
+| --- | --- |
+| `state.json` | Selected release, previous release, generation and selection history |
+| `releases/ID/manifest.json` | Original SF61 export manifest |
+| `releases/ID/offers.json` | Original compiled seller offers |
+| `releases/ID/seller-service.json` | Original SF30 service configuration |
+| `releases/ID/responses/` | Original SF61 JSON response-file snapshots, when used |
+| `releases/ID/release.json` | Source/file digests, exact route summary and pinned runtime settings |
+| `releases/ID/pilot-runtime.json` | Original mutable pilot runtime options |
+| `releases/ID/runtime-readiness.json` | Original pilot's most recent startup observation |
+| `runtime.json` | Release-manager process identity, listener and exit observation |
+| `state.lock`, `run.lock` | Local operation/process ownership |
+
+New directories use mode 0700 and files use 0600 where supported. Selection
+and runtime records use flushed temporary writes and atomic replacement.
+Digests detect source drift within the operator's controlled store; they are
+not an independent signature from another party. Keep the store private and
+operate it on one host.
+
+## Focused local exercise
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-acceptance.mjs
+```
+
+This uses the real original compiler and foreground seller in the cloud/local
+Linux runtime. It prepares two releases, compares price/application changes,
+starts actual challenge endpoints, changes selection while the first release
+is running, rejects a stale selection write and duplicate process, upgrades,
+then rolls back through the real local operator HTTP interface. It also checks
+operator-token/origin behavior and preserves the source snapshot after its
+input file changes. It starts no hosted Actions and submits no payment.

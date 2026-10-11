@@ -1,5 +1,8 @@
 # SF82 — run an OpenAPI seller
 
+For versioned configuration changes, exact price/application review, retained
+rollback and a local operator console, use [Seller configuration releases](RELEASES.md).
+
 Compile selected operations from an existing API, run their seller service, stop it, and restart the same compiled seller. Supply declarative bindings for an existing HTTP backend, a trusted JavaScript application, or static responses. This command uses the original [SF61 importer](../sf61-openapi-seller-import/README.md) and [SF30 server](../sf30-seller-sdk/README.md), including their schema checks, application handlers, admission callbacks and native x402 payment integration.
 
 ## Start
