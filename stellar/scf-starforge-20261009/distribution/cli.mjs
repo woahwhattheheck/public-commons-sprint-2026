@@ -22,6 +22,8 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  webhook-feed                              Receive signed webhooks and sell reviewed event feeds
+  buyer-event-feed                          Collect, recover and export original paid event pages
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
