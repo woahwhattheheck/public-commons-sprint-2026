@@ -1,99 +1,97 @@
-# Counterpress Compass — original synthetic tactical intelligence prototype
+# Counterpress Compass
 
-**New, separate Microsoft/Premier League Inside the Game 2026 candidate.** Not PitchPulse or MatchLens and not an update to their source. All fixture names, timing and events are invented. This is a **source-complete local synthetic demo**, not an authenticated Microsoft Foundry request, deployed Azure app, registered human entrant, competition submission, sponsor award, professional tactical evaluation, or use of real Premier League footage/data.
+Counterpress Compass turns a live stream of synthetic football events into a useful coach and fan review: follow possession changes, locate counterpress moments, inspect the original play sequence, compare the two clubs, and save the match with tactical notes for later replay.
 
-## Product and value
+The original Node/HTTP/SSE application runs locally with no package installation or provider call. It supports casual and analyst views in English and Spanish, independent viewer sessions, saved match collections, exact event bookmarks, and portable match packages. The Microsoft Inside the Game competition specifies football-realistic synthetic events; Harbor FC, Metro Rovers and their players are invented.
 
-Within the first eight seconds after a club loses possession, Counterpress Compass tests whether a sequence of documented team pressure actions ended in a same-team regain. It keeps the evidence IDs, exact event times and a closed observation window; silence and an incomplete stream do not become a false failure. A compact on-screen cue distinguishes confirmed recovery, observed timeout, and an interrupted observation whose outcome remains unknown. Broadcast viewers can switch between human-friendly captions and fact-dense analyst overlays in English/Spanish, focused on either side. This is **counterpress-window accounting from synthetic events**, not an LLM pretending to understand a match or claiming a tactical causal effect.
+## Run the application
 
-The five official challenge stages are realized as (1) timed synthetic fixture ingestion; (2) rolling event-time loss/pressure/regain state machine with evidence IDs; (3) conservative explanations with no invented performance claims; (4) timed, machine-readable broadcast cue objects; and (5) two genuinely different audience variants and two languages. New event fixtures may be authored locally with valid schema; the public demo API deliberately accepts **only event prefix counts from the server's own fixture**, avoiding shared-session mutation and arbitrary user uploads. Every browser is independent, so one judge's stepping cannot move another judge's replay.
-
-## Run
-
-Requires Node.js 22+; **no npm install, cloud account, live data, footage, key, or network call is needed for the local demo.**
+Requires Node.js 22 or newer.
 
 ```sh
 node src/server.mjs
 # Open http://127.0.0.1:3167
-npm run check:focused
 ```
 
-The fixture contains two evidenced Harbor FC successful regains in 5.0s and 4.0s, one Metro Rovers pressured attempt that expired after eight seconds, and a late Harbor unpressured loss that does not count as a failed press. All values are synthetic and were handcrafted for deterministic validation. `GET /health`, `GET /api/bootstrap`, and stateless `POST /api/analyze` expose structured reproducible evidence and snapshots.
+Choose a match situation and seed, select your club, then use **Play**, **Next play**, or the timeline. The scenario generator produces the same event sequence for the same scenario and seed within that application version. Each browser controls its own session.
 
-Example:
+The default listener is `127.0.0.1:3167`; `HOST` and `PORT` select an operator's existing service interface. Saved matches use a private directory under the current user's data directory. Set `COUNTERPRESS_ARCHIVE_DIR` to an absolute persistent directory when running a container or service:
 
 ```sh
-curl -s http://127.0.0.1:3167/api/analyze \
-  -H 'content-type: application/json' \
-  -d '{"count":15,"team":"Harbor FC","audience":"analyst","locale":"en"}'
+COUNTERPRESS_ARCHIVE_DIR=/absolute/private/counterpress-matches node src/server.mjs
 ```
 
-## Sparse-event outcome accounting
+The directory is created with mode 0700. Keep it on a persistent volume across server replacements. One original Node server owns each archive directory.
 
-An additional loss for the same team before the current eight-second window closes interrupts the earlier observation. Without a recorded regain, its outcome is unknown; it is neither a confirmed failure nor a success. The interruption cue reports the actual observed duration and includes the new loss ID as closing evidence in both English and Spanish.
+## Watch, understand, save and return
 
-`counterpressAttempts` still includes interrupted press attempts. `resolvedCounterpressAttempts` counts only successful regains and observed expiries; `interruptedAttempts` reports unknown outcomes separately. `successRatePct` is the **resolved-window success rate**, with `successRateBasis: "resolved_counterpress_attempts"`; it is `null` if no outcome has resolved. The browser explicitly shows its successes/resolved denominator and the interrupted count. A paired synthetic fixture has one unknown plus one success (1/1 resolved, 100%, one interrupted), versus one observed expiry plus one success (1/2 resolved, 50%, none interrupted). These are accounting examples, not measured tactical performance.
+1. **Choose the situation.** High press, low block, end-to-end transitions and a second-half push provide different generated match patterns. Both clubs use the same underlying events.
+2. **Find the moment.** Filter key moments by outcome or half. Select one to see the observed loss, pressure and closing play in the **Press sequence** panel.
+3. **Replay its outcome.** The replay button requests the exact original event prefix from the server. Successful recovery, elapsed windows and interrupted observations keep their separate meanings.
+4. **Save the review.** Use **Save this moment** in the sequence panel, or **Save match** in the saved-match area. Give the match a title, add coach notes and annotate the saved moments. Edits and the confirmed replay position save automatically.
+5. **Return or share.** Open the match from your collection after a server restart, or use **Copy match link** to open an independent paused replay. A saved-match link includes its saved notes. A recipient can save a separate editable copy.
+6. **Take the match with you.** **Download match** preserves the complete original event array, notes, bookmarks and viewing preferences. **Import match** opens that package in the same native player, with a new collection entry.
 
-Run only this regression with `node --test test/interrupted.focused.test.mjs`.
+Saved replays retain the actual event rows, so they continue to use the saved input when the scenario generator changes. Existing unsaved scenario/seed links continue to reconstruct their generated match. See [Saved matches and reviews](SAVED_MATCHES.md), [Tactical film room](TACTICAL-FILMROOM.md) and [Match links](MATCH-LINKS.md).
 
-The eight-second regain deadline is inclusive. A replay prefix ending at exactly the deadline does not prove expiry: a later consumed event may have the same timestamp and contain a valid regain. Timeout requires an event timestamp strictly beyond the deadline. The focused `node --test test/boundary.focused.test.mjs` fixture compares a clock at 8s (no outcome yet), an appended regain at the same 8s (success), and a clock at 8.1s without a regain (expiry recorded at the 8s deadline).
+The interface uses native keyboard controls and a neutral industrial layout. Space or K toggles playback and Right Arrow advances a play when focus is outside a control. Every saved moment opens its precise original frame.
 
-## Optional Microsoft Foundry AI narrative draft
+## What the match model means
 
-Optional live drafts are capped at eight admitted requests per rolling hour and one in flight per process; further requests return 429 before provider contact. See [Foundry admission](FOUNDRY_ADMISSION.md) for the retry contract and deployment limitations.
+The engine observes an eight-second window after a club loses possession. A same-team pressure action followed by a same-team regain at or before the deadline is a successful counterpress. The deadline is inclusive: another event at exactly eight seconds may still contain a valid regain.
 
-The server includes a real REST integration adapter for a customer-provisioned **Azure OpenAI model deployed via Microsoft Foundry**. Current Microsoft Foundry REST docs describe `POST /openai/v1/chat/completions`. The endpoint, deployment and API key are sourced only from server environment; the endpoint is restricted to HTTPS on the expected Azure OpenAI resource domain. The browser never receives credentials or request details. No model call happens on the replay path; the visitor must click **Request optional Foundry draft**, which may incur usage charges. Provider output is marked UNVERIFIED and can never replace canonical data and event IDs. Failed calls degrade back to the deterministic cue. No actual Foundry credentials were available/tested here, so neither live compatibility nor paid inference is claimed.
+A later timestamp strictly beyond the deadline establishes expiry. A new same-team loss before resolution interrupts the earlier window; its outcome remains unknown. Missing events and incomplete streams do not establish a failed press. The resolved-window rate uses only successful and expired windows, with interrupted attempts counted separately.
+
+Each explanation retains its original event IDs and observed time. A following pass or shot supplies context; it does not establish that the press caused the next action. The feed records pitch thirds rather than exact player coordinates, and shots rather than a goal scoreline.
+
+The runtime shares incremental accounting and bounded replay checkpoints across views of an immutable event array. It uses the same original snapshot contract for playback, backward seeking and restored matches. [Playback runtime](PLAYBACK_RUNTIME.md) documents the integrated MS15 implementation.
+
+## Recover playback
+
+A temporary SSE drop keeps the last confirmed event and shows **Reconnecting**. **Resume match** refreshes that exact prefix and resumes the ordered stream. Malformed, out-of-order or different-session frames stop before changing the current match.
+
+When an ephemeral session has expired, saved matches restore their retained event array into a new native session. An unsaved generated match recovers its original scenario and seed. Changing sessions or opening another saved match flushes pending review edits first. A failed save leaves those edits available for retry, a separate copy or a portable download.
+
+## Optional Microsoft Foundry and Opus commentary
+
+The original server includes an optional Microsoft Foundry Azure OpenAI REST adapter. Configure an existing authorized deployment through server environment variables:
 
 ```sh
-# Only after the original entrant authorizes an existing Azure resource/key/usage budget:
 AZURE_OPENAI_ENDPOINT='https://YOUR-RESOURCE.openai.azure.com' \
 AZURE_OPENAI_DEPLOYMENT='YOUR-DEPLOYMENT-NAME' \
-AZURE_OPENAI_API_KEY='(server-side secret)' \
+AZURE_OPENAI_API_KEY='SERVER_SIDE_KEY' \
 node src/server.mjs
 ```
 
-Do not commit `.env`, API keys, or inference payloads containing personal data. Default listener is loopback; `HOST=0.0.0.0` is possible only behind production HTTPS reverse proxy, admission throttling and model expense limits. This prototype has **no hosted public URL**. Production needs proper per-user authorization, provider cost quota/rate limits, access logging policy, resilient service boundaries, Azure Container Apps/AKS deployment, service monitoring and licensed presentation materials. Do not enable optional live inference publicly without them.
+The browser never receives the provider credential. Foundry drafts run only from the explicit commentary action and use the existing per-process admission controls. The separate optional Opus route keeps its original configuration and budget behavior. Generated commentary stays separate from the canonical event-derived captions and outcomes. Replay, archival, bookmarks, imports and exports make no provider requests.
 
-## Live match recovery (MS14)
+For an operator's public judge service, use its existing HTTPS hosting and appropriate access and cost controls. The default launch is a local application. The optional services' configured state is available in `GET /health`; the actual demo capture records which services were configured during that run.
 
-The existing EventSource stream uses ordered server event IDs. Temporary drops now show **Reconnecting** rather than falsely showing LIVE, retain the last confirmed fixture/cursor, and offer a visible **Resume match** control while the connection is unhealthy. A newly opened original stream clears that state. An out-of-order, malformed or different-session frame stops the stream before it can mutate the match; pressing Resume obtains the existing server's exact original event prefix, then resumes ordered playback. If the original ephemeral session actually expired (HTTP 404/410), that same explicit action re-creates the **same selected original scenario and random seed**, seeks to the former cursor and starts from that verified point. It never silently advances a clock, fakes a play, or calls Foundry/Opus. Playback can also simply be paused as before. The deterministic fixture remains synthetic because that is what the official competition specifies.
+Relevant implementation guides: [Foundry admission](FOUNDRY_ADMISSION.md), [Foundry grounding](FOUNDRY_GROUNDING.md), and [Microsoft's REST specification](https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat?view=rest-microsoft-foundry-v1).
 
-No hosted service or account required: run the existing original `node src/server.mjs` and use the existing match player. Event reconnection and explicit restoration are gameplay UX; neither is an external network simulation or proof of a Microsoft hosted demo.
+## Competition and running-product demo
 
-## Real contest requirements and next acceptance gates
+Microsoft's [official Inside the Game rules](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md) require registration by **October 20, 2026 at noon Pacific** and submission by **October 27, 2026 at 11:59 PM Pacific**. Delivery includes public source, a public video under two minutes demonstrating actual functionality, and free functioning access or a test build for judges. The solution must use permitted Microsoft technology and fit the entered category.
 
-Microsoft [OFFICIAL RULES](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md) require registration by **October 20, 2026 at 12:00 noon Pacific**, then project submission by **October 27, 2026 11:59 PM Pacific**, a public GitHub repository, a **sub-two-minute** public video showing actual functionality, a free functioning judge access link/test build, and permitted materials. The application must legitimately use Microsoft technology and fit one selected prize category. The current source is sufficient for offline product demonstration and an implemented optional Azure connector, not sponsor confirmation, Foundry execution evidence, deployed app, demo video, valid human/team account, or accepted submission. The registered original entrant should reconcile uniqueness/team and prize rights with the existing PitchPulse and MatchLens projects, verify actual model integration and cost cap, publicly publish the independent MIT code if chosen, capture a real on-device video under two minutes, and submit from the authorized account.
+The [original browser recorder](demo/README.md) launches the real application and captures its actual HTTP/SSE gameplay. Existing entrant and Microsoft integration owners retain their platform delivery and runtime work. Repository source, the captured local run and the provider's actual entry status are separate records.
 
-Relevant Microsoft Foundry REST spec: https://learn.microsoft.com/en-us/rest/api/microsoft-foundry/azureopenai/chat?view=rest-microsoft-foundry-v1
+## Source map
 
-## Files and attribution
+| Source | Responsibility |
+| --- | --- |
+| `src/scenarios.mjs` | Seeded football-realistic synthetic event generation |
+| `src/engine.mjs` | Event-time accounting, explanations and incremental replay timeline |
+| `src/live_sessions.mjs` | Independent session lifecycle, retained-event restoration and native frames |
+| `src/server.mjs` | HTTP/SSE player, archive APIs and optional commentary routes |
+| `src/match_archive.mjs` | Durable original matches, review revisions and portable packages |
+| `web/app.js` | Pitch, play-by-play, frame controls, personalization and sequence review |
+| `web/archive.js` | Saved collections, autosaved notes, bookmarks and shared replay workflow |
+| `web/index.html`, `web/style.css` | Responsive industrial interface |
+| `demo/capture.mjs` | Actual running-product browser capture |
+| `data/events.json` | Original handcrafted synthetic fixture retained for compatibility |
 
-- `src/engine.mjs`: deterministic state machine and evidence-linked view model.
-- `src/server.mjs`: stateless judge replay backend, protected local HTTP and optional drafting route.
-- `src/foundry.mjs`: opt-in server-only Azure OpenAI/Foundry REST adapter.
-- `web/index.html`, `web/app.js`, `web/style.css`: interactive replay, timed overlays, two-persona UI, bilingual explanation and keyboard-accessible buttons.
-- `data/events.json`: explicit fabricated match fixture and event provenance.
-- `test/engine.focused.test.mjs`: three narrow focused contract checks; no broad suite.
-- `package.json`, `LICENSE`: zero dependency runnable Node application and MIT license.
+The stateless `/api/analyze` and historical `/api/evidence-export` routes remain available for the bundled handcrafted fixture. The current player uses session frames; portable saved matches use `/api/archives/:id/export`.
 
-Original 2026 source authored in the TokenJunkieLabs Commons swarm for the owner's competition exploration. Preserve the human entrant's actual legal ownership, rights and collaborator provenance when publishing or entering. All synthetic and brand-neutral art, no real team/player logos, no footage, no sponsor endorsement or implied prize.
+## Attribution
 
-
-## Deterministic judge evidence export
-
-Use **Evidence JSON** or **Evidence CSV** from the replay controls. The server
-exports the exact currently selected synthetic event prefix and selected
-team/language/audience; it does **not** call Foundry, reveal keys, run a model,
-or rely on mutable browser session state. JSON includes the actual event rows,
-engine outcome cues, their evidence IDs and exact source-event SHA-256 digest
-(`SHA-256(UTF-8 JSON.stringify(selectedEvents))`). The digest is
-a reproducibility fingerprint, **not a digital signature** or an attestation of
-real-match authenticity. CSV exports the same outcome citations with quoted,
-spreadsheet-formula-neutralized fields. No outcome is fabricated when the
-prefix contains no complete press window. Source events remain explicitly
-labelled synthetic throughout.
-
-A selected event count must be within the bundled fixture length; team,
-audience, locale and format are validated server-side. The export endpoint
-returns only local synthetic evidence and is never a paid-provider operation.
-The one isolated source contract is `node --test test/evidence-export.focused.test.mjs`.
+Original 2026 source authored in the TokenJunkieLabs Commons swarm for the owner's competition exploration. Preserve the human entrant's actual legal ownership, rights and collaborator provenance when publishing or entering. The source is MIT licensed. Teams, players, events and presentation artwork are original synthetic material.

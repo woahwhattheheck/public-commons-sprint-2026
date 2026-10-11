@@ -176,12 +176,87 @@ apply. Once committed, the listing disappears from the live discovery view;
 its lifecycle history remains. If the original SF95 head-bound request has
 become stale, prepare and sign a current request through the same workflow.
 
+## Import a signed catalog batch without downtime
+
+The same operator now exposes `preview-batch` and `apply-batch`. This is the
+existing [atomic SF60 importer](./BULK_IMPORT.md), joined to the original SF73
+signature verifier and this process's startup-pinned policies. A single group
+can add or revise up to 1,000 offers across configured sellers. Every original
+quote proof is checked on preview **and checked again on apply**. One bad row
+rejects the entire group; no partial admission becomes visible to discovery.
+Signed withdrawals retain the existing individual SF95 commands above.
+
+Prepare a manifest referencing the original received entry and proof files.
+Paths are relative to the manifest's directory; absolute paths also work.
+Use actual seller IDs, increasing sequences, source URLs and observation times:
+
+~~~json
+{
+  "schema": "stellar-forge.catalog-signed-batch-files/v1",
+  "admissions": [{
+    "sellerId": "merchant-1",
+    "sequence": 1,
+    "sourceURL": "https://merchant.example/offers/export",
+    "observedAt": "2026-10-11T15:00:00.000Z",
+    "entry": "received/offer.json",
+    "proofs": "received/proofs.json"
+  }]
+}
+~~~
+
+The entry remains the exact original v2 declaration bytes. The proofs file is
+the same original array of `{nonce, proof}` pairs used by `admit`. The manifest
+cannot introduce seller policies, private keys or a substitute public pin.
+The service uses its already loaded policy, not the static importer's separate
+operator-authorities schema.
+
+~~~sh
+node operator-cli.mjs preview-batch \
+  --directory /srv/starforge/catalog \
+  --batch /private/catalog-batch.json \
+  --out /private/catalog-plan.json \
+  --html /private/catalog-review.html
+
+node operator-cli.mjs apply-batch \
+  --directory /srv/starforge/catalog \
+  --batch /private/catalog-batch.json \
+  --plan /private/catalog-plan.json \
+  --out /private/catalog-receipt.json
+~~~
+
+The optional HTML file shows the actual before/after terms with the same
+industrial review renderer. Both output names are reserved privately before
+sending the command. The plan binds the complete loaded batch, startup policy
+hash, current journal head and native proposed operations. Changed source,
+changed policy, an intervening write or an expired proof requires a new
+preview with current original inputs. This is not a new human approval gate:
+an authenticated operator can run preview/apply consecutively. The existing
+SF50 proof lifetime is short (at most two minutes); the preview reports the
+earliest expiry and never extends it.
+
+On apply, original SF73 verification produces the native operations and SF60
+commits them with one durable journal publication. The same discovery address
+remains available. An exact current replay returns `unchanged` without another
+journal write. A successful receipt has the resulting `head`, `operations`,
+`changes`, `replays`, source/policy hashes and verified-option count. If output
+is lost after sending apply, compare `status.journalHead` with the saved plan's
+`review.baseHead` and `review.nextHead` before retrying.
+
+Embedding callers may send `preview-batch` with `{batch}` where `batch` has
+schema `stellar-forge.catalog-signed-batch/v1` and an `admissions` array of the
+existing `admit` inputs (`sourceBase64` rather than file paths). For apply,
+send the same batch plus `expectedHead: plan.review.baseHead`,
+`expectedPlan: plan.review.planId`, `expectedBatch: plan.batchSha256` and
+`expectedPolicy: plan.policySha256`. The checked command is serialized by the
+same original operator queue, not a second writer. Existing journal limits
+(10,000 operations / 32 MiB) and native batch limits still apply.
+
 ## Transport, persistence and integration
 
-Each command is one request with a request ID, up to 512 KiB of JSON, sent once.
+Each command is one request with a request ID, up to 8 MiB of JSON, sent once.
 The daemon serializes commands around the same original journal owner.
-Requests beyond its 16-command local capacity receive a clear response.
-Responses are limited to 4 MiB; use original pagination for large listings.
+At most 16 commands and 32 MiB of declared command bytes may be in flight;
+excess requests receive a clear capacity response. Responses are limited to 32 MiB; use original pagination for large listings.
 There is no background polling or retry loop.
 
 The --out option reserves a new mode-0600 file before sending the command.

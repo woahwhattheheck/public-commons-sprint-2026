@@ -15,3 +15,8 @@ export { initReleaseStore, stageRelease, readReleaseState, listReleases, inspect
   compareReleases, activateRelease, rollbackRelease, releaseStatus, runActiveRelease } from '../sf82-seller-pilot/releases.mjs';
 export { startReleaseConsole } from '../sf82-seller-pilot/release-console.mjs';
 export { initializeQueue, openQueue, saveQueueReport } from '../sf88-operator-buyer-cli/queue.mjs';
+export { initializeCommerce, inspectCommerce, openCommerce } from '../sf66-demo-launcher/commerce.mjs';
+export { startCommerceConsole } from '../sf66-demo-launcher/commerce-console.mjs';
+export { openCatalogOperator, requestCatalogOperator } from '../sf60-durable-catalog-transaction/operator.mjs';
+export { openDatasetVersions } from '../sf30-seller-sdk/dataset-refresh/versions.mjs';
+export { startVersionedDatasetSeller, datasetControl } from '../sf30-seller-sdk/dataset-refresh/service.mjs';

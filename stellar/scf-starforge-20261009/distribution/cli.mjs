@@ -22,6 +22,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
+  import-headers  Import original operator HTTP headers
   handoff     Captured challenge -> review    support     Private seller support case
   commerce    Merchant + buyer session        inbox       Durable selected requests
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
@@ -32,6 +33,12 @@ Native commands (arguments pass unchanged to the maintained implementation):
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   sqlite-init / sqlite-inspect                Prepare or inspect a SQLite source
+  commerce-console                           Browser workspace for a prepared commerce session
+  dataset-refresh                            Publish and select retained dataset versions
+  catalog-serve / catalog                     Host and operate live seller discovery
+  catalog-withdrawal                         Prepare, sign and apply seller withdrawals
+  checkout / purchase                        Enroll, purchase and retrieve a merchant file
+  buyer-object                               Acquire, resume and assemble an existing object
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator

@@ -7,6 +7,9 @@ import { hostname } from 'node:os';
 const SCHEMA = 'stellar-forge.upstream-operation.v1';
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const HEX = /^[a-f0-9]{64}$/;
+const STATES = ['IN_FLIGHT','COMPLETE','UNCERTAIN','RETRY_READY'];
+const PUBLIC_COLUMNS = `operation_key,request_hash,state,attempt,generation,created_at,updated_at,
+  status,COALESCE(length(body),0) AS body_bytes,body_hash,error,reference`;
 const active = new Map();
 const runId = randomUUID();
 const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v) &&
@@ -137,7 +140,10 @@ export function createDurableUpstreamOperations({ scope, stateDir, key, maxRespo
         CREATE TABLE IF NOT EXISTS merchant_operation_audit (
           seq INTEGER PRIMARY KEY, operation_key TEXT NOT NULL, generation INTEGER NOT NULL,
           state TEXT NOT NULL, at INTEGER NOT NULL, reference TEXT);
-        CREATE INDEX IF NOT EXISTS merchant_operation_scope ON merchant_operations(scope);`);
+        CREATE INDEX IF NOT EXISTS merchant_operation_scope ON merchant_operations(scope);
+        CREATE INDEX IF NOT EXISTS merchant_operation_recent ON merchant_operations(scope,updated_at DESC,operation_key DESC);
+        CREATE INDEX IF NOT EXISTS merchant_operation_state_recent ON merchant_operations(scope,state,updated_at DESC,operation_key DESC);
+        CREATE INDEX IF NOT EXISTS merchant_operation_audit_key ON merchant_operation_audit(operation_key,seq);`);
       return db;
     })().catch(error => { databasePromise = undefined; throw error; });
     return databasePromise;
@@ -163,9 +169,10 @@ export function createDurableUpstreamOperations({ scope, stateDir, key, maxRespo
     return response;
   }
   function publicRow(row) {
-    return row ? { operationKey: row.operation_key, requestHash: row.request_hash, state: row.state,
+    return row ? { operationKey: row.operation_key, backendKey: 'sf30_' + row.operation_key,
+      requestHash: row.request_hash, state: row.state,
       attempt: row.attempt, generation: row.generation, createdAt: row.created_at, updatedAt: row.updated_at,
-      status: row.status, bodyBytes: row.body?.length ?? 0, bodySha256: row.body_hash, error: row.error,
+      status: row.status, bodyBytes: row.body_bytes ?? row.body?.length ?? 0, bodySha256: row.body_hash, error: row.error,
       reference: row.reference } : null;
   }
   async function inspect(operationKey) {
@@ -173,6 +180,46 @@ export function createDurableUpstreamOperations({ scope, stateDir, key, maxRespo
     const row = rowFor(await database(), operationKey);
     if (row && row.scope !== scope) throw fail('OPERATION_SCOPE_MISMATCH');
     return publicRow(row);
+  }
+  // Read the original ledger's metadata, never its response payloads or tickets.
+  // Keyset pagination stays bounded even when the ledger has many completed rows.
+  async function list({ state, cursor, limit = 25 } = {}) {
+    if (state !== undefined && !STATES.includes(state) || !Number.isSafeInteger(limit) || limit < 1 || limit > 100)
+      throw new TypeError('Valid operation state and limit 1–100 required');
+    let position;
+    if (cursor !== undefined) {
+      try {
+        if (typeof cursor !== 'string' || cursor.length > 256 || !/^[A-Za-z0-9_-]+$/.test(cursor)) throw new Error();
+        position = JSON.parse(Buffer.from(cursor,'base64url').toString('utf8'));
+        if (!plain(position) || Object.keys(position).sort().join(',') !== 'key,time' ||
+            !HEX.test(position.key ?? '') || !Number.isSafeInteger(position.time) || position.time < 0) throw new Error();
+      } catch { throw new TypeError('Invalid operation cursor'); }
+    }
+    const db = await database(), conditions = ['scope=?'], parameters = [scope];
+    if (state !== undefined) { conditions.push('state=?'); parameters.push(state); }
+    if (position) {
+      conditions.push('(updated_at<? OR (updated_at=? AND operation_key<?))');
+      parameters.push(position.time,position.time,position.key);
+    }
+    const rows = db.prepare(`SELECT ${PUBLIC_COLUMNS} FROM merchant_operations WHERE ${conditions.join(' AND ')}
+      ORDER BY updated_at DESC,operation_key DESC LIMIT ?`).all(...parameters,limit + 1);
+    const more = rows.length > limit, page = rows.slice(0,limit), last = page.at(-1);
+    const totals = Object.fromEntries(STATES.map(state => [state,0]));
+    for (const row of db.prepare('SELECT state,COUNT(*) AS total FROM merchant_operations WHERE scope=? GROUP BY state').all(scope)) totals[row.state] = row.total;
+    return { capturedAt: Date.now(), totals, records: page.map(publicRow),
+      nextCursor: more ? Buffer.from(JSON.stringify({time:last.updated_at,key:last.operation_key})).toString('base64url') : null };
+  }
+  async function auditHistory(operationKey, { after = 0, limit = 100 } = {}) {
+    if (!HEX.test(operationKey ?? '') || !Number.isSafeInteger(after) || after < 0 ||
+        !Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new TypeError('Exact operationKey and valid audit page required');
+    const db = await database();
+    const operation = db.prepare('SELECT scope FROM merchant_operations WHERE operation_key=?').get(operationKey);
+    if (!operation) return null;
+    if (operation.scope !== scope) throw fail('OPERATION_SCOPE_MISMATCH');
+    const rows = db.prepare(`SELECT seq,generation,state,at,reference FROM merchant_operation_audit
+      WHERE operation_key=? AND seq>? ORDER BY seq LIMIT ?`).all(operationKey,after,limit + 1);
+    const more = rows.length > limit, events = rows.slice(0,limit);
+    return { events, nextAfter: more ? events.at(-1).seq : null };
   }
   async function admit({ ticket, requestHash }) {
     try {
@@ -288,7 +335,7 @@ export function createDurableUpstreamOperations({ scope, stateDir, key, maxRespo
       const current = rowFor(db, operationKey); audit(db, current, reference); return publicRow(current);
     });
   }
-  return Object.freeze({ issue, verify, admit, execute, inspect, recover,
+  return Object.freeze({ issue, verify, admit, execute, inspect, list, audit: auditHistory, recover,
     snapshot: () => Object.freeze({ ...counts }),
     async close() { if (databasePromise) { const db = await databasePromise; db.close(); databasePromise = undefined; } },
   });
