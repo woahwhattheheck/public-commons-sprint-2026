@@ -9,6 +9,7 @@ node cli.mjs container generate --plan PRIVATE_CONTAINER.json --out NEW_PRIVATE_
 node cli.mjs container check --bundle PRIVATE_CONTAINER_DIRECTORY
 node cli.mjs container pull|up|status|stop|logs|smoke --bundle PRIVATE_CONTAINER_DIRECTORY
 node cli.mjs container maintenance --help
+node cli.mjs container image --help
 
 Prepare the original API, retained-release or paid-file merchant for Linux
 Compose. The image, numeric runtime identity, source and private roots are explicit.
@@ -18,6 +19,7 @@ The included runbook carries installation, original runtime, backup and recovery
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args[0] === '--help') { console.log(HELP); return 0; }
   if (args[0] === 'maintenance') return (await import('./compose-maintenance.mjs')).main(args.slice(1));
+  if (args[0] === 'image') return (await import('./container-image/cli.mjs')).main(args.slice(1));
   if (['pull', 'up', 'status', 'stop', 'logs', 'smoke'].includes(args[0]))
     return (await import('./container-operations.mjs')).main(args);
   const [command, ...rest] = args;
