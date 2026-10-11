@@ -147,7 +147,7 @@ class Store:
         return {**{k: row[k] for k in ("kind", "id", "revision", "created", "actor")},
                 "payload": json.loads(row["payload"])}
 
-    def list(self, kind, limit=1000):
+    def list(self, kind, limit=10000):
         identifier(kind)
         with self.lock:
             rows = self.db.execute(
