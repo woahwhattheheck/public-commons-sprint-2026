@@ -339,6 +339,16 @@ function validateMapping(mapping, issues) {
   return result;
 }
 
+/** Decode retained legacy bytes for the receiving adapter. Original comparison reparses these same bytes exactly. */
+export function decodeLegacyCapture(body, { format, csv } = {}) {
+  if (!(Buffer.isBuffer(body) || body instanceof Uint8Array))
+    throw new TypeError('Retain the original legacy response bytes as a Buffer or Uint8Array.');
+  const raw = new TextDecoder('utf-8', { fatal: true }).decode(body).replace(/^\uFEFF/, '');
+  if (format === 'json') return plain(exactJson(raw));
+  if (format === 'csv') return csvRows(raw, csv);
+  throw new TypeError('Declare the retained legacy format as json or csv.');
+}
+
 function pointerParts(value, label) {
   if (typeof value !== 'string' || (value !== '' && !value.startsWith('/')) || /~(?:[^01]|$)/.test(value))
     throw new TypeError('Declare ' + label + ' as an RFC6901 JSON pointer.');
@@ -348,6 +358,7 @@ function projectCapture(document, source, capture, issues, side) {
   const request = source.manifest.request ?? {}, projection = request.projection;
   const path = '/sources/' + side + '/captures/' + capture.id;
   const kind = source.result.kind, fileImport = capture.status === null;
+  const legacyImport = request.kind === 'legacy-import' || projection?.schemaVersion === 'blockworks-legacy-projection/v1';
   const pick = (root, selector, label, required = true) => {
     if (selector === undefined && !required) return undefined;
     const found = atPath(root, pointerParts(selector, label));
@@ -355,7 +366,7 @@ function projectCapture(document, source, capture, issues, side) {
     return found.value;
   };
   let rows = [], entries = [], schema = null, metadata = {}, legacy = false, rowPath = [], singletonRow = false;
-  if (fileImport) {
+  if (legacyImport || fileImport) {
     legacy = true;
     if (!object(projection) || projection.schemaVersion !== 'blockworks-legacy-projection/v1')
       throw new TypeError('Retain the original blockworks-legacy-projection/v1 selection.');
@@ -449,11 +460,12 @@ function validDate(value) { try { rfcSeconds(value); return true; } catch { retu
 function inspectSource(source, side, issues) {
   const base = '/sources/' + side;
   const result = { side, samples: [], entries: [], rows: [], captures: [], complete: false, kind: null, coverage: {}, digest: null,
-    acceptedCaptureCount: 0, historicalFailureCount: 0, fileImport: false, schema: null };
+    acceptedCaptureCount: 0, historicalFailureCount: 0, fileImport: false, legacyImport: false, schema: null };
   if (!object(source) || !object(source.manifest) || !object(source.result) || !Array.isArray(source.captures)) {
     problem(issues, 'SOURCE_ENVELOPE', base, 'Supply the original manifest, unchanged readRows result and readCapture {body:Buffer,metadata} entries.', 'error', { side }); return result;
   }
   const manifest = source.manifest, native = source.result;
+  result.legacyImport = manifest.request?.kind === 'legacy-import' || manifest.request?.projection?.schemaVersion === 'blockworks-legacy-projection/v1';
   result.kind = native.kind; result.complete = native.complete === true; result.coverage = native.coverage ?? manifest.coverage ?? {};
   if (!text(manifest.id)) problem(issues, 'SOURCE_ID', base + '/manifest/id', 'Retain the original acquisition/import identity.', 'error', { side });
   if (!['tabular', 'timeseries', 'single-series', 'multi-series', 'catalog'].includes(native.kind))
@@ -481,7 +493,7 @@ function inspectSource(source, side, issues) {
       problem(issues, 'CAPTURE_BYTES_CHANGED', path, 'Captured byte count or SHA-256 differs from the retained original.', 'error', { side });
     if (typeof meta.accepted !== 'boolean') problem(issues, 'CAPTURE_ACCEPTANCE', path + '/metadata/accepted', 'Retain the acquisition/import acceptance value.', 'error', { side });
     const file = meta.status === null;
-    result.fileImport ||= file;
+    result.fileImport ||= file; result.legacyImport ||= file;
     if (file) {
       if (meta.provenance?.kind !== 'file' || !text(meta.provenance?.name) || !validDate(meta.provenance?.importedAt))
         problem(issues, 'FILE_PROVENANCE', path + '/metadata/provenance', 'File captures retain kind:file, original name and actual timezone-qualified importedAt.', 'error', { side });
@@ -501,7 +513,7 @@ function inspectSource(source, side, issues) {
     result.acceptedCaptureCount++;
     try {
       const raw = new TextDecoder('utf-8', { fatal: true }).decode(body).replace(/^\uFEFF/, '');
-      const format = file ? manifest.request?.format : 'json';
+      const format = result.legacyImport ? manifest.request?.format : 'json';
       if (!['json', 'csv'].includes(format)) throw new TypeError('Declare the original file format as json or csv.');
       const document = format === 'csv' ? csvRows(raw, manifest.request.projection?.csv) : exactJson(raw);
       const projectedCapture = projectCapture(document, source, meta, issues, side);
@@ -523,7 +535,7 @@ function inspectSource(source, side, issues) {
         problem(issues, 'CAPTURE_MANIFEST_CHANGED', base + '/manifest/captures/' + captured.metadata.id, 'Capture ' + field + ' differs from its manifest.', 'error', { side });
     }
   }
-  if (result.fileImport) {
+  if (result.legacyImport) {
     const coverage = result.coverage;
     if (coverage.kind !== 'declared-export' || coverage.complete !== true || !text(coverage.declaredBy) || !validDate(coverage.declaredAt) || !text(coverage.reference) || !text(coverage.note))
       problem(issues, 'EXPORT_DECLARATION', base + '/manifest/coverage', 'Retain the complete-export declaration, reviewer, actual date, reference and scope note.', 'error', { side });
@@ -563,7 +575,7 @@ function inspectSource(source, side, issues) {
       if (seen.size !== expected || result.rows.length !== first.totalRows) problem(issues, 'PAGE_COVERAGE', base, 'The complete provider population is not present in the retained pages.', 'error', { side, details: { receivedPages: seen.size, expectedPages: expected, receivedRows: result.rows.length, expectedRows: first.totalRows } });
     }
   }
-  const selectedRequest = !result.fileImport && !['tabular', 'catalog'].includes(result.kind) ?
+  const selectedRequest = !result.legacyImport && !['tabular', 'catalog'].includes(result.kind) ?
     (typeof manifest.request?.query?.series === 'string' ? manifest.request.query.series.split(',') :
       Object.entries(manifest.request?.pathParameters ?? {}).filter(([key]) => key !== 'granularity').map(([, value]) => value)) : [];
   if (selectedRequest.some(value => typeof value !== 'string' || value.length === 0))
@@ -571,19 +583,19 @@ function inspectSource(source, side, issues) {
   if (selectedRequest.length) for (const entry of result.entries) if (!selectedRequest.includes(plain(entry.key)))
     problem(issues, 'UNREQUESTED_SERIES', base + '/captures', 'The original capture returns a series outside the selected native identifiers.', 'error', { side,
       details: { key: cell(entry.key), requested: selectedRequest } });
-  const pages = !result.fileImport && Array.isArray(native.metadata?.pages) ? native.metadata.pages : null;
-  if (!result.fileImport && manifest.schema === 'starforge.blockworks-acquisition/v1' && pages === null)
+  const pages = !result.legacyImport && Array.isArray(native.metadata?.pages) ? native.metadata.pages : null;
+  if (!result.legacyImport && manifest.schema === 'starforge.blockworks-acquisition/v1' && pages === null)
     problem(issues, 'SOURCE_METADATA_CONTRADICTION', base + '/result/metadata/pages', 'The native acquisition readRows result must retain its original per-capture metadata pages.', 'error', { side });
   const expectedUnresolved = [], capturedUnresolved = [];
   for (const item of projected) {
     const capturePath = base + '/captures/' + item.capture.id;
-    const metadataPointer = item.capture.status === null ? manifest.request?.projection?.metadataPointer : '/metadata';
+    const metadataPointer = result.legacyImport ? manifest.request?.projection?.metadataPointer : '/metadata';
     const rawUnresolved = item.metadata?.unresolvedIdentifiers;
     if (rawUnresolved !== undefined && !Array.isArray(rawUnresolved))
       problem(issues, 'SOURCE_METADATA_INVALID', capturePath, 'The original unresolvedIdentifiers field is not an array.', 'error', { side });
     if (Array.isArray(rawUnresolved)) for (const identifier of rawUnresolved) capturedUnresolved.push({
       identifier: plain(identifier), captureId: item.capture.id, pointer: (metadataPointer ?? '') + '/unresolvedIdentifiers' });
-    const derived = !result.fileImport && !['tabular', 'catalog'].includes(result.kind) ?
+    const derived = !result.legacyImport && !['tabular', 'catalog'].includes(result.kind) ?
       selectedRequest.filter(key => !item.entries.some(entry => plain(entry.key) === key && (entry.points.length > 0 || object(entry.entity)))) : undefined;
     if (derived !== undefined && Array.isArray(rawUnresolved) && !same(plain(rawUnresolved), derived))
       problem(issues, 'SOURCE_METADATA_CONTRADICTION', capturePath, 'The original unresolvedIdentifiers metadata differs from the identifiers resolved by the original request and series.', 'error', { side,
@@ -650,7 +662,7 @@ function population(prepared, source, originalSource, mapping, issues) {
   if (timeseries && !prepared.keys.some(key => key.definition.semantic !== 'time' && key.definition[side]?.from === 'row' && same(key.definition[side]?.path, ['key'])))
     problem(issues, 'CANONICAL_SERIES_KEY_REQUIRED', '/mapping/keys', 'Retain the original series key as an identity selector; symbols and shared product labels are separate fields.', 'error', { side });
   const request = originalSource?.manifest?.request ?? {};
-  const canonicalField = !source.fileImport && source.kind === 'tabular' ? request.keyField : null;
+  const canonicalField = !source.legacyImport && source.kind === 'tabular' ? request.keyField : null;
   if (canonicalField && !prepared.keys.some(key => key.definition[side]?.from === 'row' && same(key.definition[side]?.path, [canonicalField])))
     problem(issues, 'CANONICAL_ROW_KEY_REQUIRED', '/mapping/keys', 'Retain original ' + canonicalField + ' as a population identity key.', 'error', { side });
   if (canonicalField) {
@@ -674,7 +686,7 @@ function population(prepared, source, originalSource, mapping, issues) {
         if (cmp(start, prepared.window.start) > 0 || cmp(end, prepared.window.end) < 0)
           problem(issues, 'WINDOW_COVERAGE', base, 'The original extraction does not cover the complete requested comparison window.', 'error', { side, details: { covered: plain(covered), requested: mapping.window } });
       } catch (error) { problem(issues, 'WINDOW_COVERAGE_INVALID', base, error.message, 'error', { side }); }
-    } else if (source.fileImport) {
+    } else if (source.legacyImport) {
       problem(issues, 'DECLARED_EXPORT_WINDOW', base, 'The selected window relies on the retained complete-export declaration; no provider window totals are asserted.', 'warning', { side });
     } else problem(issues, 'WINDOW_UNRESOLVED', base, 'Retain explicit start/end or the source-resolved window; relative-now or bounds-only input is insufficient for exact window alignment.', 'error', { side });
   }
@@ -768,7 +780,7 @@ function prepare(input) {
   const sourceViews = Object.fromEntries(SIDES.map(side => [side, {
     id: sources[side]?.manifest?.id ?? null, schema: sources[side]?.manifest?.schema ?? null,
     kind: sides[side].kind, digest: sides[side].digest, complete: sides[side].complete,
-    coverage: plain(sides[side].coverage), coverageKind: sides[side].fileImport ? 'declared-export' : 'provider-capture',
+    coverage: plain(sides[side].coverage), coverageKind: sides[side].legacyImport ? 'declared-export' : 'provider-capture',
     request: sources[side]?.manifest?.request ?? null, captures: sides[side].captures,
     records: populations[side].original, selectedRecords: populations[side].selected, excludedRecords: populations[side].excluded,
     invalidKeys: populations[side].invalid, fields: populations[side].fields
