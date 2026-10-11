@@ -3,13 +3,14 @@
 import { writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
+import { supportsSellerMethod } from '../sf30-seller-sdk/http-methods.mjs';
 
 const FIELDS = Object.freeze([
   'access-control-allow-origin', 'access-control-allow-credentials',
   'access-control-allow-headers', 'access-control-allow-methods',
   'access-control-expose-headers', 'vary',
 ]);
-const USAGE = `Browser x402 preflight audit (Node 22+, read-only)\n  node audit.mjs --resource https://seller.example/paid --origin https://buyer.example [--method GET|POST] [--credentialed] [--out private.json]\n  Use --allow-loopback ONLY for explicit http://127.0.0.1 seller + buyer fixtures.\n  Performs actual unpaid GET and OPTIONS, not the method supplied as --method.`;
+const USAGE = `Browser x402 preflight audit (Node 22+, read-only)\n  node audit.mjs --resource https://seller.example/paid --origin https://buyer.example [--method GET|HEAD|POST|PUT|PATCH|DELETE] [--credentialed] [--out private.json]\n  Use --allow-loopback ONLY for explicit http://127.0.0.1 seller + buyer fixtures.\n  Performs actual unpaid GET and OPTIONS, not the method supplied as --method.`;
 
 function tokens(s) {
   return new Set(String(s ?? '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean));
@@ -53,7 +54,7 @@ function optionArgs(args) {
   const resource=urlOf(vals.get('--resource'),{loopback});
   const origin=urlOf(vals.get('--origin'),{loopback,originOnly:true}).origin;
   const method=vals.get('--method')??'GET';
-  if (!['GET','POST','PUT','PATCH','DELETE'].includes(method)) throw new TypeError('Unknown preflight method');
+  if (!supportsSellerMethod(method)) throw new TypeError('Unknown preflight method');
   if (resource.origin===origin) throw new TypeError('Choose a distinct buyer origin for actual cross-origin acceptance');
   return {resource:resource.href,origin,method,credentialed:flags.has('--credentialed'),out:vals.get('--out')};
 }
