@@ -5,6 +5,11 @@ interface takes a prepared merchant API through staging, exact price and route
 comparison, activation, original seller startup, customer SDK export, rollback
 and graceful shutdown. The same operator opens retained merchant incidents and
 support cases, records owner delivery terms, and exports the original workorder.
+`merchant-mcp download-support` retrieves those exact retained files through the
+same authenticated MCP endpoint and resumes an interrupted download. The original
+completion manifest is saved last; `reopen-support` opens its complete inputs in
+the existing SF74 case store offline. See [SUPPORT.md](SUPPORT.md#retrieve-and-reopen-the-private-handoff)
+for the client commands and recovery workflow.
 The tools use the original SF82 release store, SF61
 OpenAPI compiler, original SF30 Python merchant, SF30 seller and customer SDK exporter. The MCP endpoint reuses
 the same authenticated HTTP transport as the existing SF32 buyer bridge.
