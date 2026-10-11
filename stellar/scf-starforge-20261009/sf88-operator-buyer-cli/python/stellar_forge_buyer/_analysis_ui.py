@@ -263,3 +263,8 @@ HTML = HTML.replace('<button data-tab="activity"', '<button data-tab="workbooks"
 HTML = HTML.replace('<section id="tab-activity"', _analysis_workbooks_ui.HTML + '<section id="tab-activity"', 1)
 CSS += _analysis_workbooks_ui.CSS
 JS += _analysis_workbooks_ui.JS
+
+
+# The profile view shares this server, capability and original dataset database.
+HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="profiles-link" href="/profiles">Data profiles</a>', 1)
+JS += "\ndocument.getElementById('profiles-link').href='/profiles#'+capability;\n"
