@@ -11,7 +11,10 @@ const HELP = `Starforge merchant MCP
 
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
-       [--handlers TRUSTED_MODULE.mjs] [--facilitator URL] [--allow-local-facilitator]
+       [--handlers TRUSTED_MODULE.mjs | --upstreams UPSTREAMS.json]
+       [--allow-loopback-upstream] [--facilitator URL] [--allow-local-facilitator]
+  init --dir NEW_DIRECTORY --workspace SAVED_API_PACKAGE [--name NAME]
+       [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
 
 Supply the bearer token through MCP_ACCESS_TOKEN (or --token-env). It is never
@@ -70,14 +73,17 @@ export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--spec', '--selections', '--bindings', '--name', '--seller-port', '--handlers', '--facilitator'], ['--allow-local-facilitator']);
-    for (const key of ['--dir', '--spec', '--selections', '--bindings']) if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
+    const options = pairs(rest, ['--dir', '--workspace', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    for (const key of options.has('--workspace') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
+      if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
     if (options.has('--handlers')) runtime.handlers = options.get('--handlers');
     if (options.has('--facilitator')) runtime.facilitator = options.get('--facilitator');
     if (options.has('--allow-local-facilitator')) runtime.allowLocalFacilitator = true;
+    if (options.has('--allow-loopback-upstream')) runtime.allowLoopbackUpstream = true;
     const result = await initializeMerchant({ directory: options.get('--dir'), spec: options.get('--spec'),
-      selections: options.get('--selections'), bindings: options.get('--bindings'), runtime,
+      selections: options.get('--selections'), bindings: options.get('--bindings'),
+      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime,
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
