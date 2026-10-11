@@ -57,15 +57,15 @@ The terminal pane displays original output. Read the current prompt, enter the i
 
 An input retains its UUID, sequence and byte hash. Its dispatch claim is durable before the first PTY write. Repeating the same request returns the retained receipt; an interrupted DISPATCHING input is not automatically repeated. Read the original output to decide what response is still needed. SENT records delivery of bytes to the terminal. The original application records approval, execution and settlement.
 
-Pending input bytes are private and removed after dispatch. Retained receipts contain identity, size/hash and delivery state. The original terminal may echo the input into its private output, as a normal terminal does.
+A terminal write checks stop and original child exit throughout dispatch and waits at most ten seconds for the PTY to accept its complete input. An interrupted, failed or partial write retains DELIVERY_UNCERTAIN and the number of bytes written; its UUID is never replayed automatically. Output backpressure does not prevent the bridge from observing shutdown. Pending input bytes are private and removed after dispatch. Retained receipts contain identity, size/hash and delivery state. The original terminal may echo the input into its private output, as a normal terminal does.
 
-The PTY records actual bridge and original child identities. Both retain the existing worker lease. Stop sends the original process group a normal termination signal and lets the original application drain accepted work. There is no forced-kill timeout or automatic approval.
+The PTY records actual bridge and original child identities and keeps the existing worker lease. Stop first sends SIGTERM to that exact original process group. After five seconds, a child that has not closed is sent SIGKILL only after its original PID, start time, process group and session still match. The bridge keeps its original child unreaped until this cleanup finishes, then reaps it and retains the real exit result. Its result records graceful or forced termination and any output bytes that could not drain. Reopen the original application's retained operation after an interrupted action; terminal delivery never grants automatic approval.
 
 The default Python is /usr/bin/python3; another reviewed absolute executable may be selected. The adapter uses the standard library and installs no terminal package or supervisor.
 
 ## Stop and recover
 
-**Stop application** addresses the original run ID. A queued launch is recorded STOPPED before execution; a live launch uses the original managed stop file and runner. Commerce may remain STOPPING while its accepted work drains.
+**Stop application** addresses the original run ID. A queued launch is recorded STOPPED before execution; a live launch uses the original managed stop file and runner. Commerce first drains within the terminal's graceful interval. A forced terminal exit leaves the original application's durable operation available for its own recovery.
 
 **Cancel pending start** also covers a saved start whose original worker request was not created. Cancellation is retained under the application lock, so a later retry cannot launch it.
 
