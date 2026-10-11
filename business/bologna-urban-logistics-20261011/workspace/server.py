@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import mimetypes
+import survey_http
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -38,6 +39,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
         try:
+            if survey_http.get(self, load_state):
+                return
             if path == "/api/state":
                 state = load_state(self.server.state_root)
                 state["delivery"] = public_delivery(state)
@@ -53,8 +56,8 @@ class Handler(BaseHTTPRequestHandler):
                 from interviews import get_resource
                 content_type, data = get_resource(load_state(self.server.state_root), path)
                 return self.send_bytes(200, data, content_type)
-            name = "index.html" if path == "/" else ("interviews.html" if path == "/interviews" else path.removeprefix("/"))
-            if name not in {"index.html", "app.js", "style.css", "delivery.js", "interviews.html", "interviews.js", "interviews.css"}:
+            name = survey_http.ASSETS.get(path) or ("index.html" if path == "/" else ("interviews.html" if path == "/interviews" else path.removeprefix("/")))
+            if name not in {"index.html", "app.js", "style.css", "delivery.js", "interviews.html", "interviews.js", "interviews.css", *survey_http.ASSETS.values()}:
                 return self.send_json(404, {"error": "NOT_FOUND"})
             data = (PUBLIC / name).read_bytes()
             return self.send_bytes(200, data, mimetypes.guess_type(name)[0] or "application/octet-stream")
@@ -64,10 +67,13 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(500, {"error": type(error).__name__, "message": str(error)})
 
     def do_POST(self):
+        if survey_http.preview(self, load_state):
+            return
         path = urlparse(self.path).path
         if path not in {"/api/action", "/api/interviews/preview"}:
             return self.send_json(404, {"error": "NOT_FOUND"})
         try:
+            survey_http.check_post(self)
             length = int(self.headers.get("Content-Length", "0"))
             if length < 2 or length > 1_000_000:
                 raise ValueError("JSON body must be 2–1000000 bytes")

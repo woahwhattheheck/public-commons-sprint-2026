@@ -26,6 +26,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   seller      JSON/application seller         upstream    Existing API seller
   jsonrpc     Prepare, diagnose and operate selected Stellar RPC read products
   getblock-stellar  Prepare selected GetBlock Stellar reads and original release/buyer handoff
+  chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
+  chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
@@ -47,6 +49,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   buyer-agent Operate the original buyer through LangGraph checkpoints and LangChain tools
+  tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
+  tenderly-customer                          Receive, recover and export the original simulation purchase
+  tenderly-analysis                          Receive, compare and review completed Tenderly simulations
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
@@ -63,6 +68,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   sheets-publisher                           Review and publish retained Sheet observations as datasets
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
+  mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
   redis                                      Inspect, prepare and operate Redis/Valkey read products
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
@@ -110,6 +116,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   graphql-deployment                         Prepare original GraphQL release and Linux host handoffs
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
+  woo-operator                              Review original Stellar transfers and complete selected Woo orders
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),
