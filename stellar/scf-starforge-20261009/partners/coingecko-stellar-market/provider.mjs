@@ -26,12 +26,13 @@ export function normalizeProviderPlan(input) {
   }
   const upstream=input.upstream??{};
   need(plain(upstream),'INVALID_UPSTREAM');
-  const apiKeyEnv=upstream.apiKeyEnv??'COINGECKO_PRO_API_KEY';
+  const optional=(value,fallback)=>value===undefined||value===null||value===''?fallback:value;
+  const apiKeyEnv=optional(upstream.apiKeyEnv,'COINGECKO_PRO_API_KEY');
   need(typeof apiKeyEnv==='string'&&/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(apiKeyEnv),'INVALID_ENVIRONMENT_NAME','Use an environment variable name, never its secret value');
   const result={name:text(input.name,'provider plan name',240),publicOrigin:origin(input.publicOrigin),
     pathPrefix:prefix(input.pathPrefix),endpointIds:clone(endpointIds),accepts,endpointAccepts:overrides,
-    upstream:{origin:origin(upstream.origin??'https://pro-api.coingecko.com'),
-      basePath:prefix(upstream.basePath??'/api/v3'),apiKeyEnv}};
+    upstream:{origin:origin(optional(upstream.origin,'https://pro-api.coingecko.com')),
+      basePath:prefix(optional(upstream.basePath,'/api/v3')),apiKeyEnv}};
   need(!(result.upstream.origin===result.publicOrigin&&result.upstream.basePath===result.pathPrefix),
     'RECURSIVE_UPSTREAM','The additional paid route cannot call itself as its upstream');
   need(!/(?:^|\/)x402(?:\/|$)/.test(result.upstream.basePath),'NESTED_PAYMENT_UPSTREAM',
