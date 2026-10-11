@@ -267,6 +267,25 @@ class Governor:
         return {'outcome':'JOURNAL_CONSISTENT','rows':len(ledger),'events':self.db.execute('SELECT COUNT(*) FROM journal').fetchone()[0],
                 'warning':'HMAC source keys are external; whole-database rollback requires independent checkpoint/witness detection'}
 
+    def reservation(self,request:dict)->dict:
+        """Read one original reservation against its complete approved intent.
+
+        A consistent SQLite read transaction covers journal and projection; no
+        new reservation, consent, release or finality attestation is produced.
+        """
+        r=validate_request(request)
+        digest=hashlib.sha256(canonical(r)).hexdigest()
+        self.db.execute('BEGIN')
+        try:
+            row=self._audit().get(r['request_id'])
+            if row is None:raise Denied('unknown reserved payment')
+            if not hmac.compare_digest(row['request_digest'],digest):
+                raise Denied('approved request differs from original reservation')
+            self.db.execute('COMMIT')
+            return row.copy()
+        except BaseException:
+            self.db.execute('ROLLBACK');raise
+
     def _budget(self,r:dict,day:str,ledger:dict)->dict:
         limits=self.limits.get((r['network'],r['asset']))
         if limits is None:raise Denied('asset/network not allowlisted by operator')
