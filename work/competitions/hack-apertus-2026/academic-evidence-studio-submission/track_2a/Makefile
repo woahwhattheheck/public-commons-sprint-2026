@@ -1,11 +1,28 @@
-IMAGE ?= hack-apertus-academic-evidence-studio:track2a-2026
-export LLM_NAME
-export LLM_BASE_URL
-export LLM_API_KEY
-.PHONY: build run test
+IMAGE ?= hack-apertus-ost-track2a:2026
+INPUT ?= /data/cases.jsonl
+OUTPUT ?= /output/predictions.jsonl
+DATA_DIR ?= $(PWD)/data
+OUTPUT_DIR ?= $(PWD)/output
+
+.PHONY: build run test prepare-dev evaluate-dev
+
 build:
 	docker build --file Dockerfile --tag $(IMAGE) .
+
 run: build
-	docker run --rm --init --publish 127.0.0.1:8787:8787 --publish 127.0.0.1:8788:8788 --env LLM_NAME --env LLM_BASE_URL --env LLM_API_KEY $(IMAGE)
+	mkdir -p $(OUTPUT_DIR)
+	docker run --rm --init \
+		--volume $(DATA_DIR):/data:ro \
+		--volume $(OUTPUT_DIR):/output \
+		--env BASE_URL --env API_KEY --env MODEL_NAME \
+		--env CONTEXT_STRATEGY --env MAX_CONTEXT_CHARS \
+		$(IMAGE) --input $(INPUT) --output $(OUTPUT)
+
 test:
-	node --test src/test_runtime.mjs src/test.mjs src/workspace.test.mjs
+	python -m unittest discover -s tests -p 'test_*.py'
+
+prepare-dev:
+	python prepare_dev.py --dataset $(DATASET) --cases $(CASES) --gold $(GOLD)
+
+evaluate-dev:
+	python evaluate_dev.py --gold $(GOLD) --predictions $(PREDICTIONS)
