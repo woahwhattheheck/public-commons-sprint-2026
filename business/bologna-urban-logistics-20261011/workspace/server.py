@@ -49,8 +49,12 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/health":
                 state = load_state(self.server.state_root)
                 return self.send_json(200, {"ok": True, "revision": state["revision"]})
-            name = "index.html" if path == "/" else path.removeprefix("/")
-            if name not in {"index.html", "app.js", "style.css", "delivery.js"}:
+            if path.startswith("/api/interviews"):
+                from interviews import get_resource
+                content_type, data = get_resource(load_state(self.server.state_root), path)
+                return self.send_bytes(200, data, content_type)
+            name = "index.html" if path == "/" else ("interviews.html" if path == "/interviews" else path.removeprefix("/"))
+            if name not in {"index.html", "app.js", "style.css", "delivery.js", "interviews.html", "interviews.js", "interviews.css"}:
                 return self.send_json(404, {"error": "NOT_FOUND"})
             data = (PUBLIC / name).read_bytes()
             return self.send_bytes(200, data, mimetypes.guess_type(name)[0] or "application/octet-stream")
@@ -60,13 +64,17 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json(500, {"error": type(error).__name__, "message": str(error)})
 
     def do_POST(self):
-        if urlparse(self.path).path != "/api/action":
+        path = urlparse(self.path).path
+        if path not in {"/api/action", "/api/interviews/preview"}:
             return self.send_json(404, {"error": "NOT_FOUND"})
         try:
             length = int(self.headers.get("Content-Length", "0"))
             if length < 2 or length > 1_000_000:
                 raise ValueError("JSON body must be 2–1000000 bytes")
             payload = json.loads(self.rfile.read(length))
+            if path == "/api/interviews/preview":
+                from interviews import prepare_source
+                return self.send_json(200, prepare_source(load_state(self.server.state_root), payload))
             state, result = apply_action(self.server.state_root, payload)
             state["delivery"] = public_delivery(state)
             return self.send_json(200, {"state": state, "result": result})
