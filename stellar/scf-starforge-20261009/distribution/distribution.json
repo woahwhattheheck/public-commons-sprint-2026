@@ -317,6 +317,8 @@
     "./buyer/runbook-workspace": "./source/stellar/scf-starforge-20261009/buyer-runbook/workspace.mjs",
     "./merchant/readiness": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant.mjs",
     "./merchant/recipient-readiness": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/sac.mjs",
+    "./merchant/receiving-workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/workspace/controller.mjs",
+    "./merchant/receiving-server": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/workspace/server.mjs",
     "./merchant/assets": {
       "types": "./source/stellar/scf-starforge-20261009/sf16-asset-engine/assets.d.ts",
       "import": "./source/stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs"
