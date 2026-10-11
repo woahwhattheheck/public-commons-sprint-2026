@@ -126,13 +126,14 @@ export class GeocodeDelivery {
       fail('GEOCODE_BUYER_OPERATION_REQUIRED');
     const plan=compileGeocodePlan(raw),product=productFor(plan,productId);
     const result=await operation.recover();
+    if(!result || typeof result.bytes !== 'function' || !result.record) fail('GEOCODE_BUYER_RESULT_REQUIRED');
     const bytes=await readBytes(operation.configPath,65536),config=JSON.parse(bytes);
     if(digest(bytes) !== result.record.configSha256) fail('GEOCODE_BUYER_CONFIG_CHANGED');
     let url;try{url=new URL(config.operation?.url);}catch{fail('GEOCODE_BUYER_URL_INVALID');}
     if(config.operation?.method !== 'GET' || url.origin !== publicOrigin || url.pathname !== product.path ||
         url.username || url.password || url.hash) fail('GEOCODE_BUYER_PRODUCT_MISMATCH');
     const query=bindGeocodeQuery(product,url.searchParams);
-    return GeocodeDelivery.fromBuyerResult(result,{request:{id:result.record.operationId ?? null,
+    return GeocodeDelivery.fromBuyerResult(result,{request:{id:result.record.intentId,
       planId:plan.id,planSha256:digest(jsonBytes(plan)),productId,mode:product.mode,query,
       method:'GET',url:url.href},provenance:{configSha256:digest(bytes),publicOrigin}});
   }
