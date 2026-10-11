@@ -16,13 +16,14 @@ Use Node 22.16 or later. From a new application directory, install the supplied
 `tokenjunkielabs-starforge-merchant-*.tgz` archive:
 
 ```sh
-npm install --ignore-scripts --offline /absolute/path/to/the-package.tgz
+npm install --ignore-scripts --offline --omit=optional /absolute/path/to/the-package.tgz
 npx --no-install starforge doctor
 ```
 
 This is a local npm-compatible source distribution. It is marked `private` to
 prevent an accidental registry publish; local installation and `npm pack` work
-normally. The archive does not fetch or install the optional payment packages.
+normally. This source-only installation omits optional packages. PostgreSQL
+drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
 ## Start a merchant workspace
@@ -111,10 +112,16 @@ or automatically retry a request.
 | `starforge upstream` | SF30 existing-API seller |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
+| `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |
+| `starforge commerce` | Persistent native merchant, operations and selected buyer session |
+| `starforge inbox` | Original durable buyer requests, outcomes and recovery |
+| `starforge native-signer` | SF103 native buyer configuration, inspection and signer loading check |
+| `starforge facilitator` | Original native Stellar facilitator or self-facilitated seller |
 | `starforge capture` | SF85 original single HTTP 402 capture |
+| `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
@@ -131,6 +138,28 @@ For example, review an existing original buyer configuration without signing:
 npx --no-install starforge buyer --review --config /absolute/private/operator.json
 npx --no-install starforge source
 ```
+
+For an original SF85 imported capture, `starforge handoff` also requires
+`--headers-file /absolute/private/original.headers`. It retains that file and
+verifies the same response through the original SF85 parser. The resulting
+bundle goes directly to `starforge buyer --review`; import time remains separate
+from the unknown HTTP capture time. See the original
+[SF96 operator-header journey](../sf96-merchant-challenge-handoff/README.md).
+
+To keep an existing configured merchant and its selected buyer requests in one
+foreground operator session, use the
+[commerce operator guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE.md):
+
+```sh
+npx --no-install starforge commerce init --plan /private/commerce-plan.json --directory /private/new-session
+npx --no-install starforge commerce start --directory /private/new-session
+```
+
+The same original native facilitator, seller, operations observer and buyer
+inbox run from the package. `review`, `signer`, `execute`, `cancel` and `recover`
+operate on explicit stable intent IDs. Terminal approval remains in the original
+SF88/SF81 workflow. `quit` drains the services; the next start reopens retained
+requests and results. No repository checkout is required on the operator host.
 
 `source` prints the exact source commit, original Git object and SHA-256 for each
 packaged file, component inventory, archive version and optional dependency
@@ -189,11 +218,14 @@ shutdown and retained history, use the packaged
 ## Use existing database sources
 
 PostgreSQL support uses the original named-query integration. Install its
-optional driver in the application directory; it is independent of the native
-payment packages:
+production drivers in the application directory; they are independent of the
+native payment packages. Driver pins and the PostgreSQL feature metadata derive
+from the selected commit's original postgres/package.json, including pg-cursor.
+They are optional runtime dependencies of the archive; development dependencies
+are excluded:
 
 ```sh
-npm install --ignore-scripts pg@8.23.1
+npm install --ignore-scripts pg@8.23.1 pg-cursor@2.22.1
 npx --no-install starforge doctor --feature postgres
 npx --no-install starforge postgres-init --directory ./postgres-merchant
 npx --no-install starforge postgres-inspect \
@@ -208,6 +240,29 @@ values stay in the chosen environment variable. The original parameter binding,
 read-only queries, projection, result limits and pool behavior remain in force.
 Development-only PostgreSQL exercise and emulator sources are omitted from the
 installed runtime.
+
+For interactive merchant setup, configure the existing source connection policy
+and run the maintained workspace:
+
+```sh
+npx --no-install starforge postgres-workspace \
+  --source ./postgres-merchant/source.json --output ./merchant-packages
+```
+
+Select the actual table/view, public columns, typed filters, ordering and payment
+terms. Each reviewed export creates a fresh private source.json/service.json
+package and prints the original launch command. The same files also run through
+the installed command catalog:
+
+```sh
+npx --no-install starforge postgres \
+  --source /absolute/export/source.json --config /absolute/export/service.json
+```
+
+The source/workspace guides include the original role, certificate, capped-query
+and facilitator setup. `doctor --feature postgres` checks imports at the original
+adapter's path, including source checkouts with drivers installed in the postgres
+directory. It does not connect to the database or require payment SDK packages.
 
 SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;
