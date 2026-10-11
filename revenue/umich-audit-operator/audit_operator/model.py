@@ -265,8 +265,8 @@ def follow_up_queue(records, as_of=None):
         explicit = iso_date(p.get("explicit_target_date"))
         target = explicit or reference
         reviews = sorted((r for r in records if r["kind"] == "follow_up_review" and r["payload"].get("action_id") == action["id"]),
-                         key=lambda r: (r["payload"].get("review_date", ""), r["updated_at"]), reverse=True)
-        verified = bool(p.get("verified_at") and p.get("verification_reference"))
+                         key=lambda r: (r["payload"].get("review_date", ""), r["updated_at"] or ""), reverse=True)
+        verified = bool(p.get("verified_at") and (p.get("verification_reference") or (action.get("projection") and p.get("auditor_verified"))))
         last = reviews[0] if reviews else None
         next_review = None
         if priority in {"high", "medium"} and not verified:
