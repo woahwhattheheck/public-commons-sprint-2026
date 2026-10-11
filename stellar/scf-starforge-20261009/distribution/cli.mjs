@@ -24,6 +24,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
   handoff     Captured challenge -> review    support     Private seller support case
+  support-watch                             Observe, acknowledge and export merchant incidents
+  support-console                           Retained merchant cases and runtime follow-up
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
