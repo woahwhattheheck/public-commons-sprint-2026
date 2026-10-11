@@ -42,7 +42,9 @@ try {
   for (const [i, path] of ['/v1/lookup?count=2', '/v1/compute'].entries()) {
     const response = await fetch(session.url + path, i ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"value":2}' } : {});
     assert.equal(response.status, 402);
-    assert.deepEqual(JSON.parse(Buffer.from(response.headers.get('payment-required'), 'base64')), imported.offers[i].seller);
+    const expected = structuredClone(imported.offers[i].seller);
+    expected.resource.url = config.publicOrigin + path;
+    assert.deepEqual(JSON.parse(Buffer.from(response.headers.get('payment-required'), 'base64')), expected);
   }
   assert.equal(invoked, 0);
   assert.equal((await fetch(session.url + '/v1/lookup', { method: 'POST' })).status, 405);
