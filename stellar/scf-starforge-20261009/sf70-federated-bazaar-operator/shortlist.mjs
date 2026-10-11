@@ -36,7 +36,7 @@ export function selectionStatus(selected, snapshot, refreshFailed = false) {
   if (snapshot.network !== selected.capturedNetwork || source.endpoint !== selected.source.endpoint)
     return { kind: 'earlier', label: 'Different source scope',
       detail: 'This selection belongs to its original provider endpoint and network.' };
-  if (source.observedAt === selected.source.observedAt)
+  if (!selected.imported && source.observedAt === selected.source.observedAt)
     return { kind: 'current', label: 'Selected from latest source capture',
       detail: 'Provider advertisement only. Seller terms have not been confirmed.' };
   if (!selected.listing.url) return { kind: 'earlier', label: 'Earlier observation; URL undeclared',
@@ -48,8 +48,8 @@ export function selectionStatus(selected, snapshot, refreshFailed = false) {
   if (!matches.length) return { kind: 'changed', label: 'Operation not in latest source capture',
     detail: 'The original selection is retained. This is not a claim that the seller disappeared.' };
   if (matches[0].paymentOptions.some(option => same(option, selected.option, fields)))
-    return { kind: 'earlier', label: 'Earlier observation; same tuple seen again',
-      detail: 'Original capture time retained. Select the latest card to compare the new observation.' };
+    return { kind: 'earlier', label: selected.imported ? 'Saved file; same tuple in latest source capture' : 'Earlier observation; same tuple seen again',
+      detail: selected.imported ? 'The operation and tuple match the latest capture. The file itself is not authenticated; its original timestamp is retained.' : 'Original capture time retained. Select the latest card to compare the new observation.' };
   if (matches[0].hiddenPaymentOptions) return { kind: 'earlier', label: 'Earlier observation; latest options incomplete',
     detail: 'Undisplayed alternatives prevent a complete comparison.' };
   return { kind: 'changed', label: 'Selected tuple not in latest source capture',
