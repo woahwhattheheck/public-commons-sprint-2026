@@ -1383,6 +1383,7 @@ function renderCampaignList() {
     const card = h("button", {
       type: "button",
       class: `campaign-card${c.id === ui.selectedCampaignId ? " selected" : ""}`,
+      "data-campaign-id": c.id,
       onClick: () => { ui.selectedCampaignId = c.id; renderAll(); },
       "aria-pressed": c.id === ui.selectedCampaignId ? "true" : "false",
     },
@@ -1407,6 +1408,37 @@ function renderCampaignList() {
 
 /* ============================ render: detail ============================ */
 
+function captureDetailFocus(panel){
+  const active=document.activeElement;
+  if(!active || !panel.contains(active))return null;
+  if(active.name){
+    let start=null,end=null;
+    try{start=active.selectionStart;end=active.selectionEnd}catch{}
+    return {field:active.name,start,end};
+  }
+  const key=active.getAttribute("data-focus-key");
+  return key?{key}:null;
+}
+
+function restoreDetailFocus(panel,snapshot,c){
+  if(!snapshot)return;
+  let target=null;
+  if(snapshot.field){
+    target=Array.from(panel.querySelectorAll("[name]")).find(el=>el.name===snapshot.field);
+  }else if(snapshot.key){
+    const keys=[snapshot.key];
+    if(snapshot.key===`close-start:${c.id}`)keys.push(`close:${c.id}`);
+    else if(snapshot.key===`cancel-close:${c.id}`)keys.push(`close-start:${c.id}`);
+    target=Array.from(panel.querySelectorAll("[data-focus-key]")).find(el=>keys.includes(el.getAttribute("data-focus-key")));
+  }
+  if(!target || target.disabled || target.hidden)return;
+  target.focus({preventScroll:true});
+  if(snapshot.field && Number.isInteger(snapshot.start) && Number.isInteger(snapshot.end)){
+    try{target.setSelectionRange(snapshot.start,snapshot.end)}catch{}
+  }
+}
+
+
 function actionBusy(key) { return ui.inflight.has(key); }
 
 function busyButton(key, label, cls, onClick, opts = {}) {
@@ -1417,6 +1449,7 @@ function busyButton(key, label, cls, onClick, opts = {}) {
     class: `btn ${cls || "secondary"}${opts.small ? " small" : ""}`,
     disabled,
     title: opts.title || null,
+    "data-focus-key": key,
     onClick,
   });
   if (busy) btn.append(h("span", { class: "spin", "aria-hidden": "true" }), opts.busyLabel || "Working…");
@@ -1553,12 +1586,9 @@ function renderDetail() {
   empty.hidden = true;
   panel.hidden = false;
   panel.className = "detail";
-  // Preserve focus across re-renders — the poll loop rebuilds this panel.
-  const ae = document.activeElement;
-  const restore = ae && panel.contains(ae) && ae.name
-    ? { name: ae.name, s: ae.selectionStart, e: ae.selectionEnd }
-    : null;
-  panel.replaceChildren();
+  // Preserve input and actionable-button keyboard focus across timed refresh.
+  const focusSnapshot=captureDetailFocus(panel);
+  panel.replaceChildren();
 
   const sponsorView = ui.role === "sponsor";
   const status = campaignStatus(c);
@@ -1594,7 +1624,7 @@ function renderDetail() {
   if (canClose && ui.confirmClose !== c.id) {
     detailActions.push(gateBlocksSponsor
       ? gateNote(sg)
-      : h("button", { type: "button", class: "btn danger small", onClick: () => { ui.confirmClose = c.id; renderDetail(); } }, "Close campaign"));
+      : h("button", { type: "button", class: "btn danger small", "data-focus-key": `close-start:${c.id}`, onClick: () => { ui.confirmClose = c.id; renderDetail(); } }, "Close campaign"));
   }
   if (canClose && ui.confirmClose === c.id) {
     const refundTxt = c.availableAtomic !== null ? fmtWithUnit(c.availableAtomic) : "an amount not yet reported";
@@ -1602,7 +1632,7 @@ function renderDetail() {
     detailActions.push(h("span", { class: "action-note", text:
       `A confirmed close returns the unused ${refundTxt} to the sponsor wallet. ${reservedTxt} stays claimable by approved creators after close. The refund happens inside the close transaction itself.` }));
     detailActions.push(busyButton(`close:${c.id}`, "Confirm close", "danger small", () => doClose(c), { busyLabel: "Closing…" }));
-    detailActions.push(h("button", { type: "button", class: "btn ghost small", onClick: () => { ui.confirmClose = null; renderDetail(); } }, "Keep open"));
+    detailActions.push(h("button", { type: "button", class: "btn ghost small", "data-focus-key": `cancel-close:${c.id}`, onClick: () => { ui.confirmClose = null; renderDetail(); } }, "Keep open"));
   }
 
   /* head — args filtered because native append() renders nulls as "null" text */
@@ -1661,13 +1691,7 @@ function renderDetail() {
     panel.append(h("hr", { class: "hr" }), h("p", { class: "empty-line", text: c.closed ? "This campaign is closed to new work." : "The deadline has passed — this campaign is closed to new work." }));
   }
 
-  if (restore) {
-    const el = panel.querySelector(`[name="${restore.name}"]`);
-    if (el) {
-      el.focus();
-      try { el.setSelectionRange(restore.s, restore.e); } catch { /* non-text control */ }
-    }
-  }
+  restoreDetailFocus(panel,focusSnapshot,c);
 }
 
 function submissionIsMine(sub) {
@@ -2132,18 +2156,66 @@ function renderTimeline() {
 
 /* ============================ drawer / toast ============================ */
 
-function openDrawer(title, node) {
-  $("#drawerTitle").textContent = title;
-  const body = $("#drawerBody");
-  body.replaceChildren(node);
-  $("#drawer").hidden = false;
-  $("#drawerScrim").hidden = false;
-  const first = body.querySelector("input, textarea, select, button");
-  if (first) first.focus();
+function nextDrawerTabTarget(items,active,backwards){
+  if(!items.length)return null;
+  if(backwards && (active===items[0] || !items.includes(active)))return items[items.length-1];
+  if(!backwards && (active===items[items.length-1] || !items.includes(active)))return items[0];
+  return null;
 }
-function closeDrawer() {
-  $("#drawer").hidden = true;
-  $("#drawerScrim").hidden = true;
+
+function handleDrawerKeys(event) {
+  const dialog=$("#drawer");
+  if(dialog.hidden)return;
+  if(event.key==="Escape"){
+    event.preventDefault();
+    closeDrawer();
+    return;
+  }
+  if(event.key!=="Tab")return;
+  const focusables=Array.from(dialog.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])'))
+    .filter(el=>!el.hidden && !el.closest("[hidden]") && el.getClientRects().length>0);
+  if(!focusables.length){
+    event.preventDefault();
+    dialog.focus({preventScroll:true});
+    return;
+  }
+  const next=nextDrawerTabTarget(focusables,document.activeElement,event.shiftKey);
+  if(next){
+    event.preventDefault();
+    next.focus({preventScroll:true});
+  }
+}
+
+let drawerReturnFocus=null;
+
+function openDrawer(title,node){
+  const dialog=$("#drawer");
+  if(!dialog.hidden)return;
+  drawerReturnFocus=document.activeElement;
+  $("#drawerTitle").textContent=title;
+  $("#drawerBody").replaceChildren(node);
+  dialog.hidden=false;
+  $("#drawerScrim").hidden=false;
+  // The modal alone is interactive; the campaign workspace and header
+  // cannot receive keyboard or assistive-tech focus until it is closed.
+  $("#main").inert=true;
+  $(".top").inert=true;
+  $("#notice").inert=true;
+  const first=$("#drawerBody").querySelector("input:not([disabled]),textarea:not([disabled]),select:not([disabled]),button:not([disabled])");
+  (first||$("#drawerClose")).focus({preventScroll:true});
+}
+function closeDrawer(){
+  const dialog=$("#drawer");
+  if(dialog.hidden)return;
+  dialog.hidden=true;
+  $("#drawerScrim").hidden=true;
+  $("#main").inert=false;
+  $(".top").inert=false;
+  $("#notice").inert=false;
+  const prior=drawerReturnFocus;
+  drawerReturnFocus=null;
+  const target=prior && prior.isConnected && !prior.disabled ? prior : $("#newCampaignBtn");
+  if(target && !target.disabled)target.focus({preventScroll:true});
 }
 function openNewCampaign() {
   openDrawer("New campaign", buildNewCampaignForm());
@@ -2309,7 +2381,9 @@ async function refresh(userInitiated) {
 }
 
 function renderAll() {
-  const ready = ui.status === "ready" && ui.state;
+  const activeCard=document.activeElement && $("#campaignList").contains(document.activeElement)
+    ? document.activeElement.getAttribute("data-campaign-id") : null;
+  const ready = ui.status === "ready" && ui.state;
   $("#appLoading").hidden = ui.status !== "loading";
   $("#appOffline").hidden = ui.status !== "offline";
   if (ui.status === "offline" && ui.offlineDetail) $("#offlineDetail").textContent = ui.offlineDetail;
@@ -2320,6 +2394,11 @@ function renderAll() {
   renderRoleControls();
   renderNotice();
   renderCampaignList();
+  if(activeCard){
+    const replacement=Array.from($("#campaignList").querySelectorAll("[data-campaign-id]"))
+      .find(el=>el.getAttribute("data-campaign-id")===activeCard);
+    if(replacement)replacement.focus({preventScroll:true});
+  }
   renderDetail();
   renderOperations();
   renderTimeline();
@@ -2347,7 +2426,7 @@ function wireChrome() {
   $("#newCampaignBtn").addEventListener("click", openNewCampaign);
   $("#drawerClose").addEventListener("click", closeDrawer);
   $("#drawerScrim").addEventListener("click", closeDrawer);
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+  document.addEventListener("keydown", handleDrawerKeys);
   $("#roleSponsor").addEventListener("click", () => { ui.role = "sponsor"; renderAll(); });
   $("#roleCreator").addEventListener("click", () => { ui.role = "creator"; renderAll(); });
   $("#actorSelect").addEventListener("change", (e) => { ui.actorId = e.target.value; renderAll(); });

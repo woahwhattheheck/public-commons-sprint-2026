@@ -57,7 +57,7 @@
 
 <div class="notice" id="notice" hidden></div>
 
-<main id="main" class="layout">
+<main id="main" class="layout" tabindex="-1">
   <div id="appLoading" class="loading-screen">
     <div class="spinner" aria-hidden="true"></div>
     <p>Connecting to the campaign service…</p>
@@ -87,7 +87,7 @@
       <div id="campaignList" class="campaign-list"></div>
     </section>
 
-    <section class="col col-detail" aria-labelledby="detailHeading">
+    <section class="col col-detail" aria-label="Campaign details">
       <div id="detailEmpty" class="detail-empty">
         <svg viewBox="0 0 64 64" width="52" height="52" aria-hidden="true">
           <rect x="8" y="10" width="48" height="34" rx="5" fill="none" stroke="currentColor" stroke-width="2" opacity=".5"/>
@@ -117,7 +117,7 @@
 </main>
 
 <div class="drawer-scrim" id="drawerScrim" hidden></div>
-<aside class="drawer" id="drawer" hidden aria-labelledby="drawerTitle" role="dialog" aria-modal="true">
+<aside class="drawer" id="drawer" hidden aria-labelledby="drawerTitle" role="dialog" aria-modal="true" tabindex="-1">
   <div class="drawer-head">
     <h2 id="drawerTitle">New campaign</h2>
     <button type="button" class="btn ghost icon-btn" id="drawerClose" aria-label="Close">
