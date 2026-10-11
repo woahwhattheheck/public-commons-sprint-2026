@@ -240,6 +240,8 @@ or automatically retry a request.
 | `starforge dataset` | SF30 dataset API compilation |
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
+| `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
+| `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
@@ -1177,6 +1179,141 @@ SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;
 `starforge sqlite-inspect --help` exposes declaration/query inspection. The
 bundled source guides cover application bindings and current Node requirements.
+
+### Build and operate a MySQL or MariaDB merchant
+
+The installed MySQL product uses the original native `mysql2` prepared-statement
+source, `information_schema` catalog, exact parameter binder, merchant package,
+SF30 seller, operations and customer exporter. Use Node 22.16 or later; the local
+browser workspace also uses the Linux host's `flock` and `tar` commands for
+retained release leases and customer archives. Install the original pinned driver
+in the application directory:
+
+```sh
+npm install --ignore-scripts mysql2@3.24.5
+npx --no-install starforge doctor --feature mysql
+npx --no-install starforge mysql init --directory /private/mysql-draft
+```
+
+The parent directory must exist. `init` creates a new private source profile,
+merchant plan, example input and sample SQL. Edit `source.json` for the existing
+database, a SELECT-only reader and its actual TLS policy. Its `connection.passwordEnv`
+names the environment variable supplied through the operator host's existing
+secret injection. `verify-full` checks the certificate and host; an optional
+`caFile` resolves relative to the source profile. `local-plaintext` is restricted
+to a local database. The original source's complete configuration and named-query
+guide is included at
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/README.md`.
+
+Start the complete browser workflow with absolute source and state paths:
+
+```sh
+npx --no-install starforge mysql-workspace \
+  --source /private/mysql-draft/source.json \
+  --state /private/mysql-workspace
+```
+
+`starforge mysql workspace` forwards to this same original server. Open the full
+URL printed by the launcher; it binds to `127.0.0.1:8439` by default and carries
+the private tab capability in its fragment. `--port 0` chooses an available
+workspace port. Source paths, database credentials and the state root are supplied
+by the operator host.
+
+1. Select an actual table or view and its approved public columns. The catalog
+   shows native types, keys, nullability, collation and precision. Choose a stable
+   order, including a unique key when appropriate.
+2. Add an endpoint with its ID, GET or POST method, public path, description,
+   limits and typed filters. Add it to the release, then repeat for the remaining
+   routes. Save edited endpoints before reviewing the release.
+3. Set a new release ID, the actual public HTTPS origin, and each ordered payment
+   option's network, asset, recipient, atomic amount and timeout.
+4. Review the complete original SQL, output aliases, typed examples, limits,
+   merchant plan and public contract. Explicit private previews run the reviewed
+   read against the actual database. Schema changes require a fresh review.
+5. Prepare the release. The original preparer creates and verifies the private
+   source, service, plan, OpenAPI, customer client, optional copied CA and manifest.
+   A complete release is published atomically; repeated successful preparation
+   reopens the same reviewed package.
+6. Open **Saved releases**, select the package and choose **Start merchant**. Use
+   the displayed API docs, original operations and availability controls. **Stop
+   merchant** drains the running source while retaining its release and route
+   policy. Reopen the same state directory for an explicit restart, or use the
+   selected release as a new draft to prepare a changed contract.
+
+The browser derives exact integer and decimal restrictions from the real schema.
+Unsigned BIGINT values retain their full range through `18446744073709551615`.
+`DECIMAL(p,s)` inputs retain decimal text and reject values requiring rounding or
+excess integer capacity before native payment. Original results keep numbers and
+dates as strings, binary values as `{ "base64": "..." }`, and SQL NULL as JSON
+null. Each request runs its own read-only repeatable-read transaction, with the
+original row, byte, queue and deadline limits. Database views can enforce the
+approved row policy; appropriate indexes support the selected order and filters.
+
+The original seller's default mode serves the configured `402` challenges. To run
+its payment-enabled mode, use the [native payment dependencies](#native-payment-dependencies)
+and add the actual `--facilitator HTTPS_URL` to the workspace command. Seller and
+operations ports default to available ports and can be selected with
+`--seller-port` and `--operations-port`. The workspace's **Download customer
+client** exports `openapi.json` and the five original files in `client/`, using a
+single-use download with its size and SHA-256 displayed in the browser.
+
+Prepared packages also run independently through the installed original CLI:
+
+```sh
+npx --no-install starforge mysql verify \
+  --directory /private/mysql-workspace/releases/catalog_v1/package
+npx --no-install starforge mysql run \
+  --directory /private/mysql-workspace/releases/catalog_v1/package \
+  --port 8423 --operations-port 8424 \
+  --availability-dir /private/mysql-workspace/availability/catalog_v1 \
+  --facilitator https://facilitator.example
+```
+
+Use the actual retained release ID and facilitator. Keep the source's password
+environment available in the destination process. `verify` and `run` use the
+original file manifest; copied CA references remain relative when relocating the
+package. The CLI also exposes `catalog --source FILE [--table NAME]`, offline
+`describe --source FILE`, native `preflight --source FILE`, and private
+`query --source FILE --query NAME --input FILE`. An operator-authored declaration
+uses `prepare --source FILE --plan FILE --directory NEW_DIRECTORY`, followed by
+the same `verify` and `run` flow. `serve --source FILE --config FILE` starts an
+existing original configuration. Each command's `--help` shows its full options.
+
+Extract the customer archive into the customer's application and follow the
+generated `client/README.md`. The original Node Buyer consumes the generated
+module directly; for the included `catalog` route example:
+
+```js
+import { fileURLToPath } from 'node:url';
+import { Buyer } from '@tokenjunkielabs/starforge-merchant/buyer/node';
+import { createSellerClient } from './client/seller-client.mjs';
+
+const buyer = new Buyer({
+  runtimeDirectory: fileURLToPath(new URL('../',
+    import.meta.resolve('@tokenjunkielabs/starforge-merchant/buyer/node'))),
+  stateDirectory: '/private/buyer-state',
+  operatorProfile: '/private/buyer-profile.json',
+});
+const api = createSellerClient({ buyer });
+const result = await api.call('catalog', {
+  path: {}, query: { region: 'north', after_id: '0' },
+}, { intentId: 'catalog-north-001', maxAtomic: '10000', acceptIndex: 0 });
+const page = await result.json();
+```
+
+Use the generated operation ID, approved input, stable intent, selected payment
+option and atomic cap for the actual reviewed offer. The original Buyer owns
+review, native execution, recovery and verified response access. Keep exact
+database values as strings in the customer integration.
+
+Application hosts import `startMysqlSeller` and `createMysqlNativeFactory` from
+`@tokenjunkielabs/starforge-merchant/seller/mysql`, or
+`startMysqlMerchantWorkspace` from `seller/mysql/workspace`, using the trusted
+host options in the included source guide. The complete browser operating and
+lifecycle guide is included at
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/workspace/README.md`.
+Both commands and public imports target these original implementations; the
+driver dependency is derived from the selected source's `mysql/package.json`.
 
 ### Build a DuckDB or Parquet merchant
 

@@ -43,6 +43,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
+  mysql-workspace                            Build, review and run a database merchant in the browser
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
   openapi-workspace                          Prepare and operate a merchant from its API contract
   duckdb / duckdb-inspect                     Run or inspect an approved DuckDB/Parquet source
@@ -80,7 +82,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   graphql-workspace                          Review schemas, query packages and merchant lifecycle
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
 
-Optional feature groups: postgres, s3, graphql.
+Optional feature groups: postgres, mysql, s3, graphql.
 
 Use starforge COMMAND --help for the original command's usage.
 Default workspace launch uses challenge-only mode. Add the original facilitator

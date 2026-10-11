@@ -125,6 +125,8 @@
     "delivery-workspace": "stellar/scf-starforge-20261009/sf98-merchant-delivery/workspace-server.mjs",
     "dataset-delivery": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-dataset-cli.mjs",
     "postgres-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+    "mysql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/cli.mjs",
+    "mysql-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/workspace/server.mjs",
     "duckdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/start.mjs",
     "duckdb-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/inspect.mjs",
     "duckdb-prepare": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/prepare-cli.mjs",
@@ -233,6 +235,8 @@
     "./seller/delivery/workspace": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/workspace-server.mjs",
     "./buyer/dataset": "./source/stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery/deliver.mjs",
     "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
+    "./seller/mysql": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/merchant.mjs",
+    "./seller/mysql/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/workspace/server.mjs",
     "./seller/duckdb": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/source.mjs",
     "./seller/duckdb/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/config.mjs",
     "./seller/duckdb/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/merchant.mjs",
@@ -359,6 +363,7 @@
   "runtimePackageManifests": {
     "schema": "stellar-forge/payment-auto-catalog/package.json",
     "postgres": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/package.json",
+    "mysql": "stellar/scf-starforge-20261009/sf30-seller-sdk/mysql/package.json",
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/package.json",
     "graphql": "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant/package.json",
     "mcp": "stellar-forge/mcp-paid-agent/package.json"
