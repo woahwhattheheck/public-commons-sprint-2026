@@ -4,6 +4,11 @@ For several prepared operations and restart recovery, use the [durable buyer
 inbox](QUEUE.md). It adds private request snapshots, a permanent attempt record,
 original-evidence recovery and an offline history report to this same buyer.
 
+For a merchant POST with an issued operation capability, use [private operation
+tickets](OPERATION_TICKETS.md). The existing prepare command accepts the body
+and ticket as private files; workspace and inbox imports preserve the exact
+ticket while review displays only its operation key, request hash and expiry.
+
 Operator-side executable joining SF31 buyer HTTP, SF81/SF62/SF36 approval and reservation, and SF82/SF43/SF52 checkout recording. The native testnet operator workspace below supplies the official Stellar SDK signer adapter and private local setup. Existing operator-provided signer modules remain supported.
 
 ## Set up a complete native testnet operator workspace
