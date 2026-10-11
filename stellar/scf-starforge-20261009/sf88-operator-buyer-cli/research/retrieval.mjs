@@ -23,7 +23,7 @@ async function exact(path,bytes){
 }
 function validatePageRequest(request,entity){
   check(object(request)&&request.entity===entity&&object(request.parameters),'RETRIEVAL_ENTITY_MISMATCH');
-  const query=validateQuery(entity,request.parameters,{kind:'list',requireFilter:true});
+  const {query}=validateQuery(entity,request.parameters,{kind:'list',requireFilter:true});
   check(typeof query.cursor==='string'&&query.cursor.length>0&&!query.page&&!query.group_by,'RESEARCH_CURSOR_REQUEST_REQUIRED');
   return query;
 }

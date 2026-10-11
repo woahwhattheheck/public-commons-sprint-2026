@@ -87,7 +87,29 @@ node sf88-operator-buyer-cli/research/cli.mjs gather \
   --product researchWorks
 ~~~
 
-When connecting to an operator-supplied service origin, add `--client-origin ORIGIN`. The buyer profile, generated client, and merchant's complete payment terms determine the payment route. Keep the original buyer's saved result with the returned page so the edition can reopen both.
+The research buyer profile selects the installed original runtime, stable buyer state, original operator profile, and explicit per-page authorization:
+
+~~~json
+{
+  "runtimeDirectory": "/private/stellar-forge/sf88-operator-buyer-cli",
+  "stateDirectory": "/private/buyer/openalex-state",
+  "operatorProfile": "/private/buyer/operator-profile.json",
+  "entity": "works",
+  "authorization": {
+    "acceptIndex": 0,
+    "maxAtomic": "10000",
+    "paymentFlow": "authorization"
+  }
+}
+~~~
+
+Set `maxAtomic` to the selected offer's per-page ceiling in atomic units and `acceptIndex` to its actual payment option. The illustrated values are configuration examples; the generated client's original offer and native approval determine the permitted payment. `paymentFlow` accepts `authorization` or `upfront`.
+
+`operatorProfile` may be an exact profile path or the original allowed-field object. The original buyer accepts `operator`, `signerModule`, `trustedPayer`, `bodyCaptureTimeoutMs`, `buyerTransport`, and `requestTimeoutMs`. Keep key material in the original signer environment. Optional top-level `node`, `timeoutMs`, `cleanupGraceMs`, and `outputLimit` configure the original runtime; `responseFile` and `requestTimeoutMs` are passed as original buyer options.
+
+Keep `--client` pointing to the complete original export's `seller-client.mjs`. Optional `--client-origin ORIGIN` checks equality with that export's retained origin; it does not rewrite the service URL. The edition pins the buyer state directory, operator-profile hash, generated-client hashes, entity, product, and authorization. Resume with those same settings. The original deterministic buyer intent reopens its saved result and response bytes before a new page can be requested.
+
+Direct retrieval similarly binds the provider account, budget directory, entity, and product. It retains the original request and complete received response in the shared budget directory before publishing the edition page. Preserve that cache with the workspace when recovering an interrupted receive.
 
 ### Import a page already obtained
 
