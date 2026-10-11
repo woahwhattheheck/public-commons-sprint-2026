@@ -689,7 +689,8 @@
     "./partners/open-meteo/reports": "./source/stellar/scf-starforge-20261009/partners/open-meteo-operations/exports.mjs",
     "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
     "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs",
-    "./merchant/woocommerce/refunds": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator.mjs"
+    "./merchant/woocommerce/refunds": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator.mjs",
+    "./merchant/woocommerce/refund-handoff": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-handoff.mjs"
   },
   "nativePeers": {
     "@x402/core": {
