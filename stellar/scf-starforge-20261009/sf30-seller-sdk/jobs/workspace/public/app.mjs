@@ -41,6 +41,12 @@ async function attachment(path, fallback) {
   const filename = /filename="([^"]+)"/.exec(disposition || '')?.[1] || fallback;
   save(await response.arrayBuffer(), filename, response.headers.get('content-type') || 'application/octet-stream');
 }
+function showTicket(ticket) {
+  state.ticket = ticket;
+  $('ticket-json').textContent = json(ticket); $('ticket-panel').hidden = false;
+  state.selected = jobId(ticket.job) || ticket.jobId;
+  $('ticket-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 function badge(value) {
   return element('span', words(value), 'status' + (value === 'COMPLETED' ? ' complete' : ['FAILED', 'INTERRUPTED'].includes(value) ? ' attention' : ''));
 }
@@ -130,7 +136,7 @@ function renderDetail(job) {
   $('history').replaceChildren();
   for (const event of [...(job.history || [])].reverse()) {
     const item = element('li');
-    item.append(element('strong', words(event.type ?? event.event ?? event.state ?? event.action ?? 'Updated')),
+    item.append(element('strong', words(event.type ?? event.event ?? event.action ?? event.state ?? 'Updated')),
       element('span', timestamp(event.at ?? event.createdAt ?? event.timestamp), 'history-time'));
     if (event.reason || event.message) item.append(element('p', event.reason || event.message));
     const specifics = Object.fromEntries(Object.entries(event).filter(([key]) => !['type', 'event', 'state', 'action', 'at', 'createdAt', 'timestamp', 'reason', 'message'].includes(key)));
@@ -141,6 +147,8 @@ function renderDetail(job) {
   $('result-panel').hidden = status !== 'COMPLETED';
   const output = job.result ?? job.output ?? {};
   $('result-summary').textContent = [output.filename, output.bytes !== undefined ? Number(output.bytes).toLocaleString() + ' bytes' : '', output.contentType, output.sha256].filter(Boolean).join(' · ');
+  $('renew-claim-job').disabled = status !== 'PREPARED' || job.submittedAt !== null ||
+    !!(job.nativeSettlement?.id ?? job.settlement?.id) || state.mutating;
   $('cancel-job').disabled = !['PREPARED', 'AWAITING_SETTLEMENT', 'QUEUED', 'RUNNING'].includes(status) || state.mutating;
   $('retry-job').disabled = !['FAILED', 'INTERRUPTED', 'CANCELLED'].includes(status) ||
     !(job.nativeSettlement?.id ?? job.settlement?.id) || state.mutating;
@@ -198,10 +206,7 @@ $('create-form').addEventListener('submit', event => {
   if ($('label').value.trim()) request.label = $('label').value.trim();
   if ($('reference').value.trim()) request.reference = $('reference').value.trim();
   change(async () => {
-    state.ticket = await post('/api/jobs', request);
-    $('ticket-json').textContent = json(state.ticket); $('ticket-panel').hidden = false;
-    state.selected = jobId(state.ticket.job) || state.ticket.jobId;
-    $('ticket-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showTicket(await post('/api/jobs', request));
   }, 'Job prepared. Save the purchase ticket for its buyer.');
 });
 $('ticket-hide').addEventListener('click', () => { $('ticket-panel').hidden = true; });
@@ -226,10 +231,17 @@ $('result-preview').addEventListener('click', async () => {
 });
 $('result-download').addEventListener('click', () => attachment('/api/jobs/' + encodeURIComponent(state.selected) + '/result', 'job-result.bin').catch(error => note(error.message, true)));
 for (const action of ['cancel', 'retry']) $(action + '-job').addEventListener('click', () => {
-  if (!$('action-form').reportValidity() || !state.detail) return;
+  if (!$('action-form').reportValidity() || !state.detail || jobId(state.detail) !== state.selected) return;
   const id = state.selected, expectedRevision = state.detail.revision, reason = $('reason').value.trim();
   change(() => post('/api/jobs/' + encodeURIComponent(id) + '/' + action, { expectedRevision, reason }),
     action === 'retry' ? 'Execution queued on the original paid job.' : 'Job cancellation recorded.');
+});
+$('renew-claim-job').addEventListener('click', () => {
+  if (!$('action-form').reportValidity() || !state.detail || jobId(state.detail) !== state.selected) return;
+  const id = state.selected, expectedRevision = state.detail.revision, reason = $('reason').value.trim();
+  change(async () => {
+    showTicket(await post('/api/jobs/' + encodeURIComponent(id) + '/renew-claim', { expectedRevision, reason }));
+  }, 'Purchase ticket renewed for the same prepared job. Save this replacement ticket for its buyer.');
 });
 $('action-form').addEventListener('submit', event => event.preventDefault());
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
