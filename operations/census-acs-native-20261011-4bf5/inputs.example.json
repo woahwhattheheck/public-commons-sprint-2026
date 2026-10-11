@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.census-native-inputs.v1",
+  "releases": {
+    "2023": {
+      "archive": "Peoria_ACS_2023_Public_Source.zip",
+      "nativePackage": "Peoria_ACS_2023_Original_Capture_Package.json",
+      "workbook": "methods/2023_Jam_Values.xlsx",
+      "receipt": "methods/2023_Jam_Values.xlsx.capture.json"
+    },
+    "2024": {
+      "archive": "Peoria_ACS_2024_Public_Source.zip",
+      "nativePackage": "Peoria_ACS_2024_Original_Capture_Package.json",
+      "workbook": "methods/2024_Jam_Values.xlsx",
+      "receipt": "methods/2024_Jam_Values.xlsx.capture.json"
+    }
+  }
+}
