@@ -16,7 +16,34 @@ node --test test.mjs    # two focused behavioral checks, no broad suite
 
 For loopback-only hosting, requests must use the matching local Host (`127.0.0.1`, `localhost`, or `[::1]`) and listening port; forged public Host headers are rejected before a session is created. An explicit non-loopback `HOST` remains an intentional deployment choice.
 
-Say “Find a cheaper schedule for tonight”, inspect item times and relative prices, click **Approve** and then **Execute simulation**. The receipt shows `simulated: true`, `liveDeviceCalls: 0`. Use **Reset session** to discard the current proposal. The UI shows no live-service or AWS/official account claim.
+Say “Find a cheaper schedule for tonight”, inspect item times and relative prices, click **Approve** and then **Execute simulation**. The receipt shows `simulated: true`, `liveDeviceCalls: 0`. Use **Clear current plan** to discard the current proposal. The UI shows no live-service or AWS/official account claim.
+
+## Plan your own hypothetical scenario
+
+The browser now exposes the original optimizer's inputs. Choose which of the
+three example loads to include, edit each load's power, duration and allowed
+window, and choose whether it must avoid 22:00–07:00 quiet hours. Set a shared
+circuit cap and hypothetical off-peak, daytime and evening rates. Rates use the
+displayed fixed time bands; they are not fetched from a utility.
+
+Click **Plan this scenario** to compare the earliest jointly feasible schedule
+with the cheaper schedule. Planning commands in **Ask GridKind** use those same
+settings. A changed field disables approval and execution until a new plan is
+generated. Infeasible inputs show the existing optimizer's explanation and do
+not authorize the previous schedule. Approval still binds the exact plan ID,
+and execution emits only the existing simulated receipt.
+
+The last valid scenario stays with the original browser session and is restored
+on reload. **Clear current plan** clears its approval and receipt while retaining
+the settings; **Restore example** edits the form back to the original example and
+requires replanning. Exported agent views are copies, so editing a returned view
+cannot mutate an approved schedule.
+
+Run the focused original-engine and browser-script flow check with:
+
+```bash
+node --test test-scenario-flow.focused.mjs
+```
 
 ## Agentic tools and method
 
@@ -41,4 +68,5 @@ Focused source regression:
 ```bash
 node amazon-gridkind-alexa-2026/test-flat-symmetry.focused.mjs
 ```
+
 
