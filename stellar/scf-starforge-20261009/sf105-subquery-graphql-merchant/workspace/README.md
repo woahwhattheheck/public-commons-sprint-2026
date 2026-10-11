@@ -7,7 +7,7 @@ queries and merchant plan feed review, export and runtime.
 
 ## Start
 
-Use Node 22 or later and install the original runtime and GraphQL dependencies
+Use Linux with Node 22 or later and `flock` from util-linux, and install the original runtime and GraphQL dependencies
 as described in the [onboarding guide](../onboarding/README.md). From the source
 checkout:
 
@@ -75,7 +75,8 @@ and Stellar settlement use the configured original runtime.
 ## Saved work and recovery
 
 Drafts live below `projects/PROJECT/` with immutable numbered versions and an
-atomically updated current pointer. Save compares the expected revision, so an
+atomically updated current pointer. Complete synced bytes are published without
+replacing an existing revision before that pointer moves. Save compares the expected revision, so an
 older tab cannot silently replace a newer draft. History opens a retained
 version; saving it appends a new revision and preserves the subsequent history.
 The browser asks before discarding unsaved edits while switching projects.
@@ -91,8 +92,10 @@ opening or editing its source draft.
 The workspace requires private regular directories (`0700`) and writes private
 files (`0600`) on Unix. Input limits match the canonical exporter: schema and
 queries each up to 1 MiB; plan up to 256 KiB. The workspace owns one local writer
-and one managed seller. It refuses a second live writer for the same directory;
-an observed dead process's writer record can be reclaimed during startup.
+and one managed seller. Linux holds the exclusive writer lock on the workspace
+process's open descriptor; a second writer is refused. Process exit releases the
+lock automatically, including an interrupted process, so reopening needs no
+stale-record removal. The persistent `writer.lock` file must remain in place.
 Interrupted exports leave their private partial files for inspection, matching
 the original create-only exporter behavior.
 
