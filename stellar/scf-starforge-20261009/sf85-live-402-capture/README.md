@@ -35,6 +35,23 @@ node stellar/scf-starforge-20261009/sf84-mpp-market-intake/inspect.mjs \
   '/private/scf85/merchant-20261011.json'
 ```
 
+### Proxy-only HTTPS egress (explicit HTTP CONNECT)
+
+Some isolated Node22+ hosts have no direct TLS route: the original merchant hostname resolves through an isolated 198.18/15 overlay, but HTTPS traffic must travel through a separate operator-managed forward proxy. Native SF85 direct TLS then fails before it can capture the real 402. The collector now supports **one explicit** HTTP CONNECT proxy, not automatic environment-variable proxy discovery:
+
+~~~sh
+node stellar/scf-starforge-20261009/sf85-live-402-capture/capture.mjs \
+  --url 'https://grug402.dev/api/x402/eip3009-exact-get' \
+  --allow-origin 'https://grug402.dev' --method GET \
+  --sandbox-egress-range '198.18.0.0/15' \
+  --https-proxy 'http://hatch-egress-proxy:3128' \
+  --timeout-ms 8000 --out '/private/scf85/grug-402.json'
+~~~
+
+The host and merchant in this command are **example operator choices** from the original runtime report; only run it on an authorized VM with that actual trusted proxy, approved real merchant URL and a new private output path. The proxy URL must be explicit `http://host[:port]`, with no userinfo, path, query, fragment or proxy authorization headers. In normal public DNS mode, SF85 requests CONNECT to the original pinned public IPv4:443. In explicitly approved all-198.18/15 overlay mode, it requests CONNECT to the original authorized merchant hostname:443 so the proxy can resolve the public seller, then requires Node TLS certificate validation for the original merchant hostname. This differs deliberately from direct-IP pinning and requires trusting the selected proxy's routing. Mixed/other nonpublic DNS remains rejected before tunneling.
+
+The proxy sees CONNECT destination and timing but **not** the merchant request URL path, original payment headers or any body through TLS; certificate validation, exact target origin, one GET/HEAD, 30-second upper bound, no redirects, no body reads, exclusive private capture, and original SF84 classification stay unchanged. A failed CONNECT or TLS handshake produces no source capture. No proxy credentials, wallets or settlement handling. If the proxy uses a TLS-intercepting corporate CA, Node only accepts it if that CA is already trusted by the operator's runtime. Never disable TLS verification.
+
 ## Move to commercial acceptance
 
 Use the actual source capture, original merchant authorization and owner acceptance process. x402 v2 merchant offers may proceed to the existing SF31/SF81 buyer and SF70/SF74/SF77 merchant support/workorder *only through those modules' actual constraints*. The same HTTP status **does not** mean the existing x402 buyer supports MPP; Charge/Session require a separate official Stellar MPP integration. A GET/HEAD challenge is not a POST/MCP paid-delivery result. Never combine price, recipient, asset, amount or resource fields from two protocol alternatives.
