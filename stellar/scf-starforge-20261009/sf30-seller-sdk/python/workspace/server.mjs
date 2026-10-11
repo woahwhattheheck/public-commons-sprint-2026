@@ -31,8 +31,22 @@ function fields(input, allowed) {
   if (unknown.length) throw failure('INVALID_FIELD', 'Unknown action field: ' + unknown.join(', '));
 }
 
-export async function startPythonWorkspace(root, { port = 8431 } = {}) {
+/**
+ * Open the original saved workspace and local operator boundary.
+ * operatorAssets optionally adds explicit {path, file, type} records; file is a
+ * local path or file URL, and path is an exact non-API HTTP path. Existing native
+ * assets cannot be replaced. Set operatorPath to one registered HTML page.
+ * The selected operatorUrl and nativeOperatorUrl share the same token, native
+ * source/preview/release APIs, origin checks and owned-process close lifecycle.
+ * Assets are read once at startup; callers keep their scripts/styles external
+ * so the original same-origin CSP applies without modification.
+ */
+export async function startPythonWorkspace(root, { port = 8431, operatorAssets = [], operatorPath = '/' } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Workspace port must be 0–65535.');
+  if (!Array.isArray(operatorAssets)) throw new TypeError('Operator assets must be explicit local file records.');
+  const assetPath = value => typeof value === 'string' && /^\/[A-Za-z0-9._/-]*$/.test(value) &&
+    !value.includes('//') && !value.split('/').some(part => part === '.' || part === '..');
+  if (!assetPath(operatorPath)) throw new TypeError('Use an exact local operator page path without query, fragment or traversal.');
   const workspace = typeof root === 'string' ? await openWorkspace(root) : root;
   if (!workspace?.state || !workspace?.close) throw new TypeError('Supply a saved Python workspace directory or its opened model.');
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
@@ -45,6 +59,17 @@ export async function startPythonWorkspace(root, { port = 8431 } = {}) {
       ['/release-panel.mjs', 'release-panel.mjs', 'text/javascript; charset=utf-8'],
       ['/style.css', 'style.css', 'text/css; charset=utf-8'],
     ]) assets.set(path, { bytes: await readFile(new URL('./' + file, import.meta.url)), type });
+    for (const asset of operatorAssets) {
+      if (!asset || !assetPath(asset.path) || assets.has(asset.path) || asset.path === '/api' || asset.path.startsWith('/api/'))
+        throw new TypeError('Each additional operator asset needs a distinct local path outside the original assets and API.');
+      if (!(typeof asset.file === 'string' && asset.file.length > 0) && !(asset.file instanceof URL && asset.file.protocol === 'file:'))
+        throw new TypeError('Operator assets must select existing local file paths or file URLs.');
+      if (typeof asset.type !== 'string' || asset.type.length > 200 || !/^[A-Za-z0-9!#$&^_.+-]+\/[A-Za-z0-9!#$&^_.+-]+(?:;[^\r\n\u0000]*)?$/.test(asset.type))
+        throw new TypeError('Each operator asset needs a valid content type.');
+      assets.set(asset.path, { bytes: await readFile(asset.file), type: asset.type });
+    }
+    if (!assets.has(operatorPath) || assets.get(operatorPath).type.split(';')[0] !== 'text/html')
+      throw new TypeError('The selected operator path must name an available HTML page.');
   } catch (error) { await workspace.close(); throw error; }
   let hosts = new Set(), origins = new Set(), url, busy = false, stopping = false, lastError = null;
   let actionDone = Promise.resolve(), resolveClosed, rejectClosed;
@@ -147,7 +172,8 @@ export async function startPythonWorkspace(root, { port = 8431 } = {}) {
     })();
     return closing;
   };
-  return { server, workspace, url, token, operatorUrl: url + '/#' + token, close, closed };
+  return { server, workspace, url, token, operatorUrl: url + operatorPath + '#' + token,
+    nativeOperatorUrl: url + '/#' + token, close, closed };
 }
 
 export const startWorkspaceServer = startPythonWorkspace;
