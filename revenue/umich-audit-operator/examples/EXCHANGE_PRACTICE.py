@@ -5,7 +5,7 @@ if "__file__" in globals():
 from audit_operator import exchange as ex
 from audit_operator.reporting import project_snapshot, project_for_access
 
-def run():
+def practice_inputs():
     namespace="practice-um-audit"
     evidence=b"Practice attachment: exact retained workpaper bytes.\n"
     raw=b"source_id,unit,detail\nA,unit-a,A_PRIVATE_DETAIL\nB,unit-b,B_PRIVATE_DETAIL\n"
@@ -35,6 +35,28 @@ def run():
       "questionnaire_response":[{"source_id":"q-3.3.5","question_id":"3.3.5","catalog_sha":"819a01647a939e867e344abc94e24db04df290687463cb43771944ec13099bac","response":"Practice response, not an institutional submission.","status":"draft","evidence_refs":[]}],
       "source_mapping":[{"source_id":"mapping-1","source_field_or_ordinal":"Priority","target_field":"priority_normalized","transform":"value_map","value_map":{"High":"high","Medium":"medium","Low":"low"},"native_contract_reference":"Practice explicitly reviewed mapping","revision":1,"record_kind":"observation"}],
     }
+    return {"namespace":namespace,"evidence":evidence,"raw":raw,"rows":rows}
+
+def practice_native_contract():
+    contract={"format":"commons-audit-target-contract/1","native_contract_reference":{"classification":"authored_practice_contract_not_vendor_schema","id":"practice-ordered-columns/1"},"tables":[
+      {"kind":"engagement","file":"engagements.csv","encoding":"utf-8-sig","header":True,"delimiter":",","line_ending":"CRLF","fields":[
+        {"name":"ID","target_field":"source_id"},
+        {"name":"Title","target_field":"title"},
+        {"name":"Units","target_field":"unit_ids","transform":"json"},
+        {"name":"IT","target_field":"is_it_audit","transform":"boolean"},
+        {"name":"Medicine IT","target_field":"is_michigan_medicine","transform":"boolean"}]},
+      {"kind":"observation","file":"observations.csv","encoding":"utf-8-sig","header":True,"delimiter":",","line_ending":"CRLF","fields":[
+        {"name":"ID","target_field":"source_id"},
+        {"name":"Engagement","target_field":"engagement_id","relationship_key":{"kind":"engagement"}},
+        {"name":"Priority","target_field":"priority_raw","null_rule":"empty_to_null"},
+        {"name":"Priority","target_field":"priority_normalized","null_rule":"empty_to_null"},
+        {"name":"","target_field":"report_summary","null_rule":"empty_to_null"},
+        {"name":"Unit","target_field":"owner_unit"}]}]}
+    return contract
+
+def run():
+    fixture=practice_inputs()
+    namespace,evidence,raw,rows=(fixture[k] for k in ("namespace","evidence","raw","rows"))
     normalized=ex.normalize_records(rows,{},namespace)
     assert normalized["valid"],normalized["diagnostics"]
     assert any(d["code"]=="priority_unresolved" for d in normalized["diagnostics"])
@@ -130,20 +152,7 @@ def run():
     except ex.ExchangeError as exc:
         assert exc.code=="member_identity_mismatch",exc.as_dict()
     projected=project_snapshot(snapshot,audience={"role":"auditor","unit_ids":[]},selected_engagement_ids=selection,review_reference="Practice native contract review")
-    contract={"format":"commons-audit-target-contract/1","native_contract_reference":{"classification":"authored_practice_contract_not_vendor_schema","id":"practice-ordered-columns/1"},"tables":[
-      {"kind":"engagement","file":"engagements.csv","encoding":"utf-8-sig","header":True,"delimiter":",","line_ending":"CRLF","fields":[
-        {"name":"ID","target_field":"source_id"},
-        {"name":"Title","target_field":"title"},
-        {"name":"Units","target_field":"unit_ids","transform":"json"},
-        {"name":"IT","target_field":"is_it_audit","transform":"boolean"},
-        {"name":"Medicine IT","target_field":"is_michigan_medicine","transform":"boolean"}]},
-      {"kind":"observation","file":"observations.csv","encoding":"utf-8-sig","header":True,"delimiter":",","line_ending":"CRLF","fields":[
-        {"name":"ID","target_field":"source_id"},
-        {"name":"Engagement","target_field":"engagement_id","relationship_key":{"kind":"engagement"}},
-        {"name":"Priority","target_field":"priority_raw","null_rule":"empty_to_null"},
-        {"name":"Priority","target_field":"priority_normalized","null_rule":"empty_to_null"},
-        {"name":"","target_field":"report_summary","null_rule":"empty_to_null"},
-        {"name":"Unit","target_field":"owner_unit"}]}]}
+    contract=practice_native_contract()
     native=ex.export_native(projected,contract)
     native_return=ex.normalize_native_files(native["files"],contract,namespace)
     assert native_return["valid"],native_return["diagnostics"]

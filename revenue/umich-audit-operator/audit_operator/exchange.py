@@ -183,6 +183,10 @@ def _transform(value, mapping):
 def _mapping_groups(mappings):
     if mappings is None:
         return {}
+    # The host mapping picker returns one original source_mapping Record.
+    if isinstance(mappings, dict) and (mappings.get("kind") == "source_mapping"
+            or ("record_kind" in mappings and "mappings" in mappings)):
+        return _mapping_groups([mappings])
     if isinstance(mappings, list):
         groups = {}
         for item in mappings:
@@ -866,7 +870,9 @@ def plan_receipt(current_snapshot, received, *, prior_receipts=None, resolutions
         previous=current_sources.get(source["id"])
         if previous is None:
             base["source_imports"].append(copy.deepcopy(source))
-        elif canonical_json(previous)!=canonical_json(source):
+        elif canonical_json({k:v for k,v in previous.items() if k!="created_at"})==canonical_json({k:v for k,v in source.items() if k!="created_at"}):
+            base["reused"].append({"id":source["id"],"kind":"source","reason":"same_original_source_and_metadata"})
+        else:
             base["conflicted"].append({"id":source["id"],"kind":"source",
                 "reason":"source_identity_conflict","current_sha256":sha256(canonical_json(previous)),"incoming_sha256":sha256(canonical_json(source)),
                 "current_blob_sha256":previous["sha256"],"incoming_blob_sha256":source["sha256"]})
