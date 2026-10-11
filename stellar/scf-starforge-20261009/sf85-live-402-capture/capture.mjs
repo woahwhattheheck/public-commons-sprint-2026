@@ -26,7 +26,18 @@ for (const [address, prefix] of [
 
 const publicV4 = (address) => isIP(address) === 4 && !denied.check(address, 'ipv4');
 const CHALLENGE = new Set(['payment-required', 'www-authenticate']);
-const SECRET_QUERY = /^(?:api[-_]?key|access[-_]?key|token|secret|auth|authorization|signature|password|session)$/i;
+// Query parameters can carry access credentials under names beyond "token".
+// Normalize separated/camel-case keys before attempting an original HTTPS capture.
+const SECRET_QUERY_PART = /(?:token|secret|password|passwd|credential|signature|session|apikey|accesskey|privatekey|bearer|authorization|signedurl|oauthcode|oauthstate|accesscode)/;
+const SECRET_QUERY_EXACT = new Set(['key', 'auth', 'code', 'sig', 'jwt', 'nonce']);
+const JWT_VALUE = /^[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}$/;
+function hasCredentialQuery(target) {
+  return [...target.searchParams].some(([key, value]) => {
+    const normalizedKey = key.normalize('NFKC').toLowerCase().replace(/[^a-z0-9]/g, '');
+    return SECRET_QUERY_PART.test(normalizedKey) || SECRET_QUERY_EXACT.has(normalizedKey)
+      || JWT_VALUE.test(value);
+  });
+}
 
 export function parseArgs(argv) {
   const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms']);
@@ -42,7 +53,7 @@ export function parseArgs(argv) {
   if (target.protocol !== 'https:' || !target.hostname || target.username || target.password || target.hash || target.port || isIP(target.hostname)) {
     throw new CaptureError('REQUIRE_PUBLIC_HOST_HTTPS_443_WITHOUT_USERINFO_OR_FRAGMENT');
   }
-  if (target.href.length > 4096 || [...target.searchParams.keys()].some(k => SECRET_QUERY.test(k))) throw new CaptureError('URL_TOO_LONG_OR_CREDENTIAL_QUERY');
+  if (target.href.length > 4096 || hasCredentialQuery(target)) throw new CaptureError('URL_TOO_LONG_OR_CREDENTIAL_QUERY');
   if (args.get('--allow-origin') !== target.origin) throw new CaptureError('TARGET_ORIGIN_NOT_EXPLICITLY_APPROVED');
   const method = args.get('--method') ?? 'GET';
   if (!['GET', 'HEAD'].includes(method)) throw new CaptureError('ONLY_GET_OR_HEAD_SUPPORTED');
