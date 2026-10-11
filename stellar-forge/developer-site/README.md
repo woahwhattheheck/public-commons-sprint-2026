@@ -165,3 +165,44 @@ Original front-door source was recovered from the complete owner-authorized Octo
 Maintained native source: https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/stellar/scf-starforge-20261009
 
 The workflow selector composes ASTRA26B1’s eight-path onboarding contribution with current seller, buyer, persistent MCP, merchant release, commerce and DuckDB source. The recovered donor archive was 47,089 bytes, SHA-256 e5558da845cb73fce8547dc3714ef6c14ee9c2aee5d83efcd5dfdd4e5ff39393. Source identities and the reviewed primary guide blobs are retained in dist/recipes.mjs.
+
+## Fleet setup workbench
+
+Open `/fleet.html` to prepare the first retained multi-merchant fleet. The
+workbench edits two to thirty-two merchants, two to four fixed slots per
+merchant, public hosts, current/later source aliases, initial releases and the
+original gateway limits. Registered sources use the original API workspace,
+Python application, DuckDB/Parquet, S3 or Stellar RPC package selectors.
+
+Review shows the exact sequential slot ports and retained store layout before
+export. Drafts can be downloaded while incomplete and reopened as portable JSON;
+the original native bootstrap declaration can also be imported. The launch ZIP
+contains the editable draft, `fleet-setup.json`, machine-readable native command
+arguments and complete host/recovery instructions. It reuses the maintained
+`zipWorkspace` writer.
+
+The packet invokes the original `fleet-release setup` command. The terminal,
+managed browser and MCP handoffs all refer to the same retained directory and
+published plan. The original host APIs inspect source packages, stage immutable
+releases, select the initial slots and retain interruption recovery. The MCP
+handoff uses `init-fleet --fleet-directory` and the original client-registration
+command. Later stage/review/activation, drain and rollback remain available in
+the original operator.
+
+`dist/fleet-onboarding.mjs` owns the portable declaration and command generation.
+`dist/fleet-setup.mjs` owns editing, import, review and downloads; `fleet.html` and
+`fleet.css` share the original grayscale site controls. The workbench runs from
+static files with the existing site. Source paths and merchant configuration
+remain in the downloaded packet and original merchant host.
+
+The fleet workbench acceptance used the actual browser to import three original
+source declarations, edit their settings, follow a collapsed-limit validation
+link, download/reopen the draft and export the launch ZIP. At 390px, document
+width stayed 390px with zero browser errors. The unchanged exported command
+arrays ran through the original distribution CLI and created six 0700 release
+stores. The managed workspace served exact DuckDB decimal/Unicode values,
+Python output and all three pinned S3 objects, including a 1,843,229-byte archive
+across three HTTP 206 ranges with its expected hash. Eight native x402 requests
+used the original SDK and a local facilitator fixture. Setup resume and the
+exported MCP initialization/host registration reopened the same retained fleet
+after the original S3 package moved. All owned child processes closed.

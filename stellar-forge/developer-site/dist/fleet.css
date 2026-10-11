@@ -1,0 +1,78 @@
+/* Fleet preparation shares the original site's neutral setup controls. */
+.fleet-main { padding-top: 38px; padding-bottom: 44px; }
+.fleet-heading { max-width: 810px; margin-bottom: 28px; }
+.fleet-heading h1 { margin: 0 0 14px; font-size: clamp(30px, 3.7vw, 44px); font-weight: 500; line-height: 1.15; letter-spacing: -1.2px; }
+.fleet-heading > p:last-child { max-width: 730px; margin: 0; color: var(--muted); font-size: 14px; }
+.fleet-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.fleet-setup .setup-pane > h2 { font-size: 21px; line-height: 1.3; letter-spacing: -.3px; margin: 0 0 10px; }
+.fleet-setup .setup-errors h2 { font-size: 13px; font-weight: 600; letter-spacing: 0; margin: 0 0 8px; }
+.fleet-setup .pane-intro { max-width: 820px; }
+.fleet-fields { min-width: 0; margin: 24px 0 0; padding: 18px 0 0; border: 0; border-top: 1px solid var(--line); }
+.fleet-fields legend { padding: 0 10px 0 0; font-size: 13px; font-weight: 600; }
+.fleet-editor, .fleet-review { min-width: 0; }
+.fleet-path { overflow-wrap: anywhere; font: 12px/1.7 var(--mono); }
+.fleet-error-link { border: 0; padding: 2px 0; background: transparent; color: inherit; text-decoration: underline; text-align: left; font: inherit; cursor: pointer; }
+.fleet-runtime-options { display: grid; gap: 10px; margin: 12px 0 20px; }
+.fleet-review .run-step { display: block; margin: 20px 0; }
+.fleet-review .run-step > button { margin-top: 10px; }
+.fleet-review > h3:not(:first-child) { margin-top: 28px; }
+.fleet-editor-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.fleet-source-list { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.fleet-merchant-item { width: 100%; min-width: 0; padding: 10px; text-align: left; border: 1px solid transparent; background: transparent; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.fleet-merchant-item[aria-pressed="true"] { background: #eee; border-color: #aaa; }
+.fleet-merchant-item:hover { background: #f3f3f3; }
+.fleet-merchant-item strong, .fleet-merchant-item code { overflow-wrap: anywhere; }
+.fleet-merchant-item code { font-size: 10px; color: var(--muted); }
+.fleet-table-wrap { overflow: auto; max-width: 100%; border: 1px solid var(--line); margin-top: 14px; }
+.fleet-table-wrap table { min-width: 570px; }
+.fleet-command { background: #222; color: #f4f4f4; padding: 17px; margin: 10px 0 0; font: 11px/1.8 var(--mono); max-height: 400px; overflow: auto; }
+.fleet-editor h3, .fleet-review h3 { margin: 0 0 12px; font-size: 16px; font-weight: 500; }
+.fleet-editor h4, .fleet-review h4 { font-size: 13px; margin: 18px 0 10px; }
+.fleet-editor > .field-grid + .field-grid { margin-top: 18px; }
+.fleet-editor .setup-actions { margin-top: 14px; }
+.fleet-editor .field label, .fleet-editor .hint { overflow-wrap: anywhere; }
+.fleet-editor > section, .fleet-source-card, .fleet-package { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--line); min-width: 0; }
+.fleet-source-card .field-grid, .fleet-package .field-grid { margin-top: 12px; }
+.fleet-source-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.fleet-source-heading h4 { margin: 0; overflow-wrap: anywhere; }
+.fleet-check { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; }
+.fleet-check input { flex: 0 0 auto; margin-top: 3px; }
+.fleet-review .table-scroll { margin-top: 14px; }
+.fleet-review table { min-width: 570px; }
+.fleet-review td { overflow-wrap: anywhere; }
+.fleet-review td code { word-break: break-word; }
+.fleet-review details { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 12px; font-size: 12px; }
+.fleet-review summary { cursor: pointer; font-weight: 600; }
+.fleet-review .command-block, .fleet-review .file-code { margin-top: 10px; }
+.fleet-review .run-step h4 { margin: 0 0 7px; }
+.fleet-review .run-step p { max-width: 820px; }
+.fleet-setup .review-downloads { border-top: 1px solid var(--line); padding-top: 18px; }
+.fleet-operating-notes { padding-top: 36px; }
+.fleet-operating-notes > h2 { font-size: 24px; margin-bottom: 20px; }
+.fleet-note-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.fleet-note-grid article { min-width: 0; border-top: 1px solid var(--line); padding-top: 14px; }
+.fleet-note-grid h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.fleet-note-grid p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.fleet-operating-notes > .text-link { margin-top: 18px; }
+@media (max-width: 950px) {
+  .fleet-note-grid { gap: 20px; }
+}
+@media (max-width: 720px) {
+  .fleet-main { padding-top: 28px; padding-bottom: 30px; }
+  .fleet-heading { margin-bottom: 22px; }
+  .fleet-note-grid { grid-template-columns: 1fr; gap: 18px; }
+  .fleet-merchant-grid .resource-list { flex-wrap: wrap; overflow: visible; }
+  .fleet-merchant-grid .resource-button { max-width: 100%; min-width: 0; flex: 1 1 145px; }
+  .fleet-setup .setup-footer { align-items: flex-start; }
+  .fleet-setup .setup-footer .setup-actions { width: auto; justify-content: flex-end; }
+}
+@media (max-width: 430px) {
+  .fleet-editor-grid { grid-template-columns: 1fr; }
+  .fleet-heading h1 { font-size: 30px; letter-spacing: -.7px; }
+  .fleet-setup .setup-pane > h2 { font-size: 19px; }
+  .fleet-setup .review-downloads { align-items: stretch; gap: 10px; }
+  .fleet-setup .review-downloads .button { width: 100%; }
+  .fleet-setup .setup-footer { flex-wrap: wrap; }
+  .fleet-setup .setup-footer .small-label { max-width: 100%; }
+  .fleet-setup .setup-footer .setup-actions { margin-left: auto; }
+}

@@ -10,7 +10,7 @@ import { initializeMerchant, initializeFleetMerchant, initializeAccountingMercha
 const HELP = `Starforge merchant MCP
 
   init-accounting --dir NEW_DIRECTORY --accounting ACCOUNTING_JSON [--name NAME]
-  init-fleet --dir NEW_DIRECTORY --plan ORIGINAL_FLEET_PLAN.json [--name NAME]
+  init-fleet --dir NEW_DIRECTORY --plan ORIGINAL_FLEET_PLAN.json [--fleet-directory RETAINED_DIRECTORY] [--name NAME]
        [--accounting ACCOUNTING_JSON]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
@@ -97,9 +97,10 @@ export async function main(args = process.argv.slice(2)) {
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
   if (command === 'init-fleet') {
-    const options = pairs(rest, ['--dir', '--plan', '--name', '--accounting']);
+    const options = pairs(rest, ['--dir', '--plan', '--fleet-directory', '--name', '--accounting']);
     if (!options.has('--dir') || !options.has('--plan')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --plan.');
     const result = await initializeFleetMerchant({ directory: options.get('--dir'), planFile: options.get('--plan'), accounting: options.get('--accounting'),
+      ...(options.has('--fleet-directory') ? { fleetDirectory: options.get('--fleet-directory') } : {}),
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
