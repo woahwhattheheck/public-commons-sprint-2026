@@ -6,13 +6,14 @@ import { constants as FS } from 'node:fs';
 import { mkdir, lstat, realpath, open, rename, unlink, readdir, readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { requestCatalogOperator } from './operator.mjs';
+import { requestCatalogOperator, CONTROL_SCHEMA } from './operator.mjs';
+import { prepareWorkspaceBatch, reconcileWorkspaceBatch, batchDocument, MAX_BATCH_BODY } from './workspace-batch.mjs';
 import { reviewCatalogRevision, assertReviewedRevision, reconcileCatalogRevision } from './workspace-revisions.mjs';
 import { validateCatalogEntry } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 
 const SCHEMA = 'stellar-forge.catalog-workspace-operation/v1';
 const STATE_SCHEMA = 'stellar-forge.catalog-workspace/v1';
-const MAX_BODY = 512 * 1024, MAX_RECORD = 5 * 1024 * 1024;
+const MAX_BODY = 512 * 1024, MAX_RECORD = 64 * 1024 * 1024;
 const uuid = value => typeof value === 'string' && /^[a-f0-9]{8}(-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(value);
 const hash = value => createHash('sha256').update(value).digest('hex');
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -70,7 +71,7 @@ async function readPrivate(path, limit = MAX_RECORD) {
   } finally { await file.close(); }
 }
 async function writePrivate(directory, name, document, exclusive = false) {
-  const bytes = Buffer.from(JSON.stringify(document, null, 2) + '\n');
+  const bytes = Buffer.from(JSON.stringify(document, null, document.operation === 'apply-batch' ? 0 : 2) + '\n');
   if (bytes.length > MAX_RECORD) fail('RECORD_TOO_LARGE');
   const target = join(directory, name), temp = exclusive ? target : join(directory, `.${randomUUID()}.tmp`);
   let file, published = false;
@@ -86,7 +87,7 @@ async function writePrivate(directory, name, document, exclusive = false) {
 }
 function verifyRecord(record, expectedId) {
   if (!plain(record) || record.schema !== SCHEMA || record.id !== expectedId || !uuid(record.id) ||
-      !['admit', 'apply-withdrawal'].includes(record.operation) ||
+      !['admit', 'apply-withdrawal', 'apply-batch'].includes(record.operation) ||
       !['prepared', 'sending', 'succeeded', 'rejected', 'unknown'].includes(record.phase) ||
       record.digest !== hash(stable({ operation: record.operation, input: record.input }))) fail('OPERATION_RECORD_INVALID');
   return record;
@@ -131,11 +132,11 @@ function validateIntent(operation, input) {
   }
   fail('UNKNOWN_MUTATION');
 }
-async function body(req) {
+async function body(req, limit = MAX_BODY) {
   if (req.headers['content-type'] !== 'application/json') fail('JSON_CONTENT_TYPE_REQUIRED', 415);
-  if (req.headers['content-length'] && (!/^\d+$/.test(req.headers['content-length']) || Number(req.headers['content-length']) > MAX_BODY)) fail('BODY_TOO_LARGE', 413);
+  if (req.headers['content-length'] && (!/^\d+$/.test(req.headers['content-length']) || Number(req.headers['content-length']) > limit)) fail('BODY_TOO_LARGE', 413);
   let size = 0; const parts = [];
-  for await (const part of req) { size += part.length; if (size > MAX_BODY) fail('BODY_TOO_LARGE', 413); parts.push(part); }
+  for await (const part of req) { size += part.length; if (size > limit) fail('BODY_TOO_LARGE', 413); parts.push(part); }
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(parts))); }
   catch { fail('INVALID_JSON'); }
 }
@@ -247,7 +248,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
     if (url.origin !== origin || url.hash || [...url.searchParams.keys()].length !== new Set(url.searchParams.keys()).size) fail('REQUEST_URL_INVALID');
     if (req.headers.origin && req.headers.origin !== origin) fail('SAME_ORIGIN_REQUIRED', 403);
     if (req.headers['sec-fetch-site'] && !['same-origin', 'none'].includes(req.headers['sec-fetch-site'])) fail('SAME_ORIGIN_REQUIRED', 403);
-    const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/revisions.js': ['revisions.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+    const assets = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/revisions.js': ['revisions.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'], '/batches.js': ['batches.js', 'text/javascript'], '/batches.css': ['batches.css', 'text/css'] };
     if (Object.hasOwn(assets, url.pathname) && req.method === 'GET') {
       if (url.search) fail('STATIC_QUERY_NOT_ALLOWED');
       const [name, type] = assets[url.pathname];
@@ -271,11 +272,20 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
       if (!limit) fail('PAGINATION_INVALID');
       return send(res, 200, await listOperations(offset, limit));
     }
+    const exported = url.pathname.match(/^\/api\/operations\/([a-f0-9-]+)\/export\/(command|review|recovery)$/);
+    if (req.method === 'GET' && exported) {
+      const record = await readRecord(exported[1]), format = exported[2];
+      if (format === 'command') return send(res, 200, { filename: `catalog-command-${record.id}.json`,
+        mediaType: 'application/json', content: JSON.stringify({schema:CONTROL_SCHEMA,requestId:record.id,operation:record.operation,input:record.input}) });
+      return send(res, 200, batchDocument(record, format));
+    }
     const selected = url.pathname.match(/^\/api\/operations\/([a-f0-9-]+)(\/inspect)?$/);
     if (req.method === 'GET' && selected) {
       const record = await readRecord(selected[1]);
       if (!selected[2]) return send(res, 200, record);
       const currentStatus = await call('status');
+      if (record.operation === 'apply-batch') return send(res, 200, {operation:brief(record), status:currentStatus,
+        reconciliation:await reconcileWorkspaceBatch(record, directory)});
       const observed = await reconcileCatalogRevision(record, call, { includeInspection: true });
       const { inspection, ...reconciliation } = observed ?? {};
       const catalogKey = record.summary.catalogKey ?? record.result?.catalogKey;
@@ -292,7 +302,8 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
       return send(res, 200, await serialize(async () => {
         const record = await readRecord(reconciliationTarget[1]);
         if (record.digest !== input.digest) fail('REVIEW_DIGEST_CHANGED', 409);
-        const observation = await reconcileCatalogRevision(record, call);
+        const observation = record.operation === 'apply-batch' ? await reconcileWorkspaceBatch(record, directory)
+          : await reconcileCatalogRevision(record, call);
         if (!observation) fail('RECONCILIATION_NOT_SUPPORTED');
         record.reconciliation = observation; record.updatedAt = now();
         // Keep the original phase and receipt, including a known outcome that
@@ -305,6 +316,19 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
           memoryOutcomes.set(record.id, structuredClone(record)); summaries.set(record.id, brief(record));
         }
         return record;
+      }));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/batch/review') {
+      // Read this larger body within the existing serialized queue, not sixteen
+      // simultaneous decoded copies. Original individual request limits remain.
+      return send(res, 201, await serialize(async () => {
+        const request = await body(req, MAX_BATCH_BODY); fields(request, ['batch']);
+        const prepared = await prepareWorkspaceBatch(request.batch, call, row => validateIntent('admit', row));
+        const createdAt = now(), record = {schema:SCHEMA,id:randomUUID(),operation:'apply-batch',
+          input:prepared.input,summary:prepared.summary,digest:hash(stable({operation:'apply-batch',input:prepared.input})),
+          batchReview:prepared.plan,phase:'prepared',createdAt,updatedAt:createdAt,
+          policySha256:prepared.plan.policySha256,reviewedJournalHead:prepared.plan.review.baseHead};
+        await save(record, true); return record;
       }));
     }
     if (req.method === 'POST' && url.pathname === '/api/review') {
