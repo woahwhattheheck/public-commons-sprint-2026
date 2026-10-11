@@ -48,8 +48,55 @@ def original_cli(module, args):
 def perform(request, access, receiver):
     fields(request, ("action", "state", "arguments"))
     need(isinstance(request["action"], str), "DESK_ACTION_INVALID")
-    state = receiver.require_private_dir(request["state"])
     action, args = request["action"], request["arguments"]
+    raw_state = request["state"]
+    need(isinstance(raw_state, str) and raw_state.startswith("/") and raw_state != "/" and
+         os.path.normpath(raw_state) == raw_state and not any(ord(c) < 32 or ord(c) == 127 for c in raw_state),
+         "NORMALIZED_PRIVATE_PATH_REQUIRED")
+    state = Path(raw_state)
+    if action in ("recovery-create", "recovery-inspect", "recovery-restore"):
+        fields(args, ("output",), ("destination",))
+        if action == "recovery-restore":
+            need("destination" in args, "RECOVERY_DESTINATION_REQUIRED")
+        else:
+            need("destination" not in args, "RECOVERY_DESTINATION_ONLY_FOR_RESTORE")
+        import hashlib
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "recovery"))
+        import merchant_snapshot
+        output = Path(args["output"])
+        if action == "recovery-create" and not output.exists():
+            result = merchant_snapshot.create_snapshot(state, output)
+            result["status"] = "MERCHANT_SNAPSHOT_CREATED"
+            return result
+        need(output.is_dir() and not output.is_symlink(), "MERCHANT_SNAPSHOT_NOT_FOUND")
+        need((output / "snapshot.json").is_file(), "MERCHANT_SNAPSHOT_INCOMPLETE")
+        inspected = merchant_snapshot.inspect_snapshot(output)
+        manifest = inspected["manifest"]
+        need(manifest.get("sourceStateDigest") == hashlib.sha256(str(state).encode("utf-8")).hexdigest(),
+             "RECOVERY_MERCHANT_MISMATCH")
+        if action == "recovery-restore":
+            destination = Path(args["destination"])
+            if destination.exists():
+                need(destination.is_dir() and not destination.is_symlink(), "RECOVERY_DESTINATION_EXISTS")
+                receiver.require_private_dir(str(destination))
+                saved = destination / "restoration.json"
+                need(saved.is_file() and not saved.is_symlink() and saved.stat().st_size < 16384,
+                     "RECOVERY_DESTINATION_EXISTS")
+                need(saved.stat().st_mode & 0o077 == 0, "RECOVERY_DESTINATION_EXISTS")
+                receipt = json.loads(saved.read_text("utf-8"))
+                need(receipt.get("snapshotManifestSha256") == inspected["manifestSha256"] and
+                     receipt.get("state") == str(destination), "RECOVERY_DESTINATION_EXISTS")
+                return {**receipt, "status": "MERCHANT_RESTORATION_REOPENED"}
+            return {**merchant_snapshot.restore_snapshot(output, destination),
+                    "status": "MERCHANT_SNAPSHOT_RESTORED"}
+        return {"schema": merchant_snapshot.SCHEMA,
+                "status": "MERCHANT_SNAPSHOT_REOPENED" if action == "recovery-create" else "MERCHANT_SNAPSHOT_VERIFIED",
+                "snapshot": str(output), "createdAt": manifest["createdAt"],
+                "manifestSha256": inspected["manifestSha256"],
+                "databaseSha256": manifest["database"]["sha256"],
+                "orders": len(manifest["orders"]),
+                "uniquePaidFiles": len({item["sha256"] for item in manifest["orders"]})}
+    state = receiver.require_private_dir(raw_state)
     if action == "status":
         fields(args, ())
         return original_cli(receiver, ["status", "--state=" + str(state)])

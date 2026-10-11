@@ -206,6 +206,7 @@
     "buyer-object": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs",
     "merchant-mcp": "stellar-forge/mcp-merchant-operator/serve.mjs",
     "merchant-desk": "stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/cli.mjs",
+    "merchant-order-recovery": "stellar/scf-starforge-20261009/sf101-merchant-receiver/recovery/cli.mjs",
     "paid-file-checkout": "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
     "paid-file-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
     "api-pass": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/cli.mjs",
