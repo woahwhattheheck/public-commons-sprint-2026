@@ -281,6 +281,7 @@
     "research-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs",
     "webhook-feed": "stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/cli.mjs",
     "buyer-event-feed": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/cli.mjs",
+    "usgs-water": "stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/cli.mjs",
     "arcgis": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs",
     "arcgis-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/cli.mjs"
   },
@@ -575,6 +576,11 @@
     "./seller/webhook-feed/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/merchant.mjs",
     "./buyer/event-feed": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/index.mjs",
     "./buyer/event-feed/workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/event-feed/workspace.mjs",
+    "./seller/usgs-water": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/merchant.mjs",
+    "./seller/usgs-water/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/provider.mjs",
+    "./seller/usgs-water/analysis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/analysis.mjs",
+    "./seller/usgs-water/project": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/project.mjs",
+    "./seller/usgs-water/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/usgs-water/workspace.mjs",
     "./seller/arcgis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/capture.mjs",
     "./seller/arcgis/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/publisher.mjs",
     "./buyer/arcgis": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/arcgis/receiving.mjs"
