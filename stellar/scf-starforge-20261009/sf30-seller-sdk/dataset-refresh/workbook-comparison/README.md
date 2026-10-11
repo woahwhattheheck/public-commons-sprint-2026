@@ -9,7 +9,7 @@ This gives a merchant one continuous workflow: original workbook → explicit pu
 1. In **Workbook sources**, retain the replacement XLSX. Keep the earlier original and its saved mapping available.
 2. In **Review workbook updates**, select the earlier workbook, saved mapping and replacement workbook, then choose **Review replacement**.
 3. Inspect worksheet and column changes. A uniquely matching original header suggests a replacement column. Duplicate, missing or changed headers require an explicit coordinate. Review the actual worksheet, range and header row; **Read headers** rereads those exact coordinates.
-4. Review each declared public field. The earlier blank/formula/error/date/whitespace/literal-mapping decisions carry forward. A newly declared native field receives explicit default choices for review. Choose one or more **Row key** fields that together identify each record in both selections.
+4. Review each declared public field. The saved mapping selector includes retained historical editions. The earlier blank/formula/error/date/whitespace/literal-mapping decisions carry forward. A newly declared native field receives explicit default choices for review. Choose one or more **Row key** fields that together identify each record in both selections.
 5. Choose **Compare complete selections**. The workspace reads every selected record and retains the complete union of keys, including unchanged records. A null or duplicate key returns the side, worksheet and original rows that need a different key or selection.
 6. Review the complete totals, column/conversion changes and paginated rows. **Inspect cells** shows the original coordinates, public values, XML tokens, saved formula/cache information and formats. Filter rows by added, removed, value changed, source changed, unchanged or moved.
 7. After reviewing the selection and totals, select the review checkbox and **Save replacement mapping**. This saves a new mapping on the replacement workbook. **Open saved mapping** returns to the original workbook controls.
@@ -32,7 +32,7 @@ The original reader makes both complete CSV projections and their source-row map
 
 Each row also has a separate **moved** flag. The **Moved rows** view includes every moved record, including records with changed values or source details. The displayed moved total is therefore independent of the mutually exclusive change-kind counts.
 
-A numeric source token can change while its native number remains equivalent; that appears as a source-detail change. Saved formulas are read from the actual workbook and their stored results. The existing reader's reviewed formula policy determines which value enters the public projection.
+A numeric source token can change while its native number remains equivalent; that appears as a source-detail change. Package-local shared-string or style index changes do not by themselves change a cell's meaning; the exact original indices remain in its retained cell details. Saved formulas are read from the actual workbook and their stored results. The existing reader's reviewed formula policy determines which value enters the public projection.
 
 Row-key fields must exist in both public schemas with the same native type. Keys must be present and unique throughout both complete selections. Choosing a worksheet row number as identity would hide insertions and deletions, so keys are selected from the declared public data instead.
 
