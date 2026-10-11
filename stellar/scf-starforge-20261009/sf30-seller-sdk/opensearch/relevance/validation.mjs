@@ -1,7 +1,8 @@
 // MIT. Validate frozen operator cases against the original OpenSearch declarations.
 import { record } from '../../sqlite/parameters.mjs';
 import { fields, bounded, validateOpenSearchSource, compileOpenSearchQueries } from '../declaration.mjs';
-import { bindOpenSearchQuery } from '../source.mjs';
+import { bindOpenSearchQuery, openSearchSort } from '../source.mjs';
+import { nativeJSON } from '../wire.mjs';
 
 const INT32_MAX = 2147483647;
 const identity = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$/;
@@ -27,7 +28,7 @@ export function describeRelevanceMetrics() {
   return { schema: 'stellar-forge.opensearch-relevance-metrics.v1',
     metrics: structuredClone(metricDefinitions),
     limits: { variants: 8, cases: 100, judgmentsPerCase: 5000, maximumK: 1000,
-      maximumNativeRequestBytes: 262144, maximumNativeResponseBytes: 33554432,
+      maximumNativeRequestBytes: 33554432, maximumNativeResponseBytes: 33554432,
       maximumDcgGrade: 1000, maximumErrRelevance: 1023 },
     semantics: 'Scores come from native OpenSearch. Grade zero is a judgment; omitted ratings are unjudged. Native aggregates exclude failed requests.' };
 }
@@ -106,6 +107,15 @@ export function validateRelevanceSuite(input) {
     return { id, input: structuredClone(value.input), ratings };
   });
   unique(cases, row => row.id, 'OPENSEARCH_RELEVANCE_DUPLICATE_CASE');
+  for (const variant of variants) {
+    const requests = cases.map(row => ({ id: row.id, request: {
+      query: bindOpenSearchQuery(variant.compiled, row.input),
+      pit: { id: '', keep_alive: '90s' }, sort: openSearchSort(variant.compiled),
+      timeout: variant.compiled.timeoutMs + 'ms' }, ratings: row.ratings, summary_fields: variant.compiled.fields }));
+    const bytes = Buffer.byteLength(nativeJSON({ requests, metric: selected.value, max_concurrent_searches: 1 }));
+    if (bytes > 33554432) throw new RangeError('OPENSEARCH_RELEVANCE_REQUEST_TOO_LARGE');
+    variant.baseRequestBytes = bytes;
+  }
   if (!record(input.config)) throw new TypeError('OPENSEARCH_RELEVANCE_SOURCE_REQUIRED');
   const config = validateOpenSearchSource({ ...input.config,
     queries: Object.fromEntries(variants.map(row => [row.internalName, row.query])), bindings: {} });
