@@ -76,15 +76,27 @@ public-key policy and SF60 journal semantics remain authoritative. The native
 response is retained. Fresh signatures are needed when their original validity
 window expires; changing the offer requires matching new proofs.
 
-Declaration input is limited to 64 KiB, proofs to 384 KiB, and the complete native
-command to the original 512 KiB limit. These are input limits, not new trading or
+The review includes the current original declaration beside the proposed one,
+including exact string atomic amounts, ordered payment alternatives, timeouts,
+resource metadata and the complete Bazaar interface. The comparison is bound to
+that resource and exact input. Immediately before sending, the workspace checks
+that the reviewed resource has not changed; unrelated catalog updates do not
+force a new admission review. This is a pre-send check, not an additional atomic
+writer: subsequent races and authority remain governed by the original operator.
+Withdrawal keeps the original strict global-head check. Retired resources retain
+their real lifecycle projection; an unavailable old declaration is not invented.
+The displayed received-proof expiry is informational until native verification.
+
+Declaration input is limited to 64 KiB, proofs to 384 KiB, and each complete
+workspace intake command to 512 KiB. These are input limits, not new trading or
 payment rules. No seller private key belongs in any upload field.
 
 ### Withdraw a resource
 
 Select an active record and choose **Prepare withdrawal**, or enter its exact key
-in Withdraw. Confirm the seller, original source URL and reason. Preparing returns
-the original head-bound SF95 request and downloads it; discovery remains unchanged.
+in Withdraw. Confirm the seller, original source URL and reason (up to the original
+256-character limit). Preparing returns the original head-bound SF95 request and
+downloads it; discovery remains unchanged.
 
 Sign that downloaded request on the seller's own trusted machine using the
 existing `sf95-signed-seller-withdrawal/cli.mjs sign` command described in
@@ -113,6 +125,22 @@ request returns its retained result once it has left `prepared`. A persisted
 `sending` record becomes `unknown` at workspace startup, rather than being replayed.
 **Inspect current catalog** loads original status, lookup and lifecycle history;
 this read does not fabricate a receipt or silently change the saved outcome.
+
+**Reconcile & save observation** compares the exact requested revision against
+original lifecycle history and retains the observation in the same operation
+record. An admission match uses the requested sequence, normalized content and
+original source-byte digest; a withdrawal match also uses the original signed
+SF95 envelope digest. Matches can remain visible after a later revision,
+withdrawal or restart. The result reports `MATCHING_ORIGINAL_REVISION_PRESENT` or
+`NO_MATCHING_REVISION_OBSERVED`, the inspected head and whether the revision was
+superseded. It never attributes a write to a particular request, fabricates a
+native command receipt, changes the saved command phase, signs, pays or retries.
+A missing match is a snapshot, not proof that an in-flight command cannot finish.
+A matching revision is useful recovery information, not permission to resend.
+
+Operation export includes the original intent, comparison, native response when
+available, and any saved reconciliation observation. The browser renders catalog
+text and comparison values as inert text, not HTML.
 
 An output-save failure after a known native response preserves that response in
 memory and shows `OUTCOME_NOT_SAVED_EXPORT_NOW`. Export the operation before closing
@@ -145,7 +173,8 @@ const ui = await openCatalogWorkspace({
 await ui.close();
 ```
 
-Distribution must preserve `workspace.mjs` and the three `workspace-ui/` files
-at their original relative paths. Reuse the original operator and its complete
-local import closure, including root `scf46-stellar-bazaar/` and `stellar-forge/`.
+Distribution must preserve `workspace.mjs`, `workspace-revisions.mjs` and all four
+`workspace-ui/` files (`index.html`, `app.js`, `revisions.js`, `style.css`) at their
+original relative paths. Reuse the original operator and its complete local import
+closure, including root `scf46-stellar-bazaar/` and `stellar-forge/`.
 There is no second payment, signing, withdrawal or journal implementation here.
