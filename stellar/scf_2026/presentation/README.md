@@ -49,6 +49,44 @@ source location. The recorder imports the original commerce runtime from that
 installed package and opens its own session/browser lifetime as described
 below. The source pin above remains the identity of the already-recorded take.
 
+## Run a live saved-simulation demonstration
+
+Use the complete current [Tenderly merchant and customer source](../../scf-starforge-20261009/partners/tenderly-stellar-pilot/README.md)
+with the matching [retained analysis](../../scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md).
+This live follow-up starts from one saved merchant profile and carries its exact
+request into the customer's original purchase and retained result.
+
+With Node 22.16+ and the existing runtime dependencies, open that profile from
+the repository root:
+
+```sh
+node stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/workspace/server.mjs \
+  --state /absolute/private/tenderly-workspace \
+  --plan /absolute/private/tenderly-plan.json --port 0
+```
+
+Supply the saved plan's provider environment and stable operation key. Open
+the local URL printed by the process; keep its access fragment outside the
+capture. The [workspace guide](../../scf-starforge-20261009/partners/tenderly-stellar-pilot/WORKSPACE.md)
+covers original facilitator selection, private launch and public merchant ingress.
+
+| Scene | Operate and explain |
+| --- | --- |
+| Merchant | Review the saved provider project, EVM data network, simulation mode and independent Stellar payment terms. Prepare and open the same immutable profile. |
+| Request and customer | Select the historical block, transaction position and exact call inputs. Download the complete request packet. Follow the original [Node or Python customer](../../scf-starforge-20261009/partners/tenderly-stellar-pilot/CUSTOMER.md) to import it and review its request, ticket and independent spending limit. The chosen customer application owns execution and recovery. |
+| Usable result | Open the completed intent, display the simulation ID, block, gas and success or revert, and inspect its complete original JSON. Export the response with its retained request and native buyer record; the analysis consumer opens that same export. |
+| Continuity | Drain and reopen the same merchant profile and customer state, then download the same result. For an existing uncertain operation, resolve its saved provider outcome against the current generation through Results & recovery. |
+
+Suggested narration: “The merchant sells an explicitly selected simulation.
+The buyer keeps the exact request, approved spend and returned result.
+A reverted EVM call is still useful simulation output. Both operators reopen
+the same operation when delivery is interrupted.”
+
+The retained local source exercise uses documented Tenderly response fixtures
+and the original nativeFactory acceptance seam. Identify that mode when
+showing those saved artifacts. The original film's separately retained native
+Stellar purchase remains its payment segment.
+
 ## Record and render
 
 Use the existing Node runtime, Playwright/Chromium installation and FFmpeg with
@@ -90,3 +128,4 @@ The generated presenter script includes the original source and application
 references. Applicant facts and the prospective budget come from the existing
 canonical manuscript; this presentation does not submit another application,
 assert an award, or represent testnet activity as commercial revenue.
+
