@@ -45,7 +45,7 @@ The evidence directory must already exist with POSIX permissions 0700. Original 
 }
 ~~~
 
-The trusted signer module exports an async sign({intent,challenge,accepted}) function backed by the already-installed official Stellar x402 SDK; no signer, private key or wallet implementation is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
+The trusted signer module exports an async sign({intent,challenge,accepted}) function backed by the already-installed official Stellar x402 SDK. Use the merged [SF103 native signer adapter](../sf103-native-buyer-signer/README.md) to connect that interface to an existing account or trusted signer provider. No private key or wallet is bundled. For POST, PUT or PATCH, an optional absolute operation.bodyFile supplies the exact request bytes (max 1 MiB). Only Content-Type and Accept request headers are configurable.
 
 Review makes no external calls. Discover returns original source catalog listings but cannot authorize payment. Execute emits a brief status and the original SF52 aggregate report plus local SF82 evidence file path. Seller-reported settlement, observed HTTP delivery, and independently verified testnet transfer event remain distinct. SCF grant and merchant adoption stay with the existing owners. No hosted GitHub Actions or testnet payment is triggered by publication of this code.
 
@@ -126,7 +126,14 @@ request bodies from seller examples. For a body-bearing method, add your own
 absolute `operation.bodyFile` and allowed headers before review.
 
 The command also accepts an unchanged native saved `resources` or `items` catalog
-envelope. Input is limited to 1 MiB; the resulting config must fit the existing
+envelope, or an original Atlas `scf61-observed-native-page-v1` export. Atlas exports
+retain their native row/option indices; older files without a source URL record
+`source:null`. The existing Atlas UI also offers the same preparation builder via
+**Review this offer**, with a concrete request form and source/config downloads.
+Both paths call exported `prepareReview(rawBytes, selection)` in `prepare.mjs`;
+only the original CLI wrapper writes an exclusive, fsynced `0600` file. The pure
+builder performs no network or filesystem access and never loads a signer.
+Input is limited to 1 MiB; the resulting config must fit the existing
 64 KiB config limit. The destination's trusted parent directory must already exist.
 The config is created with mode `0600` and never overwrites an existing path.
 
@@ -148,6 +155,32 @@ option within the displayed caps, and asks the original operator to approve its
 full current terms. `preparedFrom` is review context, not an exact-option commitment
 or a replacement for that approval; no unknown provider field is silently turned
 into signer or payment authority.
+
+## Connect the official native Stellar signer
+
+After reviewing the saved selection, complete the configuration's real operator
+paths, evidence directory, public `trustedPayer` and any response destination.
+Install the pinned optional native packages listed in the [SF103 guide](../sf103-native-buyer-signer/README.md),
+then use its setup command with the existing trusted signer environment:
+
+```sh
+node stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs prepare \
+  --buyer-config /private/weather-review.json \
+  --out /private/weather-native --secret-env STELLAR_SECRET
+node stellar/scf-starforge-20261009/sf103-native-buyer-signer/setup.mjs inspect \
+  --config /private/weather-native/signer.json
+export SF103_SIGNER_CONFIG=/private/weather-native/signer.json
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
+  --review --config /private/weather-native/buyer.json
+```
+
+The setup command preserves the original operation, request body, source
+provenance, operator and response settings. It changes `signerModule` in a new
+private buyer file and binds that file to the new signer configuration. The
+source input is unchanged. An existing trusted provider module can replace
+`--secret-env`; SF103 documents that interface and the optional `check-signer`
+command. Use the generated buyer file for the existing `--execute` command;
+the original terminal approval and reservation run before native signing.
 
 ## Save the returned dataset or other output
 

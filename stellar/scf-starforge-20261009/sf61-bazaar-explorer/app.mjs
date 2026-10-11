@@ -9,6 +9,7 @@ const next = $('next');
 const exportButton = $('export');
 const pageInfo = $('page-info');
 const PAGE_SIZE = 25;
+const reviewState = {choice:null, prepared:null, generation:0, controller:null};
 const state = {
   nav:null, request:null, report:null, loading:false,
   requestId:0, controller:null, pending:null,
@@ -54,7 +55,7 @@ function optionMatchesFilters(option) {
     (!filters.payTo || option?.payTo === filters.payTo);
 }
 
-function renderOption(option, index) {
+function renderOption(option, index, row, rowIndex) {
   const matches = optionMatchesFilters(option);
   const outer = el('div', 'payment-option' + (matches ? '' : ' out-of-filter'));
   outer.append(el('div', 'terms-top', 'OPTION ' + String(index + 1) +
@@ -64,10 +65,25 @@ function renderOption(option, index) {
   addDetail(outer, 'Amount (atomic units)', option?.amount);
   addDetail(outer, 'Asset ID', option?.asset);
   addDetail(outer, 'Pay to', option?.payTo);
+  const button = el('button','secondary small','Review this offer');
+  button.type = 'button';
+  const supported = option?.scheme === 'exact' &&
+    ['stellar:testnet','stellar:pubnet'].includes(option?.network) &&
+    (row?.type === undefined || row.type === 'http') &&
+    (info(row).type === undefined || info(row).type === 'http') &&
+    state.report?.mode !== 'LOCAL_NONPAYABLE_SF44_FIXTURE';
+  button.disabled = !supported;
+  button.setAttribute('aria-label','Review option ' + (index + 1) + ' for ' + sourceLabel(row));
+  button.addEventListener('click',() => selectOffer(rowIndex,index));
+  outer.append(button);
+  if (!supported) outer.append(el('p','muted',
+    state.report?.mode === 'LOCAL_NONPAYABLE_SF44_FIXTURE'
+      ? 'Development listing. Connect an original merchant catalog to prepare a buyer review.'
+      : 'The existing buyer supports exact Stellar HTTP offers.'));
   return outer;
 }
 
-function renderResource(row, index) {
+function renderResource(row, index, rowIndex) {
   const item = el('article', 'resource');
   const top = el('div', 'resource-top');
   const headline = el('div');
@@ -107,7 +123,7 @@ function renderResource(row, index) {
         options.append(el('p', 'muted', String(accepts.length - i) + ' additional offers not displayed'));
         break;
       }
-      options.append(renderOption(option, i));
+      options.append(renderOption(option, i, row, rowIndex));
     }
   }
   item.append(options);
@@ -187,11 +203,140 @@ function render(data) {
     results.append(empty);
   } else {
     rows.forEach((row, i) => results.append(renderResource(row, i +
-      (nav.filters.query ? (nav.page - 1) * PAGE_SIZE : nav.offset))));
+      (nav.filters.query ? (nav.page - 1) * PAGE_SIZE : nav.offset),i)));
   }
   pageInfo.textContent = 'Page ' + nav.page + (nav.filters.query ? ' · cursor-paged' : ' · offset ' + nav.offset);
   syncControls();
+  if (reviewState.choice) updateReviewSource();
 }
+
+function observedPage(report,request) {
+  return JSON.stringify({
+    schema:'scf61-observed-native-page-v1',observedAt:report.observedAt,
+    sourceMode:report.mode,sourceUrl:report.sourceUrl ?? undefined,
+    view:report.view,filterRequest:request,readOnly:true,
+    nativeProviderRows:report.resources,pagination:report.pagination,paidOrSettled:false,
+  },null,2)+'\n';
+}
+function download(text,name) {
+  const blob=new Blob([text],{type:'application/json'});
+  const target=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=target;a.download=name;
+  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(target);
+}
+function invalidateReview(message) {
+  ++reviewState.generation;reviewState.controller?.abort();reviewState.controller=null;
+  reviewState.prepared=null;
+  $('review-output').hidden=true;
+  $('review-download').disabled=true;
+  $('review-prepare').disabled=!reviewState.choice;
+  $('review-status').textContent=message;
+  $('review-status').classList.remove('error');
+  $('review-form').setAttribute('aria-busy','false');
+}
+function updateReviewSource() {
+  const choice=reviewState.choice;
+  if (!choice) return;
+  $('review-source-status').textContent = choice.report === state.report
+    ? 'Selected from the displayed source page. Terms below are the saved observation.'
+    : 'Retained from an earlier source page. Browsing and refresh have not changed the selected terms.';
+}
+function selectOffer(rowIndex,acceptIndex) {
+  const report=state.report,request=state.request;
+  if (!report?.resources?.[rowIndex]?.accepts?.[acceptIndex] || !request) return;
+  invalidateReview('Enter a stable operation ID, confirm the request, then prepare the review.');
+  const sourceText=observedPage(report,request);
+  const snapshot=JSON.parse(sourceText),row=snapshot.nativeProviderRows[rowIndex];
+  const accepted=row.accepts[acceptIndex],declaredMethod=info(row).method;
+  reviewState.choice={report,sourceText,rowIndex,acceptIndex,row,accepted};
+  $('review-empty').hidden=true;$('review-workspace').hidden=false;
+  $('review-title').textContent=sourceLabel(row);
+  $('review-source').textContent=report.sourceUrl ?? 'Source URL was not recorded in this page.';
+  $('review-observed').textContent=(report.observedAt ?? 'Time not recorded')+
+    ' · page row '+(rowIndex+1)+' · option '+(acceptIndex+1);
+  $('review-terms').replaceChildren();
+  for (const [label,value] of [['Network',accepted.network],['Scheme',accepted.scheme],
+    ['Amount / atomic units',accepted.amount],['Asset',accepted.asset],['Recipient',accepted.payTo],
+    ['Maximum timeout / seconds',accepted.maxTimeoutSeconds],['Payment flow',accepted.extra?.paymentFlow ?? 'Not declared']]) {
+    const entry=el('div','review-term');entry.append(el('dt','',label),el('dd','',value ?? 'Not declared'));
+    $('review-terms').append(entry);
+  }
+  $('review-url').value=resourceUrl(row) ?? '';
+  $('review-method').value=['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(declaredMethod) ? declaredMethod : '';
+  $('review-method').disabled=typeof declaredMethod==='string';
+  $('review-method-note').textContent=typeof declaredMethod==='string'
+    ? 'The original listing declares '+declaredMethod+'. Preparation must keep that method.'
+    : 'The listing does not declare an HTTP method. Choose the intended method explicitly.';
+  for (const id of ['review-intent','review-body','review-content-type','review-accept']) $(id).value='';
+  $('review-native').textContent=JSON.stringify(row,null,2);
+  $('review-source-download').disabled=false;$('review-prepare').disabled=false;
+  updateReviewSource();$('review-intent').focus();
+}
+function reviewSelection() {
+  const c=reviewState.choice;
+  const selection={rowIndex:c.rowIndex,acceptIndex:c.acceptIndex,
+    intentId:$('review-intent').value.trim(),url:$('review-url').value.trim(),method:$('review-method').value};
+  if ($('review-body').value.trim()) selection.bodyFile=$('review-body').value.trim();
+  const headers={};
+  if ($('review-content-type').value.trim()) headers['Content-Type']=$('review-content-type').value.trim();
+  if ($('review-accept').value.trim()) headers.Accept=$('review-accept').value.trim();
+  if (Object.keys(headers).length) selection.headers=headers;
+  return selection;
+}
+const reviewErrors={
+  CONCRETE_URL_MUST_MATCH_SELECTED_RESOURCE_PATH:'Keep the selected seller origin and path; enter concrete query values only.',
+  STABLE_INTENT_ID_REQUIRED:'Enter a stable operation ID using letters, digits, dots, hyphens, underscores or colons.',
+  DISCOVERED_METHOD_MISMATCH:'The request method must match the original listing.',
+  BODY_DISALLOWED_FOR_METHOD:'GET and HEAD cannot use a request body file.',
+  BODY_PATH_MUST_BE_ABSOLUTE:'Use the absolute path of the request body on the trusted operator host.',
+  INVALID_DISCOVERED_REQUIREMENT:'The advertised option lacks supported timeout or requirement metadata. Inspect its original listing.',
+  PREPARED_CONFIG_EXCEEDS_CONFIG_LIMIT:'This listing is too large for the existing buyer configuration limit.',
+  INVALID_DISCOVERY_FILE:'This source page exceeds the existing 1 MiB buyer input limit.',
+  INVALID_METHOD:'Choose a supported HTTP method.',
+};
+$('review-form').addEventListener('input',()=>invalidateReview('Request edited. Prepare the updated review before downloading.'));
+$('review-form').addEventListener('change',()=>invalidateReview('Request edited. Prepare the updated review before downloading.'));
+$('review-form').addEventListener('submit',async event=>{
+  event.preventDefault();if (!reviewState.choice) return;
+  invalidateReview('Preparing the local buyer review…');
+  const generation=reviewState.generation,choice=reviewState.choice;
+  const controller=new AbortController();reviewState.controller=controller;
+  $('review-prepare').disabled=true;$('review-form').setAttribute('aria-busy','true');
+  try {
+    const response=await fetch('/api/prepare-review',{method:'POST',credentials:'omit',cache:'no-store',
+      headers:{'Content-Type':'application/json'},signal:controller.signal,
+      body:JSON.stringify({discovery:choice.sourceText,selection:reviewSelection()})});
+    const result=await response.json();
+    if (generation!==reviewState.generation) return;
+    if (!response.ok) throw new Error(result.error ?? 'REVIEW_UNAVAILABLE');
+    reviewState.prepared=result;
+    $('review-config').textContent=result.configText;
+    $('review-digests').textContent='Config SHA-256: '+result.configSha256+'\nSource SHA-256: '+result.sourceFileSha256;
+    $('review-output').hidden=false;$('review-download').disabled=false;
+    $('review-status').textContent='Review prepared. Save the configuration and source snapshot together; continue in the trusted buyer terminal.';
+  } catch (error) {
+    if (generation!==reviewState.generation) return;
+    $('review-status').classList.add('error');
+    $('review-status').textContent=reviewErrors[error.message] ?? 'Review could not be prepared: '+String(error.message).slice(0,180);
+  } finally {
+    if (generation===reviewState.generation) {
+      reviewState.controller=null;$('review-prepare').disabled=false;$('review-form').setAttribute('aria-busy','false');
+    }
+  }
+});
+$('review-download').addEventListener('click',()=>{
+  const prepared=reviewState.prepared;if (!prepared || $('review-download').disabled) return;
+  download(prepared.configText,'buyer-'+prepared.config.operation.intentId.replace(/[^A-Za-z0-9._-]/g,'_')+'-review.json');
+});
+$('review-source-download').addEventListener('click',()=>{
+  if (reviewState.choice) download(reviewState.choice.sourceText,'bazaar-atlas-selected-source.json');
+});
+$('review-clear').addEventListener('click',()=>{
+  invalidateReview('Select an offer in the catalog to begin.');reviewState.choice=null;
+  $('review-workspace').hidden=true;$('review-empty').hidden=false;
+  $('review-source-download').disabled=true;$('review-prepare').disabled=true;
+  $('results-title').focus();
+});
 
 async function load(nav) {
   const requestId = ++state.requestId;
@@ -273,16 +418,7 @@ prev.addEventListener('click',() => {
 });
 exportButton.addEventListener('click',() => {
   if (exportButton.disabled || !state.report?.resources?.length || !state.request) return;
-  const text=JSON.stringify({
-    schema:'scf61-observed-native-page-v1',observedAt:state.report.observedAt,
-    sourceMode:state.report.mode,view:state.report.view,filterRequest:state.request,
-    readOnly:true,nativeProviderRows:state.report.resources,
-    pagination:state.report.pagination,paidOrSettled:false,
-  },null,2)+'\n';
-  const blob=new Blob([text],{type:'application/json'});
-  const target=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=target;a.download='bazaar-atlas-observed-page.json';
-  document.body.append(a);a.click();a.remove();URL.revokeObjectURL(target);
+  download(observedPage(state.report,state.request),'bazaar-atlas-observed-page.json');
 });
 async function source() {
   try {
