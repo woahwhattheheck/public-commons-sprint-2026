@@ -1,67 +1,146 @@
-# DisburseLens — PayPal payout evidence and locally learned review assistant
+# DisburseLens
 
-**PayPal AI Hackathon 2026 original demo candidate** · MIT · Node.js 22+ · zero package installs.
+**A merchant workspace for understanding and following up PayPal payout batches.**
 
-DisburseLens is a merchant/operator reconciliation workspace for PayPal **Payouts v1** *read-only* data. It checks an entire payout batch for duplicate sender IDs, nonfinal/failed payment statuses and exact-cent aggregate mismatch, then applies a locally trained **multinomial Naive Bayes** classifier to the payout's free-text note. It puts each item into a human-controlled casebook, preserving the original batch-evidence SHA-256 and a redacted CSV export.
+DisburseLens combines the original PayPal sandbox reader, exact-cent reconciliation, locally trained note classifier, and two-observation comparison in one application. Review a batch, see what changed since the previous observation, assign a case, record a disposition and note, then reopen the same saved workspace. The interface uses the original payout items throughout; a local review decision never changes the provider's payout status.
 
-Importantly, it does **not** call PayPal create/cancel payout endpoints, transfer funds, initiate refunds, or offer a machine-authorized payout action. "Escalate" and "Acknowledge" change only the local review decision state. The synthetic fixture is not evidence of real funds received or disbursed. The classifier is an advisory learned *text pattern* signal, **not** a fraud verdict.
+MIT · Node.js 22+ · no package installs · local browser interface
 
-## Run a real working judge demo (no credentials)
+## Start the complete application
 
-```sh
-cd paypal-disburselens-2026
-node src/server.mjs
-```
+Keep the **whole `paypal-disburselens-2026` directory** together, including `src/`, `public/`, `fixtures/`, and `longitudinal/`. The comparison module imports the original reconciler and fixture from sibling directories; copying `longitudinal/` alone is insufficient.
 
-Open http://127.0.0.1:8787. The loaded fictional batch has six payouts and an exact-cent $700.00 aggregate; review the duplicated sender ID, a still-PENDING payout, a FAILED payout, and flagged note language. Filter **Needs review**, click **Escalate**, and download the redacted evidence CSV. Refresh the page to see the local review state in memory. Use **Download casebook** to keep a portable copy before stopping the server. **Load fictional example** replaces the current batch and resets the casebook after an evidence change.
-
-## Save and resume a review
-
-The casebook JSON contains the complete set of case IDs and their local `open`, `acknowledged`, or `escalated` states, together with the source, evidence SHA-256, export time and historical report version. It omits payout amounts, recipients, free-text notes and credentials. It is a portable review snapshot, not a payment instruction, provider receipt or accounting archive.
-
-After a restart, load the same batch evidence, choose the saved JSON, and inspect its read-only preview. The preview shows the source, evidence, saved state counts and proposed state changes. **Restore casebook** explicitly replaces the entire current review snapshot, including reopening cases marked `open` in the file. File selection, preview and download do not change review states. Cancel discards the pending preview.
-
-Both preview and restore require the same source, exact evidence SHA-256 and complete unique case-ID set. Restore also checks the current preview's report version; a new decision, demo load or sync requires a fresh preview. The historical export version is metadata, so a saved file can be restored after restart. A changed provider response needs fresh review even when its batch ID is unchanged. Restored changes receive a new local timestamp and `casebook_import` audit event; old audit history is not imported. This confirms which local snapshot was restored, not who originally made each saved decision.
-
-The browser accepts JSON files up to 262,144 bytes. The API exposes `GET /api/casebook.json`, read-only `POST /api/casebook/preview`, and explicit `POST /api/casebook/restore`. POST bodies are `application/json` objects containing `{ "version": CURRENT_REPORT_VERSION, "casebook": SAVED_JSON }` and share a 262,144-byte body limit. Nothing is restored automatically, and uncertain saves are followed by a read-only report refresh rather than an automatic retry.
-
-The classifier is trained locally at process startup using 24 included labeled fictional payout narratives; no model key/provider/token call. `src/model.mjs` exposes `train(rows)` and `classify()` to illustrate a transparent approach; review scores and strongest token contributions are visible in the UI. For production, supply more representative labeled cases and independently evaluate false positives/negatives.
-
-One scoped source-behavior check:
+From that directory:
 
 ```sh
-npm run test:focused
+npm start -- --data-dir "$HOME/.disburselens/review"
 ```
 
-This test covers a trained local classifier, exact-cent parsing, a duplicate sender ID, completeness rejection, HTTP report/decision, stale-version protection and redacted CSV; it is not a live PayPal connector test.
+Open [http://127.0.0.1:8787](http://127.0.0.1:8787). The first launch opens the original six-item fictional example. The explicit data directory saves observations, selected batch, case assignments, notes, dispositions, and review history. Stop with Ctrl+C and use the same command to resume.
 
-## Connect read-only PayPal sandbox Payouts
+`node src/server.mjs --data-dir /private/path/review` runs the same server directly. `DISBURSELENS_DATA_DIR` supplies the directory when the flag is omitted; relative paths resolve from the launch directory. `PORT` changes the default port of 8787. The server listens on loopback.
 
-The project uses the first-party Payouts v1 [Show payout batch details](https://developer.paypal.com/api/payments.payouts-batch/v1/payouts-get/) API, `GET /v1/payments/payouts/{id}` with `page=...&page_size=100&total_required=true`, plus OAuth2 client-credentials `POST /v1/oauth2/token` for a bearer token. **No payout-creating action** is included. Authentication requires a PayPal sandbox app **with the Payouts scope enabled**; a generic sandbox app may receive HTTP 403 for lack of entitlement.
+Running without a data directory keeps the original in-memory mode. The interface identifies the storage mode so the reviewer can see whether the workspace will survive a server restart.
 
-Set credentials **locally** (not in source, screenshots, Slack, or submissions):
+## Review a payout from start to finish
+
+1. Open an observation and check its source, capture time, batch ID, and evidence hash. The original fixture contains six payouts totalling $700.00.
+2. Filter the queue and open a payout. Inspect the provider status, exact amount, duplicate sender ID, nonfinal or failed status, and any learned note signals together.
+3. Inspect the AI explanation. The app shows the original source note, the portion scored by the model, and the strongest known token contributions. Provider status and amounts continue to come from the original pages.
+4. Set a local disposition: `open`, `acknowledged`, or `escalated`. Add a reviewer/owner and a concrete follow-up note, then save. The case history records the saved change.
+5. Open another observation or restart the server with the same data directory. Returning to the first observation restores its own review state. A newly captured observation gets its own review; cases from an earlier observation are not silently carried over.
+6. Export the current CSV, individual case review, or portable casebook when needed. Use the original observation JSON to retain or move the complete source pages. Comparison exports use the original offline HTML and CSV renderer.
+
+The owner field is an operator-supplied label. The local history records edits made in this workspace; it is not an authenticated user directory.
+
+## Reproduce the accepted two-observation example
+
+The existing longitudinal CLI creates the original pair used for the lifecycle exercise. It uses the repository's six-item fixture and changes two payout statuses over an explicitly fictional 48-hour interval.
 
 ```sh
-export PAYPAL_CLIENT_ID=your_sandbox_client_id
-export PAYPAL_CLIENT_SECRET=your_sandbox_secret
-node src/server.mjs
+node longitudinal/cli.mjs demo --out "$HOME/.disburselens/example-oct11"
 ```
 
-Enter an existing **sandbox** payout batch ID in the dashboard. The server only connects to `https://api-m.sandbox.paypal.com`, never production. It handles up to 10 pages × 100 records, rejects mismatched IDs/pages/counts, enforces a per-page response size cap and a 9-second per-call timeout, and does not silently claim partial data is reconciled. Every backend sync requires an explicit UI action; errors cannot trigger automatic retries or transfers. Reconciliation also rejects changed batch amount, currency, status or declared item count across pages, so a changing provider batch requires a fresh sync. This detects inconsistent page metadata; the API does not provide an atomic snapshot of individual item statuses.
+The output directory must be new. In the application, use **Import observation** to select `before.json`, then import `after.json` from that directory. Each import validates the original envelope and complete batch before selecting it. Open the comparison view and choose:
 
-**Demo scope versus official submission:** A complete interactive local demo works using fictional data. A PayPal sandbox GET integration is implemented from official specs but not verified against live credentials in this environment. We have **not** created a PayPal account, called the provider, entered Devpost, uploaded any official contest submission, or won a prize. Official entries additionally require a public, open-source repository, working demo or reproducible setup, meaningful AI and central PayPal integration; entrants should verify eligibility and account access. Source rule: https://paypalaihackathon.devpost.com/rules (deadline November 12, 2026, noon PST).
+| Setting | Value |
+| --- | --- |
+| Baseline | October 9, 2026, 09:00 UTC |
+| Follow-up | October 11, 2026, 09:00 UTC |
+| Stalled interval | 24 hours |
+| Source | fictional example |
 
-## Architecture and scope
+The original comparison produces:
 
-- `src/paypal.mjs` — fixed-host, bounded sandbox OAuth + paginated Payouts GET, no payout write methods.
-- `src/model.mjs` — directly trained/interpretable local multinomial Bayes note classification.
-- `src/reconcile.mjs` — exact-cent BigInt, complete batch counts, deterministic evidence hashes, masked receiver, anomaly flags.
-- `src/casebook.mjs` — bounded portable review snapshots and complete source-bound restore planning.
-- `src/server.mjs` — loopback-only API and static UI, human review states with stale-version checks, CSV/casebook export, explicit preview and restore, source-bound audit log.
-- `public/` — accessible responsive dashboard, filters, model explanations, review decisions, evidence export.
-- `fixtures/payout_batch.json` — clearly marked fictional 6-item example, not a provider receipt.
-- `test/focused.test.mjs` — one narrowly relevant workflow check.
+| Result | Count |
+| --- | ---: |
+| Payouts | 6 |
+| High priority | 3 |
+| Review | 2 |
+| Clear | 1 |
+| Status changes | 2 |
+| Stalled nonfinal payouts | 1 |
 
-**Known limitations:** Local review decisions live in RAM and reset on restart unless you explicitly download and restore a casebook. The file is not encrypted or authenticated; its hash binds it to source evidence, not to an author. Keep saved files appropriately and inspect their proposed changes before restoring. The review queue should not be treated as an accounting system of record or anti-fraud engine. Case evidence uses a full SHA-256 hash of the source response, but no durable encrypted archive is stored. No live sandbox credentials or PayPal-enabled account are bundled. Payment status comes from source and is never inferred from learned AI scores; `PENDING` remains unsettled even when the text looks routine. Limit processing to sandbox test data and qualified authorized reviewers.
+`ITEM-001` changes from `SUCCESS` to `REVERSED`; `ITEM-003` changes from `PENDING` to `SUCCESS`; `ITEM-006` remains `UNCLAIMED` for the full interval. The comparison retains the original sender-ID duplication and learned note signals. Open the follow-up observation to save the corresponding local review work.
 
-No live payouts, subscription changes, external contact, or paid API/model inference.
+For the same result as portable offline HTML, CSV, and JSON:
+
+```sh
+node longitudinal/cli.mjs compare \
+  --before "$HOME/.disburselens/example-oct11/before.json" \
+  --after "$HOME/.disburselens/example-oct11/after.json" \
+  --out "$HOME/.disburselens/example-oct11/report" \
+  --stale-hours 24
+```
+
+The new report directory contains `review.html`, `review.csv`, `report.json`, and `manifest.json`. It uses the same original `analyzeSnapshots` implementation as the application's comparison. `npm run lifecycle -- ...` is an alias for this CLI.
+
+## Use authorized PayPal sandbox observations
+
+The existing connector uses OAuth client credentials and PayPal's [Show payout batch details](https://developer.paypal.com/api/payments.payouts-batch/v1/payouts-get/) API. Supply `PAYPAL_CLIENT_ID` and `PAYPAL_CLIENT_SECRET` in the server's private environment. The sandbox application needs the Payouts permission and an existing payout batch that the operator is authorized to read.
+
+Enter that existing batch ID in the application's sandbox capture control. Capture is explicit: the server reads all required pages, validates them with the original reconciler, saves the completed observation, and selects it. A failed or inconsistent capture leaves the previously selected review intact.
+
+The standalone command performs the same sandbox read and writes a portable observation:
+
+```sh
+node longitudinal/cli.mjs capture \
+  --batch EXISTING_SANDBOX_BATCH_ID \
+  --out /private/path/batch-before.json
+```
+
+Capture the same batch later into a different new file to compare its actual evolution. Both observations must have the same batch and source, valid chronological capture times, and complete source pages. The stalled interval is an operator-selected integer between 1 and 720 hours.
+
+The fixed provider host is `https://api-m.sandbox.paypal.com`. The connector performs `POST /v1/oauth2/token` and paginated `GET /v1/payments/payouts/{id}`. It supports up to 10 pages of 100 items and checks page, batch, amount, currency, and declared count consistency. These are separate observations of an evolving batch; capture times are retained in every comparison.
+
+All payout operations in this application are observations. Local acknowledgement, escalation, assignment, import, and restore update the review workspace only.
+
+## What the AI contributes
+
+`src/model.mjs` trains a multinomial Naive Bayes classifier at process startup using 24 included labeled fictional payout narratives. Classification executes locally, with no model account, API key, download, or paid inference call.
+
+The original reconciler supplies up to the first 320 characters of a payout note. The model tokenizes that text, scores known vocabulary with Laplace smoothing, and returns a review score, matching-token count, label, and strongest token contributions. The detail panel connects those contributions to the source note the operator is reading.
+
+Use the score to prioritize human review alongside deterministic flags and original provider facts. This small example model has not been calibrated as a fraud or settlement predictor. Replacing the training examples is an application change that should be evaluated with representative labeled merchant cases.
+
+## Saved workspace and recovery
+
+Durable mode stores one private, atomic workspace file containing the original observation envelopes, each observation's local cases and retained audit events, the selected observation, and the current version. A save becomes visible after its replacement file is committed. A failure before replacement leaves the previous review intact. If replacement completed but the filesystem could not confirm the final directory flush, the current version advances and the interface asks the operator to refresh before acting again.
+
+Observations are identified by source, capture time, and original page evidence. Reimporting the exact same observation returns to its saved review; recapturing the same batch at a different time remains a separate observation. The workspace holds up to 128 observations, at most 4 MiB per envelope and 64 MiB in total. The interface shows capacity and supports explicit removal of an observation and its local review when it is no longer needed; at least one observation remains.
+
+A single writer owns the directory. The Linux recovery check uses the original procfs process ID and start time in the same boot and procfs view, so a recycled runtime PID cannot make a dead writer appear active. Concurrent writers are rejected. Restart with the same directory to recover the last completed save after an interrupted process.
+
+Directories are private and workspace files use mode 0600. Original observation JSON includes full source recipients and notes. The current CSV masks the provider recipient and includes the local owner and review note; the individual case JSON also contains its original source note and local history. Portable source exports and the saved workspace should therefore stay with the authorized reviewer. Up to 1,000 recent audit events are retained per observation, with an explicit count of older events removed from that history.
+
+### Portable casebooks
+
+The existing `disburselens-casebook/v1` format remains a compact state-only export. It contains the source, evidence hash, complete case IDs, local dispositions, export time, and historical version. Observation JSON carries source pages; the durable workspace also carries assignments, notes, and history.
+
+Choose a casebook in the recovery panel, inspect the proposed changes, then explicitly restore. Preview and restore require the same source evidence and complete case-ID set. Restore checks the current report version; an intervening edit or observation switch requires a fresh preview. File selection and preview do not save changes. A state-only restore preserves the selected observation's current owner and note annotations.
+
+Casebooks from the original application's `fixture` source label can be restored against the exact canonical fixture evidence. The preview identifies this legacy compatibility path; other fictional examples and sandbox observations still require their matching source and evidence.
+
+The interface refreshes after a stale-version or uncertain-response error so the operator can inspect the current state before acting again. It does not automatically repeat review mutations.
+
+## Source map
+
+| Path | Responsibility |
+| --- | --- |
+| `src/server.mjs` | Original application server, saved observation selection, review APIs, and launch |
+| `src/observations.mjs` | Atomic private workspace storage, observation identity, retained history, and writer recovery |
+| `src/paypal.mjs` | Original fixed-host sandbox OAuth and complete paginated payout read |
+| `src/reconcile.mjs` | Original exact-cent batch checks, source hashes, masked rows, and deterministic flags |
+| `src/model.mjs` | Original local training and interpretable note classification |
+| `src/casebook.mjs` | Original portable state export and source-bound restore planning |
+| `public/` | Observation library, review queue, source explanation, comparison, and recovery interface |
+| `longitudinal/` | Original envelope validation, comparison, standalone capture, and offline reports |
+| `fixtures/payout_batch.json` | Original six-item fictional example |
+
+The repository retains its original focused checks. The full application can be exercised through the startup, import, review, restart, comparison, and export path above without running a hosted CI job.
+
+## PayPal AI Hackathon 2026
+
+This is the original DisburseLens entrant's working application. The [official overview](https://paypalaihackathon.devpost.com/) lists a November 12, 2026, noon PST deadline and requires meaningful PayPal and AI integration, public open-source code, a working build with usable setup, English materials, and a functional demonstration video under three minutes. The entrant maintains the official submission and publishes the final video.
+
+The included example and recorded fixture workflow are explicitly labeled fictional. An authorized sandbox capture retains its own source label, batch pages, and capture time, and uses the same application and analysis path.

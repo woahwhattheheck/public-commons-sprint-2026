@@ -66,6 +66,13 @@ compares any two retained releases. It reports:
   digest, availability, durable-operation configuration, shared-result policy and
   source limits for upstream routes.
 
+OAuth API releases retain the original declared token endpoint, client environment
+references, scope and lifecycle settings. Staging and inspection use the original
+credential-reference reader with syntax-only values; they do not read merchant
+credentials or call the token endpoint. The original provider resolves current
+credentials when the retained release starts. Releases without OAuth retain their
+previous metadata shape.
+
 It does not print static customer response contents. Amounts remain their
 original atomic strings. The tool does not infer token decimals or convert
 prices to dollars.
@@ -207,6 +214,15 @@ public seller. Startup reports readiness after the original seller and its
 required controls are ready; shutdown drains the original seller and closes its
 control transport. Process memory is discarded, while immutable configurations
 and the existing selection history remain.
+
+## Publish and retire catalog listings
+
+The existing console also connects a running retained release to its approved
+live catalog. Supply `console --catalog CONFIG_JSON` to review exact current
+offer differences, publish with the merchant's existing seller-proof key, and
+withdraw a selected listing. The original SF50/SF60/SF95 implementations retain
+signing, pinned admission, atomic publication and withdrawal. See the complete
+[merchant catalog workflow](./CATALOG.md) for configuration and CLI commands.
 
 ## Application code and native payment runtime
 

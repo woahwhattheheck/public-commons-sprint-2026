@@ -67,7 +67,8 @@ export async function main(args = process.argv.slice(2)) {
   console.log(JSON.stringify({ operations: operations.url, mode: session.mode,
     snapshot: operations.url + '/api/snapshot', sessionId: operations.observer.snapshot().sessionId,
     history: historyDirectory === undefined ? null : operations.url + '/api/history',
-    merchantOperations:operations.merchantOperationsUrl,operationControl:operations.operationControlUrl }));
+    merchantOperations:operations.merchantOperationsUrl,operationControl:operations.operationControlUrl,
+    availability:operations.availabilityUrl,availabilityControl:operations.availabilityControlUrl }));
   // Let original requests finish before the final usage checkpoint; the
   // original seller still owns its drain and any forced-close deadline.
   let closing;

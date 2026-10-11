@@ -42,7 +42,9 @@
     "stellar-forge/mcp-merchant-operator",
     "stellar/scf-starforge-20261009/sf33-failure-contract",
     "stellar/scf-starforge-20261009/merchant-fleet-gateway",
-    "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops"
+    "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops",
+    "stellar/scf-starforge-20261009/buyer-runbook",
+    "stellar/scf-starforge-20261009/sf101-merchant-account-readiness"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -61,7 +63,9 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-purchase.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-python.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_PAID_FILES.md",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/PYTHON_COMMERCE.md"
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/PYTHON_COMMERCE.md",
+    "stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs",
+    "stellar/scf-starforge-20261009/sf16-asset-engine/assets.d.ts"
   ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
@@ -115,7 +119,9 @@
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/cli.mjs",
     "python-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "revenue-report": "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
-    "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs"
+    "openapi-workspace": "stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "buyer-runbook": "stellar/scf-starforge-20261009/buyer-runbook/cli.mjs",
+    "merchant-readiness": "stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant-cli.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -125,6 +131,10 @@
     "./seller/asset-bundles": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/asset-cli.mjs",
     "./seller/http": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/resource-server.mjs",
     "./seller/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/native-factory.mjs",
+    "./seller/embedded": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/embedded/index.mjs"
+    },
     "./seller/operations": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/operations/server.mjs",
     "./buyer": {
       "types": "./source/stellar/scf-starforge-20261009/sf31-buyer-client/buyer.d.ts",
@@ -183,7 +193,16 @@
     "./seller/python": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/merchant.mjs",
     "./seller/python/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/python/config.mjs",
     "./merchant/revenue-report": "./source/stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs",
-    "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs"
+    "./seller/openapi/workspace": "./source/stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs",
+    "./buyer/runbook": "./source/stellar/scf-starforge-20261009/buyer-runbook/runbook.mjs",
+    "./buyer/runbook-workspace": "./source/stellar/scf-starforge-20261009/buyer-runbook/workspace.mjs",
+    "./merchant/readiness": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/merchant.mjs",
+    "./merchant/recipient-readiness": "./source/stellar/scf-starforge-20261009/sf101-merchant-account-readiness/sac.mjs",
+    "./merchant/assets": {
+      "types": "./source/stellar/scf-starforge-20261009/sf16-asset-engine/assets.d.ts",
+      "import": "./source/stellar/scf-starforge-20261009/sf16-asset-engine/assets.mjs"
+    },
+    "./facilitator/readiness": "./source/stellar/scf-starforge-20261009/native-facilitator/readiness.mjs"
   },
   "nativePeers": {
     "@x402/core": {
