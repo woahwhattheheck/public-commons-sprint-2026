@@ -160,22 +160,54 @@ function renderMappingFields() {
   const root = $('mapping-fields'); root.replaceChildren();
   function change(collection, index, callback) { const next = definition(); callback(next[collection][index]); updateDefinition(next); }
   function pathCell(collection, i, side) { return cellInput(pretty(value[collection][i][side]?.path ?? []), text => change(collection, i, row => { row[side] ??= { from: 'row' }; row[side].path = parse(text, 'Selector path'); })); }
+  function sourceSelector(collection, i, side) {
+    const selected = value[collection][i][side] ?? {};
+    const from = cellInput(selected.from ?? 'row', text => change(collection, i, row => { row[side].from = text; }), ['row', 'entity', 'point']);
+    const result = actions(from, pathCell(collection, i, side));
+    if (selected.from === 'point') {
+      const descriptor = cellInput(selected.descriptorKey ?? 'field', text => change(collection, i, row => { row[side].descriptorKey = text; }), ['field', 'slug']);
+      descriptor.setAttribute('aria-label', side + ' point descriptor field');
+      result.append(make('span', 'Descriptor name', 'hint'), descriptor);
+    }
+    return result;
+  }
   if (value.keys?.length) root.append(make('h4', 'Entity, dimension and time keys'), table(['Key', 'Meaning', 'Baseline from / path', 'Candidate from / path', 'Time formats', ''], value.keys.map((row, i) => [
     cellInput(row.id, text => change('keys', i, key => { key.id = text; })), cellInput(row.semantic, text => change('keys', i, key => { key.semantic = text; })),
-    actions(cellInput(row.baseline?.from, text => change('keys', i, key => { key.baseline.from = text; }), ['row', 'entity', 'point']), pathCell('keys', i, 'baseline')),
-    actions(cellInput(row.candidate?.from, text => change('keys', i, key => { key.candidate.from = text; }), ['row', 'entity', 'point']), pathCell('keys', i, 'candidate')),
+    sourceSelector('keys', i, 'baseline'),
+    sourceSelector('keys', i, 'candidate'),
     actions(cellInput(row.baseline?.timeFormat, text => change('keys', i, key => { if (text) key.baseline.timeFormat = text; else delete key.baseline.timeFormat; }), ['', 'unix-s', 'unix-ms', 'rfc3339']),
       cellInput(row.candidate?.timeFormat, text => change('keys', i, key => { if (text) key.candidate.timeFormat = text; else delete key.candidate.timeFormat; }), ['', 'unix-s', 'unix-ms', 'rfc3339'])),
     button('Remove', async () => { const next = definition(); next.keys.splice(i, 1); updateDefinition(next); }, 'small-button')])));
-  if (value.measures?.length) root.append(make('h4', 'Measures and agreed tolerances'), table(['Measure', 'Baseline path / unit', 'Candidate path / unit', 'Factor / offset', 'Absolute / relative tolerance', ''], value.measures.map((row, i) => [
+  if (value.measures?.length) root.append(make('h4', 'Measures and agreed tolerances'), table(['Measure', 'Interpretation', 'Baseline selector / unit', 'Candidate selector / unit', 'Factor / offset', 'Absolute / relative tolerance', ''], value.measures.map((row, i) => [
     cellInput(row.id, text => change('measures', i, measure => { measure.id = text; })),
-    actions(pathCell('measures', i, 'baseline'), cellInput(row.baseline?.unit, text => change('measures', i, measure => { measure.baseline.unit = text || null; }))),
-    actions(pathCell('measures', i, 'candidate'), cellInput(row.candidate?.unit, text => change('measures', i, measure => { measure.candidate.unit = text || null; }))),
+    cellInput(row.interpretation ?? '', text => change('measures', i, measure => { measure.interpretation = text; }), ['', 'numeric', 'scalar']),
+    actions(sourceSelector('measures', i, 'baseline'), cellInput(row.baseline?.unit, text => change('measures', i, measure => { measure.baseline.unit = text || null; }))),
+    actions(sourceSelector('measures', i, 'candidate'), cellInput(row.candidate?.unit, text => change('measures', i, measure => { measure.candidate.unit = text || null; }))),
     actions(cellInput(row.conversion?.factor ?? '1', text => change('measures', i, measure => { measure.conversion ??= {}; measure.conversion.factor = text; })),
       cellInput(row.conversion?.offset ?? '0', text => change('measures', i, measure => { measure.conversion ??= {}; measure.conversion.offset = text; }))),
     actions(cellInput(row.tolerance?.absolute ?? '0', text => change('measures', i, measure => { measure.tolerance ??= {}; measure.tolerance.absolute = text; })),
       cellInput(row.tolerance?.relative ?? '0', text => change('measures', i, measure => { measure.tolerance ??= {}; measure.tolerance.relative = text; }))),
     button('Remove', async () => { const next = definition(); next.measures.splice(i, 1); updateDefinition(next); }, 'small-button')])));
+  if (value.measures?.length) root.append(make('p', 'Numeric measures compare exact decimal values using the selected units, conversion and tolerances. Scalar measures preserve primitive types and values; use no units, identity conversion and zero tolerances.', 'hint'));
+  const timeKeys = (value.keys ?? []).filter(key => key.semantic === 'time');
+  if (timeKeys.length) {
+    const windowKey = make('select');
+    for (const key of timeKeys) windowKey.append(new Option(key.id, key.id));
+    windowKey.value = value.window?.timeKey ?? timeKeys[0].id;
+    const start = make('input'), end = make('input');
+    for (const input of [start, end]) { input.type = 'datetime-local'; input.step = '1'; }
+    if (Number.isFinite(value.window?.start)) start.value = new Date(value.window.start * 1000).toISOString().slice(0, 19);
+    if (Number.isFinite(value.window?.end)) end.value = new Date(value.window.end * 1000).toISOString().slice(0, 19);
+    const labeled = (title, input) => { const label = make('label', title); label.append(input); return label; };
+    root.append(make('h4', 'Comparison time window'), make('p', 'Use UTC. The start is included and the end is excluded. The original capture coverage remains visible in the review.', 'hint'),
+      actions(labeled('Time key', windowKey), labeled('Start, UTC', start), labeled('End, UTC', end),
+        button('Apply window', async () => {
+          if (!start.value || !end.value) throw new Error('Choose both UTC window boundaries.');
+          const left = Date.parse(start.value + 'Z') / 1000, right = Date.parse(end.value + 'Z') / 1000;
+          if (!Number.isFinite(left) || !Number.isFinite(right) || right <= left) throw new Error('The UTC window must end after it starts.');
+          const next = definition(); next.window = { timeKey: windowKey.value, start: left, end: right }; updateDefinition(next);
+        }), button('Remove window', async () => { const next = definition(); delete next.window; updateDefinition(next); })));
+  }
   if (value.decisions?.length) root.append(make('h4', 'Review decisions'), table(['Decision', 'Kind', 'Result', 'Reviewer', 'Reference', 'Reason'], value.decisions.map((row, i) => [
     cellInput(row.id, text => change('decisions', i, decision => { decision.id = text; })), cellInput(row.kind, text => change('decisions', i, decision => { decision.kind = text; })),
     cellInput(row.decision, text => change('decisions', i, decision => { decision.decision = text; decision.at = new Date().toISOString(); }), ['needs_review', 'approved']),
@@ -305,7 +337,7 @@ $('add-key').addEventListener('click', () => {
   try { const value = definition(); value.keys ??= []; value.keys.push({ id: 'key-' + (value.keys.length + 1), semantic: 'entity', baseline: { from: 'row', path: [] }, candidate: { from: 'row', path: [] }, aliases: [] }); updateDefinition(value); } catch (e) { note(e.message, true); }
 });
 $('add-measure').addEventListener('click', () => {
-  try { const value = definition(); value.measures ??= []; value.measures.push({ id: 'measure-' + (value.measures.length + 1), baseline: { from: 'row', path: [], unit: null, dimensions: {} }, candidate: { from: 'row', path: [], unit: null, dimensions: {} }, conversion: { factor: '1', offset: '0' }, tolerance: { absolute: '0', relative: '0' } }); updateDefinition(value); } catch (e) { note(e.message, true); }
+  try { const value = definition(); value.measures ??= []; value.measures.push({ id: 'measure-' + (value.measures.length + 1), interpretation: '', baseline: { from: 'row', path: [], unit: null, dimensions: {} }, candidate: { from: 'row', path: [], unit: null, dimensions: {} }, conversion: { factor: '1', offset: '0' }, tolerance: { absolute: '0', relative: '0' } }); updateDefinition(value); } catch (e) { note(e.message, true); }
 });
 $('add-decision').addEventListener('click', () => {
   try { const value = definition(); value.decisions ??= []; value.decisions.push({ id: 'decision-' + (value.decisions.length + 1), decision: 'needs_review', kind: 'equivalence', by: $('operator').value.trim(), at: new Date().toISOString(), reference: '', note: '' }); updateDefinition(value); } catch (e) { note(e.message, true); }
