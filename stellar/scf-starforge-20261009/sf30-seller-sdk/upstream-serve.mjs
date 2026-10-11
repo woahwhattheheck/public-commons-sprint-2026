@@ -6,6 +6,7 @@ import { readUpstreamBindings, compileUpstreamBindings, createUpstreamHandlers, 
 const USAGE = `Usage: node upstream-serve.mjs --config SELLER.json --upstreams BINDINGS.json
   [--port 8423] [--allow-loopback-upstream] [--check]
   [--facilitator HTTPS_URL] [--allow-local-facilitator]
+  [--max-in-flight 64] [--drain-grace-ms 60000]
 
 Wrap an existing GET/HEAD/JSON POST API with the original SF30 payment lifecycle.
 Both JSON paths resolve from the current directory. Backend origins are fixed;
@@ -20,12 +21,18 @@ function parse(args) {
     const key = args[i];
     if (options.has(key)) throw new TypeError('Duplicate option: ' + key);
     if (switches.has(key)) { options.set(key,true); continue; }
-    if (!['--config','--upstreams','--port','--facilitator'].includes(key) || !args[i+1] || args[i+1].startsWith('--')) throw new TypeError(USAGE);
+    if (!['--config','--upstreams','--port','--facilitator','--max-in-flight','--drain-grace-ms'].includes(key) || !args[i+1] || args[i+1].startsWith('--')) throw new TypeError(USAGE);
     options.set(key,args[++i]);
   }
   if (!options.has('--config') || !options.has('--upstreams') || options.has('--allow-local-facilitator') && !options.has('--facilitator')) throw new TypeError(USAGE);
   const port = options.get('--port') ?? '8423';
   if (!/^\d{1,5}$/.test(port) || Number(port) > 65535) throw new TypeError('port must be 0–65535');
+  const maxInFlight = Number(options.get('--max-in-flight') ?? 64);
+  const drainGraceMs = Number(options.get('--drain-grace-ms') ?? 60000);
+  if (!Number.isSafeInteger(maxInFlight) || maxInFlight < 1 || maxInFlight > 1024 ||
+      !Number.isSafeInteger(drainGraceMs) || drainGraceMs < 1000 || drainGraceMs > 300000) {
+    throw new RangeError('Invalid request capacity or drain grace');
+  }
   let facilitator;
   if (options.has('--facilitator')) {
     let url;
@@ -35,7 +42,8 @@ function parse(args) {
     facilitator = url.href.replace(/\/$/,'');
   }
   return {configPath:resolve(options.get('--config')), upstreamPath:resolve(options.get('--upstreams')),
-    port:Number(port), allowLoopback:options.has('--allow-loopback-upstream'), check:options.has('--check'), facilitator};
+    port:Number(port), allowLoopback:options.has('--allow-loopback-upstream'), check:options.has('--check'),
+    facilitator, maxInFlight, drainGraceMs};
 }
 
 export async function main(args = process.argv.slice(2)) {
@@ -79,9 +87,11 @@ export async function main(args = process.argv.slice(2)) {
       facilitatorClient:new HTTPFacilitatorClient({url:options.facilitator}),
     });
   }
-  const session = await startSellerService({config,port:options.port,handlers,nativeFactory});
+  const session = await startSellerService({config,port:options.port,handlers,nativeFactory,
+    maxInFlight:options.maxInFlight,drainGraceMs:options.drainGraceMs});
   process.stdout.write(JSON.stringify({url:session.url,mode:session.mode,
-    health:session.url + '/_seller/health',offers:session.url + '/_seller/offers',
+    health:session.url + '/_seller/health',ready:session.url + '/_seller/ready',
+    offers:session.url + '/_seller/offers',
     upstreamBindings:Object.keys(compiled).length}) + '\n');
   for (const signal of ['SIGINT','SIGTERM']) process.once(signal,() => {
     session.close().then(() => { process.exitCode = 0; },() => { process.exitCode = 1; });
