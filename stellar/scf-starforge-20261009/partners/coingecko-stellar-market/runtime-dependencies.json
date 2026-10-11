@@ -19,5 +19,16 @@
     "stellar/scf-starforge-20261009/sf61-openapi-seller-import/package.json"
   ],
   "resolution": "Use the original maintained runtime, or install these dependencies in an ancestor of every unpacked original module. Installing them only inside this partner directory does not resolve sibling SF30/SF61/SF88 imports.",
-  "credentials": "Original buyer configuration, signer files, budget ledgers and facilitator profiles remain in their existing private operator environment."
+  "credentials": "Original buyer configuration, signer files, budget ledgers and facilitator profiles remain in their existing private operator environment.",
+  "nativeAcceptance": {
+    "guide": "workspace/acceptance/README.md",
+    "preparation": "workspace/acceptance/launch-native.py",
+    "browser": "workspace/acceptance/run-browser.mjs",
+    "hostTools": [
+      "Python 3.11 or later",
+      "OpenSSL",
+      "Existing Playwright and Chromium for the browser continuation"
+    ],
+    "signing": "Existing process environment and original shared signer ownership; no credential values in the package."
+  }
 }
