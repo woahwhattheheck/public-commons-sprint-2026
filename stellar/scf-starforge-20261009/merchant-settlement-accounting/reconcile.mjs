@@ -67,6 +67,24 @@ const parseJson = (bytes,label) => {
   try { return JSON.parse(bytes.toString('utf8')); }
   catch { throw new Error('INVALID_JSON:'+label); }
 };
+// A reporting period selects recorded activity. Native rows use their capture
+// time; recovered rows use import time, never an inferred ledger-close date.
+export function compileAccountingPeriod(raw) {
+  if(raw===undefined||raw===null)return null;
+  if(!strictObject(raw)||Object.keys(raw).some(key=>!['from','until'].includes(key)))
+    throw new Error('INVALID_ACCOUNTING_PERIOD');
+  const instant=value=>{
+    if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value))
+      throw new Error('ACCOUNTING_PERIOD_REQUIRES_UTC_INSTANTS');
+    const date=new Date(value),normalized=value.includes('.')?value:value.replace('Z','.000Z');
+    if(!Number.isFinite(date.getTime())||date.toISOString()!==normalized)
+      throw new Error('INVALID_ACCOUNTING_PERIOD_INSTANT');
+    return normalized;
+  };
+  const from=instant(raw.from),until=instant(raw.until);
+  if(from>=until)throw new Error('ACCOUNTING_PERIOD_END_MUST_FOLLOW_START');
+  return {from,until};
+}
 export function compileTerms(raw) {
   if (!strictObject(raw) || raw.schema !== 'stellar-forge.merchant-accounting-terms.v1' ||
       !Array.isArray(raw.routes) || raw.routes.length<1 || raw.routes.length>200)
@@ -251,11 +269,11 @@ function recoveredRow(entry) {
     transactionFingerprint:sha(e.transaction)},state:null,recovery:entry};
 }
 
-export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[]}={}) {
+export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[],period:rawPeriod}={}) {
   if (!Array.isArray(rows) || rows.length>20_000) throw new Error('OUTBOX_SIZE_UNSUPPORTED');
   if(!Array.isArray(recoveredEntries) || recoveredEntries.length>2000)
     throw new Error('RECOVERED_SOURCE_SIZE_UNSUPPORTED');
-  const terms=compileTerms(termsRaw);
+  const period=compileAccountingPeriod(rawPeriod),terms=compileTerms(termsRaw);
   const termsIndex=indexTerms(terms);
   const recoveredRows=recoveredEntries.map(recoveredRow);
   const documents=[...proofDocs],proofDigests=new Set(proofDocs.map(x=>x.fileDigest));
@@ -263,7 +281,7 @@ export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[]}={}) 
     documents.push(row.recovery.proof);proofDigests.add(row.recovery.proof.fileDigest);
   }
   const {index,ignored}=indexOriginalVerifications(documents);
-  const seen=new Set(), refCount=new Map(), results=[], exceptions=[];
+  const seen=new Set(), refCount=new Map();let results=[],exceptions=[];
   for(const row of [...rows.map(({event,state})=>({event,state})),...recoveredRows]){
     const e=row.event;
     if (!row.recovery && !eventCheck(e)) throw new Error('ORIGINAL_OUTBOX_EVENT_INVALID');
@@ -310,6 +328,30 @@ export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[]}={}) 
       exceptions.push(exceptionRow(r,REASON.conflict));
     }
   }
+  // Verification, conflicting evidence, and transaction reuse above always see
+  // the complete captured source. An outside-period row can still invalidate a
+  // reused transaction inside the period. Proof coverage also stays full-source.
+  const used=new Set(results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').map(transactionKey));
+  const unmatched=[...index.entries()].filter(([digest])=>!used.has(digest));
+  let periodSummary;
+  if(period){
+    const count=(items,issues)=>({events:items.length,
+      nativeSuccessEvents:items.filter(row=>row.origin!==RECOVERED).length,
+      recoveredSettlements:items.filter(row=>row.origin===RECOVERED).length,
+      officialTransferMatches:items.filter(row=>row.transfer==='OFFICIAL_TRANSFER_MATCHED').length,
+      requiringReconciliation:items.filter(row=>row.transfer!=='OFFICIAL_TRANSFER_MATCHED').length,
+      exceptionRows:issues.length});
+    const sourceCounts=count(results,exceptions),from=Date.parse(period.from),until=Date.parse(period.until);
+    results=results.filter(row=>{const at=Date.parse(row.at);return at>=from&&at<until;});
+    const selected=new Set(results.map(row=>row.eventId));
+    exceptions=exceptions.filter(row=>selected.has(row.eventId));
+    const selectedCounts=count(results,exceptions);
+    periodSummary={schema:'stellar-forge.merchant-recorded-period.v1',...period,
+      selection:'FROM_INCLUSIVE_UNTIL_EXCLUSIVE',verificationScope:'ALL_CAPTURED_SOURCES_BEFORE_PERIOD_SELECTION',
+      proofCoverageScope:'ALL_CAPTURED_SOURCES',timeBasis:{SF98_NATIVE_CAPTURE:'NATIVE_SETTLEMENT_CAPTURED_AT',
+        [RECOVERED]:'RECOVERY_IMPORTED_AT'},sourceCounts,selectedCounts,
+      excludedCounts:Object.fromEntries(Object.keys(sourceCounts).map(key=>[key,sourceCounts[key]-selectedCounts[key]]))};
+  }
   const byRoute=new Map();
   let totalQuote=0n,hasAllQuote=true;
   for(const r of results){
@@ -336,9 +378,8 @@ export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[]}={}) 
         missingTransferEvidence:x.missingTransferEvidence,webhookAccepted:x.webhookAccepted,
         verifiedQuotedValueUsd:x.withQuote?toUsd(x.verifiedQuotedValueMicro):null};
     });
-  const used=new Set(results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').map(transactionKey));
-  const unmatched=[...index.entries()].filter(([digest])=>!used.has(digest));
   return {
+    ...(periodSummary?{period:periodSummary}:{}),
     ledger:results.sort((a,b)=>a.at.localeCompare(b.at)||a.eventId.localeCompare(b.eventId)),
     exceptions,
     ignoredProofs:ignored,
@@ -358,7 +399,7 @@ export function compileLedger(rows,termsRaw,proofDocs,{recoveredEntries=[]}={}) 
       unresolvedTermsEvents:results.filter(x=>!['EXACT_OPTION','LEGACY_UNIQUE_OPTION'].includes(x.termsMatch)).length},
   };
 }
-export async function runOriginalAccounting({outboxDir,proofDir,termsFile,recoveredDir}) {
+export async function runOriginalAccounting({outboxDir,proofDir,termsFile,recoveredDir,period}) {
   await safeDir(outboxDir);
   await safeDir(proofDir);
   const termsBytes=await readPlain(termsFile,200_000);
@@ -377,7 +418,7 @@ export async function runOriginalAccounting({outboxDir,proofDir,termsFile,recove
   const rows=await outbox.rows();
   const recovered=recoveredDir===undefined?{entries:[],hashes:[]}:
     await (await import('./recovery.mjs')).readRecoveredSettlements(recoveredDir);
-  const ledger=compileLedger(rows,terms,docs,{recoveredEntries:recovered.entries});
+  const ledger=compileLedger(rows,terms,docs,{recoveredEntries:recovered.entries,period});
   const hashes={termsSha256:sha(termsBytes),
     originalSf98EventsSha256:await hashOptional(join(outboxDir,'events.ndjson')),
     originalSf98DeliveriesSha256:await hashOptional(join(outboxDir,'deliveries.ndjson')),
