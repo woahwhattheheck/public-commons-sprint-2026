@@ -1,5 +1,10 @@
 # SF96 | Real merchant 402 to reviewed Stellar buyer intent
 
+For a complete private direct-provider operation, use the [operator workflow](OPERATOR.md).
+It carries this same source-bound handoff into the existing SF88 workspace and
+durable inbox, with native terminal approval, returned output, restart recovery
+and an operator report. No manual rebuilding of the execution configuration is needed.
+
 **End-to-end gap closed:** SF85 can already acquire a consenting merchant's real unpaid HTTP 402 response, and SF84 classifies its original x402 v2 and Stellar MPP payment challenges. SF88 can already produce an offline operator-review configuration *from a facilitator catalog*. This product adds the missing source-native path for a merchant who has a directly observed original x402 challenge **but is not yet in that catalog**: capture → original decode → explicit one-option selection → hard atomic spend ceiling → source-bound review → separately owned SF88 human approval if the merchant actually proceeds.
 
 This is an integration of the [SF85 original capture](../sf85-live-402-capture/README.md), [SF84 original dual-rail inspector](../sf84-mpp-market-intake/README.md) and [SF88 original approved buyer](../sf88-operator-buyer-cli/README.md). It never creates a competing HTTP client, 402 decoder, buyer signer, facilitator, wallet, catalog, monitoring service or payment flow. Node 22+, standard library only, no server and no GitHub Actions.
@@ -61,7 +66,15 @@ The source must be an SF85-shaped, actual 402 GET or HEAD capture; a non-402, mi
 
 ## Transition to an authorized paid pilot
 
-The generated **review** config is intentionally unsigned and **cannot execute** via SF88. The trusted SF49/operator team, not this importer, can copy it into a **new private** execution config and add the pre-existing SF36 operator policy, durable ledger, original signer module and evidence destination after independently verifying seller and accepted terms. The original SF88 `--execute` then enforces its existing typed human approval and reservation. No auto-signing, wallet provisioning, self-approval or forced retry happens here. A seller may change its quote between capture and execution; owner must check the still-current original challenge. Do not treat HTTP 200 or 402 as finality or a sale.
+The generated **review** config is unsigned. The [operator workflow](OPERATOR.md)
+can import this exact verified handoff into a new private original SF88 workspace
+and durable inbox, supplying the operator's own identities, budget and public
+payer. It invokes the existing workspace initializer and native approval path;
+the importer supplies no wallet key or approval. Experienced operators can still
+compose their own trusted SF88 execution config. A seller may change its quote
+between capture and execution, so the original buyer obtains fresh terms and
+asks for current native approval. HTTP 200 or 402 alone does not establish finality
+or a sale.
 
 Run the one focused source-native wiring acceptance from the complete actual checkout with:
 
