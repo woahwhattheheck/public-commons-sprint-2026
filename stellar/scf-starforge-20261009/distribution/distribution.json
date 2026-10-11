@@ -149,6 +149,9 @@
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/REFUNDS.md"
   ],
   "commands": {
+    "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
+    "research": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/cli.mjs",
+    "research-receive": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/receive-cli.mjs",
     "installation": "stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
     "runtime-profile": "stellar/scf-starforge-20261009/distribution/runtime-profile-cli.mjs",
     "runtime-install": "stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs",
@@ -320,6 +323,17 @@
     "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs"
   },
   "exports": {
+    "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
+    "./seller/openalex/config": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/config.mjs",
+    "./seller/openalex/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/source.mjs",
+    "./seller/openalex/budget": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/budget.mjs",
+    "./seller/openalex/export": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
+    "./buyer/research": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs",
+    "./buyer/research/analysis": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/analysis.mjs",
+    "./buyer/research/report": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/report.mjs",
+    "./buyer/research/server": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/server.mjs",
+    "./buyer/research/retrieval": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/retrieval.mjs",
+    "./buyer/research/receive": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/receive-export.mjs",
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
     "./installation": "./source/stellar/scf-starforge-20261009/sf46-release/merchant-package.mjs",
     "./installation/cli": "./source/stellar/scf-starforge-20261009/sf46-release/package-cli.mjs",
