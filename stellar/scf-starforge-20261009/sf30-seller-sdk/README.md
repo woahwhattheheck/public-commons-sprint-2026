@@ -38,6 +38,17 @@ Choose one response source per route:
   `--handlers`. Paths passed to `--handlers` are relative to the config file's
   directory, or may be absolute.
 
+Routes can alternatively supply an original compiled `offer` instead of
+`definition`. This preserves richer OpenAPI-derived Bazaar schemas and examples
+without reducing them to a second declaration. An offer route requires an
+explicit `publicOrigin`, and its original resource URL must equal that origin
+plus `route.path`; the server never rewrites it. The exact offer is retained in
+native SDK route configuration, `/_seller/offers` and the 402 header. Original
+SF25 metadata acceptance and SF30 payment/resource validation both apply.
+Use the [OpenAPI service-config command](../sf61-openapi-seller-import/README.md#run-the-imported-routes)
+to generate a config with explicit handler/static-response bindings. A full
+repository checkout supplies the original shared SF25 validation modules.
+
 For example, replace `response` with `"handler": "dataset"` in a copy of
 `examples/service.json`, then launch with `--handlers application.mjs` when
 that config is kept beside `examples/application.mjs`.
@@ -159,3 +170,4 @@ The canonical x402 v2 \`PAYMENT-REQUIRED\` header is Base64-encoded JSON. This S
 The compiler treats query parameter names as untrusted metadata: `__proto__`, `prototype` and `constructor` are rejected, preventing ambiguous or prototype-affecting JSON Schema keys. Other valid names inherited by ordinary JavaScript objects, such as `toString` and `hasOwnProperty`, remain usable and must serialize as **own** query example/schema properties. This is seller-side metadata hygiene only, not request authentication or an x402 settlement guarantee.
 
 Focused regression: `node --test stellar/scf-starforge-20261009/sf30-seller-sdk/test/query-keys.test.mjs`.
+
