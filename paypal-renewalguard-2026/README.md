@@ -32,6 +32,31 @@ model; provider credentials are never returned to the browser. The current
 status receipt is not a proof of settled funds. Provider failures never
 silently switch from PayPal to demonstration data.
 
+## Review a subscription
+
+Load a source, then search by subscription ID, plan or status and filter by
+the statuses actually returned. Filters operate on the loaded list without
+additional provider calls. The coverage notice always describes that original
+list, including the existing partial-list warning; a filtered count is not a
+merchant total.
+
+Select a record to read its status, original review rationale, reported dates
+and exact review fingerprint. Missing dates remain **Not provided**. Use
+**Refresh facts** to read the selected subscription again. Switching sources,
+reloading the list or filtering the selected record out clears its draft.
+
+**Prepare review note** retains the server's fresh-read fingerprint check. If
+the subscription changed, refresh its details before requesting another draft.
+The app does not silently retry that request. A successful draft can be saved
+with **Download unsent note**, which includes its data source, subscription ID,
+exact fingerprint, original facts and draft kind. The download is a local text
+file; it neither sends a message nor changes a subscription. Saved facts can
+become stale, and a rule-based preview is explicitly distinguished from an
+AI-generated draft.
+
+The interface uses a same-origin stylesheet served under the existing content
+policy. Provider credentials, API behavior and triage rules are unchanged.
+
 ## PayPal sandbox list coverage
 
 PayPal Subscriptions v1 limits each List API page to 20 records. RenewalGuard

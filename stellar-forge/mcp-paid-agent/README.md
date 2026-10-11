@@ -7,10 +7,12 @@ Streamable HTTP (no SSE, server-push, remote MCP tool execution, multi-round-tri
 protocol-level sessions). It connects to the existing Bazaar `/discovery/search`
 handler rather than duplicating SF-23 ranking or the SF-26 marketplace binding.
 
-Tool names: `bazaar_search`, `bazaar_preview`, `bazaar_execute_approved`,
+Tool names: `bazaar_search`, `bazaar_describe`, `bazaar_preview`, `bazaar_execute_approved`,
 `bazaar_status`, `bazaar_cancel`.
 
 - Search: source-backed discovery GET and version-independent ephemeral resource handles.
+- Describe: original input examples/schema, output declaration and complete eligible
+  payment alternatives from the cached handle, with no network request.
 - Preview: exact method, query inputs and selected payment terms, with origin and
   supported-transport checks, **no external merchant request**.
 - Execute: requires an independent operator `approve()` callback AND externally supplied
@@ -41,6 +43,56 @@ embed `McpPaidToolBroker` in an operator-controlled application and supply both
 `approve(quote)` and `signPayment({resource,accepted,paymentRequired})`, using a
 canonical Stellar x402 signer and real out-of-band authorization. Protect keys
 outside MCP and bound spend using SF-36. Do not send private keys in tool calls.
+
+## Discover the required inputs before previewing
+
+Use `bazaar_search` to find a resource, then `bazaar_describe` with that result's
+`handle`. For example, an MCP client sends this ordinary `tools/call` request:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "method": "tools/call",
+  "params": {
+    "name": "bazaar_describe",
+    "arguments": { "handle": "HANDLE_FROM_BAZAAR_SEARCH" }
+  }
+}
+```
+
+The returned structured content contains:
+
+- `resource`: the resource object used by the existing bridge. Native provider
+  URL strings are represented as `{ "url": "..." }`; their original string or
+  object remains available under `source.resource`.
+- `bazaar`: the complete original Bazaar extension, including `info.input`
+  examples, `schema`, `info.output` and any other advertised extension fields.
+- `accepts`: complete payment alternatives in the same filtered order as the
+  search result. `acceptIndex` for preview indexes this array. Timeout and
+  `extra` fields remain attached to their original alternative.
+- `source`: the exact discovery request URL, observation time and original
+  resource representation. `expiresAt` is the existing handle-expiry timestamp
+  in Unix milliseconds.
+- `preview`: the bridge's existing input/transport limits and configured
+  `allowedOrigin` status, separate from the seller's declaration.
+
+Read `bazaar.schema` for required inputs and inspect `bazaar.info.input` for the
+seller's examples. Pass selected query values as **strings** under
+`bazaar_preview`'s `input.query`, even when the advertised example is numeric.
+Only advertised query keys are accepted. The existing bridge still supports
+HTTP GET/HEAD previews; describing an MCP tool, POST operation, additional input
+container or unapproved origin does not enable its execution.
+
+Descriptions use the original observation and the same handle lifetime as
+preview. They do not refresh the provider, create a quote or inspect a merchant.
+An expired or evicted handle returns `RESOURCE_STALE`: search again to obtain a
+new handle. Returned metadata is a detached snapshot; changing it cannot change
+the bridge's cached resource or terms.
+
+The advertised schema helps construct the request; describing it is not schema
+validation, seller authentication, payment approval or settlement verification.
+The original preview, approval, signing and recovery behavior remains in place.
 
 ## Focused check
 
