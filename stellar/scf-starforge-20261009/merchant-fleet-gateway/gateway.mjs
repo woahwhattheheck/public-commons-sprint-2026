@@ -316,18 +316,21 @@ export async function startMerchantFleet(fleet, { port = 8400, adminPort = 8401,
     store?.publish(adminURL);
     const close = () => {
       if (!closePromise) {
-        stopping = true; rollout.shutdown();
-        closePromise = Promise.all([closeOne(publicServer), closeOne(adminServer)])
+        stopping = true;
+        const operationDone = rollout.shutdown();
+        closePromise = Promise.all([closeOne(publicServer), closeOne(adminServer), operationDone])
           .then(() => store?.close());
       }
       return closePromise;
     };
     return { publicServer, adminServer, close, status: rollout.status,
+      withRetiredPort: rollout.withRetiredPort,
       publicURL: 'http://' + HOST + ':' + publicServer.address().port, adminURL,
       controlPath: store?.controlPath ?? null };
   } catch (error) {
-    stopping = true; rollout?.shutdown();
-    await Promise.allSettled([closeOne(publicServer), closeOne(adminServer)]);
+    stopping = true;
+    const operationDone = rollout?.shutdown();
+    await Promise.allSettled([closeOne(publicServer), closeOne(adminServer), operationDone]);
     await store?.close();
     throw error;
   }

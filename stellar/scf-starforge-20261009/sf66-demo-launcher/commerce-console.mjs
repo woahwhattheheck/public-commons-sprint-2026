@@ -99,7 +99,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
   let hosts = new Set(), origins = new Set(), url;
   // These maps retain only this browser session's review/dispatch presentation.
   // Terminal results, replay prevention and files are always read from SF88.
-  const reviews = new Map(), dispatches = new Map();
+  const reviews = new Map(), dispatches = new Map(), retrievals = new Map();
   let work = null, action = null, stopping = false, stopPromise, shutdown, shutdownError, closing;
   const fingerprint = job => createHash('sha256').update(JSON.stringify([
     job.configSha256, job.bodySha256, job.bodyBytes, job.operation, job.merchant,
@@ -150,11 +150,16 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         signerFilename: basename(job.dependencies.signer.path) } : null,
       review: review ? { id: review.id, at: review.at, original: review.original } : null,
       attempt, delivery: savedDelivery(job?.outcome),
+      purchase: job?.paidFile ?? null,
+      retrieval: retrievals.has(id) ? { state: retrievals.get(id).running ? 'RUNNING' : 'FINISHED',
+        result: retrievals.get(id).result ?? null, error: retrievals.get(id).error ?? null } : null,
       activeIntent: work?.intent ?? null,
       controls: { canReview: Boolean(job) && runningSession && !action,
         canExecute: Boolean(review) && runningSession && !action && !work && job.state === 'QUEUED' && original.seller.mode === 'NATIVE_X402',
         canCancel: runningSession && !action && !running && job?.state === 'QUEUED',
         canRecover: runningSession && !action && !work && ['RUNNING_OR_INTERRUPTED', 'REVIEW_REQUIRED'].includes(job?.state),
+        canRetrieve: Boolean(job?.paidFile) && typeof session.retrieve === 'function' && runningSession && !action &&
+          !retrievals.get(id)?.running,
         canStop: runningSession },
       updatedAt: new Date().toISOString(),
     };
@@ -192,13 +197,14 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       const supplied = Buffer.from(req.headers['x-commerce-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes))
         throw problem('Reopen the complete operator URL printed by the commerce console command.', 401);
-      if (req.method === 'GET' && ['/api/session', '/api/preview', '/api/delivery'].includes(target.pathname)) {
+      if (req.method === 'GET' && ['/api/session', '/api/preview', '/api/delivery', '/api/product-preview', '/api/product-delivery'].includes(target.pathname)) {
         if ([...target.searchParams.keys()].some(key => key !== 'intent') || target.searchParams.getAll('intent').length > 1)
           throw problem('Only one exact intent selection is accepted.');
         const intent = target.searchParams.get('intent');
         if (target.pathname === '/api/session') return send(200, await snapshot(intent));
-        const { job } = await current(intent), delivery = savedDelivery(job.outcome);
-        if (target.pathname === '/api/preview') return send(200, await preview(delivery));
+        const { job } = await current(intent);
+        const delivery = target.pathname.startsWith('/api/product-') ? job.paidFile?.delivery ?? { available: false } : savedDelivery(job.outcome);
+        if (['/api/preview', '/api/product-preview'].includes(target.pathname)) return send(200, await preview(delivery));
         const handle = await savedFile(delivery);
         const filename = delivery.name.replace(/[^A-Za-z0-9_. -]/g, '_').slice(0, 120) || 'response.bin';
         try {
@@ -210,11 +216,12 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
         } finally { await handle.close(); }
         return;
       }
-      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop'].includes(target.pathname))
+      if (target.search || req.method !== 'POST' || !['/api/review', '/api/execute', '/api/cancel', '/api/recover', '/api/stop', '/api/retrieve'].includes(target.pathname))
         throw problem('Unknown commerce workspace action.', 404);
       if (!origins.has(req.headers.origin)) throw problem('Same-origin operator action required.', 403);
       const value = await input(req);
-      const allowed = target.pathname === '/api/execute' ? ['intent', 'reviewId'] : ['intent'];
+      const allowed = target.pathname === '/api/execute' ? ['intent', 'reviewId'] :
+        target.pathname === '/api/retrieve' ? ['intent', 'configSha256', 'handoffSha256'] : ['intent'];
       if (Object.keys(value).some(key => !allowed.includes(key))) throw problem('Unknown operator action field.');
       if (target.pathname === '/api/stop') {
         await stopSession(); return send(200, await snapshot(value.intent));
@@ -225,7 +232,15 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
       try {
         const { original, job } = await current(value.intent), intent = job.operation.intentId;
         if (original.state !== 'RUNNING') throw problem('The commerce session is not running.', 409);
-        if (target.pathname === '/api/review') {
+        if (target.pathname === '/api/retrieve') {
+          if (typeof session.retrieve !== 'function' || !job.paidFile) throw problem('This operation has no configured paid file.', 409);
+          if (retrievals.get(intent)?.running) throw problem('This file is already being retrieved.', 409);
+          if (value.configSha256 !== job.configSha256 || value.handoffSha256 !== job.paidFile.handoffSha256)
+            throw problem('The selected request or file handoff changed. Refresh before retrieving.', 409);
+          const file = { running: true }; retrievals.set(intent, file);
+          file.promise = Promise.resolve().then(() => session.retrieve(intent)).then(result => { file.result = result; },
+            error => { file.error = commerceErrorCode(error); }).finally(() => { file.running = false; });
+        } else if (target.pathname === '/api/review') {
           const result = await session.review(intent);
           if (result.exitCode !== 0 || result.original?.mode !== 'OFFLINE_REVIEW')
             throw problem('Buyer review failed. ' + (result.original?.error ?? ''), 409);
@@ -259,7 +274,7 @@ export async function startCommerceConsole(session, { port = 8426 } = {}) {
           });
         }
       } finally { action = null; }
-      return send(target.pathname === '/api/execute' ? 202 : 200, await snapshot(value.intent));
+      return send(['/api/execute', '/api/retrieve'].includes(target.pathname) ? 202 : 200, await snapshot(value.intent));
     } catch (error) {
       if (res.headersSent) { res.destroy(error); return; }
       send(error.status ?? 400, { error: error.code ?? 'COMMERCE_OPERATOR_ERROR', message: error.message });

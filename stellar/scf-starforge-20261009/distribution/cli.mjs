@@ -29,6 +29,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
+  buyer-node  Review, execute and recover generated-client purchases in a Node application
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout

@@ -89,7 +89,7 @@ export async function openRolloutState(directory) {
     const token = prior?.token ?? randomBytes(32).toString('base64url');
     read();
     return {
-      directory, controlPath, token, instance: owner.id, read,
+      directory, controlPath, token, instance: owner.id, read, assertHeld: assertOwner,
       snapshot(fleet) {
         assertOwner();
         if (!fleet.sourceManifest || !Array.isArray(fleet.sourceConfigs)) throw new Error('FLEET_SOURCE_REQUIRED');

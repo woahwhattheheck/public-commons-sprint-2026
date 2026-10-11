@@ -50,6 +50,20 @@
       <nav class="pagination" aria-label="Preview pages"><button id="previous" type="button" disabled>Previous page</button><span id="page-position" class="small muted"></span><button id="next" type="button" disabled>Next page</button></nav>
     </section>
 
+    <section class="panel" aria-labelledby="buyer-title">
+      <div class="section-head"><div><h2 id="buyer-title">Prepare buyer acquisition</h2><p>Use the inspected version and query to acquire every matching page through the original buyer.</p></div><button id="load-offer" type="button" disabled>Load seller offer</button></div>
+      <p id="buyer-setup" class="small muted">Connect the existing seller with the workspace’s --seller and --resource options.</p>
+      <div id="buyer-review" hidden>
+        <dl class="details"><dt>Seller mode</dt><dd id="buyer-mode"></dd><dt>Request</dt><dd id="buyer-url" class="mono wrap"></dd><dt>Selection</dt><dd id="buyer-selection"></dd><dt>Available until</dt><dd id="buyer-expiry"></dd></dl>
+        <p class="small muted">Acquisition starts at the first page of this query. Moving the current publication does not change the selected snapshot; the seller’s retention window still applies.</p>
+        <form id="buyer-form"><div class="buyer-inputs"><div><label for="buyer-accept">Advertised payment alternative</label><select id="buyer-accept" required></select></div><div><label for="buyer-intent">Unique acquisition ID</label><input id="buyer-intent" maxlength="128" required autocomplete="off"></div></div>
+          <dl class="details"><dt>Price per page</dt><dd id="buyer-price"></dd><dt>Asset</dt><dd id="buyer-asset" class="mono wrap"></dd><dt>Recipient</dt><dd id="buyer-recipient" class="mono wrap"></dd><dt>Payment terms</dt><dd id="buyer-payment"></dd></dl>
+          <div class="actions"><button id="prepare-buyer" type="submit" class="primary" disabled>Prepare buyer config</button></div>
+        </form>
+      </div>
+      <div id="buyer-prepared" class="activation" hidden><strong>Original buyer config prepared</strong><p id="buyer-prepared-summary" class="small"></p><p class="small">Download the config, initialize a private buyer workspace, then use dataset acquisition to save and deliver all pages. Each new page uses the original quote review and operator approval.</p><div class="actions"><button id="download-buyer" type="button" disabled>Download buyer JSON</button></div></div>
+    </section>
+
     <section class="panel" aria-labelledby="versions-title"><div class="section-head"><div><h2 id="versions-title">Published versions</h2><p id="retention-policy">Current and retained snapshots from the original seller.</p></div><button id="collect" type="button">Collect expired</button></div>
       <div class="table-scroll" tabindex="0" aria-label="Retained dataset versions"><table id="versions"><thead><tr><th>Snapshot</th><th>Status</th><th>Rows</th><th>CSV size</th><th>Retained until</th><th>Readers</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
       <div id="activation-review" class="activation" hidden><strong>Make this retained version current?</strong><p id="activation-summary" class="mono small wrap"></p><p class="small">New queries will use this version. Existing readers keep their original retained snapshot.</p><div class="actions"><button id="confirm-activation" type="button" class="primary">Make current</button><button id="cancel-activation" type="button">Cancel</button></div></div>

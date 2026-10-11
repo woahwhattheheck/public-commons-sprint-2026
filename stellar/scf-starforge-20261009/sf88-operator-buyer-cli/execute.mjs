@@ -1,7 +1,7 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
 import { stat } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
-import { OperatorApprovedBuyer } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { OperatorApprovedBuyer, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
@@ -47,6 +47,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   need(signerFile.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   const body = op.bodyFile === undefined ? undefined :
     Uint8Array.from(await bytes(op.bodyFile, 1048576, 'REQUEST_BODY_INVALID'));
+  need(!signal?.aborted, 'OPERATOR_ABORTED');
+  await checkOperatorTerminal(op.intentId);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;

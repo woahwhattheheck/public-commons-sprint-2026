@@ -151,6 +151,7 @@ or automatically retry a request.
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
 | `starforge releases` | Stage, compare, select, run and roll back seller configurations; local operator console |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
+| `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
 | `starforge merchant-desk` | Private paid-file order inventory, enrollment, handoffs, access controls and support |
@@ -246,6 +247,25 @@ drains the owned runtime and leaves recorded outcomes available. Native signer
 diagnostics remain available through the commerce terminal's `signer INTENT`
 command. The packaged `source/stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_CONSOLE.md`
 describes the complete browser workflow and application API.
+
+The same session also supports the original paid-file checkout and Python
+merchant applications. In an existing commerce plan, `seller.checkoutConfig`
+selects the original checkout and each buyer's optional `paidFile` identifies
+its frozen handoff, separate product destination and claim-token variable.
+The browser and terminal `retrieve INTENT` action use the original entitled-file
+retrieval, while the immediate paid HTTP response remains a separate result.
+The installed `sf66-demo-launcher/COMMERCE_PAID_FILES.md` guide covers preparation,
+review, retrieval, verified preview/download and local-file recovery.
+
+For a Python application, select `seller.python` in the commerce plan using the
+same declaration accepted by `starforge python-merchant`. Initialization freezes
+the declaration, derived seller terms and application digest; native startup
+opens the original worker pool, and shutdown reports its actual cleanup result.
+Use the existing `commerce init`, `commerce inspect` and `commerce start` commands,
+or `commerce-console start` for the browser. The installed
+`sf66-demo-launcher/PYTHON_COMMERCE.md` guide covers application lifecycle,
+configuration, request selection and reopening. Both guides are under the
+package's `source/stellar/scf-starforge-20261009` directory.
 
 `source` prints the exact source commit, original Git object and SHA-256 for each
 packaged file, component inventory, archive version and optional dependency
@@ -774,6 +794,23 @@ exports. It uses the same installed Node buyer and operator modules. Keep its
 private application state outside `node_modules` so it survives package updates.
 
 ### JavaScript applications
+
+The original Node customer adapter is available from
+`@tokenjunkielabs/starforge-merchant/buyer/node`, with its original TypeScript
+declarations. Its `Buyer` accepts the installed original runtime directory and
+private application state. `starforge buyer-node` runs its existing generated
+client example through review, execution, recovery and listing:
+
+```sh
+npx --no-install starforge buyer-node list \
+  --runtime "$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli" \
+  --state /absolute/private/customer-purchases
+```
+
+`--runtime` identifies the installed `sf88-operator-buyer-cli` directory.
+The included `sf88-operator-buyer-cli/node/README.md` explains the existing
+operator profile, generated-client interface, durable intent, explicit native
+approval and recovery. Keep customer state outside the installed package.
 
 The installed package exposes complete customer and operator workflows as well
 as the original seller primitives:
