@@ -112,14 +112,15 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'onResult']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, onResult } = options;
+    maxInFlight = 16, allowLocal = false, lookup, onResult } = options;
   if (!METHODS.has(method) || !['json', 'bytes'].includes(responseType) || typeof allowLocal !== 'boolean' ||
-      onResult !== undefined && typeof onResult !== 'function') throw new TypeError('Invalid upstream options');
+      onResult !== undefined && typeof onResult !== 'function' ||
+      lookup !== undefined && typeof lookup !== 'function') throw new TypeError('Invalid upstream options');
   integer(timeoutMs, 1, 120000, 'timeoutMs');
   integer(maxRequestBytes, 1, 16 * 1048576, 'maxRequestBytes');
   integer(maxResponseBytes, 1, 16 * 1048576, 'maxResponseBytes');
@@ -174,6 +175,7 @@ export function createUpstreamHandler(options = {}) {
       try {
         request = (target.protocol === 'https:' ? httpsRequest : httpRequest)(target, {
           method, headers: outgoing, maxHeaderSize: 16384, agent: false,
+          ...(lookup === undefined ? {} : { lookup }),
         }, res => {
           response = res;
           res.on('error', () => bad(502, 'UPSTREAM_RESPONSE_INCOMPLETE'));
