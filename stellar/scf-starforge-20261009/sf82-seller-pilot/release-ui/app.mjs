@@ -1,4 +1,5 @@
 import { bindDiscoveryControls } from './discovery.mjs';
+import { bindFacilitatorControls, renderFacilitatorChange } from './facilitator.mjs';
 import { bindClientControls } from './client.mjs';
 import { bindReceivingControls } from './receiving.mjs';
 const $ = selector => document.querySelector(selector);
@@ -37,6 +38,7 @@ function buttons() {
   const blocked = busy || !snapshot || snapshot.console.busy;
   for (const button of document.querySelectorAll('button')) button.disabled = blocked;
   discovery.buttons(blocked);
+  facilitator.buttons(blocked);
   clients.buttons(blocked);
   receiving.buttons(blocked);
   if (!snapshot || blocked) return;
@@ -294,11 +296,15 @@ function renderDiff(value) {
   const runtime = $('#runtime-changes'); runtime.replaceChildren();
   for (const change of value.runtimeChanges) runtime.append(change.field === 'jsonrpc'
     ? rpcRuntimeChange(change.before, change.after) : change.field === 'sqlite'
-      ? sqliteRuntimeChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+      ? sqliteRuntimeChange(change.before, change.after) : change.field === 'facilitatorReview'
+        ? renderFacilitatorChange(change.before, change.after) : fieldPair('Runtime · ' + change.field, change.before, change.after));
+  if (value.after.facilitatorReview && !value.runtimeChanges.some(change => change.field === 'facilitatorReview'))
+    runtime.append(renderFacilitatorChange(null, value.after.facilitatorReview));
   if (value.after.handlerEntry) runtime.append(node('p', 'Handler entry module is pinned. Its imported files and installed package dependencies are managed separately by the operator.', 'section-note'));
   $('#selection-actions').hidden = false;
   for (const button of document.querySelectorAll('.release-card')) button.setAttribute('aria-pressed', String(button.dataset.id === selected));
   discovery.selectRelease(value.after);
+  facilitator.selectRelease(value.after);
   receiving.selectRelease(value.after, value.generation);
   buttons();
 }
@@ -314,6 +320,7 @@ async function refresh() {
     const value = await request('/api/status'); renderStatus(value);
     await refreshCaches();
     await discovery.refresh();
+    await facilitator.refresh();
     await clients.refresh();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
@@ -345,6 +352,9 @@ async function act(action) {
   finally { busy = false; buttons(); }
 }
 const discovery = bindDiscoveryControls({ request, notice, refresh, isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+const facilitator = bindFacilitatorControls({ request, notice, refresh, choose,
+  isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
 const clients = bindClientControls({ request, getSnapshot: () => snapshot, isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });

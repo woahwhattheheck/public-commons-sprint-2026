@@ -1,7 +1,8 @@
 // MIT. Version original SF61 exports and SF30 native merchant sources through SF82.
-import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink } from 'node:fs/promises';
+import { open, readFile, lstat, mkdir, readdir, rename, rm, rmdir, unlink, copyFile } from 'node:fs/promises';
+import { constants as fsConstants } from 'node:fs';
 import { createHash, randomUUID } from 'node:crypto';
-import { join, resolve, dirname } from 'node:path';
+import { join, resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
@@ -14,6 +15,7 @@ import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './r
 import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
 import { SQLITE_SOURCE_SCHEMA, stageSqliteRelease, inspectSqliteRelease } from './release-sqlite.mjs';
+import { NATIVE_SDK_VERSION } from '../sf30-seller-sdk/native-factory.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
 const RELEASE = 'stellar-forge.seller-release.v1';
@@ -299,6 +301,8 @@ function publicRelease(record) {
     runtime: record.runtime, handlerEntry: record.handlerEntry,
     mode: record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
     source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}),
+    ...(record.derivedFrom ? { derivedFrom: record.derivedFrom } : {}),
+    ...(record.facilitatorReview ? { facilitatorReview: record.facilitatorReview } : {}),
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
     ...(record.mysql ? { mysql: record.mysql } : {}),
@@ -307,12 +311,39 @@ function publicRelease(record) {
     ...(record.jsonrpc ? { jsonrpc: record.jsonrpc } : {}),
     ...(record.sqlite ? { sqlite: record.sqlite } : {}) };
 }
+function checkFacilitatorReview(record) {
+  const review = record.facilitatorReview;
+  if (!review && record.derivedFrom?.kind !== 'FACILITATOR') return;
+  const { id: reviewId, ...content } = review ?? {};
+  if (content.schema !== 'stellar-forge.seller-facilitator-review.v1' ||
+      reviewId !== hash(stable(content)) || content.compatible !== true || content.error !== null ||
+      content.nativeSdk !== NATIVE_SDK_VERSION || Buffer.byteLength(stable(review)) > 1024 * 1024 ||
+      content.supportedSha256 !== hash(stable(content.supported)) ||
+      record.derivedFrom?.kind !== 'FACILITATOR' || record.derivedFrom.reviewId !== reviewId ||
+      record.derivedFrom.supportedSha256 !== content.supportedSha256 ||
+      record.derivedFrom.releaseId !== content.source?.releaseId ||
+      record.derivedFrom.releaseDigest !== content.source?.releaseDigest ||
+      record.id !== content.proposed?.id || record.label !== content.proposed?.label ||
+      record.runtime.facilitator !== content.proposed?.provider?.url ||
+      (record.runtime.allowLocalFacilitator === true) !== content.proposed?.provider?.allowLocalFacilitator ||
+      record.publicOrigin !== content.source?.publicOrigin || stable(record.source) !== stable(content.source?.source) ||
+      !Array.isArray(content.nativePayments) || content.nativePayments.length !== record.routes.length)
+    throw new Error('Retained facilitator review differs from its release binding.');
+  for (const [index, route] of record.routes.entries()) {
+    const payment = content.nativePayments[index];
+    if (payment?.routeId !== route.id || payment.method !== route.method || payment.path !== route.path ||
+        payment.url !== route.url || stable(payment.storedPayment) !== stable(route.payment) ||
+        !Array.isArray(payment.nativePayment) || !payment.nativePayment.length)
+      throw new Error('Retained native payment review differs from its original merchant route.');
+  }
+}
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
   const record = await json(join(path, 'release.json'));
   const { digest, ...content } = record;
   if (record.schema !== RELEASE || record.id !== releaseId || hash(stable(content)) !== digest)
     throw new Error('Release metadata changed or belongs to a different release.');
+  checkFacilitatorReview(record);
   if (verify) {
     const snapshot = await sourceSnapshot(path, record.runtime.upstreams, record.runtime.allowLoopbackUpstream === true);
     if (stable(snapshot.files) !== stable(record.files) || stable(snapshot.routes) !== stable(record.routes) ||
@@ -459,6 +490,99 @@ export async function stageRelease(root, options) {
     return publicRelease(record);
   } finally { if (!committed) await rm(temp, { recursive: true, force: true }); }
 }
+/** Retain verified compiled source while changing only its reviewed facilitator.
+ * All original native-kind metadata and file identities travel with the source;
+ * mutable pilot configuration, process records and controls are never copied. */
+export async function stageRetainedRelease(root, options) {
+  const allowed = ['from', 'id', 'label', 'expectedDigest', 'expectedGeneration', 'facilitator',
+    'allowLocalFacilitator', 'review'];
+  if (!options || typeof options !== 'object' || Array.isArray(options) || Object.keys(options).some(key => !allowed.includes(key)))
+    throw new TypeError('Supply the reviewed retained release and facilitator fields.');
+  root = resolve(root); await readReleaseState(root);
+  const from = id(options.from), releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
+  if (from === releaseId) throw new TypeError('Use a new release ID for a facilitator change.');
+  if (typeof options.expectedDigest !== 'string' || !/^[a-f0-9]{64}$/.test(options.expectedDigest))
+    throw new TypeError('Supply the exact reviewed source digest.');
+  if (!Number.isSafeInteger(options.expectedGeneration) || options.expectedGeneration < 0)
+    throw new TypeError('Supply the reviewed selection generation.');
+  const { record: original, path: sourcePath } = await releaseRecord(root, from, true);
+  if (original.digest !== options.expectedDigest)
+    throw Object.assign(new Error('The retained source differs from the reviewed digest.'), { code: 'RELEASE_CONFLICT' });
+  const retainedRuntime = { ...original.runtime };
+  delete retainedRuntime.facilitator; delete retainedRuntime.allowLocalFacilitator;
+  const runtime = runtimeOptions({ ...retainedRuntime, facilitator: options.facilitator,
+    allowLocalFacilitator: options.allowLocalFacilitator ?? false });
+  if (!runtime.facilitator) throw new TypeError('Select an explicit facilitator for this retained release.');
+  const facilitatorReview = structuredClone(options.review);
+  const derivedFrom = { kind: 'FACILITATOR', releaseId: from, releaseDigest: original.digest,
+    reviewId: facilitatorReview?.id, supportedSha256: facilitatorReview?.supportedSha256 };
+  checkFacilitatorReview({ ...original, id: releaseId, label, runtime, derivedFrom, facilitatorReview });
+  if (facilitatorReview.generation !== options.expectedGeneration ||
+      facilitatorReview.source.currentFacilitator !== (original.runtime.facilitator ?? null) ||
+      facilitatorReview.source.currentAllowLocalFacilitator !== (original.runtime.allowLocalFacilitator === true))
+    throw new Error('The retained review differs from its original runtime or selection generation.');
+  const target = join(root, 'releases', releaseId);
+  const existing = async () => {
+    let value;
+    try { value = await releaseRecord(root, releaseId, true); }
+    catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+    if (value.record.label !== label || stable(value.record.derivedFrom) !== stable(derivedFrom) ||
+        stable(value.record.facilitatorReview) !== stable(facilitatorReview) ||
+        stable(value.record.runtime) !== stable(runtime) || stable(value.record.source) !== stable(original.source) ||
+        stable(value.record.files) !== stable(original.files) || stable(value.record.routes) !== stable(original.routes))
+      throw Object.assign(new Error('That release ID belongs to a different retained change. Inspect it or choose a new ID.'), { code: 'EEXIST' });
+    return { release: publicRelease(value.record), reused: true };
+  };
+  const retained = await existing();
+  if (retained) return retained;
+  const checkGeneration = async () => {
+    const state = await readReleaseState(root);
+    if (state.generation !== options.expectedGeneration)
+      throw Object.assign(new Error('Selection changed while preparing this facilitator. Review the current release again.'),
+        { code: 'RELEASE_CONFLICT', generation: state.generation });
+  };
+  await checkGeneration();
+  const temp = join(root, 'releases', '.stage-' + randomUUID());
+  let committed = false;
+  try {
+    await mkdir(temp, { mode: 0o700 });
+    for (const entry of original.files) {
+      if (typeof entry.file !== 'string' || !entry.file || entry.file.includes('\\') || entry.file.includes('\0') ||
+          isAbsolute(entry.file) || relative(temp, resolve(temp, entry.file)).split(sep).join('/') !== entry.file ||
+          entry.file.split('/').some(part => !part || part === '.' || part === '..') ||
+          !Number.isSafeInteger(entry.bytes) || entry.bytes < 0 || !/^[a-f0-9]{64}$/.test(entry.sha256))
+        throw new TypeError('The original retained source has an invalid file identity.');
+      const source = join(sourcePath, entry.file), destination = join(temp, entry.file);
+      const parents = entry.file.split('/').slice(0, -1);
+      let parent = sourcePath;
+      for (const part of parents) { parent = join(parent, part); await directory(parent); }
+      const info = await lstat(source);
+      if (!info.isFile() || info.size !== entry.bytes) throw new Error('Retained source file changed: ' + entry.file);
+      await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+      await copyFile(source, destination, fsConstants.COPYFILE_EXCL | fsConstants.COPYFILE_FICLONE);
+      const handle = await open(destination, 'r');
+      try { await handle.sync(); } finally { await handle.close(); }
+    }
+    // Original source inspectors validate the complete copied closure, including
+    // native database/package bytes and executable declarations, before commit.
+    const { digest: ignoredDigest, ...originalContent } = original;
+    const content = { ...originalContent, id: releaseId, label, createdAt: new Date().toISOString(), runtime, derivedFrom, facilitatorReview };
+    const record = { ...content, digest: hash(stable(content)) };
+    if (Buffer.byteLength(JSON.stringify(record, null, 2) + '\n') > LIMIT)
+      throw new RangeError('The retained release reached its original metadata size limit.');
+    await writeNew(join(temp, 'release.json'), record);
+    const snapshot = await sourceSnapshot(temp, runtime.upstreams, runtime.allowLoopbackUpstream === true);
+    if (stable(snapshot.files) !== stable(original.files) || stable(snapshot.routes) !== stable(original.routes))
+      throw new Error('Copied source differs from the inspected retained release.');
+    return await mutate(root, async () => {
+      const concurrent = await existing();
+      if (concurrent) return concurrent;
+      await checkGeneration();
+      await rename(temp, target); committed = true; await syncDirectory(join(root, 'releases'));
+      return { release: publicRelease(record), reused: false };
+    });
+  } finally { if (!committed) await rm(temp, { recursive: true, force: true }); }
+}
 export async function listReleases(root) {
   await readReleaseState(root);
   const names = await readdir(join(resolve(root), 'releases'), { withFileTypes: true });
@@ -514,6 +638,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'jsonrpc', before: before?.jsonrpc ?? null, after: after.jsonrpc ?? null });
   if (stable(before?.sqlite ?? null) !== stable(after.sqlite ?? null))
     runtimeChanges.push({ field: 'sqlite', before: before?.sqlite ?? null, after: after.sqlite ?? null });
+  if (stable(before?.facilitatorReview ?? null) !== stable(after.facilitatorReview ?? null))
+    runtimeChanges.push({ field: 'facilitatorReview', before: before?.facilitatorReview ?? null, after: after.facilitatorReview ?? null });
   return { schema: 'stellar-forge.seller-release-diff.v1', before, after, changes, runtimeChanges,
     summary: { added: changes.filter(c => c.state === 'ADDED').length,
       removed: changes.filter(c => c.state === 'REMOVED').length,
@@ -766,7 +892,8 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
       ...(receiving ? { receivingReview: receiving } : {}) };
     await atomic(join(root, 'runtime.json'), observation);
     if (exitSettled || shutdownRequested) throw new Error(failure ?? 'Original seller stopped before launch.');
-    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes }, error => error ? fail(error) : done()));
+    await new Promise((done, fail) => child.send({ type: 'sf82-start', instanceId, cacheRoutes,
+      facilitatorReview: record.facilitatorReview ?? null }, error => error ? fail(error) : done()));
     let report;
     try { report = await ready; } finally { clearTimeout(startupTimer); }
     if (report.originalOffersSha256 !== record.source.offersSha256 ||

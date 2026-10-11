@@ -550,8 +550,25 @@ reopen an older version and save it as a new head. Reopen later with only
 `starforge mongodb-workspace --state /private/mongodb-workspace`.
 Prepared packages and exact GET/POST buyer requests remain attached to that state.
 
+The same workspace's **Dataset publisher** tab captures an entire approved
+aggregation into a reviewed typed dataset. Select a saved report and its exact
+inputs, set extraction limits and deterministic order, inspect the retained
+candidate, publish it and start the original versioned seller. The existing
+refresh policy retains its baseline, row bounds and cadence. Customers can
+prepare the original buyer request pinned to a retained snapshot while later
+editions are published. The publisher retains collection, pipeline and declared
+read concern with the source revision; large BSON integers and decimals can be
+projected as exact strings. Explicitly alias `_id` for a public dataset column.
+
+Use `starforge mongodb-publisher` for the same publisher through its standalone
+CLI or browser, and `./seller/mongodb/publisher` for the native factory. The
+merchant MCP connection accepts `kind: "mongodb"` for that original private
+workspace. Its original publisher and scheduler retain ownership across CLI,
+browser and MCP reopen. The installed full SF30 component includes the Mongo
+publisher guide, both browser modules and the shared schedules interface.
+
 The original application exports are `./seller/mongodb`, `/source`, `/prepare`,
-`/onboarding`, `/workspace` and `/buyer`. They expose the same implementations used
+`/onboarding`, `/workspace`, `/publisher` and `/buyer`. They expose the same implementations used
 by the CLI and browser. Full source, pipeline, package, buyer and operating guides
 are included under `source/stellar/scf-starforge-20261009/sf30-seller-sdk/mongodb/`.
 The optional driver pin is derived from that component's own `package.json`.
@@ -653,6 +670,7 @@ or automatically retry a request.
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge mongodb` | Inspect native collections, prepare fixed BSON reports and operate the original MongoDB seller |
 | `starforge mongodb-workspace` | Author, review, save and run MongoDB reports; export merchant packages and exact buyer requests |
+| `starforge mongodb-publisher` | Capture complete native MongoDB snapshots, review and publish retained editions, and operate the original refresh policy |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
@@ -3537,6 +3555,79 @@ accepted event and retained review. `show`, `history` and `export` reopen saved
 work offline. The `./merchant/woocommerce` export exposes the same application
 functions. All nine plugin files, the CLI and their original dependencies ship
 from the selected package source.
+
+## Operate a Tenderly simulation merchant
+
+The complete Tenderly partner product includes provider configuration, the
+retained operation application, its industrial operator workspace, and the
+original Node and Python customer adapters. Its selected EVM network and
+seven public transaction fields remain bound to the merchant's plan.
+
+Use `starforge tenderly --help` for the original preparation and merchant
+lifecycle, `starforge tenderly-workspace --help` for the operator browser, and
+`starforge tenderly-customer --help` for customer selection, import, review,
+execution, status, recovery, export and analysis. Customer recovery opens the
+existing attempt and its saved file. The same customer can deliver its result
+directly to the analysis workspace:
+
+```sh
+starforge tenderly-customer analyze \
+  --runtime /absolute/installed/source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  --state /private/customer/purchases --intent EXISTING_INTENT \
+  --workspace /private/customer/tenderly-analysis --label 'Reviewed simulation'
+```
+
+Use the actual installed SF88 directory and retained customer intent. The whole
+`source/stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot/`
+directory includes the original operator, preparation and customer guides,
+browser assets, and `customer/python/stellar_forge_tenderly` package.
+
+Stable application entries are `./partners/tenderly`, `/application`,
+`/preparation`, `/customer`, `/workspace` and `/workspace/server`, each under
+`@tokenjunkielabs/starforge-merchant`. They expose the maintained product,
+application, buyer preparation, native customer and operator workspace.
+
+## Analyze a completed Tenderly simulation
+
+Use the customer analysis workspace to receive the original merchant or buyer
+delivery, inspect execution records, compare retained results and save a review:
+
+```sh
+npx --no-install starforge tenderly-analysis serve \
+  --workspace /private/customer/tenderly-analysis --port 8468
+```
+
+Open the printed private loopback URL. Receive the portable `response.json`
+with its `simulation-request.json` and original `buyer-result.json`. The
+workspace verifies the supplied delivery metadata, retains the exact files and
+shows observed context, calls, state changes, assets and logs. Choose another
+capture to compare the recorded execution, then save notes and download its
+readable review. Each row links to the original provider JSON.
+
+The same command provides `receive`, `list`, `inspect`, `compare`, `review`
+and `export`. An export contains original inputs, analysis, four CSV tables,
+an HTML review and a manifest; an interrupted export resumes in the same
+directory. Keep this private workspace outside the installation.
+
+Applications can pass the existing customer result directly:
+
+```js
+import { receiveBuyerResult } from
+  '@tokenjunkielabs/starforge-merchant/buyer/tenderly-analysis';
+
+const capture = await receiveBuyerResult(customerResult.original, {
+  workspace: '/private/customer/tenderly-analysis',
+  request: customerResult.analysisRequest(),
+  label: 'Reviewed transaction',
+});
+```
+
+The adjacent `buyer/tenderly-analysis/server` entry exposes
+`startAnalysisWorkspace`; `buyer/tenderly-analysis/records` exposes the
+record analysis, comparison and CSV functions. These entries use the original
+Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
+receiving and portable-file guide is included at
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
 
 ## Embed in an application
 

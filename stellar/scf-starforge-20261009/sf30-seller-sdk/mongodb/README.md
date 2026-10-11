@@ -1,5 +1,10 @@
 # MongoDB merchant reports
 
+The [retained dataset publisher](publisher/README.md) turns these reviewed
+native reports into immutable CSV data products with recurring refresh,
+versioned seller operation and snapshot-bound buyer handoffs. Use the merchant
+workspace's **Dataset publisher** tab or `starforge mongodb-publisher`.
+
 Publish approved MongoDB aggregation reports through the existing SF30 seller.
 The merchant chooses collections, fixed pipelines, output fields, typed request
 parameters and public payment options. The original seller still owns HTTP,
