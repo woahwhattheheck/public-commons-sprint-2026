@@ -19,6 +19,7 @@ const identity=()=>({id:crypto.randomUUID(),createdAt:new Date().toISOString()})
 let createIdentity=identity();
 const base=()=>'/api/qbo/plans/'+encode(selected);
 const cancelled=()=>detail?.record?.status==='CANCELLED';
+const receivable=()=>detail?.record?.status==='REVIEWED';
 const approved=()=>!cancelled()&&(Boolean(detail?.record?.review)||['REVIEWED','BOOKED'].includes(detail?.record?.status));
 const resumable=item=>responseRecord(item)?.status==='PENDING'&&!cancelled();
 const cancellable=()=>Boolean(detail)&&!['BOOKED','CANCELLED'].includes(detail.record.status)&&!responses().some(item=>responseRecord(item).status==='PENDING');
@@ -70,8 +71,8 @@ function controls(){
   $('qbo-company-load').disabled=!writable;$('qbo-company-manual').disabled=!writable||!loadedCompany;
   $('qbo-response-resume').disabled=!writable||!resumable(responseDetail);
   document.querySelectorAll('[data-qbo-resume]').forEach(button=>{button.disabled=!writable||cancelled();});
-  $('qbo-import').disabled=!writable||!detail||!approved()||fileLoading||!loadedFile;
-  $('qbo-apply').disabled=!writable||!responsePreview||cancelled();
+  $('qbo-import').disabled=!writable||!receivable()||fileLoading||!loadedFile;
+  $('qbo-apply').disabled=!writable||!responsePreview||!receivable();
   $('qbo-clear-preview').disabled=busy;
   $('qbo-retry').disabled=busy||!pending;$('qbo-dismiss-retry').disabled=busy;
   $('qbo-fill-accounts').disabled=!writable||!draftSelected.size;
@@ -82,7 +83,7 @@ function controls(){
     input.disabled=!writable||!eligible(sourceById.get(id))||(input.type!=='checkbox'&&!draftSelected.has(id));
   }
   for(const button of $('qbo-plan-list').querySelectorAll('button'))button.disabled=busy;
-  for(const form of ['qbo-create-form','qbo-review-form','qbo-response-form','qbo-company-form','qbo-cancel-form'])for(const input of $(form).querySelectorAll('input,select,textarea'))if(!input.closest('#qbo-mappings'))input.disabled=busy||Boolean(pending)||((form==='qbo-response-form'||form==='qbo-review-form')&&cancelled());
+  for(const form of ['qbo-create-form','qbo-review-form','qbo-response-form','qbo-company-form','qbo-cancel-form'])for(const input of $(form).querySelectorAll('input,select,textarea'))if(!input.closest('#qbo-mappings'))input.disabled=busy||Boolean(pending)||((form==='qbo-response-form'&&!receivable())||(form==='qbo-review-form'&&cancelled()));
   $('qbo-operator').disabled=busy||Boolean(pending);
   document.body.classList.toggle('working',busy);
 }
@@ -188,6 +189,10 @@ function renderPlan(){
   renderIssues($('qbo-plan-issues'),p.issues);$('qbo-request-json').textContent=JSON.stringify(journal(p),null,2);
   $('qbo-request-downloads').innerHTML=[...(approved()?[download('journal-entry.json','QuickBooks journal request')]:[]),download('plan.json','Complete plan JSON'),download('accountant.csv','Source-linked accountant CSV'),download('review.html','Offline journal review')].join('');
   $('qbo-review-form').hidden=approved()||cancelled();
+  if(r.status==='BOOKED')$('qbo-file-status').textContent='This journal is booked. Reopen its retained response and original accountant return below.';
+  else if(cancelled())$('qbo-file-status').textContent='This journal is cancelled. Its saved source and history remain available.';
+  else if(r.status==='DRAFT')$('qbo-file-status').textContent='Approve this retained journal in Journal review before choosing its received response.';
+  else if(!loadedFile)$('qbo-file-status').textContent='Choose the complete received JSON file.';
   $('qbo-cancel-form').hidden=!cancellable();
   $('qbo-cancel-status').textContent=cancelled()?'This plan is cancelled. Create a new journal plan to use these source events.':r.status==='BOOKED'?'The journal is linked to a saved accountant return. Its retained history remains available.':responses().some(item=>responseRecord(item).status==='PENDING')?'Complete the pending accountant return before changing this plan.':'Cancel this retained plan when it will not be used. Its source events become available for a new journal plan.';
   $('qbo-review-status').textContent=cancelled()?'Cancelled plans retain their saved source and history.':r.review?'Approved by '+r.review.actor+' · '+date(r.review.createdAt):'Approve the retained source, amounts and accounts to enable the journal request download.';
@@ -287,7 +292,7 @@ function renderResponsePreview(){
   controls();
 }
 async function previewResponse(){
-  if(!detail||!loadedFile||!approved())throw new Error('Choose an approved saved journal plan and its complete QuickBooks response.');
+  if(!detail||!loadedFile||!receivable())throw new Error('Choose a reviewed journal awaiting its saved QuickBooks response.');
   const id=selected,token=responseToken;
   await reading(async()=>{
     const current=await api('/api/qbo/handoffs/'+encode(detail.plan.handoffId));if(selected!==id||token!==responseToken)return;
@@ -461,7 +466,7 @@ $('qbo-preview-previous').addEventListener('click',()=>{previewOffset=Math.max(0
 $('qbo-preview-next').addEventListener('click',()=>{previewOffset+=PAGE;renderResponsePreview();});
 $('qbo-clear-preview').addEventListener('click',()=>{invalidateResponse();showView('response');});
 $('qbo-apply').addEventListener('click',()=>attempt(async()=>{
-  if(!responsePreview||responsePreview.planId!==selected||cancelled())throw new Error('Preview the received response against this journal before saving.');
+  if(!responsePreview||responsePreview.planId!==selected||!receivable())throw new Error('Preview the received response against this reviewed journal before saving.');
   const intent=responsePreview;
   await perform({path:base()+'/responses',body:intent.request,description:'QuickBooks response and accountant return',message:intent.value.result.kind==='FAULT'?'The received QuickBooks fault is retained for review.':'The saved QuickBooks journal is linked to the original accountant return.',success:async result=>{
     selectedResponse=result.response?.id??intent.request.id;invalidateResponse();loadedFile=null;++fileToken;fileLoading=false;$('qbo-response-file').value='';$('qbo-response-name').value='';$('qbo-file-status').textContent='Choose the complete received JSON file.';showView(intent.value.result.kind==='FAULT'?'response':'return');
