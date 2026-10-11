@@ -62,7 +62,8 @@ export async function readReleaseCatalogReview(path) {
 
 async function originalOffers(root, releaseId) {
   const release = await inspectRelease(root, releaseId);
-  const bytes = await readBytes(join(resolve(root), 'releases', release.id, 'seller-service.json'));
+  // Match the original Python release reader's service bound as well as SF61.
+  const bytes = await readBytes(join(resolve(root), 'releases', release.id, 'seller-service.json'), 4 * LIMIT);
   if (hash(bytes) !== release.source.serviceConfigSha256) fail('RELEASE_SOURCE_CHANGED');
   const service = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   if (!Array.isArray(service.routes) || !service.routes.length || service.routes.length > 1000)
