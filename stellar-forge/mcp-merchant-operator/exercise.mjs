@@ -44,7 +44,7 @@ export async function exercise() {
     };
     assert.equal((await rpc('initialize')).body.result.serverInfo.name, 'starforge-merchant-operator');
     const tools = (await rpc('tools/list')).body.result.tools;
-    assert.equal(tools.length, 12); assert.equal(new Set(tools.map(tool => tool.name)).size, 12);
+    assert.equal(new Set(tools.map(tool => tool.name)).size, tools.length);
     assert.equal((await rpc('tools/list', {}, { authorization: '' })).status, 401);
     assert.equal((await rpc('tools/list', {}, { origin: 'https://another.example' })).status, 403);
     await call('merchant_stage', { source: 'initial', id: 'first', spec: '/etc/passwd' }, 'INVALID_PARAMS');

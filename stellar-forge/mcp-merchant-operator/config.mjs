@@ -4,6 +4,7 @@ import { dirname, resolve, isAbsolute, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { initReleaseStore, readReleaseState } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs';
 import { readReleaseWorkspace, inspectUpstreamConfiguration } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-upstreams.mjs';
+import { readReleaseCatalogConfig } from '../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-catalog.mjs';
 import { importOpenApi } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/importer.mjs';
 import { createSellerServiceConfig } from '../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-config.mjs';
 
@@ -107,7 +108,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -116,28 +117,34 @@ export async function readMerchantConfig(path) {
     sources[alias] = sourceDefinition(source, base, alias);
   }
   const config = { schema: CONFIG_SCHEMA, name: line(raw.name, 'Merchant name'),
-    releaseStore: hostPath(raw.releaseStore, base), exportsDirectory: hostPath(raw.exportsDirectory, base), sources };
+    releaseStore: hostPath(raw.releaseStore, base), exportsDirectory: hostPath(raw.exportsDirectory, base), sources,
+    catalog: raw.catalogConnection === undefined ? null
+      : await readReleaseCatalogConfig(hostPath(raw.catalogConnection, base)) };
   await readReleaseState(config.releaseStore);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
   return config;
 }
-export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, runtime = {} }) {
+export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, runtime = {}, catalog }) {
   const root = resolve(directory);
   name = line(name, 'Merchant name');
   const source = sourceDefinition({ label: 'Initial merchant configuration', spec, selections, bindings, workspace, upstreams, runtime }, process.cwd(), 'initial');
   const preview = await inspectMerchantSource(source);
+  const catalogConnection = catalog === undefined ? undefined : hostPath(catalog, process.cwd());
+  if (catalogConnection) await readReleaseCatalogConfig(catalogConnection);
   await mkdir(root, { mode: 0o700 });
   await initReleaseStore(join(root, 'releases'));
   await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
   const path = join(root, 'merchant-mcp.json');
   await writePrivate(path, { schema: CONFIG_SCHEMA, name,
-    releaseStore: './releases', exportsDirectory: './customer-exports', sources: {
+    releaseStore: './releases', exportsDirectory: './customer-exports',
+    ...(catalogConnection ? { catalogConnection } : {}), sources: {
       initial: { label: source.label, runtime: source.runtime,
         ...(source.workspace ? { workspace: source.workspace } : { spec: source.spec, selections: source.config,
           bindings: source.bindings, ...(source.upstreams ? { upstreams: source.upstreams } : {}) }) },
     } });
   await readMerchantConfig(path);
   return { schema: CONFIG_SCHEMA, configuration: path, sourceAlias: 'initial', state: 'INITIALIZED',
+    catalogConfigured: Boolean(catalogConnection),
     sourceType: preview.sourceType, sourceDigests: preview.sourceDigests, inputPackage: preview.inputPackage,
     environment: preview.environment, credentialValuesChecked: false };
 }
