@@ -723,6 +723,7 @@ or automatically retry a request.
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
+| `starforge arcgis` / `arcgis-publisher` | Retain ArcGIS layers, publish reviewed datasets and receive original Esri FeatureSets from finalized buyer deliveries |
 | `starforge sheets-source` | Retain an actual Google cell response, inspect headers and prepare an explicit public projection |
 | `starforge sheets-publisher` | Review and publish selected Sheet observations through the original retained dataset and buyer workflow |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
@@ -3389,6 +3390,29 @@ exports the same original reports with optional captured sources. Its ordinary
 `merchant-accounting` command accepts the same optional `--recovered-dir`.
 The public `./merchant/recovery` entry exposes the original importer, collection
 reader and saved-response export for applications embedding this workflow.
+
+## ArcGIS source publication and GIS receiving
+
+Use `starforge arcgis` (or `arcgis-publisher`) for the maintained
+[ArcGIS workflow](../sf30-seller-sdk/arcgis/README.md): capture a FeatureServer or
+MapServer layer, or import retained original feature sets; select explicit
+native fields; review and publish through the existing dataset publisher.
+Stable object IDs, scalar attributes, geometry and coordinate reference stay
+in their original Esri representation. The same merchant supplies the original
+SF88 buyer configuration and snapshot-bound page query.
+
+Prepare the public receiving declaration with `starforge arcgis receiving-plan`
+for the retained candidate. After the original SF100 delivery has been
+finalized, `starforge arcgis receive` streams its exact typed JSONL into a usable
+Esri FeatureSet. It verifies the complete retained page chain and source binding
+before publishing the output. Payment history remains with the original buyer.
+The maintained merchant MCP also accepts a host-declared ArcGIS publisher;
+its source credentials remain private environment references.
+
+The package exports `@tokenjunkielabs/starforge-merchant/seller/arcgis`,
+`/seller/arcgis/publisher` and `/buyer/arcgis` for applications. The component
+reuses the included original publisher, dataset and buyer-delivery modules and
+adds no optional native dependency.
 
 ## Run an existing Python merchant
 
