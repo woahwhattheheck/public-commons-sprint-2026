@@ -19,15 +19,13 @@ function sourceResult(response, query) {
 }
 
 /**
- * serviceConfig and bindings are the ORIGINAL prepared seller documents.
- * selections only choose existing route IDs, MCP names and explicit native terms.
- * SQL, source paths, credentials, limits and output columns never come from callers.
+ * Compile the ORIGINAL prepared source description, service and bindings without
+ * opening a source or signer. Preparation and runtime share the same selection
+ * checks; no substitute route or handler is created for offline review.
  */
-export function createDataSourceTools({source, serviceConfig, bindings, selections} = {}) {
-  requireValue(typeof source?.route === 'function' && typeof source?.describe === 'function' &&
-    Array.isArray(serviceConfig?.routes) && object(bindings) && Array.isArray(selections) &&
+export function compileDataToolDeclarations({description, serviceConfig, bindings, selections} = {}) {
+  requireValue(object(description) && Array.isArray(serviceConfig?.routes) && object(bindings) && Array.isArray(selections) &&
     selections.length > 0 && selections.length <= 32, 'DATA_MCP_BINDINGS_REQUIRED');
-  const description = source.describe();
   const queries = description.schema === 'stellar-forge.duckdb-description.v1' ? description.queries : description;
   requireValue(object(queries), 'DATA_MCP_SOURCE_DESCRIPTION_INVALID');
   const names = new Set(), selectedRoutes = new Set();
@@ -60,27 +58,38 @@ export function createDataSourceTools({source, serviceConfig, bindings, selectio
       'DATA_MCP_TOOL_NAME_INVALID');
     const accepts = selection.accepts ?? route.offer.accepts;
     requireValue(Array.isArray(accepts) && accepts.length > 0, 'DATA_MCP_NATIVE_TERMS_REQUIRED');
+    names.add(name); selectedRoutes.add(selection.routeId);
+    const example = wireInput[key];
+    return {routeId:selection.routeId, query:binding.query, name,
+      description:route.offer.resource.description, accepts:copy(accepts), inputSchema:copy(inputSchema),
+      ...(example === undefined ? {} : {example:copy(example)}),
+      annotations:{readOnlyHint:true, destructiveHint:false, idempotentHint:false, openWorldHint:false}};
+  });
+}
+
+/** Bind original callbacks after the same preparation compiler accepts them. */
+export function createDataSourceTools({source, serviceConfig, bindings, selections} = {}) {
+  requireValue(typeof source?.route === 'function' && typeof source?.describe === 'function',
+    'DATA_MCP_BINDINGS_REQUIRED');
+  const declarations = compileDataToolDeclarations({description:source.describe(), serviceConfig, bindings, selections});
+  return declarations.map(({routeId, query, ...tool}) => {
     // All providers already expose this body route. Its original binder supplies
     // defaults, exact values, null/enum semantics, unknown-field checks and limits.
-    const original = source.route(binding.query, {input:'body'});
+    const original = source.route(query, {input:'body'});
     requireValue(typeof original.admit === 'function' && typeof original.handler === 'function',
       'DATA_MCP_SOURCE_ROUTE_INVALID');
     const context = (args, extra) => ({method:'POST', body:args, signal:extra.signal});
-    names.add(name); selectedRoutes.add(selection.routeId);
-    const example = wireInput[key];
-    return {name, description:route.offer.resource.description, accepts:copy(accepts), inputSchema:copy(inputSchema),
-      ...(example === undefined ? {} : {example:copy(example)}),
-      annotations:{readOnlyHint:true, destructiveHint:false, idempotentHint:false, openWorldHint:false},
+    return {...tool,
       async admit(args, extra) {
         try {
           const response = await original.admit(context(args, extra));
-          return response === true ? true : sourceResult(response, binding.query);
+          return response === true ? true : sourceResult(response, query);
         } catch (issue) {
           if (!['SOURCE_CLOSED','SOURCE_BUSY'].includes(issue?.code)) throw issue;
-          return sourceResult({status:issue.code === 'SOURCE_BUSY' ? 429 : 503, body:{error:issue.code}}, binding.query);
+          return sourceResult({status:issue.code === 'SOURCE_BUSY' ? 429 : 503, body:{error:issue.code}}, query);
         }
       },
-      async handler(args, extra) { return sourceResult(await original.handler(context(args, extra)), binding.query); }};
+      async handler(args, extra) { return sourceResult(await original.handler(context(args, extra)), query); }};
   });
 }
 
