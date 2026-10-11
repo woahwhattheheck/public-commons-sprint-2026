@@ -71,6 +71,7 @@ function guide(manifest) {
     '# Migration handover', '', manifest.title,
     '', 'Project: ' + manifest.projectId, 'Project edition: ' + manifest.projectRevision,
     'Prepared by: ' + manifest.actor, 'Prepared at: ' + manifest.createdAt,
+    'Receiving team: ' + manifest.receiver, '', manifest.note,
     '', '## Reopen', '',
     'Open the original API merchant workspace, choose Migrations, then import this handover under a new workspace name.',
     'The import creates a separate private workspace and verifies every file before making it available.',
@@ -115,8 +116,10 @@ export async function openMigrationHandovers({ projects, releases, acquisition, 
     need(body.length === value.manifest.archive.bytes && sha256(body) === value.manifest.archive.sha256, 'Handover archive changed.');
     return { ...value, body };
   }
-  async function create({ projectId, name, expectedRevision, actor, requestId, customerExports = [] }) {
+  async function create({ projectId, name, expectedRevision, actor, requestId, receiver = '', note = '', customerExports = [] }) {
     id(name); id(requestId); need(typeof actor === 'string' && actor.trim() && actor.length <= 180, 'Enter the operator preparing this handover.');
+    need(typeof receiver === 'string' && receiver.length <= 240 && typeof note === 'string' && note.length <= 8000,
+      'Receiving team and handover note exceed their text limits.');
     const project = await projects.get(projectId);
     const existing = await optionalBytes(join(root(projectId), name, 'manifest.json'));
     if (existing) {
@@ -200,7 +203,7 @@ export async function openMigrationHandovers({ projects, releases, acquisition, 
       need((await projects.get(projectId)).revision === expectedRevision, 'The migration changed during handover preparation.');
       const collected = files.finish();
       const manifest = { schema: HANDOVER_SCHEMA, id: name, requestId, projectId, title: project.title,
-        customer: project.customer, projectRevision: project.revision, actor, createdAt: new Date().toISOString(),
+        customer: project.customer, projectRevision: project.revision, actor, receiver, note, createdAt: new Date().toISOString(),
         files: collected.files, totalBytes: collected.totalBytes, native };
       manifest.digest = manifestIdentity(manifest);
       const envelope = jsonBytes({ manifest, blobs: collected.blobs });
