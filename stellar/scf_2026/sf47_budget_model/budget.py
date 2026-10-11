@@ -154,6 +154,7 @@ def model(data):
                                       rounding=ROUND_HALF_UP)) for share in SHARES]})
     return {
         "status":"ILLUSTRATIVE_UNSENT_NOT_GRANTED",
+        "application_state":data.get("application_state", "NOT_REPORTED_BY_THIS_SCENARIO"),
         "award_request_usd":cents(award),
         "planned_future_costs_usd":cents(total),
         "project_end_day":project_end,
@@ -167,13 +168,11 @@ def model(data):
         "peak_prefunding_gap_usd":cents(deficit_peak),
         "peak_gap_day":worst_day,
         "xlm_price_scenarios_not_live_quotes":sensitivities,
-        "critical_unknowns":["no SCF grant eligibility/award/invitation",
-            "current x402 RFP quarter status unresolved",
-            "applicant human identity/team and legal capacity unverified",
-            "staff rates, hours, vendor quotes and actual workplan not yet sourced",
-            "award disbursement approval lags unknown, XLM settlement price variable",
-            "a proposed 180-day day-offset schedule does not replace calendar review",
-            "no funds transferred or committed; no work may be funded from assumption"],
+        "critical_unknowns":data.get("planning_inputs_to_complete", [
+            "award and milestone-specific acceptance terms",
+            "actual contributor capacity, rates and incremental service costs",
+            "actual review/payment lag and source of working capital",
+            "calendar dates corresponding to modeled day offsets"]),
         "source_urls":[
             "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award",
             "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines",

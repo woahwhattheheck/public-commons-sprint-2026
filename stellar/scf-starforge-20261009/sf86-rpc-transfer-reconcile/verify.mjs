@@ -1,6 +1,7 @@
 import {checkOriginalTerms, requireTruth, digest, DEFAULT_RPC, LOCAL_RPC, object, ReconciliationError} from './terms.mjs';
 import {rpc} from './rpc-transport.mjs';
 export {validStrKey,ReconciliationError,DEFAULT_RPC} from './terms.mjs';
+const EVENT_PAGE_LIMIT=200;
 export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractEvent,
   rpcEndpoint=DEFAULT_RPC,maxEventPages=24} = {}) {
   const {intentId, requirement:q, receipt:r}=checkOriginalTerms(record,payer);
@@ -17,7 +18,7 @@ export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractE
   for (let i=0; i<maxEventPages; i++) {
     const params={...(cursor ? {} : {startLedger:tx.ledger}),
       filters:[{type:'contract',contractIds:[q.asset]}],
-      pagination:{limit:200,...(cursor ? {cursor} : {})}};
+      pagination:{limit:EVENT_PAGE_LIMIT,...(cursor ? {cursor} : {})}};
     const out=await rpc('getEvents',params,rpcEndpoint,fetchImpl);
     eventPages++;
     requireTruth(Array.isArray(out.events), 'EVENTS_SHAPE_UNRECOGNIZED');
@@ -43,6 +44,13 @@ export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractE
       requireTruth(count <= 1, 'AMBIGUOUS_TRANSFERS');
     }
     if(reachedEnd) break;
+    // Stellar RPC also returns a cursor after exhausting its scan window. A
+    // short page with an index caught up to this transaction covers its whole
+    // ledger; full pages still need pagination to rule out another transfer.
+    if(out.events.length < EVENT_PAGE_LIMIT &&
+      Number.isSafeInteger(out.latestLedger) && out.latestLedger >= tx.ledger) {
+      reachedEnd=true; break;
+    }
     const next=out.cursor ?? out.pagination?.cursor ?? null;
     if (!next) { reachedEnd=true; break; }
     requireTruth(typeof next === 'string' && next !== cursor && next !== previousCursor,

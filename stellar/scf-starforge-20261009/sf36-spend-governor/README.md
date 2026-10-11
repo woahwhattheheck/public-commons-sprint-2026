@@ -66,7 +66,7 @@ ledger.close()
 
 **The snippet is illustrative operator wiring**, not evidence that a live network receipt exists. The `a*64` digest in the snippet is a placeholder to be replaced by an actual independently verified provider receipt hash; never use that placeholder operationally.
 
-The HMAC **issuer and finality watcher are privileged operations**: deploy separately from untrusted agents/tool calls and do not expose them through MCP. Their source-of-truth permission/finality verification, key rotation, ledger/account controls, and external independent checkpoint are additional production tasks. An attacker who obtains those keys or DB admin plus signing authority can forge approvals. Do not claim this module alone enforces Soroban wallet allowances or bank-level guarantees.
+The HMAC **issuer and finality watcher are privileged operations**: deploy separately from untrusted agents/tool calls and do not expose them through MCP. The [original finalization worker](FINALIZATION.md) now connects the retained SF62/SF81/SF82 approved request to fresh SF86 testnet transfer observation and this same ledger. Key rotation, operator-host custody and an external independent checkpoint remain deployment responsibilities. An attacker who obtains those keys or DB admin plus signing authority can forge approvals; this module alone does not enforce onchain wallet allowances.
 
 ### Complete-intent consent boundary (source upgrade, October 10)
 
@@ -101,11 +101,10 @@ This runs only the changed authorization, limits, replay, reconciliation, receip
 
 ### Known operational gaps (handoff to original product integration owners)
 
-- No network proof fetcher, wallet SDK integration, onchain cap enforcement, trustline lookup, token decimal registry, payment reversal/refund, external journal checkpoint, multi-tenant SSO, automatic key rotation or deployed uptime metrics.
-- Production reconnects must establish a new verified finality watcher and authenticated ledger link. A signed operator attestation alone does not prove a transaction occurred; verify actual onchain amount/token/recipient/ledger/network.
+- The original [worker](FINALIZATION.md) composes the actual SF86 exact-testnet proof fetcher, complete original request and authenticated ledger link. Mainnet/upto observer integration, onchain cap enforcement, payment reversal/refund, independent journal checkpoint, multi-tenant SSO and automatic key rotation remain outside this worker.
+- Run it against the original private buyer-host capture and existing ledger. A signed operator attestation alone does not establish a transaction; the worker independently checks the actual original RPC amount/token/recipient/ledger/network first.
 - Operational fee spending and `upto` fees must be tracked separately; the policy here budgets **paid resource transfer amounts only**, not facilitator-sponsored XLM transaction fees or vendor platform costs.
 - HMAC keys are process capabilities: an agent controlling the process may forge consent. Protect the service runtime and keys using existing authorized custody; this SDK should be hosted behind an authenticated, rate-limited operator service before production use.
-- The RFP's presence for SCF Round #46 is not confirmed (current listing is #45); no application/interest form submitted.
 
 **Ownership boundary:** `SF-36` spend governor only. Do not duplicate SF-31 buyer client, SF-32 `upto` Stellar scheme work, SF-29 federation, or SF-38 network conformance. License this original code permissively under the accompanying MIT LICENSE (not AGPL). No GitHub Actions/workflows are added.
 
