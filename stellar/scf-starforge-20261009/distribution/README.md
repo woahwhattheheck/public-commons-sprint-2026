@@ -131,6 +131,8 @@ or automatically retry a request.
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
+| `starforge merchant-desk` | Private paid-file order inventory, enrollment, handoffs, access controls and support |
+| `starforge paid-file-checkout` / `paid-file-purchase` | Original merchant file checkout and approved customer purchase/download |
 | `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
 | `starforge sqlite-init` / `sqlite-inspect` | Prepare and inspect an original SQLite named-query source |
 | `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
@@ -188,6 +190,58 @@ describes the complete browser workflow and application API.
 packaged file, component inventory, archive version and optional dependency
 declarations. It does not infer a grant submission, merchant onboarding, customer
 payment, or settlement from installation or an HTTP response.
+
+## Operate paid-file orders
+
+The original SF101 merchant desk turns the existing checkout and access tools
+into one local operator workflow. It lists enrolled orders and their current
+delivery/access state, enrolls a selected approved file, exports or recovers the
+same customer handoff, checks the original file, and performs revision-checked
+access changes with the original reason and operation history. It uses the
+merchant's existing SQLite store and checkout configuration.
+
+Use Python 3.11 or newer on the merchant's existing POSIX host. Prepare the real
+checkout configuration using the
+[original paid-file guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf101-merchant-receiver/CHECKOUT.md).
+Keep the approved files in a separate private directory. Files must already be
+regular private files, at most 32 MiB. Provision the merchant's existing claim
+token in its original environment; only its variable name is passed below.
+
+```sh
+npx --no-install starforge merchant-desk init \
+  --dir /private/merchant/order-desk \
+  --config /private/merchant/checkout.json \
+  --files /private/merchant/approved-files \
+  --claim-env SF101_CLAIM_TOKEN --actor merchant-operations
+npx --no-install starforge merchant-desk inspect --workspace /private/merchant/order-desk
+npx --no-install starforge merchant-desk start --workspace /private/merchant/order-desk
+```
+
+Open the printed private URL. Initialize the original store in the desk when
+needed, select a file and order reference, then export the native buyer handoff.
+An interrupted export can recover the enrolled order without enrolling or
+charging again. Access changes include suspend, resume, expiry and claim-token
+rotation; the original access implementation checks the displayed revision and
+records the operation. Claim-token values never appear in the browser or handoff.
+
+`init` creates only private launch settings and an export directory. It requires
+a new workspace and preserves existing merchant state. `start` reopens that same
+workspace. Files, exports, order state and delivery outbox have separate roots.
+The desk can run beside the merchant's existing checkout and delivery processes;
+it does not start a buyer, signer or payment. See the
+[merchant desk guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/README.md)
+for the complete enrollment, recovery and customer handoff workflow.
+
+For the original commands after handoff:
+
+```sh
+npx --no-install starforge paid-file-checkout serve --config /private/merchant/checkout.json
+npx --no-install starforge paid-file-purchase inspect --handoff /private/customer/order.json
+```
+
+The original checkout guide supplies the native facilitator, authenticated SF98
+delivery and existing receiver configuration for actual payment and file release.
+The desk's order view does not infer settlement or payment from enrollment.
 
 ## Publish a changing dataset
 

@@ -90,7 +90,10 @@
     "checkout": "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
     "purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs",
     "buyer-object": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs",
-    "merchant-mcp": "stellar-forge/mcp-merchant-operator/serve.mjs"
+    "merchant-mcp": "stellar-forge/mcp-merchant-operator/serve.mjs",
+    "merchant-desk": "stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/cli.mjs",
+    "paid-file-checkout": "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
+    "paid-file-purchase": "stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -138,7 +141,11 @@
     "./buyer/object": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-session.mjs",
     "./buyer/object-description": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-description.mjs",
     "./merchant/mcp": "./source/stellar-forge/mcp-merchant-operator/operator.mjs",
-    "./merchant/mcp/server": "./source/stellar-forge/mcp-merchant-operator/serve.mjs"
+    "./merchant/mcp/server": "./source/stellar-forge/mcp-merchant-operator/serve.mjs",
+    "./seller/merchant-desk": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/server.mjs",
+    "./seller/merchant-desk/workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/workspace.mjs",
+    "./seller/paid-file": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.mjs",
+    "./buyer/paid-file": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/purchase.mjs"
   },
   "nativePeers": {
     "@x402/core": {

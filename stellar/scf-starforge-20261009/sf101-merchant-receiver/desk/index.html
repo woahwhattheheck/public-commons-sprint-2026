@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <title>Merchant desk</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./desk.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to orders</a>
+  <header class="app-header">
+    <div class="brand"><span class="brand-mark" aria-hidden="true">M</span><div><h1>Merchant desk</h1><p>Private file delivery</p></div></div>
+    <div class="session-state"><span id="connection-state" class="badge">Connecting</span><span id="actor-label" class="muted"></span></div>
+  </header>
+
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <main id="main">
+    <section id="connect-panel" class="connection-panel" aria-labelledby="connect-title" hidden>
+      <span class="eyebrow">Private workspace</span>
+      <h2 id="connect-title">Open the desk from its launch link</h2>
+      <p id="connect-message">Use the link printed by your merchant desk launcher. It connects this tab to your private workspace.</p>
+      <button id="reconnect" type="button" hidden>Reconnect this tab</button>
+    </section>
+
+    <div id="desk" hidden>
+      <section class="workspace-bar" aria-label="Merchant workspace">
+        <div class="workspace-heading"><span class="eyebrow">Checkout</span><strong id="checkout-description">Merchant checkout</strong><span id="checkout-resource" class="mono muted"></span></div>
+        <div class="workspace-terms"><span id="checkout-network" class="badge"></span><span id="checkout-amount" class="mono"></span></div>
+        <div class="toolbar">
+          <button id="workspace-open" type="button">Workspace</button>
+          <button id="support-export" type="button" data-needs-init>Export support</button>
+          <button id="enroll-open" class="primary" type="button" data-needs-init>Enroll file</button>
+        </div>
+      </section>
+
+      <section id="initialize-panel" class="initialize-panel" aria-labelledby="initialize-title" hidden>
+        <div><h2 id="initialize-title">Set up this merchant workspace</h2><p>Initialize the order store, then select an approved file to create your first customer handoff.</p></div>
+        <button id="initialize" class="primary" type="button">Initialize workspace</button>
+      </section>
+
+      <div class="desk-grid">
+        <section class="inventory panel" aria-labelledby="orders-title">
+          <div class="panel-heading"><div><span class="eyebrow">Inventory</span><h2 id="orders-title">Orders <span id="order-count" class="count"></span></h2></div><button id="refresh-orders" type="button" data-needs-init>Refresh</button></div>
+          <div class="inventory-controls">
+            <label class="field compact">Access &amp; delivery<select id="order-status" data-needs-init><option value="all">All orders</option><option value="pending">Awaiting entitlement</option><option value="available">Available</option><option value="suspended">Suspended</option><option value="expired">Expired</option></select></label>
+            <form id="order-jump" class="jump-form"><label class="field compact" for="jump-ref">Open order reference<input id="jump-ref" name="ref" type="text" maxlength="80" placeholder="approved-order-482" autocomplete="off" spellcheck="false" pattern="[A-Za-z0-9._:\-]{1,80}" required data-needs-init></label><button type="submit" data-needs-init>Open</button></form>
+          </div>
+          <div id="inventory-summary" class="inventory-summary muted"></div>
+          <div id="order-table-wrap" class="table-wrap" tabindex="0" aria-label="Order inventory">
+            <table class="order-table"><caption class="sr-only">Merchant order inventory. Open an order to inspect its file and manage access.</caption><thead><tr><th scope="col">Order reference</th><th scope="col">Order state</th><th scope="col">Access</th><th scope="col" class="numeric">File</th></tr></thead><tbody id="order-rows"></tbody></table>
+          </div>
+          <div id="orders-empty" class="empty-state" hidden><h3 id="orders-empty-title">No orders yet</h3><p id="orders-empty-copy">Enroll an approved file to create an order and customer handoff.</p></div>
+          <div id="orders-loading" class="inline-progress" role="status" hidden>Loading orders…</div>
+          <footer class="pagination"><span id="page-label" class="muted">Page 1</span><label class="page-size">Per page<select id="page-size" aria-label="Orders per page" data-needs-init><option>25</option><option>50</option><option>100</option></select></label><button id="previous-page" type="button" disabled>Previous</button><button id="next-page" type="button" disabled>Next</button></footer>
+        </section>
+
+        <section id="detail-panel" class="detail panel" aria-labelledby="detail-title">
+          <div id="detail-empty" class="detail-empty"><div class="empty-mark" aria-hidden="true">↗</div><h2 id="detail-title">Select an order</h2><p>Inspect the entitlement, verify its file, and manage future access.</p></div>
+          <div id="detail-content" hidden>
+            <div class="panel-heading detail-heading"><div><span class="eyebrow">Order detail</span><h2 id="detail-ref" class="mono" tabindex="-1"></h2></div><button id="refresh-detail" type="button">Refresh</button></div>
+            <div class="detail-status"><span id="native-status" class="badge"></span><span id="access-status" class="badge"></span><span id="detail-revision" class="muted"></span></div>
+            <p id="access-explanation" class="detail-explanation"></p>
+            <dl id="order-facts" class="facts"></dl>
+
+            <section class="detail-section" aria-labelledby="delivery-title">
+              <div class="section-heading"><h3 id="delivery-title">Customer delivery</h3></div>
+              <p class="muted">Recover the customer handoff or export the current entitlement receipt for this order.</p>
+              <div class="button-row"><button id="handoff-export" type="button">Export handoff</button><button id="receipt-export" type="button">Export receipt</button></div>
+              <div id="order-export-result" class="export-result" hidden></div>
+            </section>
+
+            <section class="detail-section" aria-labelledby="file-title">
+              <div class="section-heading"><h3 id="file-title">Enrolled file</h3><button id="file-inspect" type="button">Inspect file</button></div>
+              <dl id="file-facts" class="facts"></dl>
+              <div id="file-health" class="file-health" aria-live="polite"><p class="muted">Inspect the current server file to compare it with the enrolled promise.</p></div>
+            </section>
+
+            <section class="detail-section" aria-labelledby="access-title">
+              <div class="section-heading"><h3 id="access-title">Access controls</h3></div>
+              <p class="muted">Changes apply to future checkout and download requests. The entitlement stays with this order.</p>
+              <div class="access-actions"><button id="suspend-access" type="button">Suspend access</button><button id="resume-access" type="button">Resume access</button><button id="set-expiry" type="button">Set deadline</button><button id="clear-expiry" type="button">Remove deadline</button><button id="rotate-token" type="button">Rotate claim credential</button></div>
+              <p id="access-unavailable" class="muted" hidden>Access controls become available when the current policy revision has loaded.</p>
+            </section>
+
+            <section class="detail-section" aria-labelledby="history-title">
+              <div class="section-heading"><h3 id="history-title">Access history</h3><span id="history-count" class="muted"></span></div>
+              <ol id="access-history" class="history"></ol>
+              <p id="history-empty" class="muted" hidden>No access changes recorded.</p>
+            </section>
+            <footer class="detail-footer muted" id="detail-captured"></footer>
+          </div>
+          <div id="detail-loading" class="inline-progress" role="status" hidden>Loading order…</div>
+        </section>
+      </div>
+      <footer class="app-footer"><span>Merchant workspace</span><span id="last-sync">Waiting for inventory</span></footer>
+    </div>
+  </main>
+
+  <dialog id="workspace-dialog" aria-labelledby="workspace-title">
+    <div class="dialog-heading"><div><span class="eyebrow">Configuration</span><h2 id="workspace-title">Merchant workspace</h2></div><button type="button" class="icon-button" data-close="workspace-dialog" aria-label="Close workspace">×</button></div>
+    <div class="dialog-body"><p class="muted">This desk uses the checkout configuration selected at launch. Enrollment and access changes share the same merchant order store.</p><dl id="workspace-facts" class="facts"></dl><h3>Available claim variables</h3><p class="muted">The desk resolves these variables on the server. Their values are never displayed here.</p><ul id="workspace-claims" class="variable-list"></ul></div>
+    <div class="dialog-footer"><button type="button" data-close="workspace-dialog">Close</button></div>
+  </dialog>
+
+  <dialog id="enroll-dialog" class="enroll-dialog" aria-labelledby="enroll-title">
+    <form id="enroll-form">
+      <div class="dialog-heading"><div><span class="eyebrow">New order</span><h2 id="enroll-title">Enroll an approved file</h2></div><button type="button" class="icon-button" data-close="enroll-dialog" aria-label="Close enrollment">×</button></div>
+      <div class="dialog-body">
+        <p class="muted">Choose an existing private file. The order inherits this checkout’s payment terms, and its handoff records the exact file hash and size.</p>
+        <label class="field">Order reference<input id="enroll-ref" name="ref" type="text" maxlength="80" pattern="[A-Za-z0-9._:\-]{1,80}" autocomplete="off" spellcheck="false" placeholder="approved-order-482" required><span class="field-help">Use up to 80 letters, numbers, periods, underscores, colons or hyphens. Do not start with a hyphen or use only one or two periods.</span></label>
+        <div class="field"><label for="enroll-file">Approved file</label><select id="enroll-file" name="file" required><option value="">Loading files…</option></select><div class="file-picker-footer"><span id="file-picker-status" class="field-help"></span><button id="load-more-files" class="text-button" type="button" hidden>Load more files</button><button id="reload-files" class="text-button" type="button">Refresh files</button></div></div>
+        <label class="field">Claim credential variable<select id="enroll-claim" name="claimEnv" required></select><span class="field-help">Select the server variable holding this customer’s claim credential. Provision its value to the customer through your existing private channel.</span></label>
+        <dl id="enroll-terms" class="facts compact-facts"></dl>
+        <div id="enroll-feedback" class="form-feedback" role="status" hidden></div>
+        <div id="enroll-export-result" class="export-result" hidden></div>
+      </div>
+      <div class="dialog-footer"><button type="button" data-close="enroll-dialog">Close</button><button id="enroll-submit" class="primary" type="submit">Enroll &amp; export handoff</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="access-dialog" aria-labelledby="access-dialog-title">
+    <form id="access-form">
+      <div class="dialog-heading"><div><span class="eyebrow">Access change</span><h2 id="access-dialog-title">Review change</h2></div><button type="button" class="icon-button" data-close="access-dialog" aria-label="Close access change">×</button></div>
+      <div class="dialog-body">
+        <p id="access-dialog-copy"></p><dl id="access-dialog-facts" class="facts compact-facts"></dl>
+        <label id="expiry-field" class="field" hidden>Access deadline<input id="access-expiry" name="expiresAt" type="datetime-local" step="1"><span class="field-help">Entered in this browser’s local time. The exact saved deadline is shown in UTC.</span></label>
+        <label id="rotate-field" class="field" hidden>New claim credential variable<select id="access-claim" name="claimEnv"></select><span class="field-help">Choose the server variable containing the replacement credential. The previous credential stops working after the change.</span></label>
+        <label class="field">Reason<input id="access-reason" name="reason" type="text" maxlength="500" placeholder="Reason for this access change" required><span class="field-help">Recorded with your operator identity in the access history.</span></label>
+        <div id="access-feedback" class="form-feedback" role="status" hidden></div>
+      </div>
+      <div class="dialog-footer"><button type="button" data-close="access-dialog">Cancel</button><button id="access-submit" class="primary" type="submit">Apply change</button></div>
+    </form>
+  </dialog>
+</body>
+</html>
