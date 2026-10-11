@@ -37,6 +37,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
+  delivery-workspace                         Configure receivers and operate retained delivery recovery
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source

@@ -184,6 +184,7 @@ or automatically retry a request.
 | `starforge buyer-node` | Review, execute and recover a generated-client purchase through the original Node buyer |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
+| `starforge delivery-workspace` | Configure receiver revisions, operate the original worker and recover selected exhausted events |
 | `starforge merchant-desk` | Private paid-file order inventory, enrollment, handoffs, access controls and support |
 | `starforge paid-file-checkout` / `paid-file-purchase` | Original merchant file checkout and approved customer purchase/download |
 | `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
@@ -674,6 +675,67 @@ Every range remains an original inbox job with its existing approval, ledger
 and native outcome. Restart uses the same state and original acquisition;
 completed parts remain available. The `./buyer/object-workspace` subpath exposes
 the original `startObjectWorkspace` API.
+
+## Operate merchant delivery in the browser
+
+Use the merchant's existing SF98 outbox and a separate private workspace for
+receiver profiles and operator controls. Set the shared receiver secret in the
+process environment before launch; each profile stores its environment-variable
+name. The original Linux delivery lease requires `flock` from util-linux, with
+Node 22.16 or later. The parent directories must already exist.
+
+```sh
+npx --no-install starforge delivery-workspace serve \
+  --workspace /private/merchant/delivery-operations \
+  --state /private/merchant/sf98 --port 8462
+```
+
+Open the printed loopback URL. Create a receiver profile with its public HTTPS
+URL, exact allowed host and secret environment name, then review the selected
+revision and delivery settings. Start the worker for ongoing delivery, or drain
+one cycle. The event list and details show the original outbox state, attempts,
+next delivery time and receiver outcome. Editing a receiver creates a new
+revision; the running worker keeps its selected revision until changed explicitly.
+
+Select exhausted events to prepare a recovery job. The workspace pauses its
+owned worker, reconciles each exact selected event through the shared original
+recovery helper, retains each result, and can resume delivery with the selected
+receiver. An interrupted job reopens against those same event identities and
+saved results. The original outbox remains the event and retry authority.
+
+Restart with the same workspace and outbox to reopen receiver revisions,
+maintenance history and retained controls. A saved running selection restarts
+its worker; **Pause** persists the paused state across restart. When moving an
+existing standalone delivery service into this workspace, stop that service
+with its existing service controls first. The shared kernel lease coordinates
+the original worker, drain and recovery paths on that outbox.
+
+The complete `sf98-merchant-delivery` component, browser assets and
+`WORKSPACE.md` are included in the archive. Its `SERVICE.md` retains the original
+standalone worker deployment instructions. Applications can use the same
+controller and browser server through the installed public entries:
+
+```js
+import { startDeliveryWorkspace } from
+  '@tokenjunkielabs/starforge-merchant/seller/delivery/workspace';
+
+const delivery = await startDeliveryWorkspace({
+  directory: '/private/merchant/delivery-operations',
+  outboxDirectory: '/private/merchant/sf98',
+  port: 8462,
+});
+console.log(delivery.url);
+// In the application's shutdown handler:
+// await delivery.close();
+```
+
+`./seller/delivery/control` exposes `openDeliveryWorkspace`, including the
+original SF30 recovery callback and retained batch controls.
+`./seller/delivery/workspace` also exports `createDeliveryWorkspaceHandler` for
+the host's private operator listener. The existing outbox API stays at
+`./seller/delivery`; `./seller/delivery/worker` and `./seller/delivery/recovery`
+expose the original worker and shared same-event recovery functions. Follow the
+included workspace guide for mounting, allowed origins and lifecycle ownership.
 
 ## Give customers a usable client
 
