@@ -227,8 +227,13 @@ export class DurableCatalogTransaction {
       return {decision:'accepted',reason:'COMMITTED',...output};
     });
   }
-  retire(input) {
+  retire(input,{expectedHead}={}) {
     return this.#enqueue(async()=>{
+      // Check the lease INSIDE the serialized write queue, not before awaiting
+      // earlier operations. Callers without expectedHead retain old behavior.
+      if (expectedHead !== undefined &&
+          (!hex(expectedHead) || ledger(this.#operations).head !== expectedHead))
+        fail('RETIREMENT_EXPECTED_HEAD_MISMATCH');
       const operation=normalizeRetire(input);
       const output=await this.#commit(operation);
       return {decision:'accepted',reason:'RETIRED',...output};
