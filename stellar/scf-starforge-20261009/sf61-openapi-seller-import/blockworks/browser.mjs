@@ -39,6 +39,11 @@ async function api(path, body) {
   if (!response.ok) throw new Error(value.error ?? 'Workspace request failed.');
   return value;
 }
+async function originalFileText(file) {
+  if (!(file instanceof File) || !file.size) throw new Error('Select the original source or response file.');
+  try { return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(await file.arrayBuffer()); }
+  catch { throw new Error(file.name + ' must contain valid UTF-8 text.'); }
+}
 async function importArchive(name, file) {
   if (!(file instanceof File) || !file.size || file.size > 32 * 1024 * 1024)
     throw new Error('Select a complete migration handover up to 32 MiB.');
@@ -327,7 +332,7 @@ submit('source-form', async (f, form) => {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) throw new Error('Original response metadata must be an object.');
   const status = f.status ? Number(f.status) : metadata.status ?? null;
   if (status !== null && (!Number.isInteger(status) || status < 100 || status > 599)) throw new Error('Retain the recorded HTTP status or leave it empty for a file export.');
-  const result = await api('source/add', input({ kind: f.kind, name: f.file.name, content: await f.file.text(),
+  const result = await api('source/add', input({ kind: f.kind, name: f.file.name, content: await originalFileText(f.file),
     provenance: { ...metadata, url: f.url || metadata.url || null, capturedAt: utc(f.capturedAt) ?? metadata.capturedAt ?? null,
       reference: f.reference || metadata.reference || null, importedBy: operator(), status } }));
   await refreshProject(); await renderInventory(); form.elements.file.value = ''; note('Retained ' + result.retained.name + ' in edition ' + current.project.sequence + '.');
@@ -345,7 +350,7 @@ submit('acquisition-form', async (f, form, submitter) => {
 });
 submit('capture-form', async (f, form) => {
   await api('acquisition/import', { projectId: projectId(), id: f.id, url: f.url, status: Number(f.status), headers: parse(f.headers, 'Response headers'),
-    body: await f.file.text(), capturedAt: utc(f.capturedAt), provenance: { reference: f.reference, importedBy: operator() } });
+    body: await originalFileText(f.file), capturedAt: utc(f.capturedAt), provenance: { reference: f.reference, importedBy: operator() } });
   await refreshProject(); await openAcquisition(f.id); form.elements.file.value = ''; note('Imported the original native response.');
 });
 submit('mapping-form', async f => {
