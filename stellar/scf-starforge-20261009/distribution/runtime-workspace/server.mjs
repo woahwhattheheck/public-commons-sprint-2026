@@ -38,6 +38,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
+    ['/applications.mjs', 'applications.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
     ['/image.mjs', 'image.mjs', 'text/javascript; charset=utf-8'],
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
@@ -88,6 +89,13 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (req.method === 'GET' && url.pathname === '/api/handoff') {
         const value = params(url, ['runtimeId']); return send(200, await model.handoff(value.runtimeId));
       }
+      if (req.method === 'GET' && url.pathname === '/api/applications/state') {
+        params(url, []); return send(200, await model.applicationsState());
+      }
+      if (req.method === 'GET' && url.pathname === '/api/applications/output')
+        return send(200, await model.applicationsOutput(params(url, ['applicationId', 'operationId'])));
+      if (req.method === 'GET' && url.pathname === '/api/applications/terminal')
+        return send(200, await model.applicationsTerminal(params(url, ['applicationId', 'operationId'])));
       if (req.method === 'GET' && url.pathname === '/api/managed/state')
         return send(200, await model.managedState(params(url, ['homeId'])));
       if (req.method === 'GET' && url.pathname === '/api/managed/config')
@@ -129,6 +137,22 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (url.pathname === '/api/resume-queued') {
         const value = await body(req, ['operationId']); return send(202, await model.resumeQueued(value.operationId));
       }
+      if (url.pathname === '/api/applications/review')
+        return send(200, await model.applicationsReview(await body(req, ['runtimeId', 'kind', 'settings', 'label', 'applicationId', 'expectedRevision', 'homeId'])));
+      if (url.pathname === '/api/applications/save')
+        return send(201, await model.applicationsSave(await body(req, ['requestId', 'reviewId', 'applicationId'])));
+      if (url.pathname === '/api/applications/connect')
+        return send(202, await model.applicationsConnect(await body(req, ['applicationId'])));
+      if (url.pathname === '/api/applications/start-review')
+        return send(200, await model.applicationsStartReview(await body(req, ['applicationId'])));
+      if (url.pathname === '/api/applications/start')
+        return send(202, await model.applicationsStart(await body(req, ['applicationId', 'requestId', 'reviewId'])));
+      if (url.pathname === '/api/applications/stop')
+        return send(202, await model.applicationsStop(await body(req, ['applicationId', 'operationId'])));
+      if (url.pathname === '/api/applications/recover')
+        return send(202, await model.applicationsRecover(await body(req, ['applicationId', 'operationId'])));
+      if (url.pathname === '/api/applications/input')
+        return send(202, await model.applicationsInput(await body(req, ['applicationId', 'operationId', 'inputId', 'text'])));
       if (url.pathname === '/api/managed/open')
         return send(201, await model.openManagedHome(await body(req, ['directory', 'label'])));
       if (url.pathname === '/api/managed/review')

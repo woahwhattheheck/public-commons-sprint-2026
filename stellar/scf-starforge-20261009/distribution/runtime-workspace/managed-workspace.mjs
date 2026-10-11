@@ -3,6 +3,7 @@ import { mkdir, readdir, lstat, realpath } from 'node:fs/promises';
 import { join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
+import { applicationEnvironment } from './application-command.mjs';
 import { activate, rollback, doctor } from '../../sf46-release/product.mjs';
 import { inspectMerchantRuntime, adoptMerchantRuntime, inspectInstalledRuntime } from '../../sf46-release/runtime-package.mjs';
 import { HOME_SCHEMA, MANIFEST, releaseId, validateId, verifyRelease, atomicFile, withHomeLock } from '../../sf46-release/release-core.mjs';
@@ -16,7 +17,7 @@ export const managedOperationFields = Object.freeze({
   'managed-inspect': ['homeId', 'releaseId', 'load'],
   'managed-doctor': ['homeId', 'releaseId', 'requireNative', 'requiredFeatures'],
   'managed-config-save': ['homeId', 'path', 'content', 'expectedSha256'],
-  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision'],
+  'managed-run': ['homeId', 'releaseId', 'command', 'args', 'expectedRevision', 'applicationId', 'terminal', 'terminalPython', 'environmentFile', 'environmentSha256'],
 });
 const TYPES = ['managed-homes', 'managed-reviews', 'managed-observations'];
 const pathFor = (root, type, id) => join(root, type, recordId(id) + '.json');
@@ -231,6 +232,14 @@ export async function normalizeManagedOperation(root, request) {
     'MANAGED_FEATURE_LIST_INVALID');
   }
   if (request.operation === 'managed-run') {
+    need(request.terminal === undefined || typeof request.terminal === 'boolean', 'MANAGED_TERMINAL_BOOLEAN_REQUIRED');
+    if (request.applicationId !== undefined) recordId(request.applicationId);
+    if (request.terminalPython !== undefined) { need(request.terminal === true, 'MANAGED_TERMINAL_REQUIRED'); absolute(request.terminalPython); }
+    if (request.environmentFile !== undefined) {
+      absolute(request.environmentFile);
+      const environment = await applicationEnvironment(request.environmentFile, request.environmentSha256);
+      request.environmentSha256 = environment.sha256;
+    } else need(request.environmentSha256 === undefined, 'MANAGED_ENVIRONMENT_FILE_REQUIRED');
     need(typeof request.command === 'string' && Object.hasOwn(selected.commands, request.command), 'MANAGED_ORIGINAL_COMMAND_REQUIRED');
     need(Array.isArray(request.args) && request.args.length <= 100 && request.args.every(arg =>
       typeof arg === 'string' && !arg.includes('\0') && Buffer.byteLength(arg) <= 8000) &&
@@ -322,7 +331,24 @@ export async function stopManagedCommand(root, id) {
   const directory = operationPath(root, id), request = await readJSON(join(directory, 'request.json'));
   need(request.operation === 'managed-run', 'MANAGED_COMMAND_REQUIRED');
   const state = await readJSON(join(directory, 'state.json'));
-  if (state.phase !== 'RUNNING') return { operationId: id, phase: state.phase, stopped: false, reopened: true };
+  if (!['QUEUED', 'RUNNING'].includes(state.phase)) return { operationId: id, phase: state.phase, stopped: false, reopened: true };
+  if (state.phase === 'QUEUED') {
+    let lease;
+    try {
+      lease = await operationLease(join(directory, 'worker.lock'));
+      const latest = await readJSON(join(directory, 'state.json'));
+      if (latest.phase === 'QUEUED') {
+        const result = { operation: 'original-command', releaseId: request.releaseId, digest: request.releaseDigest,
+          command: request.command, args: request.args, cwd: request.homeDirectory,
+          state: 'STOPPED', stopped: true, launched: false, exitCode: null, signal: null, completedAt: now() };
+        await saveJSON(join(directory, 'command-result.json'), result);
+        await saveJSON(join(directory, 'state.json'), { ...latest, phase: 'SUCCEEDED', updatedAt: now(),
+          completedAt: result.completedAt, result }, true);
+        return { operationId: id, phase: 'SUCCEEDED', stopped: true, result };
+      }
+    } catch (error) { if (error.code !== 'RUNTIME_WORKSPACE_OPERATION_RUNNING') throw error; }
+    finally { if (lease) await lease.close(); }
+  }
   const path = join(directory, 'stop.json');
   if (!await readJSON(path, true)) {
     try { await saveJSON(path, { requestedAt: now(), signal: 'SIGTERM' }); }

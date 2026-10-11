@@ -21,6 +21,15 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace managed-recover --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-stop --workspace DIRECTORY --operation-id UUID
   runtime-workspace managed-config --workspace DIRECTORY --home-id ID [--path RELATIVE_FILE]
+  runtime-workspace applications --workspace DIRECTORY
+  runtime-workspace application-review --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-save --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-start-review --workspace DIRECTORY --application-id ID
+  runtime-workspace application-start --workspace DIRECTORY --request PRIVATE_JSON
+  runtime-workspace application-connect --workspace DIRECTORY --application-id ID
+  runtime-workspace application-stop --workspace DIRECTORY --application-id ID --operation-id UUID
+  runtime-workspace application-recover --workspace DIRECTORY --application-id ID --operation-id UUID
+  runtime-workspace application-output --workspace DIRECTORY --application-id ID --operation-id UUID
 
 The private browser receives an original archive or reuses an existing runtime,
 reviews exact dependency profiles, prepares and resumes original installations,
@@ -30,6 +39,13 @@ Install workers retain progress and continue across browser/server restarts.
 Linux, Node22.16+, Python3.11+, npm and flock are the original installer requirements.
 `;
 const allowed = {
+  applications: ['--workspace'],
+  'application-review': ['--workspace', '--request'], 'application-save': ['--workspace', '--request'],
+  'application-start': ['--workspace', '--request'],
+  'application-start-review': ['--workspace', '--application-id'], 'application-connect': ['--workspace', '--application-id'],
+  'application-stop': ['--workspace', '--application-id', '--operation-id'],
+  'application-recover': ['--workspace', '--application-id', '--operation-id'],
+  'application-output': ['--workspace', '--application-id', '--operation-id'],
   'managed-open': ['--workspace', '--home', '--label'], 'managed-status': ['--workspace', '--home-id'],
   'managed-review': ['--workspace', '--home-id', '--runtime-id'], 'managed-operation': ['--workspace', '--request'],
   'managed-recover': ['--workspace', '--operation-id'], 'managed-stop': ['--workspace', '--operation-id'],
@@ -70,7 +86,17 @@ export async function main(argv = process.argv.slice(2)) {
   }
   const model = await openRuntimeWorkspace({ directory });
   let result;
-  if (command === 'managed-open') {
+  if (command === 'applications') result = await model.applicationsState();
+  else if (['application-review', 'application-save', 'application-start'].includes(command)) {
+    if (!options['--request']) fail('APPLICATION_REQUEST_FILE_REQUIRED');
+    const method = { 'application-review': 'applicationsReview', 'application-save': 'applicationsSave', 'application-start': 'applicationsStart' }[command];
+    result = await model[method](await readJSON(resolve(options['--request'])));
+  } else if (['application-start-review', 'application-connect', 'application-stop', 'application-recover', 'application-output'].includes(command)) {
+    if (!options['--application-id']) fail('APPLICATION_ID_REQUIRED');
+    const method = { 'application-start-review': 'applicationsStartReview', 'application-connect': 'applicationsConnect',
+      'application-stop': 'applicationsStop', 'application-recover': 'applicationsRecover', 'application-output': 'applicationsOutput' }[command];
+    result = await model[method]({ applicationId: options['--application-id'], ...(options['--operation-id'] ? { operationId: options['--operation-id'] } : {}) });
+  } else if (command === 'managed-open') {
     if (!options['--home']) fail('MANAGED_HOME_REQUIRED');
     result = await model.openManagedHome({ directory: resolve(options['--home']), label: options['--label'] });
   } else if (command === 'managed-status') result = await model.managedState({ homeId: options['--home-id'] ?? null });
