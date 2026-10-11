@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
+import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { config, catalog, operation, bytes, need } from './config.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
@@ -27,7 +28,7 @@ async function review(c) {
 }
 async function discover(c) {
   const input = catalog(c.catalog);
-  const result = await new X402BuyerClient().discover(input);
+  const result = await new X402BuyerClient({fetchImpl:createPublicHttpsFetch()}).discover(input);
   print({
     mode:'ORIGINAL_UNSIGNED_CATALOG', source:result.source,
     sourceEnvelope:result.sourceEnvelope,
