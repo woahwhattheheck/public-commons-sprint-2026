@@ -18,5 +18,5 @@ export async function openSqliteQueryFile(filename) {
   if (!record(config) || config.schema !== 'stellar-forge.sqlite-source.v1' || typeof config.database !== 'string')
     throw new TypeError('Expected stellar-forge.sqlite-source.v1 configuration');
   return createSqliteQuerySource({ database: resolve(dirname(path), config.database), queries: config.queries,
-    maxPending: config.maxPending, startupTimeoutMs: config.startupTimeoutMs });
+    maxPending: config.maxPending, startupTimeoutMs: config.startupTimeoutMs, workerCount: config.workerCount });
 }
