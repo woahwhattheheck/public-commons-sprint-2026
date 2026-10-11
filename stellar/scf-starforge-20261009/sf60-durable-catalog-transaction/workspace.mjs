@@ -91,8 +91,9 @@ function verifyRecord(record, expectedId) {
   return record;
 }
 function brief(record) {
+  const { declaration, request, ...summary } = record.summary;
   return { id: record.id, operation: record.operation, phase: record.phase, digest: record.digest,
-    createdAt: record.createdAt, updatedAt: record.updatedAt, summary: record.summary,
+    createdAt: record.createdAt, updatedAt: record.updatedAt, summary: { ...summary, sequence: summary.sequence ?? request?.sequence },
     error: record.error ?? null, policySha256: record.policySha256 };
 }
 function validateIntent(operation, input) {
@@ -155,7 +156,8 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
   const lockPath = join(stateDirectory, '.workspace.lock');
   const lock = await open(lockPath, 'wx', 0o600);
   let lockIdentity, server, closePromise, closing = false, origin;
-  const active = new Set(), memoryOutcomes = new Map(), connections = new Set();
+  const active = new Set(), requests = new Set(), memoryOutcomes = new Map(), connections = new Set();
+  const summaries = new Map();
   let mutationQueue = Promise.resolve(), pendingWrites = 0;
   const secret = randomBytes(32).toString('hex');
   const assetRoot = new URL('./workspace-ui/', import.meta.url);
@@ -164,7 +166,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
   const readRecord = async id => memoryOutcomes.get(id) ?? verifyRecord(await readPrivate(recordPath(id)), id);
   const save = async (record, exclusive = false) => {
     await writePrivate(stateDirectory, `${record.id}.json`, record, exclusive);
-    memoryOutcomes.delete(record.id);
+    memoryOutcomes.delete(record.id); summaries.set(record.id, brief(record));
   };
   const serialize = fn => {
     if (closing) return Promise.reject(Object.assign(new Error('WORKSPACE_CLOSING'), { httpStatus: 503 }));
@@ -182,9 +184,9 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
     }
   };
   const listOperations = async (offset, limit) => {
-    const names = (await readdir(stateDirectory)).filter(name => uuid(name.slice(0, -5)) && name.endsWith('.json'));
-    const rows = [];
-    for (const name of names) rows.push(brief(await readRecord(name.slice(0, -5))));
+    // Keep only compact metadata in memory; selecting an operation reads its
+    // full original input/result. Paging never rereads all uploaded files.
+    const rows = [...summaries.values()];
     rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
     return { total: rows.length, offset, limit, items: rows.slice(offset, offset + limit) };
   };
@@ -211,7 +213,7 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
       // A known success stays recoverable in this process even if persistence
       // fails. On restart the durable 'sending' record becomes unknown.
       record.persistenceError = 'OUTCOME_NOT_SAVED_EXPORT_NOW';
-      memoryOutcomes.set(id, structuredClone(record));
+      memoryOutcomes.set(id, structuredClone(record)); summaries.set(id, brief(record));
     }
     return record;
   };
@@ -318,12 +320,14 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
       const id = name.slice(0, -5);
       if (!name.endsWith('.json') || !uuid(id)) continue;
       const record = await readRecord(id);
+      summaries.set(id, brief(record));
       if (record.phase === 'sending') {
         record.phase = 'unknown'; record.error = 'WORKSPACE_INTERRUPTED_AFTER_INTENT'; record.updatedAt = now(); await save(record);
       }
     }
     await call('status'); // Fail startup without an actual original daemon.
     server = createServer((req, res) => {
+      requests.add(req); req.once('close', () => requests.delete(req));
       const job = route(req, res).catch(error => {
         if (error.code === 'ENOENT') send(res, 404, { error: 'NOT_FOUND' });
         else send(res, error.httpStatus ?? (Number.isInteger(error.statusCode) ? 422 : 502), { error: safeCode(error) });
@@ -349,6 +353,9 @@ export async function openCatalogWorkspace({ directory, stateDirectory, port = 0
         closing = true;
         const stopped = new Promise((done, reject) => server.close(error => error ? reject(error) : done()));
         server.closeIdleConnections();
+        // Incomplete browser bodies have not entered the command queue. End
+        // them now; fully admitted native commands retain completion ownership.
+        for (const req of requests) if (!req.complete) req.destroy();
         await mutationQueue;
         await Promise.allSettled([...active]);
         for (const socket of connections) socket.destroy();
