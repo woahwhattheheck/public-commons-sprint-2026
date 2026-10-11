@@ -286,14 +286,16 @@ export async function openCommerce(directory, { nativeFactory, environment = pro
       seller = await startSellerService({ config, port: saved.seller.port, handlers, nativeFactory: nativeFactory ?? null });
     }
     for (const job of jobs) bindMerchantPurchase(seller.compiled, job);
-    operations = await startSellerOperations(seller, { port: saved.operationsPort });
+    operations = await startSellerOperations(seller, { port: saved.operationsPort,
+      historyDirectory: join(directory, 'usage'), historyRetentionDays: 90 });
     state = 'RUNNING';
     const status = async () => ({ schema: SESSION, state, directory,
       seller: { url: seller.url, publicOrigin: config.publicOrigin, mode: seller.mode,
         health: seller.url + '/_seller/health', docs: seller.url + '/_seller/docs', lifecycle: seller.lifecycle.snapshot() },
       facilitator: seller.facilitator?.status() ?? { mode: saved.seller.facilitator ? 'EXISTING_HTTP_FACILITATOR' :
         nativeFactory ? 'TRUSTED_NATIVE_EMBEDDING' : 'NOT_CONFIGURED' },
-      operations: { url: operations.url, traffic: operations.observer.snapshot() },
+      operations: { url: operations.url, traffic: operations.observer.snapshot(),
+        historyUrl: operations.url + '/history.json', usageHistory: operations.history.status() },
       buyers: await Promise.all((await queue.list()).map(async job => ({ ...job,
         merchant: bindMerchantPurchase(seller.compiled, job) }))),
     });

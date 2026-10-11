@@ -125,7 +125,10 @@ The readiness output shows the actual seller URL, developer portal, original
 facilitator status, operations dashboard and every selected buyer's state.
 Each selection is bound to the running merchant's original compiled route and
 one complete offered network/asset/recipient/amount/timeout tuple. Open the
-printed operations URL to watch this same seller session.
+printed operations URL to watch this same seller session. Original SF30 usage
+history is stored in the session's private `usage` directory with its existing
+90-day retention. The operations `/history.json` and `/history.csv` exports
+retain original day/route HTTP outcomes and latency across merchant restarts.
 
 The terminal accepts these commands; substitute an intent ID from readiness:
 
@@ -165,7 +168,8 @@ SIGTERM; it does not read commands from a pipe as payment instructions.
 ## Reopen and hand off
 
 Run the same `start` command to reopen the session. The merchant gets a new
-process-local traffic observer; the original buyer inbox preserves requests,
+process-local traffic observer and reuses the same original usage history;
+the original buyer inbox preserves requests,
 attempt markers, outcomes and recovery. A previously attempted or cancelled
 intent is shown from retained state rather than executed again. Use the
 original inbox's recovery command and existing SF36/chain records for an
@@ -185,10 +189,12 @@ Changed handler code or session snapshots are reported before startup; prepare
 a new deliberate session when changing the merchant setup. Existing inbox
 records remain available separately through the original commands.
 
-Shutdown awaits the original buyer's cancellation, then the original merchant's
+Shutdown awaits all original buyer review, signer-check and execution children,
+then the original merchant's
 drain. The self-facilitated seller drains its own native facilitator after
 accepted merchant work. The operations observer stays attached through that
-process. The original `drained`/forced-close result is retained, and a forced
+process and saves the final original usage checkpoint. The original
+`drained`/forced-close result is retained, and a forced
 native drain exits with status 2 as the original facilitator CLI does.
 
 ## Installed package and embedding
