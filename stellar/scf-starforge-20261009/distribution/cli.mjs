@@ -30,6 +30,9 @@ Native commands (arguments pass unchanged to the maintained implementation):
   commerce    Merchant + buyer session        inbox       Durable selected requests
   merchant-mcp                               Operate native merchant releases from an MCP client
   mcp-native                                Prepare and operate the original native buyer MCP workspace
+  mcp-buyer                                 Run the existing private HTTP buyer and operator console
+  mcp-results                               Read, export and recover original saved MCP results
+  mcp-data                                  Serve prepared SQLite/PostgreSQL/DuckDB/ClickHouse queries over MCP
   mcp-stdio / mcp-client-config              Run and register that buyer with a local MCP host
   merchant-mcp-stdio / merchant-mcp-client-config  Run and register original merchant MCP tools locally
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend

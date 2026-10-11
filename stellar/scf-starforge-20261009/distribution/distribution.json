@@ -195,7 +195,10 @@
     "merchant-accounting-recovery": "stellar/scf-starforge-20261009/merchant-settlement-accounting/recovery-cli.mjs",
     "catalog-workspace": "stellar/scf-starforge-20261009/sf60-durable-catalog-transaction/workspace.mjs",
     "buyer-object-workspace": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs",
-    "availability": "stellar/scf-starforge-20261009/sf30-seller-sdk/availability/cli.mjs"
+    "availability": "stellar/scf-starforge-20261009/sf30-seller-sdk/availability/cli.mjs",
+    "mcp-buyer": "stellar-forge/mcp-paid-agent/serve.mjs",
+    "mcp-results": "stellar-forge/mcp-paid-agent/result-cli.mjs",
+    "mcp-data": "stellar-forge/mcp-paid-agent/data-serve.mjs"
   },
   "exports": {
     ".": "./source/stellar/scf-starforge-20261009/distribution/index.mjs",
@@ -349,7 +352,12 @@
     "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs",
     "./buyer/mcp/remote": "./source/stellar-forge/mcp-paid-agent/remote-mcp.mjs",
     "./buyer/mcp/native-operator": "./source/stellar-forge/mcp-paid-agent/native-mcp-operator.mjs",
-    "./merchant/mcp/paid-tools": "./source/stellar-forge/mcp-paid-agent/paid-tool-server.mjs"
+    "./merchant/mcp/paid-tools": "./source/stellar-forge/mcp-paid-agent/paid-tool-server.mjs",
+    "./buyer/mcp/server": "./source/stellar-forge/mcp-paid-agent/serve.mjs",
+    "./buyer/mcp/result-store": "./source/stellar-forge/mcp-paid-agent/result-store.mjs",
+    "./buyer/mcp/result-cli": "./source/stellar-forge/mcp-paid-agent/result-cli.mjs",
+    "./merchant/mcp/data-tools": "./source/stellar-forge/mcp-paid-agent/data-tools.mjs",
+    "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs"
   },
   "nativePeers": {
     "@x402/core": {

@@ -313,6 +313,9 @@ or automatically retry a request.
 | `starforge commerce` | Persistent native merchant, operations and selected buyer session |
 | `starforge merchant-mcp` | MCP staging, comparison, activation, seller lifecycle and customer SDK export through the original release system |
 | `starforge mcp-native` | Initialize and operate the original native buyer MCP workspace |
+| `starforge mcp-buyer` | Run the original private HTTP buyer with its retained quote and result workspace |
+| `starforge mcp-results` | List, read, export or locally recover complete original MCP results |
+| `starforge mcp-data` | Serve existing prepared SQLite, PostgreSQL, DuckDB or ClickHouse data products as native paid MCP tools |
 | `starforge mcp-stdio` / `mcp-client-config` | Run and register that buyer in an existing local MCP host |
 | `starforge merchant-mcp-stdio` / `merchant-mcp-client-config` | Run and register original merchant tools in an existing local MCP host |
 | `starforge commerce-setup` | Prepare exact merchant requests and one shared native buyer workspace |
@@ -1022,6 +1025,86 @@ full payment terms and input schemas come from that same running server.
 On shutdown, await the server's original `close()` to drain accepted work and
 release native signer ownership. Operator configuration, wallet material and
 retained purchase state stay in the operator's private directories.
+
+### Serve prepared data through native paid MCP
+
+The `mcp-data` command opens an existing prepared SQLite, PostgreSQL, DuckDB or
+ClickHouse source through its original provider and native paid-tool server.
+Create the private operator JSON from
+`source/stellar-forge/mcp-paid-agent/DATA_TOOLS.md`. That guide covers the exact
+source/service/bindings files, selected routes, payment terms, discovery, complete
+query results and shutdown. The SQLite generated-handler mapping and original
+public parameter schemas are consumed as documented there.
+
+```sh
+npx --no-install starforge doctor --feature mcp
+npx --no-install starforge mcp-data --config /private/operator/data-mcp.json
+```
+
+The existing whole SF30 component includes all four dynamically selected provider
+modules and their original worker/runtime files. Use the existing MCP dependency
+setup above and the selected provider's original runtime:
+
+| Provider | Runtime at the application installation root |
+| --- | --- |
+| SQLite | Node 22.16+ with its built-in SQLite module and original worker pool; no added driver. |
+| PostgreSQL | `pg@8.23.1` and `pg-cursor@2.22.1`, derived from the provider's component manifest. Check `starforge doctor --feature postgres`. |
+| DuckDB | Existing Python 3.10+ with `duckdb==1.5.6`, matching the included provider requirements.txt; select that interpreter's absolute path with `python` in the operator file. |
+| ClickHouse | Original native HTTP adapter and configured endpoint/credentials; no added Node driver. |
+
+If optional dependencies were omitted, install the MCP pins and any selected
+PostgreSQL drivers at the application installation root. `doctor` checks Node
+module resolution; the original provider performs its own database/source
+preflight. DuckDB uses the explicitly selected Python environment.
+
+Embedding applications can compose the same provider or private configuration:
+
+```js
+import { createDataSourceTools, startDataToolServer } from
+  '@tokenjunkielabs/starforge-merchant/merchant/mcp/data-tools';
+import { readDataMcpConfig, startDataMcpFile } from
+  '@tokenjunkielabs/starforge-merchant/merchant/mcp/data-server';
+```
+
+### Open the buyer and consume saved results
+
+`mcp-buyer` runs the original loopback HTTP workspace. Configure
+`BAZAAR_DISCOVERY_URL`, `MCP_ACCESS_TOKEN`, `PAID_RESOURCE_ORIGINS` and private
+`MCP_STATE_DIR`; paid execution also uses the existing absolute
+`MCP_OPERATOR_MODULE`. The original README, REMOTE_MCP.md and CONSOLE.md under
+`source/stellar-forge/mcp-paid-agent/` describe setup, independent approval and
+the same-server browser. `MCP_PORT` selects its port.
+
+```sh
+npx --no-install starforge mcp-buyer
+```
+
+Use the original buyer's state directory to consume its complete saved native
+results. These commands open its quote store read-only:
+
+```sh
+npx --no-install starforge mcp-results list \
+  --state-dir /private/commerce/mcp-quotes
+npx --no-install starforge mcp-results read \
+  --state-dir /private/commerce/mcp-quotes --quote ORIGINAL_QUOTE_ID \
+  --byte-offset 0 --max-bytes 32768
+npx --no-install starforge mcp-results export \
+  --state-dir /private/commerce/mcp-quotes --quote ORIGINAL_QUOTE_ID \
+  --out /private/commerce/exports/tool-result.json
+```
+
+Range offsets count bytes; concatenate decoded ranges before UTF-8 decoding.
+Export verifies the complete original hash and creates a new destination in an
+existing private parent. `mcp-results recover` and `import` run after the writer
+closes and use the original retained completion without a new merchant, signer
+or ledger call. Complete options, MCP inbox tools and the saved-file API are in
+`source/stellar-forge/mcp-paid-agent/RESULTS.md`.
+
+```js
+import { startMcpWorkspace } from '@tokenjunkielabs/starforge-merchant/buyer/mcp/server';
+import { McpResultStore } from '@tokenjunkielabs/starforge-merchant/buyer/mcp/result-store';
+import { runResultCommand } from '@tokenjunkielabs/starforge-merchant/buyer/mcp/result-cli';
+```
 
 ### Connect native buying to an MCP host
 
