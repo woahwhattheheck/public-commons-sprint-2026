@@ -78,3 +78,27 @@ frontend mirrors this: it journals unsigned batches in the tab, offers
 resume-signing, and never invents a hash.
 
 See `backend/API-CONTRACT.md` for the exact wire format.
+
+## Sponsor's pool view
+
+The existing campaign workspace now makes its contract-backed pool accounting
+usable before sponsorship decisions. Select a campaign in the Sponsor view to
+see uncommitted funds, approved creator reserves, claimed payouts and prior
+refunds, plus an explanation of what closing or the next approval will do.
+The funded balance must reconcile with those four buckets; incomplete or
+inconsistent provider readback is flagged instead of treated as zero. The
+campaign-card meter also distinguishes its not-yet-funded budget portion.
+
+**Example (atomic units, illustrative contract state):** budget 250, funded
+250, already claimed 100, reserved for other approved creators 100, free 50,
+refunded 0. The funded 250 is fully accounted for, but another 100-unit
+approval is not affordable. A close refunds at most the currently free 50;
+the approved 100 remains reserved for creator-initiated claims after close.
+The interactive approve action previews the remaining free pool; it uses the
+existing API and wallet/operationId flow without another transaction, signing
+step, permission, backend accounting implementation or substitute auth.
+
+The selected token symbol and decimal precision come from the backend state.
+Local mode uses valueless CPDEMO and unlocked demonstration accounts; public
+mode requires actual deployed contracts and wallet signatures, neither supplied
+by this source branch. These readouts do not claim any real deployment/payment.
