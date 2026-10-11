@@ -48,6 +48,39 @@ controls requires an attached original upstream binding with idempotency. The
 original traffic, history, fulfillment and export endpoints remain read-only
 with either setting.
 
+### Launch an installed release
+
+The original [merchant package](../../distribution/README.md) includes these
+pages and modules in its seller component. From the directory where that package
+is already installed, its existing `operations` command forwards directly to
+the same launcher:
+
+```sh
+npx --no-install starforge operations --upstream --operation-controls --operations-port 8424 -- \
+  --config /private/merchant/seller.json \
+  --upstreams /private/merchant/upstreams.json \
+  --facilitator https://YOUR_EXISTING_FACILITATOR
+```
+
+The original [portable product](../../sf46-release/DISTRIBUTION.md) includes the
+same seller source and also exposes `operations`. With the merchant's actual
+installation home, use its existing launcher:
+
+```sh
+node /private/merchant-install/forge.mjs run operations --home /private/merchant-install -- \
+  --upstream --operation-controls --operations-port 8424 -- \
+  --config /private/merchant/seller.json \
+  --upstreams /private/merchant/upstreams.json \
+  --facilitator https://YOUR_EXISTING_FACILITATOR
+```
+
+Keep both `--` separators in the portable command: the first ends product
+options, and the second ends operations-listener options. These commands run the
+selected release's source; install or activate a release containing merchant
+operation recovery using the original distribution guide. Merchant configuration,
+ticket keys and operation state stay in the existing private merchant directory
+across release changes.
+
 ## Browse and reconcile
 
 Choose the original binding. Counts show all stored states in that binding;
@@ -98,6 +131,31 @@ and performs no signing, verification or settlement. Every separately approved
 paid request continues through the original payment path. Retain the buyer's
 original payment evidence and use the existing payment recovery workflow when
 that is the problem being resolved.
+
+## Join the original buyer workflow
+
+The original [SF88 merchant-ticket workflow](../../sf88-operator-buyer-cli/OPERATION_TICKETS.md)
+accepts the merchant-issued private file using `--prepare --ticket-file`, imports
+it into the existing operator workspace and preserves it in the original buyer
+queue across restarts. Its default ordinary header is `x-merchant-operation`;
+`--ticket-header` must match the merchant's configured alternative. The buyer's
+`--body-file` is the HTTP JSON body alone, while the merchant issuer's request
+file also describes the method, source URL, path values and forwarded headers.
+
+Use the existing identifiers to join that buyer operation to this console:
+
+| Identifier | Where it is used |
+| --- | --- |
+| Ticket `operationKey` | Buyer review and queue metadata; paste this exact key into the merchant console's lookup. |
+| Merchant `backendKey` | The selected console record's backend operation key; use it in the merchant's actual backend lookup or support interface. |
+| Buyer intent and payment evidence | Retain the original SF88 queue, SF36 reservation and SF82 outcome during buyer recovery. |
+
+The buyer's private ticket is never needed by this console. A merchant recovery
+decision updates only the original merchant operation ledger. It does not update
+a buyer attempt, resolve `PAYMENT_OUTCOME_UNKNOWN`, replace the SF98 order
+reference or permit another payment. Follow the existing
+[buyer inbox recovery](../../sf88-operator-buyer-cli/QUEUE.md) for those records,
+using the same operation key to share the merchant's actual finding.
 
 ## Use the maintained order backend's actual result
 
