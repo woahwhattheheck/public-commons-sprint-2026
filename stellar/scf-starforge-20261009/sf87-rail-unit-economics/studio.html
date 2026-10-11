@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Starforge | Merchant Rail Studio</title>
+  <link rel="stylesheet" href="/studio.css">
+  <script src="/studio.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="masthead">
+      <div class="brand"><span class="mark" aria-hidden="true">✦</span> STARFORGE <span class="muted">/ merchant tools</span></div>
+      <div class="eyebrow">STELLAR COMMUNITY FUND · OFFLINE OPERATOR</div>
+      <h1>Find the economics<br>behind the payment rail.</h1>
+      <p class="lede">Compare Stellar x402 Exact, MPP Charge, and MPP Session with your own request volume, sponsorship costs, and channel churn. One operator, three scenarios, zero network payments.</p>
+      <div class="assumption">Sample values are illustrative and <strong>not provider quotes</strong>. Enter actual seller costs before sharing a commercial projection.</div>
+    </header>
+    <main>
+      <section class="workspace" aria-labelledby="inputs-title">
+        <div class="heading"><div><div class="eyebrow">01 / INPUTS</div><h2 id="inputs-title">Operating assumptions</h2></div><p>Clear a cost to mark it unknown.</p></div>
+        <form id="inputs" autocomplete="off" novalidate>
+          <div id="field-groups" class="field-groups"></div>
+          <div class="actions"><button id="calculate" class="primary" type="submit">Calculate economics <span aria-hidden="true">↗</span></button><button id="reset" type="button">Reset to illustrative sample</button></div>
+          <p id="error" class="error" role="alert" aria-live="polite"></p>
+        </form>
+      </section>
+      <section id="results" class="results hidden" aria-labelledby="results-title" aria-live="polite">
+        <div class="heading"><div><div class="eyebrow">02 / DECISION</div><h2 id="results-title">Monthly scenario results</h2></div><p>Numbers are scenario projections, not live fees.</p></div>
+        <div class="metrics" id="metrics"></div>
+        <div class="table-scroll"><table><caption class="sr-only">Three-rail monthly cost comparison</caption><thead><tr><th scope="col">Rail</th><th scope="col">Onchain ops</th><th scope="col">Full cost</th><th scope="col">Contribution</th><th scope="col">Break-even calls</th></tr></thead><tbody id="rail-rows"></tbody></table></div>
+        <p id="decision" class="decision"></p>
+        <div class="actions"><button id="download-json" type="button">Download original-data JSON ↓</button><button id="download-md" type="button">Download merchant report ↓</button></div>
+        <details><summary>Cost lines, assumptions, and missing fields</summary><pre id="details"></pre></details>
+      </section>
+    </main>
+    <footer>Runs solely on <code>127.0.0.1</code> using the original SF87 Node 22 economics engine. No wallet, chain request, uploaded data, or hosted analytics.</footer>
+  </div>
+</body>
+</html>
