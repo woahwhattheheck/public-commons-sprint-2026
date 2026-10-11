@@ -20,20 +20,7 @@
           "amount": "10000",
           "maxTimeoutSeconds": 60
         },
-        "queryParameters": [
-          {
-            "name": "start",
-            "type": "string",
-            "description": "Date start, for date-window report only",
-            "required": false
-          },
-          {
-            "name": "end",
-            "type": "string",
-            "description": "Date end, for date-window report only",
-            "required": false
-          }
-        ],
+        "queryParameters": [],
         "outputExample": {
           "data": [
             {
@@ -67,14 +54,16 @@
           {
             "name": "start",
             "type": "string",
-            "description": "Date start, for date-window report only",
-            "required": false
+            "description": "Start date in YYYY-MM-DD format",
+            "required": true,
+            "example": "2026-10-01"
           },
           {
             "name": "end",
             "type": "string",
-            "description": "Date end, for date-window report only",
-            "required": false
+            "description": "End date in YYYY-MM-DD format; at most 31 days after start",
+            "required": true,
+            "example": "2026-10-10"
           }
         ],
         "outputExample": {
