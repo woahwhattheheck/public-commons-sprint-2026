@@ -178,10 +178,10 @@ export class ApiAccessClient {
       pair.every(value => typeof value === 'string')), 'QUERY_PAIRS_REQUIRED');
     need(typeof contentType === 'string' && contentType.length > 0 &&
       contentType.length <= 255 && /^[\x20-\x7e]+$/.test(contentType), 'INVALID_CONTENT_TYPE');
-    const args = ['--route',route,'--request-id',selected,'--method',method,
-      '--content-type',contentType,'--out',absolute(output)];
+    const args = ['--route='+route,'--request-id',selected,'--method',method,
+      '--content-type='+contentType,'--out',absolute(output)];
     if (bodyFile !== undefined) args.push('--body',absolute(bodyFile));
-    for (const pair of query) args.push('--query',...pair);
+    if (query.length) args.push('--query-json='+JSON.stringify(query));
     await this.inspect({signal});
     return this._result(await this._command('call', args, {signal}), selected, output);
   }
