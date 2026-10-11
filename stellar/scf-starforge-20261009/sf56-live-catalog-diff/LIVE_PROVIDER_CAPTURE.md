@@ -20,7 +20,7 @@ Node 22+, no npm dependencies. Existing cloud runtimes without DNS can use **the
 # Network-capable operator: actual read-only discovery, raw capture, static human report
 node stellar/scf-starforge-20261009/sf56-live-catalog-diff/cli.mjs live --out /tmp/sf56-live
 
-# Offline on full original JSON from GET /discovery/resources (items and total required)
+# Offline on original GET JSON: native pagination.total OR older top-level total
 node stellar/scf-starforge-20261009/sf56-live-catalog-diff/cli.mjs inspect --input /path/to/original-vellar.json --out /tmp/sf56-review
 
 # Compare two genuine saved snapshots; does not open any network connection
@@ -41,3 +41,25 @@ The current Vellar Railway origin and the `listResources({network:'stellar:testn
 3. Existing SCF founder owner chooses the correct official grant interest/application path and includes only claims supported by original source and independent acceptance. Existing business owner can demonstrate local HTML to a consenting prospective pilot, but no external contact or price/award claim is implied by source publication.
 
 **Limitations:** This is a cross-snapshot *catalog advertised-term* diff, not a DNS ownership validator or quote oracle. Origin is hard-pinned to official Vellar Railway; arbitrary third-party proxy URLs are not accepted. A listing can be removed/replaced between captures. Host availability and chain settlement remain separate independently validated steps. `providerOwnerVerified` is provider-reported only. The CLI never follows HTTP redirects.
+
+## Original native Vellar page compatibility (2026-10-11)
+
+The genuine Muse October 10 read-only Vellar testnet response has `x402Version:2`,
+`items:[...]`, and `pagination:{limit,offset,total}`, **not** top-level
+`total`. Earlier SF56 `live` rejected that provider's real 27-row HTTP200
+page and required an operator's manual flattened wrapper. The updated original
+`fetchVellar`, `analyzePages`, and `inspect` consume that native response
+**directly**, while retaining the older flat-total fixture form. The original
+UTF-8 HTTP body remains byte-for-byte unchanged in `capture.json` and its
+per-page SHA-256, even if another caller supplies a conflicting derived payload.
+
+Pagination total must be a nonnegative safe integer; contradictory flat and
+nested totals, invalid offset/limit, changing totals or incomplete retrieved
+rows fail closed. Live mode still GETs only the fixed upstream, with no redirects,
+seller paid call, payment, signing, or approval. Reproduce the focused Node22
+native-envelope regression with the existing one-file test command above. The
+existing @Muse source owner should rerun against the **unchanged original
+27/27 Vellar raw corpus** (source SHA-256
+`63a7662d63c4cc610917ddfc7f2dbd490e88a9e491abf7b7038714a51d1b8c81`)
+and then perform one real GET on the fixed provider to verify no adapter is
+needed; do not report that genuine replay as already completed by this patch.
