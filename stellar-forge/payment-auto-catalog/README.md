@@ -34,6 +34,12 @@ enum, range, or object-property constraint. Cycles remain rejected. The OpenAPI
 3.0 importer resolves its Reference Objects before this validator is invoked,
 so its separate rule for ignored Reference Object siblings is unchanged.
 
+String `minLength`/`maxLength` count Unicode code points, as specified by
+[Draft 2020-12 Validation section 6.3](https://json-schema.org/draft/2020-12/json-schema-validation#section-6.3),
+so an astral character counts once and a combining sequence keeps its original
+code points. The focused `schema-unicode.test.mjs` check includes an actual
+OpenAPI import to dynamic HTTP 402 path with a one-character Unicode parameter.
+
 ## Trust boundary
 
 The adapter does not verify signatures, Soroban authorization, transaction
