@@ -74,4 +74,4 @@ export async function main(argv=process.argv.slice(2)) {
     return 2;
   }
 }
-if(import.meta.url===new URL('file://'+process.argv[1]).href) process.exitCode=await main();
+if(process.argv[1] && import.meta.url===new URL('file://'+process.argv[1]).href) process.exitCode=await main();
