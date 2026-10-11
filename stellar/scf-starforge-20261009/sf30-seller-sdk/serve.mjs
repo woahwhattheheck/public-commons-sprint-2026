@@ -25,14 +25,19 @@ function validateConfig(config) {
   const seen = new Set();
   for (const route of config.routes) {
     if (!object(route) || !/^[A-Za-z0-9_-]{1,64}$/.test(route.id ?? '') ||
-        seen.has(route.id) || !object(route.definition) ||
+        seen.has(route.id) || OWN(route, 'definition') === OWN(route, 'offer') ||
+        !(OWN(route, 'offer') ? object(route.offer) : object(route.definition)) ||
         typeof route.path !== 'string' || !/^\/[A-Za-z0-9_.~/-]*$/.test(route.path) ||
         route.path.startsWith('/_seller/') || route.path.includes('//') ||
         new URL(route.path, 'https://seller.example').pathname !== route.path) {
       throw new TypeError('Each route needs a unique ID, canonical fixed path and SF30 definition');
     }
     seen.add(route.id);
-    if (OWN(route.definition, 'url')) throw new TypeError('Use route.path and publicOrigin instead of definition.url');
+    if (route.definition && OWN(route.definition, 'url')) throw new TypeError('Use route.path and publicOrigin instead of definition.url');
+    if (route.offer && (!config.publicOrigin ||
+        route.offer.resource?.url !== new URL(config.publicOrigin).origin + route.path)) {
+      throw new TypeError('Compiled offer URL must exactly match publicOrigin and route.path');
+    }
     if (OWN(route, 'handler') === OWN(route, 'response')) {
       throw new TypeError('Each route must choose exactly one handler export or static JSON response');
     }
@@ -100,7 +105,7 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : url;
     const compiled = compileSellerRoutes(config.routes.map(route => ({
       id: route.id,
-      definition: { ...route.definition, url: origin + route.path },
+      ...(route.offer ? { offer: route.offer } : { definition: { ...route.definition, url: origin + route.path } }),
       handler: route.handler ? handlers[route.handler] : async () => ({
         status: 200, headers: { 'content-type': 'application/json' }, body: structuredClone(route.response),
       }),
@@ -109,8 +114,8 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
     const resources = createSellerResourceHandler({ compiled, nativeServer });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
-    const info = { schema: SCHEMA, mode, routes: config.routes.map(route => ({
-      id: route.id, method: route.definition.method, url: origin + route.path,
+    const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
+      id: route.id, method: route.method, url: route.offer.resource.url,
     })) };
     dispatch = (req, res) => {
       if (req.url === '/_seller/health' || req.url === '/_seller/offers') {
@@ -171,3 +176,4 @@ export async function main(args = process.argv.slice(2)) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main().catch(error => { process.stderr.write(String(error?.message ?? error) + '\n'); process.exitCode = 1; });
 }
+

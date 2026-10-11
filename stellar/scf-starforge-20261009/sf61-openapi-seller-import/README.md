@@ -29,6 +29,55 @@ settle, register resources or submit a grant. Wire the emitted metadata into the
 existing canonical x402 payment middleware; SF25 ingestion still requires the
 authentic settled-payment callback.
 
+## Run the imported routes
+
+The existing SF30 seller service can now consume the exact compiled offers.
+Supply one explicit binding per selected operation: an `id`, the original
+OpenAPI `method` and `path`, and either `handler` (a trusted ESM export name)
+or `response` (static JSON application data, including explicit `null`).
+The importer never uses documentation examples as application responses.
+
+From the repository root, this complete example starts a real HTTP 402 route:
+
+```sh
+node stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs \
+  --spec stellar/scf-starforge-20261009/sf61-openapi-seller-import/openapi.example.json \
+  --config stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-selections.example.json \
+  --service-bindings stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-bindings.example.json \
+  --out /tmp/openapi-seller-service
+
+node stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs \
+  --config /tmp/openapi-seller-service/seller-service.json
+
+curl -i -X POST http://127.0.0.1:8423/api/v2/forecast \
+  -H 'content-type: application/json' -d '{"latitude":38.25,"longitude":-85.76}'
+```
+
+The new output directory contains `offers.json`, `seller-service.json` and
+the input/output SHA-256 manifest. The original advertised resource remains
+`https://weather.example/api/v2/forecast`; the listener is loopback and the
+example payment markers remain nonpayable. Replace them with your real source
+document, terms and application before deployment. To bind an actual application,
+use `"handler":"forecast"` instead of `response` and pass `--handlers FILE`
+to the existing seller CLI. Its native facilitator mode is described in the
+[SF30 service guide](../sf30-seller-sdk/README.md).
+
+No schema translation occurs: the runtime retains the complete original offer,
+including query/body assertions, examples and payment terms, through native
+route configuration, offer inspection and the HTTP 402 header. The original
+SF25 validator checks Bazaar metadata; original SF30 preflight checks supported
+payment/resource terms. The generated service configuration requires fixed GET,
+HEAD or JSON POST routes, one exact testnet/pubnet payment option, one public
+origin and at most 64 explicit bindings. Dynamic routes, unsupported methods,
+multiple payment options, extra payment parameters or non-Bazaar extensions
+require a different runtime integration; no partial service config is emitted.
+The existing general importer still supports its broader metadata-only mapping.
+
+Focused integration: `node stellar/scf-starforge-20261009/sf61-openapi-seller-import/service-acceptance.mjs`.
+This exercises the original compiler, CLI, service config and actual local HTTP
+GET/POST 402 responses. It makes no settlement call. Without `--facilitator`,
+the existing runtime does not execute application handlers.
+
 ## Supported mapping
 
 | OpenAPI declaration | Seller metadata |
@@ -62,7 +111,8 @@ The output passes original SF25 schema/example acceptance, including required
 fields and supported value constraints. This does not validate a real wallet,
 seller identity or payment, and is not a complete OpenAPI document validator.
 SF31's shipped 32,768-character payment header limit is checked on each result.
-Only new files in this directory are added; existing SF30/SF25 source is unchanged.
+The service adapter extends the existing SF30 runtime; the original SF30 metadata
+compiler and SF25 validator are reused unchanged.
 
 ## Focused verification
 
@@ -79,3 +129,4 @@ Contract references: [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html),
 [SF30 seller compiler](../sf30-seller-discovery/README.md), and
 [SF25 auto-catalog](../../../stellar-forge/payment-auto-catalog/README.md).
 MIT, matching the imported public components.
+
