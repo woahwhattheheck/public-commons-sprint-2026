@@ -193,3 +193,13 @@ Runtime profiles retain no environment-variable values, provider credentials,
 wallets or merchant private state. Keep the installation's existing npm lock,
 selected source archive and previous profile together for the maintained
 upgrade and recovery workflow.
+
+## Declared native readiness
+
+The original `node-agents` declaration marks its pinned `better-sqlite3` dependency with `native: "sqlite"`. The profile carries that native requirement alongside its original import probe and includes only that package in the generated npm lifecycle allowance. Native metadata is read from the selected distribution and preserved when its versions come from the original feature runtime manifest.
+
+Each inspection resolves the exact installed package and operates its SQLite binding in the existing isolated Node child. It opens an in-memory database, writes and reads inside a transaction, closes it and reports SQLite version together with the actual Node version, module ABI, platform and architecture. `check.native.state` is `READY`, `NATIVE_FAILED` or `UNAVAILABLE`. An import that succeeds while its native binding is missing leaves the profile incomplete.
+
+Native operation runs even without `--load`; ordinary selected-module imports retain their existing optional behavior. Existing inspection callers therefore receive a usable readiness result for a declared native profile. Profiles without a native preparation declaration retain their original package selection and identity.
+
+The profile inspector remains read-only with respect to installed dependency files and customer databases. The original [runtime installer](RUNTIME_INSTALL.md#native-sqlite-preparation-and-restart) owns exact-package native preparation, private logs, the kernel installation lock, offline local headers and interrupted-stage recovery. Use its original new-directory recovery after a completed runtime changes host ABI or binding.

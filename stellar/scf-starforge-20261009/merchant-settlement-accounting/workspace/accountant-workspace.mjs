@@ -5,6 +5,8 @@ import {lstat,mkdir,open,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {createHandoff,importReturn,inspectHandoff,renderCsv,renderHtml,validateHandoff,validateRevision} from '../accountant/engine.mjs';
+import {renderAdjustmentCsv,renderAdjustmentHtml} from '../adjustments.mjs';
+import {freezeAccountantAdjustments} from '../accountant/adjustments.mjs';
 
 export const ACCOUNTANT_CSV_BYTES=64*1024*1024;
 export const ACCOUNTANT_REQUEST_BYTES=Math.ceil(ACCOUNTANT_CSV_BYTES*4/3)+500_000;
@@ -82,7 +84,7 @@ export class AccountantWorkspace{
   }
   view(){return {revision:this.workspace.state.revision,handoffs:copy(records(this.workspace)),closes:copy(this.workspace.periods?.view().closes??[])};}
   async source({runId,closeId=null}){
-    const workspace=this.workspace;let periodCloseBytes=null,reviewNotesBytes=null,periodClose=null;
+    const workspace=this.workspace;let periodCloseBytes=null,reviewNotesBytes=null,periodClose=null,adjustmentsBytes=null,adjustmentFiles=null;
     if(closeId){
       check(workspace.periods,'ACCOUNTING_PERIODS_UNAVAILABLE','Open this workspace with the maintained recorded-activity periods module.');
       const close=workspace.periods.closeRow(closeId);
@@ -90,16 +92,32 @@ export class AccountantWorkspace{
       periodCloseBytes=(await workspace.periods.file(closeId,'period-close.json')).bytes;
       reviewNotesBytes=(await workspace.periods.file(closeId,'review-notes.json')).bytes;
       periodClose={id:close.id,revision:close.revision,sha256:hash(periodCloseBytes)};
+      if(JSON.parse(periodCloseBytes).adjustmentsSha256){
+        adjustmentFiles={};
+        for(const name of ['adjustments.json','adjustments.csv','adjustments.html'])
+          adjustmentFiles[name]=(await workspace.periods.file(closeId,name)).bytes;
+        adjustmentsBytes=adjustmentFiles['adjustments.json'];
+      }
     }
     const run=copy(workspace.runRow(runId));
     const reportBytes=await workspace.reportFile(runId,'report.json'),manifestBytes=await workspace.reportFile(runId,'manifest.json');
     const inputManifestBytes=await readExact(join(workspace.runPath(runId),'input-manifest.json'),{sha256:run.inputManifestSha256},{max:16_000_000});
-    return {run,reportBytes,manifestBytes,inputManifestBytes,periodCloseBytes,reviewNotesBytes,source:{runId,reportSha256:run.reportSha256,manifestSha256:run.manifestSha256,inputManifestSha256:run.inputManifestSha256,...(periodClose?{periodClose}:{})}};
+    if(!closeId&&workspace.adjustments){
+      const snapshot=await workspace.adjustments.snapshot(runId);adjustmentsBytes=json(snapshot);
+      adjustmentFiles={'adjustments.json':adjustmentsBytes,'adjustments.csv':renderAdjustmentCsv(snapshot),'adjustments.html':renderAdjustmentHtml(snapshot)};
+    }
+    return {run,reportBytes,manifestBytes,inputManifestBytes,periodCloseBytes,reviewNotesBytes,adjustmentsBytes,adjustmentFiles,
+      source:{runId,reportSha256:run.reportSha256,manifestSha256:run.manifestSha256,inputManifestSha256:run.inputManifestSha256,
+        ...(periodClose?{periodClose}:{}),...(adjustmentsBytes?{adjustmentsSha256:hash(adjustmentsBytes)}:{})}};
   }
   async prepare({runId,closeId}){
     const source=await this.source({runId,closeId});
     const report=JSON.parse(source.reportBytes.toString('utf8'));
-    return {run:source.run,source:source.source,period:report.period??null,totals:report.totals,options:report.options,rowCount:report.ledger.length};
+    const adjustments=freezeAccountantAdjustments({adjustmentsBytes:source.adjustmentsBytes,report,source:source.source,
+      periodCloseDocument:source.periodCloseBytes?JSON.parse(source.periodCloseBytes):undefined});
+    return {run:source.run,source:source.source,period:report.period??null,totals:report.totals,options:report.options,rowCount:report.ledger.length,
+      workspaceRevision:source.source.periodClose?this.workspace.state.revision:(adjustments?.source.workspaceRevision??this.workspace.state.revision),
+      ...(adjustments?{adjustments:{source:adjustments.source,summary:adjustments.summary}}:{})};
   }
   async create(value){
     const workspace=this.workspace;
@@ -120,6 +138,7 @@ export class AccountantWorkspace{
         const files={'handoff.json':json(handoff),'accountant.csv':renderCsv(handoff),'review.html':renderHtml(handoff),'original-report.json':selected.reportBytes,'original-manifest.json':selected.manifestBytes,'input-manifest.json':selected.inputManifestBytes};
         const archiveNames=['handoff.json','accountant.csv','review.html','original-report.json','original-manifest.json','input-manifest.json'];
         if(selected.periodCloseBytes){files['period-close.json']=selected.periodCloseBytes;files['review-notes.json']=selected.reviewNotesBytes;archiveNames.push('period-close.json','review-notes.json');}
+        if(selected.adjustmentFiles)for(const [filename,bytes] of Object.entries(selected.adjustmentFiles)){files[filename]=bytes;archiveNames.push(filename);}
         const savedFiles=await writePacket(directory,files,archiveNames);
         const record={id:handoffId,name,actor,createdAt,requestSha256,source:handoff.source,rowCount:handoff.rows.length,summary:handoff.summary,files:savedFiles,revisions:[]};
         workspace.state.accountantHandoffs??=[];workspace.state.accountantHandoffs.unshift(record);
@@ -160,7 +179,7 @@ export class AccountantWorkspace{
       const handoff=await this.readHandoff(handoffId),directory=join(this.directory(handoffId),'returns',returnId);await privateDirectory(directory,{create:true});let committed=false;
       try{
         const files={'return.json':json(result),'returned.csv':csvBytes,'accountant.csv':renderCsv(handoff,result),'review.html':renderHtml(handoff,result),'handoff.json':json(handoff)};
-        for(const filename of ['original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json']){
+        for(const filename of ['original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
           const original=record.files.find(file=>file.name===filename);if(original)files[filename]=await readExact(join(this.directory(handoffId),filename),original);
         }
         const savedFiles=await writePacket(directory,files,Object.keys(files));

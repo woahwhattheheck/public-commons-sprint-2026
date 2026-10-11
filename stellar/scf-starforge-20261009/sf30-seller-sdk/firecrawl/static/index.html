@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Research workspace</title><link rel="stylesheet" href="/app.css"><script src="/app.js" defer></script></head>
+<body><header><div><strong>STELLAR FORGE</strong><h1>Research workspace</h1></div><div class="header-meta"><span id="counts"></span><button id="refresh">Refresh saved work</button></div></header>
+<div id="notice" role="status" aria-live="polite">Opening workspace…</div>
+<main><aside><div class="section-heading"><h2>Research requests</h2><button id="new-query">New</button></div><div id="queries"></div><div class="pager"><button id="previous">Previous</button><span id="page"></span><button id="next">Next</button></div>
+<div class="section-heading"><h2>Collections</h2><button id="new-collection">New</button></div><div id="collections"></div></aside>
+<section class="work">
+<section id="editor"><div class="section-heading"><h2 id="editor-title">New research request</h2><span id="phase" class="badge">DRAFT</span></div>
+<form id="query-form"><label>Research title<input id="title" maxlength="200" required></label>
+<div class="row"><label>Operation<select id="operation"><option value="firecrawl-search">Search</option><option value="firecrawl-search-content">Search with page content</option><option value="firecrawl-read">Read a selected public page</option></select></label><label id="limit-label">Results per source<input id="limit" type="number" min="1" value="3"></label></div>
+<div id="search-inputs"><label>Query<textarea id="query" maxlength="500" rows="3"></textarea></label>
+<fieldset><legend>Result sources</legend><label class="check"><input id="web" type="checkbox" checked> Web</label><label class="check"><input id="news" type="checkbox"> News</label><label class="check"><input id="images" type="checkbox"> Images</label></fieldset>
+<div class="row"><label>Domain filter<select id="domain-mode"><option value="">Any domain</option><option value="includeDomains">Include only</option><option value="excludeDomains">Exclude</option></select></label><label>Hostnames, one per line<textarea id="domains" rows="2" placeholder="developers.stellar.org"></textarea></label></div>
+<div class="row"><label>Location<input id="location" placeholder="Optional city or region" maxlength="500"></label><label>Country code<input id="country" maxlength="2" placeholder="US"></label><label>Time filter<input id="tbs" maxlength="500" placeholder="qdr:w for the past week"></label></div>
+<label class="check"><input id="highlights" type="checkbox" checked> Query-relevant highlights</label></div>
+<label id="read-input">Public page URL<input id="url" type="url" placeholder="https://…"></label>
+<p class="hint" id="policy"></p><div class="actions"><button class="primary" id="save-query" type="submit">Save request</button><button id="duplicate" type="button" hidden>Use as a new request</button></div></form>
+<section id="purchase" hidden><h3>Customer purchase</h3><p id="purchase-summary"></p><div class="row"><label>Maximum payment, atomic units<input id="max-atomic" inputmode="numeric" placeholder="Choose the original offer ceiling"></label><label>Payment option index<input id="accept" type="number" min="0" value="0"></label></div>
+<div class="actions"><button id="prepare">Prepare original buyer request</button><button id="collect">Read retained result</button><button id="inspect">Inspect original operation</button></div>
+<details><summary>Exact retained request and buyer review</summary><pre id="review"></pre></details><p class="hint" id="execute-help"></p></section></section>
+<section id="results" hidden><div class="section-heading"><h2>Retained results</h2><span id="capture-kind" class="badge"></span></div><p id="capture-summary"></p><p id="provider-warning" class="warning"></p>
+<div class="tabs" role="group" aria-label="Result types"><button data-group="all">All</button><button data-group="web">Web</button><button data-group="news">News</button><button data-group="images">Images</button></div>
+<div class="results-layout"><div id="result-list"></div><article id="result-detail"><p>Select a result to review its source and retained content.</p></article></div></section>
+<section id="collection-panel" hidden><div class="section-heading"><h2>Collection</h2><span id="collection-revision"></span></div>
+<form id="collection-form"><label>Title<input id="collection-title" maxlength="200" required></label><label>Research brief<textarea id="collection-description" rows="3" maxlength="16000"></textarea></label>
+<fieldset><legend>Retained requests in this collection</legend><div id="collection-members"></div><button type="button" id="load-captures">Load older retained responses</button></fieldset><button class="primary">Save collection</button></form>
+<p class="hint">Select sources and write notes in each retained result. A frozen edition keeps those selections, the exact queries and the original provider responses.</p>
+<div class="actions"><button id="freeze">Freeze reviewed collection</button></div><div id="editions"></div></section>
+<section id="comparison-panel"><h2>Compare retained responses</h2><div class="row"><label>Earlier response<select id="compare-left"></select></label><label>Later response<select id="compare-right"></select></label><button id="compare">Compare</button></div><div id="comparison"></div></section>
+</section></main><footer>Original buyer accounting and provider credits stay separately recorded. Reopening saved content makes no new provider request.</footer></body></html>

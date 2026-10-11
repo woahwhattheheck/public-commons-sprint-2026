@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { setInventory, readInventory, readWorkboard, addWorkTask, updateWorkTask, updateInventory } from './workboard.mjs';
 import {
   actionIntentDigest,
   assertOperationId,
@@ -18,8 +19,13 @@ export class HearthlineOrchestrator {
   constructor({ store, alertProvider, clock = () => Date.now() }) { this.store = store; this.alertProvider = alertProvider; this.clock = clock; }
   async seedInventory(items) {
     if (!items || typeof items !== 'object' || Array.isArray(items)) throw new Error('items must be an object');
-    return this.store.mutate((state) => { for (const [name, qty] of Object.entries(items)) { if (!/^[a-z0-9_-]{1,64}$/i.test(name)) throw new Error(`invalid inventory key: ${name}`); if (!Number.isInteger(qty) || qty < 0 || qty > 10000) throw new Error(`invalid quantity for ${name}`); state.inventory[name] = qty; } return { inventory: state.inventory }; });
+    return this.store.mutate((state) => { setInventory(state, items, nowIso(this.clock)); return { inventory: state.inventory }; });
   }
+  getInventory() { return readInventory(this); }
+  getWorkboard(args) { return readWorkboard(this, args); }
+  addTask(args) { return addWorkTask(this, args); }
+  updateTask(args) { return updateWorkTask(this, args); }
+  updateInventory(args) { return updateInventory(this, args); }
   async prepareStormMission({ title = 'Storm readiness', latitude, longitude, household = {} }) {
     const alerts = await this.alertProvider({ latitude, longitude });
     await this.store.load();

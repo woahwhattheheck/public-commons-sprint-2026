@@ -1,4 +1,4 @@
-import {checkOriginalTerms, checkReportedTerms, checkPaymentAttemptTerms, requireTruth, digest, rpcNetwork, object,
+import {checkOriginalTerms, checkReportedTerms, checkPaymentAttemptTerms, checkMerchantRefundTerms, requireTruth, digest, rpcNetwork, object,
   ReconciliationError} from './terms.mjs';
 import {rpc} from './rpc-transport.mjs';
 export {validStrKey,ReconciliationError,DEFAULT_RPC} from './terms.mjs';
@@ -11,6 +11,12 @@ export async function reconcileReportedReceipt({intentId,requirement,receipt,pay
   const terms=checkReportedTerms({intentId,requirement,receipt},payer);
   return reconcileTransfer({...options,...terms,payer,reservation:'ABSENT_NO_SF81_RECORD',
     origin:'RECOVERED_ORIGINAL_SF31_OUTCOME'});
+}
+/** Read an already submitted merchant refund through the original native RPC path. */
+export async function reconcileMerchantRefund(options={}) {
+  const terms=checkMerchantRefundTerms(options);
+  return reconcileTransfer({...options,...terms,refund:true,
+    reservation:'NOT_APPLICABLE_MERCHANT_REFUND',origin:'MERCHANT_REFUND'});
 }
 // Only this new report uses sorted-key JSON digests; legacy reconciliation
 // reports keep their original digest convention and return shape unchanged.
@@ -79,7 +85,7 @@ export async function reconcilePaymentAttempt({intentId,requirement,receipt,paye
   return {...report,transfer};
 }
 async function reconcileTransfer({intentId,requirement:q,receipt:r,payer,fetchImpl=fetch,
-  decodeContractEvent,rpcEndpoint,maxEventPages=24,signal,reservation,origin}) {
+  decodeContractEvent,rpcEndpoint,maxEventPages=24,signal,reservation,origin,refund=false}) {
   const profile=rpcNetwork(q.network,rpcEndpoint),{live}=profile;
   rpcEndpoint=profile.endpoint;
   const readRpc=(method,params)=>rpc(method,params,rpcEndpoint,fetchImpl,{signal});
@@ -95,11 +101,12 @@ async function reconcileTransfer({intentId,requirement:q,receipt:r,payer,fetchIm
   requireTruth(tx.status === 'SUCCESS' && tx.txHash === r.transaction &&
     Number.isSafeInteger(tx.ledger) && tx.ledger > 0, 'TX_NOT_CONFIRMED_SUCCESS');
   return verifyTransactionTransfer({intentId,q,transaction:r.transaction,payer,decodeContractEvent,
-    profile,rpcEndpoint,maxEventPages,networkResult,tx,readRpc,reservation,origin,
-    sellerReport:r.success?'REPORTED_SUCCESS':'SETTLEMENT_PENDING'});
+    profile,rpcEndpoint,maxEventPages,networkResult,tx,readRpc,reservation,origin,refund,
+    sellerReport:r.success?'REPORTED_SUCCESS':'SETTLEMENT_PENDING',
+    ...(refund?{limitation:'Reverse transfer for the merchant-selected refund; original payment and buyer reservation remain separate.'}:{})});
 }
 async function verifyTransactionTransfer({intentId,q,transaction,payer,decodeContractEvent,profile,
-  rpcEndpoint,maxEventPages,networkResult,tx,readRpc,reservation,origin,sellerReport,
+  rpcEndpoint,maxEventPages,networkResult,tx,readRpc,reservation,origin,sellerReport,refund=false,
   limitation='Verified transfer for seller-reported hash; original HTTP intent binding and accounting remain separate.'}) {
   const {live}=profile;
   let cursor=null, previousCursor=null, count=0, matchedId=null;
@@ -151,16 +158,23 @@ async function verifyTransactionTransfer({intentId,q,transaction,payer,decodeCon
   }
   requireTruth(reachedEnd, 'EVENT_PAGE_BUDGET_EXHAUSTED');
   requireTruth(count === 1, 'NO_EXACT_TRANSFER');
-  return {schema:'stellar-forge.sf86.rpc-reconciliation.v1',
+  let transferAt=null;
+  if(refund && tx.createdAt!==undefined) {
+    requireTruth(typeof tx.createdAt==='string' && /^(0|[1-9][0-9]{0,11})$/.test(tx.createdAt) &&
+      Number(tx.createdAt)<=253402300799,'TX_CLOSE_TIME_INVALID');
+    transferAt=new Date(Number(tx.createdAt)*1000).toISOString();
+  }
+  return {schema:refund?'stellar-forge.sf86.refund-reconciliation.v1':'stellar-forge.sf86.rpc-reconciliation.v1',
     verdict:live?profile.verdict:'LOCAL_RPC_REPLAY_MATCHED',
     source:live?profile.source:'127.0.0.1-loopback',
     rpcEndpoint, ...(live?{networkPassphrase:profile.passphrase,
       networkResultSha256:digest(networkResult)}:{}),
-    intentId,transaction,network:q.network,ledger:tx.ledger,
+    ...(refund?{refundId:intentId,transferAt,observedAt:new Date().toISOString()}:{intentId}),
+    transaction,network:q.network,ledger:tx.ledger,
     asset:q.asset,payer,recipient:q.payTo,atomicAmount:q.amount,
     matchingTransfers:1,matchingEventId:matchedId,eventPages,
     transactionResultSha256:digest(tx),eventPageSha256:eventHashes,
-    sellerReport,
+    ...(refund?{}:{sellerReport}),
     reservation,...(origin?{origin}:{}),
     limitation};
 }

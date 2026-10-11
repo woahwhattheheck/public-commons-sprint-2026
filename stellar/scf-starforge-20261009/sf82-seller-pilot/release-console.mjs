@@ -8,8 +8,10 @@ import { readReleaseState, compareReleases, activateRelease, rollbackRelease,
 import { releaseCacheStatus, invalidateReleaseCache } from './release-cache.mjs';
 import { releaseCatalogStatus, reviewReleaseCatalog, applyReleaseCatalog } from './release-catalog.mjs';
 import { createReleaseDiscoveryConsole } from './release-discovery-console.mjs';
+import { reviewPostgresSelection, stageReviewedPostgresRelease } from './release-postgres-control.mjs';
 import { createReleaseFacilitatorControl } from './release-facilitator.mjs';
 import { createReleaseClientConsole } from './release-client.mjs';
+import { createReleaseReceivingConsole } from './release-receiving.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 function failure(message, status = 400) { return Object.assign(new Error(message), { status }); }
@@ -25,20 +27,23 @@ async function body(req) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw failure('JSON object required.');
   return value;
 }
-export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, facilitators, clientExportsDirectory } = {}) {
+export async function startReleaseConsole(root, { port = 8425, catalogConfig, discoverySetup, facilitators, clientExportsDirectory, receivingConfig } = {}) {
   root = resolve(root); await readReleaseState(root);
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Console port must be 0–65535.');
   if (catalogConfig && discoverySetup !== undefined) throw new TypeError('Use either an existing catalog connection or a managed discovery setup.');
   const discovery = catalogConfig ? null : createReleaseDiscoveryConsole(root, { directory: discoverySetup ?? root + '.discovery' });
   const catalogConnection = () => catalogConfig ?? discovery?.catalogConfig;
+  const receiving = createReleaseReceivingConsole(root, receivingConfig);
   const facilitator = createReleaseFacilitatorControl(root, facilitators);
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
+    ['/postgres.mjs', 'postgres.mjs', 'text/javascript; charset=utf-8'],
     ['/facilitator.mjs', 'facilitator.mjs', 'text/javascript; charset=utf-8'],
     ['/client.mjs', 'client.mjs', 'text/javascript; charset=utf-8'],
+    ['/receiving.mjs', 'receiving.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { bytes: await readFile(new URL('./release-ui/' + file, import.meta.url)), type }])));
   let hosts = new Set(), origins = new Set(), url, managed = null, busy = false, stopping = false;
@@ -51,7 +56,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
   const status = async () => ({ ...await releaseStatus(root),
     console: { managesRunningSeller: Boolean(managed), instanceId: managed?.observation.instanceId ?? null,
       operations: managed?.operations ?? null,
-      catalogConfigured: Boolean(catalogConnection()), clientExports: clients.summary, busy, lastError } });
+      catalogConfigured: Boolean(catalogConnection()), clientExports: clients.summary, receiving: await receiving.status(), busy, lastError } });
   const server = createServer(async (req, res) => {
     const reply = (code, type, data) => {
       if (res.destroyed) return;
@@ -75,9 +80,32 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       if (['GET', 'HEAD'].includes(req.method) && assets.has(target.pathname) && !target.search) {
         const asset = assets.get(target.pathname); reply(200, asset.type, asset.bytes); return;
       }
+      if (target.pathname === '/receiving' || target.pathname.startsWith('/receiving/')) {
+        if (stopping) throw failure('The release console is closing.', 503);
+        if (await receiving.handle(req, res, { origins: [...origins], basePath: '/receiving', token })) return;
+        throw failure('Unknown receiving workspace route.', 404);
+      }
       const supplied = Buffer.from(req.headers['x-release-token'] ?? '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes)) throw failure('Reopen the operator URL printed by the console command.', 401);
       if (req.method === 'GET' && target.pathname === '/api/status' && !target.search) { send(200, await status()); return; }
+      if (req.method === 'GET' && ['/api/receiving/status', '/api/receiving/available', '/api/receiving/export'].includes(target.pathname)) {
+        const action = target.pathname.slice('/api/receiving/'.length);
+        const allowed = { status: ['releaseId', 'bindingId', 'reviewId', 'bindingAfter', 'reviewAfter', 'offset'],
+          available: ['releaseId', 'after'], export: ['releaseId', 'bindingId', 'reviewId'] }[action];
+        if ([...target.searchParams.keys()].some(key => !allowed.includes(key) || target.searchParams.getAll(key).length !== 1))
+          throw failure('Unknown or duplicate receiving parameter.');
+        const input = Object.fromEntries(target.searchParams);
+        if (input.offset !== undefined) {
+          if (!/^\d+$/.test(input.offset) || !Number.isSafeInteger(Number(input.offset))) throw failure('Use the requested receiving option offset.');
+          input.offset = Number(input.offset);
+        }
+        if (action === 'export') {
+          const output = await receiving.export(input);
+          res.setHeader('content-disposition', 'attachment; filename="release-receiving-' + input.reviewId + '.json"');
+          reply(200, 'application/json; charset=utf-8', output);
+        } else send(200, await receiving[action](input));
+        return;
+      }
       if (req.method === 'GET' && target.pathname === '/api/clients') {
         if ([...target.searchParams.keys()].some(key => !['after', 'limit'].includes(key))) throw failure('Unknown customer listing parameter.');
         send(200, await clients.list({ ...(target.searchParams.has('after') ? { after: target.searchParams.get('after') } : {}),
@@ -115,7 +143,9 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       }
       if (req.method !== 'POST' || !['/api/activate', '/api/rollback', '/api/run', '/api/stop', '/api/restart', '/api/cache/invalidate', '/api/catalog/review', '/api/catalog/apply',
         '/api/discovery/review', '/api/discovery/create', '/api/discovery/start', '/api/discovery/stop',
-        '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt'].includes(target.pathname) || target.search)
+        '/api/postgres/review', '/api/postgres/stage', '/api/facilitator/review', '/api/facilitator/stage', '/api/clients/generate', '/api/clients/adopt',
+        '/api/receiving/open', '/api/receiving/close', '/api/receiving/prepare', '/api/receiving/attach',
+        '/api/receiving/start', '/api/receiving/cancel'].includes(target.pathname) || target.search)
         throw failure('Unknown console action.', 404);
       if (!req.headers.origin || !origins.has(req.headers.origin)) throw failure('Same-origin operator action required.', 403);
       if (busy || stopping) throw failure('An operator action is already running. Refresh when it completes.', 409);
@@ -126,7 +156,30 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
       actionDone = new Promise(done => { finishAction = done; });
       try {
         lastError = null;
-        if (target.pathname.startsWith('/api/facilitator/')) {
+        let receivingReview;
+        if (input.receiving !== undefined) {
+          if (!['/api/activate', '/api/rollback', '/api/run', '/api/restart'].includes(target.pathname) ||
+              !input.receiving || typeof input.receiving !== 'object' || Array.isArray(input.receiving) ||
+              Object.keys(input.receiving).some(key => !['bindingId', 'reviewId'].includes(key)))
+            throw failure('Use a saved receiving binding and review with this release operation.');
+          const state = await readReleaseState(root);
+          const releaseId = target.pathname === '/api/activate' ? input.id
+            : target.pathname === '/api/rollback' ? input.to ?? state.previous : state.active;
+          receivingReview = await receiving.selectionContext({ releaseId, expectedGeneration: input.expectedGeneration,
+            bindingId: input.receiving.bindingId, reviewId: input.receiving.reviewId });
+        }
+        if (target.pathname.startsWith('/api/receiving/')) {
+          const action = target.pathname.slice('/api/receiving/'.length);
+          if (['open', 'close'].includes(action) && Object.keys(input).length)
+            throw failure('The receiving workspace path is configured by the console command.');
+          send(200, await receiving[action === 'close' ? 'closeWorkspace' : action](input)); return;
+
+        } else if (target.pathname === '/api/postgres/review') {
+          send(200, await reviewPostgresSelection(input)); return;
+        } else if (target.pathname === '/api/postgres/stage') {
+          const result = await stageReviewedPostgresRelease(root, input);
+          busy = false; send(200, { ...result, status: await status() }); return;
+        } else if (target.pathname.startsWith('/api/facilitator/')) {
           const action = target.pathname.slice('/api/facilitator/'.length);
           send(200, await facilitator[action](input)); return;
         } else if (target.pathname.startsWith('/api/clients/')) {
@@ -159,9 +212,9 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
           const invalidated = await invalidateReleaseCache(root, { instanceId: input.instanceId, routeId: input.routeId });
           busy = false; send(200, { ...await releaseCacheStatus(root), invalidatedRoutes: invalidated.invalidatedRoutes }); return;
         } else if (target.pathname === '/api/activate') {
-          await activateRelease(root, input.id, { expectedGeneration: input.expectedGeneration, reason: input.reason });
+          await activateRelease(root, input.id, { expectedGeneration: input.expectedGeneration, reason: input.reason, receivingReview });
         } else if (target.pathname === '/api/rollback') {
-          await rollbackRelease(root, { to: input.to, expectedGeneration: input.expectedGeneration, reason: input.reason });
+          await rollbackRelease(root, { to: input.to, expectedGeneration: input.expectedGeneration, reason: input.reason, receivingReview });
         } else {
           if (target.pathname === '/api/stop' || target.pathname === '/api/restart') {
             if (!managed || input.instanceId !== managed.observation.instanceId) throw failure('This console does not own that seller instance. Refresh.', 409);
@@ -173,7 +226,7 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
           if (target.pathname === '/api/run' || target.pathname === '/api/restart') {
             if (managed) throw failure('This console already owns a seller. Use Restart selected.', 409);
             if (!Number.isSafeInteger(input.expectedGeneration)) throw failure('Current selection generation required.');
-            const session = await runActiveRelease(root, { expectedGeneration: input.expectedGeneration, operationsNavigationOrigin: url }); managed = session;
+            const session = await runActiveRelease(root, { expectedGeneration: input.expectedGeneration, operationsNavigationOrigin: url, receivingReview }); managed = session;
             session.completion.then(() => { if (managed === session) managed = null; }, error => {
               lastError = error.message; if (managed === session) managed = null;
             });
@@ -212,7 +265,10 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig, di
         finally {
           try { try { await clients.close(); } finally { await discovery?.close(); } }
           finally {
-            await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
+            try { await receiving.close(); }
+            finally {
+              await new Promise((done, fail) => { server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.(); });
+            }
           }
         }
         resolveClosed();
