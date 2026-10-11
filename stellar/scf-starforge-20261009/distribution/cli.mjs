@@ -93,6 +93,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
+  api-purchase                              Buy an API allowance, call approved routes and recover saved responses
+  api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
