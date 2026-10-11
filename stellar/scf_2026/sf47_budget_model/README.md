@@ -1,84 +1,107 @@
-# SF-47 — SCF Build award-tranche and pre-financing model
+# SF47: SCF Build remaining-work budget and cash-flow model
 
-**Work order:** `SCF-STARFORGE-20261009/SF-47` · **Status:** working-source draft, **NOT SUBMITTED**.  
-**Implementation:** offline Python 3 standard library only — [budget.py](./budget.py), [example_scenario.json](./example_scenario.json)  
-**No** API calls, accounts, forms, wallets, hosted CI/workflows, data exfiltration, email, SLAs, vendor invoices, grant/award commitments or fund movement.
+The current SF10 planning input is [sf10_current_candidate.json](sf10_current_candidate.json).
+It prices six remaining delivery packages at **400 prospective engineering hours
+× the retained assumed $95/hour = $38,000**, over 150 modeled days. The hours are
+an engineering estimate; the rate comes from the earlier planning scenario and
+is not an agreed staffing rate. It contains no unquoted infrastructure reserve.
+The SCF interest form has been acknowledged; a full-application invitation and
+award are separate steps. This file is an internal budget model, not a submitted
+funding request or a funding receipt.
 
-## Primary rule references — retrieved October 9, 2026
+## Scope after the October 11 product shipments
 
-1. [SCF Build Budget & Deliverable Guidelines](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines) — maximum **$150,000 USD-worth XLM**; budget for **future milestone work only**, not prior work/general operations; proposed project **up to six months**; three actual deliverable milestones (#1 MVP, #2 Testnet or equivalent, #3 Mainnet or equivalent) and **four conditional payouts 10% / 20% / 30% / 40%**. #0 payable only after award acceptance, later payments after milestone review.
-2. [SCF Build Award](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award) — **interest → eligibility screening → invitation → full submission**, deliverable-based, documentation of applicant experience/costs, KYC/KYB for selected awardees, eligible human participants, and award value converted with the **payout-day XLM/USD benchmark**, not a static forecast. Current #46 specific x402 RFP eligibility remains in dispute because [RFP listing](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/rfp-track) is still headed **July 23, 2026, Q3/#45**.
-3. **Exclusions in the actual guidelines:** standard award budget may **not** reimburse past development, general operations, audits (Audit Bank separately), marketing/user acquisition, legal/entity incorporation, general bounties, token giveaways or prize pools. There is a narrow Integration Track exception for validation-focused user testing in later tranches, **not** broad acquisition, and current greenfield SF product does not meet existing-product Integration entry just by changing the label. The offline model uses a conservative category allowlist, no automatic Integration exception.
-4. **Deadlines:** milestone completion form must be submitted **within 90 calendar days of preceding payment**, or funds may be forfeited absent timely SDF-confirmed communications; review/payment lag is *not contractually fixed*. For Integration final 40%, a panel-ratified actual onchain outcome metric is required (not mainnet release alone). Rights and restrictions depend on jurisdiction and applicant, not inferred.
+The original $70,000 / 700-hour model treated a large amount of now-delivered
+software as future work. [remaining-work.md](remaining-work.md) reconciles all
+14 original rows with original product paths. Existing seller SDK, catalog,
+admission, quote checks, buyer approvals, durable ledger, native signer, buyer
+inbox, finalizer, merchant outbox/receiver, dataset adapters, monitoring and
+recovery source are the starting point. Their programming is excluded. Work
+shipped between this estimate and an actual award must be removed again.
 
-## What the model solves
+The six priced packages are actual **remaining deployment and integration**:
 
-Teams routinely propose an award equal to total development cost and wrongly assume that money is all available up front. Here, only 10% is hypothetically available at acceptance. A project that expends money continuously against milestones can have a **severe interim cash gap** before the 20%, 30%, 40% reimbursements, especially during review lag. A grant is never an authorization to spend. The model estimates a **conditional peak prefunding need** under explicit planning assumptions so the operator can decide whether a tranche structure is genuinely financeable before putting any dollars in a request.
-
-## Offline usage
-
-```bash
-python3 stellar/scf_2026/sf47_budget_model/budget.py \
-  stellar/scf_2026/sf47_budget_model/example_scenario.json \
-  --out /tmp/scf-sf47-illustration.json
-```
-
-Or omit `--out` to print JSON to stdout. Nothing is submitted. Only local JSON is read/written. Edit amounts, deliverables, day offsets, assumed approval/payment lags and optional illustrative XLM/USD **scenario** rates after real human quote/role data is available. Costs must remain auditable future deliverable-specific work rather than historical swarm compute or marketing spend.
-
-## Hypothetical example (NOT requested, approved or real)
-
-**Inputs:** `example_scenario.json` models a **USD $90,000** build, 180 modeled days, unspecified/unverified human engineering rates, evenly spread **$30,000** cost per 60-day phase. Milestone completion days **60**, **120**, **180**, with hypothetical 14-day review/payment lag each. Entire future estimate **invented solely to exercise the model and must be replaced by actual rates/hours** before any application. No award is anticipated or granted.
-
-| Conditional tranche | When paid in this illustration | % | Hypothetical USD |
+| Tranche | Remaining work | Estimated hours | Modeled USD |
 | --- | --- | ---: | ---: |
-| #0 award acceptance | Day 0 | 10% | $9,000 |
-| #1 MVP acceptance | Day 74 (submit day 60 + assumed review 14) | 20% | $18,000 |
-| #2 testnet acceptance | Day 134 (submit day 120 + 14) | 30% | $27,000 |
-| #3 mainnet/equivalent acceptance | Day 194 (submit day 180 + 14) | 40% | $36,000 |
+| 1 | Merchant-specific HTTP/MCP resource installation | 80 | $7,600 |
+| 1 | Real merchant authority/role handover and onboarding repairs | 40 | $3,800 |
+| 2 | Independently operated provider and existing ledger/receiver deployment | 70 | $6,650 |
+| 2 | Deployment-specific threat response and actionable alert integration | 50 | $4,750 |
+| 3 | Actual mainnet merchant rollout and protected runtime configuration | 90 | $8,550 |
+| 3 | Production recovery integration, remediation and maintainer handover | 70 | $6,650 |
+| **Total** | **120 / 120 / 160 hours by tranche** | **400** | **$38,000** |
 
-At **day 133** under the **assumed even daily cost accrual**, $67,000 of future work is counted as consumed but only $27,000 of conditional payments have arrived. **Peak prefunding gap: $40,000 at day 133.** At day 180 the full $90,000 model cost is committed while $54,000 of conditional payments have arrived; gap $36,000 until final modeled release. This is a mathematical example, **not a quoted financing amount** or received cash. If the award is declined or a tranche rejected, actual grant receipts are $0 or the last accepted portion, and the responsible owner must replan work and liquidity, not presume automatic approval. The model rejects costs exceeding the requested award, unapproved categories, nonfuture costs, incoherent milestones or missed 90-day windows.
+Milestones submit on modeled days **30, 90 and 150**. T1 delivers an independently
+operable merchant installation. T2 delivers integrated settlement and merchant
+operation across actual providers, with the required threat/monitoring work.
+T3 delivers a maintained mainnet merchant release with working recovery. The
+complete per-package outcomes and cost spans are in the current JSON.
 
-**XLM volatility:** illustrative scenario rates 0.10 / 0.30 / 0.60 USD/XLM are *NOT current quotes or predictions*. The model shows only arithmetic units that would result if a selected hypothetical rate were used for a tranche. Actual payment-date USD valuation is defined by official SCF rules and cannot be determined in advance from this spreadsheet-style simulation. No trading, conversion or price forecasting is performed.
+The first 30 days require 120 contributor hours (about 28 hours/week); each
+subsequent 60-day phase requires 120 or 160 hours (about 14 or 19 hours/week).
+These are capacity requirements, not invented commitments from named people.
+Allocate actual contributors and rates against the packages as staffing is
+agreed. Existing fleet/container capacity is used first. New infrastructure goes
+into the request only when an actual deployment needs it and its units and
+price are sourced. Hosted GitHub Actions spend is not included.
 
-## Implementation / modeling boundaries
+## Run the existing calculator
 
-- Source code uses Python `Decimal` for monetary values; all grant amounts are USD scenario values before payout conversion.
-- Exactly 3 ordered milestone submissions and 4 payout shares. Period completion dates are constrained to conservative **180 modeled days**; this is NOT a legal interpretation of every six-calendar-month schedule.
-- One proposed project budget, positive line-items, categories `core-development`, `frontend-ux`, `verification`, `release`; all costs explicitly future-only. If a tranche cost ends after its claimed completion day, reject it rather than silently count it as deliverable proof.
-- Proposed milestones cannot be submitted more than 90 modeled days after the immediately preceding **payment**; no arbitrary claim that payment review always takes 14 days.
-- **Sequential receipt scenario:** The model conservatively rejects a next-tranche submission dated before the prior hypothetical payment. This prevents impossible out-of-order 20%/30%/40% receipt schedules when assumed reviewer delays differ. Actual permitted filing/review arrangements depend on SCF; replan the cash-flow dates rather than treating this simulation as official timing guidance.
-- Each amount is **spread evenly across its inclusive modeled start/end days**. This is only a scenario cash-accrual assumption, not actual time sheets or supplier invoice dates; a real payment schedule from SF-08/human quotes should replace it.
-- Output includes each milestone, every conditional payout date, selected-day cumulative hypothetical outflow/inflow, worst cash gap day/amount, XLM hypothetical sensitivity, requirements and critical unknowns. It does **not** file SCF completion forms or schedule actions.
-- This lane does not duplicate SF-08's **real unit-economics** or SF-09's grant-track decision, and cannot fill in unspecified human applicant facts from software fleet size. Engineering owners supply actual source heads and future acceptance receipts; a demo or implementation PR is **not** itself SCF tranche acceptance.
-
-## Milestone evidence and independent review gates
-
-| Future tranche | Milestone example, to refine against actual current product | Evidence required before claiming complete |
-| --- | --- | --- |
-| #1 — MVP | opt-in HTTP/MCP resource ingestion, discover/search, normalizing canonical x402 price/method metadata, documented self-host | Real current source, version-tagged public release, actual original endpoints with operator rights, reproducible acceptance logs and failure-mode cases |
-| #2 — Testnet | agent discovers a seller-priced service, owner-authorized wallet uses canonical Stellar x402, policy and receipts cover actual transaction | Real testnet ledger receipt with genuine signatures, source/version hash, independent same-corpus quality test and no unsupported network/scheme claims |
-| #3 — Mainnet/equivalent | documented deployment/maintenance/monitoring and accessible public API, security and failure recovery, real consenting early user | Actually performed approved network deployment/equivalent, original live performance data, user/merchant validation, documented availability and operator costs; if jurisdictional exception, require SDF decision |
-
-Architecture, original research and product decomposition **must be finished before an invitation/submission**, not priced retroactively as tranche #1. Only actual future deliverables count. Mainnet spending, legal applicant approval, vendor contract, SCF submission, external email and public grant claims all remain **OWNER HOLD**.
-
-## Expansion / source handoff
-
-**SF47-B1:** SF-08 reviewer to supply **actual future human rates/hours**, measured provider/storage/RPC costs, license constraints and note any costs that official guidelines exclude. Do not charge award for unspecified internal model tokens or previous work.  
-**SF47-B2:** SF-03/04/46 source owners to replace placeholder milestones with exact current canonical acceptance contract and signed/testnet evidence prerequisites, not toy traces.  
-**SF47-B3:** Human owner to decide allowable legal entity/team participants, seller consent, realistic credit/working-capital access, and whether an SCF form may ever be sent (currently NO).  
-**SF47-B4:** Financial operations to reconcile committed expenses, actual invoices and successful funding receipts with a **separate ledger**; model output is not an accounting record.
-
-**Status:** code, JSON exemplar and source-linked operator guide are deliverables. Actual staff budget, award, eligibility, user demand, XLM exchange values and transfer receipts remain unknown. No grant application or payment initiated.
-
-## SF10 founder provisional $70k / 19-week scenario
-
-[**sf10_70000_candidate.json**](./sf10_70000_candidate.json) is the existing founder SF10 editorial baseline in this calculator's `ILLUSTRATIVE_UNSENT` input schema, **not** a selected award request, approved labor rate, vendor quote, interest form or grant application. It holds fourteen future-only cost entries totaling $70,000: $18,000 MVP + $23,000 testnet + $29,000 mainnet (700 *hypothetical* engineering hours at $95/hour and $3,500 of assumed future services). All staff rates, costs and eligibility still require founder confirmation. Its owner context is the [existing private founder workspace](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C82MLR4UV).
-
-The original offline calculator already accepts this input:
-
-```bash
+```sh
 python3 stellar/scf_2026/sf47_budget_model/budget.py \
-  stellar/scf_2026/sf47_budget_model/sf10_70000_candidate.json
+  stellar/scf_2026/sf47_budget_model/sf10_current_candidate.json
 ```
 
-For submitted milestone days 35, 77 and 133, the file's hypothetical 14-day review/payment lag implies tranche receipt days 0, 49, 91 and 147. A locally edited 30-day sensitivity implies days 0, 65, 107 and 163. Under the source model's inclusive even-accrual assumption, the respective peak pre-financing gaps are **$28,000 at day 133** and **$35,017.86 at day 106**. A uniform 60-day lag fails the sequential-payment rule because tranche 2's submission day 77 precedes tranche 1's hypothetical payment day 95. Rephase the schedule instead of treating a rejected case as viable. These are *cash-flow assumptions*, not SDF payout commitments.
+The original Python standard-library model uses Decimal, exactly three ordered
+milestones, the four 10% / 20% / 30% / 40% payout shares, positive future cost
+rows, six-month planning limits, and completion within 90 modeled days of the
+preceding payment. It rejects a submission earlier than the preceding modeled
+payment. Costs accrue evenly over each row's inclusive date span. It performs
+no external calls, submission, funding transaction or expense commitment.
+
+The same current schedule was recomputed with **14, 30 and 60 days** of assumed
+review/payment lag. All three satisfy the model's sequential-payment rules:
+
+| Assumed lag | Payout days, including initial acceptance | Peak interim cash gap | Peak day |
+| --- | --- | ---: | ---: |
+| 14 days | 0 / 44 / 104 / 164 | $15,200.00 | 150 |
+| 30 days | 0 / 60 / 120 / 180 | $18,746.67 | 119 |
+| 60 days | 0 / 90 / 150 / 210 | $26,346.67 | 149 |
+
+The hypothetical payouts are **$3,800 / $7,600 / $11,400 / $15,200**. A 150-day
+work plan can therefore require financing beyond the work period: in the
+60-day-lag scenario the last payment is modeled on day 210. Review lag is an
+assumption, not an SDF commitment. Actual costs may be front-loaded, acceptance
+may fail or take longer, and actual XLM conversion follows the program's
+payout-date rules. Record a real source of working capital against this cash
+need; the calculation does not establish that financing exists.
+
+To reproduce a sensitivity, change only each milestone's
+`review_and_payment_lag_days` in a local copy or call `budget.model()` with a
+copy of the current data. Do not use historical model output as a current
+spending balance. Actual invoices and receipts belong in the existing business
+accounting workflow.
+
+## Rules and planning inputs
+
+Official sources were rechecked October 11, 2026:
+
+- [Budget and deliverable guidelines](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines): maximum $150,000 worth of XLM; up to six months; prospective development only; three delivery tranches with four conditional payout shares. Excludes past work, general operations, independent audits, acquisition/marketing and legal/entity costs from the standard development award.
+- [Submission criteria](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/submission-criteria): self-contained application, meaningful Stellar integration, actual readiness, clear costs and outcomes, tranche-two threat assessment and monitoring, final mainnet outcome.
+- [Open Track](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/open-track): explain the incremental value against existing ecosystem infrastructure and the concrete user/business need.
+
+The current application state is carried from the scenario rather than a hard-
+coded stale RFP or applicant assertion. Remaining inputs are accountable staffing,
+actual rates, participating merchant scope, any incremental service quotes,
+actual invitation/award terms and working-capital source. They can be completed
+in parallel with product delivery; this model creates no blanket hold on work,
+sales or authorized publication.
+
+## Historical inputs
+
+[sf10_70000_candidate.json](sf10_70000_candidate.json), its 60-day rephased
+alternative, and [example_scenario.json](example_scenario.json) are retained as
+historical calculator inputs. They are not the current SF10 budget and should
+not be copied into the full application. The original scenario was never an
+approved award or submitted monetary claim; this revision preserves source
+history and replaces stale prospective scope in the working candidate.

@@ -41,7 +41,7 @@ export function applyOutreachReview(opportunities, decisions, snapshot, now) {
     if (held.length) {
       decision.readyForOwnerApproach = false;
       decision.blockers.push(...held.map(reason=>reason.startsWith('OUTREACH_')?reason:'OUTREACH_'+reason));
-      decision.nextActions = decision.nextActions.filter(x=>!x.startsWith('Owner may authorize one tailored unsent prime approach'));
+      decision.nextActions = decision.nextActions.filter(x=>!x.startsWith('Owner may authorize one tailored unsent prime approach') && !x.startsWith('Proceed with the authorized'));
       decision.nextActions.unshift('Resolve the recorded outreach preflight hold with the existing relationship owner; do not create another first contact');
     }
   }

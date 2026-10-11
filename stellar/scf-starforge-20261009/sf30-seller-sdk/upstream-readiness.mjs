@@ -1,4 +1,5 @@
 // MIT. Availability around the ORIGINAL upstream handler; no payment or retry engine.
+import { UPSTREAM_ATTEMPT } from './upstream-handler.mjs';
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value) &&
   [Object.prototype, null].includes(Object.getPrototypeOf(value));
 const FIELDS = new Set(['failureThreshold', 'resetAfterMs', 'maxResetAfterMs']);
@@ -31,12 +32,15 @@ function response(status, code, delayMs) {
 }
 
 function outcome(result) {
-  const status = result?.status, code = result?.body?.error;
+  const attempt = result?.[UPSTREAM_ATTEMPT];
+  if (attempt?.dispatched === false) return 'neutral';
+  const status = attempt?.status ?? result?.status, code = attempt?.error ?? result?.body?.error;
   if (Number.isInteger(status) && status >= 200 && status < 300) return 'healthy';
   if (code === 'UPSTREAM_REQUEST_FAILED') {
     // A merchant's ordinary 4xx still proves a responsive backend. Its 429 and
     // 5xx are availability failures; do not hide or rewrite the original result.
-    return result.body.upstreamStatus === 429 || result.body.upstreamStatus >= 500 ? 'failed' : 'healthy';
+    const upstreamStatus = attempt?.upstreamStatus ?? result.body?.upstreamStatus;
+    return upstreamStatus === 429 || upstreamStatus >= 500 ? 'failed' : 'healthy';
   }
   if (FAILURES.has(code)) return 'failed';
   // Bad request values and local capacity rejection are not backend outages.
@@ -79,17 +83,21 @@ export function protectUpstream(handler, policy, { maxInFlight, monotonic = () =
     const blocked = condition();
     if (blocked) { totals.handlerRejected++; return response(503, blocked.code, blocked.delay); }
     const ticket = { generation, recovery: open };
-    if (ticket.recovery) { trial = ticket; totals.recoveryCalls++; }
+    if (ticket.recovery) trial = ticket;
     let result;
     try { result = await handler(context); }
     catch { result = response(502, 'UPSTREAM_UNAVAILABLE', 1000); }
+    const attempt = result?.[UPSTREAM_ATTEMPT];
+    if (ticket.recovery && attempt?.dispatched !== false) totals.recoveryCalls++;
     // Results from calls already active when the circuit opened cannot close it
     // or extend it. The one recovery call owns the next availability decision.
     if (ticket.generation === generation) {
       const state = outcome(result);
-      lastStatus = Number.isInteger(result?.status) ? result.status : null;
-      lastError = FAILURES.has(result?.body?.error) || result?.body?.error === 'UPSTREAM_REQUEST_FAILED'
-        ? result.body.error : null;
+      if (attempt?.dispatched !== false) {
+        const status = attempt?.status ?? result?.status, code = attempt?.error ?? result?.body?.error;
+        lastStatus = Number.isInteger(status) ? status : null;
+        lastError = FAILURES.has(code) || code === 'UPSTREAM_REQUEST_FAILED' ? code : null;
+      }
       if (state === 'failed') {
         failures++;
         if (ticket.recovery || failures >= policy.failureThreshold) trip(ticket.recovery);

@@ -4,13 +4,14 @@
 
 ## Install the original dependencies
 
-Install from the original `sf88-operator-buyer-cli` directory so its signer module resolves these packages:
+From the repository root, install the pinned packages in the buyer directory:
 
 ```sh
-npm ci --ignore-scripts --no-audit --no-fund
+npm --prefix stellar/scf-starforge-20261009/sf88-operator-buyer-cli \
+  ci --ignore-scripts --no-audit --no-fund
 ```
 
-Node 22+ is required. The published package versions above were retrieved and installed in the cloud development workspace on October 11, 2026. No dependency installation script or repository test suite is needed.
+Node 22+ is required. The lockfile pins `@x402/core` 2.28.0, `@x402/stellar` 2.28.0 and `@stellar/stellar-sdk` 16.3.0, retrieved and installed in the cloud development workspace on October 11, 2026. No dependency installation script or repository test suite is needed.
 
 ## Generated private signer module
 
@@ -37,6 +38,8 @@ export async function sign(payload) {
 ```
 
 Keep construction inside `sign`: importing the generated module and running SF88 review then reads no key, contacts no provider and signs nothing. `createEnvironmentStellarSigner` reads the configured environment variable and derives an official SDK signer. Its public address must equal `expectedPayer` before a sign callback is returned.
+
+Workspace execution first calls `checkNativeSignerPrerequisites` to inspect the configured provider file or wallet-variable presence and import the local SDK. It does not import the provider, read the key's value or call RPC. Missing local setup therefore leaves a queued request unattempted and the spend ledger unchanged. This check is not performed during initialization or offline review.
 
 An operator using an existing external or hardware signer can call `createOfficialStellarSigner({ ...configuration, signer })` instead. The signer must implement the official `ClientStellarSigner` interface: `address` and `signAuthEntry`. This adapter does not create a wallet or replace that signer.
 
@@ -67,7 +70,8 @@ query parameters or fragments. The default remains
 ## Diagnose the same workspace
 
 ```sh
-node cli.mjs --diagnose-workspace --dir /private/weather-operator
+node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/cli.mjs \
+  --diagnose-workspace --dir /private/weather-operator
 ```
 
 This validates the original workspace and installed `@x402/core` and
