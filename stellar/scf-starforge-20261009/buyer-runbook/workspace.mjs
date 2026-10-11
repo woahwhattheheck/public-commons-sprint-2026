@@ -4,6 +4,7 @@ import {readFile} from 'node:fs/promises';
 import {randomBytes, timingSafeEqual} from 'node:crypto';
 import {pipeline} from 'node:stream/promises';
 import {openRunbookWorkspace, fault} from './workspace-model.mjs';
+import {OPERATION_HANDOFF_MAX_BYTES} from '../sf88-operator-buyer-cli/operation-handoff.mjs';
 
 const CSP = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const messages = {
@@ -114,7 +115,7 @@ export async function startRunbookWorkspace({port = 8460, ...options} = {}) {
         throw fault('NOT_FOUND',404);
       }
       if (req.method !== 'POST') return reply(405,'text/plain','Use GET or POST.',{allow:'GET, HEAD, POST'});
-      const input = await body(url.pathname === '/api/requests/upload' ? 6 * 1024 * 1024 : 1024 * 1024);
+      const input = await body(url.pathname === '/api/requests/upload' ? 4*Math.ceil(OPERATION_HANDOFF_MAX_BYTES/3)+1024 : 1024 * 1024);
       if (url.pathname === '/api/requests/upload') return json(200,await model.receiveRequest(input));
       if (url.pathname === '/api/requests/review') return json(200,await model.reviewRequest(input));
       if (url.pathname === '/api/requests/prepare') return json(200,await model.prepareRequest(input));

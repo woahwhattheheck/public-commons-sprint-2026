@@ -42,11 +42,26 @@ export function buildUnpaidRequest(operation, values, browserOrigin) {
   let command = `curl --include --max-time 15${route.method === 'HEAD' ? ' --head' : ' --request ' + route.method} ` + quote(publicUrl.href);
   if(accept!=='application/json')command += " \\\n  --header " + quote('Accept: '+accept);
   if (jsonBodyMethods.has(route.method)) {
-    if (typeof values.body !== 'string') throw new TypeError('JSON body text required');
-    JSON.parse(values.body);
-    if (new TextEncoder().encode(values.body).length > 1024 * 1024) throw new RangeError('JSON body exceeds 1 MiB');
-    init.headers['content-type'] = 'application/json'; init.body = values.body;
-    command += " \\\n  --header 'Content-Type: application/json' \\\n  --data-raw " + quote(values.body);
+    const required=operation.requestBody?.required??offer.extensions?.bazaar?.schema?.properties?.input?.required?.includes('body')??true;
+    const limit=route.maxRequestBytes??1048576;
+    if (!Number.isSafeInteger(limit)||limit<1||limit>16*1024*1024) throw new TypeError('Invalid merchant request limit');
+    if (values.omitBody===true) {
+      if (required||own(values,'body')||own(values,'multipart')) throw new TypeError('Only an optional whole request body may be explicitly omitted');
+    } else if (offer.extensions?.bazaar?.info?.input?.bodyType==='form-data') {
+      const selected=values.multipart;
+      if (own(values,'body')||!object(selected)||Object.keys(selected).some(key=>!['body','contentType'].includes(key))||!(selected.body instanceof Uint8Array)||
+          typeof selected.contentType!=='string'||selected.contentType.length>256||/[\r\n\0]/.test(selected.contentType)||!/^multipart\/form-data\s*;/i.test(selected.contentType))
+        throw new TypeError('Use retained multipart bytes and their exact boundary from the private merchant workspace or SF88 --prepare --form-file');
+      if (selected.body.byteLength>limit) throw new RangeError('Multipart body exceeds the merchant request-byte limit');
+      init.body=Uint8Array.from(selected.body);init.headers['content-type']=selected.contentType;
+      command+=' \\\n  --header '+quote('Content-Type: '+selected.contentType)+' \\\n  --data-binary @/absolute/prepared-request.multipart';
+    } else {
+      if (typeof values.body !== 'string'||own(values,'multipart')) throw new TypeError('JSON body text required');
+      JSON.parse(values.body);
+      if (new TextEncoder().encode(values.body).length>limit) throw new RangeError('JSON body exceeds the merchant request-byte limit');
+      init.headers['content-type'] = 'application/json'; init.body = values.body;
+      command += " \\\n  --header 'Content-Type: application/json' \\\n  --data-raw " + quote(values.body);
+    }
   }
   return { url: local.href, publicUrl: publicUrl.href, init, curl: command };
 }

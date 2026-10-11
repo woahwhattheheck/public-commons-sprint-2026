@@ -3,6 +3,7 @@ import { createOpenApiResolver } from '../importer.mjs';
 import { planProbes } from '../../sf96-seller-acceptance/audit.mjs';
 import { createLiveRequestAdmission } from '../../sf89-live-request-admission/index.mjs';
 import { requiresJsonBody } from '../../sf30-seller-sdk/http-methods.mjs';
+import { openApiRequestBody } from '../request-body.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (value, key) => Object.hasOwn(value, key);
@@ -49,9 +50,10 @@ export function preparePublicOperation(document, item, operation, row, method) {
   if (merged.size) result.parameters = [...merged.values()];
   if (own(sample, 'body')) {
     const body = structuredClone(refs.reference(operation.requestBody));
-    if (!plain(body.content?.['application/json'])) fail('Request body example needs an application/json declaration');
-    body.content['application/json'].example = structuredClone(sample.body);
-    delete body.content['application/json'].examples;
+    const declaration=openApiRequestBody(operation,refs);
+    if (!declaration) fail('Request body example needs an original body declaration');
+    body.content[declaration.mediaType].example = structuredClone(sample.body);
+    delete body.content[declaration.mediaType].examples;
     result.requestBody = body;
   }
   return result;
@@ -64,7 +66,7 @@ export function createMerchantCases(imported, service, plan) {
     const config = service.routes[index], row = plan.operations[index];
     const route = { id: config.id, method: offer.method, advertisedUrl: offer.seller.resource.url,
       template: offer.seller.extensions.bazaar.routeTemplate ?? null, offer: offer.seller };
-    if (row.requestExample !== undefined) {
+    if (row.requestExample !== undefined && offer.seller.extensions.bazaar.info.input.bodyType!=='form-data') {
       const request = row.requestExample, example = { path: new URL(route.advertisedUrl).pathname,
         query: structuredClone(request.query ?? offer.seller.extensions.bazaar.info.input.queryParams ?? {}) };
       if (own(request, 'body')) example.body = structuredClone(request.body);
@@ -76,7 +78,8 @@ export function createMerchantCases(imported, service, plan) {
   });
   const planned = planProbes(routes, cases.routes);
   const review = planned.map((request, index) => {
-    if (request.skip) return { id: request.route.id, method: request.route.method, state: 'NEEDS_EXAMPLE', reason: request.skip };
+    if (request.skip) return { id: request.route.id, method: request.route.method,
+      state:request.skip==='MULTIPART_REQUIRES_PRIVATE_FILE_REQUEST'?'PRIVATE_FILE_REQUEST':'NEEDS_EXAMPLE',reason: request.skip };
     const offer = request.route.offer, query = Object.fromEntries(new URL(request.path, 'http://127.0.0.1').searchParams);
     const context = { method: request.route.method, query,
       pathParams: structuredClone(offer.extensions.bazaar.info.input.pathParams ?? {}),

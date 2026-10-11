@@ -85,7 +85,8 @@ function render(next) {
   text('seller-origin', seller.publicOrigin); text('seller-mode', label(seller.mode));
   text('intent', op?.intentId ?? 'No prepared buyer');
   text('operation-state', review ? 'Reviewed at ' + time(review.at) : label(op?.state));
-  text('result-state', attempt?.outcome?.status ?? label(attempt?.state ?? 'NOT_RUN'));
+  text('result-state', next.rpcRecovery?.state === 'SETTLED_RESULT_RECOVERED' ? 'Settled · result recovered' :
+    next.rpcRecovery?.settlement ? 'Settled · response recovery pending' : attempt?.outcome?.status ?? label(attempt?.state ?? 'NOT_RUN'));
   text('last-updated', 'Updated ' + time(next.updatedAt));
   text('method', op?.method); text('request-url', op?.url ?? 'This session has no prepared buyer operation.');
   const terms = op?.expect ?? {};
@@ -132,8 +133,35 @@ function render(next) {
       'The recorded operation result is shown above.'));
   byId('outcome-details').hidden = !outcome;
   text('outcome-json', outcome ? JSON.stringify(outcome, null, 2) : '');
+  const rpc = next.rpcRecovery, rpcAction = next.rpcAction;
+  byId('rpc-recovery').hidden = !rpc;
+  const transaction = byId('rpc-transaction');
+  if (transaction.dataset.intent !== selectedIntent) {
+    transaction.dataset.intent = selectedIntent; transaction.value = rpc?.settlement?.transaction ?? '';
+  }
+  byId('rpc-transaction-entry').hidden = Boolean(rpc?.settlement);
+  byId('rpc-verify').hidden = !rpc?.canVerify;
+  byId('rpc-verify').disabled = pending || !controls.canVerifyRpcPayment;
+  byId('rpc-read').hidden = !rpc?.settlement || rpc?.responseFile?.status === 'SAVED';
+  byId('rpc-read').disabled = pending || !controls.canRecoverRpcResponse;
+  text('rpc-recovery-note', rpc?.responseFile?.status === 'SAVED' ?
+    'The recovered response is retained with its original payment and request. Its read time is recorded separately below.' :
+    rpc?.settlement ? 'The existing payment is settled. Recover paid read calls the same selected RPC method with the retained parameters and saves its current result.' :
+    'Select the transaction for this original attempted request. The original ledger and Stellar transfer verifier authenticate it before a recovery read becomes available.');
+  facts('rpc-recovery-facts', rpc ? [
+    ['Original attempt', time(attempt?.startedAt)], ['Transaction', rpc.settlement?.transaction],
+    ['Confirmed ledger', rpc.settlement?.ledger], ['Settled amount (atomic)', rpc.settlement?.amountAtomic],
+    ['Recovery read started', rpc.responseFile?.recoveryReadStartedAt ? time(rpc.responseFile.recoveryReadStartedAt) : undefined],
+    ['Recovery response observed', rpc.responseFile?.responseObservedAt ? time(rpc.responseFile.responseObservedAt) : undefined],
+  ] : []);
+  text('rpc-recovery-result', rpcAction?.state === 'RUNNING' ?
+    rpcAction.operation === 'VERIFY_PAYMENT' ? 'Verifying the original reservation and transaction…' : 'Reading and saving the paid RPC result…' :
+    rpcAction?.error ? label(rpcAction.error) : rpc?.settlement && !rpc.canRecover && !rpc.responseFile ?
+      'Resume the product in its availability desk before requesting the recovery read.' : '');
   text('delivery-state', delivery?.available ? 'Saved response' : label(delivery?.status ?? 'NO_SAVED_RESPONSE'));
-  text('delivery-note', delivery?.available ? 'Download the exact file saved by the buyer, or preview its contents.' :
+  text('delivery-note', delivery?.source === 'SETTLED_RPC_RECOVERY_READ' ?
+    'Download the exact saved recovery response. The original request time and the later provider read remain recorded together.' :
+    delivery?.available ? 'Download the exact file saved by the buyer, or preview its contents.' :
     'A response saved by the buyer appears here after the operation completes.');
   byId('delivery-facts').hidden = !delivery?.available;
   facts('delivery-facts', delivery?.available ? [
@@ -241,7 +269,13 @@ function render(next) {
   ]);
   byId('facilitator').disabled = pending || selectionLoading || !controls.canProbeFacilitator;
   facts('seller-facts', [['Mode', label(seller.mode)], ['Listener', seller.listener],
-    ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)]]);
+    ['Routes', seller.routes?.length ?? 0], ['Started', time(session.startedAt)],
+    ...(seller.jsonrpc ? [
+      ['RPC data network', seller.jsonrpc.dataNetwork],
+      ['Provider verified', time(seller.jsonrpc.networkVerifiedAt)],
+      ['Read products', seller.jsonrpc.methods.join(', ')],
+      ['Provider results', seller.jsonrpc.acceptedResults],
+    ] : [])]);
   const links = byId('seller-links'); links.replaceChildren();
   link(links, 'Open developer workspace ↗', seller.developerUrl);
   operationsAddress(links, seller.operationsUrl);
@@ -280,7 +314,7 @@ async function refresh({ quiet = false } = {}) {
   } catch (error) { if (order === lastRequest) notice(error.message, true); }
   finally {
     clearTimeout(refreshTimer);
-    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
+    refreshTimer = setTimeout(() => refresh({ quiet: true }), view?.activeIntent || view?.retrieval?.state === 'RUNNING' || view?.rpcAction?.state === 'RUNNING' || view?.session?.state === 'STOPPING' ? 1500 : 6000);
   }
 }
 async function action(name, body = {}) {
@@ -298,6 +332,8 @@ async function action(name, body = {}) {
     if (name === 'recover') notice('The recorded result was recovered from the inbox.');
     if (name === 'retrieve') notice('File retrieval started. Its result will appear in Purchased file.');
     if (name === 'reset-transfer') notice('Retained download cleared. Use Retrieve entitled file to start this order’s download again.');
+    if (name === 'verify-rpc-payment') notice('Existing-payment verification and its result are shown with this original attempt.');
+    if (name === 'recover-rpc-response') notice('Recovery progress and the saved response are shown below.');
     if (name === 'facilitator') notice('Payment-service observation refreshed.');
     if (name === 'stop') notice(next.session.state === 'STOPPED' ? 'The session has stopped. Saved results remain available.' : 'The session is draining. Its progress remains visible below.');
   } catch (error) { notice(error.message, true); }
@@ -308,7 +344,7 @@ byId('operation-select').addEventListener('change', async event => {
   if (pending) return;
   selectionLoading = true;
   selectedIntent = event.target.value; ++lastRequest;
-  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-reset-transfer', 'product-preview', 'product-download', 'facilitator']) byId(id).disabled = true;
+  for (const id of ['review', 'execute', 'cancel', 'recover', 'preview', 'download', 'product-retrieve', 'product-reset-transfer', 'product-preview', 'product-download', 'facilitator', 'rpc-verify', 'rpc-read']) byId(id).disabled = true;
   byId('preview-area').hidden = true;
   byId('product-preview-area').hidden = true;
   await refresh();
@@ -317,6 +353,13 @@ byId('review').addEventListener('click', () => action('review'));
 byId('facilitator').addEventListener('click', () => action('facilitator'));
 byId('execute').addEventListener('click', () => action('execute', { reviewId: view?.review?.id }));
 byId('cancel').addEventListener('click', () => action('cancel'));
+function rpcSelection(transaction) {
+  const original = view?.rpcRecovery?.original;
+  return { transaction, expectedRequestSha256: original?.expectedRequestSha256,
+    expectedAttemptId: original?.attemptId, expectedConfigSha256: original?.configSha256 };
+}
+byId('rpc-verify').addEventListener('click', () => action('verify-rpc-payment', rpcSelection(byId('rpc-transaction').value.trim())));
+byId('rpc-read').addEventListener('click', () => action('recover-rpc-response', rpcSelection(view?.rpcRecovery?.settlement?.transaction)));
 byId('recover').addEventListener('click', () => action('recover'));
 byId('product-retrieve').addEventListener('click', () => action('retrieve', {
   configSha256: view?.purchase?.request.configSha256, handoffSha256: view?.purchase?.handoffSha256,

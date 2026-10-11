@@ -160,12 +160,13 @@ export function createUpstreamHandler(options = {}) {
   if (!object(options)) throw new TypeError('Upstream options must be a plain object');
   const known = new Set(['baseUrl', 'path', 'method', 'query', 'headers', 'requestHeaders',
     'responseHeaders', 'responseType', 'timeoutMs', 'maxRequestBytes', 'maxResponseBytes',
-    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'stream']);
+    'maxInFlight', 'allowLocal', 'lookup', 'onResult', 'responseContract', 'idempotency', 'cachePolicyMetadata', 'credentialProvider', 'bodyType', 'stream']);
   for (const key of Object.keys(options)) if (!known.has(key)) throw new TypeError(`Unknown upstream option: ${key}`);
   const { baseUrl, path, method = 'GET', query = [], headers: configuredHeaders = {},
     requestHeaders = [], responseHeaders = ['content-type', 'content-language'], responseType = 'json',
     timeoutMs = 10000, maxRequestBytes = 1048576, maxResponseBytes = 1048576,
-    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream } = options;
+    maxInFlight = 16, allowLocal = false, lookup, onResult, responseContract, idempotency, cachePolicyMetadata = false, credentialProvider, stream, bodyType='json' } = options;
+  if (!['json','form-data'].includes(bodyType) || bodyType==='form-data'&&!requiresJsonBody(method)) throw new TypeError('Invalid upstream bodyType');
   if (!supportsSellerMethod(method) || !['json', 'bytes', 'sse', 'ndjson'].includes(responseType) || typeof allowLocal !== 'boolean' ||
       typeof cachePolicyMetadata !== 'boolean' ||
       onResult !== undefined && typeof onResult !== 'function' ||
@@ -239,15 +240,25 @@ export function createUpstreamHandler(options = {}) {
     }
     let body;
     if (requiresJsonBody(method)) {
-      const encoded = idempotency ? canonicalOperationJSON(context.body) : JSON.stringify(context.body);
-      if (encoded === undefined) throw new TypeError('Replayable JSON body required');
-      body = Buffer.from(encoded);
-      if (body.length > maxRequestBytes) throw new TypeError('Upstream request body too large');
+      if (context.bodyPresent!==false) {
+        if (bodyType==='form-data') {
+          if (context.bodyType!=='form-data'||!(context.rawBody instanceof Uint8Array)||
+              typeof incoming['content-type']!=='string'||incomingHop.has('content-type')||
+              incoming['content-type'].length>256||!/^multipart\/form-data\s*;/i.test(incoming['content-type'])) throw new TypeError('Replayable multipart request required');
+          body=Buffer.from(context.rawBody);
+          outgoing['content-type']=incoming['content-type'];
+        } else {
+          const encoded = idempotency ? canonicalOperationJSON(context.body) : JSON.stringify(context.body);
+          if (encoded === undefined) throw new TypeError('Replayable JSON body required');
+          body = Buffer.from(encoded);
+        }
+        if (body.length > maxRequestBytes) throw new TypeError('Upstream request body too large');
+      }
     }
     const operation = idempotency ? {
       ticket: incomingHop.has(idempotency.requestHeader) ? undefined : incoming[idempotency.requestHeader],
       requestHash: operationRequestHash({scope:idempotency.scope,method,sourceUrl:context.url.href,
-        targetUrl:target.href,headers:outgoing,body}),
+        targetUrl:target.href,headers:outgoing,body:body??Buffer.alloc(0)}),
     } : undefined;
     return { target, outgoing, body, operation };
   }
@@ -390,7 +401,7 @@ export function createUpstreamHandler(options = {}) {
         prepared.outgoing.accept ??= responseType === 'json' ? 'application/json' :
           responseType === 'sse' ? 'text/event-stream' : responseType === 'ndjson' ? 'application/x-ndjson' : '*/*';
         if (prepared.body !== undefined) {
-          prepared.outgoing['content-type'] = 'application/json; charset=utf-8';
+          prepared.outgoing['content-type'] ??= 'application/json; charset=utf-8';
           prepared.outgoing['content-length'] = String(prepared.body.length);
         }
         if (backendKey !== undefined) prepared.outgoing[idempotency.backendHeader] = backendKey;

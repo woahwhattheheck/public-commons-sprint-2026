@@ -89,11 +89,14 @@ preset require a new review before preparing a request; already prepared buyers
 keep their original local policy and identity.
 
 1. Choose **Receive merchant request** and upload the original complete file
-   (up to 4 MiB). The workspace retains its exact bytes privately. Uploading that
+   within the packet limit shown by the receiver. The workspace retains its exact bytes privately. Uploading that
    identical file again opens the same retained request.
 2. Inspect the public request, ticket expiry, exact body and ordinary headers.
    **Download exact body** returns the original bytes, including multipart or
    binary input. The private request attachment retains the original transfer.
+   Multipart bodies use the shared 16 MiB request ceiling, including framing;
+   packet and HTTP upload limits allow their base64 representation. A source-
+   declared absent body stays absent and has no body attachment to download.
 3. Explicitly choose a supported payment option from its original discovery.
    Set a total and daily atomic budget. The daily amount must cover the selected
    request ceiling and fit inside the total and the declared local limits.

@@ -7,6 +7,7 @@ import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
 import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs';
 import { execution, bytes, need } from './config.mjs';
+import { readRequestBody } from './request-body.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
 
@@ -46,8 +47,8 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     (directory.mode & 0o077) === 0), 'PRIVATE_EVIDENCE_DIRECTORY_REQUIRED');
   const signerFile = await stat(cfg.signerModule);
   need(signerFile.isFile(), 'SIGNER_MODULE_MUST_EXIST');
-  const body = op.bodyFile === undefined ? undefined :
-    Uint8Array.from(await bytes(op.bodyFile, 1048576, 'REQUEST_BODY_INVALID'));
+  const retainedBody=await readRequestBody(op);
+  const body=retainedBody===undefined?undefined:Uint8Array.from(retainedBody);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
   await checkOperatorTerminal(op.intentId);
   need(!signal?.aborted, 'OPERATOR_ABORTED');

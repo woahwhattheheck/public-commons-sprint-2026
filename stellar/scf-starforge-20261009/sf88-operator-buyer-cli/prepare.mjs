@@ -4,10 +4,11 @@ import { open, unlink } from 'node:fs/promises';
 import { abs, bytes, InputError, need, operation, preparedFrom, responseFile } from './config.mjs';
 import { loadOperationTicket, operationTicketView } from './operation-ticket.mjs';
 import { normalizeOperationHeaders, readOperationHeaders } from './request-headers.mjs';
+import { readRequestBody, requestBodyPin, prepareMultipartFile } from './request-body.mjs';
 
 const object = x => x !== null && typeof x === 'object' && !Array.isArray(x);
 const required = ['--discovery','--row','--accept','--intent-id','--url','--method','--out'];
-const optional = ['--body-file','--content-type','--headers-file','--ticket-file','--ticket-header','--response-out'];
+const optional = ['--body-file','--content-type','--headers-file','--ticket-file','--ticket-header','--response-out','--form-file','--form-out'];
 function index(value) {
   need(typeof value === 'string' && /^(0|[1-9][0-9]*)$/.test(value) &&
     Number.isSafeInteger(Number(value)), 'EXPLICIT_SELECTION_INDEX_REQUIRED');
@@ -25,7 +26,7 @@ function https(value) {
 export function prepareReview(raw, selection) {
   need(raw instanceof Uint8Array && raw.byteLength <= 1048576, 'INVALID_DISCOVERY_FILE');
   need(object(selection) && Object.keys(selection).every(key =>
-    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','headers','ticketFile','ticketHeader','responseOut'].includes(key)),
+    ['rowIndex','acceptIndex','intentId','url','method','bodyFile','bodyBytes','bodySha256','headers','ticketFile','ticketHeader','responseOut'].includes(key)),
     'PREPARE_EXPLICIT_SELECTION_REQUIRED');
   const {rowIndex, acceptIndex, intentId, url, method, bodyFile, headers, ticketFile, ticketHeader} = selection;
   need(typeof method === 'string' && ['GET','HEAD','POST','PUT','PATCH','DELETE'].includes(method),
@@ -79,6 +80,7 @@ export function prepareReview(raw, selection) {
   if (accepted.extra?.paymentFlow !== undefined) expect.paymentFlow = accepted.extra.paymentFlow;
   const op = operation({intentId, url:requested.href, method, expect,
     ...(bodyFile === undefined ? {} : {bodyFile}), ...(headers === undefined ? {} : {headers}),
+    ...(selection.bodySha256===undefined?{}:{bodySha256:selection.bodySha256,bodyBytes:selection.bodyBytes}),
     ...(ticketFile === undefined ? {} : {ticketFile}), ...(ticketHeader === undefined ? {} : {ticketHeader})});
   const origin = preparedFrom({schema:'stellar-forge.sf88.saved-discovery.v1',
     discoveryFileSha256:createHash('sha256').update(raw).digest('hex'), source, sourceEnvelope,
@@ -128,9 +130,21 @@ export async function prepare(args) {
       'PREPARE_CONTENT_TYPE_HEADER_CONFLICT');
     headers = {...headers,...explicit};
   }
+  need(flags.has('--form-file')===flags.has('--form-out')&&!(flags.has('--form-file')&&flags.has('--body-file')),'INVALID_FORM_PREPARATION_FLAGS');
+  let request={};
+  if (flags.has('--form-file')) {
+    need(!headers['Content-Type'],'FORM_CONTENT_TYPE_IS_GENERATED');
+    const form=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await bytes(flags.get('--form-file'),65536,'INVALID_FORM_FILE')));
+    const staged=await prepareMultipartFile(form,abs(flags.get('--form-out'),'FORM_OUTPUT_PATH_REQUIRED'));
+    request={bodyFile:staged.bodyFile,bodyBytes:staged.bodyBytes,bodySha256:staged.bodySha256};
+    headers={...headers,...staged.headers};
+  } else if (flags.has('--body-file')) {
+    request={bodyFile:flags.get('--body-file')};
+    Object.assign(request,requestBodyPin(await readRequestBody(request)));
+  }
   const {draft, data, configSha256} = prepareReview(raw, {rowIndex,acceptIndex,
     intentId:flags.get('--intent-id'),url:flags.get('--url'),method:flags.get('--method'),
-    ...(flags.has('--body-file') ? {bodyFile:flags.get('--body-file')} : {}),
+    ...request,
     ...(Object.keys(headers).length ? {headers} : {}),
     ...(flags.has('--ticket-file') ? {ticketFile:flags.get('--ticket-file')} : {}),
     ...(flags.has('--ticket-header') ? {ticketHeader:flags.get('--ticket-header')} : {}),
