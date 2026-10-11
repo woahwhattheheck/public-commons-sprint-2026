@@ -1,6 +1,8 @@
+import { renderComparison } from './comparison-view.mjs';
+
 const $ = id => document.getElementById(id);
 const token = location.hash.slice(1);
-let current = null, selectedRun = null, releaseReview = null, sourceReview = null, busy = false, activeTab = 'sources';
+let current = null, selectedRun = null, releaseReview = null, sourceReview = null, comparisonView = null, busy = false, activeTab = 'sources';
 const make = (tag, text, cls) => { const e = document.createElement(tag); if (text !== undefined) e.textContent = text; if (cls) e.className = cls; return e; };
 const pretty = value => JSON.stringify(value, null, 2);
 const note = (message, error = false) => { $('notice').textContent = message; $('notice').classList.toggle('error', error); };
@@ -37,6 +39,17 @@ async function api(path, body) {
   if (!response.ok) throw new Error(value.error ?? 'Workspace request failed.');
   return value;
 }
+async function importArchive(name, file) {
+  if (!(file instanceof File) || !file.size || file.size > 32 * 1024 * 1024)
+    throw new Error('Select a complete migration handover up to 32 MiB.');
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', await file.arrayBuffer()));
+  const expectedSha256 = [...digest].map(value => value.toString(16).padStart(2, '0')).join('');
+  const response = await fetch('/api/migrations/handover/import-file?name=' + encodeURIComponent(name) +
+    '&sha256=' + expectedSha256, { method: 'POST', headers: { 'x-workspace-token': token, 'content-type': 'application/gzip' }, body: file });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error ?? 'Handover import failed.');
+  return value;
+}
 async function download(path, name) {
   const response = await fetch('/api/migrations/' + path, { headers: { 'x-workspace-token': token } });
   if (!response.ok) { const value = await response.json(); throw new Error(value.error ?? 'Download failed.'); }
@@ -63,11 +76,20 @@ async function refreshProjects() {
     control.setAttribute('aria-current', String(current?.project.id === project.id)); list.append(control);
   }
   if (!value.projects.length) list.append(empty('Create the first migration.'));
+  const received = $('received-workspaces'); received.replaceChildren();
+  for (const workspace of value.receivedWorkspaces ?? []) {
+    const control = button(workspace.name, async () => {
+      const opened = await api('handover/open', { name: workspace.name }); location.assign(opened.url);
+    }, 'project-button');
+    control.append(make('small', workspace.projectId + ' · ' + workspace.importedAt)); received.append(control);
+  }
+  if (!received.childElementCount) received.append(empty('Imported handovers appear here.'));
   return value;
 }
 async function openProject(id) {
   current = await api('project?project=' + encodeURIComponent(id));
   selectedRun = null; releaseReview = null; sourceReview = null;
+  comparisonView?.dispose(); comparisonView = null;
   $('empty').hidden = true; $('project').hidden = false; $('history').hidden = true;
   sessionStorage.setItem('migration-project', id);
   resetMapping(); render(); await refreshProjects(); await renderInventory();
@@ -90,7 +112,7 @@ function render() {
     if (source.kind.includes('openapi')) buttons.push(button('Inspect', () => inspectSource(source.ref), 'small-button'), button('Use in merchant setup', () => { location.href = '/?migration=' + encodeURIComponent(p.id) + '&source=' + source.ref + '#' + token; }, 'small-button'));
     return [label, source.kind, source.bytes.toLocaleString(), actions(...buttons)];
   })));
-  renderAcquisitions(); renderMappingList(); renderComparisons(); renderReleases();
+  renderAcquisitions(); renderMappingList(); renderComparisons(); renderReleases(); renderReceiver();
   const packageRows = current.packages.map(value => [value.name, value.name + ' · ' + (value.title ?? '')]);
   selectOptions($('baseline-package'), packageRows, state.merchant.baseline ?? undefined);
   selectOptions($('stage-package'), packageRows, state.merchant.package?.name ?? undefined);
@@ -101,8 +123,20 @@ function render() {
   $('handover-summary').replaceChildren(table(['Retained scope', 'Count or current selection'], [
     ['Source files', state.sources.length], ['Acquisitions', state.acquisitions.length], ['Saved mappings', Object.keys(state.mappings).length],
     ['Result comparisons', Object.keys(state.comparisons).length], ['Merchant package', state.merchant.package?.name ?? 'Choose or export a merchant package']]));
-  $('handover-list').replaceChildren(table(['Handover', 'Created', 'Receiving team'], (state.handovers ?? []).map(row => [row.name, row.createdAt, row.receiver])));
+  $('handover-list').replaceChildren(table(['Handover', 'Created', 'Receiving team', 'Archive bytes', 'Actions'],
+    (current.handovers ?? []).map(row => [row.id, row.createdAt, row.receiver, row.archive?.bytes?.toLocaleString(),
+      row.problem ? make('span', row.problem) : button('Download handover', () => download(
+        'handover-download?' + query('&name=' + encodeURIComponent(row.id)), row.filename), 'small-button')])));
   updateReviewButtons(); showTab(activeTab);
+}
+function renderReceiver() {
+  const state = current.receiver ?? { open: false }, target = $('receiver-state');
+  target.replaceChildren(badge(state.open ? 'Receiving workspace open' : 'Receiving workspace closed'));
+  if (state.open && state.url) {
+    const link = make('a', 'Open the original receiving application'); link.href = state.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+    target.append(actions(link));
+  }
+  target.append(make('p', 'Closing the view retains its saved runs. Reopen it to continue an existing operation.', 'hint'));
 }
 async function inspectSource(ref) {
   const value = await api('source-inspect?' + query('&ref=' + ref));
@@ -237,6 +271,7 @@ function updateReviewButtons() {
   const id = $('mapping-id').value, saved = current.project.state.mappings[id], reviewed = current.project.state.mappingReviews[id];
   $('review-mapping').disabled = busy || !saved; $('compare-mapping').disabled = busy || !reviewed?.ready;
   $('select-release').disabled = busy || !releaseReview; $('rollback-release').disabled = busy || !releaseReview;
+  $('open-receiver').disabled = busy || Boolean(current.receiver?.open); $('close-receiver').disabled = busy || !current.receiver?.open;
 }
 async function reviewSavedMapping() {
   const id = $('mapping-id').value.trim(), result = await api('mapping/review', input({ id }));
@@ -254,10 +289,25 @@ function renderComparisons() {
 }
 async function openComparison(ref) {
   const retained = await api('source?' + query('&ref=' + ref)), value = parse(retained.content, 'Comparison');
-  const target = $('comparison-detail'); target.replaceChildren(make('h3', 'Result comparison'), badge(value.status), pre({ summary: value.summary, coverage: value.coverage }));
-  if (value.differences?.length) target.append(table(['Difference'], value.differences.map(row => [pre(row)])));
-  if (value.issues?.length) target.append(table(['Issue'], value.issues.map(row => [row.message ?? pretty(row)])));
-  const details = make('details'); details.append(make('summary', 'Complete comparison'), pre(value)); target.append(details); showTab('results');
+  const binding = current.project.state.mappings[value.mappingId]?.binding;
+  comparisonView?.dispose();
+  comparisonView = renderComparison($('comparison-detail'), value, { sourceText: retained.content,
+    onOpenSource: ({ side, source, location: recordLocation }) => act(async () => {
+      const selected = binding?.[side];
+      if (!selected) throw new Error('Open the mapping edition that retained this comparison source.');
+      if (selected.type === 'acquisition') {
+        await openAcquisition(selected.id); showTab('acquire');
+        $('acquisition-detail').append(make('h4', 'Selected comparison record'), pre({ side, source: source.id, location: recordLocation }));
+      } else {
+        const original = await api('source?' + query('&ref=' + encodeURIComponent(selected.ref)));
+        const details = make('details'); details.append(make('summary', 'Complete original response'), pre(original.content));
+        $('source-inspection').replaceChildren(make('h3', original.metadata.name),
+          pre({ source: original.metadata, location: recordLocation }),
+          button('Download original response', () => download('source-download?' + query('&ref=' + selected.ref), original.metadata.name)), details);
+        showTab('sources');
+      }
+    }) });
+  showTab('results');
 }
 function renderReleases() {
   const r = current.releases; $('release-state').replaceChildren(pre({ selection: r.state, running: r.ownedRuntime ?? r.runtime }));
@@ -273,8 +323,13 @@ function submit(formId, work) { $(formId).addEventListener('submit', event => { 
 submit('new-project', async (f, form) => { const result = await api('create', { id: f.id.trim(), title: f.title.trim(), customer: f.customer.trim(), actor: operator() }); form.reset(); await openProject(result.project.id); });
 submit('source-form', async (f, form) => {
   if (!(f.file instanceof File) || !f.file.size) throw new Error('Select the original source file.');
+  const metadata = parse(f.metadata, 'Original response metadata');
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) throw new Error('Original response metadata must be an object.');
+  const status = f.status ? Number(f.status) : metadata.status ?? null;
+  if (status !== null && (!Number.isInteger(status) || status < 100 || status > 599)) throw new Error('Retain the recorded HTTP status or leave it empty for a file export.');
   const result = await api('source/add', input({ kind: f.kind, name: f.file.name, content: await f.file.text(),
-    provenance: { url: f.url || null, capturedAt: utc(f.capturedAt), reference: f.reference || null, importedBy: operator() } }));
+    provenance: { ...metadata, url: f.url || metadata.url || null, capturedAt: utc(f.capturedAt) ?? metadata.capturedAt ?? null,
+      reference: f.reference || metadata.reference || null, importedBy: operator(), status } }));
   await refreshProject(); await renderInventory(); form.elements.file.value = ''; note('Retained ' + result.retained.name + ' in edition ' + current.project.sequence + '.');
 });
 submit('inventory-form', async (f, form) => {
@@ -312,8 +367,25 @@ submit('stage-form', async f => {
 });
 submit('handover-form', async f => {
   const result = await api('handover/create', input({ name: f.name, receiver: f.receiver, note: f.note }));
-  await refreshProject(); $('handover-list').append(pre(result)); note('Created the portable receiving-team handover.');
+  await refreshProject(); note('Created ' + result.filename + '. Download it from the saved handover list.');
 });
+submit('handover-import-form', async f => {
+  const result = await importArchive(f.name.trim(), f.file);
+  note('Imported the complete handover. Opening its original merchant workspace.'); location.assign(result.open.url);
+});
+submit('receiver-result-form', async f => {
+  const selection = parse(f.selection, 'Original response layout');
+  const result = await api('receiver/retain', input({ runId: f.runId.trim(), operationId: f.operationId.trim(), name: f.name.trim(), selection }));
+  await refreshProject();
+  $('mapping-candidate').value = 'source:' + result.retained.ref; $('candidate-selection').value = pretty(selection);
+  showTab('mapping'); note('Retained ' + result.retained.name + ' from the original receiving operation. It is selected as candidate data.');
+});
+$('open-receiver').addEventListener('click', () => act(async () => {
+  await api('receiver/open', { projectId: projectId() }); await refreshProject(); note('The original receiving workspace is open. Use its link to continue.');
+}));
+$('close-receiver').addEventListener('click', () => act(async () => {
+  await api('receiver/close', { projectId: projectId() }); await refreshProject(); note('The receiving workspace closed with its saved operations retained.');
+}));
 $('refresh-projects').addEventListener('click', () => act(async () => { await refreshProjects(); await refreshProject(); note('Refreshed current work.'); }));
 $('show-history').addEventListener('click', () => act(async () => {
   const result = await api('history?' + query()); $('history').hidden = false;
@@ -361,7 +433,7 @@ $('operator').value = sessionStorage.getItem('migration-operator') ?? '';
 $('merchant-link').href = '/#' + token;
 await act(async () => {
   if (!token) throw new Error('Open the complete private workspace URL printed by the launcher.');
-  const list = await refreshProjects(), previous = sessionStorage.getItem('migration-project');
+  const list = await refreshProjects(), previous = new URLSearchParams(location.search).get('project') || sessionStorage.getItem('migration-project');
   if (previous && list.projects.some(row => row.id === previous && !row.error)) await openProject(previous);
   else note('Choose a saved migration or create a project.');
 });
