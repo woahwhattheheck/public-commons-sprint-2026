@@ -159,7 +159,8 @@ export async function openS3Store(input, { client: suppliedClient, sdk: supplied
       .map(key => [key, env[key]]));
     const agents = [];
     try {
-      const { NodeHttpHandler } = nativeRequire('@smithy/node-http-handler');
+      const sdkRequire = createRequire(nativeRequire.resolve('@aws-sdk/client-s3'));
+      const { NodeHttpHandler } = sdkRequire('@smithy/node-http-handler');
       need(typeof NodeHttpHandler === 'function', 'Original Smithy HTTP handler required');
       const httpAgent = new HttpAgent({ keepAlive: true, proxyEnv });
       agents.push(httpAgent);
