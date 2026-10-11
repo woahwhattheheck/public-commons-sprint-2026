@@ -48,7 +48,6 @@
     "stellar/scf-starforge-20261009/sf97-merchant-revenue-ops",
     "stellar/scf-starforge-20261009/buyer-runbook",
     "stellar/scf-starforge-20261009/sf101-merchant-account-readiness",
-    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter",
     "stellar/scf-starforge-20261009/sf105-subquery-graphql-merchant",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge",
     "stellar-forge/mcp-paid-agent",
@@ -58,6 +57,7 @@
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
     "stellar-forge/payment-auto-catalog/schema-pattern.mjs",
     "stellar-forge/payment-auto-catalog/package.json",
+    "stellar-forge/payment-auto-catalog/package-lock.json",
     "stellar/scf-starforge-20261009/partners/getblock-stellar/product.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
@@ -340,7 +340,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/exercise.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-receiver/checkout.journey.mjs",
     "stellar-forge/mcp-merchant-operator/exercise.mjs",
-    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs"
+    "stellar/scf-starforge-20261009/sf102-cube-paid-query-adapter/check.mjs",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot/release-discovery-journey.mjs"
   ],
   "featurePeers": {
     "postgres": {
