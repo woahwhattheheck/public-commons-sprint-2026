@@ -56,7 +56,8 @@
     "stellar/scf-starforge-20261009/partners/chainstack-stellar",
     "stellar/scf-starforge-20261009/merchant-settlement-accounting",
     "stellar/scf-starforge-20261009/partners/allium-explorer-pilot",
-    "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot"
+    "stellar/scf-starforge-20261009/partners/tenderly-stellar-pilot",
+    "stellar/scf_2026/sf47_budget_model"
   ],
   "supportFiles": [
     "stellar-forge/payment-auto-catalog/schema-validation.mjs",
@@ -256,7 +257,8 @@
     "tenderly-analysis": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/cli.mjs",
     "routescan-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/cli.mjs",
     "routescan-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/routescan/workspace-cli.mjs",
-    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs"
+    "buyer-n8n-workflows": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/n8n/workflow.mjs",
+    "grant-workspace": "stellar/scf_2026/sf47_budget_model/workspace/launcher.mjs"
   },
   "exports": {
     "./runtime-profile": "./source/stellar/scf-starforge-20261009/distribution/runtime-profile.mjs",
