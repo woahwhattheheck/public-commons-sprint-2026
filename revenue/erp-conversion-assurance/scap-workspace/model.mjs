@@ -23,12 +23,14 @@ const pageNumber = (value, fallback, maximum) => {
   return n;
 };
 
-export function createConversionWorkspace({ service, profile: inputProfile }) {
+export function createConversionWorkspace({ service, profile: inputProfile, extension = null }) {
   const profile = validateProfile(inputProfile);
   for (const method of ['stageBundle', 'getBundle', 'listBundles', 'reviseBundle', 'execute', 'getJob',
     'listJobs', 'readReportChunk', 'review', 'getReviews', 'cancel', 'recover', 'exportReplay'])
     if (typeof service?.[method] !== 'function') fail('SERVICE_API_UNAVAILABLE', `The retained reconciliation service needs ${method}.`, 503);
   const configuration = service.configuration;
+  const decorateDraft = (spec, draft) => extension?.decorateDraft
+    ? extension.decorateDraft({ spec: clone(spec), draft }) : draft;
   const bundles = new Map(), reports = new Map();
   let reportCacheBytes = 0;
 
@@ -73,7 +75,7 @@ export function createConversionWorkspace({ service, profile: inputProfile }) {
 
   async function openBundle(bundleId) {
     const { bundle, spec } = await getBundle(bundleId, { refresh: true });
-    return { bundle, spec, draft: draftFromSpec(spec, profile) };
+    return { bundle, spec, draft: decorateDraft(spec, draftFromSpec(spec, profile)) };
   }
 
   async function stage({ draft, baseBundleId, previousJobId, source, target } = {}) {
@@ -106,7 +108,8 @@ export function createConversionWorkspace({ service, profile: inputProfile }) {
     }
     const previous = base ? { bundleId: baseBundleId, ...(previousJobId ? { jobId: previousJobId } : {}),
       revision: base.spec.workspace?.schema === WORKSPACE_SCHEMA ? base.spec.workspace.revision : 0 } : null;
-    const spec = compileDraft(draft, { profile: selectedProfile, headers, inputs, previous });
+    let spec = compileDraft(draft, { profile: selectedProfile, headers, inputs, previous });
+    if (extension?.compileSpec) spec = await extension.compileSpec({ spec, draft, base, service });
     const specBytes = json(spec);
     if (specBytes.length > MAX_SPEC_BYTES) fail('MAPPING_LIMIT_EXCEEDED', 'The complete mapping, crosswalk and scope must fit within the retained service’s 256 KiB mapping limit.');
     const temporary = await mkdtemp(join(tmpdir(), 'erp-workspace-intake-'));
@@ -123,7 +126,7 @@ export function createConversionWorkspace({ service, profile: inputProfile }) {
         : await service.stageBundle({ ...paths, spec: specPath });
       const retained = await getBundle(bundle.bundleId, { refresh: true });
       if (retained.bundle.spec.sha256 !== digest(specBytes)) fail('MAPPING_CHANGED', 'The staged mapping does not match the reviewed bytes.', 409);
-      return { ...retained, draft: draftFromSpec(retained.spec, selectedProfile) };
+      return { ...retained, draft: decorateDraft(retained.spec, draftFromSpec(retained.spec, selectedProfile)) };
     } finally { await rm(temporary, { recursive: true, force: true }); }
   }
 
