@@ -15,16 +15,42 @@
   <div id="notice" role="status" aria-live="polite" hidden></div>
   <main>
     <aside class="sidebar">
-      <section class="source-summary"><h2>Source catalog</h2><p id="source-counts"></p><details><summary>Source details</summary><p id="source-path" class="mono break"></p><p id="source-digest" class="mono break"></p></details></section>
+      <section class="source-summary"><h2>Source catalog</h2><p id="source-counts"></p><p id="source-edition" class="help break"></p><details><summary>Source details</summary><p id="source-path" class="mono break"></p><p id="source-digest" class="mono break"></p></details></section>
       <nav class="tabs" aria-label="Workspace steps">
         <button data-tab="compose" class="active">1. Compose reports</button>
         <button data-tab="review">2. Review and save</button>
         <button data-tab="handoff">3. Merchant handoff</button>
+        <button data-tab="schema">4. Schema refresh</button>
       </nav>
       <section><div class="section-title"><h2>Reports</h2><button id="add-report">Add</button></div><div id="report-list" class="item-list"></div></section>
       <section><div class="section-title"><h2>Saved versions</h2><button id="refresh-versions">Refresh</button></div><div id="version-list" class="item-list"></div><button id="more-versions" hidden>Load older versions</button></section>
     </aside>
     <div class="content">
+      <section id="schema-panel" class="panel" hidden>
+        <div class="heading"><div><h1>Refresh the Cube schema</h1><p>Review a new metadata edition against a saved merchant version, then carry the accepted report decisions into its successor.</p></div><button id="reload-schema-history">Refresh history</button></div>
+        <section class="card"><h2>Source version and candidate metadata</h2>
+          <label>Saved merchant version<select id="refresh-base"><option value="">Choose a saved version</option></select></label>
+          <button id="refresh-more-versions" hidden>Load older merchant versions</button>
+          <div class="form-grid">
+            <label>Candidate label<input id="metadata-label" maxlength="240" placeholder="October service schema"></label>
+            <label>Metadata path on this version’s Cube backend<input id="metadata-path" value="/cubejs-api/v1/meta" spellcheck="false"></label>
+          </div>
+          <div class="button-row"><button id="capture-metadata">Capture from saved Cube backend</button></div>
+          <details><summary>Import a retained metadata file</summary><label>Original Cube metadata JSON<input id="metadata-file" type="file" accept=".json,application/json"></label><button id="import-metadata">Retain original file</button><p class="help">The original bytes and filename remain attached to this edition. Maximum 16 MiB.</p></details>
+          <label>Retained candidate edition<select id="refresh-candidate"><option value="">Choose a retained metadata edition</option></select></label>
+          <div class="button-row"><button id="inspect-refresh" class="primary">Compare source and report impact</button><button id="refresh-more-metadata" hidden>Load older metadata editions</button></div>
+        </section>
+        <section id="refresh-impact" class="card"></section>
+        <section class="card"><h2>Review report decisions</h2><p>Choose keep, remap or retire for every report. The original compiler checks the resulting queries. Public input definitions, prices and report routes are preserved.</p>
+          <label>Review operator<input id="refresh-operator" maxlength="240" autocomplete="name" placeholder="Name or accountable operator"></label>
+          <details><summary>Find a candidate member for a remap</summary><div class="button-row"><label>Candidate member search<input id="refresh-target-search" type="search" placeholder="Exact name or title"></label><button id="refresh-target-search-button">Find members</button></div><p id="refresh-target-count" class="help"></p><datalist id="refresh-target-members"></datalist></details>
+        </section>
+        <div id="refresh-decisions"></div>
+        <div class="button-row schema-actions"><button id="review-refresh" class="primary" disabled>Save reviewed transition</button><button id="apply-refresh" disabled>Apply saved review</button></div>
+        <section id="refresh-result" class="card" aria-live="polite"></section>
+        <details class="card"><summary>Retained metadata editions</summary><div id="metadata-history"></div></details>
+        <section class="card"><h2>Schema review history</h2><div id="refresh-history"></div><button id="refresh-more-history" hidden>Load older reviews</button></section>
+      </section>
       <section id="compose-panel" class="panel">
         <div class="heading"><div><h1>Configure the merchant</h1><p>Use the saved Cube catalog to define fixed reports and the exact terms each customer will see.</p></div><button id="review-top" class="primary">Review plan</button></div>
         <details class="card" open>
