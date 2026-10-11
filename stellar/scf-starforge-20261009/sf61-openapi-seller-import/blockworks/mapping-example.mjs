@@ -87,8 +87,33 @@ export function exampleInputs() {
     }
   };
 }
+// Complete result-storage operation using the original 9,000-point per-series limit.
+// These are design records. The same input goes through native comparison, retention,
+// reopening, viewer and export; the complete source population remains available.
+export function capacityInputs(count = 9000) {
+  if (!Number.isSafeInteger(count) || count < 1 || count > 9000) throw new TypeError('Choose 1 through 9000 design points.');
+  const input = exampleInputs(), start = 1791676800, end = start + count * 86400;
+  input.mapping.id = 'design-price-migration-capacity';
+  input.mapping.window = { timeKey: 'observation-time', start, end };
+  for (const side of ['baseline', 'candidate']) {
+    const source = input.sources[side], original = JSON.parse(source.captures[0].body.toString('utf8'));
+    original.data.points = Array.from({ length: count }, (_, index) => [(start + index * 86400) * (side === 'baseline' ? 1000 : 1), 42]);
+    const body = Buffer.from(JSON.stringify(original)), capture = source.captures[0].metadata;
+    capture.bytes = body.length; capture.sha256 = sha256(body); source.captures[0] = { body, metadata: capture };
+    source.manifest.captures = [capture]; source.manifest.coverage.window = { start, end };
+    if (side === 'baseline') {
+      source.manifest.coverage.note = count + ' declared design points for complete result-storage operation.';
+      source.result.series = [{ key: original.data.assetID, points: original.data.points }];
+    } else {
+      source.result.series = [original.data]; source.manifest.coverage.receivedRows = count;
+      source.manifest.request.window = { start, end }; source.manifest.request.query = { start, end };
+      capture.request.url = 'https://api.blockworks.com' + source.manifest.request.path + '?start=' + start + '&end=' + end;
+    }
+  }
+  return input;
+}
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const input = exampleInputs();
+  const input = process.argv.includes('--capacity') ? capacityInputs() : exampleInputs();
   const review = reviewMapping(input);
   const comparison = compareMappedResults({ ...input, reviewId: review.reviewId });
   process.stdout.write(JSON.stringify({ designOnly: true, review, comparison }, null, 2) + '\n');
