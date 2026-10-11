@@ -1,6 +1,6 @@
 # Native merchant query parameters
 
-The original OpenAPI importer, merchant workspace, live admission and route acceptance now share one query codec. It supports scalar strings, booleans, finite numbers and safe integers, including a schema with one such type plus null, and arrays of scalar items. The original schema validator still checks enum, bounds, length, uniqueness and all other retained assertions.
+The original OpenAPI importer, merchant workspace, developer explorer, generated customer client, live admission and route acceptance now share one query codec. It supports scalar strings, booleans, finite numbers and safe integers, including a schema with one such type plus null, and arrays of scalar items. The original schema validator still checks enum, bounds, length, uniqueness and all other retained assertions.
 
 ## Review the actual wire encoding
 
@@ -18,13 +18,13 @@ When a provider's parameter description and omitted/default serialization differ
       "page": 1,
       "pageSize": 5,
       "acceptFormat": "json",
-      "selections": ["id", "name"]
+      "selections": ["assetID", "name"]
     }
   }
 }
 ```
 
-This example describes the selected Blockworks list operations. Confirm the selected fields against that operation's original enum. Every override must name an actual query parameter; it changes only the explicitly prepared public facade. The provider source bytes, source hash and schema assertions remain intact.
+This example describes the selected Blockworks assets operation. Confirm the selected fields against that operation's original enum. Every override must name an actual query parameter; it changes only the explicitly prepared public facade. The provider source bytes, source hash and schema assertions remain intact.
 
 For an existing source-refresh review, put the same `querySerialization` object in that mapping's `settings`. It becomes part of the saved plan, preview and review identity. Changing the source, selection, settings or generated offer requires the current original review identity when saving a package.
 
@@ -51,18 +51,20 @@ import {encodeQueryParameters} from '../sf30-seller-sdk/query-parameters.mjs';
 const bazaar = offer.extensions.bazaar;
 const url = new URL(offer.resource.url);
 url.search = encodeQueryParameters(
-  {page: 1, pageSize: 5, acceptFormat: 'json', selections: ['id', 'name']},
+  {page: 1, pageSize: 5, acceptFormat: 'json', selections: ['assetID', 'name']},
   bazaar.schema.properties.input.properties.queryParams,
   bazaar.querySerialization
 );
 ```
 
+The original generated customer client and developer explorer use the same codec automatically. Their existing query inputs remain strings or nonempty arrays of strings; numeric and boolean text is converted using the declared type, selected array items follow the saved encoding, and a raw string follows that field's declared wire form. A generated client inlines the maintained codec and remains dependency-free. Existing offers without serialization metadata keep the previous raw-query behavior.
+
 Pass that concrete URL through the existing reviewed buyer workflow. The native upstream retains repeated query pairs. The original admission callback reconstructs typed arrays and then applies the original schema validator before the existing payment path.
 
 | Selection | Declared form | Encoded query |
 | --- | --- | --- |
-| `['id', 'name']` | explode true | `selections=id&selections=name` |
-| `['id', 'name']` | explode false | `selections=id%2Cname` |
+| `['assetID', 'name']` | explode true | `selections=assetID&selections=name` |
+| `['assetID', 'name']` | explode false | `selections=assetID%2Cname` |
 | Boolean false | scalar | `hasDiligence=false` |
 | String `''` | scalar | `name=` |
 
