@@ -455,6 +455,89 @@ Closing only the browser leaves the
 host process running; reopen the printed URL to inspect it. An abrupt host or
 process interruption is handled by the original session recovery command.
 
+## Use a completed file in data analysis
+
+**Use in data analysis** connects a completed JSON or CSV download to the original
+Python analytical application. The source is the recorded assembly selected by
+this workspace. The browser supplies its session ID, chosen format and source
+name; it cannot substitute an arbitrary local file path.
+
+1. Open the completed download in **File delivery** and save its complete file.
+   Choose **Use in data analysis**, then enter a source name and the actual JSON
+   or CSV format.
+2. Choose **Review source handoff**. The review shows the original session,
+   configuration and snapshot binding, complete file length and SHA-256, target
+   analytical workspace and current source revision. An existing name therefore
+   has an explicit reviewed revision before it can change.
+3. Choose **Register source and open analysis**. The existing Python ObjectBuyer
+   reopens the original session and its recorded assembly. The original
+   AnalysisResponses registry retains that source and its revision in the same
+   DatasetDatabase used by the analytical application. Registration is sent
+   through its authenticated local `/api/object-source` route when it is open.
+4. Follow **Continue in analysis workspace**. In **Retained responses and files**,
+   inspect the registered source, select the JSON record collection when needed,
+   choose explicit field types, preview all mapped records and import the
+   reviewed projection. The existing Data, Query, Activity, Reports and full
+   query export surfaces continue from that imported version. The original
+   source and analytical projection keep their separate identities.
+5. **Stop analysis workspace** drains the owned Python application. **Open saved
+   analysis** reopens its existing database, queries, projections and exports;
+   this does not require the original downloaded file to remain available.
+   Registering or previewing that file again still requires its verified original
+   session and recorded assembly.
+
+The database is private and retained at `STATE/analysis`. `python3` is the default
+host executable; use `--analysis-python /absolute/python3` to select another
+installed Python. The complete matching native checkout supplies the Python
+modules directly, including the original ObjectBuyer and response-table reader.
+No package installation or additional Python service is performed by the UI.
+The original runtime and optional analytical features retain their documented
+dependencies and limits in [`../python/WORKSPACE.md`](../python/WORKSPACE.md).
+
+The latest handoff record remains at `STATE/analysis-handoff.json`. If the parent
+or HTTP reply is interrupted, reopen saved analysis or review and register the
+same file again. The original registry reuses an identical source identity;
+the buyer does not acquire or assemble the object as a registration fallback.
+**Stop current operation** stops the exact owned handoff. Original committed
+source revisions remain available even if a final browser reply was lost.
+
+The analysis process uses the shared original dataset-workspace launcher. Its
+private URL is supplied only through the authenticated Object Buyer UI or the
+owning terminal. `workspace.close()`, `Ctrl+C` and `SIGTERM` close owned analysis
+work along with other owned buyer work. On Linux the Python process group is
+also interrupted when its launcher exits abruptly. Reopening never signals an
+unrelated PID or takes over another live analysis writer.
+
+Stop analysis before reviewing or creating a workspace backup. The existing
+encrypted recovery captures the database inside the workspace and holds the
+original Python `analysis.lock` throughout the capture. A live native analysis
+writer prevents that capture until it is stopped. This composes with the existing
+session and original operator journal leases.
+
+The same customer flow is available from the original object command:
+
+```sh
+buyer-object analysis-review --state /absolute/private/download-workspace \
+  --session completed-events --name purchased_events --format csv
+
+# Use reviewSha256 from that exact review.
+buyer-object analysis-open --state /absolute/private/download-workspace \
+  --session completed-events --name purchased_events --format csv \
+  --review REVIEW_SHA256
+
+# Reopen analytical work without selecting a source or acquiring a file.
+buyer-object analysis-open --state /absolute/private/download-workspace
+
+buyer-object analysis-status --state /absolute/private/download-workspace
+```
+
+For these analysis commands, `--session` is the saved name inside `STATE/sessions`.
+The native download commands retain their original absolute `--session` paths.
+`analysis-open` stays in the foreground and prints the private analytical URL;
+keep that terminal open and use `Ctrl+C` to close its owned application. Without
+the installed alias, use `node .../sf88-operator-buyer-cli/object-cli.mjs` with the
+same arguments. No new acquisition or purchase is part of this handoff.
+
 ## Embedding and deployment
 
 ```js
@@ -464,6 +547,7 @@ const workspace = await startObjectWorkspace({
   stateDirectory: '/absolute/private/download-workspace',
   profilePath: '/absolute/private/object-products.json',
   operatorSettings: '/absolute/private/object-operator.json', // optional receiving preset
+  analysisPython: '/usr/bin/python3', // optional; defaults to python3 on the host
   port: 0,
 });
 console.log(workspace.url);
@@ -474,7 +558,9 @@ await workspace.close();
 The workspace has no additional third-party runtime dependency. Its package closure is the
 original SF88 object modules and their existing imports, `intake.mjs`, the
 original `buyer-runbook/handoff-intake.mjs` preset reader and `runbook.mjs`
-metadata lease, plus the three static files in `public/`. Native signing and transport use the existing original buyer
+metadata lease, shared `dataset-workspace/analysis.mjs`, the original Python
+analytical application and object reader, plus the three static files in `public/`.
+Native signing and transport use the existing original buyer
 dependencies. Distribution owners can expose `server.mjs` as a command and its
 `startObjectWorkspace` export without an additional wrapper or bundle.
 

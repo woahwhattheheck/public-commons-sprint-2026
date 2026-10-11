@@ -105,6 +105,7 @@ function updateButtons() {
   for (const area of document.querySelectorAll('.area:not(#area-maintenance)')) area.inert = locked;
   $('run-list').inert = $('period-current').inert = locked;
   for (const button of document.querySelectorAll('.tabs [data-area]')) button.disabled = locked && button.dataset.area !== 'maintenance';
+  for (const link of document.querySelectorAll('.tabs a')) { link.inert = locked; link.setAttribute('aria-disabled',String(locked)); }
   pricingPane?.setBusy(blocked);periodPane?.setBusy(blocked);accountantPane?.setBusy(blocked);adjustmentsPane?.setBusy(blocked);
   maintenancePane?.setBusy(busy);
 }

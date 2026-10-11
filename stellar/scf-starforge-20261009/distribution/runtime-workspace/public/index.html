@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Starforge Runtime Workspace</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body>
+<header><div><p class="eyebrow">STARFORGE / OPERATIONS</p><h1>Runtime workspace</h1></div><div class="header-right"><span id="connection">Opening workspace</span><button id="refresh" type="button">Refresh</button></div></header>
+<div id="message" class="message" role="status" aria-live="polite" hidden></div>
+<div class="layout">
+<aside>
+  <div class="section-title"><h2>Runtimes</h2><span id="runtime-count" class="count">0</span></div>
+  <div id="runtime-list" class="runtime-list"></div>
+  <details id="attach-details"><summary>Open an existing runtime</summary><form id="attach-form">
+    <label>Runtime directory<input id="attach-directory" required placeholder="/srv/starforge/runtimes/merchant-01" autocomplete="off"></label>
+    <label>Display name<input id="attach-label" maxlength="120" placeholder="Production merchant"></label>
+    <button type="submit">Open runtime</button>
+  </form></details>
+  <p class="note">Existing runtimes retain their original paths, archive and dependency lock.</p>
+  <button id="retry-request" type="button" hidden>Recover last request</button>
+</aside>
+<main>
+  <nav aria-label="Workspace views"><button data-view="runtime" aria-current="page">Selected runtime</button><button data-view="profile">Source &amp; profile</button><button data-view="operations">Operations</button><button data-view="deployment">Deployment</button><button data-view="managed">Managed releases</button><button data-view="images">Images</button><button type="button" data-view="transfers">Offline transfers</button></nav>
+  <section data-pane="runtime">
+    <div class="section-title"><div><p class="eyebrow">SELECTED INSTALLATION</p><h2 id="selected-name">Open a runtime to begin</h2></div><span id="selected-phase" class="status">EMPTY</span></div>
+    <p id="selected-version" class="muted">Open an existing installation or prepare a source archive.</p>
+    <dl id="runtime-facts" class="facts"></dl>
+    <div class="panel"><h3>Inspect and resume</h3><p class="note">Inspection uses the original profile and installer. Installation progress and npm logs are retained in the runtime directory.</p>
+      <div class="checks"><label><input id="inspect-load" type="checkbox" checked>Import selected dependencies</label><label><input id="inspect-source" type="checkbox">Check complete original source</label></div>
+      <div class="actions"><button id="inspect" type="button" disabled>Inspect runtime</button><button id="install" type="button" disabled>Install / resume</button><button id="install-log" type="button" disabled>Open npm log</button></div>
+      <details><summary>npm cache and native adapter options</summary><div class="checks"><label><input id="offline" type="checkbox">Use existing cache only</label></div><label>Cache directory (optional)<input id="npm-cache" placeholder="/srv/starforge/npm-cache" autocomplete="off"></label><label>Local Node headers (optional, for offline native adapters)<input id="node-headers" placeholder="/srv/starforge/node-headers" autocomplete="off"></label></details>
+      <div id="inspection" class="result" hidden></div>
+    </div>
+    <div class="columns">
+      <div class="panel"><h3>Compare runtimes</h3><label>Compare selected runtime with<select id="compare-after"><option value="">Choose a runtime</option></select></label><button id="compare" type="button" disabled>Compare source and dependencies</button><div id="comparison" class="result" hidden></div></div>
+      <div class="panel"><h3>Recover in a new directory</h3><p class="note">Reuse the original archive and selection. A complete source runtime carries its retained dependency lock.</p><form id="recover-form"><label>New runtime name<input id="recover-name" required maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" placeholder="merchant-recovered-01"></label><label class="check"><input id="recover-install" type="checkbox" checked>Install dependencies after preparation</label><button id="recover" type="submit" disabled>Recover runtime</button></form></div>
+    </div>
+    <details><summary>Original source and dependency paths</summary><dl id="runtime-paths" class="paths"></dl></details>
+  </section>
+  <section data-pane="profile" hidden>
+    <div class="section-title"><div><p class="eyebrow">ORIGINAL SOURCE</p><h2>Choose the release and adapter profile</h2></div></div>
+    <p class="muted">Dependency choices come from the selected original archive. Review the exact versions before preparing a runtime.</p>
+    <label>Source archive<select id="archive-select"><option value="">Import an archive or open an existing runtime</option></select></label>
+    <p id="archive-detail" class="note"></p>
+    <div class="panel"><h3>Adapter selection</h3><div class="checks"><label><input id="native" type="checkbox">Native payment runtime</label><label><input id="operator" type="checkbox" checked>Linux operator tools</label></div><fieldset><legend>Optional adapters in this release</legend><div id="features" class="feature-grid"><p class="note">Choose an archive to load its declarations.</p></div></fieldset>
+      <details><summary>Exact version overrides</summary><label>Compatible explicit pins (JSON)<textarea id="pins" rows="4" spellcheck="false">{}</textarea></label><p class="note">Exact original pins remain exact. Supported ranges keep their declared baseline unless a compatible explicit pin is selected.</p></details>
+      <button id="review-profile" type="button" disabled>Review exact profile</button><div id="profile-review" class="result" hidden></div>
+    </div>
+    <div class="panel"><h3>Prepare the reviewed profile</h3><label>New runtime name<input id="new-name" maxlength="80" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" placeholder="merchant-02"></label><p id="runtime-home" class="note"></p><div class="actions"><button id="prepare" type="button" disabled>Prepare new runtime</button><button id="upgrade" type="button" disabled>Upgrade selected runtime</button></div><label class="check"><input id="upgrade-install" type="checkbox" checked>Install dependencies during upgrade</label><p class="note">Preparation keeps the original archive and source intact. Upgrade creates a new runtime and preserves the previous directory.</p></div>
+    <details id="archive-details"><summary>Import another original archive</summary><form id="archive-form">
+      <label>Archive file<input id="archive-file" type="file" accept=".tgz,.gz,application/gzip"></label>
+      <p class="note">Or select an existing archive on the operator machine:</p><label>Existing archive path<input id="archive-path" placeholder="/srv/starforge/downloads/merchant.tgz" autocomplete="off"></label>
+      <label>Original SHA-256<input id="archive-sha" required pattern="[a-f0-9]{64}" maxlength="64" spellcheck="false" placeholder="Complete original archive digest"></label>
+      <label>Display name<input id="archive-label" maxlength="120" placeholder="Merchant source release"></label><button type="submit">Receive and inspect archive</button>
+      <p class="note">The original installer verifies and prepares a source catalog. Native dependencies are selected in the profile above.</p>
+    </form></details>
+  </section>
+  <section data-pane="operations" hidden>
+    <div class="section-title"><div><p class="eyebrow">RETAINED WORK</p><h2>Installation and recovery operations</h2></div><span id="operation-count" class="count">0</span></div>
+    <p class="muted">Operations run in separate local workers. Closing this browser or restarting its server preserves the original installation and its progress.</p>
+    <div id="operations" class="operation-list"></div>
+    <div class="panel" id="log-panel" hidden><div class="section-title"><h3 id="log-title">Selected log</h3><button id="refresh-log" type="button">Refresh log</button></div><p id="log-detail" class="note"></p><pre id="log-text" tabindex="0"></pre></div>
+  </section>
+  <section data-pane="deployment" hidden>
+    <div class="section-title"><div><p class="eyebrow">EXISTING DEPLOYMENT CONTROLS</p><h2>Hand off a ready runtime</h2></div></div>
+    <p class="muted">Export the original source and dependency roots for the existing merchant host, container or SF46 release workflow. Its existing selection and rollback controls choose the running release.</p>
+    <button id="create-handoff" type="button" disabled>Prepare deployment handoff</button>
+    <div id="handoff" class="result" hidden><dl id="handoff-facts" class="paths"></dl><h3>Adopt into the existing managed home</h3><p>Run this command with the current Starforge installation command. Set <code>--home</code> to the managed merchant home outside this runtime directory. The first adoption becomes active; later adoptions are staged for the existing activation and rollback controls.</p><pre id="managed-command" tabindex="0"></pre><div class="actions"><button id="download-handoff" type="button">Download handoff JSON</button><button id="copy-handoff" type="button">Copy handoff JSON</button></div><details><summary>Complete handoff</summary><pre id="handoff-json" tabindex="0"></pre></details></div>
+    <div class="panel"><h3>Keep the selected directory identity</h3><p>Use <code>sourceRoot</code> and <code>dependencyRoot</code> together. An installed source at <code>DIRECTORY/package/source</code> resolves dependencies from <code>DIRECTORY/node_modules</code>.</p><p>The existing SF46 workflow can attach the ready runtime at its actual path. If preparing directly inside a future release directory, choose its final path before preparation. The existing host and release controls own activation, shutdown and rollback.</p></div>
+  </section>
+  <section data-pane="managed" hidden><div id="managed-workspace"></div></section>
+  <section data-pane="transfers" hidden><div id="transfer-workspace"></div></section>
+  <section data-pane="images" hidden><div id="image-workspace"></div></section>
+</main>
+</div>
+<footer><span id="workspace-location"></span><span>Original source. Retained dependency lock. Existing deployment controls.</span></footer>
+</body></html>

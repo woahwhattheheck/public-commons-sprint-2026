@@ -30,6 +30,16 @@ Exports have private directory/file permissions (0700/0600). Each export uses a 
 
 This produces one capped ordered GET query, with at most 1,000 rows and the configured query timeout, using the original adapter's byte and concurrency limits. It does not scan the database for example records, replicate tables, infer prices, install schema objects, or start a seller as a side effect of export. Use approved database views and normal role/row policies for access restrictions. Request filters are public query inputs, not customer authentication or row authorization. PostgreSQL results preserve the original adapter's text/null and type-OID contract.
 
+## Retain, operate and roll back the merchant
+
+Initialize an SF82 release store once, then add `--release-store /private/merchant-releases` when opening this workspace. Enter the intended public HTTPS origin before exporting the package. The **Release handoff** section shows all saved exports with paged file identities, their retained release receipts and the exact named-query contract. Select a saved export, choose the release ID and launch settings, then stage it. The original release adapter pins the reviewed input-manifest SHA before committing that immutable ID.
+
+**Open Seller releases** opens the original operator console for this store. Compare query, source and exact payment changes; select at the current generation; start or restart explicitly; inspect the original Operations and availability controls; and open the actual developer explorer and customer SDK downloads. This workspace owns the console and seller it starts, and closes them on shutdown. An independently launched `release-cli.mjs console` can reopen the same retained store.
+
+A lost stage reply can recover the same release ID and exact source/runtime choices, including after the authoring package moves. Keep the workspace output directory to reopen its saved-export receipts, and keep the complete release store for immutable configurations, selection history and per-release availability. Database contents remain live; rollback restores configuration against the current database.
+
+Use the [complete PostgreSQL release guide](../../../sf82-seller-pilot/POSTGRES_RELEASES.md) for initialization commands, direct CLI staging, MCP source aliases, customer delivery, upgrades and recovery. Existing direct `postgres/start.mjs` exports still work without a release store.
+
 ## Integration surfaces
 
 | File | Purpose |
@@ -37,10 +47,11 @@ This produces one capped ordered GET query, with at most 1,000 rows and the conf
 | `catalog.mjs` | Fixed, parameterized metadata reads inside short read-only transactions, with connection/time limits and close cleanup. |
 | `plan.mjs` | Explicit operator choices to a schema-qualified query, output aliases, typed inputs, and original seller terms. |
 | `package.mjs` | Canonical compiler validation, credential-free source policy capture, certificate preservation, and private create-only export. |
-| `server.mjs` | Loopback HTTP server and CLI, exact Host/Origin checks, session CSRF token, preview/export lifecycle. |
+| `server.mjs` | Loopback HTTP server and CLI, exact Host/Origin checks, session CSRF token, preview/export and retained-release lifecycle. |
+| `release-handoff.mjs` | Saved-export receipts, original hash-pinned staging/recovery and owned release-console handoff. |
 | `public/` | Dependency-free, neutral industrial operator interface. |
 
-`main(['--source', sourceFile, '--output', directory, '--port', '0'])` returns `{url, server, close}` for embedding. Lower-level callers may provide a catalog and a `workspaceProfile` built from the original `readPostgresSourceFile` / `resolvePostgresConnection` pair to `startMerchantWorkspace`. Those are operator-process APIs, not browser configuration endpoints.
+`main(['--source', sourceFile, '--output', directory, '--port', '0'])` returns `{url, server, close}` for embedding. Lower-level callers may provide a catalog and a `workspaceProfile` built from the original `readPostgresSourceFile` / `resolvePostgresConnection` pair to `startMerchantWorkspace`; its optional `releaseStore` points to an existing SF82 store. Those are operator-process APIs, not browser configuration endpoints.
 
 ## Focused integration exercise
 
