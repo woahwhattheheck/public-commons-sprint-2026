@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.sac-asset-map.v1",
+  "assets": [
+    {
+      "network": "stellar:testnet",
+      "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+      "classicAsset": {
+        "code": "USDC",
+        "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5"
+      },
+      "source": "https://developers.stellar.org/docs/build/agentic-payments/x402#testnet-usdc"
+    },
+    {
+      "network": "stellar:testnet",
+      "asset": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      "classicAsset": "native",
+      "source": "https://developers.stellar.org/docs/tokens/stellar-asset-contract"
+    },
+    {
+      "network": "stellar:pubnet",
+      "asset": "CAS3J7GYLGXMF6TDJBBYYSE3HQ6BBSMLNUQ34T6TZMYMW2EVH34XOWMA",
+      "classicAsset": "native",
+      "source": "https://developers.stellar.org/docs/tokens/stellar-asset-contract"
+    }
+  ]
+}
