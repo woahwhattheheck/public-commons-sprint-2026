@@ -138,6 +138,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   woo-seller / woo-buyer                     Connect existing WooCommerce orders to native checkout
   grant-workspace                           Revise, export and receive the original SF47 grant delivery plans
   woo-operator                              Review original Stellar transfers and complete selected Woo orders
+  woo-refund                                Record verified order credits and receive original refund handoffs
 
 Optional feature groups: ${[...new Set([
   ...Object.keys(specification.featurePeers ?? {}),

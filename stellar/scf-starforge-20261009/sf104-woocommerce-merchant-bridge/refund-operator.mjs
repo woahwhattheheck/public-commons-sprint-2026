@@ -415,5 +415,6 @@ export async function exportRefund(config, id, destination) {
     siteUrl:config.siteUrl, orderReference:status.orderReference, inputSha256:loaded.input.sha256, files};
   const saved = await saveFirst(join(target, 'manifest.json'), manifest);
   need(same(saved, manifest), 'WOO_REFUND_EXPORT_MANIFEST_CONFLICT');
-  return {...manifest, directory:target};
+  return {...manifest, directory:target,
+    manifestSha256:digest(await readBytes(join(target, 'manifest.json'), MAX_STATE))};
 }
