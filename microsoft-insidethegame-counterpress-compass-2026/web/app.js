@@ -15,7 +15,7 @@ const L = {
     zone: {defensive: 'own third', middle: 'middle third', attacking: 'final third'},
     rows: {shots: 'Shots', share: 'Share of on-ball actions', cp: 'Counterpresses', regains: 'Won back within 8s', rate: 'Regain rate (settled)', mean: 'Avg. time to win back', unclear: 'Unclear outcome'},
     chip: {success: 'Won back', expired: 'Timed out', interrupted: 'Unclear'},
-    noMoments: 'No counterpress moments yet.', progress: (c, n) => `Event ${c} of ${n}.`, at: 'at',
+    noMoments: 'No counterpress moments yet.', reviewFilter: 'Filter moments', reviewAll: 'All outcomes', reviewSuccess: 'Won back', reviewExpired: '8s elapsed', reviewInterrupted: 'Unclear', reviewSelected: 'Press evidence', reviewEmpty: 'No settled press windows in this view.', reviewMissing: 'No moments match this filter.', reviewObserved: 'Next observed event', reviewNoNext: 'No later event observed in this match prefix.', reviewCaution: 'The following event is context, not proof the press caused it.', reviewJump: 'Replay this outcome', reviewCount: (n,total) => n + ' of ' + total + ' observed moments', reviewEvidence: 'Recorded evidence', reviewReason: {success: (n,s) => n + ' pressure action(s); same-team regain in ' + s + 's inside the official 8s window.', expired: (n) => n + ' pressure action(s); the log passed 8s without a qualifying regain.', interrupted: (n) => n + ' pressure action(s); a new same-team loss interrupted the window, so recovery is unknown.'}, progress: (c, n) => `Event ${c} of ${n}.`, at: 'at',
     ins: {none: 'Nothing has happened yet — press Play.', front: (t, n) => `${t} are on the front foot: ${n} pressing actions in the last five minutes.`,
       even: n => `An even spell: ${n} pressing actions between the sides in the last five minutes.`, quiet: 'A quiet spell — little pressing in the last five minutes.',
       regainBest: (t, s) => `${t} win the ball back in ${s}s on average after losing it.`, noRegain: t => `${t} haven't won the ball back inside eight seconds yet.`,
@@ -37,7 +37,7 @@ const L = {
     zone: {defensive: 'campo propio', middle: 'zona media', attacking: 'último tercio'},
     rows: {shots: 'Tiros', share: 'Cuota de acciones con balón', cp: 'Contrapresiones', regains: 'Recuperadas en 8s', rate: 'Tasa de recuperación (resueltas)', mean: 'Tiempo medio de recuperación', unclear: 'Resultado incierto'},
     chip: {success: 'Recuperada', expired: 'Sin recuperar', interrupted: 'Incierta'},
-    noMoments: 'Aún no hay momentos de contrapresión.', progress: (c, n) => `Jugada ${c} de ${n}.`, at: 'a los',
+    noMoments: 'Aún no hay momentos de contrapresión.', reviewFilter: 'Filtrar jugadas', reviewAll: 'Todos', reviewSuccess: 'Recuperada', reviewExpired: '8s cumplidos', reviewInterrupted: 'Incierta', reviewSelected: 'Evidencia de presión', reviewEmpty: 'No hay ventanas de presión resueltas en esta vista.', reviewMissing: 'Ninguna jugada coincide con el filtro.', reviewObserved: 'Siguiente jugada observada', reviewNoNext: 'No hay jugadas posteriores observadas en este segmento.', reviewCaution: 'La siguiente jugada es contexto, no prueba de causalidad.', reviewJump: 'Reproducir este resultado', reviewCount: (n,total) => n + ' de ' + total + ' jugadas observadas', reviewEvidence: 'Evidencia registrada', reviewReason: {success: (n,s) => n + ' presión(es); recuperación del mismo equipo en ' + s + 's dentro de 8s.', expired: (n) => n + ' presión(es); pasaron 8s sin una recuperación válida.', interrupted: (n) => n + ' presión(es); otra pérdida interrumpió la ventana y el resultado es desconocido.'}, progress: (c, n) => `Jugada ${c} de ${n}.`, at: 'a los',
     ins: {none: 'Aún no ha pasado nada: pulsa Reproducir.', front: (t, n) => `${t} manda: ${n} acciones de presión en los últimos cinco minutos.`,
       even: n => `Fase igualada: ${n} acciones de presión entre ambos en los últimos cinco minutos.`, quiet: 'Fase tranquila: poca presión en los últimos cinco minutos.',
       regainBest: (t, s) => `${t} recupera el balón en ${s}s de media tras perderlo.`, noRegain: t => `${t} aún no ha recuperado el balón en menos de ocho segundos.`,
@@ -45,7 +45,7 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
+const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
@@ -201,16 +201,64 @@ function insights(f) {
   out.push(T.ins.rivalLine(rival, rr === null ? '—' : rr + '%'));
   return out;
 }
-function drawMoments(f) {
-  const T = t(), list = f.overlays.slice(-6).reverse();
-  if (!list.length) { el('moments').replaceChildren(node('li', '', T.noMoments)); return; }
-  el('moments').replaceChildren(...list.map(o => {
-    const li = node('li'), body = node('span');
-    body.append(node('span', 'chip ' + o.status, T.chip[o.status] || o.status), document.createTextNode(o.text));
-    li.append(node('b', '', fmt(o.showAt)), body);
-    return li;
-  }));
+// Every replayed explanation is derived from original fixture IDs already
+// present in the current validated event prefix. Never infer unseen plays.
+function reviewEvidence(f, o) {
+  const T = t(), root = el('review');
+  root.replaceChildren();
+  if (!o) { root.append(node('p', 'note', T.reviewEmpty)); return; }
+  const known = new Set(o.evidenceIds);
+  const trace = S.events.filter(e => known.has(e.id));
+  const head = node('h3', '', T.reviewSelected + ' · ' + fmt(o.showAt));
+  const summary = node('p', 'review-summary', o.text);
+  const reason = node('p', 'review-why', T.reviewReason[o.status](o.metrics.pressureCount, o.metrics.secondsToRecover));
+  const label = node('h4', '', T.reviewEvidence);
+  const chain = node('ol', 'review-evidence');
+  for (const e of trace) {
+    const li = node('li');
+    li.append(node('code', '', e.id), node('time', '', fmt(e.second)), node('span', '', eventLine(e)));
+    chain.append(li);
+  }
+  // An expired window becomes established only when a later event advances
+  // the event-time watermark strictly beyond the eight-second boundary.
+  const lastId = o.evidenceIds.at(-1);
+  const closingIndex = o.status === 'expired'
+    ? S.events.findIndex(e => e.second > o.showAt)
+    : S.events.findIndex(e => e.id === lastId);
+  const next = closingIndex < 0 ? null : S.events.slice(closingIndex + 1).find(e => e.type !== 'clock');
+  const observation = node('p', 'review-following', next
+    ? T.reviewObserved + ': ' + next.id + ' · ' + fmt(next.second) + ' · ' + eventLine(next)
+    : T.reviewNoNext);
+  const caution = node('p', 'note', T.reviewCaution);
+  const jump = node('button', 'review-jump', T.reviewJump);
+  jump.type = 'button'; jump.disabled = closingIndex < 0;
+  jump.addEventListener('click', () => { if (S.session && closingIndex >= 0) void seek(closingIndex + 1); });
+  root.append(head, summary, reason, label, chain, observation, caution, jump);
 }
+function drawMoments(f) {
+  const T = t(), filter = el('reviewFilter').value;
+  const visible = f.overlays.filter(o => filter === 'all' || o.status === filter).slice(-10).reverse();
+  el('reviewCount').textContent = T.reviewCount(visible.length, f.overlays.length);
+  if (!visible.length) {
+    el('moments').replaceChildren(node('li', '', f.overlays.length ? T.reviewMissing : T.noMoments));
+    reviewEvidence(f, null); return;
+  }
+  let selected = visible.find(o => o.id === S.selectedMomentId);
+  if (!selected) { selected = visible[0]; S.selectedMomentId = selected.id; }
+  el('moments').replaceChildren(...visible.map(o => {
+    const li = node('li');
+    const btn = node('button', 'moment-select' + (o.id === S.selectedMomentId ? ' selected' : ''));
+    btn.type = 'button'; btn.setAttribute('aria-pressed', String(o.id === S.selectedMomentId));
+    btn.setAttribute('aria-label', fmt(o.showAt) + ' · ' + (T.chip[o.status] || o.status) + ' · ' + o.text);
+    const body = node('span');
+    body.append(node('span', 'chip ' + o.status, T.chip[o.status] || o.status), document.createTextNode(o.text));
+    btn.append(node('b', '', fmt(o.showAt)), body);
+    btn.addEventListener('click', () => { S.selectedMomentId = o.id; if (S.frame) drawMoments(S.frame); el('review').focus(); });
+    li.append(btn); return li;
+  }));
+  reviewEvidence(f, selected);
+}
+
 function drawFeed() {
   el('feed').replaceChildren(...S.events.slice(-10).reverse().map(e => {
     const li = node('li', e.team === 'Harbor FC' ? 'harbor' : 'metro');
@@ -360,6 +408,7 @@ async function seek(count) {
   } catch (e) { if (token === S.req) notice(e.status === 404 ? t().expiredSession : e.message); }
 }
 async function refreshView() {
+  S.selectedMomentId = null;
   applyI18n();
   const resume = S.playing;
   await seek(S.cursor);
@@ -376,7 +425,7 @@ async function newMatch({count = 0} = {}) {
     const s = await api('/api/sessions', 'POST', {scenario, seed});
     if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return; }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
-    S.session = s; S.match = {scenario, seed}; S.events = []; S.cursor = 0; S.frame = null;
+    S.session = s; S.match = {scenario, seed}; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null;
     el('matchLink').hidden = true; el('shareStatus').textContent = '';
     el('scrub').max = String(s.total);
     el('blurb').textContent = s.blurb;
@@ -408,6 +457,7 @@ async function boot() {
   el('dice').addEventListener('click', () => { el('seed').value = String(1 + crypto.getRandomValues(new Uint32Array(1))[0] % 999999); newMatch(); });
   el('play').addEventListener('click', () => (S.playing ? stopStream() : play()));
   el('recover').addEventListener('click', recoverStream);
+  el('reviewFilter').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) drawMoments(S.frame); });
   el('step').addEventListener('click', () => { if (S.session) seek(Math.min(S.cursor + 1, S.session.total)); });
   el('restart').addEventListener('click', () => seek(0));
   el('speed').addEventListener('change', () => { if (S.playing) play(); });
