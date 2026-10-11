@@ -4,13 +4,14 @@ import { createHash } from 'node:crypto';
 import { basename } from 'node:path';
 import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
-import { config, catalog, operation, bytes, need } from './config.mjs';
+import { config, catalog, operation, responseFile, bytes, need } from './config.mjs';
 
 const print = data => process.stdout.write(JSON.stringify(data, null, 2) + '\n');
 const sha256 = data => createHash('sha256').update(data).digest('hex');
 
 async function review(c) {
   const op = operation(c.operation);
+  const download = responseFile(c);
   const body = op.bodyFile === undefined ? undefined :
     await bytes(op.bodyFile, 1048576, 'BODY_FILE_INVALID');
   print({
@@ -23,6 +24,7 @@ async function review(c) {
     operatorId:c.operator?.actor ?? null,
     serviceId:c.operator?.service ?? null,
     signerFilename:c.signerModule ? basename(c.signerModule) : null,
+    responseFile:download ? { ...download, prepared:false } : null,
     next:'Execute an original approved single operation using the private operator module'
   });
 }
@@ -37,12 +39,18 @@ async function discover(c) {
 }
 async function main(args) {
   if (args.length === 1 && args[0] === '--help') {
-    process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json\n');
+    process.stdout.write('Usage: node cli.mjs --review|--discover|--execute --config /absolute/operator.json [--response-out /absolute/output]\n');
     return;
   }
-  need(args.length === 3 && ['--review','--discover','--execute'].includes(args[0]) &&
+  need((args.length === 3 || args.length === 5 && args[3] === '--response-out') &&
+    ['--review','--discover','--execute'].includes(args[0]) &&
     args[1] === '--config', 'USAGE_MODE_AND_CONFIG_REQUIRED');
   const c = await config(args[2]);
+  if (args.length === 5) {
+    need(args[0] !== '--discover', 'RESPONSE_OUT_REQUIRES_REVIEW_OR_EXECUTE');
+    need(c.responseFile === undefined, 'RESPONSE_FILE_CONFIG_AND_FLAG_CONFLICT');
+    c.responseFile = { destination:args[4] };
+  }
   if (args[0] === '--review') return review(c);
   if (args[0] === '--discover') return discover(c);
   const { execute } = await import('./execute.mjs');
