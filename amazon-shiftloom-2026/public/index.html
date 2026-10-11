@@ -12,6 +12,7 @@
     <header class="topbar"><div class="brand"><span class="mark">S</span><span><b>ShiftLoom</b><small>Human-approved shift coordination</small></span></div><div class="hint">Simulated Alexa+ experience · No device or cloud account</div></header>
     <main>
       <section class="hero"><div class="eyebrow">NEIGHBORHOOD SCIENCE DAY · SAT 17 OCT 2026</div><h1>One missing volunteer.<br><em>One better plan.</em></h1><p>Talk to your event coordinator, check qualifications and schedule conflicts, then approve exactly what changes. Nothing is sent to real volunteers.</p></section>
+      <div class="session-bar"><div><strong>Your local review</strong><p id="session-status" role="status">Opening your sample event…</p></div><button id="refresh" type="button">Refresh event</button></div>
       <div class="columns">
         <section class="panel coordinator" aria-label="Coordination assistant">
           <div class="panelhead"><div><span class="live-dot"></span> SHIFTLOOM COORDINATOR</div><button id="listen" class="textbutton" type="button" title="Speak the latest response using your browser">Read aloud</button></div>
@@ -21,7 +22,7 @@
           <section id="proposal" class="proposal" hidden aria-label="Proposed changes"><h3>Proposed change · Not committed</h3><p id="proposal-summary"></p><ul id="proposal-changes"></ul><div class="approval"><button id="approve" class="primary" type="button">Approve change</button><button id="dismiss" type="button">Dismiss</button></div></section>
           <section id="trace" class="trace" hidden><h3>Real tool-by-tool reasoning</h3><ol id="trace-list"></ol></section>
         </section>
-        <section class="panel board" aria-label="Live sample event schedule"><div class="panelhead"><span>EVENT COVERAGE</span><span id="revision">Revision 0</span></div><h2>Shift board</h2><p class="sub">Fictional volunteers · Local demo data</p><div id="shifts"></div><div class="buttons"><button id="undo" type="button">Undo last approval</button><button id="reset" type="button">Reset demo</button></div><p class="footnote">The system checks availability, required skills, simultaneous assignments and weekly limits before proposing coverage. Only the Approve action changes this local schedule.</p></section>
+        <section class="panel board" aria-label="Live sample event schedule"><div class="panelhead"><span>EVENT COVERAGE</span><span id="revision">Revision 0</span></div><h2>Shift board</h2><p class="sub">Fictional volunteers · Local demo data</p><div id="shifts"></div><div class="buttons"><button id="undo" type="button">Undo last approval</button><button id="reset" type="button">Reset demo</button></div><p class="footnote">The system checks availability, required skills, simultaneous assignments and weekly limits before proposing coverage. Approvals change assignments; Undo reverses the last approval and Reset restores the sample event. Nothing changes another browser’s event.</p></section>
       </div>
       <footer>Built for the Amazon Build, Ship, Shape developer hackathon · Alexa+ simulated experience path · Original work, offline-first.</footer>
     </main>
