@@ -21,21 +21,36 @@
       <section class="workspace" aria-labelledby="inputs-title">
         <div class="heading"><div><div class="eyebrow">01 / INPUTS</div><h2 id="inputs-title">Operating assumptions</h2></div><p>Clear a cost to mark it unknown.</p></div>
         <form id="inputs" autocomplete="off" novalidate>
+          <div class="scenario-panel">
+            <div class="field scenario-name-field">
+              <label for="scenario-name">Scenario name</label>
+              <input id="scenario-name" name="scenario-name" type="text" maxlength="160" spellcheck="false" placeholder="Name these operating assumptions" aria-describedby="scenario-storage">
+            </div>
+            <div class="actions scenario-actions" role="group" aria-label="Editable scenario files">
+              <button id="save-scenario" type="button">Save scenario JSON</button>
+              <button id="open-scenario" type="button" aria-controls="scenario-file">Open scenario JSON</button>
+              <button id="undo-scenario" type="button" disabled>Undo scenario replacement</button>
+            </div>
+            <p id="scenario-storage" class="scenario-help">Edits stay in this page until reload or close. Save a scenario file to reopen it later. Opened files are validated by this local server; nothing is uploaded externally.</p>
+            <p id="scenario-status" class="scenario-status" role="status" aria-live="polite">Working with illustrative assumptions. Save a scenario file to keep your edits.</p>
+            <p class="scenario-help">Editing assumptions clears previous results and report downloads. Calculate again when ready.</p>
+          </div>
           <div id="field-groups" class="field-groups"></div>
           <div class="actions"><button id="calculate" class="primary" type="submit">Calculate economics <span aria-hidden="true">↗</span></button><button id="reset" type="button">Reset to illustrative sample</button></div>
           <p id="error" class="error" role="alert" aria-live="polite"></p>
         </form>
+        <input id="scenario-file" type="file" accept=".json,application/json" aria-label="Choose a saved scenario JSON file" hidden>
       </section>
       <section id="results" class="results hidden" aria-labelledby="results-title" aria-live="polite">
         <div class="heading"><div><div class="eyebrow">02 / DECISION</div><h2 id="results-title">Monthly scenario results</h2></div><p>Numbers are scenario projections, not live fees.</p></div>
         <div class="metrics" id="metrics"></div>
         <div class="table-scroll"><table><caption class="sr-only">Three-rail monthly cost comparison</caption><thead><tr><th scope="col">Rail</th><th scope="col">Onchain ops</th><th scope="col">Full cost</th><th scope="col">Contribution</th><th scope="col">Break-even calls</th></tr></thead><tbody id="rail-rows"></tbody></table></div>
         <p id="decision" class="decision"></p>
-        <div class="actions"><button id="download-json" type="button">Download original-data JSON ↓</button><button id="download-md" type="button">Download merchant report ↓</button></div>
+        <div class="actions"><button id="download-json" type="button" disabled>Download calculated report JSON ↓</button><button id="download-md" type="button" disabled>Download merchant report ↓</button></div>
         <details><summary>Cost lines, assumptions, and missing fields</summary><pre id="details"></pre></details>
       </section>
     </main>
-    <footer>Runs solely on <code>127.0.0.1</code> using the original SF87 Node 22 economics engine. No wallet, chain request, uploaded data, or hosted analytics.</footer>
+    <footer>Runs on your device at <code>127.0.0.1</code>. Scenario validation and calculations use this local server. No external uploads, wallet, chain requests, or hosted analytics.</footer>
   </div>
 </body>
 </html>
