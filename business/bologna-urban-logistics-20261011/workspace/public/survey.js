@@ -40,7 +40,7 @@ async function perform(form, payload, revision) {
     dirtyForms.delete(form.id);
     if(payload.action==='survey.import')dirtyForms.delete('preview-form');
     dirty=dirtyForms.size>0;
-    data=await request('/api/survey');render(false);
+    data=await request(`/api/survey?${new URLSearchParams(filters)}`);render(false);
     message(`Saved · ${result.result.event} · workspace revision ${data.revision}`);
     return result;
   } catch(error){message(error.message,true);return null;}
@@ -69,7 +69,7 @@ function render(forms=false) {
   selectOptions($('#filter-role'),Object.entries(data.schema.options.role).map(([id,labels])=>[id,labels[1]]),'All roles');
   selectOptions($('#finding-scenarios'),data.scenarios.map(x=>[x.id,`${x.id} · ${x.name.en}`]));
   selectOptions($('#finding-decisions'),data.decisions.map(x=>[x.id,`${x.id} · ${x.subject}`]));
-  $('#theme-list').replaceChildren(...data.themes.map(t=>{const b=node('button',`${t.id} · ${t.it} / ${t.en}`,{type:'button'});b.onclick=()=>{fill($('#theme-form'),t);dirty=true;};return b;}));
+  $('#theme-list').replaceChildren(...data.themes.map(t=>{const b=node('button',`${t.id} · ${t.it} / ${t.en}`,{type:'button'});b.onclick=()=>{fill($('#theme-form'),t);dirtyForms.add('theme-form');dirty=true;};return b;}));
   selectOptions($('#publication-source'),data.publications.map(x=>[x.id,`${x.name} · revision ${x.workspaceRevision}`]),'Current filtered analysis');
   renderResponses();renderDetail();renderAnalysis(data.analysis);links();
 }
