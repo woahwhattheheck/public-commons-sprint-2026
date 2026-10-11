@@ -69,6 +69,31 @@ async function publish(path,value,{same=false,raw=false}={}) {
   } finally {await file.close().catch(()=>{});await unlink(temporary).catch(()=>{});}
 }
 
+/** Read the ORIGINAL host-owned operator preset for receiving applications. */
+export async function readBuyerOperatorPreset(settingsFile, {directory} = {}) {
+  canonical(directory);
+  check(settingsFile!==null,'REQUEST_OPERATOR_PRESET_REQUIRED');
+  const raw=await bytes(canonical(settingsFile),16384);let value;
+  try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
+  catch{throw new InputError('REQUEST_OPERATOR_PRESET_INVALID');}
+  const required=['schema','actor','service','payer','python','maxTotalAtomic','maxDailyAtomic'];
+  fields(value,[...required,'secretEnv','signerProvider','rpc','httpsProxyEnv'],required);
+  check(value.schema===PRESET,'REQUEST_OPERATOR_PRESET_INVALID');
+  nativeOperator({actor:value.actor,service:value.service,python:value.python,
+    policy:join(directory,'policy.json'),ledger:join(directory,'reservations.sqlite')});
+  check(/^G[A-Z2-7]{55}$/.test(value.payer??''),'REQUEST_OPERATOR_PAYER_INVALID');
+  check(BigInt(amount(value.maxDailyAtomic))<=BigInt(amount(value.maxTotalAtomic)),'REQUEST_OPERATOR_BUDGET_INVALID');
+  check(value.signerProvider===undefined||value.secretEnv===undefined,'REQUEST_ONE_SIGNER_SOURCE_REQUIRED');
+  if(value.signerProvider!==undefined)canonical(value.signerProvider);
+  for(const name of ['secretEnv','httpsProxyEnv'])if(value[name]!==undefined)
+    check(/^[A-Z][A-Z0-9_]{0,127}$/.test(value[name])&&!value[name].startsWith('SF36_'),'REQUEST_ENVIRONMENT_NAME_INVALID');
+  if(value.rpc!==undefined)check(typeof value.rpc==='string'&&value.rpc.length<=2048,'REQUEST_RPC_INVALID');
+  return {value,sha256:hash(raw),view:{actor:value.actor,service:value.service,payer:value.payer,
+    maxTotalAtomic:value.maxTotalAtomic,maxDailyAtomic:value.maxDailyAtomic,
+    signerSource:value.signerProvider===undefined?'ENVIRONMENT':'TRUSTED_SEP43_PROVIDER',
+    walletKeyEnvironment:value.signerProvider===undefined?value.secretEnv??'STELLAR_SECRET':null}};
+}
+
 /** The preset is declared by the local launcher, never by a received packet. */
 export async function openHandoffIntake({directory,configsDirectory,operatorSettings}) {
   await privateDirectory(directory,true);await privateDirectory(configsDirectory);
@@ -93,28 +118,7 @@ export async function openHandoffIntake({directory,configsDirectory,operatorSett
   const configuration=id=>'received-'+id.slice(8)+'.json';
   async function lease(action){const release=await acquireRunbookMetadataLease(directory);
     try{return await action();}finally{await release();}}
-  async function preset() {
-    check(settingsFile!==null,'REQUEST_OPERATOR_PRESET_REQUIRED');
-    const raw=await bytes(canonical(settingsFile),16384);let value;
-    try{value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));}
-    catch{throw new InputError('REQUEST_OPERATOR_PRESET_INVALID');}
-    const required=['schema','actor','service','payer','python','maxTotalAtomic','maxDailyAtomic'];
-    fields(value,[...required,'secretEnv','signerProvider','rpc','httpsProxyEnv'],required);
-    check(value.schema===PRESET,'REQUEST_OPERATOR_PRESET_INVALID');
-    nativeOperator({actor:value.actor,service:value.service,python:value.python,
-      policy:join(directory,'policy.json'),ledger:join(directory,'reservations.sqlite')});
-    check(/^G[A-Z2-7]{55}$/.test(value.payer??''),'REQUEST_OPERATOR_PAYER_INVALID');
-    check(BigInt(amount(value.maxDailyAtomic))<=BigInt(amount(value.maxTotalAtomic)),'REQUEST_OPERATOR_BUDGET_INVALID');
-    check(value.signerProvider===undefined||value.secretEnv===undefined,'REQUEST_ONE_SIGNER_SOURCE_REQUIRED');
-    if(value.signerProvider!==undefined)canonical(value.signerProvider);
-    for(const name of ['secretEnv','httpsProxyEnv'])if(value[name]!==undefined)
-      check(/^[A-Z][A-Z0-9_]{0,127}$/.test(value[name])&&!value[name].startsWith('SF36_'),'REQUEST_ENVIRONMENT_NAME_INVALID');
-    if(value.rpc!==undefined)check(typeof value.rpc==='string'&&value.rpc.length<=2048,'REQUEST_RPC_INVALID');
-    return {value,sha256:hash(raw),view:{actor:value.actor,service:value.service,payer:value.payer,
-      maxTotalAtomic:value.maxTotalAtomic,maxDailyAtomic:value.maxDailyAtomic,
-      signerSource:value.signerProvider===undefined?'ENVIRONMENT':'TRUSTED_SEP43_PROVIDER',
-      walletKeyEnvironment:value.signerProvider===undefined?value.secretEnv??'STELLAR_SECRET':null}};
-  }
+  const preset = () => readBuyerOperatorPreset(settingsFile, {directory});
   async function record(id){const value=await json(join(root(id),'request.json'));
     check(value.schema===SCHEMA&&value.id===id&&value.handoffSha256===id.slice(8),'REQUEST_RECORD_CHANGED');return value;}
   async function verifiedSource(id){const item=await record(id),raw=await bytes(source(id),OPERATION_HANDOFF_MAX_BYTES);
