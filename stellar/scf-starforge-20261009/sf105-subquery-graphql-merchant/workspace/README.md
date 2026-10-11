@@ -22,7 +22,8 @@ workspace binds `127.0.0.1`; `--port 0` chooses an available port. The URL's
 private capability moves into browser session storage and is removed from the
 address bar. Every private API uses that capability and the exact local origin.
 Closing the browser leaves the workspace process running; Ctrl-C drains its
-managed merchant and closes the workspace. The next launch prints a new URL.
+managed merchant, closes its release consoles and their managed merchants, and
+closes the workspace. The next launch prints a new URL.
 
 Provide backend credential environment values to the launcher process when the
 original approved-queries file declares an `authorizationEnv`. The browser
@@ -146,6 +147,93 @@ merchant is started. Each successive revision copies the prior merchant package,
 not all earlier wrappers, so historical lineage does not recursively duplicate
 the complete workspace.
 
+## Deploy a retained merchant and operate its releases
+
+The **Deployment and operations** panel consumes the original
+[`deployment/compiler.mjs`](../deployment/compiler.mjs), the existing
+[SF82 release store and console](../../sf82-seller-pilot/RELEASES.md), and the
+[SF99 Linux host generator](../../sf99-merchant-deploy/README.md). The browser
+uses the same original service, query, admission and payment contracts through
+these destinations.
+
+1. **Prepare deployment package.** Choose an original or revised export retained
+   by this project. Earlier exports remain available for an explicit deployment
+   choice. Save any draft edits first; the server uses the selected export's
+   exact package, not the editable draft. Enable the local-backend option only
+   when that package's actual GraphQL service uses loopback. The original
+   compiler verifies and copies its merchant, binds the named original handlers,
+   and prepares its OpenAPI, selections, service bindings, service and release
+   review. The workspace retains all returned paths and the complete package.
+2. **Stage release.** Enter an explicit release ID, label and seller port. A
+   facilitator selects the original native runtime; leaving it blank keeps
+   challenge-only mode. The local-facilitator checkbox permits the original
+   explicitly configured loopback HTTP option. Staging calls the original
+   `stageSubQueryDeployment` and stores its inspected immutable release identity.
+   Each project has one private store under `release-stores/PROJECT/`, so later
+   merchant versions use the same selection and rollback history. Staging does
+   not select or start the release. A package has one retained staged release;
+   prepare another deployment when selecting different runtime settings.
+3. **Open release console.** The workspace starts the original
+   `startReleaseConsole` on a private available loopback port. Its original UI
+   compares the selected and candidate releases, selects through the current
+   generation guard, and runs, drains, restarts or rolls back its managed seller.
+   Use the exact staged release ID shown in the workspace. The console reads
+   actual store selection and running-instance state. Its private URL is created
+   for this workspace session and is never written into project history. Closing
+   a browser tab leaves the process running. Closing the workspace drains only
+   the merchants owned by its original consoles and direct runtime.
+4. **Prepare host package.** Enter the target host's actual merchant ID, existing
+   unprivileged account, private state directory, distinct seller and operations
+   ports, and challenge/native mode. A native host requires its selected HTTPS
+   facilitator. If the GraphQL service names a credential, supply the private
+   environment file path; the original compiler requires it. The workspace
+   never requests or copies the file's credential values. Additional original
+   settings include service group, runtime executables, event delivery,
+   capacity, drain time and history retention. The original compiler binds the
+   selected deployment's service and handler files and generates its SF99
+   installation directory.
+5. **Read installation runbook.** Each retained host packet displays its actual
+   merchant, public origin, service target and source installation, original
+   generated files and `RUNBOOK.md`. The browser verifies the exact packet and
+   reports the original host preflight separately. A private environment file
+   may be provisioned after generation: the retained runbook stays accessible
+   while its readiness message identifies the missing setup. Follow that runbook
+   on the selected host for account permissions, environment setup, Caddy and
+   systemd installation, preflight, lifecycle and recovery. Generation creates
+   these files; installing services remains an explicit operator action. Keep
+   the recorded source installation and private deployment directory available.
+6. **Reopen and continue.** Reopen the project after a workspace restart and
+   select its saved deployment. **Refresh deployment** reads the original
+   packet, current release selection/runtime and host-file availability. Open
+   the original console again to operate the same release store. A host packet
+   whose bound source changed remains visible with its actual readiness error;
+   prepare the appropriate new deployment/host packet for the changed source.
+
+Release staging and host preparation are separate original destinations. The
+host packet launches the exact retained merchant directly; it does not claim
+to deploy the SF82 store's active selection. The original deployment review
+records SF61's representation annotations, while preserving the approved
+queries, route identity, input assertions, public example, complete ordered
+payment options and handler/admission binding. Use the original generated buyer
+client with the selected live seller's challenge, as described in that review.
+
+Deployment packages live under `deployments/PROJECT-ID/packet/`. Successive
+operation records are complete immutable files alongside the packet. Saving a
+draft, restoring an earlier draft, or preparing a later export preserves the
+project's current deployment references and all prior project versions. Package
+preparation, staging and host generation each append a project revision.
+
+If a process exits after writing a complete operation record but before moving
+the project pointer, **Refresh deployment** exposes **Recover finished
+operation**. Recovery verifies and attaches the existing record without
+repeating its stage or host generation. If the original SF82 stage finished
+before that record was written, retrying the same release ID and exact options
+can adopt it only after the original inspector verifies its immutable release
+and the workspace matches the precise input hashes, handler and runtime. A
+different release under that ID is refused. The original console can also
+inspect the retained store directly. Failed host preparation gets a new
+destination on a corrected attempt, preserving the original partial inputs.
+
 The workspace requires private regular directories (`0700`) and writes private
 files (`0600`) on Unix. Input limits match the canonical exporter: schema and
 queries each up to 1 MiB; plan up to 256 KiB. The workspace owns one local writer
@@ -161,7 +249,8 @@ the original create-only exporter behavior.
 `startWorkspace({workspace, port:0, noSignals:true})` from `server.mjs` returns
 `{url, origin, token, directory, close}`. The private API supports schema
 inspection, current-draft review, project save/load/history, export, evolution and managed
-merchant start/stop/status. The web page and API call the same maintained
+merchant start/stop/status, retained deployment preparation, staging, host packets
+and original release-console access. The web page and API call the same maintained
 compiler and original native runtime. No separate GraphQL parser, payment
 implementation, scheduler or project database is introduced.
 
@@ -172,7 +261,17 @@ The same authenticated local API exposes:
 | `POST /api/evolution/compare` | Current project `id`, `expectedRevision`, retained `baselineExportId`, and editable `input`; returns original `review`, exact `comparisonDigest`, candidate `inputDigest`, baseline identity and valid candidate merchant review. |
 | `POST /api/evolution/prepare` | Current project `id`, `expectedRevision`, `baselineExportId` and previously returned `comparisonDigest`; prepares the saved candidate and returns the updated project and complete original export. |
 | `GET /api/evolution/report?id=PROJECT&exportId=EXPORT` | Verifies the retained package and returns its original saved review and baseline identity. |
+| `POST /api/deployment/prepare` | Current project `id`, `expectedRevision`, retained `exportId`, optional boolean `allowLoopbackUpstream`; returns the updated project and retained deployment. |
+| `GET /api/deployment?id=PROJECT&deploymentId=DEPLOYMENT` | Verifies the current retained packet and returns original inspection, release state, per-host availability and any finished operation awaiting attachment. |
+| `POST /api/deployment/stage` | Current project `id`, `expectedRevision`, retained `deploymentId`, and original `options` (`id`, optional `label`, `port`, `facilitator`, `allowLocalFacilitator`); returns the updated project and inspected release binding. |
+| `POST /api/deployment/console` | Current project `id`, `expectedRevision`, retained `deploymentId`; opens or reuses this project's original release console and returns its session-local `operatorUrl`. |
+| `POST /api/deployment/host` | Current project `id`, `expectedRevision`, retained `deploymentId`, and original `host` settings; returns the updated project and retained generated host packet. Service and handler paths come from the deployment. |
+| `GET /api/deployment/host?id=PROJECT&deploymentId=DEPLOYMENT&hostId=HOST` | Verifies the retained packet and returns its exact installation runbook, service identity and original host preflight readiness. |
+| `POST /api/deployment/recover` | Current project `id`, `expectedRevision`, retained `deploymentId`; verifies and attaches an already completed next operation record. |
 
 Export identifiers resolve only within the named project. These endpoints accept
 no caller-provided package directory. A comparison that no longer matches the
 current draft or baseline returns a conflict and requires a fresh comparison.
+Deployment and host identifiers also resolve only within the named project.
+`POST /api/save` accepts only `id`, `input` and `expectedRevision`; attachment
+references are created by the original preparation actions inside the workspace.

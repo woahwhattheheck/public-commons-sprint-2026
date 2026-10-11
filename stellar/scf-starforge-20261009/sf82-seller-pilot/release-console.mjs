@@ -51,8 +51,13 @@ export async function startReleaseConsole(root, { port = 8425, catalogConfig } =
     };
     const send = (code, value) => reply(code, 'application/json; charset=utf-8', JSON.stringify(value));
     try {
+      // A local operator workspace may open this public landing document in a
+      // new tab. Capability and origin checks still guard every private API.
+      const landingNavigation = req.headers['sec-fetch-site'] === 'same-site' &&
+        ['GET', 'HEAD'].includes(req.method) && req.url === '/' &&
+        req.headers['sec-fetch-mode'] === 'navigate' && req.headers['sec-fetch-dest'] === 'document';
       if (!hosts.has(req.headers.host) || (req.headers.origin && !origins.has(req.headers.origin)) ||
-          ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site'])) throw failure('Use this local operator origin.', 403);
+          ['cross-site', 'same-site'].includes(req.headers['sec-fetch-site']) && !landingNavigation) throw failure('Use this local operator origin.', 403);
       if (!req.url?.startsWith('/') || req.url.startsWith('//')) throw failure('Invalid request target.');
       const target = new URL(req.url, url);
       if (['GET', 'HEAD'].includes(req.method) && assets.has(target.pathname) && !target.search) {
