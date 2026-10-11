@@ -5,21 +5,22 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
+  init-fleet --dir NEW_DIRECTORY --plan ORIGINAL_FLEET_PLAN.json [--name NAME]
   init --dir NEW_DIRECTORY --spec OPENAPI.json --selections SELECTIONS.json
        --bindings BINDINGS.json [--name NAME] [--seller-port PORT]
        [--handlers TRUSTED_MODULE.mjs | --upstreams UPSTREAMS.json]
        [--allow-loopback-upstream] [--facilitator URL] [--allow-local-facilitator]
-       [--catalog CATALOG_CONNECTION_JSON]
+       [--catalog CATALOG_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   init --dir NEW_DIRECTORY --workspace SAVED_API_PACKAGE [--name NAME]
        [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
-       [--catalog CATALOG_CONNECTION_JSON]
+       [--catalog CATALOG_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   init --dir NEW_DIRECTORY --python PYTHON_MERCHANT.json [--python-root SOURCE_DIR]
        [--name NAME] [--seller-port PORT] [--facilitator URL] [--allow-local-facilitator]
-       [--catalog CATALOG_CONNECTION_JSON]
+       [--catalog CATALOG_CONNECTION_JSON] [--fleet-plan ORIGINAL_FLEET_PLAN.json]
   serve --config MERCHANT_MCP.json [--port PORT] [--token-env ENVIRONMENT_NAME]
 
 Supply the bearer token through MCP_ACCESS_TOKEN (or --token-env). It is never
@@ -52,7 +53,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
     const handler = createMcpToolHandler(operator, { bearerToken: environment[tokenEnv],
       allowedClientOrigins: String(environment.MCP_CLIENT_ORIGINS ?? '').split(',').map(value => value.trim()).filter(Boolean),
       serverName: 'starforge-merchant-operator', serverVersion: '0.1.0',
-      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. Only this MCP process can stop the seller it owns. Customer client export reads original metadata. Payment verification and settlement remain in the original seller and configured facilitator.' });
+      instructions: 'Use merchant_sources, stage, inspect and compare to prepare a release. Activate with the current generation and exact digest. Start or restart explicitly. Use merchant_discovery_status and review before applying the returned reviewId to publish or withdraw offers; after an interrupted apply, inspect current discovery instead of replaying it. Cache invalidation requires the current owned instance and an explicit route or all:true. For a configured fleet, inspect merchant_fleet_plan and start with its digest; stage/review/prepare/activate uses the original exact candidate and revision. Keep draining sessions until fleet_status reports canRetire, then retire their exact child instance. Rollback uses a fresh retained-revision review; stop/restart uses this process-owned managerId. After a lost response inspect current status before another change. Only this MCP process can stop its owned runtimes. Customer client export reads original metadata. Payment verification and settlement remain in the original seller and configured facilitator.' });
     server = createServer(handler);
     server.requestTimeout = 150000; server.headersTimeout = 10000; server.keepAliveTimeout = 2000;
     await new Promise((done, reject) => {
@@ -77,8 +78,15 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
+  if (command === 'init-fleet') {
+    const options = pairs(rest, ['--dir', '--plan', '--name']);
+    if (!options.has('--dir') || !options.has('--plan')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --plan.');
+    const result = await initializeFleetMerchant({ directory: options.get('--dir'), planFile: options.get('--plan'),
+      ...(options.has('--name') ? { name: options.get('--name') } : {}) });
+    process.stdout.write(JSON.stringify(result) + '\n'); return result;
+  }
   if (command === 'init') {
-    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
+    const options = pairs(rest, ['--dir', '--workspace', '--python', '--python-root', '--spec', '--selections', '--bindings', '--upstreams', '--name', '--seller-port', '--handlers', '--facilitator', '--catalog', '--fleet-plan'], ['--allow-local-facilitator', '--allow-loopback-upstream']);
     for (const key of options.has('--workspace') || options.has('--python') ? ['--dir'] : ['--dir', '--spec', '--selections', '--bindings'])
       if (!options.has(key)) throw failure('CONFIGURATION_ERROR', 'Missing ' + key);
     const runtime = { port: portNumber(options.get('--seller-port'), 0) };
@@ -88,12 +96,12 @@ export async function main(args = process.argv.slice(2)) {
     if (options.has('--allow-loopback-upstream')) runtime.allowLoopbackUpstream = true;
     const result = await initializeMerchant({ directory: options.get('--dir'), spec: options.get('--spec'),
       selections: options.get('--selections'), bindings: options.get('--bindings'),
-      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'),
+      workspace: options.get('--workspace'), upstreams: options.get('--upstreams'), runtime, catalog: options.get('--catalog'), fleetPlan: options.get('--fleet-plan'),
       python: options.get('--python'), pythonRoot: options.get('--python-root'),
       ...(options.has('--name') ? { name: options.get('--name') } : {}) });
     process.stdout.write(JSON.stringify(result) + '\n'); return result;
   }
-  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init or serve.');
+  if (command !== 'serve') throw failure('CONFIGURATION_ERROR', 'Choose init, init-fleet or serve.');
   const options = pairs(rest, ['--config', '--port', '--token-env']);
   if (!options.has('--config')) throw failure('CONFIGURATION_ERROR', 'Supply --config.');
   const session = await startMerchantMcp({ configPath: options.get('--config'), port: portNumber(options.get('--port'), 3211),

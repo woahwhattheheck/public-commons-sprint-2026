@@ -14,6 +14,18 @@ and trusted application. The MCP tools never request a paid resource or accept
 wallet keys, handler paths, arbitrary file paths, URLs or payment overrides as
 tool arguments.
 
+## Operate a retained merchant fleet
+
+The same provider also exposes the original multi-store fleet lifecycle. Use
+`init-fleet --dir NEW_DIRECTORY --plan ORIGINAL_FLEET_PLAN.json`, connect the
+existing MCP transport, inspect `merchant_fleet_plan`, and start with its digest.
+Agents can then stage, compare, prepare and activate releases; observe draining
+requests; retire exact owned child instances; review and restore a retained
+revision; and stop or reopen the saved fleet. The original gateway, release
+stores and sessions own these operations. See [FLEET.md](FLEET.md) for the full
+host configuration, all 13 fleet tools, and recovery workflow. Existing merchant
+initialization can include the same fleet with `--fleet-plan`.
+
 ## Prepare a merchant
 
 Use Node 22+ and the complete source checkout, or the installed Starforge package
