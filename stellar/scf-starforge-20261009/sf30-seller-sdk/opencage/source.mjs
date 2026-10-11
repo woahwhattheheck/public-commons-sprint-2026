@@ -36,7 +36,7 @@ export function readGeocodeResponse(bytes, { httpStatus = 200, mode = null, quer
       value.licenses.some(item => !object(item)))) fail('GEOCODE_PROVIDER_LICENSE_INVALID');
   return {value,candidates:value.results,state:providerState(200,value.results.length),semantics:{
     httpStatus,providerStatus:value.status,returnedCandidates:value.results.length,
-    coordinateReferenceSystem:'EPSG:4326',coordinateOrder:{query:'latitude,longitude',geojson:'longitude,latitude'},
+    coordinateReferenceSystem:'EPSG:4326',coordinateOrder:{query:mode === 'forward' ? 'address or place text' : 'latitude,longitude',geojson:'longitude,latitude'},
     ordering:'PROVIDER_RELEVANCE_ORDER',confidenceMeaning:'SPATIAL_PRECISION_NOT_CORRECTNESS',
     rate:value.rate ?? null,ratePresence:Object.hasOwn(value,'rate') ? 'SUPPLIED' : 'ABSENT',
     licenses:value.licenses ?? [],timestamp:value.timestamp ?? null,
