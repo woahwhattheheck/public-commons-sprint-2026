@@ -26,7 +26,7 @@
     REFUND_REOPEN_REQUIRED:'Reopen this same order and review its current refund records.',
   }[code] || String(code || 'The refund request could not complete.').replaceAll('_', ' '));
 
-  async function validateCandidate(record, event, snapshot) {
+  async function validateCandidate(record, event, snapshot, exported) {
     const original = snapshot.originalPayment, native = original.reviewedTransfer, binding = original.binding;
     need(record?.schema === 'stellar-forge.merchant-adjustment.v1' && record.kind === 'REFUND' &&
       record.status === 'VERIFIED' && UUID.test(record.id) && record.eventId === original.eventId &&
@@ -38,14 +38,24 @@
       'The retained adjustment request changed.');
     need(/^[1-9][0-9]{0,38}$/.test(record.amountAtomic) && BigInt(record.amountAtomic) <= BigInt(binding.amountAtomic),
       'The return amount must fit the original payment.');
-    for (const source of [record.original, event.original]) {
-      need(source.network === binding.network && source.assetDigest === binding.assetDigest &&
+    need(exported.source && ['runId','reportSha256','inputManifestSha256'].every(key =>
+      exported.source[key] === record.source[key]), 'The export and selected adjustment refer to different source reports.');
+    const ledger = exported.originalReport?.ledger;
+    need(Array.isArray(ledger), 'Keep the original accounting report in this adjustment export.');
+    const retained = ledger.filter(row => row.eventId === record.eventId && row.network === record.original.network);
+    need(retained.length === 1, 'The original report must contain this payment exactly once.');
+    for (const source of [record.original, event.original, retained[0]]) {
+      need(source.eventId === original.eventId && source.routeId === binding.routeId && source.method === binding.method &&
+        source.network === binding.network && source.assetDigest === binding.assetDigest &&
         source.amountAtomic === binding.amountAtomic && source.transactionFingerprint === await hash(original.transactionHash) &&
         (source.recipientDigest ?? source.termsRecipientDigest) === binding.recipientDigest,
         'The adjustment’s original payment terms differ from this Woo order.');
-      if (source.orderReferenceDigest) need(source.orderReferenceDigest === await hash(snapshot.orderReference),
+      need(source.orderReferenceDigest === await hash(snapshot.orderReference),
         'The accounting event belongs to another original Woo order.');
     }
+    need(record.refundTerms?.network === native.network && record.refundTerms.asset === native.asset &&
+      record.refundTerms.from === native.recipient && record.refundTerms.to === native.payer,
+      'The refund terms must reverse this original payment.');
     const proof = record.verification?.proof;
     need(proof?.schema === 'stellar-forge.sf86.refund-reconciliation.v1' &&
       proof.origin === 'MERCHANT_REFUND' && proof.reservation === 'NOT_APPLICABLE_MERCHANT_REFUND' &&
@@ -154,6 +164,7 @@
     }
     container.addEventListener('change', async event => {
       const input = event.target;
+      if (busy) return;
       if (input.matches('[data-refund-import]')) {
         const file = input.files?.[0]; if (!file) return;
         try {
@@ -167,7 +178,7 @@
           const found = [], invalid = [];
           for (const record of matching[0].adjustments) {
             if (record.kind !== 'REFUND' || record.status !== 'VERIFIED') continue;
-            try { found.push(await validateCandidate(record, matching[0], snapshot)); }
+            try { found.push(await validateCandidate(record, matching[0], snapshot, value)); }
             catch (error) { invalid.push(error.message); }
           }
           need(found.length > 0, invalid[0] || 'This order has no verified refund in the selected export.');
@@ -196,7 +207,7 @@
       event.preventDefault(); if (busy) return;
       const prepare = form.matches('[data-refund-prepare]');
       try {
-        busy = true; form.querySelectorAll('button').forEach(node => { node.disabled = true; });
+        busy = true; container.querySelectorAll('form button,[data-refund-import]').forEach(node => { node.disabled = true; });
         if (prepare) {
           const values = new FormData(form), id = values.get('adjustment'), amount = values.get('amount');
           const record = candidates.find(row => row.id === id);
@@ -220,7 +231,13 @@
         // explicit action on the saved mapping, with the same native refund ID.
         try { await refresh(); } catch {}
         message(error.message + ' Current retained rows show whether the request was saved.', true);
-      } finally { busy = false; if (active()) container.querySelectorAll('form button').forEach(node => { node.disabled = !!node.closest('[data-refund-prepare]') && !candidates.length; }); }
+      } finally {
+        busy = false;
+        if (active()) {
+          container.querySelectorAll('form button').forEach(node => { node.disabled = !!node.closest('[data-refund-prepare]') && !candidates.length; });
+          container.querySelectorAll('[data-refund-import]').forEach(node => { node.disabled = false; });
+        }
+      }
     });
     container.innerHTML = '<section class="sf104-panel"><p role="status">Loading this order’s native refunds…</p></section>';
     try { await refresh(); } catch (error) { container.innerHTML = '<section class="sf104-panel"><h3>Order refunds</h3><p>' + esc(error.message) + '</p></section>'; }
