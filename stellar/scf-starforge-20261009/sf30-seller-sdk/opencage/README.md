@@ -19,6 +19,8 @@ The source plan remains immutable within a workspace. Edited payment terms creat
 
 Use the maintained Starforge merchant distribution, or the public repository with its existing dependencies installed. The operator uses the original Linux `flock` workspace lease and original Node private-file primitives. Node 22 is the native execution target.
 
+The installed distribution exposes `starforge opencage-workbench` for the same CLI and `@tokenjunkielabs/starforge-merchant/seller/opencage` for the application API. The provider, configuration, merchant, customer, workspace and server modules also have corresponding `/seller/opencage/MODULE` exports.
+
 From `stellar/scf-starforge-20261009/`:
 
 ```sh
