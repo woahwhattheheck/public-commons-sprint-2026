@@ -23,6 +23,40 @@ async function api(path, data) {
   if (!response.ok) throw new Error(body.error || "Operation failed.");
   return body;
 }
+function renderCatalogue(s) {
+  const target = $("catalogue");
+  target.replaceChildren();
+  if (!s.plan) {
+    target.textContent = "Plan a goal to compare the server-priced options against your selected budget.";
+    return;
+  }
+  const budget = Number(s.plan.budget_usd);
+  const items = Array.isArray(s.catalogue) ? s.catalogue.filter(item =>
+    item && typeof item.sku === "string" && typeof item.name === "string" &&
+    typeof item.why === "string" && typeof item.price === "string" &&
+    /^\\d{1,4}\\.\\d{2}$/.test(item.price)
+  ).sort((a, b) => Number(a.price) - Number(b.price) || a.sku.localeCompare(b.sku)) : [];
+  if (!Number.isFinite(budget) || !items.length) {
+    target.textContent = "Catalogue comparison unavailable; review the exact item and price above.";
+    return;
+  }
+  for (const item of items) {
+    const selected = item.sku === s.plan.sku;
+    const affordable = Number(item.price) <= budget;
+    const row = node("div", undefined, selected ? "catalogue-item is-recommended" : "catalogue-item");
+    row.setAttribute("role", "listitem");
+    const details = node("div", undefined, "catalogue-item-copy");
+    details.append(
+      node("strong", item.name),
+      node("small", item.why, "catalogue-item-explanation"),
+      node("span", selected ? "Agent's proposed item" :
+        affordable ? "Within this plan's budget" : "Above this plan's budget", "catalogue-item-status")
+    );
+    row.append(details, node("strong", "$" + item.price + " USD", "catalogue-item-price"));
+    target.append(row);
+  }
+}
+
 function paint(s) {
   if (!s || typeof s.generation !== "string" || !s.generation ||
       !Number.isSafeInteger(s.revision) || s.revision < 0) {
@@ -41,6 +75,7 @@ function paint(s) {
   ].join(" · ");
   const p = $("proposal");
   p.replaceChildren();
+  renderCatalogue(s);
   $("orderform").hidden = true;
   $("captureform").hidden = true;
   $("approval").hidden = true;
