@@ -243,7 +243,8 @@ export async function previewAuthoredOperation(store, saved, { id, operation, va
       sourceSha256: compiled.sourceSha256, provenance: compiled.provenance }, request };
   try {
     const existing = await readPreview(store, { id });
-    if (existing.project !== saved.id || existing.inputDigest !== saved.inputDigest || existing.requestSha256 !== requestSha256)
+    if (existing.project !== saved.id || existing.inputDigest !== saved.inputDigest || existing.operation !== operation ||
+        existing.requestSha256 !== requestSha256)
       fail('This preview ID already belongs to different saved inputs.', 409);
     return { record: existing, reference: { ...previewView(existing), recordSha256: digest(await readFile(previewFile(store, id))) } };
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
