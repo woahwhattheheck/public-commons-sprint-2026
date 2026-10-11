@@ -138,7 +138,7 @@ export async function readSellerClientFile({ directory, exportId, file, expected
 }
 
 /** Read the complete original payload once. Missing legacy files are explicit. */
-export async function inspectSellerClientExport({ directory, exportId } = {}) {
+export async function inspectSellerClientExport({ directory, exportId, includeOffers = false } = {}) {
   try { directory = await directoryAt(directory); }
   catch (error) {
     if (error.code === 'ENOENT') return { schema: 'stellar-forge.seller-client-export-status.v1', state: 'NOT_FOUND', directory: resolve(directory) };
@@ -168,6 +168,7 @@ export async function inspectSellerClientExport({ directory, exportId } = {}) {
     throw fail('FILE_CHANGED', 'The retained source or files differ from their saved completion receipt.');
   return { schema: 'stellar-forge.seller-client-export-status.v1', state: retained ? 'COMPLETE' : 'LEGACY_FILES_RETAINED',
     directory, ...view, files, filesSha256: digest, manifestRetained: Boolean(retained),
+    ...(includeOffers ? { snapshot } : {}),
     ...(retained ? { manifest: retained.manifest, manifestFile: retained.manifestFile } : {}) };
 }
 
