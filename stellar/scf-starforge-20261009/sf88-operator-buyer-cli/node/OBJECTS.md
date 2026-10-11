@@ -205,6 +205,12 @@ Finalization is explicit and does not run on download. The command retains
 process status independently; unresolved native outcomes remain visible for
 the same original continuation.
 
+Use `accountingPages()` or `finalizeAll()` to consume each native range through
+one async iterator. `recoverAccounting()` reopens a retained command without a
+provider request, and `exportAccounting()` writes all original accounting ranges
+as a complete private JSONL export. The [shared customer accounting guide](ACCOUNTING.md)
+documents cancellation, interrupted-command recovery and the installed commands.
+
 ## Installed command
 
 The existing `starforge buyer-node` and `node forge.mjs run buyer-node -- ...`
