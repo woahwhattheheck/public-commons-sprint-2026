@@ -257,6 +257,8 @@ or automatically retry a request.
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge postgres-publisher` | Review and publish complete query snapshots; keep the original data product current on a saved cadence |
+| `starforge sheets-source` | Retain an actual Google cell response, inspect headers and prepare an explicit public projection |
+| `starforge sheets-publisher` | Review and publish selected Sheet observations through the original retained dataset and buyer workflow |
 | `starforge mysql` | Inspect actual MySQL/MariaDB metadata, preview approved queries and prepare or run a merchant |
 | `starforge mysql-workspace` | Select database fields, review typed endpoints and payment terms, operate releases and export the customer client |
 | `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
@@ -1687,6 +1689,104 @@ query-authoring modules keep their maintained DuckDB export paths.
 `doctor` reports optional feature availability and fails only for the requested
 feature or native dependency group. It resolves modules without importing them
 or opening a database connection.
+
+## Publish a Google Sheets catalog
+
+The installed Sheets source turns an explicitly selected workbook range into
+the original versioned dataset product. It supports an authorized live read-only
+Google connection and retained CellData from an existing connected Google
+session. It uses the same typed publisher, candidate review, dataset versions,
+buyer configuration and publication schedule as the database publishers. Use
+Node 22.16+ and Linux util-linux `flock`; there is no additional npm dependency.
+
+Create a private working directory outside the installed package. From the
+existing connected Google session, save the original Spreadsheet resource for
+one exact bounded range, including stable tab ID/title, literal header cells,
+`userEnteredValue`, `effectiveValue` and `effectiveFormat.numberFormat`. The
+[complete Sheets guide](../sf30-seller-sdk/sheets/README.md) gives the connected
+request fields and live OAuth alternative. Retain the original response:
+
+```sh
+npx --no-install starforge sheets-source import \
+  --resource /private/sheets/provider-resource.json \
+  --range "'Catalog'!A1:H500" --directory /private/sheets/capture-001
+npx --no-install starforge sheets-source headers \
+  --capture /private/sheets/capture-001/capture.json
+```
+
+Review the actual headers and declared native types. Copy the packaged
+[projection example](../sf30-seller-sdk/sheets/example-projection.json) to the
+private workspace and select the intended public columns by absolute letter,
+exact header, public alias and scalar type. Unselected columns remain private.
+Text identifiers must be stored as actual Sheet text to preserve leading zeros
+and large values; formula columns require explicit `formula: "effective"` to
+publish Google's calculated result. Formatting is not a numeric conversion.
+
+```sh
+npx --no-install starforge sheets-source prepare \
+  --capture /private/sheets/capture-001/capture.json \
+  --projection /private/sheets/reviewed-projection.json \
+  --query catalog --out /private/sheets/source.json
+npx --no-install starforge sheets-publisher serve \
+  --workspace /private/sheets/publications --create \
+  --source /private/sheets/source.json --state /private/sheets/dataset --port 8452
+```
+
+Open the printed loopback URL. Review the source and public columns, save the
+reviewed plan, extract it, and inspect the original typed candidate. Enter the
+reviewer and change note, record the publication review, then publish against
+the displayed target revision. Preparation and saving alone do not extract or
+publish. A capture-backed saved plan retains its own original resource bytes.
+The candidate records one Spreadsheet response, its range, receipt time and
+hashes. Original type, header, formula, row and byte checks reject an incomplete
+candidate before publication.
+
+After the first publication, configure the native seller with the merchant's
+actual payment terms and public HTTPS resource:
+
+```sh
+npx --no-install starforge dataset-refresh configure \
+  --state /private/sheets/dataset --payment /private/sheets/payment.json \
+  --origin https://merchant.example --path /data --snapshot-selection \
+  --out /private/sheets/seller.json
+npx --no-install starforge dataset-refresh serve \
+  --state /private/sheets/dataset --seller /private/sheets/seller.json --port 8423
+```
+
+Use the original facilitator and deployment options for native paid operation.
+Stop and reopen the same publisher without `--create`, adding that seller:
+
+```sh
+npx --no-install starforge sheets-publisher serve \
+  --workspace /private/sheets/publications --port 8452 \
+  --seller http://127.0.0.1:8423 --resource https://merchant.example/data
+```
+
+Choose the published extraction, load the seller's actual terms, select the
+payment alternative and download the original buyer configuration. Continue
+with the existing private buyer workspace and `starforge buyer-dataset`; its
+approval, budgets, acquisition, recovery and delivery are described in the
+packaged [dataset acquisition guide](../sf88-operator-buyer-cli/DATASETS.md).
+The selected version is retained under the original seller's retention rules.
+
+To update the product, obtain a new actual capture, prepare its reviewed source
+revision, and deliberately replace the original private source file. **New
+plan** loads that revision; previous saved plans keep their own observation.
+A live source instead captures a fresh response on each explicit extraction.
+Review and publish the new candidate through the same workspace. The original
+saved publication schedule can maintain a live source; a retained capture
+continues to represent its original observation. Reopening the same workspace
+does not fetch Google data or publish a candidate. Use the original retained
+result recovery for interrupted work and retain the workspace with its target.
+
+`starforge sheets-source --help` and `starforge sheets-publisher --help` expose
+the maintained CLI options. Application imports
+`@tokenjunkielabs/starforge-merchant/seller/sheets`, `/seller/sheets/capture` and
+`/seller/sheets/publisher` expose the original source, capture and
+`openSheetsPublisher(options)` APIs. The whole SF30 component includes their
+guides, examples and shared browser assets. Original captures, source identities,
+credentials and operator state belong in the private workspace; the installed
+package contains source and placeholder examples.
 
 ## Configure an object-store merchant
 

@@ -47,6 +47,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
+  sheets-source                              Capture, inspect and prepare selected Google Sheets columns
+  sheets-publisher                           Review and publish retained Sheet observations as datasets
   clickhouse                                 Preflight and run a retained ClickHouse merchant
   clickhouse-prepare                         Prepare approved analytical queries and the original customer client
   cube-workspace / cube-onboard              Author, review and export paid Cube reports
