@@ -5,7 +5,7 @@ import { join, resolve, dirname } from 'node:path';
 import { hostname } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams } from './release-upstreams.mjs';
+import { upstreamReleaseSnapshot, stageReleaseUpstreams, inspectReleaseUpstreams, readReleaseWorkspace } from './release-upstreams.mjs';
 import { releaseCacheControlPath } from './release-cache.mjs';
 
 const STORE = 'stellar-forge.seller-release-store.v1';
@@ -232,7 +232,7 @@ function publicRelease(record) {
     digest: record.digest, publicOrigin: record.publicOrigin, routes: record.routes,
     runtime: record.runtime, handlerEntry: record.handlerEntry,
     mode: record.runtime.facilitator ? 'NATIVE_X402' : 'CHALLENGE_ONLY',
-    source: record.source };
+    source: record.source, ...(record.inputPackage ? { inputPackage: record.inputPackage } : {}) };
 }
 async function releaseRecord(root, releaseId, verify = false) {
   const path = join(resolve(root), 'releases', id(releaseId)); await directory(path);
@@ -254,22 +254,32 @@ async function releaseRecord(root, releaseId, verify = false) {
 export async function stageRelease(root, options) {
   root = resolve(root); await readReleaseState(root);
   const releaseId = id(options.id), label = text(options.label ?? releaseId, 'Release label');
+  if (options.workspace && (['spec', 'config', 'bindings', 'upstreams'].some(key => options[key] !== undefined) || options.runtime?.handlers))
+    throw new TypeError('Choose --workspace or explicit source inputs for this release.');
+  const workspace = options.workspace ? await readReleaseWorkspace(options.workspace) : null;
+  const inputs = workspace?.inputs ?? options;
   const runtime = runtimeOptions(options.runtime);
+  if (workspace?.allowLoopbackUpstream) runtime.allowLoopbackUpstream = true;
   if (runtime.upstreams) throw new TypeError('Stage takes --upstreams FILE, not an existing release snapshot.');
-  if (options.upstreams && runtime.handlers) throw new TypeError('Choose --upstreams or --handlers for this release.');
-  if (runtime.allowLoopbackUpstream && !options.upstreams) throw new TypeError('Loopback upstream permission requires --upstreams.');
+  if (inputs.upstreams && runtime.handlers) throw new TypeError('Choose --upstreams or --handlers for this release.');
+  if (runtime.allowLoopbackUpstream && !inputs.upstreams) throw new TypeError('Loopback upstream permission requires --upstreams.');
   const temp = join(root, 'releases', '.stage-' + randomUUID());
   let committed = false;
   try {
     const compile = (await import('../sf61-openapi-seller-import/cli.mjs')).run;
-    await compile(['--spec', resolve(options.spec), '--config', resolve(options.config),
-      '--service-bindings', resolve(options.bindings), '--out', temp]);
+    await compile(['--spec', resolve(inputs.spec), '--config', resolve(inputs.config),
+      '--service-bindings', resolve(inputs.bindings), '--out', temp]);
     let source = await sourceSnapshot(temp);
-    if (options.upstreams) {
-      runtime.upstreams = await stageReleaseUpstreams(temp, resolve(options.upstreams), source.service,
+    if (inputs.upstreams) {
+      runtime.upstreams = await stageReleaseUpstreams(temp, resolve(inputs.upstreams), source.service,
         { allowLoopback: runtime.allowLoopbackUpstream === true });
       source = await sourceSnapshot(temp, runtime.upstreams, runtime.allowLoopbackUpstream === true);
     }
+    if (workspace && (source.manifest.specSha256 !== workspace.hashes['facade-openapi.json'] ||
+        source.manifest.selectionsSha256 !== workspace.hashes['selections.json'] ||
+        source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
+        runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
+      throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
     if (source.hasApplication && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
@@ -280,6 +290,7 @@ export async function stageRelease(root, options) {
     }
     const content = { schema: RELEASE, id: releaseId, label, createdAt: new Date().toISOString(),
       publicOrigin: source.service.publicOrigin, runtime, handlerEntry, files: source.files, routes: source.routes,
+      ...(workspace ? { inputPackage: workspace.provenance } : {}),
       source: { offersSha256: source.manifest.offersSha256, serviceConfigSha256: source.manifest.serviceConfigSha256,
         specSha256: source.manifest.specSha256, selectionsSha256: source.manifest.selectionsSha256,
         serviceBindingsSha256: source.manifest.serviceBindingsSha256 } };

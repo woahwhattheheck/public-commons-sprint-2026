@@ -63,7 +63,8 @@ compares any two retained releases. It reports:
 - handler/admission bindings, input-validation settings and response digests;
 - facilitator, port and handler-entry changes;
 - backend origin/path/query, credential environment references, response-contract
-  digest, availability, shared-result policy and source limits for upstream routes.
+  digest, availability, durable-operation configuration, shared-result policy and
+  source limits for upstream routes.
 
 It does not print static customer response contents. Amounts remain their
 original atomic strings. The tool does not infer token decimals or convert
@@ -130,7 +131,20 @@ seller; closing the browser tab leaves the command running. A separate
 ## Release an existing API merchant
 
 An API package saved by the original SF61 workspace can now become a retained
-release directly. Use its original inputs together:
+release directly:
+
+```sh
+node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs stage \
+  --store /private/merchant-releases --id api-first \
+  --workspace /private/api-project --port 0
+```
+
+The original workspace reader verifies its saved package before staging. The
+release records the package identity and original OpenAPI digest, and checks the
+actual staged compiler inputs against those saved hashes. Its original loopback
+choice is retained. This command does not reopen or import the package's backend.
+
+For separately prepared inputs, use the original files together:
 
 ```sh
 node stellar/scf-starforge-20261009/sf82-seller-pilot/release-cli.mjs stage \
@@ -150,7 +164,8 @@ choose one. A development source on `http://127.0.0.1` additionally requires
 Staging validates the original upstream schema and route bindings, then retains
 the exact JSON bytes in a private digest-named snapshot. Environment names are
 validated without reading credential values. The snapshot includes the source's
-configured response contract, availability and optional GET/HEAD cache policy.
+configured response contract, availability, original POST idempotency references
+and optional GET/HEAD cache policy.
 Inspect, comparison, selection and startup verify the retained digest. Editing
 the input file later has no effect on an existing release; stage a new version
 to change its origin, policy, mapping or limits. Existing response files and

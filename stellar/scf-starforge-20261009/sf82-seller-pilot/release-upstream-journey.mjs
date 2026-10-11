@@ -9,6 +9,7 @@ import { encodePaymentSignatureHeader } from '@x402/core/http';
 import { initReleaseStore, stageRelease, inspectRelease, compareReleases } from './releases.mjs';
 import { startReleaseConsole } from './release-console.mjs';
 import { releaseCacheControlPath } from './release-cache.mjs';
+import { savePackage } from '../sf61-openapi-seller-import/workspace/model.mjs';
 
 let reads = 0, verified = 0, settled = 0;
 const listen = server => new Promise(done => server.listen(0, '127.0.0.1', done));
@@ -29,7 +30,6 @@ const facilitator = createServer(async (req, res) => {
 });
 await listen(backend); await listen(facilitator);
 const work = await mkdtemp(join(tmpdir(), 'sf82-api-release-')), root = join(work, 'releases');
-const upstreamFile = join(work, 'upstreams.json'), selectionsFile = join(work, 'selections.json');
 const example = name => fileURLToPath(new URL('./examples/' + name, import.meta.url));
 const write = (path, value) => writeFile(path, JSON.stringify(value, null, 2) + '\n');
 const envName = 'SCF_RELEASE_JOURNEY_AUTH', priorEnv = process.env[envName];
@@ -37,28 +37,30 @@ let operator;
 try {
   delete process.env[envName];
   await initReleaseStore(root);
-  const upstreams = { schema: 'stellar-forge.seller-upstreams.v1', bindings: { merchantDataset: {
-    origin: `http://127.0.0.1:${backend.address().port}`, path: '/v1/dataset', method: 'GET', query: ['region'],
-    headerEnv: { authorization: envName }, availability: { failureThreshold: 3, resetAfterMs: 100, maxResetAfterMs: 1000 },
-    cache: { shareAcrossBuyers: true, ttlMs: 60000, maxEntries: 8, maxBytes: 65536, maxEntryBytes: 8192,
-      maxSourceInFlight: 4, maxWaiters: 8, sourceTimeoutMs: 10000 },
-  } } };
+  const description = JSON.parse(await readFile(example('upstream-openapi.json')));
+  description.servers = [{ url: `http://127.0.0.1:${backend.address().port}/v1` }];
   const selections = JSON.parse(await readFile(example('upstream-selections.json')));
-  await write(upstreamFile, upstreams); await write(selectionsFile, selections);
-  const input = { spec: example('upstream-openapi.json'), config: selectionsFile,
-    bindings: example('upstream-route-bindings.json'), upstreams: upstreamFile,
-    runtime: { port: 0, allowLoopbackUpstream: true, allowLocalFacilitator: true,
+  const { scheme, amount, ...payment } = selections[0].accepts[0];
+  const plan = { schema: 'stellar-forge.api-merchant-plan.v1', sellerServer: 'https://dataset.example/api',
+    allowLoopbackUpstream: true, payment, operations: [{ id: 'dataset', method: 'GET', path: '/dataset',
+      amountAtomic: amount, headerEnv: { authorization: envName },
+      cache: { shareAcrossBuyers: true, ttlMs: 60000, maxEntries: 8, maxBytes: 65536, maxEntryBytes: 8192,
+        maxSourceInFlight: 4, maxWaiters: 8, sourceTimeoutMs: 10000 } }] };
+  const firstPackage = await savePackage({ specText: JSON.stringify(description), plan, parent: work, name: 'api-first' });
+  const input = { runtime: { port: 0, allowLocalFacilitator: true,
       facilitator: `http://127.0.0.1:${facilitator.address().port}` } };
-  await stageRelease(root, { ...input, id: 'first' });
-  upstreams.bindings.merchantDataset.path = '/v2/dataset'; upstreams.bindings.merchantDataset.cache.ttlMs = 30000;
-  selections[0].accepts[0].amount = '30000';
-  await write(upstreamFile, upstreams); await write(selectionsFile, selections);
-  await stageRelease(root, { ...input, id: 'second' });
-  await write(upstreamFile, { laterInputDoesNotChangeStagedRelease: true });
+  await stageRelease(root, { ...input, id: 'first', workspace: firstPackage.folder });
+  description.servers[0].url = `http://127.0.0.1:${backend.address().port}/v2`;
+  plan.operations[0].cache.ttlMs = 30000; plan.operations[0].amountAtomic = '30000';
+  const secondPackage = await savePackage({ specText: JSON.stringify(description), plan, parent: work, name: 'api-second' });
+  await stageRelease(root, { ...input, id: 'second', workspace: secondPackage.folder });
+  await write(join(firstPackage.folder, 'upstreams.json'), { laterInputDoesNotChangeStagedRelease: true });
   const diff = await compareReleases(root, 'first', 'second');
   assert.equal(diff.summary.paymentChanged, 1);
   assert.ok(diff.changes[0].fields.some(field => field.field === 'upstream'));
-  assert.equal((await inspectRelease(root, 'first')).routes[0].upstream.cache.ttlMs, 60000);
+  const retainedFirst = await inspectRelease(root, 'first');
+  assert.equal(retainedFirst.routes[0].upstream.cache.ttlMs, 60000);
+  assert.equal(retainedFirst.inputPackage.id, firstPackage.manifest.id);
   assert.equal(reads + verified + settled, 0);
 
   operator = await startReleaseConsole(root, { port: 0 });
@@ -110,7 +112,7 @@ try {
   assert.equal((await ok('/api/cache')).available, false);
   assert.equal(verified, 6); assert.equal(settled, 6);
   console.log(JSON.stringify({ result: 'PASS', originalBackendReads: reads, nativeVerifies: verified, nativeSettlements: settled,
-    journey: ['immutable upstream releases', 'exact policy/payment diff', 'real child runtime', 'private instance controls',
+    journey: ['original saved workspace to immutable release', 'exact policy/payment diff', 'real child runtime', 'private instance controls',
       'upgrade and stale-instance refusal', 'rollback with current credentials'], chainTransactions: 0, hostedActions: 0 }));
 } finally {
   await operator?.close(); if (priorEnv === undefined) delete process.env[envName]; else process.env[envName] = priorEnv;
