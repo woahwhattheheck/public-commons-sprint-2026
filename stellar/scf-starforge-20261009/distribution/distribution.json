@@ -60,7 +60,8 @@
     "stellar/scf_2026/sf47_budget_model",
     "stellar/scf-starforge-20261009/mpp-charge",
     "stellar/mercury-event-operations",
-    "stellar/scf-starforge-20261009/partners/open-meteo-operations"
+    "stellar/scf-starforge-20261009/partners/open-meteo-operations",
+    "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api"
   ],
   "browserAssets": [
     {
@@ -321,7 +322,8 @@
     "buyer-expenses": "stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/cli.mjs",
     "weather-operations": "stellar/scf-starforge-20261009/partners/open-meteo-operations/cli.mjs",
     "merchant-fleet-host": "stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-cli.mjs",
-    "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs"
+    "woo-refund": "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator-cli.mjs",
+    "blockscout": "stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -690,7 +692,12 @@
     "./merchant/fleet/host": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy.mjs",
     "./merchant/fleet/host-runtime": "./source/stellar/scf-starforge-20261009/merchant-fleet-gateway/deploy-runtime.mjs",
     "./merchant/woocommerce/refunds": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-operator.mjs",
-    "./merchant/woocommerce/refund-handoff": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-handoff.mjs"
+    "./merchant/woocommerce/refund-handoff": "./source/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/refund-handoff.mjs",
+    "./partners/blockscout": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/product.mjs",
+    "./partners/blockscout/application": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/application.mjs",
+    "./partners/blockscout/launch": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/launch.mjs",
+    "./partners/blockscout/accounting": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/accounting.mjs",
+    "./partners/blockscout/customer": "./source/stellar/scf-starforge-20261009/partners/blockscout-stellar-pro-api/customer.mjs"
   },
   "nativePeers": {
     "@x402/core": {
