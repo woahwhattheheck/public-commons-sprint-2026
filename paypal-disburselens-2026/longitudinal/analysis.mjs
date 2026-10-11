@@ -20,6 +20,7 @@ function rawIndex(pages){
   for(const page of pages){
     for(const item of page.items){
       const id=item.payout_item_id;
+      if(typeof id!=='string'||!id)fail('Original payout_item_id is required for longitudinal tracking');
       if(index.has(id))fail('Duplicate original payout_item_id');
       index.set(id,{
         recipientHash:sha(String(item.payout_item?.receiver??'')),
