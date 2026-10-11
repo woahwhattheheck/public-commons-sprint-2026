@@ -49,6 +49,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
+  job-workspace                             Receive paid jobs, retrieve results and organize research collections
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
