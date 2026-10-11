@@ -1,4 +1,6 @@
 // MIT. Browser editing and exact-value inspection over the native MongoDB workspace.
+import { createMongoPublicationPanel } from './publisher.mjs';
+let publicationPanel = null;
 const $ = id => document.getElementById(id);
 const clone = value => structuredClone(value);
 const pretty = value => JSON.stringify(value, null, 2);
@@ -38,7 +40,7 @@ async function run(action) {
   const controls = [...document.querySelectorAll('button,input,select,textarea')].map(item => [item, item.disabled]);
   controls.forEach(([item]) => { item.disabled = true; }); document.body.setAttribute('aria-busy', 'true');
   try { await action(); } catch (error) { notice(error.message, true); }
-  finally { controls.forEach(([item, disabled]) => { item.disabled = disabled; }); document.body.removeAttribute('aria-busy'); }
+  finally { controls.forEach(([item, disabled]) => { item.disabled = disabled; }); document.body.removeAttribute('aria-busy'); publicationPanel?.update(); }
 }
 function draftKey() { return 'mongodb-workspace-draft:' + state.directory; }
 function cache() {
@@ -66,8 +68,9 @@ function syncEditors() {
 function dirty() { state.dirty = true; state.review = null; syncEditors(); status(); cache(); }
 function pending(id) { state.pending.add(id); dirty(); }
 function showTab(name) {
-  for (const tab of ['source', 'reports', 'merchant', 'review', 'packages']) $(tab + '-panel').hidden = name !== tab;
+  for (const tab of ['source', 'reports', 'merchant', 'review', 'packages', 'publisher']) $(tab + '-panel').hidden = name !== tab;
   document.querySelectorAll('[data-tab]').forEach(item => item.classList.toggle('active', item.dataset.tab === name));
+  publicationPanel?.show(name === 'publisher');
 }
 function query() { return state.source?.queries?.[state.query]; }
 function route() { return state.plan?.routes?.find(item => item.id === state.route); }
@@ -524,6 +527,8 @@ on('prepare-buyer', async () => {
   $('download-buyer').hidden = false; notice('Prepared the original buyer review with the selected payment choice and exact inputs.');
 });
 on('download-buyer', () => download('files/buyers/' + state.buyer.id + '/buyer.tar.gz', 'MongoDB-Buyer-' + state.buyer.id + '.tar.gz'));
+publicationPanel = createMongoPublicationPanel({ api, action: run, notice, current: () => state,
+  requireSaved, download, isBusy: () => document.body.getAttribute('aria-busy') === 'true' });
 window.addEventListener('beforeunload', event => {
   cache(); if (state.dirty || state.pending.size) { event.preventDefault(); event.returnValue = ''; }
 });
