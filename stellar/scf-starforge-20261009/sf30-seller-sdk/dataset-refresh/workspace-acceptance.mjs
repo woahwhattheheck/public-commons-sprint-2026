@@ -202,7 +202,8 @@ try {
   await api('draft', csv.candidate, { method: 'PUT' });
   assert((await readdir(directory)).some(name => name.startsWith('.publisher-')));
   await workspace.close(); workspace = null;
-  assert(!(await readdir(directory)).some(name => name.startsWith('.publisher-')));
+  assert((await readdir(directory)).includes('.publisher-workspace'));
+  assert.equal(JSON.parse(await readFile(join(directory, '.publisher-workspace', 'workspace.json'), 'utf8')).candidates.length, 2);
   assert.equal(JSON.parse(await readFile(join(directory, 'state.json'))).current, initial.current);
   assert.deepEqual(await challenge(), termsBefore);
   console.log('PASS: original seller/publisher upload, review, publication and rollback; actual live offer -> original prepareReview config -> private buyer workspace/ledger -> pinned acquisition after publication changes -> interrupted/resumed native pages -> original SF100 CSV/JSONL data room. Stale offers, changed workspace, conflicting snapshot and expired selection refused; complete acquisition is not requested again.');
