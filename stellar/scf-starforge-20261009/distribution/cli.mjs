@@ -22,6 +22,9 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  webhook-feed                              Receive signed webhooks and sell reviewed event feeds
+  buyer-event-feed                          Collect, recover and export original paid event pages
+  mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
   valyu-merchant                            Configure and operate the native research search merchant
   valyu-research                            Save queries, operate purchases, compare research and export editions
   sftp                                      Inspect, capture and resume pinned private report files
@@ -38,6 +41,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   chainstack-stellar  Install, observe and operate the original Chainstack merchant and buyer handoff
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
+  supplier-quotas                            Review supplier account configuration and inspect retained call allowances
   openapi     OpenAPI seller import            pilot       OpenAPI pilot + operations
   buyer       Discover, review, approved call  capture     One HTTP 402 capture
   import-headers  Import original operator HTTP headers
@@ -55,6 +59,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   native-signer  Native buyer configuration   facilitator Native fee-sponsoring backend
   client      Export a JS/TypeScript client   releases    Review and operate seller releases
   merchant-host                             Install, observe and recover the original Linux merchant group
+  merchant-recovery                         Create, verify and cold-restore original encrypted merchant snapshots
+  merchant-recovery-remote                  Upload, list, retrieve and restore retained off-host snapshots
   buyer-inbox Prepare and run buyer jobs     postgres    PostgreSQL merchant + dashboard
   buyer-node  Review, execute and recover generated-client purchases in a Node application
   routescan-merchant  Configure, preview and operate the original Routescan gas-data merchant
@@ -65,12 +71,16 @@ Native commands (arguments pass unchanged to the maintained implementation):
   tenderly / tenderly-workspace              Prepare and operate the Tenderly simulation merchant
   tenderly-customer                          Receive, recover and export the original simulation purchase
   tenderly-analysis                          Receive, compare and review completed Tenderly simulations
+  research-dossiers                         Retain research questions, evidence, findings and portable reports
+  research-workspace                        Open the private research dossier operator workspace
   dataset-delivery Export a saved buyer dataset
   merchant    Seller + fulfillment journal   delivery    Deliver original merchant events
   delivery-workspace                         Configure receivers and operate retained delivery recovery
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
   paid-file-purchase Prepare and retrieve an approved customer order
+  api-pass                                  Sell and operate purchased API allowances on original orders
+  api-pass-client                           Use an allowance, inspect usage and recover an original response
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
