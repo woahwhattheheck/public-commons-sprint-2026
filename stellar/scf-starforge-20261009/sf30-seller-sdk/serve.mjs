@@ -4,6 +4,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { compileSellerRoutes, createSellerResourceHandler } from './resource-server.mjs';
+import { validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath } from './route-path.mjs';
 
 const SCHEMA = 'stellar-forge.seller-service.v1';
@@ -23,6 +24,7 @@ function validateConfig(config) {
       config.routes.length < 1 || config.routes.length > 64) {
     throw new TypeError('Expected seller-service.v1 config with 1–64 routes');
   }
+  validateAdmissionTimeout(config.admissionTimeoutMs ?? 2000);
   const seen = new Set();
   for (const route of config.routes) {
     if (!object(route) || !/^[A-Za-z0-9_-]{1,64}$/.test(route.id ?? '') ||
@@ -49,6 +51,10 @@ function validateConfig(config) {
     }
     if (OWN(route, 'handler') && !/^[A-Za-z_$][\w$]{0,127}$/.test(route.handler)) {
       throw new TypeError('Invalid application handler export name');
+    }
+    if (OWN(route, 'admit') && (typeof route.admit !== 'string' ||
+        !/^[A-Za-z_$][\w$]{0,127}$/.test(route.admit))) {
+      throw new TypeError('Invalid admission export name');
     }
   }
   if (config.publicOrigin !== undefined) {
@@ -90,6 +96,9 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     if (route.handler && (!OWN(handlers, route.handler) || typeof handlers[route.handler] !== 'function')) {
       throw new TypeError(`Application handler export missing: ${route.handler}`);
     }
+    if (route.admit && (!OWN(handlers, route.admit) || typeof handlers[route.admit] !== 'function')) {
+      throw new TypeError(`Admission export missing: ${route.admit}`);
+    }
   }
   let dispatch = (_req, res) => { res.writeHead(503, { 'retry-after': '1' }); res.end(); };
   const server = createServer((req, res) => {
@@ -111,6 +120,7 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     const origin = config.publicOrigin ? new URL(config.publicOrigin).origin : url;
     const compiled = compileSellerRoutes(config.routes.map(route => ({
       id: route.id,
+      ...(route.admit ? { admit: handlers[route.admit] } : {}),
       ...(route.offer ? { offer: route.offer } : { definition: { ...route.definition, url: origin + route.path } }),
       handler: route.handler ? handlers[route.handler] : async () => ({
         status: 200, headers: { 'content-type': 'application/json' }, body: structuredClone(route.response),
@@ -118,10 +128,12 @@ export async function startSellerService({ config, port = 8423, handlers = {}, n
     })), { allowLocalhost: !config.publicOrigin });
     const nativeServer = nativeFactory ? await nativeFactory(compiled) : null;
     if (nativeFactory && !nativeServer) throw new TypeError('Native factory did not return a resource server');
-    const resources = createSellerResourceHandler({ compiled, nativeServer });
+    const resources = createSellerResourceHandler({ compiled, nativeServer,
+      admissionTimeoutMs: config.admissionTimeoutMs ?? 2000 });
     const mode = nativeServer ? 'NATIVE_X402' : 'CHALLENGE_ONLY';
     const info = { schema: SCHEMA, mode, routes: compiled.routes.map(route => ({
       id: route.id, method: route.method, url: route.offer.resource.url,
+      admission: typeof route.admit === 'function',
       ...(route.binding.dynamic ? { routeTemplate: route.path } : {}),
     })) };
     dispatch = (req, res) => {
