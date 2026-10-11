@@ -54,7 +54,7 @@ Base URL: same origin as the served `web/` app. The default local address is `ht
 
 ## Example `GET /api/state`
 
-This is the shape only. Every value comes from the live chain at request time.
+This is the shape only. All chain values come from one reported block. Local metadata and the pending operation journal are joined when the response is built.
 
 ```json
 {
@@ -97,3 +97,30 @@ This is the shape only. Every value comes from the live chain at request time.
 - Available means free budget, reserved means owed to approved creators, paid means claimed, and refunded means returned at close.
 - Show the ledger as payment history.
 - Show `operations` only when the list is non-empty, as "transaction awaiting confirmation".
+
+
+## Consistent state and refresh throughput
+
+`GET /api/state` pins campaign counts, submissions, campaign accounting, actor and pool balances, and event history to its reported `blockNumber`. The additive `blockHash` identifies that block. The reader checks its canonical hash again before returning a completed build; a changed block is discarded and retried from the current head, up to three times. HTTP 503 `chain_snapshot_unstable` means those attempts crossed repeated reorganizations; the caller can refresh current state. `chain_snapshot_unavailable` means the selected header or source records were unavailable. An RPC failure does not return a prior cached success as a fresh response.
+
+Every refresh reads the RPC head directly. Concurrent readers share work for that same head, and an unchanged head reuses the completed chain snapshot. A refresh that has already observed a newer block waits for the current build and then reads the new head, so it does not inherit an older in-flight result. Contract reads use eight concurrent workers rather than one round trip per row. Already admitted reads finish before an error releases the build; no failed cache value is retained.
+
+When the head advances, event history is fetched only after the last indexed block if that block's hash still matches the chain. A rewind or changed ancestor rebuilds the event prefix from the deployment block. Campaign/submission transaction indexes are updated from those same events. The cache contains chain data only: newly reconciled local titles, briefs, submission URLs and pending-operation state remain visible on the same chain block.
+
+The response keeps all original amount strings, ordering, transaction fields and wallet/local-mode semantics. `Server-Timing: state;dur=…`, `X-CreatorPool-Block` and `X-CreatorPool-Block-Hash` let an operator inspect the actual read duration and source block in the ordinary browser network panel or `curl -i`. Timing is in headers, so it does not change an otherwise identical JSON response. The original mutation/reconciliation handlers and contract authorization remain the transaction authority.
+
+
+### Measured native workload
+
+On 11 October 2026, the unchanged original backend and the snapshot backend were run against the same retained Ganache 7.9.2 ledger using Node 24.19.0 and ethers 6.13.4. The actual state contained 29 campaigns, two submissions and 37 contract events; all original response fields were identical. Four waves of eight concurrent refreshes were separated by 300 ms. Both services used the same transparent local RPC transport and original contracts.
+
+| Measurement | Original backend | Snapshot backend |
+| --- | ---: | ---: |
+| First read | 1,297 ms | 671 ms |
+| Repeated-read median | 2,175 ms | 43 ms |
+| Repeated-read 95th percentile | 2,365 ms | 61 ms |
+| RPC calls across 32 repeated reads | 1,348 | 32 |
+
+Each new repeated read still made its own uncached head request. The 32 remaining RPC calls were those head reads; they were not eliminated by a time-based stale-response cache. These are local shared-container measurements, not production latency or competition scores.
+
+The same original HTTP/contract journey attached pending metadata with `/api/reconcile` without advancing the cached block; separated two overlapping readers that saw successive heads; replaced a cached ancestor and rebuilt its event prefix; and changed the selected block during contract reads, after which the request returned the actual canonical replacement. Every measured snapshot `eth_call` supplied its selected numeric block tag. An independent source review also removed the provider's short-lived log cache from this read path and ensured admitted reads drain before failed builds release their slot. No hosted Actions or replacement chain model was used.

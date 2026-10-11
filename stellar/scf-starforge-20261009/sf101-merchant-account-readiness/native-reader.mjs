@@ -1,10 +1,7 @@
 // MIT. Native SDK serialization and read-only Stellar RPC observations for SF101.
 import { createHash } from 'node:crypto';
-
-export const NETWORKS = Object.freeze({
-  'stellar:testnet': {horizon:'testnet', passphrase:'Test SDF Network ; September 2015', rpc:'https://soroban-testnet.stellar.org'},
-  'stellar:pubnet': {horizon:'public', passphrase:'Public Global Stellar Network ; September 2015', rpc:null},
-});
+import { SAC_NETWORKS as NETWORKS, resolveSacRpcEndpoint, decodeSacInstance } from './sac.mjs';
+export { NETWORKS };
 const READ_METHODS = new Set(['getNetwork', 'getLedgerEntries', 'simulateTransaction']);
 const MAX_BODY = 2 * 1024 * 1024;
 const MAX_CAPTURE = 64 * 1024 * 1024;
@@ -18,15 +15,8 @@ export async function loadStellarSdk() {
   catch (error) { throw fault('STELLAR_SDK_REQUIRED', 'Install the original optional @stellar/stellar-sdk dependency in this application: ' + error.code); }
 }
 
-export function rpcEndpoint(raw) {
-  const url = new URL(raw);
-  requireThat(url.protocol === 'https:' && !url.username && !url.password && !url.search && !url.hash,
-    'RPC_REQUIRES_HTTPS_ENDPOINT_WITHOUT_CREDENTIALS');
-  return url.href;
-}
-
 /** Retain original HTTP bytes; replay addresses the same exact serialized request. */
-export function createReadTransport({capture, fetchImpl = fetch} = {}) {
+export function createReadTransport({capture, fetchImpl = fetch, liveTransport = false} = {}) {
   if (capture !== undefined) requireThat(object(capture) && capture.schema === 'stellar-forge.sf101.merchant-capture.v1' &&
     Array.isArray(capture.reads) && capture.reads.length <= 10000, 'INVALID_CAPTURE');
   const recorded = new Map();
@@ -55,7 +45,7 @@ export function createReadTransport({capture, fetchImpl = fetch} = {}) {
     if (capture !== undefined) requireThat(item, 'CAPTURE_REQUEST_MISSING');
     if (!item) {
       let response;
-      try { response = await fetchImpl(url, {...init, redirect:'error'}); }
+      try { response = await fetchImpl(url, {...init, redirect:'manual'}); }
       catch (error) {
         item = {key,request,observedAt:new Date().toISOString(),failure:{
           code:String(error.code ?? error.cause?.code ?? 'READ_TRANSPORT_FAILED').slice(0,80),
@@ -81,11 +71,11 @@ export function createReadTransport({capture, fetchImpl = fetch} = {}) {
       {status:item.status,headers:{'content-type':'application/json'}});
   }
   return {fetch:recordedFetch, mode:capture !== undefined ? 'RETAINED_NETWORK_READS' :
-    fetchImpl === fetch ? 'LIVE_NETWORK_READS' : 'CALLER_TRANSPORT_READS',
+    fetchImpl === fetch || liveTransport ? 'LIVE_NETWORK_READS' : 'CALLER_TRANSPORT_READS',
     reads:() => [...used.values()].map(value => structuredClone(value))};
 }
 
-export function createNativeReader({sdk, transport, endpoints = {}, timeoutMs = 12000}) {
+export function createNativeReader({sdk, transport, endpoints = {}, environment = process.env, timeoutMs = 12000}) {
   requireThat(Number.isInteger(timeoutMs) && timeoutMs >= 1000 && timeoutMs <= 30000, 'INVALID_TIMEOUT');
   const networks = new Map(), tokens = new Map(), balances = new Map();
   const memo = (map, key, task) => {
@@ -107,9 +97,7 @@ export function createNativeReader({sdk, transport, endpoints = {}, timeoutMs = 
   const network = name => memo(networks,name,async () => {
     const definition = NETWORKS[name];
     requireThat(definition, 'UNSUPPORTED_NETWORK');
-    const raw = endpoints[name] ?? definition.rpc;
-    requireThat(raw, 'PUBLIC_RPC_ENDPOINT_REQUIRED');
-    const endpoint = rpcEndpoint(raw), result = await rpc(endpoint,'getNetwork');
+    const endpoint = resolveSacRpcEndpoint(name,endpoints,environment), result = await rpc(endpoint,'getNetwork');
     requireThat(result.passphrase === definition.passphrase, 'RPC_NETWORK_PASSPHRASE_MISMATCH');
     return {name,endpoint,passphrase:definition.passphrase,protocolVersion:result.protocolVersion ?? null};
   });
@@ -133,13 +121,10 @@ export function createNativeReader({sdk, transport, endpoints = {}, timeoutMs = 
     requireThat(sdk.StrKey.isValidContract(asset), 'ASSET_CONTRACT_ADDRESS_INVALID');
     const context = await network(name), key = new sdk.Contract(asset).getFootprint().toXDR('base64');
     const result = await rpc(context.endpoint,'getLedgerEntries',{keys:[key]});
-    requireThat(Number.isSafeInteger(result.latestLedger) && result.latestLedger > 0 && Array.isArray(result.entries), 'CONTRACT_LEDGER_RESULT_INVALID');
-    requireThat(result.entries.length === 1, 'CONTRACT_INSTANCE_MISSING_OR_ARCHIVED');
-    const entry = result.entries[0];
-    requireThat(entry.key === key && typeof entry.xdr === 'string', 'CONTRACT_LEDGER_KEY_MISMATCH');
-    const value = sdk.xdr.LedgerEntryData.fromXDR(entry.xdr,'base64');
-    requireThat(value.switch().name === 'contractData' && value.contractData().val().switch().name === 'scvContractInstance', 'CONTRACT_INSTANCE_INVALID');
-    const kind = value.contractData().val().instance().executable().switch().name;
+    const instance = decodeSacInstance({result},asset,sdk);
+    requireThat(instance.state !== 'SAC_INSTANCE_MISSING' && instance.liveUntilLedger >= result.latestLedger,
+      'CONTRACT_INSTANCE_MISSING_OR_ARCHIVED');
+    const kind = instance.executable;
     const sac = kind === 'contractExecutableStellarAsset';
     const decimals = await query(context,asset,'decimals');
     const symbol = await query(context,asset,'symbol');
@@ -160,7 +145,8 @@ export function createNativeReader({sdk, transport, endpoints = {}, timeoutMs = 
     }
     return {network:name,asset,kind:sac?'STELLAR_ASSET_CONTRACT':'CUSTOM_CONTRACT',executable:kind,
       decimals:decimals.value,symbol:symbol.value,name:nameResult.value,classic,
-      rpc:context.endpoint,instanceLedger:result.latestLedger,liveUntilLedger:entry.liveUntilLedgerSeq ?? null,
+      rpcOrigin:new URL(context.endpoint).origin,endpointDigest:hash(context.endpoint),
+      instanceLedger:instance.latestLedger,liveUntilLedger:instance.liveUntilLedger,instance,
       metadataLedgers:[decimals.ledger,symbol.ledger,nameResult.ledger]};
   });
   const recipient = (name, asset, payTo) => memo(balances,JSON.stringify([name,asset,payTo]),async () => {

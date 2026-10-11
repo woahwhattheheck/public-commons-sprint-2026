@@ -1,5 +1,10 @@
 # SF-32 · Stellar Bazaar MCP paid-tool bridge
 
+**Local client integration:** [Launch the original buyer workspace over stdio](STDIO.md)
+from a desktop, editor or agent host. The included client configuration generator
+connects the same tools, operator adapter and durable quote history to the host's
+subprocess lifecycle.
+
 **Status:** Original Node 22 source, not deployed, no paid transactions or SCF submission. MIT.
 
 This module exposes a real MCP 2025-11-25 JSON-RPC tools endpoint over single-response

@@ -2,7 +2,7 @@
 // MIT. Direct, read-only RPC reconciliation using original SF43 official SDK decoder.
 import { readFile } from 'node:fs/promises';
 import { createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
-import { reconcileRpc, ReconciliationError, DEFAULT_RPC } from './verify.mjs';
+import { reconcileRpc, ReconciliationError } from './verify.mjs';
 
 function argsOf(argv) {
   const known = new Set(['--sf81-result','--sf82-evidence','--payer','--rpc-endpoint','--max-event-pages']);
@@ -64,7 +64,7 @@ export async function main(argv=process.argv.slice(2)) {
     catch { throw new ReconciliationError('STELLAR_SDK_DECODER_UNAVAILABLE'); }
     const pages=args['--max-event-pages']===undefined?24:Number(args['--max-event-pages']);
     const result=await reconcileRpc({record,payer:args['--payer'],decodeContractEvent,
-      rpcEndpoint:args['--rpc-endpoint']??DEFAULT_RPC,maxEventPages:pages});
+      rpcEndpoint:args['--rpc-endpoint'],maxEventPages:pages});
     console.log(JSON.stringify(result));
     return 0;
   } catch(e) {
@@ -74,4 +74,4 @@ export async function main(argv=process.argv.slice(2)) {
     return 2;
   }
 }
-if(import.meta.url===new URL('file://'+process.argv[1]).href) process.exitCode=await main();
+if(process.argv[1] && import.meta.url===new URL('file://'+process.argv[1]).href) process.exitCode=await main();

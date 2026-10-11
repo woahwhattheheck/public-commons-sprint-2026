@@ -1,0 +1,389 @@
+// MIT. Browser operations over the original SF88 object sessions and inbox.
+import { createHash, randomUUID } from 'node:crypto';
+import { constants } from 'node:fs';
+import { lstat, mkdir, open, readdir, realpath, unlink } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { config, execution } from '../config.mjs';
+import { selectObjectDescription } from '../object-description.mjs';
+import { createObjectSession, inspectObjectSession, runObjectSession,
+  recoverObjectSession, assembleObjectSession } from '../object-session.mjs';
+import { renderObjectReport } from '../object-report.mjs';
+
+const PROFILE = 'stellar-forge.sf88.object-workspace.v1';
+const SESSION = 'stellar-forge.sf88.object-session.v1';
+const HASH = /^[a-f0-9]{64}$/;
+const ID = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
+const MAX_ATOMIC = 170141183460469231731687303715884105727n;
+const encode = value => Buffer.from(JSON.stringify(value, null, 2) + '\n');
+const sha = value => createHash('sha256').update(value).digest('hex');
+const now = () => new Date().toISOString();
+const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
+export const workspaceError = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '') ? error.code :
+  /^[A-Z0-9_]{1,120}$/.test(error?.message ?? '') ? error.message : 'OBJECT_WORKSPACE_FAILED';
+export function fail(code, status = 400) { throw Object.assign(new Error(code), { code, status }); }
+const need = (condition, code, status = 400) => { if (!condition) fail(code, status); };
+const privateInfo = info => process.platform === 'win32' || ((info.mode & 0o077) === 0 &&
+  (typeof process.getuid !== 'function' || info.uid === process.getuid()));
+
+function absolute(value) {
+  need(typeof value === 'string' && isAbsolute(value) && resolve(value) === value &&
+    !value.includes('\0') && value !== '/', 'OBJECT_WORKSPACE_ABSOLUTE_PATH_REQUIRED');
+  return value;
+}
+async function privateDirectory(path, create = false) {
+  absolute(path);
+  if (create) {
+    need(await realpath(dirname(path)) === dirname(path), 'OBJECT_WORKSPACE_REAL_PARENT_REQUIRED');
+    try { await mkdir(path, { mode: 0o700 }); }
+    catch (error) { if (error.code !== 'EEXIST') throw error; }
+  }
+  const info = await lstat(path);
+  need(info.isDirectory() && !info.isSymbolicLink() && privateInfo(info) &&
+    await realpath(path) === path, 'OBJECT_WORKSPACE_PRIVATE_DIRECTORY_REQUIRED');
+}
+async function read(path, maxBytes, isPrivate = true) {
+  const handle = await open(absolute(path), constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) |
+    (constants.O_NONBLOCK ?? 0));
+  try {
+    const before = await handle.stat({ bigint: true });
+    need(before.isFile() && before.size <= BigInt(maxBytes), 'OBJECT_WORKSPACE_INPUT_SIZE');
+    if (isPrivate) need(privateInfo(await handle.stat()), 'OBJECT_WORKSPACE_PRIVATE_FILE_REQUIRED');
+    const bytes = await handle.readFile();
+    const after = await handle.stat({ bigint: true });
+    need(bytes.length <= maxBytes && ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs']
+      .every(key => before[key] === after[key]), 'OBJECT_WORKSPACE_INPUT_CHANGED');
+    return bytes;
+  } finally { await handle.close(); }
+}
+function json(bytes) {
+  try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
+  catch { fail('OBJECT_WORKSPACE_JSON_INVALID'); }
+}
+function positive(value) {
+  need(Number.isSafeInteger(value) && value > 0, 'OBJECT_WORKSPACE_CHUNK_SIZE_INVALID');
+  return value;
+}
+function atomic(value) {
+  need(typeof value === 'string' && /^(0|[1-9][0-9]{0,38})$/.test(value) &&
+    BigInt(value) <= MAX_ATOMIC, 'OBJECT_WORKSPACE_ATOMIC_LIMIT_INVALID');
+  return value;
+}
+function slug(value) {
+  need(typeof value === 'string' && ID.test(value), 'OBJECT_WORKSPACE_SESSION_NAME_INVALID');
+  return value;
+}
+function revision(report) {
+  return sha(JSON.stringify([report.sessionId, report.configurationSha256, report.status,
+    report.completeChunks, report.attemptedChunks, report.objectSha256, report.lock ?? null,
+    report.stoppedChunk ?? null, report.chunks.map(row => [row.index, row.state, row.attemptId,
+      row.sha256, row.evidenceSha256, row.originalOutcome, row.code]),
+    report.assemblies.map(row => [row.destination, row.sha256, row.chunkManifestSha256])]));
+}
+function summary(id, report) {
+  return { id, sessionId: report.sessionId, name: report.selection?.filename ?? id,
+    objectId: report.selection?.objectId ?? null, createdAt: report.createdAt, status: report.status,
+    bytes: report.bytes, completeChunks: report.completeChunks, chunkCount: report.chunkCount,
+    downloadedBytes: report.downloadedBytes, inspectedAt: report.inspectedAt ?? null };
+}
+
+/** The profile contains trusted local references. Browser actions select IDs only. */
+export async function openObjectWorkspace({ stateDirectory, profilePath = null } = {}) {
+  const root = absolute(stateDirectory);
+  await privateDirectory(root, true);
+  const sessionsRoot = join(root, 'sessions'), outputsRoot = join(root, 'downloads'), inputsRoot = join(root, 'preparations');
+  for (const path of [sessionsRoot, outputsRoot, inputsRoot]) await privateDirectory(path, true);
+  let profiles = [];
+  if (profilePath !== null) {
+    const profile = json(await read(profilePath, 262144));
+    need(object(profile) && profile.schema === PROFILE && Array.isArray(profile.products) &&
+      profile.products.length <= 64 && Object.keys(profile).every(key => ['schema', 'products'].includes(key)),
+    'OBJECT_WORKSPACE_PROFILE_INVALID');
+    const ids = new Set();
+    profiles = profile.products.map(product => {
+      need(object(product) && Object.keys(product).every(key =>
+        ['id', 'label', 'descriptionFile', 'objectId', 'configFile', 'workspace'].includes(key)),
+      'OBJECT_WORKSPACE_PRODUCT_INVALID');
+      slug(product.id); slug(product.objectId);
+      need(!ids.has(product.id), 'OBJECT_WORKSPACE_PRODUCT_DUPLICATE'); ids.add(product.id);
+      need(typeof product.label === 'string' && product.label.length > 0 && product.label.length <= 160 &&
+        !/[\x00-\x1f\x7f]/.test(product.label), 'OBJECT_WORKSPACE_LABEL_INVALID');
+      absolute(product.descriptionFile); absolute(product.configFile);
+      need(product.workspace === undefined || product.workspace === null || typeof product.workspace === 'string',
+        'OBJECT_WORKSPACE_OPERATOR_REFERENCE_INVALID');
+      if (product.workspace) absolute(product.workspace);
+      return { ...product, workspace: product.workspace ?? null };
+    });
+  }
+  const index = new Map(), reports = new Map(), reviews = new Map(), dispatches = new Map();
+  let active = null, mutation = null, closed = false, closePromise;
+  const sessionPath = id => join(sessionsRoot, slug(id));
+  const chooseProfile = id => profiles.find(product => product.id === id) ?? fail('OBJECT_WORKSPACE_PRODUCT_NOT_FOUND', 404);
+  const assertOpen = () => need(!closed, 'OBJECT_WORKSPACE_CLOSED', 409);
+  const assertIdle = () => { assertOpen(); need(!active && !mutation, 'OBJECT_WORKSPACE_BUSY', 409); };
+  const retain = (id, report) => {
+    reports.delete(id); reports.set(id, report); index.set(id, summary(id, report));
+    while (reports.size > 8) {
+      const candidate = reports.keys().next().value;
+      if (candidate === active?.session) { const value = reports.get(candidate); reports.delete(candidate); reports.set(candidate, value); }
+      else reports.delete(candidate);
+    }
+    return report;
+  };
+  async function scan() {
+    const entries = await readdir(sessionsRoot, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!ID.test(entry.name)) continue;
+      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+      if (index.has(entry.name)) continue;
+      try {
+        const definition = json(await read(join(sessionsRoot, entry.name, 'session.json'), 131072));
+        need(definition.schema === SESSION && definition.directory === sessionPath(entry.name), 'OBJECT_SESSION_INVALID');
+        index.set(entry.name, { id: entry.name, sessionId: definition.sessionId,
+          name: definition.selection?.filename ?? entry.name, objectId: definition.selection?.objectId ?? null,
+          createdAt: definition.createdAt, status: 'NEEDS_INSPECTION', bytes: definition.bytes,
+          chunkCount: definition.chunkCount, completeChunks: null, downloadedBytes: null, inspectedAt: null });
+      } catch (error) {
+        index.set(entry.name, { id: entry.name, name: entry.name, status: 'INCOMPLETE_SETUP', error: workspaceError(error) });
+      }
+    }
+  }
+  async function inspect(id) {
+    slug(id); need(index.has(id), 'OBJECT_WORKSPACE_SESSION_NOT_FOUND', 404);
+    if (active?.session === id) return reports.get(id);
+    return retain(id, await inspectObjectSession(sessionPath(id)));
+  }
+  async function original(id) { return reports.get(id) ?? inspect(id); }
+  async function checked(id, expectedRevision) {
+    const report = await inspect(id);
+    need(typeof expectedRevision === 'string' && revision(report) === expectedRevision,
+      'OBJECT_WORKSPACE_REVIEW_CHANGED', 409);
+    return report;
+  }
+  async function selected(product, chunkBytes) {
+    const before = await read(product.configFile, 65536);
+    const source = await config(product.configFile), { op } = execution(source);
+    const selection = await selectObjectDescription({ descriptionPath: product.descriptionFile,
+      objectId: product.objectId, configPath: product.configFile, ...(chunkBytes ? { chunkBytes } : {}) });
+    const after = await read(product.configFile, 65536);
+    need(before.equals(after), 'OBJECT_WORKSPACE_INPUT_CHANGED', 409);
+    const chunks = Number((BigInt(selection.bytes) + BigInt(selection.chunkBytes) - 1n) / BigInt(selection.chunkBytes));
+    need(chunks <= 100000, 'OBJECT_BYTE_PLAN_INVALID');
+    return { product, source, selection, configurationSha256: sha(encode(source)), sourceSha256: sha(before),
+      chunks, plannedMaxAtomic: (BigInt(op.expect.maxAtomic) * BigInt(chunks)).toString(),
+      public: { id: product.id, label: product.label, objectId: product.objectId,
+        filename: selection.selection.filename, bytes: selection.bytes, chunkBytes: selection.chunkBytes,
+        chunkCount: chunks, snapshot: selection.expectedSnapshot, expectedSha256: selection.expectedSha256,
+        contentType: selection.expectedContentType, sourceUrl: op.url, terms: op.expect,
+        operatorWorkspace: product.workspace !== null, descriptionSha256: selection.selection.descriptionSha256 } };
+  }
+  async function products() {
+    return Promise.all(profiles.map(async product => {
+      try { const value = await selected(product); return { ...value.public, plannedMaxAtomic: value.plannedMaxAtomic }; }
+      catch (error) { return { id: product.id, label: product.label, error: workspaceError(error) }; }
+    }));
+  }
+  function trimReviews() {
+    for (const [id, review] of reviews) if (review.expires < Date.now()) reviews.delete(id);
+    while (reviews.size >= 64) reviews.delete(reviews.keys().next().value);
+  }
+  async function reviewSelection({ productId, sessionName, chunkBytes, maxTotalAtomic } = {}) {
+    assertIdle(); slug(sessionName); positive(chunkBytes); atomic(maxTotalAtomic); trimReviews();
+    const value = await selected(chooseProfile(productId), chunkBytes);
+    need(BigInt(value.plannedMaxAtomic) <= BigInt(maxTotalAtomic), 'OBJECT_TOTAL_BUDGET_INSUFFICIENT');
+    const reviewId = randomUUID(), expires = Date.now() + 15 * 60 * 1000;
+    reviews.set(reviewId, { ...value, sessionName, maxTotalAtomic, expires });
+    return { ...value.public, plannedMaxAtomic: value.plannedMaxAtomic, maxTotalAtomic, sessionName,
+      reviewId, expiresAt: new Date(expires).toISOString(), configurationSha256: value.configurationSha256,
+      firstRange: { offset: 0, length: Math.min(chunkBytes, value.selection.bytes) },
+      lastRange: { offset: (value.chunks - 1) * chunkBytes,
+        length: value.selection.bytes - (value.chunks - 1) * chunkBytes } };
+  }
+  function matchesReview(report, review) {
+    return report.configurationSha256 === review.configurationSha256 &&
+      report.workspace === review.product.workspace && report.bytes === review.selection.bytes &&
+      report.chunkBytes === review.selection.chunkBytes && report.expectedSnapshot === review.selection.expectedSnapshot &&
+      report.expectedSha256 === review.selection.expectedSha256 &&
+      report.expectedContentType === review.selection.expectedContentType &&
+      report.maxTotalAtomic === review.maxTotalAtomic &&
+      JSON.stringify(report.selection) === JSON.stringify(review.selection.selection);
+  }
+  async function create({ reviewId } = {}) {
+    assertIdle(); const review = reviews.get(reviewId);
+    need(review && review.expires > Date.now(), 'OBJECT_WORKSPACE_REVIEW_EXPIRED', 409);
+    mutation = { kind: 'CREATE', session: review.sessionName };
+    let temporary;
+    try {
+      // A lost successful response resolves to the same original directory.
+      try {
+        const existing = await inspectObjectSession(sessionPath(review.sessionName));
+        need(matchesReview(existing, review), 'OBJECT_WORKSPACE_SESSION_NAME_OCCUPIED', 409);
+        retain(review.sessionName, existing); return { session: review.sessionName, recoveredCreate: true };
+      } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      const fresh = await selected(review.product, review.selection.chunkBytes);
+      need(fresh.sourceSha256 === review.sourceSha256 && fresh.configurationSha256 === review.configurationSha256 &&
+        JSON.stringify(fresh.selection) === JSON.stringify(review.selection), 'OBJECT_WORKSPACE_REVIEW_CHANGED', 409);
+      // The original initializer consumes this exact reviewed configuration;
+      // later edits to the source path cannot change an already reviewed create.
+      temporary = join(inputsRoot, randomUUID() + '.json');
+      const handle = await open(temporary, 'wx', 0o600);
+      try { await handle.writeFile(encode(review.source)); await handle.sync(); } finally { await handle.close(); }
+      const report = await createObjectSession({ directory: sessionPath(review.sessionName), configPath: temporary,
+        workspace: review.product.workspace, maxTotalAtomic: review.maxTotalAtomic, ...review.selection });
+      need(matchesReview(report, review), 'OBJECT_WORKSPACE_CREATED_PLAN_MISMATCH', 409);
+      retain(review.sessionName, report); return { session: review.sessionName, recoveredCreate: false };
+    } finally {
+      if (temporary) await unlink(temporary).catch(() => {});
+      mutation = null; await scan();
+    }
+  }
+  function runView(work) {
+    if (!work) return null;
+    return { id: work.id, session: work.session, state: work.stopping ? 'STOPPING' : 'RUNNING',
+      startedAt: work.startedAt, progressAt: work.progressAt, completeChunks: work.report?.completeChunks,
+      chunkCount: work.report?.chunkCount };
+  }
+  async function view({ session = null, page = 0, filter = 'all', query = '' } = {}) {
+    assertOpen(); need(Number.isInteger(page) && page >= 0 && page <= 2000, 'OBJECT_WORKSPACE_PAGE_INVALID');
+    need(['all', 'QUEUED', 'VERIFIED', 'RECONCILIATION_REQUIRED'].includes(filter), 'OBJECT_WORKSPACE_FILTER_INVALID');
+    need(typeof query === 'string' && query.length <= 160, 'OBJECT_WORKSPACE_QUERY_INVALID');
+    const state = { sessions: [...index.values()].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? '') || a.id.localeCompare(b.id)),
+      selected: null, active: runView(active), mutation, updatedAt: now() };
+    if (!session) return state;
+    const report = await original(session), search = query.toLowerCase();
+    const chunks = report.chunks.filter(chunk => (filter === 'all' || chunk.state === filter) &&
+      (!search || [chunk.index, chunk.offset, chunk.length, chunk.intentId, chunk.state, chunk.code,
+        chunk.sha256, chunk.originalOutcome?.status].some(value => String(value ?? '').toLowerCase().includes(search))));
+    const pages = Math.max(1, Math.ceil(chunks.length / 50)), selectedPage = Math.min(page, pages - 1);
+    const status = active?.session === session ? (active.stopping ? 'STOPPING' : 'RUNNING') : report.status;
+    const ownedOutput = assemblyRecord(session, report);
+    state.selected = { ...summary(session, report), status, revision: revision(report),
+      sourceUrl: report.sourceUrl, snapshot: report.expectedSnapshot, expectedSha256: report.expectedSha256,
+      contentType: report.expectedContentType, limits: report.limits, terms: report.terms,
+      capAllocatedAtomic: report.capAllocatedAtomic, attemptedChunks: report.attemptedChunks,
+      objectSha256: report.objectSha256, selection: report.selection, lock: report.lock ?? null,
+      stoppedChunk: report.stoppedChunk ? { index: report.stoppedChunk.index, code: report.stoppedChunk.code,
+        intentId: report.stoppedChunk.intentId } : null,
+      lastRun: dispatches.get(session) ?? null,
+      assembly: ownedOutput ? { name: basename(ownedOutput.destination), bytes: ownedOutput.bytes,
+        sha256: ownedOutput.sha256, createdAt: ownedOutput.createdAt, status: 'RECORDED' } : null,
+      chunks: chunks.slice(selectedPage * 50, selectedPage * 50 + 50).map(chunk => ({ index: chunk.index,
+        offset: chunk.offset, length: chunk.length, intentId: chunk.intentId, state: chunk.state,
+        sha256: chunk.sha256, code: chunk.code ?? null, outcome: chunk.originalOutcome?.status ?? null })),
+      pagination: { page: selectedPage, pages, total: chunks.length, pageSize: 50 },
+      controls: { run: !active && !mutation && ['READY', 'INTERRUPTED'].includes(report.status) && !report.lock,
+        stop: active?.session === session && !active.stopping,
+        recover: !active && !mutation && report.lock?.state !== 'ACTIVE' && report.lock?.state !== 'OTHER_HOST',
+        assemble: !active && !mutation && report.status === 'COMPLETE' && !report.lock && !ownedOutput,
+        download: Boolean(ownedOutput) && !active && !mutation,
+        refresh: active?.session !== session && !mutation } };
+    return state;
+  }
+  async function refresh(session = null) {
+    assertOpen(); need(!mutation, 'OBJECT_WORKSPACE_BUSY', 409); await scan();
+    if (session && active?.session !== session) await inspect(session);
+  }
+  async function run({ session, expectedRevision, actionId } = {}) {
+    assertOpen(); need(typeof actionId === 'string' && /^[a-f0-9-]{36}$/.test(actionId), 'OBJECT_WORKSPACE_ACTION_ID_REQUIRED');
+    const previous = dispatches.get(session);
+    if (previous?.id === actionId) return previous;
+    assertIdle(); mutation = { kind: 'REVIEW_RUN', session };
+    try {
+      const report = await checked(session, expectedRevision);
+      need(['READY', 'INTERRUPTED'].includes(report.status) && !report.lock, 'OBJECT_WORKSPACE_RUN_UNAVAILABLE', 409);
+      const controller = new AbortController();
+      const work = { id: actionId, session, controller, startedAt: now(), stopping: false, report };
+      active = work; dispatches.set(session, { id: actionId, startedAt: work.startedAt, state: 'RUNNING' });
+      work.promise = runObjectSession(sessionPath(session), { signal: controller.signal, onChunk: update => {
+        const current = reports.get(session);
+        current.chunks[update.chunk.index] = update.chunk;
+        for (const key of ['status', 'completeChunks', 'completedChunks', 'attemptedChunks', 'downloadedBytes',
+          'capAllocatedAtomic', 'nextChunk', 'stoppedChunk']) if (key in update) current[key] = update[key];
+        current.inspectedAt = now(); work.progressAt = current.inspectedAt; work.report = current;
+        retain(session, current);
+      } }).then(result => {
+        retain(session, result);
+        dispatches.set(session, { id: actionId, startedAt: work.startedAt, endedAt: now(),
+          state: result.status, interrupted: result.interrupted === true });
+      }, async error => {
+        let refreshed;
+        try { refreshed = await inspectObjectSession(sessionPath(session)); retain(session, refreshed); } catch {}
+        dispatches.set(session, { id: actionId, startedAt: work.startedAt, endedAt: now(),
+          state: refreshed?.attemptedChunks ? 'RECONCILIATION_REQUIRED' : 'SETUP_REQUIRED', error: workspaceError(error) });
+      }).finally(() => { if (active === work) active = null; });
+      return { id: actionId, state: 'RUNNING', session };
+    } finally { mutation = null; }
+  }
+  function stop({ session, runId } = {}) {
+    assertOpen();
+    if (!active && dispatches.get(session)?.id === runId) return dispatches.get(session);
+    need(active?.session === session && active.id === runId, 'OBJECT_WORKSPACE_RUN_CHANGED', 409);
+    active.stopping = true; active.controller.abort(); return runView(active);
+  }
+  async function recover({ session, expectedRevision } = {}) {
+    assertIdle(); mutation = { kind: 'RECOVER', session };
+    try { await checked(session, expectedRevision); retain(session, await recoverObjectSession(sessionPath(session))); }
+    finally { mutation = null; }
+  }
+  function destination(id, report) {
+    const name = report.selection?.filename ?? 'object.bin';
+    need(typeof name === 'string' && /^[A-Za-z0-9][A-Za-z0-9_. -]{0,119}$/.test(name) &&
+      !/[. ]$/.test(name), 'OBJECT_WORKSPACE_FILENAME_INVALID');
+    return join(outputsRoot, slug(id), name);
+  }
+  function assemblyRecord(id, report) {
+    const target = destination(id, report);
+    return report.assemblies.find(item => item.destination === target) ??
+      (report.assembly?.destination === target && report.assembly?.status === 'SAVED' ? report.assembly : null);
+  }
+  async function assemble({ session, expectedRevision } = {}) {
+    assertIdle(); mutation = { kind: 'ASSEMBLE', session };
+    try {
+      const report = await checked(session, expectedRevision);
+      if (assemblyRecord(session, report)) return;
+      const target = destination(session, report); await privateDirectory(dirname(target), true);
+      retain(session, await assembleObjectSession(sessionPath(session), target));
+    } finally { mutation = null; }
+  }
+  async function exportReport(session, kind) {
+    need(['json', 'html'].includes(kind), 'OBJECT_WORKSPACE_EXPORT_INVALID');
+    need(!active && !mutation, 'OBJECT_WORKSPACE_BUSY', 409);
+    const report = await inspect(session);
+    return { bytes: kind === 'html' ? Buffer.from(renderObjectReport(report)) : encode(report),
+      name: slug(session) + (kind === 'html' ? '.html' : '.json'),
+      type: kind === 'html' ? 'text/html; charset=utf-8' : 'application/json; charset=utf-8' };
+  }
+  async function openDownload(session) {
+    assertIdle(); const report = await original(session), record = assemblyRecord(session, report);
+    need(record && HASH.test(record.sha256), 'OBJECT_WORKSPACE_ASSEMBLY_REQUIRED', 409);
+    const path = destination(session, report); await privateDirectory(dirname(path));
+    const handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0));
+    try {
+      const before = await handle.stat({ bigint: true }), info = await handle.stat();
+      need(info.isFile() && info.nlink === 1 && info.size === record.bytes && privateInfo(info),
+        'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+      const hash = createHash('sha256'), buffer = Buffer.alloc(65536); let offset = 0;
+      while (offset < record.bytes) {
+        const { bytesRead } = await handle.read(buffer, 0, Math.min(buffer.length, record.bytes - offset), offset);
+        need(bytesRead > 0, 'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+        hash.update(buffer.subarray(0, bytesRead)); offset += bytesRead;
+      }
+      const after = await handle.stat({ bigint: true });
+      need(hash.digest('hex') === record.sha256 && ['dev', 'ino', 'size', 'mtimeNs', 'ctimeNs']
+        .every(key => before[key] === after[key]), 'OBJECT_WORKSPACE_SAVED_FILE_CHANGED', 409);
+      return { handle, bytes: record.bytes, sha256: record.sha256, name: basename(path) };
+    } catch (error) { await handle.close(); throw error; }
+  }
+  async function close() {
+    if (closePromise) return closePromise;
+    closed = true;
+    closePromise = (async () => {
+      if (active) { active.stopping = true; active.controller.abort(); await active.promise; }
+      while (mutation) await new Promise(resolve => setTimeout(resolve, 20));
+      reviews.clear();
+    })();
+    return closePromise;
+  }
+  await scan();
+  return { products, reviewSelection, create, view, refresh, run, stop, recover, assemble,
+    exportReport, openDownload, close };
+}

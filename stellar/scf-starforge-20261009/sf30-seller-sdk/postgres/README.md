@@ -49,6 +49,26 @@ Startup prints the seller URL, developer docs, OpenAPI document, health/readines
 
 Without `--facilitator`, SF30 returns its original payment challenge and does not execute the database handler for an unpaid HTTP request. For native payment mode, use the original SF30 SDK dependencies and append `--facilitator HTTPS_URL`; the launcher imports the original `createNativeSellerServer` and official `HTTPFacilitatorClient`. `--allow-local-facilitator` retains the original explicit loopback HTTP development option. This package introduces no signer, wallet, facilitator or automatic paid retry.
 
+## Pause and resume query products
+
+Append `--availability-dir` to retain product availability across seller restarts:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/start.mjs \
+  --source /private/merchant-postgres/source.json \
+  --config /private/merchant-postgres/service.json \
+  --availability-dir /private/merchant-postgres/availability \
+  --port 8423 --operations-port 8424
+```
+
+Use a private absolute directory on Linux; the original availability store creates it with mode 0700 and retains the policy with mode 0600 under a single-writer lease. Keep the same seller `publicOrigin` and directory on restart. For a local seller without `publicOrigin`, retain the same fixed seller port so the persisted origin still matches.
+
+Startup includes `availability` and `availabilityControl` URLs beside `operations`. Open `availabilityControl` to select named products and pause or resume them in the existing operations console. Its fragment grants write access, so keep the full URL within the private operator session. The plain availability page presents the current product state and recent changes; the [availability CLI](../availability/README.md) uses the same revision-aware controls.
+
+A paused route returns HTTP 503 before the original native payment handler or PostgreSQL admission function runs. Requests admitted before the pause continue through the original seller lifecycle, and their in-flight count remains visible until completion. Other routes continue selling. Startup still performs the PostgreSQL schema preflight against the configured source; product availability controls customer requests after startup. Reuse the saved directory to recover pauses, including paused route IDs removed from a later service configuration.
+
+Both `startPostgresMerchant` and `startPostgresSeller` accept the same optional `availabilityDirectory` value. Their returned seller exposes the original `availability` controller, and their operations object exposes `availabilityUrl` and `availabilityControlUrl`. The file launcher validates the path before opening the database. Generated workspace `START.md` files include this launch option and the operator workflow.
+
 ## Configuration
 
 `example-source.json` shows the complete `stellar-forge.postgres-source.v1` declaration:
@@ -158,9 +178,10 @@ The workspace-oriented names use that same implementation:
 import { startPostgresSeller } from './postgres/launch.mjs';
 const session = await startPostgresSeller({
   sourceFile: '/private/source.json', configFile: '/private/service.json',
-  port: 8423, operationsPort: 8424, nativeFactory: existingNativeFactory
+  port: 8423, operationsPort: 8424, nativeFactory: existingNativeFactory,
+  availabilityDirectory: '/private/merchant-availability'
 });
-console.log(session.seller.url, session.operations.url);
+console.log(session.seller.url, session.operations.url, session.operations.availabilityControlUrl);
 await session.close();
 ```
 

@@ -1,6 +1,6 @@
 # SF97 / Merchant Revenue Operations
 
-**Product:** a runnable seller-to-commercial-decision workbench. It consumes the existing **SF30 native seller-service JSON and its actual operator traffic snapshot** from `operations/launch.mjs`, joins merchant-owned USD prices, real costs and monthly targets, and exports a private, readable merchant pricing/acceptance review (`review.html`) plus machine-readable report (`report.json`). Both outputs are built from the same calculation. Standard-library Node 22+, no new payment or data collector, no npm install, hosted Actions or background jobs.
+**Product:** a runnable seller-to-commercial-decision workbench. It consumes the existing **SF30 native seller-service JSON and its actual operator traffic snapshot or retained usage history** from `operations/launch.mjs`, joins merchant-owned USD prices, real costs and monthly targets, and exports a private, readable merchant pricing/acceptance review (`review.html`) plus machine-readable report (`report.json`). Both outputs are built from the same calculation. Standard-library Node 22+, no new payment or data collector, no npm install, hosted Actions or background jobs.
 
 **Local merchant workspace:** [WORKSPACE.md](WORKSPACE.md) provides the complete browser workflow for editing actual quote/cost assumptions, reviewing all original payment choices, saving private report versions, reopening history and downloading CLI-compatible merchant terms. It uses the same analyzer and optional native companion described here.
 
@@ -43,6 +43,80 @@ node "$R/analyze.mjs" --config ./seller-service.json \
 ```
 
 The tool prints a JSON status line, not the merchant data. Output directory **must not exist** (non-overwriting `mkdir`, files `wx`, directory `0700`, files `0600` on POSIX). The HTML shows every option's network, atomic amount, timeout and asset/recipient SHA-256. Raw asset, `payTo` and `extra` remain in the private JSON report for owner comparison. Every input file has a SHA-256 in output. All paths are local, and live URL is restricted to HTTP loopback with redirects prohibited and a four-second timeout. It does not poll, schedule anything, call external URLs or send messages.
+
+Use `node "$R/analyze.mjs" --help` (or the installed `starforge revenue-report --help`) to print usage on stdout and exit successfully without reading inputs or creating a report. Missing or invalid report arguments still fail.
+
+## Review a retained period across seller restarts
+
+The original operations listener can retain the original observer's UTC day and route aggregates. Enable its existing history storage when launching the merchant, or keep using the history directory already attached to the native merchant launcher:
+
+```sh
+node "$S/operations/launch.mjs" --operations-port 8424 \
+  --history-dir /private/merchant/usage --history-days 90 -- \
+  --config /private/merchant/seller.json --port 8423
+```
+
+The original [operations history guide](../sf30-seller-sdk/operations/README.md#retain-and-compare-daily-usage) covers storage, retention and shutdown. SF97 reads its existing JSON export; it does not open another history writer. Select the actual retained period using the original endpoint:
+
+```sh
+node "$R/analyze.mjs" \
+  --config /private/merchant/seller.json \
+  --terms /private/merchant/pricing.json \
+  --ops-url 'http://127.0.0.1:8424/history.json?from=2026-10-01&to=2026-10-11' \
+  --native-outbox /private/merchant/sf98-outbox \
+  --output /private/reviews/merchant-oct01-oct11
+```
+
+Use the merchant's real dates and omit `--native-outbox` when that original source is not being included. `/api/history` accepts the same selection. Append `&routeId=ACTUAL_ROUTE_ID` to review one original route; only the original `from`, `to` and `routeId` query parameters are allowed. A retained-period source and a current process snapshot are alternative inputs to the same report.
+
+The original console's downloaded `history.json` can be used after the seller stops:
+
+```sh
+node "$R/analyze.mjs" \
+  --config /private/merchant/seller.json \
+  --terms /private/merchant/pricing.json \
+  --history /private/captures/original-history.json \
+  --native-outbox /private/merchant/sf98-outbox \
+  --output /private/reviews/merchant-retained-period
+```
+
+`--snapshot` also accepts an unmodified original history export, preserving the existing workspace source pipeline. `--history` explicitly requires `stellar-forge.seller-usage-history.v1`; it rejects a process snapshot supplied under that flag. No fabricated `sessionId`, in-flight count, continuous observation window or payment-option allocation is needed.
+
+### What the period view preserves
+
+The HTML includes UTC day totals, expandable day/route rows, all retained method/path variants, and saved session details. The JSON retains the normalized original source in `usageHistory`, alongside the derived `periodReview`. Original histogram populations are combined by the history producer; SF97 preserves its P95 bin bound rather than averaging per-session percentiles.
+
+| Report field | Period meaning |
+| --- | --- |
+| `observationKind` | `DURABLE_HISTORY`; existing process reports retain their original shape. |
+| `sessionId`, `sessionIds` | `null` for the period, plus the actual unique original session IDs. |
+| `originalSellerMode` | The actual one mode, `MIXED` for multiple retained modes, or `UNKNOWN` when no observations were retained. |
+| `usageHistory.range` | Original requested and effective UTC dates, route selection and retention truncation. |
+| `usageHistory.sessions` | Actual start/capture/save times, finalized/active/interrupted state, outstanding requests, observer errors and selected day membership. |
+| `periodReview.days` | Actual daily starts/completions/outcomes, route variants, and current-route price/cost sensitivity. |
+| `periodReview.variants` | Every original ID/method/path variant and whether it matches the current seller configuration. |
+| `observedFrom`, `observedUntil` | Envelope of the retained session intervals. The native companion also checks selected days and actual session/route coverage; it does not treat this envelope as uninterrupted operation. |
+
+Request starts and response finishes/disconnects use their **own** original UTC event dates. A request crossing midnight can increase starts on one day and completions on the next. There is no per-day in-flight gauge, and a day with more completions than starts remains valid. Missing days have no saved observations. Interrupted sessions may have lost observations after their last saved checkpoint; a later zero count is not substituted for that missing work. Observer errors and outstanding requests are session-checkpoint facts, not counts allocated to each selected day.
+
+Current merchant prices apply only when route ID, method **and path** match the retained variant. A removed route or changed method/path keeps its original counters but receives no current quote or target. The report does not reconstruct historical payment configurations or prices from HTTP history. Actual native notices still need exact configured payment-option matching in the companion.
+
+Monthly targets are applied once per selected current route, regardless of session count, day count or number of payment alternatives. A whole-seller report applies the merchant's shared fixed cost once. A route-filtered report leaves contribution **after shared fixed cost** unknown because no cost allocation was supplied; it still shows that route's target gross and contribution before fixed cost. Current quotes applied to prior HTTP completions remain the existing sensitivity calculation, not historical invoices or collected cash.
+
+### Existing history exports and downstream callers
+
+The original history schema remains unchanged. New exports add `coverageFormat: "stellar-forge.seller-usage-day-routes.v1"` and `sessions[].retainedDays`, containing each selected UTC day and its original `routeKeys`. These fields come directly from the saved original session records; no persistence format, writer lock, retention calculation or close behavior changes. The exported `normalizeTrafficHistoryReport` in the original `operations/history.mjs` reuses its counter, histogram and route-identity rules without opening storage.
+
+Older original exports remain readable. Their actual session intervals, days and route variants are retained, while absent session/day/route membership stays absent. The native companion can use unambiguous legacy coverage and leaves ambiguous historical variants unassigned. See [NATIVE_RECONCILIATION.md](NATIVE_RECONCILIATION.md#retained-period-and-session-coverage) for its event decisions.
+
+The pricing [workspace](WORKSPACE.md) uses the same public analyzer API:
+
+- `merchantRoutes(seller)` and `merchantTerms(seller, commercial)` retain the original normalized choices and merchant-input validation.
+- `analyze(seller, observation, terms, provenance)` accepts either original source schema directly.
+- `readJson(path, label)` and `liveSnapshot(url)` retain `{value, hash, bytes}`; `bytes` are the actual original input, suitable for saving and reopening a review.
+- `createReport(argv)` returns the existing CLI status object. Period results additionally contain `observation`, session/day counts and the original selected range. `main(argv)` prints and returns that object.
+
+History input and a completed JSON report have a 64 MiB limit; ordinary config, terms and process-source readers retain their smaller limit. For a larger retained source, select a shorter original date range or one route before exporting. A workspace can impose its own documented saved-file capacity. Retain the original bytes and hashes with the review so a later operator can reproduce the same selected period.
 
 ### Approve every payment alternative
 

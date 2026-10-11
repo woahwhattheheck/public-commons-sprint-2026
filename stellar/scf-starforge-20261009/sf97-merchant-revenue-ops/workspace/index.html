@@ -1,13 +1,45 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Merchant pricing · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/browser.mjs"></script></head>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Merchant pricing · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script type="module" src="/browser.mjs"></script></head>
 <body><main>
-<header><div><p class="eyebrow">Stellar Forge / Merchant operations</p><h1>Merchant pricing</h1><p class="subtitle">Review service costs, payment choices and a monthly commercial plan.</p></div><span class="badge">Local workspace</span></header>
-<section class="source-bar" aria-label="Current source"><div><span class="muted">Seller configuration</span><strong id="source-name">Loading…</strong></div><div><span class="muted">Observed session</span><strong id="session-name">—</strong></div><div><span class="muted">Captured</span><strong id="captured">—</strong></div><button id="refresh" type="button">Refresh operations</button></section>
+<header><div><p class="eyebrow">Stellar Forge / Merchant operations</p><h1>Merchant pricing</h1><p class="subtitle">Review service economics from current operations or a retained period.</p></div><span class="badge">Local workspace</span></header>
 <p id="notice" role="status" aria-live="polite">Loading the current merchant configuration.</p>
+<section class="panel source-panel" aria-labelledby="source-title">
+  <div class="section-head"><h2 id="source-title">Review source</h2><span id="source-kind-note" class="muted small"></span></div>
+  <form id="source-form" class="source-controls">
+    <label>Operations source<select id="source-kind" aria-describedby="source-help"></select></label>
+    <div id="period-controls" class="period-controls" hidden>
+      <label>From day · UTC<input id="source-from" type="date"></label>
+      <label>Through day · UTC<input id="source-to" type="date"></label>
+      <label>Service scope<select id="source-route"><option value="">All retained services</option></select></label>
+    </div>
+    <div class="button-row"><button id="apply-source" type="submit">Apply source</button><button id="reset-source" type="button">Use current selection</button><button id="refresh" type="button">Refresh operations</button></div>
+  </form>
+  <p id="source-help" class="muted small"></p>
+  <div class="source-bar" aria-label="Current source"><div><span class="muted">Seller configuration</span><strong id="source-name">Loading…</strong></div><div><span class="muted">Observed source</span><strong id="session-name">—</strong></div><div><span class="muted">Captured</span><strong id="captured">—</strong></div></div>
+  <div id="source-coverage" hidden>
+    <div id="coverage-facts" class="source-facts"></div>
+    <p id="coverage-semantics" class="muted small"></p>
+    <details class="coverage-detail"><summary>Retained day coverage <span id="day-count"></span></summary><div id="coverage-days"></div></details>
+    <details class="coverage-detail"><summary>Session coverage <span id="session-count"></span></summary><div id="coverage-sessions"></div></details>
+  </div>
+</section>
 <section class="merchant panel"><div class="section-head"><h2>Merchant assumptions</h2><span id="save-state" class="muted">Unsaved review</span></div><div class="fields"><label>Merchant name<input id="merchant-name" maxlength="160" autocomplete="organization"></label><label>Shared monthly fixed cost · USD<input id="fixed-cost" inputmode="decimal" placeholder="Unknown"><small>Leave unknown costs blank.</small></label></div></section>
 <div class="workspace-grid"><aside class="panel"><h2>Services</h2><nav id="routes" aria-label="Seller routes"></nav><p id="route-count" class="muted small"></p></aside><section id="editor" class="panel" aria-label="Service commercial inputs"></section></div>
-<section class="panel review-actions"><div><label>Review name<input id="review-name" maxlength="100" placeholder="October pilot pricing"></label><p class="muted small">Saving retains these inputs, the captured operations data and the original reports as one private version.</p></div><div class="button-row"><button id="preview" type="button">Calculate review</button><button id="save" class="primary" type="button">Save review</button></div></section>
-<section id="preview-panel" class="panel" hidden><div class="section-head"><h2>Commercial review</h2><span id="preview-caption" class="muted"></span></div><div id="totals" class="totals"></div><p class="muted small">Monthly amounts use the prices, costs and paid-volume targets entered above. Observed HTTP traffic remains operational usage.</p><div class="table-scroll"><table><thead><tr><th>Service</th><th>Attempts</th><th>402</th><th>2xx</th><th>Target gross · USD</th><th>Target contribution · USD</th></tr></thead><tbody id="preview-rows"></tbody></table></div><ul id="issues"></ul></section>
-<section class="panel"><div class="section-head"><h2>Saved reviews</h2><span id="history-count" class="muted"></span></div><p class="muted small">Open a previous report or reuse its commercial assumptions in a new review. Every saved version keeps its original payment terms and operations capture.</p><div id="history"></div></section>
+<section class="panel review-actions"><div><label>Review name<input id="review-name" maxlength="100" placeholder="October pilot pricing"></label><p id="save-help" class="muted small">Saving retains these inputs, the selected operations source and the original reports as one private version.</p></div><div class="button-row"><button id="preview" type="button">Calculate review</button><button id="save" class="primary" type="button">Save review</button></div></section>
+<section id="preview-panel" class="panel" hidden>
+  <div class="section-head"><h2>Commercial review</h2><span id="preview-caption" class="muted"></span></div>
+  <div id="period-review" hidden></div>
+  <div id="totals" class="totals"></div>
+  <p class="muted small">Monthly amounts use the prices, costs and paid-volume targets entered above. Observed HTTP traffic remains operational usage.</p>
+  <div class="table-scroll"><table><thead><tr><th>Service</th><th>Attempts</th><th>402</th><th>2xx</th><th>Target gross · USD</th><th>Target contribution · USD</th></tr></thead><tbody id="preview-rows"></tbody></table></div><ul id="issues"></ul>
+</section>
+<section class="panel" aria-labelledby="history-title"><div class="section-head"><h2 id="history-title">Saved reviews</h2><span id="history-count" class="muted"></span></div><p class="muted small">Each version keeps the selected source, original payment terms and reports. Reusing assumptions keeps your current operations selection.</p><div id="history"></div></section>
+<section class="panel" aria-labelledby="comparison-title">
+  <div class="section-head"><h2 id="comparison-title">Compare saved reviews</h2><span id="comparison-status" class="muted small">Choose two saved reviews.</span></div>
+  <p class="muted small">Compare the original saved values and source coverage. Differences in configuration, commercial terms or observed period are shown alongside the reports.</p>
+  <form id="comparison-form" class="comparison-controls"><label>First saved review<select id="compare-left"></select></label><label>Second saved review<select id="compare-right"></select></label><button id="compare" type="submit">Compare reviews</button></form>
+  <div id="comparison-result" hidden><div id="comparison-compatibility" class="compatibility"></div><div id="comparison-reports" class="comparison-grid"></div></div>
+</section>
 <footer><span id="native-status"></span><details><summary>Configuration identity</summary><code id="config-hash"></code><p class="small muted">Review files are stored privately on this operator host. The current seller configuration supplies the complete ordered payment choices.</p></details></footer>
 </main></body></html>

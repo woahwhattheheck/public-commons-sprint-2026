@@ -43,6 +43,42 @@ const decimal = n => typeof n === 'number' && Number.isFinite(n) && n >= 0;
 const id = s => text(s).replace(/[^a-zA-Z0-9_.-]/g,'_').slice(0,90);
 function insist(ok,msg) { if(!ok) throw Error(msg); }
 
+const proposalCurrencies = new Set(Intl.supportedValuesOf('currency'));
+function workshareMoney(share) {
+  const explicit = ['currency','feeMinor','costMinor'].some(key => own(share,key));
+  if (!explicit) {
+    const fee = decimal(share.feeUsd) ? share.feeUsd : null;
+    const cost = decimal(share.costUsd) ? share.costUsd : null;
+    return { currency:'USD', moneyInput:'LEGACY_USD', minorUnitDigits:2,
+      feeAmount:fee, costAmount:cost, feeUsd:fee, costUsd:cost,
+      feeMinor:fee === 0 ? 0 : exactUsdMinor(fee), costMinor:cost === 0 ? 0 : exactUsdMinor(cost) };
+  }
+  const currency = text(share.currency).toUpperCase();
+  insist(proposalCurrencies.has(currency), 'Workshare currency must be a supported ISO currency code');
+  insist(share.feeUsd == null && share.costUsd == null, 'Use either currency/feeMinor/costMinor or legacy feeUsd/costUsd; do not mix amounts');
+  const minor = (key) => {
+    if (share[key] == null) return null;
+    insist(Number.isSafeInteger(share[key]) && share[key] >= 0, 'Workshare '+key+' must be a nonnegative safe integer or null');
+    return share[key];
+  };
+  const feeMinor = minor('feeMinor'), costMinor = minor('costMinor');
+  const minorUnitDigits = new Intl.NumberFormat('en-US',{style:'currency',currency}).resolvedOptions().maximumFractionDigits;
+  const scale = 10 ** minorUnitDigits;
+  const feeAmount = feeMinor === null ? null : feeMinor / scale;
+  const costAmount = costMinor === null ? null : costMinor / scale;
+  return {currency,moneyInput:'MINOR_UNITS',minorUnitDigits,feeMinor,costMinor,feeAmount,costAmount,
+    feeUsd:currency === 'USD' ? feeAmount : null, costUsd:currency === 'USD' ? costAmount : null};
+}
+function worksharePrice(share,kind='fee') {
+  if (share.moneyInput !== 'MINOR_UNITS') return money(share[kind+'Usd']);
+  const value = share[kind+'Minor'];
+  if (value === null) return 'UNSET';
+  const digits = share.minorUnitDigits;
+  const raw = BigInt(value).toString().padStart(digits + 1,'0');
+  const whole = (digits ? raw.slice(0,-digits) : raw).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  return share.currency+' '+whole+(digits ? '.'+raw.slice(-digits) : '');
+}
+
 export function evaluate(op, now = new Date(), options = {}) {
   insist(now instanceof Date && Number.isFinite(now.getTime()), 'Invalid assessment time');
   insist(op && typeof op === 'object' && !Array.isArray(op), 'Opportunity must be an object');
@@ -83,9 +119,11 @@ export function evaluate(op, now = new Date(), options = {}) {
   const share = op.workshare || {};
   const milestones = Array.isArray(share.milestones) ? share.milestones : [];
   const deliverable = milestones.length > 0 && milestones.every(m=>text(m.acceptance) && text(m.deliverable));
-  const fee = share.feeUsd;
-  const costs = share.costUsd;
-  const margin = decimal(fee) && fee > 0 && decimal(costs) ? (fee-costs)/fee : null;
+  const proposalMoney = workshareMoney(share);
+  const fee = proposalMoney.feeAmount, costs = proposalMoney.costAmount;
+  const margin = proposalMoney.moneyInput === 'MINOR_UNITS'
+    ? proposalMoney.feeMinor > 0 && proposalMoney.costMinor !== null ? (proposalMoney.feeMinor-proposalMoney.costMinor)/proposalMoney.feeMinor : null
+    : decimal(fee) && fee > 0 && decimal(costs) ? (fee-costs)/fee : null;
   const minimumMargin = op.minimumMargin ?? .25;
   const marginPolicyValid = decimal(minimumMargin) && minimumMargin < 1;
   const contact = op.communication || {};
@@ -151,7 +189,7 @@ export function evaluate(op, now = new Date(), options = {}) {
   return {
     key,buyer:{name:buyer.name,id:buyer.opportunityId,revision:buyer.revision,status:buyer.status,sourceUrl:buyer.sourceUrl,deadlineText:deadline.originalText||'',deadlineIso:deadlineKnown?normalizedDeadline:null},
     owner:op.owner,sourceReview:sourceReady?'RECORDED_ISSUER_REVIEW':'UNREVIEWED',deadlineState:due,
-    partners,selectedPrime:targetPartner?.name||null,primeQualificationComplete:!!targetPartner?.eligibleToConsider,workshare:{summary:share.summary||'',milestones,feeUsd:decimal(fee)?fee:null,costUsd:decimal(costs)?costs:null,margin:margin===null?null:Number(margin.toFixed(4)),minimumMargin:marginPolicyValid?minimumMargin:null,feeStatus:share.feeStatus||'UNSET',feeApproved,feeUsableForProposal,feeAuthority:feeApproved?'OWNER_EXACT_PRICE':standingProposal?authority.kind:'UNRECORDED'},
+    partners,selectedPrime:targetPartner?.name||null,primeQualificationComplete:!!targetPartner?.eligibleToConsider,workshare:{summary:share.summary||'',milestones,...proposalMoney,margin:margin===null?null:Number(margin.toFixed(4)),minimumMargin:marginPolicyValid?minimumMargin:null,feeStatus:share.feeStatus||'UNSET',feeApproved,feeUsableForProposal,feeAuthority:feeApproved?'OWNER_EXACT_PRICE':standingProposal?authority.kind:'UNRECORDED'},
     outreachAuthorized:authorized,outreachAuthority:authority,stage,recordedReceipts:validEvents,acceptedStageEvents,rejectedStageEvents,
     provenPaidUsd,recordedNetUsd:provenPaidUsd,cashReconciliation:'SINGLE_OPPORTUNITY_ONLY_NOT_DUPLICATE_CLEARED',
     readyForOwnerApproach:blockers.length===0,blockers,nextActions
@@ -190,7 +228,7 @@ export function renderMarkdown(rs,now){
     if (r.outreachPreflight) out+=`**Outreach snapshot:** ${r.outreachPreflight.decision}; ${r.outreachPreflight.reasons.join('; ')||'no collision observed in supplied snapshot; this is not send authorization'}.\n\n`;
     if (r.replyTriage) out+=`**First-contact eligibility:** ${introductionDisplay(r)}; **Reply status:** ${r.replyTriage.status}; ${r.replyTriage.sentCount??0} verified SENT, ${r.replyTriage.humanReplyCount??0} human, ${r.replyTriage.bounceCount??0} bounce. ${r.replyTriage.nextAction||'Provider reply snapshot not supplied or case not mapped'}.\n\n`;
     out+=`Source: ${r.buyer.sourceUrl}\n\nDeadline: ${r.buyer.deadlineText} (${r.deadlineState}). Source review: ${r.sourceReview}.\n\n`;
-    out+=`Proposed specialist slice: ${r.workshare.summary||'UNDEFINED'}; fee ${money(r.workshare.feeUsd)}, delivery cost ${money(r.workshare.costUsd)}, margin ${r.workshare.margin===null?'UNKNOWN':(100*r.workshare.margin).toFixed(1)+'%'}; ${r.workshare.feeStatus}.\n\n`;
+    out+=`Proposed specialist slice: ${r.workshare.summary||'UNDEFINED'}; fee ${worksharePrice(r.workshare)}, delivery cost ${worksharePrice(r.workshare,'cost')}, margin ${r.workshare.margin===null?'UNKNOWN':(100*r.workshare.margin).toFixed(1)+'%'}; ${r.workshare.feeStatus}.\n\n`;
     out+=`Prime fit: ${r.partners.map(p=>`${p.name} ${p.documented}/${p.required} documented requirements`).join('; ')||'UNASSIGNED'}\n\n`;
     out+='**Items to resolve:** '+(r.blockers.join('; ')||'none in supplied records')+'\n\n';
     out+='**Next operator moves:**\n'+r.nextActions.map(x=>`- ${x}`).join('\n')+'\n';
@@ -209,7 +247,7 @@ export function renderWorkshareSheet(rs,now){
     out+=`**Specialist workshare:** ${r.workshare.summary||'NOT YET SCOPED'}.\n\n`;
     out+=`**Milestone acceptance schedule:**\n`;
     out+=r.workshare.milestones.length ? r.workshare.milestones.map((m,i)=>`${i+1}. Deliverable: ${m.deliverable}\n   Acceptance: ${m.acceptance}`).join('\n')+'\n' : 'No signed-off deliverables or acceptance yet.\n';
-    out+=`\n**Externally usable fee:** ${r.workshare.feeUsableForProposal && r.workshare.feeUsd !== null ? money(r.workshare.feeUsd)+' ('+r.workshare.feeAuthority+'; proposal only)' : 'NOT PROPOSED'}.\n\n`;
+    out+=`\n**Externally usable fee:** ${r.workshare.feeUsableForProposal && Number.isFinite(r.workshare.feeAmount ?? r.workshare.feeUsd) ? worksharePrice(r.workshare)+' ('+r.workshare.feeAuthority+'; proposal only)' : 'NOT PROPOSED'}.\n\n`;
     out+=`**Partner fit:** ${r.partners.map(p=>`${p.name}: ${p.documented}/${p.required} mandatory clauses documented, ${p.eligibleToConsider?'potential candidate':'not qualified on provided records'}`).join('; ')||'No candidates assessed'}.\n\n`;
     if (r.contactHistory) out+=`**Shared contact history:** ${r.contactHistory.status}; ${r.contactHistory.channels.join(', ')||'no completed contact'}; observed ${r.contactHistory.latestObservedAt||'not recorded'}. ${r.contactHistory.nextAction||''}\n\n`;
     if (r.replyTriage) out+=`**Provider reply lane:** ${r.replyTriage.status}; ${r.replyTriage.nextAction||'Supply actual provider data and bind caseId before further contact'}.\n\n`;
@@ -227,9 +265,10 @@ export function renderHtml(rs,now){
     const collectionView=r.collections?`<h3>Recorded collections</h3><p>Workflow stage is separate from invoice settlement. Integer minor units per stated currency; no currency conversion. ${r.collections.reviewRequired?'Review required: see collections.json for rejected or conflicting receipts.':'Receipts remain operator supplied; independently verify with the provider.'}</p><table><tr><th>Invoice</th><th>Currency</th><th>Net received</th><th>Outstanding</th><th>State</th></tr>${collectionRows||'<tr><td colspan="5">No valid invoice recorded</td></tr>'}</table>`:'';
     const outreachView=r.outreachPreflight?`<h3>Outreach snapshot</h3><p>${safe(r.outreachPreflight.decision)}: ${safe(r.outreachPreflight.reasons.join('; ')||'No collision observed in supplied snapshot. Separate live checks, reservation and owner authorization still apply.')}</p>`:'';
     const replyView=r.replyTriage?`<h3>Provider reply lane</h3><p><strong>${safe(r.replyTriage.engagementLane||'PROVIDER DATA NOT SUPPLIED')}</strong> · ${safe(r.replyTriage.status)}</p><p><strong>Original introduction: ${introductionDisplay(r)}</strong> · ${safe(r.replyTriage.sentCount??0)} verified SENT · ${safe(r.replyTriage.humanReplyCount??0)} human · ${safe(r.replyTriage.bounceCount??0)} bounce.</p><p>${safe(r.replyTriage.nextAction||'No mapped provider reply data. Use the relationship owner and actual mailbox receipts.')}</p>`:'';
+    const workshareView=`<h3>Implementation workshare</h3><p>${safe(r.workshare.summary||'Scope not recorded')}</p><p>Fee: ${safe(worksharePrice(r.workshare))} · ${safe(r.workshare.feeStatus)} · ${safe(r.workshare.feeAuthority)}. Delivery cost: ${safe(worksharePrice(r.workshare,'cost'))}.</p><ol>${r.workshare.milestones.map(m=>`<li><b>${safe(m.deliverable)}</b>: ${safe(m.acceptance)}</li>`).join('')}</ol>`;
     const issues=r.blockers.map(s=>`<li>${safe(s)}</li>`).join('');
     const partnerRows=r.partners.map(p=>`<tr><td>${safe(p.name)}</td><td>${p.documented}/${p.required}</td><td>${p.eligibleToConsider?'DOCUMENTED':'ASK PARTNER'}</td><td>${safe(p.gaps.map(g=>g.requirementId).join(', '))}</td></tr>`).join('');
-    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${safe(engagementDisplay(r))}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not selected')}</strong></div><div><label>Price</label><strong>${safe(money(r.workshare.feeUsd))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${authorityView}${contactView}${collectionView}${outreachView}${replyView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Items to resolve</h3><ul>${issues||'<li>None recorded</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
+    return `<section><div class="top"><h2>${safe(r.buyer.name)}</h2><span class="status">${safe(engagementDisplay(r))}</span></div><p>${safe(r.buyer.id)} · ${safe(r.buyer.revision)} · ${safe(r.owner)} · Workflow: ${safe(r.stage)}</p><p>Cash basis: ${safe(r.cashReconciliation)}; operator-recorded, not provider-verified.</p><p><a href="${safe(r.buyer.sourceUrl)}">First-party source</a> · ${safe(r.deadlineState)}</p><div class="metrics"><div><label>Documented prime</label><strong>${safe(r.selectedPrime||'Not selected')}</strong></div><div><label>Price</label><strong>${safe(worksharePrice(r.workshare))}</strong></div><div><label>Recorded net USD</label><strong>${safe(money(r.recordedNetUsd))}</strong></div></div>${authorityView}${contactView}${collectionView}${outreachView}${replyView}${workshareView}<h3>Mandatory prime requirements</h3><table><tr><th>Candidate</th><th>Documented</th><th>Gate</th><th>Missing</th></tr>${partnerRows}</table><h3>Items to resolve</h3><ul>${issues||'<li>None recorded</li>'}</ul><h3>Next actions</h3><ol>${r.nextActions.map(s=>`<li>${safe(s)}</li>`).join('')}</ol></section>`;
   }).join('');
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Buyer-to-prime operator board</title><style>:root{font-family:system-ui,-apple-system,sans-serif;color:#222;background:#f4f4f4}body{max-width:1090px;margin:38px auto;padding:0 18px}h1{font-size:2rem}p{line-height:1.5;color:#444}section{background:#fff;padding:28px;border:1px solid #ccc;border-radius:3px;margin:20px 0}.top{display:flex;align-items:center;justify-content:space-between;gap:12px}.top h2{margin:0}.status{font-weight:700;color:#222;background:#eee;padding:8px 12px;border-radius:3px}.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin:22px 0}.metrics div{padding:16px;background:#f5f5f5;border-radius:2px}label{display:block;font-size:.8rem;color:#555;margin-bottom:8px}strong{display:block;font-size:1.1rem;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;text-align:left}td,th{border-bottom:1px solid #ccc;padding:10px 6px;overflow-wrap:anywhere}th{color:#444}li{line-height:1.5;margin:7px 0}a{color:#222}.disclaimer{padding:16px;border-left:4px solid #666}</style><main><h1>Buyer → prime → paid work</h1><p class="disclaimer">Offline operator decision board, generated ${safe(now.toISOString())}. Documentation status is declared by inputs, not validated by this program. Nothing is submitted, contacted, purchased or paid.</p>${blocks}</main></html>`;
 }

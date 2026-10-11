@@ -1,98 +1,138 @@
 #!/usr/bin/env node
-// MIT. Private merchant receiving review and exact-source replay.
-import {readFile,lstat,mkdir,open,rm} from 'node:fs/promises';
-import {resolve,join} from 'node:path';
-import {fileURLToPath} from 'node:url';
-import {createHash} from 'node:crypto';
-import {inspectMerchantReceiving,compareMerchantReadiness,merchantReadinessHtml,merchantReadinessCsv} from './merchant.mjs';
-import {fault} from './native-reader.mjs';
+// MIT. Private merchant receiving review over original source and public reads.
+import { readFile, open, mkdir, rm, stat } from 'node:fs/promises';
+import { resolve, join, isAbsolute } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { merchantReadinessHtml, merchantReadinessCsv } from './merchant.mjs';
+import { inspectMerchantReceiving, compareMerchantReadiness } from './receiving-session.mjs';
+import { sha256 } from './readiness.mjs';
 
-const hash = bytes => createHash('sha256').update(bytes).digest('hex');
-const USAGE = `Usage: node merchant-cli.mjs --config SELLER_JSON --out NEW_PRIVATE_DIRECTORY
-       [--origin ACTUAL_LOOPBACK_ORIGIN] [--rpc-testnet HTTPS_URL] [--rpc-public HTTPS_URL]
-       [--timeout-ms 12000] [--ops 10] [--previous PRIOR_BUNDLE_DIRECTORY]
-       [--from-capture PRIOR_BUNDLE_DIRECTORY]
+const HELP = `Usage: node merchant-cli.mjs --config SELLER_JSON --out NEW_PRIVATE_DIRECTORY
+  [--asset-map ASSET_MAP_JSON] [--origin ACTUAL_SELLER_ORIGIN] [--rpc-map RPC_MAP_JSON]
+  [--https-proxy-env ENV_NAME] [--timeout-ms 12000] [--fee-operations 0]
+  [--previous PREVIOUS_REVIEW_DIRECTORY] [--from-capture RETAINED_REVIEW_DIRECTORY]
 
-Uses the original SF30 seller compiler, native Stellar SDK reads and SF101 account calculator.
-Each payment alternative retains its original atomic amount, asset, network and recipient.
---from-capture reopens the original recorded requests from a verified previous bundle.
-The existing single-account classic command remains cli.mjs.`;
+Reviews every original SF30 option using native token reads and the original SAC
+receiving evaluator. Existing exact asset maps are accepted; other SAC identities
+are resolved from their deployed metadata and verified with the native SDK.
+Writes private review.json, review.html, options.csv, plan.json, asset-map.json,
+capture.json and manifest.json. Replay makes the same captured requests offline.
+Exit 0: all recipients ready. Exit 2: merchant action/configuration/source review.
+Exit 1: provider read failed. Exit 3: invalid input or output failure.
+Guide: MERCHANT_READINESS.md`;
 
-function parse(argv) {
-  const result = {};
-  const allowed = new Set(['config','out','origin','rpc-testnet','rpc-public','timeout-ms','ops','previous','from-capture']);
-  for (let i = 0; i < argv.length; i += 2) {
-    const key = argv[i]?.slice(2);
-    if (!argv[i]?.startsWith('--') || !allowed.has(key) || Object.hasOwn(result,key) ||
-      i+1 >= argv.length || argv[i+1].startsWith('--')) throw fault('INVALID_ARGUMENTS',USAGE);
-    result[key] = argv[i+1];
-  }
-  if (!result.config || !result.out) throw fault('REQUIRED_ARGUMENTS',USAGE);
-  return result;
-}
-async function jsonFile(path,limit) {
-  const info = await lstat(path);
-  if (!info.isFile() || info.isSymbolicLink() || info.size > limit) throw fault('INVALID_INPUT_FILE');
-  const bytes = await readFile(path);
-  if (bytes.length > limit) throw fault('INPUT_FILE_TOO_LARGE');
-  return {value:JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)),bytes};
-}
-export async function readReceivingBundle(directory,filename) {
-  if (!['capture.json','report.json'].includes(filename)) throw fault('INVALID_BUNDLE_FILE');
-  const path = resolve(directory), manifest = (await jsonFile(join(path,'manifest.json'),65536)).value;
-  if (manifest.schema !== 'stellar-forge.sf101.merchant-bundle.v1') throw fault('BUNDLE_SCHEMA_MISMATCH');
-  const file = await jsonFile(join(path,filename),80 * 1024 * 1024);
-  if (manifest.files?.[filename]?.sha256 !== hash(file.bytes) || manifest.files[filename].bytes !== file.bytes.length)
-    throw fault('BUNDLE_FILE_DIGEST_MISMATCH');
-  return file.value;
+async function jsonInput(path) {
+  const absolute = resolve(path), info = await stat(absolute);
+  if (!info.isFile() || info.size > 1024*1024) throw new Error('INPUT_MUST_BE_JSON_FILE_UNDER_1_MIB');
+  const bytes = await readFile(absolute);
+  if (bytes.length > 1024*1024) throw new Error('INPUT_TOO_LARGE');
+  return {json:JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes)),
+    source:{path:absolute,bytes:bytes.length,sha256:sha256(bytes)}};
 }
 
-export async function writeReceivingBundle(directory,{plan,report,capture}) {
-  const path = resolve(directory);
-  const files = {
-    'plan.json':JSON.stringify(plan,null,2)+'\n',
-    'report.json':JSON.stringify(report,null,2)+'\n',
-    'options.csv':merchantReadinessCsv(report),
-    'review.html':merchantReadinessHtml(report),
-    'capture.json':JSON.stringify(capture,null,2)+'\n',
-  };
-  const manifest = {schema:'stellar-forge.sf101.merchant-bundle.v1',observedAt:report.observedAt,
-    planSha256:plan.planSha256,configurationSha256:plan.configuration.sha256,mode:report.mode,
-    files:Object.fromEntries(Object.entries(files).map(([name,value]) => [name,{bytes:Buffer.byteLength(value),sha256:hash(value)}]))};
-  await mkdir(path,{mode:0o700}); // Existing output is preserved; one directory per review.
-  try {
-    for (const [name,value] of [...Object.entries(files),['manifest.json',JSON.stringify(manifest,null,2)+'\n']]) {
-      const handle = await open(join(path,name),'wx',0o600);
-      try { await handle.writeFile(value,'utf8'); await handle.sync(); } finally { await handle.close(); }
+/** Reuse the original explicit CONNECT/TLS transport only when requested. */
+export async function createReadinessFetch(proxyEnv, {environment = process.env, timeoutMs = 12000} = {}) {
+  if (proxyEnv === undefined) return globalThis.fetch;
+  if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(proxyEnv) || typeof environment[proxyEnv] !== 'string')
+    throw new Error('EXPLICIT_PROXY_ENVIRONMENT_REQUIRED');
+  const {createPublicHttpsFetch,normalizeBuyerTransport,resolveBuyerProxy} = await import('../sf31-buyer-client/public-transport.mjs');
+  // Resolve this caller's environment now; the original transport receives the
+  // same verified proxy URL and retains the exact target origin/TLS identity.
+  const transports = new Map();
+  return (url, init) => {
+    const origin = new URL(url).origin;
+    if (!transports.has(origin)) {
+      const profile = normalizeBuyerTransport({mode:'explicit-connect',origin,proxyEnv});
+      resolveBuyerProxy(profile,environment);
+      transports.set(origin,createPublicHttpsFetch({timeoutMs,
+        trustedProxy:{mode:'explicit-connect',origin,proxyUrl:environment[proxyEnv]}}));
     }
+    return transports.get(origin)(url,init);
+  };
+}
+
+export async function writeMerchantReview(directory, report, sources, bundle) {
+  if (!isAbsolute(directory) || resolve(directory) !== directory) throw new Error('ABSOLUTE_NORMALIZED_OUTPUT_REQUIRED');
+  // Own the directory only after this exclusive creation succeeds.
+  await mkdir(directory,{mode:0o700});
+  try {
+    const files = {'review.json':JSON.stringify(report,null,2)+'\n','review.html':merchantReadinessHtml(report),
+      'options.csv':merchantReadinessCsv(report),...(bundle ? {
+        'plan.json':JSON.stringify(bundle.plan,null,2)+'\n',
+        'asset-map.json':JSON.stringify(bundle.resolvedAssetMap,null,2)+'\n',
+        'capture.json':JSON.stringify(bundle.capture,null,2)+'\n'} : {})};
+    const manifest = {schema:'stellar-forge.merchant-readiness-manifest.v1',createdAt:new Date().toISOString(),
+      sources,planDigest:report.planDigest,files:Object.entries(files).map(([name,text])=>
+        ({name,bytes:Buffer.byteLength(text),sha256:sha256(text)}))};
+    files['manifest.json'] = JSON.stringify(manifest,null,2)+'\n';
+    for (const [name,text] of Object.entries(files)) {
+      const handle = await open(join(directory,name),'wx',0o600);
+      try { await handle.writeFile(text); await handle.sync(); } finally { await handle.close(); }
+    }
+    return manifest;
   } catch (error) {
-    await rm(path,{recursive:true,force:true}); // Only the directory this invocation just created.
+    await rm(directory,{recursive:true,force:true});
     throw error;
   }
-  return {directory:path,manifestSha256:hash(JSON.stringify(manifest,null,2)+'\n'),files:Object.keys(manifest.files)};
 }
 
-export async function main(argv = process.argv.slice(2)) {
-  if (argv.length === 1 && argv[0] === '--help') { console.log(USAGE); return; }
-  const args = parse(argv);
-  let capture, endpoints = {};
-  if (args['from-capture']) {
-    if (args['rpc-testnet'] || args['rpc-public']) throw fault('CAPTURE_RETAINS_ORIGINAL_ENDPOINTS');
-    capture = await readReceivingBundle(args['from-capture'],'capture.json');
-    endpoints = capture.endpoints ?? {};
-  } else {
-    if (args['rpc-testnet']) endpoints['stellar:testnet'] = args['rpc-testnet'];
-    if (args['rpc-public']) endpoints['stellar:pubnet'] = args['rpc-public'];
-  }
-  const result = await inspectMerchantReceiving({configPath:args.config,origin:args.origin,endpoints,capture,
-    timeoutMs:args['timeout-ms'] === undefined ? 12000 : Number(args['timeout-ms']),
-    feeOperations:args.ops === undefined ? 10 : Number(args.ops)});
-  if (args.previous) result.report.comparison = compareMerchantReadiness(
-    await readReceivingBundle(args.previous,'report.json'),result.report);
-  const bundle = await writeReceivingBundle(args.out,result);
-  console.log(JSON.stringify({mode:result.report.mode,...result.report.summary,bundle},null,2));
-  process.exitCode = result.report.summary.statusCounts.ACTION_REQUIRED ? 2 : result.report.summary.statusCounts.REVIEW ? 1 : 0;
+/** Resolve only named files whose exact bytes are committed by the private manifest. */
+export async function readMerchantBundle(directory, name) {
+  if (!['review.json','capture.json'].includes(name)) throw new Error('INVALID_BUNDLE_MEMBER');
+  const root = resolve(directory), manifest = await jsonInput(join(root,'manifest.json'));
+  if (manifest.json.schema !== 'stellar-forge.merchant-readiness-manifest.v1' || !Array.isArray(manifest.json.files))
+    throw new Error('INVALID_MERCHANT_MANIFEST');
+  const matches = manifest.json.files.filter(file=>file.name === name);
+  if (matches.length !== 1) throw new Error('MANIFEST_MEMBER_MISSING');
+  const expected = matches[0], path = join(root,name), info = await stat(path), max = name === 'capture.json' ? 80*1024*1024 : 8*1024*1024;
+  if (!info.isFile() || !Number.isSafeInteger(expected.bytes) || expected.bytes < 0 || expected.bytes > max || info.size !== expected.bytes)
+    throw new Error('MANIFEST_SIZE_MISMATCH');
+  const bytes = await readFile(path);
+  if (bytes.length !== expected.bytes || sha256(bytes) !== expected.sha256) throw new Error('MANIFEST_DIGEST_MISMATCH');
+  return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
 }
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().catch(error => { console.error((error.code ?? 'MERCHANT_READINESS_FAILED')+': '+error.message); process.exitCode = 3; });
+
+export async function run(argv = process.argv.slice(2)) {
+  if (argv.length === 0 || argv.includes('--help')) { console.log(HELP); return 0; }
+  const values = new Map(), allowed = new Set(['--config','--asset-map','--out','--rpc-map',
+    '--https-proxy-env','--timeout-ms','--fee-operations','--origin','--previous','--from-capture']);
+  for (let index = 0; index < argv.length; index += 2) {
+    if (!allowed.has(argv[index]) || values.has(argv[index]) || !argv[index+1] || argv[index+1].startsWith('--'))
+      throw new Error('INVALID_COMMAND_ARGUMENT');
+    values.set(argv[index],argv[index+1]);
+  }
+  for (const key of ['--config','--out']) if (!values.has(key)) throw new Error('MISSING_REQUIRED_ARGUMENT');
+  const number = (key,fallback) => {
+    if (!values.has(key)) return fallback;
+    if (!/^(0|[1-9]\d{0,8})$/.test(values.get(key))) throw new Error('INVALID_NUMERIC_ARGUMENT');
+    return Number(values.get(key));
+  };
+  const [assets,rpc,capture,previous] = await Promise.all([
+    values.has('--asset-map') ? jsonInput(values.get('--asset-map')) : null,
+    values.has('--rpc-map') ? jsonInput(values.get('--rpc-map')) : null,
+    values.has('--from-capture') ? readMerchantBundle(values.get('--from-capture'),'capture.json') : null,
+    values.has('--previous') ? readMerchantBundle(values.get('--previous'),'review.json') : null,
+  ]);
+  const timeoutMs = number('--timeout-ms',12000), feeOperations = number('--fee-operations',capture?.feeOperations ?? 0);
+  const fetchImpl = capture ? undefined : await createReadinessFetch(values.get('--https-proxy-env'),{timeoutMs});
+  const bundle = await inspectMerchantReceiving({configPath:values.get('--config'),origin:values.get('--origin'),
+    assetMap:assets?.json,rpcEndpoints:rpc?.json,timeoutMs,feeOperations,fetchImpl,capture:capture ?? undefined,liveTransport:!capture});
+  const report = bundle.report;
+  if (previous) report.comparison = compareMerchantReadiness(previous,report);
+  const output = values.get('--out');
+  await writeMerchantReview(output,report,{seller:report.configuration,
+    ...(assets ? {assetMap:assets.source} : {}),...(rpc ? {rpcMap:rpc.source} : {})},bundle);
+
+  console.log(JSON.stringify({status:report.status,...report.summary,output}));
+  return report.summary.readFailed ? 1 : report.summary.ready === report.summary.options ? 0 : 2;
+}
+
+if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+  try { process.exitCode = await run(); }
+  catch (error) {
+    // Provider URLs and bodies may contain credentials. Emit stable codes only.
+    const code = error.code ?? error.message;
+    console.error(JSON.stringify({error:typeof code === 'string' && /^[A-Z0-9_]{1,100}$/.test(code) ? code : 'MERCHANT_READINESS_FAILED'}));
+    process.exitCode = 3;
+  }
 }

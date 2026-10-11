@@ -1,31 +1,33 @@
-import {checkOriginalTerms, requireTruth, digest, DEFAULT_RPC, LOCAL_RPC, object,
-  TESTNET_RPC_ENDPOINTS, TESTNET_PASSPHRASE, ReconciliationError} from './terms.mjs';
+import {checkOriginalTerms, requireTruth, digest, rpcNetwork, object,
+  ReconciliationError} from './terms.mjs';
 import {rpc} from './rpc-transport.mjs';
 export {validStrKey,ReconciliationError,DEFAULT_RPC} from './terms.mjs';
 const EVENT_PAGE_LIMIT=200;
 export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractEvent,
-  rpcEndpoint=DEFAULT_RPC,maxEventPages=24} = {}) {
+  rpcEndpoint,maxEventPages=24,signal} = {}) {
   const {intentId, requirement:q, receipt:r}=checkOriginalTerms(record,payer);
-  const live=TESTNET_RPC_ENDPOINTS.includes(rpcEndpoint);
-  requireTruth(live || LOCAL_RPC.test(rpcEndpoint), 'RPC_ENDPOINT_NOT_ALLOWED');
+  const profile=rpcNetwork(q.network,rpcEndpoint),{live}=profile;
+  rpcEndpoint=profile.endpoint;
+  const readRpc=(method,params)=>rpc(method,params,rpcEndpoint,fetchImpl,{signal});
   requireTruth(Number.isSafeInteger(maxEventPages) && maxEventPages >= 1 &&
     maxEventPages <= 100, 'INVALID_EVENT_PAGE_BUDGET');
   requireTruth(typeof decodeContractEvent === 'function', 'STELLAR_SDK_DECODER_REQUIRED');
+  let networkResult;
   if(live) {
-    const network=await rpc('getNetwork',{},rpcEndpoint,fetchImpl);
-    requireTruth(network.passphrase === TESTNET_PASSPHRASE, 'RPC_NETWORK_PASSPHRASE_MISMATCH');
+    networkResult=await readRpc('getNetwork',{});
+    requireTruth(networkResult.passphrase === profile.passphrase, 'RPC_NETWORK_PASSPHRASE_MISMATCH');
   }
-  const tx=await rpc('getTransaction',{hash:r.transaction},rpcEndpoint,fetchImpl);
+  const tx=await readRpc('getTransaction',{hash:r.transaction});
   requireTruth(tx.status === 'SUCCESS' && tx.txHash === r.transaction &&
     Number.isSafeInteger(tx.ledger) && tx.ledger > 0, 'TX_NOT_CONFIRMED_SUCCESS');
   let cursor=null, previousCursor=null, count=0, matchedId=null;
   let eventPages=0, reachedEnd=false, lastLedger=tx.ledger;
   const seenIds=new Set(); const eventHashes=[];
   for (let i=0; i<maxEventPages; i++) {
-    const params={...(cursor ? {} : {startLedger:tx.ledger}),
+    const params={...(cursor ? {} : {startLedger:tx.ledger,endLedger:tx.ledger+1}),
       filters:[{type:'contract',contractIds:[q.asset]}],
       pagination:{limit:EVENT_PAGE_LIMIT,...(cursor ? {cursor} : {})}};
-    const out=await rpc('getEvents',params,rpcEndpoint,fetchImpl);
+    const out=await readRpc('getEvents',params);
     eventPages++;
     requireTruth(Array.isArray(out.events), 'EVENTS_SHAPE_UNRECOGNIZED');
     requireTruth(out.latestLedger === undefined ||
@@ -38,6 +40,7 @@ export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractE
       lastLedger=event.ledger;
       if(event.ledger > tx.ledger) { reachedEnd=true; break; }
       if(event.txHash !== r.transaction || event.contractId !== q.asset) continue;
+      if(event.inSuccessfulContractCall === false) continue;
       requireTruth(typeof event.id === 'string' && event.id.length > 0 && !seenIds.has(event.id),
         'TARGET_EVENT_ID_INVALID_OR_DUPLICATE');
       seenIds.add(event.id);
@@ -67,9 +70,10 @@ export async function reconcileRpc({record,payer,fetchImpl=fetch,decodeContractE
   requireTruth(reachedEnd, 'EVENT_PAGE_BUDGET_EXHAUSTED');
   requireTruth(count === 1, 'NO_EXACT_TRANSFER');
   return {schema:'stellar-forge.sf86.rpc-reconciliation.v1',
-    verdict:live?'CHAIN_TRANSFER_MATCHED_RPC_TESTNET':'LOCAL_RPC_REPLAY_MATCHED',
-    source:live?'official-stellar-testnet-rpc':'127.0.0.1-loopback',
-    rpcEndpoint, ...(live?{networkPassphrase:TESTNET_PASSPHRASE}:{}),
+    verdict:live?profile.verdict:'LOCAL_RPC_REPLAY_MATCHED',
+    source:live?profile.source:'127.0.0.1-loopback',
+    rpcEndpoint, ...(live?{networkPassphrase:profile.passphrase,
+      networkResultSha256:digest(networkResult)}:{}),
     intentId,transaction:r.transaction,network:q.network,ledger:tx.ledger,
     asset:q.asset,payer,recipient:q.payTo,atomicAmount:q.amount,
     matchingTransfers:1,matchingEventId:matchedId,eventPages,
