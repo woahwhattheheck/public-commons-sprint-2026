@@ -11,6 +11,11 @@ const sha = x => createHash('sha256').update(x).digest('hex');
 const hex64 = x => typeof x === 'string' && /^[a-f0-9]{64}$/.test(x);
 const paymentDecimal = x => typeof x === 'string' && /^[1-9][0-9]{0,38}$/.test(x);
 const routeId = x => typeof x === 'string' && /^[A-Za-z0-9_-]{1,80}$/.test(x);
+const knownNetwork = x => x === 'stellar:testnet' || x === 'stellar:pubnet';
+const routeKey = x => x.routeId+'\n'+x.method;
+const optionBaseKey = x => [x.routeId,x.method,x.network,x.assetDigest,x.amountAtomic].join('\n');
+const optionKey = x => optionBaseKey(x)+'\n'+(x.recipientDigest ?? '?');
+const optionId = x => sha('stellar-forge.merchant-option.v1\n'+optionKey(x));
 const REASON = Object.freeze({
   noProof: 'NO_ORIGINAL_OFFICIAL_VERIFICATION',
   noTx: 'NATIVE_RECEIPT_HAS_NO_TRANSACTION_FINGERPRINT',
@@ -18,6 +23,8 @@ const REASON = Object.freeze({
   different: 'PROOF_TERMS_DIFFER_FROM_NATIVE_SELLER',
   missingTerms: 'MERCHANT_ROUTE_TERMS_NOT_CONFIGURED',
   mappingMismatch: 'MERCHANT_TERMS_DIFFER_FROM_NATIVE_OFFER',
+  ambiguousTerms: 'LEGACY_EVENT_MATCHES_MULTIPLE_RECIPIENT_OPTIONS',
+  publicNetwork: 'PUBLIC_NETWORK_VERIFICATION_PENDING',
 });
 const microRegex = /^(0|[1-9]\d{0,11})(?:\.(\d{1,6}))?$/;
 const money = x => {
@@ -64,18 +71,45 @@ export function compileTerms(raw) {
   const terms=new Map();
   for (const r of raw.routes) {
     if (!strictObject(r) || !routeId(r.routeId) || !['GET','POST','HEAD'].includes(r.method) ||
-        r.network!=='stellar:testnet' || !paymentDecimal(r.amountAtomic) ||
+        !knownNetwork(r.network) || !paymentDecimal(r.amountAtomic) ||
         !/^[CG][A-Z2-7]{55}$/.test(r.asset) || !/^G[A-Z2-7]{55}$/.test(r.payTo) ||
         typeof r.priceBasis!=='string' || !/^[A-Za-z0-9 _.:/-]{3,100}$/.test(r.priceBasis) ||
         r.unitPriceUsd===undefined || r.unitCostUsd===undefined)
       throw new Error('INVALID_MERCHANT_ROUTE_TERMS');
-    const k=r.routeId+'\n'+r.method;
+    const value={...r,assetDigest:sha(r.asset),recipientDigest:sha(r.payTo),
+      price:r.unitPriceUsd===null ? null : money(r.unitPriceUsd),
+      cost:r.unitCostUsd===null ? null : money(r.unitCostUsd)};
+    const k=optionKey(value);
     if (terms.has(k)) throw new Error('DUPLICATE_MERCHANT_ROUTE_TERMS');
-    terms.set(k,{...r, assetDigest:sha(r.asset), recipientDigest:sha(r.payTo),
-      price: r.unitPriceUsd===null ? null : money(r.unitPriceUsd),
-      cost: r.unitCostUsd===null ? null : money(r.unitCostUsd)});
+    terms.set(k,{...value,optionId:optionId(value)});
   }
   return terms;
+}
+
+function indexTerms(terms) {
+  const routes=new Set(),byObservedTerms=new Map();
+  for(const term of terms.values()) {
+    routes.add(routeKey(term));
+    const key=optionBaseKey(term),prior=byObservedTerms.get(key) ?? [];
+    prior.push(term);byObservedTerms.set(key,prior);
+  }
+  return {routes,byObservedTerms};
+}
+function resolveTerms(event,terms,{routes,byObservedTerms}) {
+  if(!routes.has(routeKey(event)))
+    return {term:null,match:'MISSING_ROUTE_TERMS',candidateCount:0,reason:REASON.missingTerms};
+  if(event.recipientDigest) {
+    const term=terms.get(optionKey(event)) ?? null;
+    return {term,match:term?'EXACT_OPTION':'OPTION_TERMS_MISMATCH',candidateCount:term?1:0,
+      reason:term?null:REASON.mappingMismatch};
+  }
+  // Older journals did not record the recipient. Use only the actual remaining
+  // five terms; a proof or the first configured option cannot select a payee.
+  const candidates=byObservedTerms.get(optionBaseKey(event)) ?? [];
+  if(candidates.length===1)
+    return {term:candidates[0],match:'LEGACY_UNIQUE_OPTION',candidateCount:1,reason:null};
+  return {term:null,match:candidates.length?'AMBIGUOUS_LEGACY_OPTIONS':'OPTION_TERMS_MISMATCH',
+    candidateCount:candidates.length,reason:candidates.length?REASON.ambiguousTerms:REASON.mappingMismatch};
 }
 
 // Only the existing SF86's exact official testnet RPC verdict can count as an
@@ -116,14 +150,17 @@ function eventCheck(e) {
     hex64(e.id) && hex64(e.receiptFingerprint) &&
     (e.transactionFingerprint===null || e.transactionFingerprint===undefined || hex64(e.transactionFingerprint)) &&
     routeId(e.routeId) && ['GET','POST','HEAD'].includes(e.method) &&
-    e.network==='stellar:testnet' && paymentDecimal(e.amountAtomic) && hex64(e.assetDigest) &&
+    knownNetwork(e.network) && paymentDecimal(e.amountAtomic) && hex64(e.assetDigest) &&
+    (e.recipientDigest===null || e.recipientDigest===undefined || hex64(e.recipientDigest)) &&
     e.authority==='ORIGINAL_NATIVE_PROCESS_SETTLEMENT_SUCCESS' &&
     typeof e.at==='string' && !Number.isNaN(Date.parse(e.at));
 }
 const deliveryOf = state => state?.state==='DELIVERED'?'WEBHOOK_ACCEPTED_NOT_FULFILLED':
   state?.state==='EXHAUSTED'?'DELIVERY_EXHAUSTED':
   state?.state==='RETRY'?'DELIVERY_RETRY':state?.state==='REQUEUE'?'DELIVERY_REQUEUED':'NOT_DELIVERED';
-const publicRow = (e,proof,terms,delivery,classification,reason) => ({
+const publicRow = (e,proof,resolution,delivery,classification,reason) => {
+  const terms=resolution.term;
+  return {
   eventId:e.id, at:e.at,routeId:e.routeId,method:e.method,network:e.network,
   amountAtomic:e.amountAtomic, assetDigest:e.assetDigest,
   receiptFingerprint:e.receiptFingerprint,transactionFingerprint:e.transactionFingerprint ?? null,
@@ -137,11 +174,56 @@ const publicRow = (e,proof,terms,delivery,classification,reason) => ({
   // merchant-provided USD valuation ONLY for the independently verified tier;
   // even this is NOT recognized accounting revenue or a settled bank receipt.
   verifiedQuotedValueUsd:classification==='OFFICIAL_TRANSFER_MATCHED'&&terms?.price!==null?toUsd(terms.price):null,
-});
+  recipientDigest:e.recipientDigest ?? null,
+  termsRecipientDigest:terms?.recipientDigest ?? null,
+  optionId:optionId({...e,recipientDigest:e.recipientDigest ?? terms?.recipientDigest ?? null}),
+  termsMatch:resolution.match,termsCandidateCount:resolution.candidateCount,
+  merchantPriceBasis:terms?.priceBasis ?? null,
+  verificationScope:e.network==='stellar:testnet'?'OFFICIAL_TESTNET_ONLY':'PUBLIC_NETWORK_PENDING',
+  };
+};
+const exceptionRow = (row,reason) => ({eventId:row.eventId,routeId:row.routeId,reason,
+  method:row.method,network:row.network,optionId:row.optionId,termsMatch:row.termsMatch});
+const transactionKey = row => row.network+'\n'+row.transactionFingerprint;
+
+function summarizeOptions(results,terms) {
+  const groups=new Map();
+  const makeGroup=(identity,term=null)=>({optionId:optionId(identity),
+    routeId:identity.routeId,method:identity.method,network:identity.network,
+    assetDigest:identity.assetDigest,amountAtomic:identity.amountAtomic,
+    recipientDigest:identity.recipientDigest ?? null,configuredOption:Boolean(term),
+    merchantQuoteUsd:term?.price===null || !term?null:toUsd(term.price),
+    merchantVariableCostUsd:term?.cost===null || !term?null:toUsd(term.cost),
+    merchantPriceBasis:term?.priceBasis ?? null,
+    nativeSuccessEvents:0,officialTransferMatches:0,missingTransferEvidence:0,
+    webhookAccepted:0,legacyRecipientEvents:0,unresolvedTermsEvents:0,
+    nativeAmount:0n,matchedAmount:0n,verifiedQuote:0n,withQuote:true});
+  // Keep configured options visible even when they have no native events.
+  for(const term of terms.values())groups.set(term.optionId,makeGroup(term,term));
+  for(const row of results) {
+    const identity={...row,recipientDigest:row.recipientDigest ?? row.termsRecipientDigest};
+    const group=groups.get(row.optionId) ?? makeGroup(identity);
+    group.nativeSuccessEvents++;group.nativeAmount+=BigInt(row.amountAtomic);
+    if(!row.recipientDigest)group.legacyRecipientEvents++;
+    if(!['EXACT_OPTION','LEGACY_UNIQUE_OPTION'].includes(row.termsMatch))group.unresolvedTermsEvents++;
+    if(row.transfer==='OFFICIAL_TRANSFER_MATCHED') {
+      group.officialTransferMatches++;group.matchedAmount+=BigInt(row.amountAtomic);
+      if(row.verifiedQuotedValueUsd===null)group.withQuote=false;
+      else group.verifiedQuote+=money(row.verifiedQuotedValueUsd);
+    } else group.missingTransferEvidence++;
+    if(row.delivery==='WEBHOOK_ACCEPTED_NOT_FULFILLED')group.webhookAccepted++;
+    groups.set(row.optionId,group);
+  }
+  return [...groups.values()].sort((a,b)=>routeKey(a).localeCompare(routeKey(b))||optionKey(a).localeCompare(optionKey(b)))
+    .map(({nativeAmount,matchedAmount,verifiedQuote,withQuote,...group})=>({...group,
+      nativeAmountAtomic:nativeAmount.toString(),officialMatchedAmountAtomic:matchedAmount.toString(),
+      verifiedQuotedValueUsd:withQuote?toUsd(verifiedQuote):null}));
+}
 
 export function compileLedger(rows,termsRaw,proofDocs) {
   if (!Array.isArray(rows) || rows.length>20_000) throw new Error('OUTBOX_SIZE_UNSUPPORTED');
   const terms=compileTerms(termsRaw);
+  const termsIndex=indexTerms(terms);
   const {index,ignored}=indexOriginalVerifications(proofDocs);
   const seen=new Set(), refCount=new Map(), results=[], exceptions=[];
   for(const row of rows){
@@ -149,14 +231,13 @@ export function compileLedger(rows,termsRaw,proofDocs) {
     if (!eventCheck(e)) throw new Error('ORIGINAL_OUTBOX_EVENT_INVALID');
     if(seen.has(e.id)) throw new Error('DUPLICATE_OUTBOX_EVENT_ID');
     seen.add(e.id);
-    const term=terms.get(e.routeId+'\n'+e.method);
-    const proofs=e.transactionFingerprint?index.get(e.transactionFingerprint)||[]:[];
-    if (e.transactionFingerprint) refCount.set(e.transactionFingerprint,
-      (refCount.get(e.transactionFingerprint)||0)+1);
+    const resolution=resolveTerms(e,terms,termsIndex),term=resolution.term;
+    const proofs=e.network==='stellar:testnet' && e.transactionFingerprint?index.get(e.transactionFingerprint)||[]:[];
+    if (e.transactionFingerprint) refCount.set(transactionKey(e),
+      (refCount.get(transactionKey(e))||0)+1);
     let proof=null,reason=null,kind='NATIVE_SUCCESS_UNVERIFIED';
-    if (!term) reason=REASON.missingTerms;
-    else if (e.network!==term.network || e.assetDigest!==term.assetDigest ||
-             e.amountAtomic!==term.amountAtomic) reason=REASON.mappingMismatch;
+    if (resolution.reason) reason=resolution.reason;
+    else if (e.network==='stellar:pubnet') reason=REASON.publicNetwork;
     else if (!e.transactionFingerprint) reason=REASON.noTx;
     else if (!proofs.length) reason=REASON.noProof;
     else if (proofs.length!==1) reason=REASON.conflict;
@@ -164,21 +245,22 @@ export function compileLedger(rows,termsRaw,proofDocs) {
       const p=proofs[0].data;
       if (p.network!==e.network || p.atomicAmount!==e.amountAtomic ||
           p.asset!==term.asset || p.recipient!==term.payTo ||
-          sha(p.asset)!==e.assetDigest) reason=REASON.different;
+          sha(p.asset)!==e.assetDigest ||
+          (e.recipientDigest && sha(p.recipient)!==e.recipientDigest)) reason=REASON.different;
       else { proof=proofs[0]; kind='OFFICIAL_TRANSFER_MATCHED'; }
     }
     const delivery=deliveryOf(row.state);
-    const result=publicRow(e,proof,term,delivery,kind,reason);
+    const result=publicRow(e,proof,resolution,delivery,kind,reason);
     results.push(result);
-    if(reason) exceptions.push({eventId:e.id,routeId:e.routeId,reason});
-    if(delivery==='DELIVERY_EXHAUSTED') exceptions.push({eventId:e.id,routeId:e.routeId,reason:'WEBHOOK_DELIVERY_EXHAUSTED'});
+    if(reason) exceptions.push(exceptionRow(result,reason));
+    if(delivery==='DELIVERY_EXHAUSTED') exceptions.push(exceptionRow(result,'WEBHOOK_DELIVERY_EXHAUSTED'));
   }
   // If a transfer fingerprint maps to >1 native event, do not count it twice.
   for(const r of results) {
-    if(r.transfer==='OFFICIAL_TRANSFER_MATCHED' && refCount.get(r.transactionFingerprint)>1){
+    if(r.transfer==='OFFICIAL_TRANSFER_MATCHED' && refCount.get(transactionKey(r))>1){
       r.transfer='REUSED_TRANSACTION_UNVERIFIED'; r.exception=REASON.conflict;
       r.verifiedQuotedValueUsd=null;r.ledger=null;r.matchingEventDigest=null;
-      exceptions.push({eventId:r.eventId,routeId:r.routeId,reason:REASON.conflict});
+      exceptions.push(exceptionRow(r,REASON.conflict));
     }
   }
   const byRoute=new Map();
@@ -214,12 +296,16 @@ export function compileLedger(rows,termsRaw,proofDocs) {
     ignoredProofs:ignored,
     unmatchedOfficialProofCount:unmatched.reduce((n,[,arr])=>n+arr.length,0),
     routes:routeSummaries,
+    options:summarizeOptions(results,terms),
     totals:{nativeSuccessEvents:results.length,
       officialTransferMatches:results.filter(x=>x.transfer==='OFFICIAL_TRANSFER_MATCHED').length,
       requiringReconciliation:results.filter(x=>x.transfer!=='OFFICIAL_TRANSFER_MATCHED').length,
       webhookAccepted:results.filter(x=>x.delivery==='WEBHOOK_ACCEPTED_NOT_FULFILLED').length,
       exhaustedDelivery:results.filter(x=>x.delivery==='DELIVERY_EXHAUSTED').length,
-      verifiedQuotedValueUsd:hasAllQuote?toUsd(totalQuote):null},
+      verifiedQuotedValueUsd:hasAllQuote?toUsd(totalQuote):null,
+      publicNetworkPending:results.filter(x=>x.network==='stellar:pubnet').length,
+      ambiguousLegacyEvents:results.filter(x=>x.termsMatch==='AMBIGUOUS_LEGACY_OPTIONS').length,
+      unresolvedTermsEvents:results.filter(x=>!['EXACT_OPTION','LEGACY_UNIQUE_OPTION'].includes(x.termsMatch)).length},
   };
 }
 export async function runOriginalAccounting({outboxDir,proofDir,termsFile}) {

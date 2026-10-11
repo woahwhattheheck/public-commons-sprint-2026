@@ -8,7 +8,17 @@ It does not sign, purchase, authorize, retry payments, create invoices, or move 
 
 On the original merchant host, retain its private SF98 outbox directory with its native `events.ndjson` and `deliveries.ndjson`. In another private directory retain the original authorized operator's SF86 reconciliation JSON result files. Source instructions for this first-party read-only original verification are at `../sf86-rpc-transfer-reconcile/README.md`. The report can be generated with no SF86 files, in which case all native successes remain unverified.
 
-Prepare a private merchant terms JSON (schema `stellar-forge.merchant-accounting-terms.v1`), with a `routes` array. Each route has `routeId`, `method`, `network`, `asset`, `payTo`, `amountAtomic`, `unitPriceUsd`, `unitCostUsd`, and `priceBasis`. These values must come from the real approved original seller configuration, not a made-up example. The stellar testnet `asset` is the actual 56-character C-contract address or G-address and `payTo` is the actual 56-character G-address. USD price and cost values are decimal strings to six places or null for unknown. No automatic currency conversion occurs.
+Prepare a private merchant terms JSON (schema `stellar-forge.merchant-accounting-terms.v1`), with a `routes` array containing one row for **each actual payment option**, up to 200 rows. A resource offering several networks, assets or recipients repeats its `routeId` and `method`. Each row has `routeId`, `method`, `network`, `asset`, `payTo`, `amountAtomic`, `unitPriceUsd`, `unitCostUsd`, and `priceBasis`. These values come from the approved original seller configuration and the merchant's own price records.
+
+| Terms field | Original source |
+| --- | --- |
+| `routeId`, `method` | Compiled original SF30 route ID and HTTP method |
+| `network`, `asset`, `payTo` | The corresponding complete `offer.accepts` entry |
+| `amountAtomic` | That option's `amount`, retained as an exact decimal string |
+| `unitPriceUsd`, `unitCostUsd` | Merchant-provided USD values, decimal strings to six places or `null` for unknown |
+| `priceBasis` | The merchant's description of the approved quote basis |
+
+Both `stellar:testnet` and `stellar:pubnet` terms are accepted. The `asset` is the actual 56-character C-contract address or G-address; `payTo` is the actual 56-character G-address. No automatic currency conversion occurs. The complete key is route ID, method, network, asset digest, atomic amount and recipient digest. Duplicate complete keys are rejected, including duplicates with conflicting prices. Different actual options on the same resource are retained independently.
 
 From the current original repository root:
 
@@ -20,13 +30,46 @@ node stellar/scf-starforge-20261009/merchant-settlement-accounting/cli.mjs \
   --out /private/merchant/new-reconciliation-report
 ```
 
-The output directory must be absolute, normalized, private, and nonexistent. It is created at mode 0700. Five create-only mode-0600 files are written: `report.json`, `ledger.csv`, `exceptions.csv`, `review.html`, and `manifest.json`. HTML is offline, mobile/print friendly, grayscale and script-free. CSV rows expose opaque event IDs and hashed transaction/receipt/order references, not original wallet addresses or raw buyer data. Original private source inputs are unchanged. The manifest contains exact SHA256 input and output lineage.
+The output directory must be absolute, normalized, private, and nonexistent. It is created at mode 0700. Six create-only mode-0600 files are written:
+
+| Output | Contents |
+| --- | --- |
+| `report.json` | Existing ledger, route totals, exceptions and lineage, with additive payment-option groups and mapping metadata |
+| `ledger.csv` | Every native event, with original columns retained and selected recipient digest, option ID, mapping result, candidate count and verification scope appended |
+| `options.csv` | Each configured payment option, including options with no events, plus separate unconfigured or unresolved native groups |
+| `exceptions.csv` | Original event/route/reason columns, followed by method, network, option ID and terms mapping |
+| `review.html` | Original route and event views, complete option identity and quote/cost terms, separate per-option atomic totals and operator exceptions |
+| `manifest.json` | Exact SHA256 input and output lineage |
+
+HTML is offline, mobile/print friendly, grayscale and script-free. Its event and exception rows link directly to the relevant option section. CSV rows expose opaque event IDs and hashed asset/recipient/transaction/receipt/order references, not original wallet addresses or raw buyer data. Original private source inputs are unchanged.
+
+## Selected option and older journals
+
+New original SF98 events add `recipientDigest`, the SHA256 of the selected native payment requirement's `payTo`. The native event retains its existing `stellar-forge.sf98.delivery-event.v1` schema, event ID and deduplication behavior; existing journal entries are not rewritten. No raw recipient address is added to the journal or these reports.
+
+The accounting report records the following mapping results:
+
+| `termsMatch` | Meaning |
+| --- | --- |
+| `EXACT_OPTION` | All six recorded identity fields match one configured option |
+| `LEGACY_UNIQUE_OPTION` | Recipient was not recorded, and the remaining five fields match exactly one configured option |
+| `AMBIGUOUS_LEGACY_OPTIONS` | Recipient was not recorded, and the remaining fields match more than one recipient option; the event remains unverified |
+| `MISSING_ROUTE_TERMS` | The route and method have no configured merchant terms |
+| `OPTION_TERMS_MISMATCH` | The route exists, but its configured options do not match the event's recorded identity |
+
+`recipientDigest` in the event ledger always represents what the original journal recorded, or `null` when absent. `termsRecipientDigest` separately records the matched merchant term's recipient. This preserves the difference between a recorded recipient and a unique legacy mapping. `termsCandidateCount` shows how many actual options remain. Proof contents never choose a recipient from an ambiguous set, and the first configured option receives no preference. Resolve historical ambiguity using the merchant's original settlement/configuration records.
+
+The opaque `optionId` joins each ledger row to its report/CSV/HTML option group. It is a deterministic hash of the six terms, not a payment receipt. Unresolved legacy rows use a distinct recipient-unknown group and cannot merge into a configured recipient group. Configured options with no events remain visible for comparison.
+
+Each option group reports `nativeAmountAtomic` and `officialMatchedAmountAtomic` as exact integer strings. These sums stay within the same route, method, network, asset, per-event amount and resolved recipient. Route and grand totals retain event counts and verified merchant USD quotes; they never add together atomic units from different options. Unknown legacy recipients are explicitly labeled in their own groups.
 
 ## Operational evidence boundary
 
 `NATIVE_SUCCESS_UNVERIFIED` means the original native SDK reported a settlement success, but no matching independent SF86 official transfer proof was provided. It is not financial recognition.
 
-`OFFICIAL_TRANSFER_MATCHED` requires original SF86 `CHAIN_TRANSFER_MATCHED_RPC_TESTNET`, official RPC source, one exact SEP-41 transfer, the same transaction fingerprint, network, asset, recipient and atomic amount as the original route. `LOCAL_RPC_REPLAY_MATCHED` from a loopback exercise is explicitly excluded. Reused native transaction fingerprints and conflicting proof rows downgrade rather than double count. The official transfer is still bound to a seller-reported transaction hash, not automatically to customer delivery, invoices, cash, finality or refunds.
+A valid `stellar:pubnet` native event is retained in a mixed-network journal without preventing testnet reconciliation. Its `verificationScope` is `PUBLIC_NETWORK_PENDING`; when merchant terms match, its exception is `PUBLIC_NETWORK_VERIFICATION_PENDING`. The original SF86 verifier currently supplies only official testnet proof, so no public-network event is classified as an official transfer by this report. Testnet rows retain `OFFICIAL_TESTNET_ONLY`. Transaction reuse is checked within the same network, so an identical fingerprint on another network cannot consume a testnet proof or suppress its otherwise valid match.
+
+`OFFICIAL_TRANSFER_MATCHED` requires original SF86 `CHAIN_TRANSFER_MATCHED_RPC_TESTNET`, official RPC source, one exact SEP-41 transfer, the same transaction fingerprint, network, asset, recipient and atomic amount as the selected original option. A recorded native recipient digest must also agree. `LOCAL_RPC_REPLAY_MATCHED` from a loopback exercise is explicitly excluded. Reused native transaction fingerprints and conflicting proof rows downgrade rather than double count. The official transfer is still bound to a seller-reported transaction hash, not automatically to customer delivery, invoices, cash, finality or refunds.
 
 `WEBHOOK_ACCEPTED_NOT_FULFILLED` means SF98 received a 2xx webhook acknowledgment, not proof of merchant order fulfillment. Exhausted deliveries are exceptions even if the original transfer matched.
 
@@ -36,4 +79,4 @@ This module complements existing SF97 merchant forecasting, SF93 support, SF98 d
 
 ## Focused source exercise
 
-Node 22 source parses, and the local private CLI flow was exercised with native SF98-shaped event journal rows and exact SF86-shaped official/local proof schemas, including distinct official matches, ignored local replay, duplicate transaction guard, exhausted delivery and all five output files. The developer exercise used an isolated temporary disk-journal adapter, not the authenticated merchant payment host; only the original operator can produce a live signed purchase and genuine official-RPC receipt.
+The original single-option implementation's local private CLI flow was exercised with native SF98-shaped event journal rows and exact SF86-shaped official/local proof schemas, including distinct official matches, ignored local replay, duplicate transaction guard, exhausted delivery and its original five output files. That developer exercise used an isolated temporary disk-journal adapter, not the authenticated merchant payment host; only the original operator can produce a live signed purchase and genuine official-RPC receipt. Multiple-option reporting retains those original SF86 proof criteria and existing outputs, with the additive option fields and `options.csv` described above.
