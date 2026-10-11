@@ -4,7 +4,7 @@ const $ = id => document.getElementById(id);
 const node = (tag,text,className) => {const value=document.createElement(tag);if(text!==undefined)value.textContent=String(text);if(className)value.className=className;return value;};
 const asText = value => value === null || value === undefined ? '—' : String(value);
 const json = value => JSON.stringify(value,null,2);
-const state = {context:null,job:null,review:null,data:null,offset:0,q:'',selectionVersion:0,
+const state = {context:null,job:null,review:null,data:null,offset:0,q:'',selectionVersion:0,comparisonVersion:0,
   comparison:{left:null,right:null,result:null},annotation:null,noteDraft:null,busy:false};
 const fragment = location.hash.slice(1);
 let token = /^[a-f0-9]{64}$/.test(fragment) ? fragment : sessionStorage.getItem('goldrush-private-session');
@@ -49,7 +49,7 @@ function friendly(error) {
 }
 async function task(button,message,run) {
   if (state.busy) return;
-  state.busy=true;if(button)button.disabled=true;notice(message);
+  state.busy=true;if(button)button.disabled=true;updateControls();notice(message);
   try {await run();}catch(error){notice(friendly(error),true);}
   finally {state.busy=false;if(button)button.disabled=false;updateControls();}
 }
@@ -181,7 +181,9 @@ function updateControls() {
   $('compare').disabled=state.busy || !state.comparison.left || !state.comparison.right;
   const editable=Boolean(state.data?.resource);
   $('save-note').disabled=state.busy || !editable;
-  $('comparison-note').disabled=!editable || !state.comparison.result;
+  $('comparison-note').disabled=state.busy || !editable || !state.comparison.result;
+  for(const id of ['compare-left','compare-right','next-page'])$(id).disabled=state.busy || !state.data;
+  for(const id of ['clear-request','clear-comparison','use-latest-note'])$(id).disabled=state.busy;
 }
 function clearData() {
   state.selectionVersion++;state.data=null;state.annotation=null;state.noteDraft=null;
@@ -203,7 +205,10 @@ async function openData(selection) {
   const detail=snap.operation==='transfers' && page
     ? 'Transfer page '+page.pageNumber+' · requested size '+page.pageSize+'. '+(page.hasMore?'The provider advertises more pages.':'The provider advertises no further page for this request.')
     : 'Balances returned for this wallet and the exact filters below.';
-  $('coverage').textContent=detail+' '+(typeof snap.coverage==='string'?snap.coverage:json(snap.coverage));
+  const scope=typeof snap.coverage==='string'?snap.coverage:snap.coverage.interpretation;
+  const unscaled=snap.coverage?.unscaledRows?.length ?? 0,ambiguous=snap.coverage?.ambiguousKeys?.length ?? 0;
+  $('coverage').textContent=detail+' '+scope+(unscaled?' '+unscaled+' rows have no token decimal precision; their atomic quantities are retained.':'')+
+    (ambiguous?' '+ambiguous+' duplicate row identities prevent comparison.':'');
   $('source-json').textContent=json({source:snap.source,query:snap.query,coverage:snap.coverage,
     pagination:snap.pagination,resource:value.resource});
   $('row-search').value='';renderRows();
@@ -303,7 +308,8 @@ function renderComparisonSlots() {
   retain('comparison',{left:state.comparison.left,right:state.comparison.right});updateControls();
 }
 function selectComparison(side) {
-  const value=state.data;if(!value)return;
+  const value=state.data;if(state.busy || !value)return;
+  state.comparisonVersion++;
   state.comparison[side]={selection:value.selection,label:value.snapshot.operation+' · '+value.snapshot.chain+' · '+value.snapshot.updatedAt+' · '+value.snapshot.source.id};
   state.comparison.result=null;renderComparisonSlots();notice('Response selected as comparison '+(side==='left'?'A':'B')+'.');
 }
@@ -342,7 +348,7 @@ listen('request-form','input',saveForm);
 listen('operation','change',()=>{formPolicy(true);saveForm();});
 listen('accept','change',()=>{paymentTerms(true);saveForm();});
 listen('refresh','click',()=>task($('refresh'),'Refreshing original saved work…',async()=>{await refreshContext({scan:true});notice('Saved work refreshed.');}));
-listen('history-form','submit',event=>{event.preventDefault();state.q=$('history-search').value;state.offset=0;void task(null,'Finding saved requests…',async()=>{await refreshContext();notice('Saved request search complete.');});});
+listen('history-form','submit',event=>{event.preventDefault();if(state.busy)return;state.q=$('history-search').value;state.offset=0;void task(null,'Finding saved requests…',async()=>{await refreshContext();notice('Saved request search complete.');});});
 for(const [id,direction] of [['newer',-1],['older',1]])listen(id,'click',()=>task($(id),'Opening request history…',async()=>{state.offset=Math.max(0,state.offset+direction*50);await refreshContext();notice('Request history opened.');}));
 for(const action of ['review','execute','recover','finalize'])listen(action,'click',()=>task($(action),action==='execute'?'Executing the reviewed request…':'Reading the original '+action+' result…',async()=>{
   const body={intentId:state.job.intentId,...(action==='execute'?{review:state.review}:{})};
@@ -366,14 +372,16 @@ listen('download-raw','click',()=>task($('download-raw'),'Opening the original v
   const a=node('a');a.href=value.url;a.download='';document.body.append(a);a.click();a.remove();notice('Original response download started.');
 }));
 for(const side of ['left','right'])listen('compare-'+side,'click',()=>selectComparison(side));
-listen('clear-comparison','click',()=>{state.comparison={left:null,right:null,result:null};renderComparisonSlots();});
+listen('clear-comparison','click',()=>{if(state.busy)return;state.comparisonVersion++;state.comparison={left:null,right:null,result:null};renderComparisonSlots();});
 listen('compare','click',()=>task($('compare'),'Comparing the exact retained responses…',async()=>{
-  state.comparison.result=await api('compare',{method:'POST',body:{left:state.comparison.left.selection,right:state.comparison.right.selection}});
-  renderComparison();notice(state.comparison.result.comparable?'Comparison ready.':'Comparison scope differences are shown.');
+  const version=state.comparisonVersion;
+  const result=await api('compare',{method:'POST',body:{left:state.comparison.left.selection,right:state.comparison.right.selection}});
+  if(version!==state.comparisonVersion)return;
+  state.comparison.result=result;renderComparison();notice(state.comparison.result.comparable?'Comparison ready.':'Comparison scope differences are shown.');
 }));
 listen('comparison-export','click',()=>downloadObject(state.comparison.result,'goldrush-comparison.json'));
 listen('comparison-note','click',()=>{
-  const value=state.comparison.result;
+  const value=state.comparison.result;if(state.busy || !value || !state.data?.resource)return;
   const summary='Comparison A '+value.leftSource.id+' ('+value.leftSource.sha256+') to B '+value.rightSource.id+' ('+value.rightSource.sha256+').\n'+
     (value.comparable?value.changes.length+' row changes; '+value.transactionChanges.length+' transaction changes. '+value.interpretation:'Scope differs: '+value.reasons.join(', '));
   $('note').value=($('note').value?$('note').value+'\n\n':'')+summary;draftNote();notice('Comparison summary added to the draft. Save the note to retain a revision.');
@@ -393,7 +401,7 @@ listen('note-form','submit',event=>{event.preventDefault();void task($('save-not
   } finally {renderNotes();}
 });});
 listen('use-latest-note','click',()=>{
-  if(!state.noteDraft)return;state.noteDraft.expectedRevision=state.annotation.revision;
+  if(state.busy || !state.noteDraft)return;state.noteDraft.expectedRevision=state.annotation.revision;
   state.noteDraft.operationId='goldrush-note-'+crypto.randomUUID();retain('note:'+state.data.resource.id,state.noteDraft);
   renderNotes();notice('Draft now uses saved revision '+state.annotation.revision+'. Save when the note is ready.');
 });
