@@ -24,7 +24,6 @@
 <div class="clock"><strong id="clock">00:00</strong><span id="state" class="state">READY</span></div>
 <div class="side away"><span class="club metro">Metro Rovers</span><span class="shots" id="shotsM">0 shots</span></div>
 </div>
-<p class="note" data-i18n="noGoals">Goals aren't part of this synthetic feed, so shots are shown instead of a scoreline.</p>
 <div class="pitchwrap">
 <svg class="pitch" viewBox="0 0 1050 680" role="img" aria-labelledby="pitchTitle"><title id="pitchTitle">Pitch split into thirds; the highlighted third shows where the latest event happened</title>
 <rect class="turf" width="1050" height="680"/>
@@ -44,7 +43,7 @@
 </svg>
 <div id="cue" class="cue quiet" aria-live="polite"><span class="label" id="cueLabel">Counterpress</span><p id="cueText">Pick a match and press Play.</p></div>
 </div>
-<p class="note" data-i18n="thirds">Highlighted third = latest event. Shading = where your club pressed most. The feed records pitch thirds, not exact positions.</p>
+<p class="note" data-i18n="thirds">Locations use pitch thirds; shading shows pressing activity.</p>
 <div class="transport">
 <button id="play" class="primary" type="button" aria-pressed="false">▶ Play</button>
 <button id="recover" type="button" aria-describedby="notice" hidden>Resume match</button>
@@ -78,8 +77,8 @@
 <label for="reviewPeriod" data-i18n="reviewPeriod">Match half</label><select id="reviewPeriod"><option value="all" data-i18n="reviewPeriodAll">Both halves</option><option value="first" data-i18n="reviewPeriodFirst">First half</option><option value="second" data-i18n="reviewPeriodSecond">Second half</option></select>
 <span id="reviewCount" class="note" aria-live="polite"></span></div>
 <ol id="moments" class="moments plain"></ol>
-<section id="review" class="review-panel" tabindex="-1" aria-label="Recorded tactical evidence"><p class="note">Select a recorded moment to inspect the event evidence.</p></section>
-<h2 data-i18n="feed">Live feed</h2>
+<section id="review" class="review-panel" tabindex="-1" aria-label="Press sequence"><p class="note">Select a key moment to review its sequence.</p></section>
+<h2 data-i18n="feed">Play-by-play</h2>
 <div class="review-tools"><label for="feedTeam" data-i18n="feedFilterTeam">Feed team</label><select id="feedTeam"><option value="both" data-i18n="feedBoth">Both teams</option><option value="focus" data-i18n="feedFocus">Your club</option><option value="rival" data-i18n="feedRival">Opponent</option></select><label for="feedType" data-i18n="feedType">Event type</label><select id="feedType"><option value="all" data-i18n="feedTypeAll">All events</option><option value="pass" data-i18n="feedPass">Pass</option><option value="loss" data-i18n="feedLoss">Loss</option><option value="pressure" data-i18n="feedPressure">Pressure</option><option value="regain" data-i18n="feedRegain">Regain</option><option value="shot" data-i18n="feedShot">Shot</option><option value="clock" data-i18n="feedClock">Clock</option></select></div>
 <ol id="feed" class="feed plain" aria-label="Latest events"></ol>
 <div class="optional"><span data-i18n="aiTitle">Optional AI commentary (Microsoft Foundry)</span> <button id="foundry" type="button" disabled>Not configured</button><div id="foundryResult" aria-live="polite"></div></div>
@@ -87,7 +86,7 @@
 </aside>
 </div>
 </main>
-<footer>Synthetic match experience for Microsoft Inside the Game 2026 development. Teams, players and events are invented; not real Premier League data.</footer>
+<footer>Counterpress Compass · Match analysis and replay.</footer>
 <script type="module" src="/app.js"></script>
 </body>
 </html>
