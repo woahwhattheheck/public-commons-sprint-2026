@@ -6,12 +6,14 @@ import { createTrafficHistory, historyCsv } from './history.mjs';
 import { createDeliveryReader, deliveryCsv, deliveryPrometheus } from './delivery-view.mjs';
 import { createMerchantOperationDesk } from './merchant-operations.mjs';
 import { createAvailabilityDesk } from '../availability/desk.mjs';
+import { createDeliveryDesk } from './delivery-control.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
 export async function startSellerOperations(session, { port = 8424, recentLimit = 160, deliveryOutbox = null, navigationOrigin = null,
-  historyDirectory, historyRetentionDays = 90, historyCheckpointMs = 5000, operationControls = false } = {}) {
+  historyDirectory, historyRetentionDays = 90, historyCheckpointMs = 5000, operationControls = false,
+  deliveryControls = true, deliveryRecovery = null } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   if (!Number.isInteger(historyCheckpointMs) || historyCheckpointMs < 1000 || historyCheckpointMs > 60000)
     throw new RangeError('history checkpoint interval must be 1000–60000 ms');
@@ -20,6 +22,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       Number(new URL(navigationOrigin).port)>65535)) throw new TypeError('navigationOrigin must be an explicit loopback workspace origin');
   const merchantDesk = createMerchantOperationDesk(session.operationControl,{enabled:operationControls});
   const availabilityDesk = createAvailabilityDesk(session.availability);
+  const deliveryDesk = createDeliveryDesk(deliveryOutbox,{enabled:deliveryControls,recovery:deliveryRecovery});
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
@@ -31,6 +34,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
     ['/availability/style.css', '../availability/style.css', 'text/css; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
     ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
+    ['/delivery.css', 'delivery.css', 'text/css; charset=utf-8'],
     ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
@@ -106,6 +110,12 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
         });
         return;
       }
+      if (deliveryDesk.accepts(req.url)) {
+        deliveryDesk.dispatch(req,allowedOrigins).then(result => {
+          if (!res.destroyed) reply(result.status,'application/json; charset=utf-8',JSON.stringify(result.body),result.headers);
+        });
+        return;
+      }
       if (!['GET', 'HEAD'].includes(req.method)) return reply(405, 'text/plain', 'Read only', { allow: 'GET, HEAD' });
       if (req.url === '/api/snapshot' || req.url === '/export.json') {
         return reply(200, 'application/json; charset=utf-8', JSON.stringify(snapshot()),
@@ -125,7 +135,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
         }
         // The journal read happens only for explicit operator GET/HEAD requests.
         // Read failures never affect seller HTTP traffic or reveal private paths.
-        readDelivery().then(view => {
+        readDelivery({fresh:req.url === '/api/delivery'}).then(view => {
           if (res.destroyed) return;
           if (req.url === '/delivery.metrics') return reply(200,
             'text/plain; version=0.0.4; charset=utf-8', deliveryPrometheus(view));
@@ -194,6 +204,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       } finally {
         await merchantDesk.close();
         await availabilityDesk.close();
+        await deliveryDesk.close();
         await checkpointPending;
         await history?.close(observer.snapshot());
       }
@@ -215,6 +226,7 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       availabilityUrl:url + '/availability',
       availabilityControlUrl:availabilityDesk.controlFragment ? url + '/availability#' + availabilityDesk.controlFragment : null,
       operationControlUrl:merchantDesk.controlFragment ? url + '/merchant-operations#' + merchantDesk.controlFragment : null,
+      deliveryControlUrl:deliveryDesk.controlFragment ? url + '/fulfillment#' + deliveryDesk.controlFragment : null,
       observer, history, close };
   } catch (error) { await close().catch(() => {}); throw error; }
 }

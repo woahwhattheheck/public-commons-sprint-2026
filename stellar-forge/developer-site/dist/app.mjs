@@ -226,6 +226,14 @@ const components = [
     "kind": "operations",
     "description": "Join original seller observations with native settlement events, delivery journals and merchant reports.",
     "path": "sf97-merchant-revenue-ops/NATIVE_RECONCILIATION.md"
+  },
+  {
+    "id": "13",
+    "title": "WooCommerce merchant setup",
+    "code": "DIGITAL PRODUCT / NATIVE CHECKOUT",
+    "kind": "seller",
+    "description": "Import saved Woo product routes, prepare the original merchant and plugin, and complete buyer, settlement, review and download release.",
+    "url": "/woo.html"
   }
 ];
 let filter='all';

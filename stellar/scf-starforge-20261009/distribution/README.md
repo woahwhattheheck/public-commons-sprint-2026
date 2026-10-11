@@ -156,7 +156,7 @@ or automatically retry a request.
 | `starforge dataset` | SF30 dataset API compilation |
 | `starforge assets` | Inspect, package and catalog original immutable file products |
 | `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
-| `starforge duckdb-workbench` | Actual DuckDB/Parquet schemas to selected queries, private previews and retained merchant packages |
+| `starforge duckdb-workspace` / `duckdb-workbench` | One retained workspace for actual DuckDB/Parquet queries, merchant packages and operations |
 | `starforge duckdb` / `duckdb-inspect` / `duckdb-prepare` | Launch or inspect the original local source; prepare, verify and reopen its merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge openapi-workspace` | Select an API contract, prepare the merchant and use its native operator workflow |
@@ -176,6 +176,8 @@ or automatically retry a request.
 | `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
+| `starforge support-watch` | Original incident collection, acknowledgment, notification delivery and support-case handoff |
+| `starforge support-console` | Retained merchant cases, runtime follow-up and original native reconciliation |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
 | `starforge releases` | Stage, compare, select, run and roll back seller configurations; local operator console |
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
@@ -971,47 +973,63 @@ bundled source guides cover application bindings and current Node requirements.
 
 ### Build a DuckDB or Parquet merchant
 
-The DuckDB workbench begins with actual local files and generates the original
-source declaration. Use Linux with `flock`, and select an existing Python 3.10+
-environment containing the pinned DuckDB dependency. To create that environment
-from the installed application's directory:
+The DuckDB merchant workspace begins with actual local files and generates the
+original source declaration. Use the distribution's supported Node runtime and
+an existing Python 3.10+ environment containing the pinned DuckDB dependency. To
+create that environment from the installed application's directory:
 
 ```sh
 python3 -m venv /private/duckdb-env
 /private/duckdb-env/bin/python -m pip install -r \
   node_modules/@tokenjunkielabs/starforge-merchant/source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/requirements.txt
-npx --no-install starforge duckdb-workbench \
-  --workspace /private/merchant-workbench \
+npx --no-install starforge duckdb-workspace \
+  --workspace /private/merchant-workspace \
   --data-dir /private/merchant-data \
   --database warehouse.duckdb \
   --parquet exports/events.parquet \
   --python /private/duckdb-env/bin/python
 ```
 
-For Parquet alone, omit `--database` and repeat `--parquet` for each approved
-file. Existing native declarations use `--source /private/data/source.json`.
-The source directory must allow private metadata writes; selected datasets must
-be stable regular files under that directory. The workbench creates a private
-workspace and retains its original Linux lease while open.
+`duckdb-workbench` is a compatible command alias for this same workspace.
+`--state` and `--workspace` select the same private saved directory. For Parquet
+alone, omit `--database` and repeat `--parquet` for each approved file. Existing
+native declarations use `--source /private/data/source.json`. The data directory
+must permit private metadata writes; selected datasets remain stable regular
+files under that directory. The workspace retains its SQLite ownership lock
+while open.
 
-Open the printed local URL. Inspect real schemas, select public columns, add
-typed filters and ordering, then preview actual query results. Enter complete
-merchant payment terms, save and review the draft, and prepare a named version.
-The original preparation service copies the selected data, performs native
-preflight and exports the original API/client. Inspect, start and stop that
-package from the same browser. Reopen with `--workspace` and `--python`; the
-saved data selection, draft and packages remain available. Add the original
-`--facilitator HTTPS_URL` option for payment-enabled sessions.
+Open the printed local URL. **Build a query** inspects actual schemas, selects
+buyer-visible columns and adds typed filters and ordering through the original
+native query author. Keep the query, preview actual rows, configure merchant
+routes and payment terms, and save an immutable merchant/query revision. Review
+the exact public choices and prepare the original merchant package, including
+copied data and generated API/client files. Inspect, start and stop the merchant
+from the same browser.
 
-The [complete workbench guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workbench/README.md)
-is also included under the same `source/` path. It documents the query contract,
-limits, version lifecycle and application API. The package includes the fixed
-native worker, schema helper, browser assets and shared lease implementation.
-Applications can import `startDuckdbWorkbench` from
-`@tokenjunkielabs/starforge-merchant/seller/duckdb/workbench` and the non-HTTP
-model from `seller/duckdb/workbench/model`. Source, configuration, merchant,
-preparation, catalog and query-authoring modules have matching DuckDB subpaths
-in the package export map.
+Reopen with the saved directory and Python environment; the retained source
+selection, draft and packages remain available:
+
+```sh
+npx --no-install starforge duckdb-workspace \
+  --workspace /private/merchant-workspace \
+  --python /private/duckdb-env/bin/python
+```
+
+Add the original `--facilitator HTTPS_URL` option for native payment-enabled
+sessions. On Linux, `--availability-dir /private/merchant-availability` enables
+the original durable product pause/resume panel and its `flock` ownership.
+**Product availability** opens that authenticated original panel beside the
+existing operations console. Keep this directory when restarting the merchant
+to retain its availability decisions.
+
+The [complete operator guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/README.md)
+is included under the same `source/` path. Applications can import
+`startDuckdbWorkspace` from
+`@tokenjunkielabs/starforge-merchant/seller/duckdb/workspace` and
+`createDuckdbWorkspace` from `seller/duckdb/workspace/model`. Existing
+`startDuckdbWorkbench` and `openDuckdbWorkbench` application exports remain at
+their original paths. Source, configuration, merchant, preparation, catalog and
+query-authoring modules keep their maintained DuckDB export paths.
 
 `doctor` reports optional feature availability and fails only for the requested
 feature or native dependency group. It resolves modules without importing them
@@ -1092,6 +1110,104 @@ included. Applications may import `startWorkspace` from
 `@tokenjunkielabs/starforge-merchant/merchant/revenue-workspace`; its `directory`
 option is the same private state passed to CLI `--state`. This workflow adds no
 npm dependency.
+
+## Operate merchant incidents and support cases
+
+The original incident watcher follows the running seller and operations listener,
+retains actionable incidents and measured recovery, and exports their original
+captures into the existing merchant case desk. It requires Node 22+, Linux with
+util-linux `flock`, and private local state supporting atomic rename and fsync.
+
+Copy the included `source/stellar/scf-starforge-20261009/` file
+`sf93-seller-support-bundle/examples/watch.json` from the installed package into
+your private operator directory. Set its merchant IDs, labels and exact local
+seller/operations addresses to those printed by your existing launchers. Make the
+configuration private (mode 0600). For notifications, supply the configured URL
+and signing-secret environment references to the watcher and operator commands;
+the secret needs at least 32 UTF-8 bytes. Set `notification` to `null` when only
+local incident operation is wanted.
+
+```sh
+npx --no-install starforge support-watch init \
+  --config /private/operator/watch.json --state /private/operator/incidents
+npx --no-install starforge support-watch run --state /private/operator/incidents
+```
+
+The state directory must be new and its parent must exist. Reopen that same
+directory on later runs. One watcher owns its kernel lease; SIGINT/SIGTERM ends
+its pending collection and finishes its state write. Keep the original seller
+and operations processes running under their existing lifecycle.
+
+In a second terminal, read the actual incident ID and revision, then acknowledge
+ownership while collection continues:
+
+```sh
+npx --no-install starforge support-watch status \
+  --state /private/operator/incidents --details
+npx --no-install starforge support-watch ack \
+  --state /private/operator/incidents --incident ACTUAL_INCIDENT_ID \
+  --revision ACTUAL_INCIDENT_REVISION --by 'Merchant operator' \
+  --note-file /private/operator/repair-note.txt
+```
+
+Acknowledgment retains ownership and notes; recovery follows subsequent usable
+observations. The original commands also provide `notify`, `retry`, `cancel`,
+`configure` and `prune`. Notifications retain event/body identity across retries
+and pin their selected destination. Use an explicit `notify` to select a changed
+destination for an incident. `INCIDENT_OPERATIONS.md` documents the exact signed
+hook protocol, attempt/revision inputs, retention and restart behavior.
+
+### Keep the original case and handoff
+
+Open the existing local case desk with durable storage:
+
+```sh
+npx --no-install starforge support-console \
+  --cases-dir /private/merchant-cases --port 8784
+```
+
+For a saved incident, select the existing private merchant workspace, an actual
+captured route ID and the current incident revision:
+
+```sh
+npx --no-install starforge support-watch export \
+  --state /private/operator/incidents --incident ACTUAL_INCIDENT_ID \
+  --revision ACTUAL_INCIDENT_REVISION \
+  --workspace /private/operator/merchant.merchant-workspace.json \
+  --route ACTUAL_ROUTE_ID --out /private/operator/incident-handoff
+```
+
+The destination must be new. In the desk's **Runtime** stage, choose **Open a
+complete support handoff**, open the exported `support-handoff.json`, then choose
+**Open handoff as new case** and **Save case**. Original baseline/follow-up files,
+incident identity, acknowledgment and session boundaries stay with that case.
+
+The original one-shot packet command remains available:
+
+```sh
+npx --no-install starforge support \
+  --seller http://127.0.0.1:8423 --ops http://127.0.0.1:8424 \
+  --out /private/operator/merchant-before
+```
+
+Use the actual running addresses and a new destination with an existing parent.
+Select all four packet files in **Runtime**, inspect them, choose the matching
+route and attach them to the case. Attach a later packet as **After / follow-up**,
+save the owner and next action, then reopen after restart or restore a saved
+version. The same desk accepts original `history.json` with its matching SF97
+`report.json` and optional original SF98 journals. **Prepare support handoff**
+exports a readable report and complete importable case. Included SF74 guides
+`RUNTIME_SUPPORT.md`, `CASE_DESK.md` and `WORKSPACES.md` cover collection, retained
+periods, native reconciliation, saved versions and private-directory recovery.
+
+The public module entries expose these unchanged original APIs:
+
+| Import subpath | Original interface |
+| --- | --- |
+| `./merchant/incidents` | `runIncidentWatch` with caller-owned cancellation and environment |
+| `./merchant/incidents/store` | `initializeIncidentStore` and `openIncidentStore` |
+| `./merchant/incidents/operator` | Status, acknowledgment, notification operations, configuration, pruning and `exportIncident` |
+| `./merchant/support-console` | `start` and `createConsoleServer` for the same case desk |
 
 ## Reconcile merchant settlements
 

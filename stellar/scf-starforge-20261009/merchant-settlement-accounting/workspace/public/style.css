@@ -138,6 +138,20 @@ td .badge {font-size:9px}
 .skip:focus {top:9px}
 :focus-visible {outline:2px solid #25353f;outline-offset:3px}
 body.working {cursor:progress}
+.source-connect {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:start}
+.source-connect button {margin-top:23px}
+.recovery-source-actions {padding-top:0}
+.recovery-form label:not(:first-child) {margin-top:16px}
+.recovery-form .actions {margin-top:17px}
+.recovery-form textarea {font-size:12px;line-height:1.55}
+#recovery-preview-detail {margin:16px 0;max-width:100%;overflow-wrap:anywhere}
+#recovery-preview-detail .record-values {grid-template-columns:minmax(130px,24%) minmax(0,1fr);font-size:12px}
+.record-values dd {white-space:pre-wrap}
+.recovery-progress {margin:15px 20px}
+.recovery-native-result {white-space:pre-wrap;overflow-wrap:anywhere;max-width:500px;font-size:11px}
+#recovery-entries td,#recovery-jobs td {overflow-wrap:anywhere}
+#recovery-entry-detail .actions {margin-bottom:15px}
+#recovery-preview-select {max-width:760px}
 @media(max-width:1150px) {
   .layout {grid-template-columns:225px minmax(0,1fr)}
   main {padding:25px 22px 50px}
@@ -150,6 +164,11 @@ body.working {cursor:progress}
   .conflict .actions {max-width:none}
 }
 @media(max-width:760px) {
+  .source-connect {grid-template-columns:1fr}
+  .source-connect button {margin:0}
+  #recovery-preview-detail .record-values {grid-template-columns:1fr;gap:4px}
+  #recovery-preview-detail .record-values dd {margin-bottom:8px}
+  .recovery-progress {margin:15px}
   .topbar {height:49px;padding:0 18px}
   .topbar strong {font-size:10px}
   .topbar>span {display:none}

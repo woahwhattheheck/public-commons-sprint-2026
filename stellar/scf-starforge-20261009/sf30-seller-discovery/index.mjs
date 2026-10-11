@@ -203,7 +203,7 @@ function makeMcpInput(input) {
 /** Build an x402 v2 PaymentRequired object with a supplied-schema Bazaar extension. */
 export function createSellerDiscovery({ resource, accepts, input, output, routeTemplate, allowHttpLoopback = false } = {}) {
   const safeResource = checkedMetadata(resource, allowHttpLoopback);
-  if (!Array.isArray(accepts) || accepts.length === 0 || accepts.length > 8) fail('1–8 payment requirements required');
+  if (!Array.isArray(accepts) || accepts.length === 0 || accepts.length > 16) fail('1–16 payment requirements required');
   const safeAccepts = accepts.map(checkedPayment);
   if (!plain(input)) fail('input must be a declarative HTTP or MCP definition');
   const built = input.type === 'http' ? makeHttpInput(input) : input.type === 'mcp' ? makeMcpInput(input) : fail('input.type must be http or mcp');

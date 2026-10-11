@@ -1,6 +1,6 @@
 # Merchant settlement workspace
 
-This local operator application keeps a merchant's reconciliations, imported original verification results, exception reviews, comparisons, and downloads together across restarts. It runs the existing `merchant-settlement-accounting/reconcile.mjs` engine and the existing CLI's report writer directly. The original SF98 journal reader, SF86 proof classifications, multi-option identity, and exact monetary arithmetic remain the accounting source.
+This local operator application keeps a merchant's reconciliations, imported original verification results, recovered original purchase outcomes, exception reviews, comparisons, and downloads together across restarts. It runs the existing `merchant-settlement-accounting/reconcile.mjs` engine and the existing CLI's report writer directly. The original SF98 journal reader, SF86 proof classifications, explicit recovered-settlement reader, multi-option identity, and exact monetary arithmetic remain the accounting source.
 
 ## Open on the merchant host
 
@@ -29,6 +29,8 @@ node stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/ser
 
 Original source paths are retained in the workspace. Import another terms file through the interface when the merchant's approved terms change. Use a separate workspace directory for a different source outbox.
 
+An existing original recovered-settlement collection can also be selected at startup with `--recovered-dir /private/merchant/recovered-settlements`, or connected through the source screen after opening the workspace. The collection must be separate from the workspace, outbox, and verification directories.
+
 ## Complete a merchant review
 
 Enter the operator or reviewer name in the sidebar. It is recorded with imports, reconciliation runs, review decisions, and exported handoffs.
@@ -42,6 +44,21 @@ Enter the operator or reviewer name in the sidebar. It is recorded with imports,
 
 Refresh preserves unsaved form text. If another operator saved the same review or changed the workspace revision, the interface retains the draft and offers an explicit reload and reapply action. Completed background work can also advance the workspace revision. A stale write is never silently substituted for the newer saved state.
 
+## Recover an already completed purchase
+
+The original recovery module handles a completed SF31 purchase whose native request, outcome, and optional delivered response were retained outside SF98. Its input and source-binding format is documented in [the original recovery guide](../RECOVERY.md). It keeps that origin explicit and uses the original network-specific SF86 verifier.
+
+1. **Connect the recovered collection.** Choose its absolute private directory on the machine running the workspace. A new collection is created at mode 0700. An existing collection is read through the original recovery reader, which checks the retained entries and their source files. The screen records the latest inventory time. Refresh the collection after another original process adds entries; ordinary UI polling reads the saved inventory instead of rereading large response files.
+2. **Review the original request.** Select a `stellar-forge.merchant-recovery-request.v1` JSON configuration. Its outcome, request, terms, and optional response paths refer to files on the workspace host. The workspace retains the exact configuration bytes and invokes `reviewRecoveredSettlement`. Review the original route, method, network, selected payment terms, transaction, payer, source hashes, and response identity before importing. This review reads the selected files locally.
+3. **Import the reviewed result.** The workspace starts the original `importRecoveredSettlement` operation in the background. The original importer verifies the transfer using the configured official RPC endpoint and retains its canonical entry, proof, and source files. A previously imported identical transaction returns `ALREADY_IMPORTED` and reuses its retained proof. The importer never sends another paid request. Progress and any original error remain in the workspace after navigation or restart.
+4. **Continue or cancel an attempt.** An in-progress read-only import can be cancelled. If the original durable import already completed, its completed result is retained. Retry the same reviewed request after cancellation, interruption, or an operational error; native import identity prevents a duplicate entry. If an original file changed after review, review the request again to inspect its current binding.
+5. **Reconcile the selected sources.** The next run captures the connected collection alongside its selected native outbox, terms, and verification files. The original engine reports native successes and recovered settlements separately. Recovered rows retain `RECOVERED_ORIGINAL_SF31_OUTCOME`, their import-time basis, original entry/proof identities, and saved-response status. The engine's existing duplicate-transaction handling spans both origins.
+6. **Inspect and download the result.** The recovered-source view shows the entries frozen with the selected run. A saved response can be downloaded from the current collection or from a retained run. Downloads return the exact original saved bytes through the original reader. Disconnecting the collection affects future reconciliations; earlier runs, their captured files, and completed import history remain available.
+
+The selected merchant accounting terms still determine the current run's route and payment-option mapping. A retained recovery has its own original terms file for source binding; it does not silently replace the workspace's selected accounting terms.
+
+Recovered response downloads and source-inclusive review archives can contain the original delivered merchant data, request metadata, and public account addresses. Use the source-inclusive option when the recipient needs those originals. The default review archive contains accounting identities and named review notes without those private source bytes.
+
 ## Original result classifications
 
 The interface uses the existing engine's result fields without interpreting a review note as payment evidence:
@@ -54,6 +71,9 @@ The interface uses the existing engine's result fields without interpreting a re
 | `LOCAL_RPC_REPLAY_MATCHED` | Original local replay result remains excluded from official transfer counts |
 | `WEBHOOK_ACCEPTED_NOT_FULFILLED` | Native delivery received a webhook acknowledgment |
 | `DELIVERY_EXHAUSTED` | The original delivery worker exhausted its attempts |
+| `RECOVERED_ORIGINAL_SF31_OUTCOME` | Original retained SF31 outcome imported through the canonical recovery source |
+| `RECOVERED_RESPONSE_SAVED` | The original delivered response bytes are retained with this recovered entry |
+| `RECOVERED_RESPONSE_NOT_RETAINED` | This recovered entry has no original saved response file |
 | Review status `reviewed` | An operator recorded a review note; the original classification remains visible |
 
 Original duplicate-transaction, conflicting-proof, ambiguous legacy-recipient, and unknown-terms behavior is preserved. An identical imported file already present in the original proof directory is captured once; the import remains listed as a duplicate of that original file. Conflicting original files remain available to the original engine's conflict detection.
@@ -64,7 +84,7 @@ The original engine's `verifiedQuotedValueUsd` is the merchant's own quote for i
 
 The workspace captures a completed prefix of `deliveries.ndjson` before a completed prefix of `events.ndjson`. Native delivery records refer to events already appended by the original producer. This order includes the required event for each captured delivery status while allowing the merchant to keep appending new events. Later appends enter the next reconciliation. The two files are a retained capture, rather than a simultaneous global journal instant.
 
-Missing or empty native journals represent an empty outbox. An incomplete trailing append fails the capture with a clear message; start a new reconciliation after the original producer finishes its append. A source file that is truncated during capture also fails the run. Imported choices are retained with the queued run, and selected source bytes are frozen before the original accounting engine begins.
+Missing or empty native journals represent an empty outbox. An incomplete trailing append fails the capture with a clear message; start a new reconciliation after the original producer finishes its append. A source file that is truncated during capture also fails the run. Imported choices and source-directory selections are retained with the queued run, and selected source bytes are frozen before the original accounting engine begins.
 
 Each completed run contains:
 
@@ -73,10 +93,11 @@ Each completed run contains:
 | `sources/outbox/` | Captured native event and delivery journal bytes |
 | `sources/proofs/` | Included original verification result bytes |
 | `sources/terms.json` | The selected original merchant accounting terms |
+| `sources/recovered/` | Connected original recovery entries, proofs, source files, and any saved response bytes |
 | `input-manifest.json` | Captured file paths, SHA256 values, original filenames, and verification descriptions |
 | `report/` | The original six create-only accounting outputs |
 
-The workspace records original report and manifest hashes. Downloads and exports check the retained original file hashes before returning them. The original CLI still writes the same six report files, using its unchanged formats: `report.json`, `ledger.csv`, `options.csv`, `exceptions.csv`, `review.html`, and `manifest.json`.
+The workspace records original report and manifest hashes. Downloads and exports check the retained original file hashes before returning them. The original CLI writes the same six report files: `report.json`, `ledger.csv`, `options.csv`, `exceptions.csv`, `review.html`, and `manifest.json`. Its ledger and option CSVs include additive original-source, recovery-identity, and recovered-amount columns; existing columns remain in place. The original HTML displays native and recovered counts separately.
 
 ## Export and reopen
 
@@ -94,6 +115,14 @@ node stellar/scf-starforge-20261009/merchant-settlement-accounting/cli.mjs \
 
 The output path must be new. Exported operator notes remain in their separate file; the original engine computes the accounting result from the retained native sources.
 
-Workspace state is atomically replaced and fsynced under the existing Linux filesystem lease. One server owns a given workspace directory. Stopping and reopening preserves completed runs, imported files, review history, and exports. If the process stops during a run, reopening marks that run interrupted and retains any captured files; the operator can capture current sources as a new run. Earlier completed results and downloads stay available. Stop the server before copying the entire private workspace for an operating-system backup.
+If the archive contains `sources/recovered/`, add:
 
-Limits follow the original accounting engine: up to 20,000 native events, 16 MB per source journal, 200 payment options, and 2,000 combined verification files. An imported SF86 file is limited to 80 KB and terms to 200 KB. Workspace history is limited to 32 MB, with up to 5,000 retained runs. Archive a completed workspace and start another when those retention limits are reached.
+```sh
+  --recovered-dir /private/extracted-review/sources/recovered
+```
+
+The explicit directory preserves the captured recovery source during reproduction, including an intentionally empty connected collection.
+
+Workspace state is atomically replaced and fsynced under the existing Linux filesystem lease. One server owns a given workspace directory. Stopping and reopening preserves completed runs, imported files, recovery reviews and attempts, review history, and exports. If the process stops during a run, reopening marks that run interrupted and retains any captured files; the operator can capture current sources as a new run. An interrupted recovery import can be retried from its saved review, including a native entry completed immediately before the interruption. Earlier completed results and downloads stay available. Stop the server before copying the entire private workspace for an operating-system backup.
+
+Limits follow the original accounting engine: up to 20,000 native events, 16 MB per source journal, 200 payment options, and 2,000 combined verification files. An imported SF86 file is limited to 80 KB and terms to 200 KB. The original recovered collection supports up to 2,000 entries, 200 KB per source JSON, and 64 MiB per saved response. The workspace retains up to 2,000 recovery reviews and 5,000 import attempts. Input manifests are limited to 16 MB, individual review archives to 256 MB, and workspace history to 32 MB with up to 5,000 runs. Archive a completed workspace and start another when those retention limits are reached.

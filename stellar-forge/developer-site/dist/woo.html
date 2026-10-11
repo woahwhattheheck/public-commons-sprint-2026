@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Import saved WooCommerce product routes, review exact native terms and prepare the original Stellar Forge merchant tools.">
+  <meta name="theme-color" content="#f4f4f4">
+  <title>WooCommerce setup — Stellar Forge</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/woo.css">
+  <script type="module" src="/woo-setup.mjs"></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/">Stellar Forge<span class="brand-caption">MERCHANT TOOLS</span></a>
+  <nav aria-label="Primary"><a href="/#configure">JSON resources</a><a href="/woo.html" aria-current="page">WooCommerce</a><a href="/#build">Native tools</a></nav>
+  <a class="nav-source" href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/GATEWAY.md" target="_blank" rel="noopener noreferrer">Integration guide ↗</a>
+</header>
+<main id="main" class="shell woo-main">
+  <div class="woo-heading"><p class="eyebrow">WOOCOMMERCE / ORIGINAL NATIVE CHECKOUT</p><h1>Prepare your merchant connection.</h1><p>Import the routes exported from your saved Woo products. Review their exact payment terms, then download the setup files for the original seller, buyer and delivery service.</p></div>
+  <div class="setup-shell">
+    <div class="setup-top"><div class="setup-title"><strong id="woo-title">woo-merchant</strong><span id="woo-count" class="mono">0 PRODUCTS</span></div><div class="setup-actions"><button id="woo-import-draft" class="button small" type="button">Open setup draft</button><button id="woo-download-draft" class="button small" type="button">Download draft</button></div></div>
+    <p id="woo-status" class="setup-status" role="status" hidden></p>
+    <div id="woo-errors" class="setup-errors" role="alert" hidden><strong>Complete these items.</strong><ul id="woo-error-list"></ul></div>
+    <nav class="setup-tabs" aria-label="Woo setup steps"><button type="button" data-woo-step="0" aria-current="step"><span>01</span>Saved products</button><button type="button" data-woo-step="1"><span>02</span>Store connection</button><button type="button" data-woo-step="2"><span>03</span>Review packet</button><button type="button" data-woo-step="3"><span>04</span>Run and release</button></nav>
+    <section id="woo-products" class="setup-pane" aria-labelledby="woo-products-heading">
+      <h2 id="woo-products-heading" tabindex="-1">Import your saved product routes.</h2><p class="pane-intro">In a saved WooCommerce product, use <strong>Download saved merchant route</strong> in its Stellar Forge settings. Select up to 64 exports from the same shop and seller. Each checkout contains one mapped simple virtual product at quantity one.</p>
+      <details class="woo-first-install"><summary>First installation? Prepare the original Woo plugin.</summary><p>Download the local preparation tool, select your complete Stellar Forge checkout or installed source package, and copy its original three PHP files into WordPress. Activate the plugin, save the product mapping, then import its route here. The included INSTALL.md covers those steps.</p><button id="woo-plugin-download" class="button small" type="button">Download plugin preparation</button></details>
+      <div class="setup-actions"><button id="woo-choose-routes" class="button primary" type="button">Choose route JSON files</button><button id="woo-paste-toggle" class="text-button" type="button" aria-expanded="false" aria-controls="woo-paste-panel">Paste a route</button></div>
+      <div id="woo-paste-panel" class="field woo-paste" hidden><label for="woo-paste">Saved product route JSON</label><textarea id="woo-paste" class="code-input" spellcheck="false" maxlength="262144" placeholder="Paste the saved route export from WooCommerce."></textarea><button id="woo-add-paste" class="button small" type="button">Add this route</button></div>
+      <div id="woo-route-list" class="woo-route-list"></div>
+      <p class="setup-notice">The exported native amount is the merchant’s declared mapping. The storefront currency and total remain in WooCommerce and are frozen into each order’s private handoff. This page does not calculate an exchange rate.</p>
+      <p class="privacy-note">Routes stay in this page until you download a draft or packet. Import product exports here; keep customer order handoffs and private keys in the original buyer and merchant tools.</p>
+    </section>
+    <section id="woo-connection" class="setup-pane" aria-labelledby="woo-connection-heading" hidden>
+      <h2 id="woo-connection-heading" tabindex="-1">Connect the existing shop and seller.</h2><p class="pane-intro">Use the actual shop, facilitator and private service directory. The exported routes already declare the seller origin, methods, assets and recipients.</p>
+      <div class="field-grid">
+        <div class="field"><label for="woo-folder">Packet folder name</label><input id="woo-folder" autocomplete="off" spellcheck="false" maxlength="64"><p class="hint">A name for the downloaded ZIP and its editable files.</p></div>
+        <div class="field"><label for="woo-storeOrigin">Shop HTTPS origin</label><input id="woo-storeOrigin" type="url" placeholder="https://shop.example.com" autocomplete="off" spellcheck="false" aria-describedby="woo-store-hint"><p class="hint" id="woo-store-hint">The exact store that exported these product IDs. Use an origin without a path.</p></div>
+        <div class="field full"><label for="woo-admissionUrl">WordPress admission URL <span class="hint">(optional for a root installation)</span></label><input id="woo-admissionUrl" type="url" placeholder="Uses the shop origin + /wp-json/stellar-forge/v1/checkout-admission" autocomplete="off" spellcheck="false"><p class="hint">For WordPress in a subdirectory, enter its actual same-origin REST URL. The settlement receiver uses the same REST base.</p></div>
+        <div class="field"><label for="woo-facilitatorUrl">Native facilitator HTTPS URL</label><input id="woo-facilitatorUrl" type="url" placeholder="Your configured native facilitator" autocomplete="off" spellcheck="false"><p class="hint">Use the facilitator selected for the routes’ actual network. No credentials in this field.</p></div>
+        <div class="field"><label for="woo-privateDirectory">New private service directory</label><input id="woo-privateDirectory" placeholder="/var/lib/stellar-merchant/woo" autocomplete="off" spellcheck="false"><p class="hint">An absolute path on your Linux merchant host, outside public web files. Preparation creates this directory and refuses an existing one.</p></div>
+      </div>
+      <div id="woo-connection-summary" class="woo-connection-summary"></div>
+      <p class="setup-notice">Define the PHP constant <code>SF98_WEBHOOK_SECRET</code> in <code>wp-config.php</code> from the private key, and set the same value in the native seller and delivery-worker environments. The setup packet contains no key. The original PHP plugin requires WooCommerce, PHP 8.0+ and real MySQL/MariaDB named locks.</p>
+    </section>
+    <section id="woo-review" class="setup-pane" aria-labelledby="woo-review-heading" hidden>
+      <h2 id="woo-review-heading" tabindex="-1">Review the exact merchant setup.</h2><p class="pane-intro">The route files retain their imported bytes. The local runner passes them through the original native compiler before creating the private merchant configuration.</p>
+      <div id="woo-review-content"></div>
+    </section>
+    <section id="woo-run" class="setup-pane" aria-labelledby="woo-run-heading" hidden>
+      <h2 id="woo-run-heading" tabindex="-1">Run the original tools and release the order.</h2><p class="pane-intro">The ZIP includes complete merchant and buyer instructions. Use the same private configuration, outbox and buyer ledger when restarting or recovering an order.</p>
+      <div id="woo-run-content"></div>
+    </section>
+    <div class="setup-footer"><span class="small-label">LOCAL PREPARATION · NO STORE REQUEST OR PAYMENT FROM THIS PAGE</span><div class="setup-actions"><button id="woo-back" class="button small" type="button" hidden>Back</button><button id="woo-next" class="button primary" type="button">Store connection →</button></div></div>
+  </div>
+  <section class="woo-operating-notes" aria-labelledby="woo-operating-heading"><h2 id="woo-operating-heading">One order, retained through delivery.</h2><div class="woo-note-grid"><article><h3>Classic and Blocks checkout</h3><p>The original gateway creates an unpaid on-hold order and a private buyer handoff bound to its saved product, exact amount and attempt generation.</p></article><article><h3>Native buyer and settlement</h3><p>The original buyer reviews the live offer and retains its approval, signer, budget and ledger. The shop admits one verified native attempt for the current order.</p></article><article><h3>Merchant review and release</h3><p>The original delivery worker records its signed notice in WooCommerce. After independent reconciliation, the merchant releases the order through Woo’s own completion and download permissions.</p></article></div><a class="text-link" href="https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/GATEWAY.md" target="_blank" rel="noopener noreferrer">Read installation, release and recovery instructions ↗</a></section>
+</main>
+<footer class="site-footer shell"><a class="footer-brand" href="/">Stellar Forge</a><p>Original merchant tools. Exact terms.</p><a href="/#build">Other native integrations</a></footer>
+<input id="woo-route-input" type="file" accept=".json,application/json" multiple hidden>
+<input id="woo-draft-input" type="file" accept=".json,application/json" hidden>
+<noscript><div class="noscript">Enable JavaScript for local route import and packet preparation, or follow the linked original integration guide.</div></noscript>
+</body>
+</html>
