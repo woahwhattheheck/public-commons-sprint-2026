@@ -12,6 +12,11 @@ import { plain, now, digest, json, canonical, fail, need, recordId, operationId,
   privateDirectory, makePrivate, readJSON, saveJSON, workerAlive, processIdentity,
   operationLease, tailFile } from './storage.mjs';
 
+import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attachWorkspaceImage,
+  attachWorkspaceImageTransfer, prepareWorkspaceImageTransfer, receiveWorkspaceImageChunk,
+  openWorkspaceImageDownload, reviewWorkspaceImageContainer, normalizeImageOperation,
+  executeImageOperation } from './image-workspace.mjs';
+
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
 const recordPath = (root, type, id) => join(root, type, recordId(id) + '.json');
@@ -103,8 +108,11 @@ async function jobView(root, id) {
   const state = await readJSON(join(directory, 'state.json'), true) ?? { phase: 'QUEUED' };
   const active = state.phase === 'RUNNING' && await workerAlive(state);
   return { id, operation: request.operation, runtimeId: request.runtimeId ?? request.targetId ?? null,
-    targetId: request.targetId ?? null,
+    targetId: request.targetId ?? null, imageId: request.imageId ?? null, transferId: request.transferId ?? null,
     targetDirectory: request.targetDirectory ?? null, createdAt: request.createdAt,
+    contextDirectory: request.contextDirectory ?? null, transferDirectory: request.transferDirectory ?? null,
+    containerDirectory: request.containerDirectory ?? null, reviewId: request.reviewId ?? null,
+    deploymentReviewId: request.deploymentReviewId ?? null,
     ...state, workerActive: active,
     displayPhase: state.phase === 'RUNNING' && !active ? 'INTERRUPTED' : state.phase };
 }
@@ -132,6 +140,7 @@ function newTarget(config, name) {
   return join(config.runtimeHome, name);
 }
 const fields = {
+  ...imageOperationFields,
   import: ['archive', 'sha256', 'label'],
   prepare: ['archiveId', 'name', 'selection', 'profileId'],
   install: ['runtimeId', 'offline', 'cache', 'nodeHeaders'],
@@ -144,6 +153,20 @@ export async function openRuntimeWorkspace({ directory } = {}) {
   const { root, config } = await context(directory);
   const model = {
     directory: root,
+    async imagesState() { return imageWorkspaceState(root); },
+    async imagesReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewWorkspaceImage(root, { ...input, runtimeDirectory: selected.directory });
+    },
+    async imagesAttach(input) { return attachWorkspaceImage(root, input); },
+    async imagesTransferAttach(input) { return attachWorkspaceImageTransfer(root, input); },
+    async imagesTransfer(input) { return prepareWorkspaceImageTransfer(root, input); },
+    async imagesUpload(input) { return receiveWorkspaceImageChunk(root, input); },
+    async imagesDownload(input) { return openWorkspaceImageDownload(root, input); },
+    async imagesContainerReview(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return reviewWorkspaceImageContainer(root, { ...input, runtimeDirectory: selected.directory });
+    },
     async state({ runtimeId = null } = {}) {
       const [saved, archives, names] = await Promise.all([records(root, 'entries'), records(root, 'archives'), readdir(join(root, 'operations'))]);
       const entries = await Promise.all(saved.map(retainedView));
@@ -233,11 +256,14 @@ export async function openRuntimeWorkspace({ directory } = {}) {
           'RUNTIME_WORKSPACE_LABEL_INVALID');
         request.targetDirectory = join(root, 'sources', id);
       }
+      if (Object.hasOwn(imageOperationFields, request.operation))
+        Object.assign(request, await normalizeImageOperation(root, request, id));
       const operationDirectory = jobPath(root, id), body = canonical(request), requestHash = digest(json(body));
       const previous = await readJSON(join(operationDirectory, 'request.json'), true);
       if (previous) {
         need(previous.requestHash === requestHash, 'RUNTIME_WORKSPACE_REQUEST_ID_REUSED');
-        return { operationId: id, runtimeId: previous.targetId ?? previous.runtimeId ?? null, reopened: true };
+        return { operationId: id, runtimeId: previous.targetId ?? previous.runtimeId ?? null,
+          imageId: previous.imageId ?? null, transferId: previous.transferId ?? null, reopened: true };
       }
       await makePrivate(operationDirectory);
       await saveJSON(join(operationDirectory, 'request.json'), { ...body, requestHash, createdAt: now() });
@@ -249,7 +275,8 @@ export async function openRuntimeWorkspace({ directory } = {}) {
           phase: 'QUEUED', updatedAt: now(), error: asError(error), launchPending: true }, true);
         throw error;
       }
-      return { operationId: id, runtimeId: request.targetId ?? request.runtimeId ?? null };
+      return { operationId: id, runtimeId: request.targetId ?? request.runtimeId ?? null,
+        imageId: request.imageId ?? null, transferId: request.transferId ?? null };
     },
     async resumeQueued(operation) {
       const current = await jobView(root, operation);
@@ -314,7 +341,9 @@ export async function executeRuntimeWorkspaceOperation({ directory, operation: i
       let result;
       const installOptions = { offline: request.offline ?? false, cache: request.cache ?? null,
         ...(request.nodeHeaders ? { nodeHeaders: request.nodeHeaders } : {}) };
-      if (request.operation === 'import') {
+      if (Object.hasOwn(imageOperationFields, request.operation)) {
+        result = await executeImageOperation(root, request, id);
+      } else if (request.operation === 'import') {
         result = await prepareRuntimeInstall({ directory: request.targetDirectory, archive: request.archive, sha256: request.sha256 });
         result = { ...result, archive: await retainArchive(root, request.targetDirectory, request.label) };
       } else if (request.operation === 'prepare') {
