@@ -144,7 +144,7 @@ def create_snapshot(state: str | Path, destination: str | Path) -> dict:
         _sync_directory(assets)
         _sync_directory(target)
         _sync_directory(target.parent)
-        return {"schema": SCHEMA, "snapshot": str(target),
+        return {"schema": SCHEMA, "snapshot": str(target), "createdAt": manifest["createdAt"],
                 "manifestSha256": _digest(target / "snapshot.json")[0],
                 "databaseSha256": db_digest, "orders": len(mapped),
                 "uniquePaidFiles": len({item["sha256"] for item in mapped})}
