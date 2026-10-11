@@ -3,9 +3,11 @@
 The existing merchant MCP service operates the same retained accounting workspace
 as the [merchant accounting browser](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/README.md).
 It uses the original source capture, classifier, report writer, recovery importer,
-review notes and exclusive workspace lease. The agent can inspect an already
-completed payment, retain its original verification, reconcile merchant activity,
-and retrieve the exact delivered response without purchasing it again.
+RPC collection, pricing, recorded-activity periods, accountant handoff and exclusive
+workspace lease. The agent can inspect a completed payment, retain its original
+verification, reconcile merchant activity, close a saved period, prepare the
+accountant's original packet and apply a reviewed return. The exact delivered
+response remains retrievable throughout that operation.
 
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
@@ -54,6 +56,46 @@ fleet configuration. Empty source maps can be omitted. The host may declare up t
 initializer also accepts `--accounting ACCOUNTING_JSON`, where that file contains
 the object inside `accounting`; its paths resolve relative to that file and are
 stored as absolute host paths in the generated merchant configuration.
+
+For collection, pricing and accountant returns, add the following optional fields
+inside the chosen workspace. Replace the payer placeholder with the complete
+original Stellar public account from the retained payment. The file paths identify
+the original source files that the host has selected.
+
+```json
+{
+  "collectionInputs": {
+    "delivered-order": {
+      "file": "../merchant/original-payment-record.json",
+      "kind": "sf81-record",
+      "payer": "<full original Stellar payer public key>",
+      "maxEventPages": 24
+    }
+  },
+  "pricingReports": {
+    "retained-month": "../revenue-period/report/report.json"
+  },
+  "accountantReturns": {
+    "reviewed-return": "../accountant/returned.csv"
+  }
+}
+```
+
+A collection input can instead use `kind:"sf82-evidence"` for an original SF82
+checkout evidence file. Its optional `rpcEndpoint` is host-selected; omission uses
+the original network profile. The original verifier checks the selected source,
+payer and endpoint. `maxEventPages` accepts 1–100. Optional workspace field
+`collectionHttpsProxyEnv:"HTTPS_PROXY"` selects the environment-variable name used
+by the original public transport. Endpoint URLs contain no credential values.
+Collection settings are retained with each imported input; changing a host alias
+does not change an already prepared collection.
+
+`pricingReports` points to the original saved SF97 report, up to 64 MiB.
+`accountantReturns` points to a returned original CSV, up to 64 MiB. Both source
+maps contain file paths, as do `proofFiles` and `termsFiles`. Source inspection
+returns these aliases; a caller cannot supply an arbitrary path or RPC URL in a
+tool invocation. Full source bytes are read by the host into the existing
+controller, so large reports and CSVs do not need to fit inside an MCP argument.
 
 Use separate private directories with mode `0700` for the accounting workspace,
 native outbox, original proofs and recovered collection. The original workspace
@@ -137,6 +179,167 @@ imports and reconciliations also advance the revision; refresh after observing
 their completion. If the original workspace returns `STALE_WORKSPACE`, review the
 current state before reapplying the intended change.
 
+## Collect original payment verification
+
+The collection controller operates original retained SF81 payment records and
+SF82 checkout evidence. Its [native guide](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/README.md#collect-verification-in-the-same-workspace)
+describes the source and verifier contract. Completed SF31 outcomes use the
+recovery workflow above, preserving their recovered origin.
+
+1. Call `merchant_accounting_collection_source` with a declared `source` alias,
+   `name`, current workspace `revision` and `actor`. Inspect the returned original
+   source ID, hash, network, payer, transaction and endpoint. Import retains the
+   file and checks its native terms without calling RPC.
+2. Call `merchant_accounting_collection_prepare` with the current revision, name,
+   actor and an explicit array of distinct retained `sourceIds`. The original plan
+   preserves all input hashes and network profiles.
+3. Call `merchant_accounting_collection_start` with its `collectionId`, current
+   revision, actor and `operation:"collect"`. Follow
+   `merchant_accounting_status` with `view:"collectionJobs"`; the returned job
+   retains its processed count, total, status and error. The original controller
+   schedules at most two collection operations within this workspace.
+4. Inspect `merchant_accounting_collection` for that ID. Its `view:"sources"`,
+   `"results"`, `"proofs"` and `"jobs"` are paged up to 200 items. Result rows
+   expose the original verdict and attempt history. A resumed collect processes
+   unattempted records. To retry failures, explicitly supply only their source IDs
+   in `retryIds`; the original controller accepts records whose current verdict
+   is `NOT_RECONCILED`. No payment transaction is sent by collection.
+5. Stop an owned operation with `merchant_accounting_collection_cancel` using its
+   job ID and actor. Completed attempts remain retained. Once the operation is
+   inactive, `merchant_accounting_collection_refresh` rereads its durable results
+   and commits current totals using the original revision.
+6. Call `merchant_accounting_collection_start` with `operation:"publish"` and the
+   current revision. The original publisher imports the exact latest result files
+   through the same proof importer. Existing proof identity and inclusion choices
+   survive duplicate publication. Read the original proof file with file
+   `kind:"collection"`, `collectionId` and `sourceId`.
+
+These operations preserve the verifier's original distinction between supported
+network RPC results and local RPC replay results. Reconciliation uses the existing
+proof eligibility and classification. Status views `collectionSources`,
+`collections` and `collectionJobs` expose the retained operation after reopening.
+
+## Review pricing and capture its original provenance
+
+Call `merchant_accounting_pricing_review` with a host-declared pricing source,
+name, current revision and actor. It returns the retained `review.id`, original
+report SHA256 and the derived terms identity. An optional `accountingReference`
+is the original short accounting label: 3–100 letters, numbers, spaces or
+`_ . : / -`. The full original price basis remains in the retained provenance.
+
+Use `merchant_accounting_pricing` with the review ID to page all original payment
+options. Supply `baselineSelection:"source"` or a retained terms ID to inspect
+the original added, removed and changed option comparison. Select the reviewed
+version explicitly with `merchant_accounting_pricing_select`, current revision
+and actor. Future captures use those terms and retain the complete pricing report
+inside the original input manifest. Earlier runs keep their existing inputs.
+
+Read the retained original report or terms with file `kind:"pricing"`, `reviewId`
+and `file:"report"` or `"terms"`. After capture, use that completed `runId` in place
+of `reviewId` to retrieve the exact original pricing inputs captured by that run.
+The selected report's quoted USD and source costs remain its original values;
+asset labels and this MCP integration do not create exchange rates. See the
+[original pricing import guide](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/PRICING.md).
+
+## Close a recorded-activity period
+
+Periods use the original native capture time or recovered-entry import time.
+Their UTC bounds include `from` and exclude `until`; the original
+[recorded-activity contract](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/PERIODS.md)
+describes the exact selection and retained source scope.
+
+1. Call `merchant_accounting_period_save` with current revision, actor, name,
+   explicit UTC `from`/`until`, optional note and `select:true`. It retains the
+   definition ID and its new immutable version. To revise a definition, pass its
+   `id` and current `expectedVersion`. Status `view:"periods"` lists latest
+   versions; `merchant_accounting_period_definition` pages a selected definition's
+   full version history.
+2. `merchant_accounting_period_select` chooses an exact `{id,version}` or `null`
+   for all recorded activity. Read the workspace's returned `periodSelection`.
+3. Call the existing `merchant_accounting_capture` with the current revision,
+   run name, actor and `expectedPeriodSelection` set to that exact object or null.
+   The original workspace checks the choice and captures complete original
+   sources before applying its recorded-activity filter. Follow the run and
+   inspect its native totals, selected rows, exclusions and exceptions.
+4. Call `merchant_accounting_period_close` with the completed run ID, current
+   revision, close name, actor, optional note and explicit `includeSources`.
+   The run must have captured a saved period. The original export writer freezes
+   the report, input manifest and current named review notes into a retained close.
+5. `merchant_accounting_period` reads that `closeId`, its frozen versus current
+   review counts, changes and previous close. `view:"notes"` pages the original
+   frozen exception notes beside their current reviews. An open or investigating
+   exception remains visible in the close.
+
+Download the exact `period-close.json`, `review-notes.json` or original `archive`
+using file `kind:"period"` and `closeId`. A later source capture, review edit or
+period revision does not rewrite an earlier close. Existing run comparison remains
+available for the same period or different explicit versions.
+
+## Prepare an accountant handoff and apply a returned CSV
+
+The [original accountant contract](../../stellar/scf-starforge-20261009/merchant-settlement-accounting/accountant/SCHEMA.md)
+owns the CSV, protected source fields, external assignments, return history and
+packet files. This workflow uses the same open accounting workspace and revision.
+
+1. Call `merchant_accounting_accountant_prepare` with a completed `runId` or a
+   retained `closeId`. A supplied run and close must identify the same original
+   reconciliation. Review the returned source hashes, original totals, row count
+   and paged payment options.
+2. Generate and retain a stable UUID for the handoff. Call
+   `merchant_accounting_accountant_create` with that `id`, selected run or close,
+   current workspace revision, name and actor. Optional `labels` is an array of
+   objects containing an actual `optionId` and any of `assetLabel`, `unitLabel`,
+   `accountCode`, `accountName` (each up to 160 characters). Labels identify the
+   source unit and account; the original atomic amount stays exact.
+3. Read `merchant_accounting_accountant` with its `handoffId`. Detail views
+   `revisions`, `files`, `issues` and `labels` are paged; status `view:"handoffs"`
+   lists retained handoffs and latest returns. `merchant_accounting_accountant_rows`
+   pages original ledger rows beside the selected external assignments. Download
+   `accountant.csv` or `accountant-handoff.tar` using file `kind:"accountant"`,
+   that handoff ID and `revisionId:"initial"` for the immutable initial packet.
+4. The accountant edits the original CSV's four external columns:
+   `externalStatus`, `externalBookRef`, `externalAccountCode`, `externalNote`.
+   Available statuses are `UNREVIEWED`, `REVIEWED`, `BOOKED`, `EXCLUDED`.
+   `BOOKED` records an accountant-reported external entry and requires its book
+   reference. Original amounts, source identity, classifications and retained
+   labels remain protected. Place the returned file at a declared
+   `accountantReturns` alias.
+5. Call `merchant_accounting_accountant_preview` with `handoffId`, source alias,
+   actor, return name and `expectedParentId:null` for the first return, or the
+   actual latest saved return ID. Inspect its original summary and paged
+   `results`, `issues`, `assignments` or `missingRows`. To read more pages of this
+   same proposed revision, repeat its returned `revision.id`, `revision.createdAt`
+   and `source.sha256` as `id`, `createdAt`, `sourceSha256`, together with the same
+   source, name, actor and expected parent. Preview does not save a return.
+6. Explicitly save the reviewed proposal with `merchant_accounting_accountant_apply`.
+   Copy these values from that preview; keep the source, handoff, name and actor
+   unchanged:
+
+   | Apply argument | Original preview field |
+   | --- | --- |
+   | `id` | `revision.id` |
+   | `createdAt` | `revision.createdAt` |
+   | `revision` | `workspaceRevision` |
+   | `expectedParentId` | `expectedParentId` |
+   | `sourceSha256` | `source.sha256` |
+   | `previewSha256` | `revision.integrity.sha256` |
+
+The original controller applies matching rows while retaining protected-field
+conflicts and unmatched records. Rows omitted from a return inherit their prior
+assignments. Read the returned summary and issues before treating the imported
+file as complete. A changed source file, newer parent or stale workspace revision
+requires a current preview. A lost response to create/apply can be recovered by
+repeating the same stable ID and exact original arguments; a different request
+under that ID is rejected.
+
+Download a specific saved return using its `revisionId`. Omission selects the
+latest return; an explicit ID keeps later process reopening tied to that exact
+packet. The retained return adds `returned.csv` and `return.json` alongside its
+complete current CSV, offline HTML, original source documents and TAR. Close and
+reopen the same MCP workspace to continue these original assignments and retrieve
+the already-delivered paid response. Creating a handoff or importing a CSV does
+not send an accounting entry to a third-party service.
+
 ## Exact files and bounded delivery
 
 `merchant_accounting_file` returns a file name, full byte count, full SHA256,
@@ -146,13 +349,27 @@ may request up to 196,608. Every later request must include the returned SHA256 
 `expectedSha256`, together with the same `readId`; continue until `nextOffset` is `null`. Verify the complete byte
 count and hash before using the assembled file.
 
-For original reports, use `kind:"report"`, the completed `runId`, and one of
-`report.json`, `ledger.csv`, `options.csv`, `exceptions.csv`, `review.html` or
-`manifest.json`. Opening a read delegates once to the original report-manifest or
-recovered-response verification. Continued chunks use that exact verified
-snapshot instead of rereading and hashing the whole source for every chunk.
+Use the original source selectors for the chosen kind. Other selector fields are
+rejected; keep the same selection on every continued chunk.
 
-The provider retains at most four reads and 256,000,000 bytes of verified
+| Kind | Source selectors | Original file |
+| --- | --- | --- |
+| `response` | `recoveryId`, optional captured `runId` | Retained delivered response |
+| `report` | `runId`, `file` | `report.json`, `ledger.csv`, `options.csv`, `exceptions.csv`, `review.html`, `manifest.json` |
+| `export` | `exportId` | Original retained review TAR |
+| `collection` | `collectionId`, `sourceId` | Latest retained original verification result |
+| `pricing` | Exactly one `reviewId` or captured `runId`, `file` | `report` or `terms` |
+| `period` | `closeId`, `file` | `period-close.json`, `review-notes.json`, `archive` |
+| `accountant` | `handoffId`, optional `revisionId`, `file` | A filename from the original packet's file list |
+
+Accountant filenames are `handoff.json`, `accountant.csv`, `review.html`,
+`original-report.json`, `original-manifest.json`, `input-manifest.json`,
+`packet-manifest.json`, `accountant-handoff.tar`, optional `period-close.json` and
+`review-notes.json`, and a saved return's `returned.csv` and `return.json`.
+Opening a read delegates once to the selected original owner's verification.
+Continued chunks use that exact verified snapshot.
+
+The accounting interface retains at most four reads and 256,000,000 bytes of verified
 snapshots in total. Files up to 32 KiB stay in memory; larger files use private
 temporary descriptors unlinked immediately after materialization. Persistent
 snapshot memory is therefore at most 128 KiB, alongside a chunk buffer and the
@@ -196,7 +413,10 @@ exports. Detailed status views are paged; original complete files remain availab
 through verified file retrieval.
 
 Closing the original provider first rejects new operations, then waits for its
-accepted calls. The accounting adapter stops owned read-only recovery work,
-finishes retained captures and outstanding file reads, and releases only its own
-workspace leases. Existing seller, fleet, discovery and support ownership retain
-their original lifecycle. A later process reopens the same original state.
+accepted calls. The accounting adapter stops its owned collection controller
+before closing the original accounting workspace, then that workspace drains its
+recovery work and retained captures. Outstanding original file reads are released
+and only its own workspace leases close. Pricing, periods and accountant returns
+use that same lease and state. Existing seller, fleet, discovery and support
+ownership retain their original lifecycle. A later process reopens the same
+original state.
