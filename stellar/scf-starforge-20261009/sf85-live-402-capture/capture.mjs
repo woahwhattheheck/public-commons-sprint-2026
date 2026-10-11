@@ -10,6 +10,7 @@ import { BlockList, isIP } from 'node:net';
 import { isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { inspectBytes } from '../sf84-mpp-market-intake/inspect.mjs';
+import { oneShotConnectAgent, parseExplicitProxy } from './proxy-connect.mjs';
 
 class CaptureError extends Error {
   constructor(code) { super(code); this.code = code; }
@@ -45,7 +46,7 @@ function hasCredentialQuery(target) {
 }
 
 export function parseArgs(argv) {
-  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms', '--sandbox-egress-range']);
+  const allowed = new Set(['--url', '--allow-origin', '--out', '--method', '--timeout-ms', '--sandbox-egress-range', '--https-proxy']);
   if (argv.length % 2 !== 0) throw new CaptureError('USAGE_REQUIRES_VALUE_PAIRS');
   const args = new Map();
   for (let i = 0; i < argv.length; i += 2) {
@@ -68,12 +69,13 @@ export function parseArgs(argv) {
   if (sandboxRange !== undefined && sandboxRange !== '198.18.0.0/15') {
     throw new CaptureError('UNSUPPORTED_SANDBOX_EGRESS_RANGE');
   }
+  const proxy = args.has('--https-proxy') ? parseExplicitProxy(args.get('--https-proxy')) : null;
   const out = args.get('--out');
   if (!isAbsolute(out) || out.includes('\0')) throw new CaptureError('OUTPUT_MUST_BE_ABSOLUTE_PATH');
-  return { target, out, method, timeout, allowSandboxGateway: sandboxRange !== undefined };
+  return { target, out, method, timeout, allowSandboxGateway: sandboxRange !== undefined, proxy };
 }
 
-export async function capture({ target, method, timeout, allowSandboxGateway = false }, { resolve = lookup, httpsRequest = request } = {}) {
+export async function capture({ target, method, timeout, allowSandboxGateway = false, proxy = null }, { resolve = lookup, httpsRequest = request } = {}) {
   // Resolve the ORIGINAL hostname once, then pin it for TLS. Default is public
   // IPv4 only. Explicit sandbox opt-in permits an ALL-198.18/15 answer set,
   // not mixed public/overlay answers or any other reserved/private ranges.
@@ -85,34 +87,40 @@ export async function capture({ target, method, timeout, allowSandboxGateway = f
   const allSandbox = allowSandboxGateway && answers.every(a => a.family === 4 && sandboxV4(a.address));
   if (!allPublic && !allSandbox) throw new CaptureError('DNS_HAS_NONPUBLIC_OR_NO_IPV4');
   const pinnedIP = answers[0].address;
-  const raw = await new Promise((resolveResult, reject) => {
-    const req = httpsRequest(target, {
-      method,
-      agent: false,
-      maxHeaderSize: 64 * 1024,
-      headers: { Accept: '*/*', 'User-Agent': 'TJLabs-SCF-merchant-capture/1.0' },
-      lookup: (_host, options, cb) => {
-        // Node's family autoselection asks for all:true, even for one pinned IP.
-        if (options?.all) cb(null, [{ address: pinnedIP, family: 4 }]);
-        else cb(null, pinnedIP, 4);
-      },
-      signal: AbortSignal.timeout(timeout),
-      rejectUnauthorized: true,
-    }, (response) => {
-      // Capturing only the two payment challenge headers preserves repeated
-      // WWW-Authenticate lines without persisting incidental server headers.
-      const headers = [];
-      for (let i = 0; i < response.rawHeaders.length; i += 2) {
-        const name = response.rawHeaders[i];
-        if (CHALLENGE.has(name.toLowerCase())) headers.push([name, response.rawHeaders[i + 1]]);
-      }
-      const status = response.statusCode;
-      response.destroy(); // No response body is read, stored or forwarded.
-      resolveResult({ status, headers });
+  const signal = AbortSignal.timeout(timeout);
+  const tunnel = proxy ? oneShotConnectAgent({ target, proxy, pinnedIP, sandboxOverlay: allSandbox, signal }) : null;
+  let raw;
+  try {
+    raw = await new Promise((resolveResult, reject) => {
+      const req = httpsRequest(target, {
+        method,
+        agent: tunnel ? tunnel.agent : false,
+        maxHeaderSize: 64 * 1024,
+        headers: { Accept: '*/*', 'User-Agent': 'TJLabs-SCF-merchant-capture/1.0' },
+        ...(tunnel ? {} : { lookup: (_host, options, cb) => {
+          // Node's family autoselection asks for all:true, even for one pinned IP.
+          if (options?.all) cb(null, [{ address: pinnedIP, family: 4 }]);
+          else cb(null, pinnedIP, 4);
+        } }),
+        signal,
+        rejectUnauthorized: true,
+      }, (response) => {
+        // Retain repeated original challenge headers; never consume a response body.
+        const headers = [];
+        for (let i = 0; i < response.rawHeaders.length; i += 2) {
+          const name = response.rawHeaders[i];
+          if (CHALLENGE.has(name.toLowerCase())) headers.push([name, response.rawHeaders[i + 1]]);
+        }
+        const status = response.statusCode;
+        response.destroy();
+        resolveResult({ status, headers });
+      });
+      req.on('error', reject);
+      req.end();
     });
-    req.on('error', reject);
-    req.end();
-  });
+  } finally {
+    tunnel?.stop();
+  }
   if (!Number.isInteger(raw.status)) throw new CaptureError('MISSING_HTTP_STATUS');
   return {
     schema: 'scf.sf85.capture.v1',
