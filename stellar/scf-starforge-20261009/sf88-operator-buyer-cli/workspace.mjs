@@ -235,7 +235,9 @@ export async function initializeWorkspace(args, { environment = process.env } = 
 }
 
 /** Review never opens the operator-key file or loads the signer/SDK. */
-export async function openWorkspace(args, { execute = false, environment = process.env } = {}) {
+export async function openWorkspace(args, { execute = false, accounting = false, environment = process.env } = {}) {
+  need(typeof execute === 'boolean' && typeof accounting === 'boolean' && !(execute && accounting),
+    'WORKSPACE_ONE_OPERATION_MODE_REQUIRED');
   need(process.platform !== 'win32', 'WORKSPACE_POSIX_OPERATOR_REQUIRED');
   const opt = options(args, ['--dir']);
   const directory = resolve(abs(opt['--dir'], 'WORKSPACE_PATH_NOT_ABSOLUTE'));
@@ -263,11 +265,15 @@ export async function openWorkspace(args, { execute = false, environment = proce
     'WORKSPACE_SIGNER_BINDING_CHANGED');
   await privateDirectory(cfg.evidenceDir);
   let operatorEnvironment;
-  if (execute) {
+  if (execute || accounting) {
     // Surface missing local setup before an inbox attempt or SF36 reservation.
-    if (transport !== null) resolveBuyerProxy(transport, environment);
-    const {checkNativeSignerPrerequisites} = await import('./native-signer.mjs');
-    await checkNativeSignerPrerequisites({...manifest.signer, environment});
+    // Accounting reopens the original journal keys without requiring a wallet,
+    // importing its provider or constructing a signer after the purchase.
+    if (execute) {
+      if (transport !== null) resolveBuyerProxy(transport, environment);
+      const {checkNativeSignerPrerequisites} = await import('./native-signer.mjs');
+      await checkNativeSignerPrerequisites({...manifest.signer, environment});
+    }
     const stored = await privateJson(join(directory, manifest.keys), 16384);
     need(stored.schema === SCHEMA && schemaObject(stored.keys) &&
       Object.keys(stored.keys).length === KEY_NAMES.length, 'WORKSPACE_KEY_FILE_INVALID');
