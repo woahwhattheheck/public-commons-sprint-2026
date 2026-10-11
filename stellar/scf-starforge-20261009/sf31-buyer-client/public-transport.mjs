@@ -4,6 +4,7 @@ import { request as httpsRequest } from 'node:https';
 import { BlockList, isIP } from 'node:net';
 import { checkServerIdentity } from 'node:tls';
 import { Readable } from 'node:stream';
+import { parseExplicitProxy, oneShotConnectAgent } from '../sf85-live-402-capture/proxy-connect.mjs';
 
 const denied4 = new BlockList();
 for (const [ip, prefix] of [
@@ -58,6 +59,33 @@ function checkedURL(input) {
   url.hostname = host;
   return url;
 }
+/** Trusted operator configuration only; an offer cannot select its own proxy. */
+export function normalizeBuyerTransport(value) {
+  if (value === null || typeof value !== 'object' || Array.isArray(value) ||
+      Object.keys(value).some(key => !['mode','origin','proxyUrl','proxyEnv'].includes(key)) ||
+      value.mode !== 'explicit-connect') fail('INVALID_BUYER_TRANSPORT');
+  const target = checkedURL(value.origin);
+  if (value.origin !== target.origin) fail('BUYER_TRANSPORT_EXACT_ORIGIN_REQUIRED');
+  if ((value.proxyUrl === undefined) === (value.proxyEnv === undefined))
+    fail('ONE_EXPLICIT_PROXY_SOURCE_REQUIRED');
+  if (value.proxyEnv !== undefined) {
+    if (typeof value.proxyEnv !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(value.proxyEnv))
+      fail('INVALID_PROXY_ENVIRONMENT_NAME');
+    return Object.freeze({mode:'explicit-connect', origin:target.origin, proxyEnv:value.proxyEnv});
+  }
+  // This original parser rejects credentials, paths, queries and fragments.
+  parseExplicitProxy(value.proxyUrl);
+  return Object.freeze({mode:'explicit-connect', origin:target.origin,
+    proxyUrl:new URL(value.proxyUrl).origin});
+}
+/** Resolve only the explicitly named proxy variable; never auto-detect a proxy. */
+export function resolveBuyerProxy(value, environment = process.env) {
+  const profile = normalizeBuyerTransport(value);
+  const raw = profile.proxyEnv === undefined ? profile.proxyUrl : environment?.[profile.proxyEnv];
+  if (profile.proxyEnv !== undefined && typeof raw !== 'string')
+    fail('BUYER_PROXY_ENVIRONMENT_REQUIRED');
+  return Object.freeze(parseExplicitProxy(raw));
+}
 function requestData(init) {
   const allowed = new Set(['method', 'headers', 'body', 'redirect', 'signal']);
   if (Object.keys(init).some(key => !allowed.has(key)) ||
@@ -100,14 +128,18 @@ function abortable(promise, signal) {
  */
 export function createPublicHttpsFetch({
   timeoutMs=30_000, lookup=systemLookup, requestImpl=httpsRequest,
-  sandboxGatewayIPv4=null
+  sandboxGatewayIPv4=null, trustedProxy=null
 }={}) {
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 300_000 ||
       typeof lookup !== 'function' || typeof requestImpl !== 'function' ||
-      (sandboxGatewayIPv4 !== null && !isManagedOverlayAddress(sandboxGatewayIPv4)))
+      (sandboxGatewayIPv4 !== null && !isManagedOverlayAddress(sandboxGatewayIPv4)) ||
+      (sandboxGatewayIPv4 !== null && trustedProxy !== null))
     throw new TypeError('Invalid transport configuration');
+  const profile = trustedProxy === null ? null : normalizeBuyerTransport(trustedProxy);
+  const proxy = profile === null ? null : resolveBuyerProxy(profile);
   return async function publicHttpsFetch(input, init={}) {
     const url = checkedURL(input);
+    if (profile !== null && url.origin !== profile.origin) fail('BUYER_TRANSPORT_ORIGIN_MISMATCH');
     const {method, headers, body} = requestData(init);
     const controller = new AbortController();
     const {signal} = controller;
@@ -116,41 +148,52 @@ export function createPublicHttpsFetch({
     else init.signal?.addEventListener('abort', stop, {once:true});
     // Deadline includes DNS, TLS, response and downstream body consumption.
     const timer = setTimeout(() => controller.abort(new PublicTransportError('PUBLIC_HTTPS_TIMEOUT')), timeoutMs);
-    const cleanup = () => { clearTimeout(timer); init.signal?.removeEventListener('abort', stop); };
-    let incoming;
+    let incoming, stopTunnel;
+    const cleanup = () => {
+      clearTimeout(timer); init.signal?.removeEventListener('abort', stop); stopTunnel?.();
+    };
     try {
       signal.throwIfAborted();
-      const answers = await abortable(lookup(url.hostname, {all:true, verbatim:true}), signal);
-      signal.throwIfAborted();
-      if (!Array.isArray(answers) || !answers.length || answers.length > 64 || answers.some(
-        row => !row || ![4,6].includes(row.family) || isIP(row.address) !== row.family))
-        fail('NONPUBLIC_DNS_ANSWER');
-      if (sandboxGatewayIPv4 === null) {
-        if (answers.some(row => !isPublicAddress(row.address))) fail('NONPUBLIC_DNS_ANSWER');
+      let connection;
+      if (profile !== null) {
+        // The operator approves this exact origin and explicit resolving proxy.
+        // Preserve the original merchant SNI/TLS and HTTP request inside it.
+        const tunnel = oneShotConnectAgent({target:url, proxy, resolveAtProxy:true, signal});
+        stopTunnel = tunnel.stop;
+        connection = {agent:tunnel.agent};
       } else {
-        // Fail closed on stale/mixed DNS, including one public plus one gateway.
-        // Original hostname, port, SNI, TLS and pinned lookup remain unchanged.
-        if (answers.length !== 1 || answers[0].family !== 4 ||
-            answers[0].address !== sandboxGatewayIPv4)
-          fail('SANDBOX_GATEWAY_DNS_MISMATCH');
+        const answers = await abortable(lookup(url.hostname, {all:true, verbatim:true}), signal);
+        signal.throwIfAborted();
+        if (!Array.isArray(answers) || !answers.length || answers.length > 64 || answers.some(
+          row => !row || ![4,6].includes(row.family) || isIP(row.address) !== row.family))
+          fail('NONPUBLIC_DNS_ANSWER');
+        if (sandboxGatewayIPv4 === null) {
+          if (answers.some(row => !isPublicAddress(row.address))) fail('NONPUBLIC_DNS_ANSWER');
+        } else {
+          // Fail closed on stale/mixed DNS, including one public plus one gateway.
+          // Original hostname, port, SNI, TLS and pinned lookup remain unchanged.
+          if (answers.length !== 1 || answers[0].family !== 4 ||
+              answers[0].address !== sandboxGatewayIPv4)
+            fail('SANDBOX_GATEWAY_DNS_MISMATCH');
+        }
+        // Copy validated primitives: the trusted resolver's mutable return object
+        // cannot alter the address after policy validation.
+        const {address, family} = answers[0];
+        const pinnedLookup = (host, options, callback) => {
+          if (typeof options === 'function') { callback = options; options = {}; }
+          if (host !== url.hostname) { callback(new PublicTransportError('DNS_PIN_HOST_MISMATCH')); return; }
+          if (options?.all) callback(null, [{address, family}]);
+          else callback(null, address, family);
+        };
+        connection = {lookup:pinnedLookup, family, autoSelectFamily:false, agent:false};
       }
-      // Copy validated primitives: the trusted resolver's mutable return object
-      // cannot alter the address after policy validation.
-      const {address, family} = answers[0];
-      const pinnedLookup = (host, options, callback) => {
-        if (typeof options === 'function') { callback = options; options = {}; }
-        if (host !== url.hostname) { callback(new PublicTransportError('DNS_PIN_HOST_MISMATCH')); return; }
-        if (options?.all) callback(null, [{address, family}]);
-        else callback(null, address, family);
-      };
       incoming = await new Promise((resolve, reject) => {
         const req = requestImpl({
           protocol:'https:', hostname:url.hostname, port:443,
           // href preserves an explicit empty query, which URL.search drops.
           // SF31 binds this exact resource identity before approving payment.
           path:url.href.slice(url.origin.length), method, headers,
-          lookup:pinnedLookup, family, autoSelectFamily:false,
-          agent:false, servername:url.hostname, rejectUnauthorized:true,
+          ...connection, servername:url.hostname, rejectUnauthorized:true,
           checkServerIdentity, minVersion:'TLSv1.2', maxHeaderSize:65_536, signal
         }, resolve);
         req.once('error', reject);
@@ -162,8 +205,8 @@ export function createPublicHttpsFetch({
         responseHeaders.append(incoming.rawHeaders[i], incoming.rawHeaders[i+1]);
       if (responseHeaders.has('content-encoding') && responseHeaders.get('content-encoding').toLowerCase() !== 'identity')
         fail('UNSUPPORTED_CONTENT_ENCODING');
-      // No redirect handling, automatic auth, cookies, proxy, pooled socket or
-      // reconnect: one resolution and at most one request per invocation.
+      // No redirects, automatic auth, cookies, implicit proxy, pooled socket or
+      // reconnect: at most one original request per invocation.
       incoming.once('close', cleanup);
       const noBody = method === 'HEAD' || [204,205,304].includes(incoming.statusCode);
       const stream = noBody ? null : Readable.toWeb(incoming, {

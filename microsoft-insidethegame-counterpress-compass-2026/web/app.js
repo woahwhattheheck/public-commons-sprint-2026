@@ -1,9 +1,10 @@
+import {ArchiveLink, createArchiveUI} from './archive.js';
+
 const el = id => document.getElementById(id);
 const L = {
   en: {synthetic: 'SYNTHETIC MATCH · invented teams and events', scenario: 'Match situation', seed: 'Seed', dice: 'Random seed', kickoff: 'Kick off',
-    noGoals: `Goals aren't part of this synthetic feed, so shots are shown instead of a scoreline.`,
-    thirds: 'Highlighted third = latest event. Shading = where your club pressed most. The feed records pitch thirds, not exact positions.',
-    club: 'Your club', mode: 'Mode', language: 'Language', story: 'The story so far', numbers: 'Numbers', moments: 'Key moments', feed: 'Live feed',
+    thirds: 'Locations use pitch thirds; shading shows pressing activity.',
+    club: 'Your club', mode: 'Mode', language: 'Language', story: 'The story so far', numbers: 'Numbers', moments: 'Key moments', feed: 'Play-by-play',
     aiTitle: 'Optional AI commentary (Microsoft Foundry)', aiAsk: 'Ask for commentary', aiOff: 'Not configured', aiFail: 'Commentary unavailable; match captions keep working.',
     opusTitle: 'AI match insight (optional)', opusAsk: 'Explain this moment', opusOff: 'Not configured', opusWait: 'Writing insight…', opusSlow: 'Still writing — the match stays fully usable.', opusFail: 'Insight unavailable right now; match captions keep working.', opusBusy: 'Insight is busy; try again in a little while.', opusAt: n => `Event ${n}`,
     share: 'Copy match link', shareCopied: 'Link copied. It opens this moment paused.', shareManual: 'Select and copy the link below.', shareHelp: 'Reopens this synthetic match at the selected event. The recipient needs access to this app.', shareLocal: 'Local address: the link opens only where this app is running.', badLink: 'This match link is invalid or no longer supported. A fresh match is ready.', clampedLink: 'The saved event is beyond this version of the match; showing its final event.',
@@ -15,7 +16,7 @@ const L = {
     zone: {defensive: 'own third', middle: 'middle third', attacking: 'final third'},
     rows: {shots: 'Shots', share: 'Share of on-ball actions', cp: 'Counterpresses', regains: 'Won back within 8s', rate: 'Regain rate (settled)', mean: 'Avg. time to win back', unclear: 'Unclear outcome'},
     chip: {success: 'Won back', expired: 'Timed out', interrupted: 'Unclear'},
-    noMoments: 'No counterpress moments yet.', reviewFilter: 'Filter moments', reviewPeriod: 'Match half', reviewPeriodAll: 'Both halves', reviewPeriodFirst: 'First half', reviewPeriodSecond: 'Second half', feedFilterTeam: 'Feed team', feedBoth: 'Both teams', feedFocus: 'Your club', feedRival: 'Opponent', feedType: 'Event type', feedTypeAll: 'All events', feedPass: 'Pass', feedLoss: 'Loss', feedPressure: 'Pressure', feedRegain: 'Regain', feedShot: 'Shot', feedClock: 'Clock', feedEmpty: 'No observed events match these filters.', reviewAll: 'All outcomes', reviewSuccess: 'Won back', reviewExpired: '8s elapsed', reviewInterrupted: 'Unclear', reviewSelected: 'Press evidence', reviewEmpty: 'No settled press windows in this view.', reviewMissing: 'No moments match this filter.', reviewObserved: 'Next observed event', reviewNoNext: 'No later event observed in this match prefix.', reviewCaution: 'The following event is context, not proof the press caused it.', reviewJump: 'Replay this outcome', reviewCount: (n,total) => n + ' of ' + total + ' observed moments', reviewEvidence: 'Recorded evidence', reviewReason: {success: (n,s) => n + ' pressure action(s); same-team regain in ' + s + 's inside the official 8s window.', expired: (n) => n + ' pressure action(s); the log passed 8s without a qualifying regain.', interrupted: (n) => n + ' pressure action(s); a new same-team loss interrupted the window, so recovery is unknown.'}, progress: (c, n) => `Event ${c} of ${n}.`, at: 'at',
+    noMoments: 'No counterpress moments yet.', reviewFilter: 'Filter moments', reviewPeriod: 'Match half', reviewPeriodAll: 'Both halves', reviewPeriodFirst: 'First half', reviewPeriodSecond: 'Second half', feedFilterTeam: 'Feed team', feedBoth: 'Both teams', feedFocus: 'Your club', feedRival: 'Opponent', feedType: 'Event type', feedTypeAll: 'All events', feedPass: 'Pass', feedLoss: 'Loss', feedPressure: 'Pressure', feedRegain: 'Regain', feedShot: 'Shot', feedClock: 'Clock', feedEmpty: 'No observed events match these filters.', reviewAll: 'All outcomes', reviewSuccess: 'Won back', reviewExpired: '8s elapsed', reviewInterrupted: 'Unclear', reviewSelected: 'Press sequence', reviewEmpty: 'No settled press windows in this view.', reviewMissing: 'No moments match this filter.', reviewObserved: 'Next play', reviewNoNext: 'No later event observed in this match prefix.', reviewJump: 'Replay this outcome', reviewCount: (n,total) => n + ' of ' + total + ' observed moments', reviewEvidence: 'Event sequence', reviewReason: {success: (n,s) => n + ' pressure action(s); same-team regain in ' + s + 's inside the 8s window.', expired: (n) => n + ' pressure action(s); the log passed 8s without a qualifying regain.', interrupted: (n) => n + ' pressure action(s); a new same-team loss interrupted the window, so recovery is unknown.'}, progress: (c, n) => `Event ${c} of ${n}.`, at: 'at',
     ins: {none: 'Nothing has happened yet — press Play.', front: (t, n) => `${t} are on the front foot: ${n} pressing actions in the last five minutes.`,
       even: n => `An even spell: ${n} pressing actions between the sides in the last five minutes.`, quiet: 'A quiet spell — little pressing in the last five minutes.',
       regainBest: (t, s) => `${t} win the ball back in ${s}s on average after losing it.`, noRegain: t => `${t} haven't won the ball back inside eight seconds yet.`,
@@ -23,9 +24,8 @@ const L = {
       rateLine: (s, r, p) => `Regain rate ${p}% (${s}/${r} settled windows).`, unclearLine: n => `${n} window(s) cut short by another loss — outcome unknown, not counted as a failure.`,
       zoneLine: z => `Most successful counterpresses: ${z}.`, pressLine: x => `${x} pressing actions per counterpress.`, rivalLine: (t, p) => `${t}: regain rate ${p}.`}},
   es: {synthetic: 'PARTIDO SINTÉTICO · equipos y jugadas inventados', scenario: 'Situación', seed: 'Semilla', dice: 'Semilla aleatoria', kickoff: 'Saque inicial',
-    noGoals: 'Los goles no forman parte de este feed sintético; se muestran tiros en lugar de marcador.',
-    thirds: 'Tercio resaltado = última jugada. Sombreado = donde más presionó tu club. El feed registra tercios del campo, no posiciones exactas.',
-    club: 'Tu club', mode: 'Modo', language: 'Idioma', story: 'La historia hasta ahora', numbers: 'Números', moments: 'Momentos clave', feed: 'En directo',
+    thirds: 'Las posiciones se muestran por tercios; el sombreado indica la actividad de presión.',
+    club: 'Tu club', mode: 'Modo', language: 'Idioma', story: 'La historia hasta ahora', numbers: 'Números', moments: 'Momentos clave', feed: 'Jugada a jugada',
     aiTitle: 'Comentario IA opcional (Microsoft Foundry)', aiAsk: 'Pedir comentario', aiOff: 'No configurado', aiFail: 'Comentario no disponible; los textos del partido siguen activos.',
     opusTitle: 'Análisis IA del momento (opcional)', opusAsk: 'Explicar este momento', opusOff: 'No configurado', opusWait: 'Escribiendo análisis…', opusSlow: 'Sigue escribiendo; el partido sigue disponible.', opusFail: 'Análisis no disponible ahora; los textos del partido siguen activos.', opusBusy: 'Análisis ocupado; inténtalo de nuevo en un rato.', opusAt: n => `Jugada ${n}`,
     share: 'Copiar enlace del partido', shareCopied: 'Enlace copiado. Abre esta jugada en pausa.', shareManual: 'Selecciona y copia el enlace de abajo.', shareHelp: 'Abre este partido sintético en la jugada elegida. El destinatario necesita acceso a esta aplicación.', shareLocal: 'Dirección local: el enlace solo abre donde se ejecuta esta aplicación.', badLink: 'Este enlace no es válido o ya no es compatible. Hay un partido nuevo listo.', clampedLink: 'La jugada guardada supera esta versión del partido; se muestra la última.',
@@ -37,7 +37,7 @@ const L = {
     zone: {defensive: 'campo propio', middle: 'zona media', attacking: 'último tercio'},
     rows: {shots: 'Tiros', share: 'Cuota de acciones con balón', cp: 'Contrapresiones', regains: 'Recuperadas en 8s', rate: 'Tasa de recuperación (resueltas)', mean: 'Tiempo medio de recuperación', unclear: 'Resultado incierto'},
     chip: {success: 'Recuperada', expired: 'Sin recuperar', interrupted: 'Incierta'},
-    noMoments: 'Aún no hay momentos de contrapresión.', reviewFilter: 'Filtrar jugadas', reviewPeriod: 'Tiempo', reviewPeriodAll: 'Ambos tiempos', reviewPeriodFirst: 'Primer tiempo', reviewPeriodSecond: 'Segundo tiempo', feedFilterTeam: 'Equipo del feed', feedBoth: 'Ambos equipos', feedFocus: 'Tu club', feedRival: 'Rival', feedType: 'Tipo de jugada', feedTypeAll: 'Todas', feedPass: 'Pase', feedLoss: 'Pérdida', feedPressure: 'Presión', feedRegain: 'Recuperación', feedShot: 'Tiro', feedClock: 'Reloj', feedEmpty: 'Ninguna jugada observada coincide con los filtros.', reviewAll: 'Todos', reviewSuccess: 'Recuperada', reviewExpired: '8s cumplidos', reviewInterrupted: 'Incierta', reviewSelected: 'Evidencia de presión', reviewEmpty: 'No hay ventanas de presión resueltas en esta vista.', reviewMissing: 'Ninguna jugada coincide con el filtro.', reviewObserved: 'Siguiente jugada observada', reviewNoNext: 'No hay jugadas posteriores observadas en este segmento.', reviewCaution: 'La siguiente jugada es contexto, no prueba de causalidad.', reviewJump: 'Reproducir este resultado', reviewCount: (n,total) => n + ' de ' + total + ' jugadas observadas', reviewEvidence: 'Evidencia registrada', reviewReason: {success: (n,s) => n + ' presión(es); recuperación del mismo equipo en ' + s + 's dentro de 8s.', expired: (n) => n + ' presión(es); pasaron 8s sin una recuperación válida.', interrupted: (n) => n + ' presión(es); otra pérdida interrumpió la ventana y el resultado es desconocido.'}, progress: (c, n) => `Jugada ${c} de ${n}.`, at: 'a los',
+    noMoments: 'Aún no hay momentos de contrapresión.', reviewFilter: 'Filtrar jugadas', reviewPeriod: 'Tiempo', reviewPeriodAll: 'Ambos tiempos', reviewPeriodFirst: 'Primer tiempo', reviewPeriodSecond: 'Segundo tiempo', feedFilterTeam: 'Equipo del feed', feedBoth: 'Ambos equipos', feedFocus: 'Tu club', feedRival: 'Rival', feedType: 'Tipo de jugada', feedTypeAll: 'Todas', feedPass: 'Pase', feedLoss: 'Pérdida', feedPressure: 'Presión', feedRegain: 'Recuperación', feedShot: 'Tiro', feedClock: 'Reloj', feedEmpty: 'Ninguna jugada observada coincide con los filtros.', reviewAll: 'Todos', reviewSuccess: 'Recuperada', reviewExpired: '8s cumplidos', reviewInterrupted: 'Incierta', reviewSelected: 'Secuencia de presión', reviewEmpty: 'No hay ventanas de presión resueltas en esta vista.', reviewMissing: 'Ninguna jugada coincide con el filtro.', reviewObserved: 'Siguiente jugada', reviewNoNext: 'No hay jugadas posteriores observadas en este segmento.', reviewJump: 'Reproducir este resultado', reviewCount: (n,total) => n + ' de ' + total + ' jugadas observadas', reviewEvidence: 'Secuencia de jugadas', reviewReason: {success: (n,s) => n + ' presión(es); recuperación del mismo equipo en ' + s + 's dentro de 8s.', expired: (n) => n + ' presión(es); pasaron 8s sin una recuperación válida.', interrupted: (n) => n + ' presión(es); otra pérdida interrumpió la ventana y el resultado es desconocido.'}, progress: (c, n) => `Jugada ${c} de ${n}.`, at: 'a los',
     ins: {none: 'Aún no ha pasado nada: pulsa Reproducir.', front: (t, n) => `${t} manda: ${n} acciones de presión en los últimos cinco minutos.`,
       even: n => `Fase igualada: ${n} acciones de presión entre ambos en los últimos cinco minutos.`, quiet: 'Fase tranquila: poca presión en los últimos cinco minutos.',
       regainBest: (t, s) => `${t} recupera el balón en ${s}s de media tras perderlo.`, noRegain: t => `${t} aún no ha recuperado el balón en menos de ocho segundos.`,
@@ -45,7 +45,8 @@ const L = {
       rateLine: (s, r, p) => `Tasa de recuperación ${p}% (${s}/${r} ventanas resueltas).`, unclearLine: n => `${n} ventana(s) cortada(s) por otra pérdida: resultado desconocido, no cuenta como fallo.`,
       zoneLine: z => `Contrapresiones exitosas sobre todo en: ${z}.`, pressLine: x => `${x} acciones de presión por contrapresión.`, rivalLine: (t, p) => `${t}: tasa de recuperación ${p}.`}}
 };
-const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
+const S = {session: null, events: [], cursor: 0, selectedMomentId: null, es: null, conn: 0, req: 0, starting: 0, playing: false, frame: null, foundry: false, opus: false, opusKey: null, match: null, archiveId: null, linkTimer: null, transport: 'ready', recoverable: false, recoveryBusy: false};
+let archiveUI;
 const t = () => L[el('locale').value] || L.en;
 const view = () => ({team: el('team').value, audience: el('audience').value, locale: el('locale').value});
 const fmt = s => String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(Math.floor(s % 60)).padStart(2, '0');
@@ -76,6 +77,8 @@ const MatchLink = {
 };
 function currentMatchLink() {
   if (!S.session || !S.match || !S.frame || S.frame.sessionId !== S.session.id || S.frame.count !== S.cursor) return null;
+  if (S.archiveId) return ArchiveLink.url(S.archiveId, S.cursor, {team: S.frame.team, audience: S.frame.audience, locale: S.frame.locale}, location.href);
+  if (S.match.preserved) return null;
   return MatchLink.url(S.match, S.cursor, {team: S.frame.team, audience: S.frame.audience, locale: S.frame.locale}, location.href);
 }
 function syncMatchLink(immediate = false) {
@@ -230,11 +233,12 @@ function reviewEvidence(f, o) {
   const observation = node('p', 'review-following', next
     ? T.reviewObserved + ': ' + next.id + ' · ' + fmt(next.second) + ' · ' + eventLine(next)
     : T.reviewNoNext);
-  const caution = node('p', 'note', T.reviewCaution);
   const jump = node('button', 'review-jump', T.reviewJump);
   jump.type = 'button'; jump.disabled = closingIndex < 0;
   jump.addEventListener('click', () => { if (S.session && closingIndex >= 0) void seek(closingIndex + 1); });
-  root.append(head, summary, reason, label, chain, observation, caution, jump);
+  root.append(head, summary, reason, label, chain, observation, jump);
+  if (archiveUI && closingIndex >= 0) root.append(archiveUI.momentButton({count: closingIndex + 1,
+    eventId: S.events[closingIndex].id, label: fmt(o.showAt) + ' · ' + o.text}));
 }
 function drawMoments(f) {
   const T = t(), filter = el('reviewFilter').value, period = el('reviewPeriod').value;
@@ -255,7 +259,7 @@ function drawMoments(f) {
     const body = node('span');
     body.append(node('span', 'chip ' + o.status, T.chip[o.status] || o.status), document.createTextNode(o.text));
     btn.append(node('b', '', fmt(o.showAt)), body);
-    btn.addEventListener('click', () => { S.selectedMomentId = o.id; if (S.frame) drawMoments(S.frame); el('review').focus(); });
+    btn.addEventListener('click', () => { S.selectedMomentId = o.id; if (S.frame) drawMoments(S.frame); archiveUI?.changed(); el('review').focus(); });
     li.append(btn); return li;
   }));
   reviewEvidence(f, selected);
@@ -295,6 +299,7 @@ function ui() {
   el('recover').textContent = T.recover;
   el('recover').hidden = !S.recoverable;
   el('recover').disabled = S.recoveryBusy || !s;
+  archiveUI?.changed();
 }
 function opusKey() { return S.session ? [S.session.id, S.cursor, el('team').value, el('audience').value, el('locale').value].join('|') : ''; }
 function apply(f) {
@@ -382,6 +387,13 @@ async function recoverStream() {
   } catch (e) {
     if (token !== S.req || S.session !== s) return;
     if (e.status === 404 || e.status === 410) {
+      if (S.archiveId) {
+        const archiveId = S.archiveId;
+        if (await openSavedMatch(archiveId, {count, settings: view()})) {
+          S.recoveryBusy = false; notice(''); play(); return;
+        }
+        S.recoverable = true; notice(t().recoverFailed); return;
+      }
       // The server discarded its ephemeral session, not the match definition.
       // Never continue a stale stream or silently replace the selected fixture.
       el('scenario').value = match.scenario; el('seed').value = String(match.seed);
@@ -425,6 +437,7 @@ async function newMatch({count = 0} = {}) {
   const seed = Number(el('seed').value), scenario = el('scenario').value;
   if (!Number.isInteger(seed) || seed < 1 || seed > 999999) { notice(t().badSeed); return; }
   stopStream();
+  if (archiveUI && !await archiveUI.beforeSwitch()) return false;
   const token = ++S.starting; ++S.req;
   notice(t().loading);
   const old = S.session;
@@ -432,7 +445,8 @@ async function newMatch({count = 0} = {}) {
     const s = await api('/api/sessions', 'POST', {scenario, seed});
     if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(s.id), {method: 'DELETE'}).catch(() => {}); return; }
     if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
-    S.session = s; S.match = {scenario, seed}; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null;
+    S.session = s; S.match = {scenario, seed}; S.archiveId = null; S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = null;
+    archiveUI?.reset();
     el('matchLink').hidden = true; el('shareStatus').textContent = '';
     el('scrub').max = String(s.total);
     el('blurb').textContent = s.blurb;
@@ -440,19 +454,49 @@ async function newMatch({count = 0} = {}) {
     notice('');
     await seek(Math.min(count, s.total));
     if (count > s.total) notice(t().clampedLink);
+    return S.frame?.sessionId === s.id;
   } catch (e) { if (token === S.starting) notice(e.message); }
+  return false;
+}
+
+async function openSavedMatch(id, {count, settings} = {}) {
+  if (!archiveUI) return false;
+  stopStream();
+  if (!await archiveUI.beforeSwitch()) return false;
+  const token = ++S.starting; ++S.req;
+  const old = S.session;
+  notice(t().loading);
+  try {
+    const {archive, session} = await archiveUI.requestOpen(id);
+    if (token !== S.starting) { fetch('/api/sessions/' + encodeURIComponent(session.id), {method: 'DELETE'}).catch(() => {}); return false; }
+    if (old) fetch('/api/sessions/' + encodeURIComponent(old.id), {method: 'DELETE'}).catch(() => {});
+    const review = archive.review;
+    S.session = session; S.match = {scenario: session.scenario, seed: session.seed, preserved: true}; S.archiveId = archive.id;
+    S.events = []; S.cursor = 0; S.frame = null; S.selectedMomentId = review.selectedMomentId;
+    el('scenario').value = session.scenario; el('seed').value = String(session.seed);
+    for (const key of ['team', 'audience', 'locale']) el(key).value = (settings || review.view)[key];
+    el('reviewFilter').value = review.filters.outcome; el('reviewPeriod').value = review.filters.period;
+    el('feedTeam').value = review.filters.feedTeam; el('feedType').value = review.filters.feedType;
+    el('scrub').max = String(session.total); el('blurb').textContent = session.blurb;
+    el('matchLink').hidden = true; el('shareStatus').textContent = ''; el('foundryResult').textContent = '';
+    archiveUI.load(archive); applyI18n();
+    await seek(Math.min(count ?? review.cursor, session.total));
+    if (S.frame?.sessionId !== session.id) return false;
+    notice(''); return true;
+  } catch (error) { if (token === S.starting) notice(error.message); return false; }
 }
 
 async function boot() {
   const b = await api('/api/bootstrap');
   for (const sc of b.scenarios) { const o = node('option', '', sc.label); o.value = sc.id; el('scenario').append(o); }
   el('scenario').value = b.defaultScenario;
-  let linked = null, invalidLink = false;
-  try { linked = MatchLink.read(location.hash, b.scenarios.map(sc => sc.id)); } catch { invalidLink = true; }
+  let linked = null, savedLink = null, invalidLink = false;
+  try { savedLink = ArchiveLink.read(location.hash); if (!savedLink) linked = MatchLink.read(location.hash, b.scenarios.map(sc => sc.id)); } catch { invalidLink = true; }
   if (linked) {
     el('scenario').value = linked.scenario; el('seed').value = String(linked.seed);
     for (const id of ['team', 'audience', 'locale']) el(id).value = linked[id];
   }
+  if (savedLink) for (const key of ['team', 'audience', 'locale']) el(key).value = savedLink.settings[key];
   S.foundry = !!b.foundryConfigured;
   el('foundry').disabled = !S.foundry;
   S.opus = !!b.opusConfigured;
@@ -464,9 +508,9 @@ async function boot() {
   el('dice').addEventListener('click', () => { el('seed').value = String(1 + crypto.getRandomValues(new Uint32Array(1))[0] % 999999); newMatch(); });
   el('play').addEventListener('click', () => (S.playing ? stopStream() : play()));
   el('recover').addEventListener('click', recoverStream);
-  el('reviewFilter').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) drawMoments(S.frame); });
-  el('reviewPeriod').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) { drawMoments(S.frame); drawFeed(); } });
-  for (const id of ['feedTeam', 'feedType']) el(id).addEventListener('change', drawFeed);
+  el('reviewFilter').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) drawMoments(S.frame); archiveUI?.changed(); });
+  el('reviewPeriod').addEventListener('change', () => { S.selectedMomentId = null; if (S.frame) { drawMoments(S.frame); drawFeed(); } archiveUI?.changed(); });
+  for (const id of ['feedTeam', 'feedType']) el(id).addEventListener('change', () => { drawFeed(); archiveUI?.changed(); });
   el('step').addEventListener('click', () => { if (S.session) seek(Math.min(S.cursor + 1, S.session.total)); });
   el('restart').addEventListener('click', () => seek(0));
   el('speed').addEventListener('change', () => { if (S.playing) play(); });
@@ -510,11 +554,27 @@ async function boot() {
   addEventListener('pagehide', () => { syncMatchLink(true); if (S.session) fetch('/api/sessions/' + encodeURIComponent(S.session.id), {method: 'DELETE', keepalive: true}).catch(() => {}); });
   addEventListener('pageshow', e => {
     if (!e.persisted || !S.match) return;
+    if (S.archiveId) { void openSavedMatch(S.archiveId, {count: S.cursor, settings: view()}); return; }
     el('scenario').value = S.match.scenario; el('seed').value = String(S.match.seed);
     void newMatch({count: S.cursor}); // pagehide deleted the old session; rebuild the saved view.
   });
+  archiveUI = createArchiveUI({
+    snapshot: () => ({sessionId: S.session?.id, match: S.match, label: S.session?.label,
+      hasFrame: !!S.frame && S.frame.sessionId === S.session?.id && S.frame.count === S.cursor,
+      cursor: S.cursor, view: view(), event: S.frame?.event, eventLabel: S.frame?.event ? eventLine(S.frame.event) : '',
+      selectedMomentId: S.events.some(event => event.id === S.selectedMomentId && event.type === 'loss') ? S.selectedMomentId : null,
+      filters: {outcome: el('reviewFilter').value, period: el('reviewPeriod').value, feedTeam: el('feedTeam').value, feedType: el('feedType').value}}),
+    onSaved: id => { S.archiveId = id; syncMatchLink(true); },
+    onDeleted: () => { S.archiveId = null; if (S.match) S.match.preserved = true; el('matchLink').hidden = true;
+      history.replaceState(null, '', location.pathname + location.search); ui(); },
+    onOpen: openSavedMatch, onJump: seek, onPause: stopStream,
+    onReviewChanged: () => { if (S.frame) drawMoments(S.frame); },
+  });
+  void archiveUI.refreshCollection();
   applyI18n();
-  await newMatch({count: linked?.count || 0});
+  if (savedLink) {
+    if (!await openSavedMatch(savedLink.id, savedLink)) { await newMatch(); notice(t().badLink); }
+  } else await newMatch({count: linked?.count || 0});
   if (invalidLink) notice(t().badLink);
 }
 boot().catch(e => { el('cueText').textContent = 'Could not load the match: ' + String(e.message).slice(0, 80); });

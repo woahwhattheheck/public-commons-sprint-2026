@@ -16,13 +16,14 @@ Use Node 22.16 or later. From a new application directory, install the supplied
 `tokenjunkielabs-starforge-merchant-*.tgz` archive:
 
 ```sh
-npm install --ignore-scripts --offline /absolute/path/to/the-package.tgz
+npm install --ignore-scripts --offline --omit=optional /absolute/path/to/the-package.tgz
 npx --no-install starforge doctor
 ```
 
 This is a local npm-compatible source distribution. It is marked `private` to
 prevent an accidental registry publish; local installation and `npm pack` work
-normally. The archive does not fetch or install the optional payment packages.
+normally. This source-only installation omits optional packages. PostgreSQL
+drivers and native payment packages have their own setup below.
 Git and a Commons checkout are unnecessary on the merchant's machine.
 
 ## Start a merchant workspace
@@ -111,14 +112,18 @@ or automatically retry a request.
 | `starforge upstream` | SF30 existing-API seller |
 | `starforge operations` | SF30 seller plus live operations dashboard |
 | `starforge dataset` | SF30 dataset API compilation |
+| `starforge postgres-workspace` | Existing database metadata to selected-query merchant package |
 | `starforge openapi` | SF61 OpenAPI offer and service configuration |
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |
 | `starforge commerce` | Persistent native merchant, operations and selected buyer session |
+| `starforge merchant-mcp` | MCP staging, comparison, activation, seller lifecycle and customer SDK export through the original release system |
+| `starforge commerce-console` | Browser workspace for prepared requests, execution and delivered resources |
 | `starforge inbox` | Original durable buyer requests, outcomes and recovery |
 | `starforge native-signer` | SF103 native buyer configuration, inspection and signer loading check |
 | `starforge facilitator` | Original native Stellar facilitator or self-facilitated seller |
 | `starforge capture` | SF85 original single HTTP 402 capture |
+| `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
 | `starforge client` | Export a standalone JavaScript client, TypeScript declarations and original OpenAPI |
@@ -126,8 +131,15 @@ or automatically retry a request.
 | `starforge buyer-inbox` | Prepare, review, execute and report retained original buyer jobs |
 | `starforge dataset-delivery` | Export an original completed buyer job as a retained dataset delivery |
 | `starforge merchant` / `delivery` | Original native seller with its retained fulfillment journal and event delivery |
+| `starforge merchant-desk` | Private paid-file order inventory, enrollment, handoffs, access controls and support |
+| `starforge paid-file-checkout` / `paid-file-purchase` | Original merchant file checkout and approved customer purchase/download |
 | `starforge postgres-init` / `postgres-inspect` / `postgres` | Prepare a PostgreSQL source, inspect named queries and launch its seller/dashboard |
 | `starforge sqlite-init` / `sqlite-inspect` | Prepare and inspect an original SQLite named-query source |
+| `starforge dataset-refresh` | Publish, retain and activate CSV dataset versions while readers finish their pages |
+| `starforge catalog-serve` / `catalog` | Host live seller discovery and operate its existing single writer |
+| `starforge catalog-withdrawal` | Prepare, sign and apply an existing seller withdrawal |
+| `starforge checkout` / `purchase` | Enroll a private merchant file, prepare its order-bound purchase and retrieve delivery |
+| `starforge buyer-object` | Prepare an object acquisition, retain chunks, resume and assemble the complete file |
 
 For example, review an existing original buyer configuration without signing:
 
@@ -135,6 +147,13 @@ For example, review an existing original buyer configuration without signing:
 npx --no-install starforge buyer --review --config /absolute/private/operator.json
 npx --no-install starforge source
 ```
+
+For an original SF85 imported capture, `starforge handoff` also requires
+`--headers-file /absolute/private/original.headers`. It retains that file and
+verifies the same response through the original SF85 parser. The resulting
+bundle goes directly to `starforge buyer --review`; import time remains separate
+from the unknown HTTP capture time. See the original
+[SF96 operator-header journey](../sf96-merchant-challenge-handoff/README.md).
 
 To keep an existing configured merchant and its selected buyer requests in one
 foreground operator session, use the
@@ -151,10 +170,181 @@ operate on explicit stable intent IDs. Terminal approval remains in the original
 SF88/SF81 workflow. `quit` drains the services; the next start reopens retained
 requests and results. No repository checkout is required on the operator host.
 
+Use the browser workspace with the same prepared session:
+
+```sh
+npx --no-install starforge commerce-console start \
+  --directory /private/new-session --port 8426
+```
+
+Open its printed local operator URL. Select a request, inspect its exact terms,
+review it, and start execution. The operator answers any payment approval in the
+same terminal. The workspace shows retained results, cancellation and recovery,
+and offers preview/download when the buyer has saved a response. Stop session
+drains the owned runtime and leaves recorded outcomes available. Native signer
+diagnostics remain available through the commerce terminal's `signer INTENT`
+command. The packaged `source/stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_CONSOLE.md`
+describes the complete browser workflow and application API.
+
 `source` prints the exact source commit, original Git object and SHA-256 for each
 packaged file, component inventory, archive version and optional dependency
 declarations. It does not infer a grant submission, merchant onboarding, customer
 payment, or settlement from installation or an HTTP response.
+
+## Operate paid-file orders
+
+The original SF101 merchant desk turns the existing checkout and access tools
+into one local operator workflow. It lists enrolled orders and their current
+delivery/access state, enrolls a selected approved file, exports or recovers the
+same customer handoff, checks the original file, and performs revision-checked
+access changes with the original reason and operation history. It uses the
+merchant's existing SQLite store and checkout configuration.
+
+Use Python 3.11 or newer on the merchant's existing POSIX host. Prepare the real
+checkout configuration using the
+[original paid-file guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf101-merchant-receiver/CHECKOUT.md).
+Keep the approved files in a separate private directory. Files must already be
+regular private files, at most 32 MiB. Provision the merchant's existing claim
+token in its original environment; only its variable name is passed below.
+
+```sh
+npx --no-install starforge merchant-desk init \
+  --dir /private/merchant/order-desk \
+  --config /private/merchant/checkout.json \
+  --files /private/merchant/approved-files \
+  --claim-env SF101_CLAIM_TOKEN --actor merchant-operations
+npx --no-install starforge merchant-desk inspect --workspace /private/merchant/order-desk
+npx --no-install starforge merchant-desk start --workspace /private/merchant/order-desk
+```
+
+Open the printed private URL. Initialize the original store in the desk when
+needed, select a file and order reference, then export the native buyer handoff.
+An interrupted export can recover the enrolled order without enrolling or
+charging again. Access changes include suspend, resume, expiry and claim-token
+rotation; the original access implementation checks the displayed revision and
+records the operation. Claim-token values never appear in the browser or handoff.
+
+`init` creates only private launch settings and an export directory. It requires
+a new workspace and preserves existing merchant state. `start` reopens that same
+workspace. Files, exports, order state and delivery outbox have separate roots.
+The desk can run beside the merchant's existing checkout and delivery processes;
+it does not start a buyer, signer or payment. See the
+[merchant desk guide](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/sf101-merchant-receiver/desk/README.md)
+for the complete enrollment, recovery and customer handoff workflow.
+
+For the original commands after handoff:
+
+```sh
+npx --no-install starforge paid-file-checkout serve --config /private/merchant/checkout.json
+npx --no-install starforge paid-file-purchase inspect --handoff /private/customer/order.json
+```
+
+The original checkout guide supplies the native facilitator, authenticated SF98
+delivery and existing receiver configuration for actual payment and file release.
+The desk's order view does not infer settlement or payment from enrollment.
+
+## Publish a changing dataset
+
+`dataset-refresh` forwards the maintained versioned CSV service. Initialize it
+from the merchant's existing dataset and payment declarations:
+
+```sh
+npx --no-install starforge dataset-refresh init \
+  --state /private/dataset-state --dataset /private/inventory/dataset.json
+npx --no-install starforge dataset-refresh configure \
+  --state /private/dataset-state --payment /private/inventory/payment.json \
+  --origin https://your-api.example --path /data --out /private/inventory/seller.json
+npx --no-install starforge dataset-refresh serve \
+  --state /private/dataset-state --seller /private/inventory/seller.json \
+  --port 8423 --control-transport loopback
+```
+
+The operator can `refresh`, `activate`, `status` and `collect` through the same
+command. Use the snapshot and revision from the current status when changing the
+selection. Existing cursors finish against their retained version while new
+queries use the new selection. The private operator control stays separate from
+the public API. The package includes the service, version store and its complete
+`source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/README.md`
+with retention, parsed-cache limits and existing facilitator options.
+
+## Run live seller discovery
+
+The package also includes the catalog operator and its existing catalog,
+identity, trust, lifecycle, admission and withdrawal modules. Start it with the
+operator's current seller policy, using an existing store or explicitly creating
+an empty one:
+
+```sh
+npx --no-install starforge catalog-serve \
+  --directory /private/catalog --policy /private/seller-policy.json \
+  --port 8787 --control loopback --create-empty
+```
+
+In another terminal, `starforge catalog status --directory /private/catalog`
+and `starforge catalog list --directory /private/catalog` read that live writer.
+Its `admit`, `prepare-withdrawal` and `apply-withdrawal` operations preserve the
+existing seller identities, signatures and sequence checks. The public service
+serves discovery; local mutations use the private operator control. Seller-side
+withdrawal signing is exposed by `starforge catalog-withdrawal --help`. Keep the
+policy and durable store in the operator's private workspace through package
+updates. The SF60 and SF95 guides are included with their source.
+
+## Deliver an approved merchant file
+
+`checkout` and `purchase` expose the existing merchant receiver and buyer
+handoff. They use the same Python application, order store, SF88 buyer and SF98
+fulfillment delivery already included in this package. With the merchant's
+existing private checkout configuration:
+
+```sh
+npx --no-install starforge checkout inspect --config /private/merchant/checkout.json
+npx --no-install starforge checkout init --config /private/merchant/checkout.json
+```
+
+The merchant then enrolls its actual file and approved order, creates the order
+handoff, and serves checkout with its configured facilitator. The customer uses
+`purchase inspect`, `purchase prepare`, the existing buyer inbox with its
+operator workspace, and `purchase retrieve`. The order reference remains bound
+to the approved request; the separate private claim token stays with its
+configured recipient. Delivery uses the existing enrolled file and entitlement.
+
+Follow the bundled `source/stellar/scf-starforge-20261009/sf101-merchant-receiver/CHECKOUT.md`
+for the complete configuration, enrollment, buyer, delivery-worker and retrieval
+commands. From the installed application's directory, translate the guide's
+source command prefixes as follows and retain every operation and argument:
+
+| Source entrypoint | Installed command |
+| --- | --- |
+| `sf101-merchant-receiver/checkout.mjs` | `npx --no-install starforge checkout` |
+| `sf101-merchant-receiver/purchase.mjs` | `npx --no-install starforge purchase` |
+| `sf88-operator-buyer-cli/cli.mjs` | `npx --no-install starforge buyer` |
+| `sf88-operator-buyer-cli/queue-cli.mjs` | `npx --no-install starforge buyer-inbox` |
+| `sf98-merchant-delivery/deliver.mjs` | `npx --no-install starforge delivery` |
+
+The receiver's Python commands use its installed source path:
+
+```sh
+STARFORGE_SOURCE="$PWD/node_modules/@tokenjunkielabs/starforge-merchant/source"
+python3 "$STARFORGE_SOURCE/stellar/scf-starforge-20261009/sf101-merchant-receiver/receiver.py" \
+  serve --state /private/merchant/sf101 --port 8472
+```
+
+Use that same Python prefix for the guide's `receipt` command. The receiver and
+checkout application use the Python standard library. The guide's final
+contributor journey runs from a source checkout; the installed package contains
+the operating workflow and excludes that development exercise. Applications
+embedding `./merchant/checkout` can read and compile its configuration through
+`./merchant/checkout/config`. Node native payment dependencies and the operator's
+actual settings are supplied as described above.
+
+Large object acquisition uses `starforge buyer-object --help` and the bundled
+`source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/OBJECTS.md` guide.
+The operator selects an object from its description, reviews a whole-download
+atomic cap, and uses the existing buyer for each prepared range. Saved chunks,
+snapshot identity and attempts survive reopening; assembly streams the retained
+contiguous bytes into a new destination. The same command provides the offline
+report and exports. Application APIs are available through `./buyer/object` and
+`./buyer/object-description`.
 
 ## Give customers a usable client
 
@@ -208,11 +398,14 @@ shutdown and retained history, use the packaged
 ## Use existing database sources
 
 PostgreSQL support uses the original named-query integration. Install its
-optional driver in the application directory; it is independent of the native
-payment packages:
+production drivers in the application directory; they are independent of the
+native payment packages. Driver pins and the PostgreSQL feature metadata derive
+from the selected commit's original postgres/package.json, including pg-cursor.
+They are optional runtime dependencies of the archive; development dependencies
+are excluded:
 
 ```sh
-npm install --ignore-scripts pg@8.23.1
+npm install --ignore-scripts pg@8.23.1 pg-cursor@2.22.1
 npx --no-install starforge doctor --feature postgres
 npx --no-install starforge postgres-init --directory ./postgres-merchant
 npx --no-install starforge postgres-inspect \
@@ -227,6 +420,29 @@ values stay in the chosen environment variable. The original parameter binding,
 read-only queries, projection, result limits and pool behavior remain in force.
 Development-only PostgreSQL exercise and emulator sources are omitted from the
 installed runtime.
+
+For interactive merchant setup, configure the existing source connection policy
+and run the maintained workspace:
+
+```sh
+npx --no-install starforge postgres-workspace \
+  --source ./postgres-merchant/source.json --output ./merchant-packages
+```
+
+Select the actual table/view, public columns, typed filters, ordering and payment
+terms. Each reviewed export creates a fresh private source.json/service.json
+package and prints the original launch command. The same files also run through
+the installed command catalog:
+
+```sh
+npx --no-install starforge postgres \
+  --source /absolute/export/source.json --config /absolute/export/service.json
+```
+
+The source/workspace guides include the original role, certificate, capped-query
+and facilitator setup. `doctor --feature postgres` checks imports at the original
+adapter's path, including source checkouts with drivers installed in the postgres
+directory. It does not connect to the database or require payment SDK packages.
 
 SQLite uses Node's built-in database module and requires no PostgreSQL driver.
 `starforge sqlite-init --directory NEW_DIRECTORY` creates the original example;

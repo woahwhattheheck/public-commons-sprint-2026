@@ -1,0 +1,30 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "catalog", "path": "/catalog", "handler": "duckdbCatalog", "admit": "admitDuckdbCatalog",
+      "definition": {
+        "method": "GET", "serviceName": "DuckDB catalog API",
+        "description": "Declared catalog query. region is required; after_id is an exclusive integer cursor, default 0. Integer and DECIMAL values are returned as strings.",
+        "tags": ["duckdb", "dataset", "example"],
+        "payment": {"scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60},
+        "queryParameters": [
+          {"name": "region", "type": "string", "required": true, "description": "Exact product region.", "example": "north"},
+          {"name": "after_id", "type": "string", "required": false, "description": "Exclusive decimal integer ID cursor. Default 0.", "example": "0"}
+        ],
+        "outputExample": {"schema": "stellar-forge.duckdb-result.v1", "query": "catalog", "columns": ["id", "title", "region", "price"], "rows": [{"id": "1", "title": "Example sensor", "region": "north", "price": "499.000000"}], "rowCount": 1, "truncated": false}
+      }
+    },
+    {
+      "id": "sales", "path": "/sales", "handler": "duckdbSales", "admit": "admitDuckdbSales",
+      "definition": {
+        "method": "GET", "serviceName": "Parquet regional sales API",
+        "description": "Aggregate an explicitly approved local Parquet file for one region. Count and DECIMAL sum preserve their string representation.",
+        "tags": ["parquet", "analytics", "example"],
+        "payment": {"scheme": "exact", "network": "stellar:testnet", "asset": "UNVERIFIED_DEMO_ASSET", "payTo": "UNVERIFIED_DEMO_RECIPIENT", "amount": "10000", "maxTimeoutSeconds": 60},
+        "queryParameters": [{"name": "region", "type": "string", "required": true, "description": "Exact sales region.", "example": "north"}],
+        "outputExample": {"schema": "stellar-forge.duckdb-result.v1", "query": "regionalSales", "columns": ["region", "events", "total"], "rows": [{"region": "north", "events": "2", "total": "599.010000"}], "rowCount": 1, "truncated": false}
+      }
+    }
+  ]
+}

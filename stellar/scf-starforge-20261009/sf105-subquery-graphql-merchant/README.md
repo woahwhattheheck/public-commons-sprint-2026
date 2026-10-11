@@ -14,6 +14,12 @@ The operator-approved JSON is in [examples/approved-queries.json](./examples/app
 
 ## Seller configuration, using the existing SF30 schema
 
+The [merchant onboarding workflow](./onboarding/README.md) now captures or imports
+the actual served schema, validates fixed operations and native variables, and
+generates the original seller configuration together with a private launchable
+package and the existing JavaScript/TypeScript buyer client. Use it to prepare
+the two files consumed by the launcher below.
+
 Supply the merchant's original **seller-service.v1** JSON externally. The standard fields are documented in [original SF30 upstream example](../sf30-seller-sdk/examples/upstream-service.json) and [original seller README](../sf30-seller-sdk/README.md). Use **two named fixed JSON POST routes** with the following exact one-to-one bindings:
 
 | Seller route field | Indexed payments | Indexed credits |

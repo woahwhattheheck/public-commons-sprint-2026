@@ -10,8 +10,8 @@ import re
 import shutil
 import tempfile
 
-from .errors import NativeError, StateError
-from .result import BuyerResult
+from .errors import DeliveryError, NativeError, StateError
+from .result import BuyerResult, FileDelivery
 from .runtime import Runtime
 from .storage import digest, dump, lock, parse, private_directory, read, sync_directory, write
 
@@ -41,6 +41,10 @@ class Review:
     config_sha256: str
     body_sha256: str
     native: dict
+    workspace_directory: str | None = None
+    handoff_sha256: str | None = None
+    file_promise: dict | None = None
+    operation_ticket_sha256: str | None = None
 
 
 class Buyer:
@@ -51,7 +55,7 @@ class Buyer:
     def operation(self, intent_id: str):
         return Operation(self, intent(intent_id))
 
-    def _new(self, intent_id: str):
+    def _new(self, intent_id: str, *, workspace=None, handoff_sha256=None):
         op = self.operation(intent_id)
         try:
             op.directory.mkdir(mode=0o700)
@@ -60,8 +64,11 @@ class Buyer:
         sync_directory(self.state_dir)
         try:
             dump(op.directory / "operation.json", {"schema": SCHEMA, "intentId": intent_id,
-                 "createdAt": now(), "runtimeCheckout": str(self.runtime.checkout)}, exclusive=True)
-            private_directory(op.directory / "evidence")
+                 "createdAt": now(), "runtimeCheckout": str(self.runtime.checkout),
+                 **({"nativeWorkspace": workspace} if workspace else {}),
+                 **({"handoffSha256": handoff_sha256} if handoff_sha256 else {})}, exclusive=True)
+            if workspace is None:
+                private_directory(op.directory / "evidence")
         except BaseException:
             shutil.rmtree(op.directory)
             raise
@@ -84,6 +91,41 @@ class Buyer:
         op = self._new(intent(config.get("operation", {}).get("intentId")))
         with op._initializing():
             op._store_config(config, body=body)
+        return op
+
+    def _workspace(self, directory, intent_id=None):
+        path = private_directory(Path(directory), create=False)
+        native = self.runtime.checked(["workspace-read", "--dir", path],
+            mode="ORIGINAL_PYTHON_WORKSPACE", target="application")
+        config = native["configuration"]
+        if intent_id is not None:
+            config["operation"]["intentId"] = intent(intent_id)
+        return native["directory"], config
+
+    def from_workspace(self, directory, *, intent_id=None, body: bytes | None = None):
+        """Snapshot the original validated workspace; its keys stay in Node."""
+        workspace, config = self._workspace(directory, intent_id)
+        op = self._new(intent(config["operation"]["intentId"]), workspace=workspace)
+        with op._initializing():
+            op._store_config(config, body=body)
+        return op
+
+    def from_paid_file(self, handoff_file, *, workspace, intent_id=None):
+        """Prepare the exact original SF101 order against an existing workspace."""
+        directory, config = self._workspace(workspace, intent_id)
+        raw = read(Path(handoff_file).expanduser().absolute(), 131072)
+        op = self._new(intent(config["operation"]["intentId"]),
+                       workspace=directory, handoff_sha256=digest(raw))
+        with op._initializing():
+            write(op.directory / "file-handoff.json", raw, exclusive=True)
+            with tempfile.TemporaryDirectory(prefix=".prepare-", dir=op.directory) as temporary:
+                base = Path(temporary) / "workspace-source.json"
+                prepared = Path(temporary) / "prepared-file.json"
+                dump(base, config, exclusive=True)
+                self.runtime.checked(["prepare-file", "--config", base,
+                    "--handoff", op.directory / "file-handoff.json", "--out", prepared],
+                    mode="ORIGINAL_PYTHON_PAID_FILE_PREPARED", target="application")
+                op._store_config(file_json(prepared))
         return op
 
     def prepare(self, discovery_file, *, row: int, accept: int, intent_id: str,
@@ -138,6 +180,28 @@ class Operation:
         meta = file_json(self.directory / "operation.json")
         if meta.get("schema") != SCHEMA or meta.get("intentId") != self.intent_id:
             raise StateError("OPERATION_ID_MISMATCH", operation=self)
+        return meta
+
+    def _context(self):
+        meta = self._check()
+        workspace = meta.get("nativeWorkspace")
+        if workspace is not None and (not isinstance(workspace, str) or
+                not Path(workspace).is_absolute()):
+            raise StateError("ORIGINAL_WORKSPACE_PATH_INVALID", operation=self)
+        handoff_sha = meta.get("handoffSha256")
+        handoff = None
+        if handoff_sha is not None:
+            raw = read(self.directory / "file-handoff.json", 131072)
+            if not isinstance(handoff_sha, str) or digest(raw) != handoff_sha:
+                raise StateError("PAID_FILE_HANDOFF_CHANGED", operation=self)
+            handoff = parse(raw)
+            if not isinstance(handoff, dict):
+                raise StateError("PAID_FILE_HANDOFF_INVALID", operation=self)
+            operation = file_json(self.config_path).get("operation", {})
+            if (operation.get("orderReference") != handoff.get("orderReference") or
+                    operation.get("url") != handoff.get("purchaseUrl") or operation.get("method") != "GET"):
+                raise StateError("PAID_FILE_OPERATION_CHANGED", operation=self)
+        return workspace, handoff_sha, handoff
 
     def _unattempted(self):
         self._check()
@@ -163,7 +227,10 @@ class Operation:
                 if read(path, 1_048_576) != body:
                     raise StateError("REQUEST_BODY_CHANGED") from None
             request["bodyFile"] = str(path)
-        config["evidenceDir"] = str(self.directory / "evidence")
+        # Original workspace binds this directory to its ledger/operator. Keep
+        # that native value; independent configurations retain the old behavior.
+        if self._check().get("nativeWorkspace") is None:
+            config["evidenceDir"] = str(self.directory / "evidence")
         config["captureBody"] = False
         config.setdefault("responseFile", {"destination": str(self.directory / "response.bin"),
                                            "maxBytes": 67_108_864, "timeoutMs": 30000})
@@ -210,13 +277,20 @@ class Operation:
         self._check()
         with lock(self.directory):
             config_sha, body_sha = self._fingerprints()
+            workspace, handoff_sha, handoff = self._context()
             result = self.buyer.runtime.checked(["--review", "--config", self.config_path],
                                                 mode="OFFLINE_REVIEW")
             if result.get("intentId") != self.intent_id or result.get("bodySha256") != body_sha:
                 raise StateError("NATIVE_REVIEW_MISMATCH")
-            review = Review(self.intent_id, config_sha, body_sha, result)
+            promise = None if handoff is None else {
+                "orderReference": handoff["orderReference"], "purchaseUrl": handoff["purchaseUrl"],
+                "deliveryUrl": handoff["deliveryUrl"], "file": handoff["file"]}
+            ticket_sha = (result.get("operationTicket") or {}).get("sha256")
+            review = Review(self.intent_id, config_sha, body_sha, result, workspace, handoff_sha, promise, ticket_sha)
             dump(self.directory / "review.json", {"intentId": review.intent_id,
-                "configSha256": config_sha, "bodySha256": body_sha, "native": result, "reviewedAt": now()})
+                "configSha256": config_sha, "bodySha256": body_sha, "native": result, "reviewedAt": now(),
+                "nativeWorkspace": workspace, "handoffSha256": handoff_sha, "filePromise": promise,
+                "operationTicketSha256": ticket_sha})
             return review
 
     def execute(self, *, review: Review) -> BuyerResult:
@@ -224,13 +298,31 @@ class Operation:
         with lock(self.directory):
             self._unattempted()
             fingerprints = self._fingerprints()
+            workspace, handoff_sha, _ = self._context()
             if (review.intent_id != self.intent_id or fingerprints !=
-                    (review.config_sha256, review.body_sha256)):
+                    (review.config_sha256, review.body_sha256) or
+                    (workspace, handoff_sha) != (review.workspace_directory, review.handoff_sha256)):
                 raise StateError("REVIEW_CHANGED_REVIEW_AGAIN", operation=self)
             config = file_json(self.config_path)
             for field in ("operator", "signerModule", "evidenceDir"):
                 if field not in config:
                     raise StateError("ORIGINAL_OPERATOR_CONFIGURATION_REQUIRED", operation=self)
+            native_args = ["--execute", "--config", self.config_path]
+            target = "buyer"
+            if workspace is not None or review.operation_ticket_sha256 is not None:
+                # Original prerequisites and exact binding run before the Python
+                # permanent attempt, just as they do in the native inbox.
+                try:
+                    setup = ["workspace-check", "--dir", workspace] if workspace else ["config-check"]
+                    ticket_args = ["--ticket-sha", review.operation_ticket_sha256 or "none"]
+                    self.buyer.runtime.checked([*setup, "--config", self.config_path, *ticket_args],
+                        mode="ORIGINAL_PYTHON_WORKSPACE_READY" if workspace else "ORIGINAL_PYTHON_CONFIG_READY",
+                        target="application")
+                except NativeError as error:
+                    raise NativeError(error.code, returncode=error.returncode, operation=self) from None
+                native_args = (["execute-workspace", "--dir", workspace] if workspace else ["execute-config"])
+                native_args += ["--config", self.config_path, *ticket_args]
+                target = "application"
             attempt = {"schema": SCHEMA, "intentId": self.intent_id, "state": "STARTING",
                        "createdAt": now(), "configSha256": fingerprints[0],
                        "bodySha256": fingerprints[1], "retry": "NO_AUTOMATIC_RETRY"}
@@ -241,8 +333,7 @@ class Operation:
                 dump(self.directory / "attempt.json", attempt)
 
             try:
-                run = self.buyer.runtime.run(["--execute", "--config", self.config_path],
-                                             logs=self.directory, started=started)
+                run = self.buyer.runtime.run(native_args, logs=self.directory, started=started, target=target)
             except BaseException:
                 attempt.update(state="INTERRUPTED_OR_START_FAILED", endedAt=now())
                 dump(self.directory / "attempt.json", attempt)
@@ -295,9 +386,79 @@ class Operation:
                   "runtimeError": "PROCESS_EXIT_NOT_RECORDED", "native": native, "recovered": True}
         return self._result(record)
 
-    def inspect(self) -> dict:
+    def _file_result(self, record, handoff_sha, handoff):
+        native = record.get("native") or {}
+        saved = native.get("file") or {}
+        if (record.get("intentId") != self.intent_id or record.get("handoffSha256") != handoff_sha or
+                native.get("mode") != "ORIGINAL_PYTHON_FILE_DELIVERY" or
+                native.get("status") not in ("APPROVED_FILE_SAVED", "EXISTING_LOCAL_BYTES_MATCH") or
+                native.get("orderReference") != handoff["orderReference"] or
+                saved.get("path") != record.get("destination") or
+                saved.get("sha256") != handoff["file"]["sha256"] or
+                saved.get("bytes") != handoff["file"]["bytes"]):
+            raise StateError("PAID_FILE_RESULT_MISMATCH", operation=self)
+        return FileDelivery(record, Path(saved["path"]), handoff["file"]["bytes"])
+
+    def retrieve_file(self, *, destination=None, claim_env="SF101_CLAIM_TOKEN") -> FileDelivery:
+        """One explicit original entitlement GET; never starts a payment."""
         self._check()
+        if not isinstance(claim_env, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{1,64}", claim_env):
+            raise StateError("CLAIM_ENV_NAME_INVALID", operation=self)
+        with lock(self.directory):
+            _, handoff_sha, handoff = self._context()
+            if handoff is None:
+                raise StateError("PAID_FILE_HANDOFF_REQUIRED", operation=self)
+            path = self.directory / "file-delivery.json"
+            old = file_json(path) if path.exists() else None
+            target = Path(destination).expanduser().absolute() if destination is not None else (
+                Path(old["destination"]) if old else self.directory / "product.bin")
+            if old and old.get("destination") != str(target):
+                raise StateError("FILE_DESTINATION_ALREADY_SELECTED_USE_SAVE_AS", operation=self)
+            # Node reads the named private value only for an actual HTTP GET.
+            # Matching original local bytes recover without any credential.
+            run = self.buyer.runtime.run(["retrieve-file", "--handoff", self.directory / "file-handoff.json",
+                "--out", target, "--claim-env", claim_env], target="application")
+            record = {"schema": "stellar-forge.python-file-delivery.v1", "intentId": self.intent_id,
+                "handoffSha256": handoff_sha, "destination": str(target), "recordedAt": now(),
+                "returncode": run.returncode, "runtimeError": run.error, "native": run.output}
+            dump(path, record)
+            if (run.returncode or run.error or not isinstance(run.output, dict) or
+                    run.output.get("status") not in ("APPROVED_FILE_SAVED", "EXISTING_LOCAL_BYTES_MATCH")):
+                code = run.error or (run.output or {}).get("error") or "ORIGINAL_FILE_DELIVERY_FAILED"
+                if not isinstance(code, str) or not re.fullmatch(r"[A-Z0-9_]{1,120}", code):
+                    code = "ORIGINAL_FILE_DELIVERY_FAILED"
+                raise DeliveryError(code, operation=self)
+            return self._file_result(record, handoff_sha, handoff)
+
+    def recover_file(self) -> FileDelivery | None:
+        """Consume a retained product locally, without starting Node or HTTP."""
+        self._check()
+        with lock(self.directory):
+            _, handoff_sha, handoff = self._context()
+            path = self.directory / "file-delivery.json"
+            if handoff is None or not path.exists():
+                return None
+            record = file_json(path)
+            if ((record.get("native") or {}).get("status") not in
+                    ("APPROVED_FILE_SAVED", "EXISTING_LOCAL_BYTES_MATCH")):
+                return None
+            return self._file_result(record, handoff_sha, handoff)
+
+    def inspect(self) -> dict:
+        meta = self._check()
         record = {"intentId": self.intent_id, "directory": str(self.directory), "state": "PREPARED"}
+        if meta.get("nativeWorkspace"):
+            record["nativeWorkspace"] = meta["nativeWorkspace"]
+        if meta.get("handoffSha256"):
+            record["handoffSha256"] = meta["handoffSha256"]
+            _, _, handoff = self._context()
+            record["filePromise"] = {"orderReference": handoff["orderReference"], "file": handoff["file"]}
+            delivery = self.directory / "file-delivery.json"
+            if delivery.exists():
+                file_record = file_json(delivery)
+                record["fileDelivery"] = {"destination": file_record["destination"],
+                    "returncode": file_record.get("returncode"), "runtimeError": file_record.get("runtimeError"),
+                    "native": file_record.get("native")}
         attempt = self.directory / "attempt.json"
         if attempt.exists():
             record.update(file_json(attempt))

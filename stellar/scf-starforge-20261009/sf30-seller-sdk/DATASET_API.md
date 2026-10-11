@@ -78,6 +78,63 @@ The command accepts a dataset path only at startup, never through HTTP input.
 Close the process with Ctrl+C when finished. Keep exports private as appropriate
 for the columns you chose to expose.
 
+## Attach the workspace to live dataset versions
+
+Start the existing [versioned dataset seller](dataset-refresh/README.md), then
+open the same workspace against its private state directory:
+
+~~~sh
+node dataset-workspace.mjs --state /srv/dataset-state --port 8430
+~~~
+
+This attaches to the running service through its existing private control client;
+it does not reopen the store or acquire a second writer lock. Choose exactly one
+of `--dataset FILE` and `--state DIR`. The file mode above keeps its original
+immutable snapshot behavior.
+
+The live workspace shows the current native schema, current snapshot, durable
+revision, retained generations, expiry, row counts, active readers/loading, and
+parsed-cache occupancy. Select **Current at request admission** to omit the
+snapshot parameter, or select a stored snapshot to preview that exact version.
+Cold generations use the service's same bounded cache. Previewing a page does
+not extend retention, and the original cursor is copied unchanged for subsequent
+pages. An expired generation cannot start a new preview.
+
+To roll back, select a retained generation and choose **Make selected snapshot
+current**. The request carries the current snapshot and revision actually shown
+in the workspace. An intervening update is rejected; the screen refreshes live
+state and lets the operator decide again. It never silently retries a stale
+activation. A still-stored expired generation can be explicitly reactivated
+before collection removes it. Closing the workspace leaves the seller running.
+
+The public resource comes from the running seller's actual compiled routes.
+With multiple dataset routes, the first is selected by default; `--resource` can
+select another exact advertised HTTPS resource. An explicitly selected first
+page receives a public request example only when that route was configured with
+`--snapshot-selection`. Otherwise its exact query and page remain available as
+a private preview with an explanation, without an unsupported public URL.
+Routes with the original full 32 query parameters remain usable in this mode.
+
+Optionally show the existing live catalog operator on the same merchant screen:
+
+~~~sh
+node dataset-workspace.mjs --state /srv/dataset-state \
+  --catalog /srv/starforge/catalog
+~~~
+
+This uses the original SF60 private status client to show journal head, committed
+operations, active resource count and discovery origin. It is catalog-wide
+status, not a claim that a particular dataset is listed. The workspace does not
+edit that catalog, fetch its discovery URL, or change seller admission policy.
+Catalog unavailability does not disable dataset preview or version controls.
+
+All workspace data and activation APIs retain the private browser session
+capability and Host/Origin checks. The underlying schema and preview reads use
+the same private dataset control transport as version management. Neither
+merchant public routes nor browser callers receive its control token or source
+paths. Paths, including the catalog directory, are accepted only at process
+startup. Do not include the workspace in a public reverse proxy.
+
 ## Publish through the original seller
 
 Prepare your existing **public payment terms** JSON: `scheme`, `network`, `asset`,

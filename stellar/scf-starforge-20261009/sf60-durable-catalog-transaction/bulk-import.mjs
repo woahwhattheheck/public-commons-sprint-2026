@@ -74,7 +74,7 @@ function terms(snapshot) {
   return `<strong>${esc(snapshot.state)} · sequence ${snapshot.sequence}</strong><div>${esc(snapshot.resourceURL)}</div>`+
     snapshot.accepts.map(a=>`<div class="term">${esc(a.amount)} atomic · ${esc(a.asset)} · ${esc(a.network)}<br>${esc(a.scheme)} → ${esc(a.payTo)}</div>`).join('');
 }
-export function renderReview(plan) {
+export function renderReview(plan, {notice = 'The operator must already have authenticated each seller and its source. This import does not verify signatures or settle payments. Atomic amounts below are advertised terms, not revenue.'} = {}) {
   const r=plan.review;
   return `<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'">
@@ -89,7 +89,7 @@ article{border-top:1px solid #ddd;padding:18px 0}.pair{display:grid;grid-templat
 <header><small>STELLAR FORGE / CATALOG OPERATIONS</small><h1>Review catalog changes</h1><p>Prepared locally. The journal has not been changed by this review. Apply using the same input, operator authorities and reviewed catalog head.</p>
 <div class="stats"><div><b>${r.requested}</b>requested</div><div><b>${r.applied}</b>changes</div><div><b>${r.replayed}</b>exact replays</div><div><b>${r.activeResources}</b>resulting active resources</div></div></header>
 <section><h2>Source and catalog binding</h2><p>Base head<br><code>${esc(r.baseHead)}</code></p><p>Result head<br><code>${esc(r.nextHead)}</code></p><details><summary>Input fingerprints and plan</summary><p>Input <code>${esc(plan.inputSha256)}</code></p><p>Authorities <code>${esc(plan.authoritiesSha256)}</code></p><p>Plan <code>${esc(r.planId)}</code></p></details>
-<p class="muted">The operator must already have authenticated each seller and its source. This import does not verify signatures or settle payments. Atomic amounts below are advertised terms, not revenue.</p></section>
+<p class="muted">${esc(notice)}</p></section>
 <section><h2>Changes in transaction order</h2>${r.changes.map(c=>`<article><strong>${c.index+1}. ${esc(c.kind)} / ${esc(c.decision)}</strong><p class="key">${esc(c.catalogKey)}</p><div class="pair"><div><small>BEFORE</small>${terms(c.before)}</div><div><small>AFTER</small>${terms(c.after)}</div></div></article>`).join('')}</section></html>`;
 }
 async function createFile(path,data) {
