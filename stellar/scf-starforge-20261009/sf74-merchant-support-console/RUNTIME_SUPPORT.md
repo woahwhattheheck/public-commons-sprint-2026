@@ -1,6 +1,6 @@
 # Runtime support in the merchant case desk
 
-The existing SF74 case now carries a merchant's original runtime packet, its repair follow-up, native delivery reconciliation and operator ownership. The original SF93 collector and SF97 reconciler remain responsible for their source products. SF74 imports their files and connects them to its saved case lifecycle.
+The existing SF74 case carries a merchant's original runtime packet or retained usage period, its repair follow-up, native delivery reconciliation and operator ownership. The original SF30 history producer, SF93 collector and SF97 analyzer/reconciler remain responsible for their source products. SF74 imports their exact files and connects them to its saved case lifecycle.
 
 ## Collect from the existing seller
 
@@ -48,6 +48,41 @@ The integration calls the original `sf97-merchant-revenue-ops/native-reconcile.m
 
 A same-session SF97 report can have a different capture time. Its own window is displayed; an exact source-snapshot match is distinguished from a separate snapshot in that session. HTTP counters are never assigned to a payment option, callback acceptance is not treated as customer fulfillment, and the case workflow status is not changed by a diagnostic result.
 
+## Support a merchant across restarts
+
+Use **Retained period across restarts** when a case needs the original saved usage history rather than one process snapshot. Obtain `history.json` from the existing operations console or its `/history.json?from=YYYY-MM-DD&to=YYYY-MM-DD` endpoint. Its optional `routeId` selects one original route. Keep the export unchanged and create the matching original SF97 report:
+
+```sh
+node stellar/scf-starforge-20261009/sf97-merchant-revenue-ops/analyze.mjs \
+  --config /private/merchant/seller.json \
+  --terms /private/merchant/pricing.json \
+  --history /private/captures/history.json \
+  --output /private/reviews/NEW-support-period
+```
+
+The original [SF97 period guide](../sf97-merchant-revenue-ops/README.md#review-a-retained-period-across-seller-restarts) covers history retention, live selection and merchant pricing. A saved pricing-workspace version also provides its original `history.json` and `report.json` downloads. The case desk does not rebuild a pricing report from counters or create a replacement support packet.
+
+1. Set the case's actual method and resource. In **Runtime**, choose **Retained period across restarts** and the baseline or follow-up position.
+2. Select `history.json` and its matching `report.json` together. Optionally choose both copied original SF98 journals. Journals are a pair; omitting them means native delivery was not supplied, while supplying two empty files represents an actual empty source pair.
+3. **Inspect selected files** checks the exact history SHA-256 in the SF97 report, normalizes both original history representations, and calls the existing native reconciler for its report, route and complete payment-option checks. A report created from a different export is rejected even when the date labels or totals look alike. Original seller/terms hashes remain attached; the case mapping itself does not authenticate a public merchant.
+4. Select the exact retained method and path. Current configured routes, older path/method variants and removed routes remain distinct. A current route with no saved observations is explicitly labeled; its absence is not measured zero traffic. Changing a path or case mapping never silently moves observations to a current quote.
+5. Attach and review. The case shows original UTC days, saved session states and intervals, selected-route membership, all retained variants for the route, original payment-option identities, native event decisions and excluded-event reasons. Per-day starts and completions may belong to different requests. P95 is the original aggregate histogram bound.
+6. Save the case, reopen it or an earlier saved version, and prepare the same complete support handoff. The original history, report and optional journal bytes remain downloadable and accompany the existing notes, owner and follow-up. You can remove a draft attachment while keeping earlier saved versions.
+
+The original history validator checks retained day/route/session structure and aggregate conservation; SF74 does not create another history writer. Modern history exports carry exact per-session UTC day/route membership. Earlier original exports remain supported with their coarser session/day coverage. Interrupted checkpoints end at their saved capture times; quiet gaps between sessions remain gaps. An active session's retained counters also stop at its captured checkpoint. Reopening a case reads its saved files without polling a merchant.
+
+### Compare a repair over time
+
+Two period attachments for the same case inputs and exact method/path show their independent observed counts and response shares. When the first selected UTC period ends before the second starts and both retain the selected route, the view also shows changes in percentage points for 2xx, 402, 5xx and disconnected shares. HTTP shares use actual response counts; disconnect share uses completed outcomes. Empty denominators remain unknown. Differences do not establish that a repair caused a change in traffic.
+
+Overlapping or reversed selections display both original periods without subtracting totals or claiming a rate change. They may include the same requests or native events. Different method/path variants, case mappings, or a process packet paired with a period retain separate views. The existing same-session SF93 before/after counter subtraction is unchanged.
+
+For a current selected route, native assignment uses the original SF97 complete option and recipient identity together with actual saved session/day/route coverage. The existing reconciler leaves events in session gaps, outside the selected dates/route, or without saved route coverage out of its option totals. Older or ambiguous route variants remain unassigned. A case mapped to a historical path can inspect those event decisions; current saved payment-option outcomes are labeled as current reference data. Atomic quantities remain separate for every native option. No report total is summed across the two attachments.
+
+### Original incident handoff
+
+The existing SF93 incident operator can continue importing its unchanged four-file packets through `inspectRuntimeFiles` and `exportRuntimeHandoff`. Its incident ID, registered merchant ID, acknowledgment, status and timestamps belong in the original handoff metadata notes and next action. This case can then retain the incident packet beside a separately selected period or follow-up capture. Incident collection, acknowledgment, notifications and recovery remain with the original SF93 service; the case does not operate a second watcher.
+
 ## Complete private handoff
 
 Choose **Prepare support handoff** from the current draft. It produces two explicit downloads:
@@ -65,11 +100,13 @@ All runtime endpoints require the same literal-loopback Host and exact local Ori
 
 | Operation | POST endpoint | Body |
 | --- | --- | --- |
-| Inspect packet | `/api/runtime/inspect` | `files` mapping original filenames to canonical base64; optional `inputs` and selected `routeId` to attach |
+| Inspect packet or period | `/api/runtime/inspect` | `files` mapping original filenames to canonical base64; optional `inputs` and selected `routeId` to attach; a period also requires the exact selected `path` |
 | Review captures | `/api/runtime/review` | `supportText`, current case `inputs` |
 | Prepare transfer | `/api/runtime/export` | `workspaceText`, `supportText`, `metadata` |
 | Open transfer | `/api/runtime/import` | `handoffText` |
 
 `runtime-support.mjs` exports the file intake, codec, comparison and handoff functions for existing callers. `runtime-desk.mjs` mounts this stage inside the existing page. The original private case store accepts optional `supportText`; omission preserves the prior attachment for older clients, and explicit `null` removes it from the new version. Workspace and runtime objects publish completely before the existing atomic case-head update.
 
-Each original file is limited to 2,000,000 bytes, a two-capture runtime case to 38,000,000 bytes, and a complete portable handoff to 60,000,000 bytes. No oversized source is silently truncated. For longer native journals, retain a coherent source export within these limits or use the original filesystem reconciliation tool directly.
+The original `stellar-forge.merchant-runtime-case.v1` and `stellar-forge.merchant-support-handoff.v1` schemas remain. A period is identified by its original `history.json`; it contains that file, `report.json`, and optionally both journals. A session packet retains its original four required files and optional native trio. These input forms cannot be mixed inside one capture. Period mappings add `scope.path`; existing session mappings and saved case summaries remain compatible. Period case summaries add `periodCaptures` without duplicating daily counters in the case list.
+
+Session packet files retain the 2,000,000-byte limit. A period capture accepts at most 64 MiB of **combined original source bytes**, including its history, report and journals; no single period file can exceed that total. The two-capture runtime file is capped at 192 MiB after base64/JSON encoding, and the complete portable handoff at 224 MiB. Oversized sources fail before attachment or saving. Select fewer actual retained days or one route through the original export, and generate its matching report, to reduce a period. Longer original journals can be reconciled through the existing filesystem CLI. No input is truncated or rewritten to fit.
