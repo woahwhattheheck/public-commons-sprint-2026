@@ -114,6 +114,7 @@ or automatically retry a request.
 | `starforge pilot` | SF96 original SF82 seller pilot, dashboard and SF93 support composition |
 | `starforge buyer` | SF88 discovery, saved-source preparation, offline review and approved execution |
 | `starforge capture` | SF85 original single HTTP 402 capture |
+| `starforge import-headers` | SF85 original operator HTTP header-file importer |
 | `starforge handoff` | SF96 captured challenge to original buyer review files |
 | `starforge support` | SF93 private seller and operations support export |
 
@@ -123,6 +124,13 @@ For example, review an existing original buyer configuration without signing:
 npx --no-install starforge buyer --review --config /absolute/private/operator.json
 npx --no-install starforge source
 ```
+
+For an original SF85 imported capture, `starforge handoff` also requires
+`--headers-file /absolute/private/original.headers`. It retains that file and
+verifies the same response through the original SF85 parser. The resulting
+bundle goes directly to `starforge buyer --review`; import time remains separate
+from the unknown HTTP capture time. See the original
+[SF96 operator-header journey](../sf96-merchant-challenge-handoff/README.md).
 
 `source` prints the exact source commit, original Git object and SHA-256 for each
 packaged file, component inventory, archive version and optional dependency
@@ -160,11 +168,19 @@ node stellar/scf-starforge-20261009/distribution/build.mjs \
 This packaging command needs Node, npm and Git. It reads only the chosen commit
 through Git, independently of modified or untracked worktree files. It copies
 explicit product components and their required shared schema/Python modules,
-checks declared entrypoints and literal relative ESM dependencies, and runs
+checks declared entrypoints and parsed static relative ESM dependencies, and runs
 `npm pack --ignore-scripts`. The source commit determines the package version.
 The new output directory contains the archive, its SHA-256/SRI receipt, and the
 inspectable staged package. The builder never runs a suite, contacts a merchant,
 publishes to npm, changes the source checkout, or enables hosted CI.
+
+Static dependency inspection uses Node's built-in V8 module parser in a child
+process with `--experimental-vm-modules`. It never links or evaluates the selected
+source. This distinguishes real module dependencies from client-code examples
+rendered by the merchant portal. The API is available in the required
+[Node 22.16 runtime](https://nodejs.org/download/release/v22.16.0/docs/api/vm.html#moduledependencyspecifiers).
+Known dynamic command families remain explicitly included by the distribution
+specification; caller-supplied application and signer modules remain local inputs.
 
 Concurrent source work is preserved: choose the merged commit you intend to
 distribute. A later native component release becomes a new archive and source

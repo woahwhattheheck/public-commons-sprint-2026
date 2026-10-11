@@ -55,16 +55,34 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       throw new RangeError('Distribution source size exceeded');
     sources.set(item.path, bytes);
   }
-  // Check literal ESM imports in the selected source. Dynamic application imports
-  // remain operator inputs; known dynamic module families are explicit components.
-  for (const [path, bytes] of sources) {
-    if (!/\.(?:mjs|js|cjs)$/.test(path)) continue;
-    const source = bytes.toString('utf8');
-    for (const match of source.matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"](\.[^'"]+)['"]/g)) {
-      const target = posix.normalize(posix.join(posix.dirname(path), match[1]));
-      if (!names.has(target)) throw new TypeError('Unpackaged relative module: ' + path + ' -> ' + target);
+  // V8 reads actual static ESM dependencies, not import examples embedded in
+  // the merchant's generated SDK/HTML. Modules are neither linked nor evaluated.
+  // Dynamic application imports remain operator inputs; known dynamic module
+  // families are explicit components, including every native command entrypoint.
+  const modules = [...sources].filter(([path]) => /\.(?:mjs|js)$/.test(path))
+    .map(([path, bytes]) => [path, bytes.toString('utf8')]);
+  const inventoryProgram = `
+    import { SourceTextModule } from 'node:vm';
+    import { readFileSync } from 'node:fs';
+    const modules = JSON.parse(readFileSync(0, 'utf8'));
+    const inventory = modules.map(([path, source]) => {
+      try { return [path, new SourceTextModule(source, {identifier:path}).dependencySpecifiers]; }
+      catch (error) { throw new Error(path + ': ' + error.message); }
+    });
+    process.stdout.write(JSON.stringify(inventory));
+  `;
+  const imports = JSON.parse(execFileSync(process.execPath,
+    ['--experimental-vm-modules', '--input-type=module', '-e', inventoryProgram],
+    { input:JSON.stringify(modules), encoding:'utf8', maxBuffer:32 * 1024 * 1024,
+      stdio:['pipe','pipe','pipe'] }));
+  const missingModules = [];
+  for (const [path, specifiers] of imports) {
+    for (const specifier of specifiers.filter(value => value.startsWith('.'))) {
+      const target = posix.normalize(posix.join(posix.dirname(path), specifier));
+      if (!names.has(target)) missingModules.push(path + ' -> ' + target);
     }
   }
+  if (missingModules.length) throw new TypeError('Unpackaged relative modules:\n' + missingModules.join('\n'));
   const version = spec.version + '-source.g' + commit.slice(0, 12);
   const metadata = {
     name: spec.name, version, private: true, type: 'module', license: 'MIT',
