@@ -22,6 +22,9 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  sftp                                      Inspect, capture and resume pinned private report files
+  sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
+  sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
   provider-operator                          Original external-provider capture, case and terminal workflow
   provider-workspace                         Retained provider desk, host profiles and complete case recovery
   runtime-profile                            Select exact dependencies for an original release
