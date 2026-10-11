@@ -41,6 +41,15 @@ const session = await startSellerService({ config, handlers, port: 0 });
 try {
   const reply = await ask(session, '/api/items/caf%C3%A9?q=one');
   assert.equal(reply.status, 402);
+  // Muse native PR710 acceptance discovered this original HTTP 404 regression:
+  // literals must use native case-insensitive matching, with original URI and
+  // decoded parameter preserved. Do not unlock an unrelated concrete route.
+  const mixedCase = await ask(session, '/API/ITEMS/CaF%C3%A9?q=one');
+  assert.equal(mixedCase.status, 402, 'uppercase literal segments must reach original route');
+  const mixedChallenge = JSON.parse(Buffer.from(mixedCase.headers['payment-required'], 'base64'));
+  assert.equal(mixedChallenge.resource.url, 'https://seller.example/API/ITEMS/CaF%C3%A9?q=one');
+  assert.deepEqual(mixedChallenge.extensions.bazaar.info.input.pathParams, { id: 'CaFé' });
+  assert.deepEqual(mixedChallenge.accepts, [payment]);
   const challenge = JSON.parse(Buffer.from(reply.headers['payment-required'], 'base64'));
   assert.equal(challenge.resource.url, 'https://seller.example/api/items/caf%C3%A9?q=one');
   assert.deepEqual(challenge.extensions.bazaar.info.input.pathParams, { id: 'café' });
