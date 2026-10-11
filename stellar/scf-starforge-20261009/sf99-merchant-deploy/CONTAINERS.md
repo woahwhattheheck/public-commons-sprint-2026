@@ -423,6 +423,31 @@ merchant's current state. A state restoration uses the original authenticated
 recovery and journaled cutover into a new destination. Carry the selected
 generation and operation identity through the documented flow.
 
+## Prepare and transfer the selected runtime image
+
+Use the [runtime image workflow](container-image/README.md) to prepare an image
+from the original source archive and the distribution's selected runtime
+profile. The same merchant entrypoint exposes the full workflow:
+
+```sh
+node cli.mjs container image --help
+```
+
+After installation, use `merchant-host container image` with the same image
+commands: `inspect`, `prepare`, `lock`, `check`, `build`, `status`, `export`, and
+`import`. The workflow retains the original source identity, exact selected
+package lock, pinned base image, Linux platform, runtime paths, and numeric
+merchant identity through image preparation and transfer. `build` records the
+local immutable image ID for this guide's container plan; `export` and `import`
+carry that image between equipped hosts without a registry.
+
+Read the resulting receipt's `sourceModes` before selecting the container plan.
+Choose `sourceMode: "bind"` for an original release that predates the container
+entry modules, preserving the installed source and its sibling dependencies at
+their original paths. A subsequent complete source release containing those
+entry modules can use `sourceMode: "image"`. The runtime image guide specifies
+the exact plan fields, commands, native prerequisites, and recovery behavior.
+
 ## Reference commands and boundaries
 
 | Command | Scope |
