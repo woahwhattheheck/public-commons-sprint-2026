@@ -39,7 +39,7 @@ async function append(dir, name, row) {
     await handle.sync();
   } finally { await handle.close(); }
 }
-function receiptFromSuccess(settled) {
+function receiptFromSuccess(settled, payment) {
   const headers = settled?.headers;
   if (!headers || typeof headers !== 'object') return null;
   const match = Object.entries(headers).find(([k]) =>
@@ -54,21 +54,38 @@ function receiptFromSuccess(settled) {
   try { original = JSON.parse(bytes.toString('utf8')); }
   catch { return null; }
   if (!original || typeof original !== 'object' || Array.isArray(original)) return null;
+  // The native result and its receipt must describe the selected option. A
+  // second advertised network must never be journaled under the first network.
+  if (original.success !== true || original.network !== payment.network ||
+      (original.amount !== undefined && original.amount !== payment.amount)) return null;
   const transaction = typeof original.transaction === 'string' &&
     /^[0-9a-f]{64}$/i.test(original.transaction) ? original.transaction.toLowerCase() : null;
   return { receiptHash: hash(bytes), transactionHash: transaction && hash(transaction) };
 }
+function selectedPayment(route, requirement) {
+  if (!requirement || typeof requirement !== 'object' || Array.isArray(requirement) ||
+      !Array.isArray(route?.offer?.accepts)) return null;
+  // processHTTPRequest returns these exact verified requirements, and SF30
+  // passes them unchanged as processSettlement's second argument. The native
+  // scheme can enrich extra (for example areFeesSponsored), so bind the six
+  // configured payment fields rather than comparing an SDK-enriched object to
+  // an unevaluated offer. SF30 rejects duplicate network/asset/payee options.
+  const fields = ['scheme', 'network', 'asset', 'payTo', 'amount', 'maxTimeoutSeconds'];
+  const matches = route.offer.accepts.filter(option =>
+    fields.every(field => option?.[field] === requirement[field]));
+  return matches.length === 1 ? requirement : null;
+}
 export function nativeEvent(compiled, args, settled, at = date()) {
   if (settled?.success !== true) return null;
-  const receipt = receiptFromSuccess(settled);
-  if (!receipt) return null;
   const context = args[3]?.request;
   if (!context || !['GET', 'HEAD', 'POST'].includes(context.method) ||
       typeof context.path !== 'string') return null;
   const selected = selectServiceRoute(compiled.routes, context.path, context.method);
   const route = selected?.route;
-  if (!route || !route.offer?.accepts?.[0]) return null;
-  const payment = route.offer.accepts[0];
+  const payment = selectedPayment(route, args[1]);
+  if (!payment) return null;
+  const receipt = receiptFromSuccess(settled, payment);
+  if (!receipt) return null;
   const rawRef = context.adapter?.getHeader?.('x-sf98-order-id');
   const reference = typeof rawRef === 'string' && /^[A-Za-z0-9._:-]{1,80}$/.test(rawRef) ?
     rawRef : null;

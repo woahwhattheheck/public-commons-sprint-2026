@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fulfillment · Stellar Forge</title>
+<link rel="stylesheet" href="/style.css">
+<script type="module" src="/delivery-panel.mjs"></script>
+</head><body>
+<header><div><span class="eyebrow">STELLAR FORGE / MERCHANT OPERATIONS</span>
+<h1>Postsettlement fulfillment</h1>
+<p>Delivery queue from the merchant's original native SF98 outbox, not from HTTP response counts.</p>
+</div><span class="badge">Local · Read only</span></header>
+<main>
+<section class="toolbar"><p id="fulfillment-status" role="status">Reading native journal…</p>
+<div><a href="/">Seller traffic ↗</a><a href="/delivery.json" download>Delivery JSON ↗</a>
+<a href="/delivery.csv" download>Recent CSV ↗</a><a href="/delivery.metrics">Metrics ↗</a></div></section>
+<section class="cards" aria-label="Native payment and delivery outcomes">
+<article><h2>Native success events</h2><strong id="fulfillment-native">—</strong>
+<p>Journaled by original native success adapter</p></article>
+<article><h2>Webhook accepted</h2><strong id="fulfillment-sent">—</strong>
+<p>Receiver HTTP 2xx is not completed fulfillment</p></article>
+<article><h2>Pending</h2><strong id="fulfillment-pending">—</strong>
+<p>Includes retries awaiting operator drain</p></article>
+<article><h2>Exhausted</h2><strong id="fulfillment-exhausted">—</strong>
+<p>Human merchant action required</p></article></section>
+<section class="panel">
+<div class="section-heading"><div><h2>Original settlement delivery queue</h2>
+<p>Last 24 durable native journal records. Never a transaction explorer or payment confirmation.</p>
+</div></div>
+<p id="fulfillment-exceptions" role="status">No delivery actions are available from this interface.</p>
+<div class="table-wrap" tabindex="0"><table><caption class="sr-only">Native settlement delivery states</caption>
+<thead><tr><th scope="col">Event fingerprint</th><th scope="col">Route</th>
+<th scope="col">State</th><th scope="col">Attempts</th><th scope="col">Next retry</th></tr></thead>
+<tbody id="fulfillment-events"></tbody></table></div>
+<p class="table-hint">Use the private JSON export for a complete hashed event ID before named manual requeue.</p>
+</section>
+<section class="bottom"><article class="panel"><h2>How to interpret</h2>
+<p>Native success events are recorded only after the original SDK reports successful settlement with a supported receipt. The journal is not an independent ledger audit.</p>
+<p>Webhook accepted means the merchant receiver responded successfully; verify merchant fulfillment separately. Pending and exhausted records never send automatically here.</p></article>
+<article class="panel"><h2>Operating boundary</h2>
+<p>This page reads the same SF98 outbox instance supplied to the merchant's original seller. There is no signer, approval, retry, webhook sender or customer tracking.</p>
+<p>Use the original SF98 delivery CLI for an explicit, authorized drain or requeue. Local exports should remain private.</p></article></section>
+<footer><span>Stellar Forge · Seller operations</span><span>Loopback only · Native source · No wallet operations</span></footer>
+</main></body></html>

@@ -164,3 +164,81 @@ This extends the already merged operations application rather than introducing
 an alternative dashboard or changing its minute chart, CSV, route matcher,
 launcher, mobile sticky columns or payment handling. The existing acceptance
 exercise covers the extension as well; it requires no new test suite or CI.
+
+
+## Actual native merchant fulfillment view (SF98 integration)
+
+The existing loopback seller operations listener now also serves **GET
+/fulfillment**, a second page under the SAME local Host/Origin/CSP protections.
+Its source is the existing SF98 postsettlement private journal, not inferred
+HTTP status. A link is available on the original traffic dashboard.
+
+**Integrate with the original merchant seller, not a second payment process.**
+In the merchant's existing Node 22+ application, open the exact same SF98
+outbox instance used by the original native settlement wrapper:
+
+~~~js
+// Imports below resolve according to your original merchant entrypoint:
+const outbox = await openOutbox('/private/merchant/sf98-outbox');
+const nativeFactory = async compiled => {
+  const native = await createNativeSellerServer(compiled, {
+    facilitatorClient: yourExistingTrustedFacilitator
+  });
+  return instrumentNativeSettlement(native, {
+    compiled, outbox,
+    onWriteFailure: () => console.error('SF98_JOURNAL_WRITE_FAILED')
+  });
+};
+const seller = await startSellerService({
+  config: yourExistingMerchantConfig,
+  handlers: yourExistingHandlers,
+  nativeFactory,
+  port: 8423
+});
+const operations = await startSellerOperations(seller, {
+  port: 8424, deliveryOutbox: outbox
+});
+console.log(operations.url + '/fulfillment');
+~~~
+
+See the real named imports, owned merchant handlers and existing facilitator
+setup in the CURRENT sf98-merchant-delivery/README.md and SF30 README.
+The ordinary operations/launch.mjs requires no new parameters and has not
+been changed; it does not configure a native SF98 recorder by itself.
+
+**Read endpoints** (all under existing strictly loopback GET/HEAD controls):
+
+* /api/delivery: bounded recent 24 events and aggregate original native
+  success journal, webhook accepted, pending, due retry, delayed retry and
+  exhausted counts; unavailable without the actual outbox instance.
+* /delivery.json and /delivery.csv: operator-downloadable metadata exports.
+  Full event IDs are deterministic hashes intended for explicit named SF98
+  requeue. No receipt payload, wallet, private order reference, buyer body,
+  payment header or credential leaves the journal.
+* /delivery.metrics: private Prometheus-compatible counters/gauges.
+  Existing /metrics appends these only if an outbox is attached, otherwise
+  stays the original HTTP-only output. Journal read errors leave original
+  HTTP metrics available and expose a generic availability gauge.
+
+The **same original durable SF98 outbox.rows()** drives both the UI and export.
+A 7.5-second promise cache prevents browser refreshes and parallel Prometheus
+scrapes from repeatedly scanning potentially large private journal files.
+Only the most recent 24 events are passed to browser memory; aggregate counts
+cover all recorded journal entries. No new listener, wallet, signer, payment,
+automated drain, webhook request, or background delivery job is added.
+
+Interpretation: an SF98 event means the original native SDK reported a
+successful settlement with a supported receipt, not that this page
+independently verified Stellar. Webhook accepted means receiver HTTP 2xx,
+not that downstream merchant fulfillment necessarily completed. An exhausted
+event calls for operator investigation using the existing SF98 CLI, not a
+click-to-retry control. The original SF86 independent on-chain reconciliation
+remains separate. Challenge-only merchants show no native settled events
+unless separately instrumented as described above.
+
+If the journal cannot be read, the fulfillment endpoint returns a generic
+503 and does not expose a private state path; existing seller traffic remains
+available. Keep merchant state/export files on a trusted owner machine with
+the original 0700/0600 protection and never deploy this loopback listener
+through the public seller reverse proxy. CSS follows existing restrained
+industrial operations styling.

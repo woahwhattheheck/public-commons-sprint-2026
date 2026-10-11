@@ -24,6 +24,16 @@ choose explicit atomic-unit prices, and set `publicOrigin` to the HTTPS origin
 served by your reverse proxy. The listener remains on `127.0.0.1`; incoming Host
 or forwarding headers cannot rewrite the configured payment identity.
 
+### Offer several payment choices on one route
+
+Use `definition.paymentOptions` for 1–16 complete `exact` options, including
+different Stellar networks or assets. Existing `definition.payment` remains
+supported for a single choice. The original native SDK registers every offered
+network, SF31 selects the explicitly authorized option, and SF98 records the
+selected option's amount and network. See [payment options](PAYMENT_OPTIONS.md)
+for the runnable example, per-option metadata, buyer selection and catalog
+visibility behavior.
+
 ### Merchant capacity and graceful drain
 
 The same original seller runtime now provides bounded request capacity and a

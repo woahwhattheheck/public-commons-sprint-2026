@@ -45,6 +45,22 @@ If the SDK says success but no supported canonical native settlement header is a
 
 ## Deliver explicitly, not inside a payment request
 
+### Events from a route with multiple payment options
+
+SF30 can configure several complete `exact` payment options on one resource.
+The outbox binds an event to the verified requirements passed as the second
+argument of the original SDK's `processSettlement`. It requires one configured
+option matching scheme, network, asset, recipient, atomic amount and timeout.
+Native additions to `extra`, including facilitator fee sponsorship, remain the
+SDK's responsibility. The event uses the chosen option's network, amount and
+asset digest, including when the buyer chooses the second advertised network.
+
+The returned payment receipt must report success on that same network; if it
+contains an amount, it must match the exact selected amount. Missing, ambiguous
+or mismatched terms produce the existing journal warning and no event. The
+already successful native resource response is still returned. Event schema,
+retry behavior and deduplication remain compatible with existing journals.
+
 There is **no background webhook sender**. From the merchant's trusted environment, set a fresh HMAC key (32+ bytes) through private environment storage, never in config or CLI output:
 
 \`\`\`sh

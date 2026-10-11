@@ -2,21 +2,26 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { observeSellerTraffic, trafficCsv, trafficPrometheus } from './traffic.mjs';
+import { createDeliveryReader, deliveryCsv, deliveryPrometheus } from './delivery-view.mjs';
 
 const HOST = '127.0.0.1';
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 
-export async function startSellerOperations(session, { port = 8424, recentLimit = 160 } = {}) {
+export async function startSellerOperations(session, { port = 8424, recentLimit = 160, deliveryOutbox = null } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new RangeError('operations port must be 0–65535');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
+    ['/fulfillment', 'delivery.html', 'text/html; charset=utf-8'],
     ['/console.mjs', 'console.mjs', 'text/javascript; charset=utf-8'],
+    ['/delivery-panel.mjs', 'delivery-panel.mjs', 'text/javascript; charset=utf-8'],
     ['/recent.mjs', 'recent.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
   const observer = observeSellerTraffic(session, { recentLimit });
   const snapshot = () => ({ ...observer.snapshot(),
     ...(typeof session.upstreamSnapshot === 'function' ? { upstreams: session.upstreamSnapshot() } : {}) });
+  // The SAME outbox used by the merchant's original native settlement decorator.
+  const readDelivery = deliveryOutbox ? createDeliveryReader(deliveryOutbox) : null;
   let allowedHosts = new Set(), allowedOrigins = new Set();
   const server = createServer((req, res) => {
     const reply = (code, type, data, extra = {}) => {
@@ -45,8 +50,41 @@ export async function startSellerOperations(session, { port = 8424, recentLimit 
       }
       if (req.url === '/export.csv') return reply(200, 'text/csv; charset=utf-8', trafficCsv(observer.snapshot()),
         { 'content-disposition': 'attachment; filename="seller-traffic.csv"' });
-      if (req.url === '/metrics') return reply(200, 'text/plain; version=0.0.4; charset=utf-8',
-        trafficPrometheus(observer.snapshot()));
+      if (['/api/delivery', '/delivery.json', '/delivery.csv', '/delivery.metrics'].includes(req.url)) {
+        if (!readDelivery) {
+          if (req.url !== '/api/delivery') return reply(404, 'text/plain', 'Outbox not attached');
+          return reply(200, 'application/json; charset=utf-8',
+            JSON.stringify({ schema: 'stellar-forge.sf98.operator-delivery.v1', available: false }));
+        }
+        // The journal read happens only for explicit operator GET/HEAD requests.
+        // Read failures never affect seller HTTP traffic or reveal private paths.
+        readDelivery().then(view => {
+          if (res.destroyed) return;
+          if (req.url === '/delivery.metrics') return reply(200,
+            'text/plain; version=0.0.4; charset=utf-8', deliveryPrometheus(view));
+          if (req.url === '/delivery.csv') return reply(200, 'text/csv; charset=utf-8', deliveryCsv(view),
+            { 'content-disposition': 'attachment; filename="merchant-delivery-recent.csv"' });
+          return reply(200, 'application/json; charset=utf-8', JSON.stringify(view),
+            req.url === '/delivery.json'
+              ? { 'content-disposition': 'attachment; filename="merchant-delivery.json"' } : {});
+        }, () => {
+          if (!res.destroyed) reply(503, 'application/json; charset=utf-8',
+            JSON.stringify({ error: 'DELIVERY_JOURNAL_UNAVAILABLE' }));
+        });
+        return;
+      }
+      if (req.url === '/metrics') {
+        const http = trafficPrometheus(observer.snapshot());
+        if (!readDelivery) return reply(200, 'text/plain; version=0.0.4; charset=utf-8', http);
+        readDelivery().then(view => {
+          if (!res.destroyed) reply(200, 'text/plain; version=0.0.4; charset=utf-8',
+            http + deliveryPrometheus(view));
+        }, () => {
+          if (!res.destroyed) reply(200, 'text/plain; version=0.0.4; charset=utf-8',
+            http + '\n# TYPE sf98_outbox_read_available gauge\nsf98_outbox_read_available 0\n');
+        });
+        return;
+      }
       const asset = assets.get(req.url);
       if (asset) return reply(200, asset.type, asset.bytes);
       return reply(404, 'text/plain', 'Not found');
