@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import { constants } from 'node:fs';
 import { access, lstat, mkdir, open, realpath, rm, stat, writeFile } from 'node:fs/promises';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abs, config, execution, need, operation, operator, InputError } from './config.mjs';
 
@@ -123,7 +123,7 @@ async function initializeLedger(python, policy, ledger, keyValues) {
 export async function initializeWorkspace(args, { environment = process.env } = {}) {
   need(process.platform !== 'win32', 'WORKSPACE_POSIX_OPERATOR_REQUIRED');
   const opt = options(args, ['--config', '--dir', '--actor', '--service', '--payer', '--python',
-    '--secret-env', '--total-atomic', '--daily-atomic']);
+    '--secret-env', '--signer-provider', '--rpc', '--total-atomic', '--daily-atomic']);
   const inputPath = abs(opt['--config'], 'WORKSPACE_REVIEW_CONFIG_REQUIRED');
   const directory = resolve(abs(opt['--dir'], 'WORKSPACE_PATH_NOT_ABSOLUTE'));
   const source = await config(inputPath);
@@ -141,8 +141,11 @@ export async function initializeWorkspace(args, { environment = process.env } = 
   const daily = amount(opt['--daily-atomic'] ?? total, 'WORKSPACE_DAILY_AMOUNT_INVALID');
   need(BigInt(total) >= BigInt(maximum) && BigInt(daily) >= BigInt(maximum) &&
     BigInt(daily) <= BigInt(total), 'WORKSPACE_BUDGET_LIMITS_INCONSISTENT');
-  const secretEnv = opt['--secret-env'] ?? 'STELLAR_SECRET';
-  need(/^[A-Z][A-Z0-9_]{0,127}$/.test(secretEnv) && !KEY_NAMES.includes(secretEnv),
+  const signerProvider = opt['--signer-provider'];
+  need(signerProvider === undefined || opt['--secret-env'] === undefined,
+    'WORKSPACE_ONE_SIGNER_SOURCE_REQUIRED');
+  const secretEnv = signerProvider === undefined ? opt['--secret-env'] ?? 'STELLAR_SECRET' : undefined;
+  need(secretEnv === undefined || /^[A-Z][A-Z0-9_]{0,127}$/.test(secretEnv) && !KEY_NAMES.includes(secretEnv),
     'WORKSPACE_WALLET_ENV_NAME_INVALID');
   const owner = operator({python:opt['--python'], actor:opt['--actor'], service:opt['--service'],
     policy:join(directory, 'policy.json'), ledger:join(directory, 'reservations.sqlite')});
@@ -163,18 +166,22 @@ export async function initializeWorkspace(args, { environment = process.env } = 
   const configuredBytes = Buffer.from(json(cfg));
   need(configuredBytes.length <= 65536, 'WORKSPACE_CONFIG_TOO_LARGE');
   const signerPins = {network:op.expect.network, asset:op.expect.asset, payTo:op.expect.payTo,
-    maxAtomic:maximum, expectedPayer:payer, secretEnv};
+    maxAtomic:maximum, expectedPayer:payer, secretEnv, signerProvider, rpcUrl:opt['--rpc']};
+  const {validateNativeSignerConfiguration, inspectSignerProvider} = await import('./native-signer.mjs');
+  validateNativeSignerConfiguration(signerPins);
+  if (signerProvider !== undefined) await inspectSignerProvider(signerProvider);
+  const factory = signerProvider === undefined ? 'createEnvironmentStellarSigner' : 'createProviderStellarSigner';
   const signerSource = `// Private operator adapter. No wallet key is stored in this file.\n` +
-    `import {createEnvironmentStellarSigner, validateNativeSignerInput} from ${JSON.stringify(signerUrl)};\n` +
+    `import {${factory}, validateNativeSignerInput} from ${JSON.stringify(signerUrl)};\n` +
     `const pins = Object.freeze(${JSON.stringify(signerPins)});\nlet adapter;\n` +
     `export async function sign(payload) {\n` +
     `  validateNativeSignerInput(payload, pins);\n` +
-    `  adapter ??= createEnvironmentStellarSigner({...pins, environment:process.env});\n` +
+    `  adapter ??= ${factory}({...pins, environment:process.env});\n` +
     `  return (await adapter).sign(payload);\n}\n`;
   const manifest = {schema:SCHEMA, createdAt:new Date().toISOString(), directory,
     config:'operator.json', keys:'operator-keys.json', sourceCli:cliPath,
     sourceConfig:inputPath, signer:signerPins,
-    operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv,
+    operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv, signerProvider,
     network:op.expect.network, payer};
   let created;
   try {
@@ -195,6 +202,7 @@ export async function initializeWorkspace(args, { environment = process.env } = 
     return {mode:'PRIVATE_OPERATOR_WORKSPACE_CREATED', directory,
       config:join(directory, 'operator.json'), network:manifest.network, payer,
       operatorKeySource:keySet.source, walletKeyEnvironment:secretEnv,
+      signerSource:signerProvider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
       walletKeyStored:false, policy, ledger,
       commands:{review:[process.execPath, cliPath, '--review-workspace', '--dir', directory],
         execute:[process.execPath, cliPath, '--execute-workspace', '--dir', directory]}};
@@ -242,4 +250,41 @@ export async function openWorkspace(args, { execute = false, environment = proce
     operatorEnvironment = {...environment, ...keys(stored.keys).values};
   }
   return {config:cfg, configPath, manifest, operatorEnvironment};
+}
+
+/** Review the original workspace plus package/source availability, without custody. */
+export async function diagnoseWorkspace(args, {environment = process.env} = {}) {
+  const workspace = await openWorkspace(args);
+  const {manifest} = workspace;
+  const {inspectNativeSignerRuntime, inspectSignerProvider, validateNativeSignerConfiguration} =
+    await import('./native-signer.mjs');
+  const checks = [];
+  let sdk = null;
+  const code = error => /^[A-Z0-9_]{1,120}$/.test(error?.code ?? '')
+    ? error.code : 'WORKSPACE_RUNTIME_UNAVAILABLE';
+  const pins = validateNativeSignerConfiguration(manifest.signer);
+  try {
+    sdk = await inspectNativeSignerRuntime();
+    checks.push({check:'official-sdk', status:'AVAILABLE'});
+  } catch (error) { checks.push({check:'official-sdk', status:'UNAVAILABLE', code:code(error)}); }
+  const provider = manifest.signer.signerProvider;
+  if (provider !== undefined) {
+    try {
+      await inspectSignerProvider(provider);
+      checks.push({check:'signer-provider', status:'PRESENT_NOT_IMPORTED', filename:basename(provider)});
+    } catch (error) {
+      checks.push({check:'signer-provider', status:'UNAVAILABLE', code:code(error)});
+    }
+  } else {
+    const name = manifest.signer.secretEnv ?? 'STELLAR_SECRET';
+    checks.push({check:'key-environment', name,
+      status:Object.hasOwn(environment, name) ? 'PRESENT_NOT_LOADED' : 'MISSING'});
+  }
+  const ready = checks.every(check => !['UNAVAILABLE','MISSING'].includes(check.status));
+  return {mode:'OPERATOR_WORKSPACE_DIAGNOSTICS', status:ready ? 'READY_TO_EXECUTE' : 'SETUP_REQUIRED',
+    directory:manifest.directory, network:pins.network, payer:pins.expectedPayer,
+    signerSource:provider === undefined ? 'ENVIRONMENT' : 'TRUSTED_SEP43_PROVIDER',
+    rpcOrigin:new URL(pins.rpcUrl).origin, sdk, checks,
+    next:ready ? 'Review the operation, then use --execute-workspace for original terminal approval.' :
+      'Resolve the listed runtime requirements and diagnose this same workspace again.'};
 }

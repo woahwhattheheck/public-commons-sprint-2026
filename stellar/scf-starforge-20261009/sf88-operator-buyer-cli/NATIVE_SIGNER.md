@@ -1,14 +1,13 @@
 # Native Stellar signer for the SF88 buyer
 
-`native-signer.mjs` supplies the missing signer callback used by the original SF88 operator buyer. It calls the published x402 SDK to construct the payment envelope. SF81 still obtains terminal approval and reserves the budget; SF31 still sends the initial request and its one paid retry; SF82 still records the result.
+`native-signer.mjs` supplies the workspace signer callback used by the original SF88 operator buyer. It retains the independent workspace policy and delegates payload creation to the shared [SF103 adapter](../sf103-native-buyer-signer/adapter.mjs), supplying the locally installed, version-checked x402 SDK. SF81 obtains terminal approval and reserves the budget; SF31 sends the initial request and its one paid retry; SF82 records the result.
 
 ## Install the original dependencies
 
 Install from the original `sf88-operator-buyer-cli` directory so its signer module resolves these packages:
 
 ```sh
-npm install --ignore-scripts --no-audit --no-fund --save-exact \
-  @x402/core@2.28.0 @x402/stellar@2.28.0 @stellar/stellar-sdk@16.3.0
+npm ci --ignore-scripts --no-audit --no-fund
 ```
 
 Node 22+ is required. The published package versions above were retrieved and installed in the cloud development workspace on October 11, 2026. No dependency installation script or repository test suite is needed.
@@ -41,13 +40,51 @@ Keep construction inside `sign`: importing the generated module and running SF88
 
 An operator using an existing external or hardware signer can call `createOfficialStellarSigner({ ...configuration, signer })` instead. The signer must implement the official `ClientStellarSigner` interface: `address` and `signAuthEntry`. This adapter does not create a wallet or replace that signer.
 
+## Integrate an existing wallet provider
+
+The workspace initializer accepts `--signer-provider /absolute/wallet.mjs` as an
+alternative to `--secret-env`. The module must be a regular file, not a symlink
+or group/world writable file. It exports:
+
+```js
+export async function createSigner({ network, payer, rpcUrl }) {
+  // Connect your existing trusted SEP-43 implementation here.
+  return existingWalletSigner;
+}
+```
+
+The returned public `address` must match the workspace's configured payer.
+`signAuthEntry` implements the original SDK contract; it must not submit a
+transaction itself. The module is trusted operator code, and its factory may
+have device or network setup of its own. Workspace initialization, review and
+`--diagnose-workspace` never import this provider. Approved execution invokes
+`createProviderStellarSigner` lazily through the generated module.
+
+An optional `--rpc` supplies an HTTPS testnet RPC URL without credentials,
+query parameters or fragments. The default remains
+`https://soroban-testnet.stellar.org`. Diagnostics show only its origin.
+
+## Diagnose the same workspace
+
+```sh
+node cli.mjs --diagnose-workspace --dir /private/weather-operator
+```
+
+This validates the original workspace and installed `@x402/core` and
+`@x402/stellar` versions, then checks either provider metadata or whether the
+named wallet environment variable exists. It does not read the variable value
+or the private SF36 key file. `PRESENT_NOT_IMPORTED` and `PRESENT_NOT_LOADED`
+describe availability, not wallet validation. `SETUP_REQUIRED` exits with code
+1; the reported error identifies the missing dependency or source. A ready
+diagnostic does not assert successful RPC access or signer initialization.
+
 ## Signing behavior
 
 The adapter permits the configured `stellar:testnet` exact scheme only. It checks the complete accepted requirement against the original challenge and SF31 approved intent, including resource identity, fee sponsorship, atomic amount, asset, recipient and timeout. The operator cap and the intent cap are both enforced. The challenge must contain exactly one copy of the selected option.
 
-Each invocation configures the original `x402Client` with `ExactStellarScheme`, the exact testnet registration, an exact-option selector and an asset-specific atomic spend control. It passes the original challenge to `createPaymentPayload`. The SDK performs the real Stellar simulation and authorization signing when the operator executes; the adapter returns its unchanged canonical envelope. It neither uses a payment-aware fetch wrapper nor sends another merchant request.
+The shared SF103 engine configures the original `x402Client` with `ExactStellarScheme`, the exact testnet registration, an exact-option selector and the approved asset-specific atomic spend control. It passes the original challenge to `createPaymentPayload`. The SDK performs Stellar simulation and authorization signing when the operator executes; the adapter returns its unchanged canonical envelope. The same SF88 signer instance refuses a second signing attempt for the same intent ID, including after failure. Separate approved intents continue to use the original durable SF36 budget and reservations. No payment-aware fetch wrapper or additional merchant request is introduced.
 
-`SIGNER_*` errors identify invalid local configuration or quote drift. `OFFICIAL_STELLAR_SDK_UNAVAILABLE` means the dependencies cannot be imported from the source module. `OFFICIAL_STELLAR_SDK_INCOMPATIBLE` means the installed API lacks the required exports. `OFFICIAL_STELLAR_PAYMENT_CREATION_FAILED` identifies SDK simulation/signing failure without placing private account material or raw transaction data in the CLI error. Preserve the original SF81 reservation after any failure; use the existing reconciliation path before another operation.
+`SIGNER_*` errors identify invalid local configuration, provider initialization or quote drift. `OFFICIAL_STELLAR_SDK_UNAVAILABLE` means the dependencies cannot be imported from the source module. `OFFICIAL_STELLAR_SDK_VERSION_MISMATCH` reports a different installed version; `OFFICIAL_STELLAR_SDK_INCOMPATIBLE` means the installed API lacks the required exports. The shared engine's `NATIVE_PAYMENT_CREATION_FAILED` identifies simulation/signing failure without placing private account material or raw transaction data in the CLI error. Preserve the original SF81 reservation after any failure; use the existing reconciliation path before another operation.
 
 ## Original source used
 
