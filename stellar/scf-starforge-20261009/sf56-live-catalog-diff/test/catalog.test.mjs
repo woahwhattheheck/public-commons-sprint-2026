@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { analyzePages, diffSnapshots, renderReportHtml, fetchVellar, PROVIDER } from '../catalog.mjs';
 
 // Publicly observed Vellar testnet /quote route and 402 terms, excerpted from the actual 2026-10-10 catalog.
@@ -46,4 +47,48 @@ test('fetch executes original provider discovery GET only, retains exact HTTP bo
   assert.equal(snapshot.declaredTotal,1);
   assert.equal(pages[0].body,body);
   assert.match(snapshot.pageHashes[0].sha256,/^[a-f0-9]{64}$/);
+});
+
+test('first-party native v2 pagination works from raw HTTP bytes without flattened substitution', async () => {
+  // Mirrors the original Muse Vellar 27/27 response's envelope shape.
+  // The existing QUOTE row is a source-observed excerpt, not a simulated
+  // provider acceptance measurement.
+  const observedBody = JSON.stringify({
+    x402Version: 2, items: [QUOTE], pagination: { limit: 100, offset: 0, total: 1 }
+  });
+  const called = [];
+  const result = await fetchVellar({capturedAt: date, fetchImpl: async (url, options) => {
+    called.push({url, method: options.method, redirect: options.redirect});
+    return new Response(observedBody, {status: 200, headers: {'content-type': 'application/json'}});
+  }});
+  assert.equal(called.length, 1);
+  assert.equal(called[0].method, 'GET');
+  assert.equal(called[0].redirect, 'error');
+  assert.equal(result.snapshot.rowCount, 1);
+  assert.equal(result.snapshot.declaredTotal, 1);
+  assert.equal(result.snapshot.offerCount, 1);
+  assert.equal(result.pages[0].body, observedBody);
+  assert.equal(result.snapshot.pageHashes[0].sha256,
+    createHash('sha256').update(observedBody).digest('hex'));
+
+  // A stale normalized payload must never override raw source bytes.
+  const rawReviewed = analyzePages([{offset: 0, body: observedBody,
+    payload: {items: [], total: 0}}], {capturedAt: date});
+  assert.equal(rawReviewed.rowCount, 1);
+  assert.equal(rawReviewed.offerCount, 1);
+
+  assert.throws(() => analyzePages([{offset: 0, payload: {
+    items: [QUOTE], total: 2, pagination: {limit: 100, offset: 0, total: 1}
+  }}], {capturedAt: date}), /Conflicting provider totals/);
+  assert.throws(() => analyzePages([{offset: 0, payload: {
+    items: [QUOTE], pagination: {limit: 100, offset: 1, total: 1}
+  }}], {capturedAt: date}), /pagination offset mismatch/);
+  assert.throws(() => analyzePages([{offset: 0, payload: {
+    items: [QUOTE], pagination: {limit: 100, offset: 0, total: 2}
+  }}], {capturedAt: date}), /Incomplete original provider snapshot/);
+  await assert.rejects(() => fetchVellar({capturedAt: date, fetchImpl: async () =>
+    new Response(JSON.stringify({items: [QUOTE],
+      pagination: {limit: 100, offset: 1, total: 1}}),
+      {status: 200, headers: {'content-type': 'application/json'}})
+  }), /pagination offset mismatch/);
 });
