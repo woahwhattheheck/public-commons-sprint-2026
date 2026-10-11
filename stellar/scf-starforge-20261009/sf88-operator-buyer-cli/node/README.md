@@ -10,6 +10,15 @@ operation -> original offline review -> one original native attempt -> durable
 output -> verified application data. Cancellation and restart recovery retain the
 original intent. A process crash does not authorize another attempt.
 
+The same Buyer also handles persistent dataset acquisition and verified SF100
+rows, described below, and the complete [large-file object workflow](OBJECTS.md).
+`createObject`/`attachObject` retain a native chunk acquisition; `download`,
+`recover`, `assemble` and `delivery` return the original progress and verified
+file to the customer application. The existing `buyer-node` command includes
+the matching `object-*` lifecycle, without a new package or payment engine.
+`accounting` and explicit `finalize` invoke the original chunk reservation
+continuation and return its native report separately from file completion.
+
 ## Install and runtime
 
 Node 22 or later is required. There are no npm dependencies or install scripts.
