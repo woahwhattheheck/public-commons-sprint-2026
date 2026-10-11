@@ -8,6 +8,7 @@ import { bootstrapFleet, readFleetBootstrapStatus } from './release-bootstrap.mj
 
 const COMMANDS = `status
 catalog TENANT SLOT
+operations TENANT SLOT INSTANCE_ID
 stage TENANT SLOT PACKAGE RELEASE
 review TENANT SLOT RELEASE
 prepare REVIEW_ID
@@ -36,12 +37,13 @@ function revision(value) {
 }
 export async function dispatchFleetCommand(operator, line) {
   const words = line.trim().split(/\s+/), [action, ...args] = words;
-  const required = { status: 0, catalog: 2, stage: 4, review: 3, prepare: 1,
+  const required = { status: 0, catalog: 2, operations: 3, stage: 4, review: 3, prepare: 1,
     activate: 2, 'review-rollback': 1, rollback: 1, retire: 4, help: 0 };
   if (!(action in required) || args.length !== required[action]) throw new TypeError(COMMANDS);
   if (action === 'help') return { commands: COMMANDS };
   if (action === 'status') return operator.status();
   if (action === 'catalog') return operator.catalog({ tenant: args[0], slot: args[1] });
+  if (action === 'operations') return operator.operations({ tenant: args[0], slot: args[1], instanceId: args[2] });
   if (action === 'stage') return operator.stage({ tenant: args[0], slot: args[1], package: args[2], releaseId: args[3] });
   if (action === 'review') return operator.review({ tenant: args[0], slot: args[1], releaseId: args[2] });
   if (action === 'prepare') return operator.prepare({ reviewId: args[0] });

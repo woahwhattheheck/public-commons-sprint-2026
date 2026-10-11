@@ -24,6 +24,7 @@ export function fleetControlTools(tool) {
     tool('merchant_fleet_rollback_review', 'Review a specific retained original fleet revision, comparing all affected tenant releases and verifying their native immutable source identities.', { targetRevision: revision }, ['targetRevision']),
     tool('merchant_fleet_rollback', 'Consume the original rollback review, reopen any needed retained merchant sessions and restore that exact fleet mapping as a new native revision.', { reviewId: identity }, ['reviewId'], { openWorld: true }),
     tool('merchant_fleet_retire', 'Retire only the named original child instance owned by this fleet after it has no current/candidate routing or draining requests. The original gateway routing mutex spans the child close.', { tenant, slot: alias, instanceId: identity, expectedRevision: revision }, ['tenant', 'slot', 'instanceId', 'expectedRevision'], { destructive: true }),
+    tool('merchant_fleet_operations', 'Read the original developer explorer and available merchant operations or private availability desk links for the exact running instance owned by this fleet. Use tenant, slot and instanceId from merchant_fleet_status. Keep the availability control link in the operator session.', { tenant, slot: alias, instanceId: identity }, ['tenant', 'slot', 'instanceId'], { readOnly: true, idempotent: true }),
     tool('merchant_fleet_stop', 'Gracefully drain the original gateway and close its owned merchant sessions. Pass managerId from merchant_fleet_status. Preserves native release, mapping and rollback state.', { managerId: identity }, ['managerId'], { destructive: true }),
     tool('merchant_fleet_restart', 'Drain this process-owned fleet, then reopen its retained original state with the inspected host-plan digest. Checks current manager ownership and plan before stopping.', { managerId: identity, expectedPlanDigest: digest }, ['managerId', 'expectedPlanDigest'], { destructive: true, openWorld: true }),
   ];
@@ -118,12 +119,13 @@ export class MerchantFleet {
         default: {
           const methods = { merchant_fleet_catalog: 'catalog', merchant_fleet_stage: 'stage',
             merchant_fleet_review: 'review', merchant_fleet_prepare: 'prepare', merchant_fleet_activate: 'activate',
-            merchant_fleet_rollback_review: 'reviewRollback', merchant_fleet_rollback: 'rollback', merchant_fleet_retire: 'retire' };
+            merchant_fleet_rollback_review: 'reviewRollback', merchant_fleet_rollback: 'rollback', merchant_fleet_retire: 'retire',
+            merchant_fleet_operations: 'operations' };
           const method = methods[name];
           if (!method) throw error('TOOL_NOT_FOUND', 'Unknown fleet operation.');
           const held = this.#owned();
           const result = await held.operator[method](args);
-          if (method !== 'catalog') this.#lastOperation = { action: method, outcome: 'RETURNED', managerId: held.id, at: new Date().toISOString() };
+          if (!['catalog', 'operations'].includes(method)) this.#lastOperation = { action: method, outcome: 'RETURNED', managerId: held.id, at: new Date().toISOString() };
           return { managerId: held.id, ...result };
         }
       }
