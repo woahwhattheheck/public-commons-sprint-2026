@@ -13,7 +13,7 @@ const HERE=dirname(fileURLToPath(import.meta.url)), ROOT=resolve(HERE,'..');
 const options={};
 for(let i=2;i<process.argv.length;i+=2){
   const key=process.argv[i],value=process.argv[i+1];
-  if(!['--out','--chromium','--playwright','--ffmpeg'].includes(key)||!value)throw new Error('Usage: node demo/capture.mjs --out NEW_DIRECTORY --chromium EXECUTABLE [--playwright MODULE] [--ffmpeg EXECUTABLE]');
+  if(!['--out','--chromium','--playwright','--ffmpeg','--ffprobe'].includes(key)||!value)throw new Error('Usage: node demo/capture.mjs --out NEW_DIRECTORY --chromium EXECUTABLE [--playwright MODULE] [--ffmpeg EXECUTABLE] [--ffprobe EXECUTABLE]');
   options[key.slice(2)]=value;
 }
 if(!options.out||!options.chromium)throw new Error('--out and --chromium are required');
@@ -130,11 +130,18 @@ try{
   concat+=`file '${frames.at(-1).file}'\n`;
   await fs.writeFile(join(output,'capture.concat'),concat);
   await fs.writeFile(join(output,'captions.srt'),captions.map((c,i)=>`${i+1}\n${stamp(c.start)} --> ${stamp(c.end)}\n${c.text}\n`).join('\n'));
+  // ASS uses explicit output pixels, preventing SRT's default 384x288 scaling
+  // from enlarging the captions into the application viewport.
+  const assTime=time=>stamp(time).replace(',','.').slice(0,-1);
+  const assHeader='[Script Info]\nScriptType: v4.00+\nPlayResX: 1600\nPlayResY: 1000\nWrapStyle: 0\n\n[V4+ Styles]\nFormat: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\nStyle: Default,DejaVu Sans,28,&H00FFFFFF,&H00FFFFFF,&H00202831,&H00202831,0,0,0,0,100,100,0,0,1,0,0,2,32,32,28,1\n\n[Events]\nFormat: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n';
+  await fs.writeFile(join(output,'captions.ass'),assHeader+captions.map(c=>`Dialogue: 0,${assTime(c.start)},${assTime(c.end)},Default,,0,0,0,,${c.text}`).join('\n')+'\n');
   await fs.writeFile(join(output,'journey.json'),JSON.stringify(trace,null,2)+'\n');
   console.log(JSON.stringify({capturedFrames:frames.length,duration,encoding:true}));
-  await encode(['-hide_banner','-loglevel','error','-f','concat','-safe','0','-i','capture.concat','-vf',"scale=1600:900:flags=lanczos,pad=1600:1000:0:0:color=0x202831,subtitles=captions.srt:force_style='Fontname=DejaVu Sans,Fontsize=22,PrimaryColour=&H00FFFFFF,Outline=0,Shadow=0,Alignment=2,MarginV=16'",'-t',duration.toFixed(3),'-r','24','-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-movflags','+faststart','Counterpress_Compass_Running_Demo.mp4']);
+  await encode(['-hide_banner','-loglevel','error','-f','concat','-safe','0','-i','capture.concat','-vf',`scale=1600:900:flags=lanczos,pad=1600:1000:0:0:color=0x202831,tpad=stop_mode=clone:stop_duration=${Math.ceil(duration)},fps=24,subtitles=captions.ass`,'-t',duration.toFixed(3),'-c:v','libx264','-preset','veryfast','-crf','20','-pix_fmt','yuv420p','-movflags','+faststart','Counterpress_Compass_Running_Demo.mp4']);
+  const encodedDuration=Number(execFileSync(options.ffprobe||'ffprobe',['-v','error','-show_entries','format=duration','-of','default=noprint_wrappers=1:nokey=1',join(output,'Counterpress_Compass_Running_Demo.mp4')],{encoding:'utf8'}).trim());
+  if(!Number.isFinite(encodedDuration)||encodedDuration>=120||Math.abs(encodedDuration-duration)>.1)throw new Error('Encoded video does not retain the required captured duration');
   const video=await fs.readFile(join(output,'Counterpress_Compass_Running_Demo.mp4'));
-  const manifest={schema:1,startedAt,completedAt:new Date().toISOString(),gitHead,sourceSha256:source,captureScriptSha256:hash(await fs.readFile(fileURLToPath(import.meta.url))),browserVersion,viewport:{width:1600,height:900},video:{file:'Counterpress_Compass_Running_Demo.mp4',bytes:video.length,sha256:hash(video),capturedDurationSeconds:duration,actualBrowserFrames:frames.length,captioned:true,audio:false},application:{originalNodeHttp:true,originalSse:true,scenario:'high-press',seed:2026,synthetic:true,optionalPanels:{foundryConfigured:!!health.foundryConfigured,opusConfigured:!!health.opusConfigured,observedCommentaryRequests:optionalRequests},publicUpload:false,entrySubmission:false},pageErrors};
+  const manifest={schema:1,startedAt,completedAt:new Date().toISOString(),gitHead,sourceSha256:source,captureScriptSha256:hash(await fs.readFile(fileURLToPath(import.meta.url))),browserVersion,viewport:{width:1600,height:900},video:{file:'Counterpress_Compass_Running_Demo.mp4',bytes:video.length,sha256:hash(video),capturedDurationSeconds:duration,encodedDurationSeconds:encodedDuration,actualBrowserFrames:frames.length,captioned:true,audio:false},application:{originalNodeHttp:true,originalSse:true,scenario:'high-press',seed:2026,synthetic:true,optionalPanels:{foundryConfigured:!!health.foundryConfigured,opusConfigured:!!health.opusConfigured,observedCommentaryRequests:optionalRequests},publicUpload:false,entrySubmission:false},pageErrors};
   await fs.writeFile(join(output,'capture-manifest.json'),JSON.stringify(manifest,null,2)+'\n');
   console.log(JSON.stringify({complete:true,output,video:manifest.video}));
 }finally{

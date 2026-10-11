@@ -4,14 +4,15 @@ This recorder runs the original Node HTTP/SSE application and records its actual
 
 ## Run
 
-Use Node 22+, an installed Playwright package, a compatible Chromium executable, and FFmpeg with H.264 and subtitle support. These are capture dependencies; the application itself still runs without installing packages. Run from this project directory:
+Use Node 22+, an installed Playwright package, a compatible Chromium executable, and FFmpeg/ffprobe with H.264 and subtitle support. These are capture dependencies; the application itself still runs without installing packages. Run from this project directory:
 
 ```sh
 node demo/capture.mjs \
   --out /absolute/path/to/a-new-capture-directory \
   --chromium /absolute/path/to/chromium \
   --playwright /absolute/path/to/node_modules/playwright \
-  --ffmpeg /usr/bin/ffmpeg
+  --ffmpeg /usr/bin/ffmpeg \
+  --ffprobe /usr/bin/ffprobe
 ```
 
 The output directory must not already exist. The recorder starts the application on an available loopback port and launches its browser in the same process environment. This also works in cloud environments where separate execution sessions cannot reach each other's loopback listeners. It does not change application routes, intercept responses, inject match state, or invoke optional commentary.
@@ -21,7 +22,7 @@ Recording lasts approximately 110 seconds. The exported MP4 uses the actual brow
 ## Outputs and handoff
 
 - `Counterpress_Compass_Running_Demo.mp4`: 1600 × 1000 H.264 video with a 1600 × 900 application viewport and English captions.
-- `captions.srt`: editable caption text and actual scene timings.
+- `captions.srt`, `captions.ass`: editable caption text and actual scene timings; the ASS file fixes caption dimensions to the output canvas.
 - `capture-manifest.json`: application file hashes, source commit, recorder hash, browser version, video hash, actual frame count, and optional-panel configuration read from the original `/health` route.
 - `journey.json`: observed HTTP routes and on-screen clock, progress and state. The final saved/reopened match values must match or the recorder fails.
 - `frames/`, `capture.concat`, `review-viewport.png`: local capture and visual-review intermediates. They need not be distributed.
