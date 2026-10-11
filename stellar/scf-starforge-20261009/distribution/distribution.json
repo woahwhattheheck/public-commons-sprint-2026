@@ -106,7 +106,12 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-request.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.css",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md"
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.css",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_RECOVERY.md"
   ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
@@ -139,6 +144,7 @@
     "merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/operations/merchant-launch.mjs",
     "delivery": "stellar/scf-starforge-20261009/sf98-merchant-delivery/deliver.mjs",
     "delivery-workspace": "stellar/scf-starforge-20261009/sf98-merchant-delivery/workspace-server.mjs",
+    "delivery-destinations": "stellar/scf-starforge-20261009/sf98-merchant-delivery/destinations/cli.mjs",
     "dataset-delivery": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue-dataset-cli.mjs",
     "postgres-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "postgres-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/cli.mjs",
@@ -271,6 +277,8 @@
     "./seller/delivery/recovery": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/delivery-recovery.mjs",
     "./seller/delivery/control": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/workspace-model.mjs",
     "./seller/delivery/workspace": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/workspace-server.mjs",
+    "./merchant/destinations": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/destinations/model.mjs",
+    "./merchant/destinations-server": "./source/stellar/scf-starforge-20261009/sf98-merchant-delivery/destinations/server.mjs",
     "./buyer/dataset": "./source/stellar/scf-starforge-20261009/sf100-buyer-dataset-delivery/deliver.mjs",
     "./seller/postgres/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/workspace/server.mjs",
     "./seller/postgres/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/model.mjs",
@@ -393,7 +401,9 @@
     "./merchant/mcp/data-tools": "./source/stellar-forge/mcp-paid-agent/data-tools.mjs",
     "./merchant/mcp/data-server": "./source/stellar-forge/mcp-paid-agent/data-serve.mjs",
     "./merchant/mcp/mysql-package": "./source/stellar-forge/mcp-paid-agent/mysql-package.mjs",
-    "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs"
+    "./buyer/dataset-workspace": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/dataset-workspace/server.mjs",
+    "./commerce-recovery": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery.mjs",
+    "./commerce-recovery-controller": "./source/stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs"
   },
   "nativePeers": {
     "@x402/core": {

@@ -107,10 +107,10 @@ export class NativeRuntime {
     return { exitCode, exitSignal, errorCode: localError ?? nativeError ?? (unavailable ? 'NATIVE_RESULT_UNAVAILABLE' : null), output };
   }
 
-  async checked(args, { stateDirectory, mode, signal } = {}) {
+  async checked(args, { stateDirectory, mode, signal, entryFile } = {}) {
     const directory = await mkdtemp(join(stateDirectory, '.native-'));
     try {
-      const run = await this.run(args, { directory, signal });
+      const run = await this.run(args, { directory, signal, entryFile });
       if (run.exitCode !== 0 || run.errorCode || !run.output || run.output.mode !== mode)
         throw new BuyerError(run.errorCode ?? 'NATIVE_COMMAND_FAILED', { exitCode: run.exitCode });
       return run.output;

@@ -135,17 +135,39 @@ export async function accountingRecoveryStatus({directory}={}){
   const marker=await readJSON(path,16_000);need(marker.schema===RESTORE&&hex(marker.manifestSha256),'ACCOUNTING_RECOVERY_MARKER','The retained restore marker is invalid.');
   return {status:'RESTORE_IN_PROGRESS',directory,manifestSha256:marker.manifestSha256,startedAt:marker.startedAt,nextOperation:'Resume restore with the same authenticated backup and original paths.'};
 }
-export async function snapshotAccountingWorkspace({directory,stateRoot,output,quiesced=false,signal,...password}={}){
+async function retainedSources(directory,stateRoot,signal){
+  need(!(await info(join(directory,RESTORE_MARKER))),'ACCOUNTING_RECOVERY_INCOMPLETE','Complete the retained restore before taking another backup.');
+  const stateBytes=await readBytes(join(directory,'workspace.json'),32_000_000),state=JSON.parse(stateBytes),roots=rootsFor(state,stateRoot,directory);
+  const extras=await extrasFor(state,stateRoot,directory,roots,path=>readBytes(path,200_000));
+  const before=await inventory(roots,extras,stateRoot,{signal});
+  return {stateBytes,state,roots,extras,before};
+}
+function sourceReview({directory,stateRoot,stateBytes,state,roots,extras,before}){
+  const workspaceSha256=hash(stateBytes),reviewId=hash(json({directory,stateRoot,workspaceSha256,inventory:before}));
+  const describe=item=>{const files=before.entries.filter(entry=>entry.kind==='file'&&inside(item.path,entry.path));return {...item,
+    files:files.length,bytes:files.reduce((total,entry)=>total+Number(entry.version.split(':')[4]),0)};};
+  return {status:'ACCOUNTING_SOURCES_REVIEWED',reviewId,directory,stateRoot,revision:state.revision,workspaceSha256,
+    operatingFiles:before.files,operatingBytes:before.bytes,roots:roots.map(describe),auxiliaryInputs:extras.length,
+    additionalSources:extras.map(item=>describe({...item,kind:'file'}))};
+}
+export async function reviewAccountingWorkspace({directory,stateRoot,quiesced=false,signal}={}){
+  need(quiesced===true,'ACCOUNTING_RECOVERY_QUIESCE','Pause the workspace and stop its original input writers before reviewing a backup.');
+  await privateRoot(stateRoot);beneath(stateRoot,directory);await privateRoot(directory);
+  const lease=await acquireStateLease(directory);
+  try{const sources=await retainedSources(directory,stateRoot,signal);aborted(signal);lease.assertHeld();return sourceReview({directory,stateRoot,...sources});}
+  finally{await lease.close();}
+}
+export async function snapshotAccountingWorkspace({directory,stateRoot,output,quiesced=false,expectedReviewId,signal,...password}={}){
   need(quiesced===true,'ACCOUNTING_RECOVERY_QUIESCE','Stop the workspace and all original input writers, then pass --quiesced.');
+  need(expectedReviewId===undefined||hex(expectedReviewId),'ACCOUNTING_RECOVERY_REVIEW','Select an exact retained source review.');
   await privateRoot(stateRoot);beneath(stateRoot,directory);await privateRoot(directory);absolute(output);const credentials=passOptions(password);
   const lease=await acquireStateLease(directory);let temporary,created=false;
   try{
-    need(!(await info(join(directory,RESTORE_MARKER))),'ACCOUNTING_RECOVERY_INCOMPLETE','Complete the retained restore before taking another backup.');
-    const stateBytes=await readBytes(join(directory,'workspace.json'),32_000_000),state=JSON.parse(stateBytes),roots=rootsFor(state,stateRoot,directory);
-    const extras=await extrasFor(state,stateRoot,directory,roots,path=>readBytes(path,200_000));
+    const sources=await retainedSources(directory,stateRoot,signal),{stateBytes,state,roots,extras,before}=sources;
+    const review=sourceReview({directory,stateRoot,...sources});
+    need(!expectedReviewId||review.reviewId===expectedReviewId,'ACCOUNTING_RECOVERY_REVIEW_CHANGED','An original operating source changed after review. Review the paused source closure again before capturing it.');
     for(const item of [...roots,...extras])need(!inside(item.path,output)&&!inside(output,item.path),'ACCOUNTING_RECOVERY_OVERLAP','Keep the new backup outside every captured operating source.');
     await privateRoot(dirname(output));temporary=await mkdtemp(join(dirname(output),'.accounting-snapshot-'));
-    const before=await inventory(roots,extras,stateRoot,{signal});
     const mapping={schema:MAPPING,createdAt:new Date().toISOString(),directory,stateRoot,revision:state.revision,stateSha256:hash(stateBytes),sources:state.sources,roots,extras};
     const mappingBytes=Buffer.from(json(mapping));need(mappingBytes.length<=16*1024**2,'ACCOUNTING_RECOVERY_LIMIT','The encrypted source mapping exceeds 16 MiB.');
     await writeNew(join(temporary,'recovery.json'),mappingBytes);
@@ -159,7 +181,7 @@ export async function snapshotAccountingWorkspace({directory,stateRoot,output,qu
     const manifestSha256=hash(await readBytes(join(output,'encrypted','manifest.json'),12*1024**2));
     const receipt={schema:BACKUP,createdAt:mapping.createdAt,manifestSha256,files:result.files,bytes:result.bytes};
     await writeNew(join(output,'backup.json'),json(receipt));await syncDirectory(join(output,'encrypted'));await syncDirectory(output);await syncDirectory(dirname(output));
-    return {...receipt,status:'ACCOUNTING_BACKUP_CREATED',output,revision:state.revision,workspaceSha256:mapping.stateSha256,operatingFiles:before.files,operatingBytes:before.bytes,auxiliaryInputs:extras.length};
+    return {...receipt,status:'ACCOUNTING_BACKUP_CREATED',output,revision:state.revision,workspaceSha256:mapping.stateSha256,operatingFiles:before.files,operatingBytes:before.bytes,auxiliaryInputs:extras.length,reviewId:review.reviewId};
   }catch(error){if(created)await rm(output,{recursive:true,force:true});throw error;}
   finally{try{if(temporary)await rm(temporary,{recursive:true,force:true});}finally{await lease.close();}}
 }

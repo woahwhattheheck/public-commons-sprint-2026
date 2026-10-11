@@ -1,0 +1,35 @@
+{
+  "openapi": "3.1.0",
+  "info": {"title": "Finite stream example", "version": "1.0.0"},
+  "servers": [{"url": "http://127.0.0.1:9041"}],
+  "paths": {
+    "/answer": {
+      "post": {
+        "operationId": "answer_stream",
+        "summary": "Stream a short demonstration response for a question",
+        "requestBody": {
+          "required": true,
+          "content": {"application/json": {
+            "schema": {"type": "object", "properties": {"question": {"type": "string", "minLength": 1, "maxLength": 4000}}, "required": ["question"], "additionalProperties": false},
+            "example": {"question": "What does this merchant stream?"}
+          }}
+        },
+        "responses": {"200": {
+          "description": "Finite UTF-8 SSE events. Each data field contains a JSON object with a text field.",
+          "content": {"text/event-stream": {"schema": {"type": "string"}}}
+        }}
+      }
+    },
+    "/records": {
+      "get": {
+        "operationId": "record_stream",
+        "summary": "Stream five records for a selected topic",
+        "parameters": [{"name": "topic", "in": "query", "required": true, "schema": {"type": "string", "minLength": 1}, "example": "merchant-operations"}],
+        "responses": {"200": {
+          "description": "Five UTF-8 JSON objects, each terminated by a newline.",
+          "content": {"application/x-ndjson": {"schema": {"type": "string"}}}
+        }}
+      }
+    }
+  }
+}

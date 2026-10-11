@@ -3,6 +3,7 @@ import { createSellerDiscovery, makePaymentRequiredResponse } from '../sf30-sell
 import { adaptOpenApi30Schema, adaptOpenApi31Schema, applyOpenApiDirection } from './schema-compat.mjs';
 import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 import { openApiRequestBody } from './request-body.mjs';
+import { selectOpenApiResponseStream } from './response-stream.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (o, k) => Object.hasOwn(o, k);
@@ -200,6 +201,9 @@ function makeOffer(document, selection, refs) {
     input.bodySchema = withExample(requestBody.schema, declaredExample(requestBody.media, refs.reference));
   } else if (operation.requestBody !== undefined) fail('Request bodies on query methods require manual integration');
   const resource = { url: url.href };
+  const stream = selectOpenApiResponseStream(operation, refs, selection.responseFormat);
+  if (stream && method === 'head') fail('A HEAD response cannot carry a stream');
+  if (stream) resource.mimeType = stream.mimeType;
   if (selection.serviceName !== undefined) resource.serviceName = selection.serviceName;
   if (operation.description || operation.summary) resource.description = operation.description || operation.summary;
   if (operation.tags !== undefined) resource.tags = clone(operation.tags);

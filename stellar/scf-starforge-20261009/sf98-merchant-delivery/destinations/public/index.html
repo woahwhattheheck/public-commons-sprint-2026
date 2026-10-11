@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Merchant delivery destinations</title><link rel="stylesheet" href="./style.css"></head>
+<body>
+<header><div><span class="eyebrow">STARFORGE / MERCHANT OPERATIONS</span><h1>Delivery destinations</h1><p>Route original settlement notices to fulfillment, accounting and operational receivers.</p></div><nav><button id="refresh">Refresh</button><a class="button" href="./api/handoff" download>Export handover</a></nav></header>
+<main>
+<div id="notice" role="status" aria-live="polite">Opening the retained delivery workspace…</div>
+<section class="summary" aria-label="Delivery summary">
+<div><span>Original events</span><strong id="source-count">—</strong></div>
+<div><span>Destinations</span><strong id="destination-count">—</strong></div>
+<div><span>Pending notices</span><strong id="pending-count">—</strong></div>
+<div><span>Worker</span><strong id="worker-state">—</strong></div>
+</section>
+<section class="panel"><div class="section-head"><div><h2>Receivers</h2><p>Each endpoint keeps its own original delivery journal and retry state.</p></div><button id="sync-all">Copy new events</button></div>
+<div class="table-scroll"><table><thead><tr><th>Destination</th><th>Mode</th><th>Delivered</th><th>Pending</th><th>Exhausted</th><th>Uncopied source</th><th>Signing key</th></tr></thead><tbody id="destinations"></tbody></table></div><p id="empty">Enroll a receiver to begin.</p></section>
+<div class="columns">
+<section class="panel"><h2>Selected destination</h2><div id="selected-empty" class="muted">Select a receiver from the table.</div><div id="selected" hidden>
+<h3 id="selected-label"></h3><dl id="selected-meta"></dl>
+<div class="actions"><button id="toggle-pause"></button><button id="sync-one">Copy new events</button><button id="drain-one" class="primary">Deliver due notices</button></div>
+<p class="hint">Delivery uses this endpoint’s original HMAC transport. A successful response records receiver acceptance. Downstream fulfillment remains visible in that receiver’s system.</p>
+</div></section>
+<section class="panel"><h2>Continuous delivery</h2><p>The worker discovers new original events and serves every active destination. One receiver’s failed request leaves the other receiver histories independent.</p>
+<form id="worker-form"><div class="form-grid"><label>Batch per destination<input name="limit" type="number" min="1" max="100" value="20" required></label><label>Concurrent requests per destination<input name="concurrency" type="number" min="1" max="16" value="1" required></label><label>Concurrent destinations<input name="destinationConcurrency" type="number" min="1" max="16" value="4" required></label><label>Request timeout, ms<input name="timeoutMs" type="number" min="100" max="60000" value="7000" required></label><label>Source poll, ms<input name="pollMs" type="number" min="100" max="60000" value="5000" required></label></div><div class="actions"><button class="primary" id="start-worker" type="submit">Start delivery worker</button><button id="stop-worker" type="button">Stop delivery worker</button></div></form><p id="worker-detail" class="hint"></p><pre id="cycle-summary" hidden></pre></section>
+</div>
+<section class="panel"><div class="section-head"><div><h2>Selected receiver’s notices</h2><p>Inspect the exact original event and its current delivery state. Requeue an exhausted notice after the receiver is ready.</p></div><label class="inline">State<select id="event-filter"><option>ALL</option><option>PENDING</option><option>DELIVERED</option><option>RETRY</option><option>REQUEUE</option><option>EXHAUSTED</option></select></label></div>
+<div class="table-scroll"><table><thead><tr><th>Original event</th><th>Route</th><th>Order reference</th><th>State</th><th>Attempt</th><th>Next attempt</th><th>Action</th></tr></thead><tbody id="events"></tbody></table></div><div class="pager"><button id="previous">Previous</button><span id="page-detail">Select a destination.</span><button id="next">Next</button></div><details id="event-inspector"><summary>Original event and delivery record</summary><pre id="event-detail">Select an event to inspect its complete record.</pre></details></section>
+<section class="panel"><h2>Enroll a destination</h2><p>Save one endpoint and its signing environment reference. Choose whether this receiver should receive matching existing events or only events added after enrollment.</p>
+<form id="enroll-form"><div class="form-grid wide"><label>Destination ID<input name="id" pattern="[a-z][a-z0-9-]{0,47}" maxlength="48" placeholder="fulfillment" required></label><label>Display name<input name="label" maxlength="100" placeholder="Order fulfillment" required></label><label>Public HTTPS webhook URL<input name="url" type="url" placeholder="https://merchant.example/internal/events" required></label><label>Exact allowed hostname<input name="allowedHost" placeholder="merchant.example" required></label><label>Signing environment name<input name="secretEnv" pattern="[A-Z][A-Z0-9_]{1,64}" placeholder="FULFILLMENT_WEBHOOK_SECRET" required></label><label>Route IDs, comma separated<input name="routeIds" placeholder="Empty selects every route"></label><label>Networks, comma separated<input name="networks" placeholder="Empty selects every network"></label><label>Start from<select name="history" required><option value="new">Events added after enrollment</option><option value="all">All matching original events</option></select></label></div>
+<p class="hint">Endpoint and event selection stay bound to this destination’s history. Set the actual key in the delivery process environment. Enrollment saves the selection; the copy and delivery actions perform subsequent work.</p><button class="primary" type="submit">Enroll receiver</button></form></section>
+<footer><span id="observed"></span><span id="source-path"></span></footer>
+</main><script type="module" src="./app.mjs"></script></body></html>

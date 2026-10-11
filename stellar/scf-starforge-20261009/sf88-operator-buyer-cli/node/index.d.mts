@@ -91,6 +91,13 @@ export interface ImportOptions {
   /** Reviewed merchant HTTP deadline; independent of the native subprocess deadline. */
   requestTimeoutMs?: number;
 }
+export interface WorkspaceImportOptions extends Omit<ImportOptions, 'operatorProfile'> {
+  /** Optional explicit native request/config merged with the workspace by its original binding. */
+  configuration?: string | JsonObject;
+  /** Explicit new intent for the selected request; never inferred during recovery. */
+  intentId?: string;
+  signal?: AbortSignal;
+}
 export interface Review {
   readonly intentId: string;
   readonly configSha256: string;
@@ -98,12 +105,15 @@ export interface Review {
   readonly ticketSha256: string | null;
   readonly reviewedAt: string;
   readonly native: JsonObject;
+  /** Original workspace chosen at preparation; its keys are not in application metadata. */
+  readonly nativeWorkspace?: string;
 }
 export interface OperationStatus {
   intentId: string; directory: string; state: string;
   resultRecoverable: boolean; nativeStatus: unknown; deliveryStatus: string | null;
   /** Present after this prepared operation is assigned to an original inbox. */
   inboxDirectory?: string;
+  nativeWorkspace?: string;
   retry: 'NO_AUTOMATIC_RETRY';
 }
 export interface NativeSummary extends JsonObject {
@@ -145,12 +155,16 @@ export class Buyer {
   ready(): Promise<this>;
   /** Recovery of the original operator plus this existing application state. */
   workspaceRecovery(): WorkspaceRecovery;
+  /** Complete original runbook operations; no extra Buyer state is created. */
+  acquisitions(options?: AcquisitionWorkspaceSelection): AcquisitionWorkspace;
   /** Reopen an existing original SF88 inbox without creating a second store. */
   inbox(directory: string): Inbox;
   createInbox(options: { directory: string; signal?: AbortSignal }): Promise<Inbox>;
   inspectOperationHandoff(file: string, options?: { accept?: number; signal?: AbortSignal }): Promise<OperationHandoffView>;
   operation(intentId: string): Operation;
   fromConfig(input: string | JsonObject, options?: ImportOptions): Promise<Operation>;
+  /** Adopt original operator configuration; keys are loaded only by its native child. */
+  fromWorkspace(directory: string, options?: WorkspaceImportOptions): Promise<Operation>;
   fromOperationHandoff(file: string, options: {
     accept: number; operatorProfile?: OperatorProfile | string; signal?: AbortSignal;
     responseFile?: ResponseCaptureOptions;
@@ -695,4 +709,209 @@ export class WorkspaceRecovery {
   snapshot(options: WorkspaceRecoverySnapshotOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoverySnapshot>>;
   verify(options: WorkspaceRecoveryArchiveOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryVerification>>;
   restore(options: WorkspaceRecoveryArchiveOptions): Promise<WorkspaceRecoverySuccess<WorkspaceRecoveryRestore>>;
+}
+
+/** Complete original buyer-runbook workspaces, independent of single-operator recovery. */
+export interface AcquisitionWorkspaceSelection {
+  /** Omit only when verifying/restoring an archive without live state. */
+  directory?: string;
+  /** Required to create a new original workspace; immutable thereafter. */
+  configsDirectory?: string;
+  /** Receiver-owned preset with original payer/signer and budget limits. */
+  operatorSettings?: string;
+  /** Existing canonical parent outside selected source state; defaults to OS temp. */
+  temporaryDirectory?: string;
+  /** Separate native result budget, 1–256 MiB; default 32 MiB. */
+  resultLimit?: number;
+}
+export type AcquisitionWorkspaceOptions = WorkspaceRecoveryOptions & AcquisitionWorkspaceSelection;
+export interface AcquisitionProcess {
+  readonly exitCode: number | null;
+  readonly exitSignal: string | null;
+  readonly started: boolean;
+  readonly errorCode: string | null;
+  readonly nativeErrorCode: string | null;
+  readonly cleanupErrorCode: string | null;
+  readonly callerCancelled: boolean;
+  readonly interrupted: boolean;
+}
+export class AcquisitionResult<T extends JsonObject = JsonObject> {
+  private constructor();
+  readonly command: string;
+  readonly commandId: string;
+  readonly native: Readonly<T> | null;
+  readonly process: AcquisitionProcess;
+  /** A false value does not assert that no original state was published. */
+  readonly completionReported: boolean;
+  readonly ok: boolean;
+}
+export type AcquisitionSuccess<T extends JsonObject = JsonObject> =
+  AcquisitionResult<T> & {readonly native: Readonly<T>; readonly completionReported: true; readonly ok: true};
+export class AcquisitionError extends BuyerError {
+  readonly result: AcquisitionResult;
+  constructor(code: string, result: AcquisitionResult);
+}
+export interface AcquisitionManifest extends JsonObject {
+  schema: 'stellar-forge.buyer-runbook.v1';
+  id: string;
+  title: string;
+  operations: Array<{id: string; label: string; config: string; saveAs?: string}>;
+}
+export interface AcquisitionPlan extends JsonObject {
+  id: string;
+  title: string;
+  directory: string;
+  operations: JsonObject[];
+}
+export interface AcquisitionDraft extends JsonObject {
+  id: string;
+  revision: number;
+  reviewSha256: string;
+  manifest: AcquisitionManifest;
+  plan: AcquisitionPlan;
+  revisions: number[];
+}
+export interface AcquisitionReady extends JsonObject {
+  id: string;
+  intentId: string;
+  configName: string;
+  configPath: string;
+  configSha256: string;
+  operatorDirectory: string;
+  generation: number;
+  reviewRevision: number;
+  reviewSha256: string;
+}
+export interface AcquisitionRequestReview extends JsonObject {
+  id: string;
+  revision: number;
+  reviewSha256: string;
+  acceptIndex: number;
+  acceptedTerms: JsonObject;
+  totalAtomic: string;
+  dailyAtomic: string;
+}
+export interface AcquisitionRequest extends JsonObject {
+  id: string;
+  filename: string;
+  handoffSha256: string;
+  view: OperationHandoffView;
+  review: AcquisitionRequestReview | null;
+  prepared: AcquisitionReady | null;
+  expired: boolean;
+}
+export interface AcquisitionRunView extends JsonObject {
+  id: string;
+  planSha256: string;
+  state: JsonObject & {
+    plan: AcquisitionPlan;
+    operations: Array<JsonObject & {id: string; intentId: string; state: string}>;
+    accounting: JsonObject;
+    executionLock: JsonObject | null;
+  } | null;
+  stateRefreshError?: string | null;
+  terminalAvailable: boolean | null;
+  execution?: JsonObject & {
+    executionId: string;
+    status: string;
+    result?: JsonObject & {results: JsonObject[]};
+    error?: string;
+  };
+}
+export interface AcquisitionWorkspaceState extends JsonObject {
+  directory: string;
+  configsDirectory: string;
+  drafts: Array<JsonObject & {id: string; revision: number; initialized: boolean}>;
+  acquisitions: Array<{id: string; title: string; planId: string; imported: boolean}>;
+  intake: JsonObject & {requests: Array<JsonObject & {id: string; prepared: AcquisitionReady | null}>};
+  recovery: JsonObject & {history: JsonObject[]};
+  configurations: JsonObject[];
+  terminalAvailable: boolean;
+}
+export interface AcquisitionRecoveryReview extends JsonObject {
+  profile: JsonObject & {
+    directory: string; configsDirectory: string; stateRoot: string; reviewSha256: string;
+    operators: string[]; runs: JsonObject[]; requests: JsonObject[];
+    restoreMode: 'ORIGINAL_CANONICAL_STATE_ROOT';
+  };
+  native: JsonObject;
+}
+export interface AcquisitionArchive extends JsonObject {
+  schema: 'stellar-forge.sf88.workspace-recovery.v2';
+  status: 'BUYER_STATE_BACKUP_CREATED' | 'BUYER_STATE_BACKUP_VERIFIED' | 'BUYER_STATE_RESTORED';
+  recordSha256: string;
+  bundle: string;
+  directory: string;
+  stateRoot: string;
+  operators: Array<JsonObject & {directory: string; checkpoint: JsonObject}>;
+  files: number;
+  bytes: number;
+  reopened?: JsonObject & {acquisitions: number; requests: number};
+  executionStarted?: false;
+}
+export interface AcquisitionExport extends JsonObject {
+  destination: string;
+  bytes: number;
+  sha256: string;
+  published: true;
+  publicationSyncError: string | null;
+}
+export interface AcquisitionArchiveOptions {
+  bundle: string;
+  expectedRecordSha256?: string;
+  /** Environment variable NAME, never the passphrase value. */
+  passphraseEnv?: string;
+  /** Receiver-owned interpreter for original ledger verification. */
+  python?: string;
+  signal?: AbortSignal;
+}
+export class AcquisitionWorkspace {
+  /** Construction never creates state or loads a wallet. */
+  constructor(options: AcquisitionWorkspaceOptions);
+  static fromBuyer(buyer: Buyer, options?: AcquisitionWorkspaceSelection): AcquisitionWorkspace;
+  readonly directory: string | null;
+  readonly configsDirectory: string | null;
+  readonly operatorSettings: string | null;
+  state(options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionWorkspaceState>>;
+  attachRun(run: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionWorkspaceState>>;
+  request(id: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRequest>>;
+  receiveRequest(file: string, options?: {filename?: string; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRequest>>;
+  reviewRequest(id: string, options: {
+    acceptIndex: number; totalAtomic: string; dailyAtomic: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionRequest>>;
+  prepareRequest(id: string, options: {reviewSha256: string; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionReady>>;
+  draft(id: string, options?: {revision?: number; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionDraft>>;
+  save(options: {
+    id?: string; expectedRevision?: number; manifest: AcquisitionManifest; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionDraft>>;
+  initialize(id: string, options: {
+    expectedRevision: number; reviewSha256: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  inspect(id: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  /** Exact reviewed plan plus the original native controlling-terminal approval. */
+  execute(id: string, options: {
+    expectedPlanSha256: string; only?: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  recover(id: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  unlock(id: string, options: {ownerPid: number; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  finalize(id: string, options?: {only?: string; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  bindAccounting(id: string, options: {
+    only: string; workspace: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionRunView>>;
+  preview(id: string, operationId: string, options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<JsonObject>>;
+  download(id: string, operationId: string, destination: string,
+    options?: {signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionExport>>;
+  export(id: string, options: {
+    format: 'json' | 'html' | 'csv'; destination: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionExport>>;
+  exportRequest(id: string, options: {
+    kind: 'body' | 'handoff'; destination: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionExport>>;
+  backupReview(options: {stateRoot: string; signal?: AbortSignal}): Promise<AcquisitionSuccess<AcquisitionRecoveryReview>>;
+  backup(options: {
+    stateRoot: string; output: string; reviewSha256: string; quiesced: true;
+    passphraseEnv?: string; signal?: AbortSignal;
+  }): Promise<AcquisitionSuccess<AcquisitionArchive>>;
+  verify(options: AcquisitionArchiveOptions): Promise<AcquisitionSuccess<AcquisitionArchive>>;
+  restore(options: AcquisitionArchiveOptions): Promise<AcquisitionSuccess<AcquisitionArchive>>;
 }
