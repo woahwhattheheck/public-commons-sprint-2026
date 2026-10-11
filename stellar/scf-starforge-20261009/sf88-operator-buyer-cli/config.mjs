@@ -3,6 +3,7 @@ import { stat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
 import { normalizeBuyerTransport } from '../sf31-buyer-client/public-transport.mjs';
 import { operationTicketReference } from './operation-ticket.mjs';
+import { normalizeOperationHeaders } from './request-headers.mjs';
 import { validateResponseFileIntegrity } from '../sf31-buyer-client/response-file.mjs';
 
 export class InputError extends Error {
@@ -119,10 +120,7 @@ export function operation(x) {
     abs(x.bodyFile, 'BODY_PATH_MUST_BE_ABSOLUTE');
     need(!['GET','HEAD'].includes(method), 'BODY_DISALLOWED_FOR_METHOD');
   }
-  const headers = {...(x.headers ?? {})};
-  shape(x.headers ?? {}, ['Content-Type','Accept','X-SF98-Order-ID'], 'INVALID_HEADERS');
-  need(Object.values(headers).every(v => typeof v === 'string' && v.length <= 256 &&
-    !/[\r\n]/.test(v)), 'INVALID_HEADERS');
+  const headers = normalizeOperationHeaders(x.headers ?? {});
   if (x.orderReference !== undefined) {
     need(typeof x.orderReference === 'string' && /^[A-Za-z0-9._:-]{1,80}$/.test(x.orderReference),
       'INVALID_ORDER_REFERENCE');

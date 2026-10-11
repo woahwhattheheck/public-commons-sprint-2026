@@ -140,14 +140,16 @@ class Buyer:
         with op._initializing():
             source = op.directory / "discovery.json"
             write(source, raw, exclusive=True)
+            headers_file = op.directory / "request.headers.json"
+            if headers is not None:
+                dump(headers_file, dict(headers), exclusive=True)
             result = self.runtime.checked(["--prepare", "--discovery", source,
                 "--row", row, "--accept", accept, "--intent-id", intent_id,
-                "--url", url, "--method", method, "--out", op.config_path],
+                "--url", url, "--method", method, "--out", op.config_path,
+                *(["--headers-file", headers_file] if headers is not None else [])],
                 mode="OFFLINE_CONFIG_PREPARED")
             dump(op.directory / "prepared.json", result, exclusive=True)
             config = file_json(op.config_path)
-            if headers is not None:
-                config["operation"]["headers"] = dict(headers)
             op._store_config(config, body=body)
         return op
 
