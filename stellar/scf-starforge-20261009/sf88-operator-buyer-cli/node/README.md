@@ -141,6 +141,25 @@ private file. The immutable configuration and existing inbox preserve these
 values across restart. Authentication and payment headers stay with the native
 operator and signer; SF98 order headers retain their original URL-bound check.
 
+For a complete merchant download from another host, use the matching native
+runtime and import directly:
+
+```js
+const operation = await buyer.fromOperationHandoff(
+  '/private/merchant-operation.handoff.json', { accept: 0 }
+);
+const review = await operation.review();
+// Execute the reviewed operation with this buyer's own configured profile.
+const result = await operation.execute({ review });
+```
+
+Choose the actual offered payment option. The native importer validates the
+original ticket and creates local input paths; this package retains the body and
+ticket in its operation directory before removing temporary import files. The
+merchant's stable intent remains unchanged, and the packet contributes no
+operator or signer settings. Reopen an existing intent with `buyer.operation`.
+Keep the received file private (`0600`) at a canonical absolute path.
+
 ## Dataset acquisition inside a Node application
 
 The same `Buyer` now exposes the original SF88 dataset session and original SF100

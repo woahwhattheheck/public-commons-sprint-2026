@@ -80,6 +80,15 @@ export async function loadOperationTicket(operation, {requireCurrent = false} = 
   const reference = operationTicketReference(operation);
   if (!reference) return null;
   const raw = await privateBytes(reference.file);
+  return parseOperationTicketBytes(raw, operation, {requireCurrent});
+}
+
+/** The same envelope validation for a private transfer before creating files. */
+export function parseOperationTicketBytes(raw, operation, {requireCurrent = false} = {}) {
+  const reference = operationTicketReference(operation);
+  need(reference && raw instanceof Uint8Array && raw.byteLength > 0 && raw.byteLength <= MAX_BYTES,
+    'OPERATION_TICKET_SCHEMA_INVALID');
+  raw = Buffer.from(raw);
   let value;
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new OperationTicketError('OPERATION_TICKET_JSON_INVALID'); }
