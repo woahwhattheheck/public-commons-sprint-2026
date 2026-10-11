@@ -236,3 +236,6 @@ export async function finalizeAcquisitionOperation(plan,row,{workspace,workspace
     ...(saveError?{saveError}:{}),status:view.observationError?'OBSERVATION_FAILED':
       view.unsignedResponse?.outcome??view.result?.outcome??'NOT_RECORDED'};
 }
+
+// Recovery reads the same original binding without creating an accounting selection.
+export {originalWorkspace as inspectAcquisitionWorkspace};

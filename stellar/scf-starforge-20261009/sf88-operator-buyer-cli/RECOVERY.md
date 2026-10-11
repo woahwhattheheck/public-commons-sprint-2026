@@ -156,3 +156,11 @@ The closure is limited to 9,500 state entries, 2 GiB per file and slightly less
 than 4 GiB in total to leave room for metadata within SF101's existing limits.
 Large independent data collections can use the original SF101 archival workflow;
 retain their actual files and bindings alongside this operator recovery plan.
+
+## Original operator collections
+
+The native recovery API also accepts `operators`, an explicit array of additional original SF88 workspace directories sharing the selected private `stateRoot`. Passing this array selects the `stellar-forge.sf88.workspace-recovery.v2` collection record, with at most 64 operators including the primary `directory`. The source CLI accepts repeated `--operator /absolute/original-workspace` for inspect and backup. Omitting the array and flags preserves the original single-operator v1 contract.
+
+A collection holds every original ledger in canonical order through both inventory comparisons, excludes each ledger's WAL and SHM sidecars, verifies every staged SQLite backup with its original journal key, and authenticates every checkpoint in the existing SF101 encrypted archive. An undeclared native ledger is rejected rather than copied as an ordinary file. Verification and restore reopen every declared operator through the maintained native engine. `optionalInclude` retains existing selected outputs or the parent metadata of absent optional outputs without recursively selecting unrelated siblings.
+
+[The buyer-runbook recovery workflow](../buyer-runbook/RECOVERY.md) composes this collection with the original workspace, every received operator generation and exact frozen acquisition plans. Its trusted staging hook seals only the leases owned by that capture after source comparison and checkpoint verification. Historical lease generations and original native engines remain intact; restore reopens saved acquisitions without running them.
