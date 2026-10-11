@@ -4,7 +4,6 @@ import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { importOpenApi } from './importer.mjs';
-import { createSellerServiceConfig } from './service-config.mjs';
 const sha = data => createHash('sha256').update(data).digest('hex');
 
 export async function run(args = process.argv.slice(2)) {
@@ -26,14 +25,19 @@ export async function run(args = process.argv.slice(2)) {
   const compiled = importOpenApi(spec.value, config.value);
   const bytes = Buffer.from(JSON.stringify(compiled, null, 2) + '\n');
   const bindings = options.has('--service-bindings') ? await input('--service-bindings') : null;
+  // Metadata-only import need not load a network resource-server module.
+  const createSellerServiceConfig = bindings
+    ? (await import('./service-config.mjs')).createSellerServiceConfig : null;
   const serviceBytes = bindings ? Buffer.from(JSON.stringify(createSellerServiceConfig(compiled, bindings.value), null, 2) + '\n') : null;
   if (serviceBytes && serviceBytes.length > 1024 * 1024) throw new RangeError('Service config exceeds the SF30 1 MiB limit');
   const native = await readFile(new URL('../sf30-seller-discovery/index.mjs', import.meta.url));
   const adapter = await readFile(new URL('./importer.mjs', import.meta.url));
-  const validator = await readFile(new URL('../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs', import.meta.url));
+  const validator = await readFile(new URL('../../../stellar-forge/payment-auto-catalog/schema-validation.mjs', import.meta.url));
+  const compatibility = await readFile(new URL('./schema-compat.mjs', import.meta.url));
   const manifest = { schema: 'stellar.open-api-seller-manifest.v1',
     specSha256: sha(spec.bytes), selectionsSha256: sha(config.bytes),
     sellerCompilerSha256: sha(native), validatorSha256: sha(validator), importerSha256: sha(adapter), offersSha256: sha(bytes),
+    schemaCompatibilitySha256: sha(compatibility),
     operations: compiled.offers.map(({ method, path, sourcePointer, serverIndex }) => ({ method, path, sourcePointer, serverIndex })) };
   if (serviceBytes) {
     manifest.serviceBindingsSha256 = sha(bindings.bytes);

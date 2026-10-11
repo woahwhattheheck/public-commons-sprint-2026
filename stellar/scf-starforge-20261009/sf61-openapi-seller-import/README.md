@@ -1,6 +1,6 @@
 # OpenAPI seller import
 
-Turn selected routes from an existing OpenAPI 3.1 JSON description into x402 v2
+Turn selected routes from an existing OpenAPI 3.0 or 3.1 JSON description into x402 v2
 seller metadata. The adapter imports the original SF30 `createSellerDiscovery`
 compiler and SF25 `validateBazaarExtension` acceptance function. It avoids a
 second hand-maintained API description and catches unsupported schemas or bad
@@ -18,7 +18,7 @@ node stellar/scf-starforge-20261009/sf61-openapi-seller-import/cli.mjs \
 The output directory must be new. `offers.json` includes the selected method,
 path, source JSON Pointer, compiled seller envelope, and ready-to-use
 402 response metadata. `manifest.json` hashes the input files, imported compiler,
-schema validator, adapter and output. These hashes identify bytes; they are not signatures.
+schema validator, schema compatibility adapter, importer and output. These hashes identify bytes; they are not signatures.
 
 The included weather document is an illustrative example. Its asset and recipient
 are deliberately nonpayable. For an actual API, supply your existing OpenAPI JSON
@@ -62,7 +62,7 @@ use `"handler":"forecast"` instead of `response` and pass `--handlers FILE`
 to the existing seller CLI. Its native facilitator mode is described in the
 [SF30 service guide](../sf30-seller-sdk/README.md).
 
-No schema translation occurs: the runtime retains the complete original offer,
+After import, no further schema translation occurs: the runtime retains the complete compiled offer,
 including query/body assertions, examples and payment terms, through native
 route configuration, offer inspection and the HTTP 402 header. The original
 SF25 validator checks Bazaar metadata; original SF30 preflight checks supported
@@ -101,12 +101,12 @@ parameters within one list and duplicate operation selections are rejected.
 Reference expansion is finite, and recursive references require manual integration.
 `$ref` in example **data** remains data; it is not fetched or resolved.
 
-This first version supports only OpenAPI 3.1 and the actual SF25 schema vocabulary.
+The importer supports OpenAPI 3.0 and 3.1 within the actual SF25 schema vocabulary.
 Unknown assertion keywords cause an explicit SF25 rejection rather than silently
-losing constraints. It does not translate OpenAPI 3.0 schema semantics. Additional
+losing constraints. Additional
 authentication, header/cookie parameters, server variables, custom serialization,
 optional request bodies, bodies on GET/HEAD/DELETE, multipart/text bodies and
-semantic `$ref` siblings require manual integration. Operation `security: []` and
+semantic OpenAPI 3.1 `$ref` siblings require manual integration. Operation `security: []` and
 an empty security alternative preserve OpenAPI's optional-authentication semantics.
 Responses and callbacks are not imported. Every selected operation must succeed;
 the tool never writes a partial list of accepted routes.
@@ -116,19 +116,48 @@ fields and supported value constraints. This does not validate a real wallet,
 seller identity or payment, and is not a complete OpenAPI document validator.
 SF31's shipped 32,768-character payment header limit is checked on each result.
 The service adapter extends the existing SF30 runtime; the original SF30 metadata
-compiler and SF25 validator are reused unchanged.
+compiler is unchanged; SF25 validation is shared through its pure schema module.
+
+## OpenAPI 3.0 compatibility
+
+The same CLI accepts `openapi: "3.0.x"`; no preprocessing command or new service
+is required. Output retains the source OpenAPI version and operation pointers.
+The context-aware adapter translates only schema nodes, never example, default
+or enum payloads. Per OpenAPI 3.0, `nullable: true` expands only a type explicitly
+present on that same schema. Other constraints, including enums and composition,
+remain effective; null is not added to an enum automatically. Reference Object
+siblings are ignored as required by 3.0, rather than applied as 3.1 assertions.
+
+Boolean exclusive numeric bounds become JSON Schema numeric bounds. The shared
+SF25 validator enforces strict comparisons and rejects malformed/nonfinite bounds.
+Nullable body properties work with declared examples. Nullable query/path values,
+nullable whole-body objects, unsupported formats/assertions and other mappings
+outside the existing compiler's vocabulary still require an explicit integration;
+this is not a complete OpenAPI converter or validator.
+
+`schema-validation.mjs` contains the shared pure SF25 validator. Its original
+`auto-catalog.mjs` export remains available; settled-payment ingestion is unchanged.
+Metadata-only import avoids loading mutable catalog/server dependencies. The CLI
+loads the existing service adapter only with `--service-bindings` and records the
+actual pure validator in `validatorSha256`, plus the additive
+`schemaCompatibilitySha256` field. Existing source/output hash fields remain.
 
 ## Focused verification
 
 ```sh
 node stellar/scf-starforge-20261009/sf61-openapi-seller-import/acceptance.mjs
+node --test stellar/scf-starforge-20261009/sf61-openapi-seller-import/openapi30-acceptance.mjs
 ```
 
 One offline integration check covers GET/path/query overriding, POST JSON body,
 original schema acceptance, header decoding, authentication semantics, invalid
 examples and CLI output. It does not run any repository suite or hosted Actions.
 
-Contract references: [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html),
+The two additional integrated 3.0 journeys exercise exact original compiler output,
+3.1 parity, refs, nullability, strict numeric boundaries, opaque example data,
+CLI export/readback and malformed input rejection. No network or payment calls.
+
+Contract references: [OpenAPI 3.0.4](https://spec.openapis.org/oas/v3.0.4.html), [OpenAPI 3.1.1](https://spec.openapis.org/oas/v3.1.1.html),
 [canonical Bazaar dynamic routes](https://github.com/x402-foundation/x402/blob/7f2b2f1f77fa5317615735e3378a6fad41cccb4e/specs/extensions/bazaar.md),
 [SF30 seller compiler](../sf30-seller-discovery/README.md), and
 [SF25 auto-catalog](../../../stellar-forge/payment-auto-catalog/README.md).

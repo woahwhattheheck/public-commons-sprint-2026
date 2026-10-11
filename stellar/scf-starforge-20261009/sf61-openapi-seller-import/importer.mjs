@@ -1,6 +1,7 @@
-// MIT. Offline OpenAPI 3.1 adapter for the original SF30 seller compiler.
+// MIT. Offline OpenAPI 3.0/3.1 adapter for the original SF30 seller compiler.
 import { createSellerDiscovery, makePaymentRequiredResponse } from '../sf30-seller-discovery/index.mjs';
-import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs';
+import { adaptOpenApi30Schema } from './schema-compat.mjs';
+import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const own = (o, k) => Object.hasOwn(o, k);
@@ -27,6 +28,7 @@ function inspect(value, depth = 0, count = { n: 0 }) {
 
 // Resolve reference OBJECTS only. Examples are data and are never traversed.
 function resolver(document) {
+  const legacy = /^3\.0\./.test(document.openapi);
   let expanded = 0;
   const pointer = ref => {
     if (typeof ref !== 'string' || !ref.startsWith('#/')) fail('Only document-local JSON Pointer references are supported');
@@ -45,7 +47,7 @@ function resolver(document) {
     object(value, 'OpenAPI object');
     if (!own(value, '$ref')) return value;
     if (stack.length >= 16 || stack.includes(value.$ref)) fail('Recursive reference is not supported');
-    const extras = Object.keys(value).filter(k => k !== '$ref');
+    const extras = legacy ? [] : Object.keys(value).filter(k => k !== '$ref');
     if (extras.some(k => !['description', 'summary'].includes(k))) fail('Semantic $ref siblings are not supported');
     return { ...reference(pointer(value.$ref), [...stack, value.$ref]),
       ...Object.fromEntries(extras.map(k => [k, value[k]])) };
@@ -55,13 +57,13 @@ function resolver(document) {
     object(value, 'Schema');
     if (own(value, '$ref')) {
       if (stack.includes(value.$ref)) fail('Recursive schema is not supported');
-      const extras = Object.keys(value).filter(k => k !== '$ref');
+      const extras = legacy ? [] : Object.keys(value).filter(k => k !== '$ref');
       if (extras.some(k => !['description', 'title', '$comment'].includes(k))) fail('Semantic schema $ref siblings are not supported');
       return { ...schema(pointer(value.$ref), [...stack, value.$ref], depth + 1),
         ...Object.fromEntries(extras.map(k => [k, clone(value[k])])) };
     }
     if (['$id', '$dynamicRef', '$dynamicAnchor', '$anchor'].some(k => own(value, k))) fail('Schema resource and dynamic references are not supported');
-    const result = clone(value);
+    const result = legacy ? adaptOpenApi30Schema(value) : clone(value);
     if (own(result, 'example')) {
       if (!own(result, 'examples')) result.examples = [result.example];
       delete result.example;
@@ -218,7 +220,7 @@ function makeOffer(document, selection, refs) {
 /** Compile explicitly selected routes. Does not fetch, sign, charge or register. */
 export function importOpenApi(document, selections) {
   object(document, 'OpenAPI document'); inspect(document); inspect(selections);
-  if (typeof document.openapi !== 'string' || !/^3\.1\.\d+$/.test(document.openapi)) fail('Only OpenAPI 3.1 documents are supported');
+  if (typeof document.openapi !== 'string' || !/^3\.[01]\.\d+$/.test(document.openapi)) fail('Only OpenAPI 3.0 or 3.1 documents are supported');
   object(document.paths, 'paths');
   if (!Array.isArray(selections) || !selections.length || selections.length > 100) fail('Select 1–100 operations explicitly');
   const seen = new Set();
