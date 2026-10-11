@@ -22,6 +22,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
@@ -90,6 +91,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
+  ckan                                       Discover, capture and operate retained CKAN data merchants
+  ckan-publisher                             Review and publish complete DataStore editions and buyer handoffs
   mongodb                                    Inspect, author and operate fixed native BSON reports
   mongodb-workspace                          Build a MongoDB merchant and prepare original buyer requests
   mongodb-publisher                          Publish complete reviewed BSON snapshots and retained refreshes
