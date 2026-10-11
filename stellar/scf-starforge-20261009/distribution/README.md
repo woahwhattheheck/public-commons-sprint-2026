@@ -4136,3 +4136,68 @@ functions. All resolve to this same packaged source and original native case.
 ## Tomorrow.io weather operations
 
 `starforge tomorrow --help` opens the complete maintained command surface for location/work selection, reviewed Timeline and PNG capture, staff decisions, operations reports, single-resource recovery, licensed merchant packaging, native customer purchase/recovery and portable handover. `starforge tomorrow serve --workspace PRIVATE_DIRECTORY` serves the industrial browser workspace. The original setup, usage, request semantics and customer/Austin workflows are documented in [Tomorrow weather operations](../sf30-seller-sdk/tomorrow/README.md). All source is included by the existing SF30 component.
+
+## Private SFTP reports and retained dataset commerce
+
+The installed `sftp-workspace` opens a private operator desk for a pinned SFTP
+connection, reviewed CSV/JSON/NDJSON reports and their complete merchant payment
+choices. Each product binds one immutable report revision and opens the original
+dataset publisher console. The original versioned seller, recurring policy and
+snapshot-bound buyer remain the underlying commerce implementation.
+
+Use Node 22.5 or newer on Linux and the maintained `sftp` dependency group, which
+declares the exact `ssh2@1.17.0` package. The original seller, native buyer and
+Linux `flock` dependency requirements still apply. The merchant connects to the
+selected SFTP server through its Node client.
+
+```sh
+starforge doctor --native --feature sftp
+starforge sftp --help
+starforge sftp-workspace --help
+starforge sftp-publisher --help
+```
+
+Save a private source JSON declaration using
+`stellar-forge.sftp-source.v1`, the server operator's confirmed SHA256 host-key
+fingerprint, an absolute remote root and authentication environment reference
+names. A key-file environment value is an absolute private 0600 path.
+Start with `queries: {}` to inspect the folder before authoring the first report.
+
+The source catalogue pages the completely observed directory. Sampling captures
+the entire file and reports its complete row count alongside a limited preview.
+JSON supports an explicit record-array pointer; CSV reuses the original record
+parser; NDJSON reads complete record lines. Public column aliases, scalar types,
+null/missing handling, fixed file path and typed conditions remain in the saved
+report declaration.
+
+Create a publication from a saved report. In its original publisher console,
+save exact parameter inputs and a complete extraction budget, inspect its
+candidate and full capture identity, record the review, and publish. Start the
+native dataset seller from the parent desk and choose an exact advertised
+payment option to prepare the original buyer handoff. Atomic amount strings and
+all payment alternatives retain their original offer semantics.
+
+Every extraction retains the complete received bytes and full digest, negotiated
+host fingerprint and before/after file observations. A transfer interruption
+retains its partial bytes; the next capture validates every saved prefix byte
+before resuming. A reviewed `expectedSha256` can bind an agreed remote edition.
+
+Configure the original recurring policy in that same publication console.
+Complete matching rows must fit its explicit budget. Later file editions become
+new retained candidates; equal content follows the original unchanged-version
+behavior. Existing buyers can keep an earlier snapshot. Close and reopen the
+private desk to restore original source/merchant revisions, publications,
+seller intent, policy and buyer handoffs.
+
+The [source and CLI guide](../sf30-seller-sdk/sftp/README.md) and
+[operator workspace guide](../sf30-seller-sdk/sftp/workspace/README.md) include
+the exact configuration, invocation, field semantics, capture/restart behavior
+and full customer operation. Merchant MCP supports the original publisher under
+`kind: "sftp"`; its [publisher guide](../../../stellar-forge/mcp-merchant-operator/PUBLISHERS.md)
+uses the same native workspace and scheduler.
+
+Programmatic exports are `./seller/sftp` for `createSftpSource`,
+`./seller/sftp/config` for source-file opening and validation,
+`./seller/sftp/publisher` for `openSftpPublisher`,
+`./seller/sftp/workspace` for `startSftpWorkbench`, and
+`./seller/sftp/workspace/model` for `openSftpWorkbench`.

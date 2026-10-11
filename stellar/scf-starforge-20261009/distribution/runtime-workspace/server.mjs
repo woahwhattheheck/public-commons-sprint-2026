@@ -4,6 +4,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import { imageOperationFields } from './image-workspace.mjs';
+import { managedOperationFields } from './managed-workspace.mjs';
 import { openRuntimeWorkspace } from './model.mjs';
 import { plain, need, fail } from './storage.mjs';
 
@@ -36,6 +37,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
+    ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
     ['/image.mjs', 'image.mjs', 'text/javascript; charset=utf-8'],
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
@@ -86,6 +88,10 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (req.method === 'GET' && url.pathname === '/api/handoff') {
         const value = params(url, ['runtimeId']); return send(200, await model.handoff(value.runtimeId));
       }
+      if (req.method === 'GET' && url.pathname === '/api/managed/state')
+        return send(200, await model.managedState(params(url, ['homeId'])));
+      if (req.method === 'GET' && url.pathname === '/api/managed/config')
+        return send(200, await model.managedConfig(params(url, ['homeId', 'path'])));
       need(req.method === 'POST' && req.headers.origin === origin, 'RUNTIME_WORKSPACE_ORIGIN_REQUIRED', undefined, 403);
       if (url.pathname === '/api/images/upload') {
         need((req.headers['content-type'] ?? '').split(';')[0] === 'application/octet-stream', 'RUNTIME_IMAGE_UPLOAD_TYPE_REQUIRED');
@@ -119,10 +125,19 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (url.pathname === '/api/review') return send(200, await model.review(await body(req, ['archiveId', 'selection'])));
       if (url.pathname === '/api/operation') return send(202, await model.begin(await body(req,
         ['requestId', 'operation', 'runtimeId', 'archiveId', 'name', 'selection', 'profileId', 'offline', 'cache',
-          'load', 'source', 'install', 'archive', 'sha256', 'label', 'nodeHeaders',
-          ...new Set(Object.values(imageOperationFields).flat())])));
+          'load', 'source', 'install', 'archive', 'sha256', 'label', 'nodeHeaders', ...Object.values(managedOperationFields).flat(), ...new Set(Object.values(imageOperationFields).flat())])));
       if (url.pathname === '/api/resume-queued') {
         const value = await body(req, ['operationId']); return send(202, await model.resumeQueued(value.operationId));
+      }
+      if (url.pathname === '/api/managed/open')
+        return send(201, await model.openManagedHome(await body(req, ['directory', 'label'])));
+      if (url.pathname === '/api/managed/review')
+        return send(200, await model.reviewManagedAdoption(await body(req, ['homeId', 'runtimeId'])));
+      if (url.pathname === '/api/managed/recover') {
+        const value = await body(req, ['operationId']); return send(202, await model.recoverManagedOperation(value.operationId));
+      }
+      if (url.pathname === '/api/managed/stop') {
+        const value = await body(req, ['operationId']); return send(202, await model.stopManagedCommand(value.operationId));
       }
       if (url.pathname === '/api/compare') return send(200, await model.compare(await body(req, ['before', 'after'])));
       fail('RUNTIME_WORKSPACE_ROUTE_NOT_FOUND', undefined, 404);
