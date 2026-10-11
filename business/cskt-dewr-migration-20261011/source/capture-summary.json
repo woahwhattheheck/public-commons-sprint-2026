@@ -1,0 +1,83 @@
+{
+  "capture": {
+    "media": {
+      "reported": 359,
+      "pagesCaptured": 4,
+      "observed": 353,
+      "uniqueIds": 353,
+      "reportedDifference": 6,
+      "alternateObserved": 353,
+      "alternateIdMatch": true
+    },
+    "pages": {
+      "reported": 33,
+      "pagesCaptured": 1,
+      "observed": 33,
+      "uniqueIds": 33,
+      "reportedDifference": 0
+    },
+    "posts": {
+      "reported": 0,
+      "pagesCaptured": 1,
+      "observed": 0,
+      "uniqueIds": 0,
+      "reportedDifference": 0
+    }
+  },
+  "mimeTypes": {
+    "application/pdf": 130,
+    "image/jpeg": 166,
+    "video/quicktime": 14,
+    "image/heic": 1,
+    "image/png": 30,
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": 3,
+    "image/webp": 4,
+    "video/mp4": 3,
+    "application/zip": 2
+  },
+  "publishedHtml": 33,
+  "bodyComparison": {
+    "REST_COMPLETE": 33
+  },
+  "gisItems": 7,
+  "nativePhaseFeatures": 6,
+  "assets": [
+    {
+      "mediaId": 2338,
+      "file": "assets/2338.png",
+      "bytes": 53536,
+      "sha256": "cb7fd7484640870030173bd63ff690ea590043a19da0babf3216616d56f8392b",
+      "contentType": "image/png"
+    },
+    {
+      "mediaId": 2662,
+      "file": "assets/2662.pdf",
+      "bytes": 2483908,
+      "sha256": "f65e8044d3b2da5e52036d1b8443440bbbaa440c0eb18009d6481d1cad3f665c",
+      "contentType": "application/pdf"
+    },
+    {
+      "mediaId": 2722,
+      "file": "assets/2722.pdf",
+      "bytes": 653776,
+      "sha256": "5a8b45e5593fa9d861ecf33eae394cc5c05428167f9935f00ff1189607f1573a",
+      "contentType": "application/pdf"
+    },
+    {
+      "mediaId": 2733,
+      "file": "assets/2733.pdf",
+      "bytes": 653776,
+      "sha256": "5a8b45e5593fa9d861ecf33eae394cc5c05428167f9935f00ff1189607f1573a",
+      "contentType": "application/pdf"
+    },
+    {
+      "mediaId": 2820,
+      "file": "DEWR_Website_RFP_Final.pdf",
+      "bytes": 631004,
+      "sha256": "114afc69be5ecbf9083e29d8023160090a0ec7b2c8b7edf78428e7155fb206e5",
+      "contentType": "application/pdf"
+    }
+  ],
+  "corpusSha256": "5855e0db92f53e822109c2e7bdc396e76f355482f31d829f982c3fe6b34f4318",
+  "corpusBytes": 2527294
+}
