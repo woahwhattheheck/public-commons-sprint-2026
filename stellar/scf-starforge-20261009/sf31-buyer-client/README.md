@@ -36,6 +36,12 @@ buyer call, then stream the original response to a create-only file with a byte
 limit and download deadline. Payment approval, receipts and recovery stay with
 the existing buyer and ledger.
 
+For finite SSE or NDJSON, the same writer can validate records incrementally and
+retain interrupted bytes for local recovery. See [streaming responses](STREAMING.md)
+for `stream`, `onRecord`, byte and record limits, and retained-reader examples.
+Payment selection defaults to `authorization`; select an advertised upfront
+offer explicitly with `expect.paymentFlow:'upfront'` before policy approval.
+
 ```js
 import { X402BuyerClient } from './buyer.mjs';
 const buyer = new X402BuyerClient();

@@ -1,0 +1,34 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "maxRequestBytes": 65536,
+  "maxStreamBytes": 33554432,
+  "handlerTimeoutMs": 60000,
+  "requestTimeoutMs": 180000,
+  "routes": [
+    {
+      "id": "exa-answer",
+      "path": "/research/answer",
+      "handler": "exaAnswer",
+      "admit": "admitExaAnswer",
+      "definition": {
+        "method": "POST",
+        "responseFormat": "sse",
+        "serviceName": "Cited research answers",
+        "description": "One Exa Answer query with streamed answer fragments and source citations at an operator-configured fixed price",
+        "tags": ["research", "citations", "streaming"],
+        "bodyType": "json",
+        "body": {"query": "How do Stellar smart contracts work?"},
+        "outputExample": {"choices": [{"delta": {"content": "Example answer fragment"}}]},
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 180,
+          "extra": {"paymentFlow": "upfront"}
+        }
+      }
+    }
+  ]
+}

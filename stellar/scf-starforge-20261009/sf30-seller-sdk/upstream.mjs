@@ -12,6 +12,7 @@ import { supportsSellerMethod } from './http-methods.mjs';
 import { createUpstreamOperationControl } from './upstream-operation-control.mjs';
 import { compileOAuthClientCredentials, createOAuthClientCredentials } from './oauth-client-credentials.mjs';
 import { compileUpstreamCache, createConfiguredCachedUpstream } from './response-cache/config.mjs';
+import { compileUpstreamStreamPolicy } from './upstream-stream.mjs';
 
 const SCHEMA = 'stellar-forge.seller-upstreams.v1';
 const OWN = (value,key) => Object.prototype.hasOwnProperty.call(value,key);
@@ -19,7 +20,7 @@ const plain = value => value !== null && typeof value === 'object' && !Array.isA
   [Object.prototype,null].includes(Object.getPrototypeOf(value));
 const reserved = /^(?:host|connection|keep-alive|content-length|transfer-encoding|te|trailer|upgrade|expect|proxy-.*|cookie|set-cookie|accept-encoding|content-encoding|content-type|origin|referer|forwarded|x-forwarded-.*|sec-.*|payment-.*|x-payment.*|extension-responses|settlement-overrides|x402-.*|www-authenticate)$/i;
 const responseAllowed = new Set(['content-type','content-language','etag','last-modified','content-disposition']);
-const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract','idempotency','cache','oauth2']);
+const bindingKeys = new Set(['origin','path','method','query','requestHeaders','headerEnv','responseHeaders','responseMode','timeoutMs','maxResponseBytes','maxInFlight','availability','responseContract','idempotency','cache','oauth2','stream']);
 const bad = text => { throw new TypeError(text); };
 const handlerRuntimes = new WeakMap();
 
@@ -140,7 +141,12 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
     const oauth2 = raw.oauth2 === undefined ? undefined : compileOAuthClientCredentials(raw.oauth2,{allowLoopback,env});
     if (oauth2 && OWN(credentials,'authorization')) bad('OAuth cannot be combined with an authorization headerEnv');
     const method = raw.method ?? 'GET', responseMode = raw.responseMode ?? 'json';
-    if (!supportsSellerMethod(method) || !['json','bytes'].includes(responseMode)) bad('Invalid upstream method or responseMode');
+    if (!supportsSellerMethod(method) || !['json','bytes','sse','ndjson'].includes(responseMode)) bad('Invalid upstream method or responseMode');
+    const streaming = ['sse','ndjson'].includes(responseMode);
+    if (streaming && (method === 'HEAD' || OWN(raw,'cache') || OWN(raw,'idempotency') || OWN(raw,'responseContract')))
+      bad('Streaming bindings require a response body and cannot combine buffered caching, idempotency or responseContract');
+    if (!streaming && OWN(raw,'stream')) bad('stream settings require sse or ndjson responseMode');
+    const stream = streaming ? compileUpstreamStreamPolicy(raw.stream,responseMode) : undefined;
     if (OWN(raw,'responseContract') && responseMode !== 'json') bad('Response contracts require JSON responseMode');
     const responseContract = OWN(raw,'responseContract') ? compileResponseContract(raw.responseContract,{method}).contract : undefined;
     const maxResponseBytes = integer(raw.maxResponseBytes,1_048_576,1_048_576,'maxResponseBytes');
@@ -154,6 +160,7 @@ export function compileUpstreamBindings(config,{allowLoopback=false,env=process.
       path:raw.path,pathKeys:Object.freeze(keys),method,query:queryMapping(raw.query),
       requestHeaders:Object.freeze(requestHeaders),responseHeaders:Object.freeze(responseHeaders),
       credentials:Object.freeze(credentials),responseMode,...(idempotency ? {idempotency} : {}),
+      ...(stream ? {stream} : {}),
       ...(oauth2 ? {oauth2} : {}),
       ...(responseContract === undefined ? {} : {responseContract}),
       timeoutMs:integer(raw.timeoutMs,10000,120000,'timeoutMs'),
@@ -182,6 +189,12 @@ export function validateUpstreamService(config,compiled) {
     }
     const method = route.definition?.method ?? route.offer?.extensions?.bazaar?.info?.input?.method;
     if (method !== bound.method) bad(`Seller/upstream method mismatch for handler: ${route.handler}`);
+    const declaredMime = String(route.offer?.resource?.mimeType ?? '').split(';')[0].trim().toLowerCase();
+    const declaredFormat = route.definition?.responseFormat ??
+      (declaredMime === 'text/event-stream' ? 'sse' :
+        ['application/x-ndjson','application/ndjson'].includes(declaredMime) ? 'ndjson' : 'json');
+    if ((['sse','ndjson'].includes(bound.responseMode) || ['sse','ndjson'].includes(declaredFormat)) &&
+        declaredFormat !== bound.responseMode) bad(`Seller/upstream stream format mismatch for handler: ${route.handler}`);
     const serviceKeys = new Set(String(route.path).split('/').filter(s => s.startsWith(':')).map(s => s.slice(1)));
     if (bound.pathKeys.some(key => !serviceKeys.has(key))) bad(`Missing seller path parameter for handler: ${route.handler}`);
     used.add(route.handler);
@@ -217,6 +230,7 @@ export function createUpstreamHandlers(config,{allowLoopback=false,env=process.e
     const options = {...(provider ? {credentialProvider:provider} : {}),baseUrl:binding.origin,path:binding.path,method:binding.method,
       query:binding.query,headers:binding.credentials,requestHeaders:binding.requestHeaders,
       responseHeaders:[...new Set(['content-type',...binding.responseHeaders])],responseType:binding.responseMode,
+      ...(binding.stream ? {stream:binding.stream} : {}),
       ...(binding.responseContract === undefined ? {} : {responseContract:binding.responseContract}),
       timeoutMs:binding.timeoutMs,maxResponseBytes:binding.maxResponseBytes,maxInFlight:binding.maxInFlight,
       ...(binding.idempotency ? {idempotency:configuredUpstreamIdempotency(binding.idempotency)} : {}),
