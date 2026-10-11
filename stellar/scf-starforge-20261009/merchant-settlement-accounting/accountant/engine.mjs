@@ -1,6 +1,7 @@
 // MIT. Accountant return adapter for the original merchant reconciliation report.
 // Pure operations: the original workspace owns source custody and immutable imports.
 import {createHash,randomUUID} from 'node:crypto';
+import {ADJUSTMENT_COLUMNS,freezeAccountantAdjustments,validateAccountantAdjustmentRow} from './adjustments.mjs';
 
 export const HANDOFF_SCHEMA='stellar-forge.merchant-accountant-handoff.v1';
 export const RETURN_SCHEMA='stellar-forge.merchant-accountant-return.v1';
@@ -22,6 +23,8 @@ export const PROTECTED_COLUMNS=Object.freeze([
   ...SOURCE_FIELDS,...LABEL_FIELDS,
 ]);
 export const CSV_COLUMNS=Object.freeze([...PROTECTED_COLUMNS,...EDITABLE_COLUMNS]);
+export const accountantColumns=handoff=>[...PROTECTED_COLUMNS,...(handoff?.source?.adjustments?ADJUSTMENT_COLUMNS:[]),...EDITABLE_COLUMNS];
+const protectedColumns=handoff=>[...PROTECTED_COLUMNS,...(handoff.source.adjustments?ADJUSTMENT_COLUMNS:[])];
 const MAX_ROWS=22_000,MAX_RETURN_ROWS=50_000,MAX_REPORT_BYTES=128_000_000,MAX_CSV_BYTES=64*1024*1024;
 const HEX=/^[a-f0-9]{64}$/;
 const IDENTIFIER=/^[A-Za-z0-9][A-Za-z0-9._-]{0,159}$/;
@@ -80,7 +83,7 @@ function validateReport(report){
 }
 
 /** Freeze one original report and operator-supplied labels. No files or network. */
-export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt=new Date().toISOString(),id=randomUUID(),periodCloseBytes}={}){
+export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt=new Date().toISOString(),id=randomUUID(),periodCloseBytes,adjustmentsBytes}={}){
   const raw=bytes(reportBytes,MAX_REPORT_BYTES,'Original report'),report=parseJson(raw,'Original report');validateReport(report);
   identifier(id,'Handoff ID');shortText(name,'Handoff name');shortText(actor,'Operator',1000);timestamp(createdAt);
   check(plain(source),'SOURCE_IDENTITY_REQUIRED','Choose the original completed reconciliation.');
@@ -90,6 +93,7 @@ export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt
   const retainedSource={runId:source.runId,reportSha256:source.reportSha256,reportBytes:raw.length,
     manifestSha256:source.manifestSha256,inputManifestSha256:source.inputManifestSha256,
     reportSchema:report.schema,reportCreatedAt:report.createdAt??null,periodClose:null};
+  let periodCloseDocument;
   if(source.periodClose!==undefined&&source.periodClose!==null){
     const close=source.periodClose;check(plain(close),'INVALID_PERIOD_CLOSE','Use an original retained period-close snapshot.');
     identifier(close.id,'Original close ID');
@@ -99,6 +103,7 @@ export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt
     const closeRaw=bytes(periodCloseBytes,MAX_REPORT_BYTES,'Original period-close snapshot');
     check(sha(closeRaw)===close.sha256,'PERIOD_CLOSE_CHANGED','The original close snapshot changed.',409);
     const closeDocument=parseJson(closeRaw,'Original period-close snapshot');
+    periodCloseDocument=closeDocument;
     check(plain(closeDocument)&&closeDocument.schema==='stellar-forge.merchant-period-close.v1',
       'INVALID_PERIOD_CLOSE','Use an original merchant period-close snapshot.');
     check(closeDocument.id===close.id&&closeDocument.revision===close.revision&&
@@ -116,6 +121,8 @@ export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt
       reviewNotesSha256:closeDocument.reviewNotesSha256,reviewSnapshotRevision:closeDocument.reviewSnapshotRevision,
       period:copy(closeDocument.period),scope:copy(closeDocument.scope)};
   }else check(periodCloseBytes===undefined||periodCloseBytes===null,'PERIOD_CLOSE_IDENTITY_REQUIRED','Retain the identity of the supplied original close snapshot.');
+  const adjustmentSnapshot=freezeAccountantAdjustments({adjustmentsBytes,report,source,periodCloseDocument});
+  if(adjustmentSnapshot)retainedSource.adjustments=adjustmentSnapshot.source;
   check(Array.isArray(labels)&&labels.length<=MAX_ROWS+200,'INVALID_LABELS','Provide option labels as an array.');
   const knownOptions=new Set([...report.options.map(option=>option.optionId),...report.ledger.map(row=>row.optionId)]),labelMap=new Map();
   for(const value of labels){
@@ -126,14 +133,16 @@ export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt
     labelMap.set(value.optionId,label);
   }
   const rows=report.ledger.map(original=>({rowId:rowIdentity(id,source.reportSha256,original.eventId),eventId:original.eventId,
-    sourceRowSha256:sha(canonical(original)),original:copy(original),label:copy(labelMap.get(original.optionId)??Object.fromEntries(LABEL_FIELDS.map(key=>[key,''])))}));
+    sourceRowSha256:sha(canonical(original)),original:copy(original),label:copy(labelMap.get(original.optionId)??Object.fromEntries(LABEL_FIELDS.map(key=>[key,'']))),
+    ...(adjustmentSnapshot?{adjustments:copy(adjustmentSnapshot.rows.get(original.eventId))}:{})}));
   const summary={totalRows:rows.length,optionCount:new Set(rows.map(row=>row.original.optionId)).size,
     nativeCapturedRows:rows.filter(row=>row.original.origin!=='RECOVERED_ORIGINAL_SF31_OUTCOME').length,
     recoveredRows:rows.filter(row=>row.original.origin==='RECOVERED_ORIGINAL_SF31_OUTCOME').length,
     testnetRows:rows.filter(row=>row.original.network==='stellar:testnet').length,
     publicNetworkRows:rows.filter(row=>row.original.network==='stellar:pubnet').length,
     officialTransferMatches:rows.filter(row=>row.original.transfer==='OFFICIAL_TRANSFER_MATCHED').length,
-    missingLabelRows:rows.filter(row=>LABEL_FIELDS.some(field=>row.label[field]==='')).length};
+    missingLabelRows:rows.filter(row=>LABEL_FIELDS.some(field=>row.label[field]==='')).length,
+    ...(adjustmentSnapshot?{adjustments:adjustmentSnapshot.summary}:{})};
   return seal({schema:HANDOFF_SCHEMA,id,name,actor,createdAt,source:retainedSource,
     sourceHashes:copy(report.hashes),sourceAccountingStatus:report.accountingStatus??null,
     sourceOptions:copy(report.options),labels:[...labelMap].map(([optionId,label])=>({optionId,...label})),rows,summary});
@@ -142,10 +151,13 @@ export function createHandoff({reportBytes,source,name,actor,labels=[],createdAt
 export function validateHandoff(handoff){
   verifySeal(handoff,HANDOFF_SCHEMA);identifier(handoff.id,'Handoff ID');
   check(plain(handoff.source)&&HEX.test(handoff.source.reportSha256)&&Array.isArray(handoff.rows)&&handoff.rows.length<=MAX_ROWS,'INVALID_HANDOFF','The handoff has invalid source or rows.');
+  if(handoff.source.adjustments)check(HEX.test(handoff.source.adjustments.sha256)&&Number.isSafeInteger(handoff.source.adjustments.bytes)&&
+    handoff.source.adjustments.bytes>0,'INVALID_HANDOFF','Retain the complete original adjustment source descriptor.');
   const seen=new Set();for(const row of handoff.rows){
     check(plain(row)&&HEX.test(row.rowId)&&HEX.test(row.eventId)&&plain(row.original)&&row.original.eventId===row.eventId&&
       row.rowId===rowIdentity(handoff.id,handoff.source.reportSha256,row.eventId)&&row.sourceRowSha256===sha(canonical(row.original))&&plain(row.label),
       'HANDOFF_ROW_CHANGED','A retained source row changed.',409);
+    if(handoff.source.adjustments)validateAccountantAdjustmentRow(row);
     check(!seen.has(row.rowId),'DUPLICATE_HANDOFF_ROW','A handoff source row is repeated.');seen.add(row.rowId);
   }
   return handoff;
@@ -177,7 +189,8 @@ function protectedValues(handoff,row){
     sourcePeriodCloseRevision:handoff.source.periodClose?.revision??null,rowId:row.rowId,sourceRowSha256:row.sourceRowSha256};
   for(const key of SOURCE_FIELDS)values[key]=row.original[key];
   for(const key of LABEL_FIELDS)values[key]=row.label[key];
-  return Object.fromEntries(PROTECTED_COLUMNS.map(key=>[key,cell(values[key])]));
+  if(handoff.source.adjustments)Object.assign(values,row.adjustments,{sourceAdjustmentsSha256:handoff.source.adjustments.sha256});
+  return Object.fromEntries(protectedColumns(handoff).map(key=>[key,cell(values[key])]));
 }
 
 // Apostrophe is a reversible spreadsheet-display escape, including for literal
@@ -188,17 +201,17 @@ const spreadsheetEncode=value=>needsSpreadsheetEscape(value)?"'"+value:value;
 const spreadsheetDecode=value=>value.startsWith("'")&&needsSpreadsheetEscape(value.slice(1))?value.slice(1):value;
 const quoteCsv=value=>'"'+spreadsheetEncode(cell(value)).replace(/"/g,'""')+'"';
 export function renderCsv(handoff,revision){
-  validateHandoff(handoff);const assignments=assignmentsFor(handoff,revision),lines=[CSV_COLUMNS.map(quoteCsv).join(',')];
-  for(const row of handoff.rows){const values={...protectedValues(handoff,row),...assignments.get(row.rowId)};lines.push(CSV_COLUMNS.map(key=>quoteCsv(values[key])).join(','));}
+  validateHandoff(handoff);const assignments=assignmentsFor(handoff,revision),columns=accountantColumns(handoff),lines=[columns.map(quoteCsv).join(',')];
+  for(const row of handoff.rows){const values={...protectedValues(handoff,row),...assignments.get(row.rowId)};lines.push(columns.map(key=>quoteCsv(values[key])).join(','));}
   return Buffer.from(lines.join('\r\n')+'\r\n','utf8');
 }
 
 /** RFC-4180-style records, preserving quoted newlines and precise text fields. */
-export function parseReturnCsv(csvBytes){
+export function parseReturnCsv(csvBytes,{columns=CSV_COLUMNS}={}){
   const raw=bytes(csvBytes,MAX_CSV_BYTES,'Accountant CSV'),text=utf8(raw,'Accountant CSV').replace(/^\uFEFF/,'');
   check(!text.includes('\u0000'),'INVALID_CSV','The CSV contains a NUL character.');
   const records=[];let values=[],value='',quoted=false,closed=false,started=false,line=1,startLine=1;
-  const field=()=>{values.push(value);value='';closed=false;started=false;check(values.length<=CSV_COLUMNS.length+8,'TOO_MANY_COLUMNS','The CSV has too many columns.');};
+  const field=()=>{values.push(value);value='';closed=false;started=false;check(values.length<=columns.length+8,'TOO_MANY_COLUMNS','The CSV has too many columns.');};
   const record=()=>{field();records.push({rowNumber:records.length+1,lineNumber:startLine,values});values=[];check(records.length<=MAX_RETURN_ROWS+1,'TOO_MANY_RETURN_ROWS','The CSV exceeds '+MAX_RETURN_ROWS+' return rows.');};
   for(let i=0;i<text.length;i++){
     const character=text[i];
@@ -222,7 +235,7 @@ export function parseReturnCsv(csvBytes){
   check(records.length>0,'CSV_HEADER_REQUIRED','Use the exported accountant template.');
   const headers=records[0].values,seen=new Set();
   for(const header of headers){check(!seen.has(header),'DUPLICATE_CSV_HEADER','A CSV column is repeated: '+header);seen.add(header);}
-  const missing=CSV_COLUMNS.filter(column=>!seen.has(column)),unknown=headers.filter(column=>!CSV_COLUMNS.includes(column));
+  const missing=columns.filter(column=>!seen.has(column)),unknown=headers.filter(column=>!columns.includes(column));
   check(missing.length===0&&unknown.length===0,'CSV_COLUMNS_CHANGED','Use all original template columns; their order may change.',400,{missing,unknown});
   return {sha256:sha(raw),bytes:raw.length,headers,records:records.slice(1),blankRows:records.slice(1).filter(row=>row.values.every(item=>item==='')).length};
 }
@@ -238,7 +251,7 @@ function issue(code,message,record,extra={}){return {code,message,rowNumber:reco
 export function importReturn({handoff,csvBytes,actor,name,parentRevision=null,createdAt=new Date().toISOString(),id=randomUUID()}={}){
   validateHandoff(handoff);identifier(id,'Import revision ID');shortText(actor,'Operator',1000);shortText(name,'Import name');timestamp(createdAt);
   if(parentRevision){validateRevision(handoff,parentRevision);check(parentRevision.id!==id,'DUPLICATE_REVISION_ID','Use a new immutable import revision ID.');}
-  const parsed=parseReturnCsv(csvBytes),assignments=assignmentsFor(handoff,parentRevision);
+  const parsed=parseReturnCsv(csvBytes,{columns:accountantColumns(handoff)}),assignments=assignmentsFor(handoff,parentRevision);
   const byId=new Map(handoff.rows.map(row=>[row.rowId,row])),byEvent=new Map(handoff.rows.map(row=>[row.eventId,row]));
   const returned=[],touches=new Map(),touched=new Set();
   for(const record of parsed.records){
@@ -260,7 +273,7 @@ export function importReturn({handoff,csvBytes,actor,name,parentRevision=null,cr
       // Field-count errors remain local to the row, so other valid rows can import.
       if(record.fieldCount!==parsed.headers.length){result.status='ROW_LENGTH_MISMATCH';conflictRows++;add(issue('ROW_LENGTH_MISMATCH','This row has a different number of fields from the template.',record,{rowId:row.rowId,eventId:row.eventId,expected:parsed.headers.length,received:record.fieldCount}));}
       else {
-        const changed=PROTECTED_COLUMNS.filter(key=>record.values[key]!==expected[key]&&spreadsheetDecode(record.values[key])!==expected[key]);
+        const changed=protectedColumns(handoff).filter(key=>record.values[key]!==expected[key]&&spreadsheetDecode(record.values[key])!==expected[key]);
         if(changed.length){result.status='PROTECTED_VALUE_CONFLICT';conflictRows++;add(issue('PROTECTED_VALUE_CONFLICT','Original identity, amounts, classifications and retained labels must match the exported source.',record,{rowId:row.rowId,eventId:row.eventId,fields:changed.map(field=>({field,expected:expected[field],received:record.values[field]}))}));}
         else {
           const previous=assignments.get(row.rowId);let edits;
@@ -296,10 +309,11 @@ export function inspectHandoff(handoff,revision){
     summary:copy(handoff.summary),revision:revision?{id:revision.id,parentRevisionId:revision.parentRevisionId,createdAt:revision.createdAt,actor:revision.actor,name:revision.name,summary:copy(revision.summary),importSha256:revision.importSha256}:null,
     rows:handoff.rows.map(row=>({...copy(row),...copy(assignments.get(row.rowId))})),issues:copy(revision?.issues??[]),missingRows:copy(revision?.missingRows??[])};
 }
+const adjustmentAmounts=row=>row.adjustments?'<br><small>Returned '+html(row.adjustments.refundedAmountAtomic)+' · remaining '+html(row.adjustments.remainingAmountAtomic)+'<br>Pending return '+html(row.adjustments.pendingRefundAmountAtomic)+' · cancelled '+html(row.adjustments.cancelledAmountAtomic)+'<br>'+html(row.adjustments.refundStatus)+(row.adjustments.latestRefundTransferAt?'<br>Latest native refund '+html(row.adjustments.latestRefundTransferAt):'')+(row.adjustments.latestCancellationEffectiveAt?'<br>Latest cancellation '+html(row.adjustments.latestCancellationEffectiveAt):'')+'</small>':'';
 const html=value=>cell(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 export function renderHtml(handoff,revision){
   const view=inspectHandoff(handoff,revision),source=handoff.source,summary=revision?.summary;
-  const rows=view.rows.map(row=>{const original=row.original;return '<tr><td><strong>'+html(original.routeId)+'</strong><br>'+html(original.method)+'<br><small>'+html(row.eventId)+'</small></td><td>'+html(original.network)+'<br>'+html(original.verificationScope)+'<br>'+html(original.transfer)+'<br>'+html(original.delivery)+'</td><td>'+html(original.amountAtomic)+' <small>atomic units</small><br>'+html(row.label.assetLabel)+' / '+html(row.label.unitLabel)+'<br><small>Asset '+html(original.assetDigest)+'<br>Option '+html(original.optionId)+'</small></td><td>'+html(original.at)+'<br>'+html(original.timeBasis)+'<br><small>'+html(original.origin)+'</small></td><td>'+html(original.merchantQuoteUsd??'Unknown')+'<br><small>'+html(original.merchantPriceBasis??'Quote basis unavailable')+'</small></td><td>'+html(row.externalStatus)+'<br>'+html(row.externalBookRef)+'<br>'+html(row.externalAccountCode||row.label.accountCode)+'<br><small>'+html(row.label.accountName)+'</small></td><td class="note">'+html(row.externalNote)+'<br><small>'+html(row.updatedBy??'')+' '+html(row.updatedAt??'')+'</small></td></tr>';}).join('');
+  const rows=view.rows.map(row=>{const original=row.original;return '<tr><td><strong>'+html(original.routeId)+'</strong><br>'+html(original.method)+'<br><small>'+html(row.eventId)+'</small></td><td>'+html(original.network)+'<br>'+html(original.verificationScope)+'<br>'+html(original.transfer)+'<br>'+html(original.delivery)+'</td><td>'+html(original.amountAtomic)+' <small>atomic units</small>'+adjustmentAmounts(row)+'<br>'+html(row.label.assetLabel)+' / '+html(row.label.unitLabel)+'<br><small>Asset '+html(original.assetDigest)+'<br>Option '+html(original.optionId)+'</small></td><td>'+html(original.at)+'<br>'+html(original.timeBasis)+'<br><small>'+html(original.origin)+'</small></td><td>'+html(original.merchantQuoteUsd??'Unknown')+'<br><small>'+html(original.merchantPriceBasis??'Quote basis unavailable')+'</small></td><td>'+html(row.externalStatus)+'<br>'+html(row.externalBookRef)+'<br>'+html(row.externalAccountCode||row.label.accountCode)+'<br><small>'+html(row.label.accountName)+'</small></td><td class="note">'+html(row.externalNote)+'<br><small>'+html(row.updatedBy??'')+' '+html(row.updatedAt??'')+'</small></td></tr>';}).join('');
   const issues=(revision?.issues??[]).map(item=>'<tr><td>'+html(item.rowNumber)+'</td><td>'+html(item.code)+'</td><td>'+html(item.message)+(item.fields?'<br><small>'+item.fields.map(field=>html(field.field)+': '+html(field.received)+' (source '+html(field.expected)+')').join('<br>')+'</small>':'')+'</td></tr>').join('');
-  return Buffer.from('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+html(handoff.name)+' — accountant handoff</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;padding:28px;font:14px/1.5 system-ui,sans-serif;color:#171717;background:#fff}main{max-width:1600px;margin:auto}h1{font-size:25px;margin:0 0 8px}h2{font-size:18px;margin:28px 0 10px}p{max-width:1050px}small{font-size:11px;color:#555;overflow-wrap:anywhere}dl{display:grid;grid-template-columns:160px 1fr;gap:5px 16px}dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}.summary{border:1px solid #aaa;padding:14px 18px;margin:18px 0;display:flex;gap:24px;flex-wrap:wrap}.summary strong{display:block;font-size:21px}.table{overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;border:1px solid #b7b7b7;padding:9px;overflow-wrap:anywhere}th{background:#ededed;font-size:12px}td.note{white-space:pre-wrap;min-width:160px}code{font-size:12px;overflow-wrap:anywhere}@media print{body{padding:0;font-size:10px}thead{display:table-header-group}tr{break-inside:avoid}.table{overflow:visible}th,td{padding:5px}small{font-size:9px}}</style></head><body><main><h1>'+html(handoff.name)+'</h1><p>Accountant return for the original merchant settlement reconciliation. Original payment evidence, native amounts and merchant quotes stay attached to each event. External status, book reference, account code and notes record the accountant’s returned information.</p><dl><dt>Handoff</dt><dd>'+html(handoff.id)+'</dd><dt>Prepared</dt><dd>'+html(handoff.createdAt)+' · '+html(handoff.actor)+'</dd><dt>Reconciliation</dt><dd>'+html(source.runId)+'</dd><dt>Original report SHA256</dt><dd><code>'+html(source.reportSha256)+'</code></dd>'+(source.periodClose?'<dt>Original period close</dt><dd>'+html(source.periodClose.id)+' · revision '+html(source.periodClose.revision)+'<br><code>'+html(source.periodClose.sha256)+'</code></dd>':'')+(revision?'<dt>Accountant return</dt><dd>'+html(revision.name)+' · '+html(revision.id)+' · '+html(revision.createdAt)+'<br>'+html(revision.actor)+' · '+html(summary.outcome)+'</dd><dt>Returned CSV SHA256</dt><dd><code>'+html(revision.importSha256)+'</code></dd>':'')+'</dl><div class="summary"><span><strong>'+view.summary.totalRows+'</strong>Source events</span><span><strong>'+view.summary.testnetRows+'</strong>Testnet events</span><span><strong>'+view.summary.publicNetworkRows+'</strong>Public-network events</span>'+(summary?'<span><strong>'+summary.bookedRows+'</strong>Accountant marked BOOKED</span><span><strong>'+summary.conflictRows+'</strong>Conflicting return rows</span><span><strong>'+summary.missingRows+'</strong>Rows omitted from this return</span>':'')+'</div><p>Amounts below use the original asset’s atomic units. Asset and account labels were supplied for this handoff. Merchant quote USD is the original quote field. BOOKED records the accountant’s reported external entry and requires its book reference. A webhook acceptance and a testnet transfer keep their original classifications.</p><h2>Complete handoff and current assignments</h2><div class="table"><table><thead><tr><th>Resource / original event</th><th>Network and original evidence</th><th>Original amount and unit identity</th><th>Source time</th><th>Merchant quote USD</th><th>Accountant status / book / account</th><th>Accountant note</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+(issues?'<h2>Return conflicts and unmatched rows</h2><p>These rows retain their preceding assignments. Missing rows also retain their preceding assignments; a later return may complete them.</p><div class="table"><table><thead><tr><th>CSV row</th><th>Code</th><th>Detail</th></tr></thead><tbody>'+issues+'</tbody></table></div>':'')+'<h2>Return template</h2><p>Edit only <code>'+EDITABLE_COLUMNS.join(', ')+'</code>. Available statuses: '+EXTERNAL_STATUSES.join(', ')+'. Keep native amount strings, original identity columns and supplied labels intact. Partial returns preserve omitted events. Shared external book references are supported for batch entries.</p></main></body></html>','utf8');
+  return Buffer.from('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+html(handoff.name)+' — accountant handoff</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;padding:28px;font:14px/1.5 system-ui,sans-serif;color:#171717;background:#fff}main{max-width:1600px;margin:auto}h1{font-size:25px;margin:0 0 8px}h2{font-size:18px;margin:28px 0 10px}p{max-width:1050px}small{font-size:11px;color:#555;overflow-wrap:anywhere}dl{display:grid;grid-template-columns:160px 1fr;gap:5px 16px}dt{font-weight:600}dd{margin:0;overflow-wrap:anywhere}.summary{border:1px solid #aaa;padding:14px 18px;margin:18px 0;display:flex;gap:24px;flex-wrap:wrap}.summary strong{display:block;font-size:21px}.table{overflow:auto}table{width:100%;border-collapse:collapse}th,td{text-align:left;vertical-align:top;border:1px solid #b7b7b7;padding:9px;overflow-wrap:anywhere}th{background:#ededed;font-size:12px}td.note{white-space:pre-wrap;min-width:160px}code{font-size:12px;overflow-wrap:anywhere}@media print{body{padding:0;font-size:10px}thead{display:table-header-group}tr{break-inside:avoid}.table{overflow:visible}th,td{padding:5px}small{font-size:9px}}</style></head><body><main><h1>'+html(handoff.name)+'</h1><p>Accountant return for the original merchant settlement reconciliation. Original payment evidence, native amounts and merchant quotes stay attached to each event. External status, book reference, account code and notes record the accountant’s returned information.</p><dl><dt>Handoff</dt><dd>'+html(handoff.id)+'</dd><dt>Prepared</dt><dd>'+html(handoff.createdAt)+' · '+html(handoff.actor)+'</dd><dt>Reconciliation</dt><dd>'+html(source.runId)+'</dd><dt>Original report SHA256</dt><dd><code>'+html(source.reportSha256)+'</code></dd>'+(source.periodClose?'<dt>Original period close</dt><dd>'+html(source.periodClose.id)+' · revision '+html(source.periodClose.revision)+'<br><code>'+html(source.periodClose.sha256)+'</code></dd>':'')+(source.adjustments?'<dt>Adjustment snapshot</dt><dd>'+html(source.adjustments.exportedAt)+' · revision '+html(source.adjustments.workspaceRevision)+'<br><code>'+html(source.adjustments.sha256)+'</code></dd>':'')+(revision?'<dt>Accountant return</dt><dd>'+html(revision.name)+' · '+html(revision.id)+' · '+html(revision.createdAt)+'<br>'+html(revision.actor)+' · '+html(summary.outcome)+'</dd><dt>Returned CSV SHA256</dt><dd><code>'+html(revision.importSha256)+'</code></dd>':'')+'</dl><div class="summary"><span><strong>'+view.summary.totalRows+'</strong>Source events</span><span><strong>'+view.summary.testnetRows+'</strong>Testnet events</span><span><strong>'+view.summary.publicNetworkRows+'</strong>Public-network events</span>'+(summary?'<span><strong>'+summary.bookedRows+'</strong>Accountant marked BOOKED</span><span><strong>'+summary.conflictRows+'</strong>Conflicting return rows</span><span><strong>'+summary.missingRows+'</strong>Rows omitted from this return</span>':'')+'</div><p>Amounts below use the original asset’s atomic units. Asset and account labels were supplied for this handoff. Merchant quote USD is the original quote field. BOOKED records the accountant’s reported external entry and requires its book reference. A webhook acceptance and a testnet transfer keep their original classifications.</p><h2>Complete handoff and current assignments</h2><div class="table"><table><thead><tr><th>Resource / original event</th><th>Network and original evidence</th><th>Original amount and unit identity</th><th>Source time</th><th>Merchant quote USD</th><th>Accountant status / book / account</th><th>Accountant note</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+(issues?'<h2>Return conflicts and unmatched rows</h2><p>These rows retain their preceding assignments. Missing rows also retain their preceding assignments; a later return may complete them.</p><div class="table"><table><thead><tr><th>CSV row</th><th>Code</th><th>Detail</th></tr></thead><tbody>'+issues+'</tbody></table></div>':'')+'<h2>Return template</h2><p>Edit only <code>'+EDITABLE_COLUMNS.join(', ')+'</code>. Available statuses: '+EXTERNAL_STATUSES.join(', ')+'. Keep native amount strings, original identity columns and supplied labels intact. Partial returns preserve omitted events. Shared external book references are supported for batch entries.</p></main></body></html>','utf8');
 }
