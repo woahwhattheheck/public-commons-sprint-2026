@@ -102,9 +102,11 @@ for Date/Expires/response timing. HTTP field semantics are described in
 
 An LRU eviction removes the least recently used retained entry when an entry or
 byte budget is reached. Each buyer receives fresh copies of headers and body;
-mutating one result cannot affect another. One cancelled buyer stops waiting
-without aborting other consumers. The shared source is aborted once all consumers
-leave. A handler must honor its signal to release its underlying resources;
+mutating one result cannot affect another. When the original server or embedding
+adapter supplies an `AbortSignal`, one cancelled buyer stops waiting without
+aborting other consumers. The shared source is aborted once all consumers leave.
+The cache also supplies its own source deadline signal. A handler must honor
+that signal to release its underlying resources;
 an uncooperative timed-out handler retains its source-capacity slot until it
 actually finishes, preventing repeated timeouts from starting unlimited work.
 These limits cover application work; the original seller's request and payment
@@ -128,6 +130,17 @@ Unix socket requires a directory owned by the process user with mode 0700 and is
 created with mode 0600. An existing socket path is never overwritten. No operator
 control is mounted on the merchant's public HTTP listener.
 
+For environments that do not support Unix sockets, use
+`--control-file /private/merchant/cache-control/control.json` instead of
+`--socket`. The server creates a fresh mode-0600 descriptor containing a random
+local control token and an ephemeral port bound only to `127.0.0.1`; the token
+is never printed. Pass `--control-file` with that same path to `control.mjs` for
+status or invalidation. Every control operation requires the token from the
+private descriptor. The descriptor is removed on an orderly shutdown and is
+never overwritten at startup. An existing file after a crash can be retained
+while a new control path is selected. Both control transports use the same
+commands, response limits and route validation.
+
 ## Embedding
 
 `createResponseCache({ handler, admit, shareAcrossBuyers: true, ...policy })`
@@ -136,7 +149,8 @@ to an existing original seller route. `bindResponseCaches({config, handlers,
 policy})` produces a fresh config/handler map while preserving source exports,
 other routes and the input-validation setting. `startCachedSeller` composes that
 binding with the original `startSellerService`; it also accepts the same explicit
-native factory, lifecycle options, optional `socketPath` and `closeSource`.
+native factory, lifecycle options, optional `socketPath` or `controlFile`, and
+`closeSource`.
 
 Trusted integrations may add synchronous `storagePolicy(result)` and
 `bypassRequest(originalContext)` callbacks to the direct factory. A storage
@@ -162,3 +176,10 @@ private-result isolation, header variation, operator invalidation, byte-copy
 isolation, cancellation, expiry and LRU eviction. Facilitator outcomes are
 controlled local values; the runner performs no network settlement or wallet
 operation and is not a merchant-payment claim. No hosted Actions are needed.
+
+Recorded on Node 24.19.0 with original x402 2.28.0: PASS. Twelve concurrent
+buyers shared one actual local backend read while completing twelve distinct
+native verification/settlement calls. The whole workflow used six backend reads
+for eighteen separately completed native request lifecycles. Private loopback
+control-file status/invalidation was exercised; Unix socket listen returned the
+container's `EPERM`, so that transport is retained for supporting hosts.
