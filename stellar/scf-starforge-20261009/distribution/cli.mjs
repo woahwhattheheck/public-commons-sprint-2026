@@ -22,6 +22,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-workspace --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  usgs-water                                Acquire USGS observations, review hydrology and operate paid editions
   webhook-feed                              Receive signed webhooks and sell reviewed event feeds
   buyer-event-feed                          Collect, recover and export original paid event pages
   mpp                                       Native Stellar MPP merchant, governed buyer and recovery workspace
@@ -78,6 +79,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   delivery-workspace                         Configure receivers and operate retained delivery recovery
   delivery-destinations                      Route original events to independently operated receivers
   merchant-desk Order, file and access desk   paid-file-checkout Original file checkout
+  merchant-order-recovery                    Snapshot and restore original orders, usage and paid files
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
