@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {initializeQueue, openQueue, saveQueueReport} from '../queue.mjs';
 import {renderQueueReport} from '../queue-report.mjs';
-import {OperatorApprovedBuyer} from '../../sf81-buyer-operator-bridge/bridge.mjs';
+import {OperatorApprovedBuyer, checkOperatorTerminal} from '../../sf81-buyer-operator-bridge/bridge.mjs';
 import {executeWithEvidence} from '../../sf82-checkout-evidence/evidence.mjs';
 
 const sha = b => createHash('sha256').update(b).digest('hex');
@@ -45,14 +45,27 @@ await assert.rejects(queue.enqueue(configPath), {code:'INBOX_INTENT_CONFLICT'});
 // Two competing callers must not both enter that original execution path.
 const names = ['SF36_CONSENT_KEY_B64','SF36_AUDIT_KEY_B64','SF36_OPERATOR_KEY_B64'];
 const saved = names.map(k => process.env[k]);
+let terminalAvailable = true;
+try { await checkOperatorTerminal('local-intake-1'); }
+catch (error) {
+  assert.equal(error.code, 'OPERATOR_CONTROLLING_TERMINAL_REQUIRED');
+  terminalAvailable = false;
+}
 for (const key of names) delete process.env[key];
 try {
-  const attempts = await Promise.allSettled([queue.run('local-intake-1'), queue.run('local-intake-1')]);
-  assert.equal(attempts.filter(x => x.status === 'fulfilled').length, 1);
-  assert.equal(attempts.find(x => x.status === 'rejected').reason.code, 'INBOX_ATTEMPT_ALREADY_EXISTS');
-  assert.equal((await queue.show('local-intake-1')).state, 'ATTEMPT_RECORDED');
-  assert.ok((await queue.show('local-intake-1')).lastError);
-  await assert.rejects(queue.run('local-intake-1'), {code:'INBOX_ATTEMPT_ALREADY_EXISTS'});
+  if (terminalAvailable) {
+    const attempts = await Promise.allSettled([queue.run('local-intake-1'), queue.run('local-intake-1')]);
+    assert.equal(attempts.filter(x => x.status === 'fulfilled').length, 1);
+    assert.equal(attempts.find(x => x.status === 'rejected').reason.code, 'INBOX_ATTEMPT_ALREADY_EXISTS');
+    assert.equal((await queue.show('local-intake-1')).state, 'ATTEMPT_RECORDED');
+    assert.ok((await queue.show('local-intake-1')).lastError);
+    await assert.rejects(queue.run('local-intake-1'), {code:'INBOX_ATTEMPT_ALREADY_EXISTS'});
+  } else {
+    await assert.rejects(queue.run('local-intake-1'), {code:'OPERATOR_CONTROLLING_TERMINAL_REQUIRED'});
+    const retained = await queue.show('local-intake-1');
+    assert.equal(retained.state, 'QUEUED');
+    assert.equal(retained.attempt, null);
+  }
 } finally {
   names.forEach((key,i) => {if(saved[i] === undefined) delete process.env[key]; else process.env[key]=saved[i];});
 }
@@ -96,6 +109,7 @@ assert.equal(JSON.parse(result.stdout).length,3);
 const source = await readFile(join(root,'jobs',first.id,'request-body.bin'),'utf8');
 assert.equal(source,'original request bytes');
 console.log(JSON.stringify({status:'PASS',node:process.version,queueRoot:root,report:join(dir,'inbox.html'),
-  exercised:['immutable intake','same-intent dedup','concurrent single attempt','original SF88 setup failure',
+  exercised:['immutable intake','same-intent dedup',
+    ...(terminalAvailable ? ['concurrent single attempt','original SF88 setup failure'] : ['controlling terminal absent before attempt']),
     'policy drift before execution','pre-attempt cancellation','original SF81 aborted outcome via SF82 recovery',
     'no replay after recovery','private HTML export','single JSON CLI'],payments:0}));
