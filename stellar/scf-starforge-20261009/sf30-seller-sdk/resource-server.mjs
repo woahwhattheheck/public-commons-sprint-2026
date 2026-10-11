@@ -4,7 +4,7 @@ import { compileHttpSellerOffer, paymentRequiredResponse } from './seller.mjs';
 import { validateHeaderName, validateHeaderValue } from 'node:http';
 import { evaluateAdmission, validateAdmissionTimeout } from './admission.mjs';
 import { compileServicePath, orderServiceRoutes, selectServiceRoute } from './route-path.mjs';
-import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/auto-catalog.mjs';
+import { validateBazaarExtension } from '../../../stellar-forge/payment-auto-catalog/schema-validation.mjs';
 
 const METHODS = new Set(['GET', 'HEAD', 'POST']);
 const plain = x => x !== null && typeof x === 'object' && !Array.isArray(x);

@@ -1,0 +1,26 @@
+{
+  "schema": "stellar-forge.seller-service.v1",
+  "routes": [
+    {
+      "id": "existing-dataset",
+      "path": "/dataset",
+      "definition": {
+        "method": "GET",
+        "serviceName": "Existing Dataset API",
+        "description": "An existing backend served through the original x402 seller lifecycle",
+        "tags": ["dataset", "example"],
+        "payment": {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "asset": "UNVERIFIED_DEMO_ASSET",
+          "payTo": "UNVERIFIED_DEMO_RECIPIENT",
+          "amount": "10000",
+          "maxTimeoutSeconds": 60
+        },
+        "queryParameters": [{"name": "region", "type": "string", "description": "Optional region filter for the existing dataset", "required": false, "example": "north"}],
+        "outputExample": {"dataset": "local-example", "rows": [{"region": "north", "value": 4}]}
+      },
+      "handler": "existingDataset"
+    }
+  ]
+}
