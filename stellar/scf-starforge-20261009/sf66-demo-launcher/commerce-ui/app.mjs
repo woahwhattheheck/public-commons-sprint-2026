@@ -88,14 +88,14 @@ function render(next) {
   byId('review').disabled = pending || !controls.canReview;
   text('review-note', review ? 'The displayed operation is the current reviewed request.' : 'The operation comes from the prepared buyer configuration.');
   text('execution-state', attempt ? label(attempt.state) : review ? 'Ready to execute' : 'Awaiting review');
-  text('execution-note', attempt?.state === 'RUNNING' ? 'The buyer is running. Answer its original payment approval in the terminal that started this workspace. Stop session interrupts remaining work and drains the merchant.' :
-    next.activeIntent ? 'Another prepared operation is running: ' + next.activeIntent + '. This original session runs one buyer at a time.' :
+  text('execution-note', attempt?.state === 'RUNNING' ? 'The buyer is running. Answer its payment approval in the terminal that started this workspace. Stop session interrupts remaining work and drains the merchant.' :
+    next.activeIntent ? 'Another prepared operation is running: ' + next.activeIntent + '. This session runs one buyer at a time.' :
     attempt?.state === 'SETUP_FAILED' ? 'The buyer could not start. Resolve the reported setup error, then review this queued request again.' :
     op?.state === 'CANCELLED' ? 'This request was cancelled before execution and remains in the inbox.' :
     op?.state === 'RUNNING_OR_INTERRUPTED' ? 'This intent has a permanent attempt. Recover its recorded result before deciding what further work is needed.' :
-    attempt?.outcome ? 'The original buyer result is retained below. This attempted intent will not be executed again.' :
-    seller.mode !== 'NATIVE_X402' ? 'This merchant is in challenge-only mode. Configure its original native facilitator to execute a purchase.' :
-    'Execution uses the configured buyer. Its original payment approval appears in the terminal that started this workspace.');
+    attempt?.outcome ? 'The buyer result is retained below. This attempted intent will not be executed again.' :
+    seller.mode !== 'NATIVE_X402' ? 'This merchant is in challenge-only mode. Configure its native facilitator to execute a purchase.' :
+    'Execution uses the configured buyer. Its payment approval appears in the terminal that started this workspace.');
   byId('execute').disabled = pending || !controls.canExecute;
   byId('cancel').disabled = pending || !controls.canCancel;
   byId('recover').hidden = !controls.canRecover;
@@ -109,14 +109,14 @@ function render(next) {
     ['Error', outcome.error?.code ?? outcome.evidenceError?.code],
   ] : []);
   text('outcome-message', attempt?.error ?? outcome?.error?.code ??
-    (outcome?.responseFile?.status === 'SAVED' ? 'The original buyer saved the response. It is available in Delivery.' :
-      outcome?.interrupted ? 'The buyer recorded an interrupted operation. Its original status remains authoritative.' :
-      'The original operation result is shown above.'));
+    (outcome?.responseFile?.status === 'SAVED' ? 'The buyer saved the response. It is available in Delivery.' :
+      outcome?.interrupted ? 'The buyer recorded an interrupted operation. Its recorded status appears above.' :
+      'The recorded operation result is shown above.'));
   byId('outcome-details').hidden = !outcome;
   text('outcome-json', outcome ? JSON.stringify(outcome, null, 2) : '');
   text('delivery-state', delivery?.available ? 'Saved response' : label(delivery?.status ?? 'NO_SAVED_RESPONSE'));
   text('delivery-note', delivery?.available ? 'Download the exact file saved by the buyer, or preview its contents.' :
-    'A response saved by the original buyer appears here after the operation completes.');
+    'A response saved by the buyer appears here after the operation completes.');
   byId('delivery-facts').hidden = !delivery?.available;
   facts('delivery-facts', delivery?.available ? [
     ['Filename', delivery.name], ['Size', size(delivery.bytes)], ['Content type', delivery.contentType ?? 'Not supplied'],
@@ -141,7 +141,7 @@ function render(next) {
   }
   if (!seller.routes?.length) { const row = document.createElement('li'); row.textContent = 'No routes reported'; routes.append(row); }
   byId('stop').disabled = pending || !controls.canStop;
-  text('stop-note', session.shutdownError ? 'Shutdown reported ' + session.shutdownError + '. The original result remains visible; inspect its recorded drain status.' :
+  text('stop-note', session.shutdownError ? 'Shutdown reported ' + session.shutdownError + '. The recorded drain status remains available.' :
     session.state === 'STOPPED' ? 'The session has stopped. Saved results remain available in this workspace.' :
     'Stop and drain this workspace’s seller and buyer session. This interrupts its active buyer. Saved operation results remain available.');
 }
@@ -167,14 +167,14 @@ async function action(name, body = {}) {
   if (pending || selectionLoading) return;
   pending = true; if (view) render(view); notice(null);
   if (name === 'stop') notice('Stopping the active buyer and draining the merchant session…');
-  if (name === 'review') notice('Reading the original buyer request review…');
+  if (name === 'review') notice('Reading the prepared buyer request…');
   ++lastRequest;
   try {
     const next = await request('/api/' + name, { method: 'POST', body: { intent: selectedIntent, ...body } }); render(next);
     if (name === 'review') notice('Review ready. The exact prepared request and terms are shown above.');
     if (name === 'execute') notice('Operation started. Its progress and result will appear below.');
-    if (name === 'cancel') notice('The queued request was cancelled and retained in the original inbox.');
-    if (name === 'recover') notice('The original inbox recovered the recorded result without executing the request again.');
+    if (name === 'cancel') notice('The queued request was cancelled and retained in the inbox.');
+    if (name === 'recover') notice('The recorded result was recovered from the inbox.');
     if (name === 'stop') notice('The session has stopped. Saved results remain available.');
   } catch (error) { notice(error.message, true); }
   finally { pending = false; if (view) render(view); await refresh({ quiet: true }); }

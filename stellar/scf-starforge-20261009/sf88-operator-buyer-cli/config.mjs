@@ -1,6 +1,8 @@
 // MIT — SF88 trusted local operator input, consumed only by original SF31/SF81/SF82.
 import { stat, readFile } from 'node:fs/promises';
 import { isAbsolute } from 'node:path';
+import { normalizeBuyerTransport } from '../sf31-buyer-client/public-transport.mjs';
+import { operationTicketReference } from './operation-ticket.mjs';
 
 export class InputError extends Error {
   constructor(code) { super(code); this.code = code; this.name = 'InputError'; }
@@ -29,9 +31,20 @@ export async function config(path) {
   try { value = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('CONFIG_JSON_INVALID'); }
   shape(value, ['catalog','operation','operator','signerModule','evidenceDir',
-    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom'], 'INVALID_CONFIG_FIELDS');
+    'trustedPayer','captureBody','bodyCaptureTimeoutMs','responseFile','preparedFrom',
+    'buyerTransport'], 'INVALID_CONFIG_FIELDS');
   if (value.preparedFrom !== undefined) preparedFrom(value.preparedFrom);
+  buyerTransport(value);
   return value;
+}
+export function buyerTransport(c) {
+  if (c.buyerTransport === undefined) return null;
+  const profile = normalizeBuyerTransport(c.buyerTransport);
+  let origin;
+  try { origin = new URL(c.operation?.url).origin; }
+  catch { throw new InputError('BUYER_TRANSPORT_OPERATION_REQUIRED'); }
+  need(profile.origin === origin, 'BUYER_TRANSPORT_ORIGIN_MISMATCH');
+  return profile;
 }
 // Saved source data is review context only; it grants no payment authority.
 export function preparedFrom(x) {
@@ -77,7 +90,7 @@ export function catalog(x) {
   return x;
 }
 export function operation(x) {
-  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference'], 'INVALID_OPERATION');
+  shape(x, ['intentId','url','method','expect','bodyFile','headers','orderReference','ticketFile','ticketHeader'], 'INVALID_OPERATION');
   need(typeof x.intentId === 'string' && /^[A-Za-z0-9._:-]{1,128}$/.test(x.intentId),
     'STABLE_INTENT_ID_REQUIRED');
   let u;
@@ -119,7 +132,8 @@ export function operation(x) {
       'ORDER_HEADER_MISMATCH');
     headers['X-SF98-Order-ID'] = x.orderReference;
   } else need(headers['X-SF98-Order-ID'] === undefined, 'ORDER_REFERENCE_REQUIRED');
-  return { ...x, method, headers };
+  const ticket = operationTicketReference({...x, method, headers});
+  return { ...x, method, headers, ...(ticket ? {ticketHeader:ticket.requestHeader} : {}) };
 }
 export function operator(x) {
   shape(x, ['python','actor','service','policy','ledger'], 'INVALID_OPERATOR');
@@ -141,5 +155,5 @@ export function execution(x) {
   if (x.bodyCaptureTimeoutMs !== undefined)
     need(Number.isInteger(x.bodyCaptureTimeoutMs) && x.bodyCaptureTimeoutMs >= 1 &&
       x.bodyCaptureTimeoutMs <= 60000, 'BODY_TIMEOUT_INVALID');
-  return { op, owner, download:responseFile(x) };
+  return { op, owner, download:responseFile(x), transport:buyerTransport(x) };
 }

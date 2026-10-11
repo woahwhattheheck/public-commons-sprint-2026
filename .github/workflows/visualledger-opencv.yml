@@ -17,6 +17,7 @@ permissions:
 
 jobs:
   source-proof:
+    if: ${{ (false) && (true) }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     defaults:

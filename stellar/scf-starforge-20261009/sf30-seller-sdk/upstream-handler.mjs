@@ -368,6 +368,8 @@ export function createUpstreamHandler(options = {}) {
     upstreamHandler.idempotency = Object.freeze({
       issue(context, options) { const prepared = prepare(context); return idempotency.operations.issue({...options,requestHash:prepared.operation.requestHash}); },
       inspect:idempotency.operations.inspect,
+      list:idempotency.operations.list,
+      audit:idempotency.operations.audit,
       recover(options) {
         if (options?.action === 'complete') {
           const response = options.response;

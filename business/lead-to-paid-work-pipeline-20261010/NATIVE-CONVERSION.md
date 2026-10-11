@@ -77,6 +77,16 @@ Add explicit `reviews[]` records to the next capture input:
 
 Accepted dispositions are `INTEREST`, `DECLINE` and `NEUTRAL`. The original classifier still determines whether a message is SENT, automated, a delivery failure or a human message requiring review. An annotation on an automated ticket does not turn that ticket into interest.
 
+## Reply and referral state
+
+Automatic contact referrals are extracted from the reply's authored routing clause. Quoted original messages, address headers, the former sender, and every known connected mailbox/SENT sender are excluded. A referral already approached remains recorded as contacted rather than returning as a new introduction.
+
+A human message is considered answered only when a later SENT message addresses that sender and links through an exact RFC reference or the same account-scoped Gmail thread. An unrelated later email does not clear the reply. The queue retains the original human message and the answering provider receipt, selects the newest unanswered message for response, and returns fully answered conversations to the existing awaiting-reply/follow-up lanes. A latest recorded decline stays declined after an acknowledgement.
+
+Gmail drafts remain in the retained capture with a separate `draftCount`; they are neither a verified send nor an incoming human reply and never create a follow-up task by themselves.
+
+Conflicting provider thread identities are retained as `MESSAGE_IDENTITY_CONFLICT` with both observed thread IDs and the capture time. An older full read cannot silently erase that issue. The same incremental workflow requests another full provider read, marks the affected conversation for that read, and clears the conflict after a later successful full capture confirms the retained identity. No synthetic message or automatic resend resolves it.
+
 ## Reuse an owner directive
 
 Put policy data alongside `opportunities[]` in the existing pipeline input:

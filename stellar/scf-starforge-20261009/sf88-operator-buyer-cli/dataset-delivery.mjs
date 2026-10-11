@@ -6,9 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { InputError, need } from './config.mjs';
-import { canonical, digest, inspectDatasetPage, object } from './dataset-page.mjs';
+import { canonical, digest, inspectDatasetPage, nativeDatasetContract, object } from './dataset-page.mjs';
 
 const NATIVE = fileURLToPath(new URL('../sf100-buyer-dataset-delivery/deliver.mjs', import.meta.url));
+const WORKER = fileURLToPath(new URL('./dataset-export-worker.mjs', import.meta.url));
 const MAX_INPUT = 2 * 1024 * 1024, MAX_PAGES = 4096, MAX_EXPORT = 256 * 1024 * 1024;
 const HEX = /^[a-f0-9]{64}$/;
 const exactPath = value => typeof value === 'string' && isAbsolute(value) && resolve(value) === value && !value.includes('\0');
@@ -83,16 +84,19 @@ async function createMarker(path, value) {
 async function nativeFingerprint() {
   // Read the original CLI at its exact repository path. Its fingerprint records provenance;
   // compatible owner updates remain subject to the archive, native scan, and output contracts.
-  // Importing this file would execute its unconditional main.
   const source = await bounded(NATIVE, 256 * 1024, false);
   return createHash('sha1').update(`blob ${source.length}\0`).update(source).digest('hex');
 }
-function native(command, out, extra = []) {
+function native(command, out, extra = [], inputs = null) {
+  const batch = command === 'append-batch';
+  need(batch === (inputs !== null), 'DATASET_DELIVERY_NATIVE_INPUT_INVALID');
+  const input = batch ? Buffer.from(JSON.stringify(inputs)) : null;
+  need(!input || input.length <= 16 * 1024 * 1024, 'DATASET_DELIVERY_BATCH_INPUT_LIMIT');
   return new Promise((accept, reject) => {
     // In particular: no NODE_OPTIONS, SF36 signing material, provider keys, or inherited HOME.
-    const child = spawn(process.execPath, [NATIVE, command, '--out', out, ...extra], {
+    const child = spawn(process.execPath, batch ? [WORKER, out] : [NATIVE, command, '--out', out, ...extra], {
       shell:false, cwd:dirname(NATIVE), env:{LANG:'C', LC_ALL:'C', TZ:'UTC'},
-      stdio:['ignore', 'pipe', 'pipe'],
+      stdio:[batch ? 'pipe' : 'ignore', 'pipe', 'pipe'],
     });
     const chunks = [];
     let stdoutBytes = 0, stderrBytes = 0, reason = null, killTimer;
@@ -105,6 +109,10 @@ function native(command, out, extra = []) {
     };
     const timer = setTimeout(() => stop('DATASET_DELIVERY_NATIVE_TIMEOUT'), 120000);
     timer.unref();
+    if (batch) {
+      child.stdin.on('error', () => stop('DATASET_DELIVERY_NATIVE_INPUT_FAILED'));
+      child.stdin.end(input);
+    }
     child.stdout.on('data', bytes => {
       stdoutBytes += bytes.length;
       if (stdoutBytes > 65536) stop('DATASET_DELIVERY_NATIVE_OUTPUT_LIMIT');
@@ -169,8 +177,7 @@ async function preflight(report) {
     need(evidenceSha256 === p.evidenceSha256 && evidence.schema === 'scf82.checkout-evidence.v1' &&
       evidence.intentId === p.intentId && evidence.observation?.intentId === p.intentId,
     'DATASET_DELIVERY_EVIDENCE_CHANGED');
-    need(Object.keys(payload.filters).length <= 8, 'DATASET_DELIVERY_NATIVE_FILTER_LIMIT');
-    const pageSignature = digest(JSON.stringify([payload.dataset, payload.fields, payload.filters, payload.page.total]));
+    const pageSignature = nativeDatasetContract(payload).signature;
     need(signature === undefined || signature === pageSignature, 'DATASET_DELIVERY_NATIVE_SIGNATURE_MISMATCH');
     signature = pageSignature;
     records.push({index:i, intent:p.intentId, responsePath:p.responsePath, evidencePath:p.evidencePath,
@@ -293,15 +300,18 @@ export async function buildNativeDataRoom(report, destination) {
       for (const name of ['dataset.jsonl','dataset.csv','review.html','manifest.json']) {
         need(!await exists(join(out, name)), 'DATASET_DELIVERY_PARTIAL_NATIVE_EXPORT');
       }
+      const inputs = [];
       for (let i = state.count; i < records.length; i++) {
         const p = records[i];
         need(digest(await bounded(p.responsePath, MAX_INPUT)) === p.sourceSha256 &&
           digest(await bounded(p.evidencePath, MAX_INPUT)) === p.evidenceSha256,
         'DATASET_DELIVERY_SOURCE_CHANGED');
-        const args = ['--page', p.responsePath, '--intent', p.intent, '--evidence', p.evidencePath];
-        if (p.requestCursor !== null) args.push('--cursor', p.requestCursor);
-        await native('append', out, args);
+        inputs.push({page:p.responsePath, intent:p.intent, evidence:p.evidencePath,
+          ...(p.requestCursor !== null ? {cursor:p.requestCursor} : {})});
       }
+      // Original appendMany scans the saved prefix once, then streams native page inputs.
+      // Complete native prefixes resume; a torn final record is retained for a fresh export.
+      if (inputs.length) await native('append-batch', out, [], inputs);
       state = await prefix(out, records);
       need(state.count === records.length, 'DATASET_DELIVERY_ARCHIVE_PREFIX_MISMATCH');
       await native('finalize', out);
