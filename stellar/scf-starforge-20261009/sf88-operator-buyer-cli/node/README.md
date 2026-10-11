@@ -124,6 +124,23 @@ intentId, url, method, body, headers, operatorProfile })` calls original
 `--prepare` and snapshots the resulting exact operation. These APIs do not replace
 the existing dataset/object multi-page acquisition sessions.
 
+Ordinary headers such as `{'Content-Type':'application/json',
+'accept-language':'en-US','x-region':'eu'}` are accepted by both `prepare` and
+`fromRequest`. Preparation writes a private headers file and passes it to the
+original runtime's `--headers-file`; generated requests pass through the same
+original native review before an operation is returned. There is no separate
+Node allowlist. The original runtime canonicalizes names and rejects duplicate,
+reserved or whitespace-changing values. This requires the matching current SF88
+runtime; the standalone Node package imports only its own files.
+
+For a merchant-issued POST, retain the exact body and ordinary headers and pass
+`ticketFile` with its optional `ticketHeader` to `prepare`, or import the
+merchant's prepared configuration with `fromConfig`. Review shows the ordinary
+values and private ticket fingerprint; the original ticket bearer stays in its
+private file. The immutable configuration and existing inbox preserve these
+values across restart. Authentication and payment headers stay with the native
+operator and signer; SF98 order headers retain their original URL-bound check.
+
 ## Dataset acquisition inside a Node application
 
 The same `Buyer` now exposes the original SF88 dataset session and original SF100

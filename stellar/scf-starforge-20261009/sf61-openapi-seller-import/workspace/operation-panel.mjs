@@ -66,6 +66,7 @@ export function createOperationPanel({ container, make, field, api, act, notice 
     function fill() {
       const binding = selected();
       scope.textContent = 'Scope: '+binding.scope+'. Buyer header: '+binding.requestHeader+'.';
+      if (binding.forwardedHeaders?.length) scope.textContent += ' Forwarded request headers: '+binding.forwardedHeaders.join(', ')+'. Include the buyer’s exact values in the request below.';
       request.value = JSON.stringify(binding.request,null,2);
       expiry.input.value = String(Math.min(3600,binding.maxTicketSeconds)); expiry.input.max=String(binding.maxTicketSeconds);
       result.replaceChildren();
@@ -94,7 +95,7 @@ export function createOperationPanel({ container, make, field, api, act, notice 
       }));
       result.append(download,make('p','A browser cannot preserve the private file mode. Before importing a download on Linux or macOS, run:','hint'));
       const permission = make('pre','chmod 600 '+issued.filename,'wrap'); result.append(permission,
-        make('p','When moving to another host, transfer the matching body, headers and offer files through your normal private channel, then prepare the buyer with those local paths.','hint'));
+        make('p','When moving to another host, transfer the matching body, headers and offer files through your normal private channel. Use the original buyer --prepare with --body-file and --headers-file at those local paths; keep the ticket separate in --ticket-file.','hint'));
       notice('Created an exact operation ticket in the private merchant package.');
     }));
     fields.append(selectLabel,scope,operationId.container,subject.container,expiry.container,requestLabel,issue,result);
