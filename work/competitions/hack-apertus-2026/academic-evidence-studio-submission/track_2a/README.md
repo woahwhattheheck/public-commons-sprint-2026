@@ -29,7 +29,7 @@ Runtime environment:
 BASE_URL=https://api.inference.cscs.ch/v1
 API_KEY=...                       # injected at runtime; never stored
 MODEL_NAME=swiss-ai/Apertus-v1.5-8B
-CONTEXT_STRATEGY=selected         # selected or full
+CONTEXT_STRATEGY=full             # default; selected or balanced are optional
 ```
 
 `BASE_URL` and `API_KEY` are read only at runtime. `MODEL_NAME` is restricted to `swiss-ai/Apertus-v1.5-*`; the public 8B model is the default. Every remote request uses `BASE_URL`. Inputs remain under the read-only `/data` mount, outputs under `/output`, and no model or data are downloaded during evaluation.
@@ -73,6 +73,27 @@ python evaluate_dev.py --gold data/dev_gold.jsonl \
 ```
 
 The report includes overall and all nine language-pair denominators, confusion matrices, accuracy, macro-F1, abstentions, mean input/output tokens, and latency. These are development metrics only; held-out organizer macro-F1 remains private. Never describe a local or public-set score as an official held-out result.
+
+## Optional document-wide retrieval
+
+An optional third retrieval arm is available as `--strategy balanced` in both
+`main.py` and `run_dev.py`. It ranks original passages with document-frequency
+and length-normalized surface anchors: accent-folded words, short character
+ngrams, and shared numbers. It reserves half of its passage budget for coverage
+across the document in cross-language cases, and a quarter for same-language
+cases. If there are no shared anchors, all slots cover the document. Short
+sources that fit within eight chunks are retained in full. Source wording and
+page provenance remain intact; this method performs no translation, reads no
+gold labels, and adds no provider requests. Full and selected strategies retain
+their previous behavior.
+
+Run this experimental arm in a separate checkpoint and output after the
+existing matched full/selected run. A changed predictor source requires a fresh
+checkpoint; do not mix previously completed predictions with a new source.
+Its predictive benefit must be measured with genuine Apertus outputs on the
+human-annotated development data before choosing it for an entry. The HTTP
+client now sends the credential-free `HackApertus-OST-Track2A/1.0` User-Agent
+required by [Public AI's authentication guide](https://platform.publicai.co/docs).
 
 ## Focused checks
 
