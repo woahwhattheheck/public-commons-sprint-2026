@@ -1535,6 +1535,41 @@ review, import, retained-entry and response APIs used by the CLI. The pricing
 and accounting join adds no package dependency; recovery uses the existing
 native SDK setup.
 
+### Recover a completed buyer purchase
+
+The original recovery command joins a completed SF31 purchase to this same
+merchant accounting workspace. Use the actual retained buyer outcome, original
+approved request, exact merchant terms, known payer and original saved response.
+The included [recovery guide](../merchant-settlement-accounting/RECOVERY.md)
+defines the private request file and canonical network/RPC selection.
+
+```sh
+npx --no-install starforge merchant-accounting-recovery review \
+  --config /private/purchase/recovery-request.json
+npx --no-install starforge merchant-accounting-recovery import \
+  --config /private/purchase/recovery-request.json \
+  --recovered-dir /private/merchant/recovered
+npx --no-install starforge merchant-accounting-recovery response \
+  --recovered-dir /private/merchant/recovered --id ACTUAL_RECOVERY_ID \
+  --out /private/purchase/reopened-response.json
+```
+
+Use the recovery ID returned by the original import and a new response output.
+An identical import reopens the retained entry without repeating its RPC reads.
+`list --recovered-dir /private/merchant/recovered` reopens the collection locally.
+The initial import uses the original Stellar observer and records its actual
+network-specific transfer result; it does not purchase the resource again.
+
+Connect that private collection in the existing accounting browser, or append
+`--recovered-dir /private/merchant/recovered` to its initial workspace command.
+Review the original request, retain import progress and capture a reconciliation.
+The workspace keeps native and recovered source counts and time bases separate,
+provides the exact saved response, compares retained payment-option totals and
+exports the same original reports with optional captured sources. Its ordinary
+`merchant-accounting` command accepts the same optional `--recovered-dir`.
+The public `./merchant/recovery` entry exposes the original importer, collection
+reader and saved-response export for applications embedding this workflow.
+
 ## Run an existing Python merchant
 
 The maintained Python merchant entrypoint is included alongside the buyer
