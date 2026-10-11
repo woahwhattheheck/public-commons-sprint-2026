@@ -46,6 +46,27 @@ supports interrupted-install continuation, fresh-directory upgrades, recovery,
 and original command launch. See [Customer runtime installation and recovery](RUNTIME_INSTALL.md)
 for the complete workflow and [Runtime profiles](RUNTIME.md) for dependency selection.
 
+### Runtime installation workspace
+
+Use the private browser workspace to select an original archive, review its exact
+adapter dependencies, and prepare, install, inspect, compare, upgrade and recover
+customer runtimes through the same maintained installer:
+
+```sh
+starforge runtime-workspace init --workspace /srv/starforge/runtime-workspace
+starforge runtime-workspace attach --workspace /srv/starforge/runtime-workspace \
+  --runtime /srv/starforge/runtimes/merchant-01 --label "Merchant production"
+starforge runtime-workspace serve --workspace /srv/starforge/runtime-workspace
+```
+
+Open the private URL printed by `serve`. The workspace retains selected runtimes,
+reviewed profiles, operation progress and logs across browser and server restarts.
+Long-running installation operations continue independently of the browser. Its
+Deployment view exports the exact source/dependency roots, profile, original
+manifest and command needed by the existing managed-release and merchant-host
+workflows. The [complete runtime workspace guide](runtime-workspace/README.md)
+covers archive upload, selected adapters, local Node headers, recovery and handoff.
+
 ### Versioned installation, upgrade and rollback
 
 Use `starforge installation` to put a selected maintained package into the
