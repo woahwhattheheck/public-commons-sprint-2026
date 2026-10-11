@@ -4,7 +4,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { privateDirectory, readBytes, readJson, writeBytes, writeJson, jsonBytes, exists } from '../../sf88-operator-buyer-cli/node/store.mjs';
-import { compileWeatherPlan, normalizeWork, requestsFor, ATTRIBUTION, CONTRACT, object, id, text, need, fail } from './config.mjs';
+import { compileWeatherPlan, normalizeWork, requestsFor, weatherRequestVariants, matchesWeatherRequests, ATTRIBUTION, CONTRACT, object, id, text, need, fail } from './config.mjs';
 import { createTomorrowSource, readTimeline, readPng, digest } from './source.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.tomorrow-workspace.v1';
@@ -160,12 +160,13 @@ export class WeatherWorkspace {
     await this._recordCapture(edition.id, kind, resource, attemptId);
   }
   /** Prepare one explicit read of a failed resource, retaining the successful resources and staff decisions. */
-  async reviewResourceRetry(editionId, kind, { tileTimeFormat = 'original' } = {}) {
+  async reviewResourceRetry(editionId, kind, { tileTimeFormat = 'iso-path' } = {}) {
     const state = await this._state(), edition = this._edition(state, editionId);
     need(['PARTIAL', 'FAILED', 'INTERRUPTED', 'COMPLETE'].includes(edition.state), 'WEATHER_RECOVERY_REQUIRED');
     need(['timeline', 'tile'].includes(kind) && edition.requests.some(value => value.kind === kind), 'WEATHER_REQUEST_NOT_SELECTED');
     need(edition.resources[kind]?.state !== 'COMPLETE', 'WEATHER_RESOURCE_ALREADY_COMPLETE');
-    const request = requestsFor(edition.work, { tileTimeFormat }).find(value => value.kind === kind);
+    const request = tileTimeFormat === 'original' ? edition.requests.find(value => value.kind === kind)
+      : requestsFor(edition.work, { tileTimeFormat }).find(value => value.kind === kind);
     const review = { editionId, kind, request, usage: edition.usage, tileTimeFormat, providerCalls: 1,
       previousFailure: edition.resources[kind] ?? null,
       priorAttempts: (edition.resourceAttempts ?? []).filter(value => value.kind === kind).map(value => ({ id: value.id, state: value.state })),
@@ -223,7 +224,7 @@ export class WeatherWorkspace {
       let result;
       try {
         need(!signal?.aborted, 'WEATHER_ACQUISITION_CANCELLED');
-        result = await this.source.capture(request.kind, edition.work, { signal });
+        result = await this.source.capture(request.kind, edition.work, { signal, request });
       } catch (error) {
         result = { observation: { kind: request.kind, method: request.method, url: request.url, status: null,
           receivedAt: new Date().toISOString(), contentType: null, sha256: null, bytes: 0 },
@@ -378,11 +379,11 @@ export class WeatherWorkspace {
       need(edition.workId === edition.work.id && object(edition.resources), 'WEATHER_HANDOVER_EDITION_INVALID');
       const existing = currentState.editions.find(value => value.id === edition.id);
       if (existing) need(digest(jsonBytes(existing)) === digest(jsonBytes(edition)), 'WEATHER_IMPORT_COLLISION');
-      need(digest(jsonBytes(requestsFor(edition.work))) === digest(jsonBytes(edition.requests)), 'WEATHER_HANDOVER_REQUEST_CHANGED');
+      need(matchesWeatherRequests(edition.work, edition.requests), 'WEATHER_HANDOVER_REQUEST_CHANGED');
       for (const [kind, resource] of Object.entries(edition.resources)) if (resource.attemptId) {
         id(resource.attemptId);
         const attempt = edition.resourceAttempts?.find(value => value.id === resource.attemptId);
-        const allowed = [requestsFor(edition.work), requestsFor(edition.work, { tileTimeFormat: 'whole-seconds' })]
+        const allowed = weatherRequestVariants(edition.work)
           .flat().filter(value => value.kind === kind);
         need(attempt?.kind === kind && allowed.some(value => digest(jsonBytes(value)) === digest(jsonBytes(attempt.request))) &&
           resource.requestSha256 === digest(jsonBytes(attempt.request)), 'WEATHER_HANDOVER_RETRY_CHANGED');
