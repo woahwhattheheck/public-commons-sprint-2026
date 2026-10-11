@@ -9,6 +9,8 @@ import {openCollectionWorkspace} from './collection-workspace.mjs';
 import {handlePricingRequest,PRICING_REQUEST_BYTES} from './pricing-workspace.mjs';
 import {handlePeriodRequest} from './period-workspace.mjs';
 import {AccountantWorkspace,handleAccountantRequest,ACCOUNTANT_REQUEST_BYTES} from './accountant-workspace.mjs';
+import {RECOVERY_COMMANDS,RECOVERY_HELP,recoveryMain} from './recovery-cli.mjs';
+import {openAccountingMaintenance} from './recovery-controller.mjs';
 import {BitwaveWorkspace,handleBitwaveRequest,BITWAVE_REQUEST_BYTES} from './bitwave-workspace.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
@@ -21,14 +23,23 @@ async function body(request,limit=600_000){
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
-export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,...options}){
+export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,
+  recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,...options}){
   check(host==='127.0.0.1'||host==='localhost','LOOPBACK_REQUIRED','This operator workspace binds to loopback.');
   check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a valid port.');
-  const workspace=await openAccountingWorkspace(options),hosts=new Set(),accountant=new AccountantWorkspace(workspace);
-  const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{});
-  let collection;
-  try{collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();}
-  catch(error){if(collection)await collection.close();await workspace.close();throw error;}
+  const hosts=new Set();
+  const closeRuntime=async({workspace,bitwave,collection})=>{
+    const errors=[];for(const owned of [bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
+    if(errors.length)throw Object.assign(new AggregateError(errors,'The original accounting controllers did not all close cleanly.'),{code:'ACCOUNTING_RUNTIME_CLOSE_FAILED'});
+  };
+  const openRuntime=async()=>{
+    const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
+    const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{});let collection;
+    try{collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();return {workspace,accountant,bitwave,collection};}
+    catch(error){await closeRuntime({workspace,bitwave,collection}).catch(()=>{});throw error;}
+  };
+  const maintenance=await openAccountingMaintenance({directory:options.directory,stateRoot:recoveryStateRoot,backupRoot:recoveryBackupRoot,
+    passEnv:recoveryPassEnv,startPaused:recoveryStartPaused,openRuntime,closeRuntime});
   const send=(response,status,value,{type='application/json; charset=utf-8',name}={})=>{
     if(response.destroyed)return;
     const bytes=Buffer.isBuffer(value)?value:Buffer.from(JSON.stringify(value));
@@ -37,6 +48,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       ...(name?{'Content-Disposition':'attachment; filename="'+name+'"'}:{})});response.end(bytes);
   };
   const server=createServer(async(request,response)=>{
+    let operation;
     try{
       check(hosts.has(request.headers.host),'INVALID_HOST','Open the printed local workspace address.',403);
       const url=new URL(request.url,'http://'+request.headers.host),path=url.pathname;
@@ -45,8 +57,11 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
         '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8'],
         '/periods.mjs':['periods.mjs','text/javascript; charset=utf-8'],'/periods.html':['periods.html','text/html; charset=utf-8'],'/periods.css':['periods.css','text/css; charset=utf-8'],
         '/accountant.mjs':['accountant.mjs','text/javascript; charset=utf-8'],'/accountant.html':['accountant.html','text/html; charset=utf-8'],'/accountant.css':['accountant.css','text/css; charset=utf-8'],
-        '/bitwave.mjs':['bitwave.mjs','text/javascript; charset=utf-8'],'/bitwave.html':['bitwave.html','text/html; charset=utf-8'],'/bitwave.css':['bitwave.css','text/css; charset=utf-8']};
+        '/bitwave.mjs':['bitwave.mjs','text/javascript; charset=utf-8'],'/bitwave.html':['bitwave.html','text/html; charset=utf-8'],'/bitwave.css':['bitwave.css','text/css; charset=utf-8'],
+        '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
+      const maintenancePath=path==='/api/maintenance'||path.startsWith('/api/maintenance/');
+      if(!maintenancePath)operation=maintenance.enter();
       let value;
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
@@ -54,6 +69,8 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
         value=await body(request,path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
+      if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
+      const {workspace,accountant,bitwave,collection}=operation;
       const bitwaveResult=await handleBitwaveRequest(bitwave,{method:request.method,path,query,value});
       if(bitwaveResult){if(bitwaveResult.file)send(response,200,bitwaveResult.file.bytes,{type:bitwaveResult.file.type,name:bitwaveResult.file.name});else send(response,200,bitwaveResult.value);return;}
       const accountingHandoff=await handleAccountantRequest(accountant,{method:request.method,path,query,value});
@@ -99,13 +116,19 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       }
       check(result!==undefined,'NOT_FOUND','This workspace operation was not found.',404);send(response,200,result);
     }catch(error){send(response,error.status??400,{error:error.code??'WORKSPACE_OPERATION_FAILED',message:String(error.message??error).slice(0,2000)});}
+    finally{operation?.release();}
   });
   server.requestTimeout=30_000;server.headersTimeout=15_000;
   try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,resolve);});}
-  catch(error){await collection.close();await workspace.close();throw error;}
+  catch(error){await maintenance.close();throw error;}
   const actual=server.address().port;hosts.add('127.0.0.1:'+actual);hosts.add('localhost:'+actual);
   let closing;
-  return {workspace,collection,accountant,bitwave,server,url:'http://127.0.0.1:'+actual,close(){if(!closing)closing=(async()=>{await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));await bitwave.close();await collection.close();await workspace.close();})();return closing;}};
+  return {get workspace(){return maintenance.runtime?.workspace;},get collection(){return maintenance.runtime?.collection;},
+    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},maintenance,server,url:'http://127.0.0.1:'+actual,
+    close(){if(!closing)closing=(async()=>{
+      const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
+      const results=await Promise.allSettled([stopped,maintenance.close()]);const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
+    })();return closing;}};
 }
 
 const HELP=`Merchant settlement workspace
@@ -119,18 +142,36 @@ Reopen:
   node workspace/server.mjs --workspace /private/accounting-workspace
 
 Optional: --port 8446 and --recovered-dir /private/original-recovered-settlements.
+Browser backup and recovery: --recovery-state-root /private/state
+  --recovery-backup-root /private/accounting-backups
+  --recovery-pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE
+Add --recovery-start-paused to restore an absent or unfinished original workspace.
 For an explicitly configured cloud HTTPS proxy, add --rpc-proxy-env HTTPS_PROXY.
 Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
+Operating backup and recovery: backup | inspect-backup | verify-backup | restore | recovery-status.
+Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
-  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP);return;}
-  const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env']),values={};
-  for(let i=0;i<argv.length;i+=2){check(keys.has(argv[i])&&argv[i+1]&&!Object.hasOwn(values,argv[i]),'INVALID_ARGUMENTS',HELP);values[argv[i]]=argv[i+1];}
+  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP);return;}
+  if(RECOVERY_COMMANDS.has(argv[0])){
+    const controller=new AbortController(),stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
+    try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
+  }
+  const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env',
+    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env']),values={};
+  for(let i=0;i<argv.length;i++){
+    const key=argv[i];check(!Object.hasOwn(values,key),'INVALID_ARGUMENTS',HELP);
+    if(key==='--recovery-start-paused'){values[key]=true;continue;}
+    check(keys.has(key)&&argv[i+1]&&!argv[i+1].startsWith('--'),'INVALID_ARGUMENTS',HELP);values[key]=argv[++i];
+  }
   check(values['--workspace'],'WORKSPACE_REQUIRED',HELP);
   const app=await startAccountingWorkspace({directory:resolve(values['--workspace']),
     outboxDir:values['--outbox']&&resolve(values['--outbox']),proofDir:values['--proof-dir']&&resolve(values['--proof-dir']),termsFile:values['--terms']&&resolve(values['--terms']),
     recoveredDir:values['--recovered-dir']&&resolve(values['--recovered-dir']),
+    recoveryStateRoot:values['--recovery-state-root']&&resolve(values['--recovery-state-root']),
+    recoveryBackupRoot:values['--recovery-backup-root']&&resolve(values['--recovery-backup-root']),
+    recoveryPassEnv:values['--recovery-pass-env'],recoveryStartPaused:values['--recovery-start-paused']??false,
     rpcProxyEnv:values['--rpc-proxy-env'],
     port:values['--port']===undefined?8446:Number(values['--port'])});
   process.stdout.write('Merchant accounting workspace: '+app.url+'\n');

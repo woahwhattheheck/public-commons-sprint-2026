@@ -31,6 +31,14 @@ Select `responseFile.stream` before review, then consume verified records with
 `operation.recover()`. The [streaming application guide](STREAMS.md) covers both
 completed responses and retained complete records from an interrupted transfer.
 
+The complete [customer inbox workflow](INBOX.md) joins merchant packet or
+generated-client intake to the original private SF88 queue. Review several
+saved requests, execute one selected intent through native terminal approval,
+cancel an unattempted job, recover after interruption, consume its verified
+file or stream, and finalize/export the original history. A transferred Node
+operation stays bound to that one inbox. The same `buyer-node` command exposes
+the entire `inbox-*` workflow, with complete private handover and reopening.
+
 ## Install and runtime
 
 Node 22 or later is required. There are no npm dependencies or install scripts.
@@ -435,6 +443,22 @@ ledger when configured to do so, but their application state directories and
 attempt markers must not be interchanged. Filesystem durability assumes a local
 filesystem supporting atomic hard links and fsync; network/distributed filesystems
 require their own validation.
+
+## Use an existing native operator workspace
+
+`buyer.fromWorkspace(directory, { configuration, intentId, responseFile, requestTimeoutMs })`
+adopts the original SF88 workspace directly. Its operator, private evidence, signer,
+transport and payment limits remain bound by the original inbox checks; workspace
+keys are loaded only inside the original native child. An optional authored
+configuration selects another explicit request under that same operator and budget.
+The default Buyer profile does not replace workspace authority.
+
+Preparation and review remain offline. Execute checks current native setup and the
+controlling terminal before recording an attempt, then uses the original workspace
+execution and manifest-selected evidence RPC. Recovery only reads the retained
+result, including when the workspace is temporarily absent. For full setup, request
+adoption, inbox/accounting handoff and original recovery, see [WORKSPACE.md](WORKSPACE.md)
+and [examples/workspace_customer.mjs](examples/workspace_customer.mjs).
 
 ## Whole customer workspace backup and restore
 

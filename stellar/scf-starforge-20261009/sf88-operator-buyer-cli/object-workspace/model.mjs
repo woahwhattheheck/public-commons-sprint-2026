@@ -77,6 +77,7 @@ function slug(value) {
 }
 function revision(report) {
   return sha(JSON.stringify([report.sessionId, report.configurationSha256, report.status,
+    report.deliveryMode ?? 'chunks',
     report.completeChunks, report.attemptedChunks, report.objectSha256, report.lock ?? null,
     report.stoppedChunk ?? null, report.chunks.map(row => [row.index, row.state, row.attemptId,
       row.sha256, row.evidenceSha256, row.originalOutcome, row.code]),
@@ -85,13 +86,14 @@ function revision(report) {
 function summary(id, report) {
   return { id, sessionId: report.sessionId, name: report.selection?.filename ?? id,
     objectId: report.selection?.objectId ?? null, createdAt: report.createdAt, status: report.status,
+    deliveryMode: report.deliveryMode ?? 'chunks',
     sourceUrl: report.sourceUrl,
     bytes: report.bytes, completeChunks: report.completeChunks, chunkCount: report.chunkCount,
     downloadedBytes: report.downloadedBytes, inspectedAt: report.inspectedAt ?? null };
 }
 function accountingRevision(record) {
   return sha(JSON.stringify([record.sessionId, record.configurationSha256,
-    record.workspace, record.terms, record.range.total]));
+    record.workspace, record.terms, record.range.total, record.deliveryMode ?? 'chunks']));
 }
 function accountingTotals(entries) {
   const value = { finalized: 0, unpaid: 0, unattempted: 0, attention: 0, actualAtomicUnits: '0' };
@@ -171,6 +173,7 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
         index.set(entry.name, { id: entry.name, sessionId: definition.sessionId,
           name: definition.selection?.filename ?? entry.name, objectId: definition.selection?.objectId ?? null,
           sourceUrl: execution(definition.config).op.url,
+          deliveryMode: definition.deliveryMode ?? 'chunks',
           createdAt: definition.createdAt, status: 'NEEDS_INSPECTION', bytes: definition.bytes,
           chunkCount: definition.chunkCount, completeChunks: null, downloadedBytes: null, inspectedAt: null });
       } catch (error) {
@@ -198,11 +201,13 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       objectId: product.objectId, configPath: product.configFile, ...(chunkBytes ? { chunkBytes } : {}) });
     const after = await read(product.configFile, 65536);
     need(before.equals(after), 'OBJECT_WORKSPACE_INPUT_CHANGED', 409);
-    const chunks = Number((BigInt(selection.bytes) + BigInt(selection.chunkBytes) - 1n) / BigInt(selection.chunkBytes));
+    const chunks = selection.deliveryMode === 'whole' ? 1 :
+      Number((BigInt(selection.bytes) + BigInt(selection.chunkBytes) - 1n) / BigInt(selection.chunkBytes));
     need(chunks <= 100000, 'OBJECT_BYTE_PLAN_INVALID');
     return { product, source, selection, configurationSha256: sha(encode(source)), sourceSha256: sha(before),
       chunks, plannedMaxAtomic: (BigInt(op.expect.maxAtomic) * BigInt(chunks)).toString(),
       public: { id: product.id, label: product.label, objectId: product.objectId,
+        deliveryMode: selection.deliveryMode ?? 'chunks',
         filename: selection.selection.filename, bytes: selection.bytes, chunkBytes: selection.chunkBytes,
         chunkCount: chunks, snapshot: selection.expectedSnapshot, expectedSha256: selection.expectedSha256,
         contentType: selection.expectedContentType, sourceUrl: op.url, terms: op.expect,
@@ -219,20 +224,24 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
     while (reviews.size >= 64) reviews.delete(reviews.keys().next().value);
   }
   async function reviewSelection({ productId, sessionName, chunkBytes, maxTotalAtomic } = {}) {
-    assertIdle(); slug(sessionName); positive(chunkBytes); atomic(maxTotalAtomic); trimReviews();
+    assertIdle(); slug(sessionName); if (chunkBytes !== undefined) positive(chunkBytes);
+    atomic(maxTotalAtomic); trimReviews();
     const value = await selected(await chooseProfile(productId), chunkBytes);
     need(BigInt(value.plannedMaxAtomic) <= BigInt(maxTotalAtomic), 'OBJECT_TOTAL_BUDGET_INSUFFICIENT');
     const reviewId = randomUUID(), expires = Date.now() + 15 * 60 * 1000;
     reviews.set(reviewId, { ...value, sessionName, maxTotalAtomic, expires });
     return { ...value.public, plannedMaxAtomic: value.plannedMaxAtomic, maxTotalAtomic, sessionName,
       reviewId, expiresAt: new Date(expires).toISOString(), configurationSha256: value.configurationSha256,
-      firstRange: { offset: 0, length: Math.min(chunkBytes, value.selection.bytes) },
-      lastRange: { offset: (value.chunks - 1) * chunkBytes,
-        length: value.selection.bytes - (value.chunks - 1) * chunkBytes } };
+      firstRange: value.selection.deliveryMode === 'whole' ? null :
+        { offset: 0, length: Math.min(value.selection.chunkBytes, value.selection.bytes) },
+      lastRange: value.selection.deliveryMode === 'whole' ? null :
+        { offset: (value.chunks - 1) * value.selection.chunkBytes,
+          length: value.selection.bytes - (value.chunks - 1) * value.selection.chunkBytes } };
   }
   function matchesReview(report, review) {
     return report.configurationSha256 === review.configurationSha256 &&
       report.workspace === review.product.workspace && report.bytes === review.selection.bytes &&
+      report.deliveryMode === (review.selection.deliveryMode ?? 'chunks') &&
       report.chunkBytes === review.selection.chunkBytes && report.expectedSnapshot === review.selection.expectedSnapshot &&
       report.expectedSha256 === review.selection.expectedSha256 &&
       report.expectedContentType === review.selection.expectedContentType &&

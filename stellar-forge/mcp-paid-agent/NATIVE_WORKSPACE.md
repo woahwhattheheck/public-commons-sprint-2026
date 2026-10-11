@@ -6,6 +6,10 @@ the selected request, invokes the original terminal approval and spending
 reservation, uses the native Stellar signer, and retains the returned file and
 original checkout result. The same intent remains available after restart.
 
+For a complete merchant object, the same tool also exposes original whole/chunk
+acquisition, recovery, accounting, assembly and bounded file reads. Register the
+merchant's original S3 descriptor and follow [the object workflow](OBJECTS.md).
+
 The connection uses the existing MCP 2025-11-25 single-response Streamable HTTP
 server. Its merchant leg is the original x402 HTTP buyer. The server, SF88 inbox,
 SF36 ledger, SF103 signer and SF31 response writer remain the original modules.

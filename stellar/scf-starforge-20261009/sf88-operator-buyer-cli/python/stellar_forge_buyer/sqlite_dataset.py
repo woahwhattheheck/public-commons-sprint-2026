@@ -329,6 +329,16 @@ class DatasetDatabase:
         analytical selection. The view snapshot and rows share one read
         transaction; immutable physical table names are also retained.
         """
+        with self._connection(readonly=True) as db:
+            db.execute("BEGIN")
+            return self._query(db, sql, parameters, max_rows=max_rows,
+                               max_result_bytes=max_result_bytes, timeout=timeout,
+                               expected_views=expected_views)
+
+    def _query(self, db, sql, parameters=(), *, max_rows=1000, max_result_bytes=16 * 1024 * 1024, timeout=10, expected_views=None):
+        """Use the original SQL reader inside an already opened transaction."""
+        if not db.in_transaction:
+            raise StateError("DATASET_SQL_TRANSACTION_REQUIRED")
         if not isinstance(sql, str) or type(max_rows) is not int or not 1 <= max_rows <= 100_000 or type(max_result_bytes) is not int or not 1 <= max_result_bytes <= 256 * 1024 * 1024 or not isinstance(timeout, (int, float)) or not math.isfinite(timeout) or not 0 < timeout <= 300:
             raise StateError("DATASET_SQL_QUERY_OPTIONS_INVALID")
         permitted = {sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION, sqlite3.SQLITE_RECURSIVE}
@@ -339,30 +349,32 @@ class DatasetDatabase:
             if action == sqlite3.SQLITE_READ and first:
                 tables.add(first)
             return sqlite3.SQLITE_OK
-        with self._connection(readonly=True) as db:
-            db.execute("BEGIN")
-            views = self._views(db)
-            if expected_views is not None and (not isinstance(expected_views, list) or views != expected_views):
-                raise StateError("DATASET_SQL_VIEWS_CHANGED")
-            deadline = time.monotonic() + timeout
-            db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
-            db.set_authorizer(authorize)
-            db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
-            try:
-                cursor = db.execute(sql, parameters)
-                columns = tuple(column[0] for column in cursor.description or ())
-                rows, size, truncated = [], 0, False
-                for row in cursor:
-                    values = tuple(row)
-                    row_bytes = sum(len(value.encode("utf-8")) if isinstance(value, str) else len(value) if isinstance(value, bytes) else 8 for value in values)
-                    if len(rows) == max_rows or size + row_bytes > max_result_bytes:
-                        truncated = True
-                        break
-                    rows.append(values)
-                    size += row_bytes
-                return QueryResult(columns, tuple(rows), truncated, tuple(views), tuple(sorted(tables)))
-            except sqlite3.Error as exc:
-                raise StateError("DATASET_SQL_QUERY_FAILED") from exc
+        views = self._views(db)
+        if expected_views is not None and (not isinstance(expected_views, list) or views != expected_views):
+            raise StateError("DATASET_SQL_VIEWS_CHANGED")
+        deadline = time.monotonic() + timeout
+        previous_length = db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, 16 * 1024 * 1024)
+        db.set_authorizer(authorize)
+        db.set_progress_handler(lambda: int(time.monotonic() >= deadline), 1000)
+        try:
+            cursor = db.execute(sql, parameters)
+            columns = tuple(column[0] for column in cursor.description or ())
+            rows, size, truncated = [], 0, False
+            for row in cursor:
+                values = tuple(row)
+                row_bytes = sum(len(value.encode("utf-8")) if isinstance(value, str) else len(value) if isinstance(value, bytes) else 8 for value in values)
+                if len(rows) == max_rows or size + row_bytes > max_result_bytes:
+                    truncated = True
+                    break
+                rows.append(values)
+                size += row_bytes
+            return QueryResult(columns, tuple(rows), truncated, tuple(views), tuple(sorted(tables)))
+        except sqlite3.Error as exc:
+            raise StateError("DATASET_SQL_QUERY_FAILED") from exc
+        finally:
+            db.set_authorizer(None)
+            db.set_progress_handler(None, 0)
+            db.setlimit(sqlite3.SQLITE_LIMIT_LENGTH, previous_length)
 
     def backup(self, destination):
         """Publish a consistent, create-only database copy that reopens normally."""

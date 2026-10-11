@@ -6,7 +6,6 @@ import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execution } from '../sf88-operator-buyer-cli/config.mjs';
 import { BuyerResult } from '../sf88-operator-buyer-cli/node/result.mjs';
-import { readExaAnswer } from '../sf88-operator-buyer-cli/node/examples/exa-answer.mjs';
 import { readPrivateFile, parseJson } from '../sf103-native-buyer-signer/operator.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
 
@@ -165,6 +164,7 @@ export function createCommerceStreamAccess(queueRoot) {
   async function answer(job, { allowPartial = false, signal } = {}) {
     need(job.merchant?.routeId === 'exa-answer', 'COMMERCE_EXA_ANSWER_ROUTE_REQUIRED');
     const {result} = await original(job);
+    const { readExaAnswer } = await import('../sf88-operator-buyer-cli/node/examples/exa-answer.mjs');
     const report = await readExaAnswer(result, {allowPartial, signal});
     return {intentId:job.operation.intentId, ...report,
       answer:report.answer.slice(0, 262144), answerCharacters:report.answer.length,

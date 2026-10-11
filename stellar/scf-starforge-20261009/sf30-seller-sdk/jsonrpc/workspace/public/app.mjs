@@ -1,4 +1,5 @@
 // MIT. Saved public plan editing and explicit original merchant operations.
+import { createCommercePanel } from './commerce.mjs';
 const $ = id => document.getElementById(id);
 const keyFromUrl = new URLSearchParams(location.hash.slice(1)).get('key');
 if (keyFromUrl && /^[a-f0-9]{64}$/.test(keyFromUrl)) {
@@ -71,6 +72,7 @@ function controls() {
   $('start').disabled ||= !$('runtime-package').value;
   $('save').disabled=!dirty;
   $('older-actions').hidden=!nextActions;
+  commercePanel.controls(actionable);
 }
 async function run(fn) {
   if (busy) return;
@@ -191,15 +193,16 @@ function renderRuntime() {
   const value=state.runtime;$('runtime-state').textContent=value.state;
   $('runtime-mode').textContent=value.launchMode==='OFFLINE' ? 'Reopen the launcher with a runtime mode to enable merchant start.' :
     'Launcher mode: '+value.launchMode.toLowerCase()+'. Provider and facilitator connections come from that launcher.';
+  if (value.kind==='COMMERCE') $('runtime-mode').textContent='Original native commerce session · retained preparation '+value.preparationId+'.';
   $('runtime-links').replaceChildren();
-  for (const [label,url] of [['Merchant explorer',value.docs],['Operations',value.operations],['Product availability',value.availability]]) {
+  for (const [label,url] of [['Original commerce console',value.console],['Merchant explorer',value.docs],['Operations',value.operations],['Product availability',value.availability]]) {
     if (!url) continue;
     const parsed=new URL(url);
     if (parsed.protocol==='http:' && parsed.hostname==='127.0.0.1')
       $('runtime-links').append(node('a',label,{href:url,target:'_blank',rel:'noopener',referrerpolicy:'origin',class:'link-button'}));
   }
   $('runtime-detail').textContent=json({state:value.state,instanceId:value.instanceId,version:value.revision,
-    packageId:value.packageId,startedAt:value.startedAt,endedAt:value.endedAt,provider:value.snapshot?.rpc});
+    packageId:value.packageId,preparationId:value.preparationId,startedAt:value.startedAt,endedAt:value.endedAt,provider:value.snapshot?.rpc});
 }
 function renderActions() {
   $('activities').replaceChildren();
@@ -211,6 +214,7 @@ function renderActions() {
     const buttons=node('div',null,{class:'buttons'});buttons.append(download('action',row.id,undefined,'Download retained operation'));
     if (row.kind==='buyer' && row.state==='COMPLETE')
       for (const file of row.result.files) buttons.append(download('buyer',row.id,file.name));
+    if (row.kind==='commerce-review' && row.state==='COMPLETE') buttons.append(commercePanel.reviewButton(row));
     details.append(buttons);$('activities').append(details);
   }
 }
@@ -218,14 +222,14 @@ async function refresh(preserve=true) {
   state=await request('/api/state'); $('directory').textContent=state.directory;
   $('workspace-status').textContent='Saved version '+state.latest.revision+' · '+state.runtime.state.toLowerCase();
   actionPage=state.actions.items;nextActions=state.actions.next;
-  if (!preserve || !active) await adopt(state.latest); else { renderVersions();renderPackages(); }
+  if (!preserve || !active) await adopt(state.latest); else { renderVersions();renderPackages();await commercePanel.refresh(); }
   renderRuntime();renderActions();controls();
 }
 async function adopt(saved) {
   active=saved;baseRevision=state.latest.revision;dirty=false;$('conflict').hidden=true;
   fillForm(saved.plan);review=await request('/api/review',{revision:saved.revision});
   $('editor-meta').textContent='Version '+saved.revision+' · saved '+time(saved.savedAt)+(saved.revision!==state.latest.revision ? ' · saving creates a new version':'');
-  renderVersions();renderReview();renderPackages();controls();
+  renderVersions();renderReview();renderPackages();await commercePanel.refresh();controls();
 }
 async function openVersion(revision) {
   if (dirty && !confirm('Discard the unsaved editor changes and open this saved version?')) return;
@@ -240,6 +244,8 @@ async function save(expectedRevision=baseRevision) {
   const saved=await operation('/api/save',{expectedRevision,sourceRevision:active.revision,plan:editorPlan()});
   await refresh();await adopt(saved);message('Saved version '+saved.revision+'.');
 }
+const commercePanel=createCommercePanel({request,operation,run,node,table,download,message,selection,
+  current:() => ({state,active,review,dirty,busy}),openVersion,refreshWorkspace:refresh});
 for (const id of ['public-origin','data-network','payment-network','endpoint-env','asset','recipient','payment-timeout']) $(id).addEventListener('input',syncForm);
 $('plan-form').addEventListener('submit',event => event.preventDefault());
 $('raw-plan').addEventListener('input',() => { rawDirty=true;markDirty(); });
@@ -279,7 +285,7 @@ $('example').addEventListener('click',() => {const selected=review?.routes.find(
 $('buyer').addEventListener('click',() => run(async () => {
   const result=await operation('/api/buyer',{...selection(),packageId:$('buyer-package').value,method:$('buyer-method').value,
     intentId:$('buyer-intent').value,bodyText:$('buyer-body').value});await refresh();
-  message('Buyer preparation '+result.state.toLowerCase()+'. Download its original review and request from saved operations.');
+  message('Buyer preparation '+result.state.toLowerCase()+'. Select its exact request in Native commerce below.');
 }));
 $('start').addEventListener('click',() => run(async () => {
   const selected=selection();if(!confirm('Start this reviewed merchant version in the launcher’s '+state.runtime.launchMode.toLowerCase()+' mode?'))return;
@@ -296,3 +302,4 @@ $('older-actions').addEventListener('click',() => run(async () => {
 }));
 window.addEventListener('beforeunload',event => {if(dirty){event.preventDefault();event.returnValue='';}});
 await run(async () => {await refresh(false);message('Workspace reopened. Choose a saved version or edit the merchant plan.');});
+
