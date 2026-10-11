@@ -1,6 +1,6 @@
 // MIT. Reviewed ArcGIS publication -> the original SF82 dataset release lifecycle.
 import { constants } from 'node:fs';
-import { open, mkdir, lstat, realpath, readdir, rm, link, unlink } from 'node:fs/promises';
+import { open, mkdir, lstat, realpath, readdir, rm, rmdir, link, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { DATASET_BINDING_SCHEMA, datasetContractSha256, prepareDatasetRelease } from '../../sf82-seller-pilot/release-dataset.mjs';
@@ -162,7 +162,7 @@ export async function exportArcgisDeployment({ publisher, run, sellerFile, direc
     if (!same(selectedPublication(publisher, run), selected)) fail('ARCGIS_PUBLICATION_CHANGED');
     const files = [];
     for (const file of FILES) files.push(await publishFile(staging, target, file));
-    await rm(staging); staging = null; await syncDirectory(target);
+    await rmdir(staging); staging = null; await syncDirectory(target);
     return summary(target, prepared, source, files);
   } finally {
     try { if (staging) await rm(staging, { recursive: true, force: true }); }
