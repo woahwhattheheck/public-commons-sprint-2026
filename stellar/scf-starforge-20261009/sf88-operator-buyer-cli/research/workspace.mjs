@@ -6,8 +6,8 @@ import {join,resolve,sep} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {privateDirectory,readBytes,readJson,writeBytes,writeJson,jsonBytes,digest,exists,parseJson,need} from '../node/store.mjs';
 import {BuyerResult} from '../node/result.mjs';
-import {analyzeResearch,compareResearch,researchExports} from './analysis.mjs';
-import {renderResearchReport} from './report.mjs';
+import {analyzeResearch,compareResearch} from './analysis.mjs';
+import {renderResearchReport,researchExports} from './report.mjs';
 
 export const MAX_PAGE_BYTES=67108864;
 export const ENTITY_PREFIXES=Object.freeze({works:'W',authors:'A',sources:'S',institutions:'I',topics:'T',publishers:'P',funders:'F',awards:'G'});
