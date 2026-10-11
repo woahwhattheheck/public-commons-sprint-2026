@@ -11,6 +11,7 @@ import os
 import tempfile
 import uuid
 import zipfile
+import survey
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
@@ -223,6 +224,8 @@ def apply_action(root: Path, payload: dict):
     action = payload.get("action")
 
     def operation(state):
+        if isinstance(action, str) and action.startswith("survey."):
+            return survey.apply(state, payload)
         if isinstance(action, str) and action.startswith("interviews."):
             from interviews import apply_interview_action
             return apply_interview_action(state, payload)
@@ -311,6 +314,7 @@ def apply_action(root: Path, payload: dict):
             frozen = report_payload(state)
             frozen["workspaceRevision"] = state["revision"] + 1
             frozen["interviews"]["workspaceRevision"] = frozen["workspaceRevision"]
+            frozen["survey"]["analysis"]["workspaceRevision"] = frozen["workspaceRevision"]
             frozen["snapshotAt"] = utc_now()
             publication = {"id": str(uuid.uuid4()), "name": name, "createdAt": frozen["snapshotAt"],
                            "workspaceRevision": state["revision"] + 1, "reportSha256": sha256(canonical(frozen)), "report": frozen}
@@ -322,14 +326,12 @@ def apply_action(root: Path, payload: dict):
 
 
 def survey_summary(state: dict) -> dict:
-    responses = state["survey"]["responses"]
-    roles = {}
-    for row in responses:
-        roles[row["role"]] = roles.get(row["role"], 0) + 1
-    count = len(responses)
-    return {"responses": count, "targetMin": state["survey"]["targetMin"], "targetMax": state["survey"]["targetMax"],
-            "targetReached": count >= state["survey"]["targetMin"], "roles": roles,
-            "interpretation": state["survey"]["interpretation"]}
+    analysis = survey.analyze(state)
+    return {"responses": analysis["includedCompleted"], "receivedResponses": analysis["received"],
+            "targetMin": analysis["targetMin"], "targetMax": analysis["targetMax"],
+            "targetReached": analysis["targetReached"], "targetCohort": analysis["targetCohort"],
+            "roles": {row["code"]: row["count"] for row in analysis["tables"]["role"]["rows"]},
+            "interpretation": state["survey"]["interpretation"], "analysis": analysis}
 
 
 def report_payload(state: dict) -> dict:
@@ -402,6 +404,8 @@ def export_parts(root: Path, publication_id: str | None = None):
         analysis = report["interviews"]
         frozen_state = {"revision": analysis["workspaceRevision"], "baseline": report["baseline"], "scenarios": report["scenarios"]}
         files.update(__import__("interviews").export_files(frozen_state, analysis))
+    if report.get("survey", {}).get("analysis"):
+        files.update(survey.export_tables(report["survey"]["analysis"]))
     manifest = file_manifest(report, files, publication_id)
     files["manifest.json"] = canonical(manifest)
     return manifest, files
@@ -462,5 +466,4 @@ def restore_workspace(archive: Path, root: Path) -> dict:
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     write_atomic(root / "workspace.json", state_bytes)
     return {"state": "RESTORED", "revision": state["revision"], "stateSha256": receipt["stateSha256"]}
-
 
