@@ -435,3 +435,16 @@ ledger when configured to do so, but their application state directories and
 attempt markers must not be interchanged. Filesystem durability assumes a local
 filesystem supporting atomic hard links and fsync; network/distributed filesystems
 require their own validation.
+
+## Whole customer workspace backup and restore
+
+`buyer.workspaceRecovery()` includes the existing Node application state alongside
+an explicitly selected original operator, inbox and other application/session
+roots. `WorkspaceRecovery` also works before a Buyer exists, so a missing root
+can be restored before application initialization recreates it. Inspect, encrypted
+snapshot, independent verification and original-root restore all invoke the
+existing SF88/SF101/SF36 implementation through the same native Runtime.
+
+See [the complete customer recovery workflow](RECOVERY.md) for passphrase-variable
+selection, quiescing writers, expected-record binding, typed interruption results
+and reopening the same Node and Python applications without repeating purchases.

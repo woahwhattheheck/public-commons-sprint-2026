@@ -2,6 +2,7 @@
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { NativeRuntime } from './runtime.mjs';
+import { WorkspaceRecovery } from './workspace-recovery.mjs';
 import { BuyerResult } from './result.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
@@ -30,6 +31,8 @@ export class Buyer {
   createObject(options) { return createObject(this, options); }
   attachObject(options) { return createObject(this, options, true); }
   listObjects() { return listObjects(this); }
+
+  workspaceRecovery() { return WorkspaceRecovery.fromBuyer(this); }
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
