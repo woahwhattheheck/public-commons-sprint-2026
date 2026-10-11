@@ -2,6 +2,8 @@
 import { constants } from 'node:fs';
 import { open, mkdir, lstat, readdir, link, unlink } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
+import { gzip, gunzip } from 'node:zlib';
+import { promisify } from 'node:util';
 import { join } from 'node:path';
 import { privateParent } from '../workspace/model.mjs';
 
@@ -9,6 +11,12 @@ export const PROJECT_SCHEMA = 'stellar-forge.blockworks-migration-project.v1';
 export const SOURCE_SCHEMA = 'stellar-forge.blockworks-migration-source.v1';
 const MAX_SOURCE = 8 * 1024 * 1024;
 const MAX_RECORD = 4 * 1024 * 1024;
+// Imported sources and generated comparisons have separate, explicit ceilings.
+export const COMPARISON_LIMITS = Object.freeze({
+  decodedBytes: 128 * 1024 * 1024,
+  storedBytes: 32 * 1024 * 1024
+});
+const gzipBytes = promisify(gzip), gunzipBytes = promisify(gunzip);
 const ID = /^[a-z0-9][a-z0-9_-]{0,79}$/;
 const HASH = /^[a-f0-9]{64}$/;
 export const sha256 = value => createHash('sha256').update(value).digest('hex');
@@ -43,8 +51,20 @@ async function readBytes(path, maximum = MAX_RECORD) {
   const file = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
   try {
     const stat = await file.stat();
-    if (!stat.isFile() || stat.size > maximum) throw new TypeError('Project file is not a supported regular file.');
-    return await file.readFile();
+    if (!stat.isFile() || !Number.isSafeInteger(stat.size) || stat.size > maximum)
+      throw new TypeError('Project file is not a supported regular file or exceeds its declared limit.');
+    // Allocate only the observed, bounded size, including when a file changes
+    // after stat. An unbounded readFile would otherwise bypass the read limit.
+    const body = Buffer.allocUnsafe(stat.size);
+    let offset = 0;
+    while (offset < body.length) {
+      const { bytesRead } = await file.read(body, offset, Math.min(body.length - offset, 64 * 1024), offset);
+      if (!bytesRead) throw new TypeError('Project file changed while it was being read.');
+      offset += bytesRead;
+    }
+    if ((await file.read(Buffer.allocUnsafe(1), 0, 1, offset)).bytesRead)
+      throw new TypeError('Project file changed while it was being read.');
+    return body;
   } finally { await file.close(); }
 }
 async function json(path, maximum) {
@@ -55,10 +75,16 @@ async function sync(path) { const fd = await open(path, constants.O_RDONLY); try
 async function publish(directory, name, bytes) {
   const body = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   const temporary = join(directory, '.write-' + randomUUID());
-  const file = await open(temporary, 'wx', 0o600);
-  try { await file.writeFile(body); await file.sync(); } finally { await file.close(); }
-  try { await link(temporary, join(directory, name)); await sync(directory); }
-  finally { await unlink(temporary).catch(() => {}); }
+  try {
+    const file = await open(temporary, 'wx', 0o600);
+    try { await file.writeFile(body); await file.sync(); } finally { await file.close(); }
+    await link(temporary, join(directory, name));
+    await sync(directory);
+  } finally {
+    // Also remove an incomplete temporary write when storage fills or sync fails.
+    // Published content remains immutable and is safely reused on the same retry.
+    await unlink(temporary).catch(() => {});
+  }
 }
 const recordBytes = value => Buffer.from(canonical(value) + '\n');
 const editionName = sequence => String(sequence).padStart(10, '0') + '.json';
@@ -135,30 +161,89 @@ export async function openMigrationProjects({ parent }) {
     catch (e) { if (e.code === 'EEXIST') throw conflict('Another operator saved an edition first. Reload this migration.'); throw e; }
     return { ...found.project, ...next, revision: sha256(bytes), directory: projectDirectory(id), editionCount: next.sequence };
   }
-  async function retainSource(id, { kind, name, content, provenance = {} }) {
+  function contentBytes(content, maximum, label) {
+    if (typeof content !== 'string' && !Buffer.isBuffer(content) && !(content instanceof Uint8Array))
+      throw new TypeError(label + ' must be UTF-8 text or bytes.');
+    const size = typeof content === 'string' ? Buffer.byteLength(content) : content.byteLength;
+    if (!size || size > maximum) {
+      const error = new TypeError(label + ' must contain 1 byte through ' + (maximum / 1024 / 1024) + ' MiB.');
+      error.status = 413; throw error;
+    }
+    // Snapshot a caller's mutable Buffer before compression or file I/O yields.
+    const bytes = Buffer.from(content);
+    if (typeof content !== 'string') new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return bytes;
+  }
+  async function retain(id, { kind, name, content, provenance = {} }, compressed) {
     await get(identifier(id));
-    if (!['openapi', 'legacy-openapi', 'inventory', 'legacy-response', 'catalog', 'mapping', 'review', 'comparison'].includes(kind)) throw new TypeError('Unsupported source purpose.');
+    if (!['openapi', 'legacy-openapi', 'inventory', 'legacy-response', 'catalog', 'mapping', 'review', 'comparison'].includes(kind))
+      throw new TypeError('Unsupported source purpose.');
     name = shortText(name, 'Source filename', 240);
-    const bytes = Buffer.isBuffer(content) ? content : Buffer.from(content);
-    if (!bytes.length || bytes.length > MAX_SOURCE) throw new TypeError('Source files must contain 1 byte through 8 MiB.');
-    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-    const sourceSha = sha256(bytes); const root = await sourceDirectory(id);
+    const bytes = contentBytes(content, compressed ? COMPARISON_LIMITS.decodedBytes : MAX_SOURCE,
+      compressed ? 'Comparison results' : 'Source files');
+    const sourceSha = sha256(bytes);
+    let stored = bytes;
     const metadata = { schema: SOURCE_SCHEMA, kind, name, sha256: sourceSha, bytes: bytes.length, provenance: clone(provenance) };
+    if (compressed) {
+      try { stored = await gzipBytes(bytes, { level: 6, maxOutputLength: COMPARISON_LIMITS.storedBytes }); }
+      catch (error) {
+        if (error.code !== 'ERR_BUFFER_TOO_LARGE') throw error;
+        throw Object.assign(new TypeError('Compressed comparison exceeds 32 MiB. The current project edition is unchanged.', { cause: error }), { status: 413 });
+      }
+      if (!stored.length || stored.length > COMPARISON_LIMITS.storedBytes)
+        throw Object.assign(new TypeError('Compressed comparison exceeds 32 MiB. The current project edition is unchanged.'), { status: 413 });
+      metadata.storage = { encoding: 'gzip', sha256: sha256(stored), bytes: stored.length };
+    }
     const ref = sha256(canonical(metadata));
-    for (const [file, body] of [[sourceSha + '.raw', bytes], [ref + '.json', recordBytes(metadata)]]) {
+    const metadataBytes = recordBytes(metadata);
+    if (metadataBytes.length > MAX_RECORD) throw new TypeError('Source metadata exceeds 4 MiB.');
+    const root = await sourceDirectory(id);
+    const storedName = compressed ? metadata.storage.sha256 + '.gz' : sourceSha + '.raw';
+    for (const [file, body] of [[storedName, stored], [ref + '.json', metadataBytes]]) {
       try { await publish(root, file, body); }
-      catch (e) { if (e.code !== 'EEXIST') throw e; if (!(await readBytes(join(root, file), MAX_SOURCE)).equals(body)) throw new TypeError('A retained source file changed.'); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        if (!(await readBytes(join(root, file), body.length)).equals(body)) throw new TypeError('A retained source file changed.');
+      }
     }
     return { ref, ...metadata };
+  }
+  // RetainSource remains the 8 MiB import path even if an external caller labels
+  // a file "comparison". Only the internally produced result uses this method.
+  async function retainSource(id, input) { return retain(id, input, false); }
+  async function retainComparison(id, { name, content, provenance = {} }) {
+    return retain(id, { kind: 'comparison', name, content, provenance }, true);
   }
   async function readSource(id, ref) {
     identifier(id); if (!HASH.test(ref ?? '')) throw new TypeError('A retained source identity is required.');
     const root = join(projectDirectory(id), 'sources'); const metadata = await json(join(root, ref + '.json'));
-    if (metadata.schema !== SOURCE_SCHEMA || sha256(canonical(metadata)) !== ref || !HASH.test(metadata.sha256)) throw new TypeError('Source metadata changed.');
-    const body = await readBytes(join(root, metadata.sha256 + '.raw'), MAX_SOURCE);
+    if (metadata.schema !== SOURCE_SCHEMA || sha256(canonical(metadata)) !== ref || !HASH.test(metadata.sha256))
+      throw new TypeError('Source metadata changed.');
+    const compressed = Object.hasOwn(metadata, 'storage');
+    const maximum = compressed ? COMPARISON_LIMITS.decodedBytes : MAX_SOURCE;
+    if (!Number.isSafeInteger(metadata.bytes) || metadata.bytes < 1 || metadata.bytes > maximum)
+      throw new TypeError('Retained source length exceeds its supported limit.');
+    let body, file;
+    if (compressed) {
+      const storage = metadata.storage;
+      if (metadata.kind !== 'comparison' || !storage || storage.encoding !== 'gzip' || !HASH.test(storage.sha256 ?? '') ||
+          !Number.isSafeInteger(storage.bytes) || storage.bytes < 1 || storage.bytes > COMPARISON_LIMITS.storedBytes)
+        throw new TypeError('Retained comparison storage metadata is unsupported.');
+      file = join(root, storage.sha256 + '.gz');
+      const stored = await readBytes(file, storage.bytes);
+      if (stored.length !== storage.bytes || sha256(stored) !== storage.sha256)
+        throw new TypeError('Retained comparison storage bytes changed.');
+      // Bound decompression to the declared original size, below the global
+      // result ceiling. A gzip stream cannot expand past its recorded output.
+      try { body = await gunzipBytes(stored, { maxOutputLength: metadata.bytes }); }
+      catch (error) { throw new TypeError('Retained comparison could not be decoded within its declared size.', { cause: error }); }
+    } else {
+      file = join(root, metadata.sha256 + '.raw');
+      body = await readBytes(file, metadata.bytes);
+    }
     if (body.length !== metadata.bytes || sha256(body) !== metadata.sha256) throw new TypeError('Retained source bytes changed.');
-    return { ref, metadata, body, file: join(root, metadata.sha256 + '.raw') };
+    return { ref, metadata, body, file };
   }
   async function readJson(id, ref) { const source = await readSource(id, ref); return { ...source, value: JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(source.body)) }; }
-  return { directory, merchantParent, projectDirectory, list, get, create, history, commit, retainSource, readSource, readJson };
+  return { directory, merchantParent, projectDirectory, list, get, create, history, commit, retainSource, retainComparison, readSource, readJson };
 }
