@@ -33,7 +33,7 @@ const shutdown = async server => {
   if (!server?.listening) return;
   server.closeAllConnections?.(); await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
 };
-let model, seller, customer, workspace, verified = 0, settled = 0, completed = false;
+let model, seller, customer, workspace, verified = 0, settled = 0, journeyCompleted = false;
 const facilitator = createServer(async (req, res) => {
   try {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
@@ -251,11 +251,11 @@ try {
   await closeMerchant(); await shutdown(facilitator);
   if (output) await write(output, summary);
   process.stdout.write(JSON.stringify(summary) + '\n');
-  completed = true;
+  journeyCompleted = true;
 } finally {
   try { await closeMerchant(); } finally {
     try { await shutdown(facilitator); } finally {
-      if (completed) await rm(work, { recursive: true, force: true });
+      if (journeyCompleted) await rm(work, { recursive: true, force: true });
       else process.stderr.write(JSON.stringify({ retainedWorkDirectory: work,
         purpose: 'Inspect the original failed operation and retained job before any recovery run.' }) + '\n');
     }
