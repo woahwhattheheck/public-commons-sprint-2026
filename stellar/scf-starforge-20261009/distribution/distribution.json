@@ -106,7 +106,12 @@
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-request.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.mjs",
     "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/request.css",
-    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md"
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_REQUESTS.md",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-recovery-controller.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.mjs",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/commerce-ui/recovery.css",
+    "stellar/scf-starforge-20261009/sf66-demo-launcher/COMMERCE_RECOVERY.md"
   ],
   "commands": {
     "seller": "stellar/scf-starforge-20261009/sf30-seller-sdk/serve.mjs",
