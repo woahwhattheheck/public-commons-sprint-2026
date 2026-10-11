@@ -2,11 +2,11 @@
 
 Use an acquired dataset in a local browser, keep saved analyses and their actual results, and reopen the complete analytical database after restart. The workspace uses the original Python `DatasetAcquisition`, `DatasetDelivery` and `DatasetDatabase`. It imports completed native deliveries; it does not execute an acquisition or financial operation.
 
-The Data tab selects original deliveries, reviews retained versions and scalar types, downloads the original manifest, and selects the version served by a named SQL view. The Analysis tab saves parameterized SQL and its revisions, executes it against a reviewed selection, pages retained results and exports JSON or CSV. Activity reopens imports, analyses and consistent database backups.
+The Data tab selects original deliveries, reviews retained versions and scalar types, downloads the original manifest, and selects the version served by a named SQL view. The Changes tab compares acquired versions, retains complete row/schema differences and applies an explicitly reviewed candidate. The Analysis tab saves parameterized SQL and its revisions, executes it against a reviewed selection, pages retained results and exports JSON or CSV. Activity reopens imports, analyses and consistent database backups.
 
 ## Start with a completed original acquisition
 
-Use Python 3.11+ and install this source's Python package beside its matching full native Node runtime. The two workspace modules and their browser assets are included by the existing Python package definition; there are no new dependencies.
+Use Python 3.11+ and install this source's Python package beside its matching full native Node runtime. The workspace modules and their browser assets are included by the existing Python package definition; there are no new dependencies.
 
 ```sh
 python -m pip install --no-deps ./stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python
@@ -81,9 +81,54 @@ Default maximum rows is 1,000, adjustable to 100,000. The workspace also limits 
 
 The browser displays typed textual cells so JavaScript does not round large SQLite integers. `result_sha256` identifies the canonical retained typed result, including its original data selection; it is checked when that result is reopened. It is not the hash of the separately formatted JSON or CSV download.
 
+## Review a candidate before changing a current view
+
+The **Changes** tab compares two original imported editions. Use it for a newly acquired snapshot, a different acquired query, or a separately mapped edition. Both source identities remain visible. A narrower category filter can remove rows from an acquired result, and a changed projection can remove a column without changing the source records.
+
+1. Keep the baseline selected for a current SQL view such as `inventory`.
+2. Import and select the candidate in Data. Choose **Review changes against a current view** and select the baseline view. The displayed view name, version and revision remain the baseline for this comparison; refresh does not silently replace them.
+3. Choose 1–16 SQL columns that uniquely identify each row and are present in both editions, such as `sku` or a composite key. The interface preselects a conventional `id`, `sku` or `record_id` column when present. The complete comparison verifies it: a null or duplicate key rejects the operation with its side and original row number.
+4. Choose **Compare every row**. Inspect added rows, removed rows, changed fields and rows whose only difference is position. Open a row to see all baseline and candidate fields with retained scalar types. Missing fields and null values are different. Original filters, ranges, ordering, projected fields, snapshots and manifest identities are shown together.
+5. Enter a review note and choose **Select reviewed candidate**. Original view activation and the comparison's selection record commit in the same SQLite transaction using the exact reviewed revision. A changed current view cannot be overwritten by an older comparison; load its current selection and compare again.
+6. Choose **Query current view** to continue with the original saved-analysis editor. Existing SQL drafts keep their ordinary discard confirmation, and earlier query results keep their own actual data selection.
+
+Comparison traverses every row in both original immutable SQL tables. It retains all added, removed, changed and order-only records in the original database. Unchanged rows stay in their original tables and contribute to the complete counts and observation hashes. Position changes on rows with changed fields contribute to the separate reordered-row count. Column additions/removals and changes in original JSON type declarations remain visible even when there are no row differences. Browser pages hold at most 50 differences and normally at most 4 MiB of records; one larger complete record is never split.
+
+Matching and field comparison use the original database's typed SQL scalars. Integers and reals remain distinguishable, signed 64-bit integers reach the browser as exact text, and a missing projected column differs from SQL null. The original importer represents JSON Booleans as SQLite `0`/`1`; original JSON type declarations remain in the schema comparison. The comparison does not reconstruct a per-row Boolean distinction that the original SQL representation did not retain.
+
+A comparison has a 120-second execution budget and a 128 MiB budget for retained typed difference records. It either completes every source row or fails and rolls back the report; it never presents a sample or truncated comparison as complete. Difference rows and the COMPLETE activity status share one commit. Restart marks interrupted work explicitly; earlier imported versions and completed comparisons remain usable.
+
+### Retained review exports
+
+**Prepare JSON report** writes the complete report, original edition metadata, exact retained selection (if any) and every typed difference. **Prepare CSV differences** writes one `comparison` metadata row followed by `difference` rows for individual fields. Every CSV row carries comparison/report, baseline/candidate version/manifest and review identities. The metadata row includes the acquired query scopes, counts, schema changes, matching keys and review, so a comparison with zero row differences still carries its source identity. Type columns distinguish missing fields, null, integer, real and string values.
+
+Exports are file-backed and streamed from retained SQLite records. Each request binds the exact completed report and selection. If a report is selected while an older export request is waiting, that request fails instead of silently substituting the new review. A new export action uses the newly displayed review. Activity retains the complete file's path, byte count and SHA-256. Download verifies and streams the same private descriptor. Browsers with the file-save API write the response stream directly; other browsers download files up to 64 MiB, with larger complete files available at their displayed local paths.
+
+The comparison and selected-review records are in the original database backup. Standalone exports are not copied into that database. After recovery, reopen the comparison and prepare its export again: it reproduces the report without a Node runtime, acquisition directory, wallet or network. An older export job retains its original location and cannot download a file from the previous workspace path.
+
+For embedding, `workspace.changes.page(comparison_id)` returns the report, selection, current view and `selection_sha256`. Dispatch a comparison using the original background interface:
+
+```python
+import uuid
+
+request = {
+    "id": uuid.uuid4().hex,
+    "view": "inventory",
+    "expected_revision": reviewed_view["revision"],
+    "base_version_id": reviewed_view["version_id"],
+    "candidate_version_id": candidate["version_id"],
+    "keys": ["sku"],
+}
+job = workspace.start("compare", request)
+# Reopen workspace.job(job["id"]) until COMPLETE, FAILED or INTERRUPTED.
+# Repeating the same request ID/content returns that original job.
+```
+
+After completion, call `workspace.changes.select(job_id, {"id": uuid.uuid4().hex, "result_sha256": report["result_sha256"], "note": "Reviewed category selection"})`. An identical selection request returns its retained result; a different request cannot overwrite it. For an export, pass `comparison_id`, `result_sha256`, the page's `selection_sha256`, `format` (`json` or `csv`) and a new `id` to `start("change-export", request)`. `workspace.changes.history(before=..., limit=25)` and `page(..., kind="removed", after=0)` reopen reports beyond the latest activity page. Start a changed comparison/filter at `after=0`; its returned cursor belongs to that selection.
+
 ## Back up and reopen
 
-Choose **Create database backup**. The original SQLite backup operation creates a consistent copy containing the imported rows, exact original manifests, current views, activation history, registered source descriptions, saved query revisions and retained analysis results. The completed action gives its local path, byte count and SHA-256. Files of at most 256 MiB can also be downloaded from the browser; larger backups remain complete at the displayed local path. Download rechecks the recorded digest.
+Choose **Create database backup**. The original SQLite backup operation creates a consistent copy containing the imported rows, exact original manifests, current views, activation history, registered source descriptions, saved query revisions, complete comparisons and selections, and retained analysis results. The completed action gives its local path, byte count and SHA-256. Files of at most 256 MiB can also be downloaded from the browser; larger backups remain complete at the displayed local path. Download rechecks the recorded digest.
 
 The native backup directory is create-only and unique for that action. To reopen a copied backup, keep its file named `datasets.sqlite3` in a private directory and start the same workspace there:
 

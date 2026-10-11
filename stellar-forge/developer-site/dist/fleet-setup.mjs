@@ -1,5 +1,5 @@
 // MIT. The workbench exports declarations consumed by the original native tools.
-import { SOURCE_LABELS, LIMIT_RANGES, createFleetDraft, newFleetTenant, newFleetSource,
+import { SOURCE_LABELS, LIMIT_RANGES, SQLITE_SNAPSHOT_OPTIONS, createFleetDraft, newFleetTenant, newFleetSource,
   importFleetDraft, validateFleetDraft, createFleetPacket, fleetCommands, commandText } from './fleet-onboarding.mjs';
 import { zipWorkspace } from './onboarding.mjs';
 
@@ -188,21 +188,35 @@ function sourceCard(tenant, source, index, prefix) {
     source.kind = value;
     if (value !== 'python') source.pythonRoot = '';
     if (value !== 'duckdbPackage') source.duckdbPython = '';
+    if (value !== 'sqlitePackage') for (const key of Object.keys(SQLITE_SNAPSHOT_OPTIONS)) delete source[key];
     if (!['workspace', 'jsonrpcPackage'].includes(value)) delete source.allowLoopbackUpstream;
     renderMerchants();
   }, { options: Object.entries(SOURCE_LABELS) }));
   const labels = { workspace: 'API workspace directory', python: 'Python application description',
     duckdbPackage: 'Prepared DuckDB package directory', s3Package: 'Configured S3 package directory',
-    jsonrpcPackage: 'Prepared Stellar RPC package directory' };
+    jsonrpcPackage: 'Prepared Stellar RPC package directory',
+    sqlitePackage: 'SQLite workbench export directory', mysqlPackage: 'Prepared MySQL package directory' };
   fields.append(field(labels[source.kind] ?? 'Source path', source.path, key + '.path', value => { source.path = value; },
     { hint: 'A host path. Relative paths resolve from fleet-setup.json.', maxLength: 4096, placeholder: '../packages/merchant-current' }));
   if (source.kind === 'python') fields.append(field('Python source root', source.pythonRoot, key + '.pythonRoot',
     value => { source.pythonRoot = value; }, { hint: 'Optional. Otherwise the original application description directory is used.', maxLength: 4096 }));
   if (source.kind === 'duckdbPackage') fields.append(field('DuckDB Python interpreter', source.duckdbPython, key + '.duckdbPython',
     value => { source.duckdbPython = value; }, { hint: 'Optional interpreter path for the original DuckDB runtime.', maxLength: 4096 }));
+  if (source.kind === 'sqlitePackage') {
+    const labels = { sqliteSnapshotMaxBytes: 'Maximum snapshot bytes',
+      sqliteSnapshotTimeoutMs: 'Snapshot timeout (milliseconds)' };
+    for (const [name, limits] of Object.entries(SQLITE_SNAPSHOT_OPTIONS))
+      fields.append(field(labels[name], source[name], key + '.' + name, value => { source[name] = value; },
+        { type: 'number', min: limits.min, max: limits.max, placeholder: String(limits.default),
+          hint: `Leave blank for the native default of ${limits.default}. Applies when staging this source.` }));
+  }
   fields.append(field('Facilitator URL', source.facilitator, key + '.facilitator', value => { source.facilitator = value; },
     { hint: 'Optional explicit runtime endpoint. Use the merchant’s configured facilitator.', placeholder: 'https://facilitator.example.com', maxLength: 4096 }));
   card.append(fields);
+  if (source.kind === 'sqlitePackage') card.append(el('p',
+    'Staging captures the committed SQLite data, including committed WAL changes, into the retained release. Later database changes appear in the next staged release.', 'hint'));
+  if (source.kind === 'mysqlPackage') card.append(el('p',
+    'The prepared package retains named queries, payment terms and connection environment references. Running releases read the live MySQL or MariaDB database using credentials on the merchant host.', 'hint'));
   const runtime = el('div', undefined, 'fleet-runtime-options');
   runtime.append(check('Allow a local facilitator on this host', source.allowLocalFacilitator, key + '.allowLocalFacilitator',
     value => { source.allowLocalFacilitator = value; }));
