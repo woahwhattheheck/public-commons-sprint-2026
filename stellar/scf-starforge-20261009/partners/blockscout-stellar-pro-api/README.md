@@ -180,6 +180,78 @@ configured record or byte ceiling is reached, the original merchant stops
 admitting new provider reads. Export the retained database and select an
 appropriate explicit limit in a new plan. Existing records remain readable.
 
+## Reconcile an interrupted provider attempt
+
+The selected attempt shows its native outcome, current reconciliation revision
+and complete decision history. For an `outcome_unknown` attempt, use the actual
+provider/account record to establish when that request finished. Then select
+a retained dispatched quota observation that started after that completion
+time. **Inspect observation** displays its original time, response hash and
+quota values before the form can submit the confirmation.
+
+Enter a named operator, a durable source reference and the exact UTC completion
+timestamp, including milliseconds. The server checks the selected attempt,
+observation, time ordering and displayed revision. It appends the decision,
+both original source identities and the preceding decision hash to the same
+private database. Status refreshes and confirmation use saved observations.
+
+Inspect one complete original attempt from the CLI:
+
+```sh
+node "$BS/cli.mjs" attempt --url "$BLOCKSCOUT_DESK_URL" \
+  --attempt ORIGINAL_ATTEMPT_ID
+```
+
+After reviewing its current revision and the provider/account source:
+
+```sh
+node "$BS/cli.mjs" reconcile --url "$BLOCKSCOUT_DESK_URL" \
+  --attempt ORIGINAL_ATTEMPT_ID --revision DISPLAYED_REVISION \
+  --operator "Operator name" \
+  --reference "Retained account log or provider case reference" \
+  --observation SAVED_QUOTA_OBSERVATION_ID \
+  --provider-finished-at "$PROVIDER_FINISHED_AT"
+```
+
+`PROVIDER_FINISHED_AT` contains the actual source timestamp in
+`YYYY-MM-DDTHH:mm:ss.sssZ` format. It must be at or after the interrupted
+request's start, no later than the current time, and strictly before the
+selected quota observation's start. The observation must contain usable
+provider credits or a request-window balance.
+
+A confirmation releases the extra unknown-attempt reservation only against
+quota samples taken after that established completion. Older applicable
+samples retain their conservative reservation. The original native outcome,
+configured daily credits, response history and payment records remain
+associated with the original attempt.
+
+Use **Reopen reservation** when the completion decision needs correction.
+Inspect the latest revision, record the reason in its source reference, and
+submit a new decision:
+
+```sh
+node "$BS/cli.mjs" reopen-reservation --url "$BLOCKSCOUT_DESK_URL" \
+  --attempt ORIGINAL_ATTEMPT_ID --revision DISPLAYED_REVISION \
+  --operator "Operator name" \
+  --reference "Account review requiring renewed reservation"
+```
+
+Reopening restores the unknown reservation. Every prior confirmation stays
+visible with its operator, source, time and original observation. A corrected
+confirmation then uses a newly reviewed current revision. The same history
+survives restart, full database backup and restoration.
+
+A stale revision returns HTTP 409; the CLI exits 3 and returns the current
+attempt beside the original requested decision. Reload and explicitly use the
+latest reviewed revision. If a response is lost, the clients inspect the
+original attempt for the exact matching next decision before reporting the
+outcome. The original POST is never automatically repeated.
+
+Decision retention follows the configured record ceiling. Space remains
+available to reopen an existing confirmation at that ceiling; each attempt
+retains at most 100 decision revisions, with the final revision reserved for
+reopening.
+
 ## Select and prepare an original buyer
 
 Use the desk's buyer form or the following command. Supply one stable intent
@@ -340,7 +412,7 @@ the same private provider directory. Use only one active owner of that ledger.
 
 Create a consistent full provider database image while the original merchant
 is running. The image includes every retained plan, attempted call, raw token
-response and quota observation. The receipt pins its exact SHA-256 and bytes.
+response, quota observation and revisioned reconciliation history. The receipt pins its exact SHA-256 and bytes.
 
 ```sh
 node "$BS/cli.mjs" backup --url "$BLOCKSCOUT_DESK_URL" \
@@ -375,7 +447,7 @@ node "$BS/cli.mjs" restore \
 
 Restoration checks the complete input digest, SQLite integrity, schema, and
 each retained plan identity. It preserves attempt IDs, original response
-bytes and quota history. Pending reads in a restored snapshot reopen as
+bytes, quota history and source-bound reconciliation decisions. Pending reads in a restored snapshot reopen as
 interrupted outcomes.
 
 The provider database is one component of the complete merchant state.

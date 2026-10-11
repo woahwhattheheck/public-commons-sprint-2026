@@ -98,6 +98,8 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
         } finally { await file.close(); }
         return;
       }
+      if (req.method === 'POST' && url.pathname === '/api/reconciliation' && !url.search)
+        return respond(res, 200, application.accounting.reconcile(await input(req)));
       if (req.method === 'POST' && url.pathname === '/api/buyer' && !url.search) {
         const data = await input(req);
         if (Object.keys(data).some(k => !['chainId', 'addressHash', 'intentId', 'responseOut'].includes(k))) throw error('BLOCKSCOUT_BUYER_SELECTION_INVALID');
@@ -125,7 +127,8 @@ export async function startBlockscoutDesk({ application, seller, operations, dir
     } catch (e) {
       if (res.headersSent) res.destroy();
       else respond(res, Number.isInteger(e.status) ? e.status : e.code === 'ENOENT' ? 404 : 500,
-        { error: typeof e.code === 'string' && /^BLOCKSCOUT_[A-Z0-9_]+$/.test(e.code) ? e.code : 'BLOCKSCOUT_OPERATOR_REQUEST_FAILED' });
+        { error: typeof e.code === 'string' && /^BLOCKSCOUT_[A-Z0-9_]+$/.test(e.code) ? e.code : 'BLOCKSCOUT_OPERATOR_REQUEST_FAILED',
+          ...(e.code === 'BLOCKSCOUT_RECONCILIATION_REVISION_CHANGED' ? { currentRevision: e.currentRevision } : {}) });
     }
   });
   server.requestTimeout = 70000; server.headersTimeout = 8000; server.keepAliveTimeout = 2000;
