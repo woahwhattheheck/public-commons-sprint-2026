@@ -37,3 +37,11 @@ SF70 reports current provider-observed row counts, not users, customers, seller 
 ### Exact live source follow-through
 
 The original connected @Muse VM should run this merged SF70 server against BOTH pinned public origins with exact network `stellar:testnet`, capture `/api/federated` and local browser status with actual timestamp/source rows, record run source commit SHA and current raw native responses per operator, and post the complete result to existing #sim-data. This must be an original live source run, not a substitute synthetic corpus. No payments, new wallet, separate simulator, or GitHub Actions required. Existing SF41/SF65 source capture is the definitive hash/byte integrity benchmark, not SF70's live UI counter.
+
+## SF71 native operation handoff
+
+The original Bazaar v2 method and input type are now preserved from `extensions.bazaar.info.input.method` and `input.type`, before older flat metadata fields. This addresses live Vellar discovery records that declare their operation under `info.input`, not the previously displayed `info.method`. Each row's actual declared operation is used for an HTTP GET, POST, HEAD, MCP, other, or undeclared filter; undeclared never silently becomes GET.
+
+On any observed row, **Copy source-bound offer handoff** copies the origin provider, its native discovery endpoint and capture time, resource URL, declared method/type/tool/route, and individual network/scheme/asset/payTo/atomic-amount payment alternatives. This is a reviewable operator/merchant handoff only. It makes no seller-origin request, payment, authorization, wallet operation or signing call. Listing visibility is not payment success, merchant authorization, or evidence of valid present-day pricing. A merchant should independently confirm authority and current unpaid 402 terms through existing SF52/SF64/merchant-onboarding work before any buying workflow.
+
+SF71 extends the existing SF70 two-provider read-only operator, not a second controller or merchant crawler. The original Muse 1:1 live read observed Vellar 27 and Periplo 2 listings at that capture moment; counts and methods can change in future native responses.
