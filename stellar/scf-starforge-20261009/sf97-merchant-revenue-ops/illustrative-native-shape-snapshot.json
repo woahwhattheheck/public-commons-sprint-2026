@@ -1,0 +1,397 @@
+{
+  "schema": "stellar-forge.seller-traffic.v1",
+  "sessionId": "00000000-1111-2222-3333-444444444444",
+  "startedAt": "2026-10-11T14:00:00.000Z",
+  "capturedAt": "2026-10-11T14:30:00.000Z",
+  "attached": true,
+  "mode": "NATIVE_X402",
+  "observerErrors": 0,
+  "ignoredMetadata": 3,
+  "totals": {
+    "id": "totals",
+    "method": "-",
+    "path": "-",
+    "started": 14,
+    "completed": 14,
+    "responses": 14,
+    "inFlight": 0,
+    "success": 4,
+    "challenge": 8,
+    "clientError": 0,
+    "serverError": 2,
+    "other": 0,
+    "disconnected": 0,
+    "durationMaxMs": 220,
+    "durationMeanMs": 42,
+    "latencyP95UpperBoundMs": 250,
+    "statuses": {
+      "200": 4,
+      "402": 8,
+      "500": 2
+    },
+    "durationHistogram": {
+      "count": 14,
+      "sumMs": 588,
+      "buckets": [
+        {
+          "upperBoundMs": 5,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 10,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 25,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 50,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 100,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 250,
+          "count": 14
+        },
+        {
+          "upperBoundMs": 500,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 1000,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 2500,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 5000,
+          "count": 0
+        },
+        {
+          "upperBoundMs": 15000,
+          "count": 0
+        },
+        {
+          "upperBoundMs": null,
+          "count": 0
+        }
+      ]
+    },
+    "httpSuccessPercent": 28.57
+  },
+  "routes": [
+    {
+      "id": "dataset",
+      "method": "GET",
+      "path": "/dataset",
+      "started": 14,
+      "completed": 14,
+      "responses": 14,
+      "inFlight": 0,
+      "success": 4,
+      "challenge": 8,
+      "clientError": 0,
+      "serverError": 2,
+      "other": 0,
+      "disconnected": 0,
+      "durationMaxMs": 220,
+      "durationMeanMs": 42,
+      "latencyP95UpperBoundMs": 250,
+      "statuses": {
+        "200": 4,
+        "402": 8,
+        "500": 2
+      },
+      "durationHistogram": {
+        "count": 14,
+        "sumMs": 588,
+        "buckets": [
+          {
+            "upperBoundMs": 5,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 10,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 25,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 50,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 100,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 250,
+            "count": 14
+          },
+          {
+            "upperBoundMs": 500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 1000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 2500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 5000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 15000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": null,
+            "count": 0
+          }
+        ]
+      },
+      "httpSuccessPercent": 28.57
+    },
+    {
+      "id": "@unmatched",
+      "method": "-",
+      "path": "Unmatched resources",
+      "started": 0,
+      "completed": 0,
+      "responses": 0,
+      "inFlight": 0,
+      "success": 0,
+      "challenge": 0,
+      "clientError": 0,
+      "serverError": 0,
+      "other": 0,
+      "disconnected": 0,
+      "durationMaxMs": 0,
+      "durationMeanMs": null,
+      "latencyP95UpperBoundMs": null,
+      "statuses": {},
+      "durationHistogram": {
+        "count": 0,
+        "sumMs": 0,
+        "buckets": [
+          {
+            "upperBoundMs": 5,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 10,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 25,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 50,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 100,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 250,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 1000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 2500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 5000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 15000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": null,
+            "count": 0
+          }
+        ]
+      },
+      "httpSuccessPercent": null
+    },
+    {
+      "id": "@method",
+      "method": "-",
+      "path": "Unsupported methods",
+      "started": 0,
+      "completed": 0,
+      "responses": 0,
+      "inFlight": 0,
+      "success": 0,
+      "challenge": 0,
+      "clientError": 0,
+      "serverError": 0,
+      "other": 0,
+      "disconnected": 0,
+      "durationMaxMs": 0,
+      "durationMeanMs": null,
+      "latencyP95UpperBoundMs": null,
+      "statuses": {},
+      "durationHistogram": {
+        "count": 0,
+        "sumMs": 0,
+        "buckets": [
+          {
+            "upperBoundMs": 5,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 10,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 25,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 50,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 100,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 250,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 1000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 2500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 5000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 15000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": null,
+            "count": 0
+          }
+        ]
+      },
+      "httpSuccessPercent": null
+    },
+    {
+      "id": "@invalid",
+      "method": "-",
+      "path": "Invalid request targets",
+      "started": 0,
+      "completed": 0,
+      "responses": 0,
+      "inFlight": 0,
+      "success": 0,
+      "challenge": 0,
+      "clientError": 0,
+      "serverError": 0,
+      "other": 0,
+      "disconnected": 0,
+      "durationMaxMs": 0,
+      "durationMeanMs": null,
+      "latencyP95UpperBoundMs": null,
+      "statuses": {},
+      "durationHistogram": {
+        "count": 0,
+        "sumMs": 0,
+        "buckets": [
+          {
+            "upperBoundMs": 5,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 10,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 25,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 50,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 100,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 250,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 1000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 2500,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 5000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": 15000,
+            "count": 0
+          },
+          {
+            "upperBoundMs": null,
+            "count": 0
+          }
+        ]
+      },
+      "httpSuccessPercent": null
+    }
+  ],
+  "recentLimit": 0,
+  "recent": [],
+  "minutes": [],
+  "semantics": {
+    "requests": "HTTP attempts, not unique buyers or payment transactions",
+    "success": "HTTP 2xx response finished at server; not verified settlement, revenue or client receipt"
+  }
+}
