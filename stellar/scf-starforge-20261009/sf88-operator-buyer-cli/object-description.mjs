@@ -24,9 +24,11 @@ export function selectObjectDescriptionBytes(raw, {objectId, chunkBytes} = {}) {
   const selected = description.objects.filter(value => object(value) && value.id === objectId);
   need(selected.length === 1, 'OBJECT_DESCRIPTION_SELECTION_NOT_UNIQUE');
   const item = selected[0];
-  need(item.mode === 'chunks' && count(item.bytes) && count(item.maxBytes) &&
-    item.maxBytes <= 1048576 && typeof item.snapshot === 'string' && HASH.test(item.snapshot),
-    'OBJECT_DESCRIPTION_CHUNK_CONTRACT_INVALID');
+  need(['chunks','whole'].includes(item.mode) && Number.isSafeInteger(item.bytes) &&
+    (item.mode === 'whole' ? item.bytes >= 0 && item.bytes <= item.maxBytes : item.bytes > 0) &&
+    count(item.maxBytes) && item.maxBytes <= 1048576 &&
+    typeof item.snapshot === 'string' && HASH.test(item.snapshot),
+    'OBJECT_DESCRIPTION_DELIVERY_CONTRACT_INVALID');
   need(typeof item.path === 'string' && item.path.startsWith('/') &&
     typeof item.contentType === 'string' && item.contentType.length > 0 &&
     item.contentType.length <= 256 && !/[\r\n]/.test(item.contentType) &&
@@ -36,9 +38,13 @@ export function selectObjectDescriptionBytes(raw, {objectId, chunkBytes} = {}) {
   need(item.expectedSha256 === undefined ||
     typeof item.expectedSha256 === 'string' && HASH.test(item.expectedSha256),
     'OBJECT_DESCRIPTION_DIGEST_INVALID');
-  const requested = chunkBytes ?? item.maxBytes;
-  need(count(requested) && requested <= item.maxBytes, 'OBJECT_DESCRIPTION_CHUNK_LIMIT');
+  // A whole product has one fixed response. Its positive writer capacity is
+  // one byte for an empty file, while its expected response length remains 0.
+  const requested = chunkBytes ?? (item.mode === 'whole' ? Math.max(1,item.bytes) : item.maxBytes);
+  if (item.mode === 'whole') need(requested === Math.max(1,item.bytes), 'OBJECT_WHOLE_FILE_SIZE_FIXED');
+  else need(count(requested) && requested <= item.maxBytes, 'OBJECT_DESCRIPTION_CHUNK_LIMIT');
   return {
+    ...(item.mode === 'whole' ? {deliveryMode:'whole'} : {}),
     bytes:item.bytes, chunkBytes:requested, expectedSnapshot:item.snapshot,
     expectedSha256:item.expectedSha256 ?? null, expectedContentType:item.contentType,
     selection:{schema:'stellar-forge.sf88.object-selection.v1',
@@ -48,7 +54,7 @@ export function selectObjectDescriptionBytes(raw, {objectId, chunkBytes} = {}) {
 }
 
 /** Offline selection of one row from the merchant's ORIGINAL objects.json.
- * The original buyer still binds and reviews each actual query-bearing quote. */
+ * The original buyer still binds and reviews each actual request and quote. */
 export async function selectObjectDescription({descriptionPath, objectId, configPath, chunkBytes} = {}) {
   need(typeof descriptionPath === 'string' && isAbsolute(descriptionPath) &&
     !descriptionPath.includes('\0'), 'OBJECT_DESCRIPTION_ABSOLUTE_PATH_REQUIRED');

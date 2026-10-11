@@ -1,9 +1,9 @@
 # Download a complete paid object
 
-The original SF30 S3 merchant can sell a large file as independently paid byte
+The original SF30 S3 merchant sells whole files or independently paid byte
 chunks. This workflow selects that merchant's existing object description,
-prepares each chunk in the original SF88 buyer inbox, saves the returned bytes,
-continues a download after restart, and assembles the complete file. The original
+prepares the selected requests in the original SF88 buyer inbox, saves the returned
+bytes, continues a download after restart, and assembles the complete file. The original
 SF81 approval, SF36 spending ledger, SF31 HTTP buyer and SF82 checkout evidence
 remain the execution path for every request.
 
@@ -33,8 +33,10 @@ Use the existing buyer discovery or captured-challenge preparation to select the
 merchant's actual HTTPS route and payment terms, then initialize the original
 operator workspace. For this workflow the source configuration must target the
 base GET route with no query string or request body. It must not already select
-a response destination. The object session derives each exact `offset` and
-`length`, stable intent, and response destination itself.
+a response destination. The object session retains the selected delivery mode,
+stable intent and response destination. A whole-file product makes one GET to
+that exact URL with no query. A chunked product derives each exact `offset` and
+`length` from its reviewed byte plan.
 
 Create an operator-private parent directory, then select one object by its exact
 merchant alias. Use absolute paths. These examples use existing reviewed input
@@ -54,11 +56,25 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs init 
 
 Replace the example paths, alias and limit with the selected product and your
 actual authorized budget. The initializer verifies that the chosen descriptor
-row is in `chunks` mode and its route matches the original buyer configuration.
-It takes the byte count, maximum chunk size, content type, snapshot and optional
-whole-file SHA-256 directly from that row. `--chunk-bytes` can choose a smaller
-positive size up to the merchant's maximum. The saved selection includes the
-exact original description's SHA-256 and object alias.
+row is in `chunks` or `whole` mode and its route matches the original buyer
+configuration. It takes the byte count, response limit, content type, snapshot
+and optional complete-file SHA-256 directly from that row. For chunks,
+`--chunk-bytes` can choose a smaller positive size up to the merchant's maximum.
+For a whole file, omit that flag: the complete response length is fixed by the
+merchant. The saved selection includes the exact original description's SHA-256
+and object alias.
+
+| Selected delivery | Native request | Required complete response | Planned requests |
+| --- | --- | --- | --- |
+| `whole` | GET of the exact base URL; no query or Range header | HTTP 200, no Content-Range, exact selected complete length | One, including a zero-byte file |
+| `chunks` | GET with exact `offset` and `length` query | HTTP 206 and the matching Content-Range | Complete byte count divided into the selected bounded chunks |
+
+Select a report or versioned whole-file product with the same command by changing
+`--object` and the matching buyer configuration. Its total and daily limits must
+cover one original per-request maximum. An empty whole file still has one
+original request and its quoted price; a byte count of zero does not make a paid
+offer free. Its native writer reserves a one-byte maximum capacity and pins
+`expectedBytes: 0`, so an unexpected nonempty response cannot be accepted.
 
 The total limit must cover the complete number of chunks multiplied by the
 original per-request `maxAtomic`. For example, 1,843,229 bytes at 921,600 bytes per
@@ -93,19 +109,19 @@ and current attempt outcomes. Its search, state filter, pagination and JSON
 export run entirely in that file. Copyable commands enter the trusted terminal;
 the page has no signing or payment controls and contacts no service.
 
-`run` executes new chunks serially through the original inbox. The original
-operator approval still reviews each current quote and exact query-bearing URL.
+`run` executes new requests serially through the original inbox. The original
+operator approval still reviews each current quote and exact selected URL.
 Saving the session or running the command does not replace that per-request
 approval. The original queue supplies the saved workspace when it was selected
 at initialization. For an existing session created without a workspace, pass
 `--workspace /absolute/private/archive-operator` to `run`, or use the original
 configured operator environment.
 
-For a completed chunk the workflow requires:
+For each completed original response the workflow requires:
 
 - An original execution attempt and complete saved buyer summary for the same
   stable intent, URL, terms and response destination.
-- HTTP 206 and the exact expected `Content-Range`, with no range gap or overlap.
+- The selected mode's HTTP status and range contract from the table above.
 - The selected `X-SF30-Object-Snapshot` and total `X-SF30-Object-Bytes`.
 - A matching returned `X-Content-SHA256`, original local writer SHA-256 and
   freshly read file bytes, plus the selected content type when supplied.
@@ -115,6 +131,11 @@ The original response writer retains these selected headers in
 `responseFile.objectMetadata`; the object session validates them. Seller
 metadata remains seller-reported metadata. It is not a signature, independent
 chain observation, or proof of a payment.
+
+Whole-file requests also pass the selected complete length and optional SHA-256
+to the original response writer before execution. A mismatched file remains an
+original failed attempt for reconciliation. The original snapshot, returned
+digest, actual saved bytes and content type are still checked independently.
 
 ## Continue and recover
 
@@ -146,10 +167,11 @@ retains these distinctions so an interrupted purchase does not cause another
 payment. Original evidence, partial files and completed chunks stay available
 for the existing operator recovery process.
 
-## Complete the original chunk accounting
+## Complete the original purchase accounting
 
 The same object session exposes the original inbox finalizer for its retained
-chunk attempts. Product assembly and accounting can finish independently:
+attempts. A whole file has one original accounting row; a chunked file has one
+per request. Product assembly and accounting can finish independently:
 
 ```sh
 node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs finalize \
@@ -241,9 +263,19 @@ node stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-cli.mjs init 
 ```
 
 The placeholder hashes must be replaced with actual selected values; `--sha256`
-and `--content-type` are optional in this explicit form. This workflow requires
-a nonempty chunked object. Use the existing single-response buyer for whole-mode
-or empty objects.
+and `--content-type` are optional in this explicit form. Explicit facts default
+to the nonempty chunk contract. For an original whole-response contract, add
+`--delivery-mode whole`, provide the complete `--bytes` count (zero is allowed),
+and omit `--chunk-bytes`. The source URL stays query-free and the one request
+uses HTTP 200 semantics. A whole product cannot be converted into byte ranges
+by changing a client-side size field.
+
+Saved session schema and existing part/queue field names remain compatible.
+Sessions predating `deliveryMode` reopen as `chunks` with their original exact
+configuration hashes and URLs. New reports expose `deliveryMode` explicitly;
+the existing `chunkCount` is one for a whole response. Recovery, accounting,
+assembly, HTML/JSON export and the browser's cancellable file transfer use the
+same retained intent and do not acquire a completed object again.
 
 Applications can import `createObjectSession`, `inspectObjectSession`,
 `runObjectSession`, `recoverObjectSession`, and `assembleObjectSession` from

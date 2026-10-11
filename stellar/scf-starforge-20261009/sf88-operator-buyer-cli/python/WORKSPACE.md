@@ -126,6 +126,125 @@ job = workspace.start("compare", request)
 
 After completion, call `workspace.changes.select(job_id, {"id": uuid.uuid4().hex, "result_sha256": report["result_sha256"], "note": "Reviewed category selection"})`. An identical selection request returns its retained result; a different request cannot overwrite it. For an export, pass `comparison_id`, `result_sha256`, the page's `selection_sha256`, `format` (`json` or `csv`) and a new `id` to `start("change-export", request)`. `workspace.changes.history(before=..., limit=25)` and `page(..., kind="removed", after=0)` reopen reports beyond the latest activity page. Start a changed comparison/filter at `after=0`; its returned cursor belongs to that selection.
 
+## Compose and publish a customer report
+
+**Reports** turns saved analyses into an ordered customer document. It uses the
+same acquired editions, saved SQL recipes, typed rows and database backup.
+
+1. Save the analyses you need in **Analysis**. A query can be used more than once
+   with different effective parameters.
+2. Open **Reports**, name the report, and add its title and introduction. Add up
+   to twelve sections; select each saved query and its exact revision, write its
+   title/context, review the SQL, and set its parameters. Move sections into the
+   intended reading order.
+3. Save the definition. Query revisions are pinned: later edits in **Analysis**
+   do not silently alter this report. **Load current query revision** explicitly
+   adopts a changed recipe before the next definition save. Unsaved report
+   authoring survives a browser refresh in this workspace's local draft.
+4. Review **Current data selection** and run the saved report. All sections use
+   one original SQLite read transaction, including their physical tables and
+   selected views. A data selection changed before execution requires a fresh
+   review. A subsequent selection cannot change the retained result.
+5. Inspect each complete table, its original acquisition scope and any original
+   comparison decision that selected the working edition. That decision's note,
+   original query/projection and comparison/selection IDs follow the report.
+6. Add a review/handover note and **Publish this report edition**. This retains a
+   named edition inside the private workspace. It does not send it to anyone.
+   Competing publication edits compare the current revision; **Refresh report
+   state** loads the actual current publication before a new attempt.
+7. Prepare **printable HTML**, **complete JSON**, or the **CSV bundle**, then
+   download the resulting file. Publication history reopens earlier editions
+   independently of later report definitions, data selections and reviews.
+
+A report does not publish a silently shortened query result. If any section
+reaches its saved row ceiling, the 4 MiB raw-value ceiling or the original
+20-second query deadline, the whole run fails and leaves earlier reports intact.
+Choose a more specific query or increase its saved row limit (up to 100,000)
+before explicitly adopting that query revision. A complete report allows at most
+60 seconds of query work and 32 MiB of encoded table rows. No partial report
+becomes a publication.
+
+The HTML is a complete offline document with print styles, typed table values,
+narrative, original data scope and query details; it loads no scripts, fonts or
+remote assets. JSON contains every table with the same exact integer/string,
+NULL and binary encodings used in the analysis workspace. The CSV ZIP contains
+one ordinary CSV per section, complete `report.json`, printable `report.html`
+and a short index. The original positional columns are preserved even when SQL
+uses duplicate column labels. CSV represents both NULL and an empty string as
+an empty field; the typed JSON retains their distinction.
+
+Publication/result IDs, original data selection and reviewed source scope remain
+inside every complete export. Files are generated and downloaded incrementally;
+the browser uses its file-save stream where available and otherwise permits
+downloads up to 64 MiB. An export can be up to 128 MiB. The customer decides how
+to share the private report. Absolute acquisition and database paths are not
+included in its dataset source metadata.
+
+### Use the same report workflow from Python
+
+Use the original `AnalysisWorkspace` while its browser server is closed. Its
+existing process lease prevents two workspace job owners from running together.
+The following example assumes `available_inventory` revision 1 was already
+saved against the customer's imported data:
+
+```python
+from uuid import uuid4
+from stellar_forge_buyer.analysis_workspace import AnalysisWorkspace
+
+workspace = AnalysisWorkspace("/private/customer/analysis")
+try:
+    definition = workspace.reports.save("inventory_review", {
+        "id": uuid4().hex,
+        "expected_revision": 0,
+        "title": "Acquired inventory review",
+        "introduction": "Review the exact acquired query and selected edition.",
+        "sections": [{
+            "title": "Available inventory",
+            "note": "Availability uses the retained source's declared values.",
+            "query_name": "available_inventory",
+            "query_revision": 1,
+            "parameters_text": '{"available": true}',
+        }],
+    })
+    pinned = workspace.reports.definition(
+        definition["name"], revision=definition["revision"])
+    job = workspace.start("report", {
+        "id": uuid4().hex,
+        "name": definition["name"],
+        "revision": definition["revision"],
+        "definition_sha256": pinned["sha256"],
+        "expected_views": workspace.database.view_bindings(),
+    })
+    # Poll workspace.job(job["id"]) for COMPLETE, then inspect:
+    # workspace.reports.result(job["id"], section=0, offset=0)
+finally:
+    workspace.close()  # waits for its existing background worker
+```
+
+`reports.publish(job_id, {id, result_sha256, expected_revision, note})` retains
+a reviewed edition. `reports.publications(name=...)` returns its exact
+`publication` and `sha256`; pass those to
+`workspace.start("report-export", {id, publication_id, publication_sha256,
+format})`, where format is `html`, `json`, or `csv`. The original
+`report_export_file(export_job_id)` returns the retained file and byte/digest
+metadata. `reports.history`, `reports.result`, `reports.definition` and
+`reports.publications` reopen the same source, tables and history used by the
+browser.
+
+Definition saves, publication requests and background jobs retain their request
+IDs. Retry an uncertain request with the same ID and unchanged content; its
+original record returns even if today's definition or publication has advanced.
+Use a new ID for a deliberate new action. Publication changes never change a SQL
+view or start a purchase.
+
+Reports and publications live in the original database backup, including all
+typed rows and the source decisions. After restoring that database in a new
+private directory, reopen the existing publication and prepare its export again.
+This regenerates the same report from retained rows; it does not re-run SQL or
+acquire data. Old export jobs retain their original directory identity and
+cannot be used to read another workspace's files. The single workspace owner
+cleans only its own incomplete `.reports-*` staging files at startup.
+
 ## Back up and reopen
 
 Choose **Create database backup**. The original SQLite backup operation creates a consistent copy containing the imported rows, exact original manifests, current views, activation history, registered source descriptions, saved query revisions, complete comparisons and selections, and retained analysis results. The completed action gives its local path, byte count and SHA-256. Files of at most 256 MiB can also be downloaded from the browser; larger backups remain complete at the displayed local path. Download rechecks the recorded digest.

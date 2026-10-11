@@ -5,6 +5,7 @@ import { readPrivateFile, absolute, parseJson } from '../sf103-native-buyer-sign
 import { inspectUpstreamConfiguration } from '../sf82-seller-pilot/release-upstreams.mjs';
 import { createUpstreamApplication } from '../sf30-seller-sdk/upstream.mjs';
 import { loadOperationTicket, operationTicketView } from '../sf88-operator-buyer-cli/operation-ticket.mjs';
+import { retainInitializationFile } from '../sf88-operator-buyer-cli/initialization.mjs';
 
 const LIMIT = 1048576;
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -39,14 +40,12 @@ export function describeUpstreamCommerce(reviewed) {
 }
 
 /** Copy the reviewed declaration exactly into a newly created private session. */
-export async function retainUpstreamCommerce(file, reviewed) {
+export async function retainUpstreamCommerce(file, reviewed, { resume = false } = {}) {
   absolute(file);
   need(Buffer.isBuffer(reviewed?.sourceBytes) &&
     reviewed.sourceBytes.length <= LIMIT && sha(reviewed.sourceBytes) === reviewed.sha256,
     'COMMERCE_UPSTREAM_SNAPSHOT_INVALID');
-  const handle = await open(file, 'wx', 0o600);
-  try { await handle.writeFile(reviewed.sourceBytes); await handle.sync(); }
-  finally { await handle.close(); }
+  await retainInitializationFile(file, reviewed.sourceBytes, { resume });
   return {file, sha256:reviewed.sha256, bytes:reviewed.bytes};
 }
 
@@ -78,3 +77,4 @@ export async function readUpstreamPurchaseTicket(selected, operation, upstream, 
 
 /** Public review data contains the original reader's metadata, never the bearer. */
 export { operationTicketView as upstreamPurchaseTicketView };
+
