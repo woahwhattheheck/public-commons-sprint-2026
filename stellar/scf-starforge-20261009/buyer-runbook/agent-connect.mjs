@@ -27,9 +27,11 @@ async function info(path){try{return await lstat(path);}catch(error){if(error.co
 async function syncDirectory(path){const handle=await open(path,'r');try{await handle.sync();}finally{await handle.close();}}
 async function directory(path){
  await privateDirectory(dirname(path));
- try{await mkdir(path,{mode:0o700});await syncDirectory(dirname(path));}
+ try{await mkdir(path,{mode:0o700});}
  catch(error){if(error.code!=='EEXIST')throw error;}
- return privateDirectory(path);
+ const selected=await privateDirectory(path);
+ // A prior mkdir may have completed before its parent sync was interrupted.
+ await syncDirectory(dirname(path));return selected;
 }
 async function document(path){
  try{const body=await readPrivate(path,LIMIT);return {value:parse(body,'BUYER_AGENT_CONNECTION_DOCUMENT_INVALID'),sha256:hash(body),bytes:body.length};}
@@ -62,7 +64,11 @@ async function stage(file,before,value,validate,temporaryFiles){
 async function publish(staged,temporaryFiles){
  need(unchanged(staged.before,await document(staged.file)),'BUYER_AGENT_CONNECTION_DOCUMENT_CHANGED',
   'The original configuration changed during setup. Reopen its current complete document.');
- if(!staged.changed)return {state:'REOPENED',sha256:staged.before.sha256,bytes:staged.before.bytes};
+ if(!staged.changed){
+  // Finish the original publication sync when a previous rename already won.
+  await syncDirectory(dirname(staged.file));
+  return {state:'REOPENED',sha256:staged.before.sha256,bytes:staged.before.bytes};
+ }
  // One original flock owns the complete preimage check and atomic publication.
  // Renaming the private stage leaves no second hard link after interruption.
  await rename(staged.temporary,staged.file);
@@ -113,6 +119,15 @@ export async function connectBuyerRunbookAgent(options,{signal}={}){
  need(plain(options)&&Object.keys(options).every(key=>KEYS.includes(key))&&
   ['connectionFile','workspace','launchFile','storageDirectory'].every(key=>Object.hasOwn(options,key)),
   'INVALID_PARAMS','Select the connection file, workspace alias, actual launch file and private receiving directory.');
+ // Capture every host selection before any filesystem or native await.
+ // Only immutable string values cross the original connection lifetime.
+ const captured={};
+ for(const key of KEYS)if(Object.hasOwn(options,key)){
+  const value=options[key];
+  need(value===undefined||typeof value==='string','INVALID_PARAMS','Use string values for the documented connection inputs.');
+  captured[key]=value;
+ }
+ options=Object.freeze(captured);
  const connectionFile=hostPath(options.connectionFile),workspace=alias(options.workspace),
   launchFile=hostPath(options.launchFile),storageDirectory=hostPath(options.storageDirectory);
  if(options.label!==undefined)label(options.label);
