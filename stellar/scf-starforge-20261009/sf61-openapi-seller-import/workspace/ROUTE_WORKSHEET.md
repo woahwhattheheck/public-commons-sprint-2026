@@ -129,7 +129,9 @@ compiler.
 
 ## Compose the same worksheet in a merchant agent
 
-The pure model is safe to import in Node and the browser. Use
+The pure model is safe to import in Node and the browser. Installed Node consumers
+use `@tokenjunkielabs/starforge-merchant/seller/openapi/route-worksheet`.
+Use
 `routeSheetSnapshot({sourceSha256,title,operations,rows,payment})` with the
 original inspector and current authored rows; each row supplies method, path,
 selected and amountAtomic. Apply a partial imported sheet with
