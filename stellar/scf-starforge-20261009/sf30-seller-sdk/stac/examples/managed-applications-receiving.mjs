@@ -291,7 +291,7 @@ async function waitFor(read,predicate,{timeoutMs,pollMs,label}){
 }
 
 /**
- * Operate an existing READY native runtime and receive closed original data.
+ * Operate an existing READY runtime and receive closed original data.
  * All copied data, journal records and complete output files stay under directory.
  * Reusing directory resumes its saved application and request identities.
  */
@@ -334,9 +334,8 @@ export async function runManagedStacReceiving({
     processingUnpacked:join(directory,'receiving','processing-input')};
   for(const key of ['copies','exports','receiving'])await privateDirectory(paths[key],{create:true});
   const checked=await inspectRuntimeInstall({directory:runtimeDirectory,load:false});
-  const profile=await readJSON(join(runtimeDirectory,'runtime-profile.json'));
-  need(checked.status==='READY'&&checked.ready===true&&profile.selection?.native===true,
-    'RECEIVING_READY_NATIVE_RUNTIME_REQUIRED','Select the original READY runtime with its native profile.');
+  need(checked.status==='READY'&&checked.ready===true,
+    'RECEIVING_READY_RUNTIME_REQUIRED','Select the original READY runtime containing the reviewed STAC command and source.');
   const binding={directory:checked.directory,installationId:checked.installationId,sourceCommit:checked.sourceCommit,
     profileId:checked.profileId,sourceRoot:checked.sourceRoot};
   if(journal.runtime)need(hash(journal.runtime)===hash(binding),'RECEIVING_RUNTIME_CHANGED');

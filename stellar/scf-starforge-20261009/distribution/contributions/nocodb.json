@@ -24,5 +24,8 @@
     "./seller/nocodb/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/server.mjs",
     "./seller/nocodb/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/launch.mjs",
     "./seller/nocodb/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/packet.mjs"
+  },
+  "applicationProviders": {
+    "nocodb": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/nocodb.mjs"
   }
 }

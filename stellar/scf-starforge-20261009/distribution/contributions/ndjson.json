@@ -15,5 +15,8 @@
   "exports": {
     "./seller/ndjson-merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/merchant.mjs",
     "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs"
+  },
+  "applicationProviders": {
+    "ndjson": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/ndjson.mjs"
   }
 }

@@ -10,7 +10,7 @@ Open a saved satellite imagery workspace through the existing Applications manag
 | Imagery customer operations | `stac-eoapi` | `stac eoapi-serve` | The original eoAPI imagery directory; optionally the original private source configuration, policy workspace, separate customer output directory and processing workspace |
 | Prescient imagery operations | `stac-prescient` | `stac prescient-serve` | The original operator directory containing `operator/` and `stac/`, its private deployment JSON and selected profile |
 
-Use a completed READY runtime containing the selected original host. The manager checks the actual source files for that mode. It reads the initialized workspace and selected configuration during review. It opens the original host when the saved start is dispatched.
+Use a completed READY runtime containing the selected original host. The retained imagery and processing receiving workflow runs with the original Node command; select optional SDK dependency features when the chosen original customer workflow requires them. The manager checks the actual source files for that mode. It reads the initialized workspace and selected configuration during review. It opens the original host when the saved start is dispatched.
 
 The imagery directory and optional processing directory must be private directories owned by the current host user. On Linux, use mode 0700; keep private configuration and connection files at mode 0600. Select their real absolute paths. Keep the original directory layout when receiving existing work.
 
