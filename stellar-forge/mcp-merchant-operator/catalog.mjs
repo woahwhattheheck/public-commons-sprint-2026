@@ -36,6 +36,8 @@ import { clinicalTrialsWorkspaceTools } from './catalog/clinicaltrials-workspace
 import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
 import { usgsWorkspaceTools } from './catalog/usgs-workspace.mjs';
 import { feedsWorkspaceTools } from './catalog/feeds-workspace.mjs';
+import { dspaceOperatorTools } from './catalog/dspace-operators.mjs';
+import { grantWorkspaceTools } from './catalog/grant-workspace.mjs';
 import { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
 import { datasetLifecycleTools } from './catalog/dataset-lifecycle.mjs';
 import { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
@@ -100,6 +102,8 @@ const familyTools = {
   baserowWorkspaces: baserowWorkspaceTools(tool),
   usgsWorkspaces: usgsWorkspaceTools(tool),
   feedsWorkspaces: feedsWorkspaceTools(tool),
+  dspaceOperators: dspaceOperatorTools(tool),
+  grantWorkspaces: grantWorkspaceTools,
   grpcWorkspaces: grpcWorkspaceTools(tool),
   dataset: datasetLifecycleTools(tool),
   openapiWorkspaces: openapiWorkspaceTools(tool),
@@ -193,6 +197,8 @@ const MERCHANT_TOOLS = [
   ...familyTools.baserowWorkspaces,
   ...familyTools.usgsWorkspaces,
   ...familyTools.feedsWorkspaces,
+  ...familyTools.dspaceOperators,
+  ...familyTools.grantWorkspaces,
   ...familyTools.grpcWorkspaces,
   ...familyTools.dataset,
   ...familyTools.openapiWorkspaces,
