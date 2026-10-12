@@ -161,14 +161,19 @@ def _heading(model, text, level=1, anchor=None):
                             "level": max(1, min(3, level)), "anchor": anchor})
 
 
-def _para(model, text, small=False):
+def _para(model, text, small=False, keep_next=False):
     for paragraph in _paragraphs(text):
-        model["blocks"].append({"kind": "paragraph", "text": paragraph, "small": small})
+        model["blocks"].append({"kind": "paragraph", "text": paragraph, "small": small,
+                                "keep_next": keep_next})
 
 
 def _list(model, items):
     if items:
-        model["blocks"].append({"kind": "list", "items": [_text(x) for x in items]})
+        values = [_text(x) for x in items]
+        if model["language"] == "fr":
+            # Display typography only: the frozen authored/source strings remain intact.
+            values = [re.sub(r" +([;:!?])", "\u00a0\\1", value) for value in values]
+        model["blocks"].append({"kind": "list", "items": values})
 
 
 def _table(model, headings, rows, weights=None, numeric=()):
@@ -291,7 +296,7 @@ def _standard_model(edition, publication, language):
     for clause in snap["clauses"]:
         _heading(model, clause["number"] + "  " + (clause.get("title_" + language) or words["no_title"]),
                  _clause_level(clause, clauses), _anchor(clause["id"]))
-        _para(model, words["kind"] + ": " + words.get(clause["kind"], clause["kind"]), True)
+        _para(model, words["kind"] + ": " + words.get(clause["kind"], clause["kind"]), True, keep_next=True)
         body, table = clause.get("body_" + language), clause.get("table_" + language, [])
         if body:
             _para(model, body)
@@ -446,7 +451,7 @@ def _comparison_model(comparison):
             if old.get(field, []) != new.get(field, []):
                 _heading(model, label, 2)
                 for basis, value in (("Before", old.get(field, [])), ("After", new.get(field, []))):
-                    _para(model, basis, True)
+                    _para(model, basis, True, keep_next=True)
                     if value:
                         _table(model, value[0], value[1:] or [[""] * len(value[0])])
         metadata = []
@@ -598,7 +603,7 @@ def _phase_model(state, phase, phase_analysis):
     model = _model("Phase " + phase + "  " + title, state["title"])
     current = engine.phase_snapshot(state, phase)
     funding = current["funding"]
-    _para(model, "Current phase workpaper. All money is CAD. Net delivery amounts and HST remain separate.")
+    _para(model, "Current phase workpaper. All money is CAD. Net delivery amounts and HST remain separate.", keep_next=True)
     if funding:
         _para(model, "Funding record: " + funding["title"] + " · " + funding["status"] +
               ". Phase base amount: CAD " + _money(funding["phase_amounts"][phase]) + ".")
@@ -624,7 +629,7 @@ def _phase_model(state, phase, phase_analysis):
            [[r["title"], r["due"], r["status"], r["accepted_at"]] for r in current["deliverables"]], [3, 1.2, 1.4, 2])
     _heading(model, "Source costs")
     for cost in costs:
-        _para(model, cost["title"] + " · " + cost["id"])
+        _para(model, cost["title"] + " · " + cost["id"], keep_next=True)
         _table(model, ["Basis and category", "Net CAD", "HST CAD", "Date"],
                [[cost["basis"] + " / " + cost["category"], _money(cost["net_cad"]), _money(cost["hst_cad"]), cost["incurred"]]],
                [2, 1, 1, 1.4], (1, 2))
@@ -797,7 +802,8 @@ def _html(model):
             identifier = ' id="' + block["anchor"] + '"' if block.get("anchor") else ""
             parts.append(f"<h{level}{identifier}>" + escape(block["text"]) + f"</h{level}>")
         elif kind == "paragraph":
-            parts.append('<p' + (' class="small"' if block["small"] else "") + ">" +
+            parts.append('<p' + (' class="small"' if block["small"] else "") +
+                         (' style="break-after:avoid"' if block.get("keep_next") else "") + ">" +
                          escape(block["text"]).replace("\n", "<br>") + "</p>")
         elif kind == "list":
             parts.append("<ul>" + "".join("<li>" + escape(x) + "</li>" for x in block["items"]) + "</ul>")
@@ -849,6 +855,10 @@ def _docx(model):
     section.left_margin = section.right_margin = Inches(.72)
     section.footer_distance = Inches(.32)
     styles = document.styles
+    # The installed starter template may carry an accent-colour title rule.
+    for style in styles:
+        for border in style.element.xpath("./w:pPr/w:pBdr"):
+            border.getparent().remove(border)
     for name in ("Normal", "Title", "Subtitle", "Heading 1", "Heading 2", "Heading 3", "List Bullet"):
         style = styles[name]
         style.font.name = "Arial"
@@ -912,6 +922,8 @@ def _docx(model):
                 link(p, block["text"], block["url"])
             else:
                 p.add_run(block["text"])
+            if block.get("keep_next"):
+                p.paragraph_format.keep_with_next = True
             if block.get("small") or kind == "link":
                 for run in p.runs:
                     run.font.size = Pt(9)
@@ -950,6 +962,8 @@ def _docx(model):
             repeat = OxmlElement("w:tblHeader")
             table.rows[0]._tr.get_or_add_trPr().append(repeat)
             for row_index, row in enumerate(table.rows):
+                # Keep an original record and its digest on one page when the row fits.
+                row._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
                 for i, cell in enumerate(row.cells):
                     cell.width = widths[i]
                     cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
@@ -1036,6 +1050,34 @@ def _pdf(model):
         "heading3": ParagraphStyle("Heading3", parent=base, fontName=FONT_NAMES[1], fontSize=10.5, leading=14.5,
                                    spaceBefore=8, spaceAfter=5, keepWithNext=True),
     }
+    styles["small_lead"] = ParagraphStyle("SmallLead", parent=styles["small"], keepWithNext=True)
+    styles["body_lead"] = ParagraphStyle("BodyLead", parent=base, keepWithNext=True)
+    # SimpleDocTemplate uses six points of padding at each end of the frame.
+    full_frame_height = letter[1] - 52 - 46 - 12
+
+    class RecordTable(Table):
+        def split(self, availWidth, availHeight):
+            # A partial current page is not a reason to split an ordinary record.
+            self.splitInRow = 0
+            result = super().split(availWidth, availHeight)
+            if result:
+                return result
+            target = self._getFirstPossibleSplitRowPosition(availHeight, ignoreSpans=1)
+            repeated = (list(range(self.repeatRows)) if isinstance(self.repeatRows, int)
+                        else list(self.repeatRows))
+            first_body = max(repeated, default=-1) + 1
+            header_height = sum(self._rowHeights[i] for i in repeated)
+            if (first_body <= target < len(self._rowHeights) and
+                    self._rowHeights[target] + header_height > full_frame_height):
+                # Only a record taller than a fresh page needs an in-row split.
+                # Thirty-six points leave room for two body lines and cell padding.
+                self.splitInRow = 36
+                try:
+                    return super().split(availWidth, availHeight)
+                finally:
+                    self.splitInRow = 0
+            return []
+
     def safe(text):
         return escape(_text(text), quote=False).replace("\n", "<br/>")
     story = [Paragraph(safe(model["title"]), styles["title"])]
@@ -1047,7 +1089,10 @@ def _pdf(model):
             prefix = '<a name="' + block["anchor"] + '"/>' if block.get("anchor") else ""
             story.append(Paragraph(prefix + safe(block["text"]), styles["heading" + str(block["level"])]))
         elif kind == "paragraph":
-            story.append(Paragraph(safe(block["text"]), styles["small" if block["small"] else "body"]))
+            style = "small" if block["small"] else "body"
+            if block.get("keep_next"):
+                style += "_lead"
+            story.append(Paragraph(safe(block["text"]), styles[style]))
         elif kind == "list":
             for item in block["items"]:
                 story.append(Paragraph("• " + safe(item), base))
@@ -1078,8 +1123,8 @@ def _pdf(model):
                     cells.append(Paragraph(safe(text) or " ", style))
                 content.append(cells)
             weights = block["weights"]
-            table = Table(content, colWidths=[508 * x / sum(weights) for x in weights], repeatRows=1,
-                          hAlign="LEFT", splitByRow=1, splitInRow=1)
+            table = RecordTable(content, colWidths=[508 * x / sum(weights) for x in weights], repeatRows=1,
+                                hAlign="LEFT", splitByRow=1, splitInRow=0)
             table.setStyle(TableStyle([
                 ("GRID", (0, 0), (-1, -1), .45, colors.HexColor("#D9D9D9")),
                 ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E9E9E9")),

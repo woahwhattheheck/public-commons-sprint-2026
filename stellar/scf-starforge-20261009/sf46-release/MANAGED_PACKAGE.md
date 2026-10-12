@@ -98,6 +98,24 @@ The package's existing `node_modules/` and `package-lock.json`, when present in
 the input, remain separate dependency state; prepare copies the original
 manifested source into the release.
 
+## Storage during preparation and installation
+
+Preparation and installation use the original manifest-bound source files
+through a create-only filesystem copy. On a filesystem that supports reflinks,
+Node requests copy-on-write storage; otherwise it performs an ordinary copy.
+Every destination has a separate inode, receives the declared source mode, and
+is checked against its complete byte count and SHA-256 before the existing
+whole-release verification and promotion. The original source is never linked
+for writing or modified by this operation.
+
+The prepared package, installed release and original runtime retain all their
+ordinary files and paths. A portable archive or transfer therefore remains
+complete on a host without reflink support. No additional dependency or
+installation flag is required. Keep the full logical source-copy space in the
+operation's disk allowance because an unsupported filesystem uses the normal
+copy path. The existing private staging directories, update lock, runtime
+attachment, cleanup and activation order remain the installation lifecycle.
+
 ## Start the original merchant workspace
 
 The `starforge` native command runs the original toolkit, including its

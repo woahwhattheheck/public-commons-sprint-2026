@@ -191,7 +191,10 @@ def platform_key(info):
 
 def wheel_metadata(path):
     with zipfile.ZipFile(path) as archive:
-        names = [name for name in archive.namelist() if name.endswith(".dist-info/METADATA")]
+        # A wheel owns one top-level metadata directory. Vendored distributions
+        # may retain their own nested metadata without changing this identity.
+        names = [name for name in archive.namelist()
+                 if name.count("/") == 1 and name.endswith(".dist-info/METADATA")]
         need(len(names) == 1 and archive.getinfo(names[0]).file_size <= MAX_JSON, "Wheel has no single package metadata identity")
         data = email.parser.Parser().parsestr(archive.read(names[0]).decode())
     return {"name": normalized(data["Name"]), "version": data["Version"]}
@@ -457,6 +460,8 @@ def application_modules(source):
                "workbookDelivery": "stellar_forge_buyer.workbook_client"}
     if source.get("scripts", {}).get("stellar-forge-duckdb") == "stellar_forge_buyer.duckdb_cli:main":
         modules["duckdb"] = "stellar_forge_buyer.duckdb_cli"
+    if source.get("scripts", {}).get("stellar-forge-postgres") == "stellar_forge_buyer.postgres_cli:main":
+        modules["postgres"] = "stellar_forge_buyer.postgres_cli"
     return modules
 
 
