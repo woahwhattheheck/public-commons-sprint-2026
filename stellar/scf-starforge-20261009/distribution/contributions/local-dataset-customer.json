@@ -1,0 +1,41 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "local-dataset-customer",
+  "description": "Complete reviewed local-source delivery, original DuckDB customer reports and portable reopening",
+  "commands": {
+    "local-dataset": "stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/cli.mjs",
+    "local-dataset-agent": "stellar-forge/mcp-merchant-operator/local-dataset-workspace-setup.mjs"
+  },
+  "commandDescriptions": {
+    "local-dataset": "Use the original merchant client for reviewed local data, full customer reports and complete portable receiving.",
+    "local-dataset-agent": "Open the original Frictionless publisher and DuckDB customer workflow through installed Applications and one merchant owner."
+  },
+  "exports": {
+    "./seller/local-dataset": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/model.mjs",
+    "./seller/local-dataset/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/server.mjs",
+    "./seller/local-dataset/package": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/package.mjs",
+    "./merchant/mcp/local-dataset": "./source/stellar-forge/mcp-merchant-operator/local-dataset-workspace.mjs",
+    "./merchant/mcp/local-dataset/config": "./source/stellar-forge/mcp-merchant-operator/local-dataset-workspace-config.mjs",
+    "./merchant/mcp/local-dataset/client": "./source/stellar-forge/mcp-merchant-operator/local-dataset-workspace-client.mjs",
+    "./merchant/mcp/local-dataset/launcher": "./source/stellar-forge/mcp-merchant-operator/local-dataset-workspace-setup.mjs",
+    "./merchant/mcp/local-dataset/provider": "./source/stellar-forge/mcp-merchant-operator/providers/local-dataset-workspaces.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/package.py",
+    "stellar-forge/mcp-merchant-operator/LOCAL_DATASET_WORKSPACE.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_dataset.py"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/local-dataset-receiving/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "local-dataset-agent": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/local-dataset-workspace.mjs"
+  },
+  "merchantProviders": {
+    "local-dataset-workspaces": "stellar-forge/mcp-merchant-operator/providers/local-dataset-workspaces.mjs"
+  }
+}
