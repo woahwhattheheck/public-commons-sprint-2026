@@ -19,8 +19,8 @@ export function createMcpToolHandler(provider,{bearerToken,authorization,allowed
   instructions='Search, describe and preview are read-only. Describe a search handle to inspect declared inputs before preview. Calls need out-of-band operator approval and an external x402 signer.'}={}){
   if(!provider || typeof provider.call!=='function' || !Array.isArray(provider.tools) || !provider.tools.length)
     throw new TypeError('A fixed tool catalog and call function are required');
-  if(!Number.isSafeInteger(maxRequestBytes)||maxRequestBytes<1||maxRequestBytes>2*1024*1024)
-    throw new RangeError('maxRequestBytes must be an integer from 1 to 2097152');
+  if(!Number.isSafeInteger(maxRequestBytes)||maxRequestBytes<1||maxRequestBytes>8*1024*1024)
+    throw new RangeError('maxRequestBytes must be an integer from 1 to 8388608');
   const tools=structuredClone(provider.tools),names=new Set();
   for(const tool of tools){
     if(!plain(tool)||!/^[-A-Za-z0-9_.]{1,128}$/.test(tool.name)||names.has(tool.name)||!plain(tool.inputSchema))

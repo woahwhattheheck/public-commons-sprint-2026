@@ -1,0 +1,35 @@
+{
+  "schema": "stellar-forge.unstructured-commerce.v1",
+  "merchantDirectory": "/absolute/private/unstructured/merchant",
+  "facilitatorConfig": "/absolute/private/native-facilitator.json",
+  "operator": {
+    "actor": "document-operator",
+    "service": "unstructured-document-review",
+    "python": "/absolute/path/to/python3",
+    "payer": "REPLACE_BUYER_PUBLIC_ACCOUNT",
+    "secretEnv": "UNSTRUCTURED_BUYER_SECRET",
+    "totalAtomic": "REPLACE_TOTAL_ATOMIC",
+    "dailyAtomic": "REPLACE_DAILY_ATOMIC"
+  },
+  "workspaceId": "document-review",
+  "documents": [
+    {
+      "profile": "quick-text",
+      "file": "/absolute/private/documents/text-document.pdf",
+      "filename": "text-document.pdf",
+      "mediaType": "application/pdf",
+      "intentId": "document-text-001",
+      "maxAtomic": "REPLACE_MAXIMUM_ATOMIC",
+      "acceptIndex": 0
+    },
+    {
+      "profile": "layout",
+      "file": "/absolute/private/documents/layout-document.pdf",
+      "filename": "layout-document.pdf",
+      "mediaType": "application/pdf",
+      "intentId": "document-layout-001",
+      "maxAtomic": "REPLACE_MAXIMUM_ATOMIC",
+      "acceptIndex": 0
+    }
+  ]
+}
