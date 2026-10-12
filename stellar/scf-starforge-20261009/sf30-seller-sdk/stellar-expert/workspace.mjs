@@ -2,14 +2,22 @@
 import {createServer} from 'node:http';
 import {readFile,open} from 'node:fs/promises';
 import {randomBytes,timingSafeEqual} from 'node:crypto';
-import {resolve} from 'node:path';
-import {pathToFileURL} from 'node:url';
+import {resolve,dirname} from 'node:path';
+import {pathToFileURL,fileURLToPath} from 'node:url';
 import {openStellarExpertWorkspace} from './core.mjs';
 import {fault} from './provider.mjs';
+import {inspectStellarExpertIdentity} from './store.mjs';
 const CSP="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
-export async function startStellarExpertWorkspace({directory,inboxDirectory,port=8436,releaseRuntime,fetchImpl}={}) {
+export async function startStellarExpertWorkspace({directory,inboxDirectory,port=8436,releaseRuntime,fetchImpl,expectedWorkspaceId}={}) {
   if(!Number.isInteger(port)||port<0||port>65535)throw new TypeError('Invalid workspace port.');
+  if(expectedWorkspaceId!==undefined){
+    const identity=await inspectStellarExpertIdentity(directory);
+    if(identity.workspaceId!==expectedWorkspaceId)throw fault('STELLAR_WORKSPACE_IDENTITY_CHANGED','Reopen the originally selected workspace.',409);
+  }
   const app=await openStellarExpertWorkspace({directory,inboxDirectory,releaseRuntime,fetchImpl});
+  if(expectedWorkspaceId!==undefined&&app.schema().workspaceId!==expectedWorkspaceId){
+    await app.close();throw fault('STELLAR_WORKSPACE_IDENTITY_CHANGED','Reopen the originally selected workspace.',409);
+  }
   let files;try{files=await Promise.all(['index.html','app.js','style.css'].map(p=>readFile(new URL('./web/'+p,import.meta.url))));}
   catch(e){await app.close();throw e;}
   const token=randomBytes(32).toString('base64url'),authorization=Buffer.from('Bearer '+token);
@@ -97,18 +105,29 @@ export async function readReleaseRuntime(filename) {
   return normalizeReleaseRuntime({port:0,...value});
 }
 export async function main(args=process.argv.slice(2)){
-  const options={};if(args.includes('--help')){console.log('node workspace.mjs --workspace PRIVATE_DIR [--inbox ORIGINAL_PRIVATE_INBOX] [--port 8436] [--release-runtime PRIVATE_JSON]');return;}
+  const options={};if(args.includes('--help')){console.log('node workspace.mjs --workspace PRIVATE_DIR [--inbox ORIGINAL_PRIVATE_INBOX] [--port 8436] [--release-runtime PRIVATE_JSON] [--startup-format json] [--expected-workspace-id UUID]');return;}
   for(let i=0;i<args.length;i+=2){
-    if(!['--workspace','--inbox','--port','--release-runtime'].includes(args[i])||Object.hasOwn(options,args[i])||!args[i+1]||args[i+1].startsWith('--'))
-      throw new TypeError('Use --workspace PRIVATE_DIR, optional --inbox, --port and --release-runtime.');
+    if(!['--workspace','--inbox','--port','--release-runtime','--startup-format','--expected-workspace-id'].includes(args[i])||Object.hasOwn(options,args[i])||!args[i+1]||args[i+1].startsWith('--'))
+      throw new TypeError('Use --workspace PRIVATE_DIR with paired supported options; see --help.');
     options[args[i]]=args[i+1];
   }
   if(!options['--workspace'])throw new TypeError('--workspace is required.');
+  if(options['--startup-format']!==undefined&&options['--startup-format']!=='json')throw new TypeError('Startup format must be json.');
+  if(options['--expected-workspace-id']!==undefined&&!/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(options['--expected-workspace-id']))
+    throw new TypeError('Expected workspace identity must be the original UUID.');
   const app=await startStellarExpertWorkspace({directory:resolve(options['--workspace']),
     inboxDirectory:options['--inbox']?resolve(options['--inbox']):undefined,
     port:options['--port']===undefined?8436:Number(options['--port']),
-    releaseRuntime:options['--release-runtime']?await readReleaseRuntime(options['--release-runtime']):undefined});
-  console.log('Stellar asset investigation workspace\n'+app.url+'\nKeep this session URL private. Stop with Ctrl+C.');
+    releaseRuntime:options['--release-runtime']?await readReleaseRuntime(options['--release-runtime']):undefined,
+    expectedWorkspaceId:options['--expected-workspace-id']});
+  if(options['--startup-format']==='json')console.log(JSON.stringify({
+    schema:'stellar-forge.stellar-expert-workspace-startup.v1',status:'STELLAR_EXPERT_READY',
+    directory:app.app.store.root,workspaceId:app.app.schema().workspaceId,
+    inboxDirectory:options['--inbox']?resolve(options['--inbox']):null,
+    releaseRuntimeFile:options['--release-runtime']?resolve(options['--release-runtime']):null,
+    sourceDirectory:dirname(fileURLToPath(import.meta.url)),pid:process.pid,url:app.url,
+  }));
+  else console.log('Stellar asset investigation workspace\n'+app.url+'\nKeep this session URL private. Stop with Ctrl+C.');
   const close=()=>{void app.close().catch(()=>{process.exitCode=1;});};process.once('SIGINT',close);process.once('SIGTERM',close);
   return app;
 }

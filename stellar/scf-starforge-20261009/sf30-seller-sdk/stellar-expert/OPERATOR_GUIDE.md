@@ -2,6 +2,24 @@
 
 The workspace turns StellarExpert observations into an asset investigation that an operator can reopen, compare, annotate, export and prepare for a merchant or customer handover. It preserves the original provider responses beside the records used for review. Dataset preparation, merchant release and customer receiving use the existing Stellar Forge services.
 
+## Open from an installed application
+
+In the existing runtime workspace, select the original installed runtime and choose **Stellar asset investigation** from Applications. The selected runtime must contain the complete StellarExpert source and its dataset, publisher and buyer dependencies.
+
+| Setting | Selection |
+| --- | --- |
+| Private StellarExpert workspace | Reopen the original private directory, or choose one new directory in an existing private parent. |
+| Original buyer inbox | Select the existing SF88 inbox that contains the purchased page intents you intend to inspect and receive. |
+| Private merchant runtime JSON | Select the original private runtime file when operating a configured native merchant. Its settings are described below. |
+| Local port | Use `0` to choose an available local port, or retain the port required by your operating environment. |
+| Private environment JSON | Optionally select the existing private environment configuration required by your runtime. |
+
+Review and save the application against that selected installation, connect its original managed release, and start its retained application operation. Open the private session URL returned by that operation. The command preserves the same source captures, edition archive, notes, datasets, merchant release history and customer receipts.
+
+The launcher records the original workspace identity, selected inbox and merchant runtime file. It reads the session URL only from the original command's structured startup record. A changed saved workspace identity requires review of the current selection. Normal source captures and operator edits retain the workspace identity and remain available after restart.
+
+Stop or reopen the retained application operation through the existing Applications controls. The running workspace owns its original writer lease; start the terminal CLI after that workspace has closed.
+
 ## Open the workspace
 
 Use the complete Stellar Forge source checkout or selected release containing this directory and its sibling dataset, release and buyer modules. From the repository root:
