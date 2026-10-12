@@ -4,13 +4,17 @@ from __future__ import annotations
 from contextlib import contextmanager
 from dataclasses import dataclass
 import os
+import hashlib
+from decimal import Decimal
+import json
+import re
 from pathlib import Path
 import stat
 
 from .errors import DeliveryError, NativeError, StateError
 from .result import FileDelivery, SessionAccountingResult
 from .runtime import Runtime
-from .storage import parse, private_directory
+from .storage import digest, parse, private_directory, read, unique_object
 
 _MODE = "ORIGINAL_PYTHON_DATASET"
 _ACQUISITION = "stellar-forge.sf88.dataset-acquisition.v1"
@@ -59,10 +63,190 @@ class DatasetDelivery:
     def status(self):
         return self.native["nativeStatus"]
 
+    @classmethod
+    def from_finalized_scan(cls, scan):
+        """Open an existing direct SF100 delivery using its unchanged native scan.
+
+        The producer calls the original SF100 scan(directory,
+        {retainPayload:false}). This receiver binds that completed native result
+        to its manifest and original files; it does not create an acquisition.
+        """
+        hexadecimal = lambda value: isinstance(value, str) and re.fullmatch(r"[0-9a-f]{64}", value)
+        if (not isinstance(scan, dict) or scan.get("finalized") is not True
+                or scan.get("nextCursor") is not None
+                or not isinstance(scan.get("session"), dict)
+                or scan["session"].get("schema") != "stellar-forge.buyer-delivery.v1"
+                or type(scan.get("count")) is not int
+                or not 0 <= scan["count"] <= 1_000_000
+                or scan.get("total") != scan["count"]
+                or not isinstance(scan.get("pages"), list)
+                or not 1 <= len(scan["pages"]) <= 4096
+                or not all(hexadecimal(scan.get(key)) for key in ("snapshot", "chain", "queryHash"))
+                or not isinstance(scan.get("out"), str)):
+            raise DeliveryError("DATASET_FINALIZED_NATIVE_SCAN_REQUIRED")
+        directory = private_directory(_path(scan["out"]), create=False)
+        if str(directory) != scan["out"]:
+            raise DeliveryError("DATASET_NATIVE_SCAN_DIRECTORY_INVALID")
+        manifest_raw = read(directory / "manifest.json", 4 * 1024 * 1024)
+        manifest = parse(manifest_raw)
+        dataset = manifest.get("dataset") if isinstance(manifest, dict) else None
+        if (not isinstance(manifest, dict)
+                or manifest.get("schema") != "stellar-forge.buyer-delivery-manifest.v1"
+                or not isinstance(dataset, dict)
+                or dataset.get("rows") != scan["count"]
+                or dataset.get("snapshot") != scan["snapshot"]
+                or dataset.get("projectedFields") != scan.get("fields")
+                or dataset.get("filters") != scan.get("filters")
+                or dataset.get("ranges") != scan.get("ranges")
+                or dataset.get("order") != (scan.get("order") or "csv-record-order")
+                or dataset.get("originalQueryHash") != scan["queryHash"]
+                or manifest.get("chainDigest") != scan["chain"]
+                or not isinstance(manifest.get("sourcePages"), list)
+                or len(manifest["sourcePages"]) != len(scan["pages"])
+                or not isinstance(manifest.get("outputs"), dict)
+                or set(manifest["outputs"]) != {"dataset.jsonl", "dataset.csv", "review.html"}):
+            raise DeliveryError("DATASET_NATIVE_SCAN_MANIFEST_CHANGED")
+        session_raw = read(directory / "session.json", 4096)
+        if parse(session_raw) != scan["session"]:
+            raise DeliveryError("DATASET_NATIVE_SCAN_SESSION_CHANGED")
+        previous, rows = None, 0
+        archive_expected = {}
+        for index, page in enumerate(scan["pages"]):
+            if (not isinstance(page, dict) or page.get("index") != index
+                    or page.get("previous") != previous
+                    or type(page.get("returned")) is not int or page["returned"] < 0
+                    or not hexadecimal(page.get("chain"))
+                    or not hexadecimal(page.get("sourceSha256"))
+                    or not hexadecimal(page.get("signature"))):
+                raise DeliveryError("DATASET_NATIVE_SCAN_PAGE_INVALID")
+            expected = {"index": index, "intent": page.get("intent"),
+                        "sourceSha256": page["sourceSha256"], "evidenceSha256": page.get("evidenceSha256"),
+                        "recordDigest": page["chain"], "rows": page["returned"],
+                        "requestedCursor": page.get("requestCursor")}
+            if manifest["sourcePages"][index] != expected:
+                raise DeliveryError("DATASET_NATIVE_SCAN_PAGE_CHANGED")
+            archive_name = f"pages/{index:05d}.json"
+            archive_raw = read(directory / archive_name, 2 * 1024 * 1024 + 4096)
+            archive = parse(archive_raw)
+            if (not isinstance(archive, dict)
+                    or any(archive.get(key) != page.get(key) for key in
+                           ("schema", "index", "previous", "intent", "requestCursor",
+                            "sourceSha256", "evidenceSha256", "signature", "chain"))
+                    or not isinstance(archive.get("payload"), dict)
+                    or archive["payload"].get("page", {}).get("returned") != page["returned"]):
+                raise DeliveryError("DATASET_NATIVE_SCAN_ARCHIVE_CHANGED")
+            # Original appendMany emits this exact compact record with chain
+            # last. Hash its retained record bytes, preserving native numeric
+            # lexemes and property order without a second serializer.
+            suffix = b',"chain":"' + page["chain"].encode("ascii") + b'"}\n'
+            if (not archive_raw.endswith(suffix)
+                    or digest(archive_raw[:-len(suffix)] + b"}") != page["chain"]):
+                raise DeliveryError("DATASET_NATIVE_ARCHIVE_RECORD_CHANGED")
+            archive_expected[archive_name] = {"bytes": len(archive_raw), "sha256": digest(archive_raw)}
+            previous, rows = page["chain"], rows + page["returned"]
+        if (previous != scan["chain"] or rows != scan["count"]
+                or dataset.get("originalQuerySignature") != scan["pages"][0]["signature"]):
+            raise DeliveryError("DATASET_NATIVE_SCAN_CHAIN_CHANGED")
+        pages = private_directory(directory / "pages", create=False)
+        names = sorted(path.name for path in pages.iterdir())
+        if names != [str(index).zfill(5) + ".json" for index in range(len(scan["pages"]))]:
+            raise DeliveryError("DATASET_NATIVE_SCAN_ARCHIVE_CHANGED")
+
+        def capture(name, limit):
+            path = directory / name
+            fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+            with os.fdopen(fd, "rb") as stream:
+                before = os.fstat(stream.fileno())
+                if (not stat.S_ISREG(before.st_mode) or before.st_nlink != 1
+                        or before.st_mode & 0o077 or before.st_size > limit):
+                    raise DeliveryError("DATASET_PRIVATE_FILE_REQUIRED")
+                checksum, size = hashlib.sha256(), 0
+                while chunk := stream.read(1024 * 1024):
+                    checksum.update(chunk)
+                    size += len(chunk)
+                    if size > limit:
+                        raise DeliveryError("DATASET_OUTPUT_LIMIT")
+                after = os.fstat(stream.fileno())
+                if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+                        after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+                    raise DeliveryError("DATASET_NATIVE_SOURCE_CHANGED")
+            return {"path": str(path), "bytes": size, "sha256": checksum.hexdigest()}
+
+        outputs = {}
+        for name in ("manifest.json", "dataset.jsonl", "dataset.csv", "review.html"):
+            metadata = capture(name, 4 * 1024 * 1024 if name == "manifest.json" else 256 * 1024 * 1024)
+            expected = ({"bytes": len(manifest_raw), "sha256": digest(manifest_raw)} if name == "manifest.json"
+                        else manifest["outputs"][name])
+            if {key: metadata[key] for key in ("bytes", "sha256")} != expected:
+                raise DeliveryError("DATASET_NATIVE_OUTPUT_CHANGED")
+            outputs[name] = metadata
+        archives = {"session.json": capture("session.json", 4096)}
+        archive_expected["session.json"] = {"bytes": len(session_raw), "sha256": digest(session_raw)}
+        archives.update({f"pages/{index:05d}.json": capture(f"pages/{index:05d}.json", 2 * 1024 * 1024 + 4096)
+                         for index in range(len(scan["pages"]))})
+        if any({key: metadata[key] for key in ("bytes", "sha256")} != archive_expected[name]
+               for name, metadata in archives.items()):
+            raise DeliveryError("DATASET_NATIVE_ARCHIVE_CHANGED_DURING_RECEIVING")
+        binding = {"schema": "stellar-forge.sf100.python-delivery-source.v1", "scan": scan,
+                   "manifestSha256": digest(manifest_raw), "archives": archives}
+        native = {"schema": "stellar-forge.sf100.dataset-delivery.v1", "sourceFormat": "SF100_SCAN",
+                  "directory": str(directory), "originalNativeScan": scan,
+                  "sourceBindingSha256": digest(json.dumps(binding, ensure_ascii=False, allow_nan=False,
+                                                           sort_keys=True, separators=(",", ":")).encode()),
+                  "nativeStatus": {"complete": True, "finalized": True, "pages": len(scan["pages"]),
+                                   "rows": scan["count"], "total": scan["total"], "snapshot": scan["snapshot"],
+                                   "lastRecordDigest": scan["chain"]},
+                  "paymentStatus": manifest["paymentStatus"], "outputs": outputs, "archives": archives}
+        delivery = cls(native, directory)
+
+        def exact(raw):
+            try:
+                return json.loads(raw.decode("utf-8"), object_pairs_hook=unique_object,
+                                  parse_float=Decimal,
+                                  parse_constant=lambda _: (_ for _ in ()).throw(ValueError()))
+            except (UnicodeError, ValueError):
+                raise DeliveryError("DATASET_NATIVE_ROW_INVALID") from None
+
+        def same(first, second):
+            if type(first) is not type(second):
+                return False
+            if isinstance(first, dict):
+                return first.keys() == second.keys() and all(same(first[key], second[key]) for key in first)
+            if isinstance(first, list):
+                return len(first) == len(second) and all(same(a, b) for a, b in zip(first, second))
+            return first == second
+
+        # The manifest's output digest alone cannot bind rows to the original
+        # page chain. Stream the typed JSONL against those exact archived rows.
+        # Decimal parsing retains numeric values without binary float rounding.
+        with delivery.file("dataset.jsonl").open() as stream:
+            for index in range(len(scan["pages"])):
+                name = f"pages/{index:05d}.json"
+                archive_raw = read(directory / name, 2 * 1024 * 1024 + 4096)
+                expected = archive_expected[name]
+                if len(archive_raw) != expected["bytes"] or digest(archive_raw) != expected["sha256"]:
+                    raise DeliveryError("DATASET_NATIVE_ARCHIVE_CHANGED_DURING_RECEIVING")
+                source_rows = exact(archive_raw)["payload"]["rows"]
+                for source_row in source_rows:
+                    raw = stream.readline(2_097_153)
+                    if (len(raw) > 2_097_152 or not raw.endswith(b"\n")
+                            or not same(exact(raw), source_row)):
+                        raise DeliveryError("DATASET_NATIVE_JSONL_SOURCE_CHANGED")
+            if stream.read(1):
+                raise DeliveryError("DATASET_NATIVE_JSONL_SOURCE_CHANGED")
+        return delivery
+
+    def file_names(self):
+        """Original finalized outputs and any direct SF100 session/page archives."""
+        names = ("manifest.json", "dataset.jsonl", "dataset.csv", "review.html")
+        return names + tuple(sorted(self.native.get("archives", {})))
+
     def file(self, name) -> FileDelivery:
-        if name not in _OUTPUTS:
+        archive = (self.native.get("sourceFormat") == "SF100_SCAN" and
+                   (name == "session.json" or isinstance(name, str) and re.fullmatch(r"pages/[0-9]{5}\.json", name)))
+        if name not in _OUTPUTS and not archive:
             raise DeliveryError("DATASET_OUTPUT_NAME_INVALID")
-        output = self.native["outputs"].get(name)
+        output = self.native["outputs"].get(name) or self.native.get("archives", {}).get(name)
         path = self.directory / name
         if not isinstance(output, dict) or output.get("path") != str(path):
             raise DeliveryError("DATASET_OUTPUT_METADATA_INVALID")

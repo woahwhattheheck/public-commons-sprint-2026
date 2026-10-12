@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { config, operation, need } from '../config.mjs';
 import { MAX_REQUEST_BODY_BYTES } from '../request-body.mjs';
 import { workspaceConfiguration, workspaceExecution } from '../queue.mjs';
-import { checkOperatorTerminal } from '../../sf81-buyer-operator-bridge/bridge.mjs';
+import { checkOperatorChannel } from '../../sf81-buyer-operator-bridge/bridge.mjs';
 import { loadOperationTicket, requireOperationTicketFingerprint, requireCurrentOperationTicket } from '../operation-ticket.mjs';
 
 const modes = {
@@ -103,7 +103,8 @@ export async function main(args = process.argv.slice(2)) {
     // The EXACT shared original inbox binding and native signer preflight.
     const nativeOptions = options.has('--dir') ? await workspaceExecution(cfg, options.get('--dir')) : {};
     if (action.endsWith('-check')) {
-      await checkOperatorTerminal(cfg.operation.intentId);
+      await checkOperatorChannel(cfg.operation.intentId,
+        {environment:nativeOptions.environment ?? process.env});
       requireCurrentOperationTicket(ticket);
       return print({mode:action === 'workspace-check'
         ? 'ORIGINAL_PYTHON_WORKSPACE_READY' : 'ORIGINAL_PYTHON_CONFIG_READY',

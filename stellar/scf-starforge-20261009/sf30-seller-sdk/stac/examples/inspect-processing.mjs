@@ -66,7 +66,7 @@ export async function inspectProcessingView({
     await tab.waitFor({state:'visible',timeout:30000});await tab.click();
     const panel=page.locator('.processing-panel');await panel.waitFor({state:'visible'});
     await panel.getByText('Saved processing state is ready.',{exact:true}).waitFor({state:'visible',timeout:30000});
-    const state=await page.evaluate(async()=>{const response=await fetch('/api/processing/state');if(!response.ok())throw Error('Processing state read failed.');return response.json();});
+    const state=await page.evaluate(async()=>{const response=await fetch('/api/processing/state');if(!response.ok)throw Error('Processing state read failed.');return response.json();});
     const processing=state.processing??state;
     const deployment=processing.deployments.find(value=>(value.dialect??value.deployment?.dialect)==='cirrus-state');
     requireValue(deployment,'The original workspace must retain its configured Cirrus deployment.');

@@ -8,23 +8,26 @@ const title=item=>(item.summary.method??'POST')+' '+new URL(item.summary.url).pa
 
 export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refreshState}) {
   let state={requests:[]},selected=null,busy=false,generation=0,reviewChanged=false;
+  const hostChanged=()=>Boolean(selected?.review&&!selected.prepared&&!selected.preparing&&selected.review.settingsSha256!==state.operatorSettingsSha256);
   function disabled() {
     const form=$('#request-review-form');
-    for(const element of form.elements)element.disabled=busy||!state.operator||Boolean(selected?.prepared)||Boolean(selected?.expired);
+    for(const element of form.elements)element.disabled=busy||!state.operator||Boolean(selected?.prepared)||Boolean(selected?.preparing)||Boolean(selected?.expired);
     $('#upload-request').disabled=busy;
-    $('#prepare-request').disabled=busy||reviewChanged||!selected?.review||Boolean(selected?.prepared)||Boolean(selected?.expired)||!state.operator;
+    $('#prepare-request').disabled=busy||reviewChanged||hostChanged()||!selected?.review||Boolean(selected?.prepared)||Boolean(selected?.expired)||!state.operator&&!selected?.preparing;
     $('#add-request-to-plan').disabled=busy||!selected?.prepared;
+    $('#request-review-changed').hidden=!selected?.review||!(reviewChanged||hostChanged());
   }
   function renderList() {
     $('#request-size-limit').textContent=Number.isSafeInteger(state.maxHandoffBytes)?'Complete packet limit: '+state.maxHandoffBytes.toLocaleString()+' bytes.':'';
     $('#request-count').textContent=String(state.requests.length);
     $('#received-request-list').innerHTML=state.requests.length?state.requests.map(item=>
-      `<button class="request-row ${item.id===selected?.id?'selected':''}" data-request="${item.id}"><span><strong>${escape(title(item))}</strong><small>${escape(item.summary.url)}</small></span><span class="badge">${item.prepared?'Ready':item.summary.expiresAt!=null&&item.summary.expiresAt<=Date.now()?'Expired':'Needs review'}</span></button>`).join(''):
+      `<button class="request-row ${item.id===selected?.id?'selected':''}" data-request="${item.id}"><span><strong>${escape(title(item))}</strong><small>${escape(item.summary.url)}</small></span><span class="badge">${item.prepared?'Ready':item.preparing?'Resume local setup':item.summary.expiresAt!=null&&item.summary.expiresAt<=Date.now()?'Expired':'Needs review'}</span></button>`).join(''):
       '<p class="muted">Uploaded merchant requests are retained here for review and reopening.</p>';
     const op=state.operator;
     $('#request-operator').innerHTML=op?
       `<strong>Local buyer · ${escape(op.actor)} / ${escape(op.service)}</strong><p class="wrap">Payer <code>${escape(op.payer)}</code></p><p class="muted">Maximum per prepared request: ${escape(op.maxTotalAtomic)} total atomic · ${escape(op.maxDailyAtomic)} per UTC day. ${op.signerSource==='ENVIRONMENT'?'Wallet key environment: '+escape(op.walletKeyEnvironment)+'.':'Uses the locally declared signer provider.'}</p>`:
-      `<strong>Local operator settings ${state.presetError?'need attention':'required for preparation'}</strong><p>${state.presetError?escape(readable(state.presetError))+'.':'Start this workspace with --operator-settings pointing to your private buyer settings file. Uploaded requests remain available here.'}</p>`;
+      `<strong>Local operator settings ${state.presetError?'need attention':'required for preparation'}</strong><p>${state.presetError?escape(readable(state.presetError))+'.':'Open Local buyer setup to save this host’s payer, signing reference and limits. Uploaded requests remain available here.'}</p>`;
+    $('#request-operator').innerHTML+='<button type="button" data-operator-setup>Local buyer setup</button>';
     $('#request-errors').textContent=state.errors?.length?state.errors.map(item=>readable(item.code)).join('; '):'';
   }
   function renderSelected() {
@@ -32,7 +35,7 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     if(!selected){disabled();return;}
     const item=selected,view=item.view,review=item.review;
     $('#request-filename').textContent=title(item);
-    $('#request-state').textContent=item.prepared?'Ready to add':item.expired?'Ticket expired':review?'Reviewed':'Select payment option';
+    $('#request-state').textContent=item.prepared?'Ready to add':item.expired?'Ticket expired':item.preparing?'Resume local setup':review?'Reviewed':'Select payment option';
     $('#request-url').textContent=view.method+' '+view.sellerUrl;
     $('#request-summary').innerHTML=`<div><dt>Stable intent</dt><dd>${escape(view.intentId)}</dd></div><div><dt>Operation ticket / expiry</dt><dd>${escape(view.operationTicket?when(view.operationTicket.expiresAt):'No operation ticket')}</dd></div><div><dt>Exact request body</dt><dd>${view.bodyPresent===false?'Omitted as declared by the source':view.bodyBytes.toLocaleString()+' bytes'}</dd></div><div><dt>Forwarded request headers</dt><dd>${view.requestHeaderNames.length}</dd></div>`;
     $('#request-body-download').href=`/files/requests/${item.id}/body`;
@@ -49,6 +52,7 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     $('#request-payment-review').hidden=!review;
     $('#request-payment-review').innerHTML=review?`<h3>Reviewed local purchase settings</h3><dl class="detail-grid"><div><dt>Recipient</dt><dd><code>${escape(review.acceptedTerms.payTo)}</code></dd></div><div><dt>Network</dt><dd>${escape(review.acceptedTerms.network)}</dd></div><div><dt>Exact asset</dt><dd><code>${escape(review.acceptedTerms.asset)}</code></dd></div><div><dt>Request ceiling</dt><dd>${escape(review.acceptedTerms.maxAtomic)} atomic</dd></div><div><dt>Total / daily budget</dt><dd>${escape(review.totalAtomic)} / ${escape(review.dailyAtomic)} atomic</dd></div><div><dt>Local payer</dt><dd><code>${escape(review.operator.payer)}</code></dd></div></dl><p class="muted">Revision ${review.revision} · ${escape(when(review.reviewedAt))}</p>`:'';
     $('#request-review-changed').hidden=true;
+    $('#prepare-request').textContent=item.preparing?'Resume local buyer setup':'Prepare local buyer';
     $('#prepared-request').hidden=!item.prepared;
     $('#prepared-request-name').textContent=item.prepared?.configName??'';
     $('#request-expired').hidden=!item.expired;
@@ -97,10 +101,10 @@ export function createHandoffIntakeUI({request,notice,openPanel,onPrepared,refre
     if(!selected||$('#request-option').value==='')throw new Error('Choose a payment option before review.');
     selected=await request('/api/requests/review',{id:selected.id,acceptIndex:Number($('#request-option').value),
       totalAtomic:$('#request-total').value,dailyAtomic:$('#request-daily').value});
-    renderSelected();notice('Review saved. Prepare the local buyer to add this request to an acquisition plan.');
+    await refreshState();renderSelected();notice('Review saved. Prepare the local buyer to add this request to an acquisition plan.');
   });});
   $('#prepare-request').addEventListener('click',()=>action(async()=>{
-    if(!selected?.review||reviewChanged)throw new Error('Save the current request review first.');
+    if(!selected?.review||reviewChanged||hostChanged())throw new Error('Save the current request review first.');
     notice('Preparing the local buyer and its retained spending ledger…');
     await request('/api/requests/prepare',{id:selected.id,reviewSha256:selected.review.reviewSha256});
     selected=await request('/api/requests/'+selected.id);await refreshState();renderSelected();

@@ -9,6 +9,7 @@ import {initializationDirectory as directory, initializationBytes as bytes,
 import {need,InputError} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs';
 import {createSavedFileReader} from './native-file.mjs';
 import {createNativeWorkbookActions} from './native-analysis-workbooks.mjs';
+import {createNativeSourceActions} from './native-analysis-sources.mjs';
 import {createNativeArchiveActions} from './native-analysis-archives.mjs';
 
 const SCHEMA='stellar-forge.mcp-native-analysis.v1';
@@ -111,11 +112,12 @@ function pageRows(record,args,key='rows'){
 }
 
 /** The host registers a real running original service; no launch URL/token is retained here. */
-export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>false}={}){
+export function createNativeAnalysis({manifest,completedDataset,completedObject,completedResponse,isClosed=()=>false}={}){
   need(object(manifest),'MCP_ANALYSIS_NATIVE_WORKSPACE_REQUIRED');
   const root=join(localPath(manifest.directory),'analysis'),aliases=join(root,'workspaces');
   const shutdown=new AbortController(),reads=createSavedFileReader(),pending=new Set();
   const workbooks=createNativeWorkbookActions({reads,parse});
+  const sources=createNativeSourceActions({manifest,completedObject,completedResponse});
   const archives=createNativeArchiveActions({reads,parse});
   let closed=false;
   const available=()=>need(!closed&&!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
@@ -290,6 +292,7 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     else if(op==='cancel-query-export')value=publicJob(await post('/api/query-exports/'+id(body.id)+'/cancel',{}));
     else if(op==='query-export-file')value=await queryExportFile(record,connection,body,context.signal);
     else if(op==='file')value=await file(record,connection,body,context.signal);
+    else if(sources.handles(op))value=await sources.call({operation:op,body,post});
     else if(workbooks.handles(op))value=await workbooks.call({operation:op,body,record,state:connection.state,get,post});
     else if(archives.handles(op))value=await archives.call({operation:op,body,record,state:connection.state,get,post});
     else fail('MCP_ANALYSIS_OPERATION_UNKNOWN');
@@ -304,3 +307,4 @@ export function createNativeAnalysis({manifest,completedDataset,isClosed=()=>fal
     // The original analysis service belongs to its host/browser. It keeps its own jobs and lease.
   }};
 }
+
