@@ -184,6 +184,7 @@ A reviewed successor uses the same original version store, expected current snap
 node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/cli.mjs buyer receive \
   --package /absolute/private/directus-package \
   --session /absolute/private/customer-session \
+  --workspace /absolute/private/directus-workspace \
   --out /absolute/private/customer-delivery \
   --include-source-captures
 ~~~
@@ -194,7 +195,13 @@ Source captures are included when explicitly selected. The complete source optio
 
 ## Transfer a complete editable project
 
-**Download project** produces a complete SQLite workspace containing original source bytes, editions, reviews, comparisons, publication records, operations and native events. **Receive project** validates those records into the receiver's own SQLite schema, reproduces each saved projection from its original source, and opens the same workspace identity.
+**Download project** produces one SQLite file containing the collection workspace and its saved publishing and customer files. The project carries original source captures, editions, named reviews, comparisons, publication records, operations and native events. It also carries every prepared merchant package and its source files, saved buyer configurations, complete customer data rooms, and the native publisher's retained dataset generations and selected edition.
+
+Merchant preparation saves the package into its open workspace automatically. Browser buyer preparation and delivery receiving save their results into that same project. For JavaScript, pass the open `workspace` to `prepareDirectusBuyer` and `receiveDirectusBuyer`; for the CLI, add `--workspace` to those buyer commands.
+
+**Receive project** validates the original records, source projections, approved package bindings, complete data-room files and dataset generations. It rebuilds local merchant execution paths inside the received project's private directory, preserving the original package bytes alongside the new local package. Packages that shared a version store continue to share one received store. The original dataset engine opens that store and verifies its selected generation.
+
+In **Saved publishing and customer files**, choose **Use publisher** to start a saved merchant with its retained history, **Download configuration** to retrieve a saved buyer configuration, or **Inspect delivery** to reopen a complete customer data room. These files and controls remain available after restarting the operator.
 
 The same transfer works through the CLI:
 
@@ -209,9 +216,11 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/cli.mjs receive \
   --workspace /absolute/private/received-directus-workspace
 ~~~
 
-A repeated receiving operation opens the original received project, including later edits. Publication of the received database occurs only after the complete original data validates.
+A repeated receiving operation opens the same received project, including later edits and later publisher selections. Re-exporting the received project captures its current dataset history; reopening its original incoming file keeps those later local changes. The received database becomes available after its original records validate, and the operator opens it after its publishing and customer files are restored.
 
 ## Whole native customer run
+
+[Native setup](NATIVE_SETUP.md) installs the original Directus 12.5.0 application, prepares an isolated version-enabled collection with varied field values, and runs the complete customer and browser exercises in one owned operation. It supports a retained SDK source, Node, Playwright and Chromium installation so an existing equipped machine can run the same application.
 
 `native-customer.mjs` is the reusable customer exercise for an actual Directus 12.5.0 service. Its input names the original operation, an isolated collection with at least three rows, one existing item to change, exact patch JSON, selected fields, attribution/distribution basis, and the original public payment terms.
 
@@ -221,11 +230,11 @@ node stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-customer.mjs
   --out /absolute/private/directus-customer-run
 ~~~
 
-The run captures the original native collection, creates and saves a native content version, compares and promotes it, reads the returned item, and captures the edited collection. It builds and reviews both dataset editions, prepares the merchant, and starts an original SF88 page chain. It publishes the successor while that customer is still acquiring the earlier snapshot, completes the original snapshot, receives its complete data room, transfers the editable workspace, restarts the seller and selects the retained earlier edition.
+The run captures the original native collection, creates and saves a native content version, compares and promotes it, reads the returned item, and captures the edited collection. It builds and reviews both dataset editions, prepares the merchant, and starts an original SF88 page chain. It publishes the successor while that customer is still acquiring the earlier snapshot, completes the original snapshot, receives its complete data room, and transfers the full editable project. It starts the received publisher at its new host paths, selects the retained earlier edition, re-exports that changed project, and reopens the original incoming file to check that the later selection survives. It also opens the changed export as another complete project, then restarts the original seller and selects its retained earlier edition.
 
 For the dataset acquisition portion, this exercise exposes the running version store through its original free HTTP response path. SF31/SF88 preserve the native `NO_PAYMENT_REQUIRED` pages, response files and acquisition history. The resulting record identifies this mode and its observed HTTP requests.
 
-A completed run produces `CUSTOMER_RESULT.json`, the customer data room, and `Directus_Complete_Project.sqlite3`. Repeating its original input reopens the completed delivery; an interrupted run continues the same native and workspace operation IDs.
+A completed run produces `CUSTOMER_RESULT.json`, the customer data room, `Directus_Complete_Project.sqlite3`, and `Directus_Received_Advanced_Project.sqlite3`. Repeating its original input reopens the completed delivery; an interrupted run continues the same native and workspace operation IDs.
 
 ## Source contract
 
@@ -246,4 +255,4 @@ After the native customer completes, `native-browser.mjs` receives its SQLite pr
 node native-browser.mjs --input /private/directus-browser-input.json --out /private/directus-browser
 ~~~
 
-The walk uses the actual UI for native draft creation, exact patch text, comparison and promotion; collection capture; field selection and edition review; dataset query; merchant offer and buyer preparation; completed original customer receiving; project download, receiving and restart. It saves six desktop/mobile viewport images, including 390-pixel keyboard navigation, plus the received editable project and `BROWSER_RESULT.json`. All browser and operator resources close before the native job releases its original Directus service.
+The walk uses the actual UI for native draft creation, exact patch text, comparison and promotion; collection capture; field selection and edition review; dataset query; merchant offer and buyer preparation; completed original customer receiving; project download, receiving and restart. It also starts a saved publisher from the received project, downloads its saved buyer configuration, and inspects its original customer delivery through the actual receiving controls. It saves eight desktop/mobile viewport images, including 390-pixel keyboard navigation and the saved publishing tables, plus the received editable project and `BROWSER_RESULT.json`. All browser and operator resources close before the native job releases its original Directus service.

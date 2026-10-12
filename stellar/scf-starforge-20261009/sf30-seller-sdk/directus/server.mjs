@@ -185,8 +185,8 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
           const {action,...input}=await body(req,2*1024*1024);
           const result=await scoped(req,async()=>{
             if(action==='offer')return reviewDirectusBuyer(input);
-            if(action==='prepare')return prepareDirectusBuyer(input);
-            if(action==='receive')return receiveDirectusBuyer(input);
+            if(action==='prepare')return prepareDirectusBuyer({...input,workspace});
+            if(action==='receive')return receiveDirectusBuyer({...input,workspace});
             if(action==='inspect')return inspectDirectusDelivery(input.directory);
             throw fault('DIRECTUS_BUYER_ACTION','Choose offer, prepare, receive or inspect.');
           });
