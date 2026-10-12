@@ -1,7 +1,6 @@
 // MIT. USAspending in the original installed Applications lifecycle.
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { absolute, need, plain, digest, json, canonical } from './storage.mjs';
 
 const SOURCE='stellar/scf-starforge-20261009/sf30-seller-sdk/usaspending';
@@ -31,6 +30,7 @@ export async function prepareUSASpendingApplication(settings,{inputPath,runtimeD
   need(typeof inputPath==='function','APPLICATION_USASPENDING_INPUT_READER_REQUIRED');
   const workspace=await inputPath(absolute(settings.workspaceDirectory),'directory',true,true);
   const receiving=settings.receivingRoot?await inputPath(absolute(settings.receivingRoot),'directory',true,true):null;
+  const { inspectMerchantRuntime }=await import('../../sf46-release/runtime-package.mjs');
   const runtime=await inspectMerchantRuntime(absolute(runtimeDirectory),{load:false});
   const native=await import(pathToFileURL(join(runtime.sourceRoot,SOURCE,'application.mjs')).href);
   need(typeof native.prepareUSASpendingSelection==='function'&&
