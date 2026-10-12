@@ -90,12 +90,15 @@ function calendarDay(value) {
 }
 
 export async function openWorkspace({config, directory, snapshot, history:historyFile, opsUrl, nativeOutbox,
-  sourcePackage, releaseStore, releaseRuntime = {}} = {}) {
+  sourcePackage, releaseStore, releaseRuntime = {}, expectedConfigSha256} = {}) {
   if (!isAbsolute(directory ?? '') || resolve(directory) !== directory || directory === '/')
     throw fault('ABSOLUTE_WORKSPACE_REQUIRED', 'Workspace must be an absolute, normalized private directory.');
   if (!config || !(snapshot || historyFile || opsUrl) || (opsUrl && (snapshot || historyFile)))
     throw fault('SOURCE_REQUIRED', 'Supply a seller configuration and original snapshot/history files, or one live operations URL.');
   const configPath = resolve(config);
+  if (expectedConfigSha256 !== undefined &&
+      (typeof expectedConfigSha256 !== 'string' || !REVISION.test(expectedConfigSha256)))
+    throw fault('INVALID_CONFIG_SHA256', 'Use the reviewed seller configuration SHA-256.');
   if (releaseStore && !sourcePackage)
     throw fault('RELEASE_SOURCE_REQUIRED', 'Configure the original API merchant source package before staging price releases.');
   if (!releaseRuntime || typeof releaseRuntime !== 'object' || Array.isArray(releaseRuntime))
@@ -147,7 +150,12 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     const source = await readJson(configPath, 'seller config');
     return {...source, routes:merchantRoutes(source.value)};
   }
-  await seller();
+  const openedSeller = await seller();
+  if (expectedConfigSha256 !== undefined && openedSeller.hash !== expectedConfigSha256)
+    throw fault('SELLER_CHANGED', 'Seller configuration changed after application review. Review its current bytes before starting.',409);
+  // This identity belongs to the initial original read. Later source refreshes
+  // keep the same seller()/save semantics and do not inherit a permanent pin.
+  const launch = Object.freeze({state:directory,configPath,configSha256:openedSeller.hash});
   await privateDirectory(directory, true);
   for (const name of ['versions','successors','pending','decisions','decision-successors','staged-releases'])
     await privateDirectory(join(directory,name), true);
@@ -549,6 +557,6 @@ export async function openWorkspace({config, directory, snapshot, history:histor
     } finally { await rm(pending,{force:true}).catch(()=>{}); }
     return result;
   }
-  return {state,preview,save,download,loadVersion,compare,planningSource,repricingSource,previewRepricing,
+  return {launch,state,preview,save,download,loadVersion,compare,planningSource,repricingSource,previewRepricing,
     saveRepricing,downloadRepricing,stageRepricing};
 }

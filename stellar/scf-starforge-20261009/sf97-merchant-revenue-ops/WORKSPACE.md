@@ -413,6 +413,43 @@ telemetry, external fonts or libraries are used.
 
 ## Integration interface
 
+### Managed application launch
+
+The existing `revenue-workspace` command accepts optional
+`--expected-config-sha256 SHA256`. A managed application passes the lowercase
+SHA-256 of the exact seller file reviewed before **Start**. The original model
+compares it with its initial `readJson` result before creating the private state
+or opening a listener. Changed seller bytes fail with `SELLER_CHANGED`; an
+invalid hash fails with `INVALID_CONFIG_SHA256`. Review the current seller source
+and start again. Direct launches can omit this option.
+
+The original CLI exports `PRICING_WORKSPACE_LAUNCH_SCHEMA` so a managed receiver
+can identify this contract in its selected runtime before offering **Start**.
+The command prints one JSON startup object after the original listener is ready:
+
+| Key | Original launch value |
+| --- | --- |
+| `schema` | `stellar-forge.merchant-pricing-workspace-launch.v1` |
+| `status` | `MERCHANT_PRICING_WORKSPACE_READY` |
+| `state` | The validated absolute, normalized private workspace directory. |
+| `configPath` | The resolved seller path used by the original reader. |
+| `configSha256` | SHA-256 of the exact seller bytes from that initial read. |
+| `pid` | The actual pricing process ID. |
+| `url` | The assigned original HTTP loopback workspace URL. |
+| `planningUrl` | The same listener's `/planning` page. |
+
+A receiver binds the startup object to its reviewed path/hash, chosen state and
+requested port; port zero accepts the actual port assigned by the listener.
+The embedding model exposes the same immutable path/hash identity as
+`model.launch`. The initial hash check does not pin later source refreshes.
+Every preview and save continues to use the original seller and observation
+bindings. Startup does not capture the snapshot or live history, so an existing
+workspace can reopen its saved reviews and comparisons while that source is
+unavailable. SIGINT or SIGTERM closes the original listener and drains its
+existing active requests through the maintained server.
+
+### Original APIs
+
 - Source command: `sf97-merchant-revenue-ops/workspace/cli.mjs`.
 - Distribution alias: `revenue-workspace`; include the complete original
   `sf97-merchant-revenue-ops` component in the maintained distribution manifest.
@@ -421,8 +458,8 @@ telemetry, external fonts or libraries are used.
   `liveSnapshot(url)` and `createReport(argv)`. The original CLI `main(argv)`
   retains its JSON status output and also returns that result.
 - Embedding: `startWorkspace({config, directory, snapshot, history, opsUrl,
-  nativeOutbox, sourcePackage, releaseStore, releaseRuntime, port})` returns
-  `{url, server, model, close}`. Select exactly one
+  nativeOutbox, sourcePackage, releaseStore, releaseRuntime, expectedConfigSha256,
+  port})` returns `{url, planningUrl, server, model, planning, close}`. Select exactly one
   live `opsUrl`, or one or both original `snapshot` and `history` file paths.
 - `model.state(selection)` selects the original source per call. Selection is
   `{kind:'SESSION'|'DURABLE_HISTORY', from:null|string, to:null|string,
