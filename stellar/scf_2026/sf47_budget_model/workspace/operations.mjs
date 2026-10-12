@@ -194,8 +194,13 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
   root.addEventListener('click',event=>{
     const tab=event.target.closest('[data-ops-tab]');if(tab&&!view.busy){view.tab=tab.dataset.opsTab;render();return;}
     const target=event.target.closest('[data-ops-action]');if(!target)return;
+    const action=target.dataset.opsAction;
+    // Open native pickers in the click gesture before busy state disables inputs.
+    if(action==='import'||action==='intake'){
+      if(view.busy||!available())return;
+      const input=$(action==='intake'?'[data-ops-intake]':'[data-ops-import]');input.value='';input.click();return;
+    }
     run(async()=>{
-      const action=target.dataset.opsAction;
       if(action==='cancel'){$('dialog').close();return;}
       if(action==='new-case')return showForm('new-case',{}, {title:'Open operations from saved plan'});
       if(action==='refresh')return refresh();
@@ -204,7 +209,6 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
       if(action==='transition')return showForm('transition',{}, {command:target.dataset.command,id:target.dataset.id,title:title(target.dataset.command.replace('.',' '))});
       if(action==='freeze-review'||action==='reopen')return showForm(action,{}, {title:title(action.replace('-',' '))});
       if(action==='close-review')return showForm('close-review',{}, {review:view.current.reviews.find(row=>row.id===target.dataset.id),title:'Close on this exact review'});
-      if(action==='import'||action==='intake'){const input=$(action==='intake'?'[data-ops-intake]':'[data-ops-import]');input.value='';input.click();return;}
       if(action==='add-line'){$('[data-ops-lines]').insertAdjacentHTML('beforeend',invoiceLines([{}]));return;}
       if(action==='remove-line'){target.closest('[data-ops-line]').remove();return;}
       if(action==='add-allocation'){if(!view.current.records.invoices.length)throw new Error('Record the original invoice before allocating a payment.');$('[data-ops-allocations]').insertAdjacentHTML('beforeend',allocation());return;}

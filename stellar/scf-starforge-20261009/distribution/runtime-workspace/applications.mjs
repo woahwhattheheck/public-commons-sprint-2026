@@ -1,4 +1,5 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
+import { readDistributionSpecification } from '../specification.mjs';
 import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
@@ -23,6 +24,7 @@ import { pricingApplication, validatePricingSelection, preparePricingApplication
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
+import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
@@ -58,6 +60,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   n8nApplication(common),
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
+  apiPassWorkspaceApplication(common),
   blockscoutApplication(common),
   mppApplication(common),
   ndjsonApplication(common),
@@ -223,7 +226,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -257,6 +260,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'sheets-authoring') {
     const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'api-pass-customer') {
+    const original = await prepareApiPassWorkspaceApplication(settings, { runtimeDirectory, inputPath, selectedExecutable });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    apiPassWorkspace = original.identity;
   } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
     const selected = await prepareEventFeedApplication(type.id, settings, {
       ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
@@ -441,6 +448,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
     ...(mppBinding ? { mppBinding } : {}),
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
@@ -545,7 +553,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
   const type = applicationType(kind), settings = normalizeSettings(type, input);
   need(typeof label === 'string' && label.trim() && label.length <= 120, 'APPLICATION_LABEL_REQUIRED');
   const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false });
-  const spec = await readJSON(join(runtime.sourceRoot, 'stellar/scf-starforge-20261009/distribution/distribution.json'));
+  const { spec } = await readDistributionSpecification({ sourceRoot: runtime.sourceRoot });
   need(type.python || Object.hasOwn(spec.commands ?? {}, type.command), 'APPLICATION_NOT_IN_RUNTIME',
     'This selected runtime does not include ' + type.command + '. Choose a runtime containing that original command.');
   if (type.requiredSource) await regular(join(runtime.sourceRoot, type.requiredSource), 4 * 1024 * 1024).catch(() =>
