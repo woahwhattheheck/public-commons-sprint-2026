@@ -6,7 +6,7 @@ const $=id=>document.getElementById(id), API='/api/supplier-orders';
 const clone=value=>JSON.parse(JSON.stringify(value)), json=value=>JSON.stringify(value,null,2);
 const encoded=value=>encodeURIComponent(String(value)), PAGE=30;
 const SESSION='supplier-orders:'+location.origin;
-const state={token:null,workspace:null,orders:[],orderTotal:0,orderOffset:0,order:null,documents:[],documentTotal:0,documentOffset:0,document:null,draft:null,working:null,lineIndex:null,dirty:false,prepared:null,request:null,requestFile:null,busy:false,editorGeneration:0,tab:'lines',refreshSequence:0};
+const state={token:null,workspace:null,orders:[],orderTotal:0,orderOffset:0,order:null,documents:[],documentTotal:0,documentOffset:0,document:null,drafts:[],draftTotal:0,draftOffset:0,draftScope:null,draftSequence:0,orderSequence:0,draft:null,working:null,lineIndex:null,dirty:false,prepared:null,request:null,requestFile:null,busy:false,editorGeneration:0,editorIdentity:null,tab:'lines',refreshSequence:0};
 const hashes=new WeakMap();
 const labels={ORDER:'Order',ORDERRESPONSE:'Confirmation',DISPATCHNOTIFICATION:'Dispatch',INVOICE:'Invoice'};
 function node(tag,text,css){const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(css)n.className=css;return n;}
@@ -31,7 +31,7 @@ async function api(path,{method='GET',body,signal}={}){return (await response(pa
 function originalRequest(kind,path,body,input=null){
   if(state.request){showRequest();throw new Error('Continue the existing '+state.request.kind+' request before starting another write.');}
   const requestId='supplier-orders-'+crypto.randomUUID(), selected={...clone(body),requestId};
-  const retained={version:1,requestId,kind,path,body:selected,input:input?clone(input):null,editorGeneration:kind.startsWith('draft-')?state.editorGeneration:null,createdAt:new Date().toISOString(),lastError:null};
+  const retained={version:1,requestId,kind,path,body:selected,input:input?clone(input):null,editorGeneration:kind.startsWith('draft-')?state.editorGeneration:null,editorIdentity:kind.startsWith('draft-')?state.editorIdentity:null,createdAt:new Date().toISOString(),lastError:null};
   state.request=retained;
   if(!privateStorage('request',JSON.stringify(retained)))message('This original request is retained in this open tab. Keep the tab open until its response is received.');
   return retained;
@@ -88,8 +88,9 @@ async function refresh({preserveEditor=false}={}){
   const sequence=++state.refreshSequence;const [workspace,page]=await Promise.all([api('/state'),api(query('/orders',{query:$('order-query').value,status:$('order-status').value,offset:state.orderOffset,limit:PAGE}))]);if(sequence!==state.refreshSequence)return;
   state.workspace=workspace;state.orders=orderRows(page);state.orderTotal=page.total??state.orders.length;
   $('workspace-label').textContent=workspace.title??workspace.directory??workspace.id??'Private supplier-order workspace';
-  renderOrders();renderDraftList();
+  renderOrders();
   if(state.order){const current=await api('/orders/'+encoded(state.order.orderId));if(sequence!==state.refreshSequence)return;state.order=current;renderOrder();await loadDocuments();}
+  await loadDrafts();
   if(!preserveEditor&&state.draft?.id&&!state.dirty){const current=await api('/drafts/'+encoded(state.draft.id));openEditor(current);}
 }
 function renderOrders(){
@@ -103,7 +104,7 @@ function renderOrders(){
   $('orders-page').textContent=state.orderTotal?(state.orderOffset+1)+'–'+Math.min(state.orderTotal,state.orderOffset+state.orders.length)+' of '+state.orderTotal:'0 orders';
   $('orders-previous').disabled=state.orderOffset===0;$('orders-next').disabled=state.orderOffset+state.orders.length>=state.orderTotal;
 }
-async function selectOrder(id){state.order=await api('/orders/'+encoded(id));state.document=null;state.documentOffset=0;renderOrders();renderOrder();await loadDocuments();}
+async function selectOrder(id){const sequence=++state.orderSequence,order=await api('/orders/'+encoded(id));if(sequence!==state.orderSequence)return;state.order=order;state.document=null;state.documentOffset=0;state.draftOffset=0;state.draftScope=null;renderOrders();renderOrder();await Promise.all([loadDocuments(),loadDrafts()]);}
 function renderOrder(){
   const order=state.order;shown('selected-order',Boolean(order));shown('no-order',!order);if(!order)return;
   $('order-title').textContent=order.orderId;$('order-subtitle').textContent='Current revision '+order.revision+(order.header?.date?' · '+order.header.date:'');$('order-state').textContent=order.status.replaceAll('_',' ');
@@ -135,10 +136,18 @@ async function selectDocument(id){
   shown('document-selection',Boolean(state.order)&&!currentSelections().has(id));$('document-copy-draft').disabled=row.kind==='ORDER';shown('document-detail',true);selectTab('documents');
 }
 function selectTab(name){state.tab=name;for(const button of document.querySelectorAll('[data-tab]')){const active=button.dataset.tab===name;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));shown('tab-'+button.dataset.tab,active);}}
+async function loadDrafts(){
+  const sequence=++state.draftSequence,orderId=state.order?.orderId??null,offset=state.draftOffset;
+  const page=await api(query('/drafts',{orderId,offset,limit:PAGE}));
+  if(sequence!==state.draftSequence||orderId!==(state.order?.orderId??null)||offset!==state.draftOffset)return;
+  state.drafts=page.items??[];state.draftTotal=page.total??state.drafts.length;state.draftScope=orderId;renderDraftList();
+}
 function renderDraftList(){
-  const list=clear($('draft-list'));let drafts=state.workspace?.drafts??[];if(state.order)drafts=drafts.filter(row=>row.orderIds?.includes(state.order.orderId));
-  if(!drafts.length){list.append(node('p','No saved working drafts in this selection.','empty'));return;}
+  const list=clear($('draft-list')),current=state.draftScope===(state.order?.orderId??null),drafts=current?state.drafts:[];
+  if(!drafts.length)list.append(node('p',current?'No saved working drafts in this selection.':'Opening saved working drafts…','empty'));
   for(const row of drafts){const item=node('div',null,'draft-card');item.append(node('strong',row.title??labels[row.kind]),node('span','Revision '+row.revision+' · '+(row.updatedAt??''),'muted'),node('span',(row.orderIds??[]).join(', ')),button('Open draft',async()=>openEditor(await api('/drafts/'+encoded(row.id)))));list.append(item);}
+  $('drafts-page').textContent=current&&state.draftTotal?(state.draftOffset+1)+'–'+Math.min(state.draftTotal,state.draftOffset+drafts.length)+' of '+state.draftTotal:'0 drafts';
+  $('drafts-previous').disabled=!current||state.draftOffset===0;$('drafts-next').disabled=!current||state.draftOffset+drafts.length>=state.draftTotal;
 }
 
 function setValue(id,value){$(id).value=value===null||value===undefined?'':String(value);}
@@ -148,9 +157,9 @@ function optionalText(target,key,value){if(value==='')delete target[key];else ta
 function markDirty(){if(!state.working)return;state.editorGeneration++;state.dirty=true;$('draft-save-state').textContent='Edited working document · save its next revision';$('prepare-draft').disabled=true;shown('prepared-result',false);}
 function roundPolicy(){const mode=$('draft-rounding-mode').value;if(!mode)return null;const scale=Number($('draft-rounding-scale').value);if(!Number.isSafeInteger(scale)||scale<0||scale>100)throw new Error('Select 0–100 decimal places for explicit rounding.');return{scale,mode,taxBasis:$('draft-tax-basis').value};}
 function openEditor(draft,{accepted=false}={}){
-  if(!accepted&&state.busy&&state.request?.kind.startsWith('draft-'))throw new Error('Finish the original draft request before replacing its working document.');
+  if(!accepted&&state.request?.kind.startsWith('draft-'))throw new Error('Finish the original draft request before replacing its working document.');
   if(!accepted&&state.dirty&&!confirm('Replace the current unsaved working document?'))return false;
-  state.editorGeneration++;shown('draft-conflict',false);
+  state.editorGeneration++;state.editorIdentity=crypto.randomUUID();shown('draft-conflict',false);
   state.draft=clone(draft);state.working=clone(draft.document);state.dirty=false;state.lineIndex=null;state.prepared=null;
   const d=state.working,h=d.header;shown('draft-editor',true);shown('draft-line-editor',false);shown('prepared-result',false);
   $('draft-title').textContent=draft.title??((labels[d.kind]??d.kind)+' '+(d.documentId||'working document'));
@@ -212,14 +221,14 @@ async function makeDraft(){
 }
 async function copyDocumentToDraft(){
   const row=state.document;if(!row||row.kind==='ORDER')return;
-  if(state.dirty&&!confirm('Replace the unsaved working document in this tab?'))return;
   const draft=await api('/drafts/new',{method:'POST',body:{kind:row.kind,orderIds:row.orderIds}});
   draft.document=clone(row.document);draft.reason='Working revision of original '+row.documentId+' source '+row.source.sha256;if(openEditor(draft)!==false)markDirty();
 }
 async function restoreLines(){
-  if(!state.draft)return;collectDraft();
+  if(!state.draft)return;collectDraft();const generation=state.editorGeneration;
   const selected=await api('/drafts/new',{method:'POST',body:{kind:state.draft.kind,orderIds:state.draft.orderIds}});
-  state.working.items=clone(selected.document.items);state.draft.orderRevisions=clone(selected.orderRevisions);state.draft.sourceOrderDocuments=clone(selected.sourceOrderDocuments??{});
+  if(generation!==state.editorGeneration)throw new Error('The working document changed while current order lines were opening. Your edits are retained; select Restore again when ready.');
+  state.working.items=clone(selected.document.items);state.draft.orderRevisions=clone(selected.orderRevisions);state.draft.orderStateSha256=clone(selected.orderStateSha256);state.draft.sourceOrderDocuments=clone(selected.sourceOrderDocuments??[]);
   state.lineIndex=null;shown('draft-line-editor',false);$('draft-summary').value=json({...state.working.summary,totalItems:String(state.working.items.length)});
   markDirty();renderDraftLines();$('draft-complete-json').value=json(state.working);
 }
@@ -232,7 +241,7 @@ function removeLine(){if(state.lineIndex===null)return;state.working.items.splic
 function useCompleteJSON(){
   const selected=parseValue('draft-complete-json');
   if(selected.schema!=='stellar-forge.supplier-order-document.v1'||selected.kind!==state.draft.kind||!Array.isArray(selected.items)||!selected.header||!selected.summary)throw new Error('Retain the complete selected document schema, kind, header, items and summary.');
-  const draft={...clone(state.draft),document:selected,reason:$('draft-reason').value,roundingPolicy:roundPolicy()};openEditor(draft);markDirty();
+  const draft={...clone(state.draft),document:selected,reason:$('draft-reason').value,roundingPolicy:roundPolicy()};if(openEditor(draft)!==false)markDirty();
 }
 function numericText(value,label){const result=decimal(value);if(result===null)throw new Error(label+' is a nonterminating decimal. Select the actual agreed rounding policy before calculating its XML value.');return result;}
 function calculateAmounts(){
@@ -253,7 +262,7 @@ function calculateAmounts(){
 }
 async function saveDraft(){
   const document=collectDraft(),reason=$('draft-reason').value;if(!reason.trim())throw new Error('Describe the reason for this complete document revision.');
-  const body={kind:state.draft.kind,orderIds:clone(state.draft.orderIds),document,reason,roundingPolicy:roundPolicy(),expectedOrderRevisions:clone(state.draft.orderRevisions??{}),sourceOrderDocuments:clone(state.draft.sourceOrderDocuments??{})};
+  const body={kind:state.draft.kind,orderIds:clone(state.draft.orderIds),document,reason,roundingPolicy:roundPolicy(),expectedOrderRevisions:clone(state.draft.orderRevisions??{}),expectedOrderStateSha256:clone(state.draft.orderStateSha256??{}),sourceOrderDocuments:clone(state.draft.sourceOrderDocuments??[])};
   if(state.draft.id){body.draftId=state.draft.id;body.expectedRevision=state.draft.revision;}
   return mutate('draft-save','/drafts',body);
 }
@@ -302,8 +311,8 @@ async function downloadSelectedDocument(){
   const row=state.document;if(!row)return;return downloadFile({id:row.id,name:row.source.name,bytes:row.source.bytes,sha256:row.source.sha256,mimeType:'application/xml'},'/documents/'+encoded(row.id)+'/file');
 }
 async function receiveResult(kind,result,request){
-  if(kind==='draft-save'){const draft=result.draft??(result.draftId?await api('/drafts/'+encoded(result.draftId)):null);if(!draft)throw new Error('The saved operation did not return its original draft identity.');if(request?.editorGeneration===state.editorGeneration){openEditor(draft,{accepted:true});message('Saved working document revision '+draft.revision+'.');}else{state.draft=clone(draft);state.dirty=true;$('draft-revision').textContent='Saved original revision '+draft.revision+' · newer local edits retained';$('draft-save-state').textContent='The original request is saved; newer edits remain unsaved';$('prepare-draft').disabled=true;message('Saved original request revision '+draft.revision+'. Your newer edited fields remain in the working document.');}await refresh({preserveEditor:true});return;}
-  if(kind==='draft-prepare'){const record=result.document??(result.documentId?await api('/documents/'+encoded(result.documentId)):null),file=result.file;if(!record||!file)throw new Error('The completed preparation must return its document and full file receipt.');state.prepared={record,file};properties($('prepared-metadata'),[['Document',record.documentId],['Revision',record.revision],['Prepared from working revision',request?.body.expectedRevision],['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);shown('prepared-result',true);await refresh({preserveEditor:true});message('Prepared the complete XML. Review its revision selection when it should contribute to current quantities.');return;}
+  if(kind==='draft-save'){const draft=result.draft??(result.draftId?await api('/drafts/'+encoded(result.draftId)):null);if(!draft)throw new Error('The saved operation did not return its original draft identity.');if(!state.working||request?.editorIdentity===state.editorIdentity&&request?.editorGeneration===state.editorGeneration){openEditor(draft,{accepted:true});message('Saved working document revision '+draft.revision+'.');}else if(request?.editorIdentity===state.editorIdentity){state.draft=clone(draft);state.dirty=true;$('draft-revision').textContent='Saved original revision '+draft.revision+' · newer local edits retained';$('draft-save-state').textContent='The original request is saved; newer edits remain unsaved';$('prepare-draft').disabled=true;message('Saved original request revision '+draft.revision+'. Your newer edited fields remain in the working document.');}else{message('The original request saved '+draft.id+' revision '+draft.revision+'. Your different working document remains open; use Working drafts to inspect the saved result.');}await refresh({preserveEditor:true});return;}
+  if(kind==='draft-prepare'){const record=result.document??(result.documentId?await api('/documents/'+encoded(result.documentId)):null),file=result.file;if(!record||!file)throw new Error('The completed preparation must return its document and full file receipt.');if(!state.working&&request?.body.draftId)openEditor(await api('/drafts/'+encoded(request.body.draftId)),{accepted:true});state.prepared={record,file};properties($('prepared-metadata'),[['Document',record.documentId],['Revision',record.revision],['Original working draft',request?.body.draftId??record.draftId],['Prepared from working revision',request?.body.expectedRevision??record.draftRevision],['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);shown('prepared-result',true);await refresh({preserveEditor:true});message('Prepared the complete XML. Review its revision selection when it should contribute to current quantities.');return;}
   if(kind==='package-export'){const file=result.file;if(!file)throw new Error('The completed workspace export has no retained file receipt.');const target=clear($('package-result'));properties(target,[['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);target.append(button('Download complete customer ZIP',()=>downloadFile(file)));message('The complete customer package is retained for download.');return;}
   if(kind==='source'){if($('source-dialog').open)$('source-dialog').close();await refresh({preserveEditor:true});if(result.orderIds?.length)await selectOrder(result.orderIds[0]);if(result.document?.id)await selectDocument(result.document.id);else if(result.documentId)await selectDocument(result.documentId);message('Received the original XML and retained its complete source and document revision.');return;}
   if(kind==='document-select'){const id=state.document?.id;await refresh({preserveEditor:true});if(id)await selectDocument(id);message('The selected document revision now contributes to the current order reconciliation.');return;}
@@ -327,7 +336,9 @@ $('close-document').addEventListener('click',()=>shown('document-detail',false))
 $('document-selection').addEventListener('submit',guard(selectCurrentDocument));
 $('document-download').addEventListener('click',guard(downloadSelectedDocument));
 $('document-copy-draft').addEventListener('click',guard(copyDocumentToDraft));
-$('drafts-refresh').addEventListener('click',guard(()=>refresh({preserveEditor:true})));
+$('drafts-refresh').addEventListener('click',guard(loadDrafts));
+$('drafts-previous').addEventListener('click',guard(async()=>{state.draftOffset=Math.max(0,state.draftOffset-PAGE);await loadDrafts();}));
+$('drafts-next').addEventListener('click',guard(async()=>{state.draftOffset+=PAGE;await loadDrafts();}));
 for(const [id,kind]of [['new-confirmation','ORDERRESPONSE'],['new-dispatch','DISPATCHNOTIFICATION'],['new-invoice','INVOICE']])$(id).addEventListener('click',guard(()=>showNewDraft(kind)));
 $('new-draft-form').addEventListener('submit',guard(makeDraft));
 $('draft-form').addEventListener('submit',guard(saveDraft));
@@ -343,7 +354,7 @@ $('prepare-draft').addEventListener('click',guard(prepareDraft));
 $('prepared-download').addEventListener('click',guard(()=>downloadFile(state.prepared?.file)));
 $('prepared-select').addEventListener('click',guard(async()=>{if(state.prepared?.record){await selectDocument(state.prepared.record.id);$('document-detail').scrollIntoView({block:'center',behavior:'smooth'});}}));
 $('close-draft').addEventListener('click',()=>{if(state.request?.kind.startsWith('draft')){showRequest();return;}if(state.dirty&&!confirm('Close this unsaved working document?'))return;state.working=null;state.draft=null;state.dirty=false;state.lineIndex=null;shown('draft-editor',false);});
-$('draft-conflict-restore').addEventListener('click',guard(()=>{if(!state.conflictDraft||!state.draft)return;const prior=clone(state.conflictDraft),current={...clone(state.draft),document:prior.document,reason:prior.reason,roundingPolicy:prior.roundingPolicy};openEditor(current,{accepted:true});state.conflictDraft=prior;shown('draft-conflict',true);$('draft-conflict-json').textContent=json(prior);markDirty();}));
+$('draft-conflict-restore').addEventListener('click',guard(()=>{if(!state.conflictDraft||!state.draft)return;const prior=clone(state.conflictDraft),current={...clone(state.draft),document:prior.document,reason:prior.reason,roundingPolicy:prior.roundingPolicy};if(openEditor(current)===false)return;state.conflictDraft=prior;shown('draft-conflict',true);$('draft-conflict-json').textContent=json(prior);markDirty();}));
 $('open-source').addEventListener('click',guard(openSource));
 $('source-form').addEventListener('submit',guard(receiveSource));
 $('source-file').addEventListener('change',()=>{if(state.request?.kind==='source')state.requestFile=$('source-file').files[0]??null;});

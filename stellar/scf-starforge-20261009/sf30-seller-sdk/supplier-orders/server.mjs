@@ -1,5 +1,6 @@
 // MIT. Private industrial supplier-order browser and complete original-file API.
 import { createServer } from 'node:http';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { createReadStream, constants } from 'node:fs';
 import { open, readFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
@@ -8,15 +9,21 @@ import { fileURLToPath } from 'node:url';
 import { openSupplierOrderWorkspace, MAX_SOURCE_BYTES, MAX_PACKAGE_BYTES } from './workspace.mjs';
 import { data, fail } from './core.mjs';
 
-const API='/api/supplier-orders',MAX_JSON_BYTES=256*1024*1024;
-const STATIC=new Map([
-  ['/',{path:new URL('./public/index.html',import.meta.url),mime:'text/html; charset=utf-8'}],
-  ['/public/index.html',{path:new URL('./public/index.html',import.meta.url),mime:'text/html; charset=utf-8'}],
-  ['/public/style.css',{path:new URL('./public/style.css',import.meta.url),mime:'text/css; charset=utf-8'}],
-  ['/public/app.mjs',{path:new URL('./public/app.mjs',import.meta.url),mime:'text/javascript; charset=utf-8'}],
-  ['/numbers.mjs',{path:new URL('./numbers.mjs',import.meta.url),mime:'text/javascript; charset=utf-8'}],
-  ['/file-sha256.mjs',{path:new URL('../opensearch/workspace/public/file-sha256.mjs',import.meta.url),mime:'text/javascript; charset=utf-8'}]
-]);
+const API='/api/supplier-orders',MAX_JSON_BYTES=256*1024*1024,TRANSFER_IDLE_MS=30000;
+const outgoingTimeout=new WeakMap();
+function responseTransfer(response){
+  if(outgoingTimeout.has(response))return;
+  const stalled=()=>response.destroy(Object.assign(new Error('The original file response stopped making progress.'),{code:'ORDER_HTTP_TRANSFER_IDLE'}));
+  const clear=()=>{response.off('timeout',stalled);response.off('finish',clear);response.off('close',clear);response.setTimeout(0);outgoingTimeout.delete(response);};
+  outgoingTimeout.set(response,clear);response.setTimeout(TRANSFER_IDLE_MS,stalled);response.once('finish',clear);response.once('close',clear);
+}
+function incomingTransfer(request,response){
+  if(request.complete)return()=>{};
+  const stalled=()=>{const error=Object.assign(new Error('The original request body stopped making progress.'),{code:'ORDER_HTTP_TRANSFER_IDLE'});request.destroy(error);response.destroy(error);};
+  const clear=()=>{request.off('timeout',stalled);request.off('end',clear);request.off('close',clear);if(!outgoingTimeout.has(response))request.setTimeout(0);};
+  request.setTimeout(TRANSFER_IDLE_MS,stalled);request.once('end',clear);request.once('close',clear);return clear;
+}
+const STATIC=new Map([...await readBrowserAssets(new URL('./browser-assets.json',import.meta.url))].map(([route,{url,type}])=>[route,{path:url,mime:type}]));
 function commonHeaders(response){
   response.setHeader('Cache-Control','no-store');
   response.setHeader('X-Content-Type-Options','nosniff');
@@ -26,7 +33,7 @@ function commonHeaders(response){
 }
 function json(response,value,status=200){
   if(response.destroyed||response.writableEnded)return;
-  const content=JSON.stringify(value);response.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':Buffer.byteLength(content)});response.end(content);
+  const content=JSON.stringify(value);responseTransfer(response);response.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Content-Length':Buffer.byteLength(content)});response.end(content);
 }
 function errorResponse(response,error){
   if(response.headersSent){response.destroy(error);return;}
@@ -68,7 +75,7 @@ function fileDisposition(name){
   return 'attachment; filename="'+ascii+'"; filename*=UTF-8\'\''+original;
 }
 async function sendFile(request,response,file){
-  const handle=await open(file.path,constants.O_RDONLY|constants.O_NOFOLLOW);
+  const handle=await open(file.path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
   try{
     const info=await handle.stat();if(!info.isFile()||info.size!==file.bytes)fail('ORDER_FILE_CHANGED','The complete retained original file changed.',409);
     let start=0,end=file.bytes-1,status=200;
@@ -85,7 +92,7 @@ async function sendFile(request,response,file){
       'Content-Disposition':fileDisposition(file.name),'Accept-Ranges':'bytes','ETag':'"'+file.sha256+'"',
       'X-Content-SHA256':file.sha256,'X-Supplier-Order-File-Id':file.id,'X-Supplier-Order-File-Bytes':String(file.bytes)};
     if(status===206)headers['Content-Range']='bytes '+start+'-'+end+'/'+file.bytes;
-    response.writeHead(status,headers);
+    responseTransfer(response);response.writeHead(status,headers);
     if(request.method==='HEAD'||!file.bytes){response.end();return;}
     const stream=handle.createReadStream({start,end,autoClose:false});await pipeline(stream,response);
   }finally{await handle.close();}
@@ -95,9 +102,12 @@ export async function serveSupplierOrderWorkspace({directory,workspace,host='127
   if(!Number.isSafeInteger(port)||port<0||port>65535)fail('ORDER_SERVER_PORT_INVALID','Choose an available TCP port.');
   if(token!==undefined&&(typeof token!=='string'||token.length<32||token.length>512))fail('ORDER_SERVER_TOKEN_INVALID','Use a private token of at least 32 characters.');
   const owned=!workspace,current=workspace??await openSupplierOrderWorkspace({directory}),secret=token??randomBytes(32).toString('base64url');
-  let origin=null,closing=false;
-  const server=createServer({maxHeaderSize:32768},async(request,response)=>{
+  let origin=null,closing=false,closePromise,stopped;
+  const active=new Set();
+  const handle=async(request,response)=>{
     commonHeaders(response);
+    const clearIncoming=incomingTransfer(request,response);
+    response.once('finish',()=>{if(!request.complete)request.destroy();});
     try{
       if(closing)fail('ORDER_SERVER_CLOSING','The workspace is closing.',503);
       const hostHeader=request.headers.host;
@@ -107,7 +117,7 @@ export async function serveSupplierOrderWorkspace({directory,workspace,host='127
       if(requestOrigin&&requestOrigin!==origin)fail('ORDER_SERVER_ORIGIN_INVALID','Use the original private workspace page.',403);
       if(['GET','HEAD'].includes(request.method)&&STATIC.has(url.pathname)){
         const selected=STATIC.get(url.pathname),bytes=await readFile(selected.path);
-        response.writeHead(200,{'Content-Type':selected.mime,'Content-Length':bytes.length});response.end(request.method==='HEAD'?undefined:bytes);return;
+        responseTransfer(response);response.writeHead(200,{'Content-Type':selected.mime,'Content-Length':bytes.length});response.end(request.method==='HEAD'?undefined:bytes);return;
       }
       if(!url.pathname.startsWith(API+'/'))fail('ORDER_HTTP_NOT_FOUND','Workspace route not found.',404);
       if(!safeEqual(request.headers.authorization,'Bearer '+secret))fail('ORDER_SERVER_AUTH_REQUIRED','Open the original private workspace URL.',401);
@@ -143,12 +153,30 @@ export async function serveSupplierOrderWorkspace({directory,workspace,host='127
       if(parts[0]==='packages'&&parts[1]==='export'&&parts.length===2)return json(response,await current.exportWorkspace({requestId:selected.requestId}));
       fail('ORDER_HTTP_NOT_FOUND','Workspace route not found.',404);
     }catch(error){errorResponse(response,error);}
+    finally{if(request.complete||request.destroyed)clearIncoming();}
+  };
+  const server=createServer({maxHeaderSize:32768},(request,response)=>{
+    const task=handle(request,response);active.add(task);
+    void task.catch(error=>response.destroy(error)).finally(()=>active.delete(task));
   });
   server.requestTimeout=0;server.headersTimeout=60000;server.keepAliveTimeout=5000;
   try{await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port,host,()=>{server.off('error',reject);resolve();});});}
   catch(error){if(owned)await current.close();throw error;}
   const address=server.address(),selectedHost=host==='::1'?'[::1]':host;
   origin='http://'+selectedHost+':'+address.port;
+  const close=()=>{
+    if(closePromise)return closePromise;
+    closing=true;
+    stopped??=new Promise((resolve,reject)=>server.close(error=>error&&error.code!=='ERR_SERVER_NOT_RUNNING'?reject(error):resolve()));
+    server.closeIdleConnections();
+    const task=(async()=>{
+      // A disconnected HTTP client can leave its original native operation running.
+      // Retain that handler and store ownership through the actual original outcome.
+      await Promise.all([stopped,(async()=>{while(active.size)await Promise.allSettled([...active]);})()]);
+      if(owned)await current.close();
+    })();
+    closePromise=task.catch(error=>{closePromise=null;throw error;});return closePromise;
+  };
   return{server,workspace:current,origin,token:secret,url:origin+'/public/index.html#token='+encodeURIComponent(secret),
-    close:async()=>{if(closing)return;closing=true;await new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));if(owned)await current.close();}};
+    get activeRequests(){return active.size;},close};
 }

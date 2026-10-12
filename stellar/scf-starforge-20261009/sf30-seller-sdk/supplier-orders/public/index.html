@@ -58,6 +58,7 @@
       <section id="tab-drafts" class="tab-panel" hidden>
         <div class="section-heading"><h3>Working drafts</h3><button id="drafts-refresh" type="button">Refresh drafts</button></div>
         <div id="draft-list" class="draft-list"></div>
+        <div class="pager"><button id="drafts-previous" type="button" disabled>Previous</button><span id="drafts-page"></span><button id="drafts-next" type="button" disabled>Next</button></div>
       </section>
       <section id="tab-parties" class="tab-panel" hidden><div id="order-parties"></div><div id="order-history"></div></section>
     </section>
@@ -65,7 +66,7 @@
     <section id="draft-editor" class="editor" hidden aria-label="Complete document editor">
       <header class="section-heading"><div><p class="eyebrow">Working document</p><h2 id="draft-title"></h2><p id="draft-revision" class="muted"></p></div><button id="close-draft" type="button">Close editor</button></header>
       <div id="draft-source-selection" class="hint"></div>
-      <details id="draft-conflict" class="detail" hidden><summary>Earlier attempted edits retained for review</summary><p class="hint">The current saved revision is open. Compare the earlier complete request before applying any of its fields.</p><pre id="draft-conflict-json"></pre><button id="draft-conflict-restore" type="button">Load earlier edits for review</button></details>
+      <details id="draft-conflict" class="detail" hidden><summary>Earlier attempted edits retained for review</summary><p class="hint">Compare the earlier complete request with the working document before applying any of its fields.</p><pre id="draft-conflict-json"></pre><button id="draft-conflict-restore" type="button">Load earlier edits for review</button></details>
       <form id="draft-form">
         <div class="form-grid">
           <label>Document business ID<input id="draft-document-id" autocomplete="off" maxlength="512"></label>

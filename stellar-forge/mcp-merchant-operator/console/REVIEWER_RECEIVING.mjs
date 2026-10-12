@@ -271,15 +271,20 @@ async function finishWorkflow(){
       await ensureBuyer('original',original.phases.original_packet_review.selectionId);
     if(next?.id==='receiver-history')
       await ensureBuyer('receiver',original.phases.second_operator_packet_intake.selectionId);
-    if(!journal.pauseReopen&&run.steps.some(value=>value.id==='source-export'&&['COMPLETE','RECOVERED'].includes(value.state))){
-      // Reopen the original Console at its actual pause after the accepted closed export.
-      // The same workflow ID, native action UUIDs, source packet and files remain selected.
-      journal.pauseReopen={runId:run.id,revision:run.revision,preparedAt:now()};await save();
+    if(!journal.pauseReopen?.reopenedAt&&run.steps.some(value=>value.id==='source-export'&&['COMPLETE','RECOVERED'].includes(value.state))){
+      // Retain the prepared continuation until its actual close/reopen has completed.
+      // A response loss after preparedAt must not turn that intent into a live-host receipt.
+      if(!journal.pauseReopen){
+        journal.pauseReopen={runId:run.id,revision:run.revision,preparedAt:now()};await save();
+      }
+      assert.equal(journal.pauseReopen.runId,run.id);
+      const previousGeneration=host.generation;
       await closeBrowser();await closeHost();
       await opening(join(root,'operator'));await profile();
       const reopened=await currentWorkflow();assert.equal(reopened.id,run.id);
       journal.pauseReopen={...journal.pauseReopen,workspaceId:(await request('host')).console.workspaceId,
-        reopenedAt:now(),stepsComplete:reopened.stepsComplete};await save();run=reopened;
+        previousGeneration,generation:host.generation,reopenedAt:now(),
+        stepsComplete:reopened.stepsComplete};await save();run=reopened;
     }
     await viewWorkflow();
     await page.locator('#workflow-continue').click();

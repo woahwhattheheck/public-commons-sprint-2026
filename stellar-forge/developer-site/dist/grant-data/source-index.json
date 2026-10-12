@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6",
-    "bytes": 30731,
-    "sha256": "161a66badaa90ec61c22e6fc95b1a702169e850548eb47fddc80a79c8c6f441b"
+    "bytes": 23481,
+    "sha256": "b1cf1ecea13f2f50c3968b17716c1635b8331b069a6ef93ed3a86f690a4beb58",
+    "git_blob": "40ac3d76a35d2b0e993245c5354abb00a9059645"
   },
   "request": {
     "basis": "prospective",
@@ -313,5 +313,29 @@
       "label": "Budget, tranche and receipt-based form guidance",
       "url": "https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines"
     }
-  ]
+  ],
+  "product_and_finance": {
+    "path": "product-and-finance.md",
+    "git_blob": "f945864b5326bf312abc6327d37c0a197f7632a6",
+    "bytes": 30731,
+    "sha256": "161a66badaa90ec61c22e6fc95b1a702169e850548eb47fddc80a79c8c6f441b",
+    "basis": "Independently reviewed full product, cost, cash, customer and operating companion retained unchanged from public PR2097."
+  },
+  "narrative_source": {
+    "basis": "Original manuscript author's complete October 12 reviewer answer",
+    "original_bytes": 23419,
+    "original_sha256": "8e735175ecc5d66dc913397cc5d7bdf63f91075ed450077a976819890c6630c4",
+    "editorial_clarifications": [
+      {
+        "before": "at least ten useful testnet purchases during seven consecutive days",
+        "after": "at least ten useful testnet purchases in total across the two buyers during seven consecutive days",
+        "reason": "State the existing combined purchase-count target across the two independent buyers."
+      },
+      {
+        "before": "at least thirty useful purchases within fourteen consecutive days",
+        "after": "at least thirty useful purchases in total across the two buyers within fourteen consecutive days",
+        "reason": "State the existing combined purchase-count target across the two independent buyers."
+      }
+    ]
+  }
 }

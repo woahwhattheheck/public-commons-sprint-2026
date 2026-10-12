@@ -1,3 +1,4 @@
+import {finalizeOperationAccounting,recoverOperationAccounting,exportOperationAccounting} from './operation-accounting.mjs';
 import { inspectPreapprovalRecovery, preparePreapprovalRecovery, executePreapprovalRecovery,
   recoverPreapprovalResult, readPreapprovalRecovery, readSelectedPreapprovalReview } from './preapproval-recovery.mjs';
 // MIT — Durable Node applications on the original SF88 CLI.
@@ -311,6 +312,10 @@ export class Operation {
       await assertOperationContinuationBinding(this, { meta, config });
     return { meta, config };
   }
+  finalize(options) { return finalizeOperationAccounting(this,options); }
+  accounting(options) { return recoverOperationAccounting(this,options); }
+  recoverAccounting(options) { return recoverOperationAccounting(this,options); }
+  exportAccounting(destination,options) { return exportOperationAccounting(this,destination,options); }
   inspectPreapprovalRecovery(options) { return inspectPreapprovalRecovery(this, options); }
   preparePreapprovalRecovery(options) { return preparePreapprovalRecovery(this, options); }
   executePreapprovalRecovery(options) { return executePreapprovalRecovery(this, options); }
