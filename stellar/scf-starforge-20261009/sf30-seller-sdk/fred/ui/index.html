@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Economic editions</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<header><div><p class="eyebrow">STELLAR FORGE</p><h1>Economic editions</h1><p id="project-title">Opening project…</p></div><button id="refresh" type="button">Refresh state</button></header>
+<p class="source-notice">This product uses the FRED® API but is not endorsed or certified by the Federal Reserve Bank of St. Louis. By using this application, users agree to the <a href="https://fred.stlouisfed.org/docs/api/terms_of_use.html" target="_blank" rel="noopener noreferrer">FRED API Terms of Use</a>.</p>
+<nav aria-label="Workspace sections"><button data-tab="source" class="active">Source</button><button data-tab="editions">Editions & review</button><button data-tab="publication">Merchant</button><button data-tab="customer">Customer</button><button data-tab="recovery">History & handover</button></nav>
+<main>
+<div id="message" role="status" aria-live="polite"></div>
+<section id="summary" class="metrics" aria-label="Project summary"></section>
+<section data-panel="source">
+<h2>Original economic source</h2><p>Choose the series and observation interval, then select the date on which the information was known. Each capture retains its original source responses and the complete selected pages.</p>
+<form id="selection-form" class="form-grid">
+<label class="wide">FRED series IDs<textarea id="series" rows="2" required></textarea><small>One original ID per line or comma. Series keep their original frequency and units.</small></label>
+<label>Vintage date<input id="as-of" type="date" required></label><label>Observation start<input id="start-date" type="date" required></label><label>Observation end<input id="end-date" type="date" required></label>
+<label>Source page size<input id="page-size" type="number" min="1" max="100000" required></label><label>Combined row capacity<input id="max-rows" type="number" min="1" max="1000000" required></label>
+<div class="wide buttons"><button type="submit">Save selection</button><button type="button" id="capture">Acquire selected source</button></div>
+</form>
+<div class="box"><h3>Import retained source</h3><p>Import the original capture JSON from an earlier operation or receiving team.</p><label>Capture file<input id="capture-file" type="file" accept=".json,application/json"></label><button id="import-capture">Import source</button></div>
+<h3>Selected acquisition</h3><pre id="acquisition-state">No acquisition is running.</pre>
+</section>
+<section data-panel="editions" hidden>
+<h2>Retained editions</h2><label>Source capture<select id="capture-select"></select></label>
+<div class="buttons"><button id="select-capture">Select this capture</button><button id="download-source">Download original capture</button></div>
+<div id="series-detail"></div>
+<h3>Original observations</h3><div class="inline"><label>Series<select id="row-series"></select></label><span id="row-count"></span></div><div id="observations" class="table-wrap"></div>
+<div class="buttons"><button id="rows-previous">Previous page</button><button id="rows-next">Next page</button></div>
+<div class="box"><h3>Review the customer edition</h3><p>Keep the original value, missing marker, vintage, units and frequency together. Configure the original dataset’s selected fields and query capabilities.</p>
+<label>Projection and page policy<textarea id="policy" rows="13" spellcheck="false"></textarea></label><label>Review note<textarea id="review-note" rows="3" maxlength="8000"></textarea></label><button id="save-review">Save reviewed edition</button></div>
+<h3>Compare two retained vintages</h3><div class="form-grid"><label>Earlier capture<select id="compare-before"></select></label><label>Later capture<select id="compare-after"></select></label></div>
+<div class="buttons"><button id="compare">Compare source editions</button><button id="download-comparison">Download full comparison</button></div><pre id="comparison-summary">Select the same series and observation interval in two captures.</pre><div id="comparison" class="table-wrap"></div>
+<div class="buttons"><button id="compare-previous">Previous changes</button><button id="compare-next">Next changes</button></div>
+</section>
+<section data-panel="publication" hidden>
+<h2>Operate a reviewed merchant edition</h2><p>Publish a saved review with the merchant’s original public payment terms. Each edition keeps a stable snapshot and its own public resource path.</p>
+<form id="publication-form" class="form-grid"><label class="wide">Saved review<select id="review-select"></select></label><label>Public HTTPS origin<input id="public-origin" type="url" placeholder="https://your-merchant.example" required></label><label>Resource path<input id="public-path" value="/economic-data" required></label>
+<label class="wide">Public payment terms<textarea id="payment" rows="9" spellcheck="false" required></textarea><small>Use your configured scheme, network, token contract, atomic amount, recipient and timeout.</small></label><div class="wide"><button type="submit">Publish reviewed source</button></div></form>
+<h3>Retained merchant</h3><label>Publication<select id="publication-select"></select></label><div class="buttons"><button id="open-publication">Open publication</button><button id="merchant-start">Start original seller</button><button id="merchant-stop">Stop and retain seller</button></div>
+<pre id="merchant-state">Select a publication.</pre><div id="publication-detail"></div>
+<label>Original dataset query<textarea id="preview-query" rows="2" spellcheck="false">limit=25</textarea></label><button id="preview">Preview original dataset</button><div id="preview-result" class="table-wrap"></div>
+</section>
+<section data-panel="customer" hidden>
+<h2>Receive the original edition</h2><p>Prepare the exact published request and inspect its terms. The configured original buyer asks for approval in the terminal and retains its attempt and delivered bytes.</p>
+<p id="buyer-status"></p><div class="form-grid"><label class="wide">Publication<select id="customer-publication"></select></label><label class="wide">Resource<select id="customer-file"><option value="">Observation page</option></select></label><label>Stable intent<input id="intent" maxlength="96"></label><label>Payment alternative<input id="accept-index" type="number" min="0" value="0"></label><label class="wide">Original page query<textarea id="customer-query" rows="3" spellcheck="false">limit=25</textarea></label></div>
+<div class="buttons"><button id="prepare">Prepare this request</button><button id="buy">Review and execute original purchase</button><button id="recover">Reopen original result</button><button id="download-customer">Download retained delivery</button><button id="next-customer-page">Prepare next page selection</button></div>
+<h3>Saved requests</h3><select id="request-select"></select><button id="open-request">Select saved request</button>
+<pre id="customer-result">The original request, selected terms and retained result appear here.</pre><div id="customer-rows" class="table-wrap"></div>
+</section>
+<section data-panel="recovery" hidden>
+<h2>History and receiving</h2><p>The project retains source captures, saved review decisions, publications and completed operation identities. Resume an interrupted source acquisition with the same operation.</p>
+<pre id="pending">No pending operation.</pre><div class="buttons"><button id="resume">Continue original acquisition</button><button id="abandon">Abandon pending action and retain its files</button><button id="download-bundle">Export complete project</button></div>
+<h3>Completed operations</h3><div id="history" class="table-wrap"></div>
+<p>To open a complete handover on another host, use <code>starforge fred receive --project /absolute/empty-directory --source /absolute/received-project.json</code>, then serve that same directory. Configure the receiving host’s existing buyer and facilitator when starting its workspace.</p>
+</section>
+</main>
+<footer>Original FRED source · retained vintage and units · native Stellar Forge seller and buyer</footer>
+<script type="module" src="/app.js"></script>
+</body></html>
