@@ -96,6 +96,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/distribution/runtime-workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/distribution/runtime-workspace/browser-assets.json"
     }
   ],
   "supportFiles": [

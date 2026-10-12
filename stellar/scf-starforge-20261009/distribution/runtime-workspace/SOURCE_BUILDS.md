@@ -17,8 +17,13 @@ product**, then:
    objects; working-tree edits are outside the selected release.
 2. Choose **Load committed products**. The resolved immutable commit appears,
    along with that commit's actual recipes and **Complete toolkit**. A recipe
-   that fails the original validator displays its error. Choose a product.
-3. Choose **Review product**. The saved review contains the package identity,
+   that fails the original validator displays its error. Search by product name,
+   workflow or recipe ID, then select the product. The chosen product stays
+   selected while the search changes. **Show unavailable recipes** displays
+   source-reading errors alongside those recipes.
+3. Inspect the selected product's commands, applications, merchant connections
+   and adapter declarations. Optionally select two to four products for a
+   side-by-side comparison. Choose **Review selected product**. The saved review contains the package identity,
    source commit, repository, commands, launchers, applications, exports,
    components, optional features and committed input hashes. It uses the
    original recipe validator and distribution composer. Python defaults to
@@ -53,6 +58,52 @@ workflow updates its ref. Reload the catalog to resolve the current local ref.
 Available products come from the selected commit rather than a browser-maintained
 list. See [Product source selections](../SOURCE_SELECTIONS.md) for the recipes
 and intended profiles. Adapter choices come from the completed archive.
+
+## Find and compare products
+
+The catalog comes from the resolved Git commit. Search filters its existing
+titles, descriptions and selection identities locally. **Show more products**
+continues through all matching recipes. Filtering does not change the selected
+source version, create a review or start a build.
+
+Selecting a product inspects the original distribution composition and displays
+its commands, Applications entries, merchant connections, package exports and
+committed guide. A recipe can be readable while its complete distribution has
+an unresolved source or composition problem; that error stays with the selected
+product so the other recipes remain available.
+
+**Installation requirements** shows the native payment package declarations and
+every optional adapter group from both direct peer declarations and committed
+runtime package manifests. Manifest-backed groups retain the original manifest
+path. Actual dependency versions and install choices are resolved from the built
+archive in **Source & profile**.
+
+Mark products with **Compare**, then choose **Compare selected products**.
+The comparison uses the same repository and immutable commit for every column.
+It shows capability counts, changed commands and exports, application and
+connection differences, adapter declarations and source components. Shared
+entries remain expandable. **Save comparison** produces editable JSON;
+**Save readable comparison** produces Markdown. Product details have the same
+two download formats.
+
+Product inspection and comparison leave saved reviews, operation requests,
+archives and runtime selections unchanged. Source changes invalidate the
+inspection cache. A changed Python interpreter also clears its inspected
+products before a new review. The existing saved-build controls remain available
+independently of the catalog search.
+
+The full toolkit's installed `starforge product-catalog` command provides the same committed
+catalog, inspection, comparison and installation planning from the terminal.
+Its [complete command guide](../product-catalog/README.md) explains every input
+and the original build and installation commands returned by a plan.
+
+## Select required capabilities
+
+After loading products, choose exact requirements from the **Required capability** list. **Cover every requirement** shows recipes that provide the whole selection. **Show partial matches** identifies missing capabilities for comparison. The selected product panel shows each capability's source registration, and complete matches can export an accepted native build review request.
+
+Product inspection reads selected runtime-package manifests and their matching committed npm lockfiles. Direct version declarations and exact locked production dependencies remain separate. The existing package installer selects the actual runtime groups and target platform.
+
+The [capability requirements guide](../discovery/PRODUCT_REQUIREMENTS.md) includes the installed terminal workflow, complete JSON plans, source ownership and typed APIs. Source review hashing, saved review IDs, operation UUIDs and original build/install continuations remain the same.
 
 ## Reopen and continue the same build
 
@@ -187,6 +238,7 @@ checks. Source paths are actual server-machine paths.
 | Method and route | Input or result |
 | --- | --- |
 | `POST /api/source-builds/catalog` | `repository`, optional `ref` and `offline`; resolved commit and recipes |
+| `POST /api/source-builds/product` | `repository`, immutable `ref`, optional `selection`, `offline`, `python`; complete read-only product descriptor and runtime declarations |
 | `POST /api/source-builds/review` | `repository`, immutable `ref`, optional `selection`, `offline`, `python`; saved review and original UUID |
 | `GET /api/source-builds/review?reviewId=ID` | Complete saved review |
 | `GET /api/source-builds/state` | Saved reviews, operation state, output and completed package/archive identities |
