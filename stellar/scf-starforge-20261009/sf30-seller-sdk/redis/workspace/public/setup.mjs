@@ -250,7 +250,7 @@ for(const [input,name,clear]of [['data-ca-upload','caFile','clear-data-ca'],['se
 $('review').addEventListener('click',()=>run(reviewDraft));$('review-terms').addEventListener('click',()=>run(reviewDraft));
 $('preview').addEventListener('click',()=>run(preview));
 $('preview-query').addEventListener('change',seedPreviewInput);
-$('preview-input').addEventListener('input',()=>{lastPreview=null;$('next-preview').hidden=true;});
+$('preview-input').addEventListener('input',clearPreview);
 $('next-preview').addEventListener('click',()=>run(async()=>{
   if(!lastPreview?.data.nextInput)throw new Error('This result has no following page.');
   $('preview-input').value=json(lastPreview.data.nextInput);await preview();
@@ -279,7 +279,9 @@ $('create').addEventListener('click',()=>run(async()=>{
   displayCreated(result);location.assign(result.operatorUrl);
 }));
 $('open-workspace').addEventListener('click',()=>run(openCreated));
-$('download-connection').addEventListener('click',()=>{if(created)download('redis-workspace-connection.json',created);});
+$('download-connection').addEventListener('click',()=>{
+  if(created){const {operatorUrl,...binding}=created;download('redis-workspace-connection.json',binding);}
+});
 await run(async()=>{
   const key='redis-setup-token:'+location.origin;
   token=location.hash.slice(1);if(token){try{sessionStorage.setItem(key,token);}catch{}history.replaceState(null,'',location.pathname);}
