@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: MIT
-"""Complete native QGIS operator dock for original STAC receiving."""
+"""Complete native QGIS operator dock for original STAC and vector receiving."""
 from __future__ import annotations
 
 import copy
@@ -20,7 +20,7 @@ from qgis.PyQt.QtWidgets import (QApplication, QDockWidget, QWidget, QVBoxLayout
     QFileDialog, QMessageBox, QInputDialog, QProgressDialog, QCheckBox, QDoubleSpinBox)
 from qgis.core import QgsProject
 
-from .model import (QgisWorkspace, ReceivingSource, receive_package, read_json, file_digest,
+from .model import (QgisWorkspace, receive_package, read_json, file_digest,
                     value_sha, QgisReceivingError, require, utc_now)
 from .qgis_project import (inspect_asset, add_to_project, capture_styles, save_project,
                            reopen_project, native_version, zoom_managed)
@@ -47,6 +47,15 @@ def pretty(value):
 
 def short(value, length=16):
     return str(value or "")[:length]
+
+
+def source_label(row):
+    source = row["source"]
+    if source.get("sourceKind") == "vector":
+        edition = source.get("sourceEdition", {})
+        label = edition.get("editionId") or edition.get("id") or edition.get("version") or short(row["id"])
+        return "Vector · " + str(label)
+    return str(source.get("editionId") or short(row["id"]))
 
 
 def button(text, callback, layout):
@@ -120,12 +129,18 @@ class LayerDialog(QDialog):
         if not self.kind.count():
             self.kind.addItem("Raster: ask the native GDAL provider", {"kind": "raster"})
             self.kind.addItem("Vector: ask the native OGR provider", {"kind": "vector"})
+        if asset.get("nativeLayer") is not None:
+            require(self.kind.count() == 1, "VECTOR_ORIGINAL_LAYER_SELECTION",
+                    "Inspect the original native layer before adding this vector output.")
+            self.kind.setEnabled(False)
         form.addRow("Native layer", self.kind)
         self.crs = QLineEdit()
         self.crs.setPlaceholderText("Keep source CRS; enter a verified CRS only to override")
         form.addRow("Explicit CRS override", self.crs)
         self.bands = QLineEdit()
         self.bands.setPlaceholderText("Native default, one gray band, or R,G,B band numbers")
+        if asset.get("sourceKind") == "vector":
+            self.bands.setEnabled(False)
         form.addRow("Band selection", self.bands)
         self.subset = QLineEdit()
         self.subset.setPlaceholderText("Optional explicit filter supported by the selected native vector provider")
@@ -216,7 +231,7 @@ class ReceivingDock(QDockWidget):
 
     def _sources_tab(self):
         layout = self.page("Sources")
-        instructions = QLabel("Import the qgis-receiving.json prepared by the original Starforge receiver. Each edition and every selected local file is retained.")
+        instructions = QLabel("Import the original qgis-receiving.json or vector-export.json. Each source edition, native layer and complete file bundle is retained.")
         instructions.setWordWrap(True)
         layout.addWidget(instructions)
         controls = QHBoxLayout()
@@ -224,17 +239,19 @@ class ReceivingDock(QDockWidget):
         button("Import original receiving", self.import_source, controls)
         button("Select edition", self.activate_source, controls)
         button("View original metadata", self.source_details, controls)
-        self.sources = table(["Edition", "Scenes", "Assets", "Receiving SHA-256", "Imported"])
+        self.sources = table(["Edition", "Source groups", "Outputs", "Receiving SHA-256", "Imported"])
         layout.addWidget(self.sources)
         self.sources.itemDoubleClicked.connect(lambda *_: self.source_details())
 
     def _layers_tab(self):
-        layout = self.page("Scenes and layers")
+        layout = self.page("Sources and layers")
         scene_controls = QHBoxLayout()
         layout.addLayout(scene_controls)
-        button("All footprints", lambda: self.add_footprints(True), scene_controls)
-        button("Selected footprints", lambda: self.add_footprints(False), scene_controls)
-        button("Scene metadata", self.scene_details, scene_controls)
+        self.all_footprints = button("All footprints", lambda: self.add_footprints(True), scene_controls)
+        self.selected_footprints = button("Selected footprints", lambda: self.add_footprints(False), scene_controls)
+        self.scene_metadata = button("Source metadata", self.scene_details, scene_controls)
+        self.all_footprints.setEnabled(False)
+        self.selected_footprints.setEnabled(False)
         self.scenes = table(["Collection", "Item", "Observed", "Cloud %", "Assets"], multiple=True)
         self.scenes.setMinimumHeight(140)
         self.scenes.itemSelectionChanged.connect(self.refresh_assets)
@@ -395,13 +412,27 @@ class ReceivingDock(QDockWidget):
         self.state = self.workspace.read()
         self.source = self.workspace.source() if self.state["activeSourceId"] else None
         self.summary.setText(self.state["title"] + " · revision " + str(self.state["revision"]) + "\n" + str(self.workspace.root))
-        fill(self.sources, [([x["source"].get("editionId"), x.get("summary", {}).get("scenes", ""),
+        fill(self.sources, [([source_label(x), x.get("summary", {}).get("scenes", ""),
                              x.get("summary", {}).get("assets", ""), x["id"], x["importedAt"]], x) for x in self.state["sources"]])
-        fill(self.scenes, [([x.get("collection"), x["itemId"], x.get("datetime") or
-                            " / ".join(str(x.get(k) or "") for k in ("startDatetime", "endDatetime")),
-                            x.get("cloudCover"), x["assetCount"]], x) for x in self.source.scene_rows()] if self.source else [])
+        vector = self.source is not None and self.source.sourceKind == "vector"
+        self.all_footprints.setEnabled(self.source is not None and not vector)
+        self.selected_footprints.setEnabled(self.source is not None and not vector)
+        if vector:
+            self.scenes.setHorizontalHeaderLabels(["Source", "Source layer", "Formats", "Source features", "Native layers"])
+            self.scene_metadata.setText("Original layer metadata")
+            fill(self.scenes, [([x["sourceId"],
+                                self.source.scenes[x["key"]]["layers"][0]["sourceReference"]["nativeSourceLayer"],
+                                ", ".join(x["formats"]), x["sourceFeatureCount"], x["assetCount"]], x)
+                               for x in self.source.scene_rows()])
+        else:
+            self.scenes.setHorizontalHeaderLabels(["Collection", "Item", "Observed", "Cloud %", "Assets"])
+            self.scene_metadata.setText("Scene metadata")
+            fill(self.scenes, [([x.get("collection"), x["itemId"], x.get("datetime") or
+                                " / ".join(str(x.get(k) or "") for k in ("startDatetime", "endDatetime")),
+                                x.get("cloudCover"), x["assetCount"]], x)
+                               for x in self.source.scene_rows()] if self.source else [])
         self.refresh_assets()
-        source_names = {x["id"]: x["source"].get("editionId") for x in self.state["sources"]}
+        source_names = {x["id"]: source_label(x) for x in self.state["sources"]}
         fill(self.layers, [([x["label"], x["kind"], source_names[x["sourceId"]],
                             short((x.get("styleFile") or {}).get("sha256")) or "Native default",
                             "Yes" if x["visible"] else "No"], x) for x in self.state["layers"]])
@@ -411,7 +442,7 @@ class ReceivingDock(QDockWidget):
             old = widget.currentData()
             widget.clear()
             for row in self.state["sources"]:
-                widget.addItem(str(row["source"].get("editionId")) + " · " + short(row["id"], 10), row["id"])
+                widget.addItem(source_label(row) + " · " + short(row["id"], 10), row["id"])
             index = widget.findData(old)
             if index >= 0:
                 widget.setCurrentIndex(index)
@@ -426,8 +457,13 @@ class ReceivingDock(QDockWidget):
         chosen = selected(self.scenes)
         keys = {x["key"] for x in chosen}
         rows = [x for x in self.source.asset_rows() if not keys or x["sceneKey"] in keys]
-        fill(self.assets, [([x["title"], x["kindHint"], x["outcome"], (x.get("file") or {}).get("bytes"),
-                            (x.get("file") or {}).get("sha256")], x) for x in rows])
+        vector = self.source.sourceKind == "vector"
+        self.assets.setHorizontalHeaderLabels(["Native layer", "Format", "Outcome", "Bytes", "Bundle SHA-256"]
+                                               if vector else ["Asset", "Kind", "Outcome", "Bytes", "SHA-256"])
+        fill(self.assets, [([x["title"], x.get("driver", x["kindHint"]) if vector else x["kindHint"],
+                            x["outcome"], (x.get("file") or {}).get("bytes"),
+                            (x.get("file") or {}).get("nativeBundleSha256") if vector
+                            else (x.get("file") or {}).get("sha256")], x) for x in rows])
 
     def show_pending(self):
         self.pending_label.setText("Pending " + self.pending["action"] + " · " + self.pending["requestId"] +
@@ -521,11 +557,13 @@ class ReceivingDock(QDockWidget):
         self.run("Receive complete project", work)
 
     def import_source(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Select original QGIS receiving manifest", "", "QGIS receiving (qgis-receiving.json)")
+        filename, _ = QFileDialog.getOpenFileName(self, "Select original receiving manifest", "",
+                                                 "Original receiving (qgis-receiving.json vector-export.json)")
         if not filename:
             return
         def work():
-            require(Path(filename).name == "qgis-receiving.json", "RECEIVING_MANIFEST", "Select the original qgis-receiving.json.")
+            require(Path(filename).name in ("qgis-receiving.json", "vector-export.json"),
+                    "RECEIVING_MANIFEST", "Select the original qgis-receiving.json or vector-export.json.")
             measured = file_digest(filename)
             self.mutate("import", {"directory": str(Path(filename).parent), "sha256": measured["sha256"]})
         self.run("Import original receiving", work)
@@ -538,13 +576,15 @@ class ReceivingDock(QDockWidget):
                  self.workspace.source(self.selected_one(self.sources, "source edition")["id"]).manifest, self).exec())
 
     def scene_details(self):
-        self.run("Read original scenes", lambda: DetailDialog("Original scene metadata",
+        self.run("Read original source layers", lambda: DetailDialog("Original source layer metadata",
                  [self.source.scenes[x["key"]] for x in selected(self.scenes)], self).exec())
 
     def add_footprints(self, all_scenes):
         def work():
             self.need_workspace()
             require(self.source is not None, "SOURCE_NOT_SELECTED", "Select an imported source edition.")
+            require(self.source.sourceKind == "stac", "VECTOR_LAYER_KIND",
+                    "Select the actual native vector output for this source.")
             keys = list(self.source.scenes) if all_scenes else [x["key"] for x in selected(self.scenes)]
             require(keys, "SCENE_SELECTION", "Select original scenes to map.")
             row = {"id": "layer-" + uuid.uuid4().hex, "sourceId": self.source.id, "kind": "footprints",
@@ -659,7 +699,10 @@ class ReceivingDock(QDockWidget):
             self.need_workspace()
             self.comparison = self.workspace.compare(self.left.currentData(), self.right.currentData())
             result = self.comparison
-            self.review_summary.setText(pretty(result["counts"]) + "\nSame original query: " + str(result["sameQuery"]))
+            identity_note = ("Same original source/layer identities: " + str(result["sameSourceIdentities"])
+                             if result.get("leftSourceKind") == result.get("rightSourceKind") == "vector"
+                             else "Same original query: " + str(result["sameQuery"]))
+            self.review_summary.setText(pretty(result["counts"]) + "\n" + identity_note)
             assets = {x["key"]: x for x in result["assets"]}
             rows = [x for x in self.state["layers"] if x["sourceId"] == result["leftSourceId"]]
             fill(self.review, [([x["label"], x.get("assetKey") or str(len(x["sceneKeys"])) + " original scenes",
@@ -733,12 +776,13 @@ class ReceivingDock(QDockWidget):
                  self.selected_one(self.history, "history event"), self).exec())
 
     def guide(self):
-        path = Path(__file__).resolve().parent / "OPERATIONS.md"
+        name = "VECTOR_RECEIVING.md" if self.source is not None and self.source.sourceKind == "vector" else "OPERATIONS.md"
+        path = Path(__file__).resolve().parent / name
         if not path.is_file():
-            path = path.parent.parent / "OPERATIONS.md"
+            path = path.parent.parent / name
         if path.is_file():
             dialog = QDialog(self)
-            dialog.setWindowTitle("Starforge STAC QGIS operator guide")
+            dialog.setWindowTitle("Starforge QGIS operator guide")
             dialog.resize(880, 650)
             layout = QVBoxLayout(dialog)
             content = QPlainTextEdit(path.read_text(encoding="utf-8"))
