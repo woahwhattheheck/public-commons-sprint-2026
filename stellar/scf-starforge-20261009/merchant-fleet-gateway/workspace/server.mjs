@@ -61,6 +61,7 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
     ['/', 'index.html', 'text/html; charset=utf-8'],
     ['/browser.mjs', 'browser.mjs', 'text/javascript; charset=utf-8'],
     ['/clients.mjs', 'clients.mjs', 'text/javascript; charset=utf-8'],
+    ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
     ['/original-client.mjs', '../../sf82-seller-pilot/release-ui/client.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
@@ -104,6 +105,38 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
       if (!sameSession(req)) return send(res, 403, { error: 'WORKSPACE_SESSION_REQUIRED' });
       if (req.method === 'GET' && req.url === '/api/status')
         return send(res, 200, await snapshot());
+      if (releases && req.url.startsWith('/api/releases/discovery')) {
+        const target = new URL(req.url, url), base = '/api/releases/discovery';
+        const reads = {
+          [base]: ['discoveryStatus', ['tenant'], []],
+          [base + '/enrollment']: ['discoveryEnrollment', ['tenant'], []],
+          [base + '/source']: ['discoverySource', ['tenant', 'slot', 'releaseId'], []],
+          [base + '/history']: ['discoveryHistory', ['tenant', 'catalogKey'], []],
+          [base + '/consume']: ['discoveryConsume', ['tenant'],
+            ['view', 'limit', 'offset', 'query', 'cursor', 'network', 'type', 'scheme', 'payTo', 'extensions']],
+        };
+        if (req.method === 'GET' && Object.hasOwn(reads, target.pathname)) {
+          const [method, required, optional] = reads[target.pathname], names = [...target.searchParams.keys()];
+          if (new Set(names).size !== names.length || required.some(name => !target.searchParams.has(name)) ||
+              names.some(name => ![...required, ...optional].includes(name))) throw failure('WORKSPACE_REQUEST_INVALID');
+          return send(res, 200, await releases[method](Object.fromEntries(target.searchParams)));
+        }
+        const changes = {
+          [base + '/enrollment/review']: ['discoveryReviewEnrollment', ['tenant', 'slot', 'instanceId', 'sellerId', 'sourceURL', 'expectedIncompleteId'], false],
+          [base + '/enrollment/create']: ['discoveryCreateEnrollment', ['tenant', 'reviewId'], true],
+          [base + '/start']: ['discoveryStart', ['tenant'], true],
+          [base + '/stop']: ['discoveryStop', ['tenant', 'instanceId'], true],
+          [base + '/review']: ['discoveryReview',
+            ['tenant', 'slot', 'instanceId', 'action', 'routeId', 'reason', 'sourceSlot', 'sourceReleaseId'], false],
+          [base + '/apply']: ['discoveryApply', ['tenant', 'reviewId'], true],
+        };
+        if (req.method === 'POST' && !target.search && Object.hasOwn(changes, target.pathname)) {
+          const [method, allowed, dispatched] = changes[target.pathname], input = await body(req);
+          keys(input, allowed); operationDispatched = dispatched;
+          return send(res, 200, await releases[method](input));
+        }
+        return send(res, 404, { error: 'WORKSPACE_ROUTE_NOT_FOUND' });
+      }
       if (releases && req.url.startsWith('/api/releases/clients')) {
         const target = new URL(req.url, url), base = '/api/releases/clients';
         const methods = { [base]: ['clientList', ['after', 'limit']],

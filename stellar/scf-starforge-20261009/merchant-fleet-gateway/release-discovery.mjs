@@ -1,5 +1,6 @@
 // MIT. Tenant discovery over the original SF82 enrollment and SF60 signed journal.
-import { mkdir, lstat, realpath } from 'node:fs/promises';
+import { constants as FS } from 'node:fs';
+import { mkdir, lstat, realpath, open as openFile, readdir, rename } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReleaseDiscoveryConsole } from '../sf82-seller-pilot/release-discovery-console.mjs';
@@ -56,7 +57,8 @@ async function privateParent(path) {
  */
 export function createFleetDiscoveryDesk({ directory, tenants, locate, current, withServing, assertOpen }) {
   directory = resolve(directory);
-  const parent = join(directory, 'discovery'), names = new Map(tenants.map(row => [row.id, row]));
+  const parent = join(directory, 'discovery'), recoveryParent = join(directory, 'discovery-recovery');
+  const names = new Map(tenants.map(row => [row.id, row]));
   const consoles = new Map(), opening = new Map(), reviews = new Map();
   let closed = false, closePromise;
   const open = () => { assertOpen(); if (closed) fail('FLEET_DISCOVERY_CLOSING', 'The discovery owner is closing.', 503); };
@@ -70,6 +72,87 @@ export function createFleetDiscoveryDesk({ directory, tenants, locate, current, 
   async function exists(id) {
     try { await lstat(destination(id)); return true; }
     catch (error) { if (error.code === 'ENOENT') return false; throw error; }
+  }
+  async function checkedDirectory(path) {
+    const info = await lstat(path, { bigint: true });
+    if (!info.isDirectory() || info.isSymbolicLink() || await realpath(path) !== path ||
+        info.mode & 0o077n || process.getuid && info.uid !== BigInt(process.getuid()))
+      fail('FLEET_DISCOVERY_PRIVATE_DIRECTORY_REQUIRED', 'Preserve the original private discovery directory.');
+    return info;
+  }
+  async function recoveries(id) {
+    try { await checkedDirectory(recoveryParent); }
+    catch (error) { if (error.code === 'ENOENT') return []; throw error; }
+    return (await readdir(recoveryParent, { withFileTypes: true }))
+      .filter(row => row.isDirectory() && row.name.startsWith(id + '--')).map(row => row.name).sort();
+  }
+  async function inspectIncomplete(id) {
+    tenant(id);
+    const path = destination(id), root = await checkedDirectory(path);
+    const allowed = new Set(['seller-key.pem', 'seller-public.pem', 'connection.json',
+      'policy.json', 'seller-enrollment.json', 'setup.json', 'catalog', 'workspace', 'launches']);
+    const entries = (await readdir(path)).sort(), rows = [];
+    if (entries.some(name => !allowed.has(name)))
+      fail('FLEET_DISCOVERY_RECOVERY_CONTENT_CHANGED', 'Inspect the additional retained files with the original setup owner.');
+    for (const name of entries) {
+      const filename = join(path, name);
+      if (['catalog', 'workspace', 'launches'].includes(name)) {
+        const info = await checkedDirectory(filename);
+        if ((await readdir(filename)).length)
+          fail('FLEET_DISCOVERY_INITIALIZED_STATE_PRESERVED',
+            'This directory contains original catalogue or workspace state. Reopen its existing identity.');
+        rows.push({ name, type: 'directory', bytes: 0, dev: String(info.dev), ino: String(info.ino),
+          mode: String(info.mode), modified: String(info.mtimeNs) });
+        continue;
+      }
+      const file = await openFile(filename, FS.O_RDONLY | (FS.O_NOFOLLOW ?? 0));
+      let data;
+      try {
+        const before = await file.stat({ bigint: true });
+        if (!before.isFile() || before.nlink !== 1n || before.mode & 0o077n ||
+            process.getuid && before.uid !== BigInt(process.getuid()) || before.size > 8n * 1024n * 1024n)
+          fail('FLEET_DISCOVERY_RECOVERY_FILE_INVALID', 'Retain the original bounded private setup files.');
+        data = Buffer.alloc(Number(before.size) + 1); let used = 0;
+        while (used < data.length) {
+          const { bytesRead } = await file.read(data, used, data.length - used, null);
+          if (!bytesRead) break;
+          used += bytesRead;
+        }
+        const after = await file.stat({ bigint: true });
+        if (used !== Number(before.size) || before.size !== after.size || before.mtimeNs !== after.mtimeNs ||
+            before.ino !== after.ino || before.dev !== after.dev)
+          fail('FLEET_DISCOVERY_RECOVERY_CHANGED', 'The incomplete setup changed. Inspect its current state again.');
+        const bytes = data.subarray(0, used);
+        if (name === 'setup.json') {
+          let completeJson = false;
+          try { JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); completeJson = true; } catch {}
+          if (completeJson) fail('FLEET_DISCOVERY_COMPLETED_SETUP_PRESERVED',
+            'A completed setup record is retained. Repair or reopen that original enrollment and identity.');
+        }
+        rows.push({ name, type: 'file', bytes: used, sha256: createHash('sha256').update(bytes).digest('hex'),
+          dev: String(before.dev), ino: String(before.ino), mode: String(before.mode), modified: String(before.mtimeNs) });
+      } finally { data?.fill(0); await file.close(); }
+    }
+    const after = await checkedDirectory(path);
+    if (root.dev !== after.dev || root.ino !== after.ino || root.mtimeNs !== after.mtimeNs)
+      fail('FLEET_DISCOVERY_RECOVERY_CHANGED', 'The incomplete setup changed. Inspect its current state again.');
+    return { inspectionId: hash({ tenant: id, dev: String(root.dev), ino: String(root.ino),
+      modified: String(root.mtimeNs), rows }), files: rows.map(({ name, type, bytes }) => ({ name, type, bytes })),
+      bytes: rows.reduce((sum, row) => sum + row.bytes, 0),
+      action: 'PRESERVE_INCOMPLETE_SETUP_AND_ENROLL' };
+  }
+  async function preserveIncomplete(id, expected) {
+    const current = await inspectIncomplete(id);
+    if (current.inspectionId !== expected.inspectionId)
+      fail('FLEET_DISCOVERY_RECOVERY_CHANGED', 'The incomplete setup changed after review.');
+    await privateParent(recoveryParent);
+    const retainedSetupId = id + '--' + expected.inspectionId.slice(0, 16) + '--' + randomUUID();
+    await rename(destination(id), join(recoveryParent, retainedSetupId));
+    for (const path of [parent, recoveryParent]) {
+      const handle = await openFile(path, FS.O_RDONLY | (FS.O_DIRECTORY ?? 0));
+      try { await handle.sync(); } finally { await handle.close(); }
+    }
+    return retainedSetupId;
   }
   async function readSetup(id, entry) {
     const value = await inspectReleaseDiscoverySetup(entry.root, { directory: destination(id) });
@@ -122,6 +205,7 @@ export function createFleetDiscoveryDesk({ directory, tenants, locate, current, 
     return { schema: REVIEW, kind: value.kind, reviewId, tenant: value.tenant,
       expiresAt: new Date(expires).toISOString(), serving: value.serving,
       ...(value.enrollment ? { enrollment: publicSetup(value.enrollment) } : {}),
+      ...(value.recovery ? { recovery: value.recovery } : {}),
       ...(value.catalog ? { catalog: publicCatalog(value.catalog), permissions: value.permissions } : {}) };
   }
   function take(input, kind) {
@@ -140,7 +224,8 @@ export function createFleetDiscoveryDesk({ directory, tenants, locate, current, 
   async function status(input) {
     keys(input, ['tenant']); const declared = tenant(input.tenant);
     const view = { schema: SCHEMA, tenant: declared.id, host: declared.host, state: 'NEW',
-      identityScope: 'TENANT', serving: null, enrollment: null, catalog: null };
+      identityScope: 'TENANT', serving: null, enrollment: null, catalog: null,
+      retainedIncompleteSetups: await recoveries(declared.id) };
     try { view.serving = binding(await current(declared.id)); }
     catch (error) { view.servingError = { code: error.code ?? error.message }; }
     try {
@@ -164,31 +249,52 @@ export function createFleetDiscoveryDesk({ directory, tenants, locate, current, 
         } catch (error) { view.catalogError = { code: error.code ?? error.message, message: error.message }; }
       }
     } catch (error) {
-      view.state = 'UNAVAILABLE'; view.error = { code: error.code ?? error.message, message: error.message };
+      const recovery = await inspectIncomplete(declared.id).catch(() => null);
+      view.state = recovery ? 'INCOMPLETE' : 'UNAVAILABLE';
+      if (recovery) view.recovery = recovery;
+      view.error = { code: error.code ?? error.message, message: error.message };
     }
     return view;
   }
   async function reviewEnrollment(input) {
-    keys(input, ['tenant', 'slot', 'instanceId', 'sellerId', 'sourceURL']);
+    keys(input, ['tenant', 'slot', 'instanceId', 'sellerId', 'sourceURL', 'expectedIncompleteId']);
     const declared = tenant(input.tenant);
-    if (await exists(declared.id)) fail('FLEET_DISCOVERY_ALREADY_ENROLLED', 'Reopen this tenant’s existing signing identity.');
+    let recovery = null;
+    if (await exists(declared.id)) {
+      recovery = await inspectIncomplete(declared.id);
+      if (typeof input.expectedIncompleteId !== 'string' || input.expectedIncompleteId !== recovery.inspectionId)
+        fail('FLEET_DISCOVERY_RECOVERY_REVIEW_REQUIRED',
+          'Review the exact incomplete setup before preserving it and creating the tenant enrollment.');
+    } else if (input.expectedIncompleteId !== undefined)
+      fail('FLEET_DISCOVERY_RECOVERY_CHANGED', 'Refresh this tenant’s current setup before recovery.');
     const source = await current(declared.id, { slot: input.slot, instanceId: input.instanceId });
     if (!input.slot || !input.instanceId) fail('FLEET_DISCOVERY_INSTANCE_REQUIRED', 'Select the exact serving instance.', 400);
     const entry = { root: source.store, anchorSlot: source.slot,
       console: createReleaseDiscoveryConsole(source.store, { directory: destination(declared.id) }) };
-    const enrollment = await entry.console.review({ releaseId: source.releaseId, sellerId: input.sellerId,
-      ...(input.sourceURL !== undefined ? { sourceURL: input.sourceURL } : {}) });
+    const request = { releaseId: source.releaseId, sellerId: input.sellerId,
+      ...(input.sourceURL !== undefined ? { sourceURL: input.sourceURL } : {}) };
+    const enrollment = recovery ? await reviewReleaseDiscoverySetup(source.store, request) : await entry.console.review(request);
     consoles.set(declared.id, entry);
-    return keep({ kind: 'enrollment', tenant: declared.id, serving: binding(source), entry, enrollment });
+    return keep({ kind: 'enrollment', tenant: declared.id, serving: binding(source), entry, enrollment, recovery });
   }
   async function createEnrollment(input) {
     const saved = take(input, 'enrollment'), source = await sameServing(saved.serving);
     await privateParent(parent);
     return withServing(saved.serving, async () => {
-      await saved.entry.console.create({ reviewId: saved.enrollment.id });
+      let enrollment = saved.enrollment, retainedSetupId = null;
+      if (saved.recovery) {
+        retainedSetupId = await preserveIncomplete(input.tenant, saved.recovery);
+        enrollment = await saved.entry.console.review({ releaseId: saved.enrollment.source.releaseId,
+          sellerId: saved.enrollment.sellerId, sourceURL: saved.enrollment.source.sourceURL });
+        const proposal = value => ({ sellerId: value.sellerId, source: value.source, permissions: value.permissions });
+        if (hash(proposal(enrollment)) !== hash(proposal(saved.enrollment)))
+          fail('FLEET_DISCOVERY_SOURCE_CHANGED', 'The original enrollment source changed after recovery review.');
+      }
+      await saved.entry.console.create({ reviewId: enrollment.id });
       consoles.set(input.tenant, saved.entry);
       return { schema: SCHEMA, tenant: input.tenant, decision: 'ENROLLED',
-        serving: binding(source), enrollment: publicSetup(await readSetup(input.tenant, saved.entry)) };
+        serving: binding(source), enrollment: publicSetup(await readSetup(input.tenant, saved.entry)),
+        ...(retainedSetupId ? { recovery: { ...saved.recovery, retainedSetupId } } : {}) };
     });
   }
   async function closeExplorer(entry) {
