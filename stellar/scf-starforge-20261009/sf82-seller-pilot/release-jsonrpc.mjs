@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { prepareProduct, credentialReferences } from '../sf30-seller-sdk/jsonrpc/config.mjs';
 
-export const JSONRPC_SOURCE_SCHEMA = 'stellar-forge.jsonrpc-seller-release-manifest.v1';
+import { JSONRPC_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { JSONRPC_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'jsonrpc/package';
 const SOURCE_FILES = ['plan.json', 'openapi.json', 'selections.json', 'route-bindings.json',
   'seller-offers.json', 'handlers.mjs', 'RUN.md', 'compiled/manifest.json',

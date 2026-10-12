@@ -172,3 +172,30 @@ Git references: [batch object reads](https://git-scm.com/docs/git-cat-file),
 [explicit fetch input](https://git-scm.com/docs/git-fetch), and
 [`--no-lazy-fetch`](https://git-scm.com/docs/git).
 
+
+## Package an audience-specific product
+
+A standalone product repository can keep the original source layout, native commands and build lifecycle while selecting its own customer-facing package metadata. Declare the optional `product` object in its committed base `distribution.json`:
+
+```json
+{
+  "product": {
+    "schema": "stellar-forge.merchant-product-package.v1",
+    "description": "TokenJunkieLabs Stellar merchant workspace and material catalog operations",
+    "repository": {
+      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "directory": ""
+    },
+    "readme": "products/material-catalog/README.md",
+    "bin": {
+      "starforge": "products/material-catalog/cli.mjs"
+    }
+  }
+}
+```
+
+All fields after `schema` are optional. An absent `product` keeps the existing package metadata exactly. The repository URL must identify one public GitHub repository; its optional directory and every README or executable target are normalized source-relative paths. The builder rejects unknown fields, parent traversal, URL query/fragment text and unsupported entrypoints. A product can declare one to eight named Node commands.
+
+Select each declared executable and README in the ordinary `components` or `supportFiles` inventory. Missing or explicitly excluded product entries fail before a package is materialized. Keep only the product's required native components, source-owned contribution files, dynamic runtime inputs and browser assets in that repository. The existing static-import closure, dependency manifests, archive limits and publication lifecycle apply to the complete selected source.
+
+The selected Git commit remains the build identity. The complete base declaration, including product metadata, remains in `distributionInputs` with its original Git blob and byte digest. `manifest.sourceRepository` and npm repository metadata identify the standalone product; retain upstream source pins and legitimate third-party licenses in that repository when copying maintained source. Resume uses the same pinned declaration and refuses a changed manifest. Use the ordinary `build.mjs --repo PRODUCT_CHECKOUT --ref COMMIT --out OUTPUT` invocation; the product introduces no second packaging engine.

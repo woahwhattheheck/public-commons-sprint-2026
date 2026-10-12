@@ -11,6 +11,24 @@ live launch before issuing an operation. A managed launch can use its original
 copied command source; the native launch reader checks that copy against the
 selected installed source.
 
+## Configured merchant host
+
+The shared host advertises the sixteen n8n tools only when its configuration has
+n8nWorkspaceConnection. The metadata-only catalog is available during host
+startup; the n8n adapter is constructed by the existing lazy provider owner when
+its configured family is first used. The same owner drains admitted calls and
+releases temporary file reads on close. Its original merchant keeps the job,
+worker and dispatch leases.
+
+The configured family also selects its n8n operating instructions and a two-MiB
+MCP request capacity, preserving larger capacities selected by other configured
+providers. The private native request still enforces its original 1,100,000-byte
+limit. Tools continue through the original merchant HTTP operation journal.
+
+Package exports and the existing n8n-merchant command are registered together in
+distribution/contributions/n8n.json. The shared distribution composer includes
+the source catalog, lazy descriptor, complete receiver and adjacent declarations.
+
 ## Connect an existing merchant
 
 Start the saved n8n merchant through its existing Applications entry. Keep its
@@ -118,9 +136,9 @@ For a new job, retain a request UUID and its complete input before sending:
 }
 ~~~
 
-This uses the original invoiceSummary example from example-input.json. It returns
-two lines, five units, subtotal 46500, taxable amount 45000, tax 3375 and total
-48375 in USD. For another configured function, use that function's exact current
+This uses the original invoiceSummary input from example-input.json. The configured
+invoice workflow computes two lines, five units, subtotal 46500, taxable amount
+45000, tax 3375 and total 48375, all monetary amounts in USD cents ($483.75 total). For another configured function, use that function's exact current
 input schema and example.
 
 merchant_n8n_prepare returns the original job handoff, including its claimToken,
@@ -345,3 +363,34 @@ The adapter and receiver use only the selected original source, authenticated
 merchant interface and maintained retained-file transport. Native payment,
 workflow execution, job ownership and operator decisions remain in the original
 merchant.
+
+## Run the original MCP receiving journey
+
+The source includes one complete prepared-job receiving operation in
+sf30-seller-sdk/n8n/examples/native-mcp-receiving.mjs. Select the source root and
+its actual Git commit, an empty private operation directory, and a receipt path:
+
+~~~sh
+node "$STARFORGE_SOURCE/stellar/scf-starforge-20261009/sf30-seller-sdk/n8n/examples/native-mcp-receiving.mjs" \\
+  --source "$STARFORGE_SOURCE" \\
+  --source-ref "$STARFORGE_COMMIT" \\
+  --directory "$N8N_RECEIVING_DIRECTORY" \\
+  --receipt "$N8N_RECEIVING_RECEIPT"
+~~~
+
+It starts the original five-service merchant and maintained authenticated MCP
+host using the bundled invoice configuration and complete original input. The
+journey lists the configured sixteen-tool family, prepares a job, repeats the
+same request to recover its claim, and freezes the selected original job and
+dispatch. It interrupts the maintained download client after its first durable
+file prefix, renews the original claim once, closes and reopens the merchant,
+then resumes that same export through the unchanged MCP endpoint and alias.
+After both services close, the local receiver validates every retained original
+file again.
+
+The private operation file retains the exact request UUIDs, handoffs, host port
+and download checkpoint needed to resume that same operation. Keep this
+0700 directory and its 0600 files private. A repeated completed command reads
+its saved result. The compact receipt includes actual source-file hashes,
+configuration/application hashes, original job and export IDs, revisions,
+received file hashes, resumed byte count and launch instance identities.

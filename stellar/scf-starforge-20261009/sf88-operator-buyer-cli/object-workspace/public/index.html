@@ -19,11 +19,44 @@
       <div class="section-heading"><h2>Downloads</h2><button id="new-download" class="small">New</button></div>
       <div id="session-list" class="session-list" aria-label="Saved downloads"></div>
       <button id="refresh-list" class="quiet wide">Refresh saved sessions</button>
+      <button id="open-operator" class="quiet wide">Local buyer setup <span id="operator-ready" class="badge">Set up</span></button>
       <button id="open-recovery" class="quiet wide">Backup and recovery</button>
       <button id="open-analysis" class="quiet wide">Data analysis</button>
       <p class="sidebar-note">Sessions and completed files remain available when you reopen this workspace.</p>
     </aside>
     <div class="content">
+      <section id="operator-panel" class="operator-panel" hidden>
+        <div class="section-heading"><div><p class="eyebrow">RECEIVING HOST</p><h2>Local buyer setup</h2><p class="intro">Choose the host identity, public payer, signing reference and spending limits for new object downloads. Existing buyers and interrupted preparations retain their original settings and journals.</p></div><button id="close-operator" class="quiet small">Close</button></div>
+        <section id="operator-current" class="panel"></section>
+        <form id="operator-form" class="panel">
+          <div class="section-heading"><h2>Host settings</h2><span id="operator-draft-state" class="badge"></span></div>
+          <div class="operator-settings-grid">
+            <label>Actor ID<input id="operator-actor" required maxlength="160" pattern="[A-Za-z0-9._:\-]+" autocomplete="off"></label>
+            <label>Service ID<input id="operator-service" required maxlength="160" pattern="[A-Za-z0-9._:\-]+" autocomplete="off"></label>
+            <label class="operator-wide">Stellar payer public address<input id="operator-payer" required maxlength="56" pattern="G[A-Z2-7]{55}" autocomplete="off" spellcheck="false"></label>
+            <label class="operator-wide">Python executable on this host<input id="operator-python" required placeholder="/usr/bin/python3" autocomplete="off" spellcheck="false"></label>
+            <label>Signing reference<select id="operator-signer-kind"><option value="ENVIRONMENT">Existing wallet environment variable</option><option value="PROVIDER">Trusted SEP-43 provider configuration</option></select></label>
+            <label id="operator-environment-row">Wallet environment variable name<input id="operator-secret-env" maxlength="128" pattern="[A-Z][A-Z0-9_]{0,127}" autocomplete="off" spellcheck="false"></label>
+            <label id="operator-provider-row" hidden>Provider configuration file<input id="operator-provider" placeholder="/absolute/private/provider.json" autocomplete="off" spellcheck="false"></label>
+            <label>Maximum total atomic units per prepared object<input id="operator-total" required inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" autocomplete="off"></label>
+            <label>Maximum atomic units per UTC day per prepared object<input id="operator-daily" required inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" autocomplete="off"></label>
+            <label class="operator-wide">RPC URL override <span class="muted">Optional; must serve the request's selected network</span><input id="operator-rpc" maxlength="2048" autocomplete="off" spellcheck="false"></label>
+            <label class="operator-wide">HTTPS proxy environment variable name <span class="muted">Optional</span><input id="operator-proxy-env" maxlength="128" pattern="[A-Z][A-Z0-9_]{0,127}" autocomplete="off" spellcheck="false"></label>
+            <label class="operator-wide">Reason for this settings change <span class="muted">Optional</span><textarea id="operator-note" rows="3" maxlength="1000"></textarea></label>
+          </div>
+          <p class="muted">Enter a signing reference here. Set the existing wallet or proxy secret in the launching process, or supply the original trusted provider file. The buyer keeps each request's selected network and exact payment terms.</p>
+          <div class="toolbar"><button id="operator-review" type="submit" class="primary">Review host settings</button><button id="operator-reload" type="button">Discard edits and reload</button></div>
+        </form>
+        <section id="operator-review-panel" class="panel" hidden>
+          <h2>Review this host change</h2><p id="operator-review-summary"></p><div id="operator-changes"></div>
+          <h3>Local references</h3><div id="operator-review-availability"></div>
+          <h3>Effect on received object plans</h3><div id="operator-review-impact"></div>
+          <details><summary>Reviewed revision identity</summary><p class="wrap">Review SHA-256: <code id="operator-review-digest"></code></p><p class="wrap">Settings SHA-256: <code id="operator-settings-digest"></code></p></details>
+          <button id="operator-save" type="button" class="primary" disabled>Save host settings</button>
+        </section>
+        <section class="panel"><h2>Current receiving state</h2><div id="operator-current-impact"><p class="muted">Open or refresh this setup view to compare retained object reviews with the selected host settings.</p></div></section>
+        <section><h2>Saved host revisions</h2><div id="operator-history"></div></section>
+      </section>
       <section id="analysis-panel" class="panel" hidden>
         <div class="section-heading"><div><p class="eyebrow">CUSTOMER ANALYSIS</p><h2>Use your completed file</h2></div><button id="close-analysis" class="quiet small">Close</button></div>
         <p class="intro">Register the recorded JSON or CSV file as a named source. The analysis workspace provides field mapping, table import, saved SQL and complete exports. Your original download and purchase records stay together.</p>
@@ -85,6 +118,7 @@
           <summary>Receive a merchant object</summary>
           <p class="note">Choose the merchant's public objects.json and saved offers. Your local operator preset supplies the payer and signer reference.</p>
           <p id="receiving-operator" class="product-summary"></p>
+          <button type="button" class="quiet" data-operator-setup>Open local buyer setup</button>
           <form id="receive-files-form">
             <div class="form-grid">
               <label>Object description<input id="receive-description" type="file" accept=".json,application/json" required><small>Original objects.json, up to 8 MiB.</small></label>
@@ -107,11 +141,16 @@
           </form>
           <section id="received-review" class="review" hidden>
             <h3>Reviewed object and buyer</h3>
+            <p id="received-review-status" class="note"></p>
             <dl id="received-review-terms" class="detail-grid"></dl>
             <p class="note">Create your original private operator workspace and this download plan. Start download is a separate action with the original per-request terminal approval.</p>
             <button id="receive-create" class="primary">Create buyer and download</button>
           </section>
         </details>
+        <section class="review"><h3>Saved object preparations</h3>
+          <p class="intro">Open a saved review or continue its original buyer preparation. Starting the download remains a separate action.</p>
+          <div id="received-preparations"></div>
+        </section>
         <h3>Existing products</h3>
         <form id="setup-form">
           <label class="full">Merchant product<select id="product" required></select></label>
@@ -133,7 +172,7 @@
       <section id="empty" class="empty panel">
         <p class="eyebrow">DOWNLOAD WORKSPACE</p><h2>Your file, from selection to delivery</h2>
         <p>Select a saved download or start a new one. Review the merchant's object and native payment terms, retain each completed part, and assemble the exact file.</p>
-        <button id="empty-new" class="primary">New download</button>
+        <div class="actions"><button id="welcome-operator">Set up this buyer host</button><button id="empty-new" class="primary">New download</button></div>
       </section>
       <section id="session" hidden>
         <div class="session-header"><div><p class="eyebrow" id="session-id"></p><h2 id="session-title"></h2><p id="session-source" class="source-url"></p></div><span id="session-status" class="badge"></span></div>
@@ -201,3 +240,4 @@
   </dialog>
 </body>
 </html>
+
