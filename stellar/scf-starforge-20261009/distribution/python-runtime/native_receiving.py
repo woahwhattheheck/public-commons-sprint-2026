@@ -14,6 +14,7 @@ import fcntl
 import hashlib
 import importlib
 import importlib.metadata
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -21,6 +22,7 @@ import re
 import selectors
 import signal
 import stat
+import struct
 import subprocess
 import sys
 import time
@@ -168,6 +170,154 @@ def operation_lease(directory):
         os.close(fd)
 
 
+
+
+_RESERVED_HEADER = struct.Struct(">8sQQ32s")
+_RESERVED_MAGIC = b"SCFNDR1\0"
+
+def _reserved_info(fd):
+    info = os.fstat(fd)
+    need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+         and not info.st_mode & 0o077 and info.st_size >= 8192 and info.st_size % 2 == 0
+         and info.st_blocks * 512 >= info.st_size,
+         "PREALLOCATED_PRIVATE_RECORD_REQUIRED")
+    return info.st_size // 2
+
+
+def _reserved_slots(fd, span):
+    rows = []
+    for offset in (0, span):
+        header = os.pread(fd, _RESERVED_HEADER.size, offset)
+        if len(header) != _RESERVED_HEADER.size:
+            continue
+        magic, sequence, count, expected = _RESERVED_HEADER.unpack(header)
+        if magic != _RESERVED_MAGIC or not sequence or count > span - 64:
+            continue
+        payload = os.pread(fd, count, offset + 64)
+        if len(payload) == count and hashlib.sha256(payload).digest() == expected:
+            rows.append((sequence, payload))
+    return sorted(rows, key=lambda row: row[0])
+
+
+def read_reserved_record(path):
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    try:
+        rows = _reserved_slots(fd, _reserved_info(fd))
+        return rows[-1] if rows else None
+    finally:
+        os.close(fd)
+
+
+def write_reserved_record(path, payload):
+    fd = os.open(path, os.O_RDWR | os.O_NOFOLLOW)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        span = _reserved_info(fd)
+        need(len(payload) <= span - 64, "RESERVED_RECORD_CAPACITY_EXCEEDED",
+             {"bytes": len(payload), "capacity": span - 64})
+        rows = _reserved_slots(fd, span)
+        sequence = rows[-1][0] + 1 if rows else 1
+        offset = (sequence % 2) * span
+        os.pwrite(fd, b"\0" * 64, offset)
+        written = 0
+        while written < len(payload):
+            count = os.pwrite(fd, payload[written:written + 65536], offset + 64 + written)
+            need(count > 0, "RESERVED_RECORD_WRITE_INCOMPLETE")
+            written += count
+        os.fsync(fd)
+        header = _RESERVED_HEADER.pack(_RESERVED_MAGIC, sequence, len(payload),
+                                       hashlib.sha256(payload).digest())
+        need(os.pwrite(fd, header, offset) == len(header), "RESERVED_RECORD_COMMIT_INCOMPLETE")
+        os.fsync(fd)
+        return {"record": str(path), "sequence": sequence, "payload_bytes": len(payload),
+                "payload_sha256": hashlib.sha256(payload).hexdigest()}
+    finally:
+        os.close(fd)
+
+
+def retain_command_failure(plan, root, directory, attempt, argv, detail):
+    """Publish exact command/engine logs before the owning execution can end."""
+    selected = plan.get("diagnostics")
+    if not selected:
+        return detail
+    import zipfile
+    sink = private(selected["directory"])
+    allocation = absolute(plan["capacity"]["directory"]).resolve()
+    step = directory.relative_to(root / "steps").as_posix()
+    need(re.fullmatch(r"[a-z][a-z0-9-]{0,79}", step), "DIAGNOSTIC_STEP_INVALID")
+    name = step + "-" + str(attempt)
+    destination = sink / (name + ".zip")
+    receipt_path = sink / (name + ".json")
+    sources = [("stdout", Path(detail["stdout"])), ("stderr", Path(detail["stderr"]))]
+    progress_path = directory / "engine-progress.json"
+    if progress_path.is_file():
+        sources.append(("engine-progress", progress_path))
+        progress = read(progress_path)
+        if isinstance(progress.get("log"), str):
+            sources.append(("engine-stage-log", Path(progress["log"])))
+    manifest = {"schema": "stellar-forge.native-command-diagnostics.v1",
+                "operation_id": plan["operation_id"], "step": step, "attempt": attempt,
+                "exit_code": detail["exit_code"], "engine_sha256": plan["engine_sha256"],
+                "files": []}
+    reserved = selected.get("record")
+    temporary = (directory if reserved else sink) / (".pending-" + uuid.uuid4().hex)
+    try:
+        with temporary.open("xb") as output:
+            os.fchmod(output.fileno(), 0o600)
+            with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED,
+                                 compresslevel=6) as archive:
+                for role, path in sources:
+                    allowed = path.resolve().is_relative_to(allocation)
+                    if role == "engine-stage-log" and selected.get("log_directory"):
+                        allowed |= path.resolve().is_relative_to(absolute(selected["log_directory"]).resolve())
+                    need(path.is_absolute() and not path.is_symlink() and allowed,
+                         "DIAGNOSTIC_SOURCE_OUTSIDE_OPERATION", role)
+                    before = path.stat()
+                    need(stat.S_ISREG(before.st_mode), "DIAGNOSTIC_REGULAR_FILE_REQUIRED", role)
+                    member = role + (".json" if role == "engine-progress" else ".log")
+                    hashed, count = hashlib.sha256(), 0
+                    with path.open("rb") as source, archive.open(member, "w") as target:
+                        while block := source.read(65536):
+                            target.write(block)
+                            hashed.update(block)
+                            count += len(block)
+                    after = path.stat()
+                    need((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns)
+                         == (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns)
+                         and count == before.st_size,
+                         "DIAGNOSTIC_SOURCE_CHANGED", role)
+                    manifest["files"].append({"role": role, "path": member,
+                        "source": str(path), "sha256": hashed.hexdigest(), "bytes": count})
+                raw = encoded(manifest)
+                archive.writestr("manifest.json", raw)
+            output.flush()
+            os.fsync(output.fileno())
+        if reserved:
+            receipt = write_reserved_record(reserved, temporary.read_bytes())
+            return {**detail, "private_diagnostics": {
+                **receipt, "complete": True,
+                "manifest_sha256": hashlib.sha256(raw).hexdigest(), "files": manifest["files"]}}
+        if destination.exists():
+            need(digest(destination) == digest(temporary), "DIAGNOSTIC_ARCHIVE_CONFLICT")
+        else:
+            os.link(temporary, destination)
+            sync(sink)
+        receipt = {"path": str(destination), "sha256": digest(destination),
+                   "bytes": destination.stat().st_size,
+                   "manifest_sha256": hashlib.sha256(raw).hexdigest(),
+                   "complete": True, "files": manifest["files"]}
+        if receipt_path.exists():
+            need(read(receipt_path) == receipt, "DIAGNOSTIC_RECEIPT_CONFLICT")
+        else:
+            write(receipt_path, receipt, create=True)
+        return {**detail, "private_diagnostics": receipt}
+    finally:
+        try:
+            temporary.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 class Journey:
     def __init__(self, plan, root, fd):
         self.plan, self.root, self.fd = plan, root, fd
@@ -244,8 +394,15 @@ class Journey:
                 errors.flush()
                 os.fsync(output.fileno())
                 os.fsync(errors.fileno())
-        need(code == 0, "NATIVE_COMMAND_FAILED",
-             {"exit_code": code, "stdout": str(stdout), "stderr": str(stderr)})
+        if code != 0:
+            detail = {"exit_code": code, "stdout": str(stdout), "stderr": str(stderr)}
+            try:
+                detail = retain_command_failure(self.plan, self.root, directory, attempt, argv, detail)
+            except Exception as error:
+                detail["diagnostic_capture_error"] = {
+                    "code": getattr(error, "code", type(error).__name__),
+                    "message": str(error)}
+            raise ReceivingError("NATIVE_COMMAND_FAILED", detail)
         need(stdout.stat().st_size <= MAX_JSON, "NATIVE_RESULT_SIZE_LIMIT")
         try:
             return json.loads(stdout.read_bytes())
@@ -271,7 +428,12 @@ class Journey:
         def apply(directory, attempt):
             argv = [self.plan["python"], self.plan["engine"], "--root", str(runtime),
                     "--lease-fd", str(self.fd), "--progress-file",
-                    str(directory / "engine-progress.json"), command, *arguments]
+                    str(directory / "engine-progress.json")]
+            diagnostics = self.plan.get("diagnostics", {})
+            if diagnostics.get("log_directory"):
+                argv.extend(["--log-directory", diagnostics["log_directory"],
+                             "--log-limit-bytes", str(diagnostics["log_limit_bytes"])])
+            argv.extend([command, *arguments])
             return self.command(directory, attempt, argv)
         return self.step(name, intent, apply,
                          recovered=None if command == "inspect" else recover,
@@ -417,13 +579,128 @@ def installation_id(result):
     return value
 
 
+def receive_primary_cohort(journey, prefix, root, selection, transfer):
+    """Receive a separately resolved public cohort, then verify the actual source."""
+    import zipfile
+
+    archive_path = absolute(transfer["archive"], file=True)
+    extras = sorted(journey.plan.get("extras", ["workbooks"]))
+    intent = {"transfer": transfer, "source": selection["sourceCommit"],
+              "source_manifest_sha256": selection["sourceManifestSha256"],
+              "extras": extras, "root": str(root)}
+
+    def preflight(directory, attempt):
+        need(digest(archive_path) == transfer["sha256"], "PRIMARY_COHORT_ARCHIVE_CHANGED")
+        with zipfile.ZipFile(archive_path) as archive:
+            members = archive.infolist()
+            names = {item.filename for item in members}
+            need(len(members) <= 2000 and len(names) == len(members),
+                 "PRIMARY_COHORT_INVENTORY_INVALID")
+            for item in members:
+                path = PurePosixPath(item.filename)
+                need(not item.is_dir() and not path.is_absolute() and ".." not in path.parts
+                     and not stat.S_ISLNK(item.external_attr >> 16),
+                     "PRIMARY_COHORT_MEMBER_INVALID", item.filename)
+            need(archive.getinfo("lock.json").file_size <= MAX_JSON
+                 and archive.getinfo("COHORT.json").file_size <= MAX_JSON,
+                 "PRIMARY_COHORT_METADATA_LIMIT")
+            lock_bytes = archive.read("lock.json")
+            lock = json.loads(lock_bytes)
+            manifest = json.loads(archive.read("COHORT.json"))
+            need(hashlib.sha256(lock_bytes).hexdigest() == transfer["lock_sha256"]
+                 and lock.get("id") == transfer["candidate"]
+                 and manifest.get("candidate") == transfer["candidate"]
+                 and manifest.get("lockSha256") == transfer["lock_sha256"],
+                 "PRIMARY_COHORT_IDENTITY_CHANGED")
+            source_matches(lock["source"], selection)
+            need(lock["extras"] == extras, "EXACT_DECLARED_EXTRAS_REQUIRED")
+            observation = {"archive": str(archive_path), "sha256": transfer["sha256"],
+                           "bytes": archive_path.stat().st_size,
+                           "candidate": transfer["candidate"],
+                           "lock_sha256": transfer["lock_sha256"],
+                           "expanded_bytes": sum(item.file_size for item in members),
+                           "members": len(members), "source": lock["source"],
+                           "resolution_interpreter": lock.get("resolutionPython"),
+                           "interpreter": lock["interpreter"]}
+            capacity = journey.plan.get("capacity")
+            if capacity is not None:
+                request_path = absolute(capacity["request"], file=True)
+                request = read(request_path)["intent"]
+                need(request["operation_id"] == journey.plan["operation_id"],
+                     "ORIGINAL_CAPACITY_OPERATION_CHANGED")
+                allocation = absolute(capacity["directory"])
+                selected = [row for row in request["disk"]["paths"]
+                            if Path(row["path"]).resolve() == allocation.resolve()]
+                need(len(selected) == 1, "ORIGINAL_DISK_DECLARATION_REQUIRED")
+                resources = os.statvfs(allocation)
+                block = resources.f_frsize
+                current = allocated_tree(allocation)
+                original = allocated_tree(Path(selection["sourceRoot"]) / PROJECT)
+                remaining = (sum(((item.file_size + block - 1) // block) * block
+                                 for item in members)
+                             + original["allocated_bytes"] + 16 * 1024 ** 2)
+                remaining_inodes = len(members) + original["inodes"] + 512
+                projected = current["allocated_bytes"] + remaining
+                projected_inodes = current["inodes"] + remaining_inodes
+                fits = (projected <= selected[0]["bytes"]
+                        and projected_inodes <= selected[0]["inodes"]
+                        and remaining + request["disk"]["reserve_bytes"]
+                            <= resources.f_bavail * resources.f_frsize
+                        and remaining_inodes + request["disk"]["reserve_inodes"]
+                            <= resources.f_favail)
+                if capacity["memory_backed"]:
+                    fits = fits and projected + capacity["process_peak_bytes"] <= request["memory"]["peak_bytes"]
+                observation["capacity"] = {"current": current, "original_project": original,
+                    "remaining_allocation_bound": remaining,
+                    "projected_allocated_bytes": projected, "projected_inodes": projected_inodes,
+                    "request_sha256": digest(request_path), "fits": fits}
+                write(directory / "capacity-observation.json", observation["capacity"])
+                need(fits, "RECEIVING_CAPACITY_ADJUSTMENT_REQUIRED", observation["capacity"])
+            return observation
+
+    journey.step(prefix + "-cohort-intake", intent, preflight)
+    result = journey.engine(prefix + "-receive", root, "receive",
+                            ["--archive", str(archive_path)])
+    need(candidate_id(result) == transfer["candidate"]
+         and result["lockSha256"] == transfer["lock_sha256"],
+         "PRIMARY_COHORT_IDENTITY_CHANGED")
+
+    def verify_original(directory, attempt):
+        engine_path = absolute(journey.plan["engine"], file=True)
+        need(digest(engine_path) == journey.plan["engine_sha256"], "PYTHON_ENGINE_CHANGED")
+        module_name = "_scf_receiving_original_engine_" + journey.plan["engine_sha256"][:16]
+        specification = importlib.util.spec_from_file_location(module_name, engine_path)
+        need(specification is not None and specification.loader is not None,
+             "ORIGINAL_ENGINE_MODULE_REQUIRED")
+        engine = importlib.util.module_from_spec(specification)
+        sys.modules[module_name] = engine
+        specification.loader.exec_module(engine)
+        with engine.owned(Path(root), journey.fd):
+            original, original_directory = engine.source_snapshot(
+                Path(root), Path(selection["sourceRoot"]) / PROJECT, extras,
+                selection["sourceCommit"], selection["sourceManifestSha256"])
+            _, lock = engine.check_candidate(Path(root), transfer["candidate"])
+            need(lock["source"] == original and result["source"] == original,
+                 "RECEIVED_COHORT_SOURCE_BYTES_DIFFER")
+        return {"candidate": transfer["candidate"], "source": original,
+                "source_directory": str(original_directory),
+                "engine_sha256": journey.plan["engine_sha256"]}
+
+    journey.step(prefix + "-received-source", intent, verify_original)
+    return result
+
+
 def cohort(journey, prefix, root, selection):
     project = Path(selection["sourceRoot"]) / PROJECT
     extras = sorted(journey.plan.get("extras", ["workbooks"]))
-    result = journey.engine(prefix + "-resolve", root, "resolve", [
-        "--python", journey.plan["python"], "--source", str(project), "--extras", ",".join(extras),
-        "--release-id", selection["sourceCommit"],
-        "--release-digest", selection["sourceManifestSha256"]])
+    transfer = journey.plan.get("primary_cohort") if prefix == "primary" else None
+    if transfer is not None:
+        result = receive_primary_cohort(journey, prefix, root, selection, transfer)
+    else:
+        result = journey.engine(prefix + "-resolve", root, "resolve", [
+            "--python", journey.plan["python"], "--source", str(project), "--extras", ",".join(extras),
+            "--release-id", selection["sourceCommit"],
+            "--release-digest", selection["sourceManifestSha256"]])
     source_matches(result["source"], selection)
     need(result["extras"] == extras, "EXACT_DECLARED_EXTRAS_REQUIRED")
     identifier = candidate_id(result)
@@ -1272,10 +1549,38 @@ def validate_plan(plan):
     need(HEX.fullmatch(plan["engine_sha256"])
          and digest(plan["engine"]) == plan["engine_sha256"], "PYTHON_ENGINE_CHANGED")
     absolute(plan["output"])
+    diagnostics = plan.get("diagnostics")
+    if diagnostics is not None:
+        need(isinstance(diagnostics, dict) and "directory" in diagnostics
+             and set(diagnostics) <= {"directory", "record", "state_record",
+                                      "log_directory", "log_limit_bytes"},
+             "DIAGNOSTICS_CONFIGURATION_INVALID")
+        destination = absolute(diagnostics["directory"])
+        need(not destination.is_relative_to(absolute(plan["output"]))
+             and not absolute(plan["output"]).is_relative_to(destination),
+             "DIAGNOSTICS_MUST_USE_SEPARATE_PRIVATE_DIRECTORY")
+        private(destination)
+        for key in ("record", "state_record"):
+            if diagnostics.get(key):
+                read_reserved_record(absolute(diagnostics[key], file=True))
+        if diagnostics.get("log_directory"):
+            private(absolute(diagnostics["log_directory"]))
+            need(type(diagnostics.get("log_limit_bytes")) is int
+                 and 4096 <= diagnostics["log_limit_bytes"] <= 64 * 1024 * 1024,
+                 "EXPLICIT_ENGINE_LOG_CAPACITY_REQUIRED")
     extras = plan.get("extras", ["workbooks"])
     need(isinstance(extras, list) and extras and "workbooks" in extras
          and all(isinstance(x, str) and re.fullmatch(r"[a-z][a-z0-9_-]{0,63}", x) for x in extras)
          and len(extras) == len(set(extras)), "DECLARED_PYTHON_EXTRAS_REQUIRED")
+    transfer = plan.get("primary_cohort")
+    if transfer is not None:
+        need(isinstance(transfer, dict)
+             and set(transfer) == {"archive", "sha256", "candidate", "lock_sha256"}
+             and all(isinstance(transfer[key], str) and HEX.fullmatch(transfer[key])
+                     for key in ("sha256", "candidate", "lock_sha256")),
+             "PRIMARY_COHORT_TRANSFER_INVALID")
+        archive = absolute(transfer["archive"], file=True)
+        need(digest(archive) == transfer["sha256"], "PRIMARY_COHORT_ARCHIVE_CHANGED")
     source, offline = plan["source"], plan["offline_source"]
     need(isinstance(source, dict) and isinstance(offline, dict)
          and source["commit"] == offline["commit"]
@@ -1444,6 +1749,8 @@ def run_plan(plan):
         if first_capacity is not None:
             result["capacity"] = {"primary": first_capacity, "offline": offline_capacity,
                                   "completed_allocation": allocated_tree(plan["capacity"]["directory"])}
+        if plan.get("primary_cohort") is not None:
+            result["received_primary_cohort"] = dict(plan["primary_cohort"])
         if managed_primary is not None:
             result["applications"] = {"primary": managed_primary, "offline": managed_offline}
         if transferred is not None:

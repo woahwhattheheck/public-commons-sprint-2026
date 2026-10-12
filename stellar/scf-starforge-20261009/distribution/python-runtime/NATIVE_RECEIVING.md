@@ -428,6 +428,76 @@ Keep result.json and the complete customer artifacts in their existing private
 receiving surface. Source publication contains the driver, engine and operating
 guides.
 
+
+## Reserved failure output for temporary execution storage
+
+When the runtime allocation belongs to one execution namespace, select a separate
+private directory for command diagnostics before admission. This optional plan
+section keeps exact failure bytes available to the owning operator:
+
+```json
+{
+  "diagnostics": {
+    "directory": "/srv/starforge/private-record/results/diagnostics",
+    "record": "/srv/starforge/private-record/command-diagnostics.dat",
+    "state_record": "/srv/starforge/private-record/control-state.dat",
+    "log_directory": "/srv/starforge/private-record/engine-logs",
+    "log_limit_bytes": 262144
+  }
+}
+```
+
+The native driver passes the selected log directory and byte limit to the original
+engine. The engine's usual destination remains its runtime's logs directory when
+this option is omitted.
+
+Prepare the selected shared files before the native operation begins. On Linux,
+reserve each log's backing storage with fallocate in KEEP_SIZE mode: its logical
+length stays zero while the requested blocks are allocated. Create twelve
+private regular files named .reserve-00 through .reserve-11 in engine-logs, with
+262,144 allocated bytes each. The engine atomically assigns those files to the
+actual original stage names as each stage starts. The current source uses
+python, create-environment, dependency-check, build-original, installed-source,
+and resolve-/install- followed by the original builder or cohort identity.
+Repeated stages append within their original file.
+
+Create command-diagnostics.dat as a private regular file with 4,194,304 physically
+allocated bytes and control-state.dat with 524,288 physically allocated bytes.
+Use os.posix_fallocate on their open file descriptors and fsync the files and
+their containing directory. The driver checks ownership, permissions, regular
+file type, link count, and actual allocated blocks before using a reserved
+record. Include these shared bytes in the original resource declaration and
+leave each record's file size intact.
+
+| Output | Retained behavior |
+| --- | --- |
+| Original engine log | Child bytes are written and synced from process start into the reserved stage file. |
+| Captured command stdout | The engine permits up to its explicit 8 MiB JSON capture limit. |
+| Stage log limit | Each selected stage file stays within log_limit_bytes. A real excess ends the child and reports observed/written counts and truncation. |
+| Command diagnostic record | A nonzero command exit commits a ZIP containing its exact stdout, stderr, engine progress, selected original stage log, and member hashes. |
+| Reserved control record | The owning worker can maintain compact progress/results with the same exported record helpers; the native session's control mirror uses this file. |
+
+The record format contains two checksummed slots. A writer syncs a new payload
+before publishing its header, leaving the previous valid slot available during
+an interrupted update. Native operators can read the latest committed payload
+through read_reserved_record(path) from native_receiving.py; it returns a
+(sequence, payload_bytes) pair, or None before the first commit. The command
+diagnostic payload is the complete ZIP. Its failure receipt supplies the record
+path, sequence, payload byte count, payload SHA256 and manifest SHA256. Extract
+only that verified payload when opening it as a ZIP; the surrounding reserved
+file intentionally keeps unused allocated space.
+
+For an ordinary persistent output directory, diagnostics.directory alone remains
+available: a failed command creates a private ZIP and JSON receipt there.
+The reserved record is the appropriate choice when the shared filesystem may
+fill while the original operation runs.
+
+Read a saved stage log or the verified diagnostic payload to identify the exact
+resolver error. Preserve the original native command's observed exit and its
+request when continuing; a missing terminal observation is retained as missing.
+A failed pre-customer resolver does not require republishing the unchanged
+source archive or customer input merely to preserve its small error record.
+
 ## Offline receiving as an operator
 
 The engine's portable cohort includes the original Python source descriptor,
@@ -510,3 +580,27 @@ source. It requires a different actual source commit, uses this guarded
 activation, and reopens the known customer output through the newly installed
 original application. The earlier cohort and environment remain available to
 the existing rollback workflow.
+
+
+## Receive a separately resolved public wheel cohort
+
+A receiver can select an exact cohort produced by the same wheel engine on an equipped public-source host. Add this optional object to the private receiving plan:
+
+```json
+{
+  "primary_cohort": {
+    "archive": "/absolute/received/python-cohort.zip",
+    "sha256": "<complete archive SHA-256>",
+    "candidate": "<original candidate SHA-256 identity>",
+    "lock_sha256": "<original lock.json SHA-256>"
+  }
+}
+```
+
+The public producer uses the selected source edition, its original source manifest and the unchanged requested extras. It runs the maintained engine's `resolve`, `inspect --candidate` and `bundle` commands. Retain its real Python descriptor, complete lock, original source descriptor, wheel hashes, wheel bytes, expanded bytes, stdout, stderr and stage logs. A Python patch-version difference is supported only where the engine's original implementation, major/minor, platform, machine and cache-tag comparison matches; installation still enforces that comparison.
+
+The receiver hashes the selected archive before work, checks the exact candidate and lock identities, and measures the pending expansion against its original disk, inode and memory declaration before extraction. It then uses the original `receive` command. Under the same engine lease, it invokes the engine's maintained source-snapshot and candidate validation functions against the actual selected local source project. The whole source descriptor must match: all source file bytes, project metadata, entrypoints, build requirements, optional dependency declarations and edition pins. This prevents an archive's source label from substituting for the actual selected source. The ordinary retained candidate inspection and installation follow; no online resolution occurs on this path.
+
+The final receiving result includes `received_primary_cohort` with the four selected transfer fields. The subsequent customer operation and fresh offline receiving remain the same workflow. A newer source upgrade continues to resolve its own source cohort.
+
+Keep an existing queued native request and any observed command result intact. Once the exact public cohort is available, select it in an explicit linked receiving continuation through the original supervisor workflow. Record the prior request/result or pre-dispatch transition, new plan identity and actual cohort hashes. The cohort contains public source and wheels; customer databases, private launch controls and customer output remain in their authorized local receiving workspace.
