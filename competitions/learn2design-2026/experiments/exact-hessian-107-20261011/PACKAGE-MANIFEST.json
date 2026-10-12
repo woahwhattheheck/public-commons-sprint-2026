@@ -32,8 +32,8 @@
     },
     {
       "path": "batch-portfolio-d76c/README.md",
-      "bytes": 6025,
-      "sha256": "9501dd40de16b694ee787620cd06c9d3304499316f9c53cca1e629e0ff4c88f1"
+      "bytes": 6321,
+      "sha256": "2ab9625bcc4d4ff6d2fd58e8e8ebc5a56ac6b20b285067c2bd885989f819445d"
     },
     {
       "path": "batch-portfolio-d76c/requirements.txt",
@@ -42,8 +42,8 @@
     },
     {
       "path": "batch-portfolio-d76c/submission.py",
-      "bytes": 20875,
-      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d"
+      "bytes": 21276,
+      "sha256": "ed2b99f854f09af59fa62f0f777a438bd7cc8b765bf5d8cab87294cc69be2278"
     },
     {
       "path": "batch-portfolio-d76c/warmstart_bank.npz",
@@ -148,12 +148,12 @@
     {
       "path": "run_phase.py",
       "bytes": 20693,
-      "sha256": "91e8d3c7858da29a4abfd443657392a6250e82b24ddb80be7cd45fff354d1cd1"
+      "sha256": "f4a8100c0e566b40b8152303dfe51fb792ad4784c0bdc2cd4a933d07b40b4325"
     },
     {
       "path": "RUN_PLAN.json",
       "bytes": 8075,
-      "sha256": "64d86403015fab18a54142a93d7de18382b8a0b2a8b21f0f9ff0caac2ead7267"
+      "sha256": "0395383c6b07798440704dc2b4449eff9fb5f3e2d728b46e5d742e6262d7fc1e"
     },
     {
       "path": "runner/invocation.py",
@@ -187,8 +187,8 @@
     },
     {
       "path": "SOURCES.json",
-      "bytes": 16180,
-      "sha256": "c92bbc783099c016f1fc8d792475ef35fc5b765ade2aa0789de0d56204db0c43"
+      "bytes": 16650,
+      "sha256": "00ba428db972917d972d5d79c0cdbe4325d0a2611228cee390cbac8296687fc9"
     },
     {
       "path": "submission-zips/099.zip",

@@ -19,6 +19,7 @@ from collections.abc import Mapping
 import hashlib
 import math
 import time
+from types import SimpleNamespace
 
 from dfbench import Objective, OptimizationAlgorithm
 import jax
@@ -70,6 +71,13 @@ class BatchedCorpusPortfolioD76C(OptimizationAlgorithm):
                 and math.isfinite(return_reserve_s) and 0 <= return_reserve_s <= 5):
             raise ValueError("invalid search schedule")
 
+        donor_context = None
+        if corpus_starts:
+            # Capture finite public bounds before prepare selects unbounded space.
+            obj.set_space_mode(False)
+            donor_context = SimpleNamespace(
+                bounds=jnp.array(obj.bounds), problem_spec=obj.problem_spec,
+                optimization_pairs=obj.optimization_pairs)
         _, key = self.prepare(obj, unbounded=True, random_seed=random_seed)
         backend = jax.default_backend()
         width = batch_size if batch_size is not None else (
@@ -86,7 +94,7 @@ class BatchedCorpusPortfolioD76C(OptimizationAlgorithm):
                 raise ValueError("The pinned public-corpus donor bank differs")
             del raw_bank
             starts, initializer = replace_start_slots(
-                obj, starts, preserve_first=init_params is not None)
+                donor_context, starts, preserve_first=init_params is not None)
         dtype = np.asarray(original_starts[0]).dtype
         points = np.asarray(starts, dtype=dtype).reshape(population_size, n)
         if not np.isfinite(points).all():

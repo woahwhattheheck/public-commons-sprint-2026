@@ -42,7 +42,7 @@
     },
     {
       "id": "batch-random-d76c",
-      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "sha256": "ed2b99f854f09af59fa62f0f777a438bd7cc8b765bf5d8cab87294cc69be2278",
       "optimize_kwargs": {
         "batch_size": 8,
         "corpus_starts": false
@@ -57,7 +57,7 @@
     },
     {
       "id": "batch-corpus-d76c",
-      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "sha256": "ed2b99f854f09af59fa62f0f777a438bd7cc8b765bf5d8cab87294cc69be2278",
       "optimize_kwargs": {
         "batch_size": 8,
         "corpus_starts": true
@@ -72,7 +72,7 @@
     },
     {
       "id": "batch-corpus-cpu1-d76c",
-      "sha256": "f7e10ac47c53c85d1ba5647b6da1d9265683cc660df2e184c26a05b43420cc3d",
+      "sha256": "ed2b99f854f09af59fa62f0f777a438bd7cc8b765bf5d8cab87294cc69be2278",
       "optimize_kwargs": {
         "batch_size": 1,
         "corpus_starts": true
