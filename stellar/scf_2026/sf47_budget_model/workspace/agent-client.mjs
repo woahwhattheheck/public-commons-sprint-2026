@@ -279,6 +279,8 @@ export class GrantWorkspaceClient {
         '&limit=' + integer(args.limit ?? 100, 'History page size', 1, 200),
       forecasts:() => '/api/operations/' + cid() + '/forecasts',
       forecast:() => '/api/operations/' + cid() + '/forecasts/' + id(args.forecastId, 'forecast'),
+      portfolios:() => '/api/operations/' + cid() + '/portfolios',
+      portfolio:() => '/api/operations/' + cid() + '/portfolios/' + id(args.portfolioId, 'portfolio'),
       review:() => '/api/operations/' + cid() + '/reviews/' + id(args.reviewId, 'review'),
     };
     need(Object.hasOwn(routes, view), 'GRANT_INVALID_VIEW', 'Choose a declared native grant view.');
@@ -325,6 +327,32 @@ export class GrantWorkspaceClient {
     return this.#request('/api/operations/' + caseId + '/command',
       {body:{...original, action:'forecast.save', data:{inputs, expectedPreviewSha256}}, originalRequestId:body.requestId});
   }
+  portfolioSeed(caseId, expectedVersion, forecastId) {
+    id(caseId, 'operation'); integer(expectedVersion, 'Current case version'); id(forecastId, 'forecast');
+    return this.#request('/api/operations/' + caseId + '/portfolio-seed',
+      {body:{expectedVersion, forecastId}, mutation:false});
+  }
+  portfolioPreview(caseId, expectedVersion, inputs) {
+    id(caseId, 'operation'); integer(expectedVersion, 'Current case version'); object(inputs, 'Portfolio inputs');
+    return this.#request('/api/operations/' + caseId + '/portfolio-preview',
+      {body:{expectedVersion, inputs}, mutation:false});
+  }
+  portfolioSave(caseId, body) {
+    id(caseId, 'operation');
+    exact(body, ['expectedVersion', 'requestId', 'actor', 'note', 'inputs', 'expectedPreviewSha256'],
+      ['expectedVersion', 'requestId', 'actor', 'inputs', 'expectedPreviewSha256']);
+    integer(body.expectedVersion, 'Current case version'); requestId(body.requestId); sha(body.expectedPreviewSha256);
+    const {inputs, expectedPreviewSha256, ...original} = body; object(inputs, 'Portfolio inputs');
+    return this.#request('/api/operations/' + caseId + '/command',
+      {body:{...original, action:'portfolio.save', data:{inputs, expectedPreviewSha256}}, originalRequestId:body.requestId});
+  }
+  portfolioSelection(caseId, expectedVersion, portfolioId, alternativeId) {
+    id(caseId, 'operation'); integer(expectedVersion, 'Current case version'); id(portfolioId, 'portfolio');
+    need(typeof alternativeId === 'string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(alternativeId),
+      'GRANT_INVALID_INPUT', 'Use the original saved alternative ID, including base for the base allocation.');
+    return this.#request('/api/operations/' + caseId + '/portfolio-selection',
+      {body:{expectedVersion, portfolioId, alternativeId}, mutation:false});
+  }
   download(kind, args) {
     object(args);
     const routes = {
@@ -334,6 +362,7 @@ export class GrantWorkspaceClient {
       'costs-csv':() => '/api/plans/' + id(args.planId, 'plan') + '/costs.csv',
       case:() => '/api/operations/' + id(args.caseId, 'operation') + '/export.zip',
       forecast:() => '/api/operations/' + id(args.caseId, 'operation') + '/forecasts/' + id(args.forecastId, 'forecast') + '/export.zip',
+      portfolio:() => '/api/operations/' + id(args.caseId, 'operation') + '/portfolios/' + id(args.portfolioId, 'portfolio') + '/export.zip',
       source:() => '/api/operations/' + id(args.caseId, 'operation') + '/sources/' + id(args.sourceId, 'source'),
     };
     need(Object.hasOwn(routes, kind), 'GRANT_INVALID_DOWNLOAD', 'Choose a complete original grant export or source.');
