@@ -3,6 +3,8 @@ import { createServer } from 'node:http';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
+import { transferOperationFields } from './transfer-workspace.mjs';
+import { MAX_MANIFEST_BYTES } from '../runtime-transfer-lock.mjs';
 import { imageOperationFields } from './image-workspace.mjs';
 import { managedOperationFields } from './managed-workspace.mjs';
 import { openRuntimeWorkspace } from './model.mjs';
@@ -39,10 +41,11 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/managed.mjs', 'managed.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
+    ['/transfer.mjs', 'transfer.mjs', 'text/javascript; charset=utf-8'],
     ['/image.mjs', 'image.mjs', 'text/javascript; charset=utf-8'],
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
   let origin, host, closing = false;
-  const sockets = new Set(), imageDownloads = new Map();
+  const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map();
   const server = createServer(async (req, res) => {
     const reply = (status, type, bytes, headers = {}) => {
       if (res.headersSent || res.destroyed) return;
@@ -72,9 +75,23 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
         } finally { await file.handle.close(); }
         return;
       }
+      if (req.method === 'GET' && /^\/transfer-download\/[a-f0-9]{64}$/.test(url.pathname) && !url.search) {
+        const key = url.pathname.split('/').at(-1), selected = transferDownloads.get(key);
+        transferDownloads.delete(key);
+        need(selected && selected.expires > Date.now(), 'RUNTIME_TRANSFER_DOWNLOAD_EXPIRED', 'Request a new download from the open workspace', 410);
+        const file = await model.transfersDownload(selected.input);
+        try {
+          res.writeHead(200, { ...security, 'content-type': file.type, 'content-length': file.bytes,
+            'content-disposition': 'attachment; filename="' + file.file + '"' });
+          await pipeline(file.handle.createReadStream({ autoClose: false }), res);
+        } finally { await file.handle.close(); }
+        return;
+      }
       const supplied = Buffer.from(typeof req.headers['x-runtime-workspace-token'] === 'string' ? req.headers['x-runtime-workspace-token'] : '');
       need(supplied.length === tokenBytes.length && timingSafeEqual(supplied, tokenBytes),
         'RUNTIME_WORKSPACE_CAPABILITY_REQUIRED', 'Open the current private URL printed by the workspace command', 401);
+      if (req.method === 'GET' && url.pathname === '/api/transfers/state')
+        return send(200, await model.transfersState(params(url, ['cacheTransferId'])));
       if (req.method === 'GET' && url.pathname === '/api/images/state') {
         params(url, []); return send(200, await model.imagesState());
       }
@@ -93,6 +110,12 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (req.method === 'GET' && url.pathname === '/api/managed/config')
         return send(200, await model.managedConfig(params(url, ['homeId', 'path'])));
       need(req.method === 'POST' && req.headers.origin === origin, 'RUNTIME_WORKSPACE_ORIGIN_REQUIRED', undefined, 403);
+      if (url.pathname === '/api/transfers/upload') {
+        need((req.headers['content-type'] ?? '').split(';')[0].trim() === 'application/octet-stream', 'RUNTIME_TRANSFER_UPLOAD_TYPE_REQUIRED');
+        const value = params(url, ['cacheTransferId', 'index']);
+        need(/^(?:0|[1-9][0-9]*)$/.test(value.index ?? '') && Number.isSafeInteger(Number(value.index)), 'RUNTIME_TRANSFER_PART_INVALID');
+        return send(200, await model.transfersUpload({ ...value, index: Number(value.index), body: req }));
+      }
       if (url.pathname === '/api/images/upload') {
         need((req.headers['content-type'] ?? '').split(';')[0] === 'application/octet-stream', 'RUNTIME_IMAGE_UPLOAD_TYPE_REQUIRED');
         const value = params(url, ['transferId', 'offset']);
@@ -105,6 +128,24 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
         return send(202, await model.receiveArchive({ ...value, body: req }));
       }
       need(!url.search, 'RUNTIME_WORKSPACE_QUERY_INVALID');
+      if (url.pathname === '/api/transfers/review')
+        return send(200, await model.transfersReview(await body(req, ['runtimeId'])));
+      if (url.pathname === '/api/transfers/attach')
+        return send(201, await model.transfersAttach(await body(req, ['directory', 'label'])));
+      if (url.pathname === '/api/transfers/receive')
+        return send(201, await model.transfersReceive(await body(req, ['manifest', 'manifestSha256', 'requestId', 'label'], MAX_MANIFEST_BYTES * 2 + 4096)));
+      if (url.pathname === '/api/transfers/recover-operation') {
+        const value = await body(req, ['operationId']); return send(202, await model.recoverTransferOperation(value.operationId));
+      }
+      if (url.pathname === '/api/transfers/download') {
+        const input = await body(req, ['cacheTransferId', 'kind', 'index']), file = await model.transfersDownload(input);
+        await file.handle.close();
+        for (const [key, value] of transferDownloads) if (value.expires <= Date.now()) transferDownloads.delete(key);
+        need(transferDownloads.size < 256, 'RUNTIME_TRANSFER_DOWNLOAD_LIMIT', 'Finish or reopen a recent download', 429);
+        const key = randomBytes(32).toString('hex');
+        transferDownloads.set(key, { input, expires: Date.now() + 60000 });
+        return send(200, { url: origin + '/transfer-download/' + key, file: file.file, bytes: file.bytes, sha256: file.sha256 });
+      }
       if (url.pathname === '/api/images/attach') return send(201, await model.imagesAttach(await body(req, ['directory', 'label'])));
       if (url.pathname === '/api/images/review') return send(200, await model.imagesReview(await body(req,
         ['runtimeId', 'id', 'baseImage', 'platform', 'sourceRoot', 'runtime', 'uid', 'gid', 'pythonModules', 'nodeHeaders'])));
@@ -125,7 +166,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
       if (url.pathname === '/api/review') return send(200, await model.review(await body(req, ['archiveId', 'selection'])));
       if (url.pathname === '/api/operation') return send(202, await model.begin(await body(req,
         ['requestId', 'operation', 'runtimeId', 'archiveId', 'name', 'selection', 'profileId', 'offline', 'cache',
-          'load', 'source', 'install', 'archive', 'sha256', 'label', 'nodeHeaders', ...Object.values(managedOperationFields).flat(), ...new Set(Object.values(imageOperationFields).flat())])));
+          'load', 'source', 'install', 'archive', 'sha256', 'label', 'nodeHeaders', ...Object.values(managedOperationFields).flat(), ...new Set(Object.values(imageOperationFields).flat()), ...new Set(Object.values(transferOperationFields).flat())])));
       if (url.pathname === '/api/resume-queued') {
         const value = await body(req, ['operationId']); return send(202, await model.resumeQueued(value.operationId));
       }
@@ -156,7 +197,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465 } = {}) {
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;
-      closing = true; imageDownloads.clear();
+      closing = true; imageDownloads.clear(); transferDownloads.clear();
       const stopped = new Promise(done => server.close(done));
       await model.close(); server.closeIdleConnections();
       for (const socket of sockets) socket.destroy();

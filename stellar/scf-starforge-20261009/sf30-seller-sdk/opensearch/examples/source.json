@@ -1,0 +1,71 @@
+{
+  "schema": "stellar-forge.opensearch-source.v1",
+  "endpointEnv": "OPENSEARCH_ENDPOINT",
+  "auth": {
+    "type": "basic",
+    "userEnv": "OPENSEARCH_USER",
+    "passwordEnv": "OPENSEARCH_PASSWORD"
+  },
+  "allowLocal": false,
+  "maxInFlight": 8,
+  "queries": {
+    "products": {
+      "indices": [
+        "merchant-products"
+      ],
+      "query": {
+        "bool": {
+          "must": [
+            {
+              "match": {
+                "title": {
+                  "$param": "term"
+                }
+              }
+            }
+          ],
+          "filter": [
+            {
+              "term": {
+                "available": {
+                  "$param": "available"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "parameters": {
+        "term": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "available": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "fields": [
+        "sku",
+        "title",
+        "price_cents",
+        "available",
+        "updated_at"
+      ],
+      "sort": [
+        {
+          "updated_at": "desc"
+        }
+      ],
+      "pageSize": 100,
+      "maxHits": 1000,
+      "maxBytes": 917504,
+      "timeoutMs": 15000,
+      "probe": {
+        "term": "pump",
+        "available": true
+      }
+    }
+  }
+}
