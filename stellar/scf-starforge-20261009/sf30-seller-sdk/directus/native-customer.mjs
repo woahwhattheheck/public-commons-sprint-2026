@@ -16,6 +16,7 @@ import {X402BuyerClient} from '../../sf31-buyer-client/buyer.mjs';
 import {prepareBuyerResponseFile} from '../../sf31-buyer-client/response-file.mjs';
 import {executeWithEvidence} from '../../sf82-checkout-evidence/evidence.mjs';
 import {createDatasetSession,runDatasetSession,inspectDatasetSession} from '../../sf88-operator-buyer-cli/dataset-session.mjs';
+import {createAttemptWireRecorder} from '../../sf88-operator-buyer-cli/attempt-wire.mjs';
 import {saveExact,copyExact,exists,digest,identity,privateDirectory,readJson,acquireWorkspace} from '../dspace/merchant-files.mjs';
 
 export async function runDirectusCustomer({input,directory,token=process.env.DIRECTUS_TOKEN}={}){
@@ -111,16 +112,23 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
     }));
     freeServer.listen(0,'127.0.0.1');await once(freeServer,'listening');
     const local='http://127.0.0.1:'+freeServer.address().port;
-    const nativeBuyer=new X402BuyerClient({fetchImpl:(url,options)=>{const u=new URL(url);return fetch(local+u.pathname+u.search,options);}});
+    const transport=async(url,options)=>{
+      const u=new URL(url),response=await fetch(local+u.pathname+u.search,options);
+      // The original logical resource maps to this running local version store.
+      // Preserve the actual response stream/status/headers under that resource URL.
+      return new Response(response.body,{status:response.status,statusText:response.statusText,headers:response.headers});
+    };
     async function executeFreePage(cfg,{signal}={}){
-      const writer=await prepareBuyerResponseFile(cfg.responseFile);let saved,evidence;
+      const writer=await prepareBuyerResponseFile(cfg.responseFile);let saved,evidence,wire;
       const buyer={async call(options){
+        wire=await createAttemptWireRecorder({cfg,body:undefined,fetchImpl:transport,signal});
+        const nativeBuyer=new X402BuyerClient({fetchImpl:wire.fetch});
         const result=await nativeBuyer.call({...options,approve:async()=>{throw new Error('This source returns a native free page.');},
           sign:async()=>{signatures++;throw new Error('The free source requested a signer.');}});
         saved=await writer.save(result,{signal});return result;
       }};
       try{evidence=await executeWithEvidence({buyer,call:{...cfg.operation,signal},outputDir:cfg.evidenceDir,captureBody:false});}
-      finally{await writer.abort();}
+      finally{try{await writer.abort();}finally{await wire?.close();}}
       assert.equal(evidence.error,null);
       return {mode:'ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT',intentId:cfg.operation.intentId,status:evidence.result.status,
         httpStatus:evidence.result.httpStatus,sellerReportedSettlement:evidence.result.settlement,evidencePath:evidence.evidencePath,
@@ -140,7 +148,8 @@ export async function runDirectusCustomer({input,directory,token=process.env.DIR
         onPage:report=>{if(report.completedPages>=1)controller.abort();}});
     }
     const prefix=await inspectDatasetSession(session),firstBytes=await readFile(prefix.pages[0].responsePath);
-    await record('original-buyer-prefix',{pages:prefix.completedPages,rows:prefix.acquiredRows,first_page_sha256:digest(firstBytes)});
+    await record('original-buyer-prefix',{pages:prefix.completedPages,rows:prefix.acquiredRows,first_page_sha256:digest(firstBytes),
+      logical_resource:origin+resourcePath,actual_loopback_source:local,wire_headers:'original-sf88-attempt-recorder'});
     const nextPackage=await prepareDirectusMerchant({...packageInput,directory:join(directory,'merchant-package-refreshed'),
       editionId:successor.edition.id,editionSha256:successor.edition.sha256,reviewId:successor.review.id});
     let savedPublication;

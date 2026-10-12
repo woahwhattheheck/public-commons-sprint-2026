@@ -237,3 +237,13 @@ The protocol implementation was derived from Directus 12.5.0 at commit `4f77933b
 - [Native field controller](https://github.com/directus/directus/blob/4f77933bf9551cac6b289576078783e189b8f4e3/api/src/controllers/fields.ts)
 
 The native helper checks the service's actual installed version during authenticated operations and retains it with each complete source capture.
+
+### Continue through the actual browser
+
+After the native customer completes, `native-browser.mjs` receives its SQLite project into a separate editable operator project and uses the running original Directus service. Its input JSON contains `operationId`, `customerDirectory`, the optional `customerResult` path, and the retained absolute `playwright` and `chromium` paths. It reads the original customer scope, fields, patch and public offer terms from `customer-intent.json`; the native access token stays in `DIRECTUS_TOKEN`.
+
+~~~sh
+node native-browser.mjs --input /private/directus-browser-input.json --out /private/directus-browser
+~~~
+
+The walk uses the actual UI for native draft creation, exact patch text, comparison and promotion; collection capture; field selection and edition review; dataset query; merchant offer and buyer preparation; completed original customer receiving; project download, receiving and restart. It saves six desktop/mobile viewport images, including 390-pixel keyboard navigation, plus the received editable project and `BROWSER_RESULT.json`. All browser and operator resources close before the native job releases its original Directus service.

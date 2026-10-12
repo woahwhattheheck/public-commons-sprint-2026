@@ -25,7 +25,8 @@
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/browser-assets.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/README.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-customer.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-customer.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/directus/native-browser.mjs"
   ],
   "commandDescriptions": {
     "directus": "Capture native collections, edit content versions, publish reviewed editions and receive customer data",

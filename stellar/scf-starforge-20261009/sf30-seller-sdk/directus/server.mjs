@@ -49,6 +49,14 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
   let registry,workspace,server,tail=Promise.resolve(),closing=false;
   let connection={baseUrl:process.env.DIRECTUS_BASE_URL??'',token:process.env.DIRECTUS_TOKEN??''};
   const nativeOperations=new DirectusOperations(),merchants=new Map();
+  const closeOwned=async()=>{
+    let failure;
+    try{await nativeOperations.close();}catch(error){failure=error;}
+    for(const service of merchants.values())try{await service.close();}catch(error){failure??=error;}
+    merchants.clear();
+    try{await workspace?.close();}catch(error){failure??=error;}
+    if(failure)throw failure;
+  };
   const serial=job=>{const result=tail.then(()=>{if(closing)throw fault('OPERATOR_CLOSING','The operator is closing.',409);lease.assertHeld();return job();});tail=result.catch(()=>{});return result;};
   try{
     try{registry=JSON.parse(await fsp.readFile(registryFile,'utf8'));}
@@ -259,13 +267,17 @@ export async function startDirectusOperator({directory,workspaceDirectory,source
     return {url:origin,token,state,launch:publicLaunch(),close(){
       if(closePromise)return closePromise;
       closing=true;closePromise=(async()=>{
-        try{await new Promise(resolve=>server.close(resolve));await tail;await nativeOperations.close();for(const service of merchants.values())await service.close();await workspace.close();
-          lease.assertHeld();await saveJson(launchFile,{...launch,state:'stopped',stoppedAt:new Date().toISOString()});}
-        finally{await lease.close();}
+        try{
+          let failure;
+          try{await new Promise(resolve=>server.close(resolve));await tail;}catch(error){failure=error;}
+          try{await closeOwned();}catch(error){failure??=error;}
+          if(failure)throw failure;
+          lease.assertHeld();await saveJson(launchFile,{...launch,state:'stopped',stoppedAt:new Date().toISOString()});
+        }finally{await lease.close();}
       })();return closePromise;
     }};
   }catch(error){
-    try{if(server?.listening)await new Promise(resolve=>server.close(resolve));await tail;await nativeOperations.close();for(const service of merchants.values())await service.close();await workspace?.close();}
+    try{try{if(server?.listening)await new Promise(resolve=>server.close(resolve));await tail;}finally{await closeOwned();}}
     finally{await lease.close();}
     throw error;
   }
