@@ -46,6 +46,7 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/fixtures/manifest.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/merchant_receiving.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/native_receiving.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/receiving/README.md",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/receiving/arrow-original-files.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/receiving/browser-receiving.cjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/wherobots/source/interoperability/receiving/consumer-selection.json",
