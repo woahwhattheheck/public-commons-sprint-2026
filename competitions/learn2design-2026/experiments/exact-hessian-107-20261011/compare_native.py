@@ -13,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "runner"))
 from run_public_uifo import classify_cell
+from invocation import arm_identity, selection_for
 
 
 def digest(value):
@@ -31,7 +32,7 @@ def runtime_context(path, report_bytes, report, source_manifest):
     if not sidecar.exists():
         # Old records do not say whether CPU dispatch was asynchronous. Keep each
         # one visible, but do not infer identical runtime from matching package names.
-        return {"status": "not_recorded", "isolation_report_sha256": report_sha}, None
+        return {"status": "not_recorded", "isolation_report_sha256": report_sha}, None, None
     raw = sidecar.read_bytes()
     context = json.loads(raw)
     expected_capture = source_manifest["runtime_capture"]["sha256"]
@@ -46,9 +47,17 @@ def runtime_context(path, report_bytes, report, source_manifest):
             context.get("source_before", {}).get("candidate_sha256") != report["candidate_before"]["sha256"] or
             context.get("condition", {}).get("capture_sha256") != expected_capture):
         raise ValueError(f"{sidecar}: runtime context does not bind this unchanged native report")
+    invocation = context.get("invocation")
+    if invocation is not None:
+        adapter_sha = source_manifest["runtime_capture"]["invocation_adapter_sha256"]
+        if (context["condition"].get("invocation_mode") != "source_bound_options" or
+                context["condition"].get("invocation_adapter_sha256") != adapter_sha or
+                context["source_before"].get("invocation_adapter_sha256") != adapter_sha or
+                invocation.get("adapter_sha256") != adapter_sha):
+            raise ValueError(f"{sidecar}: different source-invocation adapter")
     return {"status": "captured", **context["condition"]}, {
         "file": str(sidecar), "sha256": hashlib.sha256(raw).hexdigest(),
-        "captured_at": context.get("captured_at"), "finished_at": context.get("finished_at")}
+        "captured_at": context.get("captured_at"), "finished_at": context.get("finished_at")}, invocation
 
 
 def cohort_for(condition):
@@ -66,7 +75,16 @@ def cohort_for(condition):
 
 
 def compare(paths, source_manifest, baseline):
-    expected = {row["submission_sha256"]: row["id"] for row in source_manifest["candidates"]}
+    expected = {}
+    source_ids = {}
+    arm_ids = set()
+    for row in source_manifest["candidates"]:
+        identity = arm_identity(row)
+        if row["id"] in source_ids or identity in arm_ids:
+            raise ValueError("Frozen candidate and source/companion/options identities must be unique")
+        source_ids[row["id"]] = row
+        arm_ids.add(identity)
+        expected.setdefault(row["submission_sha256"], []).append(row)
     runner_sha = source_manifest["native_runner"]["sha256"]
     groups = {}
     cohorts = {}
@@ -80,8 +98,22 @@ def compare(paths, source_manifest, baseline):
             raise ValueError(f"{path}: source is outside this frozen comparison")
         if report.get("runner", {}).get("sha256") != runner_sha:
             raise ValueError(f"{path}: different original runner; retain it as a separate condition")
-        candidate = expected[source_sha]
-        runtime, runtime_receipt = runtime_context(path, data, report, source_manifest)
+        runtime, runtime_receipt, invocation = runtime_context(path, data, report, source_manifest)
+        if invocation is not None:
+            candidate = invocation.get("source_id")
+            selected = source_ids.get(candidate)
+            if (selected is None or selected["submission_sha256"] != source_sha or
+                    invocation.get("selection") != selection_for(selected) or
+                    invocation.get("arm_sha256") != arm_identity(selected) or
+                    invocation.get("manifest_content_sha256") != digest(source_manifest)):
+                raise ValueError(f"{path}: source/options invocation does not match this frozen arm")
+        else:
+            if len(expected[source_sha]) != 1:
+                raise ValueError(f"{path}: this shared source requires its retained invocation sidecar")
+            selected = expected[source_sha][0]
+            if selected.get("invocation"):
+                raise ValueError(f"{path}: selected companion/options were not captured")
+            candidate = selected["id"]
         condition = {"cell": report["cell"], "problem_spec": report["problem_spec"],
                      "environment": report["environment"], "runner_sha256": runner_sha,
                      "runtime_context": runtime}
@@ -95,7 +127,8 @@ def compare(paths, source_manifest, baseline):
         seen.add(identity)
         m = report.get("metrics", {})
         unchanged = (report.get("candidate_unchanged") is True and
-                     report.get("candidate_after", {}).get("sha256") == source_sha)
+                     report.get("candidate_after", {}).get("sha256") == source_sha and
+                     (invocation is None or invocation.get("valid_invocation") is True))
         status = classify_cell(report.get("error"), m, unchanged)
         loss = m.get("best_feasible_loss")
         usable = status.startswith("COMPLETE_")
@@ -103,7 +136,8 @@ def compare(paths, source_manifest, baseline):
             loss = None
         record = {"candidate": candidate, "report": str(path),
                   "report_sha256": hashlib.sha256(data).hexdigest(),
-                  "source_sha256": source_sha, "condition_id": condition_id,
+                  "source_sha256": source_sha, "arm_sha256": arm_identity(selected),
+                  "invocation": invocation, "condition_id": condition_id,
                   "cohort_id": cohort_id,
                   "status": status, "reported_status": report.get("status"),
                   "error": report.get("error"), "best_feasible_loss": loss,
@@ -149,7 +183,7 @@ def compare(paths, source_manifest, baseline):
                           "median_delta": statistics.median(values) if values else None,
                           "best_delta": min(values) if values else None,
                           "worst_delta": max(values) if values else None})
-    return {"schema": "tjlabs.l2d.exact-hessian-comparison/v2", "baseline": baseline,
+    return {"schema": "tjlabs.l2d.exact-hessian-comparison/v3", "baseline": baseline,
             "source_manifest_sha256": digest(source_manifest),
             "conditions": [{"id": k, **v["condition"]} for k, v in groups.items()],
             "cohorts": [{"id": k, **v} for k, v in cohorts.items()],

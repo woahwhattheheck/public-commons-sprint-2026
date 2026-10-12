@@ -7,18 +7,18 @@
   "files": [
     {
       "path": "README.md",
-      "bytes": 9804,
-      "sha256": "ccd2570a947df18e24b5c5669f270c129bf3ffa1f2497223a206ddca285fb362"
+      "bytes": 13765,
+      "sha256": "36611a2e5a8d2e73aacd8d7b25ef1d5a9e087443c8c81f134bb5a18ae52e84d8"
     },
     {
       "path": "RUN_PLAN.json",
-      "bytes": 3790,
-      "sha256": "ffcfa9e7ebb357eee102f41a250830d7c5312aa2e862812430afe1ec7ac70b1c"
+      "bytes": 5214,
+      "sha256": "e7740e29bfcf04dacc25ddf8725067662e4afac3f4721ed18e3fb9574a33a750"
     },
     {
       "path": "SOURCES.json",
-      "bytes": 5778,
-      "sha256": "692920c3d107f54ebe92c6c723fcf277bd0c7365e00e0f92e3a4f59b3be5e3cb"
+      "bytes": 8798,
+      "sha256": "ca508eb0df0494432fbdda7b1007c39090e5d306644e869a3bc016ac888c0b55"
     },
     {
       "path": "candidate/requirements.txt",
@@ -32,8 +32,33 @@
     },
     {
       "path": "compare_native.py",
-      "bytes": 9945,
-      "sha256": "7c9300e433ce16dbf6953bf114b74e029cbf63c8bd90cf782da1db52163eb686"
+      "bytes": 12029,
+      "sha256": "f40b79efd6abeeef5c106a53ada015c2d10606ee20088f30f594cdddfd9a55aa"
+    },
+    {
+      "path": "coordinate-map-110/EXTRACTION-MANIFEST.json",
+      "bytes": 1330,
+      "sha256": "855ca9f9afb8ac7bbdc5bf026a665d5033288a96d1dbd8692b375ca46d45e390"
+    },
+    {
+      "path": "coordinate-map-110/SOURCE.md",
+      "bytes": 4009,
+      "sha256": "96e92110d2cebec640a66e07f6f1aac450ce6e3e797db6049ed68dd63c29898a"
+    },
+    {
+      "path": "coordinate-map-110/l2d_coordmap.py",
+      "bytes": 11827,
+      "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+    },
+    {
+      "path": "coordinate-map-110/requirements.txt",
+      "bytes": 18,
+      "sha256": "c3cc7885d8cda069a6801ef2c10a02199acaf1996f4521fbbe54e1ee0734cb68"
+    },
+    {
+      "path": "coordinate-map-110/submission.py",
+      "bytes": 42436,
+      "sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0"
     },
     {
       "path": "official/LICENSE",
@@ -82,8 +107,13 @@
     },
     {
       "path": "run_phase.py",
-      "bytes": 19483,
-      "sha256": "e7c524e4e169c2fe445e99bb83e145dc7479c944f9f624330926331ef2fdf1e8"
+      "bytes": 20633,
+      "sha256": "ede516fd8d9e13cdc715cc092236e5a49199a11d2add8345f8073d357fbdb6ed"
+    },
+    {
+      "path": "runner/invocation.py",
+      "bytes": 11892,
+      "sha256": "42d5a782d377d8a2400eae283f2f379a04103061d5017363f7d50534176bfda6"
     },
     {
       "path": "runner/run_cpu.py",
@@ -102,13 +132,13 @@
     },
     {
       "path": "runner/run_recorded.py",
-      "bytes": 5616,
-      "sha256": "d8be45aa9f371bccc8a36b971072eda0ebe2391796aa8b92d3af7081bc614d66"
+      "bytes": 6522,
+      "sha256": "b2a294bf78f9593799ed25c0c5f5c3ef5d76fe00f1e18fc792066fa66e9d6b00"
     },
     {
       "path": "runner/run_recorded_cpu.sh",
-      "bytes": 1020,
-      "sha256": "91a8c98bc46066b737fc2dc121642960f68d6ead7c17fa64c71ded4cd77806f5"
+      "bytes": 1410,
+      "sha256": "97c55ae3559befea87db90a3ae902e903042579ab81ca50320a452813ad76356"
     },
     {
       "path": "submission-zips/099.zip",
@@ -130,5 +160,8 @@
       "bytes": 10644,
       "sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
     }
-  ]
+  ],
+  "revision": 4,
+  "coordinate_map_entrypoint": "coordinate-map-110/submission.py",
+  "invocation_adapter": "runner/invocation.py"
 }

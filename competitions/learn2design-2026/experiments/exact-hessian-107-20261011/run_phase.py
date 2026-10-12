@@ -21,8 +21,9 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "runner"))
 from run_recorded import ENVIRONMENT_KEYS
 from compare_native import compare
+from invocation import arm_identity, selection_for
 
-SCHEMA = "tjlabs.l2d.serial-phase/v1"
+SCHEMA = "tjlabs.l2d.serial-phase/v2"
 
 
 def now():
@@ -72,17 +73,18 @@ def freeze(args):
     sources, plan = read(ROOT / "SOURCES.json"), read(ROOT / "RUN_PLAN.json")
     phases = {value["id"]: value for value in plan["phases"]}
     phase = phases[args.phase]
+    baseline = args.baseline or phase.get("baseline", "099")
     candidates = {value["id"]: value for value in sources["candidates"]}
     required = phase["candidates"]
     if isinstance(required, list):
         selected = required
         if args.candidate and args.candidate != selected:
-            raise ValueError("The matched-development phase retains all four original selected sources")
+            raise ValueError("This matched phase retains its explicitly selected source arms")
     else:
         selected = args.candidate
         if not selected or len(selected) != 2 or len(set(selected)) != 2:
             raise ValueError("Select two distinct frozen --candidate IDs for this broader phase")
-    if any(value not in candidates for value in selected) or args.baseline not in selected:
+    if any(value not in candidates for value in selected) or baseline not in selected:
         raise ValueError("Every selected source and the baseline must belong to this frozen phase")
     pinned = {
         "SOURCES.json": sha(ROOT / "SOURCES.json"),
@@ -91,11 +93,16 @@ def freeze(args):
         sources["native_runner"]["path"]: sources["native_runner"]["sha256"],
         sources["runtime_capture"]["path"]: sources["runtime_capture"]["sha256"],
         sources["runtime_capture"]["cpu_launcher"]: sources["runtime_capture"]["cpu_launcher_sha256"],
+        sources["runtime_capture"]["invocation_adapter"]: sources["runtime_capture"]["invocation_adapter_sha256"],
     }
     for key in selected:
         candidate = candidates[key]
         pinned[candidate["submission"]] = candidate["submission_sha256"]
         pinned[candidate["requirements"]] = candidate["requirements_sha256"]
+        for companion in candidate.get("invocation", {}).get("companions", []):
+            previous = pinned.setdefault(companion["path"], companion["sha256"])
+            if previous != companion["sha256"]:
+                raise ValueError("Selected companion path has conflicting frozen bytes")
     for name, expected in pinned.items():
         if sha(ROOT / name) != expected:
             raise ValueError("Frozen source differs: " + name)
@@ -106,9 +113,11 @@ def freeze(args):
             for key in selected:
                 cells.append({"id": f"{key}-t{topology}-s{seed}-{phase['max_time_seconds']}",
                               "candidate": key, "submission": candidates[key]["submission"],
+                              "arm_sha256": arm_identity(candidates[key]),
+                              "invocation_selection": selection_for(candidates[key]),
                               "topology_seed": topology, "algorithm_seed": seed,
                               "max_time_seconds": phase["max_time_seconds"]})
-    return sources, {"schema": SCHEMA, "phase": args.phase, "baseline": args.baseline,
+    return sources, {"schema": SCHEMA, "phase": args.phase, "baseline": baseline,
                      "candidates": selected, "cells": cells, "source_sha256": pinned,
                      "container_cap_seconds": phase.get("container_cap_seconds", 16200),
                      "physics": plan["common_objective"]}
@@ -132,13 +141,16 @@ def command_for(cell, intent, cell_root):
     if intent["runtime"]["mode"] == "cpu":
         environment.update(L2D_PYTHON=intent["runtime"]["python"],
                            L2D_CPUS=intent["runtime"]["cpu_affinity"],
-                           L2D_CPU_CACHE_DIR=cache)
+                           L2D_CPU_CACHE_DIR=cache,
+                           L2D_SOURCE_MANIFEST=str(ROOT / "SOURCES.json"), L2D_SOURCE_ID=cell["candidate"])
         command = ["bash", str(ROOT / "runner/run_recorded_cpu.sh"), *native]
     else:
         environment.update(JAX_COMPILATION_CACHE_DIR=cache,
                            JAX_COMPILATION_CACHE_MAX_SIZE="134217728",
                            JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS="1")
-        command = [intent["runtime"]["python"], str(ROOT / "runner/run_recorded.py"), "--", *native]
+        command = [intent["runtime"]["python"], str(ROOT / "runner/run_recorded.py"),
+                   "--source-manifest", str(ROOT / "SOURCES.json"), "--source-id", cell["candidate"],
+                   "--", *native]
     return command, environment
 
 
@@ -247,12 +259,14 @@ def summarize(directory, intent, sources, *, publish=True):
                 raw = read(report)
                 actual = raw["cell"]
                 if (classified["candidate"] != cell["candidate"] or
+                        classified["arm_sha256"] != cell["arm_sha256"] or
                         actual.get("topology_seed") != cell["topology_seed"] or
                         actual.get("algorithm_seed") != cell["algorithm_seed"] or
                         actual.get("max_time_s") != cell["max_time_seconds"] or
                         actual.get("population_size_override") is not None):
                     raise ValueError("Retained original report differs from this planned cell")
                 row.update(native_status=classified["status"], native_error=classified["error"],
+                           arm_sha256=classified["arm_sha256"], invocation=classified["invocation"],
                            best_feasible_loss=classified["best_feasible_loss"])
                 accepted.append(report)
             except (OSError, ValueError, KeyError, TypeError) as exc:
@@ -299,10 +313,10 @@ def archive(directory, target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("plan", "run", "status", "export"))
-    parser.add_argument("--phase", choices=("matched-development", "broad-public", "full-objective-budget"),
+    parser.add_argument("--phase", choices=("matched-development", "coordinate-map-development", "broad-public", "full-objective-budget"),
                         default="matched-development")
     parser.add_argument("--candidate", action="append", help="Two frozen IDs for a broader phase")
-    parser.add_argument("--baseline", default="099")
+    parser.add_argument("--baseline", help="Frozen source ID; defaults to the selected phase control")
     parser.add_argument("--mode", choices=("cpu", "gpu"), default="gpu")
     parser.add_argument("--python", dest="python_executable", default=sys.executable)
     parser.add_argument("--cpu-affinity", help="Granted CPU list, passed to the unchanged CPU launcher")

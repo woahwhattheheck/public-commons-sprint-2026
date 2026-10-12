@@ -17,6 +17,23 @@
     {
       "id": "107-measured6966",
       "sha256": "9b478a32e37594b54892884ac24d3a8e04d7c33974affdc5480095416b8ca192"
+    },
+    {
+      "id": "110-identity",
+      "sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0",
+      "optimize_kwargs": {
+        "coordinate_map": "identity"
+      },
+      "companion_sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+    },
+    {
+      "id": "110-property-v1",
+      "sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0",
+      "optimize_kwargs": {
+        "coordinate_map": "l2d_property_v1",
+        "coordinate_map_problem_size": 3
+      },
+      "companion_sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
     }
   ],
   "common_objective": {
@@ -46,6 +63,25 @@
       ],
       "max_time_seconds": 180,
       "purpose": "Same public cohort/budget as retained V5 development; original099/101 sources remain distinct from its096/V1 records."
+    },
+    {
+      "id": "coordinate-map-development",
+      "baseline": "110-identity",
+      "candidates": [
+        "110-identity",
+        "110-property-v1"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "container_cap_seconds": 16200,
+      "purpose": "Pair the same corrected ROOT110-R submission and exact companion bytes with identity versus l2d_property_v1 size3. Preserve original Objective and budget. No other optimizer change."
     },
     {
       "id": "broad-public",
@@ -96,7 +132,8 @@
     "gpu_entrypoint": "python runner/run_recorded.py -- <original runner arguments>",
     "cpu_entrypoint": "bash runner/run_recorded_cpu.sh <original runner arguments>",
     "retained_files": "The original output.json and adjacent output.json.runtime.json; both create-only.",
-    "comparison": "Same-process effective configuration joins exact original report bytes; aggregate only within the same hardware/runtime/physics/budget cohort."
+    "comparison": "Same-process effective configuration joins exact original report bytes; aggregate only within the same hardware/runtime/physics/budget cohort.",
+    "invocation": "Each new phase arm passes --source-manifest/--source-id. Sidecars retain exact companion import, canonical optimize options, arm identity and actual algorithm diagnostic match."
   },
   "phase_operator": {
     "path": "run_phase.py",
@@ -105,6 +142,7 @@
     "full_budget_cells": 20,
     "dispatch": "One process per native cell inside one existing allocation; no second scheduler.",
     "compilation_cache": "New empty isolated cache per cell, at most128MiB; release only its own cache after child exit and retained completion.",
-    "handoff": "Original raw report/context/console/attempt/completion and matched comparison in a complete output archive."
+    "handoff": "Original raw report/context/console/attempt/completion and matched comparison in a complete output archive.",
+    "coordinate_map_cells": 6
   }
 }

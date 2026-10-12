@@ -10,6 +10,13 @@ L2D_CPU_CACHE_DIR="${L2D_CPU_CACHE_DIR:-${TMPDIR:-/tmp}/l2d-native-cpu-cache}"
 L2D_SOURCE_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 mkdir -p -- "$L2D_CPU_CACHE_DIR"
 
+L2D_CAPTURE_OPTIONS=()
+if [[ -n "${L2D_SOURCE_MANIFEST:-}" || -n "${L2D_SOURCE_ID:-}" ]]; then
+  : "${L2D_SOURCE_MANIFEST:?Set the retained source manifest with the selected source ID}"
+  : "${L2D_SOURCE_ID:?Set the selected source ID with its retained manifest}"
+  L2D_CAPTURE_OPTIONS=(--source-manifest "$L2D_SOURCE_MANIFEST" --source-id "$L2D_SOURCE_ID")
+fi
+
 exec taskset -c "$L2D_CPUS" env \
   JAX_PLATFORMS=cpu JAX_ENABLE_X64=true \
   OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=2 \
@@ -18,4 +25,4 @@ exec taskset -c "$L2D_CPUS" env \
   JAX_COMPILATION_CACHE_DIR="$L2D_CPU_CACHE_DIR" \
   JAX_COMPILATION_CACHE_MAX_SIZE=134217728 \
   JAX_PERSISTENT_CACHE_MIN_COMPILE_TIME_SECS=1 \
-  "$L2D_PYTHON" "$L2D_SOURCE_DIR/run_recorded.py" --cpu-sync -- "$@"
+  "$L2D_PYTHON" "$L2D_SOURCE_DIR/run_recorded.py" --cpu-sync "${L2D_CAPTURE_OPTIONS[@]}" -- "$@"
