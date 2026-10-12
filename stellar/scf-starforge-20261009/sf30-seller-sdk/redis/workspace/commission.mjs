@@ -127,7 +127,7 @@ export function redisCommissioningRequestId(input, suffix, namespace) {
   return 'commission-'+hash(input.operationId+'\n'+(namespace===undefined?'':namespace+'\n')+suffix).slice(0,48);
 }
 
-export async function commissionRedis({input, inputSha256, directory, environment=process.env, mode='review'}={}) {
+export async function commissionRedis({input, inputSha256, directory, environment=process.env, mode='review', onProgress=async()=>{}}={}) {
   if (!['review','create','receive'].includes(mode))
     throw issue('REDIS_COMMISSIONING_MODE_INVALID', 'Choose review, create or receive.');
   const selected = normalizeRedisCommissioning(input, environment);
@@ -148,8 +148,9 @@ export async function commissionRedis({input, inputSha256, directory, environmen
     const created=await setup.create({draft:input.setup,digest:review.digest,requestId:input.requestId});
     report.workspace=created;
     if (mode === 'create') return {...report,status:'CREATED'};
-    return receiveRedisCommissioning({workspace:setup.workspace,input,inputSha256:identity,
-      environment,workspaceCreated:created});
+    // Hold the original setup/workspace owner until its complete receiving flow returns.
+    return await receiveRedisCommissioning({workspace:setup.workspace,input,inputSha256:identity,
+      environment,workspaceCreated:created,onProgress});
   } finally { await setup.close(); }
 }
 /** Execute the original receiving flow on an already open workspace.
