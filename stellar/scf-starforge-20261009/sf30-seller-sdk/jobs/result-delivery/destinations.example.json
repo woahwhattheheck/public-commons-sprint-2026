@@ -2,10 +2,10 @@
   "schema": "stellar-forge.job-result-destinations.v1",
   "destinations": [
     {
-      "id": "report-archive",
-      "url": "https://receiver.example/job-results",
-      "allowedHost": "receiver.example",
-      "secretEnv": "SFJOBS_RESULT_RECEIVER_SECRET",
+      "id": "customer-results",
+      "url": "https://results.customer.example/starforge/results",
+      "allowedHost": "results.customer.example",
+      "secretEnv": "STARFORGE_JOB_DELIVERY_SECRET",
       "enabled": true
     }
   ],
