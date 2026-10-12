@@ -19,8 +19,8 @@ export function selectObjectDescriptionBytes(raw, {objectId, chunkBytes} = {}) {
   let description;
   try { description = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(raw)); }
   catch { throw new InputError('OBJECT_DESCRIPTION_JSON_INVALID'); }
-  need(object(description) && description.schema === 'stellar-forge.s3-description.v1' &&
-    Array.isArray(description.objects), 'OBJECT_ORIGINAL_S3_DESCRIPTION_REQUIRED');
+  need(object(description) && ['stellar-forge.s3-description.v1','stellar-forge.object-description.v1'].includes(description.schema) &&
+    Array.isArray(description.objects), 'OBJECT_ORIGINAL_DESCRIPTION_REQUIRED');
   const selected = description.objects.filter(value => object(value) && value.id === objectId);
   need(selected.length === 1, 'OBJECT_DESCRIPTION_SELECTION_NOT_UNIQUE');
   const item = selected[0];
@@ -43,6 +43,9 @@ export function selectObjectDescriptionBytes(raw, {objectId, chunkBytes} = {}) {
   const requested = chunkBytes ?? (item.mode === 'whole' ? Math.max(1,item.bytes) : item.maxBytes);
   if (item.mode === 'whole') need(requested === Math.max(1,item.bytes), 'OBJECT_WHOLE_FILE_SIZE_FIXED');
   else need(count(requested) && requested <= item.maxBytes, 'OBJECT_DESCRIPTION_CHUNK_LIMIT');
+  if (item.fixedChunkBytes !== undefined) need(description.schema === 'stellar-forge.object-description.v1' &&
+    item.mode === 'chunks' && count(item.fixedChunkBytes) && item.fixedChunkBytes === item.maxBytes &&
+    requested === item.fixedChunkBytes, 'OBJECT_DESCRIPTION_FIXED_CHUNK_REQUIRED');
   return {
     ...(item.mode === 'whole' ? {deliveryMode:'whole'} : {}),
     bytes:item.bytes, chunkBytes:requested, expectedSnapshot:item.snapshot,

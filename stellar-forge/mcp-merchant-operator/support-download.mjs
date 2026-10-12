@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { realpath } from 'node:fs/promises';
 import { createRetainedDownload } from './retained-download.mjs';
 import { parseSupportExportManifest } from './support.mjs';
-import { failure, privateSupportDirectory } from './config.mjs';
+import { failure, privateSupportDirectory } from './host-files.mjs';
 import { importRuntimeHandoff, MAX_HANDOFF_BYTES } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs';
 import { openCaseStore, caseMetadata } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs';
 export { openMerchantFileClient } from './retained-download.mjs';

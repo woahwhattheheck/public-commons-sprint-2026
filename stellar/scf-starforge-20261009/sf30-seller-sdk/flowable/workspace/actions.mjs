@@ -6,8 +6,11 @@ const id={type:'string',pattern:'^[a-f0-9]{24}$'};
 const sha={type:'string',pattern:'^[a-f0-9]{64}$'};
 const uuid={type:'string',pattern:'^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$'};
 const revision={type:'integer',minimum:1};
-const kind={enum:['connection','portfolio','release','process','task','migration','delivery','receiving']};
-const operationKind={enum:['release','process','task','migration']};
+export const FLOWABLE_RECORD_KINDS=Object.freeze(['connection','portfolio','release','process','task','migration',
+  'decisionPortfolio','decisionRelease','decisionEvaluation','delivery','receiving']);
+export const FLOWABLE_OPERATION_KINDS=Object.freeze(['release','process','task','migration','decisionRelease','decisionEvaluation']);
+const kind={enum:FLOWABLE_RECORD_KINDS};
+const operationKind={enum:FLOWABLE_OPERATION_KINDS};
 const reference={type:'object',properties:{sha256:sha,bytes:{type:'integer',minimum:0},mediaType:text(200)},
   required:['sha256','bytes'],additionalProperties:false};
 const paging={offset:{type:'integer',minimum:0},limit:{type:'integer',minimum:1,maximum:500}};
@@ -33,6 +36,12 @@ export const FLOWABLE_WORKSPACE_ACTIONS=Object.freeze({
     {id,revision,collection:text(100),...paging},['id','collection']),
   readDefinition:action('Process definition','Read the original captured BPMN resource and its definition identity.',false,
     {portfolioId:id,revision,definitionId:text(2000)},['portfolioId','definitionId']),
+  readDecisionPortfolio:action('Decision portfolio','Page one complete captured native decision collection with its original response references.',false,
+    {id,revision,collection:text(100),...paging},['id','collection']),
+  readDecisionDefinition:action('Decision definition','Read the exact captured native decision definition and complete original DMN deployment resources.',false,
+    {portfolioId:id,revision,definitionId:text(2000)},['portfolioId','definitionId']),
+  readDecisionExecution:action('Decision execution','Read a captured native decision execution and its complete original audit data.',false,
+    {portfolioId:id,revision,executionId:text(2000)},['portfolioId','executionId']),
   readSource:action('Original source','Read a complete saved source or native response by its immutable reference.',false,
     {reference},['reference']),
   readReview:action('Operation review','Read the saved request, native preimage, validation and complete response references.',false,
@@ -41,6 +50,16 @@ export const FLOWABLE_WORKSPACE_ACTIONS=Object.freeze({
     {id,expectedRevision:{type:'integer',minimum:0},connection},['connection']),
   capturePortfolio:action('Refresh portfolio','Capture complete native definitions, deployments, active work and history with original source resources.',true,
     {connectionId:id,label:text(300)},['connectionId']),
+  captureDecisionPortfolio:action('Refresh decisions','Capture native DMN deployments, definitions, complete execution history and original decision resources.',true,
+    {connectionId:id,label:text(300)},['connectionId']),
+  prepareDecisionRelease:action('Prepare decision release','Retain the original DMN resource and native deployment preimage for review.',true,
+    preparation,['connectionId','selection']),
+  dispatchDecisionRelease:action('Deploy reviewed decisions','Submit the saved native DMN deployment and receive its exact definitions and resources.',true,
+    dispatch,['id','expectedRevision','planSha256']),
+  prepareDecisionEvaluation:action('Prepare decision evaluation','Retain the complete native evaluation body and current decision definition selected by the engine.',true,
+    preparation,['connectionId','selection']),
+  dispatchDecisionEvaluation:action('Evaluate reviewed decisions','Submit the saved native DMN evaluation once and retain its complete result and available audit history.',true,
+    dispatch,['id','expectedRevision','planSha256']),
   prepareRelease:action('Prepare release','Retain the exact original BPMN deployment request and current engine preimage for review.',true,
     preparation,['connectionId','selection']),
   dispatchRelease:action('Deploy reviewed release','Submit the saved deployment once and receive its native definitions and original resources.',true,

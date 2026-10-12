@@ -109,3 +109,9 @@ On the receiving host, declare the complete file under the destination workspace
 ~~~
 
 Replace the UUID and SHA with actual values. Inspect with the destination workspace alias, file handover and a stable requestId. Read the returned receiving record and adopt with its id, expectedRevision and manifestSha256. The receiver checks all source blobs, saved revisions, history chains and native journals before adoption. Closing and reopening the receiving workspace preserves the adopted original records.
+
+## Native decision operations
+
+The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
+
+See [Decision deployment, evaluation and operating history](../../products/flowable-merchant/DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.

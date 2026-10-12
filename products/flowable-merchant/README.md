@@ -1,7 +1,8 @@
-# Flowable process operations
+# Flowable process and decision operations
 
-Deploy original BPMN resources, operate human tasks, review native process migration,
-and deliver the complete process workspace to another operator.
+Deploy original BPMN and DMN resources, operate human tasks, migrate running
+processes, evaluate native decisions and deliver the complete operating workspace
+to another operator.
 
 The installed application opens one durable Flowable workspace. Its browser,
 typed client, command line and merchant MCP connection use the same engine
@@ -11,7 +12,7 @@ historic engine readback.
 
 The command is `starforge flowable-product`. The selected package also provides
 `flowable-merchant`. In the Runtime workspace, choose
-**Applications → Flowable process operations**.
+**Applications → Flowable process and decision operations**.
 
 ## Open the application
 
@@ -76,3 +77,9 @@ streams full native source and handover files.
 Stop drains the original workspace before releasing its writer. Open the same
 private directory to continue its UUID, saved revisions, original requests and
 completed receiving records.
+
+## Native decision operations
+
+The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
+
+See [Decision deployment, evaluation and operating history](DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.

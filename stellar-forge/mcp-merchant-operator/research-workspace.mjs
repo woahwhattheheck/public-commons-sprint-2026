@@ -255,15 +255,16 @@ export class MerchantResearchWorkspaces{
     const download=async work=>{
       try{return await work();}
       catch(error){
-        if(error.code!=='RESEARCH_EXPORTED_FILE_CHANGED'||error.destinationPublished!==true||
-          error.file?.file!==temporary)throw error;
+        if(!['RESEARCH_EXPORTED_FILE_CHANGED','RESEARCH_QUOTE_DOWNLOADED_FILE_CHANGED'].includes(error.code)||
+          error.destinationPublished!==true||error.file?.file!==temporary)throw error;
         // The original receiver completed this file. Verify and retain those
         // actual bytes before reporting the reviewed-digest mismatch.
         const original=await openResearchSource(temporary,256*1024*1024,{sha256:checkedDigest(error.file.sha256)});
         try{if(original.bytes!==error.file.bytes)throw failure('RESEARCH_EXPORT_CHANGED','The completed download length differs.');}
         finally{await original.close();}
         verification={state:'DIGEST_MISMATCH',expectedSha256:error.expectedSha256??args.expectedSha256,actualSha256:error.file.sha256,
-          ...(error.expectedBytes!==undefined?{expectedBytes:error.expectedBytes,actualBytes:error.file.bytes}:{})};
+          ...((error.expectedBytes??error.metadata?.descriptor?.bytes)!==undefined?{
+            expectedBytes:error.expectedBytes??error.metadata.descriptor.bytes,actualBytes:error.file.bytes}:{})};
         return error.file;
       }
     };

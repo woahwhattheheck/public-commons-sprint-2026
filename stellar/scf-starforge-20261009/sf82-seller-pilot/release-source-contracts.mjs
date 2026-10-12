@@ -13,3 +13,4 @@ export const SQLITE_SOURCE_SCHEMA = 'stellar-forge.sqlite-seller-release-manifes
 export const DATASET_SOURCE_SCHEMA = 'stellar-forge.dataset-seller-release-manifest.v1';
 export const CLICKHOUSE_SOURCE_SCHEMA = 'stellar-forge.clickhouse-seller-release-manifest.v1';
 export const GRPC_SOURCE_SCHEMA = 'stellar-forge.grpc-seller-source.v1';
+export const PMTILES_OUTPUT_SOURCE_SCHEMA = 'stellar-forge.pmtiles-output-release-manifest.v1';

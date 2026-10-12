@@ -186,6 +186,18 @@ override, the maintained package default remains in effect. This keeps a
 standalone product's source identity without bringing other products' bins
 into its selected archive.
 
+Explicit support-file declarations retain the complete original file regardless
+of extension, including publisher TeX, native input/reference formats and opaque
+support assets. They do not broaden automatic component-directory discovery:
+undeclared formats still follow the maintained runtime-file heuristic. The
+existing hidden-directory, excluded-directory and exact `excludeFiles` rules
+remain in force. Only the existing explicit CSV/JSON/TXT/Parquet fixture-data
+exception permits a `fixtures` path; declaring an executable fixture does not
+permit it. The original Git reader still requires regular source files, exact
+object identity and the per-file and aggregate byte bounds. A declaration that
+violates those rules remains a missing required entry rather than being silently
+dropped from a supposedly complete package.
+
 Required command and export targets, selected provider modules, runtime package
 manifests, and browser server/manifests are retained as explicit runtime seeds.
 The original static ESM and browser-map closure then includes their dependencies.
@@ -255,3 +267,7 @@ against the same saved building project. A customer package retains every
 source byte, proposal and review, saved edition, original request outcome and
 portable application file; the received application reopens that original
 workspace for continued work.
+
+## Complete Groundwater installation receiving
+
+The existing `groundwater-reports` product is exercised through its original managed source review, package build, selected runtime install, lock-bound offline transfer, independent install and saved-build reopen. The [complete receiving guide](receiving/GROUNDWATER.md) and its caller retain one source-build request and verify all 64 scientific files in both installations. The separate `groundwater-report` selection remains the Report Desk product. Scientific execution continues through its existing workspace and owner.

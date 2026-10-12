@@ -163,11 +163,32 @@ Original source documentation remains the authority for native APIs and formats:
 
 ## Continue an interrupted handover
 
-Run the same `handover` command against its original output directory and selected source. Completed Results ZIPs are read through the original native archive, history, source and report validators. Their saved snapshot supplies the readable reports and comparison files. The builder does not re-export a completed ZIP against a project that has since acquired another edition or comparison. If the original ZIP was published immediately before an interruption, its exact native export lease and remaining same-file partial link are reconciled first. Other partial files remain in place.
+Run the same `handover` command against its original output directory and selected source. Completed Results ZIPs are read through the original native archive, history, source and report validators. The native report API rebuilds and verifies each selected report from its original projections. Its renderer receives that rebuilt report and the completed packet's frozen comparison records, matching the original exporter even when loading snapshot JSON changes dictionary order. The builder does not re-export a completed ZIP against a project that has since acquired another edition or comparison. If the original ZIP was published immediately before an interruption, its exact native export lease and remaining same-file partial link are reconciled first. Other partial files remain in place.
 
 The operator similarly recovers a completed private output whose only second hard link is its exact owned temporary file with identical bytes. It does not replace an existing different output. Saved-edition selection retains its first complete comparison records so repeating that selection does not substitute subsequent UI work.
 
 The original publishing application exports **released** publisher revisions. A programme plan can prepare or correct a local publisher draft, but complete editable publisher receiving requires selecting its actual released revision. Use the original publishing application's review and release workflow when the project is ready, then `select` that saved revision. A Results-only programme may keep `publisherSteps` empty; its native Results packets still contain the complete original XML sources and reporting history. A completed publisher ZIP is independently received into a private disposable workspace before inclusion.
+
+
+### Continue with corrected software
+
+If a receiving or handover correction changes the operator or selected runtime, preserve the original incomplete handover. Run `handover` with the same completed programme result and `--resume-from` pointing to that earlier directory, and choose a new `--out` directory:
+
+```bash
+python3 programme.py \
+  --iati /srv/pmel-source/stellar/scf-starforge-20261009/sf30-seller-sdk/iati \
+  --workspace /srv/pmel-private/programme \
+  handover \
+  --result /srv/pmel-private/programme/programme-operations/ACTUAL-OPERATION-DIGEST/result.json \
+  --runtime-manifest /srv/pmel-source/runtime-selection.json \
+  --runtime-root /srv/pmel-source \
+  --resume-from /srv/pmel-delivery/programme-handover \
+  --out /srv/pmel-delivery/programme-handover-corrected
+```
+
+The operator verifies the earlier build, its complete saved result, runtime selection and retained operator files. It reads every completed native archive through the selected application's original source, snapshot and report validators, then copies those exact bytes into the successor handover. It exports only selected packets that were never completed in the earlier build. This command performs no Results saves or publisher edits.
+
+The successor includes the complete corrected runtime and operator, plus the earlier `BUILD.json` and runtime selection under `resumed-build/`. The receiving start script accepts this optional continuation record and verifies the earlier build, original operation/result and prior runtime/operator identities against those included files before receiving native data. A changed runtime selection is explicit: the old manifest remains retained and the new selection is verified in full. Keep the same `--resume-from` argument when continuing the successor build after another interruption. Native workspace IDs, project IDs, editions and original operation identity remain those of the completed programme.
 
 ## Use the existing staff application lifetime
 

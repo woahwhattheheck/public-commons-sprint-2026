@@ -72,6 +72,8 @@ The complete native contracts and deployment instructions remain in [SF101 check
 
 ### Buyer
 
+The complete [Research Buyer setup](BUYER_SETUP.md) starts the original Buyer from an existing SF88 operator or attaches an Applications-managed Buyer, retains its actual launch and selection digest, adopts the original preset locally, and writes the complete agent and Research host files. Use `research-client commerce-buyer-serve --input /private/buyer-input.json --run-directory /private/research-buyer`, or `commerce-buyer-attach` for the existing actual launch. Repeat the same command with its retained directory to reopen. The original Research purchase, budget approval and receiving continue through the workflow below.
+
 Choose an existing Buyer Runbook application whose local operator, payer/signing source and budgets are already configured for the selected native network and asset. Its original private workspace, retained launch file and exact selection digest belong in the existing agent configuration:
 
 ~~~json

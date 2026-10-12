@@ -1,6 +1,6 @@
 // MIT. Full tariff quotation receiving under the original configured Support owner.
 import {openCommercialTariffController} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commercial/tariff-controller.mjs';
-import {failure,exact,privateSupportDirectory} from './config.mjs';
+import {failure,exact,privateSupportDirectory} from './host-files.mjs';
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const HASH=/^[a-f0-9]{64}$/;
 const ACTIONS=Object.fromEntries(['status','catalog','selection','capture','inspect','attach','case','restore']

@@ -30,7 +30,7 @@ export const RESEARCH_QUOTE_EXPORTS=Object.freeze({
 export const RESEARCH_QUOTE_EXPORT_FIELDS=Object.freeze({
  quoteOperationId:uuid,quoteCaseId:uuid,
  quoteFileName:{type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9._-]{0,179}$'},
- quoteInput:native,quoteInputSource:alias,
+ quoteInput:native,quoteInputSource:alias,quoteExpectedBytes:{type:'integer',minimum:0,maximum:268435456},
 });
 export function researchQuoteTools(tool){
  const command=(name,description,input)=>tool(RESEARCH_QUOTE_PREFIX+name,description+

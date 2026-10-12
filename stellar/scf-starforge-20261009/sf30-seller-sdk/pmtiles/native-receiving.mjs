@@ -41,6 +41,12 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
     'PMTILES_READY_MERCHANT_INSTALLATION_IDENTITY_REQUIRED');
   need(/^[a-f0-9]{64}$/.test(installedSelection.expectedSourceManifestSha256??''),
     'PMTILES_READY_MERCHANT_SOURCE_MANIFEST_REQUIRED');
+  if(input.outputCommerce!==undefined){
+    const sourceRoot=resolve(HERE,'../../../..');
+    const hook=join(sourceRoot,'stellar-forge','mcp-merchant-operator','pmtiles-commerce-native-receiving.mjs');
+    const {validatePMTilesOutputNativeSelection}=await import(pathToFileURL(hook).href);
+    input.outputCommerce=validatePMTilesOutputNativeSelection(input.outputCommerce);
+  }
   const root=await privateDirectory(resolve(input.directory));
   await privateDirectory(join(root,'locks'));await privateDirectory(join(root,'steps'));await privateDirectory(join(root,'browser-records'));
   await retainJson(join(root,'original-input.json'),input);
@@ -81,6 +87,22 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
           'PMTILES_ORIGINAL_PREVIEW_OUTPUT_CHANGED');
         const observed=await fileDescriptor(file.path,{signal});
         need(observed.bytes===file.bytes&&observed.sha256===file.sha256,'PMTILES_ORIGINAL_PREVIEW_OUTPUT_CHANGED');
+      }
+      if(input.outputCommerce!==undefined){
+        need(completed.outputCommerce?.status==='PMTILES_OUTPUT_COMMERCE_COMPLETE'&&
+          completed.outputCommerce.operationId===input.operationId&&completed.outputCommerce.workspaceId===completed.workspaceId,
+          'PMTILES_ORIGINAL_OUTPUT_COMMERCE_INCOMPLETE');
+        const receiptPath=join(root,'merchant-output','result.json');
+        need(completed.outputCommerceReceipt?.path===receiptPath,'PMTILES_ORIGINAL_OUTPUT_RECEIPT_REQUIRED');
+        const receipt=await fileDescriptor(receiptPath,{signal});
+        need(receipt.bytes===completed.outputCommerceReceipt.bytes&&receipt.sha256===completed.outputCommerceReceipt.sha256,
+          'PMTILES_ORIGINAL_OUTPUT_RECEIPT_CHANGED');
+        for(const file of completed.outputCommerce.files){
+          need(typeof file.path==='string'&&isAbsolute(file.path)&&resolve(file.path).startsWith(join(root,'merchant-output')+'/'),
+            'PMTILES_ORIGINAL_OUTPUT_FILE_CHANGED');
+          const actual=await fileDescriptor(file.path,{limit:34359738368,signal});
+          need(actual.bytes===file.bytes&&actual.sha256===file.sha256,'PMTILES_ORIGINAL_OUTPUT_FILE_CHANGED');
+        }
       }
       return {...completed,reused:true};
     }
@@ -398,12 +420,28 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
         'PMTILES_ORIGINAL_APPLICATIONS_RECEIVING_INCOMPLETE');
       const managedReceiptPath=join(managedRoot,'complete.json');
       const managedApplicationsReceipt={path:managedReceiptPath,...await fileDescriptor(managedReceiptPath,{signal})};
+      let outputCommerce=null,outputCommerceReceipt=null;
+      if(input.outputCommerce!==undefined){
+        const commerceHook=join(merchantSourceRoot,'stellar-forge','mcp-merchant-operator','pmtiles-commerce-native-receiving.mjs');
+        const {exercisePMTilesOutputCommerce}=await import(pathToFileURL(commerceHook).href);
+        const commerceRoot=join(root,'merchant-output');
+        outputCommerce=await exercisePMTilesOutputCommerce({sourceRoot:merchantSourceRoot,directory:join(root,'workspace'),
+          runtimeProfile:runtimeResult.profilePath,expectedWorkspaceId:workspaceId,root:commerceRoot,
+          operationId:input.operationId,commerce:input.outputCommerce,signal,
+          progress:value=>process.stdout.write(JSON.stringify(value)+'\n')});
+        need(outputCommerce.status==='PMTILES_OUTPUT_COMMERCE_COMPLETE'&&
+          outputCommerce.originalReleaseId===vectorRelease.id&&outputCommerce.workspaceId===workspaceId,
+          'PMTILES_ORIGINAL_OUTPUT_COMMERCE_INCOMPLETE');
+        const receiptPath=join(commerceRoot,'result.json');
+        outputCommerceReceipt={path:receiptPath,...await fileDescriptor(receiptPath,{signal})};
+      }
       need(browserErrors.length===0,'PMTILES_BROWSER_PAGE_ERROR',JSON.stringify(browserErrors));
       const result={schema:'starforge.pmtiles-native-receiving-result.v1',status:'PMTILES_RECEIVING_COMPLETE',operationId:input.operationId,
         requestSha256,workspaceId,sourceSelection,runtimeSha256:runtime.runtimeSha256,browserIdentity,
         firstReleaseId:firstRelease.id,secondReleaseId:secondRelease.id,vectorReleaseId:vectorRelease.id,
         vectorSource:{...vectorSource,sha256:vectorArchive.sha256,resourceId:vectorArchive.id,gitBlobSha1:observedBlob},restoredReleaseId:firstRelease.id,
         package:packageResult.result,receiving:received.value,cliState:cliState.value,previewBrowser,merchantMcp,managedApplications,managedApplicationsReceipt,
+        ...(outputCommerce?{outputCommerce,outputCommerceReceipt}:{}),
         browserErrors,nativeTileResponses,completedAt:timestamp()};
       await retainJson(join(root,'native-result.json'),result);return result;
     }finally{

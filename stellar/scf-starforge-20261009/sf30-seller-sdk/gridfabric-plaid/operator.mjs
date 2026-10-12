@@ -104,18 +104,24 @@ export async function openGridFabricWorkspace({directory,create=false,name='Grid
     throw fail('GRIDFABRIC_TRANSPORT_CONFIGURATION','Use a 1–600 second timeout and a complete-response allowance from 1 KiB to 256 MiB.');
   if(existsSync(join(directory,'.gridfabric-restore.json')))throw fail('GRIDFABRIC_RESTORE_IN_PROGRESS','Resume the original portable restoration before opening this workspace.');
   const store=await openGridFabricStore({directory,create});
-  let closing=false,closed=false;const active=new Set();
+  let closing=false,closed=false;const active=new Set(),receivers=new Set();
   try {
     const vault=createGridFabricFiles({directory:store.directory,assertHeld:store.assertHeld});
-    const files={...vault,put(text,metadata={}){
-      const result=vault.put(text,metadata),prior=store.get('host_files',result.sha256);
-      const names=prior?.names||[];
+    const rememberFile=result=>{
+      const prior=store.get('host_files',result.sha256),names=prior?.names||[];
+      // Preserve the complete original serialized record on an identical upload.
+      // Portable receiving binds that exact record, including its key order.
+      if(prior&&prior.sha256===result.sha256&&prior.bytes===result.bytes&&
+        prior.name===result.name&&prior.mime_type===result.mime_type&&
+        names.some(item=>item.name===result.name&&item.mime_type===result.mime_type))
+        return result;
       if(!names.some(item=>item.name===result.name&&item.mime_type===result.mime_type))
         names.push({name:result.name,mime_type:result.mime_type});
       store.put('host_files',result.sha256,{...result,names,created_at:prior?.created_at||now()},
         {scope:'',sort:prior?.created_at||now(),tag:'UTF8'});
       return result;
-    }};
+    };
+    const files={...vault,put(text,metadata={}){return rememberFile(vault.put(text,metadata));}};
     const engine=createEngine({store,files,sha256Utf8,now,newId:randomUUID,publicContract});
     if(create)engine.initialize({name});
     const initial=engine.state();
@@ -195,6 +201,21 @@ export async function openGridFabricWorkspace({directory,create=false,name='Grid
       detail(collection,id){assertOpen();return engine.detail(collection,id);},
       execute(action,input,options){assertOpen();return engine.execute(action,input,options);},
       upload(text,metadata){assertOpen();return store.transaction(()=>files.put(text,metadata));},
+      beginUpload(metadata){
+        assertOpen();
+        if(typeof metadata?.name!=='string'||!metadata.name||metadata.name.includes('\0')||
+           typeof metadata.mime_type!=='string'||!metadata.mime_type||metadata.mime_type.includes('\0'))
+          throw fail('GRIDFABRIC_FILE_METADATA','Keep the original file name and media type.');
+        const original=vault.beginReceive(metadata);let ended=false;
+        const receiver={
+          write(chunk){assertOpen();if(ended)throw fail('GRIDFABRIC_FILE_RECEIVER_CLOSED','The original upload is closed.');original.write(chunk);},
+          finish(){assertOpen();if(ended)throw fail('GRIDFABRIC_FILE_RECEIVER_CLOSED','The original upload is closed.');
+            try{return store.transaction(()=>rememberFile(original.finish()));}
+            finally{try{original.abort();}finally{ended=true;receivers.delete(receiver);}}},
+          abort(){if(!ended){ended=true;original.abort();receivers.delete(receiver);}}
+        };
+        receivers.add(receiver);return receiver;
+      },
       handleCallback(instanceId,rawUtf8,options){assertOpen();return engine.handleCallback(instanceId,rawUtf8,options);},
       dispatchManagement:(input,options)=>trackedDispatch('management',input,options),
       dispatchDevice:(input,options)=>trackedDispatch('device',input,options),
@@ -207,7 +228,7 @@ export async function openGridFabricWorkspace({directory,create=false,name='Grid
           rows:store.scan(table,options).map(row=>({id:row.id,...row.data}))};
       },
       async close(){
-        if(closed)return;closing=true;await Promise.allSettled([...active]);await store.close();closed=true;
+        if(closed)return;closing=true;await Promise.allSettled([...active]);for(const receiver of [...receivers])receiver.abort();await store.close();closed=true;
       }
     };
   } catch(error) {await store.close();throw error;}

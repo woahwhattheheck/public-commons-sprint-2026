@@ -424,6 +424,101 @@ The local run and the native operation have different purposes. `quotes-operatio
 
 For the whole customer journey, retain the creation/brief review, apply the accepted review, record the actual customer response, complete evidence work through Customer updates, prepare and enroll its frozen publication, then receive the realized report and every native file. The original Commerce commands continue the approved Buyer action and customer receiving between publication and realized reporting.
 
+
+### Run and reopen the complete terminal workflow
+
+Use the actual Research connection and the complete selection files from the HTTP examples above. For a current native observation, use the read commands. For a durable review or write, choose one private directory for that exact request.
+
+~~~sh
+research-client quotes-configuration \
+  --connection-file /private/research-connection.json \
+  --out /private/quotation-configuration.json
+
+research-client quotes-create-case \
+  --connection-file /private/research-connection.json \
+  --input /private/selections/create-case.json \
+  --run-directory /private/quote-operations/create-case
+
+research-client quotes-prepare \
+  --connection-file /private/research-connection.json \
+  --input /private/selections/brief.json \
+  --run-directory /private/quote-operations/brief-review
+
+research-client quotes-run \
+  --run-directory /private/quote-operations/brief-review
+~~~
+
+The complete prepared operation contains the native `id` and `reviewSha256`. Save those exact values as the apply selection, then submit it in its own retained directory:
+
+~~~sh
+research-client quotes-apply \
+  --connection-file /private/research-connection.json \
+  --input /private/selections/apply-brief.json \
+  --run-directory /private/quote-operations/brief-apply \
+  --out /private/applied-brief-result.json
+~~~
+
+Use the same pattern for response review, publication review/enrollment and the realized report. Their original selections remain in the native workspace and in the local terminal directory. Repeating a completed command requires only its retained directory:
+
+~~~sh
+research-client quotes-apply \
+  --run-directory /private/quote-operations/brief-apply
+~~~
+
+A deliberate replay uses a distinct local attempt and the original retained input:
+
+~~~sh
+research-client quotes-replay \
+  --connection-file /private/research-connection.json \
+  --source-operation /private/quote-operations/brief-apply \
+  --run-directory /private/quote-operations/brief-apply-replay
+~~~
+
+For an original commercial or pricing action, add its actual routing fields. Keep the full native body in the input file; use `{}` for a native action without arguments.
+
+~~~sh
+research-client quotes-native-case \
+  --connection-file /private/research-connection.json \
+  --case-id ACTUAL_CASE_UUID --action preview \
+  --input /private/selections/native-quote-preview.json \
+  --run-directory /private/quote-operations/native-preview
+
+research-client quotes-pricing \
+  --connection-file /private/research-connection.json \
+  --profile research --action planning-preview \
+  --input /private/selections/planning-preview.json \
+  --run-directory /private/quote-operations/planning-preview
+~~~
+
+The run retains the first response for native previews and reads too. Use another run directory when requesting a fresh observation.
+
+Receive the complete selected operation and all its original source/report files:
+
+~~~sh
+research-client quotes-export-operation \
+  --connection-file /private/research-connection.json \
+  --id ACTUAL_OPERATION_UUID \
+  --run-directory /private/quote-operations/report-export \
+  --out-directory /private/customer-handover
+~~~
+
+The retained export freezes the complete operation and file roster before transfer. `--operation-sha256` can additionally select the native canonical operation fingerprint. The receiving directory contains every original file, its complete operation context and the saved export selection. A stopped transfer resumes its original roster; repeating it after completion verifies the retained files without opening the host.
+
+For one original commercial or tariff file, select the corresponding native download input and preserve the returned case revision:
+
+~~~sh
+research-client quotes-download-case \
+  --connection-file /private/research-connection.json \
+  --case-id ACTUAL_CASE_UUID \
+  --input /private/selections/native-case-download.json \
+  --run-directory /private/quote-operations/case-export \
+  --out /private/customer-case.json
+~~~
+
+`quotes-download-tariff` has the same flags. Optional `--sha256` and `--bytes` select a known original file identity. The native metadata and stream share one admitted client operation. The retained historical case selection stays usable after a later case revision.
+
+The CLI retains the first complete native result before terminal output. `--out` copies that exact retained result for writes; complete-file commands copy the original selected bytes. An output failure therefore leaves the saved operation available through the same directory. SIGINT/SIGTERM cancel the original client action and drain its owned file/transport handles; an incomplete closer remains available to its same foreground owner.
+
 ## Operate the same workflow from a Merchant agent
 
 Use the existing declared Research workspace. `merchant_research_workspaces` lists its alias and source handles; `merchant_research_attach` verifies the original listener and returns the current attachment ID. The complete customer quotation tools operate on that attachment.
@@ -463,11 +558,12 @@ For an operation, list `merchant_research_quote_files`, then call `merchant_rese
   kind: "quote-operation-file",
   quoteOperationId: originalOperationId,
   quoteFileName: selectedFile.name,
+  quoteExpectedBytes: selectedFile.bytes,
   expectedSha256: selectedFile.sha256
 }
 ~~~
 
-For a commercial case or tariff file, inspect `merchant_research_quote_file_info` first. Use `kind: "CASE"` or `"TARIFF"`, the original case `id`, and its complete native download `input`. Retain the returned case revision in that input. Then export using `kind: "quote-case-file"` or `"quote-tariff-file"`, `quoteCaseId`, exactly one `quoteInput` or `quoteInputSource`, and the exact descriptor SHA.
+For a commercial case or tariff file, inspect `merchant_research_quote_file_info` first. Use `kind: "CASE"` or `"TARIFF"`, the original case `id`, and its complete native download `input`. Retain the returned case revision in that input. Then export using `kind: "quote-case-file"` or `"quote-tariff-file"`, `quoteCaseId`, exactly one `quoteInput` or `quoteInputSource`, and the exact descriptor SHA. `quoteExpectedBytes` can also pin the descriptor length for case and tariff files.
 
 Every completed export enters the same original Research file store. Continue with `merchant_research_file_read` using the returned `kind`, `exportId`, `readId` and `nextOffset` until the complete file is received. If a reader expires or the Merchant process restarts, reopen the same retained export ID at the retained offset. `merchant_research_file_release` releases the temporary read after receiving the file.
 
@@ -476,5 +572,7 @@ The original attachment drains accepted operations and its file readers on detac
 ## Complete installed source
 
 The Research contribution carries the quotation browser, contracts, native controller, typed client, durable operators and terminal entry. It also includes the complete original SF74 and SF97 components, which supply the commercial UI, case writer, pricing/planning/tariff engines and native portable files.
+
+The quotation server and distribution builder read the same [browser asset manifest](browser-assets.json). Its nine routes map the embedded commercial editor, receiving desk and tariff desk to their complete original source files. The maintained browser asset reader travels with this source selection.
 
 The original Research launcher, Customer updates, Paid delivery, Buyer Runbook, SF101 checkout and saved customer receiving remain the operating path. A full native continuation can therefore proceed from the existing customer case and observed pricing version through quotation, revised evidence work, frozen paid delivery, actual Buyer receiving and a complete realized report.

@@ -13,7 +13,7 @@ const PRODUCT = 'products/flowable-merchant/';
 const SDK = 'stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/';
 const RUNTIME = 'stellar/scf-starforge-20261009/distribution/runtime-workspace/';
 const MCP = 'stellar-forge/mcp-merchant-operator/';
-const CORE_KINDS = ['connection','portfolio','release','process','task','migration'];
+const CORE_KINDS = ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation'];
 const HASH = /^[a-f0-9]{64}$/;
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = value => JSON.stringify(value, (_, item) =>
@@ -225,7 +225,7 @@ export async function runInstalledFlowableJourney({
     need(HASH.test(sourceDelivery.sha256) && sourceDelivery.record.kind==='delivery','Select the original complete parent delivery.');
     await checkedFile(sourceDelivery.path,sourceDelivery);
     await product.initializeFlowableProduct({directory:senderDirectory,workspaceDirectory:sourceWorkspaceDirectory,
-      name:'Native Flowable sender',connections:[configuration.connection]});
+      name:'Native Flowable sender',connections:[configuration.connection,configuration.dmnConnection]});
     await product.initializeFlowableProduct({directory:receiverDirectory,name:'Native Flowable installed receiver',connections:[]});
     if(!await common.exists(join(appsDirectory,'workspace.json')))await runtime.createRuntimeWorkspace({directory:appsDirectory});
     apps=await runtime.openRuntimeWorkspace({directory:appsDirectory});
@@ -321,7 +321,7 @@ export async function runInstalledFlowableJourney({
     ];
     for(const args of cliCalls) {
       const result=await runCLI(sourceRoot,args,signal);report.cli.push(result.receipt);
-      if(args[0]==='actions')need(result.value.length===21,'The installed CLI exposes every original workspace action.');
+      if(args[0]==='actions')need(result.value.length===29,'The installed CLI exposes every original workspace action.');
       if(args[0]==='status')need(result.value.workspaceId===senderStatus.workspaceId,'CLI and SDK use the same native workspace.');
       if(args[0]==='record')need(result.value.sha256===selectedRelease.sha256,'CLI reads the same immutable native record.');
     }
@@ -329,7 +329,7 @@ export async function runInstalledFlowableJourney({
     need(canonical(reviewValue)===canonical(originalReview),'The CLI receives the complete original field review.');
     report.files.push(await checkedFile(reviewFile));
     mark('Installed SDK, original CLI and exact deployment source',{release:ref(selectedRelease),source:sourceReference,
-      actions:21,reviewSha256:hash(reviewBytes)});
+      actions:29,reviewSha256:hash(reviewBytes)});
     const laterInput={requestId:request('later-portfolio'),connectionId:senderStatus.connections.find(item=>item.connection.id===configuration.connection.id)?.id,
       label:'Installed operator continuation of original native portfolio'};
     need(laterInput.connectionId,'Select the original saved native engine.');
@@ -357,6 +357,122 @@ export async function runInstalledFlowableJourney({
       const bytes=Buffer.from(resource.contentBase64,'base64');
       need(bytes.length===resource.bytes && hash(bytes)===resource.sha256,'Retain exact original native resource bytes.');
     }
+
+    const decisionConnectionId=senderStatus.connections.find(item=>item.connection.id===configuration.dmnConnection?.id)?.id;
+    need(decisionConnectionId,'Continue the original saved DMN engine connection.');
+    const decisionSeed=await memo('original-decision-continuation',{deliverySha256:sourceDelivery.sha256},async()=>{
+      const records=(await allRecords(sender,'decisionEvaluation')).sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt)));
+      for(const item of records) {
+        const record=await sender.getRecord({kind:'decisionEvaluation',id:item.id});
+        if(!record.value.response || !['CONFIRMED','ACCEPTED','OBSERVED'].includes(record.value.state))continue;
+        const response=(await sender.readSource({reference:record.value.response})).value;
+        const selection=(await sender.readSource({reference:record.value.selection})).value;
+        if(response.status===201 && Array.isArray(response.json?.resultVariables) && selection?.bodyText) {
+          return {record:ref(record),selection,resultVariables:response.json.resultVariables,
+            responseSha256:response.bodySha256,planSha256:record.value.planSha256};
+        }
+      }
+      throw fail('Continue an actual successful native decision evaluation from the complete original handover.');
+    });
+    async function decisionOutcome(record,surface,reconcile) {
+      record=await sender.getRecord({kind:'decisionEvaluation',id:record.id});
+      if(record.value.dispatchedAt && ['UNKNOWN','DISPATCHED','READBACK'].includes(record.value.state)) {
+        // Continue the saved native dispatch through this surface's stable readback request.
+        record=await reconcile(record);
+        record=await sender.getRecord({kind:'decisionEvaluation',id:record.id});
+      }
+      need(['CONFIRMED','ACCEPTED','OBSERVED'].includes(record.value.state) && record.value.response,
+        surface+' must retain an accepted native decision evaluation.');
+      const response=(await sender.readSource({reference:record.value.response})).value;
+      need(response.status===201 && canonical(response.json?.resultVariables)===canonical(decisionSeed.resultVariables),
+        surface+' must return the current original native decision result variables.');
+      const review=await sender.readReview({kind:'decisionEvaluation',id:record.id,revision:record.revision});
+      const reviewPath=join(directory,surface.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'-decision-review.json');
+      await common.publish(reviewPath,review,{replace:true,lease});
+      report.files.push(await checkedFile(reviewPath));
+      return {record:ref(record),response:{status:response.status,bytes:response.bodyBytes,sha256:response.bodySha256},
+        resultVariables:response.json.resultVariables};
+    }
+    const decisionPrepared=await memo('sdk-decision-prepared',{source:decisionSeed.record},()=>sender.prepareDecisionEvaluation({
+      requestId:request('sdk-decision-prepare'),connectionId:decisionConnectionId,
+      label:'Installed SDK native decision continuation',selection:decisionSeed.selection}));
+    const decisionSdk=await sender.dispatchDecisionEvaluation({requestId:request('sdk-decision-dispatch'),
+      id:decisionPrepared.id,expectedRevision:decisionPrepared.revision,planSha256:decisionPrepared.value.planSha256});
+    const decisionSdkResult=await decisionOutcome(decisionSdk,'Installed SDK',record=>sender.reconcileOperation({
+      requestId:request('sdk-decision-reconcile'),kind:'decisionEvaluation',id:record.id}));
+    const decisionSelectionPath=join(directory,'original-native-decision-selection.json');
+    await common.publish(decisionSelectionPath,decisionSeed.selection,{replace:true,lease});
+    const decisionCliPrepared=await memo('cli-decision-prepared',{source:decisionSeed.record},()=>runCLI(sourceRoot,[
+      'prepare','--dir',senderDirectory,'--kind','decisionEvaluation','--request',request('cli-decision-prepare'),
+      '--connection',decisionConnectionId,'--selection',decisionSelectionPath,
+      '--label','Installed CLI native decision continuation'],signal));
+    report.cli.push(decisionCliPrepared.receipt);
+    const cliPrepared=decisionCliPrepared.value;
+    const decisionCli=await runCLI(sourceRoot,['dispatch','--dir',senderDirectory,'--kind','decisionEvaluation',
+      '--request',request('cli-decision-dispatch'),'--id',cliPrepared.id,'--revision',String(cliPrepared.revision),
+      '--plan-sha256',cliPrepared.value.planSha256],signal);
+    report.cli.push(decisionCli.receipt);
+    const decisionCliResult=await decisionOutcome(decisionCli.value,'Installed CLI',async record=>{
+      const continued=await runCLI(sourceRoot,['reconcile','--dir',senderDirectory,'--kind','decisionEvaluation',
+        '--request',request('cli-decision-reconcile'),'--id',record.id],signal);
+      report.cli.push(continued.receipt);return continued.value;
+    });
+    const decisionPortfolio=await sender.captureDecisionPortfolio({requestId:request('installed-decision-portfolio'),
+      connectionId:decisionConnectionId,label:'Complete installed native decision history'});
+    need(decisionPortfolio.value.state==='CAPTURED','The installed SDK captures the whole native decision portfolio.');
+    const decisionCollections={},decisionItems={};
+    for(const collection of ['deployments','definitions','historicExecutions']) {
+      const items=[];let offset=0;
+      for(;;) {
+        const page=await sender.readDecisionPortfolio({id:decisionPortfolio.id,revision:decisionPortfolio.revision,collection,offset,limit:2});
+        need(page.complete && page.offset===offset,'The installed decision capture keeps each original complete native collection.');
+        items.push(...page.items);
+        if(page.nextOffset===null){need(items.length===page.total,'Read every captured native decision record.');break;}
+        need(page.nextOffset>offset,'Native decision paging advances.');offset=page.nextOffset;
+      }
+      decisionItems[collection]=items;
+      decisionCollections[collection]={count:items.length,identitiesSha256:hash(canonical(items.map(item=>item.id)))};
+    }
+    need(decisionItems.definitions.length>=6 && decisionItems.historicExecutions.length>0,
+      'The installed product continues all three native decision families and both source editions.');
+    const decisionKey=JSON.parse(decisionSeed.selection.bodyText).decisionKey;
+    const selectedDecision=decisionItems.definitions.filter(item=>item.key===decisionKey)
+      .sort((a,b)=>Number(b.version)-Number(a.version))[0];
+    need(selectedDecision,'The original evaluated native definition remains in the complete capture.');
+    const installedDefinition=await sender.readDecisionDefinition({portfolioId:decisionPortfolio.id,
+      revision:decisionPortfolio.revision,definitionId:selectedDecision.id});
+    need(installedDefinition.resources.some(item=>item.kind==='dmn-definition-resource'),
+      'Installed decision definition opens its complete original DMN resource.');
+    const selectedExecution=decisionItems.historicExecutions.find(item=>
+      item.decisionDefinitionId===selectedDecision.id || item.decisionKey===decisionKey || item.decisionDefinitionKey===decisionKey)
+      ?? decisionItems.historicExecutions[0];
+    const installedAudit=await sender.readDecisionExecution({portfolioId:decisionPortfolio.id,
+      revision:decisionPortfolio.revision,executionId:selectedExecution.id});
+    need(installedAudit.resources.some(item=>item.kind==='dmn-execution-audit'),
+      'Installed history opens the original selected execution audit.');
+    for(const [prefix,resources] of [['decision',installedDefinition.resources],['audit',installedAudit.resources]]) {
+      for(const resource of resources)if(resource.originalResource) {
+        const received=await sender.downloadSource({reference:resource.originalResource,
+          path:join(directory,prefix+'-'+resource.sha256+'.source')});
+        await checkedFile(received.path,resource.originalResource);report.files.push(received);
+      }
+    }
+    for(const args of [
+      ['decision-portfolio','--dir',senderDirectory,'--id',decisionPortfolio.id,'--revision',String(decisionPortfolio.revision),
+        '--collection','historicExecutions','--limit','2'],
+      ['decision-definition','--dir',senderDirectory,'--portfolio',decisionPortfolio.id,'--definition',selectedDecision.id,
+        '--revision',String(decisionPortfolio.revision)],
+      ['decision-execution','--dir',senderDirectory,'--portfolio',decisionPortfolio.id,'--execution',selectedExecution.id,
+        '--revision',String(decisionPortfolio.revision)],
+    ]) {
+      const result=await runCLI(sourceRoot,args,signal);report.cli.push(result.receipt);
+      need(result.value.portfolio?.id===decisionPortfolio.id && result.value.portfolio.revision===decisionPortfolio.revision,
+        'The installed decision CLI reads the selected original portfolio and revision.');
+    }
+    mark('Native installed decision evaluation, source and audit',{source:decisionSeed.record,
+      sdk:decisionSdkResult,cli:decisionCliResult,portfolio:ref(decisionPortfolio),collections:decisionCollections,
+      definitionId:selectedDecision.id,executionId:selectedExecution.id});
+
     const laterDelivery=await sender.exportWorkspace({requestId:request('export-later'),label:'Complete installed Flowable continuation'});
     need(laterDelivery.value.state==='EXPORTED','Export the complete later native workspace.');
     const laterFile=await sender.downloadDelivery({id:laterDelivery.id,path:join(directory,'later-workspace.ndjson'),
@@ -403,7 +519,7 @@ export async function runInstalledFlowableJourney({
       if(!result.nextCursor)break;need(result.nextCursor!==cursor,'MCP tool pagination advances.');cursor=result.nextCursor;
     }
     const names=advertised.filter(name=>name.startsWith('merchant_flowable_'));
-    need(names.length===27 && new Set(names).size===27,'The selected installed merchant exposes all 27 original Flowable tools.');
+    need(names.length===35 && new Set(names).size===35,'The selected installed merchant exposes all 35 original Flowable tools.');
     const remoteStatus=await mcp.tool('merchant_flowable_status',{workspace:'sender'});
     need(remoteStatus.workspaceId===senderStatus.workspaceId,'Authenticated MCP and Applications use the same original workspace.');
     let chunksRead=0,reopenedReader=false;
@@ -471,6 +587,54 @@ export async function runInstalledFlowableJourney({
     mark('Authenticated installed MCP and original range receiving',{toolCount:names.length,
       toolNamesSha256:hash(canonical(names)),manifest:mcpReceived.manifest,receiving:ref(remoteAdopted),
       chunksRead,reopenedReader,sourceManifest:mcpSource.manifest});
+
+    const remoteDecision=await mcp.tool('merchant_flowable_decision_definition',{workspace:'sender',
+      portfolioId:decisionPortfolio.id,revision:decisionPortfolio.revision,definitionId:selectedDecision.id});
+    const remoteAudit=await mcp.tool('merchant_flowable_decision_execution',{workspace:'sender',
+      portfolioId:decisionPortfolio.id,revision:decisionPortfolio.revision,executionId:selectedExecution.id});
+    need(canonical(remoteDecision)===canonical(installedDefinition) && canonical(remoteAudit)===canonical(installedAudit),
+      'MCP, SDK and CLI open the same complete native definition and audit resources.');
+    const mcpDecisionPrepared=await memo('mcp-decision-prepared',{source:decisionSeed.record},()=>mcp.tool(
+      'merchant_flowable_prepare_decision_evaluation',{workspace:'sender',requestId:request('mcp-decision-prepare'),
+        connectionId:decisionConnectionId,label:'Installed MCP native decision continuation',selection:decisionSeed.selection}));
+    const mcpDecision=await mcp.tool('merchant_flowable_dispatch_decision_evaluation',{workspace:'sender',
+      requestId:request('mcp-decision-dispatch'),id:mcpDecisionPrepared.id,expectedRevision:mcpDecisionPrepared.revision,
+      planSha256:mcpDecisionPrepared.value.planSha256});
+    const mcpDecisionResult=await decisionOutcome(mcpDecision,'Installed MCP',record=>mcp.tool('merchant_flowable_reconcile',{
+      workspace:'sender',requestId:request('mcp-decision-reconcile'),kind:'decisionEvaluation',id:record.id}));
+    const mcpDecisionPortfolio=await mcp.tool('merchant_flowable_capture_decisions',{workspace:'sender',
+      requestId:request('mcp-decision-portfolio'),connectionId:decisionConnectionId,label:'Complete MCP decision continuation'});
+    need(mcpDecisionPortfolio.value.state==='CAPTURED','MCP captures the original completed native decision continuation.');
+    const remoteHistory=await mcp.tool('merchant_flowable_decision_portfolio',{workspace:'sender',
+      id:mcpDecisionPortfolio.id,revision:mcpDecisionPortfolio.revision,collection:'historicExecutions',offset:0,limit:2});
+    need(remoteHistory.complete && remoteHistory.total>=decisionItems.historicExecutions.length,
+      'MCP exposes the original full native execution history after its decision operation.');
+    const finalDecisionDelivery=await sender.exportWorkspace({requestId:request('export-complete-decision-continuation'),
+      label:'Complete original process and decision operating history'});
+    const finalDecisionExport=await mcp.tool('merchant_flowable_download',{workspace:'sender',kind:'delivery',id:finalDecisionDelivery.id});
+    const finalDecisionReceived=await retainedFile(finalDecisionExport,join(directory,'complete-process-and-decision-workspace.ndjson'));
+    need(finalDecisionReceived.file.sha256===finalDecisionDelivery.value.file.sha256 &&
+      finalDecisionReceived.file.bytes===finalDecisionDelivery.value.file.bytes,
+      'MCP receives every byte of the complete native process and decision continuation.');
+    report.files.push(finalDecisionReceived.file);
+    const finalInspection=await receiver.inspectDeliveryFile({requestId:request('receive-complete-decision-continuation'),
+      path:finalDecisionReceived.file.path,label:'Complete native process and decision continuation',
+      expectedSha256:finalDecisionReceived.file.sha256});
+    const finalAdoptInput=await memo('complete-decision-adoption-input',{requestId:request('adopt-complete-decision-continuation'),
+      id:finalInspection.id,manifestSha256:finalInspection.value.manifestSha256},async()=>({
+        requestId:request('adopt-complete-decision-continuation'),id:finalInspection.id,
+        expectedRevision:finalInspection.revision,manifestSha256:finalInspection.value.manifestSha256}));
+    const finalDecisionAdopted=await receiver.adoptDelivery(finalAdoptInput);
+    need(finalDecisionAdopted.value.state==='ADOPTED','Receive the complete native decision continuation with its original process history.');
+    await receiver.close();receiver=undefined;await receiverOwner.close();receiverOwner=undefined;
+    await openReceiver();
+    const finalDecisionReopened=await receiver.adoptDelivery(finalAdoptInput);
+    need(finalDecisionReopened.sha256===finalDecisionAdopted.sha256,
+      'The complete process and decision receiving survives cold installed reopen.');
+    mark('Native MCP decision evaluation and complete customer receiving',{evaluation:mcpDecisionResult,
+      portfolio:ref(mcpDecisionPortfolio),history:remoteHistory.total,delivery:ref(finalDecisionDelivery),
+      receiving:ref(finalDecisionReopened),file:finalDecisionReceived.file,records:await compareCore(sender,receiver)});
+
     if(configuration.playwrightModule && configuration.chromiumExecutable) {
       const imported=await import(pathToFileURL(configuration.playwrightModule).href);
       const playwright=imported.chromium?imported:imported.default;
@@ -484,7 +648,17 @@ export async function runInstalledFlowableJourney({
         const screenshot=join(directory,'installed-definitions.png');
         await page.screenshot({path:screenshot,fullPage:true});
         report.files.push(await checkedFile(screenshot));
-        mark('Actual installed product browser',{screenshot:'installed-definitions.png',workspaceId:senderStatus.workspaceId});
+        await page.locator('#engine-select').selectOption(decisionConnectionId);
+        await page.locator('#busy').waitFor({state:'hidden'});
+        await page.getByRole('button',{name:'Decisions',exact:true}).click();
+        await page.waitForSelector('#decisions-table table');
+        need((await page.locator('#notice').getAttribute('data-level'))!=='error',
+          'The installed browser opens the same native decision portfolio.');
+        const decisionScreenshot=join(directory,'installed-decisions.png');
+        await page.screenshot({path:decisionScreenshot,fullPage:true});
+        report.files.push(await checkedFile(decisionScreenshot));
+        mark('Actual installed product browser',{screenshots:['installed-definitions.png','installed-decisions.png'],
+          workspaceId:senderStatus.workspaceId,decisionConnectionId});
       } finally {await browser.close();}
     }
     preparedReport=report;

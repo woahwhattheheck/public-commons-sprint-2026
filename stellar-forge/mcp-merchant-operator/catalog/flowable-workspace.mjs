@@ -18,6 +18,14 @@ export const FLOWABLE_AGENT_METHODS=Object.freeze({
   "merchant_flowable_dispatch_task": "dispatchTask",
   "merchant_flowable_prepare_migration": "prepareMigration",
   "merchant_flowable_dispatch_migration": "dispatchMigration",
+  "merchant_flowable_decision_portfolio": "readDecisionPortfolio",
+  "merchant_flowable_decision_definition": "readDecisionDefinition",
+  "merchant_flowable_decision_execution": "readDecisionExecution",
+  "merchant_flowable_capture_decisions": "captureDecisionPortfolio",
+  "merchant_flowable_prepare_decision_release": "prepareDecisionRelease",
+  "merchant_flowable_dispatch_decision_release": "dispatchDecisionRelease",
+  "merchant_flowable_prepare_decision_evaluation": "prepareDecisionEvaluation",
+  "merchant_flowable_dispatch_decision_evaluation": "dispatchDecisionEvaluation",
   "merchant_flowable_reconcile": "reconcileOperation",
   "merchant_flowable_export": "exportWorkspace",
   "merchant_flowable_adopt_delivery": "adoptDelivery"
@@ -32,8 +40,8 @@ export function flowableWorkspaceTools(tool){
     const action=FLOWABLE_WORKSPACE_ACTIONS[method];
     return tool(name,action.description,{...workspace,...action.inputSchema.properties},
       ['workspace',...action.inputSchema.required],
-      {readOnly:!action.write,destructive:['dispatchRelease','dispatchProcess','dispatchTask','dispatchMigration'].includes(method),idempotent:true,
-        openWorld:['capturePortfolio','prepareRelease','prepareProcess','prepareTask','prepareMigration','dispatchRelease','dispatchProcess','dispatchTask','dispatchMigration','reconcileOperation'].includes(method)});
+      {readOnly:!action.write,destructive:method.startsWith('dispatch'),idempotent:true,
+        openWorld:method.startsWith('capture')||method.startsWith('prepare')||method.startsWith('dispatch')||method==='reconcileOperation'});
   });
   return [
     tool('merchant_flowable_workspaces','List original host-declared Flowable workspaces and handover files.',{},[],{readOnly:true,openWorld:false}),

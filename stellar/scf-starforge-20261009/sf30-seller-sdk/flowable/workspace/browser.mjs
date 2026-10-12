@@ -1,11 +1,11 @@
 // MIT. Original Flowable operator workspace; all native mutations use saved reviewed requests.
-import {FLOWABLE_WORKSPACE_ACTIONS,validateFlowableAction} from './actions.mjs';
+import {FLOWABLE_WORKSPACE_ACTIONS,FLOWABLE_RECORD_KINDS,FLOWABLE_OPERATION_KINDS,validateFlowableAction} from './actions.mjs';
 const $=selector=>document.querySelector(selector),$$=selector=>[...document.querySelectorAll(selector)];
 const tokenKey='flowable-token:'+location.origin;
 const fragment=location.hash.slice(1);
 if(fragment){sessionStorage.setItem(tokenKey,fragment);history.replaceState(null,'',location.pathname);}
 const token=sessionStorage.getItem(tokenKey);
-const state={view:null,page:'overview',engine:null,portfolio:null,records:new Map(),busy:false,controller:null,pending:[],
+const state={view:null,page:'overview',engine:null,portfolio:null,decisionPortfolio:null,records:new Map(),busy:false,controller:null,pending:[],
   definition:null,detail:null,db:null};
 function node(tag,text,attributes={}){
   const element=document.createElement(tag);
@@ -149,13 +149,20 @@ async function reload(){
   state.engine=selectOptions($('#engine-select'),state.view.connections.map(record=>({
     value:record.id,label:(record.connection.label??record.connection.id)+(record.credentialAvailable?'':' · credentials unavailable')})),
     state.engine,'Add an engine');
-  await Promise.all(['portfolio','release','process','task','migration','delivery','receiving'].map(allRecords));
+  await Promise.all(FLOWABLE_RECORD_KINDS.filter(kind=>kind!=='connection').map(allRecords));
   const captures=forEngine(records('portfolio')).filter(record=>record.state==='CAPTURED')
     .sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   state.portfolio=selectOptions($('#portfolio-select'),captures.map(record=>({value:record.id,
     label:record.label+' · '+stamp(record.updatedAt)})),state.portfolio,'Refresh the engine to capture a portfolio');
   $('#portfolio-status').textContent=state.portfolio?'Showing the selected saved engine capture. Refresh engine reads its current native state.':
     'Connect an engine and refresh it to capture definitions, active work and history.';
+  const decisions=forEngine(records('decisionPortfolio')).filter(record=>record.state==='CAPTURED')
+    .sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  state.decisionPortfolio=selectOptions($('#decision-portfolio-select'),decisions.map(record=>({value:record.id,
+    label:record.label+' · '+stamp(record.updatedAt)})),state.decisionPortfolio,'Refresh the DMN engine to capture decisions');
+  $('#decision-portfolio-status').textContent=state.decisionPortfolio?
+    'Showing the selected saved decision definitions and complete execution history.':
+    'Select the original DMN REST connection and refresh decisions.';
   await renderAll();
 }
 function table(container,columns,items,{pageSize=25,empty='No saved records.'}={}){
@@ -188,24 +195,26 @@ function recordColumns(kind){
     {label:'Updated',render:item=>stamp(item.updatedAt)},{label:'Revision',key:'revision'},
     {label:'Open',render:item=>button('Review',()=>openRecord(kind??item.kind,item.id))}];
 }
-async function captured(collection){
-  if(!state.portfolio)return[];
+async function capturedCollection(id,method,collection){
+  if(!id)return[];
   let offset=0,result=[];
   do{
-    const current=await api('readPortfolio',{id:state.portfolio,collection,offset,limit:500});
+    const current=await api(method,{id,collection,offset,limit:500});
     result.push(...current.items);offset=current.nextOffset;
   }while(offset!=null);return result;
 }
+const captured=collection=>capturedCollection(state.portfolio,'readPortfolio',collection);
+const capturedDecision=collection=>capturedCollection(state.decisionPortfolio,'readDecisionPortfolio',collection);
 async function renderAll(){
   const metrics=$('#metrics');metrics.replaceChildren();
   const latest=state.portfolio?records('portfolio').find(item=>item.id===state.portfolio):null;
   for(const[label,value]of [['Definitions',latest?.summary?.definitions??0],['Active processes',latest?.summary?.processes??0],
-    ['Human tasks',latest?.summary?.tasks??0],['Saved operations',['release','process','task','migration'].reduce((sum,kind)=>sum+forEngine(records(kind)).length,0)]]){
+    ['Human tasks',latest?.summary?.tasks??0],['Saved operations',FLOWABLE_OPERATION_KINDS.reduce((sum,kind)=>sum+forEngine(records(kind)).length,0)]]){
     const metric=node('div',null,{class:'metric'});metric.append(node('strong',value),node('span',label));metrics.append(metric);
   }
-  const recent=['release','process','task','migration'].flatMap(kind=>forEngine(records(kind))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
+  const recent=FLOWABLE_OPERATION_KINDS.flatMap(kind=>forEngine(records(kind))).sort((a,b)=>b.updatedAt.localeCompare(a.updatedAt));
   table($('#recent-records'),[{label:'Type',key:'kind'},...recordColumns()],recent);
-  for(const kind of ['release','process','task','migration'])table($('#'+kind+'-records'),recordColumns(kind),forEngine(records(kind)));
+  for(const kind of FLOWABLE_OPERATION_KINDS)table($('#'+kind+'-records'),recordColumns(kind),forEngine(records(kind)));
   table($('#delivery-records'),recordColumns('delivery'),records('delivery'));
   table($('#receiving-records'),recordColumns('receiving'),records('receiving'));
   table($('#connections-table'),[
@@ -241,6 +250,18 @@ async function renderAll(){
     {label:'Created',render:item=>stamp(item.startTime??item.createTime)},{label:'Ended',render:item=>stamp(item.endTime)},
     {label:'Open',render:item=>button('Original',()=>openNative('Historic task',item))},
   ],historicTasks);
+  const[decisions,historicExecutions]=await Promise.all(['definitions','historicExecutions'].map(capturedDecision));
+  table($('#decisions-table'),[
+    {label:'Decision',render:item=>item.name??item.key},{label:'Key',key:'key'},{label:'Version',key:'version'},
+    {label:'Tenant',key:'tenantId'},{label:'Deployment',key:'deploymentId'},
+    {label:'Open',render:item=>button('Source and evaluate',()=>openDecisionDefinition(item))},
+  ],decisions,{empty:'The selected decision portfolio has no definitions.'});
+  table($('#historic-decisions-table'),[
+    {label:'Execution',key:'id'},{label:'Decision',render:item=>item.decisionKey??item.decisionDefinitionKey??item.decisionDefinitionId},
+    {label:'Version',render:item=>item.decisionVersion??item.decisionDefinitionVersion},
+    {label:'Started',render:item=>stamp(item.startTime)},{label:'Ended',render:item=>stamp(item.endTime)},
+    {label:'Open',render:item=>button('Execution and audit',()=>openDecisionExecution(item))},
+  ],historicExecutions,{empty:'The selected decision portfolio has no retained native executions.'});
 }
 function detail(title){
   $('#detail').hidden=false;$('#detail-title').textContent=title;
@@ -254,6 +275,22 @@ function editConnection(record){
   form.elements.id.readOnly=true;$('#connection-form-title').textContent='Edit engine';
   form.scrollIntoView({behavior:'smooth',block:'center'});
 }
+function renderOriginalResources(container,resources,{label='Native resource',sourceLabel='Original source'}={}){
+  for(const resource of resources??[]){
+    const section=node('section');section.append(node('h3',resource.filename??'Original deployment resource'));
+    section.append(keyValues([['Bytes',resource.bytes],['Content type',resource.contentType],['SHA-256',resource.sha256]]));
+    if(resource.originalResource)section.append(originalLink(resource.originalResource,'Download '+resource.filename,resource.filename));
+    else if(resource.definitionRef)section.append(originalLink(resource.definitionRef,'Download complete resource record'));
+    if(resource.contentBase64&&resource.bytes<=8*1024*1024&&resource.contentType==='image/png'&&resource.contentBase64.startsWith('iVBORw0KGgo')){
+      section.append(node('img',null,{class:'native-diagram',src:'data:image/png;base64,'+resource.contentBase64,alt:'Original Flowable diagram for '+label}));
+    }
+    if(resource.contentBase64&&resource.bytes<=1024*1024&&/(?:xml|text|json)/i.test(resource.contentType??resource.filename??'')){
+      const bytes=Uint8Array.from(atob(resource.contentBase64),char=>char.charCodeAt(0));
+      jsonSection(section,sourceLabel,new TextDecoder('utf-8',{fatal:true}).decode(bytes));
+    }
+    container.append(section);
+  }
+}
 async function openDefinition(definition){
   const result=await api('readDefinition',{portfolioId:state.portfolio,definitionId:definition.id});
   state.definition=definition;const container=detail(definition.name??definition.key??definition.id);
@@ -265,21 +302,38 @@ async function openDefinition(definition){
     form.elements.bodyText.value=JSON.stringify({processDefinitionId:definition.id,businessKey:'case-'+crypto.randomUUID(),variables:[]},null,2);
     switchPage('processes');form.scrollIntoView({behavior:'smooth',block:'start'});$('#detail').hidden=true;
   },{primary:true}));
-  for(const resource of result.resources??[]){
-    const section=node('section');section.append(node('h3',resource.filename??'Original deployment resource'));
-    section.append(keyValues([['Bytes',resource.bytes],['Content type',resource.contentType],['SHA-256',resource.sha256]]));
-    if(resource.originalResource)section.append(originalLink(resource.originalResource,'Download '+resource.filename,resource.filename));
-    else if(resource.definitionRef)section.append(originalLink(resource.definitionRef,'Download complete resource record'));
-    if(resource.contentBase64&&resource.bytes<=8*1024*1024&&resource.contentType==='image/png'&&resource.contentBase64.startsWith('iVBORw0KGgo')){
-      section.append(node('img',null,{class:'native-diagram',src:'data:image/png;base64,'+resource.contentBase64,alt:'Original Flowable diagram for '+(definition.name??definition.key??definition.id)}));
-    }
-    if(resource.contentBase64&&resource.bytes<=1024*1024&&/(?:xml|text)/i.test(resource.contentType??resource.filename??'')){
-      const bytes=Uint8Array.from(atob(resource.contentBase64),char=>char.charCodeAt(0));
-      jsonSection(section,'Original process source',new TextDecoder('utf-8',{fatal:true}).decode(bytes));
-    }
-    container.append(section);
-  }
+  renderOriginalResources(container,result.resources,{label:definition.name??definition.key??definition.id,sourceLabel:'Original process source'});
   jsonSection(container,'Original definition record',result.definition);revealDetail();
+}
+async function openDecisionDefinition(definition){
+  const result=await api('readDecisionDefinition',{portfolioId:state.decisionPortfolio,definitionId:definition.id});
+  const container=detail(definition.name??definition.key??definition.id);
+  container.append(keyValues([['Definition ID',definition.id],['Decision key',definition.key],['Captured version',definition.version],
+    ['Deployment',definition.deploymentId],['Parent deployment',result.deployment?.parentDeploymentId],['Tenant',definition.tenantId]]));
+  container.append(button('Prepare evaluation for this key',()=>{
+    const form=$('#decisionEvaluation-form'),body={decisionKey:definition.key,inputVariables:[],disableHistory:false};
+    if(definition.tenantId)body.tenantId=definition.tenantId;
+    if(result.deployment?.parentDeploymentId)body.parentDeploymentId=result.deployment.parentDeploymentId;
+    form.elements.label.value='Evaluate '+(definition.name??definition.key);
+    form.elements.mode.value='auto';form.elements.singleResult.checked=false;
+    form.elements.bodyText.value=JSON.stringify(body,null,2);
+    switchPage('decisions');form.scrollIntoView({behavior:'smooth',block:'start'});$('#detail').hidden=true;
+  },{primary:true}));
+  container.append(node('p','Evaluation resolves the current native definition for this key and scope. The saved review retains the actual selection before dispatch.'));
+  renderOriginalResources(container,result.resources,{label:definition.name??definition.key??definition.id,sourceLabel:'Original decision source'});
+  jsonSection(container,'Original decision definition',result.definition);
+  if(result.deployment)jsonSection(container,'Original decision deployment',result.deployment);
+  revealDetail();
+}
+async function openDecisionExecution(execution){
+  const result=await api('readDecisionExecution',{portfolioId:state.decisionPortfolio,executionId:execution.id});
+  const container=detail('Decision execution · '+execution.id);
+  container.append(keyValues([['Execution ID',execution.id],['Decision key',execution.decisionKey??execution.decisionDefinitionKey],
+    ['Decision version',execution.decisionVersion??execution.decisionDefinitionVersion],
+    ['Started',stamp(execution.startTime)],['Ended',stamp(execution.endTime)],['Deployment',execution.deploymentId]]));
+  jsonSection(container,'Original native execution',result.execution,{open:true});
+  renderOriginalResources(container,result.resources,{label:'Decision execution '+execution.id,sourceLabel:'Original native audit data'});
+  revealDetail();
 }
 function openNative(title,item,action){
   const container=detail(title+' · '+(item.name??item.id));container.append(pre(item));
@@ -296,7 +350,7 @@ function openNative(title,item,action){
   revealDetail();
 }
 async function openRecord(kind,id){
-  const record=await api('getRecord',{kind,id}),operation=['release','process','task','migration'].includes(kind);
+  const record=await api('getRecord',{kind,id}),operation=FLOWABLE_OPERATION_KINDS.includes(kind);
   state.detail={kind,id};
   const container=detail(record.value.label??kind+' '+id);
   container.append(keyValues([['State',record.value.state??record.value.phase],['Revision',record.revision],
@@ -305,7 +359,7 @@ async function openRecord(kind,id){
     const review=await api('readReview',{kind,id,revision:record.revision});
     const toolbar=node('div',null,{class:'toolbar'});
     if(review.phase==='PREPARED'){
-      const label={release:'Deploy release',process:'Start process',task:'Execute task action',migration:'Migrate process'}[kind];
+      const label={release:'Deploy release',process:'Start process',task:'Execute task action',migration:'Migrate process',decisionRelease:'Deploy decisions',decisionEvaluation:'Evaluate decisions'}[kind];
       toolbar.append(button(label,async()=>{
         const method='dispatch'+kind[0].toUpperCase()+kind.slice(1);
         const result=await write(method,{id,expectedRevision:record.revision,planSha256:review.request.planSha256});
@@ -353,16 +407,19 @@ async function openRecord(kind,id){
   revealDetail();
 }
 function reuseSelection(kind,review){
-  const form=$('#'+kind+'-form');switchPage(kind==='process'?'processes':kind==='task'?'tasks':kind==='release'?'releases':'migrations');
+  const form=$('#'+kind+'-form');switchPage({process:'processes',task:'tasks',release:'releases',migration:'migrations',
+    decisionRelease:'decisions',decisionEvaluation:'decisions'}[kind]);
   if(form.elements.label)form.elements.label.value=review.label??'';
   if(form.elements.note)form.elements.note.value=review.note??'';
   if(form.elements.bodyText)form.elements.bodyText.value=review.request?.bodyText??'';
   if(form.elements.taskId)form.elements.taskId.value=review.request?.taskId??'';
   if(form.elements.processInstanceId)form.elements.processInstanceId.value=review.request?.processInstanceId??'';
   if(form.elements.action)form.elements.action.value=review.request?.action??'claim';
-  if(kind==='release'){
-    for(const key of ['deploymentName','deploymentKey','tenantId'])form.elements[key].value=review.request?.[key]??'';
+  if(kind==='release'||kind==='decisionRelease'){
+    for(const key of ['deploymentName','deploymentKey','tenantId'])if(form.elements[key])form.elements[key].value=review.request?.[key]??'';
   }
+  if(form.elements.mode)form.elements.mode.value=review.request?.mode??'auto';
+  if(form.elements.singleResult)form.elements.singleResult.checked=review.request?.singleResult===true;
   form.scrollIntoView({behavior:'smooth',block:'start'});$('#detail').hidden=true;
 }
 function requireEngine(){
@@ -424,6 +481,22 @@ formAction('#migration-form','Validate native process migration',async(form,valu
     selection:{action:'migrate',processInstanceId:value.processInstanceId,bodyText:value.bodyText}});
   await reload();await openRecord('migration',result.id);
 });
+formAction('#decisionRelease-form','Prepare native decision deployment',async(form,value)=>{
+  const file=value.resource;
+  if(!(file instanceof File)||file.size===0)throw new Error('Select the complete original DMN resource.');
+  if(file.size>90*1024*1024)throw new Error('This browser action supports DMN resources up to 90 MiB. Use the installed client for larger original requests.');
+  const selection={action:'deploy',resource:{filename:file.name,contentType:file.type||'application/xml',
+    contentBase64:toBase64(new Uint8Array(await file.arrayBuffer()))}};
+  optionalText(value,'tenantId',selection);
+  const result=await write('prepareDecisionRelease',{connectionId:requireEngine(),label:value.label||file.name,note:value.note,selection});
+  await reload();await openRecord('decisionRelease',result.id);
+});
+formAction('#decisionEvaluation-form','Prepare native decision evaluation',async(form,value)=>{
+  originalJSON(value.bodyText);
+  const result=await write('prepareDecisionEvaluation',{connectionId:requireEngine(),label:value.label||'Evaluate decisions',note:value.note,
+    selection:{action:'evaluate',mode:value.mode,singleResult:value.singleResult==='on',bodyText:value.bodyText}});
+  await reload();await openRecord('decisionEvaluation',result.id);
+});
 formAction('#export-form','Export complete workspace',async(form,value)=>{
   const result=await write('exportWorkspace',{label:value.label||'Complete process operations handover'});
   await reload();await openRecord('delivery',result.id);
@@ -440,7 +513,7 @@ $('#new-engine').addEventListener('click',()=>{
   form.elements.id.readOnly=false;$('#connection-form-title').textContent='Add engine';
 });
 $('#engine-select').addEventListener('change',()=>busy('Read saved engine workspace',async()=>{
-  state.engine=$('#engine-select').value;state.portfolio=null;await reload();
+  state.engine=$('#engine-select').value;state.portfolio=null;state.decisionPortfolio=null;await reload();
 }));
 $('#portfolio-select').addEventListener('change',()=>busy('Read saved portfolio',async()=>{
   state.portfolio=$('#portfolio-select').value;await renderAll();
@@ -450,6 +523,15 @@ $('#capture').addEventListener('click',()=>busy('Capture complete native engine 
   if(result.value.state==='CAPTURED')state.portfolio=result.id;
   await reload();notice(result.value.state==='CAPTURED'?'Original definitions, active work and history captured.':
     result.value.failure?.message??'Capture state: '+result.value.state,result.value.state==='CAPTURED'?'info':'error');
+}));
+$('#decision-portfolio-select').addEventListener('change',()=>busy('Read saved decision portfolio',async()=>{
+  state.decisionPortfolio=$('#decision-portfolio-select').value;await renderAll();
+}));
+$('#capture-decisions').addEventListener('click',()=>busy('Capture complete native decision portfolio',async()=>{
+  const result=await write('captureDecisionPortfolio',{connectionId:requireEngine(),label:'Decision portfolio '+new Date().toISOString()});
+  if(result.value.state==='CAPTURED')state.decisionPortfolio=result.id;
+  await reload();notice(result.value.state==='CAPTURED'?'Original decision definitions, resources and execution history captured.':
+    result.value.failure?.message??'Decision capture state: '+result.value.state,result.value.state==='CAPTURED'?'info':'error');
 }));
 $('#refresh').addEventListener('click',()=>busy('Reload saved workspace',reload));
 $('#cancel').addEventListener('click',()=>state.controller?.abort(new Error('Connection cancelled. The original request remains saved for recovery.')));
@@ -470,4 +552,5 @@ await busy('Open saved workspace',async()=>{
   if(!token)throw Object.assign(new Error('Open the original private workspace URL.'),{code:'FLOWABLE_WORKSPACE_TOKEN_REQUIRED'});
   await reload();await pendingRefresh();
   $('#process-form').elements.bodyText.value=JSON.stringify({processDefinitionKey:'',businessKey:'case-'+crypto.randomUUID(),variables:[]},null,2);
+  $('#decisionEvaluation-form').elements.bodyText.value=JSON.stringify({decisionKey:'',inputVariables:[],disableHistory:false},null,2);
 });

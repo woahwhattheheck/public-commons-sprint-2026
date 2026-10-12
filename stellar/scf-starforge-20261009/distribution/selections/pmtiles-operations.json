@@ -2,7 +2,7 @@
   "schema": "stellar-forge.distribution-source-selection.v1",
   "id": "pmtiles-operations",
   "title": "PMTiles map releases and object customer",
-  "description": "Complete original regional map authoring, verified PMTiles and Martin releases, managed Applications, merchant MCP and retained object customer receiving",
+  "description": "Complete original regional map authoring, verified PMTiles and Martin releases, managed Applications, paid output sales, merchant MCP and original object customer receiving",
   "base": {
     "commands": [
       "installation",
@@ -90,7 +90,8 @@
     "merchant-provider-tools",
     "merchant-provider-client-exports",
     "pmtiles",
-    "pmtiles-merchant-mcp"
+    "pmtiles-merchant-mcp",
+    "pmtiles-commerce"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
@@ -138,7 +139,7 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Original PMTiles map authoring, native reviewed publication, managed Applications and complete source/runtime/customer receiving",
+    "description": "Original PMTiles map authoring, native reviewed publication, managed Applications, paid immutable map outputs and complete source/runtime/customer receiving",
     "readme": "stellar/scf-starforge-20261009/distribution/selections/PMTILES_OPERATIONS.md"
   },
   "excludeFiles": [

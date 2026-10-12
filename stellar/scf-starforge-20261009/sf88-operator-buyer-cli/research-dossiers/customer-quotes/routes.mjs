@@ -2,20 +2,11 @@
 import {readFile} from 'node:fs/promises';
 import {pipeline} from 'node:stream/promises';
 import {Readable} from 'node:stream';
+import {readBrowserAssets} from '../../../distribution/browser-assets.mjs';
 import {QUOTE_REQUEST_LIMIT,id,alias,need} from './contracts.mjs';
-const assets=new Map([
- ['/customer-quotes.html',[new URL('./public/index.html',import.meta.url),'text/html; charset=utf-8']],
- ['/customer-quotes/browser.mjs',[new URL('./public/browser.mjs',import.meta.url),'text/javascript; charset=utf-8']],
- ['/customer-quotes/style.css',[new URL('./public/style.css',import.meta.url),'text/css; charset=utf-8']],
- ['/customer-quotes/native/commercial-desk.mjs',[new URL('../../../sf74-merchant-support-console/commercial-desk.mjs',import.meta.url),'text/javascript; charset=utf-8']],
- ['/customer-quotes/native/commercial-desk.css',[new URL('../../../sf74-merchant-support-console/commercial-desk.css',import.meta.url),'text/css; charset=utf-8']],
- ['/customer-quotes/native/commercial/receiving-desk.mjs',[new URL('../../../sf74-merchant-support-console/commercial/receiving-desk.mjs',import.meta.url),'text/javascript; charset=utf-8']],
- ['/customer-quotes/native/commercial/receiving-desk.css',[new URL('../../../sf74-merchant-support-console/commercial/receiving-desk.css',import.meta.url),'text/css; charset=utf-8']],
- ['/customer-quotes/native/commercial/tariff-desk.mjs',[new URL('../../../sf74-merchant-support-console/commercial/tariff-desk.mjs',import.meta.url),'text/javascript; charset=utf-8']],
- ['/customer-quotes/native/commercial/tariff-desk.css',[new URL('../../../sf74-merchant-support-console/commercial/tariff-desk.css',import.meta.url),'text/css; charset=utf-8']],
-]);
+const assets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
 export async function readResearchQuoteAsset(path){
- const selected=assets.get(path);return selected?{body:await readFile(selected[0]),contentType:selected[1]}:null;
+ const selected=assets.get(path);return selected?{body:await readFile(selected.url),contentType:selected.type}:null;
 }
 function parameters(url,allowed,numeric=[]){
  const value={};
