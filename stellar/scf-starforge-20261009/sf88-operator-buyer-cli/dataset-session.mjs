@@ -122,7 +122,12 @@ function validateDefinition(value, directory) {
     typeof value.createdAt === 'string' && object(value.config) && object(value.limits) &&
     digest(canonical(value.config)) === value.configurationSha256, 'DATASET_SESSION_INVALID');
   const op = operation(value.config.operation);
-  execution(value.config);
+  // Dataset pages write only to this session's own evidence directory. A
+  // prepared source configuration need not allocate a separate evidence path.
+  // Validate that effective path without changing the immutable source config
+  // or its digest; explicitly supplied invalid paths still fail execution().
+  execution(value.config.evidenceDir === undefined
+    ? {...value.config, evidenceDir:join(directory, 'evidence')} : value.config);
   need(op.method === 'GET' && op.bodyFile === undefined && value.config.responseFile === undefined &&
     (value.config.captureBody === undefined || value.config.captureBody === false), 'DATASET_GET_CONFIG_REQUIRED');
   const query = validateDatasetQuery(op.url, {initial:true});
