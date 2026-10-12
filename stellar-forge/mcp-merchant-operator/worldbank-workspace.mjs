@@ -382,10 +382,11 @@ export class MerchantWorldBankWorkspaces {
         if(args.action!=='open')throw failure('INVALID_PARAMS','Choose open or close.');
         if(!handle.browser){
           const {startWorldBankWorkspace}=await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/worldbank/native.mjs');
-          handle.browser=await startWorldBankWorkspace({directory:entry.directory,operator:original,
+          handle.browser=await startWorldBankWorkspace({directory:entry.directory,operator:original,instanceId:handle.instanceId,
             port:count(args.port??0,'Browser port',0,65535)});
         }
-        return {workspace:args.workspace,instanceId:handle.instanceId,browser:'OPEN',url:handle.browser.url};
+        const {directory:_privateDirectory,...launch}=handle.browser.launch;
+        return {workspace:args.workspace,instanceId:handle.instanceId,browser:'OPEN',url:handle.browser.url,launch};
       }
       case 'merchant_worldbank_file':return this.#file(handle,args);
       case 'merchant_worldbank_file_release':
