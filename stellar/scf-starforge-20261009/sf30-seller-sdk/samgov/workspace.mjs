@@ -27,6 +27,14 @@ const controlledError = error => ({
   status: Number.isInteger(error?.status) ? error.status : 500,
 });
 const safeFilename = value => text(value,'Filename',240).replace(/[\\/\x00-\x1f\x7f]/g,'_');
+function validSourceAcquisition(source) {
+  if(!['search_page','description','attachment'].includes(source.kind))return false;
+  if(source.status==='received_file')return source.kind!=='search_page' && source.request===null &&
+    plain(source.headers) && Object.keys(source.headers).length===0 &&
+    Array.isArray(source.redirects) && source.redirects.length===0;
+  return Number.isInteger(source.status) && source.status>=100 && source.status<=599 &&
+    plain(source.request) && source.request.method==='GET' && typeof source.request.url==='string';
+}
 function validateState(value) {
   requireThat(plain(value) && value.schema === SAM_SCHEMA && typeof value.id === 'string' &&
     /^sam_[a-f0-9-]{36}$/.test(value.id) && Number.isSafeInteger(value.revision) && value.revision >= 1 &&
@@ -38,7 +46,7 @@ function validateState(value) {
   }
   for (const source of value.sources)
     requireThat(HASH.test(source.sha256) && Number.isSafeInteger(source.bytes) &&
-      source.bytes >= 0 && source.bytes <= MAX_SOURCE_BYTES, 'SOURCE_RECORD_INVALID');
+      source.bytes >= 0 && source.bytes <= MAX_SOURCE_BYTES && validSourceAcquisition(source), 'SOURCE_RECORD_INVALID');
   for (const edition of value.editions)
     requireThat(HASH.test(edition.objectSha256) && HASH.test(edition.sha256) &&
       Number.isSafeInteger(edition.rowCount) && edition.rowCount >= 0 &&
@@ -309,15 +317,17 @@ export async function openSamWorkspace({
       if(receipt.privateOriginalBody)await keep(sha(receipt.privateOriginalBody),receipt.privateOriginalBody);
       if(receipt.privateOriginalHeaders){const bytes=jsonBytes(receipt.privateOriginalHeaders);await keep(sha(bytes)+'.headers.json',bytes);}
     }
-    const capturedAt=instant(receipt.capturedAt,'Source capture time'),url=cleanSourceUrl(receipt.request.url);
-    requireThat(receipt.request.method==='GET' && Number.isInteger(receipt.status) && receipt.status>=100 && receipt.status<=599,'SOURCE_RESPONSE_INVALID');
+    requireThat(validSourceAcquisition({...receipt,kind}),'SOURCE_RESPONSE_INVALID');
+    const receivedFile=receipt.status==='received_file',
+      capturedAt=instant(receipt.capturedAt,'Source capture time'),
+      url=cleanSourceUrl(receivedFile?receipt.url:receipt.request.url);
     const mediaType=text(receipt.mediaType || 'application/octet-stream','Media type',500);
     requireThat(/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+(?:\s*;[^\r\n\x00]*)?$/i.test(mediaType),'SOURCE_MEDIA_TYPE_INVALID');
     const bodySha256=await putObject(receipt.body);
     const source={kind,url,filename:safeFilename(requestedFilename || receipt.filename || 'source.bin'),
       mediaType,
       bytes:receipt.body.length,sha256:bodySha256,capturedAt,status:receipt.status,
-      request:{method:'GET',url},headers:safeHeaders(receipt.headers),
+      request:receivedFile?null:{method:'GET',url},headers:safeHeaders(receipt.headers),
       originalSha256:receipt.originalSha256 || bodySha256,redactions:copy(receipt.redactions ?? []),
       representation:(receipt.redactions??[]).length?'credential_redacted':'original',
       originalPrivateAtCapture:Boolean(receipt.privateOriginalBody || receipt.privateOriginalHeaders),
@@ -718,8 +728,17 @@ export async function openSamWorkspace({
     requireThat(available.some(item=>item.kind===payload.kind && item.url===payload.url),'RESOURCE_NOT_IN_NOTICE',
       'The original downloaded resource must match a URL retained by this notice.');
     const url=cleanSourceUrl(payload.url);
-    const receipt={request:{method:'GET',url},status:200,capturedAt:payload.capturedAt,
-      filename:payload.filename,mediaType:payload.mediaType,body:sourceBuffer(payload),headers:{}};
+    let receipt={url,request:null,status:'received_file',capturedAt:payload.capturedAt,
+      filename:payload.filename,mediaType:payload.mediaType,body:sourceBuffer(payload),headers:{},redirects:[]};
+    if(payload.response!==undefined){
+      requireThat(plain(payload.response),'SOURCE_RESPONSE_INVALID',
+        'Supply the original HTTP response metadata, or receive the original file without an HTTP receipt.');
+      compareRequest(payload.response.request,{url});
+      requireThat(Number.isInteger(payload.response.status) && payload.response.status>=100 &&
+        payload.response.status<=599,'SOURCE_RESPONSE_INVALID');
+      receipt={...receipt,request:{method:'GET',url},status:payload.response.status,
+        headers:safeHeaders(payload.response.headers??{})};
+    }
     const source=await retainedSource(receipt,{kind:payload.kind,noticeId:row.noticeId});
     addSources(state,[source]);
     const received=resourceRecord(source,payload.kind,payload.url),rows=parent.rows.map(item=>{
@@ -911,7 +930,7 @@ export async function openSamWorkspace({
         requireThat(row,'NOTICE_NOT_SELECTED','Select this notice in the retained selection.');
         const {prepareSamOpportunity}=await import('./opportunity.mjs');
         const inputs=[];
-        for(const sourceId of [row.source.sourceId,...row.resources.filter(item=>item.sourceId && item.status===200)
+        for(const sourceId of [row.source.sourceId,...row.resources.filter(item=>item.sourceId && (item.status===200 || item.status==='received_file'))
           .map(item=>item.sourceId)]){
           const source=await sourceRecord(sourceId,state);
           inputs.push({...copy(source),contentBase64:(await objectBytes(source.sha256,MAX_SOURCE_BYTES)).toString('base64')});
@@ -984,10 +1003,11 @@ export async function openSamWorkspace({
     requireThat(plain(source) && /^src_[a-f0-9]{64}$/.test(source.id),'SOURCE_RECORD_INVALID');
     const identity=copy(source);delete identity.id;
     requireThat(source.id==='src_'+sha(identity),'SOURCE_RECORD_CHANGED');
-    cleanSourceUrl(source.url);compareRequest(source.request,{url:source.url});
+    cleanSourceUrl(source.url);
+    requireThat(validSourceAcquisition(source),'SOURCE_RECORD_INVALID');
+    if(source.status!=='received_file')compareRequest(source.request,{url:source.url});
     instant(source.capturedAt);text(source.filename,'Source filename',240);
     requireThat(source.filename===safeFilename(source.filename) &&
-      Number.isInteger(source.status) && source.status>=100 && source.status<=599 &&
       HASH.test(source.originalSha256) && canonical(safeHeaders(source.headers))===canonical(source.headers),
       'SOURCE_RECORD_INVALID');
     const body=objects.get(source.sha256);

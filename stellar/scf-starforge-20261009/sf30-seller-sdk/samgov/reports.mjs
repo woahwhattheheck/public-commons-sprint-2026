@@ -87,7 +87,7 @@ export function renderSamCsv(packet, kind = 'notices') {
     ...relevantChanges(view).map(c=>[c.noticeId,c.beforeEditionId,c.afterEditionId,c.decision,c.owner,c.note,c.id,c.updatedAt||c.createdAt]),
   ]);
   if (kind === 'sources') return csv([
-    ['sourceId','kind','filename','url','capturedAt','httpStatus','mediaType','bytes','retainedSha256','originalSha256','redactions','request'],
+    ['sourceId','kind','filename','url','capturedAt','sourceStatus','mediaType','bytes','retainedSha256','originalSha256','redactions','request'],
     ...view.sources.map(s => [s.id,s.kind,s.filename,s.url,s.capturedAt,s.status,s.mediaType,s.bytes,s.sha256,s.originalSha256,s.redactions,s.request]),
   ]);
   throw Object.assign(new Error('Choose notices, reviews, changes, or sources CSV.'), {code: 'SAM_CSV_FORMAT_INVALID', status: 400});
@@ -147,7 +147,7 @@ export function renderSamMarkdown(packet) {
   for (const source of view.sources) {
     line('### ' + (source.filename || source.id)); line('');
     line(source.id + ' · ' + label(source.kind) + ' · ' + source.bytes + ' bytes · ' + source.mediaType);
-    line('Captured: ' + source.capturedAt + ' · source status ' + source.status);
+    line('Captured: ' + source.capturedAt + ' · ' + (source.status==='received_file'?'Received file':'HTTP '+source.status));
     if (source.url) line(source.url);
     line('SHA256: ' + source.sha256);
     if (source.originalSha256 && source.originalSha256 !== source.sha256)
@@ -185,7 +185,7 @@ export function renderSamHtml(packet) {
   const changeHtml=changes.length?'<h2>Change review</h2>'+changes.map(c=>'<section class="notice"><h3>'+esc(c.noticeId)+'</h3>'+kv([['Earlier edition',c.beforeEditionId],['Later edition',c.afterEditionId],['Decision',label(c.decision)],['Owner',c.owner]])+'<div class="review">'+esc(c.note)+'</div></section>').join(''):'';
   const sources = view.sources.map(source => {
     const body = source.kind === 'description' ? visibleSourceText(packet, source) : null;
-    return '<section class="source"><h3>'+esc(source.filename || source.id)+'</h3>'+kv([['Kind',label(source.kind)],['Captured',source.capturedAt],['Source status',source.status],['Media type',source.mediaType],['Bytes',source.bytes]]) +
+    return '<section class="source"><h3>'+esc(source.filename || source.id)+'</h3>'+kv([['Kind',label(source.kind)],['Captured',source.capturedAt],['Source status',source.status==='received_file'?'Received file':'HTTP '+source.status],['Media type',source.mediaType],['Bytes',source.bytes]]) +
       '<p>'+link(source.url,source.url)+'</p><p class="mono">Source '+esc(source.id)+'<br>SHA256 '+esc(source.sha256)+
       (source.originalSha256 && source.originalSha256!==source.sha256?'<br>Original response '+esc(source.originalSha256)+'<br>Retained redactions '+esc(text(source.redactions)):'')+'</p>' +
       (body!==null?'<details><summary>Read complete retained description source</summary><pre>'+esc(body)+'</pre></details>':'')+'</section>';

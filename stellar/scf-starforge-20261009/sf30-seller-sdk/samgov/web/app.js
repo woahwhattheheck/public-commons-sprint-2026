@@ -368,8 +368,9 @@ async function retainResource(id,kind,url) {
    field('file','Original file',{type:'file',required:true,full:true})+
    field('filename','Original filename',{required:true,value:'',help:'Retain the filename supplied by the source.'})+
    field('mediaType','Media type',{required:true,value:selected[0]==='description'?'text/html':'application/octet-stream'})+
-   field('capturedAt','Actual retrieval timestamp',{required:true,placeholder:'2026-10-12T02:00:00Z',full:true}),
-  action:'retain_resource',build:async data=>{const selectedUrl=val(data,'url'),candidate=candidates.find(c=>c[1]===selectedUrl);return{editionId,noticeId:id,kind:candidate[0],url:selectedUrl,filename:val(data,'filename'),mediaType:val(data,'mediaType'),capturedAt:val(data,'capturedAt'),contentBase64:await fileBase64(data.get('file'))};},
+   field('capturedAt','Actual retrieval timestamp',{required:true,placeholder:'2026-10-12T02:00:00Z',full:true})+
+   field('response','HTTP receipt (optional)',{type:'textarea',full:true,rows:4,help:'If the original download includes an HTTP receipt, enter its request object (GET and the issued URL), numeric status and optional response headers as JSON. Otherwise the source is retained as a received file.'}),
+  action:'retain_resource',build:async data=>{const selectedUrl=val(data,'url'),candidate=candidates.find(c=>c[1]===selectedUrl);let response;const receipt=val(data,'response');if(receipt){try{response=JSON.parse(receipt);}catch{throw new Error('The HTTP receipt must be valid JSON.');}if(!response||typeof response!=='object'||Array.isArray(response))throw new Error('Use the original HTTP receipt object.');}return{editionId,noticeId:id,kind:candidate[0],url:selectedUrl,filename:val(data,'filename'),mediaType:val(data,'mediaType'),capturedAt:val(data,'capturedAt'),contentBase64:await fileBase64(data.get('file')),...(response?{response}:{})};},
   onDone:result=>{if(result.result?.editionId){state.editionId=result.result.editionId;state.selected.clear();state.detail=id;state.offset=0;}},saveLabel:'Retain original source'});
  const input=$('#field-file');input.addEventListener('change',()=>{if(input.files[0]){if(!$('#field-filename').value)$('#field-filename').value=input.files[0].name;if(input.files[0].type)$('#field-mediaType').value=input.files[0].type;}});
 }
