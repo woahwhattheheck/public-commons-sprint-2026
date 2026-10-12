@@ -103,12 +103,12 @@ async function ensureReleaseStore(root) {
   try {await initReleaseStore(staging);await rename(staging,root);await syncDirectory(dirname(root));}
   finally {await rm(staging,{recursive:true,force:true});}
 }
-export async function stageGeocodePackage(releaseRoot,applicationRoot,directory,{id,label,facilitator,port=0}={}) {
+export async function prepareGeocodeHandlerEntry(applicationRoot,directory,{readOnly=false}={}) {
   const bundle=await inspectGeocodePackage(directory);
   const current=await runtimeBinding();
   if(digest(jsonBytes(current)) !== digest(bundle.files.get('runtime-binding.json'))) fail('GEOCODE_INSTALLED_SOURCE_CHANGED',
     'The installed provider source differs from this prepared package. Prepare a new package for this installation.');
-  const app=await privateDirectory(resolve(applicationRoot));
+  const app=await privateDirectory(resolve(applicationRoot),{create:!readOnly});
   const sourceUrl=new URL('./source.mjs',import.meta.url);
   const entry=[
     '// MIT. Immutable SF82 application entry generated from the reviewed geocoding package.',
@@ -129,7 +129,14 @@ export async function stageGeocodePackage(releaseRoot,applicationRoot,directory,
   // The portable package can be opened by another installed source directory.
   // Its generated entry also binds that exact directory; retain both identities.
   const entryPath=join(app,bundle.manifest.identity+'-'+handlerSha256+'.mjs');
-  await putOnce(entryPath,entryBytes);
+  if(readOnly){
+    const saved=await readBytes(entryPath,entryBytes.length);
+    if(saved.length!==entryBytes.length||digest(saved)!==handlerSha256)fail('GEOCODE_HANDLER_ENTRY_CHANGED');
+  }else await putOnce(entryPath,entryBytes);
+  return {bundle,entryPath,handlerSha256};
+}
+export async function stageGeocodePackage(releaseRoot,applicationRoot,directory,{id,label,facilitator,port=0}={}) {
+  const {bundle,entryPath,handlerSha256}=await prepareGeocodeHandlerEntry(applicationRoot,directory);
   await ensureReleaseStore(resolve(releaseRoot));
   const result=await stageRelease(resolve(releaseRoot),{id,label,
     spec:join(bundle.directory,'spec.json'),config:join(bundle.directory,'selections.json'),

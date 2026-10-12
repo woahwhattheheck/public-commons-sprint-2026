@@ -1,0 +1,93 @@
+{
+  "schema": "commons.iati-native-foreground/v1",
+  "operationId": "IATI-PUBLISHER-7108-20261012",
+  "sourceCommit": "c5348b13834012b41c5b40573bc0c390c4226efc",
+  "project": "/dev/7108-iati-publisher-native",
+  "sharedReturn": "/dev/shm/7108-iati-bootstrap-input/final-c534/return",
+  "inputPath": "/dev/7108-iati-publisher-native/foreground-input.json",
+  "launcher": {
+    "path": "/dev/7108-iati-publisher-native/foreground.py",
+    "sha256": "c45fd026ba1a908817a825749b84631d6dd5fa335af6d98c27256d07d853f63c",
+    "bytes": 53996
+  },
+  "intake": {
+    "path": "/dev/7108-iati-publisher-native/intake/source-intake.json.gz",
+    "sha256": "810e97048e505e0ac593ab6b44267208b3a1a709a7934f20a7a2f2ff511d93b5",
+    "bytes": 1482218,
+    "gitBlob": "6be65a54689cdac97e03efafe21c5157e296909c",
+    "rawSha256": "5de2b6bd64974d82fd652b45bd0853907b35a9e605dccc12b54bb5bd44b2af7a",
+    "retainedShared": {
+      "path": "/dev/shm/7108-iati-bootstrap-input/final-c534/.source-intake.json.gz.810e97048e505e0ac593ab6b44267208b3a1a709a7934f20a7a2f2ff511d93b5.part",
+      "lock": "/dev/shm/7108-iati-bootstrap-input/intake.lock"
+    }
+  },
+  "paths": {
+    "host": "/workspace/scratch/dbc61db6310c/native-runtime-recovery-62c14ca9/host",
+    "nodeExecutable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/node",
+    "pythonExecutable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "npmExecutable": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/bin/npm",
+    "chromiumExecutable": "/workspace/scratch/705ebf077387/browser-runtime/chrome-headless-shell-linux64/chrome-headless-shell",
+    "playwrightModule": "/opt/codex/runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.js",
+    "donorRepository": "/workspace/scratch/7108267765ab/fiscal-applications-native/source-10f5/cache/repository.git"
+  },
+  "hostCli": {
+    "bytes": 75476,
+    "sha256": "014fbbec7f9a3827ba135b8072be0eb37293bf22429fbfc6cad73697f428c776"
+  },
+  "versions": {
+    "node": "v24.19.0",
+    "python": "3.12.14",
+    "expat": "2.8.3",
+    "chromium": "Google Chrome for Testing 155.0.8059.39"
+  },
+  "resources": {
+    "memoryMiB": 1024,
+    "memoryReserveMiB": 128,
+    "privateGrowthMiB": 384,
+    "sharedGrowthMiB": 2,
+    "diskReserveMiB": 1
+  },
+  "library": {
+    "helperDirectory": "/root/.codex/plugins/cache/openai-curated-remote/openai-library/0.1.62/skills/library/scripts",
+    "helpers": [
+      {
+        "name": "library_upload.py",
+        "bytes": 44876,
+        "sha256": "5bc473dadefe1f68ee8797baaed19d6662642d0ea4bcba128fa12938faa0d767"
+      },
+      {
+        "name": "library_hosted_apps.py",
+        "bytes": 12576,
+        "sha256": "97d029b097ace62b744c82dfde20ef6921ed543a33a771ecf6452bd655d11b59"
+      },
+      {
+        "name": "library_file_transfer.py",
+        "bytes": 11084,
+        "sha256": "5e1557817be17db06e2375f8c34ed83e948d520242e5ee4cb50a30c7a4c83378"
+      }
+    ]
+  },
+  "runtimePaths": [
+    "/workspace/scratch/dbc61db6310c/native-runtime-recovery-62c14ca9/host",
+    "/dev/7108-iati-publisher-native/foreground.py",
+    "/dev/7108-iati-publisher-native/foreground-input.json",
+    "/dev/7108-iati-publisher-native/intake/source-intake.json.gz",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/node",
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python",
+    "/workspace/scratch/705ebf077387/browser-runtime/chrome-headless-shell-linux64",
+    "/workspace/scratch/7108267765ab/fiscal-applications-native/source-10f5/cache/repository.git",
+    "/root/.codex/plugins/cache/openai-curated-remote/openai-library/0.1.62/skills/library/scripts"
+  ],
+  "sourceManifest": {
+    "gitBlob": "3cffeefb956c3af1070a0d34ec516a81e3468ca0",
+    "bytes": 81024,
+    "sha256": "52bb99597fa66eecb4f1c19d9ea25209262dd0e41055406f8fd73a228be1575a",
+    "files": 277,
+    "sourceBytes": 4083509
+  },
+  "publisherIds": [
+    "IATI-PUBLISHER-7108-20261012",
+    "IATI-PUBLISHER-7108-20261012-TI"
+  ],
+  "returnMode": "durable"
+}

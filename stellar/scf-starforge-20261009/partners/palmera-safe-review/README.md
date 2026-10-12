@@ -4,6 +4,10 @@ Capture an existing Palmera or Safe transaction, buy its exact Tenderly simulati
 
 The adapter keeps the original Safe transaction object at the SDK boundary. The SDK supplies the Safe transaction hash and complete encoded `execTransaction` call. The existing Tenderly customer owns merchant selection, the original SF88 intent, payment review, execution, recovery and response validation. The existing analysis workspace owns traces, state changes, assets, logs, comparison and CSV export.
 
+## Install the complete Safe review product
+
+The original distribution now supplies the `safe-review` source selection. It carries this complete adapter, public transaction receiving, operator UI, native Buyer runtime, Tenderly merchant/customer/analysis and the original Applications/MCP bindings in one source-pinned installation. Use the [complete selected installation guide](../../distribution/selections/SAFE_REVIEW.md) for the original builder, archive, native runtime profile, SDK caller and end-to-end receiving commands. The selected package preserves the original import paths and payment/intent engines.
+
 ## Runtime and source
 
 Use the maintained Node 24 runtime with the complete Starforge source and its installed feature dependencies. The capture module runs inside the caller's existing Palmera / Safe application environment. Keep that application's SDK installation, provider and wallet connection.

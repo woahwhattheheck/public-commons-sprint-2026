@@ -92,6 +92,21 @@
         "prescient/view.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/geonetwork/view.mjs",
+      [
+        "geonetwork/view.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/geonetwork/view.css",
+      [
+        "geonetwork/view.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }
+

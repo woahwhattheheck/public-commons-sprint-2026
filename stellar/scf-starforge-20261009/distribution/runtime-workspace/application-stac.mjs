@@ -15,10 +15,16 @@ const processingFields=[
   field('transportFile','Source transport configuration','path',false,
     'Optional original HTTP source transport; private credentials remain on this host.'),
 ];
+const catalogueFields=[
+  field('catalogueWorkspaceDirectory','Catalogue receiving workspace','path',false,
+    'Optional private native GeoNetwork workspace. A new directory needs an existing private parent.'),
+  field('catalogueConfigurationFile','Private catalogue host configuration','path',false,
+    'Optional title, handover directory and existing source-publication directory. Credential values remain in host environment variables.'),
+];
 const variants=[
   {id:'stac-imagery',native:'serve',title:'Satellite imagery and processing',
     description:'Open original scene editions, selected assets, source comparisons, processing history and complete receiving.',
-    fields:processingFields},
+    fields:[...processingFields,...catalogueFields]},
   {id:'stac-eoapi',native:'eoapi-serve',title:'Imagery customer operations',
     description:'Operate the original eoAPI policy, source, selected files, merchant staging and customer receiving in the same imagery workspace.',
     fields:[field('sourceConfigurationFile','Private source authorization','path',false,
@@ -55,7 +61,8 @@ export async function prepareStacApplication(kind,settings,{inputPath,runtimeDir
   const flags={workspace:absolute(settings.workspaceDirectory),port:settings.port??0,'startup-json':true};
   const mapping={processingWorkspaceDirectory:'processing-workspace',processingConfigurationFile:'processing-config',
     transportFile:'transport',sourceConfigurationFile:'source-config',policyWorkspaceDirectory:'policy-workspace',
-    outputDirectory:'output-directory',deploymentFile:'deployment',profileSha256:'profile-sha256'};
+    outputDirectory:'output-directory',deploymentFile:'deployment',profileSha256:'profile-sha256',
+    catalogueWorkspaceDirectory:'catalogue-workspace',catalogueConfigurationFile:'catalogue-config'};
   for(const[name,flag]of Object.entries(mapping))if(settings[name])flags[flag]=settings[name];
   const selection=await original.native.inspectStacManagedSelection({command:variant.native,flags,sourceDirectory:original.directory});
   if(selection.options.profileSha256)flags['profile-sha256']=selection.options.profileSha256;
@@ -67,6 +74,7 @@ export async function prepareStacApplication(kind,settings,{inputPath,runtimeDir
     inputs.push(await inputPath(selection.eoapi.policy.directory,'directory',false,true));
     inputs.push(await inputPath(selection.eoapi.output.directory,'directory',true,true));
   }
+  if(selection.catalogue)inputs.push(await inputPath(selection.catalogue.location.directory,'directory',true,true));
   for(const value of selection.configurations){
     const retained=await inputPath(value.path,'file');
     need(retained.sha256===value.sha256&&retained.bytes===value.bytes,'APPLICATION_STAC_CONFIGURATION_CHANGED');inputs.push(retained);
@@ -103,15 +111,18 @@ export async function stacStartup(request,text){
     HASH.test(value.sourceSha256)&&value.processingDirectory===(selection.processing?.directory??null)&&
     value.profileSha256===(selection.options.profileSha256??null)&&
     value.policyDirectory===(selection.eoapi?.policy.directory??null)&&value.outputDirectory===(selection.eoapi?.output.directory??null)&&
+    (value.catalogueDirectory??null)===(selection.catalogue?.location.directory??null)&&
+    (!selection.catalogue||/^catalogue-[a-f0-9]{24}$/.test(value.catalogueWorkspaceId??''))&&
     UUID.test(value.instanceId??'')&&
     Number.isSafeInteger(value.pid)&&value.pid>0&&typeof value.createdAt==='string'&&Number.isFinite(Date.parse(value.createdAt)),
     'APPLICATION_STAC_STARTUP_CHANGED');
   const live=await native.verifyStacManagedHost({url:value.url,selection});
-  need(live.workspaceId===value.workspaceId,'APPLICATION_STAC_WORKSPACE_CHANGED');
+  need(live.workspaceId===value.workspaceId&&(live.catalogueWorkspaceId??null)===(value.catalogueWorkspaceId??null),'APPLICATION_STAC_WORKSPACE_CHANGED');
   return {url:live.url,original:{schema:STARTUP,command:value.command,directory:value.directory,
     workspaceDirectory:value.workspaceDirectory,workspaceId:value.workspaceId,selectionSha256:value.selectionSha256,
     sourceSha256:value.sourceSha256,processingDirectory:value.processingDirectory,profileSha256:value.profileSha256,
     policyDirectory:value.policyDirectory,outputDirectory:value.outputDirectory,
+    catalogueDirectory:value.catalogueDirectory??null,catalogueWorkspaceId:value.catalogueWorkspaceId??null,
     instanceId:value.instanceId,pid:value.pid,createdAt:value.createdAt}};
 }
 
@@ -133,3 +144,4 @@ export async function saveStacApplicationConnection(request,directory,record){
   await saveJSON(path,record,true);
   return path;
 }
+

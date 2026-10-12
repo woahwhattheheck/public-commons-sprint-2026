@@ -6,7 +6,7 @@ Start with the public USGS example below. For an institutional collection, subst
 
 ## What is included
 
-The application consists of aviary.py, aviary_client.py, server.py, index.html, app.js, cli.mjs, this guide and PROVIDER_CONTRACT.md. Python 3.11 or later runs the application. The local command line and browser use the same retained workspace. In the surrounding Node project, `node research/aviary/cli.mjs` forwards the same arguments to Python and preserves normal process signals. It uses STELLAR_FORGE_PYTHON when set, otherwise python3.
+The application consists of aviary.py, aviary_client.py, server.py, index.html, app.js, cli.mjs, this guide and PROVIDER_CONTRACT.md. The complete native handoff also includes managed.py and [the Applications guide](APPLICATIONS.md). The installed aviary command and the Aviary collection migration entry in Applications open that same workspace with its selected Python. Python 3.11 or later runs the application. The local command line and browser use the same retained workspace. In the surrounding Node project, `node research/aviary/cli.mjs` forwards the same arguments to Python and preserves normal process signals. It uses STELLAR_FORGE_PYTHON when set, otherwise python3.
 
 The example includes an input declaration and a source-capture script. Its source tables deliberately use catalogue headers such as record_key, asset_key, local_file and Tile. The mapping records every conversion, including the explicit **Title ← Tile** attachment mapping. It does not silently repair a malformed CSV row.
 

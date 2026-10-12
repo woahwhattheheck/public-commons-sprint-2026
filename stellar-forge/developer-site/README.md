@@ -261,3 +261,44 @@ Choose **Read and reuse an economic briefing** in the existing workflow selector
 The static copy lives under `dist/examples/fred-briefing-20261012/`. Preserve its complete files when publishing the existing Site or packaging its browser assets; no toolkit runtime is embedded in the example. Use the maintained installed FRED runtime to run the included commands. The original native FRED receiving operation and funded buyer intents retain their own owner/results. This example is a completed report and customer starting point, not a claim that those later operations ran.
 
 The same ready 15-file [economic briefing ZIP](dist/examples/fred-briefing-20261012/stellar-forge-economic-briefing-20261012.zip) is retained for direct receiving: 328,163 bytes, SHA-256 `105e6fa6e6b83d05df7f8c21b1f5c0c46c2bec53ce3f3f0fc9b0823fb2298301`. It was produced by the unchanged original `zipWorkspace`; every member was compared with its selected source bytes. The browser produces that same complete member selection from the verified static files.
+
+
+## CoCart customer setup and complete receiving
+
+Open **/cocart.html** from Other sources, the workflow selector, the searchable
+component index or the existing Woo page. Import the original saved merchant
+profile or full CoCart receiving JSON. Review exact shop, checkout, product,
+currency and native terms; choose the actual private host directory and
+original SDK entry. Optional named handoffs and receiving inputs enter the
+same existing merchant connection.
+
+The editor keeps original file bytes, provides saved browser drafts with
+optimistic revisions, and downloads the complete editable draft, setup ZIP,
+operating guide and profile-plugin preparation runner. The ZIP contains every
+selected original JSON file, setup.json, cocart.mjs and INSTALL.md. Source
+amounts remain strings. The page sends no imported data to a remote service.
+
+Run **Inspect** and **Prepare** from that extracted folder against the maintained
+source checkout or installed package. The portable runner verifies the input
+hashes and delegates profile, receiving and handoff admission to the original
+CoCart modules. Prepare uses the existing setupCocartWorkspace; it preserves
+complete receiving identities and objects, selects the real SDK, and can
+initialize the existing merchant connection and agent directory. Open, Status
+and Export use the same native application and CartWorkspace.
+
+The generated handover covers first Woo installation, the original profile
+export companion, native cart and checkout, buyer handoff, seller and delivery
+operations, complete customer export, and the existing Applications
+Review/Save/Start/Open/Stop/reopen sequence. It records the exact existing
+workspaceDirectory, sdkModule, connectionFile and workspaceAlias fields.
+The source does not add a cart engine, payment implementation or managed
+application registry.
+
+Complete source, interfaces and host instructions are in [COCART.md](COCART.md).
+The addition consists of dist/cocart.html, dist/cocart.css,
+dist/cocart-onboarding.mjs, dist/cocart-setup.mjs and dist/cocart-runner.mjs.
+It reuses the original onboarding ZIP writer, draft store and shared styles.
+Original CoCart product and managed operating results remain attached to
+PR1618 and PR1708; a following front-door receiving operation retains its own
+actual result. Publish this cumulative subtree through the same existing
+Site project and its current audience.

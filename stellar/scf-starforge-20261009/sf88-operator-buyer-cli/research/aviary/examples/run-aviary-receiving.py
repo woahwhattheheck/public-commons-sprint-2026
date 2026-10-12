@@ -60,7 +60,8 @@ EXCLUDED_KEY = "effective-excluded"
 VTT = ("WEBVTT\n\n00:00:00.000 --> 00:00:02.000\n"
        "Retained receiving source — exact UTF-8 transcript.\n").encode("utf-8")
 APP_FILES = ("aviary.py", "aviary_client.py", "server.py", "index.html",
-             "app.js", "cli.mjs", "README.md", "PROVIDER_CONTRACT.md")
+             "app.js", "cli.mjs", "README.md", "PROVIDER_CONTRACT.md",
+             "managed.py", "APPLICATIONS.md")
 
 
 def now():

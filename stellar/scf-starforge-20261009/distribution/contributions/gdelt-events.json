@@ -1,12 +1,12 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "gdelt-events",
-  "description": "GDELT Events and Mentions customer data editions",
+  "description": "GDELT article, entity, Events and Mentions customer editions",
   "commands": {
     "gdelt": "stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/cli.mjs"
   },
   "commandDescriptions": {
-    "gdelt": "Acquire official event updates, review and publish datasets, deliver and reopen customer sources"
+    "gdelt": "Acquire official article/event sources, review entities and source coverage, publish datasets, deliver and reopen complete originals"
   },
   "exports": {
     "./seller/gdelt": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/merchant.mjs",
@@ -17,7 +17,8 @@
     "./seller/gdelt/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/workspace.mjs",
     "./seller/gdelt/application": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/application.mjs",
     "./merchant/gdelt": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/mcp.mjs",
-    "./merchant/gdelt/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/mcp-client.mjs"
+    "./merchant/gdelt/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/mcp-client.mjs",
+    "./seller/gdelt/gkg": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/gkg.mjs"
   },
   "applicationProviders": {
     "gdelt-events": "stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/application-provider.mjs"

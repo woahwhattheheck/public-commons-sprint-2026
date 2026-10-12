@@ -7,6 +7,8 @@ import { SF61_SHA, SF61_MAX_SOURCE_BYTES, sf61Hash as hash,
 
 import { routeWorksheetTools } from './catalog/openapi-route-worksheet.mjs';
 export { routeWorksheetTools } from './catalog/openapi-route-worksheet.mjs';
+export { stage as stageRouteWorksheet, stageView as routeWorksheetStageView,
+  valueOrFile as readRouteWorksheetValue, requireReconciled as requireRouteWorksheetReconciled };
 
 const PACKAGE = /^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$/;
 const REVIEW_SCHEMA = 'stellar-forge.api-route-sheet-review.v1';

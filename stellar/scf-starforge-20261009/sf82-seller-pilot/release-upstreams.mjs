@@ -31,7 +31,9 @@ export async function readReleaseWorkspace(path) {
     provenance: { name: project.name, id: project.manifest.id, manifestSha256: digest(manifestBytes),
       originalOpenApiSha256: project.manifest.files[project.manifest.sourceFile ?? 'original-openapi.json'],
       ...(project.sourceRevision ? {sourceRevisionSha256:project.manifest.files['source-revision.json'],
-        sourceRevision:project.sourceRevision} : {}) },
+        sourceRevision:project.sourceRevision} : {}),
+      ...(project.operationPolicy ? {operationPolicySha256:project.manifest.files['operation-policy.json'],
+        operationPolicyReviewSha256:project.operationPolicy.review.sha256} : {}) },
   };
 }
 async function bytesAt(path) {

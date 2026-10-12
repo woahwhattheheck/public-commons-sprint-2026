@@ -4,6 +4,8 @@ The generated Ruby customer package can acquire an entire selected dataset throu
 
 Use this workflow for a complete table or selected query that spans several source pages. The existing [single-response customer](RUBY.md) remains available for other merchant operations. The [Rails edition importer](examples/rails_dataset/README.md) provides the full application migration, models, job, mapping and commissioning command.
 
+For an already finalized SF100 room, use [direct finalized dataset receiving](NATIVE_DATASETS.md). That source entrypoint retains the original complete room and uses the same `DatasetDelivery` and Rails importer; its standalone customer package and complete portable application receiving are included.
+
 ## Customer workflow
 
 1. Deliver the complete seller package from the actual OpenAPI contract.
@@ -22,9 +24,9 @@ starforge client ruby status --dir /absolute/customer-package
 starforge client ruby copy --dir /absolute/customer-package --out /absolute/recipient-package
 ~~~
 
-The current package adds 21 Ruby/application files to the original five JavaScript customer files. Its `ruby-client.json` lists their exact relative paths, byte counts and SHA-256 hashes, and binds the original seller export manifest. Nested Rails examples are included in export, inspection, copy and interrupted-copy recovery.
+The current package adds 26 Ruby/application files to the original five JavaScript customer files. Its `ruby-client.json` lists their exact relative paths, byte counts and SHA-256 hashes, and binds the original seller export manifest. Nested Rails examples are included in export, inspection, copy and interrupted-copy recovery.
 
-The inspector also accepts an existing complete eight-file Ruby edition. That original edition retains its exact files. Export the current complete package to a new destination to add Dataset and Rails edition capabilities; `client.dataset_available?` reports whether those verified companions are present.
+The inspector also accepts existing complete eight-file and twenty-one-file Ruby editions. Those original editions retain their exact files. Export the current complete package to a new destination to add Dataset and Rails edition capabilities; `client.dataset_available?` reports whether those verified companions are present.
 
 Source entry points:
 

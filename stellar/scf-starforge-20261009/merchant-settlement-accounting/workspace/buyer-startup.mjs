@@ -64,6 +64,13 @@ const summarize=value=>({allocationRows:value.rows.length,
   creditRows:value.rows.filter(row=>row.kind==='CREDIT').length,
   outstandingReservations:value.source.buyer.outstandingReservations.length});
 
+/** Read and validate one original private issued file without creating a workspace. */
+export async function inspectBuyerStartupFile(path,options={}){
+  const original=await readOriginal(path,options);
+  const inspected=inspectBuyerSource(original.bytes);
+  return {...original,inspected,summary:summarize(inspected)};
+}
+
 /** Called only while the original Store owns its existing writer lease. */
 export async function initializeBuyerStartup(directory,{buyerSourceFile,buyerSourceSha256,buyerSourceName,buyerOperator}){
   const actor=label(buyerOperator,'source operator',1000);

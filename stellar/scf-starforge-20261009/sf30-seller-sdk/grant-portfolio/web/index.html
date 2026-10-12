@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grant Portfolio</title>
+<link rel="stylesheet" href="/style.css">
+<script src="/app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div><strong>Grant Portfolio</strong><span class="subtitle">Source editions · Review · Reconciliation</span></div>
+  <div id="connection" class="small">Opening workspace…</div>
+</header>
+<div class="shell">
+<aside>
+  <nav aria-label="Workspace">
+    <button data-view="portfolios" class="active">Portfolios</button>
+    <button data-view="sources">Source editions</button>
+    <button data-view="review">Review records</button>
+    <button data-view="ledger">Financial ledger</button>
+    <button data-view="history">Revision history</button>
+    <button data-view="requests">Saved operations</button>
+  </nav>
+  <div class="side-note">IATI and 360Giving<br>Original records and complete source handoffs</div>
+</aside>
+<main>
+  <section class="selection" aria-label="Selected portfolio">
+    <label>Portfolio<select id="portfolio-select"><option value="">Select a saved portfolio</option></select></label>
+    <label>Revision<select id="revision-select"><option value="">—</option></select></label>
+    <button id="refresh">Refresh</button>
+    <button id="new-portfolio">New portfolio</button>
+  </section>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <section id="content" aria-live="polite"></section>
+</main>
+</div>
+<dialog id="detail-dialog"><header><h2 id="detail-title">Original record</h2><button id="close-detail">Close</button></header><div id="detail-content"></div></dialog>
+</body>
+</html>

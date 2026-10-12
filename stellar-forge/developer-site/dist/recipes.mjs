@@ -32,6 +32,21 @@ export const ROLES = Object.freeze({
     "command": "# From the parent of your extracted merchant directory:\nnpm install --ignore-scripts --offline --omit=optional \\\n  /absolute/path/to/the-package.tgz\nnpx --no-install starforge doctor\nnpx --no-install starforge run --workspace ./merchant -- --port 0\n\n# Open the seller URL + /_seller/docs\n# Open the separate operations URL printed at startup.",
     "result": "The original seller loads your JSON files and advertises every configured resource. Unpaid requests return native HTTP 402 challenges; the operations view tracks the running service."
   },
+  "cocart": {
+    "meta": "COCART / CUSTOMER SETUP + RECEIVING",
+    "title": "Prepare the complete customer workspace.",
+    "description": "Import the original merchant profile or full CoCart receiving file, select its installed host and prepare the existing cart, checkout and customer handover.",
+    "checklist": [
+      "Open CoCart customer receiving. Import the original profile or complete receiving JSON and any named handoffs.",
+      "Review the selected source, SDK and private directories; download and extract the complete setup packet.",
+      "Run the packet's native Inspect and Prepare commands, then open the original application or add the same directory to Applications.",
+      "Keep the original checkout and buyer handoff, export the complete case, then Stop and reopen the same customer workspace."
+    ],
+    "docs": "/cocart.html",
+    "label": "TERMINAL / EXTRACTED COCART SETUP PACKET",
+    "command": "# Open /cocart.html and download the reviewed setup packet.\n# Run from its extracted folder using your maintained installation:\nTOOLKIT=/absolute/path/to/checkout-or-installed-package\n\nnode cocart.mjs inspect --toolkit \"$TOOLKIT\"\nnode cocart.mjs prepare --toolkit \"$TOOLKIT\"\nnode cocart.mjs status --toolkit \"$TOOLKIT\"\nnode cocart.mjs open --toolkit \"$TOOLKIT\"\n# Ctrl+C stops this direct listener.\n\n# Export to a new private filename after the customer operation:\nnode cocart.mjs export --toolkit \"$TOOLKIT\" \\\n  --out /absolute/private/CoCart_Receiving_Workspace.json\n\n# INSTALL.md includes the original Applications fields,\n# merchant setup, buyer handoff, delivery and same-case reopen.",
+    "result": "The original managed application receives the selected profile or complete customer case, preserves its native identities and source objects, and opens the existing cart/checkout interface. Its complete receiving export carries that same history to another selected host."
+  },
   "woo": {
     "meta": "SF104 / WOOCOMMERCE CHECKOUT",
     "title": "Connect a WooCommerce digital product.",

@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { normalizeRedisSetup, createRedisConnectionSetup, redisSetupTemplates } from './setup-model.mjs';
 import { compileRedisQueries, bindRedisQuery } from '../declaration.mjs';
 import { redisWorkspaceBinding } from './model.mjs';
+import { REDIS_CERTIFICATE_FILES } from '../connection-profile.mjs';
 
 export const REDIS_COMMISSIONING_SCHEMA = 'stellar-forge.redis-commissioning-input.v1';
 const plain = v => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -112,16 +113,19 @@ function resultMatches(expectedResult, columns, rows) {
   }
   return {passed:mismatches.length===0, mismatches, observed};
 }
-async function completed(workspace, action) {
+async function completed(workspace, action, resume) {
   let record = await action();
-  if (record.status === 'INTERRUPTED') record = await workspace.resume(record.id);
+  if (record.status === 'INTERRUPTED') record = await (resume ? resume(record.id) : workspace.resume(record.id));
   if (record.status !== 'COMPLETED')
     throw issue('REDIS_COMMISSIONING_OPERATION_INCOMPLETE',
       'Continue the original saved operation after resolving its recorded error.',
       {requestId:record.id,status:record.status,error:record.error});
   return record;
 }
-function requestId(input, suffix) { return 'commission-'+hash(input.operationId+'\n'+suffix).slice(0,48); }
+export function redisCommissioningRequestId(input, suffix, namespace) {
+  if(namespace!==undefined)identifier(namespace,'Receiving request ID');
+  return 'commission-'+hash(input.operationId+'\n'+(namespace===undefined?'':namespace+'\n')+suffix).slice(0,48);
+}
 
 export async function commissionRedis({input, inputSha256, directory, environment=process.env, mode='review'}={}) {
   if (!['review','create','receive'].includes(mode))
@@ -144,71 +148,130 @@ export async function commissionRedis({input, inputSha256, directory, environmen
     const created=await setup.create({draft:input.setup,digest:review.digest,requestId:input.requestId});
     report.workspace=created;
     if (mode === 'create') return {...report,status:'CREATED'};
-    const workspace=setup.workspace, meta=workspace.metadata(), revision=workspace.revision(meta.head);
-    if (stable(revision.source.queries)!==stable(selected.setup.source.queries) ||
-        stable(revision.plan)!==stable(selected.setup.plan))
-      throw issue('REDIS_COMMISSIONING_REVISION_CHANGED',
-        'The operator has saved different product inputs. Review that revision in its original workspace.');
-    report.revisionId=revision.id; report.checks=[];
-    for (const check of selected.checks) {
-      const rows=[], pages=[], cursors=new Set(); let columns, next=structuredClone(check.input);
-      for (let page=0;;page++) {
-        const cursor=stable(next);
-        if (cursors.has(cursor)) throw issue('REDIS_COMMISSIONING_CURSOR_REPEATED',
-          'The original source returned a repeated continuation.',{check:check.id,input:next});
-        cursors.add(cursor);
-        const op=await completed(workspace,()=>workspace.preview({
-          requestId:requestId(input,'preview-'+check.id+'-'+page),
-          revisionId:revision.id,query:check.query,input:next}));
-        const data=op.result.data;
-        if (!Array.isArray(data.rows) || !Array.isArray(data.columns))
-          throw issue('REDIS_COMMISSIONING_RESULT_INVALID','The original query result is incomplete.');
-        columns ??= data.columns;
-        if (stable(columns)!==stable(data.columns))
-          throw issue('REDIS_COMMISSIONING_COLUMNS_CHANGED','The query columns changed during receiving.');
-        if (rows.length+data.rows.length>check.maxRows)
-          throw issue('REDIS_COMMISSIONING_RECEIVING_LIMIT',
-            'The full native batch exceeds the selected receiving row budget.',{check:check.id,requestId:op.id});
-        rows.push(...data.rows);
-        const continuation=data.nextInput;
-        pages.push({requestId:op.id,observedAt:op.result.observedAt,input:next,
-          rows:data.rows.length,resultSha256:hash(stable(data)),
-          nextInput:continuation??null,scanCursor:data.scanCursor??null,scanComplete:data.scanComplete??null});
-        // Empty SSCAN pages still carry a native continuation. Never use rowCount
-        // or the requested COUNT hint to decide whether another page exists.
-        if (!check.allPages || continuation === undefined || continuation === null) break;
-        if (!plain(continuation))
-          throw issue('REDIS_COMMISSIONING_CONTINUATION_INVALID','Use the source’s exact nextInput object.');
-        if (page+1>=check.maxPages)
-          throw issue('REDIS_COMMISSIONING_RECEIVING_LIMIT',
-            'The selected receiving page budget was reached with a native continuation remaining.',
-            {check:check.id,requestId:op.id,nextInput:continuation});
-        next=structuredClone(continuation);
-      }
-      const match=resultMatches(check.expected,columns,rows);
-      report.checks.push({id:check.id,query:check.query,passed:match.passed,
-        mismatches:match.mismatches,rowCount:rows.length,rowsSha256:match.observed.rowsSha256,pages});
-    }
-    if (report.checks.some(c=>!c.passed))
-      return {...report,status:'ACCEPTANCE_MISMATCH'};
-    const prepared=await completed(workspace,()=>workspace.prepare({
-      requestId:requestId(input,'prepare'),revisionId:revision.id}));
-    const customerFiles=[];
-    for (const name of Object.keys(prepared.result.files ?? {}).filter(n=>n==='openapi.json'||n.startsWith('client/'))) {
-      const file=await workspace.file(prepared.id,name);
-      customerFiles.push({path:name,bytes:file.bytes.length,sha256:hash(file.bytes)});
-    }
-    report.package={requestId:prepared.id,directory:prepared.result.directory,
-      manifestSha256:prepared.result.manifestSha256,customerFiles};
-    if (input.release) {
-      const stage=await completed(workspace,()=>workspace.stage({
-        requestId:requestId(input,'stage'),packageId:prepared.id,...input.release}));
-      report.release={requestId:stage.id,...stage.result};
-    }
-    report.workspace={...report.workspace,...redisWorkspaceBinding(workspace.metadata())};
-    return {...report,status:'RECEIVED'};
+    return receiveRedisCommissioning({workspace:setup.workspace,input,inputSha256:identity,
+      environment,workspaceCreated:created});
   } finally { await setup.close(); }
 }
+/** Execute the original receiving flow on an already open workspace.
+ * Hosts retain the caller's parent request namespace and use the original child
+ * operation executor; CLI callers keep their existing deterministic identities.
+ */
+export async function receiveRedisCommissioning({workspace,input,inputSha256,revisionId,
+  environment=workspace?.environment??process.env,requestNamespace,onProgress=async()=>{},execute,workspaceCreated}={}) {
+  if(!workspace||typeof workspace.preview!=='function'||typeof workspace.operation!=='function')
+    throw issue('REDIS_COMMISSIONING_WORKSPACE_REQUIRED','Open the original saved Redis workspace.');
+  if(typeof onProgress!=='function'||execute!==undefined&&typeof execute!=='function')
+    throw new TypeError('Use callable receiving progress and operation handlers.');
+  if(requestNamespace!==undefined)identifier(requestNamespace,'Receiving request ID');
+  const selected=normalizeRedisCommissioning(input,environment);
+  const identity=inputSha256??hash(stable(input));
+  if(!/^[a-f0-9]{64}$/.test(identity))
+    throw issue('REDIS_COMMISSIONING_DIGEST_INVALID','Use the original complete input SHA256.');
+  if(selected.setup.review.environment.some(value=>!value.available))
+    throw issue('REDIS_COMMISSIONING_ENVIRONMENT_REQUIRED','Set the named source variables in the receiving process environment.',
+      {names:selected.setup.review.environment.filter(value=>!value.available).map(value=>value.name)});
+  const report={schema:'stellar-forge.redis-commissioning-result.v1',mode:'receive',
+    inputSha256:identity,operationId:input.operationId,review:selected.review,
+    workspace:workspaceCreated??{directory:workspace.root,...redisWorkspaceBinding(workspace.metadata())}};
+  const meta=workspace.metadata(), revision=workspace.revision(revisionId??meta.head);
+  if (stable(revision.source)!==stable(selected.setup.source) ||
+      stable(revision.plan)!==stable(selected.setup.plan))
+    throw issue('REDIS_COMMISSIONING_REVISION_CHANGED',
+      'The operator has saved different product inputs. Review that revision in its original workspace.');
+  for(const item of REDIS_CERTIFICATE_FILES){
+    const expected=selected.setup.certificates[item.profile];
+    if((expected?hash(expected):null)!==(meta[item.fingerprint]??null))
+      throw issue('REDIS_COMMISSIONING_PROFILE_CHANGED','The saved source certificate differs from the commissioning input.');
+  }
+  report.revisionId=revision.id; report.checks=[];
+  const emit=async value=>{await onProgress({...value,totalChecks:selected.checks.length,completedChecks:report.checks.length});};
+  const run=async(kind,operation)=>completed(workspace,
+    ()=>execute?execute(kind,operation,false):workspace[kind](operation),
+    execute?()=>execute(kind,operation,true):undefined);
+  await emit({phase:'receiving'});
+  for (const [checkIndex,check] of selected.checks.entries()) {
+    workspace.writable?.();
+    await emit({phase:'checking',checkIndex,checkId:check.id,query:check.query,pageCount:0,rowCount:0});
+    const rows=[], pages=[], cursors=new Set(); let columns, next=structuredClone(check.input);
+    for (let page=0;;page++) {
+      const cursor=stable(next);
+      if (cursors.has(cursor)) throw issue('REDIS_COMMISSIONING_CURSOR_REPEATED',
+        'The original source returned a repeated continuation.',{check:check.id,input:next});
+      cursors.add(cursor);
+      const op=await run('preview',{
+        requestId:redisCommissioningRequestId(input,'preview-'+check.id+'-'+page,requestNamespace),
+        revisionId:revision.id,query:check.query,input:next});
+      const data=op.result.data;
+      if (!Array.isArray(data.rows) || !Array.isArray(data.columns))
+        throw issue('REDIS_COMMISSIONING_RESULT_INVALID','The original query result is incomplete.');
+      columns ??= data.columns;
+      if (stable(columns)!==stable(data.columns))
+        throw issue('REDIS_COMMISSIONING_COLUMNS_CHANGED','The query columns changed during receiving.');
+      if (rows.length+data.rows.length>check.maxRows)
+        throw issue('REDIS_COMMISSIONING_RECEIVING_LIMIT',
+          'The full native batch exceeds the selected receiving row budget.',{check:check.id,requestId:op.id});
+      rows.push(...data.rows);
+      const continuation=data.nextInput;
+      pages.push({requestId:op.id,observedAt:op.result.observedAt,input:next,
+        rows:data.rows.length,resultSha256:hash(stable(data)),
+        nextInput:continuation??null,scanCursor:data.scanCursor??null,scanComplete:data.scanComplete??null,
+        truncated:data.truncated??null,continuationUnavailable:data.continuationUnavailable??null});
+      await emit({phase:'checking',checkIndex,checkId:check.id,query:check.query,
+        pageCount:pages.length,rowCount:rows.length,lastOperationId:op.id});
+      // Empty SSCAN pages still carry a native continuation. Never use rowCount
+      // or the requested COUNT hint to decide whether another page exists.
+      if (!check.allPages) break;
+      if (continuation === undefined || continuation === null) {
+        const incomplete=data.truncated!==false||data.continuationUnavailable!==undefined&&data.continuationUnavailable!==null||
+          data.kind==='set'&&(data.scanComplete!==true||data.scanCursor!=='0');
+        if(incomplete){
+          const source={truncated:data.truncated??null,continuationUnavailable:data.continuationUnavailable??null,
+            scanCursor:data.scanCursor??null,scanComplete:data.scanComplete??null};
+          await emit({phase:'source-incomplete',checkIndex,checkId:check.id,query:check.query,
+            pageCount:pages.length,rowCount:rows.length,lastOperationId:op.id,source});
+          throw issue('REDIS_COMMISSIONING_SOURCE_INCOMPLETE',
+            'The native source retained an incomplete final page'+(data.continuationUnavailable?' ('+data.continuationUnavailable+')':'')+'. Review this original page and source limits before preparing.',
+            {check:check.id,requestId:op.id,...source});
+        }
+        break;
+      }
+      if (!plain(continuation))
+        throw issue('REDIS_COMMISSIONING_CONTINUATION_INVALID','Use the source’s exact nextInput object.');
+      if (page+1>=check.maxPages)
+        throw issue('REDIS_COMMISSIONING_RECEIVING_LIMIT',
+          'The selected receiving page budget was reached with a native continuation remaining.',
+          {check:check.id,requestId:op.id,nextInput:continuation});
+      next=structuredClone(continuation);
+    }
+    const match=resultMatches(check.expected,columns,rows);
+    report.checks.push({id:check.id,query:check.query,allPages:check.allPages,passed:match.passed,
+      mismatches:match.mismatches,rowCount:rows.length,rowsSha256:match.observed.rowsSha256,pages});
+    await emit({phase:'check-completed',checkIndex,checkId:check.id,query:check.query,pageCount:pages.length,
+      rowCount:rows.length,passed:match.passed,mismatches:match.mismatches,rowsSha256:match.observed.rowsSha256});
+  }
+  if (report.checks.some(c=>!c.passed))
+    return {...report,status:'ACCEPTANCE_MISMATCH'};
+  await emit({phase:'preparing'});
+  const prepared=await run('prepare',{
+    requestId:redisCommissioningRequestId(input,'prepare',requestNamespace),revisionId:revision.id});
+  const customerFiles=[];
+  for (const name of Object.keys(prepared.result.files ?? {}).filter(n=>n==='openapi.json'||n.startsWith('client/'))) {
+    const file=await workspace.file(prepared.id,name);
+    customerFiles.push({path:name,bytes:file.bytes.length,sha256:hash(file.bytes)});
+  }
+  report.package={requestId:prepared.id,directory:prepared.result.directory,
+    manifestSha256:prepared.result.manifestSha256,customerFiles};
+  if (input.release) {
+    await emit({phase:'staging',packageId:prepared.id});
+    const stage=await run('stage',{
+      requestId:redisCommissioningRequestId(input,'stage',requestNamespace),packageId:prepared.id,...input.release});
+    report.release={requestId:stage.id,...stage.result};
+  }
+  report.workspace={...report.workspace,...redisWorkspaceBinding(workspace.metadata())};
+  await emit({phase:'received',packageId:prepared.id});
+  return {...report,status:'RECEIVED'};
+}
+
 export async function redisCommissioningTemplate() {
   const setup=await redisSetupTemplates();
   const [source,plan]=await Promise.all(['example-collections-source.json','example-collections-plan.json']

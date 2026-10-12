@@ -1,14 +1,49 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "ndjson-360giving",
-  "description": "Complete 360Giving publisher review and receiving",
+  "description": "Complete 360Giving publisher Applications, typed clients, merchant tools and customer receiving",
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving"
   ],
   "commands": {
-    "dataset-360giving": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/cli.mjs"
+    "dataset-360giving": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/cli.mjs",
+    "dataset-360giving-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/operator/cli.mjs",
+    "dataset-360giving-agent-receiving": "stellar/scf-starforge-20261009/distribution/runtime-workspace/360giving-agent-receiving.mjs"
   },
   "commandDescriptions": {
-    "dataset-360giving": "Prepare, review, correct, export and receive complete 360Giving publisher editions; example runs both retained SCVO funds"
-  }
+    "dataset-360giving": "Prepare, review, correct, export and receive complete 360Giving publisher editions; example runs both retained SCVO funds",
+    "dataset-360giving-workspace": "Save publisher reviews and candidates, operate original native grant datasets, and export or receive complete customer handoffs; example runs both original SCVO funds",
+    "dataset-360giving-agent-receiving": "Run complete saved publisher and merchant receiving, including original requests, every native query/change page, resumable complete files, and source/receiver cold reopen."
+  },
+  "applicationProviders": {
+    "ndjson-360giving": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/ndjson-360giving.mjs"
+  },
+  "exports": {
+    "./seller/360giving/client": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/operator/client.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/operator/client.mjs"
+    },
+    "./merchant/360giving": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/360giving-download.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/360giving-download.mjs"
+    }
+  },
+  "merchantProviders": {
+    "publisher-360giving": "stellar-forge/mcp-merchant-operator/providers/publisher-360giving.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/360giving-workspace.mjs",
+    "stellar-forge/mcp-merchant-operator/360giving-setup.mjs",
+    "stellar-forge/mcp-merchant-operator/360giving-contract.mjs",
+    "stellar-forge/mcp-merchant-operator/360giving-download.mjs",
+    "stellar-forge/mcp-merchant-operator/360giving-download.d.mts",
+    "stellar-forge/mcp-merchant-operator/360GIVING.md",
+    "stellar-forge/mcp-merchant-operator/serve.mjs",
+    "stellar-forge/mcp-merchant-operator/config.mjs",
+    "stellar/scf-starforge-20261009/sf82-seller-pilot/releases.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/stellar-expert/exact-json.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/360giving-receiving.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/360giving-agent-receiving.mjs",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/360GIVING_APPLICATIONS.md"
+  ]
 }

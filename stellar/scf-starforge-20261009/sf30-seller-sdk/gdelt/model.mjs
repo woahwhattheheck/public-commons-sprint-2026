@@ -1,5 +1,8 @@
 // MIT. GDELT 2.0 Event/Mentions source meanings and lossless projections.
 import { createHash } from 'node:crypto';
+import { GKG_CAPTURE, GKG_CODEBOOK_URL, GKG_NOTICE, GKG_FIELDS, GKG_TABLES, isGkgTable, gkgTableFields,
+  gkgRequiredFields, parseGkgTable, gkgCollectionRows, gkgColumnMeaning, compareGkgModels } from './gkg.mjs';
+export { GKG_CAPTURE, GKG_CODEBOOK_URL, GKG_NOTICE, GKG_FIELDS, GKG_TABLES, isGkgTable } from './gkg.mjs';
 
 export const CAPTURE = 'stellar-forge.gdelt-capture.v1';
 export const SCHEMA = 'stellar-forge.gdelt-schema.v1';
@@ -58,7 +61,8 @@ const INTEGER_FIELDS = new Set(['Year','IsRootEvent','QuadClass','NumMentions','
   'ActionCharOffset','InRawText','Confidence','MentionDocLen','source_row']);
 const DECIMAL_FIELDS = new Set(['FractionDate','GoldsteinScale','AvgTone','Actor1Geo_Lat','Actor1Geo_Long',
   'Actor2Geo_Lat','Actor2Geo_Long','ActionGeo_Lat','ActionGeo_Long','MentionDocTone']);
-export function columnMeaning(name) {
+export function columnMeaning(name, { table } = {}) {
+  if (isGkgTable(table)) return gkgColumnMeaning(name);
   const original = name.startsWith('Event_') ? name.slice(6) : name;
   let meaning = 'Original GDELT source text, preserved exactly.';
   if (original === 'GlobalEventID') meaning = 'Opaque event identifier retained as text; its numeric order is not chronology.';
@@ -85,11 +89,13 @@ export function columnMeaning(name) {
     encoding: DECIMAL_FIELDS.has(original) ? 'decimal-text' : integer ? 'exact-safe-integer' : 'source-text', meaning };
 }
 export function tableFields(table) {
+  if (isGkgTable(table)) return gkgTableFields(table);
   need(['events','mentions','related-mentions'].includes(table), 'Choose events, mentions or related-mentions.');
   return ['source_batch','source_row', ...(table === 'events' ? EVENT_FIELDS : MENTION_FIELDS),
     ...(table === 'related-mentions' ? ['event_match','event_candidates','source_batch_event', ...EVENT_LOOKUP_FIELDS.map(field => 'Event_' + field)] : [])];
 }
-export function parseManifest(body, { selectedBatch } = {}) {
+export function parseManifest(body, { selectedBatch, format = 'events-mentions' } = {}) {
+  need(['events-mentions','gkg'].includes(format), 'Choose Events/Mentions or GKG article sources.');
   need(typeof body === 'string' && Buffer.byteLength(body) <= LIMITS.manifestBytes && !body.includes('\0'), 'Use a complete GDELT manifest response within 1 MiB.');
   const entries = [];
   for (const line of body.split(/\r?\n/)) {
@@ -103,17 +109,18 @@ export function parseManifest(body, { selectedBatch } = {}) {
       url: match[3].replace(/^http:/, 'https:'), member: batch + '.' + match[5] });
   }
   need(entries.length > 0 && new Set(entries.map(item => item.advertisedUrl)).size === entries.length, 'Manifest entries must be nonempty and unique.');
-  const batches = [...new Set(entries.filter(item => item.kind !== 'gkg').map(item => item.batch))].sort();
+  const batches = [...new Set(entries.filter(item => format === 'gkg' ? item.kind === 'gkg' : item.kind !== 'gkg').map(item => item.batch))].sort();
   const batch = selectedBatch === undefined ? batches.at(-1) : batchId(selectedBatch);
-  const selected = ['events','mentions'].map(kind => {
+  const selected = (format === 'gkg' ? ['gkg'] : ['events','mentions']).map(kind => {
     const choices = entries.filter(item => item.batch === batch && item.kind === kind);
-    need(choices.length === 1, 'The selected batch requires exactly one Event and one Mentions file.');
+    need(choices.length === 1, format === 'gkg' ? 'The selected batch requires exactly one original GKG file.' : 'The selected batch requires exactly one Event and one Mentions file.');
     need(choices[0].bytes <= LIMITS.zipBytes, 'Selected ZIP exceeds the supported 24 MiB per-file capacity.', 'GDELT_SOURCE_TOO_LARGE', 413);
     return choices[0];
   });
-  return { batch, selected, availableBatches: batches };
+  return { batch, selected, availableBatches: batches, ...(format === 'gkg' ? { format } : {}) };
 }
 export function parseTable(text, kind, batch) {
+  if (kind === 'gkg') { batchId(batch); return parseGkgTable(text,batch,{maxBytes:LIMITS.tableBytes,maxRows:LIMITS.rows,maxCellChars:LIMITS.cellChars}); }
   const fields = kind === 'events' ? EVENT_FIELDS : MENTION_FIELDS;
   need(['events','mentions'].includes(kind) && typeof text === 'string' && Buffer.byteLength(text) <= LIMITS.tableBytes &&
     !text.includes('\0') && !text.startsWith('\uFEFF'), 'Use an original UTF-8 GDELT TSV table.');
@@ -153,8 +160,9 @@ export function projectionPolicy(value = {}) {
   const fields = value.fields ?? available;
   need(Array.isArray(fields) && fields.length >= 1 && fields.length <= 64 && new Set(fields).size === fields.length &&
     fields.every(name => available.includes(name)), 'Select one to 64 distinct fields from the selected table.');
-  need(fields.includes('source_batch') && fields.includes('source_row') && fields.includes('GlobalEventID'), 'Keep source_batch, source_row and GlobalEventID in every customer projection.');
-  const filters = value.filters ?? ['GlobalEventID'], ranges = value.ranges ?? [], sorts = value.sorts ?? ['source_batch'];
+  need((isGkgTable(table) ? gkgRequiredFields(table) : ['source_batch','source_row','GlobalEventID']).every(name => fields.includes(name)),
+    isGkgTable(table) ? 'Keep the original batch, row, GKG record and occurrence identity in every article projection.' : 'Keep source_batch, source_row and GlobalEventID in every customer projection.');
+  const filters = value.filters ?? [isGkgTable(table) ? 'GKGRECORDID' : 'GlobalEventID'], ranges = value.ranges ?? [], sorts = value.sorts ?? ['source_batch'];
   for (const [name, list] of [['filters',filters],['ranges',ranges],['sorts',sorts]])
     need(Array.isArray(list) && list.length <= 8 && new Set(list).size === list.length && list.every(item => fields.includes(item)), 'Choose up to eight projected ' + name + '.');
   need(3+filters.length+4*ranges.length+(sorts.length?1:0)+1<=32,
@@ -175,6 +183,8 @@ export function collectionRows(models, table) {
   const ordered = [...models].sort((a,b) => a.batch.localeCompare(b.batch));
   need(ordered.length >= 1 && ordered.length <= LIMITS.captures &&
     new Set(ordered.map(item => item.batch)).size === ordered.length, 'Select one original edition per batch, up to 32 batches.');
+  if (isGkgTable(table)) return gkgCollectionRows(ordered,table,{maxRows:LIMITS.rows});
+  need(ordered.every(model => model.format !== 'gkg'), 'Select Events/Mentions captures for this event table.');
   const events = ordered.flatMap(model => model.events), mentions = ordered.flatMap(model => model.mentions);
   need(events.length <= LIMITS.rows && mentions.length <= LIMITS.rows, 'Collection exceeds the one-million-row table capacity.');
   if (table === 'events') return events;
@@ -207,6 +217,17 @@ export function projectionCsv(models, supplied) {
 }
 export function schemaDocument(policy, captureIds) {
   policy = projectionPolicy(policy);
+  if (isGkgTable(policy.table)) return {
+    schema:SCHEMA,provider:'GDELT Project',version:'GKG2.1',attribution:ATTRIBUTION,
+    projectUrl:PROJECT_URL,termsUrl:TERMS_URL,codebookUrl:GKG_CODEBOOK_URL,notice:GKG_NOTICE,
+    captureIds:[...captureIds],table:policy.table,selection:policy.selection,
+    physical:'UTF-8 CSV; exact original27-field TSV and ZIP remain in each GKG capture. Blank nullable cells become null.',
+    decimals:'Original decimal, offset, count and code values remain text. Numeric range/sort on text columns is lexical.',
+    order:'Source batches ascending, original TSV rows, then declared source-field order and one-based occurrence ordinal.',
+    comparison:'Document/window membership retains every record; only-in-window does not imply creation, deletion or factual confirmation.',
+    occurrenceViews:'Entity views use enhanced theme/person/organization/location and AllNames occurrences. Measures retain tone and sparse GCAM entries. Details retain counts, dates, quotations and amounts. Unrecognized entries keep raw_entry and original ordinal.',
+    fields:policy.fields.map(name=>columnMeaning(name,{table:policy.table})),sourceFieldOrder:{gkg:GKG_FIELDS}
+  };
   return { schema: SCHEMA, provider: 'GDELT Project', version: '2.0', attribution: ATTRIBUTION,
     projectUrl: PROJECT_URL, termsUrl: TERMS_URL, codebookUrl: CODEBOOK_URL, notice: NOTICE,
     captureIds: [...captureIds], table: policy.table, selection: policy.selection,
@@ -217,6 +238,7 @@ export function schemaDocument(policy, captureIds) {
     fields: policy.fields.map(columnMeaning), sourceFieldOrder: { events: EVENT_FIELDS, mentions: MENTION_FIELDS } };
 }
 export function compareModels(before, after) {
+  if (before.format === 'gkg' || after.format === 'gkg') return {...compareGkgModels(before,after),attribution:ATTRIBUTION};
   const comparison = { schema: 'stellar-forge.gdelt-comparison.v1', beforeBatch: before.batch, afterBatch: after.batch,
     notice: 'This compares source-window membership. Only-in-before/after entries are not real-world event deletions/creations.',
     attribution: ATTRIBUTION, events: [], mentions: {}, totals: {} };

@@ -3,6 +3,7 @@ import { renderPostgresContract, renderPostgresComparison, bindPostgresStaging }
 import { bindFacilitatorControls, renderFacilitatorChange } from './facilitator.mjs';
 import { bindClientControls } from './client.mjs';
 import { bindReceivingControls } from './receiving.mjs';
+import { bindDeliveryControls } from './delivery.mjs';
 const $ = selector => document.querySelector(selector);
 const fragment = location.hash.slice(1);
 if (fragment) { sessionStorage.setItem('seller-release-token', fragment); history.replaceState(null, '', location.pathname); }
@@ -48,6 +49,7 @@ function buttons() {
   facilitator.buttons(blocked);
   clients.buttons(blocked);
   receiving.buttons(blocked);
+  delivery.buttons(blocked);
   if (!snapshot || blocked) return;
   $('#activate').disabled = !comparison || selected === snapshot.state.active;
   $('#rollback').disabled = !snapshot.state.previous;
@@ -395,6 +397,7 @@ async function refresh() {
     await discovery.refresh();
     await facilitator.refresh();
     await clients.refresh();
+    await delivery.refresh();
     if (selected && !value.releases.some(r => r.id === selected)) selected = null;
     selected ??= value.state.active ?? value.releases[0]?.id ?? null;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
@@ -417,6 +420,7 @@ async function act(action) {
     const value = await request('/api/' + action, payload); renderStatus(value);
     await refreshCaches();
     await clients.refresh();
+    await delivery.refresh();
     if (action === 'rollback') selected = value.state.active;
     if (selected) renderDiff(await request('/api/diff?to=' + encodeURIComponent(selected)));
     await refreshCatalog();
@@ -439,6 +443,11 @@ const clients = bindClientControls({ request, getSnapshot: () => snapshot, isBus
   setBusy: value => { busy = value; buttons(); } });
 const receiving = bindReceivingControls({ request, notice, isBusy: () => busy || !snapshot || snapshot.console.busy,
   setBusy: value => { busy = value; buttons(); } });
+const delivery = bindDeliveryControls({ request, getSnapshot: () => snapshot,
+  isBusy: () => busy || !snapshot || snapshot.console.busy,
+  setBusy: value => { busy = value; buttons(); } });
+window.addEventListener('pagehide', () => { void delivery.close(); });
+window.addEventListener('pageshow', event => { if (event.persisted) location.reload(); });
 $('#refresh').addEventListener('click', () => { notice(); refresh(); });
 $('#activate').addEventListener('click', () => act('activate'));
 $('#rollback').addEventListener('click', () => act('rollback'));

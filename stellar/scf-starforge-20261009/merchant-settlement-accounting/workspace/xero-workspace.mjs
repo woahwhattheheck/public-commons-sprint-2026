@@ -1,6 +1,6 @@
 // MIT. Xero delivery belongs to the original accountant workspace and its root lease.
 import {constants} from 'node:fs';
-import {lstat,mkdir,open,rm} from 'node:fs/promises';
+import {lstat,mkdir,open,link,rm} from 'node:fs/promises';
 import {join} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {XeroHttpClient} from '../accountant/xero-http.mjs';
@@ -20,6 +20,63 @@ async function syncDir(path){const handle=await open(path,'r');try{await handle.
 async function write(directoryPath,name,bytes){fileName(name);const path=join(directoryPath,name),handle=await open(path,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);bytes=Buffer.from(bytes);try{await handle.writeFile(bytes);await handle.sync();}finally{await handle.close();}return {name,bytes:bytes.length,sha256:hash(bytes)};}
 async function exact(directoryPath,file){fileName(file?.name);const handle=await open(join(directoryPath,file.name),constants.O_RDONLY|constants.O_NOFOLLOW);try{const before=await handle.stat();need(before.isFile()&&before.size<=FILE_LIMIT,'XERO_FILE_CHANGED','A retained Xero source is not a supported regular file.',409);const bytes=await handle.readFile(),after=await handle.stat();need(bytes.length===file.bytes&&hash(bytes)===file.sha256&&before.size===after.size&&before.mtimeMs===after.mtimeMs&&before.ctimeMs===after.ctimeMs,'XERO_FILE_CHANGED','The retained Xero source bytes changed.',409);return bytes;}finally{await handle.close();}}
 async function writeFiles(path,files){const saved=[];for(const [name,bytes]of Object.entries(files))saved.push(await write(path,name,bytes));await syncDir(path);return saved;}
+// Match the original QuickBooks packet contract: retain exact completed members
+// across an interrupted create, and never remove a packet after an uncertain
+// workspace commit. Only the same request's matching bytes can reuse a member.
+async function planPacket(path,files){
+  await directory(path,{create:true});const saved=[];
+  for(const [name,value]of Object.entries(files)){
+    fileName(name);const bytes=Buffer.from(value),entry={name,bytes:bytes.length,sha256:hash(bytes)};
+    const pending=join(path,'.'+name+'.'+randomUUID()+'.pending'),handle=await open(pending,'wx',0o600);
+    try{
+      try{await handle.writeFile(bytes);await handle.sync();}finally{await handle.close();}
+      try{await link(pending,join(path,name));}
+      catch(error){if(error.code!=='EEXIST')throw error;await exact(path,entry);}
+      saved.push(entry);
+    }finally{await rm(pending,{force:true});}
+  }
+  await syncDir(path);return saved;
+}
+async function optionalPacketJson(path,name){
+  fileName(name);let handle;try{handle=await open(join(path,name),constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);}
+  catch(error){if(error.code==='ENOENT')return null;throw error;}
+  try{
+    const before=await handle.stat();need(before.isFile()&&before.size>0&&before.size<=FILE_LIMIT,'XERO_CONTEXT_PACKET_CHANGED','The retained context packet is not a supported regular file.',409);
+    const bytes=await handle.readFile(),after=await handle.stat();
+    need(bytes.length===before.size&&before.size===after.size&&before.mtimeMs===after.mtimeMs&&before.ctimeMs===after.ctimeMs,'XERO_CONTEXT_PACKET_CHANGED','The retained context packet changed while reopening.',409);
+    let value;try{value=JSON.parse(bytes);}catch{need(false,'XERO_CONTEXT_PACKET_CHANGED','The retained context packet is incomplete. Preserve its original bytes.',409);}
+    return {bytes,value};
+  }finally{await handle.close();}
+}
+function contextSource(source,request,organizationBytes,accountsBytes){
+  need(object(source)&&source.tenantId===request.tenantId,'XERO_CONTEXT_SOURCE_CHANGED','The retained context source belongs to another tenant.',409);
+  if(source.kind==='operator-file')need(source.actor===request.actor,'XERO_CONTEXT_SOURCE_CHANGED','The retained context source belongs to another operator.',409);
+  else need(source.kind==='native-api'&&source.organization?.sha256===hash(organizationBytes)&&source.organization?.bytes===organizationBytes.length&&source.accounts?.sha256===hash(accountsBytes)&&source.accounts?.bytes===accountsBytes.length,'XERO_CONTEXT_SOURCE_CHANGED','The retained native observations differ from these exact context bytes.',409);
+  return source;
+}
+async function contextImportIntent(path,request,requestSha256,organizationBytes,accountsBytes,nativeSource){
+  await directory(path,{create:true});const retained=await optionalPacketJson(path,'import-request.json');
+  if(retained){
+    need(object(retained.value),'XERO_CONTEXT_REQUEST_CONFLICT','The retained context import intent changed.',409);
+    const {sha256,...body}=retained.value;
+    need(body.schema==='stellar-forge.xero-context-import.v1'&&sha256===hash(xeroCanonical(body))&&body.requestSha256===requestSha256&&xeroCanonical(body.request)===xeroCanonical(request),'XERO_CONTEXT_REQUEST_CONFLICT','This context UUID retains another original request.',409);
+    contextSource(body.source,request,organizationBytes,accountsBytes);return retained.value;
+  }
+  const previous=await optionalPacketJson(path,'context.json'),source=await optionalPacketJson(path,'source.json');
+  let createdAt=now(),selectedSource=nativeSource??{kind:'operator-file',actor:request.actor,tenantId:request.tenantId};
+  if(previous||source){
+    need(previous&&source,'XERO_CONTEXT_PACKET_INCOMPLETE','An older interrupted context lacks its complete original context/source pair. Preserve that packet and inspect its original bytes before continuing.',409);
+    validateXeroContext(previous.value);createdAt=previous.value.createdAt;
+    const rebuilt=createXeroContext({...request,createdAt,organizationBytes,accountsBytes});
+    need(xeroCanonical(rebuilt)===xeroCanonical(previous.value),'XERO_CONTEXT_REQUEST_CONFLICT','The earlier context packet belongs to different original source bytes or registration.',409);
+    selectedSource=source.value;
+  }
+  createXeroContext({...request,createdAt,organizationBytes,accountsBytes});
+  contextSource(selectedSource,request,organizationBytes,accountsBytes);
+  const body={schema:'stellar-forge.xero-context-import.v1',request,requestSha256,createdAt,source:clone(selectedSource)};
+  const intent={...body,sha256:hash(xeroCanonical(body))};
+  await planPacket(path,{'import-request.json':json(intent)});return intent;
+}
 function tar(files){
   let size=1024;const parts=[];
   for(const [name,value]of Object.entries(files)){fileName(name);const bytes=Buffer.from(value),header=Buffer.alloc(512);size+=512+Math.ceil(bytes.length/512)*512;need(size<=512_000_000,'XERO_ARCHIVE_TOO_LARGE','Download the retained files individually when the complete archive exceeds 512 MB.');
@@ -55,14 +112,15 @@ export class XeroWorkspace{
   async context(id){const row=this.contextRow(id),value=JSON.parse(await exact(this.contextPath(id),row.files.find(file=>file.name==='context.json')));validateXeroContext(value);need(value.id===row.id&&value.sha256===row.contextSha256,'XERO_CONTEXT_CHANGED','The retained context identity changed.',409);return value;}
   async plan(id){const row=this.row(id),value=JSON.parse(await exact(this.path(id),row.files.find(file=>file.name==='plan.json')));validateXeroPlan(value);need(value.id===row.id&&value.sha256===row.planSha256,'XERO_PLAN_CHANGED','The retained journal plan identity changed.',409);return value;}
   async importContext(value,{nativeSource=null}={}){
+    value=clone(value);nativeSource=clone(nativeSource);
     return this.workspace.serial(async()=>{const id=xeroId(value.id??randomUUID()),organizationBytes=base64(value.organizationBase64,'organization'),accountsBytes=base64(value.accountsBase64,'accounts'),request={id,name:xeroText(value.name,'Organization label',160),actor:xeroText(value.actor,'Operator',1000),tenantId:xeroId(value.tenantId),organizationSha256:hash(organizationBytes),accountsSha256:hash(accountsBytes)},requestSha256=hash(xeroCanonical(request));
       const prior=(this.workspace.state.xeroContexts??[]).find(row=>row.id===id);if(prior){need(prior.requestSha256===requestSha256,'XERO_CONTEXT_REQUEST_CONFLICT','This context UUID belongs to another source import.',409);return {record:clone(prior),duplicate:true,state:this.view()};}
       this.workspace.expected(value.revision);need((this.workspace.state.xeroContexts??[]).length<2000,'XERO_CONTEXT_LIMIT','This workspace already retains 2,000 Xero contexts.');
-      const context=createXeroContext({...request,organizationBytes,accountsBytes}),path=this.contextPath(id);await mkdir(path,{mode:0o700});let committed=false;
-      try{const files=await writeFiles(path,{'context.json':json(context),'organization.json':organizationBytes,'accounts.json':accountsBytes,'source.json':json(nativeSource??{kind:'operator-file',actor:request.actor,tenantId:request.tenantId})});
-        const row={id,name:context.name,actor:context.actor,createdAt:context.createdAt,tenantId:context.tenantId,organization:clone(context.organization),baseCurrency:context.organization.baseCurrency,accountCount:context.accounts.length,eligibleAccountCount:context.accounts.filter(row=>row.eligible).length,requestSha256,contextSha256:context.sha256,files};
-        this.workspace.state.xeroContexts??=[];this.workspace.state.xeroContexts.push(row);await syncDir(join(this.root,'contexts'));await this.workspace.commit('xero_context_imported',request.actor,{contextId:id,tenantId:context.tenantId,sourceKind:nativeSource?'native-api':'operator-file'});committed=true;return {record:clone(row),duplicate:false,state:this.view()};
-      }finally{if(!committed)await rm(path,{recursive:true,force:true});}
+      const path=this.contextPath(id),intent=await contextImportIntent(path,request,requestSha256,organizationBytes,accountsBytes,nativeSource);
+      const context=createXeroContext({...request,createdAt:intent.createdAt,organizationBytes,accountsBytes});
+      const files=await planPacket(path,{'import-request.json':json(intent),'context.json':json(context),'organization.json':organizationBytes,'accounts.json':accountsBytes,'source.json':json(intent.source)});
+      const row={id,name:context.name,actor:context.actor,createdAt:context.createdAt,tenantId:context.tenantId,organization:clone(context.organization),baseCurrency:context.organization.baseCurrency,accountCount:context.accounts.length,eligibleAccountCount:context.accounts.filter(row=>row.eligible).length,requestSha256,contextSha256:context.sha256,files};
+      this.workspace.state.xeroContexts??=[];this.workspace.state.xeroContexts.push(row);await syncDir(join(this.root,'contexts'));await this.workspace.commit('xero_context_imported',request.actor,{contextId:id,tenantId:context.tenantId,sourceKind:intent.source.kind});return {record:clone(row),duplicate:false,state:this.view()};
     });
   }
   async captureContext(value){
@@ -99,27 +157,25 @@ export class XeroWorkspace{
     return {request,plan,conflicts,previewSha256:plan.sha256,workspaceRevision:this.workspace.state.revision};
   }
   async create(value){
-    return this.workspace.serial(async()=>{const id=xeroId(value.id),prior=(this.workspace.state.xeroPlans??[]).find(row=>row.id===id);
+    value=clone(value);return this.workspace.serial(async()=>{const id=xeroId(value.id),prior=(this.workspace.state.xeroPlans??[]).find(row=>row.id===id);
       if(prior){need(prior.planSha256===value.previewSha256,'XERO_PLAN_REQUEST_CONFLICT','This plan UUID belongs to another reviewed journal plan.',409);const stored=JSON.parse(await exact(this.path(id),prior.files.find(file=>file.name==='plan-request.json')));need(Object.keys(stored).every(key=>xeroCanonical(stored[key])===xeroCanonical(value[key])),'XERO_PLAN_REQUEST_CONFLICT','The replayed plan request differs from its original.',409);return {record:clone(prior),plan:await this.plan(id),duplicate:true,state:this.view()};}
       this.workspace.expected(value.revision);need((this.workspace.state.xeroPlans??[]).length<2000,'XERO_PLAN_LIMIT','This workspace already retains 2,000 Xero plans.');
       const preview=await this.preview(value);need(preview.previewSha256===value.previewSha256,'XERO_PREVIEW_CHANGED','Review the current exact journal plan before saving it.',409);need(preview.conflicts.length===0,'XERO_SOURCE_ALREADY_RESERVED','A selected source component is already in an active plan for this Xero organization.',409);
-      const original=await this.originals(value.handoffId,preview.request.accountantRevisionId),contextRow=this.contextRow(value.contextId),path=this.path(id);await mkdir(path,{mode:0o700});let committed=false;
-      try{
-        for(const name of ['captures','operations','returns'])await mkdir(join(path,name),{mode:0o700});
-        const files={'plan.json':json(preview.plan),'plan-request.json':json(preview.request),'review.html':renderXeroReview(preview.plan)};
-        for(const filename of ['handoff.json','accountant.csv','original-buyer-source.json','original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
-          const selected=original.record.files.find(file=>file.name===filename);if(selected)files[filename]=(await this.accountant.file(value.handoffId,filename,{revisionId:'initial'})).bytes;
-        }
-        if(original.revision)files['accountant-baseline-return.json']=json(original.revision);
-        for(const file of contextRow.files)files['xero-'+file.name]=await exact(this.contextPath(value.contextId),file);
-        for(const journal of preview.plan.journals)files['manual-journal-'+String(journal.index).padStart(4,'0')+'.json']=json(xeroCreateRequest(preview.plan,journal.index).body);
-        const saved=await writeFiles(path,files),row={id,name:preview.plan.name,actor:preview.plan.actor,createdAt:preview.plan.createdAt,handoffId:preview.plan.source.handoffId,contextId:value.contextId,tenantId:preview.plan.context.tenantId,planSha256:preview.plan.sha256,requestSha256:hash(xeroCanonical(preview.request)),summary:clone(preview.plan.summary),componentIds:preview.plan.entries.map(entry=>entry.id),...(preview.plan.source.buyer?{buyerSource:clone(preview.plan.source.buyer),buyerEconomicIds:[...new Set(preview.plan.entries.map(entry=>entry.economicId))]}:{}),files:saved,cancelledAt:null,cancellationReason:null,journals:preview.plan.journals.map(journal=>({index:journal.index,status:'READY',attempted:false,journalId:null,sourceFiles:[]})),operations:[],captures:[],returnIntents:[],returns:[]};
-        this.workspace.state.xeroPlans??=[];this.workspace.state.xeroPlans.push(row);await syncDir(join(this.root,'plans'));await this.workspace.commit('xero_plan_created',row.actor,{planId:id,handoffId:row.handoffId,planSha256:row.planSha256,components:row.componentIds.length});committed=true;return {record:clone(row),plan:preview.plan,duplicate:false,state:this.view()};
-      }finally{if(!committed)await rm(path,{recursive:true,force:true});}
+      const original=await this.originals(value.handoffId,preview.request.accountantRevisionId),contextRow=this.contextRow(value.contextId),path=this.path(id);await directory(path,{create:true});
+      for(const name of ['captures','operations','returns'])await directory(join(path,name),{create:true});
+      const files={'plan.json':json(preview.plan),'plan-request.json':json(preview.request),'review.html':renderXeroReview(preview.plan)};
+      for(const filename of ['handoff.json','accountant.csv','original-buyer-source.json','original-report.json','original-manifest.json','input-manifest.json','period-close.json','review-notes.json','adjustments.json','adjustments.csv','adjustments.html']){
+        const selected=original.record.files.find(file=>file.name===filename);if(selected)files[filename]=(await this.accountant.file(value.handoffId,filename,{revisionId:'initial'})).bytes;
+      }
+      if(original.revision)files['accountant-baseline-return.json']=json(original.revision);
+      for(const file of contextRow.files)files['xero-'+file.name]=await exact(this.contextPath(value.contextId),file);
+      for(const journal of preview.plan.journals)files['manual-journal-'+String(journal.index).padStart(4,'0')+'.json']=json(xeroCreateRequest(preview.plan,journal.index).body);
+      const saved=await planPacket(path,files),row={id,name:preview.plan.name,actor:preview.plan.actor,createdAt:preview.plan.createdAt,handoffId:preview.plan.source.handoffId,contextId:value.contextId,tenantId:preview.plan.context.tenantId,planSha256:preview.plan.sha256,requestSha256:hash(xeroCanonical(preview.request)),summary:clone(preview.plan.summary),componentIds:preview.plan.entries.map(entry=>entry.id),...(preview.plan.source.buyer?{buyerSource:clone(preview.plan.source.buyer),buyerEconomicIds:[...new Set(preview.plan.entries.map(entry=>entry.economicId))]}:{}),files:saved,cancelledAt:null,cancellationReason:null,journals:preview.plan.journals.map(journal=>({index:journal.index,status:'READY',attempted:false,journalId:null,sourceFiles:[]})),operations:[],captures:[],returnIntents:[],returns:[]};
+      this.workspace.state.xeroPlans??=[];this.workspace.state.xeroPlans.push(row);await syncDir(join(this.root,'plans'));await this.workspace.commit('xero_plan_created',row.actor,{planId:id,handoffId:row.handoffId,planSha256:row.planSha256,components:row.componentIds.length});return {record:clone(row),plan:preview.plan,duplicate:false,state:this.view()};
     });
   }
   async detail(id){return {record:clone(this.row(id)),plan:await this.plan(id),state:this.view()};}
-  async cancel(id,value){return this.workspace.serial(async()=>{const row=this.row(id);if(row.cancelledAt)return {record:clone(row),duplicate:true,state:this.view()};this.workspace.expected(value.revision);need(value.noExternalImport===true,'XERO_EXTERNAL_IMPORT_CONFIRMATION_REQUIRED','Confirm that no downloaded journal from this plan was imported externally.');need(!row.journals.some(journal=>journal.attempted||journal.journalId)&&row.captures.every(capture=>capture.nativeJournalCount===0),'XERO_PLAN_ALREADY_DELIVERED','This plan has native delivery activity; review its original journals.');row.cancelledAt=now();row.cancellationReason=xeroText(value.reason,'Cancellation reason',2000,{multiline:true});const actor=xeroText(value.actor,'Operator',1000);await this.workspace.commit('xero_unused_plan_cancelled',actor,{planId:id,reason:row.cancellationReason});return {record:clone(row),duplicate:false,state:this.view()};});}
+  async cancel(id,value){return this.workspace.serial(async()=>{const row=this.row(id);if(row.cancelledAt)return {record:clone(row),duplicate:true,state:this.view()};this.workspace.expected(value.revision);need(!row.operations.some(operation=>operation.status==='RUNNING'),'XERO_OPERATION_ACTIVE','Wait for the original native operation to finish before cancelling this plan.',409);need(value.noExternalImport===true,'XERO_EXTERNAL_IMPORT_CONFIRMATION_REQUIRED','Confirm that no downloaded journal from this plan was imported externally.');need(!row.journals.some(journal=>journal.attempted||journal.journalId)&&row.captures.every(capture=>capture.nativeJournalCount===0),'XERO_PLAN_ALREADY_DELIVERED','This plan has native delivery activity; review its original journals.');row.cancelledAt=now();row.cancellationReason=xeroText(value.reason,'Cancellation reason',2000,{multiline:true});const actor=xeroText(value.actor,'Operator',1000);await this.workspace.commit('xero_unused_plan_cancelled',actor,{planId:id,reason:row.cancellationReason});return {record:clone(row),duplicate:false,state:this.view()};});}
   async retainCapture(id,{captureId=randomUUID(),actor,responseFiles,source}){
     const row=this.row(id),plan=await this.plan(id),comparison=compareXeroJournals({id:captureId,plan,responseFiles,actor,source}),root='captures/'+captureId,path=join(this.path(id),root);await mkdir(path,{mode:0o700});let committed=false;
     try{const files={};responseFiles.forEach((file,index)=>{files['response-'+String(index).padStart(4,'0')+'.json']=file.bytes;});files['comparison.json']=json(comparison);files['review.html']=renderXeroReview(plan,comparison);
@@ -209,7 +265,7 @@ export class XeroWorkspace{
         controller.signal.throwIfAborted();let responses;
         if(operation.action==='create-drafts'){
           await this.appendOperationFile(id,operationId,'request-'+index+'.json',json(xeroCreateRequest(plan,index)));
-          await this.workspace.serial(async()=>{const journal=this.row(id).journals[index];need((!journal.attempted||journal.status==='REJECTED')&&!journal.journalId,'XERO_DRAFT_ALREADY_ATTEMPTED','Refresh the retained native journal attempt.');journal.attempted=true;journal.status='SENDING';journal.operationId=operationId;await this.workspace.commit('xero_draft_request_reserved',operation.actor,{planId:id,operationId,index});});
+          await this.workspace.serial(async()=>{const row=this.row(id);need(!row.cancelledAt,'XERO_PLAN_CANCELLED','This plan was cancelled before its native journal was reserved.',409);const journal=row.journals[index];need((!journal.attempted||journal.status==='REJECTED')&&!journal.journalId,'XERO_DRAFT_ALREADY_ATTEMPTED','Refresh the retained native journal attempt.');journal.attempted=true;journal.status='SENDING';journal.operationId=operationId;await this.workspace.commit('xero_draft_request_reserved',operation.actor,{planId:id,operationId,index});});
           responses=[await this.client.createDraft(plan,index,{signal:controller.signal})];
         }else responses=await this.client.readJournal(plan,index,{journalId:this.row(id).journals[index].journalId,signal:controller.signal});
         const sourceFiles=[];

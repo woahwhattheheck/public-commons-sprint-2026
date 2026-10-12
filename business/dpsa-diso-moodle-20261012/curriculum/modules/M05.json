@@ -1,0 +1,805 @@
+{
+  "schema": "dpsa.diso.module.v1",
+  "id": "M05",
+  "title": "Information security governance",
+  "rfpSection": "Terms of Reference §8, Module 5",
+  "summary": "Create accountable decisions, coherent policies and useful assurance for departmental information security.",
+  "outcomes": [
+    "Separate governance from operational management.",
+    "Assign decision rights and escalation routes.",
+    "Use policy, exceptions and assurance to improve actual services."
+  ],
+  "realExample": {
+    "title": "Western Cape Provincial Treasury's sustained clean audits",
+    "sourceIds": [
+      "CASE-WC-TREASURY"
+    ],
+    "documentedOutcome": "The Provincial Treasury reported its 12th consecutive clean audit for 2024/25.",
+    "discussion": "Examine the governance habits needed to sustain accountable decisions: ownership, dependable records, review and correction. Ask what additional evidence would be needed for a specific information-security conclusion.",
+    "scope": "A financial/performance/compliance audit outcome, not a universal cybersecurity certification."
+  },
+  "units": [
+    {
+      "id": "M05-U01",
+      "title": "Decisions, accountability and governance forums",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Distinguish oversight from operation.",
+        "Assign one clear accountable decision owner.",
+        "Define escalation that preserves service responsibility."
+      ],
+      "chapters": [
+        {
+          "id": "M05-U01-C01",
+          "title": "Governance asks whether the right work is done",
+          "bodyHtml": "<p>Governance evaluates needs and options, sets direction and monitors results. Management organises and performs the work within that direction. Executives should decide the service priorities, acceptable risk and investment direction; operational teams should be able to implement within an agreed mandate without sending every routine action to a committee.</p>\n<p>Information security belongs inside the department's governance arrangements because its consequences affect services, resources and public trust. The DISO should translate technical findings into the decisions those arrangements need to make.</p>\n<p>A governance forum needs a mandate, membership, decision authority, reporting route and a record of decisions. A monthly meeting without assigned authority can discuss a problem repeatedly while nobody owns its resolution. Define what the forum decides and what it must recommend or escalate.</p>",
+          "sourceIds": [
+            "CGICT-2022"
+          ]
+        },
+        {
+          "id": "M05-U01-C02",
+          "title": "Make responsibilities unambiguous",
+          "bodyHtml": "<p>A responsibility matrix is useful when it clarifies an actual decision. Identify who performs the work, who is accountable for its outcome, who must be consulted and who needs to be informed. Avoid assigning a whole group as vaguely accountable when a specific delegated authority must make the decision.</p>\n<p>For an access exception, the service owner explains the business need, ICT assesses and implements the technical arrangement, the DISO advises on risk, and the authorised authority approves or rejects within its mandate. HR, privacy, records or procurement may need consultation depending on the facts.</p>\n<p>Check that the named owner has authority, capacity and a route to resources. An action allocated to someone unable to change the process is not effectively owned. If responsibility crosses organisations, define the interface and escalation route instead of hoping informal cooperation will cover it.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M05-U01-C03",
+          "title": "Escalate with a decision, not a surprise",
+          "bodyHtml": "<p>Escalation should be triggered by material consequences, overdue actions, breached limits or a decision beyond the current owner's mandate. The brief should state what changed, the service effect, actions already taken, options and the requested decision.</p>\n<p>Preserve the service owner's involvement. Escalation does not mean that the DISO takes over every business responsibility or that a technical team may abandon a service. It brings the required authority and resources to the problem.</p>\n<p>After the decision, return clear actions to the people who must implement them. Record conditions, funding, dates and evidence. Report whether the decision achieved the intended result. This closes the governance loop and gives future meetings something more useful than a repeated status narrative.</p>",
+          "sourceIds": []
+        }
+      ],
+      "application": {
+        "title": "Assign governance for a cross-department data service",
+        "instructionsHtml": "<p>A fictional provincial department shares a licensing dataset with three agencies. Nobody owns decisions about a new public API. ICT can build it, Legal has concerns, and the service manager wants it live next month.</p>\n<p>Spend about 60 minutes preparing a responsibility matrix and governance decision brief for release, access, funding and incident response.</p>",
+        "deliverable": "A four-decision matrix and one-page escalation brief.",
+        "suggestedAnswerHtml": "<p>Name the business purpose and the authority that can approve the release. Separate implementation from accountable approval; consult privacy, legal and records roles where applicable.</p>\n<p>Define the agency interface, incident contacts and change responsibilities. Do not treat willingness to build as authority to disclose.</p>\n<p>Ask the forum for a specific decision with conditions and evidence, then return implementation actions to named owners.</p>",
+        "rubric": [
+          {
+            "criterion": "Clear decision rights",
+            "points": 4
+          },
+          {
+            "criterion": "Cross-agency consultation and interfaces",
+            "points": 3
+          },
+          {
+            "criterion": "Actionable escalation and follow-through",
+            "points": 3
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which recurring committee discussion has no clear decision owner?",
+        "guidanceHtml": "<p>Rewrite it as a decision with authority, options and an implementation owner.</p>"
+      },
+      "quiz": {
+        "id": "M05-U01-QUIZ",
+        "title": "Decisions, accountability and governance forums — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M05-U01-Q01",
+            "type": "multichoice",
+            "name": "M05-U01-Q01",
+            "promptHtml": "<p>Which activity most directly represents governance?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Choosing service priorities and monitoring whether investment delivers them",
+                "fraction": 100,
+                "feedbackHtml": "Governance evaluates, directs and monitors."
+              },
+              {
+                "textHtml": "Resetting a user's password",
+                "fraction": 0,
+                "feedbackHtml": "That is an operational task."
+              },
+              {
+                "textHtml": "Installing an approved patch",
+                "fraction": 0,
+                "feedbackHtml": "That is implementation."
+              },
+              {
+                "textHtml": "Exporting a routine log file",
+                "fraction": 0,
+                "feedbackHtml": "That is an operating action."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Governance evaluates, directs and monitors.</p>",
+            "sourceIds": [
+              "CGICT-2022"
+            ]
+          },
+          {
+            "id": "M05-U01-Q02",
+            "type": "multichoice",
+            "name": "M05-U01-Q02",
+            "promptHtml": "<p>What is the central weakness of a committee that repeatedly discusses risk but has no mandate?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "It cannot reliably make or route the needed decisions",
+                "fraction": 100,
+                "feedbackHtml": "Define authority and escalation, not just meeting frequency."
+              },
+              {
+                "textHtml": "It has not increased its meeting frequency enough",
+                "fraction": 0,
+                "feedbackHtml": "More meetings do not supply missing decision authority."
+              },
+              {
+                "textHtml": "It has not adopted the supplier's reporting template",
+                "fraction": 0,
+                "feedbackHtml": "A template does not establish a functioning mandate."
+              },
+              {
+                "textHtml": "It has not taken over every operational task from the service teams",
+                "fraction": 0,
+                "feedbackHtml": "Governance needs an operating decision route, not ownership of every technical action."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Define authority and escalation, not just meeting frequency.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q03",
+            "type": "multichoice",
+            "name": "M05-U01-Q03",
+            "promptHtml": "<p>An action owner cannot change the process or obtain resources. What should be corrected?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Assign an owner with the necessary authority and support",
+                "fraction": 100,
+                "feedbackHtml": "Responsibility must be workable."
+              },
+              {
+                "textHtml": "Keep the name solely to fill the table",
+                "fraction": 0,
+                "feedbackHtml": "That leaves ownership ineffective."
+              },
+              {
+                "textHtml": "Remove the action from all reports",
+                "fraction": 0,
+                "feedbackHtml": "The problem remains."
+              },
+              {
+                "textHtml": "Blame the owner without addressing authority",
+                "fraction": 0,
+                "feedbackHtml": "That does not make delivery possible."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Responsibility must be workable.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q04",
+            "type": "multichoice",
+            "name": "M05-U01-Q04",
+            "promptHtml": "<p>Who explains why a public API is needed and its service consequences?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The responsible business/service owner",
+                "fraction": 100,
+                "feedbackHtml": "Technical delivery must be connected to a business purpose."
+              },
+              {
+                "textHtml": "The software vendor solely because it implements the interface",
+                "fraction": 0,
+                "feedbackHtml": "The vendor can advise technically but does not define the department's public purpose."
+              },
+              {
+                "textHtml": "The information-security team alone because APIs create exposure",
+                "fraction": 0,
+                "feedbackHtml": "Security advice is distinct from business responsibility for why the service exists."
+              },
+              {
+                "textHtml": "The procurement team alone because the interface appears in a contract",
+                "fraction": 0,
+                "feedbackHtml": "Procurement supports the arrangement; the service owner explains its business purpose and consequences."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Technical delivery must be connected to a business purpose.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q05",
+            "type": "multichoice",
+            "name": "M05-U01-Q05",
+            "promptHtml": "<p>What makes escalation useful?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "A clear consequence, options and requested decision",
+                "fraction": 100,
+                "feedbackHtml": "Escalate the decision that exceeds the current mandate."
+              },
+              {
+                "textHtml": "A surprising allegation without evidence",
+                "fraction": 0,
+                "feedbackHtml": "That obstructs a reasoned response."
+              },
+              {
+                "textHtml": "A long technical dump with no decision",
+                "fraction": 0,
+                "feedbackHtml": "The authority cannot see what is needed."
+              },
+              {
+                "textHtml": "A demand that every routine change reach EXCO",
+                "fraction": 0,
+                "feedbackHtml": "That overloads governance."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Escalate the decision that exceeds the current mandate.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q06",
+            "type": "multichoice",
+            "name": "M05-U01-Q06",
+            "promptHtml": "<p>What does the Treasury clean-audit example justify?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Examining documented governance outcomes within the audit's scope",
+                "fraction": 100,
+                "feedbackHtml": "Use the outcome without expanding its scope."
+              },
+              {
+                "textHtml": "Assuming every security control is perfect",
+                "fraction": 0,
+                "feedbackHtml": "The audit outcome does not establish that universal claim."
+              },
+              {
+                "textHtml": "Ending all future assurance",
+                "fraction": 0,
+                "feedbackHtml": "Sustained outcomes still require work."
+              },
+              {
+                "textHtml": "Copying its structure without local context",
+                "fraction": 0,
+                "feedbackHtml": "Departments differ."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Use the outcome without expanding its scope.</p>",
+            "sourceIds": [
+              "CASE-WC-TREASURY"
+            ]
+          },
+          {
+            "id": "M05-U01-Q07",
+            "type": "multichoice",
+            "name": "M05-U01-Q07",
+            "promptHtml": "<p>Which elements belong in a governance forum's terms? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Decision authority and escalation route",
+                "fraction": 50,
+                "feedbackHtml": "These explain what it can do."
+              },
+              {
+                "textHtml": "Named membership and decision records",
+                "fraction": 50,
+                "feedbackHtml": "These support accountability."
+              },
+              {
+                "textHtml": "An instruction to replace every operational team",
+                "fraction": -50,
+                "feedbackHtml": "Oversight and operation differ."
+              },
+              {
+                "textHtml": "A requirement that no dissent be recorded",
+                "fraction": -50,
+                "feedbackHtml": "Relevant disagreement supports a transparent decision."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A useful forum has authority and a traceable process.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q08",
+            "type": "multichoice",
+            "name": "M05-U01-Q08",
+            "promptHtml": "<p>Which responsibilities need clarification in a shared data service? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Who approves changes in information use",
+                "fraction": 50,
+                "feedbackHtml": "This is a business and legal decision."
+              },
+              {
+                "textHtml": "Who coordinates incidents across the agencies",
+                "fraction": 50,
+                "feedbackHtml": "Cross-boundary response needs an interface."
+              },
+              {
+                "textHtml": "An assumption that all information-use authority transfers with the hosting contract",
+                "fraction": -50,
+                "feedbackHtml": "Hosting responsibilities do not automatically transfer departmental decision authority."
+              },
+              {
+                "textHtml": "The supplier's technical contact treated as the sole approver of every agency's data use",
+                "fraction": -50,
+                "feedbackHtml": "Technical coordination is not a substitute for each agency's actual authority."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Shared delivery requires explicit interfaces.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q09",
+            "type": "truefalse",
+            "name": "M05-U01-Q09",
+            "promptHtml": "<p>Escalating a risk automatically transfers all service responsibility to the DISO.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. Escalation brings the right authority to a decision while preserving appropriate ownership.",
+            "falseFeedbackHtml": "Escalation brings the right authority to a decision while preserving appropriate ownership.",
+            "generalFeedbackHtml": "<p>Escalation brings the right authority to a decision while preserving appropriate ownership.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q10",
+            "type": "truefalse",
+            "name": "M05-U01-Q10",
+            "promptHtml": "<p>Governance should monitor whether its decisions produced the intended service result.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "The loop includes outcomes, not only approvals.",
+            "falseFeedbackHtml": "This is incorrect. The loop includes outcomes, not only approvals.",
+            "generalFeedbackHtml": "<p>The loop includes outcomes, not only approvals.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q11",
+            "type": "matching",
+            "name": "M05-U01-Q11",
+            "promptHtml": "<p>Match the contribution to its governance purpose.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Options and recommendation",
+                "answer": "Support a decision"
+              },
+              {
+                "promptHtml": "Delegated approval",
+                "answer": "Exercise authority"
+              },
+              {
+                "promptHtml": "Named delivery action",
+                "answer": "Implement the decision"
+              },
+              {
+                "promptHtml": "Outcome review",
+                "answer": "Monitor effectiveness"
+              }
+            ],
+            "generalFeedbackHtml": "<p>These stages make the decision loop complete.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U01-Q12",
+            "type": "gapselect",
+            "name": "M05-U01-Q12",
+            "promptHtml": "<p>A responsibility matrix should clarify decision [[1]] and implementation [[2]].</p>",
+            "choices": [
+              {
+                "text": "authority",
+                "group": 1
+              },
+              {
+                "text": "ownership",
+                "group": 1
+              },
+              {
+                "text": "colour",
+                "group": 1
+              },
+              {
+                "text": "branding",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>A matrix is useful when it makes real work accountable.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "M05-U02",
+      "title": "Policy, exceptions and independent assurance",
+      "estimatedMinutes": 150,
+      "objectives": [
+        "Write policy that can be operated.",
+        "Manage exceptions without hiding residual risk.",
+        "Use assurance findings to improve controls."
+      ],
+      "chapters": [
+        {
+          "id": "M05-U02-C01",
+          "title": "Policy sets an assessable expectation",
+          "bodyHtml": "<p>A useful policy states its purpose, scope, authority, required behaviour, roles, exceptions, review triggers and consequences through the applicable process. Supporting procedures explain how people comply. Do not make staff search a hundred-page document for the one action needed when a device is lost.</p>\n<p>Use language that can be assessed. 'Access requires an authorised business purpose and named approval' is clearer than 'staff must be careful'. Keep the procedure aligned with actual systems and service conditions.</p>\n<p>Maintain a version and change history. Tell affected staff what changed and how it affects their work. A revised policy that nobody can find or operate is a weak control, however polished its approval page.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M05-U02-C02",
+          "title": "An exception is a controlled decision",
+          "bodyHtml": "<p>An exception record should identify the exact requirement, service need, scope, risk, compensating measures, authorised approver, expiry and permanent resolution. It should be possible to tell when the exception no longer applies.</p>\n<p>An exception does not change legislation or give a manager authority they do not possess. Where the requested action conflicts with a mandatory legal requirement, obtain the appropriate legal and governance decision rather than using a local form as a waiver.</p>\n<p>Review exceptions as a portfolio. Repeated requests for the same workaround may indicate that the normal process is unusable or under-resourced. Fixing the shared cause can reduce both risk and administrative effort.</p>",
+          "sourceIds": []
+        },
+        {
+          "id": "M05-U02-C03",
+          "title": "Assurance asks how we know",
+          "bodyHtml": "<p>Management monitoring, specialist review and independent audit can provide different perspectives. Define the question and scope before commissioning assurance. A sample of privileged accounts can support a conclusion about that sample and process; it does not prove every information asset is protected.</p>\n<p>Keep findings connected to their evidence, risk and owner. Agree what satisfactory correction would look like, including the operating outcome. An owner may disagree with an interpretation; record the reason and resolve it through the appropriate route rather than silently changing the finding.</p>\n<p>Report themes and material exceptions to governance. Executives need to know where confidence is strong, where coverage is limited and what decision will improve the service. Use the result to change the process, not merely to produce another stack of reports.</p>",
+          "sourceIds": []
+        }
+      ],
+      "application": {
+        "title": "Repair a recurring exception process",
+        "instructionsHtml": "<p>A fictional department has forty 'temporary' supplier-access exceptions. Twenty have expired, ten have no approver, and several exist because the normal onboarding process cannot complete urgent work.</p>\n<p>Spend about 60 minutes proposing immediate handling, a redesigned exception record and a permanent improvement.</p>",
+        "deliverable": "An exception decision template and a three-stage correction plan.",
+        "suggestedAnswerHtml": "<p>Confirm current authorised need and exposure; do not assume every account should remain open or that all can be removed without service assessment. Route material decisions to the proper authority.</p>\n<p>Require scope, compensating measures, approver, expiry and resolution. Review missing approvals and expired exceptions explicitly.</p>\n<p>Repair onboarding capacity and process ownership, then measure whether repeat exceptions fall while legitimate access remains timely.</p>",
+        "rubric": [
+          {
+            "criterion": "Current exposure and service handling",
+            "points": 3
+          },
+          {
+            "criterion": "Complete accountable exception design",
+            "points": 4
+          },
+          {
+            "criterion": "Permanent cause correction and measurement",
+            "points": 3
+          }
+        ]
+      },
+      "reflection": {
+        "prompt": "Which recurring exception reveals a problem in your normal process?",
+        "guidanceHtml": "<p>Describe the cause and one outcome measure that would show a real improvement.</p>"
+      },
+      "quiz": {
+        "id": "M05-U02-QUIZ",
+        "title": "Policy, exceptions and independent assurance — knowledge check",
+        "passPercent": 75,
+        "attempts": 0,
+        "questions": [
+          {
+            "id": "M05-U02-Q01",
+            "type": "multichoice",
+            "name": "M05-U02-Q01",
+            "promptHtml": "<p>Which policy statement is most assessable?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Access requires a named approval for an authorised business purpose",
+                "fraction": 100,
+                "feedbackHtml": "Policy should state observable expectations."
+              },
+              {
+                "textHtml": "Everyone should always be excellent",
+                "fraction": 0,
+                "feedbackHtml": "The behaviour is undefined."
+              },
+              {
+                "textHtml": "Security is very important",
+                "fraction": 0,
+                "feedbackHtml": "That does not specify an action."
+              },
+              {
+                "textHtml": "Use the best system",
+                "fraction": 0,
+                "feedbackHtml": "The requirement is ambiguous."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Policy should state observable expectations.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q02",
+            "type": "multichoice",
+            "name": "M05-U02-Q02",
+            "promptHtml": "<p>What distinguishes a controlled exception from an indefinite workaround?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Defined scope, approver, compensating measures and expiry",
+                "fraction": 100,
+                "feedbackHtml": "The exception must be bounded and authorised."
+              },
+              {
+                "textHtml": "A label saying temporary with no date",
+                "fraction": 0,
+                "feedbackHtml": "That does not create an end condition."
+              },
+              {
+                "textHtml": "A hidden spreadsheet no owner reviews",
+                "fraction": 0,
+                "feedbackHtml": "It does not support accountable control."
+              },
+              {
+                "textHtml": "An assumption that all rules are waived",
+                "fraction": 0,
+                "feedbackHtml": "An exception has a defined scope."
+              }
+            ],
+            "generalFeedbackHtml": "<p>The exception must be bounded and authorised.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q03",
+            "type": "multichoice",
+            "name": "M05-U02-Q03",
+            "promptHtml": "<p>Can a local exception form waive an Act's mandatory requirement?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "No; it cannot create authority to override legislation",
+                "fraction": 100,
+                "feedbackHtml": "Resolve the legal issue through the appropriate authority."
+              },
+              {
+                "textHtml": "Yes, if the form is signed by anyone",
+                "fraction": 0,
+                "feedbackHtml": "A signature cannot create missing legal authority."
+              },
+              {
+                "textHtml": "Yes, if the deadline is close",
+                "fraction": 0,
+                "feedbackHtml": "Urgency does not automatically waive law."
+              },
+              {
+                "textHtml": "Yes, if the supplier prefers it",
+                "fraction": 0,
+                "feedbackHtml": "Commercial preference is not legal authority."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Resolve the legal issue through the appropriate authority.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q04",
+            "type": "multichoice",
+            "name": "M05-U02-Q04",
+            "promptHtml": "<p>Many identical access exceptions recur. What should be investigated?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The normal process's usability, capacity and ownership",
+                "fraction": 100,
+                "feedbackHtml": "Recurring exceptions can reveal a structural problem."
+              },
+              {
+                "textHtml": "Whether renewals can be approved in larger batches without examining the repeated cause",
+                "fraction": 0,
+                "feedbackHtml": "Batching may reduce paperwork while leaving the underlying problem unchanged."
+              },
+              {
+                "textHtml": "Whether the exception deadline can be removed so the cases stop recurring",
+                "fraction": 0,
+                "feedbackHtml": "Removing review conditions conceals rather than repairs the issue."
+              },
+              {
+                "textHtml": "Whether the requirement can be considered satisfied solely because every exception has a form",
+                "fraction": 0,
+                "feedbackHtml": "A recorded exception is not evidence that the normal control works."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Recurring exceptions can reveal a structural problem.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q05",
+            "type": "multichoice",
+            "name": "M05-U02-Q05",
+            "promptHtml": "<p>What is the proper scope of a sampled account review?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "The actual sample and process examined, with limits explained",
+                "fraction": 100,
+                "feedbackHtml": "Assurance conclusions must match evidence."
+              },
+              {
+                "textHtml": "Every control in the department",
+                "fraction": 0,
+                "feedbackHtml": "That exceeds the observation."
+              },
+              {
+                "textHtml": "All future accounts forever",
+                "fraction": 0,
+                "feedbackHtml": "Future operation still needs monitoring."
+              },
+              {
+                "textHtml": "Only whether the report looks professional",
+                "fraction": 0,
+                "feedbackHtml": "Appearance is not assurance."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Assurance conclusions must match evidence.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q06",
+            "type": "multichoice",
+            "name": "M05-U02-Q06",
+            "promptHtml": "<p>An owner disputes an audit interpretation. What is the appropriate response?</p>",
+            "single": true,
+            "answers": [
+              {
+                "textHtml": "Record the reasons and resolve them through the review route",
+                "fraction": 100,
+                "feedbackHtml": "A reasoned resolution preserves the finding's history."
+              },
+              {
+                "textHtml": "Erase the finding without a record",
+                "fraction": 0,
+                "feedbackHtml": "That loses accountability."
+              },
+              {
+                "textHtml": "Ignore all evidence from the owner",
+                "fraction": 0,
+                "feedbackHtml": "Relevant evidence matters."
+              },
+              {
+                "textHtml": "Treat disagreement itself as proof of misconduct",
+                "fraction": 0,
+                "feedbackHtml": "That inference is unsupported."
+              }
+            ],
+            "generalFeedbackHtml": "<p>A reasoned resolution preserves the finding's history.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q07",
+            "type": "multichoice",
+            "name": "M05-U02-Q07",
+            "promptHtml": "<p>Which fields belong in a useful exception record? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "The exact requirement and affected service",
+                "fraction": 50,
+                "feedbackHtml": "This defines scope."
+              },
+              {
+                "textHtml": "Expiry and permanent resolution owner",
+                "fraction": 50,
+                "feedbackHtml": "This connects temporary control to closure."
+              },
+              {
+                "textHtml": "A blanket waiver of all future requirements",
+                "fraction": -50,
+                "feedbackHtml": "That is unbounded."
+              },
+              {
+                "textHtml": "An anonymous approval",
+                "fraction": -50,
+                "feedbackHtml": "Authority cannot be assessed."
+              }
+            ],
+            "generalFeedbackHtml": "<p>An exception is a specific accountable decision.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q08",
+            "type": "multichoice",
+            "name": "M05-U02-Q08",
+            "promptHtml": "<p>Which assurance practices support improvement? Select all correct answers.</p>",
+            "single": false,
+            "answers": [
+              {
+                "textHtml": "Agree the operating evidence needed for correction",
+                "fraction": 50,
+                "feedbackHtml": "This makes closure meaningful."
+              },
+              {
+                "textHtml": "Report recurring themes and material coverage limits",
+                "fraction": 50,
+                "feedbackHtml": "This supports governance decisions."
+              },
+              {
+                "textHtml": "Close findings when a title is changed",
+                "fraction": -50,
+                "feedbackHtml": "That does not repair the control."
+              },
+              {
+                "textHtml": "Commission duplicate reviews without a question",
+                "fraction": -50,
+                "feedbackHtml": "That can waste resources."
+              }
+            ],
+            "generalFeedbackHtml": "<p>Assurance should answer a question and improve the service.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q09",
+            "type": "truefalse",
+            "name": "M05-U02-Q09",
+            "promptHtml": "<p>A policy change should explain its effect to the staff who must operate it.</p>",
+            "correct": true,
+            "trueFeedbackHtml": "Approval alone does not make a changed process usable.",
+            "falseFeedbackHtml": "This is incorrect. Approval alone does not make a changed process usable.",
+            "generalFeedbackHtml": "<p>Approval alone does not make a changed process usable.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q10",
+            "type": "truefalse",
+            "name": "M05-U02-Q10",
+            "promptHtml": "<p>An expired exception should be silently extended whenever renewal is inconvenient.</p>",
+            "correct": false,
+            "trueFeedbackHtml": "This is incorrect. Its ongoing need and risk require an explicit authorised decision.",
+            "falseFeedbackHtml": "Its ongoing need and risk require an explicit authorised decision.",
+            "generalFeedbackHtml": "<p>Its ongoing need and risk require an explicit authorised decision.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q11",
+            "type": "matching",
+            "name": "M05-U02-Q11",
+            "promptHtml": "<p>Match the artefact to its function.</p>",
+            "pairs": [
+              {
+                "promptHtml": "Policy",
+                "answer": "Required expectation"
+              },
+              {
+                "promptHtml": "Procedure",
+                "answer": "How staff perform it"
+              },
+              {
+                "promptHtml": "Exception decision",
+                "answer": "Authorised departure within scope"
+              },
+              {
+                "promptHtml": "Assurance finding",
+                "answer": "Evidence-based assessment and improvement need"
+              }
+            ],
+            "generalFeedbackHtml": "<p>These artefacts serve different parts of governance.</p>",
+            "sourceIds": []
+          },
+          {
+            "id": "M05-U02-Q12",
+            "type": "ddwtos",
+            "name": "M05-U02-Q12",
+            "promptHtml": "<p>An assurance conclusion should match its [[1]] and stated [[2]].</p>",
+            "choices": [
+              {
+                "text": "evidence",
+                "group": 1
+              },
+              {
+                "text": "scope",
+                "group": 1
+              },
+              {
+                "text": "slogan",
+                "group": 1
+              },
+              {
+                "text": "colour",
+                "group": 1
+              }
+            ],
+            "correctChoices": [
+              1,
+              2
+            ],
+            "generalFeedbackHtml": "<p>Do not make the conclusion broader than the observation.</p>",
+            "sourceIds": []
+          }
+        ]
+      }
+    }
+  ]
+}

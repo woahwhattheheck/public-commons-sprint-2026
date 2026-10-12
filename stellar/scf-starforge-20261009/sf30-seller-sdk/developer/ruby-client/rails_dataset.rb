@@ -6,7 +6,6 @@ require "set"
 require "date"
 require "time"
 require "csv"
-require "uri"
 require_relative "dataset_delivery"
 
 module Starforge
@@ -366,24 +365,11 @@ module Starforge
       @mapping = Mapping.new(mapping, @model, @delivery.fields, protected_columns)
       @scope_sha = self.class.fingerprint({"model"=>@model.name, "sql"=>@scope.to_sql,
         "creation_values"=>@scope_values})
-      original = @delivery.native_manifest.fetch("dataset")
-      request = @delivery.source.fetch("request")
-      begin
-        endpoint = URI.parse(request.fetch("url"))
-      rescue URI::InvalidURIError
-        raise ImportError.new("DATASET_ORIGINAL_ENDPOINT")
-      end
-      operation_id = @delivery.source.fetch("operationId")
-      self.class.need(endpoint.is_a?(URI::HTTP) && endpoint.host && !endpoint.userinfo &&
-        request["method"] == "GET" && operation_id.is_a?(String) && !operation_id.empty?,
-        "DATASET_ORIGINAL_ENDPOINT")
-      endpoint.query = nil
-      endpoint.fragment = nil
-      @membership = {"source_sha256"=>@delivery.source_sha256,
-        "operation_id"=>operation_id, "method"=>request["method"], "endpoint"=>endpoint.to_s,
-        "query_sha256"=>original.fetch("originalQueryHash"), "projected_fields"=>@delivery.fields}
-      self.class.need(@membership["query_sha256"].is_a?(String) &&
-        /\A[a-f0-9]{64}\z/.match?(@membership["query_sha256"]), "DATASET_QUERY_MEMBERSHIP")
+      @membership = self.class.copy_json(@delivery.membership)
+      self.class.need(@membership.is_a?(Hash) &&
+        @membership["query_sha256"].is_a?(String) &&
+        /\A[a-f0-9]{64}\z/.match?(@membership["query_sha256"]) &&
+        @membership["projected_fields"] == @delivery.fields, "DATASET_QUERY_MEMBERSHIP")
       DatasetDelivery.freeze_value(@membership)
       @membership_sha = self.class.fingerprint(@membership)
       @schema_sha = self.class.fingerprint(@mapping.target_columns.sort.map do |name|

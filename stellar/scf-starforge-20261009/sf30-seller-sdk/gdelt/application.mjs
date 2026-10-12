@@ -7,7 +7,8 @@ import { loadDatasetConfig } from '../dataset-handler.mjs';
 import { Buyer } from '../../sf88-operator-buyer-cli/node/index.mjs';
 import { need, plain, clone, jsonBytes, operationId, projectionPolicy, tableFields, columnMeaning,
   ATTRIBUTION, NOTICE, LIMITS, digest } from './model.mjs';
-import { discoverGdelt, inspectGdeltCapture, optionalJson, durableDirectory, exactFile } from './source.mjs';
+import { GKG_NOTICE, isGkgTable, gkgRequiredFields } from './gkg.mjs';
+import { discoverGdelt, inspectGdeltCapture, validateManifestRecord, optionalJson, durableDirectory, exactFile } from './source.mjs';
 import { readGdeltWorkspaceLaunch, GDELT_WORKSPACE_STARTUP } from './launch.mjs';
 import { readGdeltProject, gdeltProjectView, getGdeltCapture, acquireGdeltCapture, importGdeltCapture,
   selectGdeltCapture, gdeltRows, reviewGdeltCapture, compareGdeltCaptures, publishGdeltReview,
@@ -18,7 +19,7 @@ import { prepareGdeltDataset, createGdeltDataset, actGdeltDataset, receiveGdeltD
   reopenGdeltSources, exportGdeltDatasetDelivery } from './customer.mjs';
 
 export const ACTION_FIELDS=Object.freeze({
-  discover:['history'], capture:['id','expectedRevision','batch','manifest','discoveryId'],
+  discover:['history','format'], capture:['id','expectedRevision','batch','manifest','discoveryId','format'],
   import:['id','expectedRevision','capture'], select:['id','expectedRevision','captureId'],
   review:['id','expectedRevision','captureIds','policy','note','name'],
   publish:['id','expectedRevision','reviewId','origin','path','payment'],
@@ -36,7 +37,7 @@ export const ACTION_FIELDS=Object.freeze({
   'project-receive':['bundle']
 });
 export const QUERY_FIELDS=Object.freeze({
-  launch:[],state:[],discovery:['id'],fields:['table'],rows:['captureIds','policy','offset','limit'],
+  launch:[],state:[],discovery:['id','format'],fields:['table'],rows:['captureIds','policy','offset','limit'],
   'source-summary':['captureId'],compare:['before','after'],publication:['publicationId'],
   preview:['publicationId','kind','query']
 });
@@ -91,13 +92,20 @@ export async function openGdeltApplication(options={}) {
       case 'discovery':{
         need(/^[a-f0-9]{64}$/.test(input.id??''),'Select the retained discovery ID.');
         const found=await readPrivateJson(join(directory,'discoveries',input.id+'.json'),2*1024*1024);
-        need(digest(found.manifest)===input.id,'The retained source manifest changed.');return found;
+        const identity=found.format==='gkg'?{manifest:found.manifest,format:'gkg'}:found.manifest;
+        need(digest(identity)===input.id,'The retained source manifest changed.');
+        return input.format===undefined?found:{manifest:found.manifest,...validateManifestRecord(found.manifest,undefined,input.format)};
       }
-      case 'fields':return{table:input.table??'events',fields:tableFields(input.table??'events').map(name=>({name,...columnMeaning(name)})),notice:NOTICE,attribution:ATTRIBUTION};
+      case 'fields':{
+        const table=input.table??'events',defaultPolicy=projectionPolicy({table});
+        return{table,fields:tableFields(table).map(name=>columnMeaning(name,{table})),defaultPolicy,
+          requiredFields:isGkgTable(table)?gkgRequiredFields(table):['source_batch','source_row','GlobalEventID'],
+          notice:isGkgTable(table)?GKG_NOTICE:NOTICE,attribution:ATTRIBUTION};
+      }
       case 'rows':return gdeltRows({...input,directory});
       case 'source-summary':{
         const capture=await getGdeltCapture(directory,input.captureId),model=inspectGdeltCapture(capture);
-        const{events,mentions,...summary}=model;return summary;
+        const{events,mentions,articles,...summary}=model;return summary;
       }
       case 'compare':return compareGdeltCaptures({directory,before:input.before,after:input.after});
       case 'publication':{
@@ -122,15 +130,15 @@ export async function openGdeltApplication(options={}) {
     const common={directory,id:request.id,expectedRevision:request.expectedRevision};
     switch(request.action){
       case'discover':{
-        const found=await discoverGdelt({history:request.history??false,signal,fetchImpl:options.fetchImpl});
-        const discoveryId=digest(found.manifest),location=await durableDirectory(join(directory,'discoveries'));
+        const found=await discoverGdelt({history:request.history??false,format:request.format??'events-mentions',signal,fetchImpl:options.fetchImpl});
+        const discoveryId=digest(found.format==='gkg'?{manifest:found.manifest,format:'gkg'}:found.manifest),location=await durableDirectory(join(directory,'discoveries'));
         await exactFile(location,discoveryId+'.json',jsonBytes(found));return {...found,discoveryId};
       }
       case'capture':{
         need(!(request.manifest&&request.discoveryId),'Select one original source manifest.');
-        let manifest=request.manifest;
-        if(request.discoveryId)manifest=(await query('discovery',{id:request.discoveryId})).manifest;
-        return acquireGdeltCapture({...common,batch:request.batch,manifest,signal,
+        let manifest=request.manifest,format=request.format;
+        if(request.discoveryId){const found=await query('discovery',{id:request.discoveryId});manifest=found.manifest;format??=found.format;}
+        return acquireGdeltCapture({...common,batch:request.batch,manifest,format:format??'events-mentions',signal,
           fetchImpl:options.fetchImpl,python:options.python,onProgress:options.onProgress});
       }
       case'import':return importGdeltCapture({...common,capture:request.capture,signal,python:options.python});
@@ -234,9 +242,11 @@ export async function openGdeltApplication(options={}) {
     close(){return closingPromise??=(async()=>{
       closing=true;lifetime.abort();
       await Promise.allSettled([...tasks]);
-      await Promise.all([...receivedWindows.values()].map(browser=>browser.close()));receivedWindows.clear();
-      if(merchant)await merchant.close();
-      merchant=null;runningPublication=null;
+      const closingResources=[...receivedWindows.values(),...(merchant?[merchant]:[])];
+      const outcomes=await Promise.allSettled(closingResources.map(resource=>Promise.resolve().then(()=>resource.close())));
+      receivedWindows.clear();merchant=null;runningPublication=null;
+      const failed=outcomes.find(outcome=>outcome.status==='rejected');
+      if(failed)throw failed.reason;
     })();}
   };
 }

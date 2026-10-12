@@ -98,6 +98,9 @@ async function bundleContent(path,expected){
     return {...summary,contentSha256:logical.digest('hex')};
   }finally{await file.close();}
 }
+// Share the original complete portable-file comparison with following receiving operations.
+export const xchangeReceivingIO=Object.freeze({bundleContent});
+
 function nativeIdentity(journey,artifacts){
   return {operationId:journey.operationId,directory:journey.directory,sourceFile:journey.sourceFile,
     workspace:journey.workspace,catalog:journey.catalog,supplier:journey.supplier,customer:journey.customer,

@@ -908,8 +908,8 @@ def export_workspace(workspace, output):
                         raise Problem("DOWNLOAD_CHANGED", "Retained transcript export changed.", item["path"])
                     add_file("workspace/" + item["path"], path)
                 application = Path(__file__).resolve().parent
-                for name in ("aviary.py", "aviary_client.py", "server.py", "index.html", "app.js", "cli.mjs", "README.md",
-                             "PROVIDER_CONTRACT.md"):
+                from managed import SOURCE_FILES
+                for name in SOURCE_FILES:
                     path = application / name
                     if not path.is_file():
                         raise Problem("APPLICATION", "Complete receiving source is missing.", name)
@@ -986,7 +986,7 @@ def main(argv=None):
     sub = parser.add_subparsers(dest="command", required=True)
     for command in ("init", "show", "preview", "mapping", "save-mapping", "assign-keys",
                     "package", "export", "serve", "plan", "run", "reconcile", "refresh-upload",
-                    "transcripts"):
+                    "transcripts", "binding", "managed"):
         child = sub.add_parser(command)
         child.add_argument("--workspace", required=True)
         if command == "init":
@@ -1001,8 +1001,10 @@ def main(argv=None):
             child.add_argument("--expected-revision", required=True, type=int)
         if command in ("package", "export"):
             child.add_argument("--output", required=True)
-        if command == "serve":
-            child.add_argument("--port", type=int, default=8769)
+        if command in ("serve", "managed"):
+            child.add_argument("--port", type=int, default=0 if command == "managed" else 8769)
+        if command == "managed":
+            child.add_argument("--expected-binding", required=True)
         if command == "plan":
             child.add_argument("--config", required=True)
             child.add_argument("--operation-id", required=True)
@@ -1041,6 +1043,12 @@ def main(argv=None):
         result = export_workspace(args.workspace, args.output)
     elif args.command == "receive":
         result = receive(args.source, args.output)
+    elif args.command == "binding":
+        from managed import binding
+        result = binding(args.workspace)
+    elif args.command == "managed":
+        from managed import serve
+        return serve(args.workspace, args.port, args.expected_binding)
     elif args.command == "serve":
         from server import serve
         return serve(args.workspace, args.port)
