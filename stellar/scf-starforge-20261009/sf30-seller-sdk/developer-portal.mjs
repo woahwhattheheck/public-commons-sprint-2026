@@ -126,6 +126,11 @@ const assets = new Map([
   ['/_seller/developer/style.css', ['text/css; charset=utf-8', 'style.css']],
 ].map(([path, [mime, name]]) => [path, { mime, bytes: readFileSync(new URL('./developer/' + name, import.meta.url)) }]));
 
+assets.set('/_seller/query-parameters.mjs', {
+  mime: 'text/javascript; charset=utf-8',
+  bytes: readFileSync(new URL('./query-parameters.mjs', import.meta.url)),
+});
+
 /** Handles only reserved documentation paths; never proxies or calls a paid route. */
 export function createSellerDeveloperPortal({ compiled, mode } = {}) {
   const specification = compileSellerOpenApi(compiled, { mode });

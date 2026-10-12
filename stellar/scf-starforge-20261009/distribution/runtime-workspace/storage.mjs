@@ -72,10 +72,39 @@ export async function saveJSON(path, value, replace = false) {
 }
 export async function processIdentity(pid = process.pid) {
   try {
-    const text = await readFile('/proc/' + pid + '/stat', 'utf8');
-    const fields = text.slice(text.lastIndexOf(')') + 2).trim().split(/\s+/);
-    if (fields[0] === 'Z') return null;
-    return fields[19] ?? null;
+    if (!Number.isInteger(pid) || pid <= 0) return null;
+    const selfText = await readFile('/proc/self/stat', 'utf8');
+    const selfPid = Number(selfText.slice(0, selfText.indexOf(' ')));
+    const parse = text => {
+      const fields = text.slice(text.lastIndexOf(')') + 2).trim().split(/\s+/);
+      return fields[0] === 'Z' ? null : fields[19] ?? null;
+    };
+    if (pid === process.pid) return parse(selfText);
+    if (selfPid === process.pid) return parse(await readFile('/proc/' + pid + '/stat', 'utf8'));
+    const selfStatus = await readFile('/proc/self/status', 'utf8');
+    const ownIds = selfStatus.match(/^NSpid:\s+(.+)$/m)?.[1].trim().split(/\s+/);
+    if (!ownIds) return null;
+    const depth = ownIds.length - 1, pending = [selfPid], visited = new Set();
+    // Only resolve this process's descendants. A receiving server in a
+    // different namespace relies on the original kernel lease and stop file.
+    while (pending.length && visited.size < 256) {
+      const parent = pending.shift();
+      if (visited.has(parent)) continue;
+      visited.add(parent);
+      let children;
+      try { children = (await readFile('/proc/' + parent + '/task/' + parent + '/children', 'utf8')).trim().split(/\s+/).filter(Boolean); }
+      catch { continue; }
+      for (const child of children) {
+        try {
+          const status = await readFile('/proc/' + child + '/status', 'utf8');
+          const ids = status.match(/^NSpid:\s+(.+)$/m)?.[1].trim().split(/\s+/);
+          if (ids && Number(ids[depth]) === pid)
+            return parse(await readFile('/proc/' + child + '/stat', 'utf8'));
+          pending.push(Number(child));
+        } catch {}
+      }
+    }
+    return null;
   } catch { return null; }
 }
 export async function workerAlive(state) {

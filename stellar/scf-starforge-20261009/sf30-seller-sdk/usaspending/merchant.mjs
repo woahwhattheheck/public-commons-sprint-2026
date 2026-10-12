@@ -76,7 +76,7 @@ export async function adoptDelivery(workspace,directory){
   const {value:manifest,bytes:manifestBytes}=await readJsonFile(join(directory,'manifest.json'),4*1024*1024);
   requireThat(manifest.schema==='stellar-forge.buyer-delivery-manifest.v1'&&manifest.dataset.snapshot===state.snapshot&&manifest.dataset.rows===state.count&&manifest.chainDigest===state.chain,'DELIVERY_MANIFEST_MISMATCH');
   requireThat(manifest.dataset.originalQueryHash===state.queryHash&&canonical(manifest.dataset.projectedFields)===canonical(state.fields),'DELIVERY_QUERY_MISMATCH');
-  const expectedPages=state.pages.map(x=>({index:x.index,intent:x.intent,sourceSha256:x.sourceSha256,evidenceSha256:x.evidenceSha256,recordDigest:x.chain,rows:x.returned,requestedCursor:x.requestCursor}));
+  const expectedPages=state.pages.map(x=>({index:x.index,intent:x.intent,sourceSha256:x.sourceSha256,evidenceSha256:x.evidenceSha256,recordDigest:x.chain,rows:x.payload.rows.length,requestedCursor:x.requestCursor}));
   requireThat(canonical(manifest.sourcePages)===canonical(expectedPages),'DELIVERY_SOURCE_MANIFEST_MISMATCH');
   const rows=state.pages.flatMap(page=>page.payload.rows),rawOutput=Buffer.from(rows.map(row=>JSON.stringify(row)+'\n').join(''));
   const info=await stat(join(directory,'dataset.jsonl'));requireThat(info.isFile()&&info.size<=256*1024*1024,'DELIVERY_OUTPUT_TOO_LARGE');

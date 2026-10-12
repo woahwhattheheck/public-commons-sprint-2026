@@ -165,3 +165,7 @@ import {
 The maintained export includes TypeScript declarations. A server can generate and deliver a public bundle with `createCustomerBundle({profile})`, or a receiving operator can use `receiveCustomerBundle({bundle, directory})`. Public contract fetching uses the existing SF31 HTTPS transport and the customer's explicit proxy configuration when supplied.
 
 OpenAPI describes dynamic `Payment` authentication and the native 402/receipt headers. The actual challenge is issued for each exact request by the original published SDK.
+
+## Operator console and customer workbench
+
+The [customer workbench guide](./workbench-guide.md) covers importing a contract or package, saving per-asset limits, selecting and previewing offers, executing the original governed purchase, recovering interrupted preparations or signed requests, and retrieving the resource from the private console. The same guide documents the borrowed workspace API and maintained CLI commands.

@@ -68,6 +68,31 @@ async function auxiliaryJson(path, maxBytes) {
     return {value:null, warning:{path,code:'INCOMPLETE_SESSION_METADATA'}};
   }
 }
+async function createRunLock(path, identity) {
+  const file = await open(path, constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | F, 0o600);
+  let created;
+  try {
+    created = await file.stat();
+    await file.writeFile(JSON.stringify(identity, null, 2) + '\n');
+    await file.sync();
+    await syncDirectory(dirname(path));
+  } catch (error) {
+    // A failed exclusive write must not leave a false running-session marker.
+    if (created) {
+      try {
+        const current = await lstat(path);
+        if (current.isFile() && current.nlink === 1 &&
+            current.dev === created.dev && current.ino === created.ino) {
+          await unlink(path);
+          await syncDirectory(dirname(path));
+        }
+      } catch (cleanupError) {
+        if (cleanupError.code !== 'ENOENT') error.lockCleanupCode = safeCode(cleanupError);
+      }
+    }
+    throw error;
+  } finally { await file.close(); }
+}
 async function lock(directory, recoverDead = false) {
   await privateDirectory(directory);
   const path = join(directory, 'run.lock');
@@ -84,7 +109,7 @@ async function lock(directory, recoverDead = false) {
     }
   }
   const identity = {pid:process.pid, host:hostname(), nonce:randomUUID(), at:new Date().toISOString()};
-  try { await createJson(path, identity); }
+  try { await createRunLock(path, identity); }
   catch (e) { if (e.code === 'EEXIST') throw new InputError('DATASET_SESSION_RUNNING_USE_STATUS'); throw e; }
   return async () => {
     const current = await readJson(path, 4096, true);

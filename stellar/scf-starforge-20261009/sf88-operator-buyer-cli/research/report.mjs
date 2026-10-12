@@ -6,7 +6,8 @@ const html = value => label(value).replace(/[&<>"']/g,char => ({'&':'&amp;','<':
 const list = value => Array.isArray(value) ? value : [];
 const oneLine = value => label(value).replace(/[\r\n\u2028\u2029]+/g,' ');
 const json = value => JSON.stringify(value,null,2) + '\n';
-const count = value => typeof value === 'number' && Number.isFinite(value) ? new Intl.NumberFormat('en-US').format(value) : 'Not supplied';
+const integerFormat = new Intl.NumberFormat('en-US');
+const count = value => typeof value === 'number' && Number.isFinite(value) ? integerFormat.format(value) : 'Not supplied';
 const percent = value => typeof value === 'number' && Number.isFinite(value) ? (value*100).toFixed(1) + '%' : '';
 const nameOf = item => item.name ?? item.rawName ?? item.id ?? 'Name not supplied';
 const names = values => list(values).map(nameOf);
@@ -109,32 +110,32 @@ function ris(rows) {
   }).join('\r\n\r\n') + (rows.length ? '\r\n' : '');
 }
 
-/** Complete deterministic export bundle; selected files contain include decisions. */
-export function researchExports(analysis, {title = 'Research edition',query = null,coverage = null,decisions,comparison = null} = {}) {
+/** Deferred deterministic serializers. Each file is rendered only when requested. */
+export function researchExportPlan(analysis, {title = 'Research edition',query = null,coverage = null,decisions,comparison = null} = {}) {
   const view = withResearchDecisions(analysis,decisions);
   const rows = view.tables.records,selected = rows.filter(row => row.decision.status === 'include');
   const files = {
-    'research-analysis.json':json({title,query,coverage,analysis:view,...(comparison ? {comparison} : {})}),
-    'records.csv':csv(RECORD_COLUMNS,rows),
-    'selected-records.csv':csv(RECORD_COLUMNS,selected),
-    'review-decisions.csv':csv([column('openalex_id','id'),{label:'status',value:row => row.decision.status},{label:'notes',value:row => row.decision.notes},{label:'tags',value:row => row.decision.tags},{label:'updated_at',value:row => row.decision.updatedAt}],rows),
-    'duplicate-occurrences.csv':csv([column('id'),column('input_index','index'),column('kept_input_index','keptIndex'),column('conflicting'),column('changed_fields','changedFields')],view.identity.duplicateOccurrences),
-    'unidentified-records.csv':csv([column('input_index','index'),column('provider_id','providedId'),column('title'),column('reason')],view.identity.unidentifiedRecords),
-    'field-coverage.csv':csv([column('field'),column('present'),column('missing'),column('null_values','nullValues'),column('empty_arrays','emptyArrays')],view.tables.fieldCoverage)
+    'research-analysis.json':() => json({title,query,coverage,analysis:view,...(comparison ? {comparison} : {})}),
+    'records.csv':() => csv(RECORD_COLUMNS,rows),
+    'selected-records.csv':() => csv(RECORD_COLUMNS,selected),
+    'review-decisions.csv':() => csv([column('openalex_id','id'),{label:'status',value:row => row.decision.status},{label:'notes',value:row => row.decision.notes},{label:'tags',value:row => row.decision.tags},{label:'updated_at',value:row => row.decision.updatedAt}],rows),
+    'duplicate-occurrences.csv':() => csv([column('id'),column('input_index','index'),column('kept_input_index','keptIndex'),column('conflicting'),column('changed_fields','changedFields')],view.identity.duplicateOccurrences),
+    'unidentified-records.csv':() => csv([column('input_index','index'),column('provider_id','providedId'),column('title'),column('reason')],view.identity.unidentifiedRecords),
+    'field-coverage.csv':() => csv([column('field'),column('present'),column('missing'),column('null_values','nullValues'),column('empty_arrays','emptyArrays')],view.tables.fieldCoverage)
   };
-  for (const [name,table] of Object.entries(view.tables)) if (!['records','fieldCoverage','decisions'].includes(name)) files[name.replace(/[A-Z]/g,char => '-' + char.toLowerCase()) + '.csv'] = csv(GROUP_COLUMNS,table);
+  for (const [name,table] of Object.entries(view.tables)) if (!['records','fieldCoverage','decisions'].includes(name)) files[name.replace(/[A-Z]/g,char => '-' + char.toLowerCase()) + '.csv'] = () => csv(GROUP_COLUMNS,table);
   if (view.entity === 'works') {
-    files['references.bib'] = bibtex(rows);files['references.ris'] = ris(rows);
-    files['selected-references.bib'] = bibtex(selected);files['selected-references.ris'] = ris(selected);
+    files['references.bib'] = () => bibtex(rows);files['references.ris'] = () => ris(rows);
+    files['selected-references.bib'] = () => bibtex(selected);files['selected-references.ris'] = () => ris(selected);
   }
   if (comparison) {
-    files['edition-comparison.json'] = json(comparison);
-    files['edition-added.csv'] = csv(RECORD_COLUMNS,comparison.added);
-    files['edition-removed.csv'] = csv(RECORD_COLUMNS,comparison.removed);
-    files['edition-changed.csv'] = csv([column('openalex_id','id'),column('title'),column('changed_fields','changedFields')],comparison.changed);
+    files['edition-comparison.json'] = () => json(comparison);
+    files['edition-added.csv'] = () => csv(RECORD_COLUMNS,comparison.added);
+    files['edition-removed.csv'] = () => csv(RECORD_COLUMNS,comparison.removed);
+    files['edition-changed.csv'] = () => csv([column('openalex_id','id'),column('title'),column('changed_fields','changedFields')],comparison.changed);
   }
-  files['report.html'] = renderResearchReport({title,query,coverage,analysis:view,comparison});
-  files['README.txt'] = [
+  files['report.html'] = () => renderResearchReport({title,query,coverage,analysis:view,comparison});
+  files['README.txt'] = () => [
     title,'','Entity: ' + view.entity,'Identified records: ' + view.counts.uniqueRecords,
     'Received occurrences: ' + view.counts.recordsReceived,'Retained query coverage: ' + (coverage?.state ?? 'UNSPECIFIED'),
     'Included review decisions: ' + selected.length,'',
@@ -147,6 +148,11 @@ export function researchExports(analysis, {title = 'Research edition',query = nu
     'Source references:',...view.methods.references,''
   ].join('\n');
   return files;
+}
+
+/** Complete in-memory bundle for callers that explicitly need all files together. */
+export function researchExports(analysis, options) {
+  return Object.fromEntries(Object.entries(researchExportPlan(analysis,options)).map(([name,render]) => [name,render()]));
 }
 
 function table(headers,body,{className = '',caption = ''} = {}) {
