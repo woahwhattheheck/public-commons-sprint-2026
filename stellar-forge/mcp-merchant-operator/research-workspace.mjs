@@ -12,6 +12,7 @@ import {callResearchRiskOfBias,exportResearchRiskOfBias,RESEARCH_RISK_PREFIX} fr
 import {callResearchExtraction,exportResearchExtraction,RESEARCH_EXTRACTION_PREFIX} from './research-extraction.mjs';
 import {callResearchEligibility,exportResearchEligibility,RESEARCH_ELIGIBILITY_PREFIX} from './research-eligibility.mjs';
 import {callResearchCustomerUpdates,exportResearchCustomerUpdates,RESEARCH_CUSTOMER_UPDATE_PREFIX} from './research-customer-updates.mjs';
+import {ResearchCommerceOperations,RESEARCH_COMMERCE_PREFIX} from './research-commerce.mjs';
 import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
@@ -45,7 +46,7 @@ export async function readResearchWorkspaceConfiguration(file){
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
       identifier(name);exact(source,['file','kind','sha256','provider','sourceReference','filename','contentType'],['file','kind','sha256']);
-      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable'].includes(source.kind)&&
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable','commerce-publication'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
@@ -185,6 +186,7 @@ export class MerchantResearchWorkspaces{
       entry.detaching=true;
       entry.close=(async()=>{
         await Promise.allSettled([...entry.pending]);
+        if(entry.commerce)await entry.commerce.close();
         await this.#reads.closeScope(entry.id);
         await entry.client.close();
         if(this.#entries.get(alias)===entry)this.#entries.delete(alias);
@@ -204,6 +206,18 @@ export class MerchantResearchWorkspaces{
     const source=entry.definition.sources?.[name];
     if(!source||!accepted.includes(source.kind))throw failure('RESEARCH_SOURCE_REQUIRED','Select a host-declared source of the required original kind.');
     return source;
+  }
+  #commerce(entry){
+    if(!entry.commerce)entry.commerce=new ResearchCommerceOperations({
+      client:entry.client,directory:join(entry.directory,'commerce'),workspaceId:entry.client.workspaceId,
+      source:(name,accepted)=>this.#source(entry,name,accepted),
+      retainedPublication:(workspace,exportId,consume)=>this.#with(workspace??entry.alias,async sourceEntry=>{
+        const selected=await this.#manifest(sourceEntry,'commerce-publication',exportId);
+        return consume({file:selected.file,sha256:exportId,bytes:selected.value.bytes,
+          filename:selected.value.filename});
+      }),
+    });
+    return entry.commerce;
   }
   #file(entry,kindName,sha256){
     const type=kind(kindName);checkedDigest(sha256);
@@ -238,7 +252,9 @@ export class MerchantResearchWorkspaces{
       }
     };
     try{
-      if(args.kind.startsWith('risk-')){
+      if(args.kind.startsWith('commerce-')){
+        ({result,selection}=await this.#commerce(entry).export(args,{file:temporary}));
+      }else if(args.kind.startsWith('risk-')){
         ({result,selection}=await exportResearchRiskOfBias(entry.client,args,{file:temporary,download}));
       }else if(args.kind.startsWith('document-')||args.kind.startsWith('pipeline-')){
         ({result,selection}=await exportResearchDocuments(entry.client,args,{file:temporary,download}));
@@ -348,6 +364,7 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(name.startsWith(RESEARCH_COMMERCE_PREFIX))return this.#commerce(entry).call(name,args);
       if(name.startsWith(RESEARCH_CUSTOMER_UPDATE_PREFIX))return callResearchCustomerUpdates(c,name,args);
       if(name.startsWith(RESEARCH_ELIGIBILITY_PREFIX))return callResearchEligibility(c,name,args);
       if(name.startsWith(RESEARCH_RISK_PREFIX))return callResearchRiskOfBias(c,name,args);

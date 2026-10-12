@@ -368,3 +368,9 @@ The first actual native merchant, payment and receiving results belong with that
 ## Scientific Python customer workflow
 
 The same paid publication, original Buyer approval and retrieval, complete archive and editable receiving are available through the installed Python Research client. Its [full operating guide](../../python/RESEARCH-COMMERCE.md) includes typed original inputs, complete retained calls and exports, local archive receiving, explicit native replay and the runnable [two-workspace programme](../../python/examples/research_paid_delivery.py). The programme continues an actual saved delivery through later customer correction and original receiving replay using the existing merchant, Buyer and Research owners.
+
+## Merchant agent continuation
+
+The existing Research Merchant attachment now carries the complete paid journey through twenty native commerce tools. Its publication review/enrollment, original Buyer intake and budgets, approved execution/cancellation/retrieval, complete archive exports and editable dossier receiving share this same engine and original workspace. Each Merchant invocation retains its complete native input and first result; resume and explicit original-request replay preserve both the source selection and the native request ID.
+
+Follow [Paid Research through the Merchant agent](../../../../../stellar-forge/mcp-merchant-operator/RESEARCH_COMMERCE.md) for the original `init-research-workspaces` setup, declared source and cross-attachment publication transfer, every native action, the full retained-file reader and receiving after restart. The Merchant instance borrows the existing authenticated Research client and drains its accepted work before detach; the original Research application keeps its listener and saved customer work.
