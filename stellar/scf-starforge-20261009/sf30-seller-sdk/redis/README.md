@@ -391,6 +391,13 @@ products, merchant, buyer, customer files and retained release journey. Add
 the existing saved editor and browser flow on the selected deployment. The
 native journey owns and closes the ephemeral Redis processes it starts.
 
+Add `SF30_REDIS_JOURNEY_TLS=1` to the Sentinel run to generate separate data
+and monitor CAs and real SAN certificates through the installed `openssl`
+executable. That run uses verified TLS on both planes, retains both CA files
+through the original workspace and package, removes the original merchant CA
+source copies, and continues through the retained seller's actual customer
+deliveries and release changes. The selected Redis executable must include TLS.
+
 The integrated run on Redis 7.0.15 and `@redis/client` 6.2.1 completed six buyer
 deliveries, retained every original response file, and restored the original
 ranking result after rollback. It also exercised authenticated database

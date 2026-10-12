@@ -81,7 +81,8 @@ export async function createRedisQuerySource({ connection, queries, maxConnectio
   try {
     factory = http
       ? { create: () => createUpstashRestClient(connection), topology: 'standalone', driver: 'Upstash REST' }
-      : await createRedisConnectionFactory(connection, { connectTimeoutMs });
+      : await createRedisConnectionFactory(connection, { connectTimeoutMs,
+        maxQueryTimeoutMs: Math.max(...Object.values(compiled).map(query => query.timeoutMs)) });
   } catch (issue) {
     if (issue instanceof RedisConnectionError) throw safeError(issue);
     throw issue;
