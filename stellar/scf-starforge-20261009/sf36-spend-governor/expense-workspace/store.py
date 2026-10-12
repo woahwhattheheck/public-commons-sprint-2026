@@ -283,10 +283,12 @@ class Store(CreditStore, AccountantStore):
             selected["coding_history"] = [json.loads(r[0]) for r in self.connection.execute("SELECT body FROM codings WHERE item_id=? ORDER BY created_at DESC,id DESC", (ident,))]
             return selected
 
-    def _new_capture(self, source, native):
+    def _new_capture(self, source, native, *, reattachment=None):
         captured = {"id": identifier("capture"), "source_id": source["id"], "parent_id": source.get("current_capture"),
                     "status": "PENDING", "created_at": now(), "path": native["path"], "identity": native["identity"],
                     "snapshot": native["snapshot"], "report": native["report"]}
+        if reattachment is not None:
+            captured["reattachment"] = reattachment | {"to_capture": captured["id"]}
         previous = self._get("captures", source["current_capture"])["report"] if source.get("current_capture") else None
         captured["changes"] = native_changes(previous, native["report"])
         self.connection.execute("INSERT INTO captures VALUES(?,?,?,?,?,?)",
@@ -338,10 +340,14 @@ class Store(CreditStore, AccountantStore):
                 after = {r["request_id"]: r for r in native["report"]["rows"]}
                 if any(r["request_id"] not in after or after[r["request_id"]]["request_digest"] != r["request_digest"] for r in before):
                     raise Problem("LEDGER_CONTINUITY", "This source does not retain the registered original request identities; register a distinct source instead", 409)
-            source["rebindings"] = source.get("rebindings", []) + [{"from": source["path"], "to": native["path"], "reason": reason, "operator": operator, "at": now()}]
+            reattachment = {"from": source["path"], "to": native["path"], "reason": reason,
+                            "operator": operator, "at": now(), "source_id": ident,
+                            "from_capture": source.get("current_capture")}
             source.update(path=native["path"], identity=native["identity"])
+            captured = self._new_capture(source, native, reattachment=reattachment)
+            source["rebindings"] = source.get("rebindings", []) + [reattachment | {"to_capture": captured["id"]}]
             self._put("sources", source)
-            return {"id": ident, "capture": self._new_capture(source, native)}
+            return {"id": ident, "capture": captured}
         return self._change(expected, "source.rebind", operation)
 
     @staticmethod
@@ -458,6 +464,94 @@ class Store(CreditStore, AccountantStore):
         return [json.loads(r[0]) for r in self.connection.execute(
             "SELECT d.body FROM disposition_heads h JOIN dispositions d ON d.id=h.disposition_id WHERE h.period_id=? ORDER BY h.item_id,h.code", (period_id,))]
 
+    def _issued_reservation_lineage(self, issued_charges):
+        """Join physical restore identities only through accepted original sources.
+
+        Physical changes require the named reattachment between the exact
+        accepted captures. UUIDs shared by unrelated sources establish no lineage.
+        Current exposure remains attached to the actually observed ledger.
+        """
+        targets = {(entry["spending_reservation"]["request_id"], entry["spending_reservation"]["request_digest"])
+                   for entry in issued_charges if entry.get("spending_reservation")}
+        if not targets:
+            return issued_charges
+        parents, witnesses, transitions = {}, {}, []
+
+        def root(key):
+            parents.setdefault(key, key)
+            while parents[key] != key:
+                parents[key] = parents[parents[key]]
+                key = parents[key]
+            return key
+
+        def connect(keys):
+            if not keys:
+                return
+            anchor = root(keys[0])
+            for key in keys[1:]:
+                parents[root(key)] = anchor
+
+        for source in self._bodies("sources"):
+            kind = source.get("kind", "sf36_ledger")
+            if kind not in ("sf36_ledger", "governed_mcp") or not source.get("current_capture"):
+                continue
+            active, histories, seen = set(targets), {}, set()
+            newer_capture = None
+            capture_id = source["current_capture"]
+            while capture_id and active:
+                if capture_id in seen:
+                    raise Problem("SOURCE_CAPTURE_HISTORY", "The retained original source ancestry repeats a capture", 409)
+                seen.add(capture_id)
+                captured = self._get("captures", capture_id)
+                if captured.get("source_id") != source["id"] or captured.get("status") != "ACCEPTED":
+                    raise Problem("SOURCE_CAPTURE_HISTORY", "Use the original accepted source ancestry", 409)
+                original_rows = {row["request_id"]: row for row in captured["report"]["rows"]}
+                ledger = (captured["identity"] if kind == "sf36_ledger" else
+                          captured["report"]["source"].get("reservation_ledger_identity"))
+                for request_id, request_digest in tuple(active):
+                    row = original_rows.get(request_id)
+                    identity = spending_reservation_identity(ledger, request_id, request_digest)
+                    if (row is None or row.get("request_digest") != request_digest or identity is None or
+                            (kind == "governed_mcp" and row.get("native_detail", {}).get("spending_link") != "ORIGINAL_SF36")):
+                        active.remove((request_id, request_digest))
+                        continue
+                    key = digest(identity)
+                    history = histories.setdefault((request_id, request_digest), [])
+                    if history and key != history[-1]:
+                        reattachment = (newer_capture or {}).get("reattachment", {})
+                        if (reattachment.get("source_id") != source["id"] or
+                                reattachment.get("from_capture") != capture_id or
+                                reattachment.get("to_capture") != newer_capture["id"] or
+                                not reattachment.get("operator") or not reattachment.get("reason")):
+                            active.remove((request_id, request_digest))
+                            continue
+                        transitions.append({"keys": [history[-1], key],
+                            "reattachment": reattachment, "request_id": request_id, "request_digest": request_digest})
+                    history.append(key)
+                    witnesses.setdefault(key, {}).setdefault(source["id"], {
+                        "identity": identity, "source_id": source["id"], "capture_id": capture_id})
+                newer_capture = captured
+                capture_id = captured.get("parent_id")
+            for keys in histories.values():
+                connect(keys)
+        groups = {}
+        for key, observations in witnesses.items():
+            groups.setdefault(root(key), []).extend(observations.values())
+        result = []
+        for entry in issued_charges:
+            identity = entry.get("spending_reservation")
+            key = digest(identity) if identity else None
+            history = groups.get(root(key), []) if key in parents else []
+            if len({digest(value["identity"]) for value in history}) > 1:
+                result.append(entry | {"spending_reservation_history": sorted(
+                    history, key=lambda value: (digest(value["identity"]), value["source_id"], value["capture_id"])),
+                    "spending_source_reattachments": sorted(
+                        [edge["reattachment"] for edge in transitions if root(edge["keys"][0]) == root(key)],
+                        key=lambda value: (value["source_id"], value["from_capture"], value["to_capture"]))})
+            else:
+                result.append(entry)
+        return result
+
     def report(self, ident):
         with self.lock:
             period = self._get("periods", ident)
@@ -493,6 +587,7 @@ class Store(CreditStore, AccountantStore):
                         closed_transfers.append({"transfer_identity":transfer, "spending_reservation":reservation,
                             "period_id":other["id"], "period_name":other["name"], "close_id":issued["id"], "item_id":line["item_id"],
                             "source_capture":line["source_capture"], "recognition_date":line["recognition_date"]})
+            closed_transfers = self._issued_reservation_lineage(closed_transfers)
             view = period_view(period, self._items(), self._source_views(), {c["id"]: c for c in self._bodies("centers")},
                                self._dispositions(ident), closed_transfers)
             view = self._credit_period(view)

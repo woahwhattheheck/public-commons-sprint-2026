@@ -7,7 +7,7 @@
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createHash,randomBytes,randomUUID} from 'node:crypto';
-import {mkdir,readFile,writeFile,rename,realpath} from 'node:fs/promises';
+import {mkdir,readFile,writeFile,rename,realpath,stat} from 'node:fs/promises';
 import {dirname,join,resolve,isAbsolute} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {parseArgs} from 'node:util';
@@ -24,6 +24,7 @@ import {createBuyerReturnPacket} from '../../stellar/scf-starforge-20261009/merc
 const ROOT=fileURLToPath(new URL('../../',import.meta.url));
 const APP=join(ROOT,'stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace');
 const HELPER=join(ROOT,'stellar-forge/mcp-paid-agent/native-spend-governor.py');
+const LEDGER_RECOVERY=join(ROOT,'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/workspace-recovery-ledger.py');
 const OPERATION='governed-buyer-expense-receiving-f232-20261012';
 const KEYS=['SF36_CONSENT_KEY_B64','SF36_AUDIT_KEY_B64','SF36_OPERATOR_KEY_B64'];
 const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -55,6 +56,43 @@ async function native(python,owner,environment,payload){
   const parsed=JSON.parse(result.stdout);
   assert.equal(parsed.schema,'stellar-forge.mcp-spending.v1');
   assert.notEqual(parsed.outcome,'ERROR');return parsed;
+}
+async function restoreOriginalLedger(python,owner,environment,work){
+  const spending=owner.spending,snapshot=join(work,'original-ledger-snapshot.sqlite');
+  const keyInput={keys:Object.fromEntries(KEYS.map(name=>[name,environment[name]]))};
+  // Invoke the unchanged SF88 relay's complete native audit/online backup. This
+  // controlled owner has no work in flight; its second private input line
+  // releases the original writer lock after that exact snapshot is complete.
+  const invoke=String.raw`import importlib.util,io,json,sys
+relay,mode,database,policy,destination=sys.argv[1:6]
+request=json.loads(sys.stdin.read())
+spec=importlib.util.spec_from_file_location("original_finance_recovery",relay)
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+if mode=="snapshot":request["identity"]=module.identity(database)
+sys.argv=[relay,mode,database,policy]+([destination] if mode=="snapshot" else [])
+sys.stdin=io.StringIO(json.dumps(request)+"\n"+("release\n" if mode=="snapshot" else ""))
+module.run()
+`;
+  const captured=JSON.parse((await run(python,['-I','-B','-c',invoke,LEDGER_RECOVERY,'snapshot',
+    spending.ledger,spending.policy,snapshot],{environment,input:JSON.stringify(keyInput)})).stdout);
+  assert.equal(captured.status,'CAPTURE_LOCKED');assert.equal(captured.checkpoint.rows,2);
+  assert.equal(captured.checkpoint.reserved,1);assert.equal(captured.checkpoint.settled,1);
+  const original=await stat(spending.ledger,{bigint:true});
+  await rename(spending.ledger,spending.ledger+'.before-restore');
+  for(const suffix of ['-wal','-shm']){
+    try{await rename(spending.ledger+suffix,spending.ledger+'.before-restore'+suffix);}
+    catch(error){if(error.code!=='ENOENT')throw error;}
+  }
+  await rename(snapshot,spending.ledger);
+  const restored=await stat(spending.ledger,{bigint:true});
+  assert.notEqual(restored.ino,original.ino);
+  const verified=JSON.parse((await run(python,['-I','-B','-c',invoke,LEDGER_RECOVERY,'verify',
+    spending.ledger,spending.policy,'unused'],{environment,input:JSON.stringify(keyInput)})).stdout);
+  assert.equal(verified.status,'LEDGER_VERIFIED');assert.deepEqual(verified.checkpoint,captured.checkpoint);
+  const receipt={original:{device:String(original.dev),inode:String(original.ino)},
+    restored:{device:String(restored.dev),inode:String(restored.ino)},checkpoint:verified.checkpoint,
+    source:'Original SF88 workspace-recovery-ledger.py audit and SQLite backup/verify'};
+  await privateWrite(join(work,'native-ledger-restore.json'),receipt);return receipt;
 }
 async function openReceived(python,source,state){
   const child=spawn(python,['-B',source,'--state',state,'--port','0','--node',process.execPath],
@@ -289,6 +327,31 @@ export async function runGovernedBuyerExpenseReceiving({work,python='/usr/bin/py
     await assert.rejects(mutate('period_close',{id:later.id,reviewId:refused.id}));
     await phase('cross-period-original-charge-preserved',{firstClose:firstClose.result.id,followingPeriod:later.id,
       firstRepresentation:'sf36_ledger',secondRepresentation:'governed_mcp',firstPeriodTotal:'60',followingPeriodTotal:'0'});
+
+
+    const restoredLedger=await restoreOriginalLedger(python,owner,fixtureEnvironment,work);
+    const reattachments=[];
+    for(const selection of [{sourceId:selectedId,governedSource:'selected'},{sourceId:directId,ledger:'shared'}]){
+      const rebound=await mutate('source_rebind',{...selection,operator:'Receiving finance maintainer',
+        reason:'Reattach the same original owner after its complete audited canonical SQLite restore.'});
+      await accept(rebound.result.capture);reattachments.push(rebound.result.capture.id);
+    }
+    await code(await call('item',{workspace:'buyer',id:selectedItem.id}),nextDay);
+    const restoredIssues=await rows(later.id,'issues');
+    const restoredDuplicate=restoredIssues.find(value=>value.code==='TRANSFER_ALREADY_ISSUED'&&value.item_id===selectedItem.id);
+    assert.ok(restoredDuplicate&&!restoredDuplicate.resolved);
+    const lineage=restoredDuplicate.group.issued_charges.flatMap(value=>value.spending_reservation_history??[]);
+    assert.ok(lineage.some(value=>value.identity.ledger.inode===restoredLedger.original.inode));
+    assert.ok(lineage.some(value=>value.identity.ledger.inode===restoredLedger.restored.inode));
+    assert.ok(restoredDuplicate.group.issued_charges.some(value=>
+      value.spending_source_reattachments?.some(link=>reattachments.includes(link.to_capture))));
+    assert.equal(total(await rows(later.id,'allocations')),'0');
+    assert.equal(total(await rows(period.id,'outstanding_reservations')),'11');
+    const preservedFirst=(await call('issued',{workspace:'buyer',id:firstClose.result.id,view:'allocations',limit:200})).rows.items;
+    assert.deepEqual(preservedFirst,firstLines);
+    await phase('original-ledger-restored-and-financial-history-reattached',{
+      checkpoint:restoredLedger.checkpoint,originalLedger:restoredLedger.original,restoredLedger:restoredLedger.restored,
+      reattachmentCaptures:reattachments,followingPeriodTotal:'0',earlierIssuedLinesUnchanged:true});
 
     await mutate('period_reopen',{id:period.id,operator:'Receiving finance operator',
       reason:'Replace the duplicate source representation with its governed buyer view while preserving the original issued edition.'});
