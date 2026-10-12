@@ -16,12 +16,12 @@ const digest=b=>createHash('sha256').update(b).digest('hex');
 const json=async p=>JSON.parse(await fs.readFile(p,'utf8'));
 const write=async(p,v)=>{await fs.writeFile(p,JSON.stringify(v,null,2)+'\n',{mode:0o600});await fs.chmod(p,0o600);};
 assert.equal(digest(await fs.readFile(join(packageRoot,'manifest.json'))),manifestSha256,'original installed package manifest');
-const upgradeCommit='d723d8709de2495b865fa2073f5e7ff844cac262';
+const upgradeCommit='cf1e7e12f2c4b61a7436416c5e67780e7437e8d3';
 const upgradePrefix='source/stellar/scf-starforge-20261009/sf30-seller-sdk/dataset-refresh/';
 const upgrades=[];
 for(const [name,expected] of [
- ['versions.mjs','079e4f8eca9819b7cd916579e34f703664ef4346'],
- ['writer-lease.mjs','b0d0207910ffc77e6b8bd0a8c5558c52c5c8dbea']
+ ['versions.mjs','fe4261675844ca6e2ab89ad59fdc14fff9f1f8e3'],
+ ['writer-lease.mjs','ff6d39faa87195e0986327f1b838662f9fb89897']
 ]){
  const path=upgradePrefix+name,bytes=await fs.readFile(join(packageRoot,path));
  const gitBlobSha=createHash('sha1').update(Buffer.from('blob '+bytes.length+'\0')).update(bytes).digest('hex');
