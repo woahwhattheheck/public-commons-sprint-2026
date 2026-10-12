@@ -44,6 +44,7 @@ the original `0.1.0-source.g0123456789ab` version form.
 
 | Selection | Product | Original Applications | Complete installed workflow |
 | --- | --- | --- | --- |
+| `eurostat` | Eurostat official source editions, exact economic reports, native publication and complete customer receiving | Eurostat economic editions; Runtime management | [Operating guide](../../../products/eurostat/OPERATING.md) |
 | `water-operations` | USGS observations, editions, Water workspace, merchant and complete customer files | Water, Buyer, merchant console | [Operating guide](selections/WATER_OPERATIONS.md) |
 | `woo-merchant` | Existing WooCommerce orders, native checkout, Operations, purchased files and refunds | WooCommerce, Buyer, merchant console | [Operating guide](selections/WOO_MERCHANT.md) |
 | `openapi-merchant` | OpenAPI/Postman/HAR authoring, route worksheets, policy editions, seller releases and complete receiving | API merchant authoring, Buyer, merchant console | [Operating guide](selections/OPENAPI_MERCHANT.md) |
@@ -63,6 +64,8 @@ for its included commands. Selected packages expose their explicit named package
 exports; the full toolkit's broad root `index.mjs` is excluded. This prevents
 its unrelated re-exports from forcing every product into a selected package.
 The original modules, their exports and implementations are unchanged.
+
+For Eurostat, use `--selection eurostat` and the [complete operating guide](../../../products/eurostat/OPERATING.md). Its selected source includes the original economic workspace, retained official responses and reviewed queries, full reports, browser and typed client, all 26 Eurostat MCP tools, native publication, merchant releases and complete customer receiving.
 
 ## Continue the same build
 
@@ -92,7 +95,7 @@ its dependency profile from the complete installed workflow linked above:
 
 | Selected product | Profile flags for the complete installed edition |
 | --- | --- |
-| `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant` | `--native --feature schema --feature openapi --feature mcp --operator` |
+| `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant`, `eurostat` | `--native --feature schema --feature openapi --feature mcp --operator` |
 | `redis-applications` | `--native --feature redis --feature schema --feature openapi --feature mcp --operator` |
 | `study-research` | `--native --feature schema --feature openapi --feature mcp --feature postgres --operator` |
 | `grant-reviewer` | `--native --feature mcp --operator` |
