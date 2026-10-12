@@ -109,7 +109,7 @@ if(await exists(resultFile)){
     const identity=document.getElementById('workspace-identity');
     const content=document.getElementById('content');
     return location.hash===hash&&selected?.value===projectId&&
-     identity?.textContent.startsWith(workspaceId+' · ')&&content?.children.length>0;
+     identity?.textContent.startsWith(workspaceId+' · ')&&Boolean(content?.querySelector('.section-head, .card'));
    },{hash:target.hash,projectId:input.project_id,workspaceId:input.workspace_id});
    const detailId=decodeURIComponent(route.split('/')[1]||'');
    if(detailId)require(await page.locator('#content code').evaluateAll((nodes,id)=>nodes.some(node=>node.textContent===id),detailId),
