@@ -69,13 +69,34 @@ def atomic_json(path, value):
     atomic_bytes(path, (json.dumps(value, sort_keys=True, separators=(",", ":")) + "\n").encode())
 
 def preserve(path, data):
+    existing = None
     if path.exists() or path.is_symlink():
-        require(path.is_file() and not path.is_symlink() and path.read_bytes() == data,
+        require(path.is_file() and not path.is_symlink() and path.stat().st_size <= len(data),
                 "MPP_RUNTIME_ORIGINAL_FILE_CONFLICT", str(path))
-    else:
-        with path.open("xb") as stream:
+        existing = path.read_bytes()
+        if existing == data:
+            return
+        require(data.startswith(existing), "MPP_RUNTIME_ORIGINAL_FILE_CONFLICT", str(path))
+    fd, temporary = tempfile.mkstemp(prefix=".manifest-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as stream:
             stream.write(data)
-        path.chmod(0o600)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.chmod(temporary, 0o600)
+        if existing is None:
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                require(path.is_file() and not path.is_symlink() and path.read_bytes() == data,
+                        "MPP_RUNTIME_ORIGINAL_FILE_CONFLICT", str(path))
+        else:
+            require(path.is_file() and not path.is_symlink() and path.read_bytes() == existing,
+                    "MPP_RUNTIME_ORIGINAL_FILE_CONFLICT", str(path))
+            os.replace(temporary, path)
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary)
 
 def child_path(root, relative):
     parts = PurePosixPath(relative).parts
@@ -307,13 +328,37 @@ def verify_layout(root, selected):
     expected = set(selected)
     modules = {PurePosixPath(*PurePosixPath(path).parts[:i + 1]).as_posix()
                for path in expected for i, part in enumerate(PurePosixPath(path).parts) if part == "node_modules"}
+    expected_bins = {relative: {} for relative in modules}
+    for relative, meta in selected.items():
+        parts = PurePosixPath(relative).parts
+        index = max(i for i, part in enumerate(parts) if part == "node_modules")
+        module_path = PurePosixPath(*parts[:index + 1]).as_posix()
+        binary = child_path(root, module_path) / ".bin"
+        package = child_path(root, relative)
+        for name, local in (meta.get("bin") or {}).items():
+            require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,100}", name),
+                    "MPP_RUNTIME_BIN_INVALID", name)
+            value = os.path.relpath(child_path(package, local), binary)
+            previous = expected_bins[module_path].get(name)
+            require(previous is None or previous == value, "MPP_RUNTIME_BIN_COLLISION", module_path + ": " + name)
+            expected_bins[module_path][name] = value
     for relative in sorted(modules):
         folder = child_path(root, relative)
         require(folder.is_dir(), "MPP_RUNTIME_MODULE_DIRECTORY_REQUIRED", str(folder))
+        binary = child_path(folder, ".bin")
+        if binary.exists():
+            require(binary.is_dir(), "MPP_RUNTIME_BIN_DIRECTORY_INVALID", str(binary))
+            observed = {entry.name: entry for entry in binary.iterdir()}
+            require(set(observed) == set(expected_bins[relative]),
+                    "MPP_RUNTIME_UNEXPECTED_BIN_LAYOUT", str(binary))
+            for name, entry in observed.items():
+                require(entry.is_symlink() and os.readlink(entry) == expected_bins[relative][name],
+                        "MPP_RUNTIME_BIN_CONFLICT", str(entry))
+        else:
+            require(not expected_bins[relative], "MPP_RUNTIME_BIN_DIRECTORY_REQUIRED", str(binary))
         packages = []
         for path in folder.iterdir():
             if path.name == ".bin":
-                require(path.is_dir() and not path.is_symlink(), "MPP_RUNTIME_BIN_DIRECTORY_INVALID", str(path))
                 continue
             if path.name == ".package-lock.json":
                 require(path.is_file() and not path.is_symlink(), "MPP_RUNTIME_FILE_INVALID", str(path))
@@ -326,6 +371,20 @@ def verify_layout(root, selected):
         for path in packages:
             require(path.is_dir() and not path.is_symlink() and path.relative_to(root).as_posix() in expected,
                     "MPP_RUNTIME_UNEXPECTED_PACKAGE", str(path))
+
+def clear_abandoned_staging(metadata, selected):
+    folder = child_path(metadata, "staging")
+    if not folder.exists():
+        return 0
+    require(folder.is_dir(), "MPP_RUNTIME_STAGING_INVALID", str(folder))
+    prefixes = {hashlib.sha256(relative.encode()).hexdigest()[:16] + "-" for relative in selected}
+    removed = 0
+    for path in folder.iterdir():
+        if any(path.name.startswith(prefix) for prefix in prefixes):
+            require(path.is_dir() and not path.is_symlink(), "MPP_RUNTIME_STAGING_INVALID", str(path))
+            shutil.rmtree(path)
+            removed += 1
+    return removed
 
 def receive(directory, source, cache=None, offline=False, inspect=False):
     started = time.monotonic()
@@ -356,12 +415,21 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
             require(not inspect, "MPP_RUNTIME_RECEIVING_STATE_REQUIRED", str(root))
             atomic_json(state_path, identity)
         for name, original in (("package.json", manifest_bytes), ("package-lock.json", lock_bytes)):
-            require(not inspect or (root / name).is_file(), "MPP_RUNTIME_ORIGINAL_FILE_REQUIRED", name)
-            preserve(root / name, original)
-        cache_root = (cache.resolve() if cache else metadata / "archives")
+            original_path = child_path(root, name)
+            if inspect:
+                require(original_path.is_file() and original_path.read_bytes() == original,
+                        "MPP_RUNTIME_ORIGINAL_FILE_CONFLICT", name)
+            else:
+                preserve(original_path, original)
+        cleared_staging = 0 if inspect else clear_abandoned_staging(metadata, selected)
+        cache_root = (cache.resolve() if cache else child_path(metadata, "archives"))
         if not inspect:
             cache_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        records_dir = metadata / "packages"
+        if not inspect and not cache:
+            for partial in cache_root.glob(".download-*.part"):
+                require(partial.is_file() and not partial.is_symlink(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(partial))
+                partial.unlink()
+        records_dir = child_path(metadata, "packages")
         if not inspect:
             records_dir.mkdir(exist_ok=True, mode=0o700)
         counts = {"packages": 0, "files": 0, "bytes": 0, "downloadedBytes": 0, "reusedPackages": 0}
@@ -382,7 +450,7 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                 require(not inspect, "MPP_RUNTIME_PACKAGE_RECEIPT_REQUIRED", relative)
                 archive, downloaded = receive_archive(meta, cache_root, offline)
                 counts["downloadedBytes"] += downloaded
-                stage_parent = metadata / "staging"
+                stage_parent = child_path(metadata, "staging")
                 stage_parent.mkdir(exist_ok=True, mode=0o700)
                 staging = Path(tempfile.mkdtemp(prefix=key[:16] + "-", dir=stage_parent))
                 try:
@@ -403,6 +471,11 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                 if not cache:
                     archive.unlink()
             bind_bins(root, relative, record, inspect)
+            if not inspect and not cache:
+                cached_archive = child_path(cache_root, meta["archiveSha512"] + ".tgz")
+                if cached_archive.exists():
+                    require(cached_archive.is_file(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(cached_archive))
+                    cached_archive.unlink()
             counts["packages"] += 1
             counts["files"] += len(record["files"])
             counts["bytes"] += record["bytes"]
@@ -415,7 +488,8 @@ def receive(directory, source, cache=None, offline=False, inspect=False):
                   "skipped": skipped, "packagesSha256": hashlib.sha256(json.dumps(
                       package_summaries, sort_keys=True, separators=(",", ":")).encode()).hexdigest(),
                   "seconds": round(time.monotonic() - started, 3),
-                  "maximumResidentKiB": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}
+                  "maximumResidentKiB": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
+                  "clearedStagingDirectories": cleared_staging}
         if not inspect:
             atomic_json(metadata / "ready.json", result)
         return result
