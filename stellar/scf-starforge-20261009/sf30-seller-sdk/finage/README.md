@@ -90,3 +90,15 @@ Use the complementary exact-kind warehouse to stage complete customer deliveries
 ## Integration
 
 Public functions are inspect_market, build_market and customer_market. Their exact schemas, journals, normalized record and complete delivery contract are in CORE_CONTRACT.md. Acquisition formats and interruption recovery are in CAPTURE.md. The original source file limit is8MiB, revision limit32MiB, preview output1MiB and preview timeout120seconds. Choose complete actual partitions when a source exceeds the native limits; never truncate a source or label a prefix complete.
+
+## Open the existing workspace from Applications
+
+The installed Applications catalog includes **Finage market review**. Select the initialized workbench directory containing `operation.json` and its original `workspace/` directory. Review the saved workspace identity and installed source, then start it on an available local port. The managed launch opens that same native workspace with the Finage browser. Stop closes the original listener; a later start reopens the original revisions and results.
+
+`binding` reads the current immutable workspace and launch-source identities without creating a revision or running Python. Applications uses those identities for `managed` and verifies the actual authenticated startup before saving the operator link. Source changes or replacement of the selected workspace require a fresh Applications review. `serve` remains useful for an already selected local workspace.
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/finage/workbench.mjs binding --source-root /absolute/source --dir /absolute/finage-workbench
+```
+
+Installed customer warehouse operations are documented in `../../distribution/FINAGE.md` and `receiving/OPERATE.md`. `finage-warehouse` reads the original delivered customer files; `finage-receive prepare|run|resume|inspect` carries the complete two-export receiving operation through the maintained shared engine. Those receiving commands do not create another producer capture or application store.
