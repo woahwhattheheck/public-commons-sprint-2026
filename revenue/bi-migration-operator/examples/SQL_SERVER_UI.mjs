@@ -43,6 +43,7 @@ async function closeHost(){
 }
 async function startHost(workspace,tag){
   await closeHost();
+  if(browser){await browser.close();browser=null;}
   let buffer='',ready=null,stderr='';
   server=spawn(python,['-B',path.join(ROOT,'BI_OPERATOR.py'),'--workspace',workspace,'serve','--port','0'],
     {cwd:ROOT,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']});
@@ -52,6 +53,8 @@ async function startHost(workspace,tag){
   server.on('error',error=>{stderr+=error.message;});
   await deadline(()=>{if(server.exitCode!==null)throw Error('Original host ended: '+stderr.slice(-1000));return ready;},'Original local host did not become ready');
   await write(path.join(uiRoot,tag+'-private-host.json'),{...ready,pid:server.pid});
+  browser=await playwright.chromium.launch({executablePath:chromium,headless:true,
+    args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-gpu-compositing','--disable-accelerated-2d-canvas','--no-zygote','--single-process']});
   context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
   page=await context.newPage();
   page.on('pageerror',e=>errors.push({tag,type:'pageerror',message:e.message}));
@@ -111,10 +114,9 @@ async function view(name,tag){
   await write(statePath,state);
 }
 try{
-  browser=await playwright.chromium.launch({executablePath:chromium,headless:true,
-    args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--no-zygote','--single-process']});
   if(state.phase<1){
     await startHost(path.join(operation,'workspace'),'source');
+    if(!state.transfer){
     await section('connections');await selected('sql-profile-select',original.profile.id);
     await page.locator('#sql-profile-notes').waitFor();
     const marker='Browser operating review '+state.operation_id;
@@ -141,9 +143,12 @@ try{
     await page.locator('[data-action="sql-open-data"]').click();
     await page.locator('#data-search').waitFor();
     const firstKey=await page.locator('td[data-column="source_record_id"]').first().getAttribute('data-value');
+    const searchResponse=page.waitForResponse(r=>{const url=new URL(r.url());return url.pathname==='/api/preview'&&url.searchParams.get('search')===firstKey;});
     await page.locator('#data-search').fill(firstKey);await page.locator('[data-action="search-data"]').click();
-    await page.waitForFunction(()=>document.querySelector('#content')?.innerText.includes('1 matching rows'));
-    await event('original_complete_dataset_opened',{dataset_id:original.dataset_id,rows:5037,search_rows:1});
+    const searched=await(await searchResponse).json();
+    if(searched.source_rows!==5037||searched.total<1||searched.total>=5037||!searched.rows.every(row=>Object.values(row).some(v=>String(v).toLowerCase().includes(firstKey.toLowerCase()))))throw Error('The actual source-text search returned a different selection.');
+    await page.waitForFunction(total=>document.querySelector('#content')?.innerText.includes(total+' matching rows'),searched.total);
+    await event('original_complete_dataset_opened',{dataset_id:original.dataset_id,rows:5037,search_rows:searched.total});
     await section('mapping');
     await selected('sql-mapping-plan',original.mapped_plan.id);
     await selected('sql-mapping-table','OffenseCells');
@@ -173,10 +178,14 @@ try{
     }
     state.delivery={id:delivery.id,digest:delivery.payload.package.digest};
     const transfer=await download('button[data-action="download"][data-sha="'+delivery.payload.package.digest+'"]','current-workstream.zip');
-    state.transfer=transfer;
-    for(const sectionName of ['connections','queries','jobs','mapping','receiving'])await view(sectionName,'desktop');
+    state.transfer=transfer;await write(statePath,state);
+    }else{
+      const retained=await fs.readFile(state.transfer.path);
+      if(hash(retained)!==state.transfer.sha256)throw Error('The retained original workstream download differs.');
+    }
+    for(const sectionName of ['connections','queries','jobs','mapping','receiving'])if(!state.views.some(v=>v.tag==='desktop'&&v.section===sectionName))await view(sectionName,'desktop');
     await page.setViewportSize({width:390,height:844});
-    for(const sectionName of ['connections','queries','jobs','mapping','receiving'])await view(sectionName,'mobile');
+    for(const sectionName of ['connections','queries','jobs','mapping','receiving'])if(!state.views.some(v=>v.tag==='mobile'&&v.section===sectionName))await view(sectionName,'mobile');
     await page.screenshot({path:path.join(uiRoot,'02-sql-receiving-mobile.png'),fullPage:true});
     state.phase=1;await event('source_operator_complete',{native_launched:0});
   }
@@ -219,6 +228,10 @@ try{
     browser_errors:0,native_jobs_started:0,sql_server_connections:0};
   await write(resultPath,result);console.log(JSON.stringify(result));
 }catch(error){
+  if(page&&!page.isClosed()){
+    await page.screenshot({path:path.join(uiRoot,'continuation-stopped.png'),fullPage:true}).catch(()=>{});
+    await write(path.join(uiRoot,'CONTINUATION-ERROR.json'),{stack:String(error.stack||error).replace(/#token=[^\s"]+/g,'#token=(private)'),view:await page.locator('body').innerText().catch(()=>'(unavailable)')}).catch(()=>{});
+  }
   await event('continuation_stopped',{error:String(error.message).replace(/#token=[^\s"]+/g,'#token=(private)')});
   await write(path.join(uiRoot,'UI-ERRORS.json'),errors);
   console.error(JSON.stringify({operation_id:state.operation_id,phase:state.phase,error:String(error.message).replace(/#token=[^\s"]+/g,'#token=(private)')}));
