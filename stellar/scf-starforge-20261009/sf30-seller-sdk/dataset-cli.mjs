@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { loadDatasetConfig } from './dataset-handler.mjs';
 
 const USAGE = `Usage:
+  node dataset-cli.mjs dspace --help  Repository source, reviewed datasets and complete customer receiving
   node dataset-cli.mjs grants --help   Grants.gov source, qualification, merchant and complete receiving
   node dataset-cli.mjs frictionless --help  Retained data packages, reviewed fields and original merchant releases
   node dataset-cli.mjs feeds --help   Retained RSS/Atom editions, operator workspace and merchant handoff

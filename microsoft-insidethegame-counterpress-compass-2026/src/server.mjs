@@ -6,7 +6,9 @@ import {homedir} from 'node:os';
 import {makeSnapshot, TEAMS, validateFixture} from './engine.mjs';
 import {foundryConfigured, suggestedNarrative} from './foundry.mjs';
 import {createFoundryAdmission} from './foundry_quota.mjs';
-import {createOpusCommentary} from './opus_commentary.mjs';
+import {createOpusCommentary, PROMPT_VERSION} from './opus_commentary.mjs';
+import {createOpusAgentInsight, AGENT_PROMPT_VERSION} from './opus_agent_bridge.mjs';
+import {createCommentaryContinuity, findRetainedInsight, presentRetainedInsight} from './retained_insight.mjs';
 import {createEvidenceExport, evidenceCsv} from './evidence_export.mjs';
 import {scenarioList, DEFAULT_SCENARIO} from './scenarios.mjs';
 import {createSessionStore, parseView, parseSpeed, parseCount, resumeCursor, delayMs} from './live_sessions.mjs';
@@ -25,7 +27,12 @@ const DEFAULT_PORT = 3167;
 // Existing local replay remains free; admitted paid attempts count even on failure.
 const foundryAdmission = createFoundryAdmission();
 // Separate optional AI insight; paid work only via the operator's budget runner.
-const opus = createOpusCommentary();
+const opusProvider = createOpusCommentary();
+const opus = createCommentaryContinuity({provider: opusProvider, edition: PROMPT_VERSION,
+  directory: join(process.env.COUNTERPRESS_ARCHIVE_DIR || join(homedir(), '.local', 'share', 'counterpress-compass', 'matches'), 'insights')});
+const opusAgentProvider = createOpusAgentInsight();
+const opusAgent = createCommentaryContinuity({provider: opusAgentProvider, edition: AGENT_PROMPT_VERSION,
+  directory: join(process.env.COUNTERPRESS_ARCHIVE_DIR || join(homedir(), '.local', 'share', 'counterpress-compass', 'matches'), 'agent-insights')});
 export const sessions = createSessionStore();
 const sweeper = setInterval(() => sessions.sweep(), 60 * 1000);
 sweeper.unref();
@@ -114,6 +121,19 @@ function streamSession(req, res, id, url) {
   timer = setTimeout(emit, 40);
 }
 
+// Paid agent execution is a local operator action. Completed saved explanations
+// remain readable through the normal player and receiving application.
+function agentExecutionAllowed(req) {
+  const ip = req.socket.remoteAddress || '';
+  if (!['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(ip) ||
+      req.headers.forwarded || req.headers['x-forwarded-for'] || req.headers['x-forwarded-host']) return false;
+  try {
+    const host = new URL('http://' + req.headers.host);
+    if (!['localhost', '127.0.0.1', '[::1]'].includes(host.hostname)) return false;
+    return !req.headers.origin || req.headers.origin === host.origin;
+  } catch { return false; }
+}
+
 export const server = createServer(async (req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
@@ -122,12 +142,14 @@ export const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, 'http://localhost');
     const path = url.pathname;
-    if (req.method === 'GET' && path === '/health') return send(res, 200, {ok: true, fixture: 'synthetic', foundryConfigured: foundryConfigured(), opusConfigured: opus.configured(), liveSessions: sessions.size()});
+    if (req.method === 'GET' && path === '/health') return send(res, 200, {ok: true, fixture: 'synthetic', foundryConfigured: foundryConfigured(), opusConfigured: opus.configured(), opusAgentConfigured: opusAgent.configured() && agentExecutionAllowed(req), liveSessions: sessions.size()});
     if (req.method === 'GET' && path === '/api/bootstrap') return send(res, 200, {
       fixture: 'SYNTHETIC ONLY', teams: TEAMS, events: FIXTURE,
       scenarios: scenarioList(), defaultScenario: DEFAULT_SCENARIO,
       rules: {counterpressWindowSeconds:8, success:'same-team loss, pressure action and regain within window'},
-      foundryConfigured: foundryConfigured(), opusConfigured: opus.configured(), providerCallsOnReplay:0,
+      foundryConfigured: foundryConfigured(), opusConfigured: opus.configured(),
+      opusAgentConfigured: opusAgent.configured() && agentExecutionAllowed(req),
+      insightEditions: {opus: PROMPT_VERSION, agent: AGENT_PROMPT_VERSION}, providerCallsOnReplay:0,
     });
     // Historical route kept for source compatibility; not linked from the product UI.
     if (req.method === 'GET' && path === '/api/evidence-export') {
@@ -195,7 +217,11 @@ export const server = createServer(async (req, res) => {
         if (action === 'open' && req.method === 'POST') {
           objectBody(await getJSON(req));
           const {archive, match} = await store.open(id, libraryKey);
-          return send(res, 201, {archive, session: sessions.restore(match)});
+          const session = sessions.restore(match);
+          // Imported review text belongs to this reopened match session. It is
+          // never promoted into the shared provider's completed-result store.
+          sessions.get(session.id).retainedInsights = archive.review.insights;
+          return send(res, 201, {archive, session});
         }
         if (action === 'export' && req.method === 'GET') {
           const body = JSON.stringify(await store.exportPackage(id), null, 2) + '\n';
@@ -218,8 +244,10 @@ export const server = createServer(async (req, res) => {
       if (action === 'stream' && req.method === 'GET') return streamSession(req, res, id, url);
       return send(res, 404, {error:'Not found'});
     }
-    if (req.method === 'POST' && path === '/api/opus-commentary') {
-      if (!opus.configured()) return send(res, 503, {error:'Optional AI insight not configured'});
+    if (req.method === 'POST' && ['/api/opus-commentary', '/api/opus-agent-insight'].includes(path)) {
+      const agentRequest = path === '/api/opus-agent-insight';
+      const provider = agentRequest ? opusAgent : opus;
+      const edition = agentRequest ? AGENT_PROMPT_VERSION : PROMPT_VERSION;
       const body = objectBody(await getJSON(req));
       if (typeof body.sessionId !== 'string') return send(res, 400, {error:'Match session required'});
       const s = sessions.get(body.sessionId);
@@ -227,7 +255,17 @@ export const server = createServer(async (req, res) => {
       const events = s.events.slice(0, count);
       const snapshot = makeSnapshot(events, parseView({team: body.team, audience: body.audience, locale: body.locale}));
       if (!snapshot.overlays.length) return send(res, 422, {error:'No counterpress moment yet in this match'});
-      const out = await opus.request({sessionId: body.sessionId, count, snapshot, events});
+      const input = {sessionId: body.sessionId, count, snapshot, events, match: s};
+      const saved = findRetainedInsight(s.retainedInsights, input, edition);
+      if (saved) return send(res, 200, presentRetainedInsight(saved, body.sessionId));
+      const mayLaunch = !agentRequest || agentExecutionAllowed(req);
+      if (!provider.configured() || !mayLaunch) {
+        const retained = await provider.lookup(input);
+        if (retained.state === 'ready') return send(res, 200, retained);
+        return send(res, mayLaunch ? 503 : 403, {error: mayLaunch ?
+          'Optional insight not configured' : 'Agent execution is available to the local operator'});
+      }
+      const out = await provider.request(input);
       if (out.state === 'busy') { res.setHeader('Retry-After', String(out.retryAfterSeconds)); return send(res, 429, {state:'busy', retryAfterSeconds: out.retryAfterSeconds}); }
       return send(res, out.state === 'pending' ? 202 : 200, out);
     }
