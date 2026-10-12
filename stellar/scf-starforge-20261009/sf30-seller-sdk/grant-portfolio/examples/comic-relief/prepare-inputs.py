@@ -311,12 +311,59 @@ def prepare(args):
     result["sources"].insert(0, {"kind":"iati", "key":"comic-relief-cprojects", "label":"Comic Relief jointly FCDO-funded programmes",
         "sourceUrl":"https://assets.ctfassets.net/zsfivwzfgl3t/3skHdjqaAyEIqNxBpQu9Jo/a659e1990757d50174979ab49959e739/unflattened_202408.xml",
         "source":info(xml), "inventory":originals["iati"], "coverage":COVERAGE["iati"]})
+
+    current = originals.get("currentPublisher2015")
+    if current is not None:
+        need(current.get("schema") == "comic-relief.current-publisher-capture/v1"
+             and current.get("registryId") == FUND_SOURCES[0][1]
+             and current.get("sourceUrl") == FUND_SOURCES[0][3], "Select this operation's original current publisher capture")
+        current_files = {}
+        for role in ("source", "capture", "capsule"):
+            retained = current[role]
+            name = retained["name"]
+            need(Path(name).name == name and name not in ("", ".", ".."), "Current capture member name is invalid")
+            path = inputs / name
+            actual = info(path)
+            need(all(actual[key] == retained[key] for key in ("bytes", "sha256")),
+                 "The current publisher capture changed: " + role)
+            current_files[role] = actual
+        capture = read_json(current_files["capture"]["path"])
+        need(capture.get("operationId") == OPERATION and capture.get("sourceUrl") == FUND_SOURCES[0][3]
+             and capture.get("acquisition") == "current-publisher-http"
+             and capture.get("completedAt") == current.get("capturedAt")
+             and all(capture["original"][key] == current_files["source"][key] for key in ("bytes", "sha256")),
+             "Current publisher response and original source identities differ")
+        current_dir = output / "current-publisher-2015"
+        subprocess.run([args.converter_python, "-B", str(Path(__file__).resolve()), "convert-one",
+                        "--file", current_files["source"]["path"], "--schemas", str(native_schemas),
+                        "--output", str(current_dir)], check=True, stdout=subprocess.PIPE,
+                       stderr=sys.stderr, env=converter_env)
+        comparison = semantic_comparison(output / "international-2015-2022/package.json", current_dir / "package.json")
+        comparison.update({
+            "selection": "retained-drive-export-vs-current-publisher-http",
+            "currentCapturedAt": capture["completedAt"],
+            "originalBefore": info(inputs / FUND_SOURCES[0][2]),
+            "originalAfter": current_files["source"],
+            "httpCapture": current_files["capture"],
+            "captureCapsule": current_files["capsule"],
+            "currentConversion": info(current_dir / "conversion.json"),
+            "meaning": "The retained Drive export and the current HTTP response are separate source observations. The current capture is not relabelled as the earlier DataGetter download.",
+        })
+        comparison_path = output / "2015-current-publisher-semantic-comparison.json"
+        publish(comparison_path, json_bytes(comparison))
+        result["currentPublisherComparison"] = {
+            "comparison": info(comparison_path), "capture": current_files["capture"],
+            "capsule": current_files["capsule"], "transport": current_files["source"],
+            "converted": info(current_dir / "package.json"), "conversion": info(current_dir / "conversion.json"),
+            "capturedAt": capture["completedAt"],
+        }
+
     if args.historical_2015:
         historical = Path(args.historical_2015).resolve(strict=True)
         comparison_dir = output / "historical-2015-publisher-capture"
         subprocess.run([args.converter_python,"-B",str(Path(__file__).resolve()),"convert-one",
                         "--file",str(historical),"--schemas",str(native_schemas),"--output",str(comparison_dir)],
-                       check=True, stdout=subprocess.PIPE, stderr=sys.stderr)
+                       check=True, stdout=subprocess.PIPE, stderr=sys.stderr, env=converter_env)
         comparison = semantic_comparison(comparison_dir/"package.json", output/"international-2015-2022/package.json")
         comparison["originalBefore"] = info(historical)
         comparison["originalAfter"] = info(inputs/FUND_SOURCES[0][2])
