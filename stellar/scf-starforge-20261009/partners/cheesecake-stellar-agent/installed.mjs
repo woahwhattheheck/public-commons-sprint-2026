@@ -165,10 +165,10 @@ export async function initializeInstalledApplication({directory:destination,appl
 
 /** Start the unchanged authenticated application on its selected loopback listener. */
 export async function startInstalledApplication({configFile,expectedSelectionSha256,managedSourceDirectory,
-  bearerToken=process.env.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=0} = {}) {
+  environment=process.env,bearerToken=environment.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=0} = {}) {
   const selected = await inspectInstalledApplication(absolute(configFile),{expectedSelectionSha256,managedSourceDirectory});
   const {createApplicationServer} = await import('./server.mjs');
-  const opened = await createApplicationServer({configFile,bearerToken,host,port});
+  const opened = await createApplicationServer({configFile,bearerToken,host,port,environment});
   try {
     const expectedBinding = {configFile:selected.configFile,configurationSha256:selected.configurationSha256,
       applicationId:selected.applicationId,subject:selected.subject,runtimeDirectory:selected.runtimeDirectory,

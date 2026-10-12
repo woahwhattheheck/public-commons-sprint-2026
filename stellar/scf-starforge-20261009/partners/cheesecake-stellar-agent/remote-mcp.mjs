@@ -177,7 +177,7 @@ export async function attachRemoteMcpApplication({application,configurationFile,
   else await saveJSON(identityFile,identity);
   const recordPath = entry => join(root,hash(entry.view.intentId) + '.json');
   const pending = new Map(), executions = new Map();
-  let closed = false, closing, operator, quoteStore, resultStore, broker;
+  let closed = false, closing, operator, quoteStore, resultStore, broker, spendingConfigurationFile;
   async function current() {
     need(!closed,'APPLICATION_REMOTE_CLOSED');
     need(hash(await readBytes(configurationFile,2*1024*1024)) === sourceSha256 &&
@@ -224,6 +224,7 @@ export async function attachRemoteMcpApplication({application,configurationFile,
       nativeSource(sourceRoot,'result-store.mjs')]);
     const operatorModule = await import(pathToFileURL(config.operatorModule).href);
     operator = typeof operatorModule.openOperator === 'function' ? await operatorModule.openOperator({environment}) : operatorModule;
+    spendingConfigurationFile=operatorModule.spendingConfigurationFile??operator.spendingConfigurationFile??null;
     need(['approve','signPayment','spendingStatus','reconcilePayment','close'].every(key =>
       typeof operator[key] === 'function'),'APPLICATION_REMOTE_GOVERNED_OPERATOR_REQUIRED');
     quoteStore = new quotes.SqliteQuoteStore({directory:join(root,'quotes')});
@@ -345,6 +346,7 @@ export async function attachRemoteMcpApplication({application,configurationFile,
       ...(format === 'file' ? {} : {data})};
   }
   const remote = {
+    spendingConfigurationFile,
     selectedIntentIds:Object.freeze([...application.selectedIntentIds,...requests.keys()]),
     identity:{...application.identity,remoteMcp:{schema:SCHEMA,sourceSha256,requests:requests.size,
       responseByteLimit:MAX_RESULT,readiness:structuredClone(operator.readiness?.aggregateSpending ?? null)}},

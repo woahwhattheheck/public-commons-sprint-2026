@@ -50,7 +50,7 @@ export async function sourceFile(path,{maximum=2*1024**3,privateOnly=false}={}) 
   const handle=await open(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0)|(constants.O_NONBLOCK??0));
   try {
     const st=await handle.stat({bigint:true});
-    need(st.isFile() && st.nlink===1n && st.size<=BigInt(maximum) &&
+    need(st.isFile() && (!privateOnly || st.nlink===1n) && st.size<=BigInt(maximum) &&
       (!privateOnly || !(Number(st.mode)&0o077) &&
         (typeof process.getuid!=='function'||Number(st.uid)===process.getuid())),
       'APPLICATION_PROJECT_FILE_INVALID');

@@ -196,7 +196,7 @@ export async function createApplicationHandler({application,context,bearerToken,
 }
 
 export async function createApplicationServer({configFile,receivedDirectory,sourceRoot,subject,passphraseEnv,
-  environment=process.env,bearerToken=process.env.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=8767}={}) {
+  environment=process.env,bearerToken=environment.STELLAR_APP_ACCESS_TOKEN,host='127.0.0.1',port=8767}={}) {
   need(Boolean(configFile)!==Boolean(receivedDirectory),'APPLICATION_CONFIG_REQUIRED');
   need(['127.0.0.1','::1'].includes(host),'APPLICATION_LOOPBACK_HOST_REQUIRED');
   need(Number.isSafeInteger(port)&&port>=0&&port<=65535,'APPLICATION_PORT_INVALID');
