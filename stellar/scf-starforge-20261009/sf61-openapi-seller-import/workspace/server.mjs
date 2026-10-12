@@ -24,11 +24,14 @@ import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
 import { openCacheWorkspace } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
 import { cacheWorkspaceApi, serveCacheWorkspaceAsset, sendCacheWorkspaceResponse } from '../../sf30-seller-sdk/response-cache/workspace/http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
+import { cachePackageBinding, cachePolicyRevisionApi } from './cache-policy-revisions.mjs';
+import { createHarConsoleRoutes } from '../har/workspace-http.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
 const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
 STATIC.set('/revision-browser.mjs','revision-browser.mjs');
 STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
+STATIC.set('/har-browser.mjs','../har/browser.mjs');
 STATIC.set('/migrations','../blockworks/index.html');
 STATIC.set('/migrations/','../blockworks/index.html');
 STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
@@ -80,6 +83,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   if(typeof allowLoopbackOAuth!=='boolean')throw new TypeError('Loopback OAuth must be an explicit host option');
   const registry=await openOAuthConnectionRegistry({connections:oauthConnections,env:runtimeEnv,allowLoopback:allowLoopbackOAuth,lookup:oauthLookup});
   const oauth=createOAuthWorkspaceAdapter({registry,origin:()=>origin,allowLoopback:allowLoopbackOAuth});
+  let harPromise;
+  const har = () => harPromise ??= createHarConsoleRoutes({parent:output}).catch(error=>{harPromise=null;throw error;});
   let migrationPromise, migrationInstance;
   const migrations = () => migrationPromise ??= createMigrationRoutes({parent:output,origin:()=>origin,parentRuntime:view,
     env:runtimeEnv,oauthConnections,allowLoopbackOAuth,oauthLookup,validatePlan:oauth.validatePlan})
@@ -93,11 +98,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         const project=await readPackage(output,name);
         if(shuttingDown)throw Object.assign(new Error('Workspace is stopping'),{status:503});
         return openCacheWorkspace({directory:join(project.folder,'cache-operations'),
-          sources:[{id:'merchant',label:project.name}],request:(_source,command)=>{
+          sources:[{id:'merchant',label:project.name}],request:async(_source,command)=>{
             const management=active?.name===project.name?active.session.session?.cacheManagement:null;
             if(!management)throw Object.assign(new Error('Start this saved API package to operate its response cache.'),
               {code:'CACHE_WORKSPACE_SOURCE_OFFLINE',status:409});
-            return management.dispatch(command);
+            const result=await management.dispatch(command);
+            return command.op==='inspect'?{...result,package:cachePackageBinding(project)}:result;
           }});
       })();
       cacheWorkspaces.set(name,opening);
@@ -107,9 +113,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   }
   function cacheOperation(req,res,url,body) {
     const operation=(async()=>{
-      const workspace=await operatingWorkspace(url.searchParams.get('name'));
-      return sendCacheWorkspaceResponse(res,await cacheWorkspaceApi(workspace,{
-        operation:url.pathname.slice('/api/cache-operations/'.length),method:req.method,query:url.searchParams,body}));
+      const baseName=url.searchParams.get('name'),workspace=await operatingWorkspace(baseName);
+      const operation=url.pathname.slice('/api/cache-operations/'.length);
+      const request={operation,method:req.method,query:url.searchParams,body};
+      return sendCacheWorkspaceResponse(res,operation.startsWith('policy-')
+        ?await cachePolicyRevisionApi({...request,parent:output,baseName,workspace,validatePlan:oauth.validatePlan})
+        :await cacheWorkspaceApi(workspace,request));
     })();
     cacheRequests.add(operation);operation.finally(()=>cacheRequests.delete(operation)).catch(()=>{});
     return operation;
@@ -173,6 +182,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
       if (req.method==='GET') {
+        if (pathname.startsWith('/api/har/')) return await (await har()).get(pathname,url,send,res);
         if(pathname.startsWith('/api/cache-operations/'))return await cacheOperation(req,res,url);
         if(pathname==='/api/oauth/connections')return send(200,await oauth.list());
         if(pathname==='/api/oauth/connection')return send(200,await oauth.status(url.searchParams.get('alias'),url.searchParams.get('flowId')));
@@ -214,6 +224,13 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         return send(404,{error:'Not found'});
       }
       if (req.method!=='POST') return send(405,{error:'Use GET or POST'});
+      if (pathname==='/api/har/upload'||pathname==='/api/har/decisions') {
+        if (busy) return send(409,{error:'A workspace operation is in progress'});
+        busy=true; let finishMutation;
+        mutationDone=new Promise(yes=>{finishMutation=yes;});
+        try {return await (await har()).upload(req,url,send);}
+        finally {busy=false;finishMutation();}
+      }
       if (pathname==='/api/migrations/handover/import-file') {
         if (busy) return send(409,{error:'A workspace operation is in progress'});
         busy=true; let finishMutation;
@@ -244,17 +261,21 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if (pathname==='/api/postman/inspect') return send(200,inspectPostman(body));
       if (pathname==='/api/postman/prepare') return send(200,preparePostmanSource(body));
       if (pathname==='/api/inspect') return send(200,inspectOpenApi(body.specText));
-      if (pathname==='/api/preview') {await oauth.validatePlan(body.specText,body.plan);return send(200,prepareMerchant(body.specText,body.plan).preview);}
+      if (pathname==='/api/preview') {
+        if (body.capturedSource!==undefined) await (await har()).app.checkSource(body.capturedSource,body.specText,body.plan);
+        await oauth.validatePlan(body.specText,body.plan);return send(200,prepareMerchant(body.specText,body.plan).preview);
+      }
       if (pathname==='/api/oauth/binding')return send(200,await oauth.binding(body));
       if (pathname==='/api/revisions/review')return send(200,await reviewMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
       if (!['/api/save','/api/start','/api/stop','/api/accept','/api/cache/invalidate','/api/operations/issue','/api/operations/download','/api/operations/load','/api/operations/handoff',
         '/api/customer/create','/api/customer/prepare','/api/customer/open','/api/customer/close','/api/oauth/command',
-        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/')) return send(404,{error:'Not found'});
+        '/api/revisions/draft','/api/revisions/save','/api/revisions/stage'].includes(pathname) && !pathname.startsWith('/api/migrations/') && !pathname.startsWith('/api/har/')) return send(404,{error:'Not found'});
       if (busy) return send(409,{error:'A workspace operation is in progress'});
       busy=true;
       let finishMutation;
       mutationDone=new Promise(yes=>{finishMutation=yes;});
       try {
+        if (pathname.startsWith('/api/har/')) return await (await har()).post(pathname,body,send,res);
         if (pathname.startsWith('/api/migrations/')) return await (await migrations()).post(pathname,body,send);
         if ((pathname==='/api/start'||pathname==='/api/customer/open') && migrationInstance?.app.releases.owned().length)
           return send(409,{error:'This workspace owns a running migration seller. Stop it in Data migrations before starting another merchant session.'});
@@ -264,7 +285,9 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         if(pathname==='/api/revisions/stage')return send(201,await stageMerchantRevision({...body,parent:output,validatePlan:oauth.validatePlan}));
         if (pathname==='/api/save') {
           await oauth.validatePlan(body.specText,body.plan);
-          const result=await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
+          const result=body.capturedSource!==undefined
+            ? await (await har()).app.saveMerchant({capturedSource:body.capturedSource,specText:body.specText,plan:body.plan,name:body.name})
+            : await savePackage({specText:body.specText,plan:body.plan,parent:output,name:body.name});
           return send(201,{name:result.name,folder:result.folder,command:result.command,preview:result.preview});
         }
         if(pathname.startsWith('/api/customer/')) {

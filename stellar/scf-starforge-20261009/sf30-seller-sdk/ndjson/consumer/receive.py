@@ -231,9 +231,38 @@ def receive_acquisition(acquisition, delivery_directory, release_directory, work
     return {**restored, "acquisition": received}
 
 
+def receive_delivery(delivery_directory, release_directory, workspace_directory, *,
+                     expected_delivery_sha256, expected_build, expected_snapshot,
+                     node="node", timeout=360, query=None, compare=None, project=None):
+    """Receive a reviewed original SF100 source delivery and its original lineage."""
+    release = inspect_release(release_directory, expected_build=expected_build,
+                              expected_snapshot=expected_snapshot, node=node, timeout=timeout)
+    delivery = _directory(delivery_directory)
+    _hash(expected_delivery_sha256, "delivery manifest")
+    native = subprocess.run(
+        [node, str(HERE / "delivery.mjs"), "--directory", str(delivery),
+         "--manifest-sha256", expected_delivery_sha256, "--snapshot", expected_snapshot],
+        capture_output=True, timeout=timeout, check=False)
+    require(native.returncode == 0, "NDJSON_ORIGINAL_SOURCE_DELIVERY_FAILED",
+            native_error=native.stderr.decode("utf-8", "replace")[-3000:])
+    require(len(native.stdout) <= 4 * 1024 * 1024, "NDJSON_SOURCE_DELIVERY_RESULT_TOO_LARGE")
+    application = _application()
+    received = application.load_json(native.stdout)
+    require(received.get("schema") == "stellar-forge.ndjson-source-delivery.v1"
+            and received.get("snapshot") == expected_snapshot
+            and received.get("manifestSha256") == expected_delivery_sha256,
+            "NDJSON_SOURCE_DELIVERY_SELECTION_CHANGED")
+    available = {column["name"] for column in release["description"]["columns"]}
+    require(set(received["fields"]) <= available, "NDJSON_DELIVERED_COLUMNS_CHANGED")
+    target = _directory(workspace_directory, exists=os.path.lexists(workspace_directory))
+    with application.Workspace(target, create=not target.exists()) as workspace:
+        restored = _restore(workspace, release, query=query, compare=compare, project=project)
+    return {**restored, "sourceDelivery": received}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("receive", "restore"))
+    parser.add_argument("command", choices=("receive", "receive-delivery", "restore"))
     parser.add_argument("--release", required=True, help="The same original SF82 NDJSON package directory")
     parser.add_argument("--workspace", required=True, help="Create or reopen this original NDJSON workspace")
     parser.add_argument("--build", required=True, help="Reviewed original source build SHA256")
@@ -241,6 +270,7 @@ def main(argv=None):
     parser.add_argument("--checkout", default=str(CHECKOUT), help="Selected original SF88 source checkout")
     parser.add_argument("--session", help="Existing original SF88 acquisition session")
     parser.add_argument("--delivery", help="Original SF100 data room destination")
+    parser.add_argument("--delivery-sha256", help="Reviewed original SF100 manifest SHA256 for receive-delivery")
     parser.add_argument("--project", help="Export or verify/reopen the original six-file project ZIP")
     parser.add_argument("--compare", help="Compare this received edition to a retained build in the same mapping")
     parser.add_argument("--query", help='Native query object with string values, for example {"limit":"20"}')
@@ -262,6 +292,11 @@ def main(argv=None):
                                                    node=args.node, timeout=args.timeout)
             result = receive_acquisition(acquisition, args.delivery, args.release, args.workspace,
                                          checkout=checkout, **options)
+        elif args.command == "receive-delivery":
+            require(args.session is None and args.delivery and args.delivery_sha256,
+                    "NDJSON_ORIGINAL_DELIVERY_AND_MANIFEST_REQUIRED")
+            result = receive_delivery(args.delivery, args.release, args.workspace,
+                                      expected_delivery_sha256=args.delivery_sha256, **options)
         else:
             require(args.session is None and args.delivery is None, "NDJSON_RESTORE_ACCEPTS_SOURCE_PACKAGE")
             result = restore_release(args.release, args.workspace, **options)

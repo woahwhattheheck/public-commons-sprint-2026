@@ -160,15 +160,17 @@ export async function prepareNdjsonRelease({ prepared, datasetDirectory, outputD
   const parent = await privateParent(outputDirectory);
   const { raw: merchantBytes } = await readJson(join(root, 'merchant.json'));
   const merchantSha256 = hash(merchantBytes);
-  try {
-    await lstat(outputDirectory);
+  let present = true;
+  try { await lstat(outputDirectory); }
+  catch (error) { if (error.code === 'ENOENT') present = false; else throw error; }
+  if (present) {
     const existing = await inspectNdjsonRelease({ directory: outputDirectory });
     need(existing.merchantSha256 === merchantSha256 && existing.datasetDirectory === datasetDirectory &&
       existing.source === merchant.source && existing.plan === merchant.plan &&
       existing.build === merchant.build && existing.snapshot === merchant.snapshot,
       'An existing release package belongs to a different reviewed merchant or version store.');
     return { ...existing, reused: true };
-  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
   const { value: review } = await readJson(join(root, 'ndjson-lineage.json'), 131072);
   const { value: config } = await readJson(join(root, 'dataset.json'), 65536);
   const { value: seller } = await readJson(join(root, 'seller.json'));
