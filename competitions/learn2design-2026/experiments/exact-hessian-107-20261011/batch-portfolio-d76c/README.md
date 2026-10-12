@@ -17,6 +17,11 @@ initial slots after the same random draws. The supplied initial point, when
 present, stays first. The original feasible archive supplies diverse restart
 basins. New random starts remain part of exploration.
 
+Donor mapping receives a snapshot of finite public bounds, problem specification
+and parameter context captured before the Objective switches to unbounded
+search. Both donor clipping and the sigmoid inverse use that same snapshot.
+The original helper and compiled bank retain their exact bytes.
+
 ## Native feasibility and timing
 
 Every batched gradient call returns the original Objective's physical

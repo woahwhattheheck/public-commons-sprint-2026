@@ -314,7 +314,8 @@ def archive(directory, target):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("action", choices=("plan", "run", "status", "export"))
-    parser.add_argument("--phase", choices=("matched-development", "coordinate-map-development", "broad-public", "full-objective-budget"),
+    parser.add_argument("--phase",
+                        choices=tuple(phase["id"] for phase in read(ROOT / "RUN_PLAN.json")["phases"]),
                         default="matched-development")
     parser.add_argument("--candidate", action="append", help="Two frozen IDs for a broader phase")
     parser.add_argument("--baseline", help="Frozen source ID; defaults to the selected phase control")
