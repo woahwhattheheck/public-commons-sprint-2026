@@ -187,6 +187,7 @@ class ReceivingDock(QDockWidget):
         self.settings = QSettings()
         self.busy = False
         self.pending = None
+        self.pending_count = 0
         self.setObjectName("StarforgeSTACReceivingDock")
         self.container = QWidget()
         self.container.setObjectName("StarforgeReceiving")
@@ -392,24 +393,90 @@ class ReceivingDock(QDockWidget):
         require(self.workspace is not None, "WORKSPACE_REQUIRED", "Create or open a GIS project workspace.")
         return self.workspace
 
+    def flush_settings(self):
+        self.settings.sync()
+        status = self.settings.status()
+        require(getattr(status, "value", status) == 0, "PENDING_STORAGE",
+                "The local pending action could not be saved. Restore access to the QGIS settings location before continuing.")
+
+    @staticmethod
+    def pending_key(task):
+        binding = {"workspace": task["workspace"], "workspaceId": task["workspaceId"]}
+        return "starforge_stac/pending_by_workspace/" + value_sha(binding) + "/" + value_sha(task["requestId"])
+
+    def retain_pending(self, task):
+        key = self.pending_key(task)
+        self.settings.sync()
+        existing = self.settings.value(key, "")
+        if existing:
+            require(json.loads(existing) == task, "PENDING_RECORD_CHANGED",
+                    "This original pending request already has different retained inputs.")
+        else:
+            self.settings.setValue(key, pretty(task))
+        self.flush_settings()
+
+    def clear_pending(self, task):
+        key = self.pending_key(task)
+        self.settings.sync()
+        existing = self.settings.value(key, "")
+        if existing:
+            require(json.loads(existing) == task, "PENDING_RECORD_CHANGED",
+                    "Refresh the original pending request before releasing its saved marker.")
+            self.settings.remove(key)
+            self.flush_settings()
+
+    def load_pending(self):
+        self.pending, self.pending_count = None, 0
+        if self.workspace is None:
+            return
+        binding = {"workspace": str(self.workspace.root), "workspaceId": self.workspace.read()["id"]}
+        self.settings.sync()
+        legacy_raw = self.settings.value("starforge_stac/pending", "")
+        if legacy_raw:
+            try:
+                legacy = json.loads(legacy_raw)
+            except (TypeError, ValueError):
+                legacy = None
+            if isinstance(legacy, dict) and legacy.get("workspace") == binding["workspace"]:
+                candidate = {**legacy, "workspaceId": binding["workspaceId"]}
+                self.retain_pending(candidate)
+                if self.settings.value("starforge_stac/pending", "") == legacy_raw:
+                    self.settings.remove("starforge_stac/pending")
+                    self.flush_settings()
+        group = "starforge_stac/pending_by_workspace/" + value_sha(binding)
+        self.settings.beginGroup(group)
+        try:
+            keys = list(self.settings.childKeys())
+        finally:
+            self.settings.endGroup()
+        tasks = []
+        for key in keys:
+            raw = self.settings.value(group + "/" + key, "")
+            try:
+                task = json.loads(raw)
+            except (TypeError, ValueError) as exc:
+                raise QgisReceivingError("PENDING_RECORD_INVALID", "The saved local action could not be read.") from exc
+            require(isinstance(task, dict) and task.get("workspace") == binding["workspace"] and
+                    task.get("workspaceId") == binding["workspaceId"] and type(task.get("revision")) is int and
+                    isinstance(task.get("requestId"), str) and isinstance(task.get("payload"), dict) and
+                    isinstance(task.get("action"), str) and isinstance(task.get("actor"), str) and
+                    self.pending_key(task) == group + "/" + key, "PENDING_RECORD_INVALID",
+                    "Retain the pending action with its original workspace, analyst and request.")
+            tasks.append(task)
+        tasks.sort(key=lambda task: (task["revision"], task["requestId"]))
+        self.pending_count = len(tasks)
+        self.pending = tasks[0] if tasks else None
+
     def set_workspace(self, workspace):
         self.workspace = workspace
         self.settings.setValue("starforge_stac/workspace", str(workspace.root))
-        self.pending = None
-        raw = self.settings.value("starforge_stac/pending", "")
-        if raw:
-            try:
-                candidate = json.loads(raw)
-                if candidate.get("workspace") == str(workspace.root):
-                    self.pending = candidate
-            except (TypeError, ValueError):
-                pass
         self.refresh()
 
     def refresh(self):
         if self.workspace is None:
             return
         self.state = self.workspace.read()
+        self.load_pending()
         self.source = self.workspace.source() if self.state["activeSourceId"] else None
         self.summary.setText(self.state["title"] + " · revision " + str(self.state["revision"]) + "\n" + str(self.workspace.root))
         fill(self.sources, [([source_label(x), x.get("summary", {}).get("scenes", ""),
@@ -467,23 +534,30 @@ class ReceivingDock(QDockWidget):
 
     def show_pending(self):
         self.pending_label.setText("Pending " + self.pending["action"] + " · " + self.pending["requestId"] +
-                                   " · input revision " + str(self.pending["revision"]) if self.pending else "No local pending action.")
+                                   " · input revision " + str(self.pending["revision"]) +
+                                   (" · " + str(self.pending_count - 1) + " additional retained action(s)" if self.pending_count > 1 else "")
+                                   if self.pending else "No local pending action.")
 
     def mutate(self, action, payload):
         self.need_workspace()
+        self.load_pending()
         require(self.pending is None, "PENDING_ACTION", "Resume the pending action, or release its local marker before starting another change.")
         actor = self.actor.text().strip()
         require(actor, "ACTOR_REQUIRED", "Enter the analyst name retained with this change.")
-        self.pending = {"workspace": str(self.workspace.root), "action": action, "payload": payload,
-                        "revision": self.state["revision"], "requestId": "qgis-" + uuid.uuid4().hex, "actor": actor}
-        self.settings.setValue("starforge_stac/pending", pretty(self.pending))
-        self.settings.sync()
+        self.pending = {"workspace": str(self.workspace.root), "workspaceId": self.state["id"],
+                        "action": action, "payload": payload, "revision": self.state["revision"],
+                        "requestId": "qgis-" + uuid.uuid4().hex, "actor": actor}
+        self.retain_pending(self.pending)
+        self.pending_count = 1
         return self.execute_pending()
 
     def execute_pending(self):
         task = self.pending
         require(task is not None, "PENDING_ACTION", "There is no local pending action.")
         workspace = self.need_workspace()
+        require(task.get("workspace") == str(workspace.root) and task.get("workspaceId") == workspace.read()["id"],
+                "PENDING_WORKSPACE_CHANGED", "Reopen the original workspace for this retained action.")
+        self.retain_pending(task)
         common = {"revision": task["revision"], "request_id": task["requestId"], "actor": task["actor"]}
         data = task["payload"]
         action = task["action"]
@@ -501,9 +575,8 @@ class ReceivingDock(QDockWidget):
             result = save_project(workspace, project_crs=data.get("projectCrs"), progress=self.progress, **common)
         else:
             raise QgisReceivingError("PENDING_ACTION_INVALID", "This saved local action is unknown.")
+        self.clear_pending(task)
         self.pending = None
-        self.settings.remove("starforge_stac/pending")
-        self.settings.sync()
         self.refresh()
         return result
 
@@ -517,8 +590,8 @@ class ReceivingDock(QDockWidget):
                                       "Keep all retained files and original operation history, and release this local pending marker?",
                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if answer == QMessageBox.StandardButton.Yes:
-            self.pending = None
-            self.settings.remove("starforge_stac/pending")
+            self.clear_pending(self.pending)
+            self.load_pending()
             self.show_pending()
 
     def create_workspace(self):

@@ -447,18 +447,49 @@ class QgisWorkspace:
         require(not self.db_path.is_symlink(), "WORKSPACE_DATABASE", "Use the ordinary project database.")
         if not self.db_path.exists():
             require(create, "WORKSPACE_MISSING", "Create a new project workspace or open its existing directory.")
-            require(not any(self.root.iterdir()), "NEW_WORKSPACE_DIRECTORY", "Choose a new empty project directory.")
-            with self._connect() as db:
-                db.executescript("""
-                    CREATE TABLE workspace (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL);
-                    CREATE TABLE events (revision INTEGER PRIMARY KEY, body TEXT NOT NULL);
-                    CREATE TABLE requests (request_id TEXT PRIMARY KEY, input_sha256 TEXT NOT NULL, result TEXT NOT NULL);
-                """)
-                state = {"schema": WORKSPACE_SCHEMA, "id": "qgis-" + uuid.uuid4().hex,
-                         "title": str(title).strip() or "STAC GIS project", "revision": 0,
-                         "createdAt": utc_now(), "activeSourceId": None, "sources": [], "layers": [],
-                         "projects": [], "reviews": []}
-                db.execute("INSERT INTO workspace VALUES(1,?)", (json.dumps(state, ensure_ascii=False),))
+            # A pre-publication stop may leave only our private initialization file/journal.
+            # Those originals remain untouched; a complete replacement is published atomically.
+            initialization = re.compile(r"^[.]workspace-init-[a-f0-9]{32}[.]sqlite(?:-journal)?$")
+            require(all(not item.is_symlink() and item.is_file() and
+                        (item.name == "workspace.sqlite" or initialization.fullmatch(item.name))
+                        for item in self.root.iterdir()), "NEW_WORKSPACE_DIRECTORY",
+                    "Choose a new project directory or resume its unfinished initialization.")
+            temporary = self.root / (".workspace-init-" + uuid.uuid4().hex + ".sqlite")
+            db = None
+            try:
+                fd = os.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+                os.close(fd)
+                db = sqlite3.connect(temporary, timeout=30)
+                with db:
+                    db.execute("BEGIN IMMEDIATE")
+                    db.execute("CREATE TABLE workspace (id INTEGER PRIMARY KEY CHECK(id=1), body TEXT NOT NULL)")
+                    db.execute("CREATE TABLE events (revision INTEGER PRIMARY KEY, body TEXT NOT NULL)")
+                    db.execute("CREATE TABLE requests (request_id TEXT PRIMARY KEY, input_sha256 TEXT NOT NULL, result TEXT NOT NULL)")
+                    state = {"schema": WORKSPACE_SCHEMA, "id": "qgis-" + uuid.uuid4().hex,
+                             "title": str(title).strip() or "STAC GIS project", "revision": 0,
+                             "createdAt": utc_now(), "activeSourceId": None, "sources": [], "layers": [],
+                             "projects": [], "reviews": []}
+                    db.execute("INSERT INTO workspace VALUES(1,?)", (json.dumps(state, ensure_ascii=False),))
+                db.close()
+                db = None
+                with temporary.open("rb") as stream:
+                    os.fsync(stream.fileno())
+                try:
+                    os.link(temporary, self.db_path)
+                except FileExistsError:
+                    # A concurrent creator published its complete original state first.
+                    require(self.db_path.is_file() and not self.db_path.is_symlink(),
+                            "WORKSPACE_DATABASE", "Use the ordinary project database.")
+                if os.name == "posix":
+                    directory_fd = os.open(self.root, os.O_RDONLY)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+            finally:
+                if db is not None:
+                    db.close()
+                temporary.unlink(missing_ok=True)
         state = self.read()
         require(state.get("schema") == WORKSPACE_SCHEMA and isinstance(state.get("revision"), int),
                 "WORKSPACE_SCHEMA", "The directory is not a Starforge QGIS project workspace.")
