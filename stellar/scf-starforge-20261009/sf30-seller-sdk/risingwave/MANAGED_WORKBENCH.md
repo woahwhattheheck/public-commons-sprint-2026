@@ -261,3 +261,17 @@ returns that retained result.
 - [Native source, subscription protocol and complete native journey](README.md)
 - [Browser, client, CLI and MCP workbench](WORKBENCH.md)
 - [Original Runtime Workspace and Applications](../../distribution/runtime-workspace/README.md)
+
+## Browser continuation in the installed application
+
+The selected application includes both private browser recovery modules.
+Browser drafts live with the adopted workbench under browser-workspaces.
+Stopping and reopening the same application restores the editor through the
+new printed URL, including source/report drafts, typed controls and original
+operation requests. The private connection token is supplied by the new launch.
+
+Use Transfer to reopen another retained browser draft, export the complete
+editor or import it back into the same workbench. Source saves, customer
+preparations, captures and comparisons continue their original request IDs.
+The existing native receiving programme and its complete capture/comparison
+files remain the operating case for this continuation.

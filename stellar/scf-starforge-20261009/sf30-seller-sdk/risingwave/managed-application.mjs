@@ -42,6 +42,7 @@ export const RISINGWAVE_APPLICATION_SOURCE_FILES = Object.freeze([
   "publisher/model.mjs",
   "publisher/cli.mjs",
   "workspace/model.mjs",
+  "workspace/recovery.mjs",
   "workspace/comparison.mjs",
   "workspace/server.mjs",
   "workspace/client.mjs",
@@ -50,6 +51,7 @@ export const RISINGWAVE_APPLICATION_SOURCE_FILES = Object.freeze([
   "workspace/mcp.mjs",
   "workspace/public/index.html",
   "workspace/public/app.mjs",
+  "workspace/public/recovery.mjs",
   "workspace/public/style.css"
 ]);
 
