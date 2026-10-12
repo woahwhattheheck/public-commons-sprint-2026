@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "operator-discovery",
-  "description": "Search installed commands, original registration sources, package exports, Applications and merchant providers, and declared runtime groups.",
+  "description": "Search installed registrations and source-owned capabilities; match product requirements and prepare original source build reviews.",
   "components": [
     "stellar/scf-starforge-20261009/distribution/discovery"
   ],
@@ -9,7 +9,7 @@
     "discover": "stellar/scf-starforge-20261009/distribution/discovery/cli.mjs"
   },
   "commandDescriptions": {
-    "discover": "Search installed toolkit capabilities, inspect original registrations, export every match and open the command finder"
+    "discover": "Find installed commands, match complete product requirements, export original registrations and prepare source build review requests"
   },
   "exports": {
     "./operator/discovery": {
@@ -17,7 +17,19 @@
       "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/catalog.mjs"
     },
     "./operator/discovery/source": "./source/stellar/scf-starforge-20261009/distribution/discovery/load.mjs",
-    "./operator/discovery/server": "./source/stellar/scf-starforge-20261009/distribution/discovery/server.mjs"
+    "./operator/discovery/server": "./source/stellar/scf-starforge-20261009/distribution/discovery/server.mjs",
+    "./operator/requirements": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/product-requirements.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/product-requirements.mjs"
+    },
+    "./operator/requirements/source": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/product-requirements-source.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/product-requirements-source.mjs"
+    },
+    "./operator/requirements/dependencies": {
+      "types": "./source/stellar/scf-starforge-20261009/distribution/discovery/runtime-dependencies.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/distribution/discovery/runtime-dependencies.mjs"
+    }
   },
   "applicationProviders": {
     "operator-discovery": "stellar/scf-starforge-20261009/distribution/discovery/application-provider.mjs"
