@@ -50,12 +50,12 @@ async function busy(label,fn){
   if(state.busy)return;
   state.busy=true;state.controller=new AbortController();notice();
   $('#busy').hidden=false;$('#busy-text').textContent=label;
-  $('button,input,select,textarea').forEach(element=>{if(element.id!=='cancel')element.disabled=true;});
+  $$('button,input,select,textarea').forEach(element=>{if(element.id!=='cancel')element.disabled=true;});
   try{return await fn();}
   catch(error){notice((error.code?error.code+': ':'')+(error.message??String(error)),'error');}
   finally{
     state.busy=false;state.controller=null;$('#busy').hidden=true;
-    $('button,input,select,textarea').forEach(element=>{element.disabled=element.dataset.pagerDisabled==='true';});renderPending();
+    $$('button,input,select,textarea').forEach(element=>{element.disabled=element.dataset.pagerDisabled==='true';});renderPending();
   }
 }
 async function api(method,args={}){
