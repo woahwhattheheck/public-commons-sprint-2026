@@ -1,12 +1,14 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "kafka-workspace",
-  "description": "Kafka capture, retained datasets and merchant handoff in the original Applications workspace",
+  "description": "Kafka source capture, retained datasets, complete Node client and agent merchant receiving through the original workspace",
   "commands": {
-    "dataset-kafka": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/cli.mjs"
+    "dataset-kafka": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/cli.mjs",
+    "kafka-client": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/client-cli.mjs"
   },
   "commandDescriptions": {
-    "dataset-kafka": "Inspect a Kafka source, retain explicit partition ranges, project datasets, and reopen the original workspace."
+    "dataset-kafka": "Inspect a Kafka source, retain explicit partition ranges, project datasets, and reopen the original workspace.",
+    "kafka-client": "Use the complete authenticated Kafka client, exact source operations and streamed project or merchant downloads."
   },
   "browserAssets": [
     {
@@ -16,5 +18,20 @@
   ],
   "applicationProviders": {
     "kafka": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/kafka.mjs"
-  }
+  },
+  "exports": {
+    "./seller/kafka/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/client.mjs",
+    "./seller/kafka/client-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/client-cli.mjs",
+    "./merchant/mcp/kafka": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/merchant-tools.mjs",
+    "./merchant/mcp/kafka/setup": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/merchant-setup.mjs"
+  },
+  "merchantProviders": {
+    "kafka-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/merchant-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/CLIENT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/MCP.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/client-cli.d.mts"
+  ]
 }
