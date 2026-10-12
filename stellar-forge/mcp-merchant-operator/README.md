@@ -50,6 +50,10 @@ Large original records and public customer files have complete resumable downloa
 See [REDIS.md](REDIS.md) for the host connection, authoring-to-release workflow,
 source continuation and retained operation recovery.
 
+## Customer statements through accounting
+
+Manage original customer profiles and order assignments, import native service/API usage, review and retain statements or corrections, reconcile interrupted replies and deliver all five original statement files through the existing accounting MCP connection. The customer SDK, durable CLI and original file reader share the native statement IDs, revisions and lifecycle. See [ACCOUNTING_STATEMENTS.md](ACCOUNTING_STATEMENTS.md) for configuration, operation recovery and delivery.
+
 ## Operate existing WooCommerce stores
 
 Connect the current SF104 merchant operator using
@@ -567,3 +571,17 @@ or attach `--source-workspaces` during ordinary merchant initialization. The
 startup, source-file handles, mapping, merchant preparation, resumable delivery
 and reconstruction. `starforge dataset ndjson` opens the source application;
 its browser remains the same workspace used by the agent.
+
+## Geocodio address review and customer workspaces
+
+[GEOCODIO_WORKSPACES.md](./GEOCODIO_WORKSPACES.md) connects this merchant host to
+the original Geocodio address application. Exact source intake, prepared provider
+requests, retained responses, candidate and coordinate review, native datasets,
+portable source closure, managed publication and customer delivery share the
+same original operator object.
+
+Use `init-geocodio-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `geocodioWorkspaceConnection` to the existing merchant configuration.
+The 16 `merchant_geocodio_*` tools retain the original address revision, provider
+request body and customer session. Browser listeners borrow that same instance;
+source, prepared-request and customer files use the maintained chunk reader.

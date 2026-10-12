@@ -21,6 +21,7 @@ import { readReceivingConfiguration } from './receiving.mjs';
 import { readPythonWorkspaceConfiguration } from './python-workspace.mjs';
 import { readS3WorkspaceConfiguration } from './s3-workspace.mjs';
 import { readSocrataWorkspaceConfiguration } from './socrata-workspace.mjs';
+import { readGeocodioWorkspaceConfiguration } from './geocodio-workspace.mjs';
 import { readWebDavWorkspaceConfiguration } from './webdav-tools.mjs';
 import { readSheetsWorkspaceConfiguration } from './sheets-workspace.mjs';
 import { readCkanWorkspaceConfiguration } from './ckan-workspace.mjs';
@@ -365,7 +366,7 @@ export async function inspectMerchantSource(source) {
 export async function readMerchantConfig(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'socrataWorkspaceConnection', 'webdavWorkspaceConnection', 'sheetsWorkspaceConnection', 'ckanWorkspaceConnection', 'tenderlyWorkspaceConnection', 'redisWorkspaceConnection', 'usaSpendingWorkspaceConnection', 'sourceWorkspaceConnection', 'pricingConnection', 'woocommerceConnection', 'buyerExpenseConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
+  exact(raw, ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources', 'catalogConnection', 'facilitatorConnection', 'fleet', 'accounting', 'supportConnection', 'receivingConnection', 'pythonWorkspaceConnection', 'publisherConnection', 's3WorkspaceConnection', 'socrataWorkspaceConnection', 'geocodioWorkspaceConnection', 'webdavWorkspaceConnection', 'sheetsWorkspaceConnection', 'ckanWorkspaceConnection', 'tenderlyWorkspaceConnection', 'redisWorkspaceConnection', 'usaSpendingWorkspaceConnection', 'sourceWorkspaceConnection', 'pricingConnection', 'woocommerceConnection', 'buyerExpenseConnection'], ['schema', 'name', 'releaseStore', 'exportsDirectory', 'sources']);
   if (raw.schema !== CONFIG_SCHEMA || !plain(raw.sources) || Object.keys(raw.sources).length > 32)
     throw failure('CONFIGURATION_ERROR', 'Expected a merchant MCP configuration with up to 32 named sources.');
   const base = dirname(path), sources = Object.create(null);
@@ -389,6 +390,8 @@ export async function readMerchantConfig(path) {
       : await readSocrataWorkspaceConfiguration(hostPath(raw.socrataWorkspaceConnection, base)),
     webdavWorkspaces: raw.webdavWorkspaceConnection === undefined ? null
       : await readWebDavWorkspaceConfiguration(hostPath(raw.webdavWorkspaceConnection, base)),
+    geocodioWorkspaces: raw.geocodioWorkspaceConnection === undefined ? null
+      : await readGeocodioWorkspaceConfiguration(hostPath(raw.geocodioWorkspaceConnection, base)),
     publishers: raw.publisherConnection === undefined ? null
       : await readPublisherConfiguration(hostPath(raw.publisherConnection, base)),
     pricing: raw.pricingConnection === undefined ? null
@@ -415,7 +418,7 @@ export async function readMerchantConfig(path) {
   config.fleet = await fleetDefinition(raw.fleet, base, config.releaseStore);
   config.accounting = normalizeAccountingConfig(raw.accounting, base);
   if (!(await lstat(config.exportsDirectory)).isDirectory()) throw failure('CONFIGURATION_ERROR', 'Customer export directory must be a real directory.');
-  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.socrataWorkspaces || config.webdavWorkspaces || config.sheetsWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.redisWorkspaces || config.usaSpendingWorkspaces || config.sourceWorkspaces || config.woocommerce || config.buyerExpenses) await privateSupportDirectory(config.exportsDirectory);
+  if (config.support || config.receiving || config.pythonWorkspaces || config.s3Workspaces || config.socrataWorkspaces || config.geocodioWorkspaces || config.webdavWorkspaces || config.sheetsWorkspaces || config.ckanWorkspaces || config.tenderlyWorkspaces || config.redisWorkspaces || config.usaSpendingWorkspaces || config.sourceWorkspaces || config.woocommerce || config.buyerExpenses) await privateSupportDirectory(config.exportsDirectory);
   return config;
 }
 export async function initializeMerchant({ directory, name = 'Starforge merchant', spec, selections, bindings, workspace, upstreams, python, pythonRoot, duckdbPackage, duckdbPython, s3Package, postgresPackage, mysqlPackage, jsonrpcPackage, sqlitePackage, sqliteSnapshotMaxBytes, sqliteSnapshotTimeoutMs, clickhousePackage, clickhouseColumnTypes, runtime = {}, catalog, facilitators, fleetPlan, accounting, support, receiving, pythonWorkspaces, sourceWorkspaces, ckanWorkspaces, pricing, woocommerce, buyerExpenses, releaseStore }) {
@@ -821,4 +824,21 @@ export async function initializeWebDavWorkspaceMerchant({ directory, connection,
   return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', webdavWorkspacesConfigured: true,
     workspaces: Object.entries(selected.workspaces).map(([workspace, item]) => ({ workspace, label: item.label })),
     authoring: 'OPENED_BY_MERCHANT_WEBDAV_OPEN' };
+}
+
+/** Connect original Geocodio source, publisher and customer workspaces to this MCP. */
+export async function initializeGeocodioWorkspaceMerchant({ directory, connection, name = 'Starforge Geocodio operator' }) {
+  const root = resolve(directory), geocodioWorkspaceConnection = hostPath(connection, process.cwd());
+  name = line(name, 'Merchant name');
+  const selected = await readGeocodioWorkspaceConfiguration(geocodioWorkspaceConnection);
+  await mkdir(root, { mode: 0o700 });
+  await initReleaseStore(join(root, 'releases'));
+  await mkdir(join(root, 'customer-exports'), { mode: 0o700 });
+  const configuration = join(root, 'merchant-mcp.json');
+  await writePrivate(configuration, { schema: CONFIG_SCHEMA, name, releaseStore: './releases',
+    exportsDirectory: './customer-exports', sources: {}, geocodioWorkspaceConnection });
+  await readMerchantConfig(configuration);
+  return { schema: CONFIG_SCHEMA, configuration, state: 'INITIALIZED', geocodioWorkspacesConfigured: true,
+    workspaces: Object.entries(selected.workspaces).map(([workspace, item]) => ({ workspace, label: item.label })),
+    authoring: 'OPENED_BY_MERCHANT_GEOCODIO_OPEN' };
 }
