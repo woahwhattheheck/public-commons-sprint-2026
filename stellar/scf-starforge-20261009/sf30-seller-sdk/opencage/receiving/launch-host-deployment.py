@@ -7,6 +7,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from shutil import which
 import sys
 
 
@@ -47,6 +48,10 @@ def main() -> int:
     if not project.is_dir():
         raise ValueError("Select the existing receiving project")
     input_path, node = regular(args.input), regular(args.node)
+    flock_command = which("flock")
+    if flock_command is None:
+        raise ValueError("The selected Linux host needs its existing flock executable")
+    flock = regular(str(Path(flock_command).resolve(strict=True)))
     input_bytes = input_path.read_bytes()
     supplied = json.loads(input_bytes)
     if supplied.get("schema") != "commons.scf-opencage-host-receiving/v1":
@@ -70,7 +75,7 @@ def main() -> int:
                "--output", str(output), "--source-manifest", str(manifest),
                "--manifest-sha256", supplied["sourceManifestSha256"],
                "--package-identity", supplied["packageIdentity"]]
-    runtime = {str(host), str(source), str(node), str(package),
+    runtime = {str(host), str(source), str(node), str(package), str(flock),
                *[str(Path(path).resolve(strict=True)) for path in args.runtime_path]}
     out = output.relative_to(project).as_posix()
     values = argparse.Namespace(
