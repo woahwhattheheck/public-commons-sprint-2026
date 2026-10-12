@@ -797,7 +797,7 @@ def create_archive(report,child_code):
         if size>MAX_ARCHIVE:
             raise ValueError('Complete archive exceeds original courier disk declaration')
         result={'operation_id':OPERATION,'filename':ARCHIVE_NAME,'bytes':size,'sha256':digest(temp),
-                'files':len(files),'private_bytes':raw_bytes,'links':len(links),'created_at':now()}
+                'files':len(files),'private_bytes':raw_bytes,'links':len(links),'created_at':manifest['created_at']}
         try:os.link(temp,target)
         except FileExistsError:
             if target.is_symlink() or target.stat().st_size!=size or digest(target)!=result['sha256']:
