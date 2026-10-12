@@ -571,13 +571,23 @@ def receive(directory, source, cache=None, offline=False, inspect=False, cache_l
                 preserve(original_path, original)
         cleared_staging = 0 if inspect else clear_abandoned_staging(metadata, selected)
         archive_root = child_path(metadata, "archives")
-        cache_root = cache.resolve() if cache else None
+        cache_directory = cache.resolve() if cache else None
+        cache_root, cache_unavailable = cache_directory, None
         if not inspect:
             archive_root.mkdir(parents=True, exist_ok=True, mode=0o700)
             if cache_root:
                 require(not cache_root.is_relative_to(root), "MPP_RUNTIME_CACHE_DIRECTORY_INVALID",
                         "Choose a retained archive directory outside this installation")
-                cache_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+                try:
+                    cache_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+                except OSError as error:
+                    if cache_limit is None or error.errno not in (errno.ENOSPC, errno.EDQUOT):
+                        raise
+                    cache_unavailable = {"directory": str(cache_root), "available": False,
+                                         "reason": "filesystem_capacity", "detail": str(error)}
+                    print(json.dumps({"state": "ARCHIVE_CACHE_UNAVAILABLE", **cache_unavailable},
+                                     separators=(",", ":")), file=sys.stderr, flush=True)
+                    cache_root = None
             for partial in archive_root.glob(".download-*.part"):
                 require(partial.is_file() and not partial.is_symlink(), "MPP_RUNTIME_ARCHIVE_CONFLICT", str(partial))
                 partial.unlink()
@@ -616,6 +626,8 @@ def receive(directory, source, cache=None, offline=False, inspect=False, cache_l
                             counts["cacheRetainedBytes"] += retention["bytes"]
                         elif retention["state"] == "ARCHIVE_CACHE_SKIPPED":
                             counts["cacheSkippedArchives"] += 1
+                    elif cache_unavailable:
+                        counts["cacheSkippedArchives"] += 1
                 stage_parent = child_path(metadata, "staging")
                 stage_parent.mkdir(exist_ok=True, mode=0o700)
                 staging = Path(tempfile.mkdtemp(prefix=key[:16] + "-", dir=stage_parent))
@@ -663,7 +675,9 @@ def receive(directory, source, cache=None, offline=False, inspect=False, cache_l
                   "clearedStagingDirectories": cleared_staging,
                   "originalArchiveBytes": counts["knownArchiveBytes"] if counts["packagesWithArchiveSize"] == len(selected) else None,
                   "originalArchiveCount": len(archive_sizes) if counts["packagesWithArchiveSize"] == len(selected) else None,
-                  "cache": cache_snapshot(cache_root, cache_limit) if cache_root else None}
+                  "cache": cache_snapshot(cache_directory, cache_limit) if cache_directory else None}
+        if cache_unavailable:
+            result["cache"].update(cache_unavailable)
         if not inspect:
             atomic_json(metadata / "ready.json", result)
         return result

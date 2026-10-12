@@ -87,11 +87,13 @@ starforge mpp runtime-receive /dev/mpp-runtime \
   --cache /retained/mpp-archives --cache-limit-bytes 4194304
 ~~~
 
-This example retains up to 4 MiB of original archives. The receiver reuses
-matching retained archives, copies new ones while the budget and current free
-space allow, and completes the runtime on the installation filesystem when the
-cache fills. It reports every capacity skip and leaves existing retained files
-in place. An interrupted worker can receive a new runtime using that same
+This example adds original archives while the cache stays within 4 MiB. The
+receiver reuses matching retained archives, copies new ones while the budget and
+current free space allow, and completes the runtime on the installation
+filesystem when the cache fills. A new cache directory that cannot be created
+because its filesystem is full is reported as unavailable, and installation
+continues locally. Existing cached files remain in place even if a lower budget
+is selected on a later run. An interrupted worker can receive a new runtime using that same
 partial cache. Offline receiving requires every unfinished package's archive to
 be available; a partial cache alone may need further original registry reads.
 Without --cache-limit-bytes, the explicit cache keeps the full-retention policy.
