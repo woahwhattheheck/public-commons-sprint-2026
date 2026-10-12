@@ -50,6 +50,7 @@ export async function createPrescientSdkRuntime({
   config,
   env = process.env,
   timeoutMs = 120000,
+  signal,
 } = {}) {
   need(Array.isArray(pythonCommand) && pythonCommand.length > 0 && pythonCommand.length <= 32 &&
     pythonCommand.every(value => typeof value === 'string' && value.length > 0 && !value.includes('\0')),
@@ -223,7 +224,14 @@ export async function createPrescientSdkRuntime({
     return result;
   }
 
-  await enqueue(null);
+  await enqueue(null, {}, { signal });
+  // An abort can arrive after initialize replies but before construction
+  // returns its close handle. Drain that just-created worker as well.
+  if (signal?.aborted) {
+    const error = failure('PRESCIENT_OPERATION_ABORTED');
+    await terminate(worker, error);
+    throw error;
+  }
   return Object.freeze({
     get metadata() { return metadata; },
     async requestHeaders({ url, method = 'GET', signal } = {}) {
