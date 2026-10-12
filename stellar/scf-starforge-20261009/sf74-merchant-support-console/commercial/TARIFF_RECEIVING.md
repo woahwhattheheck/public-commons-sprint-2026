@@ -2,20 +2,22 @@
 
 This programme carries the **same completed repository Tariff operation** into the original Commercial workspace. Its inputs are the original native programme's saved request IDs, pricing workspace, completed selection and full pricing backup. The original case, commissioning, package, pricing restore and retained-file engines perform each operation.
 
-The product source is [PR2291](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2291), merged at `f89885a893dcfe66a05bdc51ca2b4a00f7848c8e`. The original Tariff programme is Git blob `3bc275a4bdf389959bcc63e3494d2dfd2f89054c` from the Tariff native receiving handoff. ASTRA-DU/TARIFF-RX owns its one physical operation; this customer programme is its continuation.
+The product source is [PR2291](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2291), merged at `f89885a893dcfe66a05bdc51ca2b4a00f7848c8e`. The original joined Tariff programme is Git blob `64e4a426afc68a2698afbd9db8adc627e6f6cb38`, including MCP continuation `faf8dc208bb64c1d33614411b6faa3861de928c4`; it extends the earlier `3bc275a4bdf389959bcc63e3494d2dfd2f89054c` programme. The exact receiver is `80bb46ed23df9c16934d3b7fc367c7f09a475ae1`, and its 179-source input packet is `66b6e1a3e41f992c449243d2acb1e98866fb7944`. ASTRA-DU/TARIFF-RX owns its one physical operation; this customer programme is its continuation.
 
 ## Run the complete continuation
 
-Use the complete source tree received for that original operation, including the SF74 console, SF97 Pricing/Economics/Tariffs, original case/source delivery, and maintained merchant MCP modules. Its full dependency closure remains the original source carrier's responsibility.
+Run the customer programme from the later complete Commercial source tree, including the SF74 console, upgraded SF97 Pricing/Economics/Tariffs, original case/source delivery, and maintained merchant MCP modules. Keep the original 179-file source tree in the path recorded by the original native operation. The canonical source composer delivers the complete customer closure alongside that retained original tree.
 
 ```sh
 node /ABSOLUTE/REPOSITORY/stellar/scf-starforge-20261009/sf74-merchant-support-console/commercial/tariff-receiving-native.mjs \
-  --native-run /mnt/data/tariff-native \
-  --output /mnt/data/tariff-native/customer \
+  --native-run /mnt/data/tariff-native/SCF-MERCHANT-TARIFFS-25FD-20261012/native \
+  --output /mnt/data/tariff-native/SCF-MERCHANT-TARIFFS-25FD-20261012/native/customer \
   --python python3
 ```
 
-Supply the actual directory containing the original `operation.json`, `flow-result.json`, `selection-request.json` and `pricing/`. The source tree must be the tree recorded by that run. The programme verifies its unchanged original three fixtures and all original recorded Tariff source files.
+Supply the actual directory containing the original `operation.json`, `flow-result.json`, `selection-request.json` and `pricing/`. The `run-native.py` receiver creates those under its selected directory's `native/` child; its unchanged original source remains under the sibling `source/` directory. Use the actual returned `flow-result.json.operationDirectory` if the owner selected a different location.
+
+The programme verifies every recorded original Tariff source file against the retained original source root, including its Git blob, SHA-256 and byte length. It separately verifies the three unchanged repository fixtures in the current customer source. Both source roots and the complete original operation/result/request hashes are bound into the saved customer operation. The upgraded customer engines reopen the original pricing directory and reuse its selected request and completed backup.
 
 Use Node 22 or later and the original Python/runtime closure required by the existing case/source delivery engine. Keep the two private output stores and the full original native run together. The same invocation resumes the same saved customer requests.
 
@@ -43,7 +45,7 @@ The revised quotation keeps the selected uniform rate of USD 0.0114 per request.
 
 ## Saved output and recovery
 
-`customer/operation.json` binds the original native output bytes, source fixtures, completed selection, existing backup and all customer request IDs. Exact private request files are saved before mutations. CLI reports retain their original input bytes and first response; the engines resolve replay.
+`customer/operation.json` binds both original and current source roots, the original native output bytes, source fixtures, completed selection, existing backup and all customer request IDs. Exact private request files are saved before mutations. CLI reports retain their original input bytes and first response; the engines resolve replay.
 
 The complete delivered material is:
 
