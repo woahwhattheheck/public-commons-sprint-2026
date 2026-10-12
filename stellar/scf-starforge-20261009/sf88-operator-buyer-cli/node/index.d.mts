@@ -1458,7 +1458,18 @@ export interface UndispatchedAuthorizationEvidence {
   binding: Record<string, unknown> & {intentId: string; requestSha256: string; attemptId: string; configSha256: string};
   wire: Record<string, unknown> & {writerActive: false; signedDispatchRecorded: false};
   signerSources: Record<string, {path: string; bytes: number; sha256: string}>;
-  scope: Record<string, unknown>;
+  scope: Record<string, unknown> & {
+    /** Present only for the reviewed native source profile with actual-FD reservation support. */
+    reviewedNativeSourceProfile?: 'ORIGINAL_AUTHORIZATION_WITH_HELD_FILE_RESERVATIONS_V1';
+    allocationEntry?:
+      | {kind: 'REVIEWED_DIRECT_NATIVE_ENTRY'}
+      | {
+          requestSha256: string;
+          entrySha256: string;
+          nativeFileReservation: NativeFileReservationDescriptor;
+          runtimeSource: NativeRuntimeSourceBinding | null;
+        };
+  };
   sha256: string;
 }
 export interface UndispatchedContinuationStatus {
