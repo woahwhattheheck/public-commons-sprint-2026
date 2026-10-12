@@ -155,7 +155,7 @@ export class MerchantSupport {
   constructor(config, { environment = process.env } = {}) {
     this.#config = config; this.#environment = environment;
     this.#commercial=merchantCommercial({cases:()=>this.#cases(),casesDirectory:()=>this.#configured().casesDirectory,
-      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads});
+      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads,environment});
     this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
       profiles: () => this.summary.profiles,
       profile: (alias, sourceDigest) => this.#profile(alias, sourceDigest),
@@ -570,12 +570,12 @@ export class MerchantSupport {
     this.#closing = true;
     this.#close = (async () => {
       const handle = this.#watch;
-      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close();
+      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close(), commercialClosing = this.#commercial.close();
       const packagesClosing=this.#casePackages?this.#casePackages.then(owner=>owner.close(),()=>{}):Promise.resolve();
       try {
         if (handle) { handle.state = 'STOPPING'; handle.controller.abort(); await handle.done; }
       } finally {
-        const results = await Promise.allSettled([readsClosing, sourcesClosing, packagesClosing]);
+        const results = await Promise.allSettled([readsClosing, sourcesClosing, packagesClosing, commercialClosing]);
         const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
         if (errors.length) throw new AggregateError(errors, 'Original support readers and source watchers did not finish closing.');
       }
