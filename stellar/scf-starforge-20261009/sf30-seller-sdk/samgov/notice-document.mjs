@@ -114,6 +114,9 @@ export function noticeDocumentRow(document,source,resources=[]){
     resourceLinks:links,award:data.award,pointOfContact:data.pointOfContact,
     placeOfPerformance:data.placeOfPerformance,
   };
+  // Optional website fields absent from the original JSON stay absent in this
+  // intermediate API projection; canonical source hashing accepts JSON values.
+  for(const key of Object.keys(projection))if(projection[key]===undefined)delete projection[key];
   const result=noticeRow(projection,source,resources);
   result.raw=copy(value);
   result.documentResources=document.resources===undefined?null:copy(document.resources);
