@@ -22,6 +22,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Paid application jobs | job-workspace serve | Prepared job checkout, original review and execution, verified results, customer library and collections |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
+| Freighter buyer wallet | browser-wallet serve | Original payer connection, exact native authorization, retained request recovery and private wallet history |
 | Research dossiers | research-workspace | Questions, saved source editions, findings, comparison and portable reports |
 | Buyer expenses | buyer-expenses | Statement captures, allocation, period review and accountant editions |
 | Blockscout token merchant | blockscout serve | Original provider desk, seller operations, quota and attempt recovery |
@@ -325,6 +326,36 @@ The original startup record contains schema stellar-forge.redis-workspace-startu
 **Open application** exposes the original product editor, full merchant terms, source review, saved revisions, real database preview and native next-page inputs. Prepare customer OpenAPI/client files from a saved revision, stage the prepared package, then open the original release controls for seller start, stop, upgrade, rollback and customer handoff.
 
 **Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
+
+## Freighter buyer wallet
+
+Prepare the wallet once through the original [browser-wallet workflow](../../sf103-native-buyer-signer/browser-wallet/README.md), from the existing initialized SF88 operator configuration. Its original wallet.json, provider.mjs, native/buyer.json and native/signer.json retain the operation and signing bindings. The runtime needs the original native dependencies and **freighter-wallet** feature; the wallet browser needs Freighter, session storage and Web Locks.
+
+Choose **Freighter buyer wallet** and select that existing private wallet directory. **Review application** binds the original operator configuration, wallet identity, native configuration and provider hashes. **Save application** and **Review start → Start reviewed application** use the existing managed release. At actual dispatch the helper rereads the same original immutable start review and requires those file hashes to match before starting **browser-wallet serve**. An intervening configuration change requires a new review.
+
+The original CLI's startup is a multiline JSON record. The observer assembles that bounded record, matches the selected directory and original wallet/launch/process-lock identities, and verifies its actual loopback URL and requested port. **Open application** appears only for that current original instance. The capability remains private in the existing managed operation; no URL is inferred from the configured port.
+
+Connect the payer account in the original wallet page. Execute through the original buyer's separate terminal or maintained structured approval customer flow. Opening this wallet application does not execute a buyer or send terminal approval. Its original SF81 approval, SF36 reservation/ledger and SF103 native signing remain separate phases of that same operation.
+
+If a claim response is lost before Freighter opens, **Continue reserved request** uses the same claim. A **PROMPTED** draft never opens a second prompt. If Freighter has returned a signature, **Return saved signature** rechecks the original account/network and returns those same bytes. A completed service result is read from the original history. Only the owning browser tab sends its connection heartbeat; duplicated tabs do not inherit prompt ownership.
+
+Use **Stop application** to close the original service. Reopen a live Applications run to recover its retained URL; after a completed stop, review a new start with the same wallet to retain all original request history. The wallet's existing **recover-lock** command reconciles a confirmed dead process by its exact instance ID. No wallet, ledger or request is copied or recreated by this application entry.
+
+The headless application-review request uses the existing schema:
+
+~~~json
+{
+  "runtimeId": "ORIGINAL_READY_RUNTIME_ID",
+  "kind": "browser-wallet",
+  "label": "Merchant buyer wallet",
+  "settings": {
+    "workspaceDirectory": "/private/merchant/wallet",
+    "port": 0
+  }
+}
+~~~
+
+Pass that private file to **runtime-workspace application-review**, then preserve the returned review ID and the same original save/start request UUIDs through the CLI commands above. The generic Applications UI, output, Stop, Continue and recovery controls require no separate frontend.
 
 
 ## Grant planning and delivery
