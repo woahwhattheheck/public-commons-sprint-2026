@@ -135,6 +135,10 @@ export async function saveMerchantRevision(options) {
       sourceChanges:{count:row.changes.count,...row.declarationPins},settingChanges:{count:row.settingChanges.count}})),
     additions:shared.operations.filter(row=>row.from===null&&row.to!==null).map(row=>({
       id:row.id,...routeOf(row.to),amountAtomic:review.plan.operations.find(operation=>keyOf(operation)===row.to).amountAtomic}))};
+  // Host-owned adapters can retain operating context after the original review.
+  // JSON workspace requests cannot supply this trusted callback.
+  if(typeof options.operatingDecision==='function')
+    sourceRevision.operatingDecision=await options.operatingDecision(review);
   const saved=await savePackage({parent:options.parent,name:options.name,specText:options.specText,plan:review.plan,sourceRevision});
   return {...saved,sourceRevision,release:releaseCommands(saved.folder,saved.name)};
 }

@@ -24,6 +24,7 @@ import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
 import { openCacheWorkspace } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
 import { cacheWorkspaceApi, serveCacheWorkspaceAsset, sendCacheWorkspaceResponse } from '../../sf30-seller-sdk/response-cache/workspace/http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
+import { cachePackageBinding, cachePolicyRevisionApi } from './cache-policy-revisions.mjs';
 import { createHarConsoleRoutes } from '../har/workspace-http.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
@@ -97,11 +98,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
         const project=await readPackage(output,name);
         if(shuttingDown)throw Object.assign(new Error('Workspace is stopping'),{status:503});
         return openCacheWorkspace({directory:join(project.folder,'cache-operations'),
-          sources:[{id:'merchant',label:project.name}],request:(_source,command)=>{
+          sources:[{id:'merchant',label:project.name}],request:async(_source,command)=>{
             const management=active?.name===project.name?active.session.session?.cacheManagement:null;
             if(!management)throw Object.assign(new Error('Start this saved API package to operate its response cache.'),
               {code:'CACHE_WORKSPACE_SOURCE_OFFLINE',status:409});
-            return management.dispatch(command);
+            const result=await management.dispatch(command);
+            return command.op==='inspect'?{...result,package:cachePackageBinding(project)}:result;
           }});
       })();
       cacheWorkspaces.set(name,opening);
@@ -111,9 +113,12 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
   }
   function cacheOperation(req,res,url,body) {
     const operation=(async()=>{
-      const workspace=await operatingWorkspace(url.searchParams.get('name'));
-      return sendCacheWorkspaceResponse(res,await cacheWorkspaceApi(workspace,{
-        operation:url.pathname.slice('/api/cache-operations/'.length),method:req.method,query:url.searchParams,body}));
+      const baseName=url.searchParams.get('name'),workspace=await operatingWorkspace(baseName);
+      const operation=url.pathname.slice('/api/cache-operations/'.length);
+      const request={operation,method:req.method,query:url.searchParams,body};
+      return sendCacheWorkspaceResponse(res,operation.startsWith('policy-')
+        ?await cachePolicyRevisionApi({...request,parent:output,baseName,workspace,validatePlan:oauth.validatePlan})
+        :await cacheWorkspaceApi(workspace,request));
     })();
     cacheRequests.add(operation);operation.finally(()=>cacheRequests.delete(operation)).catch(()=>{});
     return operation;
