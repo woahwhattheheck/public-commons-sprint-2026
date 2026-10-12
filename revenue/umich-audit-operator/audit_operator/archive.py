@@ -160,6 +160,8 @@ def restore_backup(data, passphrase, destination):
             with db:
                 db.execute("DELETE FROM sessions")
                 db.execute("DELETE FROM grants")
+                from .identity import renew_identity_after_restore
+                renew_identity_after_restore(db, digest(data))
                 db.execute("INSERT OR REPLACE INTO settings VALUES('restored_from',?)", (digest(data),))
                 db.execute("INSERT OR REPLACE INTO settings VALUES('restored_at',?)", (now(),))
         finally:

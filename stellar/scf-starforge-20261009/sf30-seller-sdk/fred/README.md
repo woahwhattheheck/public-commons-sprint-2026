@@ -269,3 +269,7 @@ All return values use the retained original source and application identities. `
 ## Managed Applications
 
 The existing Applications interface opens the original economic project with its configured buyer and routed merchant port. Use Review/Save/adopt/Start/Open/Stop/Reopen to continue source review, publication and the same customer requests. See [Economic data editions in Applications](../../distribution/runtime-workspace/FRED_APPLICATIONS.md) for operator selection, complete starter inputs and the native receiving continuation.
+
+## Original native host
+
+`starforge fred receiver-host --project ABS --config PRIVATE_HOST_JSON` connects the complete receiver to the existing operator, original native facilitator, HTTPS/CONNECT route and real approval terminal. It finalizes each original customer intent through SF88/SF36 and drains the shared native services before browser receiving. See [Native host receiving](NATIVE_HOST.md) for the original host selection, existing receiver adoption and same-operation continuation.

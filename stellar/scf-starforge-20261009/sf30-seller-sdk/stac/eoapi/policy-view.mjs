@@ -70,7 +70,7 @@ export function mountDeploymentPolicy(element, { dispatch, reviewer = '', onAppr
   const document = element.ownerDocument, window = document.defaultView;
   const abort = new AbortController();
   let state = null, editor = blankPolicy(), editorRevision = null, dirty = false, busy = false, destroyed = false;
-  let currentReview = null, selectedApproval = null, packageToReceive = null, packageInspection = null, exported = null;
+  let currentReview = null, selectedApproval = null, packageToReceive = null, packageToReceiveText = null, packageInspection = null, exported = null;
   let historyKind = 'reviews', nextHistory = null, historyRows = [];
   const links = new Set();
   function node(tag, text, attributes = {}) {
@@ -317,17 +317,17 @@ export function mountDeploymentPolicy(element, { dispatch, reviewer = '', onAppr
     if (target.matches('[data-history-kind]')) { historyKind = target.value; action(() => historyPage(true)); }
     if (target.matches('[data-policy-file], [data-package-file]')) action(async () => {
       if (target.matches('[data-package-file]')) {
-        packageToReceive = null; packageInspection = null; renderReceive();
+        packageToReceive = null; packageToReceiveText = null; packageInspection = null; renderReceive();
       }
       const file = target.files?.[0]; if (!file) return;
       if (file.size > 20 * 1024 ** 2) { const error = new Error(); error.code = 'EOAPI_POLICY_REQUEST_SIZE_EXCEEDED'; throw error; }
-      const value = jsonInput(await file.text(), 'Selected JSON file');
+      const sourceText = await file.text(), value = jsonInput(sourceText, 'Selected JSON file');
       if (target.matches('[data-policy-file]')) {
         const preview = await request('POST', '/preview', { policy: value });
         fillEditor(preview.compilation.policy, state.revision, true); status('Policy opened in the draft editor. Save it to retain a new draft.');
       } else {
         const inspected = await request('POST', '/inspect', { package: value });
-        packageToReceive = value; packageInspection = inspected; renderReceive(); status('Package inspected. Receive this approved edition when its contents are the intended input.');
+        packageToReceive = value; packageToReceiveText = sourceText; packageInspection = inspected; renderReceive(); status('Package inspected. Receive this approved edition when its contents are the intended input.');
       }
       target.value = '';
     });
@@ -361,12 +361,12 @@ export function mountDeploymentPolicy(element, { dispatch, reviewer = '', onAppr
       else if (name === 'open-approval') await openApproval(button.dataset.id);
       else if (name === 'open-review') { currentReview = (await request('GET', '/reviews/' + encodeURIComponent(button.dataset.id))).review; renderReview(); tab('review'); }
       else if (name === 'export') {
-        exported = (await request('POST', '/export', { approvalId: selectedApproval.approval.id })).package;
-        renderExport(); download(pretty(exported) + '\n', exported.approvalId + '.json'); status(`Complete package downloaded: ${exported.files.length} retained files.`);
+        const result = await request('POST', '/export', { approvalId: selectedApproval.approval.id }); exported = result.package;
+        renderExport(); download(result.packageText ?? pretty(exported) + '\n', exported.approvalId + '.json'); status(`Complete package downloaded: ${exported.files.length} retained files.`);
       } else if (name === 'download-file') { const file = exported?.files[Number(button.dataset.fileIndex)]; if (file) download(file.text, file.path, file.mime); }
       else if (name === 'history-refresh' || name === 'history-more') await historyPage(name === 'history-refresh');
       else if (name === 'receive') {
-        const receipt = await request('POST', '/receive', { package: packageToReceive, expectedRevision: state.revision });
+        const receipt = await request('POST', '/receive', { packageText: packageToReceiveText, expectedRevision: state.revision });
         await refresh(); await openApproval(receipt.approvalId);
         status(`Approved edition received: ${receipt.files} files, original approval ${receipt.approvalId}.` + (dirty ? ' Local edits and their original revision remain in the draft editor.' : ''));
         await callHost(onReceived, { receipt, ...selectedApproval, packageDigest: receipt.digest }, 'Approved edition received.');

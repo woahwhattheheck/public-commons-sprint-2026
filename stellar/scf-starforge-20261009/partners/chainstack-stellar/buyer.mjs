@@ -55,6 +55,13 @@ export async function main(args = process.argv.slice(2)) {
     const state = await operation.inspect(); process.stdout.write(JSON.stringify(state, null, 2) + '\n'); return state;
   }
   const result = command === 'execute' ? await operation.execute({ review: await json(resolve(o['review-file'])) }) : await operation.recover();
+  if (command === 'recover' && result === null) {
+    const recovery = { intentId: o.intent, resultRecoverable: false, recovery: 'RESULT_UNAVAILABLE',
+      nextAction: { command: 'inspect', intentId: o.intent, stateDirectory: resolve(o.state) } };
+    process.stdout.write(JSON.stringify(recovery, null, 2) + '\n');
+    process.exitCode = 2;
+    return null;
+  }
   const summary = { intentId: o.intent, status: result.status, delivery: result.delivery };
   if (o.output) summary.exported = await result.saveAs(resolve(o.output));
   process.stdout.write(JSON.stringify(summary, null, 2) + '\n'); return result;
