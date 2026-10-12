@@ -238,9 +238,9 @@ const components = [
   {
     "id": "14",
     "title": "OpenSearch workspace",
-    "code": "SEARCH / CAPTURE",
+    "code": "SEARCH / RELEVANCE",
     "kind": "seller",
-    "description": "Author named native searches, retain and compare result editions, and prepare the original merchant and customer client.",
+    "description": "Author native searches, retain result editions, review judged query variants and export the original merchant, customer client and relevance report.",
     "path": "sf30-seller-sdk/opensearch/workspace/README.md"
   }
 ];

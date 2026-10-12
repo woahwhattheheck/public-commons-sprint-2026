@@ -4011,6 +4011,90 @@ Node buyer SDK and Node 22.16+, with no additional runtime package. The complete
 receiving and portable-file guide is included at
 `source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/tenderly-analysis/README.md`.
 
+## GoldRush wallet data and research
+
+The installed product joins the provider's prepared release to the original
+Node Buyer, Inbox and Resource library. It supports the two selected EVM wallet
+operations: token balances and one explicit page of token transfers. Stellar
+is the separately configured merchant's payment network; this does not extend
+GoldRush's existing Base Sepolia client interface or add Stellar source-chain
+data.
+
+Check the original schema runtime, then inspect or prepare the provider's
+retained release:
+
+```sh
+npx --no-install starforge doctor --feature schema
+npx --no-install starforge goldrush-merchant --help
+npx --no-install starforge goldrush-merchant prepare \
+  --plan /private/provider/goldrush-plan.json \
+  --catalog /private/provider/goldrush-catalog.json \
+  --out /private/provider/goldrush-release
+npx --no-install starforge goldrush-merchant inspect \
+  --release /private/provider/goldrush-release
+```
+
+The provider supplies the existing account, named credential environment,
+source-data rights and complete merchant payment terms. Preparation reads
+retained inputs and creates a new release; it performs no provider request.
+The original check/serve argument arrays printed by `inspect` resolve against
+this installation and the selected release directory.
+
+Open the wallet workspace with its original release and private buyer paths:
+
+```sh
+npx --no-install starforge goldrush workbench \
+  --state /private/customer/goldrush-wallet \
+  --release /private/provider/goldrush-release \
+  --buyer-state /private/customer/goldrush-buyer \
+  --inbox /private/customer/goldrush-inbox \
+  --workspace /private/customer/operator-workspace
+```
+
+Use an existing `--profile` instead of `--workspace` when that is the original
+operator configuration; the two options are mutually exclusive. Use the
+configuration required by the original wallet operating guide. Open the private
+URL announced by the process. It exposes the wallet and the original Resource library on
+the same listener and session.
+
+After stopping the process, reopen with only the same `--state`. The retained
+configuration keeps its release, buyer, inbox and operator paths. Use an
+explicit `--port` when browser drafts must reopen at the same local origin.
+Preparation, saved-response reading, comparison, notes and export do not
+execute a purchase. Each selected execution still uses the original operator
+review and terminal; interrupted work returns to the same saved Inbox intent.
+
+`starforge goldrush --help` also exposes the maintained request, prepare,
+review, execute, recover and next-page commands. One transfer response is
+one page; a next page requires a new explicit request and ceiling. The
+pilot's 20-second upstream deadline, 1-MiB response cap and four-request
+concurrency cap remain in force, and provider or delivery failures retain their original outcome.
+
+Applications may use the same argument-vector opening API:
+
+```js
+import { startGoldRushWorkspace } from '@tokenjunkielabs/starforge-merchant';
+
+const running = await startGoldRushWorkspace([
+  '--state', '/private/customer/goldrush-wallet',
+]);
+console.log(running.url);
+// Keep the application running for the operator; close it during host shutdown:
+// await running.close();
+```
+
+This reopens an initialized workspace. Its original low-level
+`openWorkbench` and `main` exports are also available at
+`@tokenjunkielabs/starforge-merchant/buyer/goldrush/workspace`.
+The `/buyer/goldrush` entry exposes original request preparation and
+`/buyer/goldrush/records` exposes the pure saved-response parser, comparison
+and CSV functions. The `/seller/goldrush` entry exposes the original merchant
+preparation command. No additional source component or dependency family is
+introduced: the existing schema feature and native buyer requirements apply.
+Follow the included [wallet operating guide](../sf30-seller-sdk/examples/goldrush-stellar-pilot/WALLET-WORKSPACE.md)
+for exact source lineage, decimal values, saved notes, reference observations
+and explicit recovery.
+
 ## Embed in an application
 
 ### Add a merchant to an existing Node or Express application
