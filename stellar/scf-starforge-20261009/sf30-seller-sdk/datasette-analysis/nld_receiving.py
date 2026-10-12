@@ -18,7 +18,6 @@ import platform
 import stat
 import sys
 import tempfile
-import uuid
 
 HERE = Path(__file__).resolve().parent
 CHECKOUT = HERE.parents[3]
@@ -162,7 +161,7 @@ def main(argv=None):
     parser.add_argument("--resume", action="store_true")
     args = parser.parse_args(argv)
     identifier(args.operation_id); identifier(args.programme_id); identifier(args.edition_id, full=True)
-    need(str(uuid.UUID(args.workspace_id)) == args.workspace_id, "NLD_RECEIVING_WORKSPACE_UUID")
+    identifier(args.workspace_id)
     need(args.operator.strip() and args.note.strip(), "NLD_RECEIVING_OPERATOR_REQUIRED")
     need(type(args.expected_rows) is int and args.expected_rows > 0
          and 0 < args.backfill_count <= args.expected_rows, "NLD_RECEIVING_EXPLICIT_ROW_SCOPE")
