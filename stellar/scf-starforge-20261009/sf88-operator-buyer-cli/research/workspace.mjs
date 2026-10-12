@@ -388,6 +388,18 @@ export async function openResearchWorkspace(directory){
     const e=await edition(id),comparison=compareWith?(await compare(compareWith,id)).comparison:null;
     return renderResearchReport({title:e.record.label,query:e.query,coverage:e.coverage,analysis:e.analysis,comparison});
   }
+  async function frozenPageBytes(directory,p,name){
+    check(['response.json','request.json','page.json','buyer-result.json'].includes(name),'PAGE_FILE_INVALID');
+    if(name==='buyer-result.json')check(p.nativeSha256,'NATIVE_RECORD_NOT_INDEXED','This source page has no retained native buyer result.',404);
+    const bytes=await readBytes(join(directory,name),name==='response.json'?MAX_PAGE_BYTES:name==='buyer-result.json'?4194304:name==='request.json'?65536:262144);
+    if(name==='response.json')check(bytes.length===p.bytes&&digest(bytes)===p.sha256,'PAGE_BYTES_CHANGED');
+    else if(name==='buyer-result.json')check(digest(bytes)===p.nativeSha256,'NATIVE_RECORD_CHANGED');
+    else if(name==='request.json'){
+      const request=parseJson(bytes);
+      check(canonical(request)===canonical(p.request)&&digest(canonical(request))===p.requestSha256,'PAGE_REQUEST_CHANGED');
+    }else check(canonical(parseJson(bytes))===canonical(p),'PAGE_RECORD_CHANGED');
+    return bytes;
+  }
   // Freeze one edition/review snapshot, then render only the files a caller consumes.
   async function prepareExport(id,{includePages=true,includeNative=true}={}){
     const e=await edition(id),generated=researchExportPlan(e.analysis,{title:e.record.label,query:e.query,coverage:e.coverage,decisions:e.decisions.items});
@@ -402,10 +414,10 @@ export async function openResearchWorkspace(directory){
     renderers.set('page-index.json',()=>jsonBytes({pages:e.pages}));
     if(includePages)for(const p of e.pages){
       const prefix='pages/'+String(p.index).padStart(8,'0'),directory=join(e.directory,prefix);
-      renderers.set(prefix+'/response.json',()=>readBytes(join(directory,'response.json'),MAX_PAGE_BYTES));
-      renderers.set(prefix+'/request.json',()=>readBytes(join(directory,'request.json'),65536));
-      renderers.set(prefix+'/page.json',()=>readBytes(join(directory,'page.json'),262144));
-      if(includeNative&&p.nativeSha256)renderers.set(prefix+'/buyer-result.json',()=>readBytes(join(directory,'buyer-result.json'),4194304));
+      renderers.set(prefix+'/response.json',()=>frozenPageBytes(directory,p,'response.json'));
+      renderers.set(prefix+'/request.json',()=>frozenPageBytes(directory,p,'request.json'));
+      renderers.set(prefix+'/page.json',()=>frozenPageBytes(directory,p,'page.json'));
+      if(includeNative&&p.nativeSha256)renderers.set(prefix+'/buyer-result.json',()=>frozenPageBytes(directory,p,'buyer-result.json'));
     }
     const manifestBase={schema:'stellar-forge.research-export.v1',editionId:id,querySha256:e.query.sha256,decisionsRevision:e.decisions.revision};
     return {renderers,manifestBase};
@@ -464,18 +476,17 @@ export async function openResearchWorkspace(directory){
   async function pageBytes(id,index,name='response.json'){
     check(Number.isSafeInteger(index)&&index>0&&['response.json','request.json','page.json','buyer-result.json'].includes(name),'PAGE_FILE_INVALID');
     const e=await edition(id,{records:false}),p=e.pages[index-1];check(p,'PAGE_NOT_FOUND',undefined,404);
-    const directory=join(e.directory,'pages',String(index).padStart(8,'0')),raw=await readBytes(join(directory,'response.json'),MAX_PAGE_BYTES);
-    check(raw.length===p.bytes&&digest(raw)===p.sha256,'PAGE_BYTES_CHANGED');
+    const directory=join(e.directory,'pages',String(index).padStart(8,'0')),raw=await frozenPageBytes(directory,p,'response.json');
     const value=pageValue(raw,e.query.entity);
     check(value.results.length===p.records&&value.meta.count===p.totalReported&&value.meta.next_cursor===p.nextCursor,'PAGE_METADATA_CHANGED');
     let nativeRaw;
     if(p.nativeSha256){
-      nativeRaw=await readBytes(join(directory,'buyer-result.json'),4194304);
-      check(digest(nativeRaw)===p.nativeSha256,'NATIVE_RECORD_CHANGED');nativeOf(parseJson(nativeRaw),raw);
+      nativeRaw=await frozenPageBytes(directory,p,'buyer-result.json');
+      nativeOf(parseJson(nativeRaw),raw);
     }
     if(name==='response.json')return raw;
     if(name==='buyer-result.json'&&nativeRaw)return nativeRaw;
-    return readBytes(join(directory,name),4194304);
+    return frozenPageBytes(directory,p,name);
   }
   return {root,query,saveQuery,listQueries,createEdition,edition,listEditions,receivePage,receiveBuyerResult,receiveResultFile,
     setDecision,copyDecisions,recoverPendingPage,gatherEdition,compare,report,exportFiles,exportEntries,exportManifest,exportFile,export:exportEdition,pageBytes,
