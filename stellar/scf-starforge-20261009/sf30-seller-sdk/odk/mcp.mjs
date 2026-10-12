@@ -4,11 +4,12 @@ import {ODK_ACTION_TOOLS,odkWorkspaceTools} from './mcp-catalog.mjs';
 import {CentralRetainedFiles} from './mcp-files.mjs';
 import {ODK_CONNECTION_FILENAME,ODK_UUID,odkNeed,odkPlain,odkExact,odkAbsolute,
   odkPrivateDirectory,odkReadPrivateJson,odkFailure,readCentralConnection,odkConnectionView,
-  odkRequest,inspectCentralListener} from './connection.mjs';
+  odkRequest,inspectCentralListener,inspectCentralCommissioning,requestCentralAction} from './connection.mjs';
 
 export const ODK_MCP_CONNECTION_SCHEMA='stellar-forge.odk-workspace-connection.v1';
 const ALIAS=/^[a-z0-9][a-z0-9_-]{0,63}$/;
-const COLLECTIONS=['connections','plans','captures','reviews','exports','reports','archives','running'];
+const COLLECTIONS=['connections','plans','captures','reviews','exports','reports','archives','running',
+  'publisherSnapshots','publisherReceiving','publisherPreparations','drafts','hostReceipts','inspections','commissions'];
 const schemas=new Map(odkWorkspaceTools((name,description,properties,required)=>
   ({name,properties,required})).map(value=>[value.name,value]));
 function alias(value){
@@ -144,16 +145,8 @@ export class MerchantCentralWorkspaces{
     return {workspace:scope.alias,state:'CONNECTED',...odkConnectionView(connection),
       native:page(live,args.offset??0,args.limit??50)};
   }
-  async #action(connection,action,payload,readOnly=false){
-    const value=await odkRequest(connection,'/api/actions/'+action,{
-      method:'POST',body:payload,readOnly,maximum:64*1024*1024});
-    if(value?.ok!==true||!Object.hasOwn(value,'result')){
-      const operationId=payload.reportId??payload.exportId??payload.id??null;
-      throw Object.assign(odkFailure('ODK_ACTION_RESPONSE_INVALID',
-        'The original Central action did not return a complete result.',502,
-        {operationId,dispatch:readOnly?'read':'unknown'}),{operationId});
-    }
-    return value.result;
+  async #action(connection,action,payload,namespace='actions'){
+    return requestCentralAction(connection,namespace,action,payload);
   }
   async #dispatch(name,args){
     const schema=schemas.get(name);
@@ -178,9 +171,16 @@ export class MerchantCentralWorkspaces{
     const connection=await this.#connection(scope);
     if(Object.hasOwn(ODK_ACTION_TOOLS,name)){
       const definition=ODK_ACTION_TOOLS[name],{workspace,...payload}=args;
-      return this.#action(connection,definition.action,payload,definition.readOnly===true);
+      return this.#action(connection,definition.action,
+        definition.inputKey?payload[definition.inputKey]:payload,definition.namespace??'actions');
     }
     switch(name){
+      case 'merchant_odk_commissioning_state':
+        return page(await inspectCentralCommissioning(connection),args.offset??0,args.limit??50);
+      case 'merchant_odk_commissioning_browser':
+        await inspectCentralCommissioning(connection);
+        return {workspace:scope.alias,instanceId:connection.value.instanceId,
+          url:connection.value.origin+'/commissioning/'+new URL(connection.value.url).hash};
       case 'merchant_odk_browser':
         await inspectCentralListener(connection);
         return {workspace:scope.alias,instanceId:connection.value.instanceId,url:connection.value.url};

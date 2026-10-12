@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "role": "numeric-catalogue",
+  "sourceUrl": "https://iot.hamburg.de/v1.1/Datastreams?$filter=observationType%20eq%20'http%3A%2F%2Fwww.opengis.net%2Fdef%2FobservationType%2FOGC-OM%2F2.0%2FOM_Measurement'&$orderby=id%20asc&$top=3&$count=true",
+  "receivedAt": "2026-10-12T11:59:41Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "hamburg-numeric-catalogue.json",
+    "bytes": 755,
+    "sha256": "051d8f012db1da025a0d4e8141a14e5ae6ec97f2581751a06dd8155f5d2e4eb0"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://iot.hamburg.de/v1.1/Datastreams?$filter=observationType%20eq%20'http%3A%2F%2Fwww.opengis.net%2Fdef%2FobservationType%2FOGC-OM%2F2.0%2FOM_Measurement'&$orderby=id%20asc&$top=3&$count=true",
+    "filename": "hamburg-numeric-catalogue.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-819a-b136-00b2b9418b46\",\"filename\":\"hamburg-numeric-catalogue.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":755,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-819a-b136-00b2b9418b46\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-819a-b136-00b2b9418b46\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-819a-b136-00b2b9418b46\",\"filename\":\"hamburg-numeric-catalogue.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":755,\"content\":\"{\\\"@iot.count\\\":1,\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(20919)\\\",\\\"@iot.id\\\":20919,\\\"name\\\":\\\"FROST UPDATE DATAINTEGRATIONS TEST Datastream\\\",\\\"description\\\":\\\"A test datastream for data integrations\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement\\\",\\\"unitOfMeasurement\\\":{\\\"name\\\":\\\"test\\\",\\\"symbol\\\":\\\"testunit\\\",\\\"definition\\\":\\\"test_def\\\"},\\\"ObservedProperty@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(20919)/ObservedProperty\\\",\\\"Sensor@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(20919)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(20919)/Thing\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Datastreams(20919)/Observations\\\"}]}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
