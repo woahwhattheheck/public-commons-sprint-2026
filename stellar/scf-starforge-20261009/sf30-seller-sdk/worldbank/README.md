@@ -117,3 +117,7 @@ The code uses Python's standard library for acquisition and storage. It uses the
 - [Request structure, periods and multiple indicators](https://datahelpdesk.worldbank.org/knowledgebase/articles/898581-api-basic-call-structures)
 - [Indicator metadata and source databases](https://datahelpdesk.worldbank.org/knowledgebase/articles/898599-indicator-api-queries)
 - [Country and aggregate metadata](https://datahelpdesk.worldbank.org/knowledgebase/articles/898590-country-api-queries)
+
+## Analysis reports and customer workbooks
+
+A reviewed handover continues into the existing Python Analysis application through `stellar-forge-worldbank-analysis prepare`. It retains the original typed source, saves country/indicator recipes, publishes a report, produces an Excel workbook and delivers a reopenable Analysis workspace. See [the complete receiving and workbook guide](ANALYSIS.md).
