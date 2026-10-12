@@ -288,21 +288,21 @@
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/public/app.js",
-      "bytes": 32664,
-      "sha256": "841058667e381dd1fb758a9d56cb8f5cc86e73d0e28215d74732827b8b90f3d4",
-      "gitBlob": "a99bf0652c7b8ba2c57725947058070388c718e2"
+      "bytes": 32570,
+      "sha256": "2600dfc463dd3e878d4997d5f3e5f057d2f2d67c924bb4f9a4b049973c8abe5c",
+      "gitBlob": "f4dbcb329d83d80cfaa70b4ab50cd99d2e0993f7"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/public/index.html",
-      "bytes": 16087,
-      "sha256": "64f539a39ebf1f990744415457126dd7bbad34cee9437a2abe1759e23bda138d",
-      "gitBlob": "a1ab38f54e1bf6a577dc89e7b958155522290eb4"
+      "bytes": 15809,
+      "sha256": "b75996cde4df61430d702e5175e6940d0082c337ff5ce11f0a81eedc3c0b7293",
+      "gitBlob": "d53f7b36079695caf770c9f321dc8fd1df5bd2a0"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/public/style.css",
-      "bytes": 10913,
-      "sha256": "4c34d2ec17f0e890f9f10b004fdd6149e3e795e356fd0a6aca7967464f7f6b44",
-      "gitBlob": "8d5f6fa76c80cb2c043b108fce92364b124b0f73"
+      "bytes": 14350,
+      "sha256": "8977d6913a51fceb62f35303ca28af34f1b59b33d9eb8efba7314c9e8320134d",
+      "gitBlob": "954184547a2fd79e49e0014866fc4377fa939f02"
     },
     {
       "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/README.md",
@@ -593,5 +593,29 @@
       "gitBlob": "715729bd4f404a677630342291da99755acce154"
     }
   ],
-  "declarationNote": "The package manifest and runtime retain the actual joined release commit. This file binds the reviewed implementation bytes and excludes itself to avoid a recursive hash. Original Utility source files support explicit reconstruction; unavailable historical workspace ZIPs are not claimed as recovered."
+  "declarationNote": "The package manifest and runtime retain the actual joined release commit. This file binds the reviewed implementation bytes and excludes itself to avoid a recursive hash. Original Utility source files support explicit reconstruction; unavailable historical workspace ZIPs are not claimed as recovered.",
+  "presentationRevision": {
+    "functionalSourceCommit": "2bc8b3abfae586bbe43aaa471c5194fe764032f5",
+    "description": "Neutral industrial operator presentation, plain operational headings, flat controls, keyboard focus and high-contrast support.",
+    "files": [
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/public/style.css",
+        "bytes": 14350,
+        "sha256": "8977d6913a51fceb62f35303ca28af34f1b59b33d9eb8efba7314c9e8320134d",
+        "gitBlob": "954184547a2fd79e49e0014866fc4377fa939f02"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/public/app.js",
+        "bytes": 32570,
+        "sha256": "2600dfc463dd3e878d4997d5f3e5f057d2f2d67c924bb4f9a4b049973c8abe5c",
+        "gitBlob": "f4dbcb329d83d80cfaa70b4ab50cd99d2e0993f7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/leap-intervals/public/index.html",
+        "bytes": 15809,
+        "sha256": "b75996cde4df61430d702e5175e6940d0082c337ff5ce11f0a81eedc3c0b7293",
+        "gitBlob": "d53f7b36079695caf770c9f321dc8fd1df5bd2a0"
+      }
+    ]
+  }
 }

@@ -52,8 +52,11 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
       publisherSnapshots:transfers.snapshots.map(({selection,files,sourceFiles,request,...value})=>({...value,
         selection:selection?{generation:selection.releaseState?.generation??null,active:selection.releaseState?.active??null,
           previous:selection.releaseState?.previous??null,datasetCount:selection.datasets.length,releaseCount:selection.releases.length}:null})),
-      publisherReceiving:transfers.receiving.map(({request,datasets,packages,releases,originalSelection,...value})=>({...value,
+      publisherPreparations:store.list('publisher-preparation').filter(record=>record.directory===root).map(({result,...record})=>record),
+      publisherReceiving:transfers.receiving.map(({request,datasets,packages,releases,originalSelection,historicalSource,...value})=>({...value,
         snapshotId:request.snapshotId,datasetCount:datasets.length,packageCount:packages.length,releaseCount:releases.length,
+        historicalSource:historicalSource?{directory:historicalSource.directory,manifestSha256:historicalSource.manifestSha256,
+          fileCount:historicalSource.files.length,bytes:historicalSource.files.reduce((sum,file)=>sum+file.bytes,0)}:null,
         releases:releases.map(({originalId,originalDigest,localId,localDigest})=>({originalId,originalDigest,localId,localDigest}))}))};
   }
   async function connect(input={}) {

@@ -1,6 +1,6 @@
 # Complete McCampbell cross-profile review
 
-[Download the complete review archive](./McCampbell_Cross_Profile_Review_20261012.zip), then open `reconciliation.html`. The same directory contains `report.html` for the EQuIS4 source and `baseline/report.html` for the EQuIS3 source.
+[Download the complete review archive](https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace/blob/main/stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/McCampbell_Cross_Profile_Review_20261012.zip?raw=true), then open `reconciliation.html`. The same directory contains `report.html` for the EQuIS4 source and `baseline/report.html` for the EQuIS3 source.
 
 The archive retains both original public 2508877 deliveries, all seven native receiving CSV files, independent field decisions, the full source comparison, the full correspondence table and all three self-contained editors. Its 37 members contain 125,237,384 logical bytes in an 8,829,090-byte ZIP. SHA256: `721a8d4a7a236179c6821e4a1100439003eeebedddc9e28a4825b2d368dfbe6b`.
 

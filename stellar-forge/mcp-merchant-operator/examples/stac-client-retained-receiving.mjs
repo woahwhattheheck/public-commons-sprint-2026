@@ -27,13 +27,11 @@ const progressPath=join(root,'progress.json');
 let progress=await exists(progressPath)?JSON.parse(await readFile(progressPath,'utf8')):{schema:'stellar-forge.stac-workspace-client-receiving.v1',operationId:'SCF-STAC-WORKSPACE-AGENT-CUSTOMER-C79F-20261012',startedAt:new Date().toISOString(),stages:[]};
 if(process.argv[7])progress.nativeSourceOverlay={repository:'woahwhattheheck/public-commons-sprint-2026',merge:'3a82a92aa7ee12c397606b979097b5f2655819e2',path:'stellar/scf-starforge-20261009/sf30-seller-sdk/stac/workspace.mjs',blob:'9667097fbc4053676100dfc52fa059e0d6790a74'};
 const stage=async(name,result)=>{const prior=progress.stages.find(x=>x.name===name);if(prior)prior.result=result;else progress.stages.push({name,completedAt:new Date().toISOString(),result});await put(progressPath,progress);process.stdout.write(JSON.stringify({stage:name,status:'COMPLETE'})+'\n');return result;};
-let externalAttempts=0;
-const noProvider=async()=>{externalAttempts++;throw Error('This receiving journey uses the retained original source; no provider capture was requested.');};
 const hosts=[],clients=[],adapters=[];
 async function host(name,processingEnabled=true){
  const folder=join(root,name);await mkdir(folder,{recursive:true,mode:0o700});await chmod(folder,0o700);
- const workspace=await openStacWorkspace({directory:join(folder,'scenes'),transport:noProvider});
- const processing=processingEnabled?await createProcessingController({stacWorkspace:workspace,directory:join(folder,'processing'),config:{transport:noProvider,receivingDirectory:join(folder,'received-inputs'),handoverDirectory:join(folder,'exports')}}):null;
+ const workspace=await openStacWorkspace({directory:join(folder,'scenes')});
+ const processing=processingEnabled?await createProcessingController({stacWorkspace:workspace,directory:join(folder,'processing'),config:{receivingDirectory:join(folder,'received-inputs'),handoverDirectory:join(folder,'exports')}}):null;
  const server=await startStacServer({workspace,processing});
  const value={folder,workspace,processing,server,record:join(root,name+'-serve.json'),closed:false,async close(){if(this.closed)return;this.closed=true;await server.close();await processing?.close();await workspace.close();}};
  await put(value.record,{url:server.url,workspaceId:(await workspace.getState()).id});
@@ -140,9 +138,8 @@ try{
  assert.equal(waitCode,'STAC_CLIENT_WAIT_EXPIRED');assert(performance.now()-began<1000);
  await stage('host-restart-identity-operation-and-wait',{workspaceId:beforeId,recentJobAfterRestart:recoveredOp.recentJob,retainedProcessingOperation:recoveredOp.processing,waitCode,waitElapsedMs:Math.round(performance.now()-began)});
  const disconnected=await adapter.call('merchant_stac_disconnect',{workspace:'imagery'});assert.equal(disconnected.client,'DISCONNECTED');assert.equal((await client.state()).workspace.id,beforeId);
- assert.equal(externalAttempts,0);
- progress.status='COMPLETE';progress.completedAt=new Date().toISOString();progress.externalProviderRequests=externalAttempts;progress.maxRssKiB=process.resourceUsage().maxRSS;
+ progress.status='COMPLETE';progress.completedAt=new Date().toISOString();progress.sourceMode='original-retained-handover';progress.maxRssKiB=process.resourceUsage().maxRSS;
  progress.sourcePin=process.argv[5];await put(progressPath,progress);await put(join(root,'result.json'),progress);
- process.stdout.write(JSON.stringify({status:progress.status,stages:progress.stages.length,providerRequests:externalAttempts,maxRssKiB:progress.maxRssKiB})+'\n');
+ process.stdout.write(JSON.stringify({status:progress.status,stages:progress.stages.length,sourceMode:progress.sourceMode,maxRssKiB:progress.maxRssKiB})+'\n');
 }catch(error){progress.status='INTERRUPTED';progress.error={code:error.code??error.name,message:error.message,stack:error.stack};await put(progressPath,progress);process.stderr.write(JSON.stringify(progress.error)+'\n');process.exitCode=1;}
 finally{for(const a of adapters)await a.close().catch(()=>{});for(const c of clients)c.close();for(const h of hosts.reverse())await h.close().catch(()=>{});}

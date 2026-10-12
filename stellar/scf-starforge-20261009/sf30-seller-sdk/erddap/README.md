@@ -295,7 +295,8 @@ For the exact retained NOAA NDBC station 46042 selection on 1 June 2023, the pro
 ~~~sh
 python3 -B "$ERDDAP/delivery/provider-native-receive.py" \
   --source-root "$ERDDAP" --operation-root "$PROVIDER_OPERATION" \
-  --capture "$NDBC_2023_CAPTURE" --ndbc-2023-reference
+  --capture "$NDBC_2023_CAPTURE" --ndbc-2023-reference \
+  --csv-policy canonical-json
 ~~~
 
 Select NDBC_2023_CAPTURE as the complete original five-response capture ZIP. The reference recipe verifies all five original response hashes, the 144 selected rows, the nine original columns and station/time selection before preparing its profile. It retains the exact public technical contact, source licensing and processing history. It leaves the separately appointed scientific contact for the provider to supply.
@@ -308,10 +309,20 @@ The browser continues that same closed workspace and profile:
 python3 -B "$ERDDAP/delivery/browser-owner.py" \
   --source-root "$ERDDAP" --operation-root "$PROVIDER_OPERATION" \
   --workspace "$PROVIDER_OPERATION/workspace" \
-  --handoff-profile "$PROVIDER_OPERATION/handoff-profile.json"
+  --handoff-profile "$REVIEWED_DIRECT_PROFILE" --csv-policy canonical-json
 ~~~
 
 Use Playwright 1.51 or later for the original IndexedDB draft-recovery phase. For another actual source, supply its complete reviewed direct profile with --profile instead of selecting the NDBC reference recipe. Keep the original operation directory across interruption: the helper retains its source, request, native workspaces, profile and accepted export/receiving checkpoints.
+
+### Review the JSON/CSV choice explicitly
+
+The bundled 144-row NDBC capture retains different numeric spellings in its two original responses: for example, JSON `13` and CSV `13.0`. A complete numeric comparison found 46 spelling differences, no changed numeric values, and 98 original missing-value representations. The first lexical evaluator recorded those spellings as response differences. The maintained exact-decimal evaluator now records `numericEquivalentSpellings: 46` and treats their numeric values as equivalent, preserving both original responses and every selected JSON token.
+
+The native and browser receiving commands default to `--csv-policy require-equivalent`. After inspecting both retained originals, select `--csv-policy canonical-json` to save a mapping that preserves the original JSON number tokens and nulls. The browser makes that same visible selection before saving its mapping. The operation records the selected policy, and a completed native mapping cannot be silently replaced during retry.
+
+The provider profile has its own reviewed `dataEdition` field. Set it explicitly to `canonical-json` in a new profile revision after reviewing the differing responses; changing the dataset mapping does not rewrite an earlier provider review. Keep an earlier profile file and its accepted bundle unchanged, save the successor against the exact current head, and set `REVIEWED_DIRECT_PROFILE` to that complete successor file when continuing the browser. A newly generated NDBC reference deliberately leaves this provider choice for review.
+
+The actual public capture does not name a separately appointed scientific contact. Preserve that question in the review bundle. Selecting a data edition does not supply a contact or change the source-owned readiness rules.
 
 ## Source, rights and operating limits
 
@@ -320,3 +331,11 @@ Use Playwright 1.51 or later for the original IndexedDB draft-recovery phase. Fo
 Retained source ZIPs are limited to 256 MiB, and customer packets to the original 512 MiB cap. Mapping limits constrain projected bytes, rows and cell size. Full source parsing retains the selected table in memory; choose source bounds that fit the actual host. The UI exposes limits and all original rows rather than silently truncating the scientific dataset.
 
 Keep private workspace/startup files, MCP connection files, source-access credentials and buyer accounting custody outside customer source exports. The portable customer packet contains the selected original scientific data and its full source/mapping/native lineage.
+
+### Keep original reviews readable after an evaluator update
+
+Each new provider review declares its readiness and CSV comparison versions. The declaration is included in its revision identity, full review and exported manifest. New reviews use the maintained exact-decimal comparator. Unknown evaluator versions are rejected.
+
+The original unversioned reviews remain supported. Receiving recomputes the complete source-bound review under the two known historical comparison versions and accepts only an exact canonical match. It validates every regenerated bundle member; a sender-provided hash or claimed result is insufficient. Previously accepted ZIP bytes and original review identities remain unchanged.
+
+An exact-save retry first recovers and validates its existing source/profile/parent request, even after the software changes. To review the same profile under the current evaluator, save a deliberate successor using the actual current head as its parent. Historical export regeneration, missing-export-receipt recovery and independent customer receiving all use the original saved evaluation. The separately appointed scientific contact remains an intake decision throughout.
