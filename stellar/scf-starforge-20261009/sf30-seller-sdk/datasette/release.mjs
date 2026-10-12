@@ -15,7 +15,7 @@ const parsed=content=>{try{return JSON.parse(new TextDecoder('utf-8',{fatal:true
 async function absent(path){try{await lstat(path);return false;}catch(e){if(e.code==='ENOENT')return true;throw e;}}
 const descriptor=(path,raw)=>({path,bytes:raw.length,sha256:digest(raw)});
 export async function prepareDatasetteRelease({publisher,runId,outputDirectory,payment,origin,path='/data'}={}) {
-  if(publisher?.settings?.schema!=='stellar-forge.datasette-publisher-workspace.v1'||
+  if(!['stellar-forge.datasette-publisher-workspace.v1','stellar-forge.datasette-publisher-workspace.v2'].includes(publisher?.settings?.schema)||
       typeof publisher.candidate!=='function'||!UUID.test(runId??''))throw fault('DATASETTE_PUBLISHER_REQUIRED');
   const directory=absolute(publisher.directory),targetDirectory=absolute(publisher.settings.targetDirectory);
   outputDirectory=absolute(outputDirectory,'prepared release directory');

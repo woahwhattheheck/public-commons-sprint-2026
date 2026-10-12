@@ -6,12 +6,14 @@ import {MAX_COMMISSIONING_BYTES} from "../../../stellar/scf-starforge-20261009/s
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "support", family: "support",
   title: "support merchant", order: 130, catalogOrder: 70,
-  configKey: "support", summary: true, dependencies: [],
+  configKey: "support", summary: true, dependencies: ["accounting","buyerExpenses"],
   maxRequestBytes: 2 * MAX_COMMISSIONING_BYTES + 1024 * 1024,
   configuration: { input: "supportConnection", privateExports: true,
     read: async (value, { base, config, hostPath }) => await (await import("../config.mjs")).readSupportConfiguration(hostPath(value)) },
   tools: supportTools,
   instructions: [
+    {prefix:'merchant_service_adjustment_',order:282,text:'Review an immutable saved Service report against the original accounting payment and explicit monetary basis. Retain the exact proposal and native intent before execution. Recover an interrupted execution with its original requestId; refresh later verification state with a new requestId and the same intent/job. Download the complete original handover or case at its saved revision.'},
+    {prefix:'merchant_service_buyer_',order:283,text:'Use the saved Service capture and the original buyer workspace. Inspect its actual packet, purchase or credit coding basis and period review. Save the complete prepared intent before execution; recovery reads its original native request. Carry the issued buyer source into the configured original accountant and retrieve every retained delivery file.'},
     {prefix:'merchant_case_package_',order:297,text:'Use the original saved case and complete package owner. Export preserves the captured case history and every retained native source bundle, including unassigned attachments. Keep one operation ID, actor and exact body; inspect status then resume that same request after interruption. Remote sources are host-configured original Handoffs aliases. Completed receiving opens the same local case and preserves later receiver edits. File readers retain the original manifest and native byte identities.'},
     {prefix:'merchant_case_commercial',order:296,text:'Use the original saved case and retained SF97 plan source. Preserve exact request UUID, actor, revision and full input after an interrupted quote write. Preview before saving an edition; record actual customer responses against its complete SHA. Quotation acceptance preserves implementation and service receiving. Read bounded customer files at their original saved revision, or export the complete original case for another operator.'},
     {prefix:"merchant_service_",order:285,text:"Use the original saved case for versioned service terms and reports. Inspect the current case and original merchant_support_service_snapshot before capture. Keep the exact requestId, expectedRevision and body across a lost change response; replay returns its original result after later case edits. Reports select exact terms history, retained captures and reviewed exclusions. Download the complete case export for staff receiving."},
@@ -29,5 +31,5 @@ export default defineMerchantProvider({
     }
   ],
   load: () => import("../support.mjs"),
-  create: (module, config, options, dependencies) => new module.MerchantSupport(config, { environment: options?.environment })
+  create: (module, config, options, dependencies) => new module.MerchantSupport(config, { environment: options?.environment, accounting: dependencies.accounting, buyer: dependencies.buyerExpenses })
 });

@@ -3,6 +3,9 @@ export { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
 import { executeGrpcUpgrade } from './grpc-upgrades.mjs';
 import { executeGrpcHealth } from './grpc-health.mjs';
 import { executeGrpcOperations } from './grpc-operations.mjs';
+import { executeGrpcTransfer } from './grpc-transfer.mjs';
+import { GRPC_TRANSFER_ARCHIVE, GRPC_TRANSFER_MANIFEST, GRPC_TRANSFER_ARCHIVE_BYTES,
+  GRPC_TRANSFER_MANIFEST_BYTES, validateGrpcTransferManifest } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/transfer/manifest.mjs';
 import { OPERATIONS_MAX_BYTES, validateOperationsExport } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/operations/domain.mjs';
 import { OPERATIONS_EXPORT_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/operations/report.mjs';
 import { GRPC_UPGRADE_MAX_BYTES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/upgrade-receiving.mjs';
@@ -12,7 +15,7 @@ import { open, lstat, mkdir, readdir, link, unlink, rm } from 'node:fs/promises'
 import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
-import { GRPC_CUSTOMER_FILES, GRPC_EXPORT_SCHEMA, GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, GRPC_STREAM_EXPORT_MAX_BYTES,
+import { GRPC_CUSTOMER_FILES, GRPC_EXPORT_SCHEMA, GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, GRPC_STREAM_EXPORT_MAX_BYTES, GRPC_TRANSFER_EXPORT_MAX_BYTES,
   grpcHash, grpcCanonical, grpcExportIdentity, parseGrpcExportManifest } from './grpc-workspace-export.mjs';
 
 export const GRPC_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.grpc-workspace-connection.v1';
@@ -90,11 +93,11 @@ export async function readGrpcWorkspaceConfiguration(path) {
   const workspaces = Object.create(null);
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     checked(alias, ALIAS, 'workspace alias');
-    exact(input, ['label', 'consoleUrlEnv', 'consoleUrlFile', 'captures', 'files', 'reflections']);
+    exact(input, ['label', 'consoleUrlEnv', 'consoleUrlFile', 'captures', 'files', 'reflections', 'destinations']);
     if ((input.consoleUrlEnv === undefined) === (input.consoleUrlFile === undefined))
       throw fail('CONFIGURATION_ERROR', 'Declare exactly one original console URL environment name or private file.');
-    const captures = Object.create(null), files = Object.create(null), reflections = Object.create(null);
-    for (const name of ['captures', 'files', 'reflections']) if (input[name] !== undefined &&
+    const captures = Object.create(null), files = Object.create(null), reflections = Object.create(null), destinations = Object.create(null);
+    for (const name of ['captures', 'files', 'reflections', 'destinations']) if (input[name] !== undefined &&
       (!plain(input[name]) || Object.keys(input[name]).length > 128))
       throw fail('CONFIGURATION_ERROR', 'Declare up to 128 original capture, reflection or receiving file handles.');
     for (const [handle, source] of Object.entries(input.captures ?? {})) {
@@ -117,11 +120,17 @@ export async function readGrpcWorkspaceConfiguration(path) {
     for (const [handle, source] of Object.entries(input.files ?? {})) {
       checked(handle, ALIAS, 'receiving file handle');
       exact(source, ['label', 'path', 'kind', 'sha256'], ['path', 'kind']);
-      if (!['revision', 'request', 'operations'].includes(source.kind)) throw fail('CONFIGURATION_ERROR', 'Declare an original revision, request or operations JSON file.');
+      if (!['revision', 'request', 'operations', 'workspace-transfer'].includes(source.kind)) throw fail('CONFIGURATION_ERROR', 'Declare an original revision/request/operations JSON file or complete workspace-transfer archive.');
       files[handle] = { label: printable(source.label ?? handle, 'file label'), path: hostPath(source.path, base), kind: source.kind,
         ...(source.sha256 === undefined ? {} : { sha256: checked(source.sha256, SHA, 'file SHA256') }) };
     }
-    workspaces[alias] = { label: printable(input.label ?? alias, 'workspace label'), captures, files, reflections,
+    for (const [handle, destination] of Object.entries(input.destinations ?? {})) {
+      checked(handle, ALIAS, 'receiving destination');
+      exact(destination, ['label', 'directory'], ['directory']);
+      destinations[handle] = { label: printable(destination.label ?? handle, 'destination label'),
+        directory: hostPath(destination.directory, base) };
+    }
+    workspaces[alias] = { label: printable(input.label ?? alias, 'workspace label'), captures, files, reflections, destinations,
       ...(input.consoleUrlFile === undefined
         ? { consoleUrlEnv: checked(input.consoleUrlEnv, /^[A-Za-z_][A-Za-z0-9_]*$/, 'console URL environment name') }
         : { consoleUrlFile: hostPath(input.consoleUrlFile, base) }) };
@@ -163,7 +172,7 @@ function revisionSummary(value) {
 
 export class MerchantGrpcWorkspaces {
   #config; #environment; #pending = new Set(); #controllers = new Set(); #closing = false; #close;
-  #reads = new RetainedFileReads({ errorPrefix: 'GRPC_EXPORT' });
+  #reads = new RetainedFileReads({ errorPrefix: 'GRPC_EXPORT', maxImmutableFileBytes: GRPC_TRANSFER_ARCHIVE_BYTES });
   constructor(config, { environment = process.env } = {}) { this.#config = config; this.#environment = environment; }
   get summary() {
     return { configured: Boolean(this.#config.grpcWorkspaces), ...this.#reads.summary,
@@ -171,6 +180,7 @@ export class MerchantGrpcWorkspaces {
         workspace, label: entry.label, ownership: 'ORIGINAL_GRPC_WORKSPACE',
         captures: Object.entries(entry.captures).map(([capture, source]) => ({ capture, label: source.label, entrypoints: source.entrypoints })),
         reflections: Object.entries(entry.reflections ?? {}).map(([profile, source]) => ({ profile, label: source.label, protocol: source.protocol })),
+        destinations: Object.entries(entry.destinations ?? {}).map(([destination, source]) => ({ destination, label: source.label })),
         files: Object.entries(entry.files).map(([file, source]) => ({ file, label: source.label, kind: source.kind, sha256: source.sha256 ?? null })),
       })) };
   }
@@ -194,7 +204,7 @@ export class MerchantGrpcWorkspaces {
     const controller = new AbortController(); this.#controllers.add(controller);
     try {
       const response = await fetch(connection.origin + route, { method: body === undefined ? 'GET' : 'POST', redirect: 'error',
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(420000)]),
+        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(route.startsWith('/api/transfer-') ? 3600000 : 420000)]),
         headers: { [release ? 'x-release-token' : 'x-workspace-token']: connection.token, origin: connection.origin,
           ...(body === undefined ? {} : { 'content-type': 'application/json' }) }, ...(payload === undefined ? {} : { body: payload }) });
       if (!response.ok) {
@@ -262,7 +272,7 @@ export class MerchantGrpcWorkspaces {
   }
   async #retain(workspace, kind, original, sources) {
     const root = await this.#root(), temporary = await privateDirectory(join(root, '.collect-' + randomUUID()));
-    const maximum = kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES
+    const maximum = kind === 'workspace-transfer' ? GRPC_TRANSFER_EXPORT_MAX_BYTES : kind === 'result' && original.topic === 'operations-incident' ? OPERATIONS_MAX_BYTES
       : kind === 'operations' ? OPERATIONS_EXPORT_MAX_BYTES : kind === 'upgrade' ? GRPC_UPGRADE_MAX_BYTES
       : sources.some(source => source.path === 'grpc-stream.ndjson') ? GRPC_EXPORT_MAX_BYTES : 64 * 1024 * 1024;
     const files = []; let total = 0;
@@ -327,6 +337,35 @@ export class MerchantGrpcWorkspaces {
     const bytes = await readBytes(source.path, kind === 'operations' ? OPERATIONS_MAX_BYTES : MAX_NATIVE_REQUEST);
     if (source.sha256 && grpcHash(bytes) !== source.sha256) throw fail('GRPC_FILE_CHANGED', 'The host-declared file differs from its pinned SHA256.');
     return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  }
+  async #transferUploadSource(definition, args) {
+    if ((args.file === undefined) === (args.exportId === undefined))
+      throw fail('INVALID_PARAMS', 'Choose exactly one declared archive file or original workspace-transfer export.');
+    if (args.file !== undefined) {
+      if (args.expectedExportManifestSha256 !== undefined) throw fail('INVALID_PARAMS', 'An export manifest hash belongs to an export ID.');
+      const source = definition.files[checked(args.file, ALIAS, 'archive file handle')];
+      if (!source || source.kind !== 'workspace-transfer')
+        throw fail('GRPC_FILE_NOT_CONFIGURED', 'Choose a host-declared complete workspace-transfer archive.');
+      if (source.sha256 && source.sha256 !== args.expectedSha256)
+        throw fail('GRPC_FILE_CHANGED', 'The selected archive differs from the host-declared SHA256.');
+      return source;
+    }
+    const retained = await this.#manifest(args.exportId);
+    if (retained.manifest.kind !== 'workspace-transfer' ||
+      checked(args.expectedExportManifestSha256, SHA, 'reviewed export manifest SHA256') !== retained.sha256)
+      throw fail('GRPC_TRANSFER_EXPORT_CHANGED', 'Choose the complete original workspace-transfer export and its reviewed outer manifest.');
+    const archive = retained.manifest.files.find(file => file.path === GRPC_TRANSFER_ARCHIVE);
+    const original = retained.manifest.files.find(file => file.path === GRPC_TRANSFER_MANIFEST);
+    if (archive.sha256 !== args.expectedSha256 || archive.bytes !== args.expectedBytes)
+      throw fail('GRPC_TRANSFER_ARCHIVE_CHANGED', 'Use the exact archive SHA256 and length from its original delivery.');
+    const bytes = await readBytes(join(retained.directory, original.name), GRPC_TRANSFER_MANIFEST_BYTES);
+    if (bytes.length !== original.bytes || grpcHash(bytes) !== original.sha256)
+      throw fail('GRPC_TRANSFER_MANIFEST_CHANGED', 'The retained complete transfer manifest changed.');
+    const manifest = validateGrpcTransferManifest(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
+    if (manifest.id !== retained.manifest.original.operationId ||
+      manifest.sha256 !== retained.manifest.original.snapshotSha256)
+      throw fail('GRPC_TRANSFER_EXPORT_CHANGED', 'The original archive manifest belongs to a different native capture.');
+    return { path: join(retained.directory, archive.name), sha256: archive.sha256, bytes: archive.bytes };
   }
   async #operationsBundle(definition, args) {
     if ((args.file === undefined) === (args.exportId === undefined))
@@ -427,6 +466,25 @@ export class MerchantGrpcWorkspaces {
       return { exportId: args.exportId, manifestSha256: retained.sha256, ...result };
     }
     const workspace = args.workspace, definition = this.#definition(workspace);
+    if (name.startsWith('merchant_grpc_transfer_')) {
+      const controller = new AbortController(); this.#controllers.add(controller);
+      try {
+        return await executeGrpcTransfer(name, args, {
+          signal: controller.signal,
+          request: (route, body) => this.#json(definition, route, body),
+          bounded: (value, original) => this.#bounded(workspace, value, original),
+          retain: (kind, original, sources) => this.#retain(workspace, kind, original, sources),
+          uploadSource: input => this.#transferUploadSource(definition, input),
+          destination: name => {
+            const target = definition.destinations?.[checked(name, ALIAS, 'receiving destination')];
+            if (!target) throw fail('GRPC_TRANSFER_DESTINATION_NOT_CONFIGURED', 'Choose an original host-declared receiving destination.');
+            return target.directory;
+          },
+          download: (action, body, consume) => this.#connection(definition).then(connection =>
+            this.#request(connection, '/api/transfer-' + action, body, consume)),
+        });
+      } finally { this.#controllers.delete(controller); }
+    }
     if (name.startsWith('merchant_grpc_operations_')) return executeGrpcOperations(name, args, {
       request: (route, body) => this.#json(definition, route, body),
       bounded: (value, original) => this.#bounded(workspace, value, original),

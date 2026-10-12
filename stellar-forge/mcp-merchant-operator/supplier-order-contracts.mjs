@@ -11,15 +11,19 @@ export const SUPPLIER_ORDER_REPLY_BYTES=1024*1024;
 export const SUPPLIER_ORDER_REQUEST_BYTES=2*1024*1024;
 export const SUPPLIER_ORDER_CLIENT_METHODS=Object.freeze({
   status:'status',open:'open',close:'close',inputs:'inputs',state:'state',
+  profile:'profile',profileTemplate:'profile_template',profileHistory:'profile_history',selectProfile:'select_profile',
   orders:'orders',order:'order',orderItems:'order_items',orderHistory:'order_history',
   documents:'documents',document:'document',documentLines:'document_lines',
   drafts:'drafts',draft:'draft',draftLines:'draft_lines',newDraft:'new_draft',
   saveDraft:'save_draft',saveDraftInput:'save_draft_input',prepare:'prepare',select:'select',
   receive:'receive',receiveWorkspace:'receive_workspace',exportWorkspace:'export_workspace',
+  transportChannels:'transport_channels',transmissions:'transmissions',transmission:'transmission',transmissionHistory:'transmission_history',
+  prepareTransmission:'prepare_transmission',sendTransmission:'send_transmission',retryTransmission:'retry_transmission',
+  resolveTransmission:'resolve_transmission',cancelTransmission:'cancel_transmission',
   operation:'operation',exportManifest:'export_manifest',exportFile:'export_file',exportFileRelease:'export_file_release'
 });
 export const SUPPLIER_ORDER_PAGED_METHODS=Object.freeze([
-  'orders','orderItems','orderHistory','documents','documentLines','drafts','draftLines'
+  'profileHistory','orders','orderItems','orderHistory','documents','documentLines','drafts','draftLines','transmissions','transmissionHistory'
 ]);
 export const supplierOrderSpecifications=new Map(supplierOrderTools(
   (name,description,properties,required,annotations)=>({name,description,properties,required,annotations})

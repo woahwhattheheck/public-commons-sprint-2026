@@ -8,6 +8,7 @@ export const NUMERIC_OBSERVATION_TYPES=Object.freeze([
 export const ANALYSIS_LIMITS=Object.freeze({streams:20,rows:250000,annotations:1000,versions:2000,pageRows:500});
 export const ANALYSIS_ACTIONS=Object.freeze({
   'analysis.python.prepare':['editionId','exportId','actor'],
+  'analysis.python.components.prepare':['editionId','exportId','analysisVersionId','actor'],
   'analysis.create':['title','editionId','selection','actor','note'],
   'analysis.revise':['projectId','baseVersionId','title','editionId','selection','actor','reason'],
   'analysis.annotate':['projectId','baseVersionId','annotation','actor','reason'],
@@ -26,6 +27,8 @@ export const ANALYSIS_MEANING=Object.freeze({
   numeric:'Numeric diagrams accept original JSON numbers only from declared OGC OM_Measurement or OM_CountObservation streams, with explicit instantaneous phenomenonTime. Count values must be integral. Exact decimal lexemes remain in source/CSV; finite browser rendering is separate and nonzero underflow is excluded.',
   nativeViewer:'Helgoland v2.2.3 uses browser-parsed IDs and direct ID URLs. IDs that cannot round-trip through that client are unavailable in its projection; exact originals remain in the analyst tables and source files. Its expanded view uses the first original Thing Location and does not establish observation location.',
   comparison:'Observed differences between retained editions. No provider insertion/deletion, atomic snapshot, uptime or quality approval is inferred.',
+  components:'MultiDatastream analysis requires explicit original positions and edition-bound metadata identities. Units, properties, declarations and result vectors remain unchanged. A numeric-json interpretation is an attributed selection, not source conformance.',
+  componentStatistics:'Exact component sample arithmetic and finite browser plotting are separate. Duplicate timestamps remain separate occurrences; gaps and sample means do not establish interval coverage or a time-weighted mean.',
   geometry:'Original retained Location/FeatureOfInterest geometry; a Thing location is not automatically an observation location.',
   authority:'An annotation is attributed operator interpretation, separate from the unchanged provider record.'
 });
@@ -43,4 +46,16 @@ export const ANALYSIS_READS=Object.freeze({
   sourceCatalog:'/api/analysis/editions/<editionId>/streams',
   sta:'/api/analysis/sta/<versionId>/<map|numeric>/',
   files:'Original /api/files selection {kind:"analysis",id:<publication/export/evidence/viewer/prepared-source ID>,file:<listed name>}'
+});
+
+export const ANALYSIS_COMPONENT_SELECTION=Object.freeze({
+  schema:'stellar-forge.sensorthings-component-selection.v1',
+  source:'componentCatalogue returned by the existing retained-edition streams read',
+  fields:['streamKeys','componentSelections','period','view','timeBasis','viewerId'],
+  componentFields:['streamKey','index','bindingId','interpretation'],
+  interpretationFields:['mode','acknowledgedIssues','note'],
+  modes:['source-declared','numeric-json'],
+  indexBasis:'Original zero-based array position; no property/name/unit inference or reordering.',
+  limits:{selections:80,index:4095,rows:250000,pageRows:500},
+  receiving:'A later source edition requires its actual binding IDs and explicit issue acknowledgements; prior choices remain immutable.'
 });

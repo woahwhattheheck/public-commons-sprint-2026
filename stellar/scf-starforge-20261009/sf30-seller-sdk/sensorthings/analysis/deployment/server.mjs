@@ -167,7 +167,14 @@ export function createAnalysisDeployment({workspace,origin}){
     const streams=selected.summary.streams.filter(stream=>stream.numericEligibleRows>0),seen=new Set();
     if(!streams.length)return result;
     for(const stream of streams){
-      let compatibility;try{compatibility=nativeEntityCompatibility(sourceDocument(Buffer.from(stream.sourceJson))['@iot.id']);}catch{}
+      let compatibility;
+      const derivedComponent=stream.kind==='MultiDatastreamComponent'&&Array.isArray(selected.version.selection.componentSelections);
+      try{
+        if(derivedComponent){
+          const choice=selected.version.selection.componentSelections.find(c=>c.streamKey===stream.sourceStreamKey&&c.index===stream.componentIndex&&c.bindingId===stream.componentBindingId);
+          if(choice&&typeof stream.key==='string'&&/^component-[a-f0-9]{40}$/.test(stream.key))compatibility=nativeEntityCompatibility('component-stream-'+stream.key);
+        }else compatibility=nativeEntityCompatibility(sourceDocument(Buffer.from(stream.sourceJson))['@iot.id']);
+      }catch{}
       if(!compatibility?.compatible||typeof compatibility.clientId!=='string'||compatibility.clientId.includes('!!')){
         result.issue={code:'SENSORTHINGS_VIEWER_NATIVE_PERMALINK',
           message:'The original selected stream ID cannot be represented by this native viewer permalink. Its source and analysis remain retained.'};return result;
@@ -175,7 +182,10 @@ export function createAnalysisDeployment({workspace,origin}){
       const internalId=selected.staRoot+'__'+compatibility.clientId;
       if(seen.has(internalId)){result.issue={code:'SENSORTHINGS_VIEWER_NATIVE_PERMALINK',
         message:'Distinct selected source streams have the same native permalink identity. Review the original typed IDs.'};return result;}
-      seen.add(internalId);result.datasets.push({streamKey:stream.key,id:compatibility.id,clientId:compatibility.clientId,internalId});
+      seen.add(internalId);result.datasets.push({streamKey:stream.key,id:compatibility.id,clientId:compatibility.clientId,internalId,
+        ...(derivedComponent?{derivedComponent:true,sourceStreamKey:stream.sourceStreamKey,originalSourceId:stream.id,
+          componentIndex:stream.componentIndex,bindingId:stream.componentBindingId,
+          meaning:'Explicitly derived component-series permalink; original MultiDatastream IDs and declarations remain unchanged.'}:{})});
     }
     const period=selected.version.selection.period;
     const starts=streams.map(stream=>stream.firstUtc).filter(value=>typeof value==='string').sort();

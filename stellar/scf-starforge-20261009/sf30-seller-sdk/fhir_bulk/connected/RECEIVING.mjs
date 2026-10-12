@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process';
 import {randomBytes} from 'node:crypto';
 import {mkdir,readFile} from 'node:fs/promises';
 import {join,dirname,resolve} from 'node:path';
-import {fileURLToPath} from 'node:url';
+import {fileURLToPath,pathToFileURL} from 'node:url';
 import {absolute,privateDirectory,readJSON,saveJSON,digest,operationLease,need,now}
   from '../../../distribution/runtime-workspace/storage.mjs';
 import {startMerchantMcp} from '../../../../../stellar-forge/mcp-merchant-operator/serve.mjs';
@@ -23,9 +23,9 @@ const HERE=dirname(fileURLToPath(import.meta.url)),FHIR=resolve(HERE,'..'),REPO=
 const CLI=join(FHIR,'cli.py'),options={};
 for(let i=2;i<process.argv.length;i+=2){
   const flag=process.argv[i],value=process.argv[i+1];
-  need(['--receiving','--out','--chromium','--credentials-file'].includes(flag) &&
+  need(['--receiving','--out','--workspace','--playwright','--chromium','--credentials-file'].includes(flag) &&
     value && !value.startsWith('--') && !Object.hasOwn(options,flag),
-  'FHIR_CONNECTED_RECEIVING_ARGUMENTS','Use --receiving ABS/OPERATED_FHIR_BULK.json --out ABS/PRIVATE_OUTPUT [--chromium ABS].');
+  'FHIR_CONNECTED_RECEIVING_ARGUMENTS','Use --receiving ABS/OPERATED_FHIR_BULK.json --out ABS/PRIVATE_OUTPUT [--workspace ABS/RECEIVED_WORKSPACE] [--playwright ABS/index.mjs] [--chromium ABS].');
   options[flag]=absolute(value);
 }
 for(const key of ['--receiving','--out'])need(options[key],'FHIR_CONNECTED_RECEIVING_ARGUMENT_REQUIRED',key);
@@ -34,7 +34,7 @@ const output=options['--out'];
 await mkdir(output,{mode:0o700,recursive:true});await privateDirectory(output);
 let lease;
 let journal,merchant,client,browser,page,configuration;
-const owners=[],browserErrors=[],pendingCaptures=new Set();
+const owners=[],ownersByAlias=new Map(),browserErrors=[],pendingCaptures=new Set();
 let captureFailure=null,writes=Promise.resolve();
 const journalPath=join(output,'CONNECTED_JOURNEY.json');
 const nativeBytes=await readSourceFile(options['--receiving'],{maxBytes:64*1024*1024});
@@ -47,7 +47,7 @@ need(native.operation==='SCF-FHIR-BULK-DATA-WORKBENCH-450E-20261012' &&
     .every(key=>new RegExp(SHA).test(native[key]??'')) &&
   Array.isArray(native.groupPageIds) && native.groupPageIds.length,
 'FHIR_CONNECTED_COMPLETE_NATIVE_REQUIRED','Select the completed original acquisition, composition, build and receiving record.');
-const originalDirectory=absolute(native.workspace);
+const originalDirectory=absolute(options['--workspace']??native.workspace);
 const binding={receiving:options['--receiving'],receivingSha256:digest(nativeBytes),
   workspace:originalDirectory,workspaceId:native.workspaceId,sourceRoot:FHIR,
   credentialsFile:options['--credentials-file']??null};
@@ -117,10 +117,11 @@ async function operatorIdentity(alias){
     {privateFile:true,maxBytes:65536})).toString('utf8'));
   need(saved.schema===OPERATOR_SCHEMA && saved.active && saved.workspace===paths[alias],
     'FHIR_CONNECTED_ORIGINAL_OPERATOR_REQUIRED');
-  const response=await fetch(new URL('/api/operator',saved.url),{
-    headers:{Authorization:'Bearer '+saved.accessToken},redirect:'error',signal:AbortSignal.timeout(30000)});
+  const owner=ownersByAlias.get(alias);
+  need(owner,'FHIR_CONNECTED_ORIGINAL_OPERATOR_REQUIRED');
+  const response=await owner.request('GET','/api/operator');
   need(response.ok,'FHIR_CONNECTED_OPERATOR_READ_FAILED');
-  const identity=await response.json();
+  const identity=response.value;
   need(identity.instanceId===saved.instanceId && identity.workspaceId===saved.workspaceId &&
     identity.processId===saved.processId,'FHIR_CONNECTED_OPERATOR_CHANGED');
   return {identity,url:saved.url+'#'+saved.accessToken};
@@ -260,6 +261,10 @@ try{
       sourceEditions:[{at:now(),files:sources}],calls:[],exports:{},downloads:{},merchantRuns:[],
       operatorRuns:[],browserRuns:[],browserRequests:[],failures:[]};
   }
+  journal.runtimeRuns??=[];
+  journal.runtimeRuns.push({at:now(),node:process.versions.node,executable:process.execPath,
+    playwright:options['--playwright']??null,chromium:options['--chromium']??null,
+    originalWorkspace:absolute(native.workspace),selectedWorkspace:originalDirectory});
   await checkpoint();
   // These are the two declared native receiving destinations. Reopening one
   // keeps its existing identity and original receive journal.
@@ -274,15 +279,21 @@ try{
   // If Applications already owns the original, this only borrows its descriptor.
   for(const [alias,selectedWorkspace] of Object.entries(selected.workspaces)){
     const owner=new FhirConnection(selectedWorkspace);owners.push(owner);
-    const opened=await owner.open();journal.operatorRuns.push({alias,at:now(),...opened});await checkpoint();
+    const opened=await owner.open();ownersByAlias.set(alias,owner);journal.operatorRuns.push({alias,at:now(),...opened});await checkpoint();
   }
   const beforeOperator=(await operatorIdentity('original')).identity;
   let playwright;
-  try{playwright=await import('playwright');}
-  catch(error){
-    need(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'FHIR_CONNECTED_PLAYWRIGHT_REQUIRED');
-    playwright=createRequire(import.meta.url)(join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'));
+  if(options['--playwright'])playwright=await import(pathToFileURL(options['--playwright']).href);
+  else{
+    try{playwright=await import('playwright');}
+    catch(error){
+      need(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'FHIR_CONNECTED_PLAYWRIGHT_REQUIRED');
+      playwright=createRequire(import.meta.url)(join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,'playwright'));
+    }
   }
+  if(!playwright.chromium&&playwright.default)playwright=playwright.default;
+  need(typeof playwright.chromium?.launchPersistentContext==='function','FHIR_CONNECTED_PLAYWRIGHT_REQUIRED',
+    'Select the existing Playwright module used by this receiving host.');
   browser=await playwright.chromium.launchPersistentContext(join(output,'browser-profile'),{
     headless:true,acceptDownloads:true,viewport:{width:1440,height:1080},
     ...(options['--chromium']?{executablePath:options['--chromium']}:{})});
@@ -423,7 +434,8 @@ try{
   need(browserErrors.length===0,'FHIR_CONNECTED_BROWSER_ERRORS',JSON.stringify(browserErrors));
   const result={schema:SCHEMA,operation:OPERATION,completedAt:now(),nativeReceiving:binding,
     sourceFiles:journal.sourceFiles,sourceEditions:journal.sourceEditions,
-    workspace:paths.original,workspaceId:native.workspaceId,originalOperator:beforeOperator,
+    workspace:paths.original,workspaceId:native.workspaceId,originalWorkspace:absolute(native.workspace),
+    runtimeRuns:journal.runtimeRuns,originalOperator:beforeOperator,
     connectionId:native.connectionId,discoveryId:native.discoveryId,groupPageIds:native.groupPageIds,
     exportIds:native.exportIds,operationIds:native.operationIds,sourceIds:native.sourceIds,
     planId:native.planId,buildIds:native.buildIds,comparisonId:native.comparisonId,rowCount:expectedRows,

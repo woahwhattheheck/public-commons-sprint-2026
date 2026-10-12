@@ -224,7 +224,9 @@ function addRoute(query) {
 }
 async function saveDraft() {
   const plan = planValue();
-  const intent = { expectedRevision: revision, sourceSha256: data.source.sourceSha256, plan, authoring: editor.authoring ?? [] };
+  const intent = { expectedRevision: revision, sourceSha256: data.source.sourceSha256, plan, authoring: editor.authoring ?? [],
+    ...(editor.receivedOrigin??{}) };
+  const savePath=editor.receivedOrigin?'/api/cloud/adopt-draft':'/api/draft';
   const builder = editor.builder;
   const identity = JSON.stringify(intent), intentKey = 'duckdb-save-intent:' + data.workspaceId;
   let pending;
@@ -232,7 +234,7 @@ async function saveDraft() {
   if (pending?.identity !== identity) pending = { identity, operationId: 'save-' + crypto.randomUUID() };
   sessionStorage.setItem(intentKey, JSON.stringify(pending));
   let result;
-  try { result = await api('/api/draft', { ...intent, operationId: pending.operationId }); }
+  try { result = await api(savePath, { ...intent, operationId: pending.operationId }); }
   catch (error) { if (error.code) sessionStorage.removeItem(intentKey); throw error; }
   sessionStorage.removeItem(intentKey);
   revision = result.revision; dirty = false; sessionStorage.removeItem(storageKey());
@@ -390,6 +392,18 @@ cloudUi = mountCloudDelivery($('#cloud-workspace'), {
     if (dirty && context.dirtyChoice === 'save') {
       review = null; await saveDraft();
     }
+  },
+  onReceivedDraft:async(original,context)=>{
+    if(dirty&&context.dirtyChoice==='save')await saveDraft();
+    else if(dirty&&context.dirtyChoice!=='discard')throw new Error('Choose how to retain the current unsaved merchant edits.');
+    await refresh({replaceEditor:true});
+    if(!data.cloud?.selection||!original.editionIds.includes(data.cloud.selection.editionId))
+      throw new Error('The selected source changed. Select this receiving’s source edition before adopting its draft.');
+    editor=toEditor(original.originalDraft.plan,original.originalDraft.authoring);
+    editor.receivedOrigin={receivingId:original.receivingId,originalDraftSha256:original.originalDraftSha256};
+    revision=data.draft?.revision??0;review=null;previewResult=undefined;selectedQuery='';
+    markEdited();render();showTab('author');
+    report('Opened the received original draft. Review its native relations and query fields, then edit the merchant terms and save the new local revision.');
   },
   onSelected: async (_result, context) => {
     review = null; previewResult = undefined; selectedQuery = '';

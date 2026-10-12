@@ -24,7 +24,11 @@ Complete retained receiving:
     --export ORIGINAL_REPORT_UUID --directory PRIVATE_DIRECTORY
     [--expected-manifest-sha256 SHA256 --chunk-size 65536]
 
-The same receiving directory resumes its verified bytes. Both commands use the
+  timescale-client commissioning-report-download --url URL --workspace ALIAS --workspace-id UUID
+    --export ORIGINAL_REPORT_UUID --directory PRIVATE_DIRECTORY
+    [--expected-manifest-sha256 SHA256 --chunk-size 65536]
+
+The same receiving directory resumes its verified bytes. These commands use the
 existing merchant download engine. SIGINT cancels this client; the original
 server request remains available for inspection. Closing the client never closes
 the externally owned merchant, publisher, scheduler or browser.
@@ -43,19 +47,19 @@ export async function runTimescaleClientCli(argv=process.argv.slice(2),{environm
   }});
   if(values.help||positionals.length===0){output.write(help);return null;}
   if(positionals.length!==1)throw failure('TIMESCALE_CLIENT_ARGUMENT','Select one original operation.');
-  const method=positionals[0],receiving=['download','report-download'].includes(method);
+  const method=positionals[0],receiving=['download','report-download','commissioning-report-download'].includes(method);
   if(!receiving&&!Object.hasOwn(TIMESCALE_CLIENT_METHODS,method))
     throw failure('TIMESCALE_CLIENT_ARGUMENT','Unknown Timescale client operation.');
   if(!values.url||!values.workspace||!values['workspace-id'])
     throw failure('TIMESCALE_CLIENT_ARGUMENT','Provide the original MCP URL, workspace alias and persistent UUID.');
   const timeoutMs=integer(values['timeout-ms'],'request timeout',1,3600000);
   const waitMs=values['wait-ms']===undefined?undefined:integer(values['wait-ms'],'observation timeout',1,3600000);
-  const startedMethods=new Set(['capture','review','refresh','verify','job','publication','export','remediation-command','remediation-report']);
+  const startedMethods=new Set(['capture','review','refresh','verify','job','publication','export','remediation-command','remediation-report','commissioning-command','commissioning-report']);
   if(waitMs!==undefined&&!startedMethods.has(method))throw failure('TIMESCALE_CLIENT_ARGUMENT','Wait applies only to an original retained operation.');
   let input={};
   if(values.input){
     const path=resolve(values.input);await privateDirectory(dirname(path));
-    const bytes=await readPrivate(path,2*1024*1024),actual=digest(bytes);
+    const bytes=await readPrivate(path,method==='commissioning-command'?8*1024*1024:2*1024*1024),actual=digest(bytes);
     if(values['input-sha256']!==undefined&&values['input-sha256']!==actual)
       throw failure('TIMESCALE_CLIENT_INPUT_CHANGED','The retained request file differs from its selected digest.');
     try{input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}
@@ -72,7 +76,7 @@ export async function runTimescaleClientCli(argv=process.argv.slice(2),{environm
     if(!values.export||!values.directory)throw failure('TIMESCALE_CLIENT_ARGUMENT','Select the original export UUID and private receiving directory.');
     const options={exportId:values.export,directory:resolve(values.directory),expectedManifestSha256:values['expected-manifest-sha256'],signal,
       ...(values['chunk-size']?{chunkSize:integer(values['chunk-size'],'chunk size',1,196608)}:{})};
-    result=method==='download'?await client.exports.download(options):await client.remediation.downloadReport(options);
+    result=method==='download'?await client.exports.download(options):method==='commissioning-report-download'?await client.commissioning.downloadReport(options):await client.remediation.downloadReport(options);
   }else{
     result=await client.call(method,input,{requestSignal:signal,timeoutMs});
     if(values['wait-ms']){

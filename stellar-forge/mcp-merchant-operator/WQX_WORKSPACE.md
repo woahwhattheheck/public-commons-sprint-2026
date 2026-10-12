@@ -207,7 +207,7 @@ Inventory pages have a whole-list snapshot; record pages have a whole-file hash;
 
 The three concentration methods use the original source-bound concentration workflow and the existing complete file store. Read `concentrationUnits`, prepare one complete source group or explicit cohort with `concentrationPrepare`, then pass its returned `documentRef` directly into the normal table/preview/save flow. `concentrationReport` reopens the full saved JSON or CSV report from either receiving project. All original result IDs, qualifiers and limit records stay attached; blank measured values and unspecified result units remain blank.
 
-[WQX_CONCENTRATIONS.md](WQX_CONCENTRATIONS.md) covers the exact selections, typed methods, CLI commands, whole-file reports, recovery and complete native Potomac receiving. The provider now exposes 37 WQX tools. Its full cohort receiving composes the original native CLI source phase with the merchant MCP, complete tables, eleven exports, two managed projects and cold report reopening.
+[WQX_CONCENTRATIONS.md](WQX_CONCENTRATIONS.md) covers the exact selections, typed methods, CLI commands, whole-file reports, recovery and complete native Potomac receiving. The provider now exposes 39 WQX tools. Its full cohort receiving composes the original native CLI source phase with the merchant MCP, complete tables, eleven exports, two managed projects and cold report reopening.
 
 ## Run the whole receiving operation
 
@@ -234,3 +234,9 @@ The same contribution installs `merchant-wqx`, the typed client, setup API, guid
 ## Native transfer verification
 
 The complete typed-client transfer check ran on Node 24.19.0 against the original WQX retained-file kernel, original file reader, HTTP transport and Linux lease. It transferred 196,745 exact bytes, resumed upload at 131,072 bytes after a committed append with an interrupted return, and resumed download at 65,536 bytes. Reopening the completed upload produced zero additional appends; reopening the completed download offline produced zero MCP requests. Two concurrent CLI calls to one selected output produced one original dispatch and one complete result. The whole scientific receiving driver records its own complete original dataset outcome in its operation directory.
+
+## Paired scientific editions and complete comparisons
+
+`scientificPreview({request})` and `scientificSave({request})` compose the original reporting-unit scientific review. The CLI commands are `scientific-preview` and `scientific-save`. Use inventory kind `scientific`, record/file family `scientific`, and receive kind `scientific` for complete saved editions, all seven native formats and both retained source editions. Every complete native response uses the existing file transport.
+
+[WQX_SCIENTIFIC.md](WQX_SCIENTIFIC.md) documents the exact preview/save request, original source and reporting representations, scientific options, typed methods, CLI, complete receiving and cold reopen. These two operations bring the provider to 39 tools while preserving its 128 MiB complete-file and 65,536-byte chunk limits.

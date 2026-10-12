@@ -7,13 +7,15 @@ import { LineageWorkspace, receiveBundle, verifyBundle } from "./store.mjs";
 import { startServer } from "./server.mjs";
 import { serveStdio } from "./protocol.mjs";
 import { LineageClient } from "./client.mjs";
+import { producerConfiguration } from "./producer.mjs";
 
 const HELP = [
   "OpenLineage operations workspace",
   "",
   "  scf-lineage init --workspace DIR [--title TITLE]",
-  "  scf-lineage serve --workspace DIR [--host 127.0.0.1] [--port 8767] [--token-file FILE]",
-  "  scf-lineage import --workspace DIR --input EVENTS [--name NAME] [--source URL] --operation-id ID [--revision N]",
+  "  scf-lineage serve --workspace DIR [--host 127.0.0.1] [--port 8767] [--token-file FILE] [--producer-token-file FILE]",
+  "  scf-lineage producer-config --connection FILE --out NEW_FILE [--token-file FILE] [--client python|java] [--compression gzip|identity] [--timeout SECONDS]",
+  "  scf-lineage import --workspace DIR --input EVENTS [--name NAME] [--source URL] --operation-id ID [--revision N] [--content-encoding identity|gzip]",
   "  scf-lineage status --workspace DIR [--edition ID]",
   "  scf-lineage action ACTION --workspace DIR --input ARGUMENTS.json",
   "  scf-lineage action ACTION --url URL --input ARGUMENTS.json [--token-file FILE]",
@@ -55,6 +57,16 @@ export async function main(argv = process.argv.slice(2)) {
   const args = [...argv], command = args.shift();
   if (!command || ["help", "--help", "-h"].includes(command)) { console.log(HELP); return 0; }
   const { result: options, positional } = parse(args);
+  if (command === "producer-config") {
+    check(options, ["connection", "out", "token-file", "client", "compression", "timeout"]);
+    const identity = await readJson(need(options.connection, "--connection"));
+    const configuration = producerConfiguration(identity, { token: await token(options), client: options.client ?? "python",
+      compression: options.compression ?? "gzip", timeoutSeconds: options.timeout === undefined ? 30 : Number(options.timeout) });
+    await writeNew(options.out, JSON.stringify(configuration, null, 2) + "\n");
+    print({ out: resolve(options.out), workspaceId: identity.workspaceId, instanceId: identity.instanceId,
+      url: configuration.transport.url, client: options.client ?? "python", authenticated: Boolean(configuration.transport.auth) });
+    return 0;
+  }
   if (command === "verify") {
     check(options, ["input"]);
     const value = verifyBundle(await fs.readFile(need(options.input, "--input")));
@@ -80,8 +92,9 @@ export async function main(argv = process.argv.slice(2)) {
     check(options, ["workspace", "title"]); print(await workspace.initialize(options.title)); return 0;
   }
   if (command === "serve") {
-    check(options, ["workspace", "title", "host", "port", "token-file", "expected-workspace-id"]);
-    const host = await startServer({ directory: options.workspace, title: options.title, host: options.host ?? "127.0.0.1", port: options.port === undefined ? 8767 : Number(options.port), token: await token(options), expectedWorkspaceId: options["expected-workspace-id"] ?? null });
+    check(options, ["workspace", "title", "host", "port", "token-file", "expected-workspace-id", "producer-token-file"]);
+    const host = await startServer({ directory: options.workspace, title: options.title, host: options.host ?? "127.0.0.1", port: options.port === undefined ? 8767 : Number(options.port), token: await token(options), expectedWorkspaceId: options["expected-workspace-id"] ?? null,
+      producerToken: options["producer-token-file"] ? (await fs.readFile(options["producer-token-file"], "utf8")).trim() : null });
     console.log(JSON.stringify(host.identity));
     let closing = false;
     const close = () => { if (closing) return; closing = true; host.close().then(() => { process.exitCode = 0; }, error => { console.error(error.message); process.exitCode = 1; }); };
@@ -96,10 +109,10 @@ export async function main(argv = process.argv.slice(2)) {
     check(options, ["workspace", "edition"]); print(await workspace.view({ edition: options.edition ?? null })); return 0;
   }
   if (command === "import") {
-    check(options, ["workspace", "input", "name", "source", "operation-id", "revision"]);
+    check(options, ["workspace", "input", "name", "source", "operation-id", "revision", "content-encoding"]);
     const bytes = await fs.readFile(need(options.input, "--input"));
     const revision = options.revision === undefined ? (await workspace.read()).revision : Number(options.revision);
-    print(await workspace.importSource({ bytes, name: options.name ?? options.input.split(/[\\/]/).at(-1), sourceUrl: options.source ?? "", operationId: need(options["operation-id"], "--operation-id"), expectedRevision: revision })); return 0;
+    print(await workspace.importSource({ bytes, name: options.name ?? options.input.split(/[\\/]/).at(-1), sourceUrl: options.source ?? "", operationId: need(options["operation-id"], "--operation-id"), expectedRevision: revision, contentEncoding: options["content-encoding"] ?? "identity" })); return 0;
   }
   if (command === "edition") {
     check(options, ["workspace", "title", "description", "operation-id", "revision"]);

@@ -1,12 +1,15 @@
 // MIT. Supplier-order operator on the original private workspace HTTP API.
 import { sha256File, Sha256 } from '/file-sha256.mjs';
 import { ZERO, exact, add, multiply, divide, rounded, decimal } from '/numbers.mjs';
+import { createSupplierOrderTransportDesk } from '/transport.mjs';
+import { createSupplierOrderProfileDesk } from '/profile.mjs';
 
 const $=id=>document.getElementById(id), API='/api/supplier-orders';
 const clone=value=>JSON.parse(JSON.stringify(value)), json=value=>JSON.stringify(value,null,2);
 const encoded=value=>encodeURIComponent(String(value)), PAGE=30;
 const SESSION='supplier-orders:'+location.origin;
-const state={token:null,workspace:null,orders:[],orderTotal:0,orderOffset:0,order:null,documents:[],documentTotal:0,documentOffset:0,document:null,drafts:[],draftTotal:0,draftOffset:0,draftScope:null,draftSequence:0,orderSequence:0,draft:null,working:null,lineIndex:null,dirty:false,prepared:null,request:null,requestFile:null,busy:false,editorGeneration:0,editorIdentity:null,tab:'lines',refreshSequence:0};
+const state={token:null,workspace:null,orders:[],orderTotal:0,orderOffset:0,order:null,documents:[],documentTotal:0,documentOffset:0,document:null,drafts:[],draftTotal:0,draftOffset:0,draftScope:null,draftSequence:0,orderSequence:0,draft:null,working:null,lineIndex:null,dirty:false,prepared:null,request:null,requestFile:null,busy:false,editorGeneration:0,editorIdentity:null,tab:'lines',refreshSequence:0,packageInspection:null};
+let transportDesk,profileDesk;
 const hashes=new WeakMap();
 const labels={ORDER:'Order',ORDERRESPONSE:'Confirmation',DISPATCHNOTIFICATION:'Dispatch',INVOICE:'Invoice'};
 function node(tag,text,css){const n=document.createElement(tag);if(text!==undefined&&text!==null)n.textContent=String(text);if(css)n.className=css;return n;}
@@ -77,7 +80,9 @@ async function reviewCurrentRequest(){
   if(op?.state==='COMPLETE')return completeRequest(op);
   if(op&&!['FAILED','INTERRUPTED'].includes(op.state))throw new Error('The original operation is still active; reopen its response first.');
   privateStorage('previous-conflict',JSON.stringify(r));retireRequest(op);await refresh({preserveEditor:true});
-  if(r.kind==='source')openSource();else if(r.kind==='package-import')$('transfer-dialog').showModal();else if(r.kind==='draft-save'){const current=r.body.draftId?await api('/drafts/'+encoded(r.body.draftId)):await api('/drafts/new',{method:'POST',body:{kind:r.body.kind,orderIds:r.body.orderIds}});const replaced=openEditor(current)!==false;state.conflictDraft=clone(r.body);$('draft-conflict-json').textContent=json(r.body);shown('draft-conflict',true);message(replaced?'The current saved draft is open. Compare the retained earlier edits before saving a new request.':'Your current unsaved document is retained. The earlier conflicting request is available below for comparison.');}
+  if(r.kind==='source')openSource();else if(r.kind.startsWith('package-')){state.packageInspection=null;renderPackageInspection();if(!$('transfer-dialog').open)$('transfer-dialog').showModal();}else if(r.kind==='draft-save'){const current=r.body.draftId?await api('/drafts/'+encoded(r.body.draftId)):await api('/drafts/new',{method:'POST',body:{kind:r.body.kind,orderIds:r.body.orderIds}});const replaced=openEditor(current)!==false;state.conflictDraft=clone(r.body);$('draft-conflict-json').textContent=json(r.body);shown('draft-conflict',true);message(replaced?'The current saved draft is open. Compare the retained earlier edits before saving a new request.':'Your current unsaved document is retained. The earlier conflicting request is available below for comparison.');}
+  else if(r.kind==='profile-select')await profileDesk.reviewRequest(r);
+  else if(r.kind.startsWith('transport-'))await transportDesk.reviewRequest(r);
   else message('The conflicting request is retained in this tab’s history. Review current source and revisions before creating a new request.');
 }
 function properties(target,entries){clear(target);const list=target.tagName==='DL'?target:node('dl');for(const [label,value]of entries){if(value===undefined||value===null||value==='')continue;list.append(node('dt',label),node('dd',typeof value==='object'?json(value):value));}if(list!==target)target.append(list);}
@@ -88,7 +93,7 @@ async function refresh({preserveEditor=false}={}){
   const sequence=++state.refreshSequence;const [workspace,page]=await Promise.all([api('/state'),api(query('/orders',{query:$('order-query').value,status:$('order-status').value,offset:state.orderOffset,limit:PAGE}))]);if(sequence!==state.refreshSequence)return;
   state.workspace=workspace;state.orders=orderRows(page);state.orderTotal=page.total??state.orders.length;
   $('workspace-label').textContent=workspace.title??workspace.directory??workspace.id??'Private supplier-order workspace';
-  renderOrders();
+  profileDesk?.setWorkspace(workspace);renderOrders();
   if(state.order){const current=await api('/orders/'+encoded(state.order.orderId));if(sequence!==state.refreshSequence)return;state.order=current;renderOrder();await loadDocuments();}
   await loadDrafts();
   if(!preserveEditor&&state.draft?.id&&!state.dirty){const current=await api('/drafts/'+encoded(state.draft.id));openEditor(current);}
@@ -133,7 +138,7 @@ async function selectDocument(id){
   const row=await api('/documents/'+encoded(id));state.document=row;$('document-title').textContent=(labels[row.kind]??row.kind)+' '+row.documentId;
   properties($('document-metadata'),[['Revision',row.revision],['Source file',row.source?.name],['Original bytes',row.source?.bytes],['SHA-256',row.source?.sha256],['Order references',row.orderIds],['Direction',row.direction],['Saved',row.createdAt]]);
   findingList($('document-findings'),row.review?.findings??[]);$('document-json').textContent=json(row.document);$('selection-reason').value='';
-  shown('document-selection',Boolean(state.order)&&!currentSelections().has(id));$('document-copy-draft').disabled=row.kind==='ORDER';shown('document-detail',true);selectTab('documents');
+  shown('document-selection',Boolean(state.order)&&!currentSelections().has(id));$('document-copy-draft').disabled=row.kind==='ORDER';shown('document-detail',true);transportDesk.documentSelected(row);selectTab('documents');
 }
 function selectTab(name){state.tab=name;for(const button of document.querySelectorAll('[data-tab]')){const active=button.dataset.tab===name;button.classList.toggle('active',active);button.setAttribute('aria-selected',String(active));shown('tab-'+button.dataset.tab,active);}}
 async function loadDrafts(){
@@ -169,7 +174,7 @@ function openEditor(draft,{accepted=false}={}){
   dateValues('draft-date',h.deliveryDate);$('draft-parties').value=json(h.parties??{});$('draft-packages').value=json(h.packages??[]);$('draft-remarks').value=json(h.remarks??[]);$('draft-summary').value=json(d.summary??{});
   setValue('draft-rounding-mode',draft.roundingPolicy?.mode??'');setValue('draft-rounding-scale',draft.roundingPolicy?.scale??2);setValue('draft-tax-basis',draft.roundingPolicy?.taxBasis??'line');
   setValue('draft-reason',draft.reason??'');$('draft-complete-json').value=json(d);
-  $('draft-kind-hint').textContent=d.kind==='ORDERRESPONSE'?'A negative confirmed quantity records cancellation of that absolute quantity. A new selected confirmation revision replaces the earlier confirmation for each included line; omitted lines retain their existing selection.':d.kind==='DISPATCHNOTIFICATION'?'Retain original order and line references. Each distinct dispatch contributes its current quantities and original parcel or tracking references.':'Retain complete original order and delivery references, price quantities, applicable tax fractions and explicit invoice totals. Rounding is selected and saved with this working revision.';
+  $('draft-kind-hint').textContent=d.kind==='ORDERRESPONSE'?((d.profile??state.workspace?.profile?.profile)?.confirmation?.negativeQuantity==='reject'?'This profile requires review of negative confirmation quantities; they do not cancel ordered units. ':'A negative confirmed quantity records cancellation of that absolute quantity. ')+((d.profile??state.workspace?.profile?.profile)?.confirmation?.omittedLines==='require-complete'?'This profile requires every original order line in the confirmation. ':'Omitted lines retain their existing selection. ')+'A selected revision replaces the current confirmation for each included line.':d.kind==='DISPATCHNOTIFICATION'?'Retain original order and line references. Each distinct dispatch contributes its current quantities and original parcel or tracking references.':'Retain complete original order and delivery references, price quantities, applicable tax fractions and explicit invoice totals. Rounding is selected and saved with this working revision.';
   $('draft-save-state').textContent=draft.id?'Saved revision '+draft.revision:'Unsaved working document';$('prepare-draft').disabled=!draft.id;
   findingList($('draft-findings'),draft.review?.findings??[]);shown('draft-findings',Boolean(draft.review?.findings?.length));renderDraftLines();
   $('draft-editor').scrollIntoView({block:'start',behavior:'smooth'});
@@ -283,13 +288,33 @@ async function receiveSource(){
   const sha256=await checksum(file,'source-progress'),provenance={};
   for(const [key,id]of Object.entries({publisher:'source-publisher',revision:'source-revision',url:'source-url',note:'source-note'}))if($(id).value)provenance[key]=$(id).value;
   const input={name:file.name,bytes:file.size,sha256};$('source-progress').textContent='Receiving the complete original XML and its selected revisions.';
-  return mutate('source','/sources',{...input,provenance,selection:$('source-selection').value,expectedOrderRevisions},input,file);
+  return mutate('source','/sources',{...input,provenance,selection:$('source-selection').value,expectedOrderRevisions,expectedProfileSha256:state.workspace.profile.profileSha256},input,file);
 }
-async function importPackage(){
+function renderPackageInspection(){
+  const selected=state.packageInspection,target=clear($('package-inspection'));$('package-adopt-profile').disabled=true;$('package-adopt-profile').checked=false;shown('package-inspection',Boolean(selected));if(!selected)return;
+  const p=selected.result.profile;
+  properties(target,[['Source workspace',selected.result.sourceWorkspaceId],['Original package',selected.input.name],['Bytes',selected.input.bytes],['SHA-256',selected.input.sha256],['Incoming profile',p?.incoming?.title],['Incoming profile ID',p?.incoming?.id],['Incoming profile SHA',p?.incomingSha256],['Current profile SHA',p?.currentSha256],['Same profile',p?.matches],['Empty workspace available for adoption',p?.canAdopt],['Same supplier',selected.result.supplierMatches]]);
+  const full=node('details');full.append(node('summary','Complete original inspection'),node('pre',json(selected.result)));target.append(full);
+  if(p?.adoptionRequired&&p.canAdopt&&selected.result.supplierMatches)$('package-adopt-profile').disabled=false;
+}
+async function importPackage({inspect=false}={}){
   const file=$('package-file').files[0];if(!file)throw new Error('Select the complete customer ZIP.');if(!file.size||file.size>8*1024*1024*1024)throw new Error('Select a nonempty original customer package up to 8 GiB.');
-  if(state.request){state.requestFile=file;showRequest();return retryOriginal();}
-  const input={name:file.name,bytes:file.size,sha256:await checksum(file,'package-progress')};$('package-progress').textContent='Receiving complete original workspace files and histories.';
-  return mutate('package-import','/packages/import',{...input,mode:'merge'},input,file);
+  if(state.request){if(!state.request.kind.startsWith('package-')){showRequest();throw new Error('Reopen the retained original request before another customer intake.');}state.requestFile=file;showRequest();return retryOriginal();}
+  const input={name:file.name,bytes:file.size,sha256:await checksum(file,'package-progress')},previous=state.packageInspection;
+  if(inspect||!previous||json(previous.input)!==json(input)){
+    $('package-progress').textContent='Inspecting the complete original source, declared profile and customer histories.';
+    return mutate('package-inspect','/packages/import',{...input,mode:'inspect'},input,file);
+  }
+  const selection=previous.result.profile;
+  if(!previous.result.supplierMatches)throw new Error('The incoming supplier differs. Use that supplier’s own workspace.');
+  const adoption={};
+  if(selection?.adoptionRequired){
+    if(!selection.canAdopt)throw new Error('This workspace has business intake under another profile. Receive the package into a matching or empty workspace.');
+    if(!$('package-adopt-profile').checked)throw new Error('Review the complete incoming declaration and explicitly select profile adoption for this empty workspace.');
+    Object.assign(adoption,{adoptProfile:true,expectedProfileSha256:selection.currentSha256,expectedSelectionRevision:selection.currentSelectionRevision});
+  }
+  $('package-progress').textContent='Receiving complete original workspace files, declared profile and histories.';
+  return mutate('package-import','/packages/import',{...input,mode:'merge',...adoption},input,file);
 }
 async function exportPackage(){return mutate('package-export','/packages/export',{});}
 async function downloadFile(file,path=null){
@@ -311,15 +336,22 @@ async function downloadSelectedDocument(){
   const row=state.document;if(!row)return;return downloadFile({id:row.id,name:row.source.name,bytes:row.source.bytes,sha256:row.source.sha256,mimeType:'application/xml'},'/documents/'+encoded(row.id)+'/file');
 }
 async function receiveResult(kind,result,request){
+  if(kind.startsWith('transport-'))return transportDesk.receiveResult(kind,result,request);
+  if(kind==='profile-select')return profileDesk.receiveResult(result,request);
+  if(kind==='package-inspect'){state.packageInspection={input:clone(request.input),result:clone(result)};renderPackageInspection();$('package-progress').textContent='The original package is inspected. Review the declared profile and supplier before receiving.';message('Full customer source and profile inspection is retained.');return;}
   if(kind==='draft-save'){const draft=result.draft??(result.draftId?await api('/drafts/'+encoded(result.draftId)):null);if(!draft)throw new Error('The saved operation did not return its original draft identity.');if(!state.working||request?.editorIdentity===state.editorIdentity&&request?.editorGeneration===state.editorGeneration){openEditor(draft,{accepted:true});message('Saved working document revision '+draft.revision+'.');}else if(request?.editorIdentity===state.editorIdentity){state.draft=clone(draft);state.dirty=true;$('draft-revision').textContent='Saved original revision '+draft.revision+' · newer local edits retained';$('draft-save-state').textContent='The original request is saved; newer edits remain unsaved';$('prepare-draft').disabled=true;message('Saved original request revision '+draft.revision+'. Your newer edited fields remain in the working document.');}else{message('The original request saved '+draft.id+' revision '+draft.revision+'. Your different working document remains open; use Working drafts to inspect the saved result.');}await refresh({preserveEditor:true});return;}
   if(kind==='draft-prepare'){const record=result.document??(result.documentId?await api('/documents/'+encoded(result.documentId)):null),file=result.file;if(!record||!file)throw new Error('The completed preparation must return its document and full file receipt.');if(!state.working&&request?.body.draftId)openEditor(await api('/drafts/'+encoded(request.body.draftId)),{accepted:true});state.prepared={record,file};properties($('prepared-metadata'),[['Document',record.documentId],['Revision',record.revision],['Original working draft',request?.body.draftId??record.draftId],['Prepared from working revision',request?.body.expectedRevision??record.draftRevision],['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);shown('prepared-result',true);await refresh({preserveEditor:true});message('Prepared the complete XML. Review its revision selection when it should contribute to current quantities.');return;}
   if(kind==='package-export'){const file=result.file;if(!file)throw new Error('The completed workspace export has no retained file receipt.');const target=clear($('package-result'));properties(target,[['File',file.name],['Bytes',file.bytes],['SHA-256',file.sha256]]);target.append(button('Download complete customer ZIP',()=>downloadFile(file)));message('The complete customer package is retained for download.');return;}
   if(kind==='source'){if($('source-dialog').open)$('source-dialog').close();await refresh({preserveEditor:true});if(result.orderIds?.length)await selectOrder(result.orderIds[0]);if(result.document?.id)await selectDocument(result.document.id);else if(result.documentId)await selectDocument(result.documentId);message('Received the original XML and retained its complete source and document revision.');return;}
   if(kind==='document-select'){const id=state.document?.id;await refresh({preserveEditor:true});if(id)await selectDocument(id);message('The selected document revision now contributes to the current order reconciliation.');return;}
-  if(kind==='package-import'){await refresh({preserveEditor:true});$('package-progress').textContent='Complete customer workspace received. Original histories and existing newer work are available.';message('Received the complete original customer package.');}
+  if(kind==='package-import'){state.packageInspection=null;renderPackageInspection();await refresh({preserveEditor:true});$('package-progress').textContent='Complete customer workspace received. Original histories and existing newer work are available.';message('Received the complete original customer package.');}
 }
 
 auth();
+profileDesk=createSupplierOrderProfileDesk({api,mutate,guard,message,getWorkspace:()=>state.workspace,refreshWorkspace:()=>refresh({preserveEditor:true})});
+transportDesk=createSupplierOrderTransportDesk({api,mutate,downloadFile,selectDocument,message,guard,
+  getDocument:()=>state.document,getPrepared:()=>state.prepared?.record,
+  refreshWorkspace:()=>refresh({preserveEditor:true})});
 for(const value of ['AWAITING_CONFIRMATION','IN_PROGRESS','REVIEW','COMPLETE']){const option=node('option',value.replaceAll('_',' '));option.value=value;$('order-status').append(option);}
 for(const control of document.querySelectorAll('[data-close]'))control.addEventListener('click',()=>$(control.dataset.close).close());
 for(const control of document.querySelectorAll('[data-tab]'))control.addEventListener('click',()=>selectTab(control.dataset.tab));
@@ -360,9 +392,10 @@ $('source-form').addEventListener('submit',guard(receiveSource));
 $('source-file').addEventListener('change',()=>{if(state.request?.kind==='source')state.requestFile=$('source-file').files[0]??null;});
 $('open-transfer').addEventListener('click',()=>{$('transfer-dialog').showModal();});
 $('export-workspace').addEventListener('click',guard(exportPackage));
-$('import-workspace-form').addEventListener('submit',guard(importPackage));
-$('package-file').addEventListener('change',()=>{if(state.request?.kind==='package-import')state.requestFile=$('package-file').files[0]??null;});
+$('import-workspace-form').addEventListener('submit',guard(()=>importPackage()));
+$('inspect-workspace').addEventListener('click',guard(()=>importPackage({inspect:true})));
+$('package-file').addEventListener('change',()=>{state.packageInspection=null;renderPackageInspection();if(state.request?.kind.startsWith('package-'))state.requestFile=$('package-file').files[0]??null;});
 $('request-retry').addEventListener('click',guard(retryOriginal));
 $('request-revise').addEventListener('click',guard(reviewCurrentRequest));
-window.addEventListener('beforeunload',event=>{if(state.dirty||state.busy){event.preventDefault();event.returnValue='';}});
+window.addEventListener('beforeunload',event=>{if(state.dirty||state.busy||profileDesk?.isDirty()){event.preventDefault();event.returnValue='';}});
 refresh().then(()=>{if(state.request)showRequest();}).catch(error=>message(error.message,true));

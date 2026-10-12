@@ -117,7 +117,7 @@
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
-    "description": "Operate native Soroban contract events, retain complete RPC sources and deliver immutable editions through paid merchant feeds",
+    "description": "Operate native Soroban event capture, recurring paid feeds, archive recovery and complete customer receiving",
     "readme": "products/soroban-events/OPERATING.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs",

@@ -192,3 +192,13 @@ python3 -B operations/scf-stac-client-native-receiving-20261012/continue-native.
 ```
 
 The linked native operation ends with `-provider-e4d5d363-<predecessor-request-sha8>`, so it preserves the original completed record and its exact request identity. The receiving driver keeps its original import ID and reopens the retained local state. Subsequent stages, native results and the complete saved artifact determine completion of the customer workflow.
+
+## Restore native private directories before host startup
+
+The original provider-matched continuation ended at 14:30:22 UTC with `PRIVATE_STATE_DIRECTORY_REQUIRED` before opening the restored host. Python's recursive directory creation had assigned default permissions to intermediate directories. The native host correctly requires every local state directory to be owner-only.
+
+Restoration now creates every directory component under the selected receiving root explicitly with mode `0700`, verifies it is an owned directory with no group or other access, and then restores the exact files. Existing directories with incompatible identity or permissions are reported; the wrapper does not relax the native host's requirement or alter the borrowed runtime.
+
+The complete ended operation is saved as `libfile_74c3c09edaac8191a3cf63f60f1fedf6/v0`, file `file_00000000cf6081f6b8a729a79c24e9e4`: 1,358,508 bytes, SHA256 `88c860848971aa5b24dccbabe6b43c994e511e8165ae4ed701c8d2c84b41062e`. Materialize that exact version through the current Library helper, verify the complete digest, and pass its local path with `--completed-result-archive` and that SHA256 to this same command. The original native record, import identity and partially imported workspace remain the inputs to the next linked continuation.
+
+If the shared preservation copy runs out of space, the wrapper removes only the incomplete file it just created and saves the complete private archive through the existing upload helper before its originating process ends. A pre-existing archive is never removed by that cleanup.

@@ -17,7 +17,17 @@ function check(value, schema, key) {
     fail('FRED_MCP_INPUT_INVALID', 'Supply the declared ' + key + '.');
   if (schema.type === 'integer' && (!Number.isSafeInteger(value) || value < (schema.minimum ?? 0) || value > (schema.maximum ?? Number.MAX_SAFE_INTEGER)))
     fail('FRED_MCP_INPUT_INVALID', 'Supply a supported integer ' + key + '.');
-  if (schema.type === 'object' && !plain(value)) fail('FRED_MCP_INPUT_INVALID', 'Supply a complete JSON object for ' + key + '.');
+  if (schema.type === 'boolean' && typeof value !== 'boolean')
+    fail('FRED_MCP_INPUT_INVALID', 'Supply a boolean ' + key + '.');
+  if (schema.type === 'object') {
+    if (!plain(value)) fail('FRED_MCP_INPUT_INVALID', 'Supply a complete JSON object for ' + key + '.');
+    if (schema.properties) {
+      if ((schema.required ?? []).some(name => !Object.hasOwn(value, name)) ||
+          schema.additionalProperties === false && Object.keys(value).some(name => !Object.hasOwn(schema.properties, name)))
+        fail('FRED_MCP_INPUT_INVALID', 'Supply the complete declared ' + key + ' fields.');
+      for (const [name, item] of Object.entries(value)) if (schema.properties[name]) check(item, schema.properties[name], key + '.' + name);
+    }
+  }
   if (schema.enum && !schema.enum.includes(value)) fail('FRED_MCP_INPUT_INVALID', 'Choose a declared ' + key + '.');
   if (schema.type === 'array') {
     if (!Array.isArray(value) || value.length < (schema.minItems ?? 0) || value.length > (schema.maxItems ?? 100000) ||
@@ -46,14 +56,16 @@ function purchaseView(result) {
     download: 'merchant_fred_file_read with kind customer and the same publicationId/intentId' } };
 }
 function projectSummary(project) {
-  const { captures, reviews, publications, operations, ...state } = project;
-  return { ...state, counts: { captures: captures.length, reviews: reviews.length, publications: publications.length, operations: operations.length } };
+  const { captures, reviews, publications, operations, briefingTemplates = [], briefingSuccessors = [], ...state } = project;
+  return { ...state, counts: { captures: captures.length, reviews: reviews.length, publications: publications.length,
+    operations: operations.length, briefingTemplates: briefingTemplates.length, briefingSuccessors: briefingSuccessors.length } };
 }
 const actionMethods = new Map([
   ['merchant_fred_configure', 'configure'], ['merchant_fred_capture', 'capture'], ['merchant_fred_combine', 'combine'],
   ['merchant_fred_select', 'select'], ['merchant_fred_review', 'review'], ['merchant_fred_abandon', 'abandon'],
   ['merchant_fred_merchant_start', 'startMerchant'], ['merchant_fred_merchant_stop', 'stopMerchant'],
-  ['merchant_fred_preview', 'preview'], ['merchant_fred_prepare', 'prepare']
+  ['merchant_fred_preview', 'preview'], ['merchant_fred_prepare', 'prepare'],
+  ['merchant_fred_briefing_template_save', 'saveBriefingTemplate'], ['merchant_fred_briefing_successor_save', 'saveBriefingSuccessor']
 ]);
 
 export class MerchantFredWorkspaces {
@@ -150,6 +162,20 @@ export class MerchantFredWorkspaces {
     if (name === 'merchant_fred_compare') return client.compare(args);
     if (name === 'merchant_fred_briefing_preview') return client.previewBriefing(args);
     if (name === 'merchant_fred_briefing') return client.briefing(args);
+    if (name === 'merchant_fred_briefing_templates') {
+      const result = await client.briefingTemplates();
+      if (args.expectedRevision !== undefined && result.revision !== args.expectedRevision)
+        fail('FRED_MCP_REVISION_CHANGED', 'The briefing inventory changed. Continue from its current project revision.', { revision: result.revision });
+      const kind = args.kind ?? 'templates';
+      return { projectId: result.projectId, revision: result.revision, kind,
+        counts: { templates: result.templates.length, successors: result.successors.length },
+        ...page(result[kind], args) };
+    }
+    if (name === 'merchant_fred_briefing_successor_preview') {
+      const { workspace: _, ...input } = args;
+      return client.previewBriefingSuccessor(input);
+    }
+    if (name === 'merchant_fred_briefing_successor') return client.briefingSuccessor(args);
     if (name === 'merchant_fred_import') {
       const source = await this.#input(alias, args.input, args.expectedSha256);
       return client.importCapture({ id: args.id, expectedRevision: args.expectedRevision, capture: source.value });

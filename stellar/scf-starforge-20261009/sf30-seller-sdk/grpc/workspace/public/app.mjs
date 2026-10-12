@@ -2,6 +2,7 @@
 import { mountGrpcUpgrades } from './upgrade.mjs';
 import { mountGrpcHealth } from './health.mjs';
 import { mountGrpcOperations } from './operations.mjs';
+import { mountGrpcTransfer } from './transfer.mjs';
 import { renderGrpcFields } from './fields.mjs';
 import { renderGrpcRequestSeries } from './request-series.mjs';
 let fieldTicket = 0;
@@ -82,6 +83,7 @@ async function work(action, message) {
 function buttons() {
   healthPanel.update(inventory, !dirty && !routeDirty && !planDirty);
   operationsPanel.update(inventory, inventory.stateDirectory);
+  transferPanel.update(inventory, !dirty && !routeDirty && !planDirty);
   $('save').disabled = !protoSource || planDirty || routeDirty;
   $('checkout').disabled = !adopted || adopted.id === inventory?.currentRevision || dirty || routeDirty || planDirty;
   for (const name of ['review', 'prepare']) $(name).disabled = !adopted || dirty || routeDirty || planDirty ||
@@ -533,6 +535,7 @@ async function download(action, value) {
   notice('Downloaded ' + filename + ' · SHA256 ' + response.headers.get('x-content-sha256'));
 }
 const operationsPanel = mountGrpcOperations({ root: $('view-operations'), json, api, work, notice, storageKey });
+const transferPanel = mountGrpcTransfer({ root: $('view-transfer'), json, api, notice, storageKey });
 const healthPanel = mountGrpcHealth({ root: $('view-health'), json, work, notice, storageKey,
   savedCurrent, getRevision: () => adopted });
 const upgradePanel = mountGrpcUpgrades({ root: $('view-upgrades'), json, work, notice, storageKey,
@@ -739,7 +742,7 @@ $('release-close').addEventListener('click', () => work(async () => {
 $('refresh').addEventListener('click', () => work(async () => {
   await refresh(); notice('Inventory refreshed. The editor still uses its exact opened revision as the save base.');
 }));
-window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId || upgradePanel.hasDraft()) { event.preventDefault(); event.returnValue = ''; } });
+window.addEventListener('beforeunload', event => { if (dirty || routeDirty || planDirty || requestDirty || activeCallId || upgradePanel.hasDraft() || transferPanel.isBusy()) { event.preventDefault(); event.returnValue = ''; } });
 await work(async () => {
   if (!/^[a-f0-9]{64}$/.test(token)) throw new Error('Open the complete private workspace URL printed by its original server.');
   await refresh();
@@ -756,6 +759,7 @@ await work(async () => {
   }
   notice('Private workspace ready. Source and credential values stay on this merchant host.');
   await upgradePanel.resume();
+  await transferPanel.resume();
 }, 'Opening saved merchant work…');
 setInterval(() => {
   if (busy || document.hidden || !token) return;

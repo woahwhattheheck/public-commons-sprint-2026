@@ -39,7 +39,9 @@ export interface NativeViewAvailability {
 export interface NativeViewNavigation {
   schema:'stellar-forge.sensorthings-native-view-navigation.v1';
   applied:boolean;
-  datasets:{streamKey:Sha256;id:NativeObject;clientId:string;internalId:string}[];
+  datasets:{streamKey:Sha256;id:NativeObject;clientId:string;internalId:string;
+    derivedComponent?:true;sourceStreamKey?:Sha256;originalSourceId?:NativeObject;
+    componentIndex?:number;bindingId?:Sha256;meaning?:string}[];
   period:null|{basis:'saved_selection_period'|'saved_source_summary_extent';fromUtc:string;toUtc:string;
     fromEpochMs:number;toEpochMs:number;precision:'millisecond';singleInstantDisplayWidthMs:0|1;meaning:string};
   query:null|{ids:string;time:string};

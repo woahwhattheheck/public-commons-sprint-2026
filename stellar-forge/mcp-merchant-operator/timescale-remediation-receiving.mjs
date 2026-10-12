@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { lstat } from 'node:fs/promises';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { openTimescaleClient } from './timescale-client.mjs';
+import { runTimescaleCommissioningReceiving } from './timescale-commissioning-receiving.mjs';
 import { runTimescaleClientCli } from './timescale-client-cli.mjs';
 import { inspectTimescaleAgentBinding, startTimescaleAgentWorkspace } from './timescale-workspace-launcher.mjs';
 import { inspectTimescaleRemediationReport } from './timescale-remediation-report.mjs';
@@ -44,9 +45,34 @@ async function allPages(read){
  * refresh, job change, seller publication, cluster or scheduler.
  */
 export async function runTimescaleRemediationReceiving({
-  nativeResult,configPath,workspace='usage',directory,environment=process.env
+  nativeResult,configPath,workspace='usage',directory,environment=process.env,
+  commissioningSourceCommit,commissioningDirectory,commissioningIntakeFile,commissioningAdoptionFile
 }={}){
   nativeResult=resolve(nativeResult);configPath=resolve(configPath);directory=resolve(directory);
+  const commissioningRequested=commissioningSourceCommit!==undefined||commissioningDirectory!==undefined||
+    commissioningIntakeFile!==undefined||commissioningAdoptionFile!==undefined;
+  let commissioningInput;
+  if(commissioningRequested){
+    need(typeof commissioningSourceCommit==='string'&&/^[0-9a-f]{40}$/.test(commissioningSourceCommit)&&
+      typeof commissioningDirectory==='string'&&commissioningDirectory.length>0,'TIMESCALE_COMMISSIONING_SOURCE_ADOPTION_REQUIRED');
+    need((commissioningIntakeFile===undefined)===(commissioningAdoptionFile===undefined),
+      'TIMESCALE_COMMISSIONING_INPUT_PAIR_REQUIRED');
+    commissioningDirectory=resolve(commissioningDirectory);
+    need(commissioningDirectory!==directory&&!directory.startsWith(commissioningDirectory+'/')&&
+      disjoint(commissioningDirectory,dirname(configPath)),'TIMESCALE_COMMISSIONING_PRIVATE_OUTPUT_REQUIRED');
+    const supplied=async path=>{
+      if(path===undefined)return null;
+      need(typeof path==='string'&&path.length>0,'TIMESCALE_COMMISSIONING_INPUT_FILE_REQUIRED');
+      const selected=resolve(path),file=await hashPrivate(selected,1048576);
+      return{path:selected,bytes:file.bytes,sha256:file.hash};
+    };
+    commissioningInput={
+      schema:'stellar-forge.timescale-commissioning-receiving-adoption.v1',
+      directory:commissioningDirectory,
+      sourceAdoption:{nativeSourceCommit:'c2ff3fecf7749f484dee7edb0a9583871e8e17b6',commissioningSourceCommit},
+      intake:await supplied(commissioningIntakeFile),adoption:await supplied(commissioningAdoptionFile),actor:ACTOR
+    };
+  }
   const originalBytes=await readPrivate(nativeResult,16777216),native=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(originalBytes));
   need(native.schema==='stellar-forge.timescale-native-demo.v1'&&native.complete===true&&
     native.phases?.publish?.state==='COMPLETE'&&native.phases?.after?.state==='COMPLETE'&&
@@ -96,6 +122,7 @@ export async function runTimescaleRemediationReceiving({
         need(actual.bytes===file.bytes&&actual.hash===file.sha256,'TIMESCALE_DESK_REPORT_FILE_CHANGED');
       }
     }
+    let completedOriginal;
     if(record.complete){
       await verifyReportFiles(record.phases['report-inspection'].result.manifest,join(directory,'report'),
         record.phases['report-inspection'].result.manifestSha256);
@@ -105,8 +132,9 @@ export async function runTimescaleRemediationReceiving({
       const receipt=await receiveTimescaleWorkspace({requestId:record.receiveId,packageDirectory:join(directory,'download'),
         expectedDigest:originalPackage.nativeManifestSha256,directory:join(directory,'customer-project')});
       need(receipt.complete&&receipt.workspaceId===workspaceId,'TIMESCALE_DESK_RECEIVE_CHANGED');
-      return{complete:true,reused:true,record:recordPath,workspaceId,workItemId:record.workItemId,
+      completedOriginal={complete:true,reused:true,record:recordPath,workspaceId,workItemId:record.workItemId,
         receiving:receipt,sourceOperationsThisReopen:0,allOwnedHandlesClosed:true};
+      if(!commissioningRequested)return completedOriginal;
     }
 
     const binding=await inspectTimescaleAgentBinding({configPath,workspace});
@@ -123,6 +151,66 @@ export async function runTimescaleRemediationReceiving({
       client=await openTimescaleClient({url:host.startup.mcpUrl,workspace,workspaceId,tokenEnv:TOKEN_ENV,environment:hostEnvironment});
       const status=await client.status();need(status.workspaceId===workspaceId,'TIMESCALE_DESK_OWNER_CHANGED');
     }
+    async function commissioningContinuation(originalResult){
+      if(!commissioningRequested)return originalResult;
+      need(record.complete&&originalResult.complete,'TIMESCALE_COMMISSIONING_ORIGINAL_RECEIVING_REQUIRED');
+      const originalSelection={nativeResult,nativeResultSha256:sourceDigest,nativeOperationId:native.id,workspaceId,workspace,
+        configPath,bindingSha256:binding.bindingSha256,originalReceivingId:record.id,originalRecord:recordPath,
+        originalReportManifestSha256:record.phases['report-inspection'].result.manifestSha256,
+        originalPackageManifestSha256:record.phases['complete-package-download'].result.nativeManifestSha256};
+      const input={...commissioningInput,original:originalSelection};
+      if(record.commissioning){
+        need(identity(record.commissioning.input)===identity(input),'TIMESCALE_COMMISSIONING_RECEIVING_INPUT_CHANGED');
+      }else{
+        record.commissioning={schema:'stellar-forge.timescale-commissioning-receiving-continuation.v1',
+          input,state:'PREPARED',createdAt:stamp(),result:null};
+        await save(); // Explicit subsequent source adoption; the original native input and phases stay retained.
+      }
+      const continuation=record.commissioning;
+      if(continuation.state!=='COMPLETE')continuation.state='RUNNING';
+      continuation.attempts=(continuation.attempts??0)+1;
+      continuation.lastOpenedAt=stamp();continuation.allOwnedHandlesClosed=false;await save();
+      const ownerView=()=>({client,operator:host.operator,publisher:binding.publisher,
+        workspaceDirectory:binding.publisherDirectory,bindingSha256:binding.bindingSha256});
+      try{
+        if(!host)await launch();
+        const result=await runTimescaleCommissioningReceiving({
+          owner:ownerView(),nativeResult,directory:input.directory,sourceAdoption:input.sourceAdoption,
+          intakeFile:input.intake?.path,adoptionFile:input.adoption?.path,actor:ACTOR,
+          expectedInputFiles:input.intake?{
+            intake:{bytes:input.intake.bytes,sha256:input.intake.sha256},
+            adoption:{bytes:input.adoption.bytes,sha256:input.adoption.sha256}
+          }:undefined,
+          onPhase:event=>{
+            process.stdout.write(JSON.stringify({...event,continuation:'commissioning',originalRecord:recordPath})+'\n');
+          },
+          restartOriginal:async transition=>{
+            need(host&&transition.before.workspaceId===workspaceId,'TIMESCALE_COMMISSIONING_RESTART_OWNER_CHANGED');
+            await host.close();host=null;
+            await launch();return ownerView();
+          },
+          withReceivedWorkspace:async(receipt,inspect)=>{
+            need(!received,'TIMESCALE_COMMISSIONING_RECEIVED_OWNER_BUSY');
+            received=await openTimescaleWorkspace({directory:receipt.directory,environment:hostEnvironment});
+            try{return await inspect(received);}
+            finally{await received.close();received=null;}
+          }
+        });
+        need(result.complete===true&&result.workspaceId===workspaceId&&result.borrowedOwnerRemainsOpen===true,
+          'TIMESCALE_COMMISSIONING_RECEIVING_INCOMPLETE');
+        continuation.result=result;continuation.state='COMPLETE';continuation.completedAt??=stamp();
+        delete continuation.error;await save(); // Keep the successful result before fallible owner close.
+        await host.close();host=null;
+        continuation.allOwnedHandlesClosed=true;continuation.closedAt=stamp();await save();
+        return{...originalResult,commissioning:result,allOwnedHandlesClosed:true};
+      }catch(error){
+        if(continuation.state!=='COMPLETE')continuation.state='INTERRUPTED';
+        continuation.error={code:error.code??'TIMESCALE_COMMISSIONING_RECEIVING_INTERRUPTED',at:stamp()};
+        await save();throw error;
+      }
+    }
+    if(completedOriginal)return await commissioningContinuation(completedOriginal);
+
     async function mutation(name,method,make){
       return phase(name,async()=>{
         let request=record.requests[name];
@@ -364,8 +452,8 @@ export async function runTimescaleRemediationReceiving({
       digest(await readPrivate(stateFile,262144))===datasetDigest,'TIMESCALE_DESK_ORIGINAL_INPUT_CHANGED');
     record.complete=true;record.completedAt=stamp();record.nativeCaptureOperations=1;record.nativeDatabaseMutations=0;
     record.allOwnedHandlesClosed=true;await save();
-    return{complete:true,reused:false,record:recordPath,workspaceId,workItemId:record.workItemId,report:reportDownload,
-      download:downloaded,receiving:receipt,nativeCaptureOperations:1,nativeDatabaseMutations:0,allOwnedHandlesClosed:true};
+    return await commissioningContinuation({complete:true,reused:false,record:recordPath,workspaceId,workItemId:record.workItemId,report:reportDownload,
+      download:downloaded,receiving:receipt,nativeCaptureOperations:1,nativeDatabaseMutations:0,allOwnedHandlesClosed:true});
   }finally{
     const results=await Promise.allSettled([host?.close(),received?.close()]);
     await unlock();
@@ -375,11 +463,15 @@ export async function runTimescaleRemediationReceiving({
 }
 export async function main(argv=process.argv.slice(2)){
   const options={},names=new Map([['--native-result','nativeResult'],['--config','configPath'],
-    ['--workspace','workspace'],['--directory','directory']]);
+    ['--workspace','workspace'],['--directory','directory'],
+    ['--commissioning-source-commit','commissioningSourceCommit'],['--commissioning-directory','commissioningDirectory'],
+    ['--commissioning-intake-file','commissioningIntakeFile'],['--commissioning-adoption-file','commissioningAdoptionFile']]);
   for(let i=0;i<argv.length;i+=2){
     const name=names.get(argv[i]),value=argv[i+1];
     if(!name||!value||options[name]!==undefined)throw fault('TIMESCALE_DESK_RECEIVING_USAGE',
-      'Use --native-result ORIGINAL_NATIVE_DEMO_JSON --config ORIGINAL_MERCHANT_JSON --workspace usage --directory PRIVATE_OUTPUT.');
+      'Use --native-result ORIGINAL_NATIVE_DEMO_JSON --config ORIGINAL_MERCHANT_JSON --workspace usage --directory PRIVATE_OUTPUT '+ 
+      '[--commissioning-source-commit FINAL_40_HEX_COMMIT --commissioning-directory PRIVATE_CONTINUATION '+ 
+      '[--commissioning-intake-file ORIGINAL_INTAKE --commissioning-adoption-file ORIGINAL_MAPPING]].');
     options[name]=value;
   }
   need(options.nativeResult&&options.configPath&&options.directory,'TIMESCALE_DESK_RECEIVING_USAGE');

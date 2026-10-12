@@ -7,7 +7,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 export const RUBY_RUNTIME_STARTUP_SCHEMA = 'stellar-forge.ruby-runtime-workspace-startup.v1';
 const HERE = dirname(fileURLToPath(import.meta.url));
-const FILES = ['browser.mjs','cli.mjs','index.html','launch.mjs','server.mjs','style.css','uploads.mjs','README.md'];
+const FILES = ['browser.mjs','cli.mjs','index.html','launch.mjs','server.mjs','style.css','uploads.mjs','README.md','../model.mjs','../files.mjs','../engine.rb','../application.rb','../editions/model.mjs','../editions/source.mjs','../editions/native.rb'];
 const fault = (code, message) => Object.assign(new Error(message), { code, status: 409 });
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const encode = value => JSON.stringify(value);

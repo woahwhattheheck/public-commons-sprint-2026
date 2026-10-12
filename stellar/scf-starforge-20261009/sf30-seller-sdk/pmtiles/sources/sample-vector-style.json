@@ -1,0 +1,54 @@
+{
+  "version": 8,
+  "sources": {
+    "example_source": {
+      "type": "vector",
+      "url": "pmtiles://https://pmtiles.io/protomaps(vector)ODbL_firenze.pmtiles"
+    }
+  },
+  "layers": [
+    {
+      "id": "water",
+      "source": "example_source",
+      "source-layer": "water",
+      "filter": [
+        "==",
+        [
+          "geometry-type"
+        ],
+        "Polygon"
+      ],
+      "type": "fill",
+      "paint": {
+        "fill-color": "#80b1d3"
+      }
+    },
+    {
+      "id": "buildings",
+      "source": "example_source",
+      "source-layer": "buildings",
+      "type": "fill",
+      "paint": {
+        "fill-color": "#d9d9d9"
+      }
+    },
+    {
+      "id": "roads",
+      "source": "example_source",
+      "source-layer": "roads",
+      "type": "line",
+      "paint": {
+        "line-color": "#fc8d62"
+      }
+    },
+    {
+      "id": "pois",
+      "source": "example_source",
+      "source-layer": "pois",
+      "type": "circle",
+      "paint": {
+        "circle-color": "#ffffb3"
+      }
+    }
+  ]
+}

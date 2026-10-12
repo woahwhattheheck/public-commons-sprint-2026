@@ -1,4 +1,5 @@
 import {merchantCommercial} from './support-commercial.mjs';
+import {merchantServiceAdjustments} from './support-service-adjustments.mjs';
 import { supportTools, alias, digest, uuid, notificationStatuses, page, text, selected, metadataSchema, termsSchema, exportNames, object } from './catalog/support.mjs';
 import { MerchantSupportIncidentSources } from './support-incidents.mjs';
 import {readServiceCase,changeServiceCase,previewServiceCase,readServiceCaseReport} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/service-cases.mjs';
@@ -150,10 +151,12 @@ function exportFileType(name) {
 }
 
 export class MerchantSupport {
-  #config; #store; #commercial; #casePackages; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
+  #config; #store; #commercial; #casePackages; #serviceAdjustments; #watch = null; #lastWatchExit = null; #closing = false; #close; #incidentSources; #environment;
   #reads = new RetainedFileReads({ errorPrefix: 'SUPPORT' });
-  constructor(config, { environment = process.env } = {}) {
+  constructor(config, { environment = process.env, accounting = null, buyer = null } = {}) {
     this.#config = config; this.#environment = environment;
+    this.#serviceAdjustments=merchantServiceAdjustments({cases:()=>this.#cases(),casesDirectory:()=>this.#configured().casesDirectory,
+      exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads,accounting,buyer});
     this.#commercial=merchantCommercial({cases:()=>this.#cases(),casesDirectory:()=>this.#configured().casesDirectory,
       exportsDirectory:()=>this.#config.exportsDirectory,reads:this.#reads,environment});
     this.#incidentSources = new MerchantSupportIncidentSources(config.support, {
@@ -454,6 +457,7 @@ export class MerchantSupport {
     if (this.#closing) throw failure('OPERATOR_CLOSING', 'Merchant support is closing.');
     try {
       return await (async () => {
+      if(this.#serviceAdjustments.handles(name))return this.#serviceAdjustments.call(name,args);
       if(name.startsWith('merchant_case_package_'))return (await this.#packages()).call(name,args);
       if(this.#commercial.handles(name))return this.#commercial.call(name,args);
       if(name==='merchant_service_read')return readServiceCase({store:await this.#cases(),args});
@@ -570,12 +574,14 @@ export class MerchantSupport {
     this.#closing = true;
     this.#close = (async () => {
       const handle = this.#watch;
-      const readsClosing = this.#reads.close(), sourcesClosing = this.#incidentSources.close(), commercialClosing = this.#commercial.close();
+      const sourcesClosing = this.#incidentSources.close(), commercialClosing = this.#commercial.close();
       const packagesClosing=this.#casePackages?this.#casePackages.then(owner=>owner.close(),()=>{}):Promise.resolve();
+      const adjustmentsClosing=this.#serviceAdjustments.close();
+      const readsClosing=Promise.allSettled([adjustmentsClosing,commercialClosing,packagesClosing]).then(()=>this.#reads.close());
       try {
         if (handle) { handle.state = 'STOPPING'; handle.controller.abort(); await handle.done; }
       } finally {
-        const results = await Promise.allSettled([readsClosing, sourcesClosing, packagesClosing, commercialClosing]);
+        const results = await Promise.allSettled([readsClosing, sourcesClosing, packagesClosing, commercialClosing, adjustmentsClosing]);
         const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
         if (errors.length) throw new AggregateError(errors, 'Original support readers and source watchers did not finish closing.');
       }
