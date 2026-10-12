@@ -131,7 +131,7 @@ export async function readDspaceOperatorLaunch({directory:operatorDirectory,laun
   try {url=new URL(record.url);} catch {throw fail('DSPACE_LAUNCH_URL','The original operator URL is invalid.');}
   need(url.protocol==='http:'&&['127.0.0.1','[::1]'].includes(url.hostname)&&
     !url.username&&!url.password&&!url.search&&!url.hash&&url.pathname==='/'&&
-    url.origin===record.url&&Number(url.port)>0&&Number(url.port)<=65535,
+    url.origin===record.url&&Number(url.port||80)>0&&Number(url.port||80)<=65535,
     'DSPACE_LAUNCH_URL','Use the original numeric loopback operator origin.');
   const executed=await sourceIdentity(executionSourceDirectory??record.executionSourceDirectory);
   need(executed.directory===record.executionSourceDirectory&&record.serverFile===path.join(executed.directory,'server.mjs')&&
