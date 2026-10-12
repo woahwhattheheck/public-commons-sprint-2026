@@ -173,6 +173,15 @@ def run(args):
                     "Query source meaning did not follow the imported edition")
             require(source_editions[0]["semantics"]["semantic_sha256"] == context["semantic_sha256"],
                     "Query source definition changed")
+            physical = request("/api/query", {
+                "sql": 'SELECT count(*) AS observations FROM "' + edition["table"].upper() + '"',
+                "parameters": [], "max_rows": 1})
+            require(physical["rows"] == [[edition["row_count"]]]
+                    and [item["edition_id"] for item in physical["source_meanings"]["editions"]] == [edition_id],
+                    "Quoted case-insensitive physical table lost its source definition")
+            keep("native_relation_receiving", {"view": preview["source_meanings"],
+                    "quoted_physical_table": physical["source_meanings"],
+                    "physical_rows": physical["rows"][0][0]})
             current = request("/api/state")
             query = next((query for query in current["queries"] if query["name"] == "source_meaning_receiving"), None)
             query = request("/api/queries", {"name": "source_meaning_receiving", "sql": sql,
