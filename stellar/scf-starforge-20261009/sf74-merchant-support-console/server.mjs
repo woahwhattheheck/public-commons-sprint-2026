@@ -32,6 +32,9 @@ const ASSETS = Object.freeze({
   '/handoff-desk.mjs': ['handoff-desk.mjs', 'text/javascript; charset=utf-8'],
   '/incident-desk.mjs': ['incident-desk.mjs', 'text/javascript; charset=utf-8'],
   '/incident-desk.css': ['incident-desk.css', 'text/css; charset=utf-8'],
+  '/service-commitments.mjs': ['service-commitments.mjs', 'text/javascript; charset=utf-8'],
+  '/service-desk.mjs': ['service-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/service-desk.css': ['service-desk.css', 'text/css; charset=utf-8'],
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
 });
 const ROOT = new URL('.', import.meta.url);
@@ -139,6 +142,22 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         const data = await readFile(new URL(filename, ROOT));
         res.writeHead(200, {'content-type': mime}); res.end(data);
       } catch { json(res, 500, {error: 'STATIC_ASSET_UNAVAILABLE'}); }
+      return;
+    }
+    if (route === '/api/services/incident-snapshot') {
+      if (req.method!=='GET') {json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
+      if ((req.headers.origin&&req.headers.origin!==ownOrigin)||
+          (req.headers['sec-fetch-site']&&!['same-origin','none'].includes(req.headers['sec-fetch-site']))) {
+        json(res,403,{error:'ORIGIN_MISMATCH'});return;
+      }
+      if(!incidentDesk){json(res,503,{error:'INCIDENT_SOURCES_DISABLED',detail:'Configure the original incident sources for this Support desk.'});return;}
+      try{
+        const query=new URL(req.url,ownOrigin).searchParams;
+        if([...query.keys()].some(key=>!['source','merchant'].includes(key))||query.getAll('source').length!==1||query.getAll('merchant').length!==1)
+          throw new TypeError('Choose one original incident source and merchant.');
+        const snapshot=await incidentDesk.serviceSnapshot(query.get('source'),{merchantId:query.get('merchant')});
+        json(res,200,{snapshot});
+      }catch(error){const problem=incidentProblem(error);json(res,problem.status,{error:problem.error,detail:problem.detail});}
       return;
     }
     if (route === '/api/incidents' || route.startsWith('/api/incidents/')) {
