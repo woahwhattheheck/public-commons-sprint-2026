@@ -16,9 +16,13 @@ async function body(req) {
   try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks))); }
   catch { throw fault('JSON_INVALID'); }
 }
-export async function startPostgresPublisherServer({ publisher, port = 8442, extension = null } = {}) {
+export async function startPostgresPublisherServer({ publisher, port = 8442, extension = null,
+  schedule: borrowedSchedule = null, ownsPublisher = true } = {}) {
   if (!publisher || typeof publisher.startExtraction !== 'function' || !Number.isInteger(port) || port < 0 || port > 65535)
     throw new TypeError('Open publisher and valid port required');
+  if (typeof ownsPublisher !== 'boolean' || ownsPublisher && borrowedSchedule || !ownsPublisher &&
+      (!borrowedSchedule || typeof borrowedSchedule.status !== 'function' || typeof borrowedSchedule.runNow !== 'function'))
+    throw new TypeError('A borrowed publisher requires its original scheduler and explicit ownsPublisher:false');
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'], ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/schedules.mjs', 'schedules.mjs', 'text/javascript; charset=utf-8'],
@@ -42,8 +46,9 @@ export async function startPostgresPublisherServer({ publisher, port = 8442, ext
     const page = assets.get('/');
     page.bytes = Buffer.from(page.bytes.toString('utf8').replaceAll('PostgreSQL', publisher.sourceName));
   }
-  const schedule = await openPostgresSchedule({ publisher });
-  let origin, closing;
+  const schedule = borrowedSchedule ?? await openPostgresSchedule({ publisher });
+  const ownsSchedule = !borrowedSchedule, pending = new Set();
+  let origin, closing, draining = false;
   const server = createServer((req, res) => {
     const send = (status, value, type = 'application/json; charset=utf-8') => {
       const output = Buffer.isBuffer(value) ? value : Buffer.from(JSON.stringify(value));
@@ -53,6 +58,7 @@ export async function startPostgresPublisherServer({ publisher, port = 8442, ext
       res.end(output);
     };
     const action = async () => {
+      if (draining) throw fault('PUBLISHER_LISTENER_CLOSING', 'This browser listener is closing.', 503);
       if (req.headers.host !== new URL(origin).host || req.headers.origin && req.headers.origin !== origin ||
           req.headers['sec-fetch-site'] === 'cross-site') throw fault('LOCAL_ORIGIN_REQUIRED', 'Open this workspace on its printed local address.', 403);
       if (typeof req.url !== 'string' || !req.url.startsWith('/') || req.url.startsWith('//')) throw fault('INVALID_REQUEST_TARGET');
@@ -98,30 +104,38 @@ export async function startPostgresPublisherServer({ publisher, port = 8442, ext
       if (path === '/api/buyer') return send(200, await publisher.prepareBuyer(input.id, input));
       throw fault('NOT_FOUND', 'Action not found.', 404);
     };
-    action().catch(issue => {
+    const operation = action().catch(issue => {
       const code = [issue.code, issue.message].find(value => typeof value === 'string' && /^[A-Z0-9_]{1,80}$/.test(value));
-      if (!res.headersSent && !res.destroyed) send([400, 403, 404, 409, 413, 415, 422, 502].includes(issue.status) ? issue.status : 422,
+      if (!res.headersSent && !res.destroyed) send([400, 403, 404, 409, 413, 415, 422, 502, 503].includes(issue.status) ? issue.status : 422,
         { error: code ?? 'PUBLISHER_INPUT_INVALID', message: issue.code ? issue.message : code ?? 'Review the selected input and retry this action.' });
       else if (!res.writableEnded) res.end();
     });
+    pending.add(operation);
+    operation.finally(() => pending.delete(operation)).catch(() => {});
   });
   server.requestTimeout = 330000; server.headersTimeout = 15000; server.keepAliveTimeout = 1000;
   try { await new Promise((done, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', done); }); }
-  catch (issue) { await schedule.close(); throw issue; }
+  catch (issue) { if (ownsSchedule) await schedule.close(); throw issue; }
   origin = `http://127.0.0.1:${server.address().port}`;
-  schedule.start();
+  if (ownsSchedule) schedule.start();
   return { url: origin, server, publisher, schedule, close() {
     closing ??= (async () => {
+      draining = true;
       const stop = new Promise((done, reject) => {
         server.close(issue => issue ? reject(issue) : done()); server.closeIdleConnections?.();
       });
-      const scheduling = schedule.close(), running = publisher.status().active;
-      if (running?.kind === 'extraction') publisher.cancel(running.id);
+      const scheduling = ownsSchedule ? schedule.close() : Promise.resolve();
+      if (ownsPublisher) {
+        const running = publisher.status().active;
+        if (running?.kind === 'extraction') publisher.cancel(running.id);
+      }
       try {
-        const results = await Promise.allSettled([stop, scheduling, extension?.close?.()]);
+        // A borrowed listener drains its own requests, including streamed downloads.
+        // It never pauses schedules, cancels source work or closes the shared core.
+        const results = await Promise.allSettled([stop, scheduling, ...pending, extension?.close?.()]);
         const failed = results.find(result => result.status === 'rejected');
         if (failed) throw failed.reason;
-      } finally { await publisher.close(); }
+      } finally { if (ownsPublisher) await publisher.close(); }
     })();
     return closing;
   } };

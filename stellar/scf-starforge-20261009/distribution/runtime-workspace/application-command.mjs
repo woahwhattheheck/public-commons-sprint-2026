@@ -1,22 +1,41 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
+import { grpcStartup } from './application-grpc.mjs';
+import { coingeckoStartup } from './application-coingecko.mjs';
+import { oaiStartup } from './application-oai.mjs';
+import { fiscalDataStartup } from './application-fiscaldata.mjs';
+import { databentoStartup } from './application-databento.mjs';
+import { opencageStartup } from './application-opencage.mjs';
+import { webdavStartup } from './application-webdav.mjs';
+import { merchantSupportStartup } from './application-merchant-support.mjs';
 import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
+import { ndjsonStartup } from './application-ndjson.mjs';
 import { cheesecakeStartup } from './application-cheesecake.mjs';
 import { odataStartup } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarStartup } from './application-sec-edgar.mjs';
 import { jobResultReceiverStartup } from './application-job-result-receiver.mjs';
 import { sheetsStartup } from './application-sheets.mjs';
+import { nocodbStartup } from './application-nocodb.mjs';
+import { stellarExpertStartup, STELLAR_EXPERT_READY_SCHEMA } from './application-stellar-expert.mjs';
 import { atlasStartup } from './application-atlas.mjs';
+import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { openApiStartup } from './application-openapi.mjs';
+import { arcgisAgentStartup } from './application-arcgis.mjs';
+import { duckdbAgentStartup, DUCKDB_AGENT_STARTUP_SCHEMA } from './application-duckdb-agent.mjs';
+import { s3MerchantStartup } from './application-s3-merchant.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { pricingStartup } from './application-pricing.mjs';
 import { collectionsStartup } from './application-collections.mjs';
+import { baserowStartup } from './application-baserow.mjs';
 import { grantStartup } from './application-grant.mjs';
+import { grantsgovStartup } from './application-grantsgov.mjs';
+import { fredStartup } from './application-fred.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
 import { browserWalletOutputReader, browserWalletStartup, verifyBrowserWalletLaunch } from './application-browser-wallet.mjs';
 import { rssAtomStartup } from './application-rss-atom.mjs';
+import { apiPassWorkspaceStartup, verifyApiPassWorkspaceLaunch } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedOutputReader, eventFeedStartup, verifyEventFeedLaunch } from './application-event-feed.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
@@ -58,6 +77,7 @@ export async function applicationEnvironment(path, expectedSha256) {
 }
 export async function prepareApplicationCommand(request, directory, originalArgs) {
   await verifyEventFeedLaunch(request, directory);
+  await verifyApiPassWorkspaceLaunch(request, directory);
   await verifyBrowserWalletLaunch(request, directory);
   const { environment } = await applicationEnvironment(request.environmentFile, request.environmentSha256);
   if (request.pythonCommand) return preparePythonManagedChild(dirname(dirname(directory)), request, environment);
@@ -90,11 +110,206 @@ export function observeApplicationOutput(request, directory, context = {}) {
   const decoder = new StringDecoder('utf8');
   const eventOutput = eventFeedOutputReader(request);
   const walletOutput = browserWalletOutputReader(request);
+  const lineLimit = request.command === 'mcp-native' && request.args?.includes('--duckdb-description') ? 65536 : 16384;
   function line(text) {
     if (seen || !request.applicationId) return;
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'mcp-native' && request.args?.includes('--duckdb-description')) {
+      if (!text.startsWith('{"schema":"' + DUCKDB_AGENT_STARTUP_SCHEMA + '",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = duckdbAgentStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema:'stellar-forge.application-url.v1', applicationId:request.applicationId,
+          operationId:directory.split('/').at(-1), command:request.command,
+          source:'original-command-stdout', observedAt:now(), url,
+          links:startup.links, original:startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'webdav') {
+      if (!text.startsWith('{"schema":"stellar-forge.webdav-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await webdavStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'support-console') {
+      if (!text.startsWith('{"schema":"stellar-forge.support-console-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await merchantSupportStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'opencage-workbench') {
+      if (!text.startsWith('{"schema":"stellar-forge.opencage-application-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await opencageStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'n8n-merchant') {
+      if (!text.startsWith('{"schema":"stellar-forge.n8n-merchant-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await n8nStartup(request, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'nocodb-source') {
+      if (!text.startsWith('{"schema":"stellar-forge.nocodb-authoring-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await nocodbStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset-workspace' && request.args?.includes('--stellar-expert')) {
+      if (!text.startsWith('{"schema":"' + STELLAR_EXPERT_READY_SCHEMA + '",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await stellarExpertStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'databento-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.databento-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await databentoStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'fiscaldata') {
+      if (!text.startsWith('{"schema":"stellar-forge.fiscaldata-application-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await fiscalDataStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'coingecko') {
+      if (!text.startsWith('{"schema":"stellar-forge.coingecko-managed-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await coingeckoStartup(request, text, directory);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'grpc-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.grpc-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await grpcStartup(request, text, directory);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'api-pass-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.sf101.api-pass-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await apiPassWorkspaceStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'stellar-application') {
       if (!text.startsWith('{"schema":"stellar-forge.application-installed-startup.v1",')) return;
       saving = saving.then(async () => {
@@ -192,6 +407,54 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }
       return;
     }
+    if (request.command === 'fred' && text.startsWith('{') &&
+        text.includes('"schema":"stellar-forge.fred-workspace-startup.v1"')) {
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await fredStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'dataset-ndjson') {
+      if (!text.startsWith('{"schema":"stellar-forge.ndjson-workspace-launch.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await ndjsonStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'grantsgov') {
+      if (!text.startsWith('{"schema":"stellar-forge.grantsgov-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await grantsgovStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (request.command === 'grant-workspace') {
       if (!text.startsWith('{"schema":"stellar-forge.sf47.workspace-launch.v1",')) return;
       saving = saving.then(async () => {
@@ -208,11 +471,13 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'dataset-feeds') {
+    if (request.command === 'dataset-feeds' || request.command === 'oai') {
       if (!text.startsWith('{')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await rssAtomStartup(request, text);
+        const startup = request.command === 'oai'
+          ? await oaiStartup(request, text)
+          : await rssAtomStartup(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
@@ -305,14 +570,33 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (request.command === 'blockscout' || request.command === 'tenderly-workspace' || request.command === 'redis') {
-      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis';
-      const startupSchema = redis ? 'stellar-forge.redis-workspace-startup.v1' :
+    if (request.command === 's3' && request.args?.[0] === 'workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.s3-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await s3MerchantStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent'].includes(request.command)) {
+      const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
+        arcgis = request.command === 'arcgis-agent';
+      const startupSchema = arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
+        redis ? 'stellar-forge.redis-workspace-startup.v1' :
         tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
       if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await (redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const startup = await (arcgis ? arcgisAgentStartup : redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;
@@ -340,6 +624,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           });
         }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       }
+      return;
+    }
+    if (request.command === 'baserow-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.baserow-authoring-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await baserowStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
     if (request.command === 'buyer-collections-workspace') {
@@ -386,8 +686,10 @@ export function observeApplicationOutput(request, directory, context = {}) {
       try {
         const ready = JSON.parse(text);
         const directoryIndex = request.args.indexOf('--dir');
+        const crossrefSelected = request.args.includes('--crossref-state');
         if (ready.mode === 'RESEARCH_DOSSIER_WORKSPACE' && directoryIndex >= 0 &&
-            ready.directory === request.args[directoryIndex + 1] && typeof ready.url === 'string')
+            ready.directory === request.args[directoryIndex + 1] &&
+            (!crossrefSelected || ready.crossrefConfigured === true) && typeof ready.url === 'string')
           candidate = ready.url;
       } catch {}
     }
@@ -433,7 +735,7 @@ export function observeApplicationOutput(request, directory, context = {}) {
       buffer += decoder.write(bytes);
       const lines = buffer.split(/\r?\n/); buffer = lines.pop();
       for (const text of lines) line(text);
-      if (buffer.length > 16384) buffer = buffer.slice(-16384);
+      if (buffer.length > lineLimit) buffer = buffer.slice(-lineLimit);
     },
     async close() {
       if (!closed) { closed = true; buffer += decoder.end(); if (buffer) line(buffer); }

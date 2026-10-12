@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { InputError, need } from './config.mjs';
-import { canonical, digest, inspectDatasetPage, nativeDatasetContract, object } from './dataset-page.mjs';
+import { canonical, digest, inspectDatasetPage, nativeDatasetContract, object, bindDatasetResponseMetadata } from './dataset-page.mjs';
 import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 
 const NATIVE = fileURLToPath(new URL('../sf100-buyer-dataset-delivery/deliver.mjs', import.meta.url));
@@ -171,24 +171,35 @@ async function preflight(report) {
     'DATASET_DELIVERY_SOURCE_PATH_MISMATCH');
     await directory(pageDir);
     const bytes = await bounded(p.responsePath, MAX_INPUT);
-    const inspected = inspectDatasetPage(bytes, {url:p.requestUrl, previous,
+    const payload = json(bytes), evidenceBytes = await bounded(p.evidencePath, MAX_INPUT);
+    const evidence = json(evidenceBytes), evidenceSha256 = digest(evidenceBytes);
+    let inspected = inspectDatasetPage(bytes, {url:p.requestUrl, previous,
       expectedSnapshot:report.snapshot, maxRows:1000000});
+    if (inspected.semantics && !recovered) {
+      const cfg = await jsonFile(join(pageDir, 'config.json'), 262144);
+      need(cfg.operation?.intentId === p.intentId && cfg.operation.url === p.requestUrl &&
+        cfg.operation.method === 'GET' && cfg.evidenceDir === join(report.directory, 'evidence') &&
+        cfg.responseFile?.destination === p.responsePath, 'DATASET_DELIVERY_RESPONSE_CONFIG_CHANGED');
+      inspected = await bindDatasetResponseMetadata(inspected, cfg, {
+        status:evidence.observation?.buyer?.httpStatus,
+        nativeBuyerStatus:evidence.observation?.buyer?.status});
+    }
+    if (recovered) {
+      const {recoveredDatasetPage} = await import('./dataset-lost-output.mjs');
+      const original = await recoveredDatasetPage({directory:report.directory,index:p.index,
+        cfg:await jsonFile(join(pageDir,'config.json'),262144),previous,
+        expectedSnapshot:report.snapshot,maxRows:1000000});
+      need(original?.evidenceSha256 === evidenceSha256 && original.sha256 === inspected.sha256,
+        'DATASET_DELIVERY_RECOVERED_SOURCE_CHANGED');
+      inspected = original;
+    }
     need(i === report.pages.length - 1 ? inspected.nextCursor === null : inspected.nextCursor !== null,
       'DATASET_DELIVERY_TERMINAL_PAGE_MISMATCH');
     need(Object.entries(inspected).every(([key, value]) => equal(p[key], value)) &&
       inspected.total === report.totalRows && !seenSources.has(inspected.sha256) && !seenIntents.has(p.intentId),
     'DATASET_DELIVERY_SOURCE_CHANGED');
-    const payload = json(bytes), evidenceBytes = await bounded(p.evidencePath, MAX_INPUT);
-    const evidence = json(evidenceBytes), evidenceSha256 = digest(evidenceBytes);
     need(evidenceSha256===p.evidenceSha256,'DATASET_DELIVERY_EVIDENCE_CHANGED');
-    if(recovered) {
-      const {recoveredDatasetPage}=await import('./dataset-lost-output.mjs');
-      const original=await recoveredDatasetPage({directory:report.directory,index:p.index,
-        cfg:await jsonFile(join(pageDir,'config.json'),262144),previous,
-        expectedSnapshot:report.snapshot,maxRows:1000000});
-      need(original?.evidenceSha256===evidenceSha256&&original.sha256===inspected.sha256,
-        'DATASET_DELIVERY_RECOVERED_SOURCE_CHANGED');
-    } else need(evidence.schema === 'scf82.checkout-evidence.v1' &&
+    if(!recovered) need(evidence.schema === 'scf82.checkout-evidence.v1' &&
       evidence.intentId === p.intentId && evidence.observation?.intentId === p.intentId,
     'DATASET_DELIVERY_EVIDENCE_CHANGED');
     const pageSignature = nativeDatasetContract(payload).signature;
@@ -197,7 +208,10 @@ async function preflight(report) {
     records.push({index:i, intent:p.intentId, responsePath:p.responsePath, evidencePath:p.evidencePath,
       sourceSha256:inspected.sha256, evidenceSha256, payloadSha256:digest(JSON.stringify(payload)),
       signature, requestCursor:previous?.nextCursor ?? null, nextCursor:inspected.nextCursor,
-      returned:inspected.returned});
+      returned:inspected.returned,
+      ...(inspected.semantics ? {semantics:inspected.semantics,
+        semanticResponseHeaders:inspected.semanticResponseHeaders,
+        semanticResponseRecord:inspected.semanticResponseRecord} : {})});
     seenSources.add(inspected.sha256); seenIntents.add(p.intentId);
     previous = inspected;
   }
@@ -233,6 +247,8 @@ async function prefix(out, records) {
 }
 function checkStatus(status, records, state, report) {
   const count = state.count;
+  need(!count || equal(status.semantics ?? null, records[0].semantics ?? null),
+    'DATASET_DELIVERY_NATIVE_SEMANTICS_MISMATCH');
   need(status.pages === count && status.lastRecordDigest === state.lastRecordDigest &&
     status.rows === records.slice(0, count).reduce((sum, p) => sum + p.returned, 0) &&
     status.nextCursor === (count ? records[count - 1].nextCursor : null) &&
@@ -245,12 +261,14 @@ function checkStatus(status, records, state, report) {
 async function exported(out, records, state, report) {
   const manifestPath = join(out, 'manifest.json');
   const manifest = await jsonFile(manifestPath, 4 * 1024 * 1024);
+  const semantics = records[0].semantics;
+  const names = ['dataset.jsonl','dataset.csv','review.html', ...(semantics ? ['semantics.json'] : [])];
   need(manifest.schema === 'stellar-forge.buyer-delivery-manifest.v1' &&
     manifest.dataset?.snapshot === report.snapshot && manifest.dataset.rows === report.totalRows &&
     manifest.dataset.originalQuerySignature === records[0].signature &&
     manifest.chainDigest === state.lastRecordDigest && Array.isArray(manifest.sourcePages) &&
     manifest.sourcePages.length === records.length && object(manifest.outputs) &&
-    equal(Object.keys(manifest.outputs).sort(), ['dataset.csv','dataset.jsonl','review.html']),
+    equal(Object.keys(manifest.outputs).sort(), [...names].sort()),
   'DATASET_DELIVERY_MANIFEST_MISMATCH');
   for (let i = 0; i < records.length; i++) {
     const p = records[i];
@@ -258,16 +276,26 @@ async function exported(out, records, state, report) {
       evidenceSha256:p.evidenceSha256, recordDigest:state.chains[i], rows:p.returned,
       requestedCursor:p.requestCursor}), 'DATASET_DELIVERY_MANIFEST_SOURCE_MISMATCH');
   }
+  if (semantics) {
+    const first = json(await bounded(records[0].responsePath, MAX_INPUT));
+    const dictionary = await jsonFile(join(out, 'semantics.json'), MAX_INPUT);
+    need(equal(dictionary, first.semantics) &&
+      equal(manifest.semantics, { ...semantics, file:'semantics.json',
+        selectedFields:first.fields, scope:'PUBLISHED_DATASET', typedRowsFile:'dataset.jsonl' }),
+      'DATASET_DELIVERY_SEMANTIC_DICTIONARY_CHANGED');
+  } else need(manifest.semantics === undefined, 'DATASET_DELIVERY_UNEXPECTED_SEMANTICS');
   const outputs = {};
-  for (const name of ['dataset.jsonl','dataset.csv','review.html']) {
+  for (const name of names) {
     const path = join(out, name), actual = await hashFile(path, MAX_EXPORT);
     need(equal(actual, manifest.outputs[name]), 'DATASET_DELIVERY_OUTPUT_CHANGED');
     outputs[name] = {path, ...actual};
   }
-  need(outputs['dataset.jsonl'].bytes + outputs['dataset.csv'].bytes <= MAX_EXPORT,
+  need(outputs['dataset.jsonl'].bytes + outputs['dataset.csv'].bytes +
+    (outputs['semantics.json']?.bytes ?? 0) <= MAX_EXPORT,
     'DATASET_DELIVERY_OUTPUT_LIMIT');
   outputs['manifest.json'] = {path:manifestPath, ...await hashFile(manifestPath, 4 * 1024 * 1024)};
-  return {outputs, paymentStatus:manifest.paymentStatus};
+  return {outputs, paymentStatus:manifest.paymentStatus,
+    ...(semantics ? {semantics:manifest.semantics} : {})};
 }
 
 /** Caller holds the original acquisition session lock for inspection and this entire call.
@@ -311,7 +339,8 @@ export async function buildNativeDataRoom(report, destination) {
     const initialPages = state.count;
     if (!status.finalized) {
       // An interrupted native finalize is preserved for native recovery, never silently deleted.
-      for (const name of ['dataset.jsonl','dataset.csv','review.html','manifest.json']) {
+      for (const name of ['dataset.jsonl','dataset.csv','review.html','manifest.json',
+        ...(records[0].semantics ? ['semantics.json'] : [])]) {
         need(!await exists(join(out, name)), 'DATASET_DELIVERY_PARTIAL_NATIVE_EXPORT');
       }
       const inputs = [];

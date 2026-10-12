@@ -1,0 +1,2 @@
+# Original SDK source selected by the Prescient integration workshare.
+prescient-sdk @ git+https://github.com/sparkgeo/prescient-sdk@895b7720b22c3047b76ecff512f6be13f1d62fc9

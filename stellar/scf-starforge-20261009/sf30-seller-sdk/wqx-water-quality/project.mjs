@@ -5,6 +5,8 @@ import { randomUUID, createHash } from 'node:crypto';
 import { privateDirectory, atomicJson, readPrivateJson, withPrivateLock } from '../routescan/quota.mjs';
 import { normalizeSelection, captureSelection, readCapture, retainedFiles } from './provider.mjs';
 import { joinCapture } from './samples.mjs';
+import { buildOpenWatersPlan, verifyOpenWatersPlan, openWatersPlanSummary, normalizeOpenWatersOptions,
+  openWatersArtifact, openWatersHash, openWatersCanonical, OPEN_WATERS_BUNDLE_SCHEMA } from './openwaters.mjs';
 import { writeBytes as writeNativeBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
 import { summarizeWaterQuality, compareWaterQualityCaptures, waterQualityObservationCsv, waterQualityObservationGeoJson, renderWaterQualityReport } from './analysis.mjs';
 import { prepareQualityEdition, stageQualityMerchant, startQualityMerchant, readQualityEdition } from './merchant.mjs';
@@ -93,7 +95,7 @@ function bundleContent(bundle) {
 export async function openWaterQualityProject(directory, { transport, env = process.env } = {}) {
   const root = await privateDirectory(resolve(directory));
   const folders = {};
-  for (const name of ['revisions', 'requests', 'captures', 'capture-summaries', 'reviews', 'editions', 'imports']) folders[name] = await privateDirectory(join(root, name));
+  for (const name of ['revisions', 'requests', 'captures', 'capture-summaries', 'reviews', 'editions', 'imports', 'open-waters', 'open-waters-manifests']) folders[name] = await privateDirectory(join(root, name));
   let pending = Promise.resolve(), closing = false, closed = false, closePromise;
   const operations = new Set(), acquisitions = new Map();
   function active() { if (closed || closing) fail('The project is closing.', 'WQX_PROJECT_CLOSED', 503); }
@@ -399,9 +401,150 @@ export async function openWaterQualityProject(directory, { transport, env = proc
     }
     return result;
   }
+
+  async function previewOpenWaters({ reviewId, options = {}, expectedReviewSha256 } = {}) {
+    const review = await readReview(reviewId);
+    if (expectedReviewSha256 && review.reviewSha256 !== expectedReviewSha256)
+      fail('The receiving choices belong to a different saved review.', 'WQX_OPEN_WATERS_REVIEW_CHANGED', 409);
+    const retained = await capture(review.captureId), model = await joinCapture(retained);
+    return buildOpenWatersPlan({ review, model, options });
+  }
+  async function readOpenWatersPlan(id) {
+    operationId(id);
+    const plan = verifyOpenWatersPlan(await readPrivateJson(join(folders['open-waters'], id + '.json'), 64 * 1024 * 1024));
+    if (plan.planId !== id) fail('The original receiving plan identity changed.', 'WQX_OPEN_WATERS_PLAN_CHANGED', 409);
+    const review = await readReview(plan.reviewId);
+    if (review.reviewSha256 !== plan.reviewSha256 || review.captureSha256 !== plan.captureSha256)
+      fail('The original receiving review changed.', 'WQX_OPEN_WATERS_REVIEW_CHANGED', 409);
+    const retained = await capture(plan.captureId);
+    if (retained.captureSha256 !== plan.captureSha256)
+      fail('The receiving plan’s original source changed.', 'WQX_OPEN_WATERS_SOURCE', 409);
+    return plan;
+  }
+  async function originalOpenWatersReviewBundle(plan) {
+    const review = await readReview(plan.reviewId);
+    const source = JSON.parse((await exportReviewBundle({ reviewId: plan.reviewId })).bytes.toString('utf8'));
+    const revisions = new Set([review.revision]);
+    for (const member of source.members.filter(x => x.path.startsWith('requests/')))
+      revisions.add(JSON.parse(Buffer.from(member.dataBase64, 'base64').toString('utf8')).revision);
+    const original = source.members.find(x => x.path === 'revisions/' + review.revision + '.json');
+    if (!original) fail('The receiving bundle needs its original review revision.', 'WQX_OPEN_WATERS_SOURCE', 409);
+    const members = source.members.filter(x =>
+      !x.path.startsWith('capture-summaries/') &&
+      (!x.path.startsWith('revisions/') || revisions.has(Number(x.path.split('/')[1].slice(0,-5)))))
+      .map(x => x.path === 'project.json' ? { ...original, path: 'project.json' } : x)
+      .sort((a,b) => a.path.localeCompare(b.path));
+    const { archiveSha256, ...content } = source;
+    content.members = members;
+    return { ...content, archiveSha256: sha(content) };
+  }
+  async function openWatersBundle(plan) {
+    const formats = ['locations','results','crosswalk','report','references'], artifacts = [];
+    for (const format of formats) {
+      const file = openWatersArtifact(plan, format);
+      artifacts.push({ format, filename: file.filename, bytes: file.bytes.length, sha256: byteHash(file.bytes), dataBase64: file.bytes.toString('base64') });
+    }
+    const content = { schema: OPEN_WATERS_BUNDLE_SCHEMA, plan: verifyOpenWatersPlan(plan),
+      reviewBundle: await originalOpenWatersReviewBundle(plan), artifacts };
+    return { ...content, bundleSha256: openWatersHash(content) };
+  }
+  async function renderOpenWatersArtifact(plan, format) {
+    if (format !== 'bundle') return openWatersArtifact(plan, format);
+    return { bytes: Buffer.from(json(await openWatersBundle(plan))), mime: 'application/json', filename: plan.planId + '-complete-open-waters.json' };
+  }
+  async function openWatersManifest(plan) {
+    const saved = await readOrNull(join(folders['open-waters-manifests'], plan.planId + '.json'));
+    if (saved) {
+      const { manifestSha256, ...content } = saved;
+      if (saved.planSha256 !== plan.planSha256 || openWatersHash(content) !== manifestSha256)
+        fail('The original receiving export manifest changed.', 'WQX_OPEN_WATERS_MANIFEST_CHANGED', 409);
+      return saved.files;
+    }
+    const files = [];
+    for (const format of ['locations','results','crosswalk','report','references','bundle']) {
+      const file = await renderOpenWatersArtifact(plan, format);
+      files.push({ format, filename: file.filename, bytes: file.bytes.length, sha256: byteHash(file.bytes) });
+    }
+    const content = { schema: 'starforge.wqx-open-waters-exports.v1', planSha256: plan.planSha256, files };
+    await immutable(folders['open-waters-manifests'], plan.planId + '.json', { ...content, manifestSha256: openWatersHash(content) });
+    return files;
+  }
+  async function readOpenWaters(id) {
+    const plan = await readOpenWatersPlan(id);
+    return { ...plan, files: await openWatersManifest(plan) };
+  }
+  async function listOpenWaters() {
+    const result = [];
+    for (const name of await names(folders['open-waters'])) result.push(openWatersPlanSummary(await readOpenWatersPlan(name.slice(0,-5))));
+    return result;
+  }
+  async function saveOpenWaters({ planId = randomUUID(), reviewId, options = {}, expectedReviewSha256 } = {}) {
+    operationId(planId);
+    return serial(async () => {
+      const existing = await readOrNull(join(folders['open-waters'], planId + '.json'), 64 * 1024 * 1024);
+      if (existing) {
+        const retained = verifyOpenWatersPlan(existing);
+        if (retained.reviewId !== reviewId || openWatersCanonical(retained.options) !== openWatersCanonical(normalizeOpenWatersOptions(options)) ||
+            (expectedReviewSha256 && retained.reviewSha256 !== expectedReviewSha256))
+          fail('This receiving plan name already contains different choices. Reopen it or save a new name.', 'WQX_OPEN_WATERS_PLAN_CHANGED', 409);
+        return readOpenWaters(planId);
+      }
+      const preview = await previewOpenWaters({ reviewId, options, expectedReviewSha256 });
+      const { planSha256, ...content } = preview;
+      content.planId = planId;
+      const plan = { ...content, planSha256: openWatersHash(content) };
+      await immutable(folders['open-waters'], planId + '.json', plan);
+      return { ...plan, files: await openWatersManifest(plan) };
+    });
+  }
+  async function exportOpenWaters({ planId, format } = {}) {
+    const plan = await readOpenWatersPlan(planId), manifest = await openWatersManifest(plan);
+    const expected = manifest.find(x => x.format === format);
+    if (!expected) fail('Choose one of this plan’s complete receiving files.');
+    const result = await renderOpenWatersArtifact(plan, format);
+    if (result.bytes.length !== expected.bytes || byteHash(result.bytes) !== expected.sha256)
+      fail('This export differs from its original saved receiving manifest.', 'WQX_OPEN_WATERS_EXPORT_CHANGED', 409);
+    return result;
+  }
+  async function receiveOpenWaters({ bundle } = {}) {
+    if (!bundle || bundle.schema !== OPEN_WATERS_BUNDLE_SCHEMA || !Array.isArray(bundle.artifacts))
+      fail('Choose the complete Open Waters receiving bundle.');
+    const { bundleSha256, ...content } = bundle;
+    if (openWatersHash(content) !== bundleSha256)
+      fail('The complete receiving bundle changed.', 'WQX_OPEN_WATERS_BUNDLE_CHANGED', 409);
+    const plan = verifyOpenWatersPlan(bundle.plan);
+    operationId(plan.planId);
+    if (bundle.reviewBundle?.reviewId !== plan.reviewId || bundle.reviewBundle?.captureSha256 !== plan.captureSha256)
+      fail('The receiving bundle and saved review belong to different source data.', 'WQX_OPEN_WATERS_BUNDLE_CHANGED', 409);
+    const formats = ['locations','results','crosswalk','report','references'];
+    if (bundle.artifacts.length !== formats.length || new Set(bundle.artifacts.map(x=>x.format)).size !== formats.length)
+      fail('The complete receiving bundle needs each original output once.');
+    for (const format of formats) {
+      const member = bundle.artifacts.find(x=>x.format===format), original = openWatersArtifact(plan, format);
+      if (!member || member.filename !== original.filename || member.bytes !== original.bytes.length ||
+          member.sha256 !== byteHash(original.bytes) || member.dataBase64 !== original.bytes.toString('base64'))
+        fail('An original receiving file changed.', 'WQX_OPEN_WATERS_BUNDLE_CHANGED', 409);
+    }
+    await receiveReviewBundle({ bundle: bundle.reviewBundle });
+    const review = await readReview(plan.reviewId);
+    if (review.reviewSha256 !== plan.reviewSha256)
+      fail('The received review differs from the receiving plan.', 'WQX_OPEN_WATERS_REVIEW_CHANGED', 409);
+    const rebuilt = buildOpenWatersPlan({ review, model: await joinCapture(await capture(plan.captureId)),
+      options: plan.options, planId: plan.planId });
+    if (rebuilt.planSha256 !== plan.planSha256)
+      fail('The receiving choices do not reproduce this plan from its original source.', 'WQX_OPEN_WATERS_SOURCE', 409);
+    return serial(async () => {
+      await immutable(folders['open-waters'], plan.planId + '.json', plan);
+      return readOpenWaters(plan.planId);
+    });
+  }
+
   return { root, read, save: args => tracked(() => save(args)), history: async () => Promise.all((await names(folders.revisions)).map(name => readPrivateJson(join(folders.revisions, name)))),
     acquire: args => tracked(() => acquire(args)), listCaptures, capture, analyze, saveReview: args => tracked(() => saveReview(args)),
     readReview, listReviews, exportReview, readResult,
+    previewOpenWaters, readOpenWaters, listOpenWaters, exportOpenWaters,
+    saveOpenWaters: args => tracked(() => saveOpenWaters(args)),
+    receiveOpenWaters: args => tracked(() => receiveOpenWaters(args)),
     importCapture: args => tracked(() => importCapture(args)), exportReviewBundle,
     receiveReviewBundle: args => tracked(() => receiveReviewBundle(args)),
     prepareEdition: args => tracked(() => serial(() => edition(args))),
