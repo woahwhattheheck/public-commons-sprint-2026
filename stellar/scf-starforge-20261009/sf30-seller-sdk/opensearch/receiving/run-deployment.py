@@ -154,63 +154,118 @@ def source_files(args):
 
 
 def assemble(args, directory, runtime):
+    from io import BytesIO
+
     files = source_files(args)
-    target = runtime / "source"
-    target.mkdir(parents=True, exist_ok=True, mode=0o700)
     members, provenance, total = {}, {}, 0
     for name, original in sorted(files.items()):
         relative(name)
+        need(name != "SOURCE_MANIFEST.json", "The source manifest name is reserved")
         raw, details = regular(original)
         total += len(raw)
         need(total <= 32 * 1024 * 1024, "Portable source exceeds 32 MiB")
         mode = 0o755 if details["mode"] & 0o111 else 0o644
-        retain_file(target / name, raw, mode)
         members[name] = {**details, "mode": mode}
         provenance[name] = str(original)
     fingerprint = digest(encoded(members))
+    target = runtime / ("source-" + fingerprint)
+    target.mkdir(parents=True, exist_ok=True, mode=0o700)
+    for name, original in sorted(files.items()):
+        raw, actual = regular(original)
+        actual["mode"] = 0o755 if actual["mode"] & 0o111 else 0o644
+        need(actual == members[name], "Selected source changed before assembly: " + name)
+        retain_file(target / name, raw, members[name]["mode"])
+        need(stat.S_IMODE((target / name).lstat().st_mode) == members[name]["mode"],
+             "The staged source mode differs: " + name)
+
     source_manifest = {"schema": "stellar-forge.opensearch-managed-source.v1",
                        "createdAt": now(), "sourceSha256": fingerprint,
                        "bytes": total, "files": members}
-    archive = directory / "source-runtime.zip"
-    if archive.exists():
-        with zipfile.ZipFile(archive) as saved:
+    archive = directory / ("source-runtime-" + fingerprint + ".zip")
+    assembly = directory / ("source-assembly-" + fingerprint + ".json")
+    legacy_archive = directory / "source-runtime.zip"
+    legacy_assembly = directory / "source-assembly.json"
+
+    def read_archive(path, verify_members):
+        raw, details = regular(path)
+        need(len(raw) <= 34 * 1024 * 1024, "The retained source archive exceeds its scope")
+        with zipfile.ZipFile(BytesIO(raw)) as saved:
             names = saved.namelist()
-            need(len(names) == len(set(names)) and
-                 set(names) == set(members) | {"SOURCE_MANIFEST.json"},
-                 "Retain the first complete source archive")
-            prior = json.loads(saved.read("SOURCE_MANIFEST.json"))
-            need(prior.get("sourceSha256") == fingerprint and prior.get("files") == members,
-                 "The existing source archive belongs to another source edition")
-            for name, details in members.items():
-                body = saved.read(name)
-                need(len(body) == details["bytes"] and digest(body) == details["sha256"],
-                     "The retained source archive differs: " + name)
-            source_manifest = prior
-    else:
+            need(len(names) == len(set(names)) and names.count("SOURCE_MANIFEST.json") == 1,
+                 "The retained source archive has an ambiguous manifest")
+            need(saved.getinfo("SOURCE_MANIFEST.json").file_size <= 1024 * 1024,
+                 "The retained source manifest exceeds its scope")
+            manifest = json.loads(saved.read("SOURCE_MANIFEST.json"))
+            need(isinstance(manifest, dict) and
+                 manifest.get("schema") == "stellar-forge.opensearch-managed-source.v1",
+                 "Retain the original source manifest")
+            if verify_members:
+                need(set(names) == set(members) | {"SOURCE_MANIFEST.json"} and
+                     manifest.get("sourceSha256") == fingerprint and
+                     manifest.get("bytes") == total and manifest.get("files") == members,
+                     "The retained source archive belongs to another source edition")
+                for name, expected in members.items():
+                    item = saved.getinfo(name)
+                    need(item.file_size == expected["bytes"],
+                         "The retained source length differs: " + name)
+                    body = saved.read(item)
+                    need(len(body) == expected["bytes"] and digest(body) == expected["sha256"] and
+                         stat.S_IMODE(item.external_attr >> 16) == expected["mode"],
+                         "The retained source archive differs: " + name)
+        return details, manifest
+
+    if legacy_archive.exists() or legacy_archive.is_symlink():
+        _, prior = read_archive(legacy_archive, False)
+        if prior.get("sourceSha256") == fingerprint:
+            archive, assembly = legacy_archive, legacy_assembly
+    elif not legacy_assembly.exists() and not legacy_assembly.is_symlink():
+        archive, assembly = legacy_archive, legacy_assembly
+
+    if not archive.exists() and not archive.is_symlink():
         candidate = directory / (".source-runtime-" + uuid4().hex + ".zip")
         try:
             with zipfile.ZipFile(candidate, "x", compression=zipfile.ZIP_DEFLATED,
                                  compresslevel=6) as output:
-                for name, details in members.items():
+                for name, expected in members.items():
+                    body, actual = regular(target / name)
+                    need(actual == expected, "Staged source changed during publication: " + name)
                     item = zipfile.ZipInfo(name)
-                    item.external_attr = (stat.S_IFREG | details["mode"]) << 16
+                    item.external_attr = (stat.S_IFREG | expected["mode"]) << 16
                     item.compress_type = zipfile.ZIP_DEFLATED
-                    output.writestr(item, (target / name).read_bytes())
+                    output.writestr(item, body)
                 output.writestr("SOURCE_MANIFEST.json", encoded(source_manifest))
             with candidate.open("rb") as stream:
                 os.fsync(stream.fileno())
-            os.link(candidate, archive)
+            try:
+                os.link(candidate, archive)
+            except FileExistsError:
+                pass
         finally:
             with contextlib.suppress(FileNotFoundError):
                 candidate.unlink()
-    raw, details = regular(archive)
-    atomic(directory / "source-assembly.json", encoded({
-        "schema": "stellar-forge.opensearch-source-assembly.v1",
-        "sourceSha256": fingerprint, "sourceFiles": len(members), "sourceBytes": total,
-        "archive": {"filename": archive.name, **details},
-        "runtimeRoot": str(target), "selectedSources": provenance}))
+
+    details, _ = read_archive(archive, True)
+    archive_record = {"filename": archive.name, **details}
+    if assembly.exists() or assembly.is_symlink():
+        prior = json.loads(regular(assembly)[0])
+        need(isinstance(prior, dict) and
+             prior.get("schema") == "stellar-forge.opensearch-source-assembly.v1" and
+             prior.get("sourceSha256") == fingerprint and
+             prior.get("sourceFiles") == len(members) and prior.get("sourceBytes") == total and
+             prior.get("archive") == archive_record,
+             "Retain the original source assembly receipt")
+    else:
+        retain_file(assembly, encoded({
+            "schema": "stellar-forge.opensearch-source-assembly.v1",
+            "sourceSha256": fingerprint, "sourceFiles": len(members), "sourceBytes": total,
+            "archive": archive_record, "runtimeRoot": str(target), "selectedSources": provenance}))
+    descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
     return target, {"files": len(members), "bytes": total, "sourceSha256": fingerprint,
-                    "archive": {"filename": archive.name, **details}}
+                    "archive": archive_record, "assembly": assembly.name}
 
 
 def original_context(args):
@@ -450,7 +505,7 @@ def main(argv=None):
                 "OPENSEARCH_NATIVE_METADATA": str(metadata),
                 "OPENSEARCH_BROWSER_EXECUTABLE": str(args.browser.resolve()),
                 "OPENSEARCH_PLAYWRIGHT_ROOT": str((args.node_modules / "playwright").resolve()),
-                "OPENSEARCH_DEPLOYMENT_SOURCE_ARCHIVE": str(directory / "source-runtime.zip"),
+                "OPENSEARCH_DEPLOYMENT_SOURCE_ARCHIVE": str(directory / assembled["archive"]["filename"]),
                 "PYTHONDONTWRITEBYTECODE": "1"})
             (runtime / "tmp").mkdir(mode=0o700, exist_ok=True)
             save("BRIDGE_READY", engineVersion=ready["version"], index=ready["index"], bridgePid=bridge.pid)
