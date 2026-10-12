@@ -34,6 +34,8 @@ export interface QuickBooksConnectionChoice {
 export interface QuickBooksOAuthRuntime extends OAuthConnectionOptions {
   /** Server-owned transport. Browser requests never select this implementation. */
   fetchImpl?:typeof globalThis.fetch;
+  /** Borrowed native TLS Agent; close it after the provider and registry drain. */
+  agent?:import('node:https').Agent;
 }
 export interface QuickBooksPreviewRequest extends QuickBooksOAuthRuntime {
   registry:OAuthConnectionRegistry;alias:string;profileSha256:string;grantId:string;realmId:string;
@@ -61,6 +63,16 @@ export interface QuickBooksNativeClient {
   searchJournal(plan:unknown,options?:{signal?:AbortSignal}):AsyncGenerator<{response:QuickBooksNativeResponse;rows:unknown[];error:unknown}>;
   readJournal(plan:unknown,journalId:string,options?:{signal?:AbortSignal}):Promise<QuickBooksNativeResponse>;
   createJournal(plan:unknown,options:{requestId:string;bytes:Uint8Array;signal?:AbortSignal}):Promise<QuickBooksNativeResponse>;
+}
+export interface QuickBooksCompanyAuthorization {
+  readonly alias:string;readonly profileSha256:string;readonly grantId:string;
+  readonly realmId:string;readonly environment:QuickBooksEnvironment;
+  headers(value?:{realmId?:string;environment?:QuickBooksEnvironment;signal?:AbortSignal}):Promise<{authorization:string}>;
+  /** Use the exact rejected Authorization value after retaining the provider's 401. */
+  invalidate(authorization?:string):void;
+  snapshot():{authorization:Record<string,unknown>;provider:Record<string,unknown>};
+  /** Borrowed registry and Agent remain with the caller. */
+  close():Promise<unknown>;
 }
 export interface QuickBooksClientOwner {
   readonly client:QuickBooksNativeClient;
@@ -97,6 +109,9 @@ export declare function readQuickBooksSelection(directory:string):Promise<QuickB
 export declare function saveQuickBooksSelection(directory:string,value:{
   registry:OAuthConnectionRegistry;selection:QuickBooksCompanySelection;previewSha256:string;expectedSelectionSha256?:string|null;
 }):Promise<{selection:QuickBooksCompanySelection;duplicate:boolean}>;
+export declare function openQuickBooksCompanyAuthorization(value:QuickBooksOAuthRuntime&{
+  registry:OAuthConnectionRegistry;selection:QuickBooksCompanySelection;
+}):Promise<QuickBooksCompanyAuthorization>;
 export declare function openQuickBooksOAuthClient(value:QuickBooksOAuthRuntime&{
   registry:OAuthConnectionRegistry;selection:QuickBooksCompanySelection;
 }):Promise<QuickBooksClientOwner>;

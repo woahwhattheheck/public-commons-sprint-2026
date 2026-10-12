@@ -121,3 +121,51 @@ All routes retain the original bearer token, loopback host/origin and workspace/
 ResearchWorkspaceClient exposes objectInputs, objectReviews, reviewObjectInput, prepareObjectPipeline, pipelineOperations and pipelineOperation using the same connection and request lifecycle. The Object workspace adds POST /api/research/open for its selected session/revision; it validates the configured original Research identity and returns the private link.
 
 The capture service closes its owned file work when the Research server closes. Its streamed reads and verified file copy observe cancellation; an accepted original preparation retains its normal immutable recovery records.
+
+## Connect the maintained Applications
+
+The original Runtime workspace can save both applications against one selected
+installation containing this Object-to-Research source and the paired provider
+registrations.
+
+1. Create or reopen **Research dossiers** in Applications. Keep its original
+   private Research directory, select the **Original private Object Buyer state**,
+   and select the existing document-pipeline source when processing is needed.
+   Save and start this same Research application.
+2. Research writes `research-connection.json` in its own directory by default
+   when an Object state is selected. An explicit **Private Research connection
+   file** can preserve an existing launcher-selected path. The startup observer
+   checks that the record identifies this Research directory, workspace,
+   instance and selected Object source before Applications exposes its Open link.
+3. Create or edit **Object buyer workspace** in Applications. Select its original
+   Object state and **Original private Research directory**. The connection file
+   defaults to the same `research-connection.json`; select the explicit file if
+   Research uses another path. Save the application, review its start and start
+   the original managed terminal.
+4. Open Object Buyer from Applications. Select the completed file and **Use in
+   Research**. The original buyer reads the private connection record and checks
+   the current Research listener's Object source. Follow **Open the original
+   Research workspace** and review that exact saved delivery.
+5. Prepare, submit, reconcile and receive through the original Pipelines controls
+   described above. The two application records, original object acquisition and
+   provider operation keep their existing identities.
+
+Research can create its one new private directory in an existing private parent
+through the original Applications save operation. Object Buyer requires the
+existing source state and a connection record produced by Research. Connection
+values remain private to the host; application reviews contain file identity and
+the selected paths.
+
+To restart, use **Stop** and **Start** on the same saved Research application.
+It rewrites the same private connection file with its current listener identity.
+An already running Object Buyer reads that file again when **Use in Research** is
+selected. Saved application settings keep the original directory and file path;
+do not replace them with a copied URL or a second workspace. A stopped Research
+listener can be reopened independently of the original acquisition and captured
+processing reviews.
+
+A connection file from a different Research directory is rejected during
+Applications review. If an original input or connection changes between the
+start review and dispatch, reopen the existing start review. The current
+Applications resource key and managed command worker continue to own Start,
+Stop, interruption and retained operation recovery.

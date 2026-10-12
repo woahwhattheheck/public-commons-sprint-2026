@@ -1,6 +1,7 @@
 // MIT. Borrow the original Research HTTP workspace without taking its listener lifecycle.
 import {isAbsolute,resolve} from 'node:path';
 import {Readable} from 'node:stream';
+import {createClinicalTrialsClient} from './clinical-trials-client.mjs';
 import {BuyerError,need,object,parseJson,safeCode} from '../node/store.mjs';
 import {writePortableFile,PORTABLE_LIMIT} from './portable.mjs';
 import {readResearchHostFile,openResearchSource} from './workspace-files.mjs';
@@ -143,6 +144,20 @@ export class ResearchWorkspaceClient{
   async receiveResearchFile(id,{file,sha256,...input}){
     const bytes=await readResearchHostFile(resolve(file),64*1024*1024,{sha256});
     return this.receiveResearchBytes(id,{...input,bytes});
+  }
+  clinicalTrials(){
+    return createClinicalTrialsClient({
+      request:(route,body,options)=>this.#json(route,body,options),
+      download:(route,file,options)=>this.#download(route,file,options),
+      upload:(route,{file,sha256,signal}={})=>this.#run(async()=>{
+        need(typeof file==='string'&&typeof sha256==='string'&&/^[a-f0-9]{64}$/.test(sha256),'CLINICALTRIALS_ORIGINAL_PACKET_REQUIRED');
+        const source=await openResearchSource(resolve(file),128*1024*1024,{sha256});
+        try{return await this.#request(route+parameters({sha256:source.sha256,bytes:source.bytes}),
+          {body:source.stream,method:'POST',signal,headers:{'Content-Type':'application/octet-stream'}},
+          async response=>parseJson(await readResponse(response)));}
+        finally{await source.close();}
+      }),
+    });
   }
   openAlexEditions(){return this.#json('/api/openalex/editions');}
   crossrefOperations(id,options={}){return this.#json(dossierPath(id)+'/crossref/operations'+parameters(options));}
