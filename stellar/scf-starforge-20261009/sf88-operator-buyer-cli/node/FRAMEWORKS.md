@@ -216,6 +216,13 @@ option returns the native outcome without materializing response data.
 The supplied [agent-workflow.mjs](examples/agent-workflow.mjs) operates an
 existing intent. All paths below identify the application's actual private state.
 
+The installed toolkit exposes this example as `starforge buyer-agent-example`.
+Use that command with the same `graph`, `resume`, `status`, `tool` and `export`
+arguments shown below. For example, `starforge buyer-agent-example status`
+accepts the existing runtime, state, intent, checkpoint and thread options.
+The complete Buyer receiving workspace uses `starforge buyer-agent`; see its
+[typed client and agent workflow](../../buyer-runbook/AGENT.md).
+
 ```sh
 node examples/agent-workflow.mjs graph \
   --runtime /srv/stellar/sf88-operator-buyer-cli \
