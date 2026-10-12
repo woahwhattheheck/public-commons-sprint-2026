@@ -130,6 +130,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source
   postgres-workspace                         Build a merchant API from database fields
+  baserow-source                            Discover, retain and publish original Baserow records and files
+  baserow-workspace                         Author Baserow sources, publish and reopen customer delivery
+  baserow-publisher                         Operate the original Baserow dataset publisher
+  baserow-deployment                        Review and stage the original Baserow merchant release
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
