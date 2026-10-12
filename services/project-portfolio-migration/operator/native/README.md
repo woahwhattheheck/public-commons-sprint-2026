@@ -25,11 +25,13 @@ python3 operator/native/receive.py \
   --workspace /absolute/portfolio-receiving/workspace \
   --source /absolute/mpxj/assignment-assignments-project2019-mspdi.xml \
   --output /absolute/portfolio-receiving/output \
-  --operation-id SENSEI-PORTFOLIO-TARGET-RECEIVING-20261012-B9D2-V1 \
+  --operation-id portfolio-target-receiving-001 \
   --node /absolute/existing/node \
   --playwright /absolute/existing/playwright/index.mjs \
   --chromium /absolute/existing/chrome-headless-shell
 ~~~
+
+Keep the same operation ID, workspace and output directory when continuing an existing run.
 
 The Python callable receive(..., native=existing_native) can join an already running original NativeMPXJ instance. It reuses that instance for both original and restored workspaces. The browser temporary directory stays within the same process's private /dev. Source, request progress, outputs and restore records remain at the selected durable output path.
 

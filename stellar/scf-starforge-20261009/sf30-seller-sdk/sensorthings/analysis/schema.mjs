@@ -1,4 +1,5 @@
 // MIT. Pure analysis metadata for the original SensorThings action/schema surface.
+import {MERCHANT_ACTIONS,MERCHANT_READS} from './merchant/schema.mjs';
 export const ANALYSIS_SCHEMA='stellar-forge.sensorthings-analysis-version.v1';
 // OGC SensorThings 1.1, Table 12: these declared result families are numeric.
 export const NUMERIC_OBSERVATION_TYPES=Object.freeze([
@@ -7,6 +8,7 @@ export const NUMERIC_OBSERVATION_TYPES=Object.freeze([
 ]);
 export const ANALYSIS_LIMITS=Object.freeze({streams:20,rows:250000,annotations:1000,versions:2000,pageRows:500});
 export const ANALYSIS_ACTIONS=Object.freeze({
+  ...MERCHANT_ACTIONS,
   'analysis.python.prepare':['editionId','exportId','actor'],
   'analysis.python.components.prepare':['editionId','exportId','analysisVersionId','actor'],
   'analysis.create':['title','editionId','selection','actor','note'],
@@ -34,6 +36,7 @@ export const ANALYSIS_MEANING=Object.freeze({
 });
 
 export const ANALYSIS_READS=Object.freeze({
+  merchant:MERCHANT_READS,
   overview:'/api/analysis',
   project:'/api/analysis/projects/<projectId>',
   version:'/api/analysis/versions/<versionId>',

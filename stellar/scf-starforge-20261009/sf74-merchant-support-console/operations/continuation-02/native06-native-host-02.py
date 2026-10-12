@@ -139,9 +139,14 @@ def retain_predecessor(path, work):
   old_manifest=json.loads(payload["source/SOURCE-MANIFEST.json"])
   if sha(payload["source/SOURCE-MANIFEST.json"])!=PREDECESSOR_SOURCE_SHA:
    raise ValueError("Original source receipt differs")
-  expected={"source/"+row["path"] for row in old_manifest["files"]}|{"source/SOURCE-MANIFEST.json"}
+  # The original receiver retained two source receipts alongside its 156 selected files.
+  receipt_files={
+   "source/SOURCE-DEPENDENCIES.json":{"bytes":243,"sha256":"6f9a1c0387f6c75411651a074e9fcb87ea77d2869e4bb0f2aff06699b03919c6"},
+   "source/SOURCE-RECEIVED.json":{"bytes":433,"sha256":"878ba1a436be8fb6131e585387601b6d25dee1b778f7682983f5b6cad7417765"}}
+  expected={"source/"+row["path"] for row in old_manifest["files"]}|{"source/SOURCE-MANIFEST.json"}|set(receipt_files)
   if {n for n in names if n.startswith("source/")}!=expected:
    raise ValueError("Original selected source set differs")
+  for name,row in receipt_files.items():check(payload[name],row)
   for row in old_manifest["files"]:
    body=payload["source/"+row["path"]];check(body,row)
    if hashlib.sha1(b"blob "+str(len(body)).encode()+b"\0"+body).hexdigest()!=row["blob"]:

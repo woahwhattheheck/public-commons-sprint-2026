@@ -33,7 +33,7 @@ def add_parser(commands):
     resume = actions.add_parser("resume", help="Explicitly continue the original retained reconciliation request")
     resume.add_argument("id")
     resume.add_argument("--workspace-id", required=True)
-    for kind in ("groups", "rows", "decisions", "changes"):
+    for kind in ("groups", "rows", "fields", "decisions", "changes"):
         item = actions.add_parser(kind)
         item.add_argument("id", help="Run ID, or immutable report ID for changes")
         item.add_argument("--offset", type=int, default=0)
@@ -41,6 +41,10 @@ def add_parser(commands):
         if kind == "groups":
             item.add_argument("--category")
             item.add_argument("--duplicates", choices=("true", "false"))
+        if kind == "fields":
+            item.add_argument("--group-id", type=int)
+            item.add_argument("--column-name")
+            item.add_argument("--state", help="Exact retained numeric/exact/missing/duplicate comparison state")
         if kind == "rows":
             item.add_argument("--side", choices=("source", "target"))
             item.add_argument("--status", choices=("INCLUDED", "QUARANTINED", "EXCLUDED_WINDOW"))
@@ -83,11 +87,13 @@ def dispatch(workspace, args):
         return native.perform("pairs" if action == "save-pair" else action, _body(args.request_file))
     if action == "resume":
         return native.resume(args.id, args.workspace_id)
-    if action in {"groups", "rows"}:
+    if action in {"groups", "rows", "fields"}:
         options = {"offset": args.offset, "limit": args.limit}
         if action == "groups":
             options.update(category=args.category,
                            duplicates=None if args.duplicates is None else args.duplicates == "true")
+        elif action == "fields":
+            options.update(group_id=args.group_id, column_name=args.column_name, state=args.state)
         else:
             options.update(side=args.side, status=args.status, group_id=args.group_id)
         return native.grid(args.id, action, **options)

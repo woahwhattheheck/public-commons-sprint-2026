@@ -16,6 +16,7 @@ import uuid
 from portfolio.storage import canonical, file_identity, require
 from .measures import CONTRIBUTION_HEADERS, TOTAL_HEADERS, decimal_value, exact_sum
 from .projection import table_headers
+from .timephased_contract import PRIMARY as TIMEPHASED_PRIMARY
 
 EXTRA_HEADERS = {
     "measure_totals": list(TOTAL_HEADERS),
@@ -32,6 +33,7 @@ PRIMARY = {
     "companion_links": ("link_id",),
     "measure_contributions": ("project_key", "edition_id", "family", "source_key", "metric"),
 }
+PRIMARY.update(TIMEPHASED_PRIMARY)
 FUNCTIONS = frozenset({
     "abs", "coalesce", "ifnull", "nullif", "lower", "upper", "length", "substr", "substring",
     "trim", "ltrim", "rtrim", "replace", "instr", "like", "glob", "count", "min", "max",

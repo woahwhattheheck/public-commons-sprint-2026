@@ -7,3 +7,15 @@ a{color:#30373f;text-decoration:underline;text-underline-offset:3px}button{backg
 @media print{.sidebar,.topbar,.toolbar,.pager,.filters,#notice,#storage-notice,.tabs,button{display:none!important}.shell{display:block}main{padding:0;max-width:none}.panel{break-inside:avoid;box-shadow:none;border-color:#b5b5b5}.table-scroll{overflow:visible}th{background:#eee}a{color:#111}}
 
 .native-marker{display:inline-block;border:1px solid #c5c9cc;border-radius:2px;padding:0 4px;font-size:10px;line-height:1.6;font-style:normal;color:#50565b;background:#f2f3f4;white-space:nowrap}
+
+.comparison-rule{padding:10px 0;border-bottom:1px solid var(--line);margin-bottom:12px}
+.comparison-rule>summary{font-weight:650;cursor:pointer;margin-bottom:12px}
+.comparison-rule>.fields{grid-template-columns:repeat(2,minmax(180px,1fr))}
+.comparison-rule>.fields>label:last-child{grid-column:1/-1}
+.comparison-rule>label{max-width:700px}
+.comparison-formula{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;background:var(--soft);border:1px solid var(--line);padding:10px 12px;margin-top:14px;overflow-wrap:anywhere}
+.comparison-summary{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.comparison-summary>.table-scroll{margin-top:12px}
+.field-inspection{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+.field-inspection>.table-scroll td:first-child{min-width:160px;max-width:260px}
+@media(max-width:740px){.comparison-rule>.fields{grid-template-columns:minmax(220px,1fr)}.comparison-rule>.fields>label:last-child{grid-column:auto}.comparison-summary .value{min-width:115px}}

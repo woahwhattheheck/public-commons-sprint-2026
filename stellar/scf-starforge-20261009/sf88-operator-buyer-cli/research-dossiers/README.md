@@ -478,6 +478,12 @@ The installed `research-template-exchange` command and the original Research wor
 
 Open the current dossier's Template exchange view, or use the [complete operating guide](template-exchange/README.md). The [receiving guide](template-exchange/native/RECEIVING.md) continues the original study and customer programme, including the authored workbook, actual returned file, whole source-bound review and independent receiving. Existing Python and JavaScript customer workflows use the same dossier history.
 
+## Customer quotation, evidence work and realized delivery
+
+Open **Customer quotations** to operate the complete original commercial case and quote desk in this Research workspace. Receive saved pricing and supplier-cost editions, publish a quotation, carry its reviewed scope into the customer brief, record the actual customer response, and enroll a frozen delivery through the original merchant. The realized report retains the exact native order, Buyer receiving, customer history and selected complete pricing files.
+
+The [customer quotation guide](customer-quotes/OPERATING.md) covers the browser, typed client, durable terminal operations, complete file handover and original request recovery. The launcher accepts `--customer-quotes-host` for an existing case store and original SF97 pricing profiles; the ordinary Paid delivery configuration selects the actual merchant and Buyer. Full working forms and original commercial drafts stay available between sessions.
+
 ## Paid customer delivery and receiving
 
 [Paid delivery](customer-commerce/OPERATING.md) publishes an original frozen customer delivery through an existing Stellar merchant, carries the complete archive through the original Buyer approval and paid-file workflow, and receives the editable dossier, original source workspace and four exact frozen reports. Open **Paid delivery** in this workspace or use `research-client commerce-help` / the installed `research-commerce` command.

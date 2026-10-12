@@ -176,15 +176,15 @@ class Desk:
                     if selected.fragment:
                         raise TargetError("HTTP_PATH", "Invalid local path.")
                     path = selected.path
-                    if path in ("/", "/assets/app.js", "/assets/style.css", "/assets/archive.js", "/assets/companions.js"):
+                    if path in ("/", "/assets/app.js", "/assets/style.css", "/assets/archive.js", "/assets/companions.js", "/assets/timephased.js"):
                         if self.headers.get("Host") != desk.allowed_host:
                             raise TargetError("HTTP_HOST", "Open the exact local operator address.")
                         filename = {"/": "index.html", "/assets/app.js": "app.js",
                                     "/assets/style.css": "style.css", "/assets/archive.js": "archive.js",
-                                    "/assets/companions.js": "companions.js"}[path]
-                        raw = ((ARCHIVE_ASSETS if filename in ("archive.js", "companions.js") else ASSETS) / filename).read_bytes()
+                                    "/assets/companions.js": "companions.js", "/assets/timephased.js": "timephased.js"}[path]
+                        raw = ((ARCHIVE_ASSETS if filename in ("archive.js", "companions.js", "timephased.js") else ASSETS) / filename).read_bytes()
                         media = {"index.html": "text/html", "app.js": "text/javascript",
-                                 "style.css": "text/css", "archive.js": "text/javascript", "companions.js": "text/javascript"}[filename] + "; charset=utf-8"
+                                 "style.css": "text/css", "archive.js": "text/javascript", "companions.js": "text/javascript", "timephased.js": "text/javascript"}[filename] + "; charset=utf-8"
                         self._headers(200, len(raw), media)
                         self.wfile.write(raw)
                         return

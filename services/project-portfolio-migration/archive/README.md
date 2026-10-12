@@ -28,6 +28,12 @@ Totals use Decimal on the original numeric text, with precision expanded for the
 
 Save the cohort, review its complete projection, then publish that exact review with an operator name and delivery decision. An edited cohort requires a following review. The publication retains the original review digest, selected editions, source model identities, table row hashes and reporting approval.
 
+## Native period reporting
+
+The same cohort can include original MPXJ assignment work, cost and material values for explicit local reporting periods. Enable **Include native period reporting**, read the selected field definitions and choose periods/series before saving. The original native runtime calculates the exact selected edition; complete raw spans, effective calendars, dated resource rates, values/nulls and grouped totals travel with the archive. Portable receiving verifies that saved calculation and every projected row without a JVM.
+
+[TIMEPHASED.md](TIMEPHASED.md) explains the full native period selection, assignment grain, units/currency/material grouping, table joins, exact SQL and original receiving continuation. Existing scalar metrics retain their selected grain and complete contribution tables.
+
 ## The delivered archive
 
 The complete ZIP includes:

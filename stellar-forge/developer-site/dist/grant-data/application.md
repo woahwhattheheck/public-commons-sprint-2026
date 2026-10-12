@@ -89,7 +89,6 @@ The complete release also underwent an operator edit, recovered export and separ
 A captioned 3-minute-32-second product/team film follows a native query, saved terms, one 0.005-testnet-XLM purchase, complete result, download and reopening. The source and operating documentation are maintained together with the public product.
 
 ## Three funded tranches and six priced deliverables
-
 Day zero is actual award acceptance. The planning rate is **$95/hour**. The implementation and acceptance structure follows the [Build budget and deliverable guidelines](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines). Each package funds remaining development of Stellar-integrated product capabilities and their deployment in the selected independent services.
 
 |Tranche and deadline|Funded implementation|Hours / cost|Completion criterion|
@@ -107,8 +106,21 @@ Tranche costs are **$11,400 / $11,400 / $15,200**. The allocation is 320 enginee
 
 Completed pre-award work is the starting product. Each remaining adaptation is assigned once to a grant package or a separately commissioned workorder. Existing implementation, general operations, sales, purchase principal and network fees have separate funding. The usage targets include no purchase subsidy. Existing compute is the starting resource; incremental service reserve and hosted Actions budget are $0. Each deployment workorder names the host and the party responsible for service charges and purchases.
 
-## Threat response and outcome measurement
+### Existing components and funded deployment changes
+The six packages extend the maintained product in the two selected installations. Each receiving package includes the usable application and its original configuration, data and operating procedure. The component map below identifies the starting source and the remaining funded change.
 
+|Package|Maintained starting component|Funded change and receiving result|
+| --- | --- | --- |
+|T1 resource integration — 80 hours / $7,600|Seller workspace, native HTTP/MCP seller, source adapters and managed distribution.|Adapt the selected source and consumer together. Deliver the exact operation, source edition, typed request/result, complete pagination or file output and selected Stellar payment terms in the merchant and buyer applications.|
+|T1 authority and handover — 40 hours / $3,800|Merchant release store, source/terms change and withdrawal, buyer saved output and receiving workspaces.|Connect the actual merchant roles and receiving engineer. Deliver the source/terms change or withdrawal, preserved acquired output and a second operator who can reopen and operate each installation.|
+|T2 provider/ledger deployment — 70 hours / $6,650|Native Stellar facilitator, buyer signer and spend governor, independent transfer reconciliation and merchant settlement accounting.|Implement the selected providers’ actual registration and wire differences for the same useful service. Deliver two-provider operation with each original approval, transfer, complete result and fulfillment joined in the existing applications.|
+|T2 threat response — 50 hours / $4,750|Existing threat model, operations telemetry, buyer inbox and merchant delivery/recovery records.|Bind observations, notifications and responses to the two real installations; repair material integration findings. Deliver the two stated customer recovery journeys and receiving of the same financial and output state.|
+|T3 mainnet rollout — 90 hours / $8,550|Native payment runtime, versioned merchant distribution, fleet release/rollback and recurring customer applications.|Configure the actual mainnet asset, parties, host and provider policies, repair deployment differences and publish the selected release. Deliver recurring independent use with complete output from both merchant installations.|
+|T3 recovery and handover — 70 hours / $6,650|Original backup/receiving, buyer and merchant continuity, release history and support/accounting workspaces.|Integrate the selected supervision and off-host retention; implement receiving-host configuration and post-backup reconciliation. Deliver the restored customer application, measured recovery, independent support case and maintainable release handover.|
+
+A source change is assigned to one package and one selected installation requirement before it enters the estimate. A reusable fix belongs to the public component; customer data, signing material and private configuration stay with the deployment. Package completion includes the corresponding documentation and receiving changes so the next operator can use the delivered capability.
+
+## Threat response and outcome measurement
 The T2 threat model and monitoring plan are included in the 50-hour/$4,750 response package. Each installation records its source edition, merchant/buyer authority, network, facilitator, protected records, observation sources, reviewed thresholds, notification destinations and named primary/backup responders.
 
 It covers changed offers or approvals, incorrect payment/output attribution, unauthorized access, interrupted delivery, lost observation and restoration of the wrong generation. The customer operates an interrupted settled purchase and a merchant-delivery failure. Both retain notification and acknowledgment, financial and delivery states, response/recovery times, corrections and the receiving engineer’s reopening after restart. Monitoring gaps remain visible until observation resumes.
@@ -127,8 +139,21 @@ The seven- and fourteen-day cohorts retain all attempted, completed, partial, un
 
 For each installation, compare the prior task, first installed execution and recurring use on the same source population or period and expected output: active effort, manual corrections, time to useful output, acceptance and unresolved work. Pricing measurements retain quantity, period, counting basis and supplier-cost coverage. Commercial measures use agreed scope, accepted milestones, issued fees, actual collections and support effort from the original workorder/accounting records.
 
-## Delivery capacity, payment timing and sustainability
+### Installed responsibility and response
+The installation workorder records the responsible operator at each boundary. These responsibilities travel with the maintained service when its receiving engineer changes.
 
+|Boundary|Responsible operator and working handover|
+| --- | --- |
+|Source, offer and fulfillment|The merchant selects the authorized source, publication and terms. Its operator retains the release history, full delivery result and original fulfillment/accounting case.|
+|Approval, signing and aggregate spend|The buyer operator supplies the existing signer or trusted provider and spending policy. The handover preserves the approved request, reservation and original dispatch; secret references are configured through the receiving host’s existing custody.|
+|Facilitator and network|The selected facilitator operator owns its signing capacity, fee policy and service operation. Our integration retains its actual supported metadata, network/RPC observations and original settlement result; a third-party provider keeps its own administrative boundary.|
+|Observation, recovery and receiving|Each installation names primary and backup responders, the supported observation sources and notification/acknowledgment route. The receiving engineer obtains the selected release, protected state, complete files and the original open cases.|
+
+The existing threat model supplies ten threat decisions and eight monitoring/response definitions. Deployment binds them to actual sources, numerical thresholds and responders inside the same T2 package. Process availability, provider readiness, financial outcome and full delivery remain separate observations. A transfer that settled before an interrupted response is recovered through its original entitlement or delivery session. An uncertain transfer is reconciled before any further financial action.
+
+The acceptance report includes the actual installation coverage and unresolved findings with the two original recovery cases. Public grant reporting uses the outcome counts, timings and sanitized source/version references; request bodies, account credentials, customer files and populated response destinations remain in the operator’s protected workspace.
+
+## Delivery capacity, payment timing and sustainability
 Bryce is accountable for allocating contributors and operating resources to the six packages. The retained resource study uses 400 hours over 150 days. Its lowest examined timely allocation is 25 engineering hours plus eight integration/handover hours per week. This is a modeled allocation; named contributor availability and payment arrangements are being finalized against the actual award date.
 
 SCF’s four payments would be **$3,800 at award acceptance, then $7,600, $11,400 and $15,200 after the respective deliverables are approved**. These payment amounts differ from tranche delivery costs. The USD-equivalent award is paid in XLM; the applicable settlement price is the value reported on the actual payment day, under the [Official Rules](https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions).
@@ -140,6 +165,15 @@ The resource model makes the working-capital requirement explicit. With its labo
 Each tranche completion form is due within 90 calendar days of the preceding payment. For an anticipated delay, we will obtain SDF’s written acknowledgment before the original deadline and use a revised deadline only when confirmed in writing.
 
 Sustainability comes from reusable open-source deployment and receiving capabilities, paid customer-specific implementation and separately scoped care. Workorders retain delivery effort, included corrections, support responsibilities, acceptance and collections. Reusable work completed before award is removed from the remaining estimate, keeping the grant focused on the agreed prospective Stellar development.
+
+### Maintainable release and support handover
+The day-150 handover gives each independent operator one source-versioned release, its dependency and license inventory, installation and upgrade instructions, the selected configuration references, and the original customer data/state receiving procedure. It also names the host owner, maintainer, primary and backup responder, service-cost owner and separately agreed care scope. These are deliverables of the existing rollout and recovery packages.
+
+Updates begin from the deployed source and preserve the merchant’s public resource identity, buyer records and state directories outside the installed package. The operator reviews changed routes, schemas and payment terms, stages the replacement and drains admitted work before switching traffic. A rollback selects a retained release while preserving later purchases and fulfilled output. A receiving-host restore reconciles operations after the backup point before continuing unfinished work.
+
+During funded delivery, dependency or protocol changes are assessed against the selected Stellar SDK, x402 wire format, token/account behavior and the installations that use them. Necessary compatibility corrections return to the maintained source with the affected operating example and migration instructions. The selected provider’s sponsored-fee declaration, authorization lifetime, accepted payment flow and transaction payload remain explicit parts of that compatibility review.
+
+At handover, the maintainer receives known limitations, open support cases and the continuation procedure for each one. The installed release and usable customer output remain available for self-operation. Paid care is separately scoped around the actual hosting, response and upgrade responsibilities; the grant’s 400 hours and $38,000 fund the prospective six-package delivery described here.
 
 ## Applicant, experience and submission
 

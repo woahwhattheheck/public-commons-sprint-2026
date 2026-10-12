@@ -44,6 +44,8 @@ const WORDS = {
     maximum:'A handover supports up to 64 captions.', reloadAsk:'Reload the saved handover and discard these local changes?',
     sourceError:'The original match is unavailable.', storage:'Browser storage is unavailable. Download the handover before closing.',
     changedTeam:'Source choices changed. Authored caption text is preserved.', loaded:'Match opened.',
+    videoError:'The browser could not open this recording.',
+    actions:{loss:'Possession loss', pressure:'Pressure action', regain:'Ball recovery', pass:'Pass', shot:'Shot', clock:'Match clock'},
   },
   es: {
     player:'Reproductor', coach:'Análisis del entrenador', language:'Idioma', eyebrow:'ESPACIO DE EMISIÓN',
@@ -78,6 +80,8 @@ const WORDS = {
     maximum:'Un guion admite hasta 64 subtítulos.', reloadAsk:'¿Recargar el guion guardado y descartar estos cambios locales?',
     sourceError:'El partido original no está disponible.', storage:'El almacenamiento no está disponible. Descarga el guion antes de cerrar.',
     changedTeam:'Selección actualizada. Se conserva el texto editado.', loaded:'Partido abierto.',
+    videoError:'El navegador no pudo abrir esta grabación.',
+    actions:{loss:'Pérdida de posesión', pressure:'Acción de presión', regain:'Recuperación', pass:'Pase', shot:'Disparo', clock:'Reloj del partido'},
   },
 };
 let libraryKey, persistent = true;
@@ -107,7 +111,8 @@ function forget(id) { try { localStorage.removeItem(DRAFT + id); } catch {} }
 function status() {
   if (busy) return notify(words().working);
   notify(conflict ? words().conflict : !persistent ? words().storage :
-    dirty ? words().local : current && !current.archive.canEdit ? words().shared : words().saved);
+    dirty ? words().local : current && !current.archive.canEdit ? words().shared :
+    current?.archive.review.broadcast ? words().saved : words().ready);
 }
 function changed() { dirty = true; conflict = false; editVersion++; remember(); status(); updateCounts(); }
 async function request(path, method = 'GET', body) {
@@ -245,7 +250,7 @@ function renderCues() {
     if (source) {
       const detail = node('details'), summary = node('summary', W.evidence), list = node('ol', undefined, 'evidence');
       for (const item of source.evidence || []) list.append(node('li',
-        clock(item.second) + ' · ' + item.id + ' · ' + item.team + ' · ' + item.player + ' · ' + item.type));
+        clock(item.second) + ' · ' + item.id + ' · ' + item.team + ' · ' + item.player + ' · ' + W.actions[item.type]));
       if (source.watermark) list.append(node('li', W.watermark + ' ' + clock(source.watermark.second) + ' · ' + source.watermark.id));
       detail.append(summary, list); row.append(detail);
     }
@@ -302,15 +307,15 @@ async function openMatch(id, {restoreDraft = true} = {}) {
     updateCollection(value.archive);
     history.replaceState(null, '', '/broadcast-handover#' + new URLSearchParams({archive: id}));
     renderEditor();
+    notify(retained ? words().savedDraft : words().loaded, 'deliveryStatus');
     if (dirty) {
       try {
         const projected = await request('/api/broadcast-handover', 'POST', {id, broadcast: draft});
         if (own === generation) { current.report = projected.report; current.candidates = projected.candidates; renderEditor(); }
-      } catch (error) { notify(error.message); }
+      } catch (error) { notify(error.message, 'deliveryStatus'); }
     }
-    notify(retained ? words().savedDraft : words().loaded, 'deliveryStatus');
     return true;
-  } catch (error) { notify(error.message, current ? 'status' : 'collectionStatus'); return false; }
+  } catch (error) { notify(error.message, current ? 'deliveryStatus' : 'collectionStatus'); return false; }
   finally { if (own === generation) setBusy(false); }
 }
 async function save({copy = false} = {}) {
@@ -435,7 +440,7 @@ el('video').onloadedmetadata = () => {
   el('duration').value = draft.recording.durationSeconds; changed(); updateVideo(); notify(words().videoReady, 'deliveryStatus');
 };
 el('video').ontimeupdate = updateVideo;
-el('video').onerror = () => { if (!el('video').hidden) notify('The browser could not open this recording.', 'deliveryStatus'); };
+el('video').onerror = () => { if (!el('video').hidden) notify(words().videoError, 'deliveryStatus'); };
 el('downloadMatch').onclick = () => void download('match');
 el('downloadHtml').onclick = () => void download('html');
 el('downloadVtt').onclick = () => void download('vtt');
