@@ -1,12 +1,12 @@
 {
   "schema": "scc-workbench/source-release/v2",
   "package": "scc-standards-workbench",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "identity_algorithm": "git-blob-sha1",
   "source_files": [
     {
       "path": "__init__.py",
-      "git_blob_sha": "eb2e71aead9ecc6c4acb4b81e4b04052d8cf1e70",
+      "git_blob_sha": "6690d20fa1364d1946f7e5d0b5490b3c9d0636cc",
       "bytes": 81
     },
     {
@@ -21,13 +21,13 @@
     },
     {
       "path": "CONSULTATION.md",
-      "git_blob_sha": "7e0687d02565c30291bc43edc1fc15dfa9a421c7",
-      "bytes": 15249
+      "git_blob_sha": "a63b8f52f16ef96379e512a2aaf902e668cfee1b",
+      "bytes": 16489
     },
     {
       "path": "consultation.py",
-      "git_blob_sha": "4787fbc37500fbbe130a908fc903a3b9096f4a47",
-      "bytes": 55283
+      "git_blob_sha": "96b292da99f63fd5839a4c5adb7d872dc1aca6d2",
+      "bytes": 54079
     },
     {
       "path": "delivery/consultation-config.example.json",
@@ -36,13 +36,13 @@
     },
     {
       "path": "delivery/CONSULTATION-RECEIVING.md",
-      "git_blob_sha": "fd915a7190e7a5683858bc31930a0e8134cb6279",
-      "bytes": 6183
+      "git_blob_sha": "8dcfc6e724e926735f5a825c878ac44e81e17cf2",
+      "bytes": 7032
     },
     {
       "path": "delivery/consultation-receiving.mjs",
-      "git_blob_sha": "797359fb6e74bf83ad8cde64c483bd1151c060e2",
-      "bytes": 26041
+      "git_blob_sha": "960ad723b56cc5dc09113902f82e434ce49f4508",
+      "bytes": 31793
     },
     {
       "path": "demo.py",
@@ -161,13 +161,13 @@
     },
     {
       "path": "pyproject.toml",
-      "git_blob_sha": "5cf14534ed0f0ce1e3f4c2c7fe0a3abd16ae6fd0",
-      "bytes": 826
+      "git_blob_sha": "850455ca4e96bc4df9b3c9c8e85b632f2d2ee844",
+      "bytes": 839
     },
     {
       "path": "README.md",
-      "git_blob_sha": "5140cb2c6eecee90f72a30e6ef3454e754e449fe",
-      "bytes": 20160
+      "git_blob_sha": "3d45fe78506009388f733c5a75c00f5aee9e1239",
+      "bytes": 20682
     },
     {
       "path": "server.py",
@@ -191,13 +191,13 @@
     },
     {
       "path": "web/consultation.css",
-      "git_blob_sha": "8293f36296b8cfb0eb283989150f8550f0ab1c93",
-      "bytes": 4261
+      "git_blob_sha": "640d1de8d0ff0fe65c61e4ac2587b1f5d4ddc974",
+      "bytes": 17610
     },
     {
       "path": "web/consultation.js",
-      "git_blob_sha": "d6618116e0aadcb094f94d0b5c739aa019551a68",
-      "bytes": 33693
+      "git_blob_sha": "cc318b7d053ff1eeeb6a9fbe7edd7d4febc26029",
+      "bytes": 52994
     },
     {
       "path": "web/index.html",
@@ -205,19 +205,24 @@
       "bytes": 2538
     },
     {
+      "path": "web/reviewer-guide.txt",
+      "git_blob_sha": "02ca525a6cdf2de247b7e0c9df4c4fd1072d3ded",
+      "bytes": 10105
+    },
+    {
       "path": "web/reviewer.css",
-      "git_blob_sha": "d871de688f85977d768868d6a0d411248ccb7f9c",
-      "bytes": 5054
+      "git_blob_sha": "c3d4cb6d3641ff7f4efd06f4f6c317038da231e5",
+      "bytes": 10605
     },
     {
       "path": "web/reviewer.html",
-      "git_blob_sha": "0fbd7bcd5840698ed89600c17b498dd4fc677004",
-      "bytes": 2012
+      "git_blob_sha": "958e8f9adf6d6ef6f9acfe78eec54e82fb33f1ca",
+      "bytes": 2571
     },
     {
       "path": "web/reviewer.js",
-      "git_blob_sha": "b71d66f78ce298dd069e17b75f3cbf694235f3d1",
-      "bytes": 22255
+      "git_blob_sha": "c1334d025688891bbcce80b4b44a7b6b83845df6",
+      "bytes": 47955
     },
     {
       "path": "web/style.css",
@@ -232,12 +237,12 @@
   ],
   "execution": {
     "initial_feature_imports_and_javascript_checks": "completed on the first feature cut",
-    "consultation_full_browser_and_installed_return_journey": "authored, not yet executed",
+    "consultation_full_browser_and_installed_return_journey": "The complete original controller, saved-case continuation and desktop/phone package views are provided in delivery/consultation-receiving.mjs.",
     "prior_publisher_0_1_1": "completed document generation and all 81 rendered-page visual review"
   },
   "notes": [
-    "The original source data, license notices and the immutable 0.1.1 downloads are retained.",
-    "The receiving controller uses the same retained project and records explicit source transitions for any necessary correction.",
-    "This manifest records source identities. It is not an external digital signature or an assertion that the new browser journey has executed."
+    "The original source data, license notices and previous release downloads are retained.",
+    "The operator and offline recipient use the existing packet, return, amendment and disposition records.",
+    "The receiving controller resumes the same saved project and records the selected source when a correction is applied."
   ]
 }
