@@ -211,7 +211,7 @@ export function makeServer(options = {}) {
       }
       if (req.method === 'GET' && url.pathname === '/api/export') {
         const mode=validateMode(url.searchParams.get('mode'));
-        return response(res,200,await workbench(mode).exportCase(url.searchParams.get('case_id')));
+        return response(res,200,await workbench(mode).exportCase(url.searchParams.get('case_id'),url.searchParams.has('revision')?Number(url.searchParams.get('revision')):null));
       }
       if (req.method === 'GET' && url.pathname === '/api/operation') {
         const mode=validateMode(url.searchParams.get('mode'));

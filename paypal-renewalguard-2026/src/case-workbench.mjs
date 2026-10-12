@@ -142,8 +142,9 @@ export class CaseWorkbench {
     if (!allReferences(head.value).some(x=>x.sha===sha)) fail('document_not_found','Document is not part of this case',404);
     return {sha,document:await this.store.get(sha)};
   }
-  async exportCase(id) {
-    const head=await this.caseHead(id), documents=[];
+  async exportCase(id, version = null) {
+    const current=await this.caseHead(id);
+    const head=version===null?current:await this.store.readVersion('cases',id,version), documents=[];
     for (const ref of allReferences(head.value)) documents.push({sha:ref.sha,document:await this.store.get(ref.sha)});
     const payload={schema:'renewalguard-case-handover-v1',scope:this.scope,case_revision:head.version,
       case_journal_sha:head.sha,case:head.value,documents};
@@ -156,7 +157,7 @@ export class CaseWorkbench {
     const value=head.value;
     return {found:true,request_id:requestId,action:value.action,case_id:value.case_id || null,input_sha256:value.input_sha256,
       state:value.state,phase:value.phase,started_at:value.started_at,updated_at:value.updated_at,
-      active:this.running.has(requestId) || (value.state==='working' && value.worker?.id!==this.workerId && await workerAlive(value.worker)),result:value.result || null,error:value.error || null,
+      active:value.state==='working' && (this.running.has(requestId) || (value.worker?.id!==this.workerId && await workerAlive(value.worker))),result:value.result || null,error:value.error || null,
       progress:value.progress || null};
   }
   async resume(requestId) {
