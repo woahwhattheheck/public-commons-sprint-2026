@@ -126,3 +126,7 @@ The first request has schema `stellar-forge.groundwater-report-journey.v1`, stab
 It writes the frozen original request before any publication. No solver or payment dispatcher is included. Add `receiving` only after the original buyer returns: handoffFile, responseFile, jobId, decision, reason, and optional explicitly reviewed case/deployment/purchase/version/preview hash. Existing input fields stay unchanged. The report ZIP and exact buyer intent must match the first prepared product.
 
 The complete result contains native publication, original buyer job/payment observations, attributed file decision, optional native Operations source link, full desk archive, independent original restore/reopen and explicit no-solver/no-buyer-payment-dispatch facts.
+
+## Managed Applications
+
+The source-owned `groundwater-reports` application provider registers kind `groundwater-report-desk` and command `groundwater-report-managed`. The existing Applications API owns review/save/start/stop/recovery; no report HTTP route is added. Its managed command verifies the immutable desk marker, optional native scientific database identity, selected interpreter and direct selected/executed source before opening the existing authenticated Report Desk server. `reportStartup` validates the same original run and reads its actual authenticated state before the original observer retains a private URL. See [INSTALLATION.md](INSTALLATION.md) and [managed-receiving.schema.json](managed-receiving.schema.json) for the complete installed receiving continuation.
