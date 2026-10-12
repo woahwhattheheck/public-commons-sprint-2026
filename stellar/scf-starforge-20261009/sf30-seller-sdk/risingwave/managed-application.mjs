@@ -20,6 +20,7 @@ const field = (name, label, type = 'path', required = false, description = '') =
   ({ name, label, type, required, description });
 
 export const RISINGWAVE_APPLICATION_SOURCE_FILES = Object.freeze([
+  "package.json",
   "application-provider.mjs",
   "managed-application.mjs",
   "common.mjs",
@@ -32,6 +33,7 @@ export const RISINGWAVE_APPLICATION_SOURCE_FILES = Object.freeze([
   "cursor.mjs",
   "mirror.mjs",
   "capture.mjs",
+  "event-log.mjs",
   "subscription.mjs",
   "source.mjs",
   "cli.mjs",

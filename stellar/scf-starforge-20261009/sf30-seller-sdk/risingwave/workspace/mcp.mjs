@@ -9,7 +9,7 @@ import { MCP_VERSION } from '../../../../../stellar-forge/mcp-paid-agent/http-to
 import { createRisingWaveWorkbenchClient } from './client.mjs';
 import { RISINGWAVE_TOOLS,callRisingWaveTool } from './tools.mjs';
 const plain=value=>value&&typeof value==='object'&&!Array.isArray(value);
-const docs='RisingWave tools operate the same running browser workspace. Save a source revision, discover native relations and existing subscriptions, compile a keyed report with typed probe values, then preview or capture it with a stable captureId. Read original capture status after a lost response. Native FULL completion and changes use the original cursor barrier and retained checkpoint. Create subscriptions through the original saved review and request ID. All seven capture files, including events, checkpoint and materialized SQLite state, are available in complete SHA-pinned ranges and through receive_capture. Dataset publication uses the original source/plan/extract/review/publish and schedule actions. Customer requests keep the exact snapshot, payment choice and intent ID.';
+const docs='RisingWave tools operate the same running browser workspace. Save a source revision, discover native relations and existing subscriptions, compile a keyed report with typed probe values, then preview or capture it with a stable captureId. Read original capture status after a lost response. Native FULL completion and changes use the original cursor barrier and retained checkpoint. Resume interrupted reads under their original capture IDs. Compare complete editions by unique keys; comparisons retain every added, removed and changed row with four-file receiving. Create subscriptions through the original saved review and request ID. All seven capture files, including events, checkpoint and materialized SQLite state, are available in complete SHA-pinned ranges and through receive_capture. Dataset publication uses the original source/plan/extract/review/publish and schedule actions. Customer requests keep the exact snapshot, payment choice and intent ID.';
 export async function startRisingWaveMcp({url,connectionFile,environment=process.env,input=process.stdin,output=process.stdout}={}){
   const client=await createRisingWaveWorkbenchClient({url,connectionFile,environment});
   await client.state();
@@ -40,6 +40,7 @@ export async function startRisingWaveMcp({url,connectionFile,environment=process
           }else if(rpc.method==='resources/list')result={resources:[{uri:'risingwave://workspace/status',name:'Current RisingWave workbench',mimeType:'application/json'},{uri:'risingwave://workspace/guide',name:'RisingWave workflow',mimeType:'text/plain'}]};
           else if(rpc.method==='resources/templates/list')result={resourceTemplates:[
             {uriTemplate:'risingwave://captures/{captureId}',name:'Original native capture',mimeType:'application/json'},
+            {uriTemplate:'risingwave://comparisons/{comparisonId}',name:'Complete retained edition differences',mimeType:'application/json'},
             {uriTemplate:'risingwave://publications/{publicationId}',name:'Original dataset publication',mimeType:'application/json'},
             {uriTemplate:'risingwave://revisions/{revision}',name:'Original source revision',mimeType:'application/json'}]};
           else if(rpc.method==='resources/read'){
@@ -47,6 +48,7 @@ export async function startRisingWaveMcp({url,connectionFile,environment=process
             if(uri==='risingwave://workspace/status')value=await client.state();
             else if(uri==='risingwave://workspace/guide'){value=docs;type='text/plain';}
             else if(/^risingwave:\/\/captures\/[a-z][a-z0-9-]{0,100}$/.test(uri??''))value=await client.captureRecord(uri.split('/').at(-1));
+            else if(/^risingwave:\/\/comparisons\/[a-z][a-z0-9-]{0,100}$/.test(uri??''))value=await client.comparisonRecord(uri.split('/').at(-1));
             else if(/^risingwave:\/\/publications\/[a-z][a-z0-9-]{0,100}$/.test(uri??''))value=await client.publication(uri.split('/').at(-1));
             else if(/^risingwave:\/\/revisions\/[1-9][0-9]*$/.test(uri??''))value=await client.revision(Number(uri.split('/').at(-1)));
             else{send(200,{jsonrpc:'2.0',id:rpc.id,error:{code:-32602,message:'Unknown original RisingWave resource'}});return;}
