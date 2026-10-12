@@ -214,3 +214,23 @@ The library exposes `createProcessingController` through `@tokenjunkielabs/starf
 Use `starforge stac eoapi-init` and `starforge stac eoapi-serve` to open customer operations in the same original analyst session. The workflow carries the approved Auth Proxy policy, retained source edition, explicit selected files and immutable delivery approval through the original merchant, Buyer and portable GIS receiving. Deployment commissioning uses the existing retained plan/run and private source runtime.
 
 [Customer onboarding and receiving guide](eoapi/ONBOARDING.md) covers source credentials, complete CLI commands, operation recovery, customer export and offline reopen. The installed SDK exposes `@tokenjunkielabs/starforge-merchant/seller/stac/eoapi` and `@tokenjunkielabs/starforge-merchant/buyer/stac/eoapi`.
+
+## Native QGIS projects and complete receiving
+
+Use `starforge stac-qgis export --directory RECEIVED_DIR --out QGIS_SOURCE_DIR`
+to prepare the exact original customer delivery for the native QGIS plugin.
+`starforge stac-qgis plugin --out PLUGIN_ZIP` builds the complete installable
+plugin from maintained source. The original STAC CLI also exposes `qgis-export`,
+`qgis-open`, `qgis-plugin` and `qgis-help`.
+
+The native operator reviews complete original scenes and received assets, selects
+native raster/vector layers and styles, saves QGZ map versions, reviews later
+source editions, and exports or receives a complete project with its original
+files and history. Current GIS choices stay separate from immutable source
+editions. QGIS uses its actual source CRS, native band metadata and local files;
+explicit analyst choices govern overrides and successor replacement.
+
+The [QGIS operator and receiving guide](qgis/OPERATIONS.md) documents installation,
+map/style capture, complete project receiving, stable request recovery and the
+native QGIS continuation. The installed Node API is
+`@tokenjunkielabs/starforge-merchant/buyer/stac/qgis`.
