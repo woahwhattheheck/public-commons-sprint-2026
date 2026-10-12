@@ -105,7 +105,7 @@ function queryMapping(value) {
   const result = new Map(), outputs = new Set();
   for (const [source, target] of pairs) {
     if (typeof source !== 'string' || typeof target !== 'string' ||
-        !/^[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(source) || !/^[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(target) ||
+        !/^[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(source) || !/^\$?[A-Za-z_][A-Za-z0-9_.-]{0,79}$/.test(target) ||
         result.has(source) || outputs.has(target)) throw new TypeError('Invalid or ambiguous query mapping');
     result.set(source, target); outputs.add(target);
   }
