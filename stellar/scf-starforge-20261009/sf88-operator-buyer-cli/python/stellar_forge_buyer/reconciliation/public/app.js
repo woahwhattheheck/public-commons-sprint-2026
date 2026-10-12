@@ -1028,10 +1028,17 @@ async function start() {
   renderEditor();renderRuns();renderReports();renderRequests();
   let screen='pairs';try{const saved=sessionStorage.getItem('stellar_duckdb_reconciliation_screen');if(['pairs','editor','runs','reports','requests'].includes(saved))screen=saved;}catch{}
   show(screen);
+  const selectedPair=new URLSearchParams(location.search).get('pair');
+  if(selectedPair!==null){
+    if(!ID64.test(selectedPair))throw new Error('Choose a complete saved pair identifier in the workspace link.');
+    await openPair(selectedPair);
+    return;
+  }
   if(draftSourceError)notice('The complete saved draft is retained. Its original edition could not be opened: '+(draftSourceError.message||String(draftSourceError)),'error');
   else notice('Original DuckDB workspace opened. Choose a saved pair or create a complete definition.');
 }
 $('dataset-home').href='/#'+capability;
+$('timescale-intake-home').href='/timescale-intake/#'+capability;
 $('refresh').addEventListener('click',()=>action('Refreshing saved catalogs',refreshLists));
 document.querySelectorAll('nav [data-screen]').forEach(node=>node.addEventListener('click',()=>{
   if(state.busy)return;
