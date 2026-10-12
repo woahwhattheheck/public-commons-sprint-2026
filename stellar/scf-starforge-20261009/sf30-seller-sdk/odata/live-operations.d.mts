@@ -38,6 +38,6 @@ export interface ODataLiveOperations {
   close(): Promise<void>;
 }
 export declare function openODataLiveOperations(options: {
-  workspace: ODataWorkspace; env?: ODataEnvironment;
+  workspace: ODataWorkspace; env?: ODataEnvironment; navigationOrigin?: string;
   nativeFactoryFor?: (facilitator: string) => ODataNativeFactory | Promise<ODataNativeFactory>;
 }): Promise<ODataLiveOperations>;

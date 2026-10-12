@@ -23,7 +23,7 @@ export interface ODataWorkspace {
   queryExport(input: { id: string; query?: string }): Promise<ODataDatasetResponse>;
   recordLiveProduct(record: ODataLiveProfile): Promise<ODataLiveProfile>;
   backup(): Promise<ODataTransfer>;
-  restore(bundle: ODataTransfer): Promise<{ connections: number; editions: number; exports: number }>;
+  restore(bundle: ODataTransfer): Promise<{ connections: number; editions: number; exports: number; liveProducts: number }>;
   raw(sha256: string): Promise<Buffer>;
   /** Aborts imports, waits for their current operation, and settles original state. */
   close(): Promise<void>;
