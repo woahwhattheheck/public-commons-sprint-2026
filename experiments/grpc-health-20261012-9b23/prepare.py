@@ -34,11 +34,11 @@ import tempfile
 import uuid
 
 OPERATION = "SCF-GRPC-SERVICE-HEALTH-20261012-9B23"
-COMMIT = "41f2254cd1ac3e9b8025bb41a63e7bbc866e762f"
-DRIVER = "c86da173d75ca89085f1269c3d72c715cac9aa2e"
+COMMIT = "8eb016b93dbbc0becb0400b7e8df37dc23aad5d0"
+DRIVER = "797d17ec5208164bc9d144fa06ddbc84e10e52bd"
 NATIVE_MANIFEST = "4410a170e653557bbd60c16282babf3db0ae15d4"
 NATIVE_IDENTITY = "136c70426e445c3a4d03ed1ada7419383f11d4798f1c58f14a9f6aa2a96af737"
-EXPECTED_FILES, EXPECTED_BYTES = 8078, 134196141
+EXPECTED_FILES, EXPECTED_BYTES = 8081, 134247028
 MAX_FILE, CHUNK = 32 * 1024 * 1024, 1024 * 1024
 MAX_SELECTION = 4 * 1024 * 1024
 MARKER = ".grpc-service-health-source-selection.json"
@@ -470,7 +470,7 @@ def prepare(args):
         git = LocalGit(args.checkout, staging, "product")
         selected = git.source_tree()
         driver = git.object_bytes(DRIVER)
-        require(len(driver) == 47708, "The reviewed original journey has an unexpected byte length.")
+        require(len(driver) == 48052, "The reviewed original journey has an unexpected byte length.")
         selection = encoded({"operation": OPERATION, "commit": COMMIT,
                              "files": {key: row["sha"] for key, row in selected.items()}, "patches": []})
         require(len(selection) <= MAX_SELECTION, "The full source selection does not fit the original driver.")
