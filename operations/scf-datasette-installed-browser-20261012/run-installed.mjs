@@ -16,7 +16,10 @@ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const need=(value,code,message=code)=>{if(!value)throw Object.assign(new Error(message),{code});};
 const delay=ms=>new Promise(done=>setTimeout(done,ms));
 const stamp=()=>new Date().toISOString();
-const issue=error=>({code:error.code??error.name,message:error.message});
+const issue=error=>({code:error.code??error.name,message:error.message,
+  ...(error.observed!==undefined?{observed:error.observed}:{}),
+  ...(error.result!==undefined?{result:error.result}:{}),
+  ...(error.inspection!==undefined?{inspection:error.inspection}:{})});
 const readJSON=async file=>JSON.parse(await readFile(file,'utf8'));
 const exists=async file=>{try{await lstat(file);return true;}catch(error){if(error.code==='ENOENT')return false;throw error;}};
 async function retain(file,value) {
@@ -95,18 +98,31 @@ function absolute(value,name) {
  * extraction, publication, payment and the separate customer Analysis run retain their original owners.
  */
 export async function runInstalledDatasetteBrowser({
-  repository,sourceRef='04e77d53a1a56fe45d74022ab2cd9f54acb0349a',publisherProgrammeDirectory,outputDirectory,
+  repository,sourceRef,publisherProgrammeDirectory,outputDirectory,
   playwrightModule='playwright',browserExecutable,port=53173,receivedPort=53174,
   offline=false,npmCache,python='python3',npm='npm',
 }={}) {
   for(const [name,value] of Object.entries({repository,publisherProgrammeDirectory,outputDirectory}))
     absolute(value,name);
-  need(/^[a-f0-9]{40}$/.test(sourceRef??''),'DATASETTE_INSTALLED_SOURCE_REF');
   need(Number.isInteger(port)&&port>0&&port<65536&&Number.isInteger(receivedPort)&&receivedPort>0&&receivedPort<65536&&port!==receivedPort,
     'DATASETTE_INSTALLED_EXPLICIT_PORTS');
   need(Number(process.versions.node.split('.')[0])>=24,'DATASETTE_INSTALLED_NODE_24');
   await mkdir(outputDirectory,{recursive:true,mode:0o700});
   need(await realpath(outputDirectory)===outputDirectory,'DATASETTE_INSTALLED_CANONICAL_DIRECTORY');
+  const stateFile=join(outputDirectory,'installed-browser-journey.json');
+  let state=await exists(stateFile)?await readJSON(stateFile):null;
+  if(state)need(state.schema==='stellar-forge.datasette-installed-browser-journey.v1',
+    'DATASETTE_INSTALLED_JOURNEY_CHANGED');
+  let sourceResolution=sourceRef===undefined?'repository-head':'explicit';
+  if(sourceRef===undefined){
+    if(state){
+      sourceRef=state.input?.sourceRef;sourceResolution='retained-original';
+    }else{
+      const git=await runCommand('git',['-C',repository,'rev-parse','--verify','HEAD^{commit}']);
+      sourceRef=git.stdout.trim();
+    }
+  }
+  need(/^[a-f0-9]{40}$/.test(sourceRef??''),'DATASETTE_INSTALLED_SOURCE_REF');
   const programme=await readJSON(join(publisherProgrammeDirectory,'publisher-programme-result.json'));
   const sourceState=await readJSON(join(publisherProgrammeDirectory,'publisher-programme-state.json'));
   need(sourceState.phase==='COMPLETE'&&programme.sourceRefresh?.state==='COMPLETE'&&programme.mcpReceiving?.passed&&
@@ -116,11 +132,9 @@ export async function runInstalledDatasetteBrowser({
   const sourceDeclaration=await readJSON(join(workspaceDirectory,'workspace.json'));
   const input={repository,sourceRef,publisherProgrammeDirectory,outputDirectory,workspaceDirectory,
     workspaceId:sourceDeclaration.workspaceId,port,receivedPort,playwrightModule,browserExecutable:browserExecutable??null};
-  const stateFile=join(outputDirectory,'installed-browser-journey.json');
-  let state=await exists(stateFile)?await readJSON(stateFile):null;
   if(state)need(same(state.input,input),'DATASETTE_INSTALLED_ORIGINAL_INPUT_CHANGED');
   else state={schema:'stellar-forge.datasette-installed-browser-journey.v1',id:randomUUID(),input,
-    startedAt:stamp(),phase:'CREATED',checks:{},applications:{},runs:[],browserErrors:[],artifacts:[]};
+    sourceResolution:{kind:sourceResolution,commit:sourceRef},startedAt:stamp(),phase:'CREATED',checks:{},applications:{},runs:[],browserErrors:[],artifacts:[]};
   const save=async phase=>{state.phase=phase;state.updatedAt=stamp();await retain(stateFile,state);
     process.stderr.write(JSON.stringify({operation:'datasette-installed-browser',phase,at:state.updatedAt})+'\n');};
   if(state.phase==='COMPLETE'){
@@ -128,7 +142,7 @@ export async function runInstalledDatasetteBrowser({
     return {state:'COMPLETE',reused:true,report:stateFile,checks:state.checks,artifacts:state.artifacts};
   }
   const fromRepo=path=>import(pathToFileURL(join(repository,path)).href);
-  let apps,context,activeApp=null,stopActive=null;
+  let apps,context,activeApp=null,stopActive=null,failed=false;
   try{
     await save('ORIGINAL_PROGRAMME_RETAINED');
     const {buildDistribution}=await fromRepo(DIST+'build.mjs');
@@ -140,10 +154,49 @@ export async function runInstalledDatasetteBrowser({
     need(state.build.sourceCommit===sourceRef&&typeof state.build.archive==='string','DATASETTE_INSTALLED_BUILD_SOURCE');
     if(!state.artifacts.some(file=>file.file===state.build.archive))state.artifacts.push({file:state.build.archive,bytes:state.build.archiveBytes,sha256:state.build.sha256});
     await save('BUILT');
-    const installer=await fromRepo(DIST+'runtime-install.mjs'),runtimeDirectory=join(outputDirectory,'runtime');
-    if(!await exists(join(runtimeDirectory,'runtime-install.json')))
-      state.prepared=await installer.prepareRuntimeInstall({directory:runtimeDirectory,archive:state.build.archive,
-        sha256:state.build.sha256,native:false,features:[],operator:false,python});
+    const installer=await fromRepo(DIST+'runtime-install.mjs');
+    if(!state.installation){
+      state.installation={archive:state.build.archive,sha256:state.build.sha256,
+        attempts:[{directory:join(outputDirectory,'runtime'),from:null,createdAt:stamp()}]};
+      await save('RUNTIME_PREPARATION_INPUT_RETAINED');
+    }
+    need(state.installation.archive===state.build.archive&&state.installation.sha256===state.build.sha256,
+      'DATASETTE_INSTALLED_PREPARATION_INPUT_CHANGED');
+    let preparation=state.installation.attempts.at(-1);
+    need(preparation&&isAbsolute(preparation.directory),'DATASETTE_INSTALLED_PREPARATION_REQUIRED');
+    let runtimeDirectory=preparation.directory;
+    // The original installer creates a private directory before its plan and state.
+    // Retain an interrupted directory, and use its original recovery operation in
+    // a new, journaled target. Dependency-install retries keep the prepared target.
+    while(!await exists(join(runtimeDirectory,'runtime-install.json'))||
+      !await exists(join(runtimeDirectory,'install-state.json'))){
+      if(await exists(runtimeDirectory)){
+        const hasPreparation=await exists(join(runtimeDirectory,'preparation.json'));
+        preparation.interruptedAt??=stamp();
+        preparation.observed={preparation:hasPreparation,
+          plan:await exists(join(runtimeDirectory,'runtime-install.json')),
+          state:await exists(join(runtimeDirectory,'install-state.json'))};
+        const previousDirectory=runtimeDirectory;
+        const recoveryFrom=hasPreparation?previousDirectory:preparation.from;
+        runtimeDirectory=join(outputDirectory,'runtime-recovery-'+String(state.installation.attempts.length).padStart(4,'0'));
+        preparation={directory:runtimeDirectory,from:recoveryFrom??null,previousDirectory,createdAt:stamp()};
+        state.installation.attempts.push(preparation);
+        await save('RUNTIME_RECOVERY_INPUT_RETAINED');
+        continue;
+      }
+      const prepared=preparation.from
+        ?await installer.recoverRuntime({from:preparation.from,directory:runtimeDirectory,
+          install:false,python,offline,npm,cache:npmCache??null})
+        :await installer.prepareRuntimeInstall({directory:runtimeDirectory,archive:state.build.archive,
+          sha256:state.build.sha256,native:false,features:[],operator:false,python,
+          from:preparation.previousDirectory??null});
+      need(prepared.directory===runtimeDirectory&&prepared.sourceCommit===sourceRef,
+        'DATASETTE_INSTALLED_PREPARATION_RESULT');
+      state.prepared=prepared;preparation.result=prepared;preparation.completedAt=stamp();
+      await save('RUNTIME_PREPARED');
+    }
+    state.installation.directory=runtimeDirectory;
+    await save('RUNTIME_INSTALL_INPUT_RETAINED');
     state.runtime=await installer.installRuntime({directory:runtimeDirectory,offline,npm,cache:npmCache??null});
     const runtime=await installer.inspectRuntimeInstall({directory:runtimeDirectory,source:true,load:true,python});
     need(runtime.status==='READY'&&runtime.ready&&runtime.sourceCommit===sourceRef,'DATASETTE_INSTALLED_RUNTIME_READY');
@@ -183,23 +236,63 @@ export async function runInstalledDatasetteBrowser({
         await save('APPLICATION_REVIEWED');
       }
       if(!item.saved){item.saved=await apps.applicationsSave({requestId:item.requestId,reviewId:item.review.id});await save('APPLICATION_SAVED');}
-      need(!item.saved.connectionError,'DATASETTE_INSTALLED_APPLICATION_CONNECTION',JSON.stringify(item.saved.connectionError));
-      const selected=await waitFor(async()=>(await apps.applicationsState()).applications.find(app=>app.id===item.saved.applicationId),
-        value=>Boolean(value?.release)||['FAILED','UNAVAILABLE','INTERRUPTED'].includes(value?.phase),
-        'The original managed runtime adoption did not settle.',300000);
-      need(selected.release,'DATASETTE_INSTALLED_APPLICATION_ADOPTION',JSON.stringify(selected));
+      let selected=(await apps.applicationsState()).applications.find(app=>app.id===item.saved.applicationId);
+      if(!selected?.release){
+        // Save may have retained the binding before its worker launch returned.
+        // applicationsConnect reopens that same adoption, including queued,
+        // interrupted and failed worker states; its request identity is native.
+        item.connections??=[];
+        const connection={at:stamp(),applicationId:item.saved.applicationId};
+        item.connections.push(connection);await save('APPLICATION_CONNECTION_RETAINED');
+        connection.result=await apps.applicationsConnect({applicationId:item.saved.applicationId});
+        await save('APPLICATION_CONNECTING');
+        selected=await waitFor(async()=>(await apps.applicationsState()).applications.find(app=>app.id===item.saved.applicationId),
+          value=>Boolean(value?.release)||value?.phase==='UNAVAILABLE'||
+            !value?.adoption?.active&&['FAILED','INTERRUPTED'].includes(value?.adoption?.phase),
+          'The original managed runtime adoption did not settle.',300000);
+      }
+      need(selected?.release,'DATASETTE_INSTALLED_APPLICATION_ADOPTION',JSON.stringify(selected));
+      item.connected={at:stamp(),release:selected.release,home:selected.home};await save('APPLICATION_CONNECTED');
       return item;
     };
     const startApplication=async item=>{
-      let selected=(await apps.applicationsState()).applications.find(app=>app.id===item.saved.applicationId);
-      if(selected?.phase!=='RUNNING'){
-        need(!selected?.current?.active,'DATASETTE_INSTALLED_APPLICATION_OWNER',JSON.stringify(selected));
-        const review=await apps.applicationsStartReview({applicationId:item.saved.applicationId});
-        const run={applicationId:item.saved.applicationId,requestId:randomUUID(),reviewId:review.id,startedAt:stamp()};
-        state.runs.push(run);await save('APPLICATION_START_RETAINED');
-        await apps.applicationsStart({applicationId:run.applicationId,requestId:run.requestId,reviewId:run.reviewId});
-        selected=await waitFor(async()=>(await apps.applicationsState()).applications.find(app=>app.id===item.saved.applicationId),
-          value=>['RUNNING','FAILED','UNAVAILABLE','INTERRUPTED'].includes(value?.phase),
+      const applicationId=item.saved.applicationId;
+      const readApplication=async()=>(await apps.applicationsState()).applications.find(app=>app.id===applicationId);
+      let selected=await readApplication();
+      need(selected,'DATASETTE_INSTALLED_APPLICATION_MISSING');
+      if(selected.phase==='STOPPING'){
+        activeApp={applicationId,operationId:selected.current.id};
+        selected=await waitFor(readApplication,value=>!value?.current?.active,
+          'The original retained application stop did not settle.',30000);
+        activeApp=null;
+      }
+      if(selected.phase!=='RUNNING'){
+        if(selected.current&&(selected.current.active||
+          ['PENDING','QUEUED','RUNNING','INTERRUPTED'].includes(selected.current.phase))){
+          activeApp={applicationId,operationId:selected.current.id};
+          if(!selected.current.active){
+            item.recoveries??=[];
+            const recovery={...activeApp,at:stamp()};
+            item.recoveries.push(recovery);await save('APPLICATION_RECOVERY_RETAINED');
+            recovery.result=await apps.applicationsRecover(activeApp);
+            await save('APPLICATION_RECOVERING');
+          }
+        }else{
+          // A start input is saved before dispatch. Reuse an input that never
+          // reached its native run record after an interrupted response.
+          let run=state.runs.findLast(value=>value.applicationId===applicationId&&!value.dispatched&&
+            value.requestId!==selected.current?.id&&!state.stops?.some(stop=>stop.operationId===value.requestId));
+          if(!run){
+            const review=await apps.applicationsStartReview({applicationId});
+            run={applicationId,requestId:randomUUID(),reviewId:review.id,startedAt:stamp()};
+            state.runs.push(run);await save('APPLICATION_START_RETAINED');
+          }
+          activeApp={applicationId,operationId:run.requestId};
+          run.result=await apps.applicationsStart({applicationId,requestId:run.requestId,reviewId:run.reviewId});
+          run.dispatched=stamp();await save('APPLICATION_START_DISPATCHED');
+        }
+        selected=await waitFor(readApplication,
+          value=>['RUNNING','FAILED','UNAVAILABLE','INTERRUPTED','STOPPED'].includes(value?.phase),
           'The managed original Datasette application did not announce its listener.',120000);
       }
       need(selected?.phase==='RUNNING'&&selected.current?.privateUrl,'DATASETTE_INSTALLED_APPLICATION_START',JSON.stringify(selected));
@@ -211,9 +304,16 @@ export async function runInstalledDatasetteBrowser({
       item.starts??=[];item.starts.push({at:stamp(),operationId:selected.current.id,announcement});
       await save('APPLICATION_RUNNING');return announcement;
     };
-    const stopApplication=async()=>{
+    const stopApplication=async({cleanup=false}={})=>{
       if(!activeApp)return;
       const stopping=activeApp;
+      if(cleanup){
+        const selected=(await apps.applicationsState()).applications.find(app=>app.id===stopping.applicationId);
+        if(!selected?.current?.active){
+          state.cleanupObservations??=[];state.cleanupObservations.push({at:stamp(),...stopping,selected});
+          activeApp=null;return;
+        }
+      }
       await apps.applicationsStop(stopping);
       const stopped=await waitFor(async()=>(await apps.applicationsState()).applications.find(app=>app.id===stopping.applicationId),
         value=>!value?.current?.active&&['STOPPED','FAILED','CANCELLED'].includes(value?.phase),
@@ -222,7 +322,7 @@ export async function runInstalledDatasetteBrowser({
       state.stops??=[];state.stops.push({at:stamp(),...stopping,result:stopped.current.result});
       activeApp=null;await save('APPLICATION_STOPPED');
     };
-    stopActive=stopApplication;
+    stopActive=()=>stopApplication({cleanup:true});
     const sourceApp=await ensureApplication('source',workspaceDirectory,port);
     let announcement=await startApplication(sourceApp);
     const {createDatasetteClient}=await fromInstalled(SDK+'client.mjs');
@@ -263,20 +363,25 @@ export async function runInstalledDatasetteBrowser({
     }
     const editionId='browser-received-wri';
     if(!state.uploadResponse){
+      let interceptionError=null;
       await page.route('**/api/upload?**',async route=>{
-        if(route.request().method()!=='POST'){await route.continue();return;}
-        const response=await route.fetch(),value=await response.json();
-        if(value.state==='COMPLETE'&&!state.uploadResponse){
-          state.uploadResponse=value;await save('BROWSER_UPLOAD_NATIVE_COMPLETE');
-          await route.abort('connectionreset');
-        }else await route.fulfill({response});
+        try{
+          if(route.request().method()!=='POST'){await route.continue();return;}
+          const response=await route.fetch(),value=await response.json();
+          need(response.status()===200,'DATASETTE_BROWSER_UPLOAD_HTTP',JSON.stringify(value));
+          if(value.state==='COMPLETE'&&!state.uploadResponse){
+            state.uploadResponse=value;await save('BROWSER_UPLOAD_NATIVE_COMPLETE');
+            await route.abort('connectionreset');
+          }else await route.fulfill({response});
+        }catch(error){interceptionError=error;await route.abort('failed').catch(()=>{});}
       });
       await page.locator('#ds-receive-kind').selectOption('source');
       await page.locator('#ds-receive-id').fill(editionId);
       await page.locator('#ds-receive-sha').fill(ARCHIVE_SHA);
       await page.locator('#ds-receive-file').setInputFiles(join(runtime.sourceRoot,WRI));
       await page.locator('#ds-receive-submit').click();
-      await waitFor(()=>journalFromBrowser(page),records=>records.some(record=>record.input?.uploadId===state.uploadResponse?.uploadId&&record.state==='UNCERTAIN'),
+      await waitFor(()=>{if(interceptionError)throw interceptionError;return journalFromBrowser(page);},
+        records=>records.some(record=>state.uploadResponse&&record.input?.uploadId===state.uploadResponse.uploadId&&record.state==='UNCERTAIN'),
         'The browser did not retain the uncertain original completed-upload response.');
       state.browserUploadBeforeRestart=(await journalFromBrowser(page)).find(record=>record.input?.uploadId===state.uploadResponse.uploadId);
       need(state.browserUploadBeforeRestart.receiving.id===editionId,'DATASETTE_BROWSER_RECEIVING_IDENTITY');
@@ -310,16 +415,20 @@ export async function runInstalledDatasetteBrowser({
       await page.locator('#ds-editions button').filter({hasText:baseline.edition.name}).last().click();
       await waitBrowser(page);
       if(!state.selectionResponse){
+        let interceptionError=null;
         await page.route('**/api/operation',async route=>{
-          const body=route.request().postDataJSON();
-          if(body?.operation!=='source.select'||state.selectionResponse){await route.continue();return;}
-          const response=await route.fetch(),value=await response.json();
-          need(response.status()===200,'DATASETTE_BROWSER_SELECTION_HTTP',JSON.stringify(value));
-          state.selectionInput=body.input;state.selectionResponse=value;await save('BROWSER_SELECTION_NATIVE_COMPLETE');
-          await route.abort('connectionreset');
+          try{
+            const body=route.request().postDataJSON();
+            if(body?.operation!=='source.select'||state.selectionResponse){await route.continue();return;}
+            const response=await route.fetch(),value=await response.json();
+            need(response.status()===200,'DATASETTE_BROWSER_SELECTION_HTTP',JSON.stringify(value));
+            state.selectionInput=body.input;state.selectionResponse=value;await save('BROWSER_SELECTION_NATIVE_COMPLETE');
+            await route.abort('connectionreset');
+          }catch(error){interceptionError=error;await route.abort('failed').catch(()=>{});}
         });
         await page.locator('#ds-select-edition').click();
-        await waitFor(()=>journalFromBrowser(page),records=>records.some(record=>record.input?.requestId===state.selectionInput?.requestId&&record.state==='UNCERTAIN'),
+        await waitFor(()=>{if(interceptionError)throw interceptionError;return journalFromBrowser(page);},
+          records=>records.some(record=>state.selectionInput?.requestId&&record.input?.requestId===state.selectionInput.requestId&&record.state==='UNCERTAIN'),
           'The original selected-source request was not retained after its response ended.');
         await page.unroute('**/api/operation');
       }
@@ -389,11 +498,12 @@ export async function runInstalledDatasetteBrowser({
     state.completedAt=stamp();await save('COMPLETE');
     return {state:'COMPLETE',report:stateFile,sourceCommit:sourceRef,workspaceId:input.workspaceId,
       checks:state.checks,installedRuntime:runtimeDirectory,receivedWorkspace:browserReceivedDirectory,artifacts:state.artifacts};
-  }catch(error){state.error=issue(error);state.phase='INTERRUPTED';state.updatedAt=stamp();await retain(stateFile,state);throw error;}
+  }catch(error){failed=true;state.error=issue(error);state.phase='INTERRUPTED';state.updatedAt=stamp();await retain(stateFile,state);throw error;}
   finally{
     if(context)await context.close().catch(error=>process.stderr.write(JSON.stringify(issue(error))+'\n'));
     if(activeApp&&apps)await (stopActive?stopActive():apps.applicationsStop(activeApp)).catch(error=>process.stderr.write(JSON.stringify(issue(error))+'\n'));
     await apps?.close();
+    if(failed){state.phase='INTERRUPTED';state.updatedAt=stamp();await retain(stateFile,state);}
   }
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){
