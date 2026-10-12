@@ -6,6 +6,7 @@ import { readOpenSearchSourceFile, createOpenSearchQuerySource } from '../source
 import { validateOpenSearchSource, compileOpenSearchQueries, bindOpenSearchParameters } from '../declaration.mjs';
 import { compileOpenSearchMerchantPlan, prepareOpenSearchSeller } from '../prepare.mjs';
 import { OpenSearchRelevanceWorkspace } from '../relevance/workspace.mjs';
+import { OpenSearchDeploymentWorkspace } from './deployment.mjs';
 import { openWorkspaceStore, WorkspaceError, clone, digest, identifier, compareEditions, editionCsv } from './store.mjs';
 
 const DEFAULT_PLAN = { schema: 'stellar-forge.opensearch-merchant-plan.v1',
@@ -81,11 +82,12 @@ class OpenSearchWorkspace {
   constructor(options) {
     Object.assign(this, options); this.active = new Map(); this.nativeBusy = false; this.closed = false;
     this.relevance = new OpenSearchRelevanceWorkspace(this, options.relevanceOptions);
+    this.deployment = new OpenSearchDeploymentWorkspace(this);
   }
   state() {
     return { ...this.store.state(), source: { name: basename(this.source.path ?? 'source.json'),
       schema: this.config.schema, connection: profile(this.config),
-      queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy, relevance: this.relevance.state() };
+      queries: clone(this.config.queries) }, templatePlan: clone(this.templatePlan), nativeBusy: this.nativeBusy, relevance: this.relevance.state(), deployment: this.deployment.summary() };
   }
   failure(error) { return nativeError(error, this.config, this.env); }
   draft(id, revision) { return this.store.draft(id, revision); }
@@ -190,6 +192,6 @@ class OpenSearchWorkspace {
     if (this.closed) return;
     this.closed = true;
     await Promise.allSettled([...this.active.values()]);
-    this.store.close();
+    try { await this.deployment.close(); } finally { this.store.close(); }
   }
 }
