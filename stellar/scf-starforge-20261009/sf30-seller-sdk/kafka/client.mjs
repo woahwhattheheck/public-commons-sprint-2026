@@ -103,7 +103,7 @@ async function removeOwned(path,identity) {
 export async function inspectKafkaDownload(filename,{maximumBytes=KAFKA_LIMITS.downloadBytes,sha256,signal}={}) {
   integer(maximumBytes,1,4*1024*1024*1024,'Maximum file bytes');
   if(signal!==undefined&&!(signal instanceof AbortSignal))throw failure('KAFKA_INVALID_PARAMS','Select an AbortSignal for file inspection.');
-  const input=await sourceHandle(filename,maximumBytes,sha256,signal);
+  const input=await sourceHandle(filename,maximumBytes,undefined,signal);
   try {
     const info=input.before;
     if (process.platform!=='win32' && ((info.mode&0o077n)!==0n ||
@@ -113,7 +113,10 @@ export async function inspectKafkaDownload(filename,{maximumBytes=KAFKA_LIMITS.d
     if (input.size) for await (const data of input.handle.createReadStream({autoClose:false,start:0,end:input.size-1,signal})) {aborted(signal);checksum.update(data);}
     await stableSource(input);
     aborted(signal);
-    return {schema:'stellar-forge.kafka-client-file.v1',path:input.path,bytes:input.size,sha256:checksum.digest('hex')};
+    const actualSha256=checksum.digest('hex');
+    if(sha256!==undefined&&actualSha256!==identifier(sha256,'Original completed file SHA-256'))
+      throw failure('KAFKA_HOST_FILE_CHANGED','The completed original file differs from its retained SHA-256.');
+    return {schema:'stellar-forge.kafka-client-file.v1',path:input.path,bytes:input.size,sha256:actualSha256};
   } finally {await input.handle.close();}
 }
 
@@ -336,7 +339,7 @@ export class KafkaWorkspaceClient {
         await new Promise((resolve,reject)=>{
           const timer=setTimeout(done,pollMs);
           function done(){combined.removeEventListener('abort',cancel);resolve();}
-          function cancel(){clearTimeout(timer);reject(failure('KAFKA_ABORTED','Capture waiting was cancelled.'));}
+          function cancel(){clearTimeout(timer);combined.removeEventListener('abort',cancel);reject(failure('KAFKA_ABORTED','Capture waiting was cancelled.'));}
           combined.addEventListener('abort',cancel,{once:true});
           if(combined.aborted)cancel();
         });
