@@ -1,12 +1,19 @@
-// MIT. Customer bookkeeping through the merchant's original MCP connection.
+// MIT. Buyer startup and customer bookkeeping through the original MCP connection.
 // Wire schema: original accounting-platforms.mjs Git blob 8d41dae6fa79514b6658464dc9542ee425844b1e (34 native tools).
 import { createHash } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { openMerchantFileClient } from './retained-download.mjs';
 import { createAccountingMaintenanceClient } from './accounting-maintenance-client.mjs';
+import { buyerAccountingClientSpec, buyerAccountingClientOperation, previewBuyerAccountingClient,
+  observeBuyerAccountingClient, buyerAccountingSourcePages } from './accounting-platform-buyer-client.mjs';
 
 const WIRE_RULES = [{"type":"string","pattern":"^[a-z0-9][a-z0-9_-]{0,63}$"},{"type":"string","pattern":"^[0-9]{1,64}$"},{"type":"string","enum":["sandbox","production"]},{"type":"string","pattern":"^[a-f0-9]{64}$"},{"type":"string","enum":["summary","accounts","snapshot"]},{"type":"integer","minimum":0},{"type":"integer","minimum":1,"maximum":200},{"type":"string","pattern":"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"},{"type":"integer","minimum":1},{"type":"string","minLength":1,"maxLength":1000},{"type":"string","minLength":1,"maxLength":80},{"anyOf":[{"type":"string","pattern":"^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$"},{"type":"null"}]},{"type":"string","enum":["summary","plans","handoffs"]},{"type":"string","enum":["summary","accounts"]},{"type":"string","maxLength":500},{"type":"string","enum":["summary","rows","lines","accounts"]},{"type":"string","enum":["summary","rows","lines","responses","files","accounts","native-attempts"]},{"type":"string","maxLength":4000},{"type":"string","minLength":1,"maxLength":4000},{"type":"boolean","enum":[true]},{"type":"string","minLength":1,"maxLength":160},{"type":"string","enum":["summary","errors","issues","rows"]},{"type":"string","enum":["summary","contexts","plans","handoffs"]},{"type":"string","enum":["summary","accounts","files"]},{"type":"string","enum":["components","accounts","reserved"]},{"type":"string","enum":["summary","entries","excluded","journals","lines","baseline","conflicts"]},{"type":"string","enum":["summary","entries","excluded","journals","lines","baseline","operations","captures","returnIntents","returns","files"]},{"type":"string","minLength":1,"maxLength":2000},{"type":"string","enum":["create-drafts","refresh"]},{"type":"string","enum":["summary","indexes","files","journalSources"]},{"type":"string","enum":["summary","journals","lines","issues","unassigned","files"]},{"type":"string","enum":["summary","conflicts","skipped","assignments","results","issues","missingRows"]}];
 const WIRE_TOOLS = {"qbo":{"connection":{"fields":{"workspace":0},"required":["workspace"],"readOnly":true},"company-fetch":{"fields":{"workspace":0,"realmId":1,"environment":2,"expectedCompanySha256":3,"view":4,"offset":5,"limit":6},"required":["workspace","realmId","environment"],"readOnly":true},"post-preview":{"fields":{"workspace":0,"planId":7,"revision":8,"id":7,"actor":9,"createdAt":10,"expectedParentId":11},"required":["workspace","planId","revision","id","actor","createdAt","expectedParentId"],"readOnly":true},"post":{"fields":{"workspace":0,"planId":7,"revision":8,"id":7,"actor":9,"createdAt":10,"expectedParentId":11,"previewSha256":3},"required":["workspace","planId","revision","id","actor","createdAt","expectedParentId","previewSha256"],"readOnly":false},"post-resume":{"fields":{"workspace":0,"planId":7,"revision":8,"id":7,"actor":9,"previewSha256":3},"required":["workspace","planId","revision","id","actor","previewSha256"],"readOnly":false},"status":{"fields":{"workspace":0,"view":12,"offset":5,"limit":6},"required":["workspace"],"readOnly":true},"company-preview":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"view":13,"offset":5,"limit":6},"required":["workspace","source"],"readOnly":true},"handoff":{"fields":{"workspace":0,"handoffId":7,"search":14,"offset":5,"limit":6},"required":["workspace","handoffId"],"readOnly":true},"preview":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"companySource":0,"companySourceSha256":3,"view":15,"offset":5,"limit":6},"required":["workspace","source"],"readOnly":true},"create":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"companySource":0,"companySourceSha256":3,"revision":8,"previewSha256":3},"required":["workspace","source","sourceSha256","revision","previewSha256"],"readOnly":false},"plan":{"fields":{"workspace":0,"planId":7,"view":16,"offset":5,"limit":6},"required":["workspace","planId"],"readOnly":true},"review":{"fields":{"workspace":0,"planId":7,"revision":8,"id":7,"actor":9,"note":17,"planSha256":3},"required":["workspace","planId","revision","id","actor","planSha256"],"readOnly":false},"cancel":{"fields":{"workspace":0,"planId":7,"revision":8,"id":7,"actor":9,"note":18,"planSha256":3,"unusedConfirmed":19},"required":["workspace","planId","revision","id","actor","note","planSha256","unusedConfirmed"],"readOnly":false},"response-preview":{"fields":{"workspace":0,"planId":7,"source":0,"sourceSha256":3,"id":7,"name":20,"actor":9,"createdAt":10,"realmId":1,"expectedParentId":11,"view":21,"offset":5,"limit":6},"required":["workspace","planId","source","id","name","actor","createdAt","realmId","expectedParentId"],"readOnly":true},"response-save":{"fields":{"workspace":0,"planId":7,"source":0,"sourceSha256":3,"id":7,"name":20,"actor":9,"createdAt":10,"realmId":1,"expectedParentId":11,"revision":8,"previewSha256":3},"required":["workspace","planId","source","sourceSha256","id","name","actor","createdAt","realmId","expectedParentId","revision","previewSha256"],"readOnly":false},"response-resume":{"fields":{"workspace":0,"planId":7,"responseId":7,"revision":8,"actor":9},"required":["workspace","planId","responseId","revision","actor"],"readOnly":false}},"xero":{"status":{"fields":{"workspace":0,"view":22,"offset":5,"limit":6},"required":["workspace"],"readOnly":true},"context":{"fields":{"workspace":0,"contextId":7,"view":23,"offset":5,"limit":6},"required":["workspace","contextId"],"readOnly":true},"context-preview":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"view":13,"offset":5,"limit":6},"required":["workspace","source"],"readOnly":true},"context-import":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"revision":8,"previewSha256":3},"required":["workspace","source","sourceSha256","revision","previewSha256"],"readOnly":false},"context-capture":{"fields":{"workspace":0,"revision":8,"id":7,"actor":9,"name":20,"tenant":0,"expectedTenantId":7},"required":["workspace","revision","id","actor","name","tenant","expectedTenantId"],"readOnly":false},"source":{"fields":{"workspace":0,"handoffId":7,"contextId":7,"view":24,"offset":5,"limit":6},"required":["workspace","handoffId","contextId"],"readOnly":true},"preview":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"view":25,"journalIndex":5,"offset":5,"limit":6},"required":["workspace","source"],"readOnly":true},"create":{"fields":{"workspace":0,"source":0,"sourceSha256":3,"revision":8,"previewSha256":3},"required":["workspace","source","sourceSha256","revision","previewSha256"],"readOnly":false},"plan":{"fields":{"workspace":0,"planId":7,"view":26,"journalIndex":5,"offset":5,"limit":6},"required":["workspace","planId"],"readOnly":true},"cancel":{"fields":{"workspace":0,"planId":7,"revision":8,"actor":9,"reason":27,"noExternalImport":19},"required":["workspace","planId","revision","actor","reason","noExternalImport"],"readOnly":false},"operate":{"fields":{"workspace":0,"planId":7,"revision":8,"id":7,"actor":9,"tenant":0,"action":28,"planSha256":3},"required":["workspace","planId","revision","id","actor","tenant","action","planSha256"],"readOnly":false},"operation":{"fields":{"workspace":0,"planId":7,"operationId":7,"view":29,"offset":5,"limit":6},"required":["workspace","planId","operationId"],"readOnly":true},"response-preview":{"fields":{"workspace":0,"planId":7,"source":0,"sourceSha256":3,"view":30,"journalIndex":5,"offset":5,"limit":6},"required":["workspace","planId","source"],"readOnly":true},"response-import":{"fields":{"workspace":0,"planId":7,"source":0,"sourceSha256":3,"revision":8,"previewSha256":3},"required":["workspace","planId","source","sourceSha256","revision","previewSha256"],"readOnly":false},"comparison":{"fields":{"workspace":0,"planId":7,"captureId":7,"view":30,"journalIndex":5,"offset":5,"limit":6},"required":["workspace","planId","captureId"],"readOnly":true},"return-preview":{"fields":{"workspace":0,"planId":7,"captureId":7,"id":7,"actor":9,"name":20,"createdAt":10,"expectedParentId":11,"view":31,"offset":5,"limit":6},"required":["workspace","planId","captureId","id","actor","name","createdAt","expectedParentId"],"readOnly":true},"return-apply":{"fields":{"workspace":0,"planId":7,"captureId":7,"id":7,"actor":9,"name":20,"createdAt":10,"expectedParentId":11,"revision":8,"previewSha256":3,"csvSha256":3},"required":["workspace","planId","captureId","id","actor","name","createdAt","expectedParentId","revision","previewSha256","csvSha256"],"readOnly":false},"return-resume":{"fields":{"workspace":0,"planId":7,"captureId":7,"returnId":7,"previewSha256":3},"required":["workspace","planId","captureId","returnId","previewSha256"],"readOnly":false}}};
+
+WIRE_TOOLS.buyer = Object.fromEntries(Object.entries(buyerAccountingClientSpec).map(([action, schema]) =>
+  [action, { fields: Object.fromEntries(Object.entries(schema.fields).map(([field, rule]) => {
+    const index = WIRE_RULES.length; WIRE_RULES.push(rule); return [field, index];
+  })), required: schema.required, readOnly: schema.readOnly }]));
 
 const PREFIX = 'merchant_accounting_';
 const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
@@ -27,10 +34,11 @@ const revisionOf = value => value?.revision ?? value?.state?.revision;
 const trimXero = value => { need(typeof value === 'string', 'Use the original Xero text value.'); return value.trim(); };
 const nativeTool = (platform, action) => PREFIX + platform + '_' + action.replaceAll('-', '_');
 const PREVIEWS = {
+  buyer: {},
   qbo: { create: 'preview', 'response-save': 'response-preview', post: 'post-preview' },
   xero: { 'context-import': 'context-preview', create: 'preview', 'response-import': 'response-preview', 'return-apply': 'return-preview' },
 };
-const INLINE = { qbo: ['review', 'cancel', 'response-resume', 'post-resume'], xero: ['context-capture', 'cancel', 'operate', 'return-resume'] };
+const INLINE = { buyer: ['initialize', 'handoff'], qbo: ['review', 'cancel', 'response-resume', 'post-resume'], xero: ['context-capture', 'cancel', 'operate', 'return-resume'] };
 const BINDINGS = {
   qbo: { create: ['planId', 'actor', 'createdAt', 'previewSha256'], review: ['planId', 'reviewId', 'requestSha256'],
     cancel: ['planId', 'cancellationId', 'requestSha256'], 'response-save': ['planId', 'responseId', 'responseSha256', 'previewSha256'],
@@ -54,7 +62,7 @@ function matches(value, rule) {
     (rule.maxLength === undefined || value.length <= rule.maxLength) && (!rule.pattern || new RegExp(rule.pattern).test(value));
   return true;
 }
-function selectedPlatform(platform) { need(Object.hasOwn(WIRE_TOOLS, platform), 'Choose qbo or xero.'); return platform; }
+function selectedPlatform(platform) { need(Object.hasOwn(WIRE_TOOLS, platform), 'Choose buyer, qbo or xero.'); return platform; }
 function wireArguments(platform, action, value) {
   selectedPlatform(platform);
   const schema = WIRE_TOOLS[platform][action];
@@ -77,8 +85,9 @@ function operationHash(platform, action, args) {
 /** Validate the original small command/binding; no native request or ID is generated. */
 export function accountingPlatformOperation(value) {
   need(plain(value?.command) && typeof value.command.tool === 'string' && plain(value.binding), 'Retain the complete original command and binding.', 'PREVIEW');
-  const match = value.command.tool.match(/^merchant_accounting_(qbo|xero)_([a-z_]+)$/);
-  need(match, 'Use an original QuickBooks or Xero command.', 'PREVIEW');
+  const match = value.command.tool.match(/^merchant_accounting_(buyer|qbo|xero)_([a-z_]+)$/);
+  need(match, 'Use an original buyer, QuickBooks or Xero command.', 'PREVIEW');
+  if (match[1] === 'buyer') return buyerAccountingClientOperation(value, wireArguments);
   const platform = match[1], action = match[2].replaceAll('_', '-'), fields = BINDINGS[platform][action];
   need(fields && !WIRE_TOOLS[platform][action].readOnly, 'Choose a reviewed native mutation.', 'PREVIEW');
   const args = wireArguments(platform, action, value.command.arguments), binding = structuredClone(value.binding);
@@ -185,6 +194,7 @@ export function createAccountingPlatformClient({ workspace, platform, call } = {
     return tenant.tenantId;
   }
   async function inlinePreview(action, value, options) {
+    if (platform === 'buyer') return previewBuyerAccountingClient(action, value, { workspace, read, wireArguments, options });
     need(INLINE[platform].includes(action), 'Use an action with a native preview or the documented original-record review.');
     need(plain(value) && (value.workspace === undefined || value.workspace === workspace), 'Keep this selected original workspace alias.');
     const args = wireArguments(platform, action, { ...value, workspace });
@@ -236,6 +246,7 @@ export function createAccountingPlatformClient({ workspace, platform, call } = {
     return { ...operation, reviewOrigin: 'CLIENT_REVIEW_OF_ORIGINAL_NATIVE_RECORD', observed };
   }
   async function observe(operation, options) {
+    if (platform === 'buyer') return observeBuyerAccountingClient(operation, { read, options });
     const { action, binding: b, command: { arguments: args } } = operation;
     const missing = () => ({ found: false, platform, action, binding: b, pending: false });
     const found = value => ({ found: true, platform, action, binding: b, pending: false, ...value });
@@ -343,14 +354,21 @@ export function createAccountingPlatformClient({ workspace, platform, call } = {
     sources: options => invoke(PREFIX + 'sources', {}, options),
     open: options => invoke(PREFIX + 'open', {}, options),
     read,
-    status: (args = {}, options) => read('status', args, options),
+    status: (args = {}, options) => read(platform === 'buyer' ? 'startup' : 'status', args, options),
+    startup: options => read('startup', {}, options),
+    sourcePreview: (args, options) => read('source-preview', args, options),
+    prepareSource: (args, options) => read('prepare', args, options),
+    sourcePages(args, options) {
+      need(platform === 'buyer', 'Original source paging belongs to buyer mode.');
+      return buyerAccountingSourcePages(args, { read, options });
+    },
     plan: (args, options) => read('plan', args, options),
     handoff: (args, options) => read('handoff', args, options),
     companyPreview: (args, options) => read('company-preview', args, options),
     connection: options => read('connection', {}, options),
     companyFetch: (args, options) => read('company-fetch', args, options),
     context: (args, options) => read('context', args, options),
-    source: (args, options) => read('source', args, options),
+    source: (args, options) => read(platform === 'buyer' ? 'source-preview' : 'source', args, options),
     comparison: (args, options) => read('comparison', args, options),
     operation: (args, options) => read('operation', args, options),
     async preview(action, args = {}, options) {
@@ -386,8 +404,11 @@ export function createAccountingPlatformClient({ workspace, platform, call } = {
     releaseFile: (readId, options) => maintenance.releaseFile(readId, options),
     drainFileReads: () => transition(() => maintenance.drainFileReads()),
     async *fileChunks(selection, options) {
-      accepting(); need(plain(selection) && (selection.kind === undefined || selection.kind === platform), 'Choose a file from this original platform.');
-      const iterator = maintenance.fileChunks({ ...selection, kind: platform }, options);
+      accepting(); need(plain(selection), 'Choose an original file selection.');
+      const kind = selection.kind ?? (platform === 'buyer' ? 'buyer-source' : platform);
+      need((platform === 'buyer' ? ['buyer-source', 'accountant'] : [platform]).includes(kind),
+        'Choose the original source/accountant file for buyer mode or the selected platform file.');
+      const iterator = maintenance.fileChunks({ ...selection, kind }, options);
       try { for (;;) { accepting(); const item = await iterator.next(); if (item.done) return; yield item.value; } }
       finally { await iterator.return?.(); }
     },
