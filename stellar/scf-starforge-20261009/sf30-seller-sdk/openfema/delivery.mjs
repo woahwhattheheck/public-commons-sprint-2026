@@ -76,7 +76,10 @@ export function validateMapping(input){
     checked(!names.has(column),'Destination column appears twice: '+column);names.add(column);
     checked(source===null||own(DELIVERY_FIELDS,source),'Choose a declared native source or analyst field for '+column+'.');
     checked(typeof value.required==='boolean','Choose required true or false for '+column+'.');
-    if(source)sources.add(source);
+    if(source){
+      checked(!(DELIVERY_FIELDS[source].owner==='review'&&sources.has(source)),'Map each writable analyst field to one destination column: '+source+'.','OPENFEMA_DELIVERY_REVIEW_ALIAS');
+      sources.add(source);
+    }
     return {column,source,required:value.required};
   });
   for(const identity of ['id','disasterNumber']){
