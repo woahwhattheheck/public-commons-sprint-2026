@@ -410,8 +410,10 @@ def field_command(workspace, action, payload, *, revision, request_id, actor, pr
         campaign, round_row = round_for(state, payload.get("roundId"))
         require(round_row["status"] in ("exported", "returned"), "FIELD_ROUND_CLOSED",
                 "This export has already been accepted or closed. Start a fresh export for another field round.")
-        source = Path(_text(payload.get("directory"), "returned device directory", 4000)).expanduser().absolute()
-        require(not source.is_relative_to(workspace.root), "FIELD_RETURN_LOCATION",
+        source = Path(_text(payload.get("directory"), "returned device directory", 4000))
+        require(source.is_absolute(), "FIELD_RETURN_ABSOLUTE",
+                "Use the absolute returned directory reported by field.inventory.")
+        require(not source.resolve().is_relative_to(workspace.root.resolve()), "FIELD_RETURN_LOCATION",
                 "Select the returned device copy outside the retained office workspace.")
         source_sha = payload.get("expectedFilesSha256")
         require(isinstance(source_sha, str) and re.fullmatch(r"[a-f0-9]{64}", source_sha),
@@ -511,8 +513,9 @@ def _prefix_edition(edition, prefix):
     return value
 
 def returned_inventory(directory, *, progress=None):
-    rows = ordinary_tree(directory, progress=progress)
-    return {"files": rows, "filesSha256": value_sha(rows),
+    source = Path(directory).expanduser().absolute()
+    rows = ordinary_tree(source, progress=progress)
+    return {"directory": str(source), "files": rows, "filesSha256": value_sha(rows),
             "totalBytes": sum(x["bytes"] for x in rows), "fileCount": len(rows)}
 
 def copy_device_package(workspace, round_id, destination, *, progress=None):
@@ -520,7 +523,8 @@ def copy_device_package(workspace, round_id, destination, *, progress=None):
     require(row["status"] in ("exported", "returned"), "FIELD_ROUND_CLOSED",
             "Create a fresh field export for another collection round.")
     target = Path(destination).expanduser().absolute()
-    require(not target.exists() and not target.is_relative_to(workspace.root),
+    require(not target.exists() and not target.is_symlink() and
+            not target.resolve().is_relative_to(workspace.root.resolve()),
             "FIELD_DEVICE_DIRECTORY", "Choose a new device-transfer directory outside this workspace.")
     root = member(workspace.root, row["packageRoot"], existing=False)
     require(root.is_dir(), "FIELD_PACKAGE_DIRECTORY", "The retained field package directory is missing.")

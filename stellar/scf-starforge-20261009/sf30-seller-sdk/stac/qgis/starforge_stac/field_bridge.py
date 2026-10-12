@@ -56,6 +56,11 @@ def run_native(workspace, action, payload, *, native_command, qfieldsync_path=""
     executable = Path(native_command[0]).expanduser()
     require(executable.is_absolute() and executable.is_file(), "FIELD_NATIVE_COMMAND",
             "Select the actual native QGIS Python executable or installed wrapper.")
+    if action == "field.receive":
+        directory = payload.get("directory") if isinstance(payload, dict) else None
+        require(isinstance(directory, str) and Path(directory).is_absolute(),
+                "FIELD_RETURN_ABSOLUTE",
+                "Use the absolute returned directory reported by field.inventory.")
     state = workspace.read()
     request_id = request_id or "field-inspect-" + uuid.uuid4().hex
     require(REQUEST.fullmatch(request_id), "FIELD_REQUEST", "Use the original saved field request ID.")
