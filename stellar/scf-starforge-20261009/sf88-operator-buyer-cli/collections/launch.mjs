@@ -2,6 +2,7 @@
 import { isAbsolute, resolve } from 'node:path';
 
 export const COLLECTIONS_WORKSPACE_LAUNCH_SCHEMA = 'stellar-forge.sf88.collections-workspace-launch.v1';
+export const COLLECTION_RECOVERY_WORKSPACE_LAUNCH_SCHEMA = 'stellar-forge.sf88.collection-recovery-workspace-launch.v1';
 
 function privatePath(value) {
   if (typeof value !== 'string' || !isAbsolute(value) || value === '/' ||
@@ -39,6 +40,27 @@ export function matchCollectionsWorkspaceLaunch(value, expected, port = 0) {
       value.schema !== COLLECTIONS_WORKSPACE_LAUNCH_SCHEMA || value.state !== 'LISTENING' ||
       !Number.isSafeInteger(value.pid) || value.pid < 1 ||
       ['directory', 'queueRoot', 'approvalMode'].some(key => value[key] !== expected[key]))
+    return null;
+  return collectionsWorkspaceUrl(value.url, port);
+}
+
+/** Original receiver listener identity, before any inbox or target is opened. */
+export function collectionsRecoveryWorkspaceSelection({ receivingDirectory }) {
+  return { receivingDirectory: privatePath(receivingDirectory) };
+}
+export function collectionsRecoveryWorkspaceLaunch(settings, url, pid = process.pid) {
+  const selection = collectionsRecoveryWorkspaceSelection(settings);
+  const address = collectionsWorkspaceUrl(url);
+  if (!address || !Number.isSafeInteger(pid) || pid < 1)
+    throw new TypeError('The original collection receiver is not ready');
+  return { schema: COLLECTION_RECOVERY_WORKSPACE_LAUNCH_SCHEMA, state: 'LISTENING',
+    ...selection, pid, url: address };
+}
+export function matchCollectionsRecoveryWorkspaceLaunch(value, expected, port = 0) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) ||
+      value.schema !== COLLECTION_RECOVERY_WORKSPACE_LAUNCH_SCHEMA || value.state !== 'LISTENING' ||
+      !Number.isSafeInteger(value.pid) || value.pid < 1 ||
+      value.receivingDirectory !== expected.receivingDirectory)
     return null;
   return collectionsWorkspaceUrl(value.url, port);
 }

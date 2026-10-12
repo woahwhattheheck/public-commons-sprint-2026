@@ -33,7 +33,16 @@ MCP_REQUIRED = {APP_PREFIX + "expense-workspace/native_mcp.py",
 
 CREDIT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in
     ("native_woo.py", "credits.py", "credit_store.py", "credit-reader-files.json")}
-CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES)
+ADJUSTMENT_READER_FILES = {
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/buyer-expense-source.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/reconcile.mjs",
+}
+# Previously issued v1 projects contain the original 53-file Woo closure.
+# The additive v2 reader requires both the native Python adapter and its two JS files.
+CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES if n not in ADJUSTMENT_READER_FILES)
+ADJUSTMENT_REQUIRED = {APP_PREFIX + "expense-workspace/native_adjustments.py"}
+ADJUSTMENT_REQUIRED.update("app/" + n for n in ADJUSTMENT_READER_FILES)
+CREDIT_VERSIONS = ("original-woo-refund-v1", "original-native-refund-v2")
 
 
 def digest_file(path):
@@ -85,7 +94,7 @@ def inspect_database(path, manifest):
         expected = trusted_schema()
         legacy = manifest.get("request_recovery") is None
         credit_feature = manifest.get("buyer_credit_capture")
-        if credit_feature not in (None, "original-woo-refund-v1"):
+        if credit_feature not in (None, *CREDIT_VERSIONS):
             raise ValueError("The project advertises an unsupported buyer refund source version.")
         required = set(expected) - ({"api_requests"} if legacy else set()) - (CREDIT_TABLES if credit_feature is None else set())
         allowed_tables = set(expected) - (CREDIT_TABLES if credit_feature is None else set())
@@ -106,14 +115,16 @@ def inspect_database(path, manifest):
             raise ValueError("The project manifest does not match its original native workspace revision.")
         source_kinds = sorted({json.loads(row[0]).get("kind", "sf36_ledger") for row in
                                database.execute("SELECT body FROM sources")})
-        if any(kind not in ("sf36_ledger", "mcp_quote", "woo_refund") for kind in source_kinds):
+        if any(kind not in ("sf36_ledger", "mcp_quote", "woo_refund", "merchant_adjustments") for kind in source_kinds):
             raise ValueError("The retained source kind is not supported by this original receiver.")
         if "mcp_quote" in source_kinds and manifest.get("mcp_quote_capture") != "native-readonly-v1":
             raise ValueError("The complete MCP expense source requires its original included reader.")
         if manifest.get("mcp_quote_capture") is not None and manifest.get("source_kinds") != source_kinds:
             raise ValueError("The original source kinds do not match the complete project manifest.")
-        if "woo_refund" in source_kinds and credit_feature != "original-woo-refund-v1":
+        if "woo_refund" in source_kinds and credit_feature not in CREDIT_VERSIONS:
             raise ValueError("The original buyer credit source requires its complete included receiver.")
+        if "merchant_adjustments" in source_kinds and credit_feature != "original-native-refund-v2":
+            raise ValueError("The original accounting source requires its complete native adjustment reader.")
         credit_count = database.execute("SELECT COUNT(*) FROM credits").fetchone()[0] if "credits" in tables else 0
         packet_count = database.execute("SELECT COUNT(*) FROM refund_packets").fetchone()[0] if "refund_packets" in tables else 0
         context = meta.get("data_context", "operational" if source_kinds else "")
@@ -174,10 +185,11 @@ def receive(archive, directory, expected_sha256):
             if feature not in (None, "native-readonly-v1"):
                 raise ValueError("The archive advertises an unsupported original MCP reader version.")
             credit_feature = manifest.get("buyer_credit_capture")
-            if credit_feature not in (None, "original-woo-refund-v1") or credit_feature and not feature:
+            if credit_feature not in (None, *CREDIT_VERSIONS) or credit_feature and not feature:
                 raise ValueError("The original refund feature requires its complete native reader closure.")
-            required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set())
-            allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set())
+            extra = ADJUSTMENT_REQUIRED if credit_feature == "original-native-refund-v2" else set()
+            required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
+            allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set()) | extra
             if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:
                 raise ValueError("The complete project must retain the exact original application and workspace members.")
             if sum(i.file_size for i in infos) > MAX_BYTES:

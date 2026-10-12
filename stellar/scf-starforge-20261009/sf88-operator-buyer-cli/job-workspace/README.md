@@ -16,7 +16,7 @@ Choose an absolute directory owned by the account that runs the workspace:
 starforge job-workspace serve --state /srv/starforge/customer-jobs
 ```
 
-Open the printed `url` exactly as supplied. The local server uses a private token in the URL fragment. Its four views are **Checkout**, **Jobs**, **Resource library**, and **Collections**; each opens with the same local authorization.
+Open the printed `url` exactly as supplied. The local server uses a private token in the URL fragment. Its views are **Request**, **Checkout**, **Jobs**, **Resolutions**, **Resource library**, and **Collections**; navigation carries the same local authorization.
 
 To include buyer directories and delivered files that already exist outside the workspace, configure their parent roots on the first open:
 
@@ -27,6 +27,14 @@ starforge job-workspace serve --state /srv/starforge/customer-jobs --buyer-root 
 The workspace creates its own `buyers/` and `artifacts/` directories automatically. Reopen with the original state path and omit the root options. Supplying roots again requires the same canonical set saved on the first open.
 
 The running server owns the workspace lease. Use its browser while it is running. Press Ctrl-C to finish local work and close before using standalone commands against that same state.
+
+## Resolve a retained purchase
+
+Open **Resolutions** beside Jobs and select the original paid job. **Read merchant resolution** retrieves its current case through the job’s customer capability. Send an issue with the requested remedy, continue the conversation, and read the merchant’s decision, pending refund and verified returned amount alongside the original payment. Saved request IDs support recovery after a connection is interrupted.
+
+The workspace retains each complete merchant receipt before updating its local record. Export a resolution to hand it over with the original buyer, or receive that file beside the matching accepted purchase. The receiving operation checks the acceptance, purchase and receipt identities and merges the existing request history before committing it. Use **Stop** to end a current customer request; closing the workspace drains these requests before releasing its state.
+
+The standalone command is `starforge jobs-buyer-resolution --help`; its typed API is `@tokenjunkielabs/starforge-merchant/buyer/job-workspace/resolution`. The [resolution operating guide](../../sf30-seller-sdk/jobs/resolution/README.md) covers the complete merchant/customer workflow, command inputs and portable receiving files. The host also returns `resolutionUrl` with its current fragment capability.
 
 ## Purchase a prepared application job
 

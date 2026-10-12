@@ -16,5 +16,8 @@
   },
   "runtimePackageManifests": {
     "s3": "stellar/scf-starforge-20261009/sf30-seller-sdk/s3/package.json"
+  },
+  "applicationProviders": {
+    "s3": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/s3.mjs"
   }
 }

@@ -140,6 +140,20 @@ recovery and reopening use the existing managed workflow.
 Configurations selecting the same original application state share one resource
 key, so that Applications workspace cannot launch overlapping owners of it.
 
+## Encrypted project backup and receiving
+
+The application can capture its selected configuration, complete handoff, saved
+requests and response bytes, and the original native spending owners in one
+encrypted project. The same browser exposes project inspection, backup archives,
+receiving review and reopening. See [PROJECT_RECOVERY.md](PROJECT_RECOVERY.md) for
+the complete configuration and receiving workflow.
+
+Use the installed command's `project-help` for exact arguments. A received project
+opens its saved requests and full result files through the original browser,
+HTTP and MCP interfaces. Live reopening verifies the original source selection
+and native financial history, then uses the same canonical owners and request
+identities. Wallet and provider credentials remain in their original custody.
+
 ## Receiving and continued operation
 
 Keep the application directory, complete handoff, remote selection, governed
@@ -159,6 +173,9 @@ buyer's recovery and source-selection rules.
 | @tokenjunkielabs/starforge-merchant/partners/stellar-application/configuration | Trusted configuration and application loading |
 | @tokenjunkielabs/starforge-merchant/partners/stellar-application/server | Original HTTP, browser and MCP host |
 | @tokenjunkielabs/starforge-merchant/partners/stellar-application/installed | Installed paths, initialization, inspection and launch |
+| @tokenjunkielabs/starforge-merchant/partners/stellar-application/project | Whole application inspection, capture and live project operations |
+| @tokenjunkielabs/starforge-merchant/partners/stellar-application/project-receive | Encrypted verification, offline receiving and original-owner restore |
+| @tokenjunkielabs/starforge-merchant/partners/stellar-application/project-cli | Installed project commands |
 
 The [workshare scope](SCOPE.md) preserves commercial terms and selected receiving
 inputs. Its engineering handoff uses this complete source and original native
