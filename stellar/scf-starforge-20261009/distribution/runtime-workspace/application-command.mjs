@@ -3,6 +3,7 @@ import { blockscoutStartup } from './application-blockscout.mjs';
 import { mppStartup, MPP_READY_SCHEMA } from './application-mpp.mjs';
 import { atlasStartup } from './application-atlas.mjs';
 import { redisStartup } from './application-redis.mjs';
+import { openApiStartup } from './application-openapi.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { collectionsStartup } from './application-collections.mjs';
@@ -42,7 +43,7 @@ export async function applicationEnvironment(path, expectedSha256) {
   try { value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); }
   catch { need(false, 'APPLICATION_ENVIRONMENT_JSON_REQUIRED'); }
   need(plain(value) && Object.keys(value).length <= 128 && Object.entries(value).every(([name, value]) =>
-    /^[A-Z_][A-Z0-9_]{0,127}$/.test(name) && typeof value === 'string' && !value.includes('\0') &&
+    /^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(name) && typeof value === 'string' && !value.includes('\0') &&
     Buffer.byteLength(value) <= 8192), 'APPLICATION_ENVIRONMENT_VALUES_INVALID');
   need(!['HOME', 'CODEX_HOME'].some(name => Object.hasOwn(value, name)), 'APPLICATION_ENVIRONMENT_HOME_RESERVED');
   return { environment: { ...process.env, ...value }, sha256 };
@@ -124,6 +125,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
       saving = saving.then(async () => {
         if (seen) return;
         const startup = await mppStartup(request, text, directory);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
+    if (request.command === 'openapi-workspace' && request.args.includes('--managed-launch-sha256')) {
+      if (!text.startsWith('{"schema":"stellar-forge.openapi-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = openApiStartup(request, directory, text, context);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

@@ -7,6 +7,7 @@ import { blockscoutApplication, prepareBlockscoutApplication } from './applicati
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
+import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
@@ -54,9 +55,7 @@ export const APPLICATION_CATALOG = Object.freeze([
     title: 'XML dataset onboarding', terminal: false,
     description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
     fields: [field('workspaceDirectory', 'Initialized XML workspace', 'path', true), ...common] },
-  { id: 'openapi', command: 'openapi-workspace', title: 'API merchant authoring', terminal: false,
-    description: 'Import the original API source, configure paid routes, save a merchant package and operate its original preview.',
-    fields: [field('outputParent', 'Private merchant projects directory', 'path', true, 'An existing private folder or a new folder in an existing private parent.'), ...common] },
+  openApiApplication(common),
   { id: 'dataset', command: 'dataset-workspace', title: 'Dataset preview', terminal: false,
     description: 'Open an original dataset file or retained dataset state with its native query and preview controls.',
     fields: [field('datasetFile', 'Dataset file'), field('stateDirectory', 'Retained dataset state'), field('catalogDirectory', 'Catalog directory'),
@@ -197,7 +196,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding;
+  let terminalPython, eventFeed, mppBinding, openapi;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
@@ -240,9 +239,11 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     await path('workspaceDirectory', 'directory', false, true);
     args.push('xml', '--workspace', settings.workspaceDirectory, 'serve');
   } else if (type.id === 'openapi') {
-    const folder = await path('outputParent', 'directory', true, true);
-    if (!folder.exists) createDirectories.push(folder.path);
-    option('--out-parent', settings.outputParent);
+    const prepared = await prepareOpenApiApplication(settings, {
+      ...context, inputPath, applicationEnvironment, runtimeDirectory,
+    });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories); openapi = prepared.openapi;
   } else if (type.id === 'dataset') {
     await path('datasetFile', 'file'); await path('stateDirectory', 'directory', false, true);
     await path('catalogDirectory', 'directory', false, true);
@@ -365,6 +366,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
     ...(mppBinding ? { mppBinding } : {}),
+    ...(openapi ? { openapi } : {}),
     ...(type.terminal ? { terminalPython } : {}),
     ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
