@@ -1,13 +1,14 @@
 // MIT. Private native x402 HTTP transport for the original SF58 frontdoor / SF30 seller.
 import { createServer } from 'node:http';
+import { createDiscoveryServer } from '../../../scf46-stellar-bazaar/src/catalog.mjs';
 import { FacilitatorError, requireValue } from './config.mjs';
 
 const BODY_LIMIT = 1024 * 1024;
-const json = (res, status, value) => {
+const json = (res, status, value, headers = {}) => {
   if (res.destroyed || res.writableEnded) return;
   const body = Buffer.from(JSON.stringify(value));
   res.writeHead(status, {'content-type':'application/json; charset=utf-8','cache-control':'no-store',
-    'x-content-type-options':'nosniff','content-length':body.length});
+    'x-content-type-options':'nosniff','content-length':body.length,...headers});
   res.end(body);
 };
 async function readBody(req) {
@@ -37,6 +38,7 @@ export async function startFacilitatorServer({facilitator, port = 4020} = {}) {
   let closing;
   const sockets = new Set();
   const responses = new Set();
+  const discovery = facilitator.catalog ? createDiscoveryServer(facilitator.catalog) : null;
   const server = createServer(async (req,res) => {
     let ended;
     const responseDone = new Promise(resolve => { ended = resolve; });
@@ -54,11 +56,22 @@ export async function startFacilitatorServer({facilitator, port = 4020} = {}) {
         const observation = await facilitator.probeReadiness();
         return json(res,observation.ready && facilitator.status().state === 'ACCEPTING' ? 200 : 503,observation);
       }
+      if (req.method === 'GET' && discovery && typeof req.url === 'string' && req.url.length <= 4096 &&
+          /^\/discovery\/(resources|search)(\?|$)/.test(req.url)) {
+        if (req.headers['transfer-encoding'] || (req.headers['content-length'] && req.headers['content-length'] !== '0'))
+          throw new FacilitatorError('DISCOVERY_BODY_NOT_ACCEPTED');
+        res.setHeader('x-content-type-options','nosniff');
+        return await discovery(req,res);
+      }
       if (req.method === 'GET' && req.url === '/supported') return json(res,200,await facilitator.getSupported());
       if (!['/verify','/settle'].includes(req.url)) throw new FacilitatorError('NOT_FOUND',404);
       if (req.method !== 'POST') throw new FacilitatorError('METHOD_NOT_ALLOWED',405);
       const body = await readBody(req);
       if (req.aborted || res.destroyed) return;
+      if (req.url === '/settle' && typeof facilitator.settleWithExtensions === 'function') {
+        const outcome = await facilitator.settleWithExtensions(body.paymentPayload,body.paymentRequirements);
+        return json(res,200,outcome.result,outcome.headers);
+      }
       const result = await facilitator[req.url.slice(1)](body.paymentPayload,body.paymentRequirements);
       json(res,200,result);
     } catch (error) {
