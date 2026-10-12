@@ -23,10 +23,13 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  odata                                     Operate OData source editions, merchants and customer receiving
+  odata-live                                Prepare, run and receive the original live OData paid-page merchant
   frictionless                              Capture table packages, review fields and publish original merchant editions
   sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
   buyer-collections                         Review, retain and operate original paid request collections
   buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
+  bls-publisher                            Publish official BLS labor observations and original customer deliveries
   census-publisher                         Publish Census ACS observations and complete original source deliveries
   usaspending-research                      Capture federal awards, review prime workshares and operate saved editions
   usaspending-dossier                       Receive award editions, write research findings and recover source packets
@@ -60,7 +63,10 @@ Native commands (arguments pass unchanged to the maintained implementation):
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
+  n8n-merchant                              Sell selected automation runs and recover original n8n executions
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
+  jobs delivery                             Send completed original job files and operate retained delivery recovery
+  jobs receiver                             Receive signed completed files, open the private desk and export original results
   job-workspace                             Receive paid jobs, retrieve results and organize research collections
   upstream-tls                               Review supplier certificate references and inspect local TLS credentials
   supplier-quotas                            Review supplier account configuration and inspect retained call allowances
@@ -120,6 +126,8 @@ Native commands (arguments pass unchanged to the maintained implementation):
   postgres-publisher                         Publish reviewed query snapshots and keep datasets current
   mysql                                      Inspect, prepare and operate a MySQL/MariaDB merchant
   mysql-workspace                            Build, review and run a database merchant in the browser
+  mssql                                      Inspect, prepare and operate a native SQL Server merchant
+  mssql-workspace                            Build and receive SQL Server data products in the browser
   mysql-publisher                            Publish reviewed MySQL snapshots and retained buyer datasets
   sheets-source                              Capture, inspect and prepare selected Google Sheets columns
   sheets-publisher                           Review and publish retained Sheet observations as datasets
@@ -180,6 +188,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   merchant-accounting-recovery               Review, import and reopen an original completed purchase
   merchant-accounting-maintenance            Back up, recover and reopen the same merchant MCP accounting workspace
   merchant-accounting-adjustments            Review, retain and reconcile original merchant cancellations and refunds
+  merchant-accounting-statements             Retain, recover and deliver original customer statements through MCP
   merchant-accounting-platforms              Review, retain and reconcile original QuickBooks and Xero operations
   s3                                         Inspect and configure selected object-store resources
   python-merchant                            Inspect, diagnose and serve a Python application

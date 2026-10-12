@@ -507,12 +507,12 @@ async function bindWorkspace(source, path) {
     BigInt(op.expect.maxAtomic) > 0n && BigInt(op.expect.maxAtomic) <= BigInt(workspaceOp.expect.maxAtomic) &&
     BigInt(op.expect.maxAtomic) <= BigInt(workspace.manifest.signer.maxAtomic), 'OBJECT_WORKSPACE_TERMS_MISMATCH');
 }
-async function bareOperatorPreflight(configuration) {
+async function bareOperatorPreflight(configuration, environment) {
   execution(configuration);
   need((await stat(configuration.signerModule)).isFile(), 'SIGNER_MODULE_MUST_EXIST');
   // Original constructor only: no approval invocation, child process, signature,
   // wallet import or ledger change. Missing setup leaves the native job QUEUED.
-  try { createOperatorApproval({...configuration.operator,environment:process.env}); }
+  try { createOperatorApproval({...configuration.operator,environment}); }
   catch (error) { error.code ??= 'OBJECT_ORIGINAL_OPERATOR_PREFLIGHT_FAILED'; throw error; }
 }
 
@@ -573,7 +573,8 @@ export async function inspectObjectSession(directory) {
 }
 
 /** Continue only untouched original inbox jobs, preserving their one-attempt custody. */
-export async function runObjectSession(directory, {signal,workspace,onChunk = () => {}} = {}) {
+export async function runObjectSession(directory, {signal,workspace,onChunk = () => {},
+  environment = process.env} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof onChunk === 'function', 'OBJECT_PROGRESS_CALLBACK_INVALID');
   const release = await acquireLock(directory);
@@ -591,8 +592,8 @@ export async function runObjectSession(directory, {signal,workspace,onChunk = ()
       // A direct original-queue operator may have taken this job since inspection.
       // Let its durable attempt prevail; never run an attempted job again.
       if (!job.attempt) {
-        if (selectedWorkspace === null) await bareOperatorPreflight(plan.configuration);
-        try { job = await queue.run(plan.intentId, {signal,
+        if (selectedWorkspace === null) await bareOperatorPreflight(plan.configuration, environment);
+        try { job = await queue.run(plan.intentId, {signal, environment,
           ...(selectedWorkspace === null ? {} : {workspace:selectedWorkspace})}); }
         catch (error) {
           job = await queue.show(plan.intentId);

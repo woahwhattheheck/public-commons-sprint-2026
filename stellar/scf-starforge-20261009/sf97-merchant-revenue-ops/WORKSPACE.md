@@ -451,3 +451,9 @@ telemetry, external fonts or libraries are used.
 Original SF74 support and merchant commercial owners can consume the unchanged
 report and terms schemas. The workspace is an additive native merchant adoption
 workflow for the single SCF project, not another grant submission.
+
+## Allocate original supplier costs
+
+Open the **Supplier costs** link in this workspace to retain original bills, credit notes, quotes and usage context, map complete charge rows, conserve allocations in their source currency, compare corrected editions, and carry a reviewed USD per-fulfilled cost into a new original pricing review. The complete operator workflow and private backup/restore interface are in [Supplier costs](economics/README.md).
+
+Optional `--supplier-usage FILE` and `--accounting-report FILE` supply host-selected original context for explicit capture. `--restore-cost-workspace BACKUP.tar --state NEW_DIRECTORY` restores a complete private pricing-and-cost workspace. Continue supplying the original seller and observation inputs when reopening. Supplier documents and tariff estimates retain their source meanings; the original native payment-price and release decisions remain in this pricing workspace.

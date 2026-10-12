@@ -91,17 +91,24 @@ function recoveryDetails(job) {
 }
 
 function finalizationDetails(job) {
-  const saved=job.finalization;
-  if(!object(saved))return section('Accounting','<p>No financial-finalization result has been saved in this inbox.</p>');
+  const saved=job.lostOutputFinalization??job.finalization;
+  if(!object(saved))return section('Accounting',job.lostOutputFinalizationError?
+    fields([['Recovered accounting read',job.lostOutputFinalizationError]]):
+    '<p>No financial-finalization result has been saved in this inbox.</p>');
   const result=object(saved.result)?saved.result:{};
   const last=object(saved.lastFinalized)?saved.lastFinalized:null;
   const rows=[
     ['Latest accounting result',result.outcome],['Checked at',saved.completedAt],
     ['Actual atomic units',result.actual],['Canonical transaction receipt',result.receipt_ref],
-    ['Approved request SHA-256',saved.approvedRequestSha256],['Finality proof SHA-256',result.proof_sha256],
+    ['Approved request SHA-256',saved.approvedRequestSha256??saved.requestSha256],['Finality proof SHA-256',result.proof_sha256],
     ['Chain observation',result.chainObservation],['Failure reason',result.reason],
     ['Merchant notification',result.merchant?.status],['Merchant order',result.merchant?.orderReference],
     ['Callback state',result.merchant?.callbackState],
+    ['Recovered original attempt',job.lostOutputFinalization?.attemptId],
+    ['Original output state',job.lostOutputFinalization?.evidenceState?.condition],
+    ['Original output SHA-256',job.lostOutputFinalization?.evidenceState?.sha256],
+    ['Recovery record authority',job.lostOutputFinalization?.recordAuthority],
+    ['Recovered accounting read',job.lostOutputFinalizationError],
     ['Earlier finalized result',last&&last.completedAt!==saved.completedAt?last.result?.outcome:undefined],
     ['Earlier finalization time',last&&last.completedAt!==saved.completedAt?last.completedAt:undefined],
   ].filter(([,value])=>value!==undefined&&value!==null);
@@ -162,13 +169,14 @@ function detail(job, queueRoot, commandFor, accountingWorkspace) {
     'This request was cancelled locally before a queue execution. Its original saved identity remains in history.' : job.state === 'QUEUED' ?
     'To run this exact queued request, use the trusted terminal. The original buyer still obtains fresh terms and operator approval.' :
     'Inspect this attempt and recover any original terminal evidence before deciding what happened. The permanent attempt marker prevents another queue execution.';
-  const workspace=accountingWorkspace??job.finalization?.workspace;
+  const workspace=accountingWorkspace??job.lostOutputFinalization?.workspace??job.finalization?.workspace;
+  const accountingVerb=job.lostOutputFinalization?'read-lost-output':'finalize';
   const finalizeCommand=job.attempt?.kind==='EXECUTE'&&typeof workspace==='string'&&workspace?
-    command('finalize',queueRoot,intentOf(job))+' --workspace '+shellQuote(workspace):null;
+    command(accountingVerb,queueRoot,intentOf(job))+' --workspace '+shellQuote(workspace):null;
   const actions = section('Operator commands', `<p>${escape(actionCopy)}</p>` +
     `<h4>Inspect saved history</h4><pre>${escape(commandFor('show', queueRoot, intentOf(job)))}</pre>` +
     (!['CANCELLED','REVIEW_REQUIRED'].includes(job.state) ? `<h4>${action === 'execute' ? 'Execute this one intent' : 'Read original evidence'}</h4><pre>${escape(commandFor(action, queueRoot, intentOf(job)))}</pre>` : '') +
-    (finalizeCommand?`<h4>Finalize original payment accounting</h4><pre>${escape(finalizeCommand)}</pre>`:'')+
+    (finalizeCommand?`<h4>${job.lostOutputFinalization?'Read recovered payment accounting':'Finalize original payment accounting'}</h4><pre>${escape(finalizeCommand)}</pre>`:'')+
     '<p class="note">These are copyable commands only. This report has no execution controls and contacts no service.</p>');
   const recoveredFile = object(recovery.deliveryFile) ?
     responseDetails({responseFile:recovery.deliveryFile}, 'Response-file recovery status') : '';
@@ -187,7 +195,7 @@ function row(job, index, queueRoot, commandFor, accountingWorkspace) {
     job.operation?.expect?.asset, job.operation?.expect?.network,
     original.status, observed?.status, original.error?.code].map(value => text(value, '')).join(' ').toLowerCase();
   const outcome = observed?.status ?? recovery.observationStatus ?? original.status;
-  const accounting=job.finalization?.result?.outcome;
+  const accounting=(job.lostOutputFinalization??job.finalization)?.result?.outcome??job.lostOutputFinalizationError;
   return `<tbody class="job" data-state="${escape(state)}" data-search="${escape(search)}">
     <tr class="summary-row">
       <th scope="row"><a href="#${id}">${escape(intent)}</a><span class="resource">${escape(job.operation?.method ?? '')} ${escape(job.operation?.url ?? '')}</span></th>

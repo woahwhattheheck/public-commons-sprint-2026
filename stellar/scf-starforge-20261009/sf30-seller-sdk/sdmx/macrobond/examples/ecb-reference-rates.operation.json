@@ -1,0 +1,225 @@
+{
+  "operation": "macrobond-ecb-customer-catalog",
+  "input_packet_sha256": "b867833b5c7db79f4cc95bee1070cb2366b5975e1e470c31c1199800c00613cc",
+  "source_project_id": "d560804b1f7bc5c59c8cd3f71483247a",
+  "source_revision": 2,
+  "catalog_id": "207af723ad9d4531a6e841efbf1f3e21",
+  "full_edition": "c4831610a20559e1f3d4b42da014e3e99f92b5ea80f745ed451055717aefc61e",
+  "usd_edition": "2bed857c07111acf1c975086389ef42c4c673809a7bfa7f51ea0788a546c96bb",
+  "compatibility_warnings": [],
+  "comparison": {
+    "before": "c4831610a20559e1f3d4b42da014e3e99f92b5ea80f745ed451055717aefc61e",
+    "after": "2bed857c07111acf1c975086389ef42c4c673809a7bfa7f51ea0788a546c96bb",
+    "series_counts": {
+      "added": 0,
+      "removed": 4,
+      "changed": 0,
+      "unchanged": 4
+    },
+    "observation_counts": {
+      "added": 0,
+      "removed": 272,
+      "changed": 0,
+      "unchanged": 272
+    },
+    "rows": [
+      {
+        "id": "sdmx_158ae96d97c59d37e55fa8f4b9f81f34",
+        "series_key": "M.GBP.EUR.SP00.A",
+        "kind": "removed",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 12,
+          "changed": 0,
+          "unchanged": 0
+        }
+      },
+      {
+        "id": "sdmx_28954369a92fc85bed4eb71edca0860b",
+        "series_key": "M.USD.EUR.SP00.A",
+        "kind": "unchanged",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 0,
+          "changed": 0,
+          "unchanged": 12
+        }
+      },
+      {
+        "id": "sdmx_31ba49096b09d36edb615cdd41c56c85",
+        "series_key": "A.GBP.EUR.SP00.A",
+        "kind": "removed",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 1,
+          "changed": 0,
+          "unchanged": 0
+        }
+      },
+      {
+        "id": "sdmx_4772d4d03a5f3cdda3eaf83a4e9bac99",
+        "series_key": "A.USD.EUR.SP00.A",
+        "kind": "unchanged",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 0,
+          "changed": 0,
+          "unchanged": 1
+        }
+      },
+      {
+        "id": "sdmx_95632776d640ec4a972152cafc48b6fa",
+        "series_key": "D.GBP.EUR.SP00.A",
+        "kind": "removed",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 255,
+          "changed": 0,
+          "unchanged": 0
+        }
+      },
+      {
+        "id": "sdmx_9f0bd595436d47ac82e35fbca41d9668",
+        "series_key": "Q.GBP.EUR.SP00.A",
+        "kind": "removed",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 4,
+          "changed": 0,
+          "unchanged": 0
+        }
+      },
+      {
+        "id": "sdmx_b455823cece4094bedcc51b428d03959",
+        "series_key": "D.USD.EUR.SP00.A",
+        "kind": "unchanged",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 0,
+          "changed": 0,
+          "unchanged": 255
+        }
+      },
+      {
+        "id": "sdmx_f4124225b9409835f0f7b9d47aa34f4d",
+        "series_key": "Q.USD.EUR.SP00.A",
+        "kind": "unchanged",
+        "metadata_changed": false,
+        "source_changed": false,
+        "counts": {
+          "added": 0,
+          "removed": 0,
+          "changed": 0,
+          "unchanged": 4
+        }
+      }
+    ]
+  },
+  "publication_history": [
+    {
+      "activated_at": "2026-10-12T01:45:25.235481Z",
+      "current": "c4831610a20559e1f3d4b42da014e3e99f92b5ea80f745ed451055717aefc61e",
+      "previous": null,
+      "revision": 1
+    },
+    {
+      "activated_at": "2026-10-12T01:45:25.246061Z",
+      "current": "2bed857c07111acf1c975086389ef42c4c673809a7bfa7f51ea0788a546c96bb",
+      "previous": "c4831610a20559e1f3d4b42da014e3e99f92b5ea80f745ed451055717aefc61e",
+      "revision": 2
+    },
+    {
+      "activated_at": "2026-10-12T01:45:25.261534Z",
+      "current": "c4831610a20559e1f3d4b42da014e3e99f92b5ea80f745ed451055717aefc61e",
+      "previous": "2bed857c07111acf1c975086389ef42c4c673809a7bfa7f51ea0788a546c96bb",
+      "revision": 3
+    }
+  ],
+  "source_provider": {
+    "routes": [
+      "getcapabilities",
+      "listseries",
+      "loadmeta",
+      "loadseries",
+      "loadtree",
+      "searchseries"
+    ],
+    "authentication_status_without_credentials": 401,
+    "series_count": 8,
+    "observation_count": 544,
+    "annual_gbp": "0.8567923137255",
+    "annual_gbp_series_id": "sdmx_31ba49096b09d36edb615cdd41c56c85",
+    "provider_series_ids": [
+      "sdmx_158ae96d97c59d37e55fa8f4b9f81f34",
+      "sdmx_28954369a92fc85bed4eb71edca0860b",
+      "sdmx_31ba49096b09d36edb615cdd41c56c85",
+      "sdmx_4772d4d03a5f3cdda3eaf83a4e9bac99",
+      "sdmx_95632776d640ec4a972152cafc48b6fa",
+      "sdmx_9f0bd595436d47ac82e35fbca41d9668",
+      "sdmx_b455823cece4094bedcc51b428d03959",
+      "sdmx_f4124225b9409835f0f7b9d47aa34f4d"
+    ],
+    "wire_sha256": "3a3d439efbc085b142b2d08fcd22db144e8ec5ba8266c246babd9de2470e3ca7"
+  },
+  "catalog_packet": {
+    "path": "ecb-reference-rates.macrobond.zip",
+    "bytes": 63569,
+    "sha256": "e15d7d1ca00275ccbf6ef22ea07d7dcd200941b8777e7dd500b090fe1bc4c649",
+    "edition_count": 2,
+    "publication_count": 3,
+    "source_project_count": 1
+  },
+  "receiving_provider": {
+    "routes": [
+      "getcapabilities",
+      "listseries",
+      "loadmeta",
+      "loadseries",
+      "loadtree",
+      "searchseries"
+    ],
+    "authentication_status_without_credentials": 401,
+    "series_count": 8,
+    "observation_count": 544,
+    "annual_gbp": "0.8567923137255",
+    "annual_gbp_series_id": "sdmx_31ba49096b09d36edb615cdd41c56c85",
+    "provider_series_ids": [
+      "sdmx_158ae96d97c59d37e55fa8f4b9f81f34",
+      "sdmx_28954369a92fc85bed4eb71edca0860b",
+      "sdmx_31ba49096b09d36edb615cdd41c56c85",
+      "sdmx_4772d4d03a5f3cdda3eaf83a4e9bac99",
+      "sdmx_95632776d640ec4a972152cafc48b6fa",
+      "sdmx_9f0bd595436d47ac82e35fbca41d9668",
+      "sdmx_b455823cece4094bedcc51b428d03959",
+      "sdmx_f4124225b9409835f0f7b9d47aa34f4d"
+    ],
+    "wire_sha256": "3a3d439efbc085b142b2d08fcd22db144e8ec5ba8266c246babd9de2470e3ca7"
+  },
+  "receiving_reopened": {
+    "catalog_id": "207af723ad9d4531a6e841efbf1f3e21",
+    "current": "c4831610a20559e1f3d4b42da014e3e99f92b5ea80f745ed451055717aefc61e",
+    "revision": 3
+  },
+  "completed_at": "2026-10-12T01:47:14.199956Z",
+  "implementation_sha256": {
+    "catalog.py": "8be5dc52fb9b7fae59af79d1347ac3c6c579e267dcfbada482b0f393b8eacf0c",
+    "server.py": "2635aeea476edef0a37ea28320d2fc8edc15f0c33638838aad5497fe2416b5f5",
+    "connection.py": "b1ca1be424afd2947837f1bcf6f2c491e33b917b658b522ec113460bfbb24682"
+  },
+  "input_packet": "../../examples/ecb-reference-rates.sdmx.zip",
+  "operation_command": "python3 -B \"$SDMX_SOURCE/macrobond/delivery/native-owner.py\" --source-root \"$SDMX_SOURCE\" --operation-root /private/ecb-macrobond-operation --project-packet \"$SDMX_SOURCE/examples/ecb-reference-rates.sdmx.zip\""
+}
