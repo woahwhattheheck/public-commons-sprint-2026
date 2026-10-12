@@ -117,16 +117,16 @@ function csktm_rewrite_html($html,$links){
         return $url;
     };
     while($processor->next_tag()){
-        foreach(array('href','src','poster','data-src','data-lazy-src','data-opt-src')as$key){$value=$processor->get_attribute($key);if(is_string($value))$processor->set_attribute($key,$rewrite($value));}
-        // The captured Optimole markup uses a transparent data-URI placeholder.
-        // Promote its observed image URL before sanitization, without requiring
-        // the old site's lazy-loader script on the native destination.
         $tag=$processor->get_tag();$src=$processor->get_attribute('src');
+        foreach(array('href','src','poster','data-src','data-lazy-src','data-opt-src')as$key){$value=$processor->get_attribute($key);if(is_string($value)){$next=$rewrite($value);if($next!==$value)$processor->set_attribute($key,$next);}}
+        // The captured Optimole markup uses a transparent data-URI placeholder.
+        // Inspect the original src before WordPress URL normalization can turn
+        // a scheme-stripped placeholder into an apparent HTTP URL.
         if($tag==='IMG'&&(!is_string($src)||trim($src)===''||preg_match('/^(?:data:)?image\/[a-z0-9.+-]+[;,]/i',ltrim($src)))){
             foreach(array('data-opt-src','data-src','data-lazy-src')as$key){
                 $candidate=$processor->get_attribute($key);if(!is_string($candidate))continue;$parts=wp_parse_url($candidate);
                 if(is_array($parts)&&in_array(strtolower($parts['scheme']??''),array('http','https'),true)&&!empty($parts['host'])&&!isset($parts['user'])&&!isset($parts['pass'])){
-                    $processor->set_attribute('src',$candidate);$promoted++;break;
+                    if($processor->set_attribute('src',$candidate)){$promoted++;break;}
                 }
             }
         }
