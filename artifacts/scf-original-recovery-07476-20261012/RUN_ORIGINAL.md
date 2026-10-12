@@ -22,7 +22,7 @@ The broader source set includes the original SDK, recovery, deploy, delivery and
 
 ## Receive the full source
 
-Check out the published artifact branch, then select its complete package directory. Choose a new source directory beside that checkout and a separate journey file:
+The full package is published at [commit 0feebd2b36f7b0a157e24c7cceab7da4a52616a3](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/0feebd2b36f7b0a157e24c7cceab7da4a52616a3/artifacts/scf-original-recovery-07476-20261012) on `artifact/scf-original-recovery-07476-20261012`. Its 39 files include all 31 source parts, the index, the standalone journey and the operating programs. Check out that published artifact branch, then select its complete package directory. Choose a new source directory beside that checkout and a separate journey file:
 
 ~~~sh
 python3 materialize-original-source.py \
@@ -50,6 +50,8 @@ Use installed Node, Python, Chromium and Playwright runtimes. The original packa
 | re2js | 2.8.6, in stellar-forge/payment-auto-catalog/package-lock.json |
 
 Reuse a compatible existing node_modules tree where available. The original re2js lock carries its package integrity. Any required installation belongs to the selected runtime directory and retains that lock and its actual installed versions. The producing commands use the original local merchant/fleet runtime.
+
+For the direct materializer route, provision the selected dependencies through the source directory's parent before running either native command. For example, when source is `/srv/scf-run/source`, an existing `/srv/scf-run/node_modules` directory or an explicit symlink there to the compatible installed runtime lets Node resolve packages from that ancestor. Every ancestor and the selected package files must be readable by the actual service account. Keep the existing target when the link already exists and confirm it resolves to the intended installed directory. The materializer finishes with source directories at mode 0555; its application tree is then read-only. The supervising controller instead prepares its own `source/node_modules` link before freezing that tree.
 
 ## Execute the entire original journey
 
