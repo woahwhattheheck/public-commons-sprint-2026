@@ -1,0 +1,17 @@
+{
+  "schema": "stellar-forge.openfema-testnet-host.v1",
+  "operationId": "SCF-OPENFEMA-PORTFOLIO-3BDA-20261012",
+  "sourceRoot": "/absolute/receiving/source",
+  "sourceRef": "3a35855d0317fcf696eb2dc17567fa7f31e0358d",
+  "operationDirectory": "/absolute/receiving/openfema-testnet",
+  "bundleFile": "/absolute/receiving/OpenFEMA_DR4724_Original_Source.json",
+  "python": "/absolute/installed/python3",
+  "openssl": "/absolute/installed/openssl",
+  "chromium": "/absolute/installed/chromium",
+  "playwrightModule": "/absolute/installed/playwright/index.mjs",
+  "origin": "https://openfema-receiving-3bda.test",
+  "path": "/openfema-dr4724",
+  "amountAtomic": "50000",
+  "maxTotalAtomic": "50000",
+  "maxTimeoutSeconds": 120
+}
