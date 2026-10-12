@@ -122,6 +122,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     questions: clone(state.questions), editions: clone(state.editions),
     selections: clone(state.selections), findings: clone(state.findings) });
   async function commit(id, expectedRevision, label, update, { projection = 'full' } = {}) {
+    need(['full', 'metadata'].includes(projection), 'RESEARCH_PROJECTION_INVALID');
     const current = await head(id);
     need(Number.isSafeInteger(expectedRevision) && current.state.revision === expectedRevision, 'REVISION_CONFLICT');
     const next = clone(current.state);
@@ -192,7 +193,16 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       unavailableSelections: state.selections.filter(selection => !occurrenceSource.has(selection.occurrenceId)),
     };
   }
-  async function get(id, { revision } = {}) { return view((await head(id, revision)).state); }
+  async function get(id, { revision, references = true, includeHistory = true } = {}) {
+    need(typeof references === 'boolean' && typeof includeHistory === 'boolean', 'RESEARCH_PROJECTION_INVALID');
+    return view((await head(id, revision)).state, {references, includeHistory});
+  }
+  async function listRevisions(id, {revision} = {}) {
+    const selected = (await head(id, revision)).state.revision;
+    return (await history(id)).filter(envelope => envelope.state.revision <= selected).map(envelope => ({
+      revision: envelope.state.revision, createdAt: envelope.state.updatedAt,
+      label: envelope.state.change, sha256: envelope.sha256}));
+  }
   // Return saved revision metadata without loading or projecting retained response bodies.
   async function getMetadata(id, { revision } = {}) { return metadata((await head(id, revision)).state); }
   async function list() {
@@ -205,7 +215,8 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     }
     return values.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }
-  async function create({ title, description = '' } = {}) {
+  async function create({ title, description = '', projection = 'full' } = {}) {
+    need(['full', 'metadata'].includes(projection), 'RESEARCH_PROJECTION_INVALID');
     title = text(title, 'TITLE_REQUIRED', 240);
     description = text(description, 'DESCRIPTION_INVALID', 20000, true);
     const id = newId('d'), now = timestamp();
@@ -214,24 +225,24 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       questions: [], editions: [], selections: [], findings: [] };
     await writeJson(join(await revisionsDirectory(id, true), filename(1)),
       { sha256: digest(jsonBytes(state)), state }, { exclusive: true });
-    return get(id);
+    return projection === 'metadata' ? getMetadata(id) : get(id);
   }
-  const update = (id, { title, description, expectedRevision }) => commit(id, expectedRevision, 'Updated dossier', state => {
+  const update = (id, { title, description, expectedRevision, projection = 'full' }) => commit(id, expectedRevision, 'Updated dossier', state => {
     if (title !== undefined) state.title = text(title, 'TITLE_REQUIRED', 240);
     if (description !== undefined) state.description = text(description, 'DESCRIPTION_INVALID', 20000, true);
-  });
-  const addQuestion = (id, { text: questionText, expectedRevision }) => commit(id, expectedRevision, 'Added research question', state => {
+  }, {projection});
+  const addQuestion = (id, { text: questionText, expectedRevision, projection = 'full' }) => commit(id, expectedRevision, 'Added research question', state => {
     state.questions.push({ id: newId('q'), text: text(questionText, 'QUESTION_REQUIRED', 4000),
       notes: '', status: 'open', createdAt: timestamp() });
-  });
-  const updateQuestion = (id, questionId, { text: questionText, notes, status, expectedRevision }) =>
+  }, {projection});
+  const updateQuestion = (id, questionId, { text: questionText, notes, status, expectedRevision, projection = 'full' }) =>
     commit(id, expectedRevision, 'Updated research question', state => {
       const question = state.questions.find(row => row.id === questionId);
       need(question, 'QUESTION_NOT_FOUND');
       if (questionText !== undefined) question.text = text(questionText, 'QUESTION_REQUIRED', 4000);
       if (notes !== undefined) question.notes = text(notes, 'QUESTION_NOTES_INVALID', 100000, true);
       if (status !== undefined) { need(['open', 'answered', 'parked'].includes(status), 'QUESTION_STATUS_INVALID'); question.status = status; }
-    });
+    }, {projection});
 
   async function receive(id, { questionId, label, provider = 'research', rawText, response, sourceReference = '',
     expectedRevision, origin = null, rawBytes, projection = 'full' } = {}) {
@@ -272,7 +283,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     });
   }
 
-  const receiveReference = (id, { questionId, label, provider, reference, expectedRevision }) =>
+  const receiveReference = (id, { questionId, label, provider, reference, expectedRevision, projection = 'full' }) =>
     commit(id, expectedRevision, 'Attached original research edition', state => {
       need(state.questions.some(question => question.id === questionId), 'QUESTION_NOT_FOUND');
       provider = text(provider, 'EDITION_PROVIDER_REQUIRED', 80);
@@ -284,9 +295,9 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       if (state.editions.some(edition => edition.id === editionId)) return false;
       state.editions.push({ id: editionId, questionId, label, provider, reference,
         mode: 'reference', createdAt: timestamp() });
-    });
+    }, {projection});
 
-  async function selectEvidence(id, { sourceId, selected, note, classification = 'unreviewed', expectedRevision }) {
+  async function selectEvidence(id, { sourceId, selected, note, classification = 'unreviewed', expectedRevision, projection = 'full' }) {
     need(typeof selected === 'boolean', 'SELECTION_REQUIRED');
     note = text(note ?? '', 'EVIDENCE_NOTE_INVALID', 100000, true);
     need(['supports', 'contradicts', 'background', 'unreviewed'].includes(classification), 'CLASSIFICATION_INVALID');
@@ -300,10 +311,10 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
           questionId: citation.questionId, key: citation.key }; state.selections.push(selection); }
         Object.assign(selection, { selected, note, classification, updatedAt: timestamp() });
       }
-    });
+    }, {projection});
   }
 
-  const addFinding = (id, { questionId, title, text: findingText, sourceIds = [], expectedRevision }) =>
+  const addFinding = (id, { questionId, title, text: findingText, sourceIds = [], expectedRevision, projection = 'full' }) =>
     commit(id, expectedRevision, 'Added analyst finding', async state => {
       need(state.questions.some(question => question.id === questionId), 'QUESTION_NOT_FOUND');
       need(Array.isArray(sourceIds) && sourceIds.every(value => typeof value === 'string'), 'FINDING_SOURCES_INVALID');
@@ -320,8 +331,8 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         occurrenceIds: [...new Set(selected.flatMap(source => source.citations
           .filter(citation => citation.questionId === questionId).map(citation => citation.occurrenceId)))],
         createdAt: timestamp() });
-    });
-  const updateSelection = (id, { occurrenceId, selected, note, classification, expectedRevision }) =>
+    }, {projection});
+  const updateSelection = (id, { occurrenceId, selected, note, classification, expectedRevision, projection = 'full' }) =>
     commit(id, expectedRevision, 'Updated saved source note', state => {
       const selection = state.selections.find(row => row.occurrenceId === occurrenceId);
       need(selection, 'SELECTION_NOT_FOUND');
@@ -332,8 +343,8 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         selection.classification = classification;
       }
       selection.updatedAt = timestamp();
-    });
-  const updateFinding = (id, findingId, { title, text: findingText, sourceIds, expectedRevision }) =>
+    }, {projection});
+  const updateFinding = (id, findingId, { title, text: findingText, sourceIds, expectedRevision, projection = 'full' }) =>
     commit(id, expectedRevision, 'Updated analyst finding', async state => {
       const finding = state.findings.find(row => row.id === findingId);
       need(finding, 'FINDING_NOT_FOUND');
@@ -350,7 +361,7 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
         }))];
       }
       finding.updatedAt = timestamp();
-    });
+    }, {projection});
   const compare = async (id, { before, after }) => {
     const [left, right] = await Promise.all([head(id, before), head(id, after)]);
     return compareViews(await view(left.state, { includeHistory: false }), await view(right.state, { includeHistory: false }));
@@ -371,12 +382,12 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
       }
       const body = jsonBytes({ schema: PORTABLE, id, exportedAt: timestamp(), versions, blobs: contents });
       need(body.length <= MAX_PORTABLE, 'PORTABLE_SIZE_LIMIT');
-      return { filename: id + '.research.json', contentType: 'application/json; charset=utf-8', body };
+      return { filename: id + '.research.json', revision:current.revision, contentType: 'application/json; charset=utf-8', body };
     }
     // Reference-only editions contribute operator notes and original handles.
     // Their provider projection is never embedded in a durable report.
     const report = await view(current, { references: false });
-    return { filename: id + '.' + format,
+    return { filename: id + '.' + format, revision:current.revision,
       contentType: format === 'md' ? 'text/markdown; charset=utf-8' : 'text/html; charset=utf-8',
       body: format === 'md' ? markdownReport(report) : htmlReport(report) };
   }
@@ -616,6 +627,6 @@ export async function openDossierStore(directory, { providers = {} } = {}) {
     } finally { await rm(staging, {recursive: true, force: true}); }
   }
 
-  return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, update, addQuestion, updateQuestion,
+  return Object.freeze({ directory, list, create, get, getMetadata, readRetainedEdition, listRevisions, update, addQuestion, updateQuestion,
     receive, receiveBuyerResult, receiveReference, selectEvidence, updateSelection, addFinding, updateFinding, compare, exportDossier, exportStream, reopen, reopenStream });
 }
