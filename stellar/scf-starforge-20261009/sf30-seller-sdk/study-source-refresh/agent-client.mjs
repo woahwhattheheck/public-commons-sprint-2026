@@ -271,8 +271,11 @@ export class StudyWorkspaceClient {
     const definition = STUDY_NATIVE_OPERATIONS[operation];
     need(definition, 'STUDY_OPERATION_UNKNOWN', 'Choose a declared original Study operation.');
     exact(args, definition.fields, definition.required);
+    // Source receiving may include the original 360-second buyer delivery plus
+    // the original 3650-second provider intake before its metadata commit.
+    const timeoutMs = ['source.import','source.receive_files','source.receive_scan'].includes(operation) ? 4200000 : 360000;
     return this.#track(async () => transport(await this.#selected(), '/api',
-      {body:{operation,arguments:args},operation,mutation:!definition.readOnly}));
+      {body:{operation,arguments:args},operation,mutation:!definition.readOnly,timeoutMs}));
   }
   browser() {
     return this.#track(async () => {
