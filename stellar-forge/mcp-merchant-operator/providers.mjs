@@ -1,6 +1,7 @@
 /** Original provider owners, constructed only when a configured tool first needs them. */
 export const MERCHANT_PROVIDERS = Object.freeze({
   apiPassWorkspaces: Object.freeze({ configKey: "apiPassWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./api-pass-workspace.mjs"), create: (module, config) => new module.MerchantApiPassWorkspaces(config) }),
+  researchWorkspaces: Object.freeze({ configKey: "researchWorkspaces", summary: true, dependencies: Object.freeze([]), load: () => import("./research-workspace.mjs"), create: (module, config) => new module.MerchantResearchWorkspaces(config) }),
   clientExports: Object.freeze({ configKey: null, summary: true, dependencies: Object.freeze([]), load: () => import("./client-exports.mjs"), create: (module, config, options, dependencies) => new module.MerchantClientExports({ directory: config.exportsDirectory }) }),
   discovery: Object.freeze({ configKey: "catalog", summary: true, dependencies: Object.freeze([]), load: () => import("./discovery.mjs"), create: (module, config, options, dependencies) => new module.MerchantDiscovery(config) }),
   fleet: Object.freeze({ configKey: "fleet", summary: true, dependencies: Object.freeze([]), load: () => import("./fleet.mjs"), create: (module, config, options, dependencies) => new module.MerchantFleet(config.fleet) }),
