@@ -222,6 +222,50 @@ interfaces are documented in the
 GeoPackage options and native file behavior are documented by the
 [GDAL GeoPackage driver](https://gdal.org/en/stable/drivers/vector/gpkg.html).
 
+
+## Consume an original WFS download order
+
+The WFS bridge accepts the maintained, already-open WFS application. It uses
+its original `query("order")` and `download("features")` methods, retains the
+exact complete GeoJSON bytes, checks the original order again after the read,
+and supplies a ready source selection plus reviewed native profile.
+
+~~~javascript
+import { materializeWfsOrderVectors } from "./stac/vector/index.mjs";
+
+const delivery = await materializeWfsOrderVectors(originalWfsApplication, orderId, {
+  sourceDirectory: "/absolute/order-vector-source",
+  captureDirectory: "/absolute/order-vector-capture",
+  directory: "/absolute/order-native-vector",
+  operationId: "original-order-native-delivery",
+  sourceCrs: reviewedOriginalSourceCrs,
+  coordinateOrder: "x,y",
+  python: "/absolute/venv/bin/python"
+});
+~~~
+
+The original GeoServer order records its literal requested CRS, actual response
+CRS and coordinate description. The caller passes the reviewed source CRS and
+confirms the original x/y coordinate representation. This becomes an explicit
+source assignment in the native profile; a target CRS, when chosen in the
+profile, remains a separate transformation. The combined feature download may
+omit its native CRS header, so this binding prevents a generic GeoJSON default
+from replacing the original order's coordinate meaning.
+
+`retainWfsVectorSource` is available when the WFS application wants to stop at
+the complete file boundary and open the existing native operator with
+`selection.json` and `profile.json`. Its private source directory retains
+`features.geojson`, the original order metadata, the original request and the
+download descriptor. The source receipt is committed before the original file,
+so a continuation can reuse completed bytes or verify an interrupted download
+against its original digest.
+
+The native layer identity derives from the original project, service, schema,
+feature type and literal CRS. Successor orders of that source keep the same
+layer identity while retaining their distinct order, query and capture IDs.
+Every feature and original numeric token stays in the downloaded source.
+Explicit identity/profile choices remain part of the original retained request.
+
 ## Build, reopen and deliver
 
 ~~~sh

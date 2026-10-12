@@ -224,3 +224,12 @@ export const createVectorBundle = (directory, archivePath, options = {}) => runV
 export const receiveVectorBundle = (archivePath, directory, options = {}) => runVectorCommand(
   { command: "receive-bundle", archivePath, directory, expectedManifestSha256: options.expectedManifestSha256,
     expectedArchiveSha256: options.expectedArchiveSha256 }, options);
+
+
+/** Consume the original WFS application's complete retained feature download. */
+export async function retainWfsVectorSource(...args) {
+  return (await import("./wfs.mjs")).retainWfsVectorSource(...args);
+}
+export async function materializeWfsOrderVectors(...args) {
+  return (await import("./wfs.mjs")).materializeWfsOrderVectors(...args);
+}
