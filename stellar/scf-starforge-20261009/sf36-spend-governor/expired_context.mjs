@@ -51,7 +51,7 @@ try {
   const directory=join(cfg.evidenceDir,'wire-'+digest(Buffer.from(op.intentId)));
   try {
     const info=await lstat(directory);need(info.isDirectory()&&!info.isSymbolicLink(),'EXPIRY_NATIVE_WIRE_PATH_INVALID');
-    const original=await readAttemptWireCheckpoint({cfg,body});
+    const original=await readAttemptWireCheckpoint({cfg,body:op.bodyFile===undefined?undefined:body});
     need(original.writerActive!==true,'EXPIRY_ORIGINAL_WIRE_WRITER_ACTIVE');
     wire={directory,sha256:digest(canonical(original))};
   } catch(error){if(error.code!=='ENOENT')throw error;}

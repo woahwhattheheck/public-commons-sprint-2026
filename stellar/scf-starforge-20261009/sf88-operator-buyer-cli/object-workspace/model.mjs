@@ -792,8 +792,15 @@ export async function openObjectWorkspace({ stateDirectory, profilePath = null, 
       if (active?.id === id && active.kind.startsWith('ANALYSIS_')) await active.promise;
       return lastAnalysis?.id === id ? lastAnalysis : null;
     },
+    operatorState: () => { assertOpen(); return receiving.operatorState(); },
+    operatorRevision: id => { assertOpen(); return receiving.operatorRevision(id); },
+    operatorAttachment: id => { assertOpen(); return receiving.operatorAttachment(id); },
+    reviewOperatorSettings: value => receivingMutation('REVIEW_OPERATOR_SETTINGS', () => receiving.reviewOperatorSettings(value)),
+    saveOperatorSettings: value => receivingMutation('SAVE_OPERATOR_SETTINGS', () => receiving.saveOperatorSettings(value)),
     receivingState: () => { assertOpen(); return receiving.state(); },
     receivingOptions: (id, objectId) => { assertOpen(); return receiving.options(id, objectId); },
+    receivedReview: id => { assertOpen(); return receiving.reviewed(id); },
     receive: value => receivingMutation('RECEIVE_OBJECT', () => receiving.receive(value)),
     reviewReceived: value => receivingMutation('REVIEW_RECEIVED_OBJECT', () => receiving.review(value)), createReceived };
 }
+

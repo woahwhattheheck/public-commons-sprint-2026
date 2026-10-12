@@ -6,6 +6,7 @@ import {readFileSync, writeFileSync, existsSync} from 'node:fs';
 import {resolve, dirname, join, isAbsolute} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 import {CartWorkspace, CartError, SOURCE} from './workspace.mjs';
+import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 
 const here=dirname(fileURLToPath(import.meta.url));
 function args(argv) {
@@ -38,8 +39,10 @@ export async function action(workspace,name,payload,version) {
     default:throw new CartError('ACTION_UNKNOWN','The requested workspace action is not available.');
   }
 }
-export async function serve({workspace,port=0}) {
-  const token=randomBytes(32).toString('hex');let origin;
+export async function serve({workspace,port=0,identity=null}) {
+  const assets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
+  const token=randomBytes(32).toString('hex');let origin,draining=false,closing=null;
+  const launchIdentity=identity===null?null:JSON.parse(JSON.stringify(identity));
   const server=createServer(async(req,res)=>{
     const send=(status,value,type='application/json',headers={})=>{
       const bytes=Buffer.isBuffer(value)?value:Buffer.from(type==='application/json'?JSON.stringify(value):value);
@@ -50,6 +53,13 @@ export async function serve({workspace,port=0}) {
       const expectedHost=new URL(origin).host;
       if(req.headers.host!==expectedHost)throw new CartError('HOST_INVALID','Use the local URL printed by this server.',{},403);
       const url=new URL(req.url,origin);
+      if(draining)throw new CartError('WORKSPACE_DRAINING','This original listener is finishing its in-flight operations.',{},503);
+      if(req.method==='GET'&&url.pathname==='/api/identity'&&launchIdentity) {
+        if(req.headers['x-cocart-workspace']!==token || (req.headers.origin && req.headers.origin!==origin))
+          throw new CartError('LOCAL_ACTION_TOKEN','Use the same authenticated local listener.',{},403);
+        const current=workspace.read();
+        return send(200,{identity:launchIdentity,origin,current:{version:current.version,revision:current.state.revision}});
+      }
       if(req.method==='GET'&&url.pathname==='/api/workspace')return send(200,{workspace:workspace.view(),web_token:token});
       if(req.method==='GET'&&url.pathname==='/api/receiving')return send(200,workspace.receivingBundle(),'application/json',{'Content-Disposition':'attachment; filename="CoCart_Receiving_Workspace.json"'});
       if(req.method==='GET'&&url.pathname.startsWith('/api/objects/')) {
@@ -64,14 +74,14 @@ export async function serve({workspace,port=0}) {
         const result=await action(workspace,body.action,body.payload||{},body.version);
         return send(200,result);
       }
-      const files={'/':['index.html','text/html; charset=utf-8'],'/app.js':['app.js','text/javascript; charset=utf-8'],'/app.css':['app.css','text/css; charset=utf-8']};
-      if(req.method==='GET'&&files[url.pathname]){const [file,type]=files[url.pathname];return send(200,readFileSync(join(here,file)),type);}
+      if(req.method==='GET'&&assets.has(url.pathname)){const {url:file,type}=assets.get(url.pathname);return send(200,readFileSync(file),type);}
       throw new CartError('NOT_FOUND','This local resource is unavailable.',{},404);
     }catch(e){const status=e instanceof CartError?e.status:500;send(status,e.toJSON?.()||{error:'LOCAL_OPERATION_FAILED',message:e.message});}
   });
   await new Promise((resolveStart,reject)=>{server.once('error',reject);server.listen(port,'127.0.0.1',resolveStart);});
-  origin='http://127.0.0.1:'+server.address().port;
-  return {server,origin,close:()=>new Promise((yes,no)=>server.close(e=>e?no(e):yes()))};
+  origin=new URL('http://127.0.0.1:'+server.address().port).origin;
+  return {server,origin,url:launchIdentity?origin+'/#token='+token:origin,
+    close:()=>{if(!closing){draining=true;closing=new Promise((yes,no)=>server.close(e=>e?no(e):yes()));}return closing;}};
 }
 export async function main(argv=process.argv.slice(2)) {
   const a=args([...argv]);

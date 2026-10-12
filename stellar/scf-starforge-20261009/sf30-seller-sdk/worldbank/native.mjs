@@ -354,9 +354,11 @@ async function requestJson(request) {
 }
 
 /** The private loopback session owns its capture children and original release process. */
-export async function startWorldBankWorkspace({ directory, python, port = 0, operator: supplied } = {}) {
+export async function startWorldBankWorkspace({ directory, python, port = 0, operator: supplied, instanceId } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535)
     throw fault('WORLDBANK_PORT', 'Choose a port from 0 to 65535.');
+  if (instanceId !== undefined && !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(instanceId))
+    throw fault('WORLDBANK_INSTANCE', 'Use the identity of the supplied original model.');
   const ownsOperator = supplied === undefined;
   const operator = supplied ?? await openWorldBankOperator({ directory, python });
   if (!operator || ['state', 'act', 'readExport', 'readPublisherExport', 'close'].some(name => typeof operator[name] !== 'function'))
@@ -369,6 +371,9 @@ export async function startWorldBankWorkspace({ directory, python, port = 0, ope
       ['/style.css', 'style.css', 'text/css; charset=utf-8']
     ].map(async ([route, name, type]) => [route, { bytes: await readFile(join(ROOT, 'ui', name)), type }])));
   } catch (error) { if (ownsOperator) await operator.close().catch(() => {}); throw error; }
+  const launch = Object.freeze({ schema: 'stellar-forge.worldbank-workspace-launch.v1', state: 'LISTENING',
+    directory: operator.directory, instanceId: instanceId ?? randomUUID(), browserInstanceId: randomUUID(),
+    startedAt: new Date().toISOString() });
   const token = randomBytes(32).toString('base64url'), expected = Buffer.from('Bearer ' + token);
   let origin, closing;
   const server = createServer({ maxHeaderSize: 16384, requestTimeout: 30000, headersTimeout: 15000, keepAliveTimeout: 1000 },
@@ -390,6 +395,7 @@ export async function startWorldBankWorkspace({ directory, python, port = 0, ope
         const suppliedToken = Buffer.from(request.headers.authorization ?? '');
         if (suppliedToken.length !== expected.length || !timingSafeEqual(suppliedToken, expected))
           throw fault('WORLDBANK_SESSION_REQUIRED', 'Reopen the session URL printed by the workspace command.', 401);
+        if (request.method === 'GET' && request.url === '/api/launch') { reply(200, launch); return; }
         if (request.method === 'GET' && request.url === '/api/state') { reply(200, await operator.state()); return; }
         const download = /^\/api\/exports\/([^/?]+)\/([^?]+)$/.exec(request.url ?? '');
         const publisherDownload = /^\/api\/publisher\/exports\/([^/?]+)\/([^/?]+)$/.exec(request.url ?? '');
@@ -429,7 +435,7 @@ export async function startWorldBankWorkspace({ directory, python, port = 0, ope
     origin = 'http://127.0.0.1:' + server.address().port;
   } catch (error) { if (ownsOperator) await operator.close().catch(() => {}); throw error; }
   return {
-    origin, url: origin + '/#' + token, token, operator,
+    origin, url: origin + '/#' + token, token, operator, launch,
     close() {
       if (!closing) closing = (async () => {
         const stopped = new Promise((accept, reject) => server.close(error => error ? reject(error) : accept()));

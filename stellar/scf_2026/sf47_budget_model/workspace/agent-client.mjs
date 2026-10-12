@@ -1,3 +1,5 @@
+import { GRANT_AGENT_SCHEMA, GRANT_MAX_BUNDLE_BYTES, GRANT_MAX_SOURCE_BYTES, GRANT_CASE_ACTIONS } from './agent-contracts.mjs';
+export { GRANT_AGENT_SCHEMA, GRANT_MAX_BUNDLE_BYTES, GRANT_MAX_SOURCE_BYTES, GRANT_CASE_ACTIONS } from './agent-contracts.mjs';
 // MIT. Typed agent access to the original SF47 planning and delivery service.
 // This client owns no planning database, business records or financial model.
 import { constants } from 'node:fs';
@@ -10,9 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { inspectGrantWorkspaceSelection, readGrantWorkspaceLaunch, GRANT_LAUNCH_SCHEMA } from './launch.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-export const GRANT_AGENT_SCHEMA = 'stellar-forge.sf47-agent.v1';
-export const GRANT_MAX_BUNDLE_BYTES = 32 * 1024 * 1024;
-export const GRANT_MAX_SOURCE_BYTES = 8 * 1024 * 1024;
+
+
+
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/;
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -52,12 +54,7 @@ const sha = value => {
   need(typeof value === 'string' && HASH.test(value), 'GRANT_INVALID_INPUT', 'Use the exact SHA256.'); return value;
 };
 
-export const GRANT_CASE_ACTIONS = Object.freeze([
-  'contributor.save', 'work.save', 'work.submit', 'work.accept', 'work.reopen', 'work.void',
-  'invoice.save', 'invoice.review', 'invoice.dispute', 'invoice.reopen', 'invoice.void',
-  'cash.record', 'cash.void', 'award.save', 'deployment.save', 'purchase.record', 'purchase.observe',
-  'purchase.void', 'outcome.save', 'review', 'close', 'reopen',
-]);
+
 
 /** Exact regular-file input. Private launch records additionally keep original ownership. */
 export async function readGrantAgentFile(filename, maximum = GRANT_MAX_BUNDLE_BYTES, privateOnly = false) {
