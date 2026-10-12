@@ -437,6 +437,7 @@ The command prints one JSON startup object after the original listener is ready:
 | `pid` | The actual pricing process ID. |
 | `url` | The assigned original HTTP loopback workspace URL. |
 | `planningUrl` | The same listener's `/planning` page. |
+| `costsUrl` | The same listener's `/economics` supplier-cost workspace. |
 
 A receiver binds the startup object to its reviewed path/hash, chosen state and
 requested port; port zero accepts the actual port assigned by the listener.
@@ -458,8 +459,9 @@ existing active requests through the maintained server.
   `liveSnapshot(url)` and `createReport(argv)`. The original CLI `main(argv)`
   retains its JSON status output and also returns that result.
 - Embedding: `startWorkspace({config, directory, snapshot, history, opsUrl,
-  nativeOutbox, sourcePackage, releaseStore, releaseRuntime, expectedConfigSha256,
-  port})` returns `{url, planningUrl, server, model, planning, close}`. Select exactly one
+  nativeOutbox, sourcePackage, releaseStore, releaseRuntime, supplierUsage,
+  accountingReport, expectedConfigSha256, port})` returns
+  `{url, planningUrl, server, model, planning, close}`. Select exactly one
   live `opsUrl`, or one or both original `snapshot` and `history` file paths.
 - `model.state(selection)` selects the original source per call. Selection is
   `{kind:'SESSION'|'DURABLE_HISTORY', from:null|string, to:null|string,
@@ -488,3 +490,9 @@ existing active requests through the maintained server.
 Original SF74 support and merchant commercial owners can consume the unchanged
 report and terms schemas. The workspace is an additive native merchant adoption
 workflow for the single SCF project, not another grant submission.
+
+## Allocate original supplier costs
+
+Open the **Supplier costs** link in this workspace to retain original bills, credit notes, quotes and usage context, map complete charge rows, conserve allocations in their source currency, compare corrected editions, and carry a reviewed USD per-fulfilled cost into a new original pricing review. The complete operator workflow and private backup/restore interface are in [Supplier costs](economics/README.md).
+
+Optional `--supplier-usage FILE` and `--accounting-report FILE` supply host-selected original context for explicit capture. `--restore-cost-workspace BACKUP.tar --state NEW_DIRECTORY` restores a complete private pricing-and-cost workspace. Continue supplying the original seller and observation inputs when reopening. Supplier documents and tariff estimates retain their source meanings; the original native payment-price and release decisions remain in this pricing workspace.
