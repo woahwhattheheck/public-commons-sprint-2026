@@ -1,6 +1,7 @@
 // MIT. Research dossier operator; all provider and persistence operations stay in the original server.
 import {createCrossrefPanel} from './crossref.js';
 import {createUnstructuredPanel} from './unstructured.js';
+import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -89,6 +90,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     if (!value) renderNoteState();
     crossrefPanel.updateBusy();
     documentPanel.updateBusy();
+    pipelinePanel.updateBusy();
   }
   async function api(path, {method = 'GET', body, file, download = false} = {}) {
     const response = await fetch(path, {method, headers: {Authorization: 'Bearer ' + state.token,
@@ -141,6 +143,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     $('import-openalex-mode').hidden = !state.openalexConfigured;
     crossrefPanel.configure(result.crossref);
     documentPanel.configure(result.unstructured);
+    pipelinePanel.configure(result.pipelines);
     renderList();
   }
   async function openDossier(id) {
@@ -181,6 +184,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     $('dossier-workspace').hidden = !view;
     crossrefPanel.setDossier(view);
     documentPanel.setDossier(view);
+    pipelinePanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -542,7 +546,7 @@ import {createUnstructuredPanel} from './unstructured.js';
   function showTab(tab) {
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'crossref', 'documents', 'pipelines'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -550,6 +554,7 @@ import {createUnstructuredPanel} from './unstructured.js';
     });
     crossrefPanel.show(tab === 'crossref');
     documentPanel.show(tab === 'documents');
+    pipelinePanel.show(tab === 'pipelines');
   }
   function clearFormError(form) { const box = form.querySelector('.form-error'); if (box) {box.textContent = ''; box.hidden = true;} }
   function showDossier(edit = false) {
@@ -666,6 +671,9 @@ import {createUnstructuredPanel} from './unstructured.js';
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   const documentPanel = createUnstructuredPanel({root:$('view-documents'),tab:$('documents-tab'),api,task,notify,
+    getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const pipelinePanel = createUnstructuredPipelinesPanel({root:$('view-pipelines'),tab:$('pipelines-tab'),api,task,notify,
     getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {

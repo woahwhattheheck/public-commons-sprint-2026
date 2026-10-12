@@ -11,6 +11,8 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Fiscal Data operations | fiscaldata managed | Named Treasury operator, exact source and decimal editions, comparisons, original merchant and buyer, complete package receiving |
 | Databento migration | databento-workspace managed | Complete original historical-data source, field mapping, named review, retained results and customer handover |
 | OpenCage geocoding | opencage-workbench serve | Original geocoding source, explicit candidate decisions, retained merchant releases and complete customer deliveries |
+| WebDAV source and merchant workspace | webdav serve | Original file-cloud versions, retained captures, exact source editions, publisher and complete customer receiving |
+| Merchant support | support-console | Original seller incidents, retained captures, named source profiles, merchant cases and saved remediation work |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -66,6 +68,18 @@ Select a READY installation containing the complete S3 Applications source and i
 **Open application** opens the original S3 authoring workspace. **Open merchant releases** opens its own SF82 release console. The same application owns both consoles and the seller started there. **Stop application** drains the original merchant and closes both windows' listeners; its source, prices, reviews, packages, release generation and customer files remain saved. Port **0** retains this workspace's original authoring port after first launch, so the same browser tab can restore unfinished edits on normal Stop/Start.
 
 The complete [S3 merchant Applications guide](./S3_MERCHANT_APPLICATIONS.md) covers installation selection, review/save, customer delivery, same-workspace receiving, ownership and recovery.
+
+## Merchant support
+
+Select the original private case directory and incident source profiles. A new case folder may be created in an existing private parent; the profiles select up to eight initialized SF93 stores. Review, save and start the application to open the original support console with its retained incidents, captures, notifications and merchant cases.
+
+The launch binds the case location, source configuration revisions and the original managed source bytes. It verifies the actual local support listener before making it available. Stop drains that console's original incident workers, and a subsequent start reopens the same saved work. The complete [Merchant support Applications guide](MERCHANT_SUPPORT_APPLICATIONS.md) covers source selection, incident operation, capture-to-case work and recovery.
+
+## WebDAV source and merchant workspace
+
+Choose an initialized private WebDAV workspace or an existing received source packet. Review and save the application with its original Python executable when needed, then review its start and open the original source operator. The selected workspace UUID and creation identity remain stable as captures, review decisions and native publisher records advance.
+
+Applications binds the fourteen original source files in the selected runtime and adopted release. The native CLI checks that source and the workspace identity under its original writer lock. Stop uses the original source and publisher close path; reopening keeps the same reviewed source, editions and customer files. Follow the complete [WebDAV Applications guide](../../sf30-seller-sdk/webdav/APPLICATIONS.md) for source capture, merchant publication, receiving and managed recovery.
 
 ## OpenCage geocoding
 
