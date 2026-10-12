@@ -9,6 +9,8 @@ import { readWorkspace, checkWorkspace, workspaceCommand } from './workspace.mjs
 import { BuyerResult } from './result.mjs';
 import { inspectUnpaidContinuation, prepareUnpaidContinuation, followUnpaidContinuation,
   assertUnpaidContinuationBinding } from './unpaid-continuation.mjs';
+import {inspectNodeLostOutput,recoverNodeLostOutput,readNodeLostOutputRecovery,
+  exportNodeLostOutputProof} from './lost-output.mjs';
 import { Dataset, createDataset, listDatasets } from './dataset.mjs';
 import { ObjectAcquisition, createObject, listObjects } from './object.mjs';
 import { Inbox, createInbox, inspectOperationHandoff } from './inbox.mjs';
@@ -298,6 +300,10 @@ export class Operation {
     if (meta.unpaidContinuation !== undefined) await assertUnpaidContinuationBinding(this, { meta, config });
     return { meta, config };
   }
+  inspectLostOutput(options) { return inspectNodeLostOutput(this,options); }
+  recoverLostOutput(options) { return recoverNodeLostOutput(this,options); }
+  readLostOutputRecovery(options) { return readNodeLostOutputRecovery(this,options); }
+  exportLostOutputProof(options) { return exportNodeLostOutputProof(this,options); }
   inspectUnpaidContinuation() { return inspectUnpaidContinuation(this); }
   prepareUnpaidContinuation(options) { return prepareUnpaidContinuation(this, options); }
   followUnpaidContinuation() { return followUnpaidContinuation(this); }
