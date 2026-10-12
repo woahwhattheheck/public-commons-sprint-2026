@@ -47,7 +47,7 @@ export function createApplicationDrafts({
     const oldKind = current.kind, owner = cache(current.workspaceId);
     owner.entries.delete(current.id); owner.active = null; persist(owner);
     current = null;
-    edit(app ?? null, { kind: app?.kind ?? oldKind, restore: false });
+    edit(app ?? null, { kind: app?.kind ?? oldKind, restore: false, initial: !app });
   });
   const download = action('Download current draft', () => {
     if (!current) return;
