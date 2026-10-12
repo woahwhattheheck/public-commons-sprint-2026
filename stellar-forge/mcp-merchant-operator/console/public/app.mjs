@@ -688,7 +688,7 @@ action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',b
 action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),
   state.customer.identity.family==='grant-reviewer'?(state.customer.manifest?.kind==='reviewer-packet'?'grant-reviewer-packet.json':state.customer.manifest?.files?.[0]?.name??'original-file'):state.customer.identity.exportId+'.tar.gz',{stream:state.customer.identity.family==='grpc',maximumBytes:(state.customer.files??[]).reduce((sum,file)=>sum+file.bytes,0)+1048576}));
 const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
-  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer});
+  requireProfile,loadProfile,loadProfiles,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer});
 const reviewerPage=createReviewerCustomerPage({state,$,node,text,pretty,when,properties,action,busy,api,notice,uid,
   requireProfile,loadProfile,openCall,fillCustomer,receiveCustomer,download,setPage,
   useRecipe:(recipe,inputs)=>workflowPage.useRecipe(recipe,inputs)});

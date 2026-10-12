@@ -13,6 +13,10 @@ export const GRPC_MANAGED_LAUNCH = 'stellar-forge.grpc-workspace-launch.v1';
 export const GRPC_LAUNCH_FILES = Object.freeze([
   'workspace/binding.mjs', 'workspace/managed-launch.mjs',
   'workspace/model.mjs', 'workspace/server.mjs',
+  'workspace/health.mjs', 'workspace/browser-assets.json',
+  'workspace/public/transfer.mjs', 'workspace/public/transfer.css',
+  'transfer/manifest.mjs', 'transfer/files.mjs', 'transfer/snapshot.mjs',
+  'transfer/upload.mjs', 'transfer/receiving.mjs', 'transfer/workspace.mjs', 'transfer/archive.py',
 ]);
 const sourceDirectory = fileURLToPath(new URL('../', import.meta.url));
 const HASH = /^[a-f0-9]{64}$/;

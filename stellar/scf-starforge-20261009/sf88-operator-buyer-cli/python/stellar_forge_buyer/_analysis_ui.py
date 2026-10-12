@@ -310,3 +310,8 @@ HTML = HTML.replace('<button data-tab="responses"', '<button data-tab="research"
 HTML = HTML.replace('<section id="tab-responses"', _analysis_research_ui.HTML + '<section id="tab-responses"', 1)
 CSS += _analysis_research_ui.CSS
 JS += _analysis_research_ui.JS
+
+
+# Evidence synthesis uses this exact Analysis capability and database.
+HTML = HTML.replace('<nav aria-label="Workspace">', '<nav aria-label="Workspace"><a id="synthesis-link" href="/synthesis">Evidence synthesis</a>', 1)
+JS += "\ndocument.getElementById('synthesis-link').href='/synthesis#'+capability;\n"

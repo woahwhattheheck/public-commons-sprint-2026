@@ -54,7 +54,7 @@ In the same desk, choose the retained native edition, continuous aggregate, actu
 
 A changed contract or selected native projection advances the contract revision and resets current acceptance assessments to Not run. Earlier source files, comparisons, observations, assessments and handovers remain in the original revision history. A previous source is visible as belonging to its earlier contract; retain the applicable original export again under the current contract before using it for a new current-contract assessment.
 
-Changing only the project title or owner preserves the existing source binding and assessments. The browser leaves unsaved form entries intact during passive refresh; the explicit reload control reads the current project.
+Changing only the project title or owner preserves the existing source binding and assessments. The browser retains complete unsaved form entries during passive and explicit refresh. A form whose saved source or review context changed remains available for deliberate reconciliation against the current project revision.
 
 ## 3. Retain the complete native exports
 
@@ -164,6 +164,59 @@ The direct CLI also supplies `commissioning-context`, `commissioning-intake`, `c
 Replace all placeholders and shown version values with the actual selected project. Report publication does not take the actor/action fields of a commissioning change.
 
 ## Browser recovery and the installed client
+
+### Retained forms, source selection and original files
+
+The **Retained forms and original files** panel keeps complete edited forms by
+workspace, commissioning project and acceptance criterion. The intake and
+native-table forms retain the selected File's complete bytes in IndexedDB.
+Returning to a project restores its own contract fields, native source choices,
+column mappings, assessments and handover statement. Changing the selected
+edition or native outcome clears the loaded result immediately; open the
+selected original record before binding or recording it.
+
+A project refresh first retains edits made while its read was in flight.
+Responses for earlier projects, pages, editions, comparisons or outcomes
+cannot replace the current selection. A completed operation only consumes the
+exact draft submitted with that original UUID. Edits made after submission
+remain available against their original saved project revision.
+
+Use **Reopen complete form** for a retained form edition. Its original edition
+and native-operation digests are reopened with it. If the saved project
+changed the form's source or review context, inspect the old form alongside the
+current project and use **Use reviewed form with current revision** to create
+a new reviewed form edition. The previous complete draft remains downloadable.
+This does not relax the producer's expected-revision or source-contract checks.
+
+**Download complete form and files** retains the full original fields, project
+revision, native source identities and base64-encoded file bytes. Each original
+file can also be downloaded separately. Browser forms stay in the browser
+profile; include the required originals and exported forms in the customer's
+private handover when moving to another browser.
+
+### Full original request history
+
+Every prepared command has its own retained full request record before its
+first POST, including the entire intake or native file body. The recovery
+panel's **Retained original requests** keeps completed, failed and unstarted
+commands independently of the current pending pointer. Closing a failed or
+unstarted request preserves its complete input and original source download.
+Reopening a history entry inspects the same UUID; continuation sends that same
+meaningful body, with only the current workspace-version guard refreshed as
+defined by the original command contract.
+
+A completed original receipt remains completed when a later status read fails
+or an older response arrives late. Completion of an older request cannot clear
+a newer pending request. If the operator has moved to another project while a
+command runs, its result remains in history without replacing that selection.
+
+The commissioning browser includes the selected workspace UUID with its API
+requests and downloads. The existing listener rejects a supplied identity that
+differs from its currently opened workspace before invoking an operation. A
+replacement workspace at the same URL therefore cannot receive a retained
+command or supply another project's download. Original clients that do not
+supply this additive binding keep their existing API contract.
+
 
 Before dispatch, the browser saves the full original input, including file text, in its local IndexedDB. It also keeps the original request UUID. On reload it inspects that request, shows its actual outcome and continues that same retained input when continuation is supported. A failed pre-dispatch write does not send the request. The original UUID is bound to the complete file digest and byte count; the complete source body is retained once in original content-addressed records.
 

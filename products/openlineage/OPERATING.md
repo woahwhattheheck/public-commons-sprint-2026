@@ -116,6 +116,41 @@ Use the browser's entity inspector to follow the original event and active linea
 
 Compare saved editions before adopting an upstream change. The full report and source downloads preserve the inspection context. The [source contract](../../stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/SOURCE_CONTRACT.md) describes how explicit lineage, input/output boundaries, supported schema versions and historical observations are represented.
 
+## Connect native pipeline producers
+
+The existing producer endpoint accepts original JSON/NDJSON or gzip bodies.
+Open **Producer intake** in the browser to inspect the current endpoint, queue
+and server counters and download complete Python or Java settings. The
+`producer-config` CLI generates the same private settings from the current
+connection file. Keep the original workspace pin across ordinary server restarts.
+
+For a dedicated producer credential, start the same workspace with a private
+operator token and a different producer token:
+
+```sh
+starforge openlineage serve \
+  --workspace /absolute/private/lineage --port 8767 \
+  --token-file /absolute/private/operator-token \
+  --producer-token-file /absolute/private/producer-token
+
+starforge openlineage producer-config \
+  --connection /absolute/private/lineage/connection.json \
+  --token-file /absolute/private/producer-token \
+  --client python --compression gzip \
+  --out /absolute/private/openlineage.yaml
+```
+
+Both token values contain at least 24 characters. Point the existing producer's
+`OPENLINEAGE_CONFIG` at the complete generated file. The browser and managed
+merchant use the operator credential; the producer credential admits event
+bodies at `POST /api/v1/lineage`.
+
+A successful producer response follows the original atomic source commit.
+Concurrent bodies use its serial append queue. Retry an unacknowledged unchanged
+body and operation identity after retryable backpressure. Original wire and
+decoded identities, client-specific setup, capacity and complete continuation
+are documented in the [producer guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/PRODUCERS.md).
+
 ## Native agents share the same owner
 
 The direct CLI, browser, typed client and MCP interfaces call the same revisioned workspace. Managed merchant access connects to the running application's original connection file and binds the selected workspace and instance. File-input aliases can name complete original event or result files with their SHA-256, so the operator can transfer actual retained files through the existing private configuration.
@@ -171,3 +206,15 @@ node RECEIVING.mjs /absolute/new-openlineage-receiving
 ```
 
 Use a new owned receiving directory for a new run. The programme records its actual progress and final result in that directory, preserves its complete generated outputs, and closes its two native servers. Browser operation can be reviewed by opening the received workspace through the normal serve command.
+
+The companion producer operation exercises native gzip and simultaneous HTTP
+arrivals, original replay, explicit writer backpressure, server restart and
+independent receiving of all compressed originals:
+
+```sh
+node PRODUCER_RECEIVING.mjs /absolute/new-openlineage-producer-receiving
+```
+
+Its saved operation file retains the original workspace and stage identities.
+An interrupted stage continues through the same directory. The complete
+producer guide explains the generated files and continuation.

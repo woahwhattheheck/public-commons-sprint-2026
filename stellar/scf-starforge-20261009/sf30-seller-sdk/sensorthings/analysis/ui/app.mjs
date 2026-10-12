@@ -854,7 +854,13 @@ function pythonSourcePane(){
     const prepareForm=formShell('Prepare the complete analysis source',async(form,revision)=>{
       const receipt=usable.find(x=>x.id===value(form,'pythonExportId'));
       if(!receipt)throw new Error('Select a complete original export of this exact source edition.');
-      await beginAction('analysis.python.prepare',{editionId,exportId:receipt.id,actor:requireActor()},revision);
+      const analysisVersionId=value(form,'pythonComponentVersionId');
+      if(analysisVersionId){
+        const selected=state.version;
+        if(selected?.id!==analysisVersionId||selected.editionId!==editionId||!Array.isArray(selected.selection?.componentSelections))
+          throw new Error('Open the exact saved component analysis version and review its source edition before preparing this selection.');
+        await beginAction('analysis.python.components.prepare',{editionId,exportId:receipt.id,analysisVersionId,actor:requireActor()},revision);
+      }else await beginAction('analysis.python.prepare',{editionId,exportId:receipt.id,actor:requireActor()},revision);
     }),choice=select('pythonExportId',[{value:'',label:'Select a retained original export'},...usable.map(x=>({
       value:x.id,label:x.createdAt+' · '+short(x.id,22)+' · '+humanBytes(x.file.bytes)
     }))],'',{required:true}),identityArea=node('div',{});
@@ -865,7 +871,16 @@ function pythonSourcePane(){
         p('Choose the completed source-export result; its ID is separate from the action that created it.','small muted'));
     };
     choice.addEventListener('change',showIdentity);showIdentity();
+    const currentComponent=state.schema.actions?.['analysis.python.components.prepare']&&state.version?.editionId===editionId&&
+      Array.isArray(state.version?.selection?.componentSelections)?state.version:null,
+      analysisChoice=select('pythonComponentVersionId',[
+        {value:'',label:'Complete source tables without a selected component analysis'},
+        ...(currentComponent?[{value:currentComponent.id,label:'Opened saved component version · '+short(currentComponent.id,22)}]:[])
+      ],'');
     prepareForm.append(field('Original source export',choice),identityArea,
+      field('Explicit analysis selection',analysisChoice),
+      currentComponent?p('The optional component handover retains this exact saved version, '+count(currentComponent.selection.componentSelections.length)+' selected positions, their ordered metadata and both exact-number and browser classifications. All complete original source tables remain included.','small muted'):
+        p('To include components, first open a saved component analysis version of this edition. No position, property, unit or interpretation is selected automatically.','small muted'),
       p('This prepares source files. The Python application records its actual import, calculations, reports, workbooks and receiving results when that programme runs.','small muted'),
       node('div',{class:'actions'},submitButton('Prepare Python analysis handover')));
     if(!usable.length)prepareForm.querySelector('button[type=submit]').dataset.readonly='true';
@@ -874,8 +889,8 @@ function pythonSourcePane(){
         code(x.id),x.createdAt,humanBytes(x.file.bytes),readFileButtons({kind:'transfer',id:x.id})
       ])):p('No complete original source export is recorded for this edition.','empty'),
       node('h4',{},'Prepared analysis handovers'),
-      records.length?table(['Preparation','Recorded','Provider traversal','Source archive','Complete handover'],records.map(x=>[
-        code(x.id),x.createdAt,x.sourceComplete?'Selected query traversed':'Incomplete traversal retained',
+      records.length?table(['Preparation','Recorded','Analysis selection','Provider traversal','Source archive','Complete handover'],records.map(x=>[
+        code(x.id),x.createdAt,x.componentAnalysis?code(x.componentAnalysis.analysisVersionId):'Complete source tables',x.sourceComplete?'Selected query traversed':'Incomplete traversal retained',
         (Number.isSafeInteger(x.sourceArchive?.bytes)?humanBytes(x.sourceArchive.bytes):'Not supplied'),button('Inspect source and files',()=>guard(()=>openPythonSource(x.id)))
       ])):p('No Python source handover has been prepared for this edition.','empty'));
   };
@@ -903,6 +918,8 @@ async function openPythonSource(id){
     kv([['Preparation',code(record.id)],['Original source edition',code(record.editionId)],['Original source export',code(record.exportId)],
       ['Source document',code(record.documentId)],['Provider traversal',record.sourceComplete?'Selected query traversed':'Incomplete traversal retained'],
       ['Complete source archive',humanBytes(record.sourceArchive.bytes)],['Archive SHA256',code(record.sourceArchive.sha256)]]),
+    ...(record.componentAnalysis?[p('This handover includes an explicitly selected immutable component analysis. Python receiving verifies every selected value and pointer against its retained original parent vector before import.'),
+      details('Saved component version and complete binding identity',record.componentAnalysis)]:[]),
     table(['Complete table','Rows','Columns'],Object.entries(record.tables).map(([name,t])=>[name,count(t.rows),count(t.columns.length)])),
     p('Receive the whole selection with the maintained file client for the Python programme. Its download manifest preserves the original source paths even when local filenames are numbered. Individual files below retain their exact bytes and selectors.','flow-note'),
     details('Complete-file receiving selection',selection),

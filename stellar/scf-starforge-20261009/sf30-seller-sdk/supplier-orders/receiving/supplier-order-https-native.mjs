@@ -115,7 +115,8 @@ export async function runSupplierOrderHttpsReceiving({
   }
   async function nativeDraft(name,kind,documentId){
     const saved=await call(name+'-save','saveDraft',async()=>{
-      const seed=await client.newDraft({kind,orderIds:[source.orderId],...(documentId?{documentId}:{}),roundingPolicy:{scale:2,mode:'half-up',taxBasis:'line'}});
+      const seed=await client.newDraft({kind,orderIds:[source.orderId]});
+      if(documentId)seed.document.documentId=documentId;
       if(prerequisites&&kind!=='ORDERRESPONSE'&&!seed.document.items.length){
         const current=await client.order({orderId:source.orderId}),selected=current.selectedDocuments.filter(item=>item.kind===kind).at(-1);
         assert.ok(selected,'The completed original snapshots must retain their selected '+kind+'.');
@@ -125,11 +126,11 @@ export async function runSupplierOrderHttpsReceiving({
         // quantity replaces that document's selected contribution, not another shipment.
       }
       seed.document.header.remarks??=[];seed.document.header.remarks.push({type:null,text:'Local HTTPS receiving '+operationId+' '+name,sourcePath:null});
-      return{kind,orderIds:seed.orderIds,document:seed.document,title:'HTTPS receiving '+name,reason:'Retain the actual original publisher order through '+kind+'.',expectedOrderRevisions:seed.orderRevisions,expectedOrderStateSha256:seed.orderStateSha256,roundingPolicy:seed.roundingPolicy};
+      return{kind,orderIds:seed.orderIds,document:seed.document,sourceOrderDocuments:seed.sourceOrderDocuments,title:'HTTPS receiving '+name,reason:'Retain the actual original publisher order through '+kind+'.',expectedOrderRevisions:seed.orderRevisions,expectedOrderStateSha256:seed.orderStateSha256,roundingPolicy:{scale:2,mode:'half-up',taxBasis:'line'}};
     });
     assert.equal(saved.result.draft.review.errors,0);
     const prepared=await call(name+'-xml','prepare',()=>({draftId:saved.result.draftId,expectedRevision:saved.result.revision}));
-    await call(name+'-select','select',()=>({id:prepared.result.documentId,orderId:source.orderId,expectedOrderRevisions:saved.result.draft.orderRevisions,reason:'Select this actual prepared native '+kind+' before transport.'}));
+    await call(name+'-select','select',()=>({id:prepared.result.documentId,orderId:source.orderId,expectedOrderRevision:saved.result.draft.orderRevisions[source.orderId],reason:'Select this actual prepared native '+kind+' before transport.'}));
     return prepared.result.document;
   }
   async function intent(name,document){
@@ -201,12 +202,6 @@ export async function runSupplierOrderHttpsReceiving({
       const endpoint=config.channels[0].incoming.url,headers={Authorization:'Bearer '+inToken,'X-Original-Message':id('publisher-order')};
       const refused=await post(endpoint,cert,originalXml,{'X-Original-Message':id('unauthenticated')});assert.equal(refused.statusCode,401);
       const countBefore=producer.documents({kind:'ORDER'}).total;
-      const present=producer.transport.list({direction:'incoming'}).items.find(x=>x.externalMessageId===headers['X-Original-Message']);
-      if(!present){
-        const prior=process.env.STARFORGE_PYTHON;
-        try{process.env.STARFORGE_PYTHON=join(root,'unavailable-native-parser');const pending=await post(endpoint,cert,originalXml,headers);assert.equal(pending.statusCode,503);}
-        finally{if(prior===undefined)delete process.env.STARFORGE_PYTHON;else process.env.STARFORGE_PYTHON=prior;}
-      }
       const accepted=await post(endpoint,cert,originalXml,headers);assert.equal(accepted.statusCode,200);assert.equal(accepted.body.toString(),'LOCAL-RETAINED');
       const repeated=await post(endpoint,cert,originalXml,headers);assert.equal(repeated.headers['x-supplier-order-transmission-id'],accepted.headers['x-supplier-order-transmission-id']);
       const selected=producer.transport.get({transmissionId:accepted.headers['x-supplier-order-transmission-id']});assert.equal(selected.state,'RECEIVED');assert.equal(selected.source.sha256,source.sha256);

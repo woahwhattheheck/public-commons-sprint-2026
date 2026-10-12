@@ -12,6 +12,7 @@ import { Buyer } from '../../sf88-operator-buyer-cli/node/client.mjs';
 const HELP = [
   'Stellar Forge / WQX water quality', '',
   'node wqx-water-quality/cli.mjs COMMAND --project /private/water-project [options]', '',
+  'scientific     Original/reporting-unit summaries, comparisons, full export and receiving (scientific help).',
   'serve          Open the private operator workspace (--port 0, --buyer-config buyer.json).',
   'init           Save title and native selection (--title NAME --selection selection.json).',
   'config         Read the saved project or save --selection FILE --expected-revision N.',
@@ -99,6 +100,7 @@ async function retainProcess(resource, ready) {
   });
 }
 export async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === 'scientific') return (await import('./standardized-analysis/cli.mjs')).main(argv.slice(1));
   const { command, options } = args(argv);
   if (['help', '--help', '-h'].includes(command)) return output(HELP);
   const directory = resolve(required(options, 'project'));
