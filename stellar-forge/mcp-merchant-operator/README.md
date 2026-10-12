@@ -1,5 +1,7 @@
 # Starforge merchant operations through MCP
 
+The host advertises its configured tools and loads each original provider when it is needed. Release-state reads use the small native release layer; workspace, seller and customer operations retain their existing ownership and recovery paths. See [Configured providers and startup](CONFIGURED_PROVIDERS.md) for setup, capability status, request limits, lifecycle and provider integration.
+
 Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
 
 Create and revise OpenAPI merchants through this same operator. Attach the host's

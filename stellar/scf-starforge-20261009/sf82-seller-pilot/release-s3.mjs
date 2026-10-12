@@ -10,7 +10,8 @@ import { describePinnedS3Config, createS3ObjectSource } from '../sf30-seller-sdk
 import { readSellerConfig, startSellerService } from '../sf30-seller-sdk/serve.mjs';
 import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 
-export const S3_SOURCE_SCHEMA = 'stellar-forge.s3-seller-release-manifest.v1';
+import { S3_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { S3_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const SOURCE_FILES = ['source.json', 'service.json', 'objects.json'];
 const MiB = 1024 * 1024;
 const hash = value => createHash('sha256').update(value).digest('hex');

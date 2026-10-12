@@ -6,7 +6,8 @@ import { fileURLToPath } from 'node:url';
 import { compilePythonMerchant } from '../sf30-seller-sdk/python/config.mjs';
 import { startPythonMerchant } from '../sf30-seller-sdk/python/merchant.mjs';
 
-export const PYTHON_SOURCE_SCHEMA = 'stellar-forge.python-seller-manifest.v1';
+import { PYTHON_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { PYTHON_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const OFFERS_SCHEMA = 'stellar-forge.python-seller-offers.v1';
 const CONFIG = 'python/declaration.json', RUNTIME_CONFIG = 'python/merchant.json';
 const SOURCE = 'python/source/';
