@@ -103,14 +103,15 @@ export function createSourceBearerAuth({
       controller.signal.throwIfAborted();
       let value;
       try {
-        value = await awaitCredential(Promise.resolve().then(() =>
-          selected.tokenEnv !== undefined
+        value = await awaitCredential(Promise.resolve().then(() => {
+          controller.signal.throwIfAborted();
+          return selected.tokenEnv !== undefined
             ? environment[selected.tokenEnv]
             : resolveCredential(selected.credentialRef, {
                 url:request.url, origin:request.origin, method:request.method,
                 signal:controller.signal
-              })
-        ), controller.signal);
+              });
+        }), controller.signal);
       } catch {
         if (controller.signal.aborted) throw controller.signal.reason;
         // Every resolver exception is private, including a custom error that
