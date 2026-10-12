@@ -168,11 +168,12 @@
       </section>
 
       <section id="page-customers" class="page" hidden>
-        <div class="section-heading"><div><p class="eyebrow">Original seller-generated clients</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
+        <div class="section-heading"><div><p class="eyebrow">Original clients and API packages</p><h2>Customer receiving</h2></div><button id="refresh-customers">Refresh receiving</button></div>
         <div class="columns">
           <section class="panel"><h3>Receive or resume a customer</h3><p>Use the export identity returned by the merchant. Receiving keeps the original manifest, verified files and resumable transfer.</p>
             <form id="customer-form">
-              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option></select>
+              <p id="customer-form-hint" class="hint"></p>
+              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option><option value="openapi">API workspace package</option></select>
               <div id="customer-workspace-field" hidden><label for="customer-workspace">Configured workspace alias</label><input id="customer-workspace" pattern="[a-z0-9][a-z0-9_-]{0,63}" autocomplete="off"></div>
               <label for="customer-export">Original export ID</label><input id="customer-export" pattern="[a-z0-9][a-z0-9_-]{0,63}" required autocomplete="off">
               <label for="customer-sha">Manifest SHA-256</label><input id="customer-sha" pattern="[a-f0-9]{64}" class="mono" required autocomplete="off">
@@ -183,6 +184,7 @@
         </div>
         <section id="customer-detail" class="panel" hidden><div class="section-heading"><div><p class="eyebrow">Retained customer export</p><h3 id="customer-title" class="break"></h3></div><span id="customer-state" class="tag"></span></div>
           <dl id="customer-details" class="properties"></dl><p id="customer-progress" class="hint"></p>
+          <p id="customer-openapi-guidance" class="hint" hidden>The API archive retains its complete export manifest, original source, route worksheet, merchant configuration and any saved policy application. Import the package in the destination API workspace to continue its seller release.</p>
           <div class="actions"><button id="resume-customer">Resume same export</button><button id="pause-customer">Pause receiving</button><button id="download-customer">Download original customer archive</button></div>
           <div class="table-wrap"><table><thead><tr><th>Original file</th><th>Bytes</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="customer-files"></tbody></table></div>
           <details><summary>Complete receiving record</summary><pre id="customer-json"></pre></details>

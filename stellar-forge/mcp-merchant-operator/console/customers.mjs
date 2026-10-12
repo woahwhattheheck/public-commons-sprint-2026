@@ -5,10 +5,17 @@ import { createRetainedDownload } from '../retained-download.mjs';
 import { identifier } from '../host-files.mjs';
 import { CLIENT_EXPORT_MANIFEST, MAX_CLIENT_EXPORT_FILE_BYTES, parseSellerClientManifest } from '../../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export.mjs';
 import { canonical, digest, fail } from './store.mjs';
+import { OPENAPI_CUSTOMER_DOWNLOAD, validateOpenApiCustomerSelection } from './openapi-customer-records.mjs';
 
 const validId=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(value);
 const validSha=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const errorView=error=>({code:error.code??'CUSTOMER_RECEIVING_ERROR',message:error.message??String(error)});
+export function customerManifestAccess(selection) {
+  const prefix = selection.family === 'core' ? 'merchant_client_export' :
+    selection.family === 'openapi' ? 'merchant_openapi' : 'merchant_opensearch_deployment';
+  return { name: prefix + '_manifest',
+    args: { exportId: selection.exportId, ...(selection.workspace ? { workspace: selection.workspace } : {}) } };
+}
 export function createConsoleCustomers({operator,store,definitions,releaseStore,getHost,authorize}) {
   const active=new Map(),archiveReaders=new Map(),archiveCalls=new Set(),archiveCloses=new Map();
   let closing=false,closed,closeAttempts=0;
@@ -25,6 +32,10 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     let pending=archiveReaders.get(record.id);
     if(!pending){
       pending=(async()=>{
+        if(record.identity.family==='openapi'){
+          const {createOpenApiCustomerArchive}=await import('./openapi-customers.mjs');
+          return createOpenApiCustomerArchive({record,directory:directory(record)});
+        }
         const {createReleaseClientConsole}=await import('../../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-client.mjs');
         return createReleaseClientConsole(releaseStore,{directory:join(store.directory,'customers',record.id),getManaged:()=>null});
       })();
@@ -34,16 +45,18 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     return pending;
   }
   function identity(input) {
-    if(!['core','opensearch'].includes(input.family)||!validId(input.exportId)||!validSha(input.expectedManifestSha256))
+    if(!['core','opensearch','openapi'].includes(input.family)||!validId(input.exportId)||!validSha(input.expectedManifestSha256))
       throw fail('CONSOLE_CUSTOMER_SELECTION','Select the original family, export ID and manifest SHA-256.',400);
     if(input.family==='opensearch'&&!validId(input.workspace))
       throw fail('CONSOLE_CUSTOMER_WORKSPACE','Select the original OpenSearch workspace alias.',400);
-    return {profileId:input.profileId,family:input.family,...(input.family==='opensearch'?{workspace:input.workspace}:{}),
+    if(input.family==='openapi')validateOpenApiCustomerSelection(input);
+    return {profileId:input.profileId,family:input.family,...(input.family!=='core'?{workspace:input.workspace}:{}),
       exportId:input.exportId,expectedManifestSha256:input.expectedManifestSha256,
       hostFingerprint:input.expectedHostFingerprint};
   }
   const directory=value=>join(store.directory,'customers',value.id,value.identity.exportId);
-  const toolPrefix=selection=>selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment';
+  const toolPrefix=selection=>customerManifestAccess(selection).name.slice(0,-'_manifest'.length);
+  const format=selection=>selection.family==='openapi'?OPENAPI_CUSTOMER_DOWNLOAD:{manifestName:CLIENT_EXPORT_MANIFEST,parseManifest:parseSellerClientManifest};
   const view=value=>({...value,active:active.has(value.id),
     localFiles:value.workspaceId===store.id&&value.state==='COMPLETE'});
   function transfer(selection,request) {
@@ -54,8 +67,9 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
       manifestName:CLIENT_EXPORT_MANIFEST,parseManifest:parseSellerClientManifest,maximumBytes:MAX_CLIENT_EXPORT_FILE_BYTES,
       stateSchema:'stellar-forge.merchant-client-download.v1',resultSchema:'stellar-forge.merchant-client-download-result.v1',
       toolPrefix:prefix,errorPrefix:'CLIENT',clientName:'starforge-merchant-console',
+      ...(selection.family==='openapi'?OPENAPI_CUSTOMER_DOWNLOAD:{}),
       connect:async()=>({endpoint:'urn:stellar-forge:merchant-host:'+selection.hostFingerprint+':'+selection.family+(selection.workspace?':'+selection.workspace:''),call:async(name,args)=>{
-        const values=selection.family==='opensearch'?{workspace:selection.workspace,...args}:args;
+        const values=selection.family!=='core'?{...args,workspace:selection.workspace}:args;
         const context=await authorize(request,name,values);
         return operator.call(name,values,context?{authorization:context}:undefined);
       }})
@@ -87,10 +101,11 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
           chunkSize:65536,signal:controller.signal,onProgress:progress=>{
             record=store.saveDelivery({...record,progress,updatedAt:new Date().toISOString()});
           }});
-        const bytes=await driver.bytesAt(join(directory(record),CLIENT_EXPORT_MANIFEST),65000);
+        const originalFormat=format(selection);
+        const bytes=await driver.bytesAt(join(directory(record),originalFormat.manifestName),65000);
         if(digest(bytes)!==selection.expectedManifestSha256)throw fail('CONSOLE_CUSTOMER_CHANGED','The received manifest changed.');
-        const manifest=parseSellerClientManifest(bytes,selection.exportId);
-        const files=[...manifest.files,{name:CLIENT_EXPORT_MANIFEST,bytes:bytes.length,sha256:digest(bytes)}];
+        const manifest=originalFormat.parseManifest(bytes,selection.exportId);
+        const files=[...manifest.files,{name:originalFormat.manifestName,bytes:bytes.length,sha256:digest(bytes)}];
         const {directory:privateDirectory,...summary}=result;
         record=store.saveDelivery({...record,state:'COMPLETE',completedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
           files,result:summary,manifest,progress:null,error:null});
