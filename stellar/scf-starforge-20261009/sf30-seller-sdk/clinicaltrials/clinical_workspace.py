@@ -235,9 +235,17 @@ class Workspace(PackageOperations, SourceWorkspace):
     def _version(self,capture,kind):
         body,receipt=registry.request(registry.BASE+"/version")
         retained=self._receipt(capture,kind,body,receipt)
+        try:
+            observed=registry.version(body)
+            retained["version"]=observed
+        except InputError as error:
+            retained["validationError"]=str(error)
+            capture.setdefault("versionRequests",[]).append(retained)
+            self._save_capture(capture)
+            raise
         capture.setdefault("versionRequests",[]).append(retained)
         self._save_capture(capture)
-        return registry.version(body)
+        return observed
 
     def _capture_start(self,request_id):
         configuration=self._meta("configuration")

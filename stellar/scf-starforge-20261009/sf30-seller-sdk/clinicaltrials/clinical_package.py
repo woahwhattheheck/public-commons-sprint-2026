@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
@@ -87,7 +88,8 @@ class PackageOperations:
             try:
                 copy_private(self._build_path(build_id,"data.csv"),destination/"dataset.csv")
                 config=load_json(self._build_path(build_id,"dataset.json").read_bytes());config["file"]="dataset.csv"
-                private_write(destination/"dataset.json",json_bytes(config))
+                # Native snapshot includes declared column order; canonical metadata sorting must not reorder this source contract.
+                private_write(destination/"dataset.json",(json.dumps(config,ensure_ascii=False,allow_nan=False,separators=(",",":"))+"\n").encode("utf-8"))
                 SourceWorkspace.export_packet(self,build_id,destination/"native-project.zip")
                 self._portable(destination/"clinicaltrials-workspace.zip")
                 source_folder=destination/"source";source_folder.mkdir(mode=0o700)
@@ -260,7 +262,15 @@ class PackageOperations:
                     versions=[]
                     for request in capture.get("versionRequests",[]):
                         body=self._verified(request["bodyPath"],request["sha256"]).read_bytes()
-                        versions.append(registry.version(body))
+                        try:
+                            observed=registry.version(body)
+                        except InputError:
+                            if not request.get("validationError"):
+                                raise InputError("A retained provider version response is invalid")
+                        else:
+                            if request.get("validationError") or (request.get("version") is not None and request["version"]!=observed):
+                                raise InputError("Retained provider version metadata differs from its original response")
+                            versions.append(observed)
                     if capture["status"]=="completed" and (len(versions)<2 or any(v!=capture["version"] for v in versions)):
                         raise InputError("Original complete capture lacks a consistent before/after provider version")
                     if capture["status"]=="completed" and (not capture["pages"] or capture["pages"][-1]["nextPageToken"] is not None):
