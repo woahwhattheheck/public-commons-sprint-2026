@@ -23,13 +23,13 @@
     },
     {
       "path": "native/browser.mjs",
-      "bytes": 25569,
-      "sha256": "a546c2ffa2a06afb0c83dd26d569672b4bc36a61086fe11319cfa84e241864bd"
+      "bytes": 27092,
+      "sha256": "2792091295d55b70221e44d08cb4d695b907fadedd3af62e21fb941a0ea528fb"
     },
     {
       "path": "native/README.md",
-      "bytes": 5463,
-      "sha256": "b3ce488b127a450a4bd4dd18bc1449164e5eca6844415dbb443fdacd678f2109"
+      "bytes": 5881,
+      "sha256": "980a1e9b78390f86c6b6b43947e1365595c4c8256ee06d4b19b0f74d229b8a89"
     },
     {
       "path": "native/receive.py",
@@ -53,8 +53,8 @@
     },
     {
       "path": "portfolio_target/cli.py",
-      "bytes": 7716,
-      "sha256": "ad947320c1395a05255e15e51cc245f850afbe3f73d9ead28dd23cc1f1f5be5d"
+      "bytes": 10136,
+      "sha256": "e0e7e3f2ab2dc1cc61ca7c5c03fba33772cacf681f74dbbb7623f64b90416b19"
     },
     {
       "path": "portfolio_target/planner.py",
@@ -63,13 +63,13 @@
     },
     {
       "path": "portfolio_target/server.py",
-      "bytes": 19316,
-      "sha256": "296154e9e5196c0d885ba320230097d5c47a80c43c3481b85c86446d932de458"
+      "bytes": 24448,
+      "sha256": "03892878570a5980df8dd322cddc5bd8ec41c5f207587d479b175ad64c218211"
     },
     {
       "path": "portfolio_target/storage.py",
-      "bytes": 13625,
-      "sha256": "06d03a97edfefe7ad9c2595c3f1a857ba509c38a4cceb9c82b5093792bca2a09"
+      "bytes": 14594,
+      "sha256": "e1432e40cbeee8474045efc533b6e74f1eba3c4b5b0e610f042efc941f36e8fa"
     },
     {
       "path": "portfolio_target/target.py",
@@ -78,28 +78,28 @@
     },
     {
       "path": "portfolio_target/web/app.js",
-      "bytes": 40603,
-      "sha256": "509cdf9502f6c5d32c15c589d55b18152c6d1aaa21f4fc289d869640c19af001"
+      "bytes": 42171,
+      "sha256": "cddc239066208e5d128159c92ad0d28a84c3e30a62981763a1e517ff95a04fec"
     },
     {
       "path": "portfolio_target/web/index.html",
-      "bytes": 11679,
-      "sha256": "48ecdea9af1275248d5f7f96a55e8dddebf581bcd03afa5a4b4882fcf315f042"
+      "bytes": 20597,
+      "sha256": "7ac15a2c9f8c8d859832e8eefba08207739a31b5be73b16d1cae758eb6a2415a"
     },
     {
       "path": "portfolio_target/web/style.css",
-      "bytes": 5004,
-      "sha256": "7806e53691dc965ce567af724850c54404a33ee98e56eb16c7033d31ced8eed3"
+      "bytes": 5910,
+      "sha256": "e2b82b06a3a03a4a99092f74bda8967fbdf7e0109db604f295434e267c5dde31"
     },
     {
       "path": "portfolio_target/workspace.py",
-      "bytes": 65671,
-      "sha256": "196ca384807d4b8d500a118fe35f5ef33cc563f05e7213794a233eeba056776c"
+      "bytes": 67640,
+      "sha256": "d239988627f0116d1905c2e1cf34b83591836cb50436372f3d1320e92ecbe89e"
     },
     {
       "path": "README.md",
-      "bytes": 21602,
-      "sha256": "f7239c10b5aefe90bcf2be0573875ec6b52c37cc2f32856b6da0a77436db2b3d"
+      "bytes": 22139,
+      "sha256": "b584bb9c17aebd9cc7e9148c54128729830d4fda0b9af7c61ae7c664268c4542"
     },
     {
       "path": "serve.py",

@@ -27,6 +27,7 @@ APPLICATIONS = {
     "finalized-dataset": CLI.parent / "python" / "finalized-dataset-bridge.mjs",
     "object": CLI.parent / "python" / "object-bridge.mjs",
     "acquisitions": CLI.parent.parent / "buyer-runbook" / "customer-bridge.mjs",
+    "analysis-lineage": CLI.parent / "python" / "analysis-lineage-bridge.mjs",
 }
 
 

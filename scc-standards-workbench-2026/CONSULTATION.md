@@ -1,6 +1,6 @@
 # Bilingual consultation receiving
 
-Version 0.2 adds a complete local review exchange to the existing standards workbench. An operator freezes a recipient packet from one edition and consultation. A reviewer opens the packet in a browser, writes comments against its exact English and French text, and returns a JSON file. The operator retains those original bytes, reviews the proposals, changes the working clauses where appropriate, and records dispositions against a frozen resolution edition.
+Version 0.2.2 provides a complete local review exchange to the existing standards workbench. An operator freezes a recipient packet from one edition and consultation. A reviewer opens the packet in a browser, writes comments against its exact English and French text, and returns a JSON file. The operator retains those original bytes, reviews the proposals, changes the working clauses where appropriate, and records dispositions against a frozen resolution edition.
 
 The packet, returned comment, applied amendment and disposition have separate identities. A proposed sentence is not adopted wording. Receiving a file does not create committee membership, a vote, a closed consultation, a dispatch record or an approval.
 
@@ -31,17 +31,21 @@ The recipient page contains the selected edition's public citations and explicit
 
 ## Work in the offline reviewer page
 
-The reviewer needs a current browser and the downloaded files. The page has no account, remote service, API request or send button.
+Open `reviewer.html` from the downloaded packet. The **Instructions & reviewer**, **Read clauses**, **Worked cases**, **My comments** and **Review & return** views share the same saved response. The language selector changes the page to English, French or paired text.
 
-Use the language selector to read English, French or both. Search the clauses, inspect the worked cases and their original cells, and choose a clause or **General comment**. Each comment records a technical, editorial or public comment type, its language, the original observation and optional proposed English or French wording. Saving a comment preserves its entry identity while you continue editing.
+In **Read clauses**, search titles and clause wording, open a clause, and use **Previous clause** and **Next clause** to continue reading. **Mark this clause read** records personal reading progress. The clause index can show all clauses, unread clauses or clauses with comments; it collapses on a phone to leave room for the document. Reading marks remain in the private draft. The original ordered cells in **Worked cases** appear as a labelled table that preserves blank values and real zero.
 
-Names, organization and return contact are optional reviewer declarations. They help the operator recognize the received file; they are not authenticated identity or voting credentials. The authored-exercise checkbox makes a demonstration return explicit.
+Choose a clause or **General comment** to describe an observation and any proposed English or French wording. A saved comment keeps its entry identity when edited. **My comments** searches the saved comments and pages longer responses. The complete return preview includes every saved comment.
 
-Use **Save draft** before closing. The page also tries local browser storage, but browsers may restrict that storage for files opened from disk. A saved draft file is portable. **Open draft / response** checks its packet identity before adopting it; a response for another edition cannot silently replace this packet's work.
+Use **Save draft** before closing. The page also tries local browser storage, which a browser may restrict for files opened from disk. A saved draft file is portable and retains reading progress. **Open draft / response** checks the original packet before opening it. Keep each packet with its own draft.
 
-Use **Export response** when the comments are ready, then send the resulting JSON through the packet's recorded return route. Export does not transmit it. Keep the packet and a draft copy if you expect to revise the response.
+In **Review & return**, read the full response, optional reviewer details and exact return instructions. **Export response** downloads the JSON file for the agreed return route. **Save readable copy** downloads a standalone HTML copy of all comments and proposed wording for reading or printing. Both exports use the same saved response. Send the JSON through the route recorded in the packet and retain the readable copy with your records.
+
+Names, organization and return contact are optional reviewer declarations. The authored-exercise checkbox labels a practice response. The full **READ-ME.txt** included in the recipient ZIP explains the same workflow in English and French, including how to reopen and correct an earlier return.
 
 ## Receive original returned comments
+
+The operator's **Reviewer packets**, **Returned comments** and **Amendments & dispositions** queues follow the same review exchange. Search the queues, move between their pages, and filter comments by decision or language. A corrected return links to its retained predecessor. The comment panel presents the original wording, current clause, proposed paired text and recorded decision together; **Next needing decision** continues the review without losing the selected return. On a phone, return to the queue to choose the next item.
 
 In **Consultation receiving**, select the retained packet and choose the original returned JSON file. **Preview return** reads the file without saving project changes. It shows:
 

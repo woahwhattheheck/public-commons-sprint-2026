@@ -2,9 +2,9 @@
 // MIT. Operate complete report selection, frozen exports, receiving and original history.
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
-import { MerchantWorkflowReportClient, readWorkflowReportFile, writeWorkflowReportExports,
-  reopenWorkflowReportExports } from './workflow-report-client.mjs';
-import { writeOpenApiWorkflowFile } from './openapi-workflow-client.mjs';
+import { readWorkflowReportFile, writeWorkflowReportExports,
+  reopenWorkflowReportExports } from './workflow-report-files.mjs';
+import { writeConsoleWorkflowFile as writeOpenApiWorkflowFile } from './client-files.mjs';
 import { fail } from './records.mjs';
 
 const HELP=[
@@ -86,7 +86,8 @@ export async function main(args=process.argv.slice(2)) {
   if(command==='build')need(values.output,'Retain the complete original report with --output.');
   if(['capture','export','reopen'].includes(command))need(values.directory,'Select the complete report --directory.');
   const offline=['inspect','export','reopen'].includes(command);
-  const client=offline?null:new MerchantWorkflowReportClient({url:values.url,tokenEnv:values['token-env']??'MCP_ACCESS_TOKEN'});
+  const Client=offline?null:(await import('./workflow-report-client.mjs')).MerchantWorkflowReportClient;
+  const client=offline?null:new Client({url:values.url,tokenEnv:values['token-env']??'MCP_ACCESS_TOKEN'});
   let result,display;
   try{
     switch(command){

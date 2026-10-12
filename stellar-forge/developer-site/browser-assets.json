@@ -10,16 +10,16 @@
       ]
     ],
     [
-      "/agentsmith-LICENSE.txt",
+      "/agentsmith-capture.py",
       [
-        "agentsmith-LICENSE.txt",
+        "agentsmith-capture.py",
         "text/plain; charset=utf-8"
       ]
     ],
     [
-      "/agentsmith-capture.py",
+      "/agentsmith-LICENSE.txt",
       [
-        "agentsmith-capture.py",
+        "agentsmith-LICENSE.txt",
         "text/plain; charset=utf-8"
       ]
     ],
@@ -122,17 +122,17 @@
       ]
     ],
     [
-      "/examples/fred-briefing-20261012/START_HERE.md",
-      [
-        "examples/fred-briefing-20261012/START_HERE.md",
-        "text/markdown; charset=utf-8"
-      ]
-    ],
-    [
       "/examples/fred-briefing-20261012/package-manifest.json",
       [
         "examples/fred-briefing-20261012/package-manifest.json",
         "application/json; charset=utf-8"
+      ]
+    ],
+    [
+      "/examples/fred-briefing-20261012/START_HERE.md",
+      [
+        "examples/fred-briefing-20261012/START_HERE.md",
+        "text/markdown; charset=utf-8"
       ]
     ],
     [
@@ -153,13 +153,6 @@
       "/examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md",
       [
         "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/BRIEFINGS.md",
-        "text/markdown; charset=utf-8"
-      ]
-    ],
-    [
-      "/examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
-      [
-        "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
         "text/markdown; charset=utf-8"
       ]
     ],
@@ -196,6 +189,13 @@
       [
         "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/macro-source.capture.json",
         "application/json; charset=utf-8"
+      ]
+    ],
+    [
+      "/examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
+      [
+        "examples/fred-briefing-20261012/stellar/scf-starforge-20261009/sf30-seller-sdk/fred/examples/briefing-20261012/README.md",
+        "text/markdown; charset=utf-8"
       ]
     ],
     [
@@ -297,6 +297,69 @@
       ]
     ],
     [
+      "/grant-entry-browser.mjs",
+      [
+        "grant-entry-browser.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-entry.css",
+      [
+        "grant-entry.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-core.mjs",
+      [
+        "grant-plan-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-source.mjs",
+      [
+        "grant-plan-source.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-plan-workspace.mjs",
+      [
+        "grant-plan-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-submission-core.mjs",
+      [
+        "grant-submission-core.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-submission-workspace.mjs",
+      [
+        "grant-submission-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-submission.css",
+      [
+        "grant-submission.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/grant-submission.html",
+      [
+        "grant-submission.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
       "/grant.css",
       [
         "grant.css",
@@ -339,13 +402,6 @@
       ]
     ],
     [
-      "/rail402-LICENSE.txt",
-      [
-        "rail402-LICENSE.txt",
-        "text/plain; charset=utf-8"
-      ]
-    ],
-    [
       "/rail402-capture.py",
       [
         "rail402-capture.py",
@@ -357,6 +413,13 @@
       [
         "rail402-captures.json",
         "application/json; charset=utf-8"
+      ]
+    ],
+    [
+      "/rail402-LICENSE.txt",
+      [
+        "rail402-LICENSE.txt",
+        "text/plain; charset=utf-8"
       ]
     ],
     [

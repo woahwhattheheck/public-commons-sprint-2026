@@ -2,11 +2,20 @@ import type { Json, RequestQuery, RequestRow, RequestFilter, CaptureComparison, 
 import type { WorkspaceConnection, WorkspaceCapture, WorkspaceOperation, WorkspaceReview, ReviewedRequest, RequestView, MutationIntent, MutationResult, CaptureInput } from './workspace.mjs';
 
 export const COLLECTION_SCHEMA: 'commons.open311.collection.v1';
+export type CollectionTimeBasis = 'created' | 'updated';
+export type CollectionStrategy = 'windows' | 'pages';
+export interface CollectionCreatedQuery extends RequestQuery { start_date: string; end_date: string; }
+export interface CollectionUpdatedQuery extends RequestQuery { updated_after: string; updated_before: string; }
+export type CollectionQuery = CollectionCreatedQuery | CollectionUpdatedQuery;
 export interface CollectionPolicy {
   maxWindowDays: number; queryQuantumMs: number; minimumWindowMs: number; boundaryOverlapMs: number;
+  /** Omitted in legacy/default plans; created selects start_date/end_date. */
+  timeBasis?: CollectionTimeBasis;
+  /** Omitted in legacy/default plans; pages requires a paginating connection. */
+  strategy?: CollectionStrategy;
 }
 export type CollectionState = 'PLANNED' | 'RUNNING' | 'PAUSED' | 'INTERRUPTED' | 'COMPLETE' | 'LIMITED';
-export type CollectionWindowState = 'PENDING' | 'FETCHING' | 'CAPTURED' | 'SPLIT' | 'LIMITED' | 'FAILED';
+export type CollectionWindowState = 'PENDING' | 'FETCHING' | 'CAPTURED' | 'SPLIT' | 'PAGED' | 'LIMITED' | 'FAILED';
 export interface CollectionSourceError {
   code: string; message: string; status: number; receipt?: WorkspaceCapture['receipt']; details?: Json;
 }
@@ -16,17 +25,20 @@ export interface CollectionAttempt {
 }
 export interface CollectionWindow {
   id: string; parentId: string | null; startDate: string; endDate: string;
+  /** Original source page, starting at 1, present only in page traversal. */
+  page?: number;
   state: CollectionWindowState; children: string[]; attempts: CollectionAttempt[];
-  captureId: string | null; problem?: 'SOURCE_QUERY_MISMATCH' | 'RESPONSE_CAP_AT_SELECTED_PRECISION';
+  captureId: string | null; problem?: 'SOURCE_QUERY_MISMATCH' | 'RESPONSE_CAP_AT_SELECTED_PRECISION' | 'REPEATED_SOURCE_PAGE';
 }
 export interface CollectionSelection {
   connectionId: string; name?: string;
-  query: RequestQuery & { start_date: string; end_date: string };
+  /** Updated traversal requires updated_after/updated_before and policy.timeBasis='updated'. */
+  query: CollectionQuery;
   policy?: Partial<CollectionPolicy>;
 }
 export interface CollectionPlan {
-  name: string; query: RequestQuery & { start_date: string; end_date: string };
-  requestedQuery: RequestQuery & { start_date: string; end_date: string };
+  name: string; query: CollectionQuery;
+  requestedQuery: CollectionQuery;
   policy: CollectionPolicy; nodes: CollectionWindow[];
 }
 export interface SourceCollection extends CollectionPlan {
@@ -38,6 +50,8 @@ export interface SourceCollection extends CollectionPlan {
 export interface CollectionCounts {
   windowCount: number; pendingWindows: number; activeWindows: number; capturedWindows: number;
   splitWindows: number; limitedWindows: number; failedWindows: number; originalCaptureCount: number;
+  /** Full pages with a saved next-page member; omitted from legacy/window summaries. */
+  pagedWindows?: number;
   returnedRows: number; uniqueRequests: number; changedRequests: number; duplicateObservations: number;
   outOfWindowRows: number; unknownDateRows: number;
 }
