@@ -24,6 +24,7 @@ import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckou
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
+import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
@@ -79,6 +80,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   datasetBuyerApplication(common),
   pricingApplication(common),
   collectionsApplication(common),
+  baserowApplication(common),
   grantApplication(common),
   fredApplication(common),
   tenderlyApplication(common),
@@ -299,6 +301,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'baserow-authoring') {
+    const prepared = await prepareBaserowApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'buyer-collections') {
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);

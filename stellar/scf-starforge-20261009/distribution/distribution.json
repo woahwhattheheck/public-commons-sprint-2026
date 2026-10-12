@@ -116,6 +116,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -199,7 +203,9 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/browser-assets.json",
     "stellar/scf-starforge-20261009/sf44-developer-onramp/onboard.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/examples/ecb-reference-rates.sdmx.zip",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/macrobond/examples/ecb-reference-rates.macrobond.zip",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/checkout-basket.php",
+    "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/BASKET.md"
   ],
   "commands": {
     "openalex": "stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/cli.mjs",
@@ -445,6 +451,11 @@
     "databento-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
     "databento-acquire": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/acquire.mjs",
     "databento-warehouse": "stellar/scf-starforge-20261009/sf30-seller-sdk/databento/warehouse.mjs",
+    "baserow-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/cli.mjs",
+    "baserow-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/publisher/cli.mjs",
+    "baserow-deployment": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment-cli.mjs",
+    "baserow-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/cli.mjs",
+    "stac": "stellar/scf-starforge-20261009/sf30-seller-sdk/stac/cli.mjs",
     "grant-demo": "stellar/scf_2026/presentation/reviewer/cli.mjs"
   },
   "exports": {
@@ -1096,6 +1107,27 @@
     "./seller/databento/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/workbench.mjs",
     "./seller/databento/acquire": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/acquire.mjs",
     "./seller/databento/warehouse": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/databento/warehouse.mjs",
+    "./seller/baserow": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/index.mjs",
+    "./seller/baserow/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/source.mjs",
+    "./seller/baserow/declaration": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/declaration.mjs",
+    "./seller/baserow/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/capture.mjs",
+    "./seller/baserow/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/publisher/model.mjs",
+    "./seller/baserow/deployment": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/deployment.mjs",
+    "./seller/baserow/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/model.mjs",
+    "./seller/baserow/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/server.mjs",
+    "./seller/baserow/workspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/launch.mjs",
+    "./seller/baserow/workspace/packet": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/baserow/workspace/packet.mjs",
+    "./seller/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/merchant.mjs",
+    "./seller/stac/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/workspace.mjs",
+    "./seller/stac/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/provider.mjs",
+    "./seller/stac/customer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./seller/stac/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/server.mjs",
+    "./buyer/stac": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/customer.mjs",
+    "./buyer/stac/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/receiving/delivery.mjs",
+    "./seller/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/workspace.mjs",
+    "./seller/stac/processing/provider": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/provider.mjs",
+    "./buyer/stac/processing": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/portable.mjs",
+    "./seller/stac/processing/cirrus": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/processing/cirrus.mjs",
     "./grant/demo": {
       "types": "./source/stellar/scf_2026/presentation/reviewer/workspace.d.mts",
       "import": "./source/stellar/scf_2026/presentation/reviewer/workspace.mjs"
