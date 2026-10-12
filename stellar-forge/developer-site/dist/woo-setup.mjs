@@ -85,7 +85,7 @@ async function packet() {
 async function exportPacket() {
   try {
     const value = await packet(); download(zipWorkspace(value.files),value.summary.folder + '-setup.zip','application/zip');
-    errors(); status(`Downloaded ${value.summary.routeCount} original route exports, the native runner, editable setup and full merchant/buyer instructions.`);
+    errors(); status(`Downloaded ${value.summary.routeCount} original route exports, the native runner, editable setup and full merchant/buyer/agent instructions.`);
   } catch (error) { fail(error); }
 }
 function command(title,text) {
@@ -135,6 +135,14 @@ function run() {
     'Complete a real classic or Blocks checkout for one mapped digital product. The order remains unpaid and on hold. The buyer downloads its own private handoff and follows the included BUYER.md through the original review, workspace and inbox.',
     'After native settlement, the original worker delivers its signed notice to WooCommerce. Independently reconcile the actual payment and use the original merchant release action. Woo’s normal completion and download permissions then deliver the file.',
     'For an uncertain attempt, reconcile first. Only the original merchant-attested non-settlement reset advances the generation. The buyer imports the current handoff into the same workspace, ledger and inbox; previous reservations remain until independently reconciled.']) sequence.append(el('li',text));
+  const agentDirectory = "'" + (input.privateDirectory + '/agents').replace(/'/g, "'\\''") + "'";
+  box.append(command('4. Connect the merchant agent',
+    'node merchant.mjs agent-init --toolkit "$TOOLKIT"\n' +
+    'node merchant.mjs agent-inspect --toolkit "$TOOLKIT" --dir ' + agentDirectory));
+  box.append(el('p','The packet includes agent-input.json and AGENTS.md. Select the existing operator or configure its credential environment names, then import the generated client.json into your MCP host. The original provider exposes 20 Woo tools for actual store queues, native review, release, refunds and complete receiving.','pane-intro'));
+  box.append(command('Keep the host’s existing servers',
+    'node merchant.mjs agent-client --toolkit "$TOOLKIT" --dir ' + agentDirectory + ' -- \\\n' +
+    '  --merge /private/existing-mcp-host.json --output /private/host-with-woo.json'));
   box.append(sequence); const link=el('a','Open the full original operating guide ↗','text-link');link.href=WOO_GUIDE;link.target='_blank';link.rel='noopener noreferrer';box.append(link);
 }
 function step(index,focus = false) {
