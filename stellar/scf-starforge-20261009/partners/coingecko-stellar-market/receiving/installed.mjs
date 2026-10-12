@@ -34,7 +34,7 @@ if(retainedPath){
   resolve(retained.directory)===retained.directory&&
   retained.sourceRoot===join(retained.directory,'package','source')&&
   retained.dependencyRoot===retained.directory&&
-  retained.entrypoint===join(retained.sourceRoot,B+'cli.mjs')&&
+  retained.entrypoint===join(retained.sourceRoot,B+'distribution/cli.mjs')&&
   /^[a-f0-9]{40}$/.test(retained.sourceCommit??'')&&
   Number.isSafeInteger(retained.dependencyCount)&&retained.dependencyCount>=0&&
   ['installationId','profileId','profileSha256','lockSha256','sourceManifestSha256']
