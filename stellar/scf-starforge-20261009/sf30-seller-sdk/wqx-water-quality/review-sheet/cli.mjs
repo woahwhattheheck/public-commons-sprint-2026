@@ -10,6 +10,8 @@ import { REVIEW_SHEET_SCHEMA, reviewSheetSource, listReviewSheetTargets, normali
 import { reviewSheetCsv, reviewSheetTsv, parseReviewSheetCsv, parseReviewSheetTsv } from './csv.mjs';
 import { previewReviewSheet, saveReviewSheet, listReviewSheets, readReviewSheet, exportReviewSheet, receiveReviewSheet } from './workflow.mjs';
 
+import { concentrationSourceGroups, prepareConcentrationChoices, concentrationReportForDocument, concentrationReportCsv } from './concentrations.mjs';
+
 const HELP = [
   'Stellar Forge / Open Waters bulk receiving decisions', '',
   'node wqx-water-quality/review-sheet/cli.mjs COMMAND --project /private/water-project [options]', '',
@@ -18,6 +20,10 @@ const HELP = [
   'draft    Export an editable sheet (--plan PLAN --format json|csv|tsv --out FILE).',
   'preview  Run the native planner (--document FILE --new-plan NEW_PLAN --out preview.json).',
   'save     Save the reviewed plan (--document FILE --new-plan NEW_PLAN --review REVIEW --preview preview.json).',
+  'units    Read exact source-unit groups (--plan PLAN).',
+  'standardize  Prepare complete result/limit choices (--document FILE --target-unit UNIT --reason TEXT',
+  '         --results IDS_JSON or --from-unit EXACT_UNIT --out decisions.json --report report.json).',
+  'unit-report  Reopen the full saved conversion (--review REVIEW [--format json|csv] --out FILE).',
   'list     List retained complete and prepared decision reviews.',
   'read     Reopen one original decision review (--review REVIEW).',
   'export   Export --review REVIEW --format FORMAT --out FILE.',
@@ -41,6 +47,7 @@ const HELP = [
 const definitions = Object.fromEntries([
   'project', 'plan', 'new-plan', 'review', 'document', 'bundle', 'format', 'input-format', 'out',
   'kind', 'field', 'search', 'status', 'attention-only', 'offset', 'limit', 'expected-preview', 'preview',
+  'results', 'from-unit', 'target-unit', 'reason', 'report',
 ].map(name => [name, { type: 'string' }]));
 function required(values, name) { if (!values[name]) throw new Error('Provide --' + name); return values[name]; }
 function number(value, fallback) {
@@ -82,6 +89,29 @@ export async function main(argv = process.argv.slice(2)) {
   if (positionals.length !== 1) throw new Error('Choose one decision-review command.');
   const project = await openWaterQualityProject(resolve(required(values, 'project')));
   try {
+    if (command === 'units') return output(concentrationSourceGroups(await project.readOpenWaters(required(values, 'plan'))), values.out);
+    if (command === 'standardize') {
+      if (Boolean(values.results) === (values['from-unit'] !== undefined)) throw new Error('Select --results IDS_JSON or --from-unit EXACT_UNIT.');
+      const out = resolve(required(values, 'out')), reportOut = resolve(required(values, 'report'));
+      if (out === reportOut) throw new Error('Choose distinct decision and complete-report output files.');
+      const document = await documentFile(required(values, 'document'), values['input-format']);
+      const groups = values.results ? null : concentrationSourceGroups(await project.readOpenWaters(document.sourcePlanId));
+      const resultIds = values.results ? await jsonFile(values.results) :
+        groups.groups.find(row => row.unit === values['from-unit'])?.resultIds;
+      const report = await prepareConcentrationChoices({project, document, resultIds,
+        targetUnit:required(values, 'target-unit'), reason:required(values, 'reason')});
+      await output(report, reportOut);
+      if (report.state !== 'PREPARED') throw Object.assign(new Error('The complete report identifies selected quantities requiring a receiving choice.'), {code:'WQX_CONCENTRATION_REVIEW'});
+      return output(report.document, out);
+    }
+    if (command === 'unit-report') {
+      const record = await readReviewSheet({project, reviewId:required(values, 'review')});
+      if (record.status !== 'COMPLETE') throw new Error('Complete the saved review before reopening its conversion report.');
+      const plan = await project.readOpenWaters(record.document.sourcePlanId), resultPlan = await project.readOpenWaters(record.newPlanId);
+      const report = concentrationReportForDocument(plan, record.document, {resultPlan}), format = values.format ?? 'json';
+      if (!['json','csv'].includes(format)) throw new Error('Choose json or csv for the complete concentration report.');
+      return output(format === 'csv' ? concentrationReportCsv(report) : report, values.out);
+    }
     if (command === 'list') return output(await listReviewSheets({ project }), values.out);
     if (command === 'read') return output(await readReviewSheet({ project, reviewId: required(values, 'review') }), values.out);
     if (command === 'export') {
