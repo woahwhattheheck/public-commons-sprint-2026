@@ -134,7 +134,8 @@ export async function openSamWorkspace({
   try{transport=createSamTransport({apiKeyEnv,endpoint:selectedEndpoint,environment,fetchImpl,timeoutMs,maxBytes:maxSourceBytes});}
   catch(error){await lease?.release();throw error;}
   let closed = false, closing = false, receiving = false, tail = Promise.resolve(), cache = null;
-  const active = new Map();
+  const active = new Map(),publicSourceChecks=new Set();
+  let publicSourceCredential=environment[apiKeyEnv];
   const ensure = (writing=false) => {
     requireThat(!closed && !closing,'WORKSPACE_CLOSED','The workspace is closing or closed.',409);
     requireThat(!writing || !readOnly,'WORKSPACE_READ_ONLY','Open the original workspace writer to change it.',409);
@@ -168,6 +169,18 @@ export async function openSamWorkspace({
     requireThat(sha(body)===digest,'IMMUTABLE_OBJECT_CHANGED');return body;
   }
   async function objectJson(digest){return JSON.parse((await objectBytes(digest)).toString('utf8'));}
+  async function publicSources(sources){
+    if(publicSourceCredential!==environment[apiKeyEnv]){
+      publicSourceChecks.clear();publicSourceCredential=environment[apiKeyEnv];
+    }
+    for(const source of sources){
+      const identity=copy(source);delete identity.id;
+      requireThat(source.id==='src_'+sha(identity),'SOURCE_RECORD_CHANGED');
+      if(publicSourceChecks.has(source.id))continue;
+      const body=await objectBytes(source.sha256,MAX_SOURCE_BYTES);
+      packetSource(source,new Map([[source.sha256,body]]),publicSourceChecks);
+    }
+  }
   function serialize(fn){
     const promise=tail.then(fn);tail=promise.catch(()=>{});return promise;
   }
@@ -232,6 +245,7 @@ export async function openSamWorkspace({
   async function list({internal=false}={}){
     if(!internal)ensure();
     const history=await allHistory(),state=history.at(-1)?.state ?? emptyState();
+    await publicSources(state.sources);
     const view=historicalView(state,history);
     view.captures=await Promise.all(state.captures.map(async capture=>{
       if(['running','paused','failed','capacity'].includes(capture.status)){
@@ -245,6 +259,7 @@ export async function openSamWorkspace({
   }
   async function editionData(editionId,state){
     state=state ?? await current();const entry=record(state,'editions',editionId);
+    await publicSources(entry.sourceIds.map(id=>record(state,'sources',id)));
     const body=await objectJson(entry.objectSha256);
     requireThat(body.schema==='stellar-forge.samgov-edition.v1' && body.id===entry.id &&
       Array.isArray(body.rows) && body.rows.length===entry.rowCount && sha(body.rows)===entry.sha256,
@@ -298,6 +313,7 @@ export async function openSamWorkspace({
   }
   async function readSource(sourceId){
     ensure();identifier(sourceId,'Source ID');const source=await sourceRecord(sourceId);
+    await publicSources([source]);
     const body=await objectBytes(source.sha256,MAX_SOURCE_BYTES);
     requireThat(body.length===source.bytes,'SOURCE_BYTES_CHANGED');
     let contentText;
@@ -1016,6 +1032,7 @@ export async function openSamWorkspace({
       integer(revision,'Export revision',1,history.length);selectedHistory=history.slice(0,revision);
     }
     const state=selectedHistory.at(-1).state;
+    for(const version of selectedHistory)await publicSources(version.state.sources);
     if(selectionId)record(state,'selections',selectionId);
     if(handoffId)record(state,'handoffs',handoffId);
     const editions=[];
