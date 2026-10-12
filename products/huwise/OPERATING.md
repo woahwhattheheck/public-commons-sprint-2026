@@ -7,7 +7,7 @@ project. A customer delivery contains complete original files and can be
 reopened after the host closes.
 
 The Huwise source selection includes the complete Explore workflow, the
-92-operation Automation API client, all 44 Huwise merchant actions, typed client
+92-operation Automation API client, all 48 Huwise merchant actions, typed client
 exports, tenant browser assets, the native receiving command, and the original
 publisher, seller, buyer and runtime installation sources.
 
@@ -393,6 +393,41 @@ merchant/customer files. With no --project, the command creates its own project
 and captures the complete live public open-data-sources dataset. Reuse the same
 receiving directory after an interruption. It retains the original connection,
 export request, complete downloaded files and native-receiving.json.
+
+## Complete native facilitator commissioning and receiving
+
+Use the installed merchant-huwise-facilitators-receive command for the full
+original saved-review, SF82 stage, typed-client, desktop/phone browser and
+offline customer workflow. It takes an existing completed project, original
+merchant export/source release, exact host profiles and native selected-build
+receipt. Its source cohort is verified against the actual installed package
+manifest before a provider action.
+
+~~~sh
+starforge merchant-huwise-facilitators-receive \
+  --directory /absolute/private/huwise-facilitator-receiving \
+  --input /absolute/private/facilitator-receiving-input.json \
+  --project /absolute/private/original-huwise-project \
+  --profiles /absolute/private/facilitators.json \
+  --source-ref ORIGINAL_COMPLETE_COMMIT \
+  --build-result /absolute/private/huwise-build-result.json \
+  --playwright-module /absolute/installed/playwright/index.mjs \
+  --browser /absolute/installed/chromium
+~~~
+
+Keep the complete same receiving directory after interruption. The programme
+adopts exact retained reviews and committed native stages, continues original
+file checkpoints, retains every desktop/phone download and closes its own
+resources. Complete files reopen locally after the merchant host closes.
+Original capture, notes, purchases and seller selection keep their original
+identities. A compatible review and staged release do not activate a seller
+or produce another payment.
+
+The [complete facilitator receiving guide](../../stellar-forge/mcp-merchant-operator/FACILITATOR_RECEIVING.md)
+defines all input fields, exact source/profile/runtime binding, native failed
+stage continuation, uncertain-review adoption, complete output files and
+offline receiving. Provider incompatibility is a retained native outcome;
+the command does not replace it with a successful result.
 
 ## Continue after interruption or upgrade
 

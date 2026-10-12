@@ -435,6 +435,16 @@ Browser tracking records support the user's current session. The authoritative
 review, source release and complete export remain in their original native
 stores. Closing or clearing a tab is not evidence that a native action failed.
 
+## Run the complete native customer programme
+
+The installed merchant-huwise-facilitators-receive command joins this original
+review and stage with full typed-client receiving, desktop/phone browser
+downloads, closed-host committed-stage recovery and complete offline reopen.
+Use its [full operating and receiving guide](../../../../stellar-forge/mcp-merchant-operator/FACILITATOR_RECEIVING.md)
+with the same original workbench, host profiles and selected source package.
+Its complete source and installation manifest remain bound to the operation.
+The original capture, buyer requests and seller selection are preserved.
+
 ## Source and operating boundaries
 
 - [Huwise facade](publisher/facilitators.mjs) adds the original merchant/capture
