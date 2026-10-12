@@ -12,11 +12,40 @@ export async function verifyReceiving({connection, directory, expectedManifestSh
   const receipt = original.manifest;
   const {Client} = await import('pg');
   const {default: Cursor} = await import('pg-cursor');
-  const client = new Client({...connection, types: TEXT_TYPES, application_name: 'starforge-postgis-receiving'});
+  const client = new Client({...connection, types: TEXT_TYPES, pipeline: false, application_name: 'starforge-postgis-receiving'});
   const q = name => relation(receipt.database.schema, name);
   const checked = [];
+  let ending, ended = false, primaryError, cleanupError, connectionError;
+  client.once('end', () => { ended = true; });
+  client.on('error', error => { connectionError ||= error; });
+  const closeClient = () => {
+    if (!ending) {
+      ending = Promise.resolve().then(() => client.end());
+      ending.catch(error => { cleanupError ||= error; });
+    }
+    return ending;
+  };
+  const cancellation = () => { void closeClient(); };
+  signal?.addEventListener('abort', cancellation, {once: true});
+  const nativeCallback = invoke => new Promise((resolveNative, rejectNative) => {
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true; client.removeListener('end', onEnd);
+      if (error) rejectNative(error); else resolveNative(value);
+    };
+    const onEnd = () => finish(connectionError || signal?.reason || new Error('POSTGIS_RECEIVING_CONNECTION_ENDED'));
+    if (ended) { onEnd(); return; }
+    client.once('end', onEnd);
+    try { invoke(finish); } catch (error) { finish(error); }
+  });
   try {
-    await client.connect();
+    abort(signal);
+    // pg's public connect callback can remain pending when end() closes an
+    // in-progress connection. Its actual native end event is the other terminal
+    // observation for this same owned client, without an abandoned race.
+    await nativeCallback(callback => client.connect(callback));
+    abort(signal);
     await client.query("SET TIME ZONE 'UTC'");
     await client.query("SET DateStyle='ISO, YMD'");
     await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
@@ -69,11 +98,21 @@ export async function verifyReceiving({connection, directory, expectedManifestSh
       try {
         for (;;) {
           abort(signal);
-          const rows = await new Promise((resolveRows, reject) => cursor.read(256, (error, rows) => error ? reject(error) : resolveRows(rows)));
+          const rows = await nativeCallback(callback => cursor.read(256, callback));
           if (!rows.length) break;
           for (const row of rows) { hashed.update(canonical(row) + '\n'); count++; }
         }
-      } finally { await new Promise((resolveClose, reject) => cursor.close(error => error ? reject(error) : resolveClose())); }
+      } catch (error) {
+        primaryError ||= error; throw error;
+      } finally {
+        try {
+          if (ending || ended) await closeClient();
+          else await nativeCallback(callback => cursor.close(callback));
+        } catch (error) {
+          if (!primaryError) throw error;
+          cleanupError ||= error;
+        }
+      }
       const observation = {layerId: layer.id, role: server.role, rowCount: count.toString(),
         rowSha256: hashed.digest('hex'), observedColumns: columns, observedPrivileges: privileges,
         viewDefinitionSha256: sha256(view.definition)};
@@ -97,6 +136,26 @@ export async function verifyReceiving({connection, directory, expectedManifestSh
         database: server.name, postgresVersion: server.version, postgisVersion: postgis,
         role: server.role, sessionRole: server.session_role, readOnly: true},
       observations: {layers: checked, allAcceptedRowsMatch: checked.every(layer => layer.matchesAcceptedRows)}};
-  } catch (error) { await client.query('ROLLBACK').catch(() => {}); throw error; }
-  finally { await client.end().catch(() => {}); }
+  } catch (error) {
+    primaryError ||= error;
+    if (!ending && !ended) {
+      try { await client.query('ROLLBACK'); }
+      catch (rollbackError) { cleanupError ||= rollbackError; }
+    }
+    throw primaryError;
+  } finally {
+    signal?.removeEventListener('abort', cancellation);
+    try { await closeClient(); } catch (error) { cleanupError ||= error; }
+    if (primaryError && signal?.aborted && Object.isExtensible(primaryError))
+      primaryError.postgisCancellationReason = signal.reason;
+    if (primaryError && cleanupError) {
+      if (Object.isExtensible(primaryError)) primaryError.postgisCleanupError = cleanupError;
+      else {
+        const joined = new AggregateError([primaryError, cleanupError], 'The original native read and its cleanup both failed.', {cause: primaryError});
+        joined.code = primaryError?.code || 'POSTGIS_RECEIVING_CLEANUP_FAILED';
+        throw joined;
+      }
+    }
+    if (!primaryError && (cleanupError || connectionError)) throw cleanupError || connectionError;
+  }
 }
