@@ -567,3 +567,26 @@ or attach `--source-workspaces` during ordinary merchant initialization. The
 startup, source-file handles, mapping, merchant preparation, resumable delivery
 and reconstruction. `starforge dataset ndjson` opens the source application;
 its browser remains the same workspace used by the agent.
+
+
+## Saved GraphQL authoring, native releases and customer handover
+
+The same merchant MCP now connects the original SF105 GraphQL workspaces with
+`init-graphql-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`, or
+`graphqlWorkspaceConnection` in an existing merchant configuration. Host aliases
+select the original private workspace, source endpoint and launch settings.
+
+`merchant_graphql_*` tools capture and save the actual schema, author bounded
+field/argument/variable operations, preserve raw drafts and revision conflicts,
+run and recover stable-ID native previews, prepare merchant/schema-evolution
+packets, and operate the original deployment/SF82 release console. The person
+using the returned native browser and the agent share the same store and IDs.
+
+`merchant_graphql_export_prepare` retains a selected original file set.
+`inspect-graphql` and `download-graphql` deliver its exact source, preview,
+merchant/buyer, revision, deployment or host files through the shared resumable
+downloader, including nested paths and process-reopen continuation. It does not
+create another workspace or transfer engine.
+
+See [GRAPHQL_WORKSPACES.md](GRAPHQL_WORKSPACES.md) for host configuration, the
+complete authoring-to-release flow, exact tool arguments and customer receiving.
