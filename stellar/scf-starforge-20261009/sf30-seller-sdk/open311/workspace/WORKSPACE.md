@@ -36,7 +36,11 @@ Open **Connections → Add connection**.
 | API key query parameter | The provider’s parameter name when its existing key uses a name other than the default. |
 | HTTP endpoint | Explicitly enable this option when the provider requires HTTP. |
 | Response limit | The provider's configured collection limit. The default is 1,000; configure a different documented limit when appropriate. |
-| Page / page_size pagination | Enable when this provider supports the pagination extension. |
+| Numbered source pages | Enable when the provider documents page traversal. The response-size parameter can be page_size, per_page, or another explicitly declared provider field. |
+| Response-size query parameter | Preserve the exact provider field; Boston uses per_page with a configured response limit of 300. |
+| API key transport | Select a query parameter or Authorization Bearer header. The saved environment-variable name supplies the actual key. |
+| Minimum source request spacing | Set the provider's interval in milliseconds; Boston's default profile uses 6000. |
+| Declared source date ranges | Enter provider JSON declarations naming start, end and maxDays, and declare their field names among allowed vendor queries. |
 | Extended attributes | Enable when this provider supports the extended-attribute query. |
 | Provider statuses | Comma-separated original status values supported by this connection. |
 | Allowed vendor query fields | Comma-separated documented extension names exposed as source-capture inputs. |
@@ -98,9 +102,11 @@ Open **Source collections** for the selected jurisdiction. A collection saves th
 
 Choose **New collection**. Enter a useful collection name and the full **Since** and **Until** period in UTC. Until must be later than Since. Select an original service code or source status when the collection should use that filter. Configured vendor fields and extended attributes are available in the same form. Visible provider-filter values begin from the connection's latest saved request query.
 
-A date collection uses its fixed period to select requests. Individual request IDs and provider page controls belong to the single-capture workflow.
+A collection uses its fixed **Date basis** period to select requests. Created time uses start_date/end_date. Updated time requires the source's declared updated_after/updated_before pair. **Additional source-date filter** retains an optional fixed range from the other basis. Individual request-ID selection remains part of the single-capture workflow.
 
-Under **Source-window refinement**, choose the policy:
+Choose **Source traversal**: refined date windows or original numbered source pages. Page traversal is available on a connection with declared pagination; its source-size field uses the actual provider parameter. The collector always starts at source page 1.
+
+Under **Date intervals and query precision**, choose the policy:
 
 | Setting | Meaning |
 | --- | --- |
@@ -140,7 +146,7 @@ For a paused or interrupted result, reconcile the original run outcome shown in 
 
 ### Inspect the original source windows
 
-The source-window table is paged across the entire saved plan. Each row displays its exact UTC interval, state, returned row count, configured source limit, attempt count, and its relationship to any parent or refined child windows.
+The source-member table is paged across the entire saved plan. Each row displays its exact UTC interval, source page when present, state, returned row count, effective source limit, attempt count, and parent/refinement or next-page relationship. In page traversal, a full page is PAGED and keeps its numbered successor; a short final page is CAPTURED. A repeated identical full page stays visible as LIMITED with its original source outcome.
 
 - **Window** opens the saved interval, attempts, refinement, and capture metadata.
 - **Receipt** opens the retained capture, decoded records, exact query, and original response receipt.
@@ -426,3 +432,17 @@ Each entry contains the original body bytes and its actual retrieval metadata. S
 When several original responses share a URL, the walkthrough consumes them in their listed order. A later repeated capture reuses the last original response if no later one was supplied. The source observation time remains unchanged, and replayedAt records the local replay separately. Unknown origin HTTP status and headers remain null; a successful public-URL import includes its actual provenance. The local Response transport status is stored separately as replayTransportStatus. The live API is the default when --retained is omitted.
 
 Every write keeps its original request ID, revision, and payload in pending-operation.json until the server result is known. A lost response is reconciled with that original operation. A server rejection keeps the pending input and error available in the private run directory for inspection. The walkthrough never replaces an uncertain command with a new request ID.
+
+## Updated records, source pages and public notes
+
+For a provider such as Boston, save its complete supplied connection profile, then open **Source collections**. The connection editor exposes its native response-size parameter, credential transport, source request spacing and date-range declarations. The actual token remains in the named service environment variable.
+
+Select **Updated time** to collect a fixed source-update interval. Enter the range in UTC and add a creation-date filter only when it belongs to the intended source population. Select **Original source pages** and the results per page. **Save collection plan** preserves those choices; **Save and run** continues the same saved plan into acquisition.
+
+Every original numbered page appears in the member table. Its **Page**, **Receipt** and **Original** controls open the saved query, complete response metadata and unchanged source body. The progress view reports full pages continued, pending pages, unresolved members and all retained observations. **Copy plan** restores the exact basis, strategy, both date ranges and provider-native response size for another explicit selection.
+
+Open any consolidated request to inspect **Source status and public notes**. This view shows original status_notes and the provider's notes array, including their returned date and description. **Original note** opens the whole original note object. The adjacent assigned-review form separately saves your owner, due date, review state and internal note, pinned to the source edition being reviewed.
+
+Finish or pause the collection, then use the existing complete JSON/report/CSV and full workspace handover controls. Receiving preserves the source pages, original bodies, plan choices, source versions and retained command. The same collection JSON enters the independent service-performance reporting desk.
+
+See [BOSTON.md](../BOSTON.md) for the complete declared provider profile and [COLLECTIONS.md](../COLLECTIONS.md) for page states, legacy plan compatibility and typed merchant operations.
