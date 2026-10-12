@@ -65,6 +65,126 @@ same SF62 review and forwards an explicit decision through the private broker.
 Only a fresh native reservation resumes the existing signer.
 
 
+## Check the original selected runtime
+
+Retained buyer workspaces can refer to an older native runtime. Import the
+bridge selected by that original runtime, and query its own helper before
+offering browser execution. A new console or reachable broker alone does not
+establish that the selected native helper understands the browser protocol.
+
+`probeOperatorApprovalCapabilities(operatorOptions, {timeoutMs = 3000, signal})`
+is exported by the current `bridge.mjs`. The first argument accepts the same
+operator options as `createOperatorApproval`; the probe reads only `python`.
+The helper remains the `approve.py` beside that imported bridge. Actor,
+service, policy, ledger, environment and the purchase timeout are not used by
+the query. Its separate timeout accepts 100–30000 milliseconds.
+
+```js
+// selectedBridgeURL is the module already selected by the retained native
+// runtime. Keep that original runtime, workspace and Python association.
+const selectedBridge = await import(selectedBridgeURL);
+const probe = selectedBridge.probeOperatorApprovalCapabilities;
+const capability = typeof probe === 'function'
+  ? await probe(trustedOperatorSettings, {
+      timeoutMs: 3000, signal: cancellationSignal,
+    })
+  : { supported: false, code: 'OPERATOR_CAPABILITIES_UNSUPPORTED' };
+
+// Keep capability.supported and capability.code with the selected runtime's
+// existing source identity in the application review. If browser execution is
+// selected, require capability.supported before creating its broker and Buyer.
+```
+
+An older bridge without this export retains its original terminal workflow.
+Do not import a newer global bridge to probe or execute an older saved runtime:
+that would change which native accounting helper the saved operation uses.
+Give the operator its original terminal option or let them select an updated
+installed runtime through the existing application review. A browser request
+that has already started retains its selected channel and original recovery.
+
+The successful probe returns the following public contract:
+
+```json
+{
+  "schema": "stellar-forge.sf81.capability-probe.v1",
+  "supported": true,
+  "code": "OPERATOR_BROWSER_REVIEW_SUPPORTED",
+  "selection": {
+    "python": "/original/runtime/bin/python3",
+    "helper": "/original/source/sf81-buyer-operator-bridge/approve.py"
+  },
+  "capabilities": {
+    "schema": "stellar-forge.sf81.capabilities.v1",
+    "review_channels": ["terminal", "pipe"],
+    "review_schema": "stellar-forge.sf81.review.v1",
+    "decision_schema": "stellar-forge.sf81.decision.v1",
+    "approval_schema": "stellar-forge.sf81.approval.v1",
+    "operator_review_schema": "stellar-forge.sf62.operator-review.v1"
+  }
+}
+```
+
+`OPERATOR_APPROVAL_CAPABILITIES` exports the bridge's frozen protocol
+description. The probe separately obtains and checks the selected helper's
+advertisement. A supported result identifies the matching wire formats; use
+`checkOperatorChannel(intentId, {environment})` to check the configured live
+broker afterward. The original execution still performs its native request
+review, current budget check, fresh reservation and signing.
+
+| Probe code | Meaning and operating response |
+| --- | --- |
+| `OPERATOR_BROWSER_REVIEW_SUPPORTED` | The selected helper advertises the original pipe protocol; bind the host's browser channel before constructing the original buyer |
+| `OPERATOR_CAPABILITIES_UNSUPPORTED` | The original helper rejects the query or advertises a different protocol; retain the original terminal option or review an updated installed source |
+| `OPERATOR_CAPABILITIES_UNAVAILABLE` | The selected interpreter/helper could not run successfully; repair that original runtime selection |
+| `OPERATOR_CAPABILITIES_INVALID` | The helper returned malformed or excessive output; inspect the selected source installation |
+| `OPERATOR_CAPABILITIES_TIMEOUT` | The bounded query timed out and its child was stopped; refresh that runtime's availability after resolving its process condition |
+| `OPERATOR_CAPABILITIES_ABORTED` | The original selection/query was cancelled; discard the superseded availability result |
+
+Unsupported and failed probes return `supported:false` and `capabilities:null`
+with the same selected `python` and `helper`. Invalid options throw a
+`TypeError` before spawning. The host should keep its original runtime/source
+pin beside this result and discard a late result after the selected runtime
+changes. Cache only against that immutable source and interpreter selection.
+
+The helper's standalone query is:
+
+```bash
+/absolute/original/python3 -I -B -u /absolute/original/approve.py --capabilities
+```
+
+It exits before importing SF62 and requires no operator configuration. It
+reads no intent or private keys, opens no policy, ledger, terminal or socket,
+and requests no approval or signature. The bridge uses fixed shell-free
+arguments, an isolated locale-only environment, ignored stdin, an 8192-byte
+output limit and cancellation/timeout cleanup. Additional arguments are
+rejected by the ordinary parser before the approval flow reads an intent.
+
+### Compose customer and Applications hosts
+
+Create a compatible host's broker before constructing its original
+`Buyer`/`NativeRuntime`, because that original runtime retains the environment
+selected at construction. Preserve the original operator fields and supply
+only the trusted host's selected transport alongside the existing private
+keys. In a collections or queue host, retain the same original workspace and
+forward that environment through the maintained execution entry point.
+
+An Applications helper should determine browser availability from the selected
+installed source and its own original native runtime, then retain that mode
+in the reviewed command and actual managed run. An older source may not accept
+the new console's `--approval-mode` flag. Its existing terminal command and
+managed terminal stay paired; a compatible browser command can use the
+original worker without requiring a controlling terminal.
+
+After a successful authenticated snapshot for the same active launch and
+intent, call `panel.render(approval, {intentId, pending, fresh:true})`. A local
+busy-state redraw uses `fresh:false`. Reset the panel and invalidate pending
+reads when the selected operation changes; call `disconnect()` after a failed
+snapshot. Decisions retain the displayed approval ID and request digest, and
+the controller binds them to the same executing task. On Stop, revoke that
+pending review and cancel/drain its original operation before closing the
+owning broker. Keep reservation state separate from original payment, task
+and delivery results.
+
 ## Browser approval in an operator host
 
 The browser broker is host infrastructure for the same approval callback. The
