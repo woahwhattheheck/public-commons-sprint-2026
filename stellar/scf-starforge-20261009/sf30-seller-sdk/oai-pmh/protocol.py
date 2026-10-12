@@ -32,6 +32,10 @@ def base_url(value):
         raise InputError("The base URL must not already contain OAI request arguments")
     return value
 
+def same_request_url(left, right):
+    a,b=urlsplit(left),urlsplit(right)
+    return (a.scheme,a.netloc,a.path,sorted(parse_qsl(a.query,keep_blank_values=True)),a.fragment)==(b.scheme,b.netloc,b.path,sorted(parse_qsl(b.query,keep_blank_values=True)),b.fragment)
+
 def request_url(base, verb, arguments):
     base_url(base)
     if verb not in VERBS or not isinstance(arguments, dict):
@@ -161,6 +165,7 @@ def parse_page(stream, verb, on_record=None):
             date(identify["earliestDatestamp"])
             result["identify"] = identify
         elif name == Q("resumptionToken"):
+            if verb not in {"ListRecords","ListIdentifiers","ListSets"}: raise InputError("This OAI verb has no continuation token")
             if result["token"] is not None: raise InputError("Duplicate OAI resumptionToken")
             token = {"value": text(node), **node.attrs}
             if "expirationDate" in token: date(token["expirationDate"], True)

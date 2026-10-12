@@ -47,6 +47,7 @@ class Console:
         if name=="build": return ws.build(p["editionId"],p["planId"])
         if name=="query": return ws.query(p["buildId"],p.get("query",{}))
         if name=="import":
+            if self.worker and self.worker.is_alive(): raise InputError("The active harvest owns its response input; finish or cancel it before importing another host response")
             body=base64.b64decode(p["bodyBase64"],validate=True)
             if len(body)>32*1024*1024: raise InputError("Use the native import command for response pages larger than 32 MiB")
             metadata=p["metadata"]
