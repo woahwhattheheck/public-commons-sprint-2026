@@ -1,3 +1,4 @@
+import {RUNBOOK_PROFILE_LIMIT,normalizeRunbookProfiles,runbookProfileSelection,runbookCycleSteps} from '/runbook-profiles.mjs';
 const $ = id => document.getElementById(id);
 const API = '/api/portfolio';
 const clone = value => structuredClone(value);
@@ -254,7 +255,11 @@ async function loadLive(){
   row.name||row.alias,
   row.error?row.error.message||row.error:(row.available?'Available':'Unavailable'),
   short(row.clientRevision||row.revision),
-  row.alias?link('Open original Runbooks',clientRunbooks(row.alias),{target:'_blank',rel:'noopener'}):'—'
+  row.alias?el('div',{class:'stack'},link('Open original Runbooks',clientRunbooks(row.alias),{target:'_blank',rel:'noopener'}),
+    Array.isArray(row.cycles)&&row.cycles.length?el('details',{},el('summary',{},'Retained periods and procedure sets · '+row.cycles.length),
+     pagedTable(['Period','Procedure set','Stage','Completed tasks'],row.cycles.map(cycle=>[
+      link(cycle.label,clientRunbooks(row.alias)+'?cycle='+encodeURIComponent(cycle.id),{target:'_blank',rel:'noopener'}),procedureSetLabel(cycle),human(cycle.phase),cycle.progress?cycle.progress.complete+' / '+cycle.progress.total:'—'
+     ]),{pageSize:20})):null):'—'
  ])):empty('The original coordinator has no mounted client workspaces yet.'));
 }
 
@@ -504,13 +509,13 @@ function planInput(draft){
   rows:draft.rows.map(row=>{
    const result={id:row.id,clientId:row.clientId,commissionId:row.commissionId,label:row.label,closeDate:row.closeDate,reviewDate:row.reviewDate,
     preparationMinutes:row.preparationMinutes,reviewMinutes:row.reviewMinutes,backupMinutes:row.backupMinutes};
-   for(const name of ['preparerId','backupId','reviewerId','cycleId','previousCycleId'])if(row[name])result[name]=row[name];
+   for(const name of ['preparerId','backupId','reviewerId','cycleId','previousCycleId','profileId'])if(row[name])result[name]=row[name];
    if(row.source)result.source=clone(row.source);return result;
   })};
 }
 function newScheduleRow(clientId=''){
  const record=state.root?.clients?.find(row=>row.id===clientId),commission=record?.commission;
- return {id:cleanId('period'),clientId,commissionId:commission?.id||'',label:'',closeDate:'',reviewDate:'',preparerId:commission?.preparerId||'',backupId:commission?.backupId||'',reviewerId:commission?.reviewerId||'',preparationMinutes:'',reviewMinutes:'',backupMinutes:'',cycleId:'',previousCycleId:'',source:null};
+ return {id:cleanId('period'),clientId,commissionId:commission?.id||'',label:'',closeDate:'',reviewDate:'',preparerId:commission?.preparerId||'',backupId:commission?.backupId||'',reviewerId:commission?.reviewerId||'',preparationMinutes:'',reviewMinutes:'',backupMinutes:'',cycleId:'',previousCycleId:'',profileId:'',source:null};
 }
 async function newPlan({clientId='',previous=null}={}){
  setView('calendar');state.selectedPlan=previous?.id||null;state.planDetail=null;state.planPreview=null;const ticket=++state.planLoad;
@@ -522,6 +527,36 @@ function invalidatePlan(){
  if(state.planPreview){state.planPreview=null;const box=$('plan-preview');if(box)put(box,empty('The schedule changed. Preview the complete current plan again before publishing.'));}
  if(state.planDraft)saveDraft(state.planDraft._scope||'plan:new',state.planDraft);
 }
+
+function procedureSetLabel(value){return value?.edition?(runbookProfileSelection(value.edition,value.profileId).profile?.name||'All procedures'):value?.profileName||value?.profileId||'All procedures';}
+function selectedWorkTable(cycle,work=cycle.work){
+ return table(['Selected task','Status','Preparation note'],runbookCycleSteps(cycle).map(step=>[step.title,human(work?.[step.id]?.status||'PENDING'),work?.[step.id]?.note||'']));
+}
+function procedureSetPicker({edition,profileId,locked=false,onChange}){
+ const box=el('section',{class:'procedure-selection stack'}),details=el('div',{class:'stack'}),selected=profileId||'';
+ const names=(edition.profiles||[]).map(profile=>({value:profile.id,label:profile.name+' · '+profile.stepIds.length+' tasks'}));
+ const control=choose(names,selected,'All procedures · '+edition.steps.length+' tasks',value=>{onChange?.(value||null);});
+ if(selected&&!names.some(row=>row.value===selected)){
+  control.append(el('option',{value:selected,disabled:true},'Earlier procedure set unavailable · '+selected));control.value=selected;
+ }
+ control.disabled=locked;
+ try{
+  const {profile,steps}=runbookProfileSelection(edition,selected||undefined);
+  details.append(...[help((locked?'This saved period or calendar fixes ':'This period will fix ')+(profile?'the '+profile.name+' procedure set.':'all procedures in this edition.')+' '+steps.length+' tasks are included in preparation, review and handover.'),
+   profile?.description?el('p',{class:'instructions'},profile.description):null,
+   el('details',{},el('summary',{},'Selected procedures'),el('ol',{class:'procedure-selection-list'},...steps.map(step=>el('li',{},step.title+(step.required?' · required':'')))))].filter(Boolean));
+ }catch(error){control.setCustomValidity(error.message);details.append(el('p',{class:'warning-box'},error.message));}
+ box.append(field('Procedure set for this period',control),details);return box;
+}
+function periodHandoverHistory(cycle){
+ const handovers=cycle.handovers||[];
+ if(!handovers.length)return null;
+ return el('details',{},el('summary',{},'Retained responsibility changes · '+handovers.length),
+  ...handovers.map(item=>el('section',{class:'resource-box stack'},el('h4',{},formatTime(item.at)+' · '+item.actor),
+   recordFacts([['Procedure set',procedureSetLabel(cycle)],['From preparer',item.from.preparer],['To preparer',item.to.preparer],['From reviewer',item.from.reviewer],['To reviewer',item.to.reviewer],['From due date',item.from.dueDate],['To due date',item.to.dueDate]]),
+   el('p',{class:'instructions'},item.note),selectedWorkTable(cycle,item.work))));
+}
+
 function nativeSourceEditor({alias,source,selected,onChange,existingCycle=false}){
  const box=el('div',{class:'resource-box stack'}),current=selected?clone(selected):null;
  let mode=current?.sourceKind||'none',value=current||null;
@@ -578,16 +613,17 @@ function renderPlanForm(stored){
  put('plan-detail',form);renderRows();refreshWrites();
 }
 function scheduleRowEditor(row,index,draft,rerender){
- const card=el('section',{class:'schedule-row'}),sourceBox=el('div',{class:'stack'}),periodBox=el('div',{class:'form-grid two'}),teamBox=el('div',{class:'form-grid three'}),sourceStatus=el('p',{class:'quiet'});
+ const card=el('section',{class:'schedule-row'}),sourceBox=el('div',{class:'stack'}),periodBox=el('div',{class:'form-grid two'}),profileBox=el('div',{class:'stack'}),teamBox=el('div',{class:'form-grid three'}),sourceStatus=el('p',{class:'quiet'});
  let generation=0;
  const active=()=>state.planDraft===draft&&draft.rows.includes(row)&&card.isConnected;
  const patch=(key,value)=>{row[key]=value;invalidatePlan();};
+ const clearSelection=()=>{row.cycleId='';row.previousCycleId='';row.profileId='';row.source=null;put(periodBox);put(profileBox);};
  const chooseClient=choose((state.root?.clients||[]).map(client=>({value:client.id,label:client.commission.name+' · '+client.commission.alias})),row.clientId,'Choose a commissioned client',id=>{
   generation++;const next=newScheduleRow(id);
   for(const name of ['clientId','commissionId','preparerId','backupId','reviewerId'])row[name]=next[name];
-  row.cycleId='';row.previousCycleId='';row.source=null;invalidatePlan();
+  clearSelection();invalidatePlan();
   put(sourceBox,empty(id?'Reading original client sources…':'Choose a client.'));
-  put(periodBox);renderTeam();guard(()=>loadRowSource(true))();
+  renderTeam();guard(()=>loadRowSource(true))();
  });chooseClient.required=true;
  const label=input(row.label,{maxlength:240,required:true,oninput:event=>patch('label',event.target.value)});
  function renderTeam(){
@@ -598,17 +634,36 @@ function scheduleRowEditor(row,index,draft,rerender){
  }
  async function loadRowSource(refresh=false){
   const ticket=++generation,clientId=row.clientId,client=state.root?.clients?.find(item=>item.id===clientId),commission=client?.commission;
+  put(profileBox);put(periodBox);
   if(!commission){put(sourceBox,empty('Select a commissioned client to choose its exact period and files.'));return;}
   const source=await loadSources(commission.alias,{refresh});
   if(ticket!==generation||!active()||row.clientId!==clientId||!source)return;
+  const bookResult=await childApi(commission.alias,'/books/'+encodeURIComponent(commission.runbookId));
+  if(ticket!==generation||!active()||row.clientId!==clientId)return;
+  if(bookResult.revision!==source.clientRevision)throw Error('The client changed while its procedure sets were read. Refresh the original sources before previewing.');
+  const book=bookResult.runbook;
   if(row.commissionId!==commission.id)sourceStatus.textContent='This draft names an older client commission. Use the current commissioning edition before previewing.';
   else sourceStatus.textContent='Commission '+short(commission.id)+' · original client revision '+short(source.clientRevision);
   const cycles=(source.cycles||[]).filter(cycle=>cycle.runbookId===commission.runbookId);
-  const current=choose(cycles.map(cycle=>({value:cycle.id,label:cycle.label+' · '+human(cycle.phase)})),row.cycleId||'','New period to prepare',id=>{row.cycleId=id;invalidatePlan();renderSource();});
-  const previous=choose(cycles.map(cycle=>({value:cycle.id,label:cycle.label+' · '+human(cycle.phase)})),row.previousCycleId||'','No previous period selected',id=>patch('previousCycleId',id));
-  put(periodBox,field('Existing period or new work',current),field('Previous-period handover',previous));
+  const renderSelection=()=>{
+   const currentCycle=row.cycleId?cycles.find(cycle=>cycle.id===row.cycleId):null;
+   const editionId=currentCycle?.editionId||commission.editionId,edition=book.editions.find(item=>item.id===editionId);
+   if(row.cycleId&&!currentCycle){put(profileBox,el('p',{class:'warning-box'},'The selected original period is no longer in this source. Refresh or explicitly choose the intended period.'));return;}
+   if(!edition){put(profileBox,el('p',{class:'warning-box'},'The commissioned procedure edition is unavailable. Select the current commission before planning.'));return;}
+   const selected=currentCycle?.profileId||(!currentCycle?row.profileId:undefined);
+   put(profileBox,procedureSetPicker({edition,profileId:selected,locked:Boolean(currentCycle),onChange:value=>{row.profileId=value||'';invalidatePlan();renderSelection();}}));
+   if(currentCycle&&row.profileId&&(row.profileId!==currentCycle.profileId)){
+    profileBox.append(el('div',{class:'warning-box'},'This draft names a different procedure set from the saved period. Its original selection is shown above.',
+     btn('Use the period’s saved procedure set',()=>{row.profileId=currentCycle.profileId||'';invalidatePlan();renderSelection();})));
+   }
+  };
   const renderSource=()=>put(sourceBox,nativeSourceEditor({alias:commission.alias,source,selected:row.source,existingCycle:Boolean(row.cycleId),onChange:value=>patch('source',value)}));
-  renderSource();
+  const current=choose(cycles.map(cycle=>({value:cycle.id,label:cycle.label+' · '+procedureSetLabel(cycle)+' · '+human(cycle.phase)})),row.cycleId||'','New period to prepare',id=>{
+   row.cycleId=id;row.profileId=id?(cycles.find(cycle=>cycle.id===id)?.profileId||''):'';invalidatePlan();renderSelection();renderSource();
+  });
+  const previous=choose(cycles.map(cycle=>({value:cycle.id,label:cycle.label+' · '+procedureSetLabel(cycle)+' · '+human(cycle.phase)})),row.previousCycleId||'','No previous period selected',id=>patch('previousCycleId',id));
+  put(periodBox,field('Existing period or new work',current),field('Previous-period handover',previous));
+  renderSelection();renderSource();
  }
  card.append(el('div',{class:'row-heading'},el('h4',{},'Client period '+(index+1)),btn('Remove period',()=>{generation++;draft.rows.splice(draft.rows.indexOf(row),1);invalidatePlan();rerender();})),
   el('div',{class:'form-grid two'},field('Commissioned client',chooseClient),field('Period label',label)),sourceStatus,
@@ -616,14 +671,14 @@ function scheduleRowEditor(row,index,draft,rerender){
    await refreshRoot();const current=state.root?.clients?.find(item=>item.id===row.clientId)?.commission;
    if(!current)throw Error('This commissioned client is no longer available.');
    row.commissionId=current.id;row.preparerId=current.preparerId;row.backupId=current.backupId;row.reviewerId=current.reviewerId;
-   row.cycleId='';row.previousCycleId='';row.source=null;invalidatePlan();renderTeam();await loadRowSource(true);
+   clearSelection();invalidatePlan();renderTeam();await loadRowSource(true);
   },{class:'muted-button'})),
   el('div',{class:'form-grid two'},field('Preparation / close due',input(row.closeDate,{type:'date',required:true,onchange:event=>patch('closeDate',event.target.value)})),field('Review due',input(row.reviewDate,{type:'date',required:true,onchange:event=>patch('reviewDate',event.target.value)}))),
   teamBox,
   el('div',{class:'form-grid three'},...[
    ['Preparation minutes','preparationMinutes'],['Review minutes','reviewMinutes'],['Backup reserve minutes','backupMinutes']
   ].map(([label,key])=>field(label,input(row[key],{type:'number',min:0,max:1000000,step:1,required:true,oninput:event=>patch(key,event.target.value===''?'':Number(event.target.value))})))),
-  periodBox,sourceBox,el('details',{},el('summary',{},'Stable schedule row'),el('p',{class:'identity'},row.id)));
+  periodBox,profileBox,sourceBox,el('details',{},el('summary',{},'Stable schedule row'),el('p',{class:'identity'},row.id)));
  renderTeam();
  queueMicrotask(()=>{if(active())guard(()=>loadRowSource(false))();});
  return card;
@@ -672,6 +727,7 @@ function renderPlanPreview(target,draft){
   el('div',{class:'facts'},...facts([['Requested',minutes(totals.requestedMinutes)],['Allocated',minutes(totals.allocatedMinutes)],['Unallocated',minutes(totals.unallocatedMinutes)],['Existing overload',minutes(totals.existingOverloadMinutes)]])),
   help('The original scheduler allocates actual work before backup reserve and includes retained bookings from other current plans.'),
   conflicts.length?panel('Capacity decisions required',conflictList):el('p',{},'All requested work fits within the declared capacity and selected dates.'),
+  table(['Client period','Procedure set'],preview.rows.map(row=>[row.name+' · '+row.label,procedureSetLabel(row)+(row.selectedStepCount===undefined?'':' · '+row.selectedStepCount+' tasks')])),
   calendarTables(preview),
   actions(publish),
   el('details',{},el('summary',{},'Reviewed source identity'),recordFacts([['Firm edition',preview.firmEditionId],['Calendar preview',preview.previewSha256],['Coordinator revision',reviewed.revision]]))));
@@ -689,7 +745,7 @@ function renderPlanDetail(){
  const summary=(state.root.plans||[]).find(row=>row.id===plan.id),current=!summary?.superseded;
  const rows=plan.rows.map(row=>el('section',{class:'schedule-row'},
   el('div',{class:'row-heading'},el('h4',{},row.name+' · '+row.label),tag(row.cycleId?'EXISTING_PERIOD':'NEW_PERIOD')),
-  recordFacts([['Close due',row.closeDate],['Review due',row.reviewDate],['Preparer',plan.firm.staff.find(p=>p.id===row.preparerId)?.name],['Backup',plan.firm.staff.find(p=>p.id===row.backupId)?.name],['Reviewer',plan.firm.staff.find(p=>p.id===row.reviewerId)?.name],['Preparation',minutes(row.preparationMinutes)],['Review',minutes(row.reviewMinutes)],['Backup reserve',minutes(row.backupMinutes)],['Close source',row.source?human(row.source.sourceKind):row.cycleId?'Retained original period':'Choose before creating the period']]),
+  recordFacts([['Procedure set',procedureSetLabel(row)],...(row.selectedStepCount===undefined?[]:[['Selected procedures',row.selectedStepCount]]),['Close due',row.closeDate],['Review due',row.reviewDate],['Preparer',plan.firm.staff.find(p=>p.id===row.preparerId)?.name],['Backup',plan.firm.staff.find(p=>p.id===row.backupId)?.name],['Reviewer',plan.firm.staff.find(p=>p.id===row.reviewerId)?.name],['Preparation',minutes(row.preparationMinutes)],['Review',minutes(row.reviewMinutes)],['Backup reserve',minutes(row.backupMinutes)],['Close source',row.source?human(row.source.sourceKind):row.cycleId?'Retained original period':'Choose before creating the period']]),
   actions(btn('Prepare client operation',()=>newCommand({clientId:row.clientId,planId:plan.id,rowId:row.id,action:row.cycleId?'assign':'create'})),link('Open original client desk',clientRunbooks(row.alias),{target:'_blank',rel:'noopener'})),
   el('details',{},el('summary',{},'Original row binding'),recordFacts([['Row ID',row.id],['Commission',row.commissionId],['Procedure edition',row.editionId],['Client workspace',row.clientWorkspaceId],['Client revision',row.clientRevision]]))
  ));
@@ -802,7 +858,8 @@ async function renderCommandForm(stored){
   if(ticket!==generation||!active()||draft.parameters.cycleId!==chosen)return;
   if(response.revision!==source.clientRevision)throw Error('The client changed while its current work was read. Refresh before preparing this operation.');
   cycle=response.cycle;assignment=response.assignment;
-  detail.append(panel(cycle.label,recordFacts([['Phase',human(cycle.phase)],['Preparer',cycle.preparer],['Reviewer',cycle.reviewer],['Due date',cycle.dueDate],['Current procedure',short(cycle.editionId)]])));
+  detail.append(panel(cycle.label,recordFacts([['Phase',human(cycle.phase)],['Preparer',cycle.preparer],['Reviewer',cycle.reviewer],['Due date',cycle.dueDate],['Current procedure',short(cycle.editionId)],['Procedure set',procedureSetLabel(cycle)],['Selected procedures',runbookCycleSteps(cycle).length]])));
+   const handovers=periodHandoverHistory(cycle);if(handovers)detail.append(handovers);
   if(cycle.readOnly){detail.append(el('div',{class:'read-only'},'This is an original received handover. Start a fresh local period for new preparation.'));return;}
   if(allowed&&!allowed.includes(cycle.phase)){detail.append(el('div',{class:'warning-box'},'This action is unavailable in the current '+human(cycle.phase).toLowerCase()+' phase. Open the original desk or choose the appropriate period.'));return;}
   await render(detail);if(ticket===generation&&active()&&draft.parameters.cycleId===chosen)actionAvailable=true;save();
@@ -822,7 +879,11 @@ async function renderCommandForm(stored){
    if(fixed){for(const [key,value] of Object.entries(fixed))p[key]=value;if(planRow.previousCycleId)p.previousCycleId=planRow.previousCycleId;else delete p.previousCycleId;}
    const nativeSource=p.sourceKind?Object.fromEntries(['sourceKind','sourceFileIds','sourceLabel','sourceNote','handoffId','accountantRevisionId','periodCloseId'].filter(key=>p[key]!==undefined).map(key=>[key,clone(p[key])])):planRow?.source?clone(planRow.source):null;
    if(nativeSource)Object.assign(p,nativeSource);
-   const edition=choose(book.editions.map(row=>({value:row.id,label:'Edition '+row.number+' · '+row.name})),p.editionId,'Choose procedure edition',id=>patch('editionId',id));edition.required=true;edition.disabled=Boolean(fixed);
+   const edition=choose(book.editions.map(row=>({value:row.id,label:'Edition '+row.number+' · '+row.name})),p.editionId,'Choose procedure edition',id=>{patch('editionId',id);guard(renderNative)();});edition.required=true;edition.disabled=Boolean(fixed);
+    const selectedEdition=book.editions.find(row=>row.id===p.editionId);
+    if(!selectedEdition)throw Error('Choose an original saved procedure edition before preparing the client period.');
+    if(fixed){if(planRow.profileId)p.profileId=planRow.profileId;else delete p.profileId;}
+    const profilePicker=procedureSetPicker({edition:selectedEdition,profileId:p.profileId,locked:Boolean(fixed),onChange:value=>{if(value)p.profileId=value;else delete p.profileId;save();guard(renderNative)();}});
    const label=input(p.label||'',{maxlength:240,required:true,readOnly:Boolean(fixed),oninput:event=>patch('label',event.target.value)});
    const due=input(p.dueDate||'',{type:'date',required:true,readOnly:Boolean(fixed),onchange:event=>patch('dueDate',event.target.value)});
    const previous=choose((source.cycles||[]).filter(row=>row.runbookId===c.runbookId).map(row=>({value:row.id,label:row.label+' · '+human(row.phase)})),p.previousCycleId||'','No previous period',id=>{if(id)p.previousCycleId=id;else delete p.previousCycleId;save();});previous.disabled=Boolean(fixed);
@@ -830,21 +891,22 @@ async function renderCommandForm(stored){
     for(const key of ['sourceKind','sourceFileIds','sourceLabel','sourceNote','handoffId','accountantRevisionId','periodCloseId'])delete p[key];
     if(value)Object.assign(p,value);save();
    }});
-   put(nativeBox,panel('Create original client period',fixed?el('p',{class:'source-lock'},'The selected published calendar fixes this period’s label, procedure, preparer, reviewer and close date.'):null,
-    el('div',{class:'form-grid two'},field('Procedure edition',edition),field('Period label',label),namedSelect('Preparer','preparer',p.preparer||'',true,Boolean(fixed)),namedSelect('Reviewer','reviewer',p.reviewer||'',true,Boolean(fixed)),field('Close due',due),field('Previous-period handover',previous)),sourceEditor));
+   put(nativeBox,panel('Create original client period',fixed?el('p',{class:'source-lock'},'The selected published calendar fixes this period’s label, procedure edition and set, preparer, reviewer and close date.'):null,
+    el('div',{class:'form-grid two'},field('Procedure edition',edition),field('Period label',label),namedSelect('Preparer','preparer',p.preparer||'',true,Boolean(fixed)),namedSelect('Reviewer','reviewer',p.reviewer||'',true,Boolean(fixed)),field('Close due',due),field('Previous-period handover',previous)),profilePicker,sourceEditor));
   }else if(draft.action==='assign'){
    await cycleSelection({allowed:['DRAFT','CHANGES_REQUESTED','IN_REVIEW'],render:async detail=>{
     p.expectedAssignmentSha256=assignment.sha256;
     if(!p.preparer)p.preparer=cycle.preparer;if(!p.reviewer)p.reviewer=cycle.reviewer;if(!p.dueDate)p.dueDate=cycle.dueDate;
     detail.append(panel('Responsibility and open-items handover',
-     help('This change retains the current work and its source, then records the receiving responsibility and agreed due date.'),
+     help('This change retains the period’s selected procedure set, current work and source, then records the receiving responsibility and agreed due date.'),
+     selectedWorkTable(cycle),
      el('div',{class:'form-grid three'},namedSelect('Receiving preparer','preparer',p.preparer),namedSelect('Receiving reviewer','reviewer',p.reviewer),field('Agreed close due',input(p.dueDate,{type:'date',required:true,onchange:event=>patch('dueDate',event.target.value)}))),
      field('Handover and open-items note',textarea(p.note||'',{maxlength:16000,required:true,oninput:event=>patch('note',event.target.value)})),
      actions(btn('Use the named backup',()=>{p.preparer=people().find(person=>person.id===c.backupId)?.name||p.preparer;save();guard(renderNative)();}))));
    }});
   }else if(draft.action==='work'){
    await cycleSelection({allowed:['DRAFT','CHANGES_REQUESTED'],render:async detail=>{
-    const steps=cycle.edition.steps||[],step=choose(steps.map(row=>({value:row.id,label:row.title+(row.required?' · required':'')})),p.stepId||'','Choose original procedure task',id=>{
+    const steps=runbookCycleSteps(cycle),step=choose(steps.map(row=>({value:row.id,label:row.title+(row.required?' · required':'')})),p.stepId||'','Choose original procedure task',id=>{
      const work=cycle.work[id]||{};p.stepId=id;p.status=work.status||'PENDING';p.note=work.note||'';p.fileIds=clone(work.fileIds||[]);save();guard(renderNative)();
     });step.required=true;
     const chosen=steps.find(row=>row.id===p.stepId),controls=el('div',{class:'stack'});
@@ -856,7 +918,7 @@ async function renderCommandForm(stored){
    }});
   }else if(draft.action==='submit'){
    await cycleSelection({allowed:['DRAFT','CHANGES_REQUESTED'],render:async detail=>{
-    const steps=cycle.edition.steps||[];
+    const steps=runbookCycleSteps(cycle);
     detail.append(panel('Submit current preparation',help('The original current task work and attachments are retained in this review round. Complete required pending tasks or record their actual blocked condition before submitting.'),
      table(['Task','Required','Current status'],steps.map(step=>[step.title,step.required?'Yes':'No',human(cycle.work[step.id]?.status||'PENDING')])),
      field('Preparation handover note',textarea(p.note||'',{maxlength:16000,oninput:event=>patch('note',event.target.value)}))));
@@ -864,7 +926,7 @@ async function renderCommandForm(stored){
   }else if(draft.action==='review'){
    await cycleSelection({allowed:['IN_REVIEW'],render:async detail=>{
     const decision=choose([{value:'RETURN',label:'Return for corrections'},{value:'APPROVE',label:'Approve preparation'}],p.decision||'RETURN',null,value=>{p.decision=value;save();guard(renderNative)();});p.decision=decision.value;
-    const blocked=(cycle.edition.steps||[]).filter(step=>step.required&&cycle.work[step.id]?.status==='BLOCKED'),exceptionBox=el('div',{class:'stack'});
+    const blocked=runbookCycleSteps(cycle).filter(step=>step.required&&cycle.work[step.id]?.status==='BLOCKED'),exceptionBox=el('div',{class:'stack'});
     if(p.decision==='APPROVE'&&blocked.length){
      p.acceptedExceptions??=[];
      exceptionBox.append(help('Review every required blocked task. Select each exception you explicitly accept and explain its handling in the review note.'),...blocked.map(step=>check(step.title+' · '+(cycle.work[step.id]?.note||'No preparation note'),p.acceptedExceptions.includes(step.id),checked=>{
@@ -873,10 +935,11 @@ async function renderCommandForm(stored){
     }
     detail.append(panel('Reviewer decision',help('The operator name at the top is retained as the actual reviewer. Current assigned reviewer: '+cycle.reviewer+'.'),
      field('Decision',decision),exceptionBox,field('Review and exception note',textarea(p.note||'',{maxlength:16000,required:p.decision==='RETURN'||blocked.length>0,oninput:event=>patch('note',event.target.value)})),
-     el('details',{},el('summary',{},'Current preparation'),table(['Task','Status','Preparation note'],cycle.edition.steps.map(step=>[step.title,human(cycle.work[step.id]?.status||'PENDING'),cycle.work[step.id]?.note||''])))));
+     el('details',{},el('summary',{},'Current preparation'),selectedWorkTable(cycle))));
    }});
   }else if(draft.action==='save'){
-   if(!p.runbookId){const edition=book.editions.find(row=>row.id===book.latestEditionId);Object.assign(p,{runbookId:book.id,expectedEditionId:book.latestEditionId,name:edition.name,client:edition.client,description:edition.description,steps:clone(edition.steps),resources:clone(edition.resources)});}
+   if(!p.runbookId){const edition=book.editions.find(row=>row.id===book.latestEditionId);Object.assign(p,{runbookId:book.id,expectedEditionId:book.latestEditionId,name:edition.name,client:edition.client,description:edition.description,steps:clone(edition.steps),resources:clone(edition.resources),...(edition.profiles===undefined?{}:{profiles:clone(edition.profiles)})});}
+    else if(p.profiles===undefined){const original=book.editions.find(row=>row.id===p.expectedEditionId);if(original?.profiles!==undefined)p.profiles=clone(original.profiles);}
    put(nativeBox,procedureEditor(p,source,save));
   }
   if(['create','save'].includes(draft.action))actionAvailable=true;
@@ -894,8 +957,10 @@ async function renderCommandForm(stored){
   if(!actionAvailable)throw Error('Read an original client period in a phase that supports this action before preparing.');
   if(draft.action==='create'&&!['files','accountant'].includes(draft.parameters.sourceKind))throw Error('Select the actual original close files or accountant handoff before creating this period.');
   if(['assign','work','submit','review'].includes(draft.action)&&(!cycle||cycle.readOnly))throw Error('Choose an original writable local client period.');
-  if(draft.action==='work'&&!draft.parameters.stepId)throw Error('Choose the actual task being prepared.');
+  if(draft.action==='work'&&!runbookCycleSteps(cycle).some(step=>step.id===draft.parameters.stepId))throw Error('Choose a task in this period’s saved procedure set.');
+   if(draft.action==='create')runbookProfileSelection(book.editions.find(row=>row.id===draft.parameters.editionId),draft.parameters.profileId);
   const parameters=clone(draft.parameters);
+   if(draft.action==='save'&&parameters.profiles!==undefined)parameters.profiles=normalizeRunbookProfiles(parameters.profiles,parameters.steps);
   if(draft.action==='review'&&parameters.decision==='RETURN')parameters.acceptedExceptions=[];
   if(draft.action==='review'&&!parameters.acceptedExceptions)parameters.acceptedExceptions=[];
   const fields={clientId:draft.clientId,action:draft.action,nativeRequestId:draft.nativeRequestId,clientWorkspaceId:draft.clientWorkspaceId,clientRevision:draft.clientRevision,parameters};
@@ -905,16 +970,36 @@ async function renderCommandForm(stored){
  put('command-detail',form);refreshWrites();if(draft.clientId)await loadClient(false);
 }
 function procedureEditor(parameters,source,save){
- const p=parameters,box=el('div',{class:'stack'}),tasks=el('div',{class:'stack'}),resources=el('div',{class:'stack'});
+ const p=parameters,box=el('div',{class:'stack'}),tasks=el('div',{class:'stack'}),resources=el('div',{class:'stack'}),profiles=el('div',{class:'stack'});
  const patch=(key,value)=>{p[key]=value;save();};
+ const profileRows=()=>p.profiles||[];
+ const redrawProfiles=()=>{
+  put(profiles,profileRows().length?profileRows().map((profile,index)=>{
+   const count=el('p',{class:'quiet'},profile.stepIds.length+' selected tasks'),title=el('h4',{},profile.name||'Procedure set '+(index+1));
+   const names=new Set(p.steps.map(step=>step.id)),missing=profile.stepIds.filter(id=>!names.has(id));
+   const choices=el('fieldset',{class:'procedure-set-choices'},el('legend',{},'Tasks in this procedure set'),
+    ...p.steps.map((step,stepIndex)=>check((stepIndex+1)+'. '+(step.title||'Untitled task'),profile.stepIds.includes(step.id),checked=>{
+     const ids=new Set(profile.stepIds);checked?ids.add(step.id):ids.delete(step.id);
+     profile.stepIds=p.steps.filter(item=>ids.has(item.id)).map(item=>item.id);count.textContent=profile.stepIds.length+' selected tasks';save();
+    })));
+   return el('section',{class:'task-editor procedure-set-editor'},
+    el('div',{class:'row-heading'},title,btn('Remove procedure set',()=>{p.profiles=profileRows().filter(item=>item!==profile);save();redrawProfiles();})),
+    field('Procedure set name',input(profile.name,{maxlength:240,required:true,oninput:event=>{profile.name=event.target.value;title.textContent=profile.name||'Procedure set '+(index+1);save();}})),
+    field('When to use this set',textarea(profile.description||'',{maxlength:16000,rows:3,oninput:event=>{profile.description=event.target.value;save();}})),
+    count,missing.length?el('p',{class:'warning-box'},'This private draft references removed tasks. Review the choices below before saving the edition.'):null,
+    choices,el('p',{class:'identity'},'Stable procedure set '+profile.id));
+  }):empty('All procedures remain available for a period. Add named sets when recurring work needs a selected group of tasks.'));
+ };
  const redrawTasks=()=>put(tasks,p.steps.length?p.steps.map((step,index)=>{
-  const shift=delta=>{const target=index+delta;if(target<0||target>=p.steps.length)return;[p.steps[index],p.steps[target]]=[p.steps[target],p.steps[index]];save();redrawTasks();};
+  const shift=delta=>{const target=index+delta;if(target<0||target>=p.steps.length)return;[p.steps[index],p.steps[target]]=[p.steps[target],p.steps[index]];save();redrawTasks();redrawProfiles();};
   const choices=el('div',{class:'choice-grid'},...p.resources.map(resource=>check(resource.title||resource.id,(step.resourceIds||[]).includes(resource.id),checked=>{
    const ids=new Set(step.resourceIds||[]);checked?ids.add(resource.id):ids.delete(resource.id);step.resourceIds=[...ids];save();
   })));
   return el('section',{class:'task-editor'},
-   el('div',{class:'row-heading'},el('h4',{},'Task '+(index+1)),actions(btn('Move up',()=>shift(-1),{disabled:index===0}),btn('Move down',()=>shift(1),{disabled:index===p.steps.length-1}),btn('Remove task',()=>{p.steps.splice(index,1);save();redrawTasks();}))),
-   field('Task title',input(step.title,{maxlength:240,required:true,oninput:event=>{step.title=event.target.value;save();}})),
+   el('div',{class:'row-heading'},el('h4',{},'Task '+(index+1)),actions(btn('Move up',()=>shift(-1),{disabled:index===0}),btn('Move down',()=>shift(1),{disabled:index===p.steps.length-1}),btn('Remove task',()=>{
+    p.steps.splice(index,1);for(const profile of profileRows())profile.stepIds=profile.stepIds.filter(id=>id!==step.id);save();redrawTasks();redrawProfiles();
+   }))),
+   field('Task title',input(step.title,{maxlength:240,required:true,onchange:()=>redrawProfiles(),oninput:event=>{step.title=event.target.value;save();}})),
    field('Instructions',textarea(step.instructions||'',{maxlength:32000,required:true,oninput:event=>{step.instructions=event.target.value;save();}})),
    check('Required preparation',step.required,checked=>{step.required=checked;save();}),
    p.resources.length?el('fieldset',{},el('legend',{},'Reference resources'),choices):null,
@@ -934,12 +1019,14 @@ function procedureEditor(parameters,source,save){
    el('div',{class:'form-grid two'},field('Resource title',input(resource.title||'',{maxlength:240,required:true,oninput:event=>{resource.title=event.target.value;save();}})),field('Resource type',kind)),body,el('p',{class:'identity'},'Stable resource '+resource.id));
  }):empty('Add approved links, notes or files used by this procedure.'));
  box.append(panel('Revise the complete client procedure',
-  help('This request saves a new complete procedure edition. Existing periods keep their original edition and work.'),
+  help('This request saves a new complete procedure edition and its named sets. Existing periods keep their original edition, selected tasks and work.'),
   el('div',{class:'form-grid two'},field('Procedure name',input(p.name||'',{maxlength:240,required:true,oninput:event=>patch('name',event.target.value)})),field('Client label',input(p.client||'',{maxlength:240,required:true,oninput:event=>patch('client',event.target.value)}))),
   field('Procedure description',textarea(p.description||'',{maxlength:16000,oninput:event=>patch('description',event.target.value)}))),
   panel('Approved references',resources,btn('Add reference resource',()=>{if(p.resources.length>=100)throw Error('This procedure already contains 100 resources.');p.resources.push({id:cleanId('reference'),title:'',kind:'note',text:''});save();redrawResources();redrawTasks();})),
-  panel('Ordered preparation tasks',tasks,btn('Add procedure task',()=>{if(p.steps.length>=100)throw Error('This procedure already contains 100 tasks.');p.steps.push({id:cleanId('task'),title:'',instructions:'',required:true,resourceIds:[]});save();redrawTasks();})));
- redrawResources();redrawTasks();return box;
+  panel('Ordered preparation tasks',tasks,btn('Add procedure task',()=>{if(p.steps.length>=100)throw Error('This procedure already contains 100 tasks.');p.steps.push({id:cleanId('task'),title:'',instructions:'',required:true,resourceIds:[]});save();redrawTasks();redrawProfiles();})),
+  panel('Named procedure sets',help('Choose which ordered tasks belong to each recurring service. Save the complete edition, then select one set when planning or creating a period.'),profiles,
+   btn('Add named procedure set',()=>{if(profileRows().length>=RUNBOOK_PROFILE_LIMIT)throw Error('This edition already has '+RUNBOOK_PROFILE_LIMIT+' procedure sets.');p.profiles??=[];p.profiles.push({id:cleanId('set'),name:'',description:'',stepIds:p.steps.map(step=>step.id)});save();redrawProfiles();})));
+ redrawResources();redrawTasks();redrawProfiles();return box;
 }
 async function openCommand(id){
  setView('commands');state.selectedCommand=id;state.commandDetail=null;state.commandDraft=null;
@@ -967,10 +1054,11 @@ function renderCommandDetail(){
 function renderNativeRequest(command){
  const p=command.nativeRequest;
  const rows=[];
- for(const [label,key] of [['Period label','label'],['Procedure name','name'],['Client label','client'],['Preparer','preparer'],['Reviewer','reviewer'],['Due date','dueDate'],['Work status','status'],['Reviewer decision','decision'],['Source type','sourceKind'],['Source label','sourceLabel'],['Selected accountant handoff','handoffId'],['Accountant edition','accountantRevisionId']])if(p[key]!==undefined)rows.push([label,key==='status'||key==='decision'||key==='sourceKind'?human(p[key]):p[key]]);
+ for(const [label,key] of [['Period label','label'],['Named procedure set','profileId'],['Procedure name','name'],['Client label','client'],['Preparer','preparer'],['Reviewer','reviewer'],['Due date','dueDate'],['Work status','status'],['Reviewer decision','decision'],['Source type','sourceKind'],['Source label','sourceLabel'],['Selected accountant handoff','handoffId'],['Accountant edition','accountantRevisionId']])if(p[key]!==undefined)rows.push([label,key==='status'||key==='decision'||key==='sourceKind'?human(p[key]):p[key]]);
  const content=el('div',{class:'stack'},rows.length?recordFacts(rows):null);
  for(const [label,key] of [['Operation note','note'],['Description','description'],['Source note','sourceNote']])if(p[key])content.append(el('div',{},el('h4',{},label),el('p',{class:'instructions'},p[key])));
  if(p.steps)content.append(table(['Task','Required','Instructions'],p.steps.map(row=>[row.title,row.required?'Yes':'No',row.instructions])));
+  if(p.profiles){const names=new Map((p.steps||[]).map(step=>[step.id,step.title]));content.append(panel('Retained named procedure sets',p.profiles.length?table(['Set','When to use','Selected tasks'],p.profiles.map(profile=>[profile.name,profile.description||'',el('ol',{class:'procedure-selection-list'},...profile.stepIds.map(id=>el('li',{},names.get(id)||id)))])):help('This complete edition explicitly saves no named procedure sets. Periods can use all procedures.')));}
  for(const [label,key] of [['Original working files','fileIds'],['Original close files','sourceFileIds'],['Accepted required exceptions','acceptedExceptions']])if(p[key]?.length)content.append(recordFacts([[label,p[key].map(short).join(', ')]]));
  return content;
 }
@@ -1190,7 +1278,7 @@ async function renderReceivedDetail(){
   actions(link('Download complete received portfolio',API+'/received/'+encodeURIComponent(received.id)+'/packet')),
   el('p',{class:'identity'},'Original complete packet '+received.sha256),
   el('details',{},el('summary',{},'Received firm standards'),recordFacts([['Close standard',firm?.closeStandard],['Reporting standard',firm?.reportingStandard],['Reporting cadence',firm?.reportingCadence],['Escalation',firm?.escalationNote]])),
-  el('details',{},el('summary',{},'Received close plans'),table(['Plan','Horizon','Client periods'],metadata.plans.map(plan=>[plan.label,plan.startDate+' → '+plan.endDate,plan.rows.length])))),
+  el('details',{},el('summary',{},'Received close plans'),table(['Plan','Horizon','Client periods and procedure sets'],metadata.plans.map(plan=>[plan.label,plan.startDate+' → '+plan.endDate,el('ul',{class:'procedure-selection-list'},...plan.rows.map(row=>el('li',{},row.name+' · '+row.label+' · '+procedureSetLabel(row))))])))),
   receivingForm);
  drawBindings();refreshWrites();
 }

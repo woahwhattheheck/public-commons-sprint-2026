@@ -12,6 +12,7 @@ import {prepareSensorThingsDataset,queryNativeDataset,nativePublishers,prepareNa
   inspectBuyer,receiveBuyer,readBuyerOutput} from './dataset.mjs';
 import {exportEdition,importEdition} from './portable.mjs';
 import {CAPTURE_READ_PARTS} from './schema.mjs';
+import {analysisContext,createAnalysisManager} from './analysis/core.mjs';
 const find=(items,id,label)=>{const item=items.find(x=>x.id===id);if(!item)throw fault('SELECTION','Select an existing '+label+'.',404);return item;};
 const errorInfo=e=>({code:e.code??'SENSORTHINGS_OPERATION_FAILED',message:e.message??'The original operation failed.',
   status:e.status??503,details:e.details??{},retryable:e.code==='SENSORTHINGS_REQUEST_INTERRUPTED'||(e.status??503)>=500});
@@ -20,6 +21,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
   fetchImpl=fetch,environment=process.env,transport=null,onProgress=()=>{}}={}){
   const store=await openWorkspaceStore(directory,{schema:WORKSPACE_SCHEMA,initialState:{sources:[],catalogs:[],plans:[],reviews:[],comparisons:[],sourceReceipts:[]}}),
     publishers=nativePublishers(store),running=new Map(),controllers=new Map(),operations=new Map();
+  const analysis=createAnalysisManager({store,edition,inboxDirectory:sourceInboxDirectory});
   let closing=false,closePromise=null;
   const schema=()=>workspaceSchema(store.read().workspaceId);
   async function view(){
@@ -35,7 +37,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
         issues:c.issues.slice(0,100),issueCount:c.issues.length,issuesTruncated:c.issues.length>100,pauseReason:c.pauseReason??null,running:running.has(c.id)})),
       editions:s.editionIds,selectedEditionId:s.selectedEditionId,reviews:s.reviews,datasets:s.datasets,releases:s.releases,
       receipts:s.receipts,sourceReceipts:s.sourceReceipts??[],comparisons:s.comparisons,exports:s.exports,
-      operations:Object.values(s.operations).slice(-100).map(({payload,context,...v})=>v),running:[...running.keys()]};
+      operations:Object.values(s.operations).slice(-100).map(({payload,context,...v})=>v),running:[...running.keys()],analysis:analysis.overview()};
   }
 
   function captureRead(id,options){
@@ -121,6 +123,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
       }
       if(action==='release.prepare')op.context.releaseRuntime=structuredClone(releaseRuntime);
       if(action.startsWith('buyer.')||action.startsWith('publisher.buyer.'))op.context.buyerWorkspaceDirectory=buyerWorkspaceDirectory??inboxDirectory;
+      if(action.startsWith('analysis.'))op.context.analysis=analysisContext(s,op,{inboxDirectory:sourceInboxDirectory});
       s.operations[operationId]=structuredClone(op);
     });return op;
   }
@@ -314,6 +317,7 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
     return complete(op,report,s=>{if(!s.comparisons.some(c=>c.id===id))s.comparisons.push(report);});
   }
   async function execute(op){
+    if(op.action.startsWith('analysis.'))return analysis.execute(op,(result,change)=>complete(op,result,change));
     const p=op.payload,s=store.read();
     if(op.action==='source.add'){
       const config=sourceConfig(p),id='source-'+identity(config).slice(0,24),record={...config,id,createdAt:op.createdAt};
@@ -495,10 +499,10 @@ export async function openSensorThingsWorkspace({directory,inboxDirectory=null,s
   catch(error){await publishers.close().catch(()=>{});await store.close().catch(()=>{});throw error;}
   function close(){
     if(closePromise)return closePromise;closing=true;for(const controller of controllers.values())controller.abort();
-    closePromise=(async()=>{await Promise.allSettled([...running.values(),...operations.values()]);await publishers.close();await store.close();})();
+    closePromise=(async()=>{await Promise.allSettled([...running.values(),...operations.values()]);await analysis.close();await publishers.close();await store.close();})();
     void closePromise.catch(()=>{closePromise=null;});return closePromise;
   }
-  return {store,directory:store.root,schema,view,action,catalogRows,edition,
+  return {store,directory:store.root,schema,view,action,catalogRows,edition,analysis,
     capture:captureRead,
     rows:async(id,options)=>rowsPage(store,await edition(id),options),
     summary:async id=>summarize(store,await edition(id)),

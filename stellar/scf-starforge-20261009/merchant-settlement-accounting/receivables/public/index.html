@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Receivables · Merchant workspace</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to workspace</a>
+  <header class="topbar">
+    <div><p class="eyebrow">Merchant workspace</p><h1>Receivables</h1></div>
+    <div class="top-actions">
+      <label class="operator">Operator<input id="operator" name="operator" maxlength="160" autocomplete="off" value="merchant-operator"></label>
+      <a class="button-link" href="/customer-statements/">Customers</a>
+      <button type="button" data-action="settings">Document settings</button>
+      <button type="button" data-action="refresh">Refresh</button>
+      <button type="button" data-action="import-quote">Import quote</button>
+      <button type="button" class="primary" data-action="new-invoice">New invoice</button>
+    </div>
+  </header>
+  <div id="message" role="status" aria-live="polite"></div>
+  <div id="pending" aria-live="polite"></div>
+  <nav class="tabs" aria-label="Receivables sections">
+    <button type="button" data-action="view" data-view="invoices" aria-current="page">Invoices</button>
+    <button type="button" data-action="view" data-view="receipts">Receipts</button>
+    <button type="button" data-action="view" data-view="aging">Aging</button>
+    <button type="button" data-action="view" data-view="activity">Activity</button>
+    <span id="revision" class="meta">Connecting to workspace…</span>
+  </nav>
+  <main id="workspace" tabindex="-1">
+    <section class="filters" aria-label="Account filters">
+      <label class="wide">Customer<select id="customer-filter"><option value="">All customers</option></select></label>
+      <label class="wide">Search<input id="search" type="search" placeholder="Invoice, customer or reference"></label>
+      <label>Status<select id="status-filter"><option value="">All statuses</option><option value="DRAFT">Draft</option><option value="OPEN">Open</option><option value="PARTIALLY_PAID">Partially paid</option><option value="OVERDUE">Overdue</option><option value="PAID">Paid</option><option value="CREDIT_BALANCE">Credit balance</option><option value="VOID">Void</option></select></label>
+      <label>As of<input id="as-of" type="date"></label>
+    </section>
+    <div id="content"><section class="empty"><h2>Opening receivables</h2><p>Loading the current accounting workspace.</p></section></div>
+  </main>
+  <dialog id="dialog" aria-labelledby="dialog-title">
+    <div class="dialog-head"><h2 id="dialog-title"></h2><button type="button" data-action="close-dialog" aria-label="Close dialog">Close</button></div>
+    <div id="dialog-message" role="status" aria-live="polite"></div>
+    <div id="dialog-content"></div>
+  </dialog>
+  <noscript>This local operator workspace requires JavaScript.</noscript>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>

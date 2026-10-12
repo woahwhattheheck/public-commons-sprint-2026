@@ -2,6 +2,7 @@
 import {studyInput,findStudy,prepareStudy,studySaveRecord,studyReview,selectedStudyReview,studyRows,studyDigest,STUDY_LIMITS,STUDY_REQUIRED_COLUMNS} from './study.mjs';
 import {writeStudyRelease,uploadStart,chunkInput,retainChunk,compareStudyReturn} from './study-exchange.mjs';
 import {makeBackfillPlan} from './history.mjs';
+import {prepareStudyDataset} from './study-dataset.mjs';
 import {writeRetainedAnalysisBundle} from './analysis/retained.mjs';
 import {mappingValue,mappingSourceValue,mappingChanges,materializeExport,retainedExport,writeTableExport,writeSourcePackage,writeComparisonExport} from './exports.mjs';
 import {openWorkspaceStore,jsonBytes,stable} from '../stellar-expert/store.mjs';
@@ -240,6 +241,7 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     if((payload.expectedDecisionId??'')!==(prior?.id??''))throw fault('COOPS_STUDY_RECEIVING_CHANGED','Review the current decision on this returned file before saving another.',409);
     op.context={returned:structuredClone(returned),priorDecisionId:prior?.id??null};
    }
+   if(action==='study.dataset.prepare'){const release=selected(s.studyReleases,payload.releaseId,'immutable reviewed study delivery');op.context={release:structuredClone(release),releaseSha256:hashBytes(jsonBytes(release))};}
    if(action==='dataset.prepare')op.context={mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='export.create')op.context={annotations:structuredClone(s.annotations.filter(a=>a.editionId===payload.editionId)),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};
    if(action==='backfill.export'){const b=selected(s.backfills,payload.backfillId,'backfill');op.context={backfill:structuredClone(b),annotations:structuredClone(s.annotations.filter(a=>b.parts.some(p=>p.editionId===a.editionId))),mapping:payload.mappingId?structuredClone(selected(s.mappings,payload.mappingId,'model-input mapping')):null};}
@@ -363,13 +365,31 @@ export async function openCoopsWorkspace({directory,inboxDirectory,releaseRuntim
     if(currentSha256!==target.recordSha256||!prior&&s.annotations.some(a=>a.id===target.id))throw fault('COOPS_REVIEW_CHANGED','The selected source review changed after this request was reserved. Compare the current decision with the retained note before issuing a new save.',409);
     const a={id:target.id,editionId:p.editionId,subject,note,status:p.status,updatedAt:op.createdAt,history:prior?[...(prior.history??[]),{note:prior.note,status:prior.status,updatedAt:prior.updatedAt}]:[]};
     s.annotations=s.annotations.filter(x=>x.id!==a.id);s.annotations.push(a);return a;});break;}
+   case'study.dataset.prepare':{
+    const c=op.context;
+    if(!c?.release||hashBytes(jsonBytes(c.release))!==c.releaseSha256||c.release.id!==p.releaseId)
+     throw fault('COOPS_STUDY_DATASET_PIN','The original reviewed study delivery is not pinned to this request.',409);
+    const prepared=op.materializedResult??await prepareStudyDataset(store,{release:c.release,id:'dataset-'+id,name:p.name,createdAt:op.createdAt});
+    result=await local(op,s=>{
+     const prior=s.datasets.find(d=>d.id===prepared.id);
+     if(prior&&stable(prior)!==stable(prepared))throw fault('COOPS_STUDY_DATASET_IDENTITY','This native dataset identity belongs to a different retained preparation.',409);
+     if(!prior)s.datasets.push(prepared);for(const file of prepared.files)if(!s.exports.some(e=>e.id===file.id))s.exports.push(file);return prepared;
+    });break;
+   }
    case'dataset.prepare':{
     if(p.mappingId&&!op.context?.mapping)throw fault('COOPS_DATASET_MAPPING_PIN','The original selected mapping revision is not retained with this unfinished request. Review the saved mapping before issuing a new preparation.',409);
     result=await prepareCoastalDataset(store,{edition:await store.edition(p.editionId),table:p.table,name:p.name,beginDate:p.beginDate,endDate:p.endDate,products:p.products,id:'dataset-'+id,mapping:op.context?.mapping??null});
     await local(op,s=>{if(!s.datasets.some(d=>d.id===result.id))s.datasets.push(result);return result;});break;
    }
    case'dataset.query':result=await queryNativeDataset(store,selected(store.read().datasets,p.datasetId,'dataset'),p.query);break;
-   case'release.prepare':result=await prepareNativeRelease(store,{dataset:selected(store.read().datasets,p.datasetId,'dataset'),origin:p.origin,path:p.path??'/coastal',payment:p.payment,id:'coops-'+id,runtime:op.context?.releaseRuntime??releaseRuntime,publishers});await local(op,s=>{if(!s.releases.some(r=>r.id===result.id))s.releases.push(result);return result;});break;
+   case'release.prepare':{
+    if(op.materializedResult){result=await local(op,()=>op.materializedResult);break;}
+    const dataset=selected(store.read().datasets,p.datasetId,'dataset');
+    result=await prepareNativeRelease(store,{dataset,origin:p.origin,path:p.path??'/coastal',payment:p.payment,id:'coops-'+id,runtime:op.context?.releaseRuntime??releaseRuntime,publishers});
+    if(dataset.sourceKind==='reviewed-study')result={...result,sourceKind:'reviewed-study',
+     ...Object.fromEntries(['studyReleaseId','studyId','studyRevision','studySha256','studyManifestSha256','studyName','review','mapping','sourceManifestSha256'].map(key=>[key,structuredClone(dataset[key])])),sourceSelection:structuredClone(dataset.selection)};
+    result=await local(op,s=>{if(!s.releases.some(r=>r.id===result.id))s.releases.push(result);return result;});break;
+   }
    case'release.inspect':result=await inspectNativeRelease(store,selected(store.read().releases,p.releaseId,'release'),publishers);break;
    case'release.activate':case'release.start':case'release.stop':case'release.rollback':result=await controlNativeRelease(store,selected(store.read().releases,p.releaseId,'release'),op.action.split('.')[1],p,publishers);break;
    case'buyer.inspect':result=await inspectBuyer(op.context?.inboxDirectory??inboxDirectory,p.intentIds);break;

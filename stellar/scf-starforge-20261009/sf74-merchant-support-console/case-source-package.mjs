@@ -828,3 +828,19 @@ export async function receiveCaseSourcePackage({directory,receivingDirectory,cas
     }
   });
 }
+
+/** Parse only the bounded original completion manifest for stream selection.
+ * Full history/source verification remains inspectCaseSourcePackage. */
+export function parseCaseSourcePackageManifest(value) {
+  ensure(typeof value==='string'||value instanceof Uint8Array,'CASE_PACKAGE_MANIFEST',
+    'Supply the exact original complete manifest bytes.');
+  const bytes=Buffer.from(value);
+  ensure(bytes.length>0&&bytes.length<=MAX_CASE_SOURCE_MANIFEST_BYTES,'CASE_PACKAGE_MANIFEST_LIMIT',
+    'Use the original bounded complete package manifest.');
+  let parsed;
+  try{parsed=JSON.parse(decode(bytes));}catch(problem){
+    throw Object.assign(new Error('The complete package manifest is not valid UTF-8 JSON.'),
+      {code:'CASE_PACKAGE_MANIFEST',status:422});
+  }
+  return {manifest:completeManifest(parsed),manifestSha256:sha(bytes),bytes:bytes.length};
+}

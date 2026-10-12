@@ -11,14 +11,15 @@ const validId=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(
 const validSha=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const errorView=error=>({code:error.code??'CUSTOMER_RECEIVING_ERROR',message:error.message??String(error)});
 export function customerAccess(selection){
-  const prefix=selection.family==='grant-reviewer'?'merchant_grant_reviewer':
+  const prefix=selection.family==='grpc'?'merchant_grpc_export':selection.family==='grant-reviewer'?'merchant_grant_reviewer':
     selection.family==='core'?'merchant_client_export':selection.family==='opensearch'?'merchant_opensearch_deployment':
     selection.family==='openapi'?'merchant_openapi':null;
   if(!prefix)throw fail('CONSOLE_CUSTOMER_SELECTION','Choose an original supported customer family.',400);
-  return {name:prefix+'_manifest',args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
+  return {name:prefix+'_manifest',args:{exportId:selection.exportId,...(selection.workspace&&selection.family!=='grpc'?{workspace:selection.workspace}:{})}};
 }
 export const customerManifestAccess=customerAccess;
 async function customerFamily(selection){
+  if(selection.family==='grpc')return (await import('./customer-grpc.mjs')).grpcCustomerFamily;
   if(selection.family==='grant-reviewer')return (await import('./customer-reviewer.mjs')).reviewerCustomerFamily;
   return null;
 }
@@ -38,6 +39,10 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     let pending=archiveReaders.get(record.id);
     if(!pending){
       pending=(async()=>{
+        if(record.identity.family==='grpc'){
+          const {createGrpcCustomerArchive}=await import('./grpc-customer-archive.mjs');
+          return createGrpcCustomerArchive({record,directory:directory(record)});
+        }
         if(record.identity.family==='openapi'){
           const {createOpenApiCustomerArchive}=await import('./openapi-customers.mjs');
           return createOpenApiCustomerArchive({record,directory:directory(record)});
@@ -90,8 +95,8 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     const selection=await identity(input),profile=store.profile(selection.profileId),host=getHost();
     if(profile.hostFingerprint!==host.configurationFingerprint||selection.hostFingerprint!==host.configurationFingerprint)
       throw fail('CONSOLE_HOST_CHANGED','Bind this profile to the displayed original host before receiving customer files.');
-    const prefix=toolPrefix(selection),args={exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})};
-    await authorize(request,prefix+'_manifest',args);
+    const access=customerAccess(selection);
+    await authorize(request,access.name,access.args);
     if(closing)throw fail('CONSOLE_CLOSING','The original operator is closing.',503);
     const identitySha256=digest(canonical(selection)),id=identitySha256.slice(0,48);
     let record;
@@ -120,7 +125,7 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
         const files=[...manifest.files,{name:format.manifestName,bytes:bytes.length,sha256:digest(bytes)}];
         const {directory:privateDirectory,...summary}=result;
         const complete={...record,state:'COMPLETE',completedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),
-          files,result:summary,manifest,progress:null,error:null};
+          files,result:summary,manifest,...format.retainManifest?.(bytes,manifest),progress:null,error:null};
         format.validateRecord?.(complete);
         record=store.saveDelivery(complete);
       }catch(error){
@@ -132,8 +137,8 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     return view(record);
   }
   async function requireRead(record,request) {
-    const selection=record.identity,prefix=toolPrefix(selection);
-    await authorize(request,prefix+'_manifest',{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})});
+    const access=customerAccess(record.identity);
+    await authorize(request,access.name,access.args);
     if(record.workspaceId!==store.id||record.state!=='COMPLETE')
       throw fail('CONSOLE_CUSTOMER_RECEIVE','Resume the original reviewed customer export to receive its local files.');
   }
@@ -170,13 +175,31 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
     view,start,
     async files(id,request){const record=store.delivery(id);await requireRead(record,request);return record.files;},
     file:readCustomerFile,
+    async streamFile(id,name,request,response){
+      const record=store.delivery(id);
+      if(record.identity.family!=='grpc')return false;
+      if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+      await requireRead(record,request);
+      const file=record.files.find(value=>value.name===name);
+      if(!file)throw fail('CONSOLE_CUSTOMER_FILE','Select a file from the original customer manifest.',404);
+      if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+      const owner=originalArchive(record);
+      const task=(async()=>{
+        const original=await owner;
+        if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+        await original.sendFile(request,response,{exportId:record.identity.exportId,
+          expectedManifestSha256:record.identity.expectedManifestSha256,file:file.name,expectedSha256:file.sha256});
+      })();
+      archiveCalls.add(task);
+      try{await task;return true;}finally{archiveCalls.delete(task);}
+    },
     async archive(id,request,response){
       if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
       const record=store.delivery(id);await requireRead(record,request);
       if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
       const family=await customerFamily(record.identity);
       if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
-      if(family){
+      if(family?.archiveFile){
         const file=family.archiveFile(record);
         if(!file)throw fail('CONSOLE_CUSTOMER_ARCHIVE','Choose a complete original file from this export.',409);
         const task=sendOriginalFile(record,file,request,response);archiveCalls.add(task);

@@ -4,8 +4,10 @@ import {resolve} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {spawn} from 'node:child_process';
 import {constants} from 'node:os';
+import {existsSync} from 'node:fs';
 
 const ROOT = fileURLToPath(new URL('.', import.meta.url));
+const PYTHON_ROOT = existsSync(resolve(ROOT, 'starforge_stac')) ? ROOT : resolve(ROOT, '..');
 const PYTHON_ENTRY = [
   'import runpy,sys',
   'sys.path.insert(0,sys.argv.pop(1))',
@@ -25,11 +27,16 @@ const ACTIONS = Object.freeze({
   'workspace-review': {command:'review',required:['workspace','input']},
   'workspace-history': {command:'history',required:['workspace']},
   'workspace-operation': {command:'operation',required:['workspace','request-id']},
+  'field': {command:'field',required:['workspace','input']},
   'project-export': {command:'export',required:['workspace','file'],optional:['revision']},
   'project-receive': {command:'receive',required:['workspace','file'],optional:['expected-sha256']},
   'native-inspect': {command:'native-inspect',required:['workspace','input'],native:true},
   'native-save': {command:'native-save',required:['workspace','input'],native:true},
-  'native-open': {command:'native-open',required:['workspace','project-id'],native:true}
+  'native-open': {command:'native-open',required:['workspace','project-id'],native:true},
+  'postgis-layers': {command:'postgis-layers',required:['workspace','source-id']},
+  'native-postgis-check': {command:'native-postgis-check',required:['workspace','input'],native:true},
+  'native-postgis-select': {command:'native-postgis-select',required:['workspace','input'],native:true},
+  'native-postgis-refresh': {command:'native-postgis-refresh',required:['workspace','project-id'],native:true}
 });
 const PATH_FLAGS = new Set(['directory','workspace','input','file']);
 
@@ -62,6 +69,16 @@ export const QGIS_HELP = [
   '  starforge stac-qgis native-save --workspace DIR --input ORIGINAL_SAVE_JSON --python QGIS_PYTHON',
   '  starforge stac-qgis native-open --workspace DIR --project-id ID --python QGIS_PYTHON',
   '',
+  'Original accepted PostGIS relations and native connection:',
+  '  starforge stac-qgis postgis-layers --workspace DIR --source-id SOURCE_ID',
+  '  starforge stac-qgis native-postgis-check --workspace DIR --input ORIGINAL_CHECK_JSON --python QGIS_PYTHON',
+  '  starforge stac-qgis native-postgis-select --workspace DIR --input ORIGINAL_SELECTION_JSON --python QGIS_PYTHON',
+  '  starforge stac-qgis native-postgis-refresh --workspace DIR --project-id ID --python QGIS_PYTHON',
+  '',
+  'Original QField commissioning and field-to-office receiving:',
+  '  starforge stac-qgis field --workspace DIR --input ORIGINAL_FIELD_ACTION_JSON',
+  '  Native field actions use nativeRuntime from that same original action file.',
+  '',
   'Complete project receiving:',
   '  starforge stac-qgis project-export --workspace DIR --file NEW_ZIP [--revision REVISION]',
   '  starforge stac-qgis project-receive --workspace RECEIVER_DIR --file ZIP [--expected-sha256 SHA256]',
@@ -73,7 +90,7 @@ export const QGIS_HELP = [
   'Install the generated ZIP through QGIS Plugins > Manage and Install Plugins > Install from ZIP.',
   'The desktop operates the same original workspace, maps, edition review and receiving archive.',
   'The existing stac qgis-export, qgis-open and qgis-plugin aliases remain available.',
-  'Read qgis/OPERATIONS.md and VECTOR_RECEIVING.md for complete installed and desktop handover.'
+  'Read qgis/OPERATIONS.md, VECTOR_RECEIVING.md and FIELD_OPERATIONS.md for complete handover.'
 ].join('\n') + '\n';
 
 function flags(argv) {
@@ -125,7 +142,7 @@ async function workspaceCommand(command,values) {
   for (const key of Object.keys(values))
     if (!allowed.has(key)) throw new TypeError('--' + key + ' is not an option for ' + command + '.');
   for (const key of action.required) required(values,key);
-  const argv = ['-B','-c',PYTHON_ENTRY,ROOT,action.command];
+  const argv = ['-B','-c',PYTHON_ENTRY,PYTHON_ROOT,action.command];
   for (const key of [...action.required,...(action.optional ?? [])]) {
     if (values[key] === undefined) continue;
     const value = required(values,key);

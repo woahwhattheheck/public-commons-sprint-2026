@@ -1,10 +1,11 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "merchant-implementation",
-  "description": "Original merchant workorder implementation, complete native source history and resumable customer receiving",
+  "description": "Original merchant implementation, full case/source browser and MCP receiving",
   "components": [
     "stellar/scf-starforge-20261009/sf74-merchant-support-console",
-    "stellar/scf_2026/sf49_data_commissioning"
+    "stellar/scf_2026/sf49_data_commissioning",
+    "stellar-forge/mcp-merchant-operator"
   ],
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/source_bundle_archive.py",
@@ -20,6 +21,8 @@
     "./merchant/implementation": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs",
     "./merchant/case-implementation": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commissioning.mjs",
     "./merchant/case-source-package": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-source-package.mjs",
-    "./merchant/case-source-delivery": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-source-delivery.mjs"
+    "./merchant/case-source-delivery": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-source-delivery.mjs",
+    "./merchant/case-package-operations": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-package-operations.mjs",
+    "./merchant/case-package-http": "./source/stellar/scf-starforge-20261009/sf74-merchant-support-console/case-package-http.mjs"
   }
 }

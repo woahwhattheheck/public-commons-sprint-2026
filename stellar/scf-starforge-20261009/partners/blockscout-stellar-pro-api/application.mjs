@@ -17,9 +17,9 @@ function providerTarget(value, connection) {
 }
 
 export async function createBlockscoutApplication(input, { directory, env = process.env, lookup,
-  developmentProviderOrigin, now } = {}) {
+  developmentProviderOrigin, now, deferCredentials = false } = {}) {
   const prepared = prepareProduct(input), { plan } = prepared;
-  const credentials = connectionRuntime(plan, env), key = credentials.secret;
+  const credentials = connectionRuntime(plan, env, { deferCredentials }), key = credentials.secret;
   const target = providerTarget(developmentProviderOrigin, credentials.connection);
   const containsCredential = value => key !== null && value.includes(key);
   const responseValidator = compileResponseContract({ schema: RESPONSE_CONTRACT_SCHEMA, method: 'GET',
@@ -34,7 +34,7 @@ export async function createBlockscoutApplication(input, { directory, env = proc
     availability: { failureThreshold: 3, resetAfterMs: 30000, maxResetAfterMs: 300000 },
   }]));
   const transport = createUpstreamHandlers({ schema: 'stellar-forge.seller-upstreams.v1', bindings },
-    { allowLoopback: target.allowLoopback, env: credentials.env,
+    { allowLoopback: target.allowLoopback, env: credentials.env, deferCredentials,
       ...(lookup === undefined ? {} : { lookup }) });
   let accounting;
   try { accounting = await openProviderAccounting({ directory, plan, ...(now === undefined ? {} : { now }) }); }
@@ -115,6 +115,9 @@ export async function createBlockscoutApplication(input, { directory, env = proc
   function snapshot() {
     return { schema: 'stellar-forge.blockscout-runtime.v1', contract: credentials.connection.mode === 'pro' ? CONTRACT : 'blockscout-instance-token-detail-v1', source: target.source,
       connection: connectionSummary(plan), publicOrigin: plan.publicOrigin, paymentNetwork: plan.payment.network,
+      providerCredential: { state: credentials.connection.authentication.kind === 'none' ? 'NOT_REQUIRED' :
+        key === null ? 'MISSING' : 'CONFIGURED',
+        environment: credentials.connection.authentication.kind === 'none' ? null : plan.apiKeyEnv },
       chains: plan.chains.map(row => ({ ...row, dataNetwork: 'eip155:' + row.chainId })),
       provider: accounting.snapshot(), transport: Object.fromEntries(Object.entries(transport)
         .filter(([, handler]) => typeof handler.snapshot === 'function').map(([name, handler]) => [name, handler.snapshot()])) };

@@ -8,6 +8,11 @@ import {researchWorkspaceTools,RESEARCH_EXPORTS} from './catalog/research-worksp
 import {callResearchClinicalTrials,exportResearchClinicalTrials,RESEARCH_CLINICALTRIALS_PREFIX} from './research-clinicaltrials.mjs';
 import {callResearchDocuments,exportResearchDocuments,RESEARCH_DOCUMENT_PREFIXES} from './research-documents.mjs';
 import {callResearchCitationUpdates,RESEARCH_CITATION_REVIEW_PREFIX} from './research-citation-updates.mjs';
+import {callResearchRiskOfBias,exportResearchRiskOfBias,RESEARCH_RISK_PREFIX} from './research-risk-of-bias.mjs';
+import {callResearchExtraction,exportResearchExtraction,RESEARCH_EXTRACTION_PREFIX} from './research-extraction.mjs';
+import {callResearchEligibility,exportResearchEligibility,RESEARCH_ELIGIBILITY_PREFIX} from './research-eligibility.mjs';
+import {callResearchCustomerUpdates,exportResearchCustomerUpdates,RESEARCH_CUSTOMER_UPDATE_PREFIX} from './research-customer-updates.mjs';
+import {callResearchEuropePmc,exportResearchEuropePmc,RESEARCH_EUROPE_PMC_PREFIX} from './research-europe-pmc.mjs';
 export {researchWorkspaceTools} from './catalog/research-workspace.mjs';
 import {ResearchWorkspaceClient} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs';
 import {readResearchHostFile,openResearchSource} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-files.mjs';
@@ -40,7 +45,7 @@ export async function readResearchWorkspaceConfiguration(file){
       throw failure('CONFIGURATION_ERROR','Declare original source handles.');
     for(const[name,source]of Object.entries(value.sources??{})){
       identifier(name);exact(source,['file','kind','sha256','provider','sourceReference','filename','contentType'],['file','kind','sha256']);
-      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input'].includes(source.kind)&&
+      if(!['research','reference','portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable'].includes(source.kind)||!['portable','clinicaltrials-packet','source-bundle','pipeline-input','europe-pmc-packet','europe-pmc-portable'].includes(source.kind)&&
         (typeof source.provider!=='string'||!/^[a-z][a-z0-9_-]{0,79}$/.test(source.provider)))
         throw failure('CONFIGURATION_ERROR','Each source declares its original kind and provider.');
       if(source.sourceReference!==undefined&&(typeof source.sourceReference!=='string'||source.sourceReference.length>4000)||
@@ -71,11 +76,17 @@ function checkValue(value,schema){
     schema.enum&&!schema.enum.includes(value))
     throw failure('INVALID_PARAMS','Use the declared native field values and reviewed identifiers.');
   if(schema.type==='object'){
-    exact(value,Object.keys(schema.properties??{}),schema.required??[]);
-    for(const[key,item]of Object.entries(value))checkValue(item,schema.properties[key]);
+    const properties=schema.properties??{},required=schema.required??[];
+    if(schema.additionalProperties===true){
+      if(!plain(value)||required.some(key=>!Object.hasOwn(value,key)))
+        throw failure('INVALID_PARAMS','Supply the complete declared native object and required fields.');
+    }else exact(value,Object.keys(properties),required);
+    for(const[key,item]of Object.entries(value))
+      if(Object.hasOwn(properties,key))checkValue(item,properties[key]);
   }
   if(schema.type==='array'){
-    if(!Array.isArray(value)||schema.maxItems!==undefined&&value.length>schema.maxItems||
+    if(!Array.isArray(value)||schema.minItems!==undefined&&value.length<schema.minItems||
+      schema.maxItems!==undefined&&value.length>schema.maxItems||
       schema.uniqueItems&&new Set(value).size!==value.length)
       throw failure('INVALID_PARAMS','Use the original unique source identifiers within the declared limit.');
     for(const item of value)checkValue(item,schema.items);
@@ -221,15 +232,26 @@ export class MerchantResearchWorkspaces{
         const original=await openResearchSource(temporary,256*1024*1024,{sha256:checkedDigest(error.file.sha256)});
         try{if(original.bytes!==error.file.bytes)throw failure('RESEARCH_EXPORT_CHANGED','The completed download length differs.');}
         finally{await original.close();}
-        verification={state:'DIGEST_MISMATCH',expectedSha256:args.expectedSha256,actualSha256:error.file.sha256};
+        verification={state:'DIGEST_MISMATCH',expectedSha256:error.expectedSha256??args.expectedSha256,actualSha256:error.file.sha256,
+          ...(error.expectedBytes!==undefined?{expectedBytes:error.expectedBytes,actualBytes:error.file.bytes}:{})};
         return error.file;
       }
     };
     try{
-      if(args.kind.startsWith('document-')||args.kind.startsWith('pipeline-')){
+      if(args.kind.startsWith('risk-')){
+        ({result,selection}=await exportResearchRiskOfBias(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('document-')||args.kind.startsWith('pipeline-')){
         ({result,selection}=await exportResearchDocuments(entry.client,args,{file:temporary,download}));
       }else if(args.kind.startsWith('clinicaltrials-')){
         ({result,selection}=await exportResearchClinicalTrials(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('europe-pmc-')){
+        ({result,selection}=await exportResearchEuropePmc(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('customer-update-')){
+        ({result,selection}=await exportResearchCustomerUpdates(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('eligibility-')){
+        ({result,selection}=await exportResearchEligibility(entry.client,args,{file:temporary,download}));
+      }else if(args.kind.startsWith('extraction-')){
+        ({result,selection}=await exportResearchExtraction(entry.client,args,{file:temporary,download}));
       }else if(spec.format){
         exact(args,['workspace','dossierId','kind','revision','expectedSha256'],['workspace','dossierId','kind']);
         result=await download(()=>entry.client.exportDossier(args.dossierId,{format:spec.format,file:temporary,revision:args.revision,expectedSha256:args.expectedSha256}));
@@ -326,7 +348,13 @@ export class MerchantResearchWorkspaces{
     if(name==='merchant_research_detach')return this.#detach(args.workspace,args.attachmentId);
     return this.#with(args.workspace,async entry=>{
       const c=entry.client,id=args.dossierId,input=nativeFields(args,['workspace','dossierId']);
+      if(name.startsWith(RESEARCH_CUSTOMER_UPDATE_PREFIX))return callResearchCustomerUpdates(c,name,args);
+      if(name.startsWith(RESEARCH_ELIGIBILITY_PREFIX))return callResearchEligibility(c,name,args);
+      if(name.startsWith(RESEARCH_RISK_PREFIX))return callResearchRiskOfBias(c,name,args);
       if(name.startsWith(RESEARCH_CITATION_REVIEW_PREFIX))return callResearchCitationUpdates(c,name,args);
+      if(name.startsWith(RESEARCH_EXTRACTION_PREFIX))return callResearchExtraction(c,name,args);
+      if(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX))return callResearchEuropePmc(c,name,args,{
+        source:(name,accepted)=>this.#source(entry,name,accepted)});
       if(RESEARCH_DOCUMENT_PREFIXES.some(prefix=>name.startsWith(prefix))){
         const result=await callResearchDocuments(c,name,args,{source:(name,accepted)=>this.#source(entry,name,accepted)});
         return name.endsWith('_receive')?compactDossier(result):result;
@@ -421,8 +449,11 @@ export class MerchantResearchWorkspaces{
       catch(error){
         if(error.outcomeUnknown)throw Object.assign(failure(error.code??'RESEARCH_CONNECTION_INTERRUPTED',
           error.recovery??'The original write response was interrupted. Read the saved dossier revision and the same source receiving operation or retained input before another write.'),
-          {outcomeUnknown:true,dossierId:args.dossierId,operationId:error.operationId??args.operationId,
-            requestId:error.requestId??args.requestId,sourceId:args.sourceId,...(error.recovery?{recovery:error.recovery}:{})});
+          {outcomeUnknown:true,dossierId:args.dossierId??args.input?.dossierId,
+            operationId:error.operationId??args.operationId??args.input?.operationId,
+            requestId:error.requestId??args.requestId??args.input?.requestId,sourceId:args.sourceId,
+            ...(name.startsWith(RESEARCH_EUROPE_PMC_PREFIX)?{library:args.library}:{}),
+            ...(error.recovery?{recovery:error.recovery}:{})});
         throw error;
       }
     });

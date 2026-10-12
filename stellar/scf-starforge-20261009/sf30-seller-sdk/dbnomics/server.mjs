@@ -48,6 +48,7 @@ export async function startDbnomicsServer({workbench,port=8459}={}){
             const result=await workbench.exportReport(id,url.searchParams.get('format')??'json');download(res,result.filename);
             send(200,await readFile(result.path),result.mediaType);return true;
           }
+          if(route==='analysis-export'){download(res,'dbnomics-analysis-source-'+id+'.json');send(200,jsonBytes(await workbench.analysisSourceExport(id)));return true;}
           if(route==='source-export'){download(res,'dbnomics-source-handover.json');send(200,jsonBytes(await workbench.exportSources()));return true;}
           if(route==='capture-export'){const c=await workbench.capture(id);download(res,'dbnomics-capture-'+id+'.json');send(200,c.captureBytes);return true;}
           if(route==='original'){
@@ -75,6 +76,7 @@ export async function startDbnomicsServer({workbench,port=8459}={}){
           }
           send(200,await workbench.importCapture({id:input.id,capture}));
         }
+        else if(route==='analysis-source')send(200,await workbench.analysisSource(input));
         else if(route==='source-import')send(200,await workbench.importSources(input));
         else if(route==='notes')send(200,await workbench.saveNotes(input));
         else if(route==='report')send(200,await workbench.saveReport(input));

@@ -34,7 +34,9 @@
   "supportFiles": [
     "stellar-forge/mcp-paid-agent/stdio.mjs",
     "stellar-forge/mcp-paid-agent/http-tools.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/native-demo.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/native-demo.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/examples/managed-workbench.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/risingwave/MANAGED_WORKBENCH.md"
   ],
   "featurePeers": {
     "risingwave": {

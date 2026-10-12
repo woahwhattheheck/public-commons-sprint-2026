@@ -20,7 +20,7 @@ The prepared company offer and its original form operation remain with the desig
 | Returned model-input file | Complete original CSV/JSONL retention, resumable chunk intake, full keyed comparison and an explicit receiving decision. Ambiguous identities and unresolved comparisons remain visible. | The model owner's actual returned file and reasoned acceptance or follow-up. The unchanged internal reference return proves only file handling after the native run completes. |
 | Source refresh | Distinct immutable editions and study revisions; source/window/quality changes and ambiguous duplicate keys remain separate. Earlier reviewed releases remain pinned. | A dated subsequent source edition and explicit analyst decision about using it. |
 | Staff operation | Existing forms, retained draft versions, exact operation replay, source-file import, original query and same-origin reopen. | One complete actual operator receiving record on the selected runtime. |
-| Native distribution | Existing SF30 query, original SF82 publisher, SF88/SF100 receiver and merchant MCP attachment. | Explicit release terms, actual configured runtime and any genuine buyer operation. |
+| Native distribution | An explicitly selected complete reviewed study CSV or single-edition snapshot enters the existing SF30 query, original SF82 publisher, SF88/SF100 receiver and merchant MCP attachment, with exact mapping/source/review provenance. | Explicit release terms, actual configured runtime and any genuine buyer operation. |
 | Engineering decisions | Source/evidence handoff and traceable analytical inputs. | Project-specific datum/time conversions, boundary-model decisions and design acceptance remain with the qualified project team. |
 
 The source implementation is merged and source-reviewed. A source merge, syntax check or an authored receiving module does not establish that NOAA observations were captured or a customer received a dataset. Record that outcome only from `coops-operator-result.json` and its retained original artifacts after the existing receiver completes the connected operation.
@@ -33,7 +33,7 @@ After the actual review, staff save the agreed mapping and export complete files
 
 The project study selects up to five station profiles and 64 ordered immutable windows over its bounded five-year period. Each station retains its own request, source, time and datum identity. The same tidal datum name at two stations does not establish a common physical vertical surface. Mixed request bases require an explicit study choice and retained warning acknowledgements; the application performs no coordinate, time or vertical-datum conversion.
 
-A native captured edition is bounded at 366 calendar days; six-minute data use shorter provider requests, and the historical export streams selected child editions. Study CSV/JSONL and the complete original-source archive are streamed from those retained editions. The native SF30 dataset controls currently select one immutable edition/table within their declared row and byte limits; a project release does not silently turn all historical rows into an unbounded query dataset.
+A native captured edition is bounded at 366 calendar days; six-minute data use shorter provider requests, and the historical export streams selected child editions. Study CSV/JSONL and the complete original-source archive are streamed from those retained editions. Native SF30 dataset controls accept either one immutable edition/table or the exact complete CSV of an explicitly selected reviewed study release. Both retain the 250,000-row / 256 MiB native limits. A larger project delivery requires an expressly narrower, reviewed release before query preparation; historical rows are never silently truncated. Later working studies and review decisions do not change the old query or its recorded review.
 
 ### Acceptance artifacts
 
@@ -45,7 +45,7 @@ A native captured edition is bounded at 366 calendar days; six-minute data use s
 - The complete study selection, station-specific basis warnings and actual revision-bound review.
 - Complete receiving files, immutable release/return receipts and full comparison, including ambiguous or unresolved rows.
 - The receiving decision and its exact comparison hash; later preparation preserves that earlier release and review.
-- Original dataset/query identity where selected, with its exact mapping revision, acquired mapping-file hash and retained receiving headings. Later conventions remain separate.
+- Original dataset/query identity where selected, with its exact mapping revision, acquired mapping-file hash and retained receiving headings. A study dataset additionally carries the exact released CSV, study revision, recorded review, original delivery manifest and complete native source/configuration downloads. Later conventions, studies and review decisions remain separate.
 - Staff save/replay, source-file receiving and reopen result in the same original workspace.
 
 ## Receiving path

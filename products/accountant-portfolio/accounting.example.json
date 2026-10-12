@@ -1,0 +1,41 @@
+{
+  "workspaces": {
+    "firm": {
+      "label": "Replace with the actual firm coordinator",
+      "directory": "/private/close/firm/workspace",
+      "outboxDir": "/private/close/firm/source/outbox",
+      "proofDir": "/private/close/firm/source/proofs",
+      "termsFile": "/private/close/firm/source/terms.json",
+      "portfolioClients": {
+        "client-a": "client_a",
+        "client-b": "client_b"
+      },
+      "portfolioInputs": {
+        "incoming_portfolio": "/private/close/incoming/portfolio.json"
+      }
+    },
+    "client_a": {
+      "label": "Replace with the actual first client",
+      "directory": "/private/close/client-a/workspace",
+      "outboxDir": "/private/close/client-a/source/outbox",
+      "proofDir": "/private/close/client-a/source/proofs",
+      "termsFile": "/private/close/client-a/source/terms.json",
+      "runbookInputs": {
+        "close_source": "/private/close/client-a/incoming/close-source.csv",
+        "procedure_notes": "/private/close/client-a/incoming/procedures.md",
+        "incoming_period": "/private/close/client-a/incoming/period.json"
+      }
+    },
+    "client_b": {
+      "label": "Replace with the actual second client",
+      "directory": "/private/close/client-b/workspace",
+      "outboxDir": "/private/close/client-b/source/outbox",
+      "proofDir": "/private/close/client-b/source/proofs",
+      "termsFile": "/private/close/client-b/source/terms.json",
+      "runbookInputs": {
+        "close_source": "/private/close/client-b/incoming/close-source.csv",
+        "incoming_period": "/private/close/client-b/incoming/period.json"
+      }
+    }
+  }
+}

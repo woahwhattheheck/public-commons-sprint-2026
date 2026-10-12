@@ -2,7 +2,7 @@
 
 A complete local workspace for Cognos migration and ongoing report support: import the original specification, review and map the model, build native paginated reports and editable Power BI projects, compare complete report outputs, manage deployment and rollback, and hand the work to its receiving team.
 
-The operating views cover inventory, migration plans, data and corrections, output comparison, on-premises Report Server, Power BI capture, cloud rollout and rollback, support, agency billing, handoff and recovery, and activity. The interface uses a restrained grayscale industrial layout.
+The operating views include the complete [load-forecast review workflow](LOAD_FORECAST_GUIDE.md): published workbook intake, exact period and unit mappings, forecast-vintage or accuracy comparisons, sourced explanations, analyst decisions, complete ten-sheet deliveries and editable receiving. They also cover inventory, migration plans, data and corrections, output comparison, on-premises Report Server, Power BI capture, cloud rollout and rollback, support, agency billing, handoff and recovery, and activity. The interface uses a restrained grayscale industrial layout.
 
 ## Start
 

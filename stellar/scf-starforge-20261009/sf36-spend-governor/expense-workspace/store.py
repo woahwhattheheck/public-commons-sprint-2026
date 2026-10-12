@@ -11,10 +11,11 @@ import sqlite3
 import stat
 import threading
 
-from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view, spending_reservation_identity
+from domain import Problem, SCHEMA, now, canonical, identifier, text, day, digest, row_key, basis, native_changes, validate_coding, period_view, spending_reservation_identity, finalized_request_identity, receipt_reference_identity
 from native import capture_source, parse_labels
 from credit_store import CreditStore, CREDIT_DDL
 from accountant_store import AccountantStore, ACCOUNTANT_DDL
+from node_store import NodeStore
 
 DDL = """
 CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL);
@@ -54,7 +55,7 @@ def page(values, offset=0, limit=50):
             "next": offset + limit if offset + limit < len(values) else None}
 
 
-class Store(CreditStore, AccountantStore):
+class Store(CreditStore, AccountantStore, NodeStore):
     def __init__(self, directory, node_executable=None):
         self.root = Path(directory).expanduser().resolve()
         self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -250,7 +251,8 @@ class Store(CreditStore, AccountantStore):
             item["coding"] = heads.get(item["id"])
             nonexpense = {"reserved":"RESERVED", "unresolved":"PAYMENT_UNRESOLVED",
                           "failed":"FAILED_TRANSACTION", "not_dispatched":"NO_SIGNED_DISPATCH",
-                          "observation_review":"OBSERVATION_REVIEW", "spending_review":"SPENDING_SOURCE_REVIEW"}
+                          "observation_review":"OBSERVATION_REVIEW", "spending_review":"SPENDING_SOURCE_REVIEW",
+                          "unpaid":"NO_PAYMENT_REQUIRED", "accounting_unresolved":"ACCOUNTING_UNRESOLVED"}
             item["status"] = ("ABSENT" if item["missing"] else nonexpense[row["state"]] if row["state"] in nonexpense else
                               "UNCODED" if not item["coding"] else "STALE" if item["coding"]["basis"] != item["basis"] else "CODED")
             items.append(item)
@@ -287,6 +289,8 @@ class Store(CreditStore, AccountantStore):
         captured = {"id": identifier("capture"), "source_id": source["id"], "parent_id": source.get("current_capture"),
                     "status": "PENDING", "created_at": now(), "path": native["path"], "identity": native["identity"],
                     "snapshot": native["snapshot"], "report": native["report"]}
+        if source.get("kind") == "node_operation":
+            captured["node_intake"] = native["node_intake"]
         if reattachment is not None:
             captured["reattachment"] = reattachment | {"to_capture": captured["id"]}
         previous = self._get("captures", source["current_capture"])["report"] if source.get("current_capture") else None
@@ -317,7 +321,7 @@ class Store(CreditStore, AccountantStore):
         with self.lock:
             source = self._get("sources", ident)
             if source.get("immutable_intake"):
-                raise Problem("REFUND_INTAKE_REQUIRED", "Import the original successor refund packet in Credits; retained customer packets are immutable", 409)
+                raise Problem("IMMUTABLE_SOURCE_INTAKE_REQUIRED", "Import the original successor file in Sources for Node operations or Credits for customer adjustments; retained packets are immutable", 409)
         native = capture_source(source["path"], source.get("kind", "sf36_ledger"), self.node_executable)
         return self._change(expected, "source.capture", lambda: self._new_capture(self._get("sources", ident), native))
 
@@ -328,7 +332,7 @@ class Store(CreditStore, AccountantStore):
         with self.lock:
             source = self._get("sources", ident)
             if source.get("immutable_intake"):
-                raise Problem("REFUND_INTAKE_REQUIRED", "Use Credits to import the exact successor customer packet; the retained purchase identity stays fixed", 409)
+                raise Problem("IMMUTABLE_SOURCE_INTAKE_REQUIRED", "Import an original successor file; retained Node operations and customer packets keep their original identity", 409)
             kind = source.get("kind", "sf36_ledger")
         native = capture_source(path, kind, self.node_executable)
         def operation():
@@ -354,7 +358,8 @@ class Store(CreditStore, AccountantStore):
     def _capture_summary(captured):
         return {k: captured.get(k) for k in ("id", "source_id", "parent_id", "status", "created_at", "reviewed_at", "operator", "reason")} | {
             "source": captured["report"]["source"], "captured_at": captured["report"]["captured_at"], "change_count": len(captured["changes"]),
-            "change_counts": {kind: sum(c["kind"] == kind for c in captured["changes"]) for kind in ("ADDED", "CHANGED", "ABSENT")}}
+            "change_counts": {kind: sum(c["kind"] == kind for c in captured["changes"]) for kind in ("ADDED", "CHANGED", "ABSENT")},
+            "node_intake": captured.get("node_intake")}
 
     def captures(self, source_id, offset=0, limit=20):
         with self.lock:
@@ -581,10 +586,17 @@ class Store(CreditStore, AccountantStore):
                                 ledger = (captured["identity"] if line.get("source_kind", "sf36_ledger") == "sf36_ledger" else
                                           captured["report"]["source"].get("reservation_ledger_identity"))
                                 reservation = spending_reservation_identity(ledger, line["request_id"], line["request_digest"])
-                    key = (transfer, digest(reservation) if reservation else None, line["item_id"])
-                    if (transfer or reservation) and key not in seen:
+                    finalized = finalized_request_identity({"state": "settled",
+                        "source_kind": line.get("source_kind", "sf36_ledger"),
+                        **{key: line.get(key) for key in ("request_id", "request_digest", "network", "asset", "receipt_ref", "proof_sha256")},
+                        "settled_base_units": line["settled_actual"]})
+                    reference = receipt_reference_identity(line)
+                    key = (transfer, digest(reservation) if reservation else None, digest(finalized), line["item_id"])
+                    if (transfer or reservation or finalized or reference) and key not in seen:
                         seen.add(key)
                         closed_transfers.append({"transfer_identity":transfer, "spending_reservation":reservation,
+                            "finalized_request":finalized, "receipt_reference":reference,
+                            "source_kind":line.get("source_kind", "sf36_ledger"), "source_id":line["source_id"],
                             "period_id":other["id"], "period_name":other["name"], "close_id":issued["id"], "item_id":line["item_id"],
                             "source_capture":line["source_capture"], "recognition_date":line["recognition_date"]})
             closed_transfers = self._issued_reservation_lineage(closed_transfers)

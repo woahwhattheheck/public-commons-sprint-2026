@@ -1,6 +1,7 @@
 import {finalizeOperationAccounting,recoverOperationAccounting,exportOperationAccounting} from './operation-accounting.mjs';
 import { inspectPreapprovalRecovery, preparePreapprovalRecovery, executePreapprovalRecovery,
-  recoverPreapprovalResult, readPreapprovalRecovery, readSelectedPreapprovalReview } from './preapproval-recovery.mjs';
+  recoverPreapprovalResult, readPreapprovalRecovery, readSelectedPreapprovalReview,
+  openPreapprovalRecoveryOperation } from './preapproval-recovery.mjs';
 // MIT — Durable Node applications on the original SF88 CLI.
 import { mkdir, mkdtemp, readdir, rm } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -70,7 +71,10 @@ export class Buyer {
 
   async ready() { await privateDirectory(this.stateDirectory); return this; }
   operation(intentId) { return new Operation(this, intent(intentId)); }
-  openOperation(intentId, options) { return openOperationRuntime(this.operation(intentId), options); }
+  async openOperation(intentId, options) {
+    const original = await openOperationRuntime(this.operation(intentId), options);
+    return openPreapprovalRecoveryOperation(original, options);
+  }
 
   async _requestFiles() {
     // The installed original runtime owns the shared request ceiling and exact

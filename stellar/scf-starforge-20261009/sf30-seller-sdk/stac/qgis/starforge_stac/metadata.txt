@@ -1,11 +1,11 @@
 [general]
 name=Starforge STAC Receiving
-description=Verified STAC, vector and PostGIS receiving, native map projects, edition review and complete handover.
-version=1.1.0
+description=Original STAC, vector and PostGIS sources, native maps, managed analyst and QField collection, complete receiving.
+version=1.2.0
 qgisMinimumVersion=3.40
 author=TJLabs Commons
 email=brycembusiness2@gmail.com
-about=Open original Starforge STAC, vector or accepted PostGIS deliveries in the same QGIS workspace. Review exact source editions, select retained files or verified native database relations, preserve native coordinates and styles, review successors, and save or receive complete workspaces with original history and explicit local connection references.
+about=Use the managed analyst console, original QGIS desktop and QField workflow over one retained workspace. Open original Starforge STAC, vector or accepted PostGIS deliveries in the same QGIS workspace. Review exact source editions, select retained files or verified native database relations, preserve native coordinates and styles, review successors, and save or receive complete workspaces with original history and explicit local connection references.
 category=Web
 homepage=https://github.com/woahwhattheheck/public-commons-sprint-2026
 repository=https://github.com/woahwhattheheck/public-commons-sprint-2026

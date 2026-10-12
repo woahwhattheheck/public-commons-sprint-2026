@@ -2,6 +2,7 @@
 import {newCommissioning,commissioningWorkorder,commissioningFileBytes,validateCommissioning} from './commissioning.mjs';
 import {validateServiceRecord} from './service-commitments.mjs';
 import {canonical,sha256,jsonBytes,commercialError,inspectCommercialPricingSource,reviewCommercialUsage} from './commercial-pricing.mjs';
+import {readCommercialTariffSources,commercialTariffSummary,renderCommercialTariffBasis} from './commercial/tariff-source.mjs';
 
 export const COMMERCIAL_DOCUMENT_SCHEMA='stellar-forge.merchant-commercial-document.v1';
 export const COMMERCIAL_QUOTE_SCHEMA='stellar-forge.merchant-commercial-quote.v1';
@@ -24,18 +25,22 @@ function decimal(value,label){if(typeof value!=='string'||!/^(0|[1-9]\d{0,20})(?
 function usd(value){const negative=value<0n,n=negative?-value:value,f=String(n%MICRO).padStart(6,'0').replace(/0+$/,'');return (negative?'-':'')+String(n/MICRO)+(f?'.'+f:'');}
 function date(value){if(value==='')return value;if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(value)||new Date(value+'T00:00:00Z').toISOString().slice(0,10)!==value)fail('COMMERCIAL_DATE_INVALID','Use a calendar date for quote validity.');return value;}
 export function emptyCommercialDraft(){return {parentId:null,title:'',customer:{name:'',contact:''},currency:'USD',
-  implementationSourceId:'',serviceSourceId:'',pricingSourceId:'',validThrough:'',
+  implementationSourceId:'',serviceSourceId:'',pricingSourceId:'',tariffSourceId:'',validThrough:'',
   implementation:{lines:[]},service:{period:'MONTH',lines:[]},pricing:{routes:[]},
   terms:{scope:'',deliverables:'',exclusions:'',payment:'',acceptance:''},notes:''};}
 export function normalizeCommercialDraft(value) {
   object(value,['parentId','title','customer','currency','implementationSourceId','serviceSourceId','pricingSourceId',
-    'validThrough','implementation','service','pricing','terms','notes'],'quotation');
+    'validThrough','implementation','service','pricing','terms','notes','tariffSourceId'],'quotation');
   const next=copy(value);
   next.parentId=selected(value.parentId??null,'parent quote');
   text(value.title,'quote title',400);object(value.customer,['name','contact'],'customer');
   text(value.customer.name,'customer name',500);text(value.customer.contact,'customer contact',2000);
   if(value.currency!=='USD')fail('COMMERCIAL_CURRENCY_INVALID','The original pricing source and this quote use USD.');
   for(const key of ['implementationSourceId','serviceSourceId','pricingSourceId'])text(value[key],key,200);
+  if(Object.hasOwn(value,'tariffSourceId')){
+    text(value.tariffSourceId,'tariff source',64);
+    if(value.tariffSourceId&&!HASH.test(value.tariffSourceId))fail('COMMERCIAL_TARIFF_SOURCE_REQUIRED','Choose the exact original tariff source.');
+  }
   date(value.validThrough);text(value.notes,'quote notes');
   object(value.implementation,['lines'],'implementation');object(value.service,['period','lines'],'service');
   object(value.pricing,['routes'],'pricing');object(value.terms,['scope','deliverables','exclusions','payment','acceptance'],'customer terms');
@@ -101,6 +106,7 @@ export async function commercialContext(workspace,{caseId,workspaceId,revision}=
     const inspected=inspectCommercialPricingSource(document.payload);
     return {...inspected,material:document.material,documentId:document.id};
   });
+  const tariffSources=await readCommercialTariffSources(state,pricingSources);
   const quotes=documents.filter(d=>d.kind==='QUOTE').map(d=>{
     const quote=copy(d.payload),{sha256:hash,...unsealed}=quote;
     if(quote.schema!==COMMERCIAL_QUOTE_SCHEMA||quote.id!==d.id||sha256(canonical(unsealed))!==hash)
@@ -112,7 +118,7 @@ export async function commercialContext(workspace,{caseId,workspaceId,revision}=
     return {...quote,originCaseId:d.caseId,receiving,material:d.material};
   }).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id));
   const drafts=documents.filter(d=>d.kind==='DRAFT').sort((a,b)=>b.createdAt.localeCompare(a.createdAt)||b.id.localeCompare(a.id));
-  return {state,documents,scope:{caseId,workspaceId},revision,implementationSources,serviceSources,pricingSources,
+  return {state,documents,scope:{caseId,workspaceId},revision,implementationSources,serviceSources,pricingSources,tariffSources,
     quotes,draft:drafts.length?normalizeCommercialDraft(drafts[0].payload):null};
 }
 function sourceBinding(source,kind) {
@@ -129,6 +135,7 @@ export function commercialView(context) {
   return {schema:'stellar-forge.merchant-commercial-workspace.v1',scope:context.scope,revision:context.revision,
     implementationRevision:context.state.revision,implementationSources:context.implementationSources.map(summary),
     serviceSources:context.serviceSources.map(summary),pricingSources:context.pricingSources.map(summary),
+    tariffSources:(context.tariffSources??[]).map(commercialTariffSummary),
     draft:context.draft,quotes:context.quotes,
     requests:context.documents.map(d=>({requestId:d.id,action:d.request.action,state:'COMPLETE',documentSha256:d.material.sha256}))};
 }
@@ -158,6 +165,9 @@ export function reviewCommercialQuote(context,input) {
   const implementation=choose(context.implementationSources,draft.implementationSourceId,'implementation edition');
   const service=choose(context.serviceSources,draft.serviceSourceId,'service terms');
   const pricing=choose(context.pricingSources,draft.pricingSourceId,'pricing scenario');
+  const tariff=choose(context.tariffSources??[],draft.tariffSourceId,'tariff source');
+  if(tariff&&tariff.pricingSourceId!==pricing?.id)
+    fail('COMMERCIAL_TARIFF_PRICING_CHANGED','Select the original pricing scenario belonging to this tariff source.');
   const lines=[...draft.implementation.lines.map(row=>feeLine(row,'IMPLEMENTATION',implementation)),
     ...draft.service.lines.map(row=>feeLine(row,'RECURRING_SERVICE',service))];
   let usage=null;
@@ -169,9 +179,20 @@ export function reviewCommercialQuote(context,input) {
   const implementationTotal=sum('IMPLEMENTATION'),serviceTotal=sum('RECURRING_SERVICE'),usageTotal=sum('ROUTE_USAGE');
   const sourceBindings={implementation:sourceBinding(implementation,'implementation'),
     service:sourceBinding(service,'service'),pricing:sourceBinding(pricing,'pricing')};
+  if(tariff){
+    const route=draft.pricing.routes.find(row=>row.routeId===tariff.routeId);
+    if(!route)fail('COMMERCIAL_TARIFF_ROUTE_REQUIRED','Keep the tariff route in the quoted monthly volumes.');
+    sourceBindings.tariff={id:tariff.id,pricingSourceId:tariff.pricingSourceId,
+      material:copy(tariff.material),files:copy(tariff.files),
+      selectionRequestId:tariff.selectionRequestId,tariffPlanId:tariff.tariffPlanId,
+      comparisonId:tariff.comparisonId,scenarioPlanId:tariff.scenarioPlanId,pricingVersion:tariff.pricingVersion,
+      routeId:tariff.routeId,tiers:copy(tariff.tiers),basis:renderCommercialTariffBasis(tariff,{monthlyRequests:route.monthlyRequests})};
+  }
   const totals={currency:'USD',implementationUsd:usd(implementationTotal),recurringServiceUsd:usd(serviceTotal),
     routeUsageUsd:usd(usageTotal),recurringUsd:usd(serviceTotal+usageTotal),recurringPeriod:'MONTH'};
   const issues=[];
+  if(sourceBindings.tariff?.basis.changedQuantity)issues.push({code:'TARIFF_VOLUME_ASSUMPTION_CHANGED',severity:'info',
+    message:'The quoted volume differs from the saved tariff selection. This quotation keeps its original uniform route rate; the retained tariff comparison shows the current quantity separately.'});
   if(service&&service.snapshot.status!=='active')issues.push({code:'SERVICE_TERMS_'+service.snapshot.status.toUpperCase(),
     severity:'warning',message:'The selected original service terms are '+service.snapshot.status+'. Quote acceptance is recorded separately from activating service.'});
   if(lines.some(l=>l.calculation?.rounded))issues.push({code:'MICRO_USD_ROUNDING',severity:'info',
@@ -225,6 +246,17 @@ export function renderCommercialQuote(value) {
     'The quoted request volumes are explicit monthly planning assumptions. Route USD unit values and totals use the selected merchant pricing scenario.',
     'Pricing source: '+(pricing.planLabel||pricing.title||'Saved merchant pricing')+'.',
     'Scenario: '+(pricing.scenarioLabel||'Selected saved scenario')+'.');
+  const tariff=value.sourceBindings.tariff;
+  if(tariff){
+    out.push('','## Tariff basis','',tariff.basis.text,'','Selected '+tariff.basis.mode+' schedule:');
+    for(const tier of tariff.tiers)out.push('- '+(tier.upTo===null?'Remaining requests':'Through '+tier.upTo+' requests')+
+      ': USD '+tier.unitPriceUsd+' per request.');
+    if(tariff.basis.changedQuantity)out.push('','At the newly quoted quantity, the retained tier schedule totals USD '+
+      tariff.basis.tariffGrossAtQuotedQuantityUsd+'. '+(tariff.basis.derivedUnitAtQuotedQuantityUsd===null?
+      'A zero-request quantity has no derived per-request rate.':
+      'Its newly derived uniform rate is USD '+tariff.basis.derivedUnitAtQuotedQuantityUsd+'.')+
+      ' The price lines above retain the selected saved rate.');
+  }
   if(d.notes)out.push('','## Notes','',d.notes);
   out.push('','## Calculation terms','',
     'Work and service quantities and unit prices use up to six decimal places. Each extended work or service fee uses half-up rounding to one millionth of a USD.',
@@ -243,7 +275,7 @@ export function compareCommercialQuotes(before,after) {
   const amounts=['implementationUsd','recurringServiceUsd','routeUsageUsd','recurringUsd'];
   const differences=Object.fromEntries(amounts.map(k=>[k,usd(decimal(after.totals[k],k)-decimal(before.totals[k],k))]));
   const changes=[];
-  for(const key of ['implementation','service','pricing'])if(canonical(before.sourceBindings[key])!==canonical(after.sourceBindings[key]))changes.push(key+' original source changed');
+  for(const key of ['implementation','service','pricing','tariff'])if(canonical(before.sourceBindings[key])!==canonical(after.sourceBindings[key]))changes.push(key+' original source changed');
   for(const key of ['scope','deliverables','payment','acceptance','exclusions'])if(before.draft.terms[key]!==after.draft.terms[key])changes.push(key+' changed');
   return {before:{id:before.id,sha256:before.sha256,title:before.title},after:{id:after.id,sha256:after.sha256,title:after.title},
     differences,changes,lines:{before:before.lines,after:after.lines},

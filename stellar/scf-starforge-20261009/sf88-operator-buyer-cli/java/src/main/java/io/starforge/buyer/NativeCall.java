@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -72,6 +73,61 @@ final class NativeCall {
         }
         Files.delete(directory);
     }
+    private static Map<String, Object> options(Object value) throws IOException {
+        return value == null ? Map.of() : Json.object(value);
+    }
+
+    // Resolve an absent selection through its nearest existing ancestor without
+    // creating it. A restore must see the original absent state as absent.
+    private static Path selectedPath(String value) throws IOException {
+        Path selected = absolute(Path.of(value));
+        Path existing = selected;
+        while (!Files.exists(existing, LinkOption.NOFOLLOW_LINKS)) {
+            existing = existing.getParent();
+            if (existing == null) throw new IOException("Existing source ancestor required");
+        }
+        return existing.toRealPath().resolve(existing.relativize(selected)).normalize();
+    }
+
+    private static Path workflowCalls(Buyer.Settings settings, Map<String, Object> arguments) throws IOException {
+        Map<String, Object> args = arguments == null ? Map.of() : arguments;
+        Map<String, Object> method = options(args.get("options"));
+        Map<String, Object> workspace = options(args.get("workspace"));
+        Path parent = settings.callsDirectory;
+        if (parent == null && method.get("stateRoot") instanceof String root)
+            parent = absolute(Path.of(root)).getParent();
+        if (parent == null) parent = absolute(Path.of(System.getProperty("java.io.tmpdir")));
+        Path actualParent = parent.toRealPath();
+        if (!actualParent.equals(parent) || !Files.isDirectory(actualParent))
+            throw new IOException("Canonical existing calls directory required");
+        List<String> selections = new ArrayList<>();
+        selections.add(settings.state.toString());
+        for (String key : List.of("directory", "configsDirectory", "operatorSettings"))
+            if (workspace.get(key) instanceof String path) selections.add(path);
+        for (String key : List.of("directory", "stateRoot"))
+            if (method.get(key) instanceof String path) selections.add(path);
+        for (String key : List.of("inboxes", "include"))
+            if (method.get(key) instanceof List<?> paths)
+                for (Object path : paths) if (path instanceof String text) selections.add(text);
+        for (String selection : selections)
+            if (actualParent.startsWith(selectedPath(selection)))
+                throw new IOException("Calls directory must be outside selected source: " + selection);
+        return actualParent;
+    }
+
+    private static Map<String, Object> retainedResponse(Path directory, Buyer.Settings settings,
+            String action, String id, String callId) {
+        try {
+            Map<String, Object> value = Json.object(Json.parse(
+                readPrivate(directory.resolve("response.json"), settings.resultLimit)));
+            boolean sameId = id == null ? value.get("id") == null : id.equals(value.get("id"));
+            if (SCHEMA.equals(value.get("schema")) && callId.equals(value.get("callId")) &&
+                    action.equals(value.get("action")) && sameId && value.get("ok") instanceof Boolean)
+                return value;
+        } catch (IOException | RuntimeException ignored) { /* Original IPC remains available for inspection. */ }
+        return null;
+    }
+
     private static void stop(Process process, long graceMillis) {
         List<ProcessHandle> descendants = process.descendants().toList();
         process.destroy(); // SIGTERM reaches the original bridge's AbortController.
@@ -93,9 +149,14 @@ final class NativeCall {
                          Map<String, Object> arguments, Consumer consume) throws IOException {
         if (Thread.currentThread().isInterrupted())
             throw new BuyerException("JAVA_CALL_INTERRUPTED_BEFORE_START", action, id, null, null, null, null);
-        privateDirectory(settings.state);
-        Path calls = settings.state.resolve(".java-calls");
-        privateDirectory(calls);
+        boolean workflow = action.startsWith("acquisitions.") || action.startsWith("workspace-recovery.");
+        Path calls;
+        if (workflow) calls = workflowCalls(settings, arguments);
+        else {
+            privateDirectory(settings.state);
+            calls = settings.callsDirectory == null ? settings.state.resolve(".java-calls") : settings.callsDirectory;
+            privateDirectory(calls);
+        }
         Path directory = Files.createTempDirectory(calls, "java-", PosixFilePermissions.asFileAttribute(PRIVATE_DIRECTORY));
         String callId = directory.getFileName().toString();
         Map<String, Object> client = Json.map("runtimeDirectory", settings.runtime.toString(),
@@ -151,10 +212,7 @@ final class NativeCall {
             boolean complete;
             if (settings.callTimeout == 0) { process.waitFor(); complete = true; }
             else complete = process.waitFor(settings.callTimeout, TimeUnit.MILLISECONDS);
-            if (!complete) {
-                stop(process, settings.cleanupGrace);
-                throw new BuyerException("JAVA_CALL_TIMEOUT", action, id, directory, null, null, null);
-            }
+            if (!complete) stop(process, settings.cleanupGrace);
             Throwable consumerFailure = null;
             try { reading.get(settings.cleanupGrace + 5000, TimeUnit.MILLISECONDS); }
             catch (ExecutionException e) { consumerFailure = e.getCause(); }
@@ -162,8 +220,8 @@ final class NativeCall {
             Map<String, Object> response;
             try { response = Json.object(Json.parse(readPrivate(directory.resolve("response.json"), settings.resultLimit))); }
             catch (IOException e) {
-                throw new BuyerException("JAVA_BRIDGE_RESULT_UNAVAILABLE", action, id, directory, null, null,
-                    consumerFailure == null ? e : consumerFailure);
+                throw new BuyerException(complete ? "JAVA_BRIDGE_RESULT_UNAVAILABLE" : "JAVA_CALL_TIMEOUT",
+                    action, id, directory, null, null, consumerFailure == null ? e : consumerFailure);
             }
             boolean sameId = id == null ? response.get("id") == null : id.equals(response.get("id"));
             if (!SCHEMA.equals(response.get("schema")) || !callId.equals(response.get("callId")) ||
@@ -171,6 +229,9 @@ final class NativeCall {
                 throw new BuyerException("JAVA_BRIDGE_RESPONSE_MISMATCH", action, id, directory, null, null, null);
             result = response.get("result");
             if (response.get("error") instanceof Map<?, ?>) nativeError = Json.object(response.get("error"));
+            if (result == null && nativeError != null) result = nativeError.get("result");
+            if (!complete)
+                throw new BuyerException("JAVA_CALL_TIMEOUT", action, id, directory, result, nativeError, null);
             if (consumerFailure != null)
                 throw new BuyerException("JAVA_OUTPUT_CONSUMER_FAILED", action, id, directory, result, nativeError, consumerFailure);
             if (!Boolean.TRUE.equals(response.get("ok"))) {
@@ -185,6 +246,15 @@ final class NativeCall {
             return result;
         } catch (InterruptedException e) {
             if (process != null) stop(process, settings.cleanupGrace);
+            // Abort can finish a native publication before the bridge closes.
+            // Read that exact sidecar before restoring the thread interruption.
+            Thread.interrupted(); // Clear a second signal while reading the already-published sidecar.
+            Map<String, Object> retained = retainedResponse(directory, settings, action, id, callId);
+            if (retained != null) {
+                result = retained.get("result");
+                if (retained.get("error") instanceof Map<?, ?>) nativeError = Json.object(retained.get("error"));
+                if (result == null && nativeError != null) result = nativeError.get("result");
+            }
             Thread.currentThread().interrupt();
             throw new BuyerException("JAVA_CALL_INTERRUPTED", action, id, directory, result, nativeError, e);
         } catch (BuyerException e) { throw e; }

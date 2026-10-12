@@ -62,12 +62,12 @@ export interface JobIntake {
   start(id: string, options: {
     kind?: IntakeTask['kind']; expectedRevision: number; reason?: string;
   }): Promise<IntakeEntry>;
-  cancel(id: string): Promise<IntakeEntry>;
+  cancel(id: string, options?: {taskId?: string}): Promise<IntakeEntry>;
   setAccess(id: string, options: {expectedRevision: number; accessToken: string | null}): Promise<IntakeEntry>;
   get(id: string): Promise<IntakeDetail>;
   list(options?: IntakeList): {total: number; offset: number; limit: number; items: IntakeEntry[]};
   ticket(id: string): Promise<Buffer>;
-  wait(id: string): Promise<IntakeDetail>;
+  wait(id: string, options?: {taskId?: string}): Promise<IntakeDetail>;
   status(): IntakeStatus;
   close(): Promise<void>;
 }

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Observation analysis · SensorThings</title>
+  <link rel="stylesheet" href="/analysis/style.css">
+  <script type="module" src="/analysis/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#content">Skip to analysis</a>
+  <header class="app-header">
+    <div><p class="eyebrow">SensorThings workspace</p><h1>Observation analysis</h1></div>
+    <div class="session-tools">
+      <label class="actor-label">Operator <input id="actor" maxlength="200" autocomplete="name" placeholder="Name recorded with changes"></label>
+      <button id="refresh" type="button" disabled>Refresh workspace</button>
+      <button id="lock" type="button" disabled>Close session</button>
+    </div>
+  </header>
+  <div id="identity" class="identity-strip">Open the existing private workspace session.</div>
+  <div id="message" class="message" role="status" aria-live="polite" hidden></div>
+  <section id="connection" class="connection">
+    <h2>Open the existing workspace</h2>
+    <p>Use the original private session link with <code>/analysis/</code> before its fragment. This connects to the existing workspace and does not create a new session.</p>
+    <form id="connect-form">
+      <label>Private workspace link <input id="private-link" type="password" autocomplete="off" required placeholder="Existing loopback URL with its private fragment"></label>
+      <button type="submit">Open workspace</button>
+    </form>
+  </section>
+  <div id="application" class="app-layout" hidden>
+    <aside class="sidebar" aria-label="Saved analyses">
+      <div class="sidebar-heading"><h2>Projects</h2><button id="new-project" type="button">New analysis</button></div>
+      <label class="sr-only" for="project-search">Find a project</label>
+      <input id="project-search" type="search" placeholder="Find a saved project">
+      <div id="projects" class="project-list"></div>
+      <p class="sidebar-note">Saved versions retain their original source edition. A later edit creates a new version.</p>
+    </aside>
+    <main id="content" tabindex="-1">
+      <section id="project-header" class="project-header"></section>
+      <section id="pending" class="pending" hidden></section>
+      <nav id="tabs" class="tabs" aria-label="Analysis workflow"></nav>
+      <div id="pane" class="pane"></div>
+    </main>
+  </div>
+  <dialog id="detail-dialog"><div class="dialog-heading"><h2 id="detail-title">Original detail</h2><button id="close-detail" type="button">Close</button></div><div id="detail-body"></div></dialog>
+</body>
+</html>

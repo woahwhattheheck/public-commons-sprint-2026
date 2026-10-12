@@ -23,11 +23,26 @@ Commands supplied by this contribution:
 | Command | Original operation |
 | --- | --- |
 | `starforge sensorthings` | Original workspace CLI, capture/edition/operation reads and explicit actions |
+| `starforge sensorthings-desk` | Complete Operations Desk on the same native listener, with source receiving and managed Start/Open/Stop |
 | `starforge sensorthings-setup connection --options FILE` | Create or reuse a private, reference-only connection file |
 | `starforge sensorthings-setup merchant --options FILE` | Initialize or reopen the standard merchant host |
 | `starforge merchant-providers init sensorthings-workspaces --options FILE` | The same initializer through the maintained registry |
 
-Managed Applications and browser asset registration use their original source declarations in this same contribution. The managed launch retains the original server and workspace; it does not create an independent MCP data store.
+Managed Applications and browser asset registration use their original source declarations in this same contribution. The application provider is `sensorthings`, and its application kind and installed command are `sensorthings-desk`. The original Desk server and its complete browser asset manifest are packaged with the command; the provider retains the existing server and workspace.
+
+The complete standalone source selection is `sensorthings-operator`. Build it with the maintained composer from the complete selected Git commit:
+
+```sh
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/original-checkout \
+  --ref <actual-complete-source-commit> \
+  --selection sensorthings-operator \
+  --out /absolute/selected-distribution
+```
+
+The source recipe and its installation guide remain under `distribution/selections/`. Continue an interrupted build against the same output with the original builder's `--resume` option. The manifest identifies the actual package and source; this documentation does not claim that a receiving host has run a build.
+
+The installed [Desk operator guide](./desk/OPERATOR.md) describes source intake, review, publishing, delivery and saved-request recovery. Its **Analysis & reports** control opens the already-composed analyst interface on this same listener in a separate private tab. It carries the current session only in that original same-origin fragment and leaves the Desk open. Reconcile a pending Desk action before using this control; refresh the Desk after analysis changes the shared workspace revision.
 
 ## 2. Select the actual running workspace
 
@@ -51,7 +66,7 @@ starforge sensorthings schema --workspace /absolute/private/sensorthings-workspa
 
 Do not run a direct workspace command while its managed or command-line listener owns the writer; use its browser or connected client instead.
 
-The original private startup record has schema `stellar-forge.sensorthings-workspace-startup.v1` and fields `workspaceId`, `origin`, `url` and `pid`. Its URL contains the private fragment credential. Keep that record and the session file private. Do not paste the URL into the source contribution, a tool argument, a shared report or a customer package.
+The direct CLI listener returns `stellar-forge.sensorthings-workspace-startup.v1`. The Operations Desk returns its actual `stellar-forge.sensorthings-desk-startup.v1` record with `status: SENSORTHINGS_DESK_READY`. Both retain the persistent `workspaceId`, origin, private URL and actual process identity. Keep the complete record and any session file private. Do not paste the URL into the source contribution, a tool argument, a shared report or a customer package.
 
 ## 3. Create the reference configuration
 
@@ -91,7 +106,14 @@ References inside a connection options file resolve relative to the destination 
 
 For `consoleUrlEnv`, provide only the environment variable name. The setup never reads or exports its value. Ensure the real merchant process inherits that variable; the generated MCP registration does not copy arbitrary process environment or credentials.
 
-For a managed Applications connection, the URL record must contain the original private `url` and `original.schema` equal to `stellar-forge.sensorthings-workspace-startup.v1`, with `original.workspaceId` matching the declared UUID. Select the URL-record filename returned by the original managed launcher. A browser link, a guessed filename or a record for another application is not an equivalent binding.
+For `applicationUrlFile`, select the exact private URL-record filename returned by the maintained Applications launcher. The MCP reader supports both actual source-owned startup formats:
+
+| Retained startup | Required managed binding |
+| --- | --- |
+| `original.schema: stellar-forge.sensorthings-workspace-startup.v1` | The declared original `workspaceId` and outer private `url` |
+| `original.schema: stellar-forge.sensorthings-desk-startup.v1` | Outer `schema: stellar-forge.application-url.v1`, `command: sensorthings-desk`, original `status: SENSORTHINGS_DESK_READY`, the declared original `workspaceId` and outer private `url` |
+
+The shared observer removes `url` from the inner `original` object and retains it on the outer record. Keep this real shape unchanged; do not rewrite a Desk announcement as a generic workspace startup. The provider checks the selected loopback session and authenticates `/api/schema` against the same workspace UUID on every connection. A browser link, a guessed filename or another application's record is not an equivalent binding.
 
 Publishing is create-only. Repeating the same normalized connection options reuses identical bytes. A different existing file is preserved and rejected. To change which workspace an alias selects, create an explicitly selected new connection and merchant setup rather than silently replacing the original binding.
 

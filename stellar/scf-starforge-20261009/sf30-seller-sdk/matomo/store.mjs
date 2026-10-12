@@ -54,7 +54,7 @@ export async function writeNew(path, content) {
   }
   await syncDirectory(dirname(path));
 }
-export async function openMatomoStore({directory, create = false, source, environment = process.env, allowLoopback = false} = {}) {
+export async function openMatomoStore({directory, create = false, source, environment = process.env, allowLoopback = false, receivingOperationId} = {}) {
   let initializing = create;
   if (create) {
     try {
@@ -83,6 +83,18 @@ export async function openMatomoStore({directory, create = false, source, enviro
     if (settings.schema !== SETTINGS || identity(settings.source) !== settings.sourceSha256 ||
         source && identity(sourceConfig(source, {allowLoopback})) !== settings.sourceSha256) throw fault('MATOMO_WORKSPACE_SOURCE_CHANGED');
     sourceConfig(settings.source, {allowLoopback});
+    let receiving = null, received = null;
+    try { receiving = await readJson(join(directory, 'product-receiving.json'), 65536); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (receiving) {
+      try { received = await readJson(join(directory, 'product-received.json'), 1048576); } catch (error) { if (error.code !== 'ENOENT') throw error; }
+      if (receiving.schema !== 'stellar-forge.matomo-product-receiving.v1' ||
+          received && (received.schema !== 'stellar-forge.matomo-product-received.v1' ||
+            received.operationId !== receiving.operationId || received.requestSha256 !== receiving.requestSha256 ||
+            received.workspaceId !== settings.id))
+        throw fault('MATOMO_PRODUCT_RECEIVING_CHANGED');
+      if (!received && receiving.operationId !== receivingOperationId)
+        throw fault('MATOMO_PRODUCT_RECEIVING_INCOMPLETE', 'Continue the original matomo-product receive command before opening this workspace.', 409);
+    }
     const initializedPath = join(directory, 'initialized.json');
     let initialized = null;
     try { initialized = await readJson(initializedPath, 4096); } catch (error) { if (error.code !== 'ENOENT') throw error; }

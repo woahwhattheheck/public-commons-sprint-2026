@@ -206,7 +206,7 @@ function finalizeOptions(options,source){
     merchantRoute:options.merchantRoute??null};
 }
 
-function accountingOutput(context,output){
+export function accountingOutput(context,output){
   need(output?.schema===OPERATION_ACCOUNTING_NATIVE&&
     output.contextSha256===digest(jsonBytes(context))&&
     sameAccountingValue(output.identity,context.identity)&&

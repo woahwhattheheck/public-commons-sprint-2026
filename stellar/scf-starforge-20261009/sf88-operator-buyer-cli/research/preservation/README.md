@@ -1,4 +1,4 @@
-# Research preservation transfers for Archivematica
+# Research preservation transfers
 
 This operator workflow turns a completed native research edition into a reviewed
 BagIt transfer. It keeps the original provider pages, query, coverage and
@@ -10,6 +10,33 @@ the metadata table is `data/metadata/metadata.csv`. The original
 research/OAI intake module performs the source query, cursor, record and
 manifest checks. This module adds review revisions, complete transfer packaging,
 receiving, and comparisons between transfers.
+
+## Browser workbench and repository destinations
+
+The [research preservation workbench](WORKBENCH.md) provides the complete
+browser workflow: source intake, record review, saved revision selection,
+destination preparation, original transfer progress, native package downloads,
+and portable application/workspace receiving.
+
+```sh
+python3 -B research/preservation/workbench.py serve \
+  --workspace /absolute/preservation/project --port 8785
+```
+
+The workbench reuses this original source/review application. Each saved
+destination receives a frozen copy of the selected published review, so a
+later catalogue revision can advance independently.
+
+| Destination | Native package and continuation |
+| --- | --- |
+| Archivematica | This guide: reviewed BagIt transfer with the original source closure |
+| RODA | [Package and submission agreement](RODA.md), [REST upload and ingest continuation](RODA_REST.md) |
+| Preservica | [OPEX producer and operator workflow](PRESERVICA.md), [deployed provider contract](PRESERVICA_PROVIDER_CONTRACT.md) |
+
+The optional Node wrapper routes the same applications through
+`cli.mjs workbench`, `cli.mjs roda`, `cli.mjs roda-client`,
+`cli.mjs preservica` and `cli.mjs preservica-client`.
+Existing preservation commands remain directly available through the wrapper.
 
 ## Start with an existing edition
 
@@ -327,3 +354,78 @@ It adds the entered submission agreement, a complete record catalog, repository
 upload and ingest operations, original job/report/AIP reconciliation, and whole
 application/workspace export and receiving. Use `roda.py` directly or prefix
 commands with `roda` through this directory's existing Node wrapper.
+
+## Continue the same reviewed collection in LIBNOVA
+
+The [LIBNOVA workflow](LIBNOVA.md) prepares the complete reviewed BagIt as
+an original destination package. Its explicit Dublin Core mapping selects
+existing metadata descriptor codes and types. The native client sends the
+original objects to the selected existing S3 endpoint, observes their
+repository file IDs and metadata, and runs the selected existing Function
+once. Final receiving compares the original bytes and mapped metadata,
+retains that Function's job and returned assets, and writes the complete
+evidence and operator report.
+
+The [browser workbench](WORKBENCH.md#libnova) uses that
+same producer and client. Choose a saved review, enter the LIBNOVA mapping
+and deployment settings, then prepare a named destination. The original
+review, BagIt, configuration and operation ID remain together. Its saved
+progress is readable while the client works; a later observation or original
+job reconciliation continues that same destination. The final report,
+evidence and full editable workspace are available from **Delivery**.
+
+The initial profile supports up to 1,000 included bibliographic records and
+1 GiB of original source/export material. The complete native research
+example remains the unchanged 169-record CC0 edition described above.
+Repository-specific acceptance uses the chosen deployment's existing
+container, storage, metadata schema, Function and authorized S3 credentials.
+
+Install the declared dependency in the selected existing Python 3.11 or
+later environment before a LIBNOVA S3 operation:
+
+```sh
+python3 -m pip install -r research/preservation/libnova-requirements.txt
+```
+
+The Workbench, offline package preparation, RODA and Preservica imports
+remain available without importing boto3. Only the LIBNOVA receiving path
+loads that dependency.
+
+The existing Node wrapper routes the complete producer/client commands:
+
+```sh
+node research/preservation/cli.mjs libnova mapping-template
+node research/preservation/cli.mjs libnova-client configuration-template
+
+node research/preservation/cli.mjs libnova prepare \
+  --bag /absolute/reviewed-transfer.zip \
+  --mapping /absolute/libnova-mapping.json \
+  --out /absolute/libnova-prepared
+
+node research/preservation/cli.mjs libnova-client plan \
+  --workspace /absolute/libnova-prepared \
+  --configuration /absolute/libnova-configuration.json \
+  --operation-id original-research-transfer
+
+node research/preservation/cli.mjs libnova-client show \
+  --workspace /absolute/libnova-prepared \
+  --operation-id original-research-transfer
+```
+
+Save complete mapping and configuration files from the installed templates
+and the agreed deployment's real IDs. Configuration files contain names of
+environment variables for secrets. `plan` and `show` make no provider
+request; `run` executes the entered original operation. `refresh` performs
+read-only provider observation. If an original Function response is lost,
+`reconcile` accepts the retained response or its original job ID and verifies
+that job's Function, container and folder binding. It never dispatches a
+replacement Function. After reconciliation, `refresh` continues final
+content and metadata readback.
+
+Use [LIBNOVA_PROVIDER_CONTRACT.md](LIBNOVA_PROVIDER_CONTRACT.md) for the
+source-pinned provider behavior, configuration fields, exact evidence
+templates and receiving limitations. A complete Workbench export includes
+the LIBNOVA producer/client, both guides, dependency declaration, frozen
+source, original operation and retained results. The installed **Research
+preservation** application keeps the original workspace and the same managed
+Python/source checks when opening a LIBNOVA destination.

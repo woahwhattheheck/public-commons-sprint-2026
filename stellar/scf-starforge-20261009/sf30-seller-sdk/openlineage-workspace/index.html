@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>OpenLineage · Operations workspace</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+<a class="skip-link" href="#workspace-main">Skip to workspace</a>
+<header class="app-header">
+  <div class="identity">
+    <span class="product-mark" aria-hidden="true">OL</span>
+    <div><p class="eyebrow">OpenLineage</p><h1 id="workspace-title">Operations workspace</h1></div>
+  </div>
+  <div class="header-controls">
+    <span id="revision-label" class="meta">Connecting…</span>
+    <button type="button" id="refresh-button">Refresh</button>
+    <button type="button" id="connection-button" aria-haspopup="dialog">Connection</button>
+  </div>
+</header>
+<main id="workspace-main">
+  <section class="workspace-toolbar" aria-label="Workspace controls">
+    <label class="edition-picker"><span>Viewing</span><select id="edition-picker" aria-label="Workspace edition"><option value="">Current workspace</option></select></label>
+    <div class="button-row">
+      <button type="button" id="import-button" class="primary" data-write>Import source</button>
+      <button type="button" id="save-edition-button" data-write>Save edition</button>
+      <button type="button" id="export-button">Export</button>
+    </div>
+  </section>
+  <div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+  <section id="pending-panel" class="pending-panel" aria-labelledby="pending-title" hidden></section>
+  <section id="workspace-summary" class="summary-grid" aria-label="Workspace summary"></section>
+  <nav id="section-nav" class="section-nav" aria-label="Workspace views">
+    <button type="button" data-view="runs" aria-current="page">Runs <span data-count="runs">0</span></button>
+    <button type="button" data-view="jobs">Jobs <span data-count="jobs">0</span></button>
+    <button type="button" data-view="datasets">Datasets <span data-count="datasets">0</span></button>
+    <button type="button" data-view="sources">Sources <span data-count="sources">0</span></button>
+    <button type="button" data-view="editions">Editions <span data-count="editions">0</span></button>
+    <button type="button" data-view="reviews">Reviews <span data-count="reviews">0</span></button>
+    <button type="button" data-view="results">Results <span data-count="results">0</span></button>
+    <button type="button" data-view="diagnostics">Attention <span data-count="diagnostics">0</span></button>
+  </nav>
+  <section class="catalog-bar" aria-label="Find records">
+    <div><h2 id="view-title">Runs</h2><p id="view-description" class="muted">Execution history from imported events.</p></div>
+    <div class="filters">
+      <label class="search-field"><span class="sr-only">Search this view</span><input type="search" id="search-input" placeholder="Search names, namespaces or IDs"></label>
+      <label id="state-filter-label"><span class="sr-only">Run state</span><select id="state-filter"><option value="">All states</option></select></label>
+      <label id="attention-filter-label" class="checkbox-label"><input type="checkbox" id="attention-filter">With issues</label>
+    </div>
+  </section>
+  <div class="explorer">
+    <section id="catalog" class="catalog" aria-labelledby="view-title" aria-busy="true"></section>
+    <aside id="inspector" class="inspector" aria-label="Selected record"></aside>
+  </div>
+  <footer class="workspace-footer"><span id="workspace-footnote">Import original OpenLineage JSON or NDJSON to begin.</span><span id="connection-state">Waiting for workspace</span></footer>
+</main>
+
+<dialog id="connection-dialog" aria-labelledby="connection-title">
+  <form id="connection-form">
+    <header class="dialog-header"><h2 id="connection-title">Connection</h2><button type="button" class="icon-button" data-close="connection-dialog" aria-label="Close connection settings">×</button></header>
+    <p id="connection-description">Use the access token configured for this workspace when required.</p>
+    <label>Access token<input id="access-token" type="password" autocomplete="off" spellcheck="false"></label>
+    <p class="field-help">Kept for this browser tab's session. An empty token uses the workspace's open local connection.</p>
+    <div class="dialog-actions"><button type="button" data-close="connection-dialog">Cancel</button><button type="submit" class="primary">Connect</button></div>
+  </form>
+</dialog>
+
+<dialog id="import-dialog" aria-labelledby="import-title">
+  <form id="import-form">
+    <header class="dialog-header"><h2 id="import-title">Import original source</h2><button type="button" class="icon-button" data-close="import-dialog" aria-label="Close source import">×</button></header>
+    <p>Choose a JSON object, JSON array, or NDJSON event file. Original file bytes and event details remain available in Sources.</p>
+    <label>Source file<input id="source-file" type="file" accept=".json,.jsonl,.ndjson,application/json,application/x-ndjson,text/plain"></label>
+    <details class="paste-option"><summary>Paste JSON or NDJSON instead</summary><label>Pasted events<textarea id="source-text" rows="8" spellcheck="false" placeholder='{"eventTime": "…", "run": {…}, "job": {…}}'></textarea></label></details>
+    <div class="form-grid">
+      <label>Source name<input id="source-name" maxlength="240" placeholder="events.ndjson"></label>
+      <label>Original source URL or reference<input id="source-url" placeholder="Optional"></label>
+    </div>
+    <p id="import-feedback" class="form-feedback" role="status"></p>
+    <div class="dialog-actions"><button type="button" data-close="import-dialog">Cancel</button><button type="submit" class="primary" data-write>Import source</button></div>
+  </form>
+</dialog>
+
+<dialog id="edition-dialog" aria-labelledby="edition-title">
+  <form id="edition-form">
+    <header class="dialog-header"><h2 id="edition-title">Save an edition</h2><button type="button" class="icon-button" data-close="edition-dialog" aria-label="Close edition form">×</button></header>
+    <p>A named edition records the current event and source selection for later review, comparison, and result attachment.</p>
+    <p id="edition-context" class="context-note"></p>
+    <label>Edition title<input id="edition-name" required maxlength="240" placeholder="October production review"></label>
+    <label>Description<textarea id="edition-description" rows="4" placeholder="What this edition covers"></textarea></label>
+    <p id="edition-feedback" class="form-feedback" role="status"></p>
+    <div class="dialog-actions"><button type="button" data-close="edition-dialog">Cancel</button><button type="submit" class="primary" data-write>Save current edition</button></div>
+  </form>
+</dialog>
+
+<dialog id="review-dialog" aria-labelledby="review-title">
+  <form id="review-form">
+    <header class="dialog-header"><h2 id="review-title">Record a review</h2><button type="button" class="icon-button" data-close="review-dialog" aria-label="Close review form">×</button></header>
+    <p id="review-context" class="context-note"></p>
+    <label>Review title<input id="review-name" required maxlength="240" placeholder="Reviewed output coverage"></label>
+    <label>Decision<select id="review-decision"><option value="observed">Observed</option><option value="accepted">Accepted</option><option value="needs-work">Needs work</option><option value="excluded">Excluded</option></select></label>
+    <label>Reason<textarea id="review-reason" rows="5" required placeholder="Explain the decision and the relevant source or result."></textarea></label>
+    <p id="review-feedback" class="form-feedback" role="status"></p>
+    <div class="dialog-actions"><button type="button" data-close="review-dialog">Cancel</button><button type="submit" class="primary" data-write>Save review</button></div>
+  </form>
+</dialog>
+
+<dialog id="result-dialog" aria-labelledby="result-title">
+  <form id="result-form">
+    <header class="dialog-header"><h2 id="result-title">Attach a complete result</h2><button type="button" class="icon-button" data-close="result-dialog" aria-label="Close result form">×</button></header>
+    <p id="result-context" class="context-note"></p>
+    <label>Result file<input id="result-file" type="file" required></label>
+    <div class="form-grid">
+      <label>Result name<input id="result-name" required maxlength="240"></label>
+      <label>Saved edition<select id="result-edition" required></select></label>
+    </div>
+    <label>Original source reference<input id="result-reference" required placeholder="Original export, query result, experiment, or retained source location"></label>
+    <label>Query or experiment details<textarea id="result-query" rows="4" placeholder="Optional query text or context"></textarea></label>
+    <p class="field-help">The complete selected file is attached to this entity and edition and included in workspace exports.</p>
+    <p id="result-feedback" class="form-feedback" role="status"></p>
+    <div class="dialog-actions"><button type="button" data-close="result-dialog">Cancel</button><button type="submit" class="primary" data-write>Attach result</button></div>
+  </form>
+</dialog>
+
+<dialog id="export-dialog" aria-labelledby="export-title">
+  <div>
+    <header class="dialog-header"><h2 id="export-title">Export workspace</h2><button type="button" class="icon-button" data-close="export-dialog" aria-label="Close export">×</button></header>
+    <section class="export-option"><h3>Complete editable workspace</h3><p>All original sources, imported events, editions, reviews, attached results, and application source in one package.</p><button type="button" id="download-workspace" class="primary">Download complete workspace</button></section>
+    <section class="export-option"><h3>Current view report</h3><p id="report-context">Download the current workspace view.</p><div class="button-row"><label><span class="sr-only">Report format</span><select id="report-format"><option value="html">HTML report</option><option value="json">JSON data</option><option value="csv">CSV run table</option></select></label><button type="button" id="download-report">Download report</button></div></section>
+    <p id="export-feedback" class="form-feedback" role="status"></p>
+    <details id="reopen-help" hidden><summary>Reopen the complete workspace</summary><p>The package contains the editable application and complete source and result files. Follow the receiving command in the included README to create a new workspace directory, then start its local server.</p></details>
+    <div class="dialog-actions"><button type="button" data-close="export-dialog">Close</button></div>
+  </div>
+</dialog>
+<noscript><p class="notice">Enable JavaScript to use the workspace. The command line interface can also import, inspect, review, and export the same workspace.</p></noscript>
+</body>
+</html>

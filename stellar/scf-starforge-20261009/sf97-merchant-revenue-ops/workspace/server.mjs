@@ -6,6 +6,8 @@ import { pipeline } from 'node:stream/promises';
 import { openBundleDownload } from '../economics/archive.mjs';
 import { openWorkspace, fault } from './model.mjs';
 import { openPlanningWorkspace } from '../planning/workspace.mjs';
+import { openTariffWorkspace } from '../tariffs/workspace.mjs';
+import { handleTariffRequest } from '../tariffs/server.mjs';
 
 const POLICY = "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
 const REPORT_POLICY = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
@@ -14,6 +16,7 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Port must be 0–65535.');
   const model = await openWorkspace(options), token = randomBytes(32).toString('hex');
   const planning = await openPlanningWorkspace({model,directory:options.directory});
+  const tariffs = await openTariffWorkspace({model,directory:options.directory});
   const assets = new Map(await Promise.all([
     ['/', 'index.html','text/html; charset=utf-8'],
     ['/economics','../economics/index.html','text/html; charset=utf-8'],
@@ -25,6 +28,9 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
     ['/planning','../planning/index.html','text/html; charset=utf-8'],
     ['/planning/browser.mjs','../planning/browser.mjs','text/javascript; charset=utf-8'],
     ['/planning/style.css','../planning/style.css','text/css; charset=utf-8'],
+    ['/tariffs/','../tariffs/public/index.html','text/html; charset=utf-8'],
+    ['/tariffs/browser.mjs','../tariffs/public/browser.mjs','text/javascript; charset=utf-8'],
+    ['/tariffs/style.css','../tariffs/public/style.css','text/css; charset=utf-8'],
   ].map(async ([path,name,type]) => [path,{type,bytes:await readFile(new URL(name,import.meta.url))}])));
   let hosts = new Set(), origins = new Set();
   const server = createServer((req,res) => {
@@ -64,8 +70,12 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
           ['cross-site','same-site'].includes(req.headers['sec-fetch-site']))
         throw fault('OPERATOR_ORIGIN_REQUIRED','Open the local operator workspace directly.',403);
       const url = new URL(req.url,`http://${req.headers.host}`);
-      if (url.search || url.hash) throw fault('INVALID_URL','Use the workspace URL without query parameters.',400);
+      if (url.hash || (url.search && !['/api/tariffs/source','/api/tariffs/repricing/source'].includes(url.pathname)))
+        throw fault('INVALID_URL','Use the workspace URL without query parameters.',400);
+      if ((url.pathname === '/api/tariffs' || url.pathname.startsWith('/api/tariffs/')) &&
+          await handleTariffRequest({req,res,url,workspace:tariffs,prefix:'/api/tariffs',authorize,json,reply,body})) return;
       if (req.method === 'GET' || req.method === 'HEAD') {
+        if (url.pathname === '/tariffs') return reply(308,'text/plain; charset=utf-8','Open the tariff workspace.',{location:'/tariffs/'});
         const asset = assets.get(url.pathname);
         if (asset) return reply(200,asset.type,asset.bytes);
         if (url.pathname === '/api/economics/state') return json(200,{...await model.economics.state(),token});
@@ -186,7 +196,8 @@ export async function startWorkspace({port = 8457, ...options} = {}) {
   hosts = new Set([`127.0.0.1:${assigned}`,`localhost:${assigned}`]);
   origins = new Set([...hosts].map(host => `http://${host}`));
   let closing;
-  return {url:`http://127.0.0.1:${assigned}`,planningUrl:`http://127.0.0.1:${assigned}/planning`,server,model,planning,
+  return {url:`http://127.0.0.1:${assigned}`,planningUrl:`http://127.0.0.1:${assigned}/planning`,
+    tariffsUrl:`http://127.0.0.1:${assigned}/tariffs/`,server,model,planning,tariffs,
     close() { return closing ??= new Promise((done,fail) => {
       server.close(error => error ? fail(error) : done()); server.closeIdleConnections?.();
     }); }};

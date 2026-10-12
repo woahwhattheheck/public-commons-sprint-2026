@@ -8,11 +8,15 @@ import {gzipSync, gunzipSync} from 'node:zlib';
 import {acquireDatasetLease} from '../dataset-refresh/writer-lease.mjs';
 import {loadDatasetConfig} from '../dataset-handler.mjs';
 import {inspectDirectusSource,projectDirectusSources,compareDirectusEditions,hash,canonical,fault,object,MAX_SOURCE_BYTES} from './source.mjs';
+import {registerDirectusMerchant,registerDirectusBuyer,registerDirectusDelivery,captureDirectusProjectRuntime,
+  validateDirectusProjectRuntime,restoreDirectusProjectRuntime,directusProjectLocations} from './project.mjs';
+import {registerDirectusBuyerSession,directusBuyerSessionLocations,captureDirectusBuyerSessions,
+  validateDirectusBuyerSessions,restoreDirectusBuyerSessions} from './sessions.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.directus-workspace.v1';
 const FILE = 'directus-datasets.sqlite3';
 const APPLICATION_ID = 1397113944;
-const KINDS = ['sources','editions','reviews','comparisons','publications','native-events'];
+const KINDS = ['sources','editions','reviews','comparisons','publications','native-events','merchant-packages','buyer-configurations','customer-deliveries','buyer-sessions'];
 const HASH = /^[a-f0-9]{64}$/;
 const REQUEST = /^[A-Za-z0-9_.:-]{8,128}$/;
 const now = () => new Date().toISOString();
@@ -99,6 +103,11 @@ function summary(kind,doc) {
     native_operation_ids:doc.native_operation_ids??[],native_event_count:doc.native_event_refs?.length??0};
   if(kind==='native-events')return {...common,operation_id:doc.event.operationId,sequence:doc.event.sequence,
     action:doc.event.action,phase:doc.event.phase,request_sha256:doc.event.requestSha256};
+  if(['merchant-packages','buyer-configurations','customer-deliveries'].includes(kind))return {...common,
+    edition_id:doc.edition.id,edition_sha256:doc.edition.sha256,snapshot:doc.edition.snapshot,
+    files:doc.files.length,bytes:doc.files.reduce((sum,file)=>sum+file.bytes,0),delivery_sha256:doc.delivery_sha256};
+  if(kind==='buyer-sessions')return {...common,buyer_id:doc.buyer_id,session_id:doc.session_id,
+    session_sha256:doc.session_sha256,configuration_sha256:doc.configuration_sha256,snapshot:doc.snapshot};
   if(kind==='comparisons')return {...common,before_id:doc.before_id,after_id:doc.after_id,counts:doc.counts};
   return clone(doc);
 }
@@ -111,7 +120,7 @@ export class DirectusWorkspace {
     try {
       const file=path.join(this.directory,FILE),existed=fs.existsSync(file);
       if(existed)regular(file);
-      this.db=new DatabaseSync(file);
+      this.db=new DatabaseSync(file);fs.chmodSync(file,0o600);
       this.db.exec('PRAGMA busy_timeout=10000; PRAGMA trusted_schema=OFF; PRAGMA journal_mode=DELETE; PRAGMA synchronous=FULL;');
       if(existed) {
         const id=Number(this.db.prepare('PRAGMA application_id').get().application_id);
@@ -163,6 +172,7 @@ export class DirectusWorkspace {
     this.lease.assertHeld();
     return {schema:WORKSPACE_SCHEMA,id:this.meta('workspace_id'),revision:this.revision(),created_at:this.meta('created_at'),
       selected_edition_id:this.meta('selected_edition_id'),selected_review_id:this.meta('selected_review_id'),...Object.fromEntries(KINDS.map(k=>[k,this.list(k)])),
+      project_runtime:{...directusProjectLocations(this),sessions:directusBuyerSessionLocations(this)},
       operation_count:Number(this.db.prepare('SELECT count(*) AS n FROM operations').get().n)};
   }
   read(kind,id,{offset=0,limit=50}={}){
@@ -368,17 +378,25 @@ export class DirectusWorkspace {
         edition:summary('editions',edition),snapshot:edition.snapshot,lineage};
     });
   }
+  retainMerchant(input){return this.run(()=>registerDirectusMerchant(this,input));}
+  retainBuyer(input){return this.run(()=>registerDirectusBuyer(this,input));}
+  retainDelivery(input){return this.run(()=>registerDirectusDelivery(this,input));}
+  retainBuyerSession(input){return this.run(()=>registerDirectusBuyerSession(this,input));}
   exportFile(kind,id){
     return this.run(async()=>{
       const root=path.join(this.directory,'downloads');directory(root);
       let bytes,filename,contentType='application/json; charset=utf-8',file;
       if(kind==='project'){
+        const runtime=await captureDirectusProjectRuntime(this);
+        const sessions=await captureDirectusBuyerSessions(this);
+        this.setMeta('session_custody',sessions);
         filename='Directus_Collection_Datasets_'+this.revision()+'.sqlite3';
-        file=path.join(root,this.meta('workspace_id')+'-'+this.revision()+'.sqlite3');
+        file=path.join(root,this.meta('workspace_id')+'-'+this.revision()+'-'+runtime.sha256+'-'+sessions.sha256+'.sqlite3');
         if(!fs.existsSync(file)){
           const temporary=file+'.partial-'+randomUUID();
           try{
             this.db.exec("VACUUM INTO '"+temporary.replaceAll("'","''")+"'");
+            await fsp.chmod(temporary,0o600);
             const handle=await fsp.open(temporary,'r');try{await handle.sync();}finally{await handle.close();}
             await fsp.link(temporary,file);
           }finally{await fsp.unlink(temporary).catch(error=>{if(error.code!=='ENOENT')throw error;});}
@@ -392,6 +410,10 @@ export class DirectusWorkspace {
             throw fault('DIRECTUS_ARCHIVE_CHANGED','The retained project archive differs from its original workspace.',409);
         }finally{check.close();}
         contentType='application/vnd.sqlite3';
+      }else if(kind==='buyer-config'){
+        const buyer=this.get('buyer-configurations',id),member=buyer.files.find(file=>file.path==='buyer.json');
+        if(!member)throw fault('DIRECTUS_FILE_MISSING','The original buyer configuration is absent.',404);
+        bytes=this.bytes(member.sha256);filename=buyer.id+'.json';
       }else if(kind==='source'){
         const source=this.get('sources',id);bytes=this.bytes(source.raw_sha256);filename=source.id+'.json';
       }else if(kind==='dataset'){
@@ -408,7 +430,7 @@ export class DirectusWorkspace {
   close(){
     if(this.closePromise)return this.closePromise;
     this.closing=true;
-    this.closePromise=(async()=>{await this.tail;this.db.close();await this.lease.close();this.closed=true;})();
+    this.closePromise=(async()=>{try{await this.tail;this.db.close();}finally{try{await this.lease.close();}finally{this.closed=true;}}})();
     return this.closePromise;
   }
 }
@@ -504,7 +526,10 @@ export async function receiveDirectusWorkspace({file,directory:root}={}){
             canonical(projected.records)!==canonical(edition.records))
           throw fault('DIRECTUS_ARCHIVE_PROJECTION','The selected original source does not reproduce its saved customer projection.');
       }
-      target.setMeta('receiving_source',identity);
+      validateDirectusProjectRuntime(target,target.meta('runtime_custody'));
+      validateDirectusBuyerSessions(target,target.meta('session_custody'));
+      target.setMeta('receiving_source',identity);target.setMeta('runtime_locations',{});target.setMeta('receiving_runtime',null);
+      target.setMeta('session_locations',{});target.setMeta('receiving_sessions',null);
       target.db.exec('COMMIT');
     }catch(error){target.db.exec('ROLLBACK');throw error;}
 
@@ -517,6 +542,13 @@ export async function receiveDirectusWorkspace({file,directory:root}={}){
       // Both names referred to the validated SQLite bytes. Retire only our own stage.
       await fsp.unlink(path.join(stage,FILE));
     }
-  }finally{await target?.close();source?.close();await receivingLease.close();}
-  return openDirectusWorkspace({directory:targetRoot});
+  }finally{try{await target?.close();}finally{try{source?.close();}finally{await receivingLease.close();}}}
+  const received=await openDirectusWorkspace({directory:targetRoot});
+  try{
+    await restoreDirectusProjectRuntime(received);
+    await restoreDirectusBuyerSessions(received,received.meta('session_custody'),{
+      sourceArchiveSha256:received.meta('receiving_source').sha256});
+    return received;
+  }
+  catch(error){await received.close();throw error;}
 }

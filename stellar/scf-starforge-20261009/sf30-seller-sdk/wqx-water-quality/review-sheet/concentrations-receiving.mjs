@@ -174,7 +174,7 @@ async function sourcePhase(config,paths,requestSha256) {
       sourcePlanId:plan.planId,sourcePlanSha256:plan.planSha256,captureSha256:plan.captureSha256,reviewSha256:plan.reviewSha256,
       newPlanId:config.newPlanId,reviewId:config.reviewId,previewSha256:preview.previewSha256,
       newPlanSha256:preview.newPlanSha256,documentSha256:openWatersHash(document),reportSha256:report.proposalSha256,
-      scientific,files,completedAt:new Date().toISOString()};
+      scientific,newPlanSummary:preview.plan.summary,files,completedAt:new Date().toISOString()};
     await immutableJson(paths.sourceReady,result);return result;
   } finally { await verified.close(); }
 }

@@ -1,0 +1,200 @@
+{
+  "schema": "stellar-forge.gridfabric-native-receiving-source.v1",
+  "operation": "GRIDFABRIC-PLAID-OPERATIONS-20261012-1FB3",
+  "source_basis": {
+    "domain_commit": "e4d45d076a71a78210a809b8e2e115ece1236084",
+    "application_commit": "51b41100c900db801b9eebd731e127b187ce6d03",
+    "functional_input_commit": "179de76b1087a82c16f8d23fee6f14c3bc5ba00a"
+  },
+  "source_root": "Repository-shaped root; preserve all declared relative paths.",
+  "scope": "Complete direct native application and receiving source. The maintained selected distribution runtime has its own original full package manifest.",
+  "requirements": {
+    "platform": "linux",
+    "node": ">=22.13 with node:sqlite",
+    "commands": [
+      "flock",
+      "GNU mv --no-clobber --no-target-directory",
+      "GNU tar"
+    ],
+    "npm_dependencies": [],
+    "browser": "Optional caller-selected existing Playwright and Chromium."
+  },
+  "input": {
+    "schema": "stellar-forge.gridfabric-functional-input-manifest.v1",
+    "manifest_path": "operations/scf-gridfabric-plaid-receiving-20261012/functional-input-manifest.json",
+    "files": 42,
+    "steps": 51,
+    "checks": 53,
+    "file_comparisons": 7
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+      "git_blob": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/FUNCTIONAL_INPUTS.md",
+      "bytes": 11252,
+      "sha256": "f0f2874724c13a5bde08e5bdadba0a7cae2e92e3e6d68add03b43e04000d74f7",
+      "git_blob": "eb26a0103633ab5a07b844dba6c20cd899036d79"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/functional-input-manifest.json",
+      "bytes": 21758,
+      "sha256": "2f705ea94edf4c8312aa8ce7fd5e57ca9a3dc247c2c63eff0710ce176395c618",
+      "git_blob": "51bdf41f77554a1362c83855a4901e8e05290c81"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/generate-functional-input.mjs",
+      "bytes": 33395,
+      "sha256": "4a6097af12cc0f534b60f475b45cb8acb4ab4df42fc5288f8a65550fd47684af",
+      "git_blob": "446aff52496bf8d7962f1f60d82e8d5af9bad10c"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/README.md",
+      "bytes": 14059,
+      "sha256": "89c7ca4bcb2255a9d3a098bb6c783a6562ca59b9a2fdeaae44ed29b6b0c7865a",
+      "git_blob": "0338c2e4a521441fb50216277208b23ccd4c23a6"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/receiving-config.example.json",
+      "bytes": 158,
+      "sha256": "c168812112ef3b0bac2743ebb7df283aec6c4b52344fb34f1e1e508bc0244956",
+      "git_blob": "a93b0861072df8cee114a2e9d1c0a02ee8665ad0"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/run-browser.mjs",
+      "bytes": 9195,
+      "sha256": "3b53a644a83d30e1695d2fe0fc1b31d78bf6ec1eea07f967da9cf5b46e2ddfad",
+      "git_blob": "ec5e2ad0cfa5b8e58b6a0b4a2712b3a13f64669e"
+    },
+    {
+      "path": "operations/scf-gridfabric-plaid-receiving-20261012/run-receiving.mjs",
+      "bytes": 51094,
+      "sha256": "109d00a5ef48033b2fa8db5fe686bfc0279a91f409c9a87f90de16a6c528d580",
+      "git_blob": "b7389ecab3f384dc9754c8a4195eca0869ee8371"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/gridfabric-plaid.json",
+      "bytes": 3322,
+      "sha256": "2f7867874a0771c425ad9869d0b9444cd26266352d632af0fa1d796cd83499c7",
+      "git_blob": "ca60ad492dea27a12e7641723d568e5499efe66d"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/selections/GRIDFABRIC_PLAID.md",
+      "bytes": 8777,
+      "sha256": "ecce3683d71bb3d985ec1a4e5592b4a5524287b475d8d4170325b446dba2797e",
+      "git_blob": "7a3bb75ebc55b73c097415015ef9513e31437da2"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/selections/gridfabric-plaid.json",
+      "bytes": 14499,
+      "sha256": "3dc9e4276a2625e45f2778dc94466a52cc2c812a4a2c9d208ed64750b4cc26b0",
+      "git_blob": "38128c1d4138d4b43f2ffd71380792d30e474bca"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
+      "bytes": 1776,
+      "sha256": "8b41905d3ad920588a810e52157527ac887eb9785098c4c0f398657905163746",
+      "git_blob": "1c2a8f3a3488bc1c687ad9fdfb2fba7964baaedc"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/cli.mjs",
+      "bytes": 12577,
+      "sha256": "a9cc963a30fda65f864bdec41760d4bfbe231165088c4f39858390ccb044f611",
+      "git_blob": "197f3dd89aa34abbe1a1c5b9169e2ef0328fb42c"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/contracts/management-examples.json",
+      "bytes": 9525,
+      "sha256": "9dacbe313b6bb5b53cb11d426c655367bc4d7548eba7d8d0864765df61c79a82",
+      "git_blob": "b9fa9f03b0f16a8fa98c768c5742e3924cf65459"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/contracts/plaid-public-contract.json",
+      "bytes": 27577,
+      "sha256": "50c4fc14985826b80bdd4cddd8075485ed85f3b6352856183ca9f529c8b72b2c",
+      "git_blob": "cc9602cd460cccc220c683e437dfc79974b67266"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/contracts/SOURCES.md",
+      "bytes": 3744,
+      "sha256": "206bc6b7a289e79202f675ee2af4c25d2c6f70859254a1febd6c598fd9509cc0",
+      "git_blob": "0c8a36327b78b27e6a4c07e9d8f9b60f63174a0b"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/core.cjs",
+      "bytes": 81279,
+      "sha256": "c5183811370dc590e0e3d90d628bbfac2a352b3d8684b769c1f6adec21071f20",
+      "git_blob": "0cc385cb74f1087459191f2ef8d36776dcd54069"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/delivery.mjs",
+      "bytes": 28301,
+      "sha256": "3f42fc9684b9714a6a166be4f3f852f2084655c60a34a2166b91dab2c622eb6e",
+      "git_blob": "1a5897f54cbded9cb945ec18770589211dcddd91"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/DOMAIN_OPERATIONS.md",
+      "bytes": 14034,
+      "sha256": "18b1ac2122b36675c1715d3fe28dd1d86d1ca75747cb0d5a63ccdac5352d149c",
+      "git_blob": "788f17ac01967286b1343a87e17866b2f4cbb2e7"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/files.mjs",
+      "bytes": 8176,
+      "sha256": "2d6ccbec9eb511b1c19a5ebb884c51c133502542cac2f25b796dfc4988022884",
+      "git_blob": "65774a4ef0e1e4b5738ccc890467ef7662f91ca8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/model.cjs",
+      "bytes": 14637,
+      "sha256": "bc74e1f92f544d8ba907e07d23ea58d8b3f4de600d4bca672af98147ca755bf2",
+      "git_blob": "4db377e81e06f11723bc849e3a13cff3fca3ee4a"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/operator.mjs",
+      "bytes": 15303,
+      "sha256": "b2a9082cd7fb9c84f059db7800b240b761b3635efa8327c000d885a9982f3583",
+      "git_blob": "22fe8a11049ddb2ced51f459839992d793d57f60"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/public/app.mjs",
+      "bytes": 51199,
+      "sha256": "5f21c3cb3348e1de4b63caecdfbfd72077e6cfbe43e6f6ced81a77f06a792577",
+      "git_blob": "4f1041a6376378d351b2bf13386391b60fb3dd38"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/public/index.html",
+      "bytes": 17094,
+      "sha256": "9dc265a0074a6a65dc06fb3a0af9fd97a52b5304c90f693b5977507f2bd38e34",
+      "git_blob": "6068fd4ebd33be5e9de0e4859377043978f885ac"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/public/style.css",
+      "bytes": 10350,
+      "sha256": "d0a9ea1dd50c0c1d6ab716b80137dca418dbe9163f24ab2421d59c3434540fdf",
+      "git_blob": "93338b7814d01a88df66c9de1ee9a1acb391fa38"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/README.md",
+      "bytes": 14740,
+      "sha256": "391738889cc2e20111524fbe6f71c25df777177baaebb625f28b3795eda6c9ef",
+      "git_blob": "101c5564bf11556b605b6c4a1f9a146fe0e6754d"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/server.mjs",
+      "bytes": 24418,
+      "sha256": "96eb13ff883024f45880424be6a5a362b99f1e33b36b177140776a07ed0d167a",
+      "git_blob": "f5fbd3b58e1bb93d3bcff981e31dfc927fd4beb8"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/gridfabric-plaid/sqlite-store.mjs",
+      "bytes": 9095,
+      "sha256": "e7298bc44eba15fe21b5ef405dc32829f4540b54cb97f5500ed60ec880155373",
+      "git_blob": "54fe57b100dadf38d57b31117ab2a32e8a836529"
+    }
+  ]
+}

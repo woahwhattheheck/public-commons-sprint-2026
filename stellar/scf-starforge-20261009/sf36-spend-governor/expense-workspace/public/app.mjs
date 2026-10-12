@@ -2,7 +2,7 @@ const content = document.querySelector("#content");
 const noticeBox = document.querySelector("#notice");
 const dirty = new Set();
 let serial = 0;
-const view = {tab:"expenses", item:null, credit:null, refundPacket:null, creditOffset:0, refundOffset:0, source:null, capture:null, period:null, review:null, close:null, issue:null,
+const view = {tab:"expenses", nodeImport:false, item:null, credit:null, refundPacket:null, creditOffset:0, refundOffset:0, source:null, capture:null, period:null, review:null, close:null, issue:null,
               periodEdit:false, setting:"centers", center:null, expensesOffset:0, captureOffset:0, sourceOffset:0,
               historyOffset:0, bookkeepingOffset:0, bookkeeping:null, activityOffset:0, query:"", filterSource:"", filterStatus:""};
 let state = null;
@@ -195,7 +195,7 @@ async function renderExpenses() {
   const bar=el("div",{class:"toolbar"});
   const search=field({name:"search",label:"Search request, service, receipt or memo",value:view.query});search.wrap.classList.add("search");
   const source=field({name:"source",label:"Source",value:view.filterSource,choices:[{value:"",label:"All sources"},...state.sources.map(s=>({value:s.id,label:s.name}))]});
-  const status=field({name:"status",label:"Coding status",value:view.filterStatus,choices:["","UNCODED","CODED","STALE","RESERVED","PAYMENT_UNRESOLVED","FAILED_TRANSACTION","NO_SIGNED_DISPATCH","OBSERVATION_REVIEW","SPENDING_SOURCE_REVIEW","ABSENT"].map(x=>({value:x,label:x||"All states"}))});
+  const status=field({name:"status",label:"Coding status",value:view.filterStatus,choices:["","UNCODED","CODED","STALE","RESERVED","PAYMENT_UNRESOLVED","FAILED_TRANSACTION","NO_SIGNED_DISPATCH","OBSERVATION_REVIEW","SPENDING_SOURCE_REVIEW","NO_PAYMENT_REQUIRED","ACCOUNTING_UNRESOLVED","ABSENT"].map(x=>({value:x,label:x||"All states"}))});
   const apply=()=>navigate(()=>{view.query=search.input.value;view.filterSource=source.input.value;view.filterStatus=status.input.value;view.expensesOffset=0;});
   bar.append(search.wrap,source.wrap,status.wrap,button("Apply filters",apply));
   search.input.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();apply().catch(e=>notify(e.message,true));}});
@@ -204,7 +204,7 @@ async function renderExpenses() {
   content.append(table(["Original request / source","Service / native day","Network / asset","Settled actual","Reserved maximum","Coding",""],data.items.map(item=>{
     const r=item.row;return [el("div",{class:"long"},el("div",{class:"code"},r.request_id),el("div",{class:"quiet"},item.source_name)),
       el("div",{},r.service,el("div",{class:"quiet"},r.day)),el("div",{class:"code"},r.network,el("br"),r.asset),
-      el("span",{class:"code"},r.settled_base_units??"Not established"),el("span",{class:"code"},reservationDisplay(r)),badge(item.status),
+      el("span",{class:"code"},r.state==="unpaid"?"No payment required":r.settled_base_units??"Not established"),el("span",{class:"code"},reservationDisplay(r)),badge(item.status),
       button("Open expense",()=>navigate(()=>{view.item=item.id;}),"small")];
   })),pager(data,x=>navigate(()=>{view.expensesOffset=x;})));
   if(!state.sources.length)content.append(el("div",{class:"card"},el("p",{},"Start by registering the original buyer ledger and reviewing its first capture."),button("Register source",()=>navigate(()=>{view.tab="sources";view.source=null;}),"primary")));
@@ -214,7 +214,7 @@ async function renderExpense(){
   content.append(button("← Expense list",()=>navigate(()=>{view.item=null;}),"small"));
   heading("Expense allocation",item.source_name+" · "+r.request_id);
   const native=el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},"Original native row"),badge(item.status)),
-    facts([["Service",r.service],["Network / asset",r.network+" / "+r.asset],[r.native_date_basis||(r.source_kind==="mcp_quote"?"MCP quote creation day":"Native reservation day"),r.day],["Settled actual",unit(r.settled_base_units,r)],
+    facts([["Service",r.service],["Network / asset",r.network?r.network+" / "+r.asset:"No payment asset"],[r.native_date_basis||(r.source_kind==="mcp_quote"?"MCP quote creation day":"Native reservation day"),r.day],["Settled actual",unit(r.settled_base_units,r)],
            ["Outstanding reservation",reservationDisplay(r)],[["woo_refund","merchant_adjustments"].includes(r.source_kind)?"Original bound purchase":r.source_kind==="mcp_quote"?"Original quoted amount":"Original authorized maximum",r.amount||"Not established"],["Receipt reference",r.receipt_ref||"No receipt reference"],
            ["Request digest",r.request_digest],["Proof digest",r.proof_sha256||"—"],["Accepted source capture",item.capture_id]]));
   content.append(native);
@@ -264,6 +264,20 @@ async function renderExpense(){
       el("details",{},el("summary",{},"Original source and job binding"),el("pre",{class:"pre"},JSON.stringify({event:n.original_event,job:n.declared_job},null,2))),
       button("Open credits and source decisions",()=>navigate(()=>{view.tab="credits";}),"small")));
   }
+  if(r.source_kind==="node_operation"){
+    const n=r.native_detail;
+    content.append(el("section",{class:"card"},el("h2",{},"Original Node accounting operation"),
+      facts([["Original intent",n.node_intent_id],["Original accounting command",n.node_command_id],
+        ["Native accounting outcome",n.native_status],["Original authority",n.record_authority],
+        ["Original source SHA256",n.node_source_sha256],["Original export bytes",n.node_source_bytes],
+        ["Producing attempt",n.attempt_created_at],["Observed response",n.source_observed_at],
+        ["Accounting completion",n.accounting_completed_at],["Original HTTP status",n.http_status??"Not recorded"],
+        ["Operation context",n.data_context],["Original ledger provenance",n.original_operator_ledger||"No ledger used"]]),
+      el("p",{class:"quiet"},r.state==="unpaid"?"The original response required no payment. This retained source creates no expense, payment asset or reservation.":
+        "The original accounting result and source remain retained. Ledger capacity stays in its original source; the imported export makes no reservation or payment."),
+      button("Download exact original export",()=>download("/api/captures/"+item.capture_id+"/node-original","original-node-accounting-export.json")),
+      el("details",{},el("summary",{},"Retained original source and finality fields"),el("pre",{class:"pre"},JSON.stringify(n,null,2)))));
+  }
   if(item.missing||r.state!=="settled"){
     content.append(el("section",{class:"card"},el("h2",{},"Review this row in its period"),el("p",{},"This original row is not available for expense allocation. Its period retains the native payment or reservation state and any required carry-forward or exclusion decision."),
       button("Open period review",()=>navigate(()=>{view.tab="periods";}),"primary")));return;
@@ -306,16 +320,17 @@ async function renderExpense(){
       el("details",{},el("summary",{},c.id),el("pre",{class:"pre"},JSON.stringify(c,null,2)))]))));
 }
 function reservationDisplay(row){
+  if(row.source_kind==="node_operation")return row.state==="unpaid"?"No payment or reservation":"Original ledger remains separate";
   const unverified=row.native_detail?.unverified_spending_exposure;
   if(unverified)return String(row.reserved_base_units||"0")+" linked; "+unverified.amount+" original units awaiting source attribution";
   return row.source_kind&&!["sf36_ledger","governed_mcp"].includes(row.source_kind)?"Separate source":String(row.reserved_base_units);
 }
 function sourceKindLabel(kind){
   return ({woo_refund:"Original customer refund packets",merchant_adjustments:"Original merchant adjustment exports",
-    mcp_quote:"Native MCP quotes",governed_mcp:"Governed native MCP purchases",sf36_ledger:"SF36 ledger"})[kind]||kind;
+    node_operation:"Original Node accounting exports",mcp_quote:"Native MCP quotes",governed_mcp:"Governed native MCP purchases",sf36_ledger:"SF36 ledger"})[kind]||kind;
 }
 function sourcePathLabel(source){
-  return source.immutable_intake?"Original customer packet":source.kind==="governed_mcp"?"Original governed source descriptor":
+  return source.kind==="node_operation"?"Original Node operation identity":source.immutable_intake?"Original customer packet":source.kind==="governed_mcp"?"Original governed source descriptor":
     source.kind==="mcp_quote"?"Original MCP quote directory":"Original ledger";
 }
 function governedSourceSection(source){
@@ -334,16 +349,17 @@ function governedSourceSection(source){
       el("pre",{class:"pre"},JSON.stringify(source.source_notes,null,2))):null);
 }
 async function renderSources(){
+  if(view.nodeImport)return renderNodeImport();
   if(view.capture)return renderCapture();
   if(view.source&&!selectedSource())view.source=null;
-  heading("Source captures","Register an original SF36 ledger, native MCP quote workspace, or governed MCP source joining the quote store to its original spending owner. Each complete capture becomes current after source review.");
+  heading("Source captures","Register an original buyer ledger or MCP source, or import a completed original Node accounting export. Each complete capture becomes current after a named source review.");
   if(view.source){
     const source=selectedSource();
     content.append(button("← All sources",()=>navigate(()=>{view.source=null;}),"small"));
     content.append(el("section",{class:"card"},el("div",{class:"card-header"},el("h2",{},source.name),badge(source.pending.length+" pending")),
       facts([[sourcePathLabel(source),source.path],["Source provenance",source.provenance||"—"],["Accepted capture",source.current_capture||"None"],
-        ["Projection digest",source.projection_sha256||"—"],["Native rows / source transitions",String(source.rows??0)+" / "+String(source.journal_events??0)],["Captured",source.capture_time||"—"]]),
-      el("div",{class:"actions"},source.immutable_intake?button("Import successor original receipt",()=>navigate(()=>{view.tab="credits";view.refundPacket=null;view.credit=null;}),"primary"):button(source.kind==="governed_mcp"?"Capture quotes and original spending":source.kind==="mcp_quote"?"Capture original MCP quotes":"Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
+        ["Projection digest",source.projection_sha256||"—"],["Native rows / source transitions",String(source.rows??0)+" / "+(source.kind==="node_operation"?"No ledger transitions in this export":String(source.journal_events??0))],["Captured",source.capture_time||"—"]]),
+      el("div",{class:"actions"},source.immutable_intake?button(source.kind==="node_operation"?"Import successor Node export":"Import successor original receipt",()=>navigate(()=>{if(source.kind==="node_operation"){view.nodeImport=true;}else{view.tab="credits";view.refundPacket=null;view.credit=null;}}),"primary"):button(source.kind==="governed_mcp"?"Capture quotes and original spending":source.kind==="mcp_quote"?"Capture original MCP quotes":"Capture original ledger",async()=>{if(!discard())return;const result=await mutate("/api/sources/"+source.id+"/capture");view.capture=result.id;view.captureOffset=0;await redrawAfter("New native capture is awaiting review.");},"primary"))));
     if(source.kind==="governed_mcp")content.append(governedSourceSection(source));
     const data=await api("/api/sources/"+source.id+"/captures?offset="+view.sourceOffset+"&limit=20");
     content.append(el("section",{class:"card"},el("h2",{},"Capture history"),
@@ -360,6 +376,7 @@ async function renderSources(){
   }
   content.append(table(["Source / kind","Original source","Accepted rows","Pending captures",""],state.sources.map(s=>[el("div",{},s.name,el("div",{class:"quiet"},sourceKindLabel(s.kind))),el("span",{class:"code"},s.path),String(s.rows??0),String(s.pending.length),
     button("Open source",()=>navigate(()=>{view.source=s.id;view.sourceOffset=0;}),"small")])));
+  content.append(el("section",{class:"card"},el("h2",{},"Original Node operation"),el("p",{},"Import a completed original accounting export with its retained producing attempt, evidence and native outcome."),button("Import Node accounting export",()=>navigate(()=>{view.nodeImport=true;}),"primary")));
   content.append(formCard("Register original buyer ledger",[
     {name:"name",label:"Source name",required:true},
     {name:"data_context",label:"Original operation context",value:state.data_context||"operational",choices:[{value:"operational",label:"Operational buyer source"},{value:"development",label:"Controlled development operation"}],help:"Keep the original source attribution. An accepted workspace retains one operation context."},
@@ -393,6 +410,15 @@ async function renderCapture(){
     facts([["Captured",c.captured_at],["Original rows",(c.source.records??c.source.reservations)],["Journal events / last sequence",String(c.source.journal_events)+" / "+String(c.source.last_sequence)],
       ["Projection digest",c.source.projection_sha256],["Changes","Added "+c.change_counts.ADDED+" · Changed "+c.change_counts.CHANGED+" · Absent "+c.change_counts.ABSENT]]),
     button("Download original capture",()=>download("/api/captures/"+c.id+"/original","native-statement-capture.json"),"small")));
+  if(c.source.kind==="node_operation"){
+    content.append(el("section",{class:"card"},el("h2",{},"Original Node source"),
+      facts([["Intent",c.source.intent_id],["Accounting command",c.source.command_id],["Native outcome",c.source.outcome],
+        ["Original file digest",c.source.source_sha256],["Original bytes",c.source.source_bytes],
+        ["Intake owner",c.node_intake?.operator],["Original provenance",c.node_intake?.provenance],
+        ["Original filename",c.node_intake?.filename]]),
+      el("p",{class:"quiet"},"The exported file contains one original operation, not a complete spending ledger. Unpaid outcomes create no asset or settled expense."),
+      button("Download exact Node export",()=>download("/api/captures/"+c.id+"/node-original","original-node-accounting-export.json"),"small")));
+  }
   if(c.source.kind==="governed_mcp"){
     content.append(governedSourceSection({...c.source,source_issues:c.source.integrity_issues}));
     content.append(el("section",{class:"card"},el("h2",{},"Complete source coverage"),
@@ -441,16 +467,17 @@ function nativeOutcomeSection(report, title="Original native purchase outcomes")
     localTable(["Original request / source","Original source day","Buyer / payment state","Quoted / settled base units","Original spending","Original transaction / result"],rows.map(r=>[
       el("div",{class:"long code"},r.request_id,el("div",{class:"quiet"},r.source_name)),r.quote_day,
       el("div",{},r.native_status,el("div",{class:"quiet"},r.payment_classification),r.missing?el("div",{},"Absent from latest source"):null),
-      el("div",{class:"code"},r.quoted_amount??"Unknown",el("div",{},"Matched: "+(r.settled_actual??"Not established")),
-        el("div",{class:"quiet"},r.network+" / "+r.asset)),
+      el("div",{class:"code"},r.native_status==="NO_PAYMENT_REQUIRED"?"No payment required":r.quoted_amount??"Unknown",
+        el("div",{},"Settled: "+(r.settled_actual??"Not established")),el("div",{class:"quiet"},r.network?r.network+" / "+r.asset:"No payment asset")),
       r.source_kind==="governed_mcp"?el("div",{class:"long code"},r.spending_state||"No native reservation",
         el("div",{},"Reserved: "+r.spending_reserved_base_units),el("div",{},"Original actual: "+(r.spending_actual??"Not settled")),
         el("div",{},"Quote observed: "+(r.observed_settled_actual??"Not established")),
         el("div",{class:"quiet"},r.spending_request_sha256||"No native binding"),
-        r.spending_problems?.length?el("div",{},r.spending_problems.join(" · ")):null):"Separate source",
+        r.spending_problems?.length?el("div",{},r.spending_problems.join(" · ")):null):(r.source_kind==="node_operation"?"Original ledger remains separate":"Separate source"),
       el("div",{class:"long code"},r.receipt_ref||"No original transaction reference",
-        el("div",{class:"quiet"},"Result: "+(r.result_file?.status||"No complete-file record")),
-        el("div",{},r.result_file?.sha256||r.result_preview?.bodySha256||"No recorded result digest"))
+        r.source_kind==="node_operation"?el("div",{},r.node_command_id,el("div",{class:"quiet"},"Observed: "+r.source_observed_at),el("div",{},r.node_source_sha256)):
+        el("div",{},el("div",{class:"quiet"},"Result: "+(r.result_file?.status||"No complete-file record")),
+          el("div",{},r.result_file?.sha256||r.result_preview?.bodySha256||"No recorded result digest")))
     ])));
 }
 
@@ -888,3 +915,138 @@ document.querySelectorAll("nav button").forEach(b=>b.addEventListener("click",()
 document.querySelector("#refresh").addEventListener("click",async()=>{try{await refreshState();if(dirty.size)notify("Current revision loaded. Your unsaved form remains intact.");else{await render();notify("Workspace refreshed.");}}catch(e){notify(e.message,true);}});
 document.querySelector("#complete").addEventListener("click",async e=>{e.currentTarget.disabled=true;try{await download("/api/complete-project","buyer-expense-complete-project.zip");notify("Complete private project downloaded with included source and saved operator state.");}catch(e){notify(e.message,true);}finally{document.querySelector("#complete").disabled=false;}});
 try {await refreshState();await render();}catch(e){content.replaceChildren(el("h1",{},"Open the private workspace URL"),el("p",{},e.message));}
+
+
+async function renderNodeImport(){
+  heading("Import original Node accounting","Retain one unchanged exportAccounting JSON, inspect its original outcome, then review the pending source capture. The ledger and producing operation stay with their original owner.");
+  content.append(button("← Sources",()=>navigate(()=>{view.nodeImport=false;view.capture=null;}),"small"));
+  const storageKey="sf36-node-intake:"+state.id, path="/api/node-operations";
+  let pending=null,candidate=null,generation=0,accepted=false;
+  try{pending=JSON.parse(sessionStorage.getItem(storageKey)||"null");}catch{}
+  if(pending&&(!/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}$/.test(pending.request_id??"")||
+      !Number.isSafeInteger(pending.expected_revision)||typeof pending.payload!=="object"||!pending.payload))
+    throw new Error("The browser's saved intake request is incomplete. Use the original request ID in Activity to recover its retained result.");
+  const result=el("section",{class:"card","aria-live":"polite"}),pinned=pending?.payload||{};
+  const definitions=[
+    {name:"file",label:"Original accounting export JSON",type:"file",required:true,wide:true,help:"Select unchanged exportAccounting output, up to 16 MiB."},
+    {name:"name",label:"Source name",value:pinned.name||"",required:true,maxlength:160},
+    {name:"operator",label:"Intake owner",value:pinned.operator||"",required:true,maxlength:240},
+    {name:"data_context",label:"Original operation context",value:pinned.data_context||state.data_context||"operational",
+      choices:[{value:"operational",label:"Operational source"},{value:"development",label:"Controlled development operation"}]},
+    {name:"provenance",label:"Original source provenance",value:pinned.provenance||"",required:true,multiline:true,wide:true,maxlength:6000,
+      help:"Retain the original operator, operation and source reference. Hash validation checks retained bytes; it does not establish who produced them."}
+  ];
+  const f=formCard("Inspect original export",definitions,"Preview source and native outcome",async(values,form)=>{
+    if(pending)throw new Error("Recover or retry the exact retained request before preparing another import.");
+    const selected=f.fields.file.files[0],current=++generation;
+    const payload=await selectedPayload(selected,values);
+    const preview=await api(path+"/preview",{payload});
+    if(!form.isConnected||current!==generation||f.fields.file.files[0]!==selected)return;
+    candidate={payload,preview,revision:Number(form.dataset.revision)};
+    result.replaceChildren(el("h2",{},"Original source review"),
+      facts([["Original intent",preview.intent_id],["Accounting command",preview.command_id],["Native outcome",preview.outcome],
+        ["Original file digest",preview.source_sha256],["Original bytes",preview.source_bytes],
+        ["Existing source",preview.existing_source_id||"First retained source"],["Native authority",preview.record_authority],
+        ["Previous exact-file capture",preview.previous_capture?preview.previous_capture.id+" · "+preview.previous_capture.status:"None"],
+        ["Current accepted parent",preview.current_capture||"None"],["Reviewed intake action",preview.intake_behavior],
+        ["Producing attempt",preview.attempt_created_at],["Observed response",preview.source_observed_at],
+        ["Accounting completion",preview.accounting_completed_at],
+        ["Settled actual",preview.row.settled_base_units??"Not established"],
+        ["Network / asset",preview.row.network?preview.row.network+" / "+preview.row.asset:"No payment asset"]]),
+      ...preview.notes.map(note=>el("p",{class:"quiet"},note)),
+      button(preview.reuse_capture?"Reopen exact retained capture":"Retain pending source capture",submit,"primary"),
+      el("p",{class:"quiet"},"A separate named source decision makes the capture current. Exact settled rows then use the existing allocation and period workflow."));
+  });
+  f.fields.file.accept=".json,application/json";
+  f.form.addEventListener("input",()=>{if(!pending&&!accepted){generation++;candidate=null;result.replaceChildren(el("p",{},"Preview the current file and choices before retaining a capture."));}});
+  content.append(f.card,result);
+  function setPendingControls(){
+    for(const [name,input]of Object.entries(f.fields))input.disabled=Boolean(pending||accepted)&&name!=="file";
+    f.form.querySelector('button[type="submit"]').disabled=Boolean(pending||accepted);
+  }
+  async function selectedPayload(file,values){
+    if(!file||!file.size||file.size>16_777_216)throw new Error("Choose the complete original Node export up to 16 MiB.");
+    const bytes=new Uint8Array(await file.arrayBuffer()),sha=[...new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))].map(x=>x.toString(16).padStart(2,"0")).join("");
+    let binary="";for(let i=0;i<bytes.length;i+=32768)binary+=String.fromCharCode(...bytes.subarray(i,i+32768));
+    return {name:values.name,operator:values.operator,data_context:values.data_context,provenance:values.provenance,
+      filename:file.name,source_sha256:sha,content_base64:btoa(binary)};
+  }
+  async function showAccepted(response){
+    if(!response?.result?.capture?.id||response.result.capture.source?.kind!=="node_operation")
+      throw new Error("The retained request did not return an original Node capture.");
+    const captured=response.result.capture;
+    if(pending&&(captured.source.source_sha256!==pending.payload.source_sha256||
+        response.request_id!==pending.request_id))throw new Error("The retained response belongs to different original source bytes.");
+    sessionStorage.removeItem(storageKey);pending=null;accepted=true;candidate=null;dirty.delete(f.form);setPendingControls();
+    result.replaceChildren(el("h2",{},"Original capture retained"),facts([["Request",response.request_id],
+      ["Source",response.result.source.id],["Capture",captured.id],["State",captured.status],
+      ["Original file digest",captured.source.source_sha256]]),
+      button("Open retained source review",async()=>{await refreshState();await navigate(()=>{
+        view.nodeImport=false;view.source=response.result.source.id;view.capture=captured.id;view.captureOffset=0;});},"primary"),
+      button("Download retained original file",()=>download("/api/captures/"+captured.id+"/node-original","original-node-accounting-export.json")),
+      button("Import another original export",()=>navigate(()=>{})));
+    try{await refreshState();}catch(e){result.append(el("p",{class:"quiet"},"The capture is saved. Current workspace refresh is unavailable: "+e.message));}
+  }
+  async function recover(quiet=false){
+    if(!pending)return false;
+    try{
+      const record=await api("/api/requests/"+encodeURIComponent(pending.request_id));
+      if(record.operation!==path)throw new Error("This request ID belongs to a different retained operation.");
+      await showAccepted(record.response);return true;
+    }catch(e){
+      if(e.code==="REQUEST_NOT_COMMITTED"){if(!quiet)result.append(el("p",{},"No committed result is retained. Re-select the same original file to retry this exact request."));return false;}
+      throw e;
+    }
+  }
+  function pendingView(message="The exact request identity is retained. Recover its accepted response before retrying."){
+    setPendingControls();
+    result.replaceChildren(el("h2",{},"Retained intake request"),facts([["Request",pending.request_id],
+      ["Expected revision",pending.expected_revision],["Original file digest",pending.payload.source_sha256],
+      ["Original filename",pending.payload.filename]]),el("p",{},message),
+      button("Recover saved request",()=>recover()),
+      button("Retry exact original request",retry),
+      button("Release an uncommitted request",async()=>{
+        if(await recover(true))return;
+        if(!confirm("The server has no committed result for this request. Release this draft so you can preview new choices?"))return;
+        sessionStorage.removeItem(storageKey);pending=null;candidate=null;accepted=false;setPendingControls();
+        result.replaceChildren(el("p",{},"Draft released. Your original file and fields are preserved; preview them again."));
+      }));
+  }
+  async function transmit(payload){
+    try{await showAccepted(await api(path,{...pending,payload}));}
+    catch(e){
+      if(accepted)throw e;
+      pendingView(e.message+" The original request stays retained.");
+      throw e;
+    }
+  }
+  async function submit(){
+    if(!candidate||pending||accepted)throw new Error("Preview the current source first.");
+    const {content_base64,...metadata}=candidate.payload;
+    const prepared={request_id:"node-intake-"+crypto.randomUUID(),expected_revision:candidate.revision,
+      payload:{...metadata,preview_sha256:candidate.preview.preview_sha256}};
+    // Keep the small exact metadata before submission. After reload the same file
+    // supplies the unchanged bytes; an accepted result needs no local file.
+    sessionStorage.setItem(storageKey,JSON.stringify(prepared));pending=prepared;
+    dirty.add(f.form);pendingView();
+    await transmit({...pending.payload,content_base64});
+  }
+  async function retry(){
+    if(!pending)return;
+    if(await recover(true))return;
+    const file=f.fields.file.files[0],reconstructed=await selectedPayload(file,pending.payload);
+    if(reconstructed.source_sha256!==pending.payload.source_sha256||reconstructed.filename!==pending.payload.filename)
+      throw new Error("Retry requires the same original filename and exact bytes.");
+    await transmit({...pending.payload,content_base64:reconstructed.content_base64});
+  }
+  if(pending){dirty.add(f.form);pendingView();}else result.append(el("p",{},"Select the original file and retain its operation provenance."));
+  const lookup=formCard("Recover an earlier Node intake request",[
+    {name:"request_id",label:"Original request ID",required:true,help:"Use the request saved before submission, or find the node_operation.capture entry in retained Activity."}
+  ],"Read retained response",async(values)=>{
+    const record=await api("/api/requests/"+encodeURIComponent(values.request_id));
+    if(record.operation!==path)throw new Error("That request belongs to another operation.");
+    if(pending&&pending.request_id!==values.request_id)throw new Error("Resolve this page's retained request before selecting another.");
+    await showAccepted(record.response);
+  });
+  content.append(lookup.card);
+}

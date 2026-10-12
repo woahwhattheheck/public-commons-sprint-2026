@@ -28,7 +28,7 @@ starforge matomo-remote tools
 starforge matomo-remote tools merchant_matomo_capture_start
 ```
 
-`tools` reads no endpoint or workspace. The 52 descriptions, fields, bounds and annotations come from the same maintained declaration used by the host; the client does not maintain a parallel tool catalog.
+`tools` reads no endpoint or workspace. The current descriptions, fields, bounds and annotations come from the same maintained declaration used by the host; the client does not maintain a parallel tool catalog.
 
 Create private JSON argument files with the exact chosen alias, then use the original commands. For example, `aliases.json` contains `{}`, and `open.json` contains the operator-selected alias under `workspace`:
 
@@ -49,7 +49,7 @@ All normal responses are the original host's structured data. Source numeric lex
 
 ## Revision-bound operations and lost responses
 
-Every one of the 29 original revision-bound mutation tools requires the original `operationId`, `expectedRevision`, `workspaceInstanceId` and the tool's actual input fields. The CLI requires a private command directory:
+Every original revision-bound mutation tool requires the original `operationId`, `expectedRevision`, `workspaceInstanceId` and the tool's actual input fields. The CLI requires a private command directory:
 
 ```sh
 starforge matomo-remote call merchant_matomo_edition_review \
@@ -187,7 +187,7 @@ try {
 }
 ```
 
-`MatomoToolArguments` declares all 52 original input shapes, including source scope, exact enums, array/object mappings, artifact ranges, publisher target revision and handover limit. Integer ranges and identifier patterns remain enforced by the original catalog/native owner. Known common results have explicit types; remaining result objects preserve the original native JSON shape rather than inventing a universal row/result wrapper.
+`MatomoToolArguments` declares every current original input shape, including source scope, exact enums, array/object mappings, artifact ranges, publisher target revision and handover limit. Integer ranges and identifier patterns remain enforced by the original catalog/native owner. Known common results have explicit types; remaining result objects preserve the original native JSON shape rather than inventing a universal row/result wrapper.
 
 `client.call` snapshots its JSON arguments before starting the request. Mutating call failures carry the exact original operation reference in `error.matomoOperation`. Library users must retain their own command/action identity or use the CLI's command directory; the library does not silently write client operation files.
 
@@ -198,3 +198,19 @@ try {
 The original demonstrated Matomo source remains the single retained demo-day Referrers capture: 89 rows across 14 native tables and 15 original responses. The existing original customer handover contains eight SF100 pages and 57 source-file chunks; its original receiver restored the complete retained source and reopened the 89-row edition. Those completed source/receiving facts do not imply a hosted deployment, customer authorization, payment or new remote-client execution.
 
 This remote leaf adds source-owned client/command/transfer functionality to that same product. Its actual installed/remote operation must be recorded separately against the original retained workspace and archive, without recapturing the provider or reconstructing a buyer attempt. Provider permissions, segment access, processed-report transformations and archive truncation remain the original source's declared boundaries.
+
+## Receive an editable workspace through the same remote client
+
+A received source workspace exposes `merchant_matomo_original_records`, `merchant_matomo_original_files` and `merchant_matomo_original_merchant`. They return bounded original-history pages, exact original inventory IDs and a selected saved merchant draft. Explicit `merchant_matomo_merchant_adopt_original` uses the normal current instance, revision and operation identity to create a new local merchant through the original compiler.
+
+The existing artifact selection and retained downloader also support `workspace-origin`, `workspace-archive` and `workspace-original`. Use ID `original` for the manifest or ZIP; use the opaque inventory ID for a source file. The unchanged shared remote-file ceiling remains 8 GiB. A larger permitted whole ZIP uses the original browser or local streamed route.
+
+After an inspected `workspace-archive` has downloaded and reopened successfully, select its exact retained payload through the product receiving command:
+
+~~~sh
+starforge matomo-product inspect --archive /private/download/matomo/payload
+starforge matomo-product receive --archive /private/download/matomo/payload \
+  --directory /private/receiving/matomo-operator --operation-id reviewed-workspace-receiving
+~~~
+
+This creates a new editable authoring workspace and preserves its original full ZIP, extracted files and commercial/action history. Inspect the returned receiving budget and complete [workspace receiving contract](WORKSPACE_RECEIVING.md). The existing `matomo-remote receive` command continues to receive a published source-file customer handover through the original Python customer.

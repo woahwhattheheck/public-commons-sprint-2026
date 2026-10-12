@@ -70,9 +70,14 @@ export async function captureFrictionlessPlan(sourceFile, directory, input) {
   await createFile(join(directory, 'schema.csv'), csvLine(Object.keys(columns)));
   await loadCsvDataset({ ...dataset, file: join(directory, 'schema.csv') });
   await retainCapture(selected, join(directory, 'capture'));
-  const runtime = structuredClone(selected.config);
-  runtime.connection.file = 'capture/capture.json';
-  const runtimeBytes = bytes(runtime);
+  if (typeof selected.queriesText !== 'string')
+    throw fault('PACKAGE_SOURCE_QUERY_TEXT_REQUIRED', 'Use the original source inspector that retains exact query JSON.');
+  // Relocation changes only the capture path. Native query constraints stay in
+  // the original Python serialization instead of crossing JavaScript numbers.
+  const runtimeBytes = Buffer.from('{"schema":"stellar-forge.frictionless-source.v1","connection":' +
+    JSON.stringify({ file: 'capture/capture.json', sha256: selected.captureSha256 }) +
+    ',"queries":' + selected.queriesText + '}\n', 'utf8');
+  if (runtimeBytes.length > 8388608) throw fault('PACKAGE_SOURCE_TOO_LARGE');
   await createFile(join(directory, 'original-source.json'), original);
   await createFile(join(directory, 'source.json'), runtimeBytes);
   const value = { schema: 'stellar-forge.frictionless-dataset-plan.v1', title: input.title.trim(),
@@ -88,6 +93,7 @@ export async function captureFrictionlessPlan(sourceFile, directory, input) {
 
 export const frictionlessPublisherDriver = Object.freeze({
   sourceName: 'Frictionless Data Package',
+  allowSourceSelection: true,
   workspaceSchema: 'stellar-forge.frictionless-publisher-workspace.v1',
   statusSchema: 'stellar-forge.frictionless-publisher-status.v1',
   candidateSchema: 'stellar-forge.frictionless-dataset-candidate.v1',

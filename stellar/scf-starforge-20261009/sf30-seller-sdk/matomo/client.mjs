@@ -11,7 +11,7 @@ function freeze(value){
   if(value&&typeof value==='object'){for(const item of Object.values(value))freeze(item);Object.freeze(value);}
   return value;
 }
-/** Metadata is obtained from the same source-owned 52-tool declaration as the host. */
+/** Metadata is obtained from the same source-owned tool declaration as the host. */
 export const MATOMO_CLIENT_TOOLS=freeze(matomoWorkspaceTools((name,description,properties,required,annotations)=>({
   name,description,inputSchema:{type:'object',additionalProperties:false,properties,required},annotations
 })).map(value=>JSON.parse(JSON.stringify(value))));

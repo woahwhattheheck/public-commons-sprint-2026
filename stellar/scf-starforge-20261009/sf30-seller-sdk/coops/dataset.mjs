@@ -1,5 +1,6 @@
 // MIT. Coastal projections use the original SF30 dataset and original publisher.
 import {join} from 'node:path';
+export {prepareStudyDataset} from './study-dataset.mjs';
 import {privateDirectory,jsonBytes} from '../stellar-expert/store.mjs';
 import {csvBytes} from '../stellar-expert/domain.mjs';
 import {editionRows} from './domain.mjs';

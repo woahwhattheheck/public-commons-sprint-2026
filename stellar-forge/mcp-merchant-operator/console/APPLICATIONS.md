@@ -108,3 +108,7 @@ contracts and provider declarations against an earlier saved binding. Saving
 the displayed review retains a new binding revision with the original drafts,
 workflows, calls and customer records. The complete profile archive carries
 that history through receiving and return.
+
+## gRPC customer workspace
+
+The installed gRPC merchant product exposes this same Merchant Console alongside its native editor and MCP endpoint. Its launch selection binds the complete Console source and private operator directory. Customer files includes the gRPC workspace browser, saved source and operation inspection, frozen service-health event history, four complete workflow recipes, and original resumable exports. Archives restore the native client directory structure and stream large members through the maintained receiving owner. See [CUSTOMER_GRPC.md](CUSTOMER_GRPC.md) for the complete customer procedure.
