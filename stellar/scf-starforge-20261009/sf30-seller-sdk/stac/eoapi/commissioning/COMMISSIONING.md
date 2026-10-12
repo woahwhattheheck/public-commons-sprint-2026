@@ -229,7 +229,9 @@ The original host authenticates the operator, enforces its existing CSRF/body li
 
 The receiving route accepts a host-resolved saved-file ID; the HTTP request cannot choose an arbitrary filesystem path. Bind the package writer to the complete package digest for its original saved-file retry/reconciliation.
 
-The browser module exports `commissioningMarkup()` and `mountCommissioning(element,{dispatch,principals})`. Supply the host's authenticated dispatch function. The panel uses its original connection labels and a monochrome industrial layout, and exposes actual retained source attachment, continuation, comparison, export and receiving.
+The browser module exports `commissioningMarkup()` and `mountCommissioning(element,{dispatch,principals,intentStore})`. Supply the host's authenticated dispatch function. The panel uses its original connection labels and a monochrome industrial layout, and exposes actual retained source attachment, continuation, comparison, export and receiving.
+
+Before plan, run or receiving dispatch, the panel retains the exact operation binding in workspace-keyed session storage. A reload restores the admitted plan draft, selected plan/file and operation IDs, so retry reaches the same original record after a lost reply. The host may provide its own synchronous `intentStore` with `getItem`/`setItem`; successful exact readback is required before dispatch. The selected plan retains its own current run operation. Explicit New plan operation, New run operation and New receiving operation actions create a separate intended record while keeping prior admitted identities in the retained journal.
 
 ## Source contracts
 
