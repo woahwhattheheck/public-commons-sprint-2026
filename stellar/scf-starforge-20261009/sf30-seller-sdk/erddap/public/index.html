@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ERDDAP Data Workbench</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">Starforge · Scientific data</p><h1>ERDDAP Data Workbench</h1></div>
+    <div class="workspace"><strong id="workspace-name">Opening workspace</strong><span id="workspace-counts"></span><button type="button" data-action="refresh">Refresh</button></div>
+  </header>
+  <nav aria-label="Workspace">
+    <button type="button" data-view="catalog" aria-current="page">Catalogue</button>
+    <button type="button" data-view="sources">Sources <span id="source-count"></span></button>
+    <button type="button" data-view="editions">Editions <span id="edition-count"></span></button>
+    <button type="button" data-view="compare">Compare</button>
+    <button type="button" data-view="receive">Receive</button>
+  </nav>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div id="error" role="alert" hidden></div>
+  <main id="main" tabindex="-1"><section class="panel"><h2>Opening the saved workspace</h2><p>Use the private link printed by this workspace's server.</p></section></main>
+  <footer>Exact source responses · Reviewed projections · Portable customer editions</footer>
+  <dialog id="review-dialog" aria-labelledby="review-title">
+    <div class="dialog-head"><h2 id="review-title">Review</h2><button type="button" data-action="close-review" aria-label="Close review">Close</button></div>
+    <div id="review-body"></div><div id="review-actions" class="actions"></div>
+  </dialog>
+</body>
+</html>

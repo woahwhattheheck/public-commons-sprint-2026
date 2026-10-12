@@ -105,7 +105,8 @@ def metadata(raw, did=None, dds=None):
     for item in declared:item["attributes"]=attrs.get(item["name"],{})
     global_attrs=attrs.get("NC_GLOBAL",{})
     supplied_id=global_attrs.get("id",{}).get("value")
-    if did and supplied_id and supplied_id!=did:raise InputError("Metadata belongs to another dataset ID")
+    # NC_GLOBAL.id is the publisher's scientific identifier, not ERDDAP's route ID.
+    # MUR uses MUR-JPL-L4-GLOB-v04.1 while its route is jplMURSST41.
     shapes={}
     if dds is not None:
         try:s=dds.decode("ascii")
@@ -120,7 +121,7 @@ def metadata(raw, did=None, dds=None):
                 if m.group(1) in shapes and shapes[m.group(1)]!=dims:raise InputError("Conflicting DDS variable dimensions")
                 shapes[m.group(1)]=dims
     for item in declared:item["dimensions"]=shapes.get(item["name"],[])
-    return {"datasetId":did or supplied_id,"variables":variables,"dimensions":dimensions,
+    return {"datasetId":did or supplied_id,"publisherId":supplied_id,"variables":variables,"dimensions":dimensions,
       "globalAttributes":global_attrs,"attributes":attrs,"unknownRows":unknown,
       "title":global_attrs.get("title",{}).get("value",did),
       "license":global_attrs.get("license",{}).get("value",""),
@@ -155,9 +156,8 @@ def selection(raw, protocol, meta=None):
             start=_atom(a["start"],"Grid start");stop=_atom(a["stop"],"Grid stop")
             if a["mode"]=="index":
                 if not start.isdigit() or not stop.isdigit() or int(start)>int(stop):raise InputError("Grid indices must be ascending nonnegative integers")
-            elif NUMBER.fullmatch(start) and NUMBER.fullmatch(stop):
-                if Decimal(start)>Decimal(stop):raise InputError("Grid coordinate bounds must be ascending")
-            elif start>stop:raise InputError("Grid time bounds must be ascending")
+            # Coordinate values follow the original axis index order; a descending
+            # latitude/depth axis legitimately has start > stop. The provider validates it.
             names.append(a["name"]);result["axes"].append({"name":a["name"],"mode":a["mode"],"start":start,"stop":stop,"stride":stride})
         if len(set(names))!=len(names):raise InputError("Grid dimension repeated")
         if meta:
@@ -260,6 +260,7 @@ def read_capture(stream):
         with zipfile.ZipFile(stream) as z:
             infos=z.infolist()
             if len(infos)!=6 or {i.filename for i in infos}!=FILES|{"manifest.json"}:raise InputError("ERDDAP source must contain its manifest and five exact original response files")
+            if sum(i.file_size for i in infos)>MAX_SOURCE:raise InputError("Complete uncompressed ERDDAP source exceeds its declared source budget")
             values={}
             for i in infos:
                 if i.file_size>MAX_SOURCE or i.compress_type not in {zipfile.ZIP_STORED,zipfile.ZIP_DEFLATED} or i.flag_bits&1 or i.is_dir() or stat.S_ISLNK(i.external_attr>>16):
