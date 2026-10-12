@@ -265,6 +265,13 @@ def main() -> int:
     transcript = bytearray()
     scanned = approvals = 0
     status = None
+    cancelled = False
+
+    def interrupted(signum, _frame):
+        nonlocal cancelled
+        cancelled = True
+
+    previous_signals = {kind: signal.signal(kind, interrupted) for kind in (signal.SIGINT, signal.SIGTERM)}
     pid, descriptor = pty.fork()
     if pid == 0:
         os.execve(str(node), [str(node), str(HERE / "native-continuation.mjs")], env)
@@ -272,6 +279,7 @@ def main() -> int:
     try:
         deadline = time.monotonic() + 210
         while time.monotonic() < deadline:
+            require(not cancelled, "CHECKOUT_NATIVE_JOURNEY_INTERRUPTED")
             ready, _, _ = select.select([descriptor], [], [], 0.1)
             if ready:
                 try:
@@ -294,9 +302,15 @@ def main() -> int:
         require(status is not None, "CHECKOUT_NATIVE_JOURNEY_TIMEOUT")
         require(os.waitstatus_to_exitcode(status) == 0, "CHECKOUT_NATIVE_JOURNEY_FAILED")
     finally:
-        status = stop_group(pid, status)
-        os.close(descriptor)
-        immutable(terminal_log, bytes(transcript))
+        try:
+            status = stop_group(pid, status)
+        finally:
+            try:
+                os.close(descriptor)
+                immutable(terminal_log, bytes(transcript))
+            finally:
+                for kind, handler in previous_signals.items():
+                    signal.signal(kind, handler)
     summary = json.loads(private_read(fixture / "native-result.json", 1048576))
     require(summary.get("result") == "PASS" and summary.get("operation") == OPERATION,
             "ORIGINAL_CHECKOUT_RESULT_REQUIRED")
@@ -338,3 +352,4 @@ if __name__ == "__main__":
                           "retained": str(Path(sys.argv[sys.argv.index("--retained") + 1]).resolve())
                           if "--retained" in sys.argv else None}), file=sys.stderr, flush=True)
         raise SystemExit(1)
+
