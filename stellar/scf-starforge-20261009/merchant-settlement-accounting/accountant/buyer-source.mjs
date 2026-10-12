@@ -24,7 +24,7 @@ const text=(x,label,max=2000,empty=false)=>{
   check(typeof x==='string'&&x.length<=max&&(empty||x.trim())&&!/[\u0000-\u001f\u007f]/.test(x),'INVALID_BUYER_SOURCE','Retain '+label+' as exact text.');return x;
 };
 const ident=(x,label)=>{check(typeof x==='string'&&ID.test(x),'INVALID_BUYER_SOURCE','Retain the original '+label+'.');return x;};
-const positive=(x,label)=>{check(typeof x==='string'&&/^[1-9]\d{0,99}$/.test(x),'INVALID_BUYER_SOURCE','Retain '+label+' as an exact positive native-unit string.');return BigInt(x);};
+const nativeAmount=(x,label)=>{check(typeof x==='string'&&/^(?:0|[1-9]\d{0,99})$/.test(x),'INVALID_BUYER_SOURCE','Retain '+label+' as an exact nonnegative native-unit string.');return BigInt(x);};
 const date=x=>{check(typeof x==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(x)&&Number.isFinite(Date.parse(x+'T00:00:00Z'))&&new Date(x+'T00:00:00Z').toISOString().slice(0,10)===x,'INVALID_BUYER_SOURCE','Retain the original recognition date.');return x;};
 const sourceLineId=(workspace,kind,row)=>buyerHash('stellar-forge.buyer-accountant-line.v1\n'+workspace+'\n'+kind+'\n'+row.coding_id+'\n'+row.line);
 const rowId=(handoffId,sourceSha,lineId)=>buyerHash('stellar-forge.buyer-accountant-row.v1\n'+handoffId+'\n'+sourceSha+'\n'+lineId);
@@ -76,7 +76,7 @@ export function inspectBuyerSource(input){
       if(kind==='CREDIT')ident(original.credit_id,'credit identity');
       check(Number.isSafeInteger(original.line)&&original.line>0,'INVALID_BUYER_SOURCE','Retain the original positive allocation line number.');
       text(original.network,'network',200);text(original.asset,'asset',1000);text(original.center_code,'cost center code',160);text(original.project,'project',2000,true);text(original.account_code,'account code',160,true);
-      const amount=positive(original.amount,'allocation amount'),maximum=positive(kind==='EXPENSE'?original.settled_actual:original.native_return,'original economic amount');
+      const amount=nativeAmount(original.amount,'allocation amount'),maximum=nativeAmount(kind==='EXPENSE'?original.settled_actual:original.native_return,'original economic amount');
       check(amount<=maximum,'BUYER_ALLOCATION_CHANGED','An allocation exceeds its original economic amount.',409);
       const economicKey=buyerCanonical([kind,kind==='CREDIT'?original.credit_id:original.item_id]);
       const previous=economic.get(economicKey);

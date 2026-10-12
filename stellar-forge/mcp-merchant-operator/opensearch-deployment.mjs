@@ -269,10 +269,12 @@ export class MerchantOpenSearchDeployments {
   releaseArchive(workspace,readId) { return this.#files.release(workspace,readId); }
   async closeWorkspace(workspace) {
     await this.#files.closeScope(workspace);
-    const selected = [this.#customers,this.#archives].map(map => {
-      const pending = map.get(workspace); map.delete(workspace); return pending;
-    }).filter(Boolean);
-    const results = await Promise.allSettled(selected.map(async handle => (await handle).close()));
+    const selected = [this.#customers, this.#archives].map(map => ({ map, pending: map.get(workspace) }))
+      .filter(entry => entry.pending);
+    const results = await Promise.allSettled(selected.map(async ({ map, pending }) => {
+      await (await pending).close();
+      if (map.get(workspace) === pending) map.delete(workspace);
+    }));
     const failed = results.find(result => result.status === 'rejected');
     if (failed) throw failed.reason;
   }
@@ -285,7 +287,7 @@ export class MerchantOpenSearchDeployments {
         const results = await Promise.allSettled([...aliases].map(workspace => this.closeWorkspace(workspace)));
         const failed = [...files,...results].find(result => result.status === 'rejected');
         if (failed) throw failed.reason;
-      })();
+      })().catch(error => { this.#close = null; throw error; });
     }
     return this.#close;
   }

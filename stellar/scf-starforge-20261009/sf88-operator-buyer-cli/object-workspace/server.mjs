@@ -19,6 +19,7 @@ const HELP = `Starforge object buyer workspace
   node server.mjs --state ABSOLUTE_PRIVATE_DIRECTORY [--profile ABSOLUTE_PROFILE_JSON]
        [--operator-settings ABSOLUTE_PRIVATE_PRESET] [--port 8438]
        [--analysis-python ABSOLUTE_PYTHON]
+       [--research-connection-file ABS_PRIVATE_STARTUP --research-directory ABS_RESEARCH]
 
 An optional trusted profile selects existing merchant objects and native buyer
 workspaces. Existing sessions reopen from --state without a profile. The native
@@ -58,9 +59,9 @@ function params(url, names) {
 }
 
 /** Run the native model on a fixed loopback interface, with a per-instance capability. */
-export async function startObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings, analysisPython = 'python3', port = 8438 } = {}) {
+export async function startObjectWorkspace({ stateDirectory, profilePath = null, operatorSettings, analysisPython = 'python3', researchConnectionFile = null, researchDirectory = null, port = 8438 } = {}) {
   if (!Number.isInteger(port) || port < 0 || port > 65535) fail('OBJECT_WORKSPACE_PORT_INVALID');
-  const model = await openObjectWorkspace({ stateDirectory, profilePath, operatorSettings, analysisPython });
+  const model = await openObjectWorkspace({ stateDirectory, profilePath, operatorSettings, analysisPython, researchConnectionFile, researchDirectory });
   const token = randomBytes(32).toString('hex'), tokenBytes = Buffer.from(token);
   const assets = new Map(await Promise.all([
     ['/', 'index.html', 'text/html; charset=utf-8'],
@@ -169,6 +170,7 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         '/api/receiving/receive': ['descriptionName', 'descriptionBase64', 'catalogName', 'catalogBase64'],
         '/api/receiving/review': ['id', 'objectId', 'rowIndex', 'acceptIndex', 'chunkBytes', 'sessionName', 'maxTotalAtomic', 'dailyAtomic'],
         '/api/receiving/create': ['reviewId'],
+        '/api/research/open': ['session','expectedRevision'],
         '/api/analysis/review': ['session', 'expectedRevision', 'name', 'format'],
         '/api/analysis/start': ['kind', 'actionId', 'reviewId'],
         '/api/recovery/review': ['stateRoot'],
@@ -182,6 +184,7 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
       if (url.pathname === '/api/operator/review') return send(200, await model.reviewOperatorSettings(value));
       if (url.pathname === '/api/operator/save') return send(200, await model.saveOperatorSettings(value));
       if (url.pathname === '/api/recovery/review') return send(200, await model.inspectRecovery(value));
+      if (url.pathname === '/api/research/open') return send(200, await model.openResearch(value));
       if (url.pathname === '/api/analysis/review') return send(200, await model.reviewAnalysis(value));
       if (url.pathname === '/api/analysis/start') return send(202, model.startAnalysis(value));
       if (url.pathname === '/api/recovery/start') return send(202, model.startRecovery(value));
@@ -248,7 +251,7 @@ export async function main(argv = process.argv.slice(2)) {
   const options = {};
   for (let i = 0; i < argv.length; i += 2) {
     const key = argv[i];
-    if (!['--state', '--profile', '--operator-settings', '--port', '--analysis-python'].includes(key) || options[key] !== undefined || !argv[i + 1])
+    if (!['--state', '--profile', '--operator-settings', '--port', '--analysis-python', '--research-connection-file', '--research-directory'].includes(key) || options[key] !== undefined || !argv[i + 1])
       fail('OBJECT_WORKSPACE_ARGUMENTS_INVALID');
     options[key] = argv[i + 1];
   }
@@ -257,6 +260,7 @@ export async function main(argv = process.argv.slice(2)) {
   const workspace = await startObjectWorkspace({ stateDirectory: options['--state'],
     profilePath: options['--profile'] ?? null, operatorSettings: options['--operator-settings'],
     analysisPython: options['--analysis-python'] ?? 'python3',
+    researchConnectionFile:options['--research-connection-file']??null,researchDirectory:options['--research-directory']??null,
     port: options['--port'] === undefined ? 8438 : Number(options['--port']) });
   process.stdout.write('Object buyer workspace: ' + workspace.url + '\nKeep this terminal open for original per-chunk approval.\n');
   let stopping = false;
