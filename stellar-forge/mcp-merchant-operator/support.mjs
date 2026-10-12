@@ -21,7 +21,7 @@ import { termsDraftFromDocument, termsDocumentFromDraft } from '../../stellar/sc
 import { workorderFromSources } from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/workorder-source.mjs';
 import {inspectCaseCommissioning,prepareCaseCommissioning,operateCaseCommissioning} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/case-commissioning.mjs';
 import {commissioningSummary,commissioningReport,commissioningTasksCsv} from '../../stellar/scf-starforge-20261009/sf74-merchant-support-console/commissioning.mjs';
-import { failure, exact, identifier, writePrivate, privateSupportDirectory } from './config.mjs';
+import { failure, exact, identifier, writePrivate, privateSupportDirectory } from './host-files.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 
 const sha = bytes => createHash('sha256').update(bytes).digest('hex');
