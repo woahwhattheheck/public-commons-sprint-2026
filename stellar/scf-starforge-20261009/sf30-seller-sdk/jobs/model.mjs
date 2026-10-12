@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { validateJobInput, digest, JOB_ID, HASH, jobError, plain } from './config.mjs';
 import { readJobMerchantSource } from './source-binding.mjs';
 import { openJobStore } from './store.mjs';
+import { openInputStore } from './inputs/store.mjs';
 import { executeJob } from './execution.mjs';
 import { openOutbox, instrumentNativeSettlement, SCHEMA as NATIVE_EVENT_SCHEMA } from '../../sf98-merchant-delivery/outbox.mjs';
 
@@ -49,6 +50,17 @@ export async function openJobMerchant({ configPath, directory, env = process.env
   let outbox;
   try { outbox = await openOutbox(join(directory, 'outbox')); }
   catch (error) { await store.close(); throw error; }
+  const preparingInputs = new Map();
+  let inputs = null;
+  try {
+    if (Object.values(source.compiled.functions).some(definition => definition.inputFiles))
+      inputs = await openInputStore({ directory: join(directory, 'input-files'), lease: store,
+        limits: source.compiled.inputFileStorage, canDiscard: plan => {
+          if (preparingInputs.has(plan.reference)) return false;
+          try { store.get(plan.reference); return false; }
+          catch (error) { if (error.code === 'JOB_NOT_FOUND') return true; throw error; }
+        } });
+  } catch (error) { await store.close(); throw error; }
   const active = new Map();
   let workerRunning = false, pumping = null, pumpAgain = false, closed = false, closing = null;
   let mode = 'STOPPED', sellerUrl = null, lastWorkerError = null, lastNativeError = null;
@@ -191,7 +203,7 @@ export async function openJobMerchant({ configPath, directory, env = process.env
           throw error;
         }
         const attempt = row.attempts.at(-1);
-        slot.promise = executeJob(source, row, attempt, { env, signal: slot.controller.signal })
+        slot.promise = executeJob(source, row, attempt, { env, signal: slot.controller.signal, inputDirectory: inputs?.directory })
           .then(body => finishAttempt(row.id, attempt.id, body, null), error => finishAttempt(row.id, attempt.id, null, error))
           .catch(error => { lastWorkerError = /^JOB_[A-Z_]+$/.test(error.code ?? '') ? error.code : 'JOB_STORAGE_UNAVAILABLE'; workerRunning = false; })
           .finally(() => { active.delete(row.id); schedule(); });
@@ -228,10 +240,10 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       });
     }
     await reconcile();
-  } catch (error) { await store.close(); throw error; }
+  } catch (error) { await inputs?.close(); await store.close(); throw error; }
 
   const model = {
-    directory, configPath: source.configPath, configuration: source.compiled,
+    directory, configPath: source.configPath, configuration: source.compiled, inputs,
     async snapshot() {
       assertOpen();
       const rows = store.rows(), counts = {};
@@ -241,7 +253,7 @@ export async function openJobMerchant({ configPath, directory, env = process.env
         serviceName: source.compiled.serviceName, publicOrigin: source.compiled.publicOrigin, mode, sellerUrl,
         worker: { running: workerRunning, draining: !workerRunning && active.size > 0,
           active: active.size, maxConcurrency: source.compiled.workerCount, error: lastWorkerError },
-        storage: store.fault ?? 'ready', nativeActivationError: lastNativeError,
+        storage: store.fault ?? 'ready', inputStorage: inputs?.capacity() ?? null, nativeActivationError: lastNativeError,
         functions: Object.values(source.compiled.functions).map(({ inputOffer, offer, ...definition }) => structuredClone(definition)),
         jobs: rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id)).map(summary),
         counts, eventExceptions: structuredClone(eventExceptions) };
@@ -250,7 +262,7 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       const { claimTokenHash, ...row } = rowFor(id);
       return { ...row, ...urls(id), nativeSettlement: row.settlement ? { id: row.settlement.id, at: row.settlement.at } : null };
     },
-    async createJob({ functionId, input, label: requestedLabel, reference, claimToken } = {}) {
+    async createJob({ functionId, input, label: requestedLabel, reference, claimToken, signal } = {}) {
       assertOpen();
       const definition = source.compiled.functions[functionId];
       if (!definition) fail('JOB_FUNCTION_NOT_FOUND', 404);
@@ -269,12 +281,25 @@ export async function openJobMerchant({ configPath, directory, env = process.env
       } else {
         if (store.rows().filter(item => pendingStates.has(item.state)).length >= source.compiled.maxPending)
           fail('JOB_QUEUE_FULL', 429);
-        const at = now();
-        row = await store.create({ schema: 'stellar-forge.application-job.v1', id, functionId,
-          label: label(requestedLabel, id), state: 'PREPARED', revision: 1, createdAt: at, updatedAt: at,
-          submittedAt: null, ...validated, claimTokenHash: digest(token), source: source.identity,
-          payment: structuredClone(definition.payment), settlement: null, result: null, error: null,
-          attempts: [], history: [{ at, action: 'prepared', state: 'PREPARED' }] });
+        // Reserve the reference across both stores. Orphan cleanup cannot
+        // retire a newly pinned file before the original job commit is visible.
+        if (definition.inputFiles) preparingInputs.set(id, (preparingInputs.get(id) ?? 0) + 1);
+        try {
+          if (definition.inputFiles) await inputs.pinJob({ origin: source.compiled.publicOrigin,
+            reference: id, functionId, input: validated.input, inputSha256: validated.inputSha256,
+            policy: definition.inputFiles, token: claimToken, signal });
+          const at = now();
+          row = await store.create({ schema: 'stellar-forge.application-job.v1', id, functionId,
+            label: label(requestedLabel, id), state: 'PREPARED', revision: 1, createdAt: at, updatedAt: at,
+            submittedAt: null, ...validated, claimTokenHash: digest(token), source: source.identity,
+            payment: structuredClone(definition.payment), settlement: null, result: null, error: null,
+            attempts: [], history: [{ at, action: 'prepared', state: 'PREPARED' }] });
+        } finally {
+          if (definition.inputFiles) {
+            const remaining = preparingInputs.get(id) - 1;
+            if (remaining) preparingInputs.set(id, remaining); else preparingInputs.delete(id);
+          }
+        }
       }
       return handoff(row, token, !existing);
     },
@@ -378,7 +403,14 @@ export async function openJobMerchant({ configPath, directory, env = process.env
     async customerResult({ id, token } = {}) { return output(customerRow(id, token)); },
     async close() {
       if (closing) return closing;
-      closing = (async () => { await stopWorker(); await store.close(); closed = true; return { stopped: true }; })();
+      closing = (async () => {
+        const errors = [];
+        for (const stop of [() => stopWorker(), () => inputs?.close(), () => store.close()])
+          try { await stop(); } catch (error) { errors.push(error); }
+        closed = true;
+        if (errors.length) throw new AggregateError(errors, 'JOB_MERCHANT_CLOSE_FAILED');
+        return { stopped: true };
+      })();
       return closing;
     },
   };
