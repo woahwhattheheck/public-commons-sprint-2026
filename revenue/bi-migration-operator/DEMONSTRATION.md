@@ -54,3 +54,20 @@ Those local exercises cover the actual operator, generated native file formats, 
 SOURCE.json, counting-basis.json, footnotes.json and source_warnings.json retain the original public report interpretation. Group A counts and arrest-based Group B are distinct. The original population labels and combined 2023/2024 applicability are retained. Regional calculations use the Sheriff's total once, without adding its component jurisdictions again. Published summary controls remain independent of detailed source tables; differences between them remain visible.
 
 The original public report and extraction provenance are linked in SOURCE.json. SOLICITATION_SCOPE.md records the separately reviewed current procurement scope and source references. Use actual customer exports and approved receiving access for the contracted report family.
+
+## SQL Server operating workflow — 12 October 2026
+
+The integrated SQL Server workflow completed one retained operation, `sqljourney-290aaa4b0a70c94aa5bd`, at 02:55:40 UTC. It used all 5,037 rows from the bundled, published SANDAG OffenseCells CSV, whose SHA256 is `3d61804ae639c7e7907da106ca18d313973846f9748b36495b590e847fa153a4`. Four separately identified Practice columns exercised exact decimal(38,8), bigint, datetime2(7), and binary transport. The agency source columns and original CSV remained unchanged.
+
+The actual application/worker path completed these connected operations:
+
+- Native declaration/catalog projection, typed generated keyset query, original metadata preflight and explicit query review.
+- Eight committed result pages at a reviewed maximum of 637 rows/page. The third response was deliberately lost; the same operation preserved its first two pages and pending cursor, reopened, continued, canceled after four committed pages, then completed all 5,037 rows. Nine query calls included that one lost response. Reopening the completed operation added zero query calls.
+- A complete comparison against the original published source passed. One saved cell change produced exactly one different cell with no duplicate keys, extra rows or missing rows. A linked correction passed. Separate one-unit changes in the eighth decimal place and seventh timestamp fractional digit were both detected.
+- A reviewed mapping of every original model field generated the complete mapped CSV and built the existing native Power BI project. The builder used the existing jsonschema dependency closure after the initial Python environment reported that dependency missing.
+- A second workspace received 22 records and 35 original revisions. The same bundle reopened its original accepted receipt. Independent profile edits created one conflict; the receiving operator retained both complete branches and exported them again with their source identities.
+- An encrypted cold restore reopened 38 original record heads with identical payload hashes and original business IDs, while issuing a new browser access key. Receiving and restoration started zero database jobs.
+
+This complete operating run used the included explicit local protocol carrier and the unchanged released driver declaration/type contract. It opened zero SQL Server connections. Actual SQL Server execution uses the same prepared native job with the operator's configured host, credentials and existing pinned driver installation. Each received page retains the source driver's `single-statement-database-isolation` label and its own observed boundary.
+
+Reproduce the complete retained operation through `examples/SQL_SERVER_JOURNEY.py`; then use `examples/SQL_SERVER_UI.mjs` to continue its completed state through the actual browser. The UI entrypoint does not start native capture jobs. Full instructions are in [tools/sql-server/GUIDE.md](tools/sql-server/GUIDE.md).

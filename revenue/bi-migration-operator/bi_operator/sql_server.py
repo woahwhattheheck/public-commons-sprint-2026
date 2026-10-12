@@ -153,8 +153,12 @@ def pagination(value, definition):
         for key in keys:
             if key.get("parameter") not in definition["parameters"]:
                 raise ValueError("Every cursor field needs its exact declared parameter.")
-        if value.get("start_parameter") not in definition["parameters"]:
-            raise ValueError("The cursor needs its explicit first-page parameter.")
+        if (value.get("start_parameter") not in definition["parameters"]
+            or definition["parameters"][value["start_parameter"]].get("type") != "boolean"):
+            raise ValueError("The cursor needs its explicit Boolean first-page parameter.")
+        parameter_names = [k["parameter"] for k in keys]
+        if len(set(parameter_names)) != len(parameter_names) or value["start_parameter"] in parameter_names:
+            raise ValueError("Every cursor component and the first-page flag needs a distinct parameter.")
         value["review_reference"] = text(value.get("review_reference"), "Unique, nonnull cursor source/review", 4000)
     for key, low, high, default in (("max_pages", 1, 1000, 100), ("max_total_rows", 1, 1000000, 100000), ("max_total_bytes", 1024, 50331648, 50331648)):
         value[key] = int(value.get(key, default))
@@ -309,8 +313,8 @@ class SqlServer:
         for name in ordered:
             if name not in aliases or columns[name].get("nullable") != "NO":
                 raise ValueError("Every cursor key must be a selected, nonnull native column.")
-            if type_parameter(columns[name])["type"] in ("number", "boolean"):
-                raise ValueError("Select an exact integer, decimal, temporal or text cursor key.")
+            if type_parameter(columns[name])["type"] == "number":
+                raise ValueError("Project an exact integer, decimal, Boolean, temporal or text cursor key.")
         native_primary = {c["name"] for c in catalog["columns"] if c.get("keyKind") == "PRI"}
         native_unique = bool(native_primary) and native_primary.issubset(set(ordered))
         review = ("Original complete primary key in " + catalog_job["id"] if native_unique
@@ -365,6 +369,19 @@ class SqlServer:
             raise ValueError("The native preflight lacks its exact projection metadata.")
         payload = copy.deepcopy(query["payload"])
         payload["expected_column_types"] = result["column_types"]
+        if payload["pagination"]["mode"] == "keyset":
+            types = {c["name"]:c for c in result["column_types"]}
+            for key in payload["pagination"]["keys"]:
+                column = types.get(key["column"])
+                spec = payload["definition"]["parameters"][key["parameter"]]
+                if not column or column["nullable"] or column["encoding"] == "binary" or not spec.get("nullable"):
+                    raise ValueError("Each cursor needs a nonnull nonbinary output and a nullable first-page parameter.")
+                native = column["type"].lower().split("(")[0]
+                allowed = {"integer":{"tinyint","smallint","int","bigint"},
+                           "decimal":{"decimal","numeric","money","smallmoney"},
+                           "boolean":{"bit"}, "number":{"float","real"}}
+                if spec["type"] in allowed and native not in allowed[spec["type"]]:
+                    raise ValueError("The cursor parameter must preserve its exact native output type; use a reviewed explicit projection.")
         payload["review"] = {"query_sha256": payload["query_sha256"], "preflight_job": request["preflight_job_id"],
                              "result_sha256": job["result_bundle"]["digest"], "reviewed_at": now(),
                              "reviewer": self.service.actor,

@@ -103,3 +103,23 @@ Portable job/result/handoff inputs are limited to64MiB per compressed ZIP or mem
 The native source is unchanged from [the released SF30 MSSQL implementation](https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/f18c68077478e1cf7063e5c38be86f0edab39d7a/stellar/scf-starforge-20261009/sf30-seller-sdk/mssql). Its eight original blobs are in DRIVER_SOURCE.json. Runtime reuse uses Node’s documented [synchronous module hook](https://github.com/nodejs/node/blob/v22.16.0/doc/api/module.md#moduleregisterhooksoptions), available from22.15, to resolve only the selected existing mssql package; original driver source bytes remain unchanged.
 
 The complete published-data exercise is `examples/SQL_SERVER_JOURNEY.py`. Its explicitly named protocol carrier validates the original driver declarations and processes the actual bundled SANDAG aggregate rows through the full local application/capture/receiving lifecycle. That carrier is not a SQL Server instance and does not claim customer database execution. Native SQL Server execution uses the original equipped-host job above and retains the returned original provider results.
+
+## Complete retained operating example
+
+The source includes a full application/worker operation using all 5,037 original published SANDAG aggregate rows and four explicitly identified native-type Practice fields. Its local protocol carrier uses the unchanged released declaration and parameter validation; it does not connect to a SQL Server instance.
+
+Run it with the same Python dependencies as the ordinary BI builder and an existing Node 22.16+ executable:
+
+```sh
+python -B examples/SQL_SERVER_JOURNEY.py --operation /private/sql-operating-example --node /existing/node
+```
+
+The private operation directory retains `JOURNEY.json`, exact source input, original job packages and committed pages, complete source/receiver workspaces, the encrypted backup and `RESULT.json`. Run that same command after an interruption to continue its saved phase. The original completed capture is reused. The recovery passphrase is retained privately within this example's operation folder; move its backup/passphrase separately under the receiving operator's normal storage arrangement.
+
+After the native operation completes, continue that same state through an existing browser runtime:
+
+```sh
+node examples/SQL_SERVER_UI.mjs --operation=/private/sql-operating-example --python=/existing/python --playwright=/existing/playwright/index.js --chromium=/existing/chromium
+```
+
+This UI continuation opens the original source, receiving and cold-restored workspaces. It retains browser actions, exact downloads and screenshots in the private `ui/` operation folder. `UI-STATE.json` makes a resumed invocation continue its original progress. No native SQL job is launched by the browser exercise. Keep the Python dependency environment used for the native run when invoking the UI carrier. Both entrypoints and all source data are portable; no fixed cloud-container path is required.
