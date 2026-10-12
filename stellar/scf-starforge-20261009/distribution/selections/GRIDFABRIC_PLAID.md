@@ -10,7 +10,7 @@ The GridFabric contribution exposes the original CLI and its actual workspace, H
 
 The recipe extends the existing `leap-intervals` selection without changing its original components, provider registrations, Utility implementation members or feature groups. It adds one product contribution and the complete GridFabric application and receiving component directories. Explicit support members preserve the source declaration and original functional generator/data manifest.
 
-The resulting recipe selects 10 source-owned contributions and 36 complete component directories. The builder still discovers static imports and declared dynamic resources. A missing actual import or declaration remains a build failure; a complete installed runtime is established only by its original installer receipt.
+The resulting recipe selects 10 source-owned contributions and 37 complete component directories. The builder still discovers static imports and declared dynamic resources. A missing actual import or declaration remains a build failure; a complete installed runtime is established only by its original installer receipt.
 
 ## Build the original package
 
@@ -82,9 +82,39 @@ Closing the owner drains active requests and in-flight dispatch handling before 
 
 Use the complete [operator guide](../../sf30-seller-sdk/gridfabric-plaid/README.md) for source intake, explicit mappings, full report paging and downloads, reviewed event continuation, original opt decisions, uncertain dispatch reconciliation, complete portable export and cold reopen. Original evidence and provider receipts remain distinct from authored input and functional results.
 
+## SDK, merchant MCP and managed Applications
+
+The same GridFabric contribution now exports the complete typed SDK, all 38 merchant tools and the managed application provider. The package retains all original Utility and Leap composition, base commands and complete distribution components. Its explicit support declaration also includes every new GridFabric SDK, MCP, application and receiving member.
+
+The public SDK entry exports `runGridFabricSdkReceiving` alongside the complete native operation client and retained file transfer. The callback uses an existing live original workspace, receives its full atomic portable archive, restores a sibling, compares all 20 native/host collections and every immutable file, exercises MCP receiving and same-request recovery, and closes its cold owner before returning. Use the [SDK and MCP guide](../../sf30-seller-sdk/gridfabric-plaid/SDK_MCP.md) for full inputs and configuration.
+
+The managed application is registered under `gridfabric-plaid`, with the `gridfabric-application` command. The [managed application guide](../../sf30-seller-sdk/gridfabric-plaid/MANAGED_APPLICATION.md) explains installation binding, application Save/Start/recover/Stop, private connection publication and source-owned cleanup.
+
+After the native populated workspace is closed, run the complete managed receiver from this same installed package:
+
+```sh
+node /retained/gridfabric-runtime/package/source/operations/scf-gridfabric-plaid-managed-receiving-20261012/run-receiving.mjs \
+  --configuration /private/gridfabric-managed-receiving.json
+```
+
+Prepare the private configuration using the [complete managed receiving guide](../../../../operations/scf-gridfabric-plaid-managed-receiving-20261012/README.md). It names the actual READY runtime, existing Applications workspace, populated original GridFabric workspace and retained export/restore request UUIDs.
+
+This continuation runs the SDK/MCP callback, compares all original tables and files through managed Stop/restart, opens the fully restored sibling through its own saved application, proves each original native lease has closed, and creates `GridFabric_Managed_Customer_Result.tar.gz`. Its original receiving journal resumes unfinished phases and packaging with their retained inputs.
+
 ## Complete native receiving
 
-After selecting the actual READY source, create the private configuration from the [receiving guide](../../../../operations/scf-gridfabric-plaid-receiving-20261012/README.md). Set `sourceRoot` to that installed package's original source directory, the exact joined commit, and a retained private output directory.
+After selecting the actual READY source, create the private configuration from the [receiving guide](../../../../operations/scf-gridfabric-plaid-receiving-20261012/README.md). For a new receiving journey on this expanded package, use the receiver's existing `sourceManifest` input to select the full manifest written by the maintained builder:
+
+```json
+{
+  "sourceRoot": "/retained/gridfabric-runtime/package/source",
+  "sourceManifest": "/retained/gridfabric-runtime/package/manifest.json",
+  "sourceCommit": "FULL_JOINED_SOURCE_COMMIT",
+  "outputDirectory": "/private/gridfabric-native-receiving"
+}
+```
+
+The original receiver verifies every manifest member's actual path, length and SHA-256 before importing the application. The original 42-file functional input, 51 steps, 53 checks and seven complete comparisons remain unchanged. Its earlier direct-source declaration remains available for the original frozen source cut. An already-started journey continues with its original configuration, source and output directory.
 
 ```sh
 node /retained/gridfabric-runtime/package/source/operations/scf-gridfabric-plaid-receiving-20261012/run-receiving.mjs \
