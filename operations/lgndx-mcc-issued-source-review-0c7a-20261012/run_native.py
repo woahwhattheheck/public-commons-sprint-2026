@@ -46,6 +46,7 @@ handoff=Path(selection['baseline_handoff']['path']);verify(handoff,selection['ba
 PRIVATE.mkdir(mode=0o700,parents=True,exist_ok=True)
 checkpoint=ROOT/'native-state.tar.gz'
 if checkpoint.exists() and not (PRIVATE/'operation.json').exists():
+ restored_journal=None
  with tarfile.open(checkpoint,'r:gz') as saved:
   for item in saved:
    relative=PurePosixPath(item.name)
@@ -56,7 +57,14 @@ if checkpoint.exists() and not (PRIVATE/'operation.json').exists():
    if not item.isfile():raise RuntimeError('Checkpoint requires original ordinary files')
    stream=saved.extractfile(item)
    if stream is None:raise RuntimeError('Checkpoint member missing')
-   with stream:put(target,stream.read())
+   with stream:body=stream.read()
+   if str(relative)=='operation.json':
+    restored_journal=body
+   else:put(target,body)
+ if restored_journal is None:raise RuntimeError('Retained paired checkpoint has no operation journal')
+ restored=json.loads(restored_journal)
+ if restored.get('operation')!=OP:raise RuntimeError('Retained checkpoint operation changed')
+ put(PRIVATE/'operation.json',restored_journal)
 with zipfile.ZipFile(source) as z:
  manifest=json.loads(z.read('SOURCE_MANIFEST.json'))
  for item in manifest['files']:

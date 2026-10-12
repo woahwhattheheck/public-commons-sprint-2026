@@ -91,7 +91,10 @@ def main():
     raise RuntimeError('The original source identity changed: '+path)
    files[path]=body
  if len(files)!=36:raise RuntimeError('The original source closure is incomplete')
- overlays=json.loads((own/'source-overlay.json').read_text())
+ overlay=json.loads((own/'source-overlay.json').read_text())
+ if not isinstance(overlay,dict) or overlay.get('source_ref')!=REF or not isinstance(overlay.get('files'),list):
+  raise RuntimeError('The exact current MCC source envelope changed')
+ overlays=overlay['files']
  required={PREFIX+'/references/issued-source-review/'+name for name in
            ('README.md','apply_issued_review.mjs','issued-inputs.json','prepare_issued_review.py','review-edits.json')}
  required.add('stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/dossier.mjs')
