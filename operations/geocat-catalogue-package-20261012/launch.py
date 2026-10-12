@@ -14,16 +14,33 @@ def terminal_control(fd):
         if error.errno != errno.ENOTTY: raise
         return ("noncontrolling", None)
 
-def slave_identity(fd, path):
+def numbered_slave_path(value):
+    selected = Path(value)
+    need(str(selected) == value and selected.parent == Path("/dev/pts") and
+         selected.name and all("0" <= char <= "9" for char in selected.name),
+         "ORIGINAL_PTY_SLAVE_PROVENANCE_REQUIRED")
+    return str(selected)
+
+def original_slave_path(fd):
+    return numbered_slave_path(os.readlink("/proc/self/fd/" + str(fd)))
+
+def slave_identity(fd, path, *, expected_device=None, expected_slave=None):
     selected = Path(path)
-    need(selected.parent == Path("/dev/pts") and selected.name and
-         all("0" <= char <= "9" for char in selected.name) and
+    if expected_device is None:
+        slave = original_slave_path(fd)
+    else:
+        need(expected_slave is not None, "ORIGINAL_PTY_SLAVE_PROVENANCE_REQUIRED")
+        slave = numbered_slave_path(expected_slave)
+    need(str(selected) == path and
+         (path == slave or selected == Path("/dev/console")) and
          selected.resolve(strict=True) == selected, "ORIGINAL_PTY_SLAVE_PATH_REQUIRED")
     opened, named = os.fstat(fd), selected.lstat()
     need(stat.S_ISCHR(opened.st_mode) and stat.S_ISCHR(named.st_mode) and
          (opened.st_dev, opened.st_ino, opened.st_rdev) ==
          (named.st_dev, named.st_ino, named.st_rdev), "ORIGINAL_PTY_SLAVE_CHANGED")
-    return [opened.st_dev, opened.st_ino, opened.st_rdev]
+    device = [opened.st_dev, opened.st_ino, opened.st_rdev]
+    need(expected_device is None or device == expected_device, "ORIGINAL_PTY_SLAVE_CHANGED")
+    return device
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
@@ -57,6 +74,7 @@ def main():
         need(os.isatty(0), "ORIGINAL_SOURCE_FEED_REQUIRES_OWNED_PTY")
         path = os.ttyname(0); mode, foreground = terminal_control(0)
         terminal = {"path": path, "device": slave_identity(0, path),
+                    "slavePath": original_slave_path(0),
                     "session": os.getsid(0), "controlMode": mode}
         need(mode == "noncontrolling" or foreground == os.getpgrp(),
              "ORIGINAL_LAUNCHER_MUST_OWN_FOREGROUND_PTY")
@@ -96,7 +114,8 @@ def main():
         if terminal is not None:
             need(launch.identity is not None and os.getsid(0) == terminal["session"],
                  "SOURCE_TERMINAL_SESSION_CHANGED")
-            need(slave_identity(0, terminal["path"]) == terminal["device"],
+            need(original_slave_path(0) == terminal["slavePath"] and
+                 slave_identity(0, terminal["path"]) == terminal["device"],
                  "SOURCE_TERMINAL_DEVICE_CHANGED")
             mode, _ = terminal_control(0)
             need(mode == terminal["controlMode"], "SOURCE_TERMINAL_CONTROL_MODE_CHANGED")
