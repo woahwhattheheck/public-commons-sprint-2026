@@ -1,4 +1,5 @@
 // MIT. Optional private terminal and original CLI URL capture inside the managed runner.
+import { blockscoutStartup } from './application-blockscout.mjs';
 import { constants } from 'node:fs';
 import { StringDecoder } from 'node:string_decoder';
 import { open, readdir, lstat, access } from 'node:fs/promises';
@@ -67,6 +68,22 @@ export function observeApplicationOutput(request, directory) {
     // Read only the maintained CLI's startup announcement. Later user-entered
     // terminal text and provider payloads cannot select a different application.
     text = text.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '').trim();
+    if (request.command === 'blockscout') {
+      if (!text.startsWith('{"schema":"stellar-forge.blockscout-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await blockscoutStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     let candidate = null;
     if (request.command === 'openapi-workspace' && text.startsWith('API merchant workspace: '))
       candidate = text.slice('API merchant workspace: '.length);
@@ -101,6 +118,33 @@ export function observeApplicationOutput(request, directory) {
         if (ready.mode === 'RESEARCH_DOSSIER_WORKSPACE' && directoryIndex >= 0 &&
             ready.directory === request.args[directoryIndex + 1] && typeof ready.url === 'string')
           candidate = ready.url;
+      } catch {}
+    }
+    if (request.command === 'buyer-expenses') {
+      try {
+        const ready = JSON.parse(text), stateIndex = request.args.indexOf('--state');
+        const portIndex = request.args.indexOf('--port');
+        if (plain(ready) && stateIndex >= 0 && ready.state === request.args[stateIndex + 1] &&
+            typeof ready.url === 'string') {
+          const address = new URL(ready.url);
+          const selectedPort = portIndex < 0 ? 0 : Number(request.args[portIndex + 1]);
+          if (address.protocol === 'http:' && address.hostname === '127.0.0.1' &&
+              address.pathname === '/' && !address.search && /^[#][A-Za-z0-9_-]{43}$/.test(address.hash) &&
+              Number.isInteger(selectedPort) && (selectedPort === 0 || Number(address.port) === selectedPort))
+            candidate = ready.url;
+        }
+      } catch {}
+    }
+    if (request.command === 'merchant-recovery-remote' &&
+        request.args[0] === 'workspace' && request.args[1] === 'serve') {
+      try {
+        const ready = JSON.parse(text), configIndex = request.args.indexOf('--config'),
+          directoryIndex = request.args.indexOf('--directory');
+        if (ready.status === 'MERCHANT_RECOVERY_WORKSPACE_READY' &&
+            configIndex >= 0 && directoryIndex >= 0 &&
+            ready.configFile === request.args[configIndex + 1] &&
+            ready.directory === request.args[directoryIndex + 1] &&
+            typeof ready.url === 'string') candidate = ready.url;
       } catch {}
     }
     const url = candidate && privateUrl(candidate);

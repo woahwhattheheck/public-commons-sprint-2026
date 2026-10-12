@@ -1,5 +1,11 @@
 // MIT. Declarations for the original public profile and compiler implementation.
 export declare const PROFILE_SCHEMA: 'stellar-forge.oauth-authorization-profile.v1';
+export declare const INTUIT_QBO_PROVIDER: 'intuit-quickbooks';
+export declare const INTUIT_QBO_SCOPE: 'com.intuit.quickbooks.accounting';
+export declare const INTUIT_QBO_ENDPOINTS: Readonly<{authorization: string; token: string; revoke: string; sandbox: string; production: string}>;
+export interface IntuitQuickBooksProvider { kind: typeof INTUIT_QBO_PROVIDER; environment: 'sandbox' | 'production' }
+export declare function intuitQboProfile(profile: unknown): boolean;
+export declare function qboRealm(value: unknown): value is string;
 
 export interface OAuthSourceIdentity {
   /** SHA-256 of the exact original OpenAPI bytes. */
@@ -30,7 +36,11 @@ export interface OAuthProfileFields {
   resourceOrigins: string[];
   authorizationParameters: Record<string, string>;
   resourceParameters: string[];
-  pkceMethod: 'S256';
+  /** Generic profiles use S256. The explicit Intuit confidential client dialect uses none. */
+  pkceMethod: 'S256' | 'none';
+  provider?: IntuitQuickBooksProvider;
+  /** Intuit only: exact registered localhost sandbox or public HTTPS callback origin. */
+  callbackOrigin?: string;
 }
 
 /** Canonical normalized, public-only profile. This value is not a private grant. */
@@ -43,7 +53,7 @@ export type OAuthProfileInput =
     resourceOrigins: readonly string[];
     authorizationParameters?: Readonly<Record<string, string>>;
     resourceParameters?: readonly string[];
-    pkceMethod?: 'S256';
+    pkceMethod?: 'S256' | 'none';
   } & OAuthClientAuthenticationInput;
 
 export interface OAuthProfileOptions {
@@ -94,6 +104,7 @@ export declare function normalizeOAuthProfile(raw: unknown, options?: OAuthProfi
 /** Hash the normalized profile; normalization is the caller's explicit preceding step. */
 export declare function oauthProfileIdentity(profile: OAuthProfile): string;
 export declare function oauthCallbackPath(profileSha256: string): string;
+export declare function oauthRedirectOrigin(profile: OAuthProfile, localOrigin: string): string;
 /** Pure compilation: this reads no environment, directory, grant or credential. */
 export declare function compileOAuthConnection(raw: unknown, options?: OAuthCompileOptions): CompiledOAuthConnection;
 

@@ -76,9 +76,13 @@ function fieldContract(value, query, name) {
   }
   return types;
 }
+export { bindQuery as bindOpenSearchQuery, completeShards as completeOpenSearchShards, pitId as validateOpenSearchPitId };
+export function openSearchSort(query) {
+  return [...(query.sort.length ? query.sort : [{ _score: 'desc' }]), { _index: 'asc' }, { _shard_doc: 'asc' }];
+}
 const same = (left, right) => nativeJSON(left) === nativeJSON(right);
 
-export async function createOpenSearchQuerySource(raw, { env = process.env } = {}) {
+export async function createOpenSearchQuerySource(raw, { env = process.env, signal: startupSignal } = {}) {
   assertLosslessJSONSupport();
   const config = validateOpenSearchSource(raw), queries = compileOpenSearchQueries(config.queries);
   const wire = createWire(resolveConnection(config, env));
@@ -144,7 +148,7 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
       // still released in finally.
       ownedPit = pitId(created?.pit_id);
       completeShards(created._shards, name);
-      const sort = [...query.sort, { _index: 'asc' }, { _shard_doc: 'asc' }];
+      const sort = openSearchSort(query);
       const hits = [], identities = new Set(), cursors = new Set();
       let cursor, total, pages = 0, exhausted = false, portableBytes = 0;
       while (hits.length <= query.maxHits && !exhausted) {
@@ -227,7 +231,7 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
     return closing;
   }
   try {
-    const version = await wire('GET', '', { timeoutMs: 5000, maxBytes: 65536 });
+    const version = await wire('GET', '', { timeoutMs: 5000, maxBytes: 65536, signal: startupSignal });
     serverVersion = version?.version?.number;
     const numbers = typeof serverVersion === 'string' ? /^(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$/.exec(serverVersion) : null;
     if (version?.version?.distribution !== 'opensearch' || !numbers ||
@@ -238,8 +242,8 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
     sourceIdentity = { clusterFingerprint: createHash('sha256').update(version.cluster_uuid).digest('hex'), serverVersion };
     for (const [name, query] of Object.entries(queries)) {
       [pinned[name], projections[name]] = await Promise.all([
-        readFields(name, query, { timeoutMs: query.timeoutMs }),
-        readProjection(name, query, { timeoutMs: query.timeoutMs }),
+        readFields(name, query, { timeoutMs: query.timeoutMs, signal: startupSignal }),
+        readProjection(name, query, { timeoutMs: query.timeoutMs, signal: startupSignal }),
       ]);
       // Validate through the same native read capability used for delivery.
       // A zero-row probe compiles/executes the declared query without exposing
@@ -248,7 +252,7 @@ export async function createOpenSearchQuerySource(raw, { env = process.env } = {
         '/_search?allow_partial_search_results=false&allow_no_indices=false&ignore_unavailable=false', {
           body: { query: bindQuery(query, query.probe), size: 0, _source: false,
             track_total_hits: 1, timeout: query.timeoutMs + 'ms' },
-          timeoutMs: query.timeoutMs, maxBytes: 65536,
+          timeoutMs: query.timeoutMs, maxBytes: 65536, signal: startupSignal,
         });
       if (!record(validation) || validation.timed_out !== false || validation.terminated_early === true ||
           !Array.isArray(validation.hits?.hits) || validation.hits.hits.length !== 0)

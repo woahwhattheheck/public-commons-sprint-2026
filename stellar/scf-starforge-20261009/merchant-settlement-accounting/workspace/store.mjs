@@ -239,7 +239,23 @@ class AccountingWorkspace{
     this.expected(revision);actor=text(actor,'operator');check(selection==='source'||this.state.termsImports.some(item=>item.id===selection),'TERMS_NOT_FOUND','Choose original source terms or a retained terms file.');
     this.state.termsSelection=selection;await this.commit('terms_selected',actor,{termsId:selection});return this.view();
   });}
-  async begin({revision,name,actor,expectedTermsSelection,expectedPeriodSelection}){return this.serial(async()=>{
+  async begin({revision,name,actor,expectedTermsSelection,expectedPeriodSelection,requestId,expectedNativeEvent}){return this.serial(async()=>{
+    let requestSha256;
+    if(requestId!==undefined){
+      check(typeof requestId==='string'&&/^[a-f0-9]{8}-[a-f0-9]{4}-[1-5][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(requestId),
+        'INVALID_RECONCILIATION_REQUEST','Retain one UUID for this original accounting capture.');
+      actor=text(actor,'operator');name=text(name,'run name',160);
+      requestSha256=hash(json({name,actor,expectedTermsSelection,expectedPeriodSelection:expectedPeriodSelection===null?null:expectedPeriodSelection===undefined?undefined:{id:expectedPeriodSelection.id,version:expectedPeriodSelection.version},expectedNativeEvent}));
+      const previous=this.state.runs.filter(run=>run.requestId===requestId);
+      check(previous.length<=1,'RECONCILIATION_REQUEST_CONFLICT','This capture request has conflicting original runs.',409);
+      if(previous.length){
+        check(previous[0].requestSha256===requestSha256,'RECONCILIATION_REQUEST_CONFLICT','This capture request identifier belongs to different original inputs.',409);
+        return {run:structuredClone(previous[0]),state:this.view(),reused:true};
+      }
+    }
+    if(expectedNativeEvent!==undefined)check(object(expectedNativeEvent)&&Object.keys(expectedNativeEvent).length===2&&
+      /^[a-f0-9]{64}$/.test(expectedNativeEvent.id??'')&&/^[a-f0-9]{64}$/.test(expectedNativeEvent.sha256??''),
+      'INVALID_NATIVE_EVENT_EXPECTATION','Bind this capture to the original native event ID and full event SHA256.');
     this.expected(revision);actor=text(actor,'operator');name=text(name,'run name',160);
     check(expectedTermsSelection===undefined||expectedTermsSelection===this.state.termsSelection,'TERMS_SELECTION_CHANGED','The selected accounting terms changed. Select the reviewed pricing terms before starting this reconciliation.',409);
     check(expectedPeriodSelection===undefined||(expectedPeriodSelection===null&&this.state.periodSelection===null)||
@@ -247,7 +263,7 @@ class AccountingWorkspace{
       'PERIOD_SELECTION_CHANGED','The selected reporting period changed. Inspect the current definition before capturing this reconciliation.',409);
     check(!this.state.runs.some(run=>['queued','running'].includes(run.status)),'RUN_IN_PROGRESS','A reconciliation is already queued or running.',409);
     check(this.state.runs.length<5000,'RUN_LIMIT','This workspace already retains 5,000 reconciliations.');
-    const run={id:identity(),name,actor,status:'queued',createdAt:now(),sourceRevision:this.state.revision,termsSelection:this.state.termsSelection,
+    const run={id:identity(),...(requestId===undefined?{}:{requestId,requestSha256}),...(expectedNativeEvent===undefined?{}:{expectedNativeEvent:structuredClone(expectedNativeEvent)}),name,actor,status:'queued',createdAt:now(),sourceRevision:this.state.revision,termsSelection:this.state.termsSelection,
       period:this.periods.selection(),sourcePaths:structuredClone(this.state.sources),proofIds:this.state.proofs.filter(proof=>proof.included).map(proof=>proof.id),totals:null,exceptionCount:0,error:null};
     this.state.runs.unshift(run);await this.commit('reconciliation_queued',actor,{runId:run.id});
     const task=new Promise(resolve=>setImmediate(resolve)).then(()=>this.execute(run.id));this.tasks.add(task);task.finally(()=>this.tasks.delete(task)).catch(()=>{});
@@ -263,8 +279,17 @@ class AccountingWorkspace{
     // completed prefix first prevents newer statuses from orphaning older events.
     for(const name of ['deliveries.ndjson','events.ndjson']){
       const raw=await readBytes(join(sourcePaths.outboxDir,name),16_000_000,{optional:true,empty:true});
-      if(raw===null){manifest.files.push({source:'sf98/'+name,path:null,bytes:0,sha256:null});continue;}
+      if(raw===null){
+        check(name!=='events.ndjson'||!run.expectedNativeEvent,'EXPECTED_NATIVE_EVENT_MISSING','Restore the original native event before continuing this capture.',409);
+        manifest.files.push({source:'sf98/'+name,path:null,bytes:0,sha256:null});continue;
+      }
       check(raw.length===0||raw.at(-1)===10,'INCOMPLETE_JOURNAL','A native journal ends with an incomplete append. Reconcile again after the producer finishes.',409);
+      if(name==='events.ndjson'&&run.expectedNativeEvent){
+        const selected=raw.toString('utf8').split('\n').filter(Boolean).map(line=>parse(Buffer.from(line),'native event')).filter(event=>event.id===run.expectedNativeEvent.id);
+        check(selected.length>0&&selected.every(event=>hash(JSON.stringify(event))===run.expectedNativeEvent.sha256),
+          'EXPECTED_NATIVE_EVENT_CHANGED','The captured journal no longer contains the exact original event selected by this delivery notice.',409);
+        manifest.expectedNativeEvent=structuredClone(run.expectedNativeEvent);
+      }
       const path='sources/outbox/'+name;await writeNew(join(root,path),raw);manifest.files.push({source:'sf98/'+name,path,bytes:raw.length,sha256:hash(raw)});
     }
     const selected=this.state.termsImports.find(item=>item.id===run.termsSelection);

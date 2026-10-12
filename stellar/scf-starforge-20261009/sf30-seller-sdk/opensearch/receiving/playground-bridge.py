@@ -50,6 +50,7 @@ proxy = urlsplit(configured_proxy if configured_proxy and "://" in configured_pr
 # normal behavior; neither path changes the session or network route.
 pooled = proxy is None or proxy.scheme == "http"
 tls_context = ssl.create_default_context()
+tls_context.set_alpn_protocols(["http/1.1"])
 slots = LifoQueue(maxsize=2)
 for slot_id in range(2):
     slots.put({"connection": None, "lastUsed": 0.0, "id": slot_id})
@@ -219,7 +220,7 @@ class Handler(BaseHTTPRequestHandler):
             base = parsed.path
             allowed = (
                 self.command == "GET" and (base == "/" or base.endswith("/_field_caps") or base.endswith("/_mapping")) or
-                self.command == "POST" and (base.endswith("/_search") or base.endswith("/_search/point_in_time")) or
+                self.command == "POST" and (base == "/_rank_eval" or base.endswith("/_search") or base.endswith("/_search/point_in_time")) or
                 self.command == "DELETE" and base == "/_search/point_in_time"
             )
             if not allowed:

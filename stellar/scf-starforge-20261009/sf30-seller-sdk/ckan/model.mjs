@@ -176,9 +176,9 @@ export async function openCkanWorkbench({ directory, create = false, origin, aut
         if (entry.state === 'COMPLETE') throw fault('CKAN_EDITION_ALREADY_COMPLETE', 'This retained edition is complete; start a new capture to refresh it.');
         return launch('resume edition', (signal, progress) => { entry.limits = { ...entry.limits, ...limits }; return capture(entry, signal, progress); });
       },
-      importCapture(filename) {
+      importCapture(filename, { expectedManifestSha256 } = {}) {
         return launch('receive retained edition', async () => {
-          const original = await readCkanCapture(resolve(filename));
+          const original = await readCkanCapture(resolve(filename), expectedManifestSha256);
           if (original.manifest.catalogOrigin !== state.catalogOrigin) throw fault('CKAN_CATALOGUE_MISMATCH');
           const prior = state.editions.find(item => item.manifestSha256 === original.manifestSha256);
           if (prior) return structuredClone(prior);

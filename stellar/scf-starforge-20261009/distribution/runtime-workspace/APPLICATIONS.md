@@ -12,6 +12,11 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
+| GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
+| Research dossiers | research-workspace | Questions, saved source editions, findings, comparison and portable reports |
+| Buyer expenses | buyer-expenses | Statement captures, allocation, period review and accountant editions |
+| Blockscout token merchant | blockscout serve | Original provider desk, seller operations, quota and attempt recovery |
+| Merchant recovery | merchant-recovery-remote workspace serve | Off-host inventory, original transfer journals and encrypted cold restore |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
@@ -146,3 +151,38 @@ The optional provider edition adapter is the original local module passed as --e
 The original command announces one JSON line with mode RESEARCH_DOSSIER_WORKSPACE, its selected directory and its actual loopback capability URL. The observer accepts it only for the research-workspace command and matching --dir argument, then applies the existing local URL checks. The source command owns HTTP shutdown and closure of its original provider workspace; saved dossiers remain available for the next reviewed start.
 
 Inside the original research application, create or reopen a question, receive saved source editions, compare provider occurrences, select evidence, write findings, compare revisions and download HTML, Markdown or complete portable JSON. Reopen the same portable dossier through its original API or CLI to retain all revision and source identities.
+
+## Buyer expenses and period delivery
+
+Choose **Buyer expenses**, select the original private expense workspace and review the selected runtime. You can also choose a new directory in an existing private parent. This directory is separate from the original buyer ledger. The selected installation must contain the original `buyer-expenses` command and its expense workspace source; the host needs Python 3.11 or later with the standard library.
+
+Applications invokes the installed command:
+
+    starforge buyer-expenses --state /private/buyer-expenses --port 0
+
+The original server takes its Store lease before binding to loopback. It then emits one JSON line containing `url` and the resolved `state` directory. Applications accepts this announcement only from `buyer-expenses`, for the exact selected `--state` and requested port, using the original loopback address and capability fragment. The private URL stays in the existing managed operation and is not a public release link.
+
+In the original expense application, register or rebind the original SF36 buyer ledger, capture its current statement and retain the source comparison. Keep settled expense amounts separate from unsent reservations. Create cost centers and periods, allocate exact atomic amounts, record labels and dispositions, review the period, and issue an accountant edition. Reopening a period retains its earlier issued edition and allows a corrected successor. Opening or restarting the application does not capture the ledger, close a period or execute a payment.
+
+Download the original complete project when transferring the expense workspace. Its included receiver restores source captures, allocation state, period history and application source into a new private directory. Select that received directory here for the next reviewed start. Original buyer ledgers remain separate and can be rebound through the original source controls when needed.
+
+**Stop application** uses the existing managed operation. The original Node launcher forwards shutdown to its Python server, which drains handlers before closing its Store lease. A later reviewed start opens the same retained data and issues a fresh private URL; it does not replay an expense or buyer operation.
+
+### Merchant recovery
+
+Choose **Merchant recovery** from an installed runtime that includes the S3 feature and SF101's recovery workspace. Select the original private recovery host configuration and its private operator-state directory. For a new state directory, its parent must already exist and be private. The configuration retains the original S3 configuration files, bundle roots, transfer-journal directory, download parent and cold-restore parent. The launcher reviews those paths and file digests; environment values remain in the optional private environment JSON. Use the same passphrase and existing AWS/proxy environment expected by those original configurations.
+
+Review and save the application, review **Start**, and open its reported local workspace. The original command announces a one-line MERCHANT_RECOVERY_WORKSPACE_READY record bound to the selected host configuration and state directory. The launcher uses its private loopback URL; the URL fragment establishes the original workspace session.
+
+Use the workspace's exact selection review for upload, inventory, encrypted download and cold restore. **Stop** in Applications gracefully closes that original server and preserves its original workspace and transfer journals. Reopen the same saved application to read completion or continue the same unfinished transfer ID. The original recovery engine remains responsible for remote object identity, verification and cold restore.
+
+## Blockscout merchant operations
+
+The original runtime workspace can retain this merchant as a Blockscout application. Select its verified package and one private merchant-state directory, the original facilitator URL and the seller, operations and provider-desk ports. Port 0 chooses an available local listener. The original plan supplies the API-key environment reference; use that variable in the inherited environment or the runtime's reviewed private environment file.
+
+The application binding verifies the manifest and all eight package leaves, then passes `--expected-plan-sha256` and `--expected-package-sha256` to `blockscout serve`. These optional flags are also available to direct launch automation. They require lowercase SHA-256 values; a changed manifest or compiled plan fails before the provider application is created. Preserve the exact values displayed by the original package and launch review when an operation waits in a queue.
+
+A successful serve prints one JSON startup line with schema `stellar-forge.blockscout-startup.v1`, status, canonical `packageDirectory` and `stateDirectory`, `planSha256`, `packageManifestSha256` and the original listener URLs. The Applications adapter accepts `providerDesk` only when the startup package, state and digests match its retained command and the current verified manifest. The private desk links the original availability and fulfillment controls. This startup record stays with the original managed operation.
+
+Use the same merchant-state directory for restart, provider-key rotation and a selected price rollback. Reopening an application resumes its merchant controls and saved account history. Buyer execution continues through the original separately reviewed SF88 intent. The Applications catalogue and observer are composed by the original runtime-workspace owner; select a source release containing `application-blockscout.mjs` and its matching startup CLI.
+
