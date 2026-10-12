@@ -23,6 +23,19 @@ elseif kind == 'hash' then
   local values = redis.call('HMGET', KEYS[1], unpack(fields))
   for i = 1, #values do keep(values[i]) end
   rows[1] = values
+elseif kind == 'list' then
+  local start = tonumber(position)
+  local values = redis.call('LRANGE', KEYS[1], position, tostring(start + count - 1))
+  for i = 1, #values do rows[#rows + 1] = {tostring(start + i - 1), keep(values[i])} end
+  if redis.call('LLEN', KEYS[1]) > start + #values then truncated = 1 end
+elseif kind == 'set' then
+  -- COUNT is a work hint, not a row limit. Return a whole native batch or fail:
+  -- slicing it while advancing the native cursor would silently skip members.
+  local page = redis.call('SSCAN', KEYS[1], position, 'COUNT', ARGV[5])
+  if #page[2] > count then error('SF30_SCAN_PAGE_TOO_MANY_ROWS') end
+  for i = 1, #page[2] do rows[#rows + 1] = {keep(page[2][i])} end
+  if page[1] ~= '0' then truncated = 1 end
+  return {truncated, rows, page[1]}
 elseif kind == 'sorted-set' then
   local start = tonumber(position)
   for offset = start, start + count do
