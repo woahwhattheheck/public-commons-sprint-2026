@@ -14,7 +14,7 @@ export const MATOMO_LAUNCH_FILES=Object.freeze([
   'capture.mjs','cli.mjs','comparison.mjs','contract.mjs','customer.py','editions.mjs',
   'merchant.mjs','model.mjs','operator-handover.mjs','operator-scan.mjs','provider.mjs',
   'server.mjs','store.mjs','values.mjs','public/app.mjs','public/index.html','public/style.css',
-  'launch.mjs','application-provider.mjs'
+  'launch.mjs','application-provider.mjs','workspace-transfer.mjs','workspace-transfer.py','product-cli.mjs','../source_bundle_archive.py'
 ]);
 const HASH=/^[a-f0-9]{64}$/,UUID=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 function requireValue(value,code){if(!value)throw fault(code,undefined,400);}

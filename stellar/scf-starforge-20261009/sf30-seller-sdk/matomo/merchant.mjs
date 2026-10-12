@@ -62,16 +62,16 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
     try{return await fn(api,item);}finally{await api.close();}
   }
   async function state(id){return {merchant:merchant(id),workbench:await workbench(id,api=>api.state())};}
-  async function configure(input) {
-    only(input,['operationId','expectedRevision','editionId','configuration']);
+  async function configure(input,{receivedFrom=null}={}) {
+    only(input,['operationId','expectedRevision','editionId','configuration','draft']);
     const id=identifier(input.operationId),edition=await editions.manifest(input.editionId,{database:true});
-    const draft=matomoMerchantDraft(edition.value,input.configuration);
+    const defaults=matomoMerchantDraft(edition.value,input.configuration),draft=input.draft??defaults;
     // Validate the complete public draft with the original native compiler before
     // allocating a retained merchant identity. No source query or provider read.
     inspectMerchantDraft(draft,edition.database);
     return store.perform('configure-merchant',input,async()=>{
       store.transaction(()=>{store.db.prepare('INSERT INTO merchants(id,edition_id,data,created_at) VALUES(?,?,?,?)').run(id,input.editionId,JSON.stringify({
-        editionSha256:edition.edition.data.manifest.sha256,configuration:input.configuration,state:'CONFIGURING'}),stamp());store.event('MERCHANT_STARTED',id);});
+        editionSha256:edition.edition.data.manifest.sha256,configuration:input.configuration,state:'CONFIGURING',...(input.draft?{initialDraft:input.draft}:{}),...(receivedFrom?{receivedFrom}:{})}),stamp());store.event('MERCHANT_STARTED',id);});
       await workbench(id,async api=>{await api.inspectDraft(draft);const current=await api.state();await api.save(draft,current.revision);});
       change('merchants',id,{state:'CONFIGURED'},'MERCHANT_CONFIGURED');return state(id);
     });
@@ -80,7 +80,7 @@ export function createMatomoMerchant(store,editions,{environment=process.env}={}
     only(input,['operationId','expectedRevision','merchantId']);const item=await selected(input.merchantId);
     return store.perform('resume-merchant-configuration',input,async()=>{
       if(item.current.data.state==='CONFIGURING')await workbench(input.merchantId,async api=>{
-        const current=await api.state(),draft=matomoMerchantDraft(item.value.value,item.current.data.configuration);
+        const current=await api.state(),draft=item.current.data.initialDraft??matomoMerchantDraft(item.value.value,item.current.data.configuration);
         if(current.draft.queries.length&&identity(current.draft)!==identity(draft))throw fault('MATOMO_MERCHANT_DRAFT_CHANGED');
         if(identity(current.draft)!==identity(draft)){await api.inspectDraft(draft);await api.save(draft,current.revision);}
       });

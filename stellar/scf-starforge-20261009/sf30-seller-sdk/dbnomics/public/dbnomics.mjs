@@ -250,6 +250,55 @@ function renderNotes(){
 }
 async function loadNotes(){if(!selectedId)return;notesState=await api('notes?id='+selectedId);noteDraft=notesState.entries.map(row=>({...row}));notesDirty=false;renderNotes();}
 
+
+// Python Analysis keeps complete economic records, reviewed workbooks and original source history.
+const pythonBox=section(analysisPane,'Python Analysis and editable workbooks');
+const pythonTitle=input('Economic source and analyst briefing',{maxLength:160}),pythonReports=select(),
+  pythonNotes=input('0',{type:'number',min:'0',step:'1'}),pythonInfo=el('p'),pythonSources=el('div'),pythonResult=el('div');
+pythonReports.multiple=true;pythonReports.size=6;
+pythonBox.append(el('p','Prepare one complete source for the installed Analysis workspace. Original observations, selected full reports, series descriptions and the exact saved notes revision travel together. The workbook retains original value text and calendar identities.'),
+  field('Analysis title',pythonTitle),field('Complete saved reports to include',pythonReports,'Select any combination; each report keeps its own calculation and saved note edition.'),
+  field('Source notes revision',pythonNotes,'Use an existing saved revision. Unsaved browser notes remain in their draft.'),
+  pythonInfo,button('Prepare Python Analysis source',async()=>{
+    if(!selectedId||!selected)throw Error('Choose the original source edition.');
+    const revision=Number(pythonNotes.value);
+    if(!Number.isSafeInteger(revision)||revision<0)throw Error('Choose a saved nonnegative notes revision.');
+    const value={selection:{captureId:selectedId,captureSha256:selected.captureSha256,
+      reportIds:ids(pythonReports),notesRevision:revision,title:pythonTitle.value}};
+    const result=await write('python-analysis','analysis-source',value);
+    pythonResult.replaceChildren(el('p','Prepared '+result.rowCount+' complete analysis records: '+
+      result.counts.observation+' original observations, '+result.counts.calculation+' calculations, '+
+      result.counts.series+' series and '+result.counts.note+' notes.'),
+      el('a','Download complete Python Analysis source',{href:'/api/dbnomics/analysis-export?'+new URLSearchParams({id:result.id}),download:'',className:'db-download'}),
+      details('Exact source selection',el('pre',JSON.stringify({id:result.id,documentId:result.documentId,selection:result.selection},null,2),{className:'db-pre'})));
+    await refresh(undefined,false);message('The complete Analysis source is saved in this original economic project.');
+  }),pythonResult,el('p','The installed Python command builds the complete HTML, JSON and CSV briefing, typed query exports, workbook and editable Analysis archive. Return the Records workbook for an original keyed comparison and review; its review_note cells can be added through the original economic notes revision check.'),
+  pythonSources);
+function pythonDraftKey(){return 'dbnomics:'+saved.project.id+':analysis-draft:'+selectedId;}
+function savePythonDraft(){
+  if(!saved||!selectedId)return;
+  localStorage.setItem(pythonDraftKey(),JSON.stringify({title:pythonTitle.value,reportIds:ids(pythonReports),notesRevision:pythonNotes.value}));
+}
+for(const node of [pythonTitle,pythonReports,pythonNotes])node.addEventListener('change',savePythonDraft);
+function renderPythonSources(){
+  const available=saved?.reports.filter(item=>item.captureId===selectedId)??[];
+  let draft=null;try{draft=JSON.parse(localStorage.getItem(pythonDraftKey())??'null');}catch{}
+  const chosen=new Set(draft?.reportIds??available.map(item=>item.id));
+  pythonReports.replaceChildren();
+  for(const report of available)pythonReports.append(el('option',report.title+' · '+report.rowCount+' rows · notes '+report.notesRevision,
+    {value:report.id,selected:chosen.has(report.id)}));
+  pythonTitle.value=draft?.title??((selected?.selection?.title??'Economic source')+' — complete analyst briefing').slice(0,160);
+  pythonNotes.value=draft?.notesRevision??String(notesState?.revision??0);
+  pythonInfo.textContent='Current saved notes revision '+(notesState?.revision??0)+'. '+available.length+' complete reports are available for this source.'+
+    (notesDirty?' The unsaved notes draft remains separate from this saved selection.':'');
+  const retained=(saved?.analysisSources??[]).filter(item=>!selectedId||item.selection.captureId===selectedId);
+  if(!retained.length){empty(pythonSources,'Prepared Analysis sources will remain available here after the project reopens.');return;}
+  pythonSources.replaceChildren(table(['Saved analysis source','Complete records','Notes revision','Download'],retained,item=>[
+    item.selection.title,item.rowCount,item.selection.notesRevision,
+    el('a','Complete source',{href:'/api/dbnomics/analysis-export?'+new URLSearchParams({id:item.id}),download:'',className:'db-download'})
+  ]));
+}
+
 // Full-coordinate revision comparison with explicit metadata changes.
 const comparisonPane=panels.get('compare'),before=select(),after=select(),compareControls=group(),comparisonSummary=el('p'),comparisonRows=el('div'),comparisonPages=row(),comparisonMeta=el('pre',undefined,{className:'db-pre'});
 compareControls.append(field('Earlier retained edition',before),field('Later retained edition',after),button('Compare original editions',async()=>{compareOffset=0;await compareEditions();}));
@@ -330,6 +379,7 @@ async function refreshReportChoices(){
   fillSelect(queryReport,[['','Original observations'],...reports.map(item=>[item.id,item.title+' · '+item.method])]);
   if(selectedReport&&!reports.some(item=>item.id===selectedReport)){selectedReport=null;reportData=null;chart.replaceChildren();reportTable.replaceChildren();}
   if(!selectedReport&&reports.length){selectedReport=reports.at(-1).id;reportSelect.value=selectedReport;reportOffset=0;await showReport();}
+  renderPythonSources();
 }
 async function refresh(preferred,loadCapture=true){
   saved=await api('status');summary.replaceChildren();

@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.central-warehouse-profiles.v1",
+  "profiles": [
+    {
+      "id": "reporting",
+      "name": "Reporting warehouse",
+      "workspace": "/private/postgres-reporting",
+      "connectionEnv": "SF_BUYER_POSTGRES_DSN",
+      "schema": "sf_received",
+      "python": "/private/venv/bin/python",
+      "timeoutSeconds": 3600
+    }
+  ]
+}

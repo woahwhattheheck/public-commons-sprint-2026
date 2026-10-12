@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="workspace-token" content="__SESSION_TOKEN__">
+<title>Daily cashiering · Permit workspace</title>
+<link rel="stylesheet" href="/cashiering/style.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to workspace</a>
+<div id="app">
+  <main id="main" class="loading-shell" tabindex="-1">
+    <h1>Daily cashiering</h1>
+    <p role="status">Opening the retained permit workspace…</p>
+  </main>
+</div>
+<div id="notifications" class="notifications" aria-live="polite" aria-atomic="false"></div>
+<dialog id="editor" aria-labelledby="dialog-title"></dialog>
+<script type="module" src="/cashiering/app.mjs"></script>
+</body>
+</html>

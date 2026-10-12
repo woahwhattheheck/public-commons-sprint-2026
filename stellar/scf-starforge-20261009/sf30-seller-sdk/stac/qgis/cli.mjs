@@ -32,7 +32,11 @@ const ACTIONS = Object.freeze({
   'project-receive': {command:'receive',required:['workspace','file'],optional:['expected-sha256']},
   'native-inspect': {command:'native-inspect',required:['workspace','input'],native:true},
   'native-save': {command:'native-save',required:['workspace','input'],native:true},
-  'native-open': {command:'native-open',required:['workspace','project-id'],native:true}
+  'native-open': {command:'native-open',required:['workspace','project-id'],native:true},
+  'postgis-layers': {command:'postgis-layers',required:['workspace','source-id']},
+  'native-postgis-check': {command:'native-postgis-check',required:['workspace','input'],native:true},
+  'native-postgis-select': {command:'native-postgis-select',required:['workspace','input'],native:true},
+  'native-postgis-refresh': {command:'native-postgis-refresh',required:['workspace','project-id'],native:true}
 });
 const PATH_FLAGS = new Set(['directory','workspace','input','file']);
 
@@ -64,6 +68,12 @@ export const QGIS_HELP = [
   '  starforge stac-qgis native-inspect --workspace DIR --input ASSET_JSON --python QGIS_PYTHON',
   '  starforge stac-qgis native-save --workspace DIR --input ORIGINAL_SAVE_JSON --python QGIS_PYTHON',
   '  starforge stac-qgis native-open --workspace DIR --project-id ID --python QGIS_PYTHON',
+  '',
+  'Original accepted PostGIS relations and native connection:',
+  '  starforge stac-qgis postgis-layers --workspace DIR --source-id SOURCE_ID',
+  '  starforge stac-qgis native-postgis-check --workspace DIR --input ORIGINAL_CHECK_JSON --python QGIS_PYTHON',
+  '  starforge stac-qgis native-postgis-select --workspace DIR --input ORIGINAL_SELECTION_JSON --python QGIS_PYTHON',
+  '  starforge stac-qgis native-postgis-refresh --workspace DIR --project-id ID --python QGIS_PYTHON',
   '',
   'Original QField commissioning and field-to-office receiving:',
   '  starforge stac-qgis field --workspace DIR --input ORIGINAL_FIELD_ACTION_JSON',

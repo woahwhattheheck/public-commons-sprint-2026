@@ -200,3 +200,79 @@ model's recovery.
 The existing native producer should select this complete receiving directory
 in its normal terminal artifact manifest and return that actual READY/source
 identity through the cumulative distribution handoff.
+
+## Receive an earlier package with the selected current generator
+
+The original `run-host-deployment.mjs` supports an explicit generator continuation after a retained `GEOCODE_PACKAGE_CONTRACT_CHANGED` outcome. The preceding package and completed native record remain the source for the receiving decision. The continuation uses the selected current Starforge compiler to produce a separate package edition, then carries that edition through the original import, host review, SF99 generation and SF82 staging APIs.
+
+This receiving addresses the actual compiler change in which the original SF61 importer adds `extensions.bazaar.querySerialization` to the offers and their payment-required wire. The generated OpenAPI and customer SDK follow that same selected source. The saved geocoding plan, complete payment terms, source specification, selections, route bindings and provider runtime binding must remain byte-identical.
+
+The earlier package is reopened by the original `readBundle` file verifier and its content identity. The newer compiler inspects its own newly produced package. Both original inspection contracts remain intact.
+
+### Select the original native outcome
+
+Run the same receiving entry point through the existing maintained native launcher. Keep its source manifest and exact manifest hash in the admitted command. A generator continuation adds these four arguments together:
+
+| Argument | Original selected value |
+| --- | --- |
+| `--previous-native` | Canonical directory of the preceding terminal host receiving |
+| `--previous-request-sha256` | SHA256 of that record's exact `request.json` |
+| `--previous-result-sha256` | SHA256 of its exact terminal `result.json` |
+| `--previous-artifacts-sha256` | SHA256 of its finalized `artifacts.json` |
+
+The preceding record must be failed with exit code 1, have no requested stop, and retain its original revision-zero failure artifact selection. Its original command must select the same package directory and package identity. The receiver verifies every declared artifact, the original selected source manifest and the exact retained package-contract failure in `output.log`. It saves those complete original records and artifact bytes under `previous-native/`.
+
+`--package` and `--package-identity` continue to select the earlier package. The new edition is produced at `OUTPUT/merchant-package`; a new output directory selects this receiving continuation.
+
+```sh
+node /absolute/current-source/stellar/scf-starforge-20261009/sf30-seller-sdk/opencage/receiving/run-host-deployment.mjs \
+  --source /absolute/current-source \
+  --source-manifest /absolute/current-source-manifest.json \
+  --manifest-sha256 CURRENT_SOURCE_MANIFEST_SHA256 \
+  --package /absolute/original-merchant-package \
+  --package-identity ORIGINAL_PACKAGE_IDENTITY \
+  --output /absolute/linked-native-project/run \
+  --previous-native /absolute/original-native-record \
+  --previous-request-sha256 ORIGINAL_REQUEST_SHA256 \
+  --previous-result-sha256 ORIGINAL_RESULT_SHA256 \
+  --previous-artifacts-sha256 ORIGINAL_ARTIFACTS_SHA256
+```
+
+For a package already matching the selected source, the existing six-argument receiving path remains available.
+
+### Preserve the two package editions
+
+Before generating dependent output, the receiver writes an immutable `recompile-intent.json` with the preceding native record, original package and complete selected generator source identities. A retry must rejoin that same intent.
+
+The new edition uses the original CLI:
+
+```sh
+node sf30-seller-sdk/opencage/cli.mjs package \
+  --plan /absolute/original-merchant-package/plan.json \
+  --terms /absolute/original-merchant-package/terms.json \
+  --out /absolute/linked-native-project/run/merchant-package
+
+node sf30-seller-sdk/opencage/cli.mjs package-inspect \
+  --package /absolute/linked-native-project/run/merchant-package
+```
+
+The receiving command performs these calls, verifies the complete generated package, and compares every old/new file. This selected continuation expects changes in `offers.json`, `seller-service.json`, `openapi.json`, `sdk/seller-client.mjs`, `sdk/seller-client.d.mts` and `sdk/README.md`. It requires every other retained file to remain identical. It also reopens every original package byte after generation.
+
+The original `GeocodeWorkspace.importPackage()` adopts the new edition under its content-derived `merchant-<identity>` package ID. The receiver verifies every imported byte, closes that writer, reopens the same workspace and resolves the same saved package. It then uses the original workspace's `stage()` with that exact package ID. The host review, original SF99 bundle, preserved-inode incomplete-generation recovery and independent host reopen remain the same complete receiving workflow.
+
+The workspace's ordinary `package()` destination includes the saved workspace, terms and provider runtime binding. Those values remain unchanged in this generator continuation. The explicit new-directory and `importPackage()` route gives this edition its own original content identity.
+
+### Retained output and reentry
+
+| Output | Receiving identity |
+| --- | --- |
+| `recompile-intent.json` | Original package, preceding terminal native record, current source manifest and new destination |
+| `previous-native/` | Exact preceding request/result/manifest/log and all selected artifact bytes |
+| `original-package/` | Complete earlier package and its original manifest |
+| `merchant-package/` | Complete package from the selected current compiler |
+| `workspace/` | Original workspace configuration, imported content-derived package and staged SF82 release |
+| `package-lineage.json` | Both complete package identities, source choice, native history, imported package and per-file comparison |
+| `deployment/` and `incomplete-deployment/` | Original reviewed and reopened SF99 host bundles |
+| `host-receiving.json` | Completed package/lineage, source, host, original stage and recovery identities |
+
+Select this complete output directory in the linked native operation's ordinary terminal artifact manifest. The receiver uses the original exclusive/atomic file APIs and content-addressed bundle publisher, so a retry rejoins identical retained files and package editions. Each workspace writer is closed before the next receiving stage; its original close failure remains attached to the primary error when both occur.

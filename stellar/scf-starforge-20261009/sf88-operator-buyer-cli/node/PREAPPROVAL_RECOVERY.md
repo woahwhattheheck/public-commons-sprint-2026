@@ -1,6 +1,6 @@
 # Recover a buyer interrupted before approval
 
-The Node buyer can continue the same prepared workspace-backed purchase after its native process ended before any original payment reservation. The recovery keeps the original intent, configuration, operator workspace and failed attempt, then starts one explicitly selected continuation through the original approval, reservation and signing path.
+The Node buyer can continue the same prepared purchase after its native process ended before any original payment reservation. It supports the original workspace-backed operation and a directly configured Node operation with a recorded kernel process identity or definitive pre-spawn receipt. The recovery keeps the original intent, configuration, operator workspace and failed attempt, then starts one explicitly selected continuation through the original approval, reservation and signing path.
 
 This is useful when a process or terminal disappears while the native buyer is waiting for the operator. First call the ordinary `recover()` method: a complete result may already be saved. When there is no native result, the recovery inspector checks the original process and the authenticated operator ledger before offering a continuation.
 
@@ -25,7 +25,7 @@ if (saved) {
 }
 ```
 
-The operation's original `config.json`, request body and any operation ticket must still match their prepared hashes. A workspace-backed operation opens and audits its original workspace, keys, policy and ledger. It does not initialize another operator.
+The operation's original `config.json`, request body and any operation ticket must still match their prepared hashes. A workspace-backed operation opens and audits its original workspace, keys, policy and ledger. A directly configured operation keeps the canonical policy, ledger and signer paths in that original configuration; its offline review must match the same actor, service, signer and body. Neither route initializes another operator.
 
 ## Inspect the interrupted attempt
 
@@ -36,7 +36,7 @@ const available = await operation.inspectPreapprovalRecovery();
 console.log(available.status, available.attemptSha256);
 ```
 
-Earlier attempts may contain only a PID. A PID can be reused or refer to a different namespace, so those attempts need their **original native worker record**. Select the retained record and its exact request, process, output and driver hashes:
+Earlier workspace-backed attempts may contain only a PID. A PID can be reused or refer to a different namespace, so those attempts need their **original native worker record**. Direct-config attempts require the recorded kernel identity or definitive `NOT_DISPATCHED` receipt; the legacy worker/PID route does not establish their process absence. Select the retained record and its exact request, process, output and driver hashes:
 
 ```js
 const nativeRecord = {
@@ -137,7 +137,7 @@ If a later child also ends before any reservation, its recorded process identity
 | --- | --- |
 | `PREAPPROVAL_RESULT_ALREADY_RECORDED` or `PREAPPROVAL_ORIGINAL_OUTPUT_EXISTS` | Reopen the original result/output. |
 | `PREAPPROVAL_PROCESS_NOT_PROVEN_ABSENT` | Inspect the recorded process through its original runtime; preserve any active process. |
-| `PREAPPROVAL_ORIGINAL_WORKSPACE_REQUIRED` | Reopen the original workspace-backed operation. |
+| `PREAPPROVAL_ORIGINAL_WORKSPACE_REQUIRED` or `PREAPPROVAL_ORIGINAL_OPERATOR_REQUIRED` | Reopen the original prepared operation and canonical operator configuration. |
 | `PREAPPROVAL_ORIGINAL_LEDGER_INSPECTOR_REQUIRED` | Install the complete matching SDK closure, including the original ledger module. |
 | `PREAPPROVAL_ATTEMPT_CHANGED` | Inspect the selected attempt again before preparing. |
 | `PREAPPROVAL_SOURCE_CHANGED` or `PREAPPROVAL_ARCHIVE_CHANGED` | Reconcile the original retained source/operation bytes. |
@@ -179,3 +179,45 @@ Preparation and execution continue to use the existing public methods and exact 
 | `PREAPPROVAL_NEW_WIRE_EXISTS` | Inspect the newer canonical attempt. The selected plan’s earlier journal remains in `original-wire/`. |
 | `PREAPPROVAL_WIRE_SIGNING_OR_DISPATCH_RECORDED` | Use the existing authorization or lost-output recovery path appropriate to the recorded phase. |
 | `PREAPPROVAL_WIRE_SOURCE_CHANGED` | Reopen the original plan and compare its retained inventory with the current source before selecting a continuation. |
+
+## Select a repaired runtime for the same intent
+
+A native import or entry failure can leave a complete recorded process identity, an empty stdout, and one structured CLI error in stderr. The inspector accepts only a bounded JSON diagnostic with the original `error` and `retry: "NO_AUTOMATIC_RETRY"` fields. It retains the exact stderr bytes and returns their code, size and digest as `nativeDiagnostic`. That diagnostic does not establish process absence or absence of payment: the original kernel observation, inactive unsigned wire and authenticated zero-reservation audit are all still required.
+
+Keep the failed runtime intact. Install the complete reviewed replacement source in another canonical directory and retain its full source manifest as described in [PROTECTED_STORAGE.md](PROTECTED_STORAGE.md). Validate the complete execution entry and its original dependency closure before selecting it; successful configuration review alone does not establish that the execution module can import.
+
+Use the updated SDK as the recovery controller with the **original** Buyer options and state/runtime paths. The operation's `operation.json`, configuration, ticket, response destination and existing continuation lineage keep their original identities.
+
+```js
+// Buyer is imported from the complete reviewed recovery SDK.
+const controller = await new Buyer(originalBuyerOptions).ready();
+const original = await controller.openOperation('original-request-id');
+const available = await original.inspectPreapprovalRecovery();
+
+const prepared = await original.preparePreapprovalRecovery({
+  expectedAttemptSha256: available.attemptSha256,
+  reason: 'Reviewed execution source repairs the original import failure.',
+  nativeRuntimeSource: {
+    directory: '/installed/repaired-source/sf88-operator-buyer-cli',
+    sourceManifestFile: '/private/repaired-source-manifest.json',
+    sourceManifestSha256: exactManifestSha256,
+  },
+  nativeFileReservation: selectedFileReservationDescriptor,
+});
+```
+
+Preparation verifies every selected source member and runs the fresh offline review through that exact source. The immutable plan and review contain an `executionRuntime` record with the original runtime directory, complete replacement source binding and normalized file-reservation descriptor. An interrupted preparation reopens that same record; a different requested source cannot replace an already selected pending plan.
+
+The ordinary `Buyer.openOperation(intentId)` method reads a retained runtime choice and opens its recovery controller without changing the operation's original runtime identity. It does not prepare a plan or launch a native process. An existing source-bound authorization continuation is still validated against its original source. The linked preapproval attempt alone uses the selected repaired execution runtime.
+
+Execute with the same saved `planSha256` and `review` shown above. Before native admission, the SDK rechecks the selected source and original process/ledger/wire evidence, reserves the actual output and metadata descriptors, and records `executionRuntime` in the linked attempt. The native command binds the selected entry, original configuration and, when configured, its private allocation bootstrap. Later inspection requires exact agreement between the retained plan, review and attempt. The original operator presents the fresh request-specific approval and owns reservation, signing and settlement.
+
+A terminal-only retained SF81 bridge uses its own original terminal preflight. A bridge that supplies the browser/channel API keeps that API and its failure behavior. Selecting either browser setting against a terminal-only bridge fails explicitly; it does not change approval channels.
+
+If this selected attempt also fails before any reservation, a later explicit plan retains its selected runtime by default. Another repaired source requires another complete descriptor selected against that newly inspected attempt. Existing attempt, source and review bytes remain unchanged.
+
+### Continue a research cursor after source repair
+
+Research receiving consumes only an already prepared preapproval plan, with its exact review and plan hash. It never prepares recovery merely because gathering was requested. The logical page intent, retained provider pages and original payment ledger stay fixed.
+
+For later page intents that do not yet exist, select the same repaired runtime in the research adapter. A saved research selection advances through an immutable successor selected by its current exact SHA; use `expectedRuntimeSelectionSha256` in `openResearchRetrieval`, or `--expected-runtime-selection-sha256 SHA` with native `gather`/`serve`. See [the research guide](../research/README.md#change-a-retained-runtime-selection) for the complete source-selection contract.

@@ -1,0 +1,252 @@
+{
+  "schema": "berkeley.cashiering.source-catalog.v1",
+  "project_id": "berkeley-clariti-daily-financial-reconciliation",
+  "title": "Daily cashiering and receivables reconciliation",
+  "source_review_date": "2026-10-12",
+  "relationship": {
+    "existing_project": "revenue/berkeley-clariti-32600118-20261010",
+    "existing_product": "Permitting cutover workspace",
+    "financial_arm": "cashiering",
+    "note": "The daily financial workflow is a separate transaction population. The existing case-level comparator and its proposed workshare remain unchanged."
+  },
+  "sources": [
+    {
+      "id": "addendum-e",
+      "title": "Berkeley RFP 24-11661-C Addendum E",
+      "date": "2024-12-06",
+      "url": "https://berkeleyca.gov/sites/default/files/documents/24-11661-C%20-%20Addendum%20E%20-%20Additional%20Vendor%20Questions%20and%20Second%20Extension.pdf",
+      "pdf_pages": 5,
+      "selected_locators": [
+        "PDF p.4, Q77/answer78",
+        "PDF p.4, Q79",
+        "PDF p.4, Q80"
+      ],
+      "edition_note": "The issued cover identifies Addendum E despite the PDF metadata title. Its historic bid-date line contains a year inconsistency; this historical line creates no new procurement deadline for the proposed implementation workshare."
+    },
+    {
+      "id": "to-be-maps",
+      "title": "City of Berkeley Permitting System Requirements and Procurement: To-Be Process Maps",
+      "date": "2024-07-22",
+      "url": "https://berkeleyca.gov/sites/default/files/documents/Appendix%20B%20-%20Rapid%20Workflow%20To-Be%20Business%20Process%20Maps_0.pdf",
+      "pdf_pages": 90,
+      "selected_locators": [
+        "Session16, PDF pp.55–57",
+        "Session21, PDF pp.66–68"
+      ],
+      "edition_note": "The selected process sheets carry June 2024 dates. They describe proposed workflows and include legacy FUND$/Accela labels; they are not a current ledger export or proof of the deployed vendor configuration."
+    },
+    {
+      "id": "existing-product-readme",
+      "title": "Existing Berkeley/Clariti product README",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/afe3597548877bc0e4b84b3acdd0e8187019d2db/revenue/berkeley-clariti-32600118-20261010/README.md",
+      "git_blob": "258a8de9703ea2b481e3500a0cdf101fcc2c34c1"
+    },
+    {
+      "id": "existing-product-api",
+      "title": "Existing retained permitting workspace API",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/afe3597548877bc0e4b84b3acdd0e8187019d2db/revenue/berkeley-clariti-32600118-20261010/workspace/API.md",
+      "git_blob": "e5560f0e35e23948626c618ba4e429ae23f90006"
+    },
+    {
+      "id": "existing-workshare",
+      "title": "Existing configured permitting cutover workshare",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/afe3597548877bc0e4b84b3acdd0e8187019d2db/revenue/berkeley-clariti-32600118-20261010/WORKSHARE.md",
+      "git_blob": "9508e7ddfee7fe35f9206909ab1da307742c7a8d"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "FIN-01",
+      "title": "Daily receivables comparison",
+      "source_id": "addendum-e",
+      "locator": "PDF p.4, Q80",
+      "source_meaning": "Compare daily receivables and permit transactions; investigate unmatched payments and denials.",
+      "product_behavior": "Retain both selected source populations, exact native identifiers, requested/paid amounts, status interpretation, differences and review history. A case-level balance is not transaction evidence."
+    },
+    {
+      "id": "FIN-02",
+      "title": "Configurable integration contract",
+      "source_id": "addendum-e",
+      "locator": "PDF p.4, Q77/answer78",
+      "source_meaning": "Detailed exchange behavior is settled during implementation.",
+      "product_behavior": "Version input/output layouts, identity rules, source-lane roles, amount encoding, timezone, report scope, status vocabulary and event semantics. Do not label a proposed layout as the vendor's native format."
+    },
+    {
+      "id": "FIN-03",
+      "title": "Processor selection",
+      "source_id": "addendum-e",
+      "locator": "PDF p.4, Q79",
+      "source_meaning": "ACI is identified; other compliant processors may be proposed.",
+      "product_behavior": "Name the actual supplied processor and export edition. Reconciliation works from its retained reports without presuming an ACI API or replacing a processor."
+    },
+    {
+      "id": "FIN-04",
+      "title": "Cashier session lifecycle",
+      "source_id": "to-be-maps",
+      "locator": "Session21, PDF p.67",
+      "source_meaning": "Open and close cashier sessions; prepare ERP exchange.",
+      "product_behavior": "Bind a session to its cashier, day, tender population and original receipts. Keep prepared output, transmitted output and observed receivables separate."
+    },
+    {
+      "id": "FIN-05",
+      "title": "Deposit review",
+      "source_id": "to-be-maps",
+      "locator": "Session21, PDF p.67",
+      "source_meaning": "Two authorized staff verify a deposit and its documents.",
+      "product_behavior": "Retain two distinct reviewer identities against the exact prepared deposit edition, their entered observations and supporting artifacts. A later material change needs a new current review."
+    },
+    {
+      "id": "FIN-06",
+      "title": "One-time payment meaning",
+      "source_id": "to-be-maps",
+      "locator": "Session21, PDF p.68, Notes",
+      "source_meaning": "POS denotes a one-time payment, not a POS system.",
+      "product_behavior": "Allow department/division and original record references for these payments without requiring a fabricated permit or hardware device identity."
+    },
+    {
+      "id": "FIN-07",
+      "title": "Partial allocation",
+      "source_id": "to-be-maps",
+      "locator": "Session21, PDF p.68",
+      "source_meaning": "Support partial payments and individual invoices.",
+      "product_behavior": "Retain explicit allocations to invoice/fee identities, original amounts and unapplied remainder. Reject over-allocation and implicit cross-currency netting."
+    },
+    {
+      "id": "FIN-08",
+      "title": "Financial change history",
+      "source_id": "to-be-maps",
+      "locator": "Session21, PDF p.68",
+      "source_meaning": "Retain fee/payment changes and responsible actors.",
+      "product_behavior": "Corrections create new immutable editions or observed lifecycle entries. Preserve who changed which source interpretation, when, why and the exact prior record."
+    },
+    {
+      "id": "FIN-09",
+      "title": "Daily reporting and over/short",
+      "source_id": "to-be-maps",
+      "locator": "Session21, PDF p.68",
+      "source_meaning": "Provide cashier, card and balancing reports with over/short.",
+      "product_behavior": "Produce session, tender, department and date views from exact retained transactions; count supplied cash separately from expected cash. Unknown observations remain unknown."
+    },
+    {
+      "id": "FIN-10",
+      "title": "Refund sequence",
+      "source_id": "to-be-maps",
+      "locator": "Session16, PDF p.56",
+      "source_meaning": "Refund approval, fee adjustment and the check request are distinct.",
+      "product_behavior": "Model proposed correction, approval, actual fee/payment update, refund request and observed refund settlement separately. Every reversal links its original source transaction."
+    },
+    {
+      "id": "FIN-11",
+      "title": "Returned payment sequence",
+      "source_id": "to-be-maps",
+      "locator": "Session16, PDF p.56",
+      "source_meaning": "Returned checks/chargebacks drive payment and workflow correction.",
+      "product_behavior": "Retain the notification, returned amount, original payment, any separately supplied fee and resulting permit observation. An internal decision does not itself change the external permit."
+    },
+    {
+      "id": "FIN-12",
+      "title": "Daily financial handoff",
+      "source_id": "to-be-maps",
+      "locator": "Session16, PDF p.56",
+      "source_meaning": "Reconcile daily reports and prepare reviewed deposit batches.",
+      "product_behavior": "Retain complete source coverage, original unmatched rows, allocations, corrected captures, review decisions, selected close and transport/posting receipts in the handoff."
+    },
+    {
+      "id": "FIN-13",
+      "title": "Preserve the existing permitting product",
+      "source_id": "existing-product-api",
+      "locator": "Original comparison contract and Berkeley source recipes",
+      "source_meaning": "Case-level paymentMinor and financial transactions use different contracts.",
+      "product_behavior": "Read a selected existing case/ID crosswalk through an explicit edition binding when useful. Do not overwrite the original comparator, case findings, approved cutover or commercial scope."
+    }
+  ],
+  "proposed_configuration": [
+    {
+      "key": "source_connection",
+      "meaning": "System/instance/report family, lane, native identity fields and event-stream versus state-snapshot interpretation."
+    },
+    {
+      "key": "scope",
+      "meaning": "Accounting date/report interval, source timezone, department, cashier/session, merchant and settlement grouping; completeness declarations are source facts."
+    },
+    {
+      "key": "amounts",
+      "meaning": "Exact decimal/minor-unit scale and currency; separate requested, paid, refund, fee and settlement/net fields when provided."
+    },
+    {
+      "key": "status_mapping",
+      "meaning": "Source labels map explicitly to observed payment/denial/void/refund/return/adjustment meanings; no automatic amount inference from a label."
+    },
+    {
+      "key": "join_mapping",
+      "meaning": "Native transaction, application/permit, invoice, fee, tender, original/reversal and batch references; optional reviewed many-to-many allocations."
+    },
+    {
+      "key": "comparison",
+      "meaning": "Selected reports, accepted timing windows and explicit tolerances. Exact difference is the default; missing data is not zero."
+    },
+    {
+      "key": "output_layout",
+      "meaning": "Explicit partner-provided field order, encoding, separators, account codes and native row identity. If unsupplied, produce a labeled neutral handoff only."
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "AC-01",
+      "title": "Original source and mapping",
+      "result": "All selected original bytes, native IDs, row positions, report scopes, mappings and interpretation versions can be reopened and exported. Reimporting the same source does not double count."
+    },
+    {
+      "id": "AC-02",
+      "title": "Whole transaction population",
+      "result": "Every selected source row remains inspectable, including unmatched, invalid, rejected, voided, corrected and out-of-scope rows. Counts show what was imported and what participates."
+    },
+    {
+      "id": "AC-03",
+      "title": "Exact allocation and totals",
+      "result": "The receiving operator can explain each payment allocation and remaining balance without floating-point changes, double reversals or cross-currency aggregation."
+    },
+    {
+      "id": "AC-04",
+      "title": "Correction and source refresh",
+      "result": "A corrected report, mapping or allocation produces a new retained comparison; prior reviews stay tied to their original evidence and current review requirements update."
+    },
+    {
+      "id": "AC-05",
+      "title": "Daily close",
+      "result": "A prepared close retains the exact included sources, transaction classifications, counts, tender observations, exceptions and distinct deposit reviewers; stale review cannot approve a later edition."
+    },
+    {
+      "id": "AC-06",
+      "title": "Prepared versus actual exchange",
+      "result": "Output generation records its supplied layout and exact bytes. Transmission and receiving/posting observations are separate original receipts with uncertain results preserved."
+    },
+    {
+      "id": "AC-07",
+      "title": "Portable continuation",
+      "result": "The full original source, configuration, allocations, lifecycle, daily packets and history reopen in a separate private receiving workspace without changing the original case."
+    }
+  ],
+  "uncertainties": [
+    {
+      "key": "native-layouts",
+      "detail": "The selected issuer documents do not provide actual Clariti, Munis ERMA or ACI transaction columns, tenant account codes, unique-key rules or API credentials."
+    },
+    {
+      "key": "financial-day",
+      "detail": "The exact accounting-day boundary, report completion signal, settlement delay and acceptable tolerance must be supplied for the selected implementation population."
+    },
+    {
+      "key": "operational-authority",
+      "detail": "An internal operator records supplied authority/review observations. The source does not make this tool a payment processor, agency ERP or identity provider."
+    },
+    {
+      "key": "historic-editions",
+      "detail": "Legacy FUND$/Accela labels and future Tyler Munis ERMA wording remain source-specific; they are not interchangeable schemas or a confirmed current deployment."
+    },
+    {
+      "key": "case-scope",
+      "detail": "The existing $4,800 permitting workshare explicitly treats transaction-level reconciliation as a separate future delivery. This module does not alter the sent offer or claim a sale."
+    }
+  ]
+}

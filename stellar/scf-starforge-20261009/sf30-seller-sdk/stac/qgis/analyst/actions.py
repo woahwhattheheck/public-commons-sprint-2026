@@ -12,7 +12,7 @@ import uuid
 
 from starforge_stac.model import (QgisReceivingError, QgisWorkspace, HASH, REQUEST,
     require, member, read_json, json_bytes, retain_bytes, file_digest, value_sha,
-    open_receiving_source, receive_package, read_package_manifest, CHUNK, MAX_JSON)
+    open_receiving_source, receive_package, read_package_manifest, opened_package_archive, CHUNK, MAX_JSON)
 from starforge_stac import qgis_project
 
 NATIVE_ACTIONS = frozenset(("map.inspect", "map.save", "map.reopen", "map.render", "map.features", "postgis.check", "postgis.layers"))
@@ -446,8 +446,7 @@ def execute(workspace, record, progress):
         if destination.exists():
             # The only uncertain point is after native package publication and before receipt retention.
             # Validate its original full manifest and captured workspace revision before adopting it.
-            import zipfile
-            with zipfile.ZipFile(destination) as archive:
+            with opened_package_archive(destination, progress=progress) as (archive, measured, assert_archive):
                 manifest, manifest_body, files = read_package_manifest(archive)
                 for index, (name, item) in enumerate(files.items(), 1):
                     digest, count = hashlib.sha256(), 0
@@ -480,7 +479,7 @@ def execute(workspace, record, progress):
                             row.get("inputSha256") == record["inputSha256"]
                             for row in snapshot.get("analystRequests", [])),
                         "ANALYST_EXPORT_CHANGED", "The existing archive belongs to another original export.")
-                measured = file_digest(destination, progress=progress)
+                assert_archive()
                 result = {"path": str(destination), **measured,
                           "manifestSha256": hashlib.sha256(manifest_body).hexdigest(),
                           "workspaceId": manifest["workspaceId"], "revision": manifest["revision"],
