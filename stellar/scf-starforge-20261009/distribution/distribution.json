@@ -440,6 +440,7 @@
     "nocodb-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/workspace/cli.mjs",
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
     "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
+    "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs",
     "api-pass-workspace": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs"
   },
   "exports": {
@@ -1067,6 +1068,18 @@
     "./partners/unstructured": "./source/stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
     "./partners/unstructured/commerce": "./source/stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
     "./merchant/mcp/coingecko": "./source/stellar-forge/mcp-merchant-operator/coingecko-workspace.mjs",
+    "./merchant/mcp/fiscaldata": "./source/stellar-forge/mcp-merchant-operator/fiscaldata-workspace.mjs",
+    "./seller/fiscaldata/portable": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/portable.mjs",
+    "./merchant/mcp/mpp": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/mpp-console.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/mpp-console.mjs"
+    },
+    "./merchant/mcp/mpp-download": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/mpp-download.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/mpp-download.mjs"
+    },
+    "./seller/ndjson/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/release.mjs",
+    "./merchant/mcp/dataset-lifecycle": "./source/stellar-forge/mcp-merchant-operator/dataset-lifecycle.mjs",
     "./merchant/api-pass-workspace": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/model.mjs",
     "./merchant/api-pass-workspace/config": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/configuration.mjs",
     "./merchant/api-pass-workspace/server": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",

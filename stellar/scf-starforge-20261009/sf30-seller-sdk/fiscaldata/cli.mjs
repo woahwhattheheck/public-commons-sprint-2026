@@ -13,6 +13,9 @@ node fiscaldata/cli.mjs action --dir /private/fiscal-data --action sources.save 
 node fiscaldata/cli.mjs action --dir /private/fiscal-data --action captures.start --input capture.json --wait
 node fiscaldata/cli.mjs worker --dir /private/fiscal-data [--once]
 node fiscaldata/cli.mjs file --dir /private/fiscal-data --kind export --id UUID --name delivery.tar.gz --out /private/delivery.tar.gz
+node fiscaldata/cli.mjs checkpoint --dir /private/fiscal-data --out /private/source-packages --operation checkpoint-20261012 --operator operator.json
+node fiscaldata/cli.mjs receive --dir /private/received-fiscal --package /private/source-packages/HASH/workspace.fiscal.gz --sha256 SHA256 --operation receive-20261012 --operator operator.json
+node fiscaldata/cli.mjs package-inspect --package /private/workspace.fiscal.gz --sha256 SHA256
 
 The same private directory is reopened for every continuation. Close its browser
 server before using a separate CLI writer. --input is exact JSON; creation
@@ -21,6 +24,12 @@ requestId values are retained and reused only for identical retry inputs.
 --limits is a JSON object of documented source/storage ceilings; both startup
 options are also accepted by state, action and worker. No payment credentials
 belong in the action JSON. Use the original configured buyer workspace.
+Checkpoint and receiving take the original kernel workspace lease. Close another
+CLI/MCP/browser writer first. --operator is a private JSON {id,label} identifying
+the actual operator. Checkpoints retain the complete source/review workspace and
+received acquisitions; configure original merchant/runtime/buyer bindings on
+the receiving host. Unfinished captures are paused after receiving. Package
+operation IDs bind original input and make interrupted copying resumable.
 `;
 async function jsonFile(path,maximum=16*1024**2){
   const data=await readFile(resolve(path));if(data.length>maximum)throw new Error('Input JSON exceeds its byte limit.');
@@ -30,11 +39,26 @@ const emit=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
 export async function main(argv=process.argv.slice(2)){
   if(!argv.length||argv.includes('--help')){process.stdout.write(HELP);return;}
   const command=argv.shift(),values={},flags=new Set(['--wait','--once']);
-  const allowed=new Set(['--dir','--port','--buyers','--limits','--action','--input','--kind','--id','--name','--out',...flags]);
+  const allowed=new Set(['--dir','--port','--buyers','--limits','--action','--input','--kind','--id','--name','--out','--operation','--operator','--package','--sha256',...flags]);
   for(let i=0;i<argv.length;i++){
     const name=argv[i];if(!allowed.has(name)||Object.hasOwn(values,name))throw new Error('Unknown or repeated option: '+name);
     if(flags.has(name)){values[name]=true;continue;}
     if(!argv[i+1]||argv[i+1].startsWith('--'))throw new Error('Missing value for '+name);values[name]=argv[++i];
+  }
+  if(['checkpoint','receive','package-inspect'].includes(command)){
+    const {createFiscalSourcePackage,receiveFiscalSourcePackage,inspectFiscalSourcePackage}=await import('./portable.mjs');
+    if(command==='package-inspect'){
+      if(!values['--package']||!values['--sha256'])throw new Error('Package inspection requires --package and --sha256.');
+      emit(await inspectFiscalSourcePackage({packagePath:resolve(values['--package']),expectedSha256:values['--sha256']}));return;
+    }
+    if(!values['--dir']||!values['--operator']||!values['--operation'])throw new Error('Checkpoint/receiving requires --dir, --operator and --operation.');
+    const common={directory:resolve(values['--dir']),operationId:values['--operation'],actor:await jsonFile(values['--operator'],16384)};
+    if(command==='checkpoint'){
+      if(!values['--out'])throw new Error('Checkpoint requires --out for its separate private package directory.');
+      emit(await createFiscalSourcePackage({...common,outputDirectory:resolve(values['--out'])}));return;
+    }
+    if(!values['--package']||!values['--sha256'])throw new Error('Receiving requires --package and --sha256.');
+    emit(await receiveFiscalSourcePackage({...common,packagePath:resolve(values['--package']),expectedSha256:values['--sha256']}));return;
   }
   if(!values['--dir'])throw new Error('--dir is required.');
   const options={directory:resolve(values['--dir']),

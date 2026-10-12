@@ -4,7 +4,7 @@ This runner carries the complete published Treasury source workflow onto an exis
 
 Application: [PR 1409](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1409), merged revision `0f6899160c46614105dfa9353ec898df37e11a0c`.
 
-The embedded source manifest selects 337 original source, guide, license and installed-map files at that one revision (about 3.9 MB before filesystem allocation). Every downloaded or reused file must match its Git blob. The receiver’s working directory contains only its new operation, public captures, interpretations, native outputs, browser sessions and screenshots. Application source lives in a separate directory.
+The embedded source manifest selects 396 original source, browser asset, guide, license and installed-map files at that one revision (about 4.7 MB before filesystem allocation). Every downloaded or reused file must match its Git blob. The complete closure includes the runtime-loaded developer, operations, JSON-RPC, support and SF66 commerce assets, plus their relative browser imports. The receiver’s working directory contains only its new operation, public captures, interpretations, native outputs, browser sessions and screenshots. Application source lives in a separate directory.
 
 ## Run on the equipped host
 
