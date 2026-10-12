@@ -225,3 +225,7 @@ The original **Delivery operations → Operating forecast** workspace now saves 
 Use [INSTALLATIONS.md](INSTALLATIONS.md) for the complete commissioning, acceptance, operator recovery and independent receiving workflow. **Export complete handover** includes the whole original Operations case, every saved installation edition, the selected edition and a readable offline installation document. The receiving workspace opens that selected edition through its existing complete-case import.
 
 The matching Python and Node managed launch readers identify the full installed operating source, including these modules and mounted controls. Adopt both launch readers and the complete runtime together, then reopen the saved workspace from that release. Existing plan and case records continue in their original database.
+
+## Original implementation evidence
+
+The [Implementation evidence desk](IMPLEMENTATION_EVIDENCE.md) receives complete SF74 commissioning source into the existing operating case. Operators select exact task, measurement and separate technical/customer receiving observations, link the original work/purchases/deployments and saved Installation editions, and freeze a source-verified review. The original Completion, typed client/MCP, CLI and full case export/reopen retain the same evidence and request identities. The [original receiving journey](BUYER_RECEIVING_JOURNEY.md) can include this phase on its explicitly selected original case.

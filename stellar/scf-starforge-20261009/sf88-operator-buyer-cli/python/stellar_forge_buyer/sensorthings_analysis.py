@@ -145,29 +145,121 @@ def _copy(stream, target, record):
     return {"path": str(target), "bytes": size, "sha256": record["sha256"]}
 
 
+def _download_identity(value):
+    # contract.mjs sorts this fixed manifest's ASCII keys before JSON.stringify.
+    # Its only numbers are already-validated, safe integral byte counts.
+    text = json.dumps(value, ensure_ascii=False, allow_nan=False,
+                      sort_keys=True, separators=(",", ":"))
+    text = "".join("\\u%04x" % ord(c) if 0xD800 <= ord(c) <= 0xDFFF else c for c in text)
+    return digest(text.encode("utf-8"))
+
+
+def _download_source_input(selection):
+    _need(set(selection) == {"name", "download_manifest", "download_manifest_sha256"},
+          "DOWNLOAD_SOURCE_SELECTION_REQUIRED")
+    manifest_path = _path(selection["download_manifest"])
+    body = read(manifest_path, 4 * 1024 * 1024)
+    reviewed = selection.get("download_manifest_sha256")
+    _need(isinstance(reviewed, str) and _HASH.fullmatch(reviewed) and digest(body) == reviewed,
+          "REVIEWED_DOWNLOAD_MANIFEST_CHANGED")
+    value = json.loads(body)
+    _need(isinstance(value, dict) and set(value) == {
+        "schema", "id", "kind", "workspace", "workspaceId", "selection",
+        "nativeFilesManifestSha256", "files", "meaning"} and
+        value["schema"] == "stellar-forge.sensorthings-download-manifest.v1" and
+        value["kind"] == "CLIENT_BOUND_NATIVE_FILE_SET", "DOWNLOAD_MANIFEST_REQUIRED")
+    parent = value["selection"]
+    _need(isinstance(parent, dict) and set(parent) == {"kind", "id"} and
+          parent["kind"] == "analysis" and isinstance(parent["id"], str) and
+          1 <= len(parent["id"]) <= 240 and
+          isinstance(value["workspace"], str) and value["workspace"] and
+          isinstance(value["workspaceId"], str) and value["workspaceId"] and
+          isinstance(value["nativeFilesManifestSha256"], str) and
+          _HASH.fullmatch(value["nativeFilesManifestSha256"]) and
+          isinstance(value["meaning"], str), "DOWNLOAD_NATIVE_SELECTION_REQUIRED")
+    files = value["files"]
+    _need(isinstance(files, list) and 2 <= len(files) <= 37, "DOWNLOAD_FILE_CLOSURE_REQUIRED")
+    names, logical, total = set(), {}, 0
+    for item in files:
+        _need(isinstance(item, dict) and set(item) == {
+            "name", "originalName", "type", "bytes", "sha256", "selection"},
+            "DOWNLOAD_FILE_DESCRIPTOR_REQUIRED")
+        native = item["selection"]
+        _need(isinstance(native, dict) and set(native) == {"kind", "id", "file"} and
+              native["kind"] == parent["kind"] and native["id"] == parent["id"] and
+              isinstance(native["file"], str) and
+              (native["file"] == "intake.json" or _FILE.fullmatch(native["file"])) and
+              native["file"] not in logical, "DOWNLOAD_NATIVE_FILE_SELECTION_CHANGED")
+        _need(isinstance(item["name"], str) and
+              re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,239}", item["name"]) and
+              item["name"] not in {"sensorthings-download.json", "download-state"} and
+              item["name"] not in names and
+              item["originalName"] == native["file"].rsplit("/", 1)[-1] and
+              isinstance(item["type"], str) and len(item["type"]) <= 240 and
+              not re.search(r"[\x00-\x1f\x7f]", item["type"]) and
+              type(item["bytes"]) is int and 0 <= item["bytes"] <= _MAX_SOURCE and
+              isinstance(item["sha256"], str) and _HASH.fullmatch(item["sha256"]),
+              "DOWNLOAD_FILE_IDENTITY_CHANGED")
+        names.add(item["name"])
+        logical[native["file"]] = item
+        total += item["bytes"]
+    _need(total <= _MAX_SOURCE + 4 * 1024 * 1024 and
+          {"source.json", "intake.json"}.issubset(logical), "DOWNLOAD_COMPLETE_SOURCE_REQUIRED")
+    _need(isinstance(value["id"], str) and _HASH.fullmatch(value["id"]) and
+          _download_identity({k: v for k, v in value.items() if k != "id"}) == value["id"],
+          "DOWNLOAD_MANIFEST_IDENTITY_CHANGED")
+    intake_record = logical["intake.json"]
+    intake_path = manifest_path.parent / intake_record["name"]
+    _verify(intake_path, intake_record, 4 * 1024 * 1024)
+    return {"manifest": value, "files": logical, "intake_path": intake_path,
+            "intake_sha256": intake_record["sha256"],
+            "record": {"path": str(manifest_path), "bytes": len(body), "sha256": reviewed}}
+
+
 def _source(selection):
     _need(isinstance(selection, dict) and _LABEL.fullmatch(selection.get("name", "")),
           "SOURCE_NAME_REQUIRED")
-    intake_path = _path(selection["intake"])
+    downloaded = _download_source_input(selection) if "download_manifest" in selection else None
+    if downloaded is None:
+        _need(set(selection) == {"name", "intake", "sha256"}, "SOURCE_INTAKE_SELECTION_REQUIRED")
+        intake_path, intake_sha256 = _path(selection["intake"]), selection["sha256"]
+    else:
+        intake_path, intake_sha256 = downloaded["intake_path"], downloaded["intake_sha256"]
     body = read(intake_path, 4 * 1024 * 1024)
-    _need(isinstance(selection.get("sha256"), str) and
-          _HASH.fullmatch(selection["sha256"]) and digest(body) == selection["sha256"],
+    _need(isinstance(intake_sha256, str) and
+          _HASH.fullmatch(intake_sha256) and digest(body) == intake_sha256,
           "REVIEWED_INTAKE_CHANGED")
     intake = json.loads(body)
     _need(intake.get("schema") == _INTAKE and set(intake.get("tables", {})) == set(_TABLES),
           "COMPLETE_FIVE_TABLE_INTAKE_REQUIRED")
     root = intake_path.parent
+    def input_path(name):
+        if downloaded is None:
+            return root / name
+        _need(name in downloaded["files"], "DOWNLOAD_SOURCE_FILE_MISSING")
+        return root / downloaded["files"][name]["name"]
+    if downloaded is not None:
+        _need(downloaded["manifest"]["workspaceId"] == intake.get("originalWorkspaceId") and
+              downloaded["manifest"]["selection"]["id"] == intake.get("id"),
+              "DOWNLOAD_ORIGINAL_PREPARATION_CHANGED")
     files = intake.get("files")
     _need(isinstance(files, list) and len(files) <= 36, "FILE_CLOSURE_REQUIRED")
     by_path = {}
     for item in files:
         name = item.get("file", "")
         _need(_FILE.fullmatch(name) and name not in by_path, "FILE_SELECTION_INVALID")
-        _verify(root / name, item)
+        if downloaded is not None:
+            retained = downloaded["files"].get(name, {})
+            _need(all(retained.get(k) == item[k] for k in ("bytes", "sha256")) and
+                  retained.get("type") == item["contentType"], "DOWNLOAD_SOURCE_DESCRIPTOR_CHANGED")
+        _verify(input_path(name), item)
         by_path[name] = item
+    if downloaded is not None:
+        _need(set(downloaded["files"]) == set(by_path) | {"intake.json"},
+              "DOWNLOAD_SOURCE_CLOSURE_DIFFERS")
     _need(intake["source"]["file"] == "source.json" and
           by_path.get("source.json") == intake["source"], "SOURCE_MANIFEST_SELECTION_CHANGED")
-    source = _read_exact_json(root / "source.json", intake["source"], 1024 * 1024)
+    source = _read_exact_json(input_path("source.json"), intake["source"], 1024 * 1024)
     validate_manifest(source)
     _need(source["document"] == intake["document"], "DOCUMENT_BINDING_CHANGED")
     descriptors = [source["document"], *source["originals"]]
@@ -181,9 +273,9 @@ def _source(selection):
     for role in ("original-source-edition", "original-source-export-receipt",
                  "projection-and-source-interpretation"):
         _need(role in originals, "ORIGINAL_SOURCE_METADATA_REQUIRED")
-    edition = _read_exact_json(root / originals["original-source-edition"]["path"],
+    edition = _read_exact_json(input_path(originals["original-source-edition"]["path"]),
                               originals["original-source-edition"], _MAX_DOCUMENT)
-    exported = _read_exact_json(root / originals["original-source-export-receipt"]["path"],
+    exported = _read_exact_json(input_path(originals["original-source-export-receipt"]["path"]),
                                originals["original-source-export-receipt"], _MAX_DOCUMENT)
     _need(exported.get('schema') == 'stellar-forge.sensorthings-transfer-receipt.v1' and
           exported.get('originalWorkspaceId') == intake.get('originalWorkspaceId') and
@@ -203,7 +295,7 @@ def _source(selection):
         _need(part["offset"] == offset and
               originals.get("source-archive-part-" + str(index + 1).zfill(4)) ==
               {k: v for k, v in part.items() if k != "offset"}, "ARCHIVE_PART_ORDER_CHANGED")
-        with _open(root / part["path"]) as stream:
+        with _open(input_path(part["path"])) as stream:
             while True:
                 block = stream.read(1024 * 1024)
                 if not block:
@@ -212,7 +304,7 @@ def _source(selection):
                 offset += len(block)
     _need(offset == archive["bytes"] and checksum.hexdigest() == archive["sha256"],
           "WHOLE_SOURCE_ARCHIVE_CHANGED")
-    document = _read_exact_json(root / source["document"]["path"], source["document"], _MAX_DOCUMENT)
+    document = _read_exact_json(input_path(source["document"]["path"]), source["document"], _MAX_DOCUMENT)
     _need(set(document) == set(_TABLES), "DOCUMENT_COLLECTIONS_CHANGED")
     for table in _TABLES:
         description, rows = intake["tables"][table], document[table]
@@ -242,7 +334,10 @@ def _source(selection):
               "ORIGINAL_CLASSIFICATION_CHANGED")
     return {"name": selection["name"], "intake_path": intake_path, "root": root,
             "intake": intake, "source": source, "document": document, "edition": edition,
-            "intake_sha256": selection["sha256"]}
+            "intake_sha256": intake_sha256, "manifest_path": input_path("source.json"),
+            "document_files": None if downloaded is None else
+                {item["path"]: str(input_path(item["path"])) for item in descriptors},
+            "download": downloaded}
 
 
 class Programme:
@@ -343,9 +438,10 @@ class Programme:
             self.queries[key] = value
         return value
 
-    def import_document(self, key, path, collections):
+    def import_document(self, key, path, collections, *, document_files=None):
         alias = self.prefix + key
-        source = self.workspace.responses.register(alias, "document", manifest=path, expected_revision=0)
+        source = self.workspace.responses.register(alias, "document", manifest=path,
+            expected_revision=0, document_files=document_files)
         tables = {}
         for table, description in collections.items():
             preview = self.job("preview:" + key + ":" + table, "response-preview", lambda: {
@@ -451,8 +547,15 @@ class Programme:
     def _prepare_analysis(self, sources):
         registered = {}
         for source in sources:
+            if source["download"] is not None:
+                retained = source["download"]["record"]
+                with _open(retained["path"]) as stream:
+                    copied = _copy(stream, self.output / "source-receiving" /
+                                   (source["name"] + "-sensorthings-download.json"), retained)
+                self.outputs["source-download:" + source["name"]] = copied
             registered[source["name"]] = self.import_document(
-                source["name"], source["root"] / "source.json", source["intake"]["tables"])
+                source["name"], source["manifest_path"], source["intake"]["tables"],
+                document_files=source["document_files"])
             for table, record in registered[source["name"]]["tables"].items():
                 self.query(source["name"] + "_" + table,
                            "SELECT " + ",".join(_qi(c) for c in record["columns"]) +

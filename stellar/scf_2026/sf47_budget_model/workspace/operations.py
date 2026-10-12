@@ -20,6 +20,7 @@ import operations_buyer as buyer
 import operations_completion as completion
 import operations_cohort as cohort
 import operations_installations as installations
+import operations_implementation as implementation
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -149,7 +150,8 @@ class Operations:
                               "purpose": row.get("purpose"),
                               **({"completionTranche": row["completion"]["clock"]["tranche"],
                                   "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {}),
-                              **(cohort.summary(row, context, cohort_history) if row.get("purpose") == "COHORT_EVALUATION" else {})}
+                              **(cohort.summary(row, context, cohort_history) if row.get("purpose") == "COHORT_EVALUATION" else {}),
+                              **(implementation.summary(row, context) if row.get("purpose") == implementation.PURPOSE else {})}
             for row in (json.loads(raw[0]) for raw in self.db.execute(
                 "SELECT body_json FROM ops_reviews WHERE program_id=? ORDER BY rowid DESC", (program_id,)))]
         latest = self.db.execute("SELECT current_revision FROM plans WHERE id=?", (result["program"]["planId"],)).fetchone()
@@ -280,6 +282,11 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command == "implementation.prepare":
+                result = implementation.prepare(self, context, data, actor, next_version)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
             elif command == "cohort.prepare":
                 result = cohort.prepare(self, context, data, actor, next_version, self._cohort_history(program_id))
                 before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
@@ -433,6 +440,51 @@ class Operations:
             review = self.review(program_id, review_id)
             return cohort.review_files(review, lambda source_id: self.source(program_id, source_id))
 
+    def _implementation_reviews(self, program_id, selected):
+        if not isinstance(selected, list) or len(selected) > 20 or any(not isinstance(x, str) for x in selected) or len(selected) != len(set(selected)):
+            implementation.fail("Select at most twenty distinct original implementation reviews.")
+        result = []
+        for ident in selected:
+            review = self.review(program_id, ident)
+            implementation.verify_review(review, lambda source_id: self.source(program_id, source_id))
+            result.append(review)
+        return result
+
+    def seed_implementation(self, program_id, body):
+        with self.workspace.mutex:
+            context = deepcopy(self._completion_context(program_id, body, ("sourceId", "asOfAt")))
+            metadata, raw = self.source(program_id, body.get("sourceId"))
+        native = implementation.inspect(raw, body.get("asOfAt") or implementation.utc_now())
+        return implementation.seed(context, metadata, native)
+
+    def preview_implementation(self, program_id, body):
+        with self.workspace.mutex:
+            context = deepcopy(self._completion_context(program_id, body, ("inputs",)))
+            supplied = body.get("inputs")
+            if not isinstance(supplied, dict):
+                implementation.fail("Use the selected original implementation inputs.")
+            metadata, raw = self.source(program_id, supplied.get("sourceId"))
+            selected = implementation.select_installations(installations.load(self, program_id),
+                                                           supplied.get("installationRefs", []))
+        native = implementation.inspect(raw, supplied.get("asOfAt"))
+        return implementation.evaluate(context, native, supplied, selected)
+
+    def export_implementation(self, program_id, review_id):
+        with self.workspace.mutex:
+            review = self.review(program_id, review_id)
+            return implementation.review_files(review, lambda source_id: self.source(program_id, source_id))
+
+    def implementation_original(self, program_id, source_id, sha256):
+        domain.sha(sha256, "Original implementation file SHA-256", False)
+        metadata, raw = self.source(program_id, source_id)
+        originals = implementation.original_files(raw)
+        if sha256 not in originals:
+            implementation.fail("This file is not in the selected original implementation.", "IMPLEMENTATION_FILE_NOT_FOUND", 404)
+        _, state, _ = implementation.original_state(raw)
+        material = next((row for row in state.get("materials", []) if row.get("sha256") == sha256), None)
+        return {"filename": material["name"] if material else "original-" + sha256,
+                "sha256": sha256, "bytes": len(originals[sha256]), "sourceId": metadata["id"]}, originals[sha256]
+
     def completion_calendar(self, program_id, as_of=None):
         with self.workspace.mutex:
             return completion.dashboard(self._context(identifier(program_id, "operation")), as_of)
@@ -451,10 +503,11 @@ class Operations:
 
     def preview_completion(self, program_id, body):
         with self.workspace.mutex:
-            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary", "cohortReviewIds"))
+            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary", "cohortReviewIds", "implementationReviewIds"))
             reviews = self._cohort_reviews(program_id, body["cohortReviewIds"]) if "cohortReviewIds" in body else None
+            evidence = self._implementation_reviews(program_id, body["implementationReviewIds"]) if "implementationReviewIds" in body else None
             return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"},
-                                      reviews, self._cohort_history(program_id) if reviews is not None else None)
+                                      reviews, self._cohort_history(program_id) if reviews is not None else None, evidence)
 
     def export_completion(self, program_id, review_id):
         with self.workspace.mutex:
@@ -759,6 +812,18 @@ class Operations:
     def import_bundle(self, raw, name, request_id, actor):
         name = text(name, "Imported operations case name", 300, True)
         actor = text(actor, "Receiving operator", 300, True)
+        request_id = short_id(request_id, "Request ID")
+        original_payload = {"domain": SCHEMA, "action": "import", "sha256": hashlib.sha256(raw).hexdigest(),
+                            "name": name, "actor": actor}
+        # A committed original import is recoverable even if its earlier reader
+        # release is not installed now. Changed bytes keep the existing conflict.
+        with self.workspace.mutex:
+            existing = self.db.execute("SELECT fingerprint,result_json FROM requests WHERE request_id=?",
+                                       (request_id,)).fetchone()
+            if existing:
+                if existing[0] != digest(original_payload):
+                    raise Problem("This request identity already describes a different operation.", 409, "REQUEST_CONFLICT")
+                return json.loads(existing[1])
         document, files = self._unpack(raw)
         source_program, plan = document["program"], document["plan"]
         if not isinstance(source_program, dict) or not isinstance(plan, dict):
@@ -823,6 +888,7 @@ class Operations:
         completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"])
         saved_installations = document.get("installations", [])
         installations.validate_import(context, saved_installations, events, source_program["version"])
+        implementation.validate_import(context, reviews, events, saved_installations, files)
         refs = installations.latest_refs(saved_installations)
         if document.get("installationRefs", []) != refs:
             domain.fail("The selected installation heads differ from their complete retained editions.")

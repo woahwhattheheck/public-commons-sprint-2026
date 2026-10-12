@@ -231,6 +231,10 @@ Use the deployment descriptor’s complete `paths.entry`, including its query. T
 
 `nativeNavigation` records the exact source/client IDs, derived native IDs, original UTC bounds and displayed epoch-millisecond range. The display starts with the explicit saved period, or the saved source summary’s extent when no period was selected. Its endpoints round outward to the native millisecond resolution; a single exact instant receives a one-millisecond display width. This describes the viewport only. It does not rewrite source timestamps, add an observation, establish a validity interval or claim interpolated measurements. IDs that collide or cannot be represented by the original permalink remain explicit native-view findings, while the complete original analysis stays available.
 
+## Complete native application and Python receiving
+
+The [complete native receiving guide](NATIVE_RUN.md) and [exact input example](native-journey.example.json) connect the existing analyst UI, actual Helgoland output, original file downloads, complete project receiving, the original Python Analysis programme and fresh-process reopen. [native-journey.mjs](native-journey.mjs) starts from the actual stopped source workspace and returned edition/export IDs. Its journal preserves the same original operations and recorded output after interruption; a prepared input is not a completed native result.
+
 ## Recovery reference
 
 | Observation | Continue the original workflow |

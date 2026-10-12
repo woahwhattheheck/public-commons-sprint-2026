@@ -9,7 +9,8 @@
     "sensorthings-report": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/status-report.mjs",
     "sensorthings-receive-bgs": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/receive-bgs.mjs",
     "sensorthings-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/launch.mjs",
-    "sensorthings-python-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document-cli.mjs"
+    "sensorthings-python-source": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document-cli.mjs",
+    "sensorthings-analysis-native": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.mjs"
   },
   "commandDescriptions": {
     "sensorthings": "Open the original SensorThings workspace, operate retained source editions and recover the same native operations.",
@@ -18,7 +19,8 @@
     "sensorthings-report": "Reproduce and reopen the complete status report from its original recorded sources and selected recipe.",
     "sensorthings-receive-bgs": "Receive the complete retained BGS pressure source through the original workspace, source review, dataset publication and archive.",
     "sensorthings-analysis": "Start the original SensorThings analysis Desk and retained Helgoland deployment using its existing private workspace session.",
-    "sensorthings-python-source": "Prepare the complete retained source edition and original source export for the existing Python Analysis document intake."
+    "sensorthings-python-source": "Prepare the complete retained source edition and original source export for the existing Python Analysis document intake.",
+    "sensorthings-analysis-native": "Continue the same original retained-edition analysis, native Helgoland browser, publication, Python programme and complete customer receiving."
   },
   "exports": {
     "./sensorthings": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/core.mjs",
@@ -65,13 +67,18 @@
     "./sensorthings/analysis/transfer": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/transfer.mjs",
     "./sensorthings/analysis/types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/types.d.mts",
     "./sensorthings/analysis/python-document": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document.mjs",
-    "./sensorthings/analysis/python-document-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document-cli.mjs"
+    "./sensorthings/analysis/python-document-cli": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/python-document-cli.mjs",
+    "./sensorthings/analysis/native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.mjs"
   },
   "merchantProviders": {
     "sensorthings-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/merchant-provider.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/upstream/LICENSE-helgoland",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/upstream/LICENSE-toolbox"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/upstream/LICENSE-toolbox",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/ANALYSIS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/OPERATIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/NATIVE_RUN.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/sensorthings/analysis/deployment/native-journey.example.json"
   ]
 }

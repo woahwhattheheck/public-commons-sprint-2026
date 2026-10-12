@@ -9,8 +9,8 @@ The source engine, AnalysisWorkspace, DatasetDatabase, report engine, workbook e
 1. Finish an original SensorThings capture and retain its immutable source edition.
 2. Complete the original edition.export action. Retain the returned result.id. That source-export ID is different from the caller's operationId.
 3. Call analysis.python.prepare in the same workspace, selecting the exact editionId and returned exportId.
-4. Deliver every file named in the resulting preparation record, preserving its relative path. The original complete source archive travels as ordered content-addressed parts, accompanied by the original edition and export receipt.
-5. Run the installed Python programme with the exact intake.json files and their SHA-256 values.
+4. Receive the complete preparation through the existing file downloader, or use its retained source directory on the same host. The normal downloader keeps numbered flat names and their original selectors in sensorthings-download.json. The complete source archive travels as ordered content-addressed parts, accompanied by the original edition and export receipt.
+5. Run the installed Python programme with each complete receiving manifest and its SHA-256, or with the original intake.json and its SHA-256 when using a retained source directory.
 6. Receive full tables, source and time summaries, categorical occurrence counts, exact numeric summaries, original semantic-key comparisons, complete query exports, a report, and workbooks.
 7. The same programme exports the original Analysis workspace, restores it with the existing receiver, edits the saved stream-coverage query, updates the report and workbook, and exports the continued workspace.
 
@@ -47,6 +47,26 @@ The helper's fixed module API is:
 The returned record uses schema stellar-forge.sensorthings-python-source.v1. It binds id, createdAt, editionId, exportId, exportSha256, originalWorkspaceId, relativeDirectory, documentId, tables, sourceComplete, sourceArchive and files. The existing manager retains it in analysisPythonSources and reads it using the original analysis tool.
 
 The directory is analysis-python/<id>. The selected files are source.json, intake.json and files/<sha256>.json or .bin. The source file reader returns path, file, bytes, sha256, contentType, filename and mime. The filename is the selected basename; the selector still retains the complete relative file name. The existing held-descriptor download path and original workspace authentication remain the only file gateway.
+
+## Receiving the normal downloaded file set
+
+Select the preparation's complete analysis file set in the existing source application. Its ordinary downloader writes sensorthings-download.json and numbered files in one receiving directory. Keep those received names and the complete manifest together.
+
+The Python programme accepts that existing manifest directly:
+
+    {
+      "name": "bgs_pressure",
+      "download_manifest": "/absolute/received-source/sensorthings-download.json",
+      "download_manifest_sha256": "the actual SHA-256 of the complete received manifest"
+    }
+
+Use this object in the programme request's sources array. Each source selects either these three fields or the original name, intake and sha256 fields. Sources using the two receiving forms can participate in the same programme.
+
+The programme checks the exact complete manifest bytes and its original client-bound identity, then follows files[].selection.file to the actual numbered file. Every selected file must belong to the same original analysis preparation. The native workspace and preparation IDs must match the received intake. The whole received closure, byte counts, SHA-256 values and content types must match the original source descriptors. The same original edition/export binding, five complete tables and ordered whole-archive hash are then checked.
+
+The existing AnalysisResponses.register method accepts an optional document_files mapping from original descriptor paths to explicit local input files. It passes that mapping to the existing retain_document function as source_files. The normal FileDelivery reader and original publication method copy each complete input directly into the existing content-addressed Analysis document store. The source.json bytes, document ID, dataset identity and registration history remain original. Repeated imports reuse completed retained files through the same publication logic.
+
+This mapping is an input-location option. The persisted source document continues to use its original files/<sha256> paths, so the normal workspace exporter and receiver need no new file format or path resolver. The complete downloaded receiving manifest is retained in the customer handover under source-receiving, alongside all other original programme deliverables.
 
 ## Five complete tables
 
@@ -148,4 +168,4 @@ The source integration adds these leaves:
 
 The existing scalar owner composes action/schema/core/read/file/MCP/type/contribution hooks once. Keep the normal source package and Python distribution; a second manually reduced package is unnecessary. The original .py/.mjs/Markdown distribution rules include these leaves. Existing upstream Helgoland licence inclusion belongs to the normal source builder and must preserve the original licence bytes.
 
-The shared AnalysisWorkspace, response-document engine, DatasetDatabase, report/workbook engine and archive receiver are consumed through their existing methods. This integration does not change those shared source files or their recovery contracts.
+The shared AnalysisWorkspace, DatasetDatabase, report/workbook engine and archive receiver are consumed through their existing methods. The optional flat-file input join changes response_tables.py and response_documents.py only: AnalysisResponses.register accepts document_files, and retain_document passes the reviewed source_files mapping to its original FileDelivery reader and publisher. Existing callers use the unchanged directory layout. Persisted manifest bytes, document IDs, response recovery, source registration history and portable workspace contracts remain original.

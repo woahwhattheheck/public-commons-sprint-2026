@@ -83,6 +83,11 @@ The executable drives the actual source and project APIs in this order:
    activate both retained editions through the original controller, and receive
    the same project again to verify that the newer version activity stays
    current.
+7. Deliver again from the relocated original acquisition, export the advanced
+   project, reopen the original incoming project without resetting its later
+   publisher or session, and receive that advanced project in a further private
+   directory. Resolve saved logical response paths through the original SF88
+   location API and retain their original byte digests.
 
 The local merchant response is the original free HTTP dataset path.
 `NO_PAYMENT_REQUIRED`, all four actual response statuses and the unchanged

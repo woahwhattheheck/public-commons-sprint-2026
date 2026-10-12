@@ -127,11 +127,12 @@ export async function inspectCohortWithCLI({grantCLI,workspaceDirectory,state,sa
   const phase=state.cohortReceiving;if(!phase)return null;
   await exactFile(phase.inputs);await exactFile(phase.review);await exactFile(phase.bundle);
   const review=JSON.parse(await readFile(phase.review.path,'utf8'));
+  const current=await grantCLI(workspaceDirectory,['operations','show','--case',phase.caseId]);
   const seed=await grantCLI(workspaceDirectory,['operations','cohort-seed','--case',phase.caseId,
-    '--expected-version',String(phase.receipt.version),'--tranche','2']);
-  need(seed.source.version===phase.receipt.version,'The CLI reopened another original case version.');
+    '--expected-version',String(current.program.version),'--tranche','2']);
+  need(seed.source.version===current.program.version,'The CLI reopened another original case version.');
   const preview=await grantCLI(workspaceDirectory,['operations','cohort-preview','--case',phase.caseId,
-    '--expected-version',String(phase.receipt.version),'--inputs',phase.inputs.path]);
+    '--expected-version',String(current.program.version),'--inputs',phase.inputs.path]);
   need(preview.source.measurementSha256===review.cohort.source.measurementSha256,'The native CLI selected another cohort measurement source.');
   const path=join(workDirectory,'cohort-receiving','Original_Cohort_CLI_Evidence.zip');
   if(!phase.cliBundle) {
