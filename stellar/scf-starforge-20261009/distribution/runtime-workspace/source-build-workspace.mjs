@@ -247,7 +247,7 @@ export async function normalizeSourceBuildOperation(root, request, id) {
   request.sourceBuildId = review.reviewId;
   request.sourceBuildOutput = join(buildPath(join(root, 'source-builds'), review.reviewId), 'output');
 }
-function checkReceipt(review, receipt, manifest) {
+export function validateSourceBuildOutput(review, receipt, manifest) {
   need(receipt?.status === 'PACKAGED' && receipt.sourceCommit === review.sourceCommit &&
     receipt.packageName === review.packageName && receipt.packageVersion === review.packageVersion &&
     (receipt.sourceSelection?.id ?? 'all') === review.selection &&
@@ -285,7 +285,7 @@ export async function executeSourceBuildOperation({ root, request, state, checkp
     onProgress: event => process.stdout.write('[source build] ' + JSON.stringify(event) + '\n'),
   });
   need(build.archive && basename(build.archive).endsWith('.tgz'), 'SOURCE_BUILD_ARCHIVE_REQUIRED');
-  checkReceipt(review, build, await readJSON(join(output, 'package', 'manifest.json')));
+  validateSourceBuildOutput(review, build, await readJSON(join(output, 'package', 'manifest.json')));
   await checkpoint({ sourceBuildStage: 'RECEIVING_SOURCE', sourceBuildReceipt: build });
   let attempt = state.sourceBuildCatalogAttempt ?? 1;
   need(Number.isSafeInteger(attempt) && attempt >= 1, 'SOURCE_BUILD_CATALOG_ATTEMPT_INVALID');

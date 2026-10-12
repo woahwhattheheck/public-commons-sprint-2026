@@ -1,4 +1,5 @@
 import { matchProductRequirements, normalizeProductRequirements, productReviewRequest } from '/product-requirements.mjs';
+import { productPlanRuntimes } from '/product-plan-runtime.mjs';
 // MIT. Complete source-product workflow over the original workspace operations.
 import { searchProductCatalog, productSourceSummary, compareProductSources,
   formatProductCatalogMarkdown } from '../../product-catalog/catalog.mjs';
@@ -27,7 +28,7 @@ function detail(title, value) {
   const node = make('details'); node.append(make('summary', title), value); return node;
 }
 export function createSourceBuildWorkspaceView({ root, api, getState, operation,
-  refreshWorkspace, openLog, switchView, chooseArchive, message, error }) {
+  refreshWorkspace, openLog, switchView, chooseArchive, chooseRuntime, message, error }) {
   let workspaceId = null, epoch = 0, pending = false, reading = false, readAgain = false;
   let catalog = null, review = null, selectedReviewId = null, builds = [], savedSelection = '';
   let sourceSignature = '', listSignature = '', reviewSignature = '', lastRead = 0, nodes = null;
@@ -38,7 +39,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
   let receiving = [], activePlan = null, selectedPlanId = null, selectedBindingId = null, pendingPlanSaves = [];
   let importedPlan = null, importedFilename = '', plansLoaded = false;
   let receivingQuery = '', receivingStatus = 'all', receivingTotal = 0, receivingCursor = null, receivingNextCursor = null, receivingPages = [];
-  let briefingDialog = null;
+  let briefingDialog = null, planRuntimesSignature = '';
   const productDetails = new Map();
   const key = () => 'starforge-source-builds-' + workspaceId;
   const snapshot = () => ({ repository: nodes.repository.value.trim(), ref: nodes.ref.value.trim() || 'HEAD',
@@ -485,16 +486,17 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
     link.href = url; link.download = value.filename; root.append(link); link.click(); link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
-  async function readBriefing(planId, bindingId, format, alive) {
+  async function readBriefing(planId, bindingId, format, alive, runtimeId) {
     const value = await api(query('/api/source-builds/plan-briefing', { planId, format,
-      ...(bindingId ? { bindingId } : {}) }));
+      ...(bindingId ? { bindingId } : {}), ...(runtimeId ? { runtimeId } : {}) }));
     if (!alive()) return null;
-    if (value.planId !== planId || value.format !== format || typeof value.content !== 'string')
+    if (value.planId !== planId || (bindingId && value.bindingId !== bindingId) ||
+      (runtimeId && value.runtimeId !== runtimeId) || value.format !== format || typeof value.content !== 'string')
       throw new Error('Reopen this saved plan before exporting its briefing.');
     return value;
   }
-  async function showBriefing(planId, bindingId, alive) {
-    const value = await readBriefing(planId, bindingId, 'html', alive);
+  async function showBriefing(planId, bindingId, alive, runtimeId) {
+    const value = await readBriefing(planId, bindingId, 'html', alive, runtimeId);
     if (!value) return;
     const source = new DOMParser().parseFromString(value.content, 'text/html').body;
     const main = source.firstElementChild;
@@ -515,6 +517,65 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
     dialog.addEventListener('close', () => { dialog.remove(); if (briefingDialog === dialog) briefingDialog = null; }, { once: true });
     actions.append(print, download, close); header.append(make('h3', 'Product briefing'), actions);
     dialog.append(header, document.importNode(main, true)); document.body.append(dialog); dialog.showModal(); close.focus();
+  }
+  function renderPlanRuntimes() {
+    const panel = nodes?.planDetails.querySelector('[data-plan-runtimes]');
+    if (!panel || !activePlan) return;
+    const value = activePlan;
+    let installed;
+    try { installed = productPlanRuntimes(value, getState(), { builds }); }
+    catch (failure) {
+      panel.replaceChildren(make('h4', 'Installed runtimes'), make('p', String(failure.message ?? failure), 'note'));
+      planRuntimesSignature = ''; return;
+    }
+    const signature = JSON.stringify([installed, pending]);
+    if (planRuntimesSignature === signature) return;
+    planRuntimesSignature = signature;
+    panel.replaceChildren(make('h4', 'Installed runtimes'));
+    if (!installed.build?.archive) {
+      panel.append(make('p', 'Build this saved product through its original review below. Its package will connect to the runtimes prepared from that exact archive.', 'muted'));
+      return;
+    }
+    panel.append(make('p', 'These runtimes use the original package archive. Open a runtime to continue its existing preparation, installation or recovery. Select a ready runtime to inspect its source and export the operating handoff.', 'muted'));
+    if (!installed.runtimes.length) {
+      panel.append(make('p', 'Choose adapters and install from the original build below. A retained preparation appears here as soon as it selects this archive.', 'note'));
+      return;
+    }
+    for (const runtime of installed.runtimes) {
+      const row = make('div', undefined, 'operation'), heading = make('div', undefined, 'section-title');
+      heading.append(make('strong', runtime.label), make('span', runtime.phase, 'status'));
+      row.append(heading, facts([['Runtime', runtime.runtimeId], ['Directory', runtime.directory],
+        ['Adapter profile', runtime.profileId], ['Installation', runtime.installationId],
+        ['Package SHA-256', runtime.archiveSha256]]));
+      if (runtime.errorCode || runtime.preparationErrorCode)
+        row.append(make('p', runtime.errorCode ?? runtime.preparationErrorCode, 'note'));
+      const actions = make('div', undefined, 'actions');
+      if (getState()?.runtimes.some(item => item.id === runtime.runtimeId))
+        actions.append(button('Open original Runtime', async alive => { if (alive()) await chooseRuntime(runtime.runtimeId); }));
+      for (const original of runtime.operations) actions.append(button(
+        original.operation + ' · ' + (original.displayPhase ?? original.phase) + ' · open operation',
+        async alive => { if (alive()) await openLog({ operationId: original.id }); }));
+      if (runtime.phase === 'READY') {
+        actions.append(button('Inspect and export installed handoff', async alive => {
+          const handoff = await api(query('/api/source-builds/plan-handoff', {
+            planId: value.plan.planId, bindingId: value.bindingId, runtimeId: runtime.runtimeId,
+          }));
+          if (!alive()) return;
+          if (handoff.planId !== value.plan.planId || handoff.bindingId !== value.bindingId ||
+            handoff.sourceCommit !== value.plan.intent.sourceCommit || handoff.runtime?.runtimeId !== runtime.runtimeId ||
+            handoff.archive?.sha256 !== installed.build.archive.sha256)
+            throw new Error('Reopen this saved plan and its selected original runtime.');
+          exportValue('product-plan-' + value.plan.planId + '-runtime-' + runtime.runtimeId + '-handoff', handoff);
+          message('Exported the original installed Runtime handoff and its current source and dependency inspection.');
+        }), button('View installed briefing', alive =>
+          showBriefing(value.plan.planId, value.bindingId, alive, runtime.runtimeId)),
+        button('Export installed Markdown', async alive => {
+          const briefing = await readBriefing(value.plan.planId, value.bindingId, 'markdown', alive, runtime.runtimeId);
+          if (briefing) downloadBriefing(briefing);
+        }));
+      }
+      row.append(actions); panel.append(row);
+    }
   }
   function renderPlanDetails() {
     if (!nodes) return;
@@ -544,6 +605,8 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
       if (alive()) message('Refreshed the exact committed source and dependency manifests using this plan’s saved source settings.');
     }));
     panel.append(actions, make('p', 'The product details below use the retained inspection for this exact source. The saved review continues through the existing build and adapter installation controls.', 'note'));
+    const runtimes = make('section'); runtimes.dataset.planRuntimes = 'true';
+    planRuntimesSignature = ''; panel.append(runtimes); renderPlanRuntimes();
     const origins = make('div');
     for (const origin of value.origins) {
       const build = origin.local ? builds.find(item => item.reviewId === origin.review.reviewId && item.requestId === origin.review.requestId) : null;
@@ -896,7 +959,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
     if (reading) { readAgain ||= force; return; }
     const signature = JSON.stringify(getState()?.operations.filter(item => item.sourceBuildId));
     if (!force && signature === sourceSignature && Date.now() - lastRead < 10000) {
-      renderReview(); renderBuilds(); return;
+      renderReview(); renderBuilds(); renderPlanRuntimes(); return;
     }
     const ticket = epoch, selectedAtStart = selectedReviewId, planAtStart = selectedPlanId;
     const alive = () => epoch === ticket && workspaceId === getState()?.workspaceId;
@@ -916,7 +979,7 @@ export function createSourceBuildWorkspaceView({ root, api, getState, operation,
         if (!alive()) return;
         if (selectedReviewId === selectedAtStart && !review) review = value;
       }
-      renderReview(); renderBuilds();
+      renderReview(); renderBuilds(); renderPlanRuntimes();
     } finally {
       if (alive()) {
         reading = false; availability();

@@ -62,6 +62,10 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     bytes: await readFile(new URL('../product-catalog/catalog.mjs', import.meta.url)),
     type: 'text/javascript; charset=utf-8',
   });
+  assets.set('/product-plan-runtime.mjs', {
+    bytes: await readFile(new URL('./product-plan-runtime.mjs', import.meta.url)),
+    type: 'text/javascript; charset=utf-8',
+  });
   assets.set('/product-requirements.mjs', {
     bytes: await readFile(new URL('../discovery/product-requirements.mjs', import.meta.url)),
     type: 'text/javascript; charset=utf-8',
@@ -150,8 +154,12 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       }
       if (req.method === 'GET' && url.pathname === '/api/source-builds/plan')
         return send(200, await model.sourcePlanRead(params(url, ['planId', 'bindingId'])));
+      if (req.method === 'GET' && url.pathname === '/api/source-builds/plan-runtimes')
+        return send(200, await model.sourcePlanRuntimes(params(url, ['planId', 'bindingId'])));
+      if (req.method === 'GET' && url.pathname === '/api/source-builds/plan-handoff')
+        return send(200, await model.sourcePlanHandoff(params(url, ['planId', 'bindingId', 'runtimeId'])));
       if (req.method === 'GET' && url.pathname === '/api/source-builds/plan-briefing')
-        return send(200, await model.sourcePlanBriefing(params(url, ['planId', 'bindingId', 'format'])));
+        return send(200, await model.sourcePlanBriefing(params(url, ['planId', 'bindingId', 'format', 'runtimeId'])));
       if (req.method === 'GET' && url.pathname === '/api/source-builds/plan-export')
         return send(200, await model.sourcePlanExport(params(url, ['planId'])));
       if (req.method === 'GET' && url.pathname === '/api/source-builds/plan-receiving')
