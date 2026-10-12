@@ -221,6 +221,7 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     if (sha256(canonical(input)) !== saved.inputSha256) fail('GRPC_CALL_INPUT_CHANGED', 409);
     const result = await optional(join(folders.attempts, id + '.output'), 17825792);
     const streaming = saved.responseFormat === 'ndjson';
+    if (streaming && saved.responseSha256 && !result) fail('GRPC_STREAM_TERMINAL_RESULT_MISSING', 409);
     if (result) {
       if (result.id !== id || result.fingerprint !== saved.fingerprint ||
           result.sha256 !== sha256(canonical(result.output))) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
