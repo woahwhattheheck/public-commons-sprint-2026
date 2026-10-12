@@ -1,0 +1,110 @@
+{
+  "schema": "portfolio.operator-source.v1",
+  "project": "Project portfolio target desk",
+  "upstream": {
+    "mpxj_version": "16.10.0",
+    "mpxj_commit": "7ef9e72813d33378c55ec6ceb148cc831ed22033"
+  },
+  "files": [
+    {
+      "path": "cli.py",
+      "bytes": 309,
+      "sha256": "9715ba42c02c6198f44b0077bcacf7ed1566aacae90a29ae8c3a8b68497db747"
+    },
+    {
+      "path": "examples/native-mappings.json",
+      "bytes": 421,
+      "sha256": "9dd592ceaaf4cd0648fa37544003ec63d951cc9686f00a6e7d3cfc39c96e247a"
+    },
+    {
+      "path": "examples/target-profiles.json",
+      "bytes": 667,
+      "sha256": "a02bf050f42e36f1dab8ec02a0fc54af9d1a0c18e7790b8b78a71f3dfba10db0"
+    },
+    {
+      "path": "native/browser.mjs",
+      "bytes": 25569,
+      "sha256": "a546c2ffa2a06afb0c83dd26d569672b4bc36a61086fe11319cfa84e241864bd"
+    },
+    {
+      "path": "native/README.md",
+      "bytes": 5408,
+      "sha256": "e9f945abd025f624aa5fec2178aa99f9c320479dadb7c1d8d6311f5b17fedb8c"
+    },
+    {
+      "path": "native/receive.py",
+      "bytes": 15097,
+      "sha256": "6d98240f71b8e6a6ed434788b026600b7710a8b6b648b8729b2c4f6d381104cc"
+    },
+    {
+      "path": "portfolio_target/__init__.py",
+      "bytes": 332,
+      "sha256": "b2520d710c5f3ae9b03f156231ebf355566e9f0a8c4a30a9b9146db672c1ac29"
+    },
+    {
+      "path": "portfolio_target/adjustments.py",
+      "bytes": 10153,
+      "sha256": "43e3b016a6c966448938576cabec709ca8f15dccb58a9e983effaee61fc59726"
+    },
+    {
+      "path": "portfolio_target/cli.py",
+      "bytes": 7716,
+      "sha256": "ad947320c1395a05255e15e51cc245f850afbe3f73d9ead28dd23cc1f1f5be5d"
+    },
+    {
+      "path": "portfolio_target/planner.py",
+      "bytes": 26652,
+      "sha256": "bb8702cbc388f9c0dddb51d96c3f2d852fe9772d11d9ed4bf073ccb286df0253"
+    },
+    {
+      "path": "portfolio_target/server.py",
+      "bytes": 19316,
+      "sha256": "296154e9e5196c0d885ba320230097d5c47a80c43c3481b85c86446d932de458"
+    },
+    {
+      "path": "portfolio_target/storage.py",
+      "bytes": 13625,
+      "sha256": "06d03a97edfefe7ad9c2595c3f1a857ba509c38a4cceb9c82b5093792bca2a09"
+    },
+    {
+      "path": "portfolio_target/target.py",
+      "bytes": 27479,
+      "sha256": "f9e12d255d117db097bc67d9b986058330dcb29ed3a4495a8a4194c94dab0495"
+    },
+    {
+      "path": "portfolio_target/web/app.js",
+      "bytes": 38638,
+      "sha256": "843056d9075d3800961d320ed48aae28536d22232dac4ec3af9543ffb3b34c3d"
+    },
+    {
+      "path": "portfolio_target/web/index.html",
+      "bytes": 11161,
+      "sha256": "6c6e8fce058f53810569e935518639ac3308b502e4fa8751449bab2f2b4e92a1"
+    },
+    {
+      "path": "portfolio_target/web/style.css",
+      "bytes": 5004,
+      "sha256": "7806e53691dc965ce567af724850c54404a33ee98e56eb16c7033d31ced8eed3"
+    },
+    {
+      "path": "portfolio_target/workspace.py",
+      "bytes": 62153,
+      "sha256": "170aeb1002e60af06ef2404a12e1ee1eefe3a622572b0d29667fb167f56ab500"
+    },
+    {
+      "path": "README.md",
+      "bytes": 18984,
+      "sha256": "70ea7f6fd5c8078dc480f13b60b41b862d7f2a0d75d1d37c38e1d35ea892d8e4"
+    },
+    {
+      "path": "serve.py",
+      "bytes": 284,
+      "sha256": "77e61a4dce8b92a80cd4351c23b9a15430293f38215b31966806bb4bea0ae018"
+    },
+    {
+      "path": "SOURCE_REFERENCES.json",
+      "bytes": 2143,
+      "sha256": "12d97852f663284427d5eba4ec32df5b7657d0c5c258ab6f4d969e70cb6e067e"
+    }
+  ]
+}
