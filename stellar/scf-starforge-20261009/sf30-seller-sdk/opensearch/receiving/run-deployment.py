@@ -452,10 +452,12 @@ def main(argv=None):
     parser.add_argument("--node-modules", required=True, type=Path)
     args = parser.parse_args(argv)
     os.umask(0o077)
-    directory = args.directory.expanduser().resolve()
+    directory = args.directory.expanduser().absolute()
+    physical_directory = directory.resolve()
     runtime = args.runtime_root.expanduser().resolve()
     args.original_journey = args.original_journey or directory / "original-merchant-journey.json"
-    need(directory != runtime and directory not in runtime.parents and runtime not in directory.parents,
+    need(physical_directory != runtime and physical_directory not in runtime.parents
+         and runtime not in physical_directory.parents,
          "Keep the declared temporary runtime separate from retained receiving output")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     runtime.mkdir(parents=True, exist_ok=True, mode=0o700)
