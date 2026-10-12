@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 from programme import (
-    HANDOVER, ProgrammeError, absolute, alias, check, digest, encoded, fields, identity,
+    HANDOVER, SOURCE_FILES, SHA, ProgrammeError, absolute, alias, check, digest, encoded, fields, identity,
     immutable_json, load_runtime, operation_lock, private_directory, read_json, relative,
 )
 
@@ -20,7 +20,7 @@ def verify_bundle(bundle):
     manifest_identity = identity(manifest_path)
     manifest = read_json(manifest_path)
     fields(manifest, ("schema", "operationId", "programme", "originalWorkspaceId", "iatiPath",
-                      "runtimeSelection", "results", "selectedHeads", "publishing", "files"),
+                      "runtimeSelection", "results", "selectedHeads", "publishing", "files", "resumedBuild"),
            ("schema", "operationId", "programme", "originalWorkspaceId", "iatiPath",
             "runtimeSelection", "results", "selectedHeads", "publishing", "files"), "complete handover")
     check(manifest["schema"] == HANDOVER, "Unsupported programme handover")
@@ -73,6 +73,28 @@ def verify_bundle(bundle):
         check((row["project"], row["revision"], row["editionSha256"]) ==
               (original["id"], original["revision"], original["sha256"]),
               "A native packet names a different programme edition")
+    if "resumedBuild" in manifest:
+        resumed = fields(manifest["resumedBuild"], ("build", "runtime", "operator"),
+                         ("build", "runtime", "operator"), "resumed build")
+        for name in ("resumed-build/BUILD.json", "resumed-build/runtime-selection.json"):
+            check(name in manifest["files"], "The continued handover lacks " + name)
+        check(resumed["build"] == manifest["files"]["resumed-build/BUILD.json"],
+              "The continued handover changes its original build identity")
+        previous = read_json(bundle / "resumed-build/BUILD.json")
+        prior_runtime = read_json(bundle / "resumed-build/runtime-selection.json")
+        check(previous.get("schema") == "tjlabs.pmel.handover-build.v1" and
+              previous.get("operationId") == manifest["operationId"] and
+              previous.get("result") == manifest["files"]["programme-result.json"] and
+              previous.get("runtime") == resumed["runtime"] == digest(encoded(prior_runtime)) and
+              previous.get("operator") == resumed["operator"],
+              "The continued handover differs from its completed original programme or software basis")
+        check(isinstance(resumed["operator"], dict) and set(resumed["operator"]) == set(SOURCE_FILES),
+              "The original complete operator identity is missing")
+        for name, selected in resumed["operator"].items():
+            fields(selected, ("bytes", "sha256"), ("bytes", "sha256"), "original operator identity")
+            check(type(selected["bytes"]) is int and selected["bytes"] > 0 and
+                  isinstance(selected["sha256"], str) and SHA.fullmatch(selected["sha256"]),
+                  "The original operator identity is invalid: " + name)
     return bundle, manifest, manifest_identity, result
 
 
