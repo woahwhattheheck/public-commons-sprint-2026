@@ -131,15 +131,21 @@ def serve(workspace, *, port=0, connection_file=None):
                         result = view.operation(query.get("id"))
                     elif path == "/api/file":
                         meta = view.get("files", query.get("id"))
-                        file_response = (view.blob_path(meta["id"]), meta)
+                        file_response = ("blob", meta)
                     elif path == "/api/export":
-                        path, meta = export_path(view, query.get("id"))
-                        file_response = (path, meta, "application/zip")
+                        meta = view.get("exports", query.get("id"))
+                        file_response = ("export", meta)
                     else:
                         raise LeapError("LOCAL_NOT_FOUND", "Choose an original workspace route.")
                 # Finish the read transaction before a slow client receives any bytes.
                 if file_response is not None:
-                    self.send_file(*file_response)
+                    kind, meta = file_response
+                    # Complete file hashing and transport use immutable bytes, outside the SQLite read transaction.
+                    if kind == "export":
+                        file, meta = export_path(workspace, meta["id"], metadata=meta)
+                        self.send_file(file, meta, "application/zip")
+                    else:
+                        self.send_file(workspace.blob_path(meta["id"]), meta)
                 else:
                     self.send_json(200, result)
             except (BrokenPipeError, ConnectionResetError):
