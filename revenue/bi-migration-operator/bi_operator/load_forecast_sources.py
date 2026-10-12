@@ -434,8 +434,18 @@ def map_source(data, inspection, mappings):
             for row, col, label, period_cell, value in candidates:
                 original_geo = text(at(row, geo_col) if geo_col else defaults.get("geography"), 300)
                 if value is None or str(value).strip() in blanks:
-                    missing.append({"mapping_id": mid, "sheet": sheet, "cell": cell_name(row, col),
-                                    "period_label": str(label or ""), "source_geography": original_geo})
+                    absent = {"mapping_id": mid, "sheet": sheet, "cell": cell_name(row, col),
+                              "period_label": str(label or ""), "source_geography": original_geo}
+                    if month_col:
+                        source_year, source_month = text(at(row, period_col), 100), text(at(row, month_col), 100)
+                        absent.update({"source_year": source_year, "source_month": source_month,
+                            "year_cell": cell_name(row, period_col), "month_cell": cell_name(row, month_col)})
+                        if (re.fullmatch(r"\d{4}", source_year) and re.fullmatch(r"\d{1,2}", source_month)
+                                and 1900 <= int(source_year) <= 2200 and 1 <= int(source_month) <= 12):
+                            absent["period_label"] = source_year + "-" + source_month.zfill(2)
+                        else:
+                            absent["period_label"] = source_year + " / " + source_month
+                    missing.append(absent)
                     continue
                 period_parts = {}
                 if month_col:
