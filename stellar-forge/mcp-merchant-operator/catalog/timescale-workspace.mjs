@@ -1,5 +1,6 @@
 // MIT. Metadata for the original Timescale project, publisher and receiving workflow.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { timescaleCommissioningTools } from './timescale-commissioning.mjs';
 export const UUID = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 export const HASH = /^[a-f0-9]{64}$/;
 const alias = { type:'string', pattern:'^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -108,5 +109,6 @@ export function timescaleWorkspaceTools(tool) {
       ['exportId','file','expectedManifestSha256','expectedSha256']),
     selected('remediation_report_file_release','Release this original remediation report descriptor.',
       {exportId:uuid,readId:uuid},['exportId','readId'],{idempotent:true}),
+    ...timescaleCommissioningTools(tool),
   ];
 }

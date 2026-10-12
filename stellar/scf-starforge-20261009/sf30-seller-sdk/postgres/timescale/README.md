@@ -221,3 +221,10 @@ Use the URL printed by that original listener. The browser arm preserves the lis
 The same application includes an assigned-work desk for the original completed Remediate and Defer review decisions. Staff can assign and revise work, bind retained plans and actual operation outcomes, review a later source edition, resolve or reopen an item, and receive its full history in the existing project archive. Every revision uses the original workspace journal and exclusive writer; native changes still use the original plan controls.
 
 [REMEDIATION.md](./REMEDIATION.md) contains the complete staff workflow, original-request recovery, CLI/HTTP/SDK interfaces and the same-operation receiving sequence. Installed code exposes `./seller/timescale/remediation`; the usual `./seller/timescale` workspace also supplies `workspace.remediation`.
+
+
+## Commission the complete customer source
+
+The same project now carries original intake files, editable source contracts, the selected native projection, complete string/null table comparisons, observed original operations, acceptance, technical handover and reopening. Its frozen JSON report preserves every original source and full project revision; the printable HTML presents the complete current decisions and comparison differences. The existing merchant client resumes complete report transfers, and whole-project export retains the entire commissioning history.
+
+[COMMISSIONING.md](./COMMISSIONING.md) contains the operator workflow, exact source format and mapping, original-request recovery, CLI/MCP/typed client contract and complete receiving path. Installed code exposes the commissioning facade from the same `workspace.commissioning`, alongside the existing native and assigned-work controls.

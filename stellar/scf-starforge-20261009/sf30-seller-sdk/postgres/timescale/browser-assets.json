@@ -57,6 +57,20 @@
         "remediation.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/timescale/commissioning.mjs",
+      [
+        "commissioning.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/timescale/commissioning.css",
+      [
+        "commissioning.css",
+        "text/css; charset=utf-8"
+      ]
     ]
   ]
 }

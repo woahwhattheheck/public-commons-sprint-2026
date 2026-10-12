@@ -8,6 +8,7 @@ import { readPostgresSourceFile } from '../config.mjs';
 import { absolute, privateDirectory, acquireWorkspace, readPrivate, readJson, createFile, atomicJson, syncDirectory, bytes, digest, identity, fault, stamp } from '../publisher/files.mjs';
 import { uuid, hash, only, checkText, catalog, tableRows, selectedAggregate, compareEditions, refreshContract, projectionContract, jobDefinition, nativeTarget } from './contracts.mjs';
 import { createTimescaleRemediation } from './remediation.mjs';
+import { createTimescaleCommissioning } from './commissioning.mjs';
 import { captureTimescale, prepareNativeRefresh, runNativeRefresh, verifyAggregate, prepareNativeJob, runNativeJobChange } from './native.mjs';
 const safeIssue=issue=>({code:typeof issue?.code==='string'&&/^[A-Z0-9_]{1,100}$/.test(issue.code)?issue.code:'TIMESCALE_OPERATION_FAILED',
   ...(typeof issue?.sqlState==='string'?{sqlState:issue.sqlState}:{})});
@@ -112,6 +113,17 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
         active:active?{id:active.id,kind:active.kind,progress:active.progress}:null,
         editions:page('editions','created DESC,id DESC'),operations:page('operations','created DESC,id DESC'),
         plans:page('plans','created DESC,id DESC'),reviews:page('reviews','created DESC,id DESC'),events:page('events','id DESC')};
+    }
+    function operations({kind,offset=0,limit=25}={}){
+      if(kind!==undefined&&(typeof kind!=='string'||!/^[a-z][a-z0-9-]{0,79}$/.test(kind)))throw fault('TIMESCALE_OPERATION_KIND_INVALID');
+      if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>100)throw fault('TIMESCALE_HISTORY_PAGE_INVALID');
+      const where=kind===undefined?'':' WHERE kind=?',args=kind===undefined?[]:[kind];
+      const total=db.prepare('SELECT count(*) AS n FROM operations'+where).get(...args).n;
+      // Original inputs can contain complete received files. List only retained
+      // results here; operation(id) remains the exact full-input recovery path.
+      const rows=db.prepare('SELECT id,kind,state,input_digest,created,updated,attempts,data FROM operations'+where+
+        ' ORDER BY created DESC,id DESC LIMIT ? OFFSET ?').all(...args,limit,offset).map(decode);
+      return {workspaceId:settings.id,version:version(),operations:{total,offset,limit,next:offset+limit<total?offset+limit:null,rows}};
     }
     async function edition(id){
       uuid(id);const row=db.prepare('SELECT * FROM editions WHERE id=?').get(id);
@@ -361,10 +373,11 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
     const publisherFacade=Object.freeze(Object.fromEntries(Object.entries(publisher).map(([name,value])=>
       [name,guardedMutations.has(name)?(...args)=>{available();return value(...args);}:value])));
     function exclusive(kind,input,work){return start(kind,input,work,{retryRead:true});}
-    const workspace={directory,settings,sourceFile,maintenanceSourceFile,publisher:publisherFacade,status,operation,edition,comparison,
+    const workspace={directory,settings,sourceFile,maintenanceSourceFile,publisher:publisherFacade,status,operation,operations,edition,comparison,
       saveReview,prepareRefresh,startRefresh,startVerification,prepareJob,applyJob,selectAggregate,startCapture,startPublicationExtraction,
       getPlan,readRecord,retainRecord,cancel,available,exclusive,close};
     workspace.remediation=createTimescaleRemediation(workspace);
+    workspace.commissioning=createTimescaleCommissioning(workspace);
     return workspace;
   }catch(issue){try{await publisher?.close();}finally{db?.close();await release();}throw issue;}
 }

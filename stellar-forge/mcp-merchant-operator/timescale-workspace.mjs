@@ -11,6 +11,7 @@ import { TIMESCALE_DOWNLOAD_MANIFEST, TIMESCALE_DOWNLOAD_SCHEMA, TIMESCALE_MANIF
 import { identity } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/publisher/files.mjs';
 import { exportTimescaleRemediationReport, inspectTimescaleRemediationReport } from './timescale-remediation-report.mjs';
 import { REMEDIATION_MANIFEST } from './timescale-remediation-contract.mjs';
+import { dispatchTimescaleCommissioning } from './timescale-commissioning.mjs';
 export { timescaleWorkspaceTools } from './catalog/timescale-workspace.mjs';
 
 const sha=bytes=>createHash('sha256').update(bytes).digest('hex');
@@ -24,7 +25,7 @@ function smallResult(value){
   if(!plain(value))return value??null;
   const output={};
   for(const key of ['editionId','digest','bytes','aggregateCount','reviewId','planId','publisherPlanId','runId','state',
-    'reportId','workItemId','itemRevision','itemDigest','manifestSha256','action','actor','note','at','reused','native','acknowledgedAt','window','options','atomic','matches','counts','jobId','manifestDigest','workspaceId','files','target','error'])
+    'commissioningId','revision','complete','createdAt','workspaceVersion','reportId','workItemId','itemRevision','itemDigest','manifestSha256','action','actor','note','at','reused','native','acknowledgedAt','window','options','atomic','matches','counts','jobId','manifestDigest','workspaceId','files','target','error'])
     if(Object.hasOwn(value,key))output[key]=value[key];
   if(value.plan)output.planKind=value.plan.schema;
   if(value.decisions)output.decisions=value.decisions.length;
@@ -313,6 +314,8 @@ export class MerchantTimescaleWorkspaces {
   async #execute(tool,name,resource,args){
     if(args.workspaceId!==resource.model.settings.id)throw failure('TIMESCALE_WORKSPACE_CHANGED','Inspect and use this original persistent workspace ID.');
     const model=resource.model;
+    if(tool.startsWith('merchant_timescale_commissioning_'))return dispatchTimescaleCommissioning({tool,name,resource,args,
+      exportsDirectory:this.#config.exportsDirectory,started:value=>this.#started(resource,value),operationView});
     switch(tool){
       case'merchant_timescale_capture':return this.#started(resource,model.startCapture(this.#input(args,['requestId','expectedVersion','title','note','timeoutMs'])));
       case'merchant_timescale_edition':{

@@ -105,6 +105,62 @@ export interface RemediationClient {
   inspectReport(input:{exportId:UUID;signal?:AbortSignal}):Promise<ManifestResult<ReportManifest>>;
   downloadReport(input:ReceiveInput):Promise<ReceiveResult>;
 }
+
+export interface CommissioningPin {commissioningId:UUID;revision:number;digest:SHA256}
+export interface CommissioningExisting {commissioningId:UUID;expectedRevision:number}
+export interface CommissioningOriginalFile {filename:string;content:string;tableName?:string|null}
+export interface CommissioningMapping {
+  columns:{name:string;expected:string;observed:string;key?:boolean}[];
+  ignoredExpected:{column:string;reason:string}[];
+  ignoredObserved:{column:string;reason:string}[];
+}
+export type CommissioningDecision='NOT_RUN'|'PASS'|'FAIL'|'DEFERRED'|'NOT_APPLICABLE';
+export interface CommissioningReference {kind:'source'|'comparison'|'observation';id:UUID}
+export interface CommissioningField {value:JsonValue;disposition:'PENDING'|'PROVIDED'|'NOT_APPLICABLE';reason:string}
+export type CommissioningCommand=
+  |WorkCommandBase&{action:'create';intake:CommissioningOriginalFile;title?:string;owner:string}
+  |WorkCommandBase&CommissioningExisting&{action:'edit';contract:Record<string,CommissioningField>;title:string;owner:string}
+  |WorkCommandBase&CommissioningExisting&{action:'bind-source';selection:WindowSelection&{columns:string[]}}
+  |WorkCommandBase&CommissioningExisting&{action:'import-table';source:CommissioningOriginalFile;role:'BASELINE'|'OBSERVED';title:string}
+  |WorkCommandBase&CommissioningExisting&{action:'compare';expectedSourceId:UUID;observedSourceId:UUID;title:string;mapping:CommissioningMapping}
+  |WorkCommandBase&CommissioningExisting&{action:'observe';operationId:UUID;operationDigest:SHA256;relevance:string}
+  |WorkCommandBase&CommissioningExisting&{action:'decide';criterionId:string;decision:CommissioningDecision;assessment:string;owner:string;references:CommissioningReference[]}
+  |WorkCommandBase&CommissioningExisting&{action:'complete';disposition:'ACCEPTED'|'WITH_OPEN_ITEMS';statement:string;followUpOwner?:string}
+  |WorkCommandBase&CommissioningExisting&{action:'reopen'};
+export type CommissioningSourceInput={commissioningId:UUID}&(
+  {kind:'intake'}|{kind:'source';sourceId:UUID}|{kind:'comparison';comparisonId:UUID});
+export type CommissioningSection='summary'|'contract'|'sources'|'comparisons'|'observations'|'acceptance'|'history';
+export interface CommissioningSummary {
+  id:UUID;title:string;owner:string;status:'OPEN'|'HANDED_OVER';revision:number;digest:SHA256;contractRevision:number;
+  createdAt:string;updatedAt:string;criteria:number;passed:number;open:number;sources:number;comparisons:number;observations:number;
+}
+export interface CommissioningDetail {
+  schema:string;workspaceId:UUID;version:number;digest:SHA256;
+  item:Record<string,unknown>&{id:UUID;revision:number;contractRevision:number;status:'OPEN'|'HANDED_OVER'};
+  section:CommissioningSection;historyCount:number;page?:NativePage<Record<string,unknown>>;
+}
+export interface CommissioningReportManifest {
+  schema:'stellar-forge.timescale-commissioning-download.v1';exportId:UUID;workspaceId:UUID;
+  commissioningId:UUID;revision:number;digest:SHA256;workspaceVersion:number;createdAt:string;complete:true;files:FileDescription[];
+}
+export interface CommissioningClient {
+  list(input?:PageInput&{q?:string;status?:'OPEN'|'HANDED_OVER'},options?:CallOptions):Promise<{
+    schema:string;workspaceId:UUID;version:number;items:NativePage<CommissioningSummary>}>;
+  item(input:({commissioningId:UUID;section?:'summary';revision?:number;digest?:SHA256}|
+    CommissioningPin&{section:Exclude<CommissioningSection,'summary'>})&PageInput,options?:CallOptions):Promise<CommissioningDetail>;
+  context(input:CommissioningPin&PageInput&{kind?:string},options?:CallOptions):Promise<Record<string,unknown>>;
+  source(input:CommissioningSourceInput&PageInput,options?:CallOptions):Promise<{
+    file:FileDescription;descriptor:Record<string,unknown>;columns?:string[];rows?:NativePage<(string|null)[]>}>;
+  comparison(input:{commissioningId:UUID;comparisonId:UUID}&PageInput,options?:CallOptions):Promise<Record<string,unknown>>;
+  command(input:CommissioningCommand,options?:CallOptions):Promise<Started>;
+  reports(input:{commissioningId:UUID}&PageInput,options?:CallOptions):Promise<Record<string,unknown>>;
+  report(input:OriginalRequest&CommissioningExisting&{expectedDigest:SHA256},options?:CallOptions):Promise<Started>;
+  file(input:CommissioningSourceInput&ChunkInput,options?:CallOptions):Promise<FileChunk>;
+  releaseFile(input:{readId:UUID},options?:CallOptions):Promise<{released:boolean;readId:UUID}>;
+  inspectReport(input:{exportId:UUID;signal?:AbortSignal}):Promise<ManifestResult<CommissioningReportManifest>>;
+  downloadReport(input:ReceiveInput):Promise<ReceiveResult>;
+}
+
 export interface TimescaleClient extends Scope {
   readonly endpoint:string;
   call(method:keyof typeof TIMESCALE_CLIENT_METHODS,input?:Record<string,unknown>,options?:CallOptions):Promise<unknown>;
@@ -131,6 +187,7 @@ export interface TimescaleClient extends Scope {
   export(input:OriginalRequest,options?:CallOptions):Promise<Started>;
   wait(requestId:UUID,options?:{intervalMs?:number;timeoutMs?:number;signal?:AbortSignal}):Promise<NativeOperation>;
   readonly remediation:RemediationClient;
+  readonly commissioning:CommissioningClient;
   readonly exports:{
     inspect(input:{exportId:UUID;signal?:AbortSignal}):Promise<ManifestResult>;
     download(input:ReceiveInput):Promise<ReceiveResult>;
@@ -143,5 +200,9 @@ export const TIMESCALE_CLIENT_METHODS:Readonly<{
   'export-file-release':string;'remediation-list':string;'remediation-sources':string;'remediation-item':string;
   'remediation-context':string;'remediation-command':string;'remediation-report':string;'report-manifest':string;
   'report-file':string;'report-file-release':string;
+  'commissioning-list':string;'commissioning-item':string;'commissioning-context':string;'commissioning-source':string;
+  'commissioning-comparison':string;'commissioning-command':string;'commissioning-reports':string;'commissioning-report':string;
+  'commissioning-file':string;'commissioning-file-release':string;'commissioning-report-manifest':string;
+  'commissioning-report-file':string;'commissioning-report-file-release':string;
 }>;
 export function openTimescaleClient(options:ClientOptions):Promise<TimescaleClient>;
