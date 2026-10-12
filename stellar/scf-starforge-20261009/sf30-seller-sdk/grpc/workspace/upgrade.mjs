@@ -5,6 +5,7 @@ import { compileProtoSource } from '../proto.mjs';
 import { compileGrpcMerchantPlan } from '../prepare.mjs';
 import { normalizeGrpcRequest, serializeGrpcRequest, grpcMethodSchema } from '../values.mjs';
 import { validateGrpcConfig } from '../config.mjs';
+import { prepareGrpcInput, grpcOperationSchema } from '../request-series.mjs';
 import { atomicJson } from '../../../sf46-release/release-core.mjs';
 import { canonical, sha256, fields, text, fail, jsonBytes, readJson, writeJsonSnapshot } from '../common.mjs';
 
@@ -77,8 +78,20 @@ function compilePlan(contract, source, plan) {
 function requestCheck(contract, method, input, limits) {
   try {
     const selected = contract.methods[method];
-    if (!selected || selected.requestStream) fail('GRPC_APPROVED_SINGLE_REQUEST_METHOD_REQUIRED');
+    if (!selected || selected.requestStream && !limits.requestStream) fail('GRPC_APPROVED_SINGLE_REQUEST_METHOD_REQUIRED');
     if (selected.responseStream && !limits.stream) fail('GRPC_STREAM_LIMITS_REQUIRED');
+    if (selected.requestStream) {
+      const prepared = prepareGrpcInput(contract, method, input, { limits });
+      const json = Buffer.from(JSON.stringify(prepared.value));
+      // A framed list of original protobuf hashes preserves message boundaries.
+      const wireMessages = prepared.messages.map(value => {
+        const wire = serializeGrpcRequest(contract, method, value);
+        return { bytes: wire.length, sha256: sha256(wire) };
+      });
+      return { accepted: true, jsonBytes: json.length, jsonSha256: sha256(json),
+        wireBytes: prepared.requestBytes, wireSha256: sha256(canonical(wireMessages)),
+        wireEncoding: 'ordered-protobuf-message-sha256-v1', requestMessages: wireMessages.length, error: null };
+    }
     const value = normalizeGrpcRequest(contract, method, input);
     const json = Buffer.from(JSON.stringify(value));
     if (json.length > limits.maxJsonRequestBytes) fail('GRPC_JSON_REQUEST_TOO_LARGE', 413);
@@ -285,7 +298,9 @@ export function createGrpcUpgradeWorkspace({ directory, selection, loadRevision,
     fields(input, ['id', 'method'], 'GRPC_UPGRADE_METHOD_FIELDS_INVALID');
     const { after } = await readReport(id(input.id, UUID));
     text(input.method, 'GRPC_METHOD_REQUIRED', 512);
-    return grpcMethodSchema(after.contract, input.method);
+    return after.contract.methods[input.method]?.requestStream && !after.source.limits.requestStream
+      ? grpcMethodSchema(after.contract, input.method)
+      : grpcOperationSchema(after.contract, input.method, { limits: after.source.limits });
   }
   async function initialize() {
     index = await optional(join(directory, 'index.json'), INDEX_LIMIT) ?? [];
