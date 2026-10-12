@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Merchant tariffs</title>
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./browser.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">Merchant pricing</p><h1>Tariffs</h1></div>
+    <nav aria-label="Workspace"><a id="pricing-link" href="/">Pricing</a><button id="refresh" type="button">Refresh</button></nav>
+  </header>
+  <div id="status" role="status" aria-live="polite">Opening the pricing workspace…</div>
+  <main>
+    <div class="work">
+      <section aria-labelledby="source-title">
+        <div class="section-heading"><span class="step">1</span><h2 id="source-title">Source and tariff</h2></div>
+        <p class="intro">Compare monthly pricing schedules against a saved merchant review. Every amount uses exact decimal arithmetic.</p>
+        <label>Saved pricing review<select id="source-version"><option value="">Loading saved reviews…</option></select></label>
+        <div id="source-summary" class="source-summary"></div>
+        <div class="two-columns">
+          <label>Plan name<input id="plan-label" maxlength="100" value="Monthly tariff comparison" autocomplete="off"></label>
+          <label>Monthly request quantities<input id="volumes" value="0, 100, 1000, 10000" inputmode="numeric" autocomplete="off"><small>Whole quantities, separated by commas. Up to 24.</small></label>
+        </div>
+        <div id="tariff-editors"></div>
+        <div class="toolbar">
+          <button id="add-tariff" type="button">Add tariff</button>
+          <button id="calculate" class="primary" type="button">Calculate comparison</button>
+        </div>
+        <details><summary>Pricing modes</summary><p><strong>Graduated</strong> charges the requests in each band at that band’s price. <strong>Volume</strong> applies the price of the selected band to every request in that quantity. A volume boundary can reduce the total charge; those changes appear in the comparison.</p></details>
+      </section>
+      <section aria-labelledby="comparison-title">
+        <div class="section-heading"><span class="step">2</span><h2 id="comparison-title">Compare and retain</h2></div>
+        <p class="intro">Each row describes one tariff and one monthly quantity. Costs come from the selected original pricing review.</p>
+        <div id="comparison-empty" class="empty">Choose a saved pricing review, enter a tariff, then calculate.</div>
+        <div id="boundary-notices"></div>
+        <div class="table-scroll"><table id="comparison-table" hidden>
+          <thead><tr><th>Tariff / route</th><th>Monthly requests</th><th>Tariff total USD</th><th>Change from fixed price</th><th>Contribution USD</th><th>Uniform quote USD</th><th>Rounding USD</th><th>Choose</th></tr></thead>
+          <tbody></tbody>
+        </table></div>
+        <div class="toolbar">
+          <button id="save-plan" type="button" disabled>Save this plan</button>
+          <button id="resume-save" type="button" hidden>Resume retained save</button>
+          <button id="download-plan" type="button" disabled>Download plan</button>
+          <button id="download-csv" type="button" disabled>Download comparison CSV</button>
+          <button id="print-plan" type="button" disabled>Print comparison</button>
+        </div>
+        <p id="saved-plan-status" class="muted"></p>
+      </section>
+      <section id="selection-section" aria-labelledby="selection-title" hidden>
+        <div class="section-heading"><span class="step">3</span><h2 id="selection-title">Review the uniform quote</h2></div>
+        <p class="intro">The existing seller uses one fixed per-request quote. This selection rounds the tariff’s average upward to six decimal places and saves it through the original pricing workflow.</p>
+        <div id="selection-summary" class="metrics"></div>
+        <div id="selection-context" class="source-summary"></div>
+        <h3>Complete commercial terms to save</h3>
+        <p class="muted">All routes below come from the selected saved review. Changes from the current pricing draft are shown before saving.</p>
+        <div class="table-scroll"><table id="selection-terms"><thead><tr><th>Route</th><th>Quote USD</th><th>Fulfillment cost USD</th><th>Challenge cost USD</th><th>Monthly requests</th><th>Change from current</th></tr></thead><tbody></tbody></table></div>
+        <p id="fixed-cost-summary"></p>
+        <details><summary>Original scenario and capture</summary><pre id="selection-detail"></pre></details>
+        <div class="toolbar"><button id="commit-selection" class="primary" type="button">Save scenario and pricing review</button><button id="download-selection" type="button">Download this selection</button></div>
+        <p id="commit-result"></p>
+      </section>
+      <section aria-labelledby="repricing-title">
+        <div class="section-heading"><span class="step">4</span><h2 id="repricing-title">Prepare native payment amounts</h2></div>
+        <p class="intro">Choose a saved pricing review and supply an explicit USD valuation for each payment option you want to change.</p>
+        <label>Pricing review<select id="repricing-version"><option value="">Choose a saved pricing review</option></select></label>
+        <button id="load-prices" type="button">Load payment options</button>
+        <div id="valuation-rows"></div>
+        <div class="toolbar"><button id="preview-prices" type="button" disabled>Review native amounts</button><button id="save-prices" type="button" disabled>Save price decision</button><button id="stage-prices" type="button" disabled>Stage retained release</button></div>
+        <div id="price-preview"></div>
+        <div id="price-downloads" class="toolbar"></div>
+      </section>
+    </div>
+    <aside>
+      <section aria-labelledby="saved-title"><h2 id="saved-title">Saved plans</h2><div id="saved-plans" class="empty">Loading…</div></section>
+      <section aria-labelledby="operations-title"><h2 id="operations-title">Retained operations</h2><p class="muted">An interrupted save keeps its original request and selected capture.</p><div id="operations"></div></section>
+      <section aria-labelledby="portfolio-title"><h2 id="portfolio-title">Portable portfolio</h2><p class="muted">Keep the tariff portfolio together with its original Pricing workspace backup.</p><button id="export-portfolio" type="button">Export complete portfolio</button><label class="file-label">Receive a portfolio<input id="import-portfolio" type="file" accept=".json,application/json"></label><p id="portfolio-result"></p></section>
+    </aside>
+  </main>
+</body>
+</html>
