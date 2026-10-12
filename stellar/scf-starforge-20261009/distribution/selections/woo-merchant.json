@@ -91,6 +91,7 @@
     "merchant-provider-tools",
     "merchant-provider-woocommerce",
     "woo-catalog",
+    "woo-connector-sources",
     "woo-managed"
   ],
   "components": [
