@@ -142,7 +142,8 @@ export function mountDss({ api, notice, make, getState, refresh }) {
         series.firstClock+' through '+series.lastClock+' · '+config.time.zone,series.insertedMissingPositions])tr.append(make('td',value));
       body.append(tr);
     }
-    table.append(body);const scroll=make('div',null,{class:'table-wrap'});scroll.append(table);container.append(scroll);
+    table.append(body);const scroll=make('div',null,{class:'table-wrap',role:'region',tabindex:'0','aria-label':'DSS receiving plan. Scroll horizontally to view every column.'});scroll.append(table);container.append(scroll);
+    container.append(make('small','Scroll the table horizontally to inspect the complete pathname and clock window.',{class:'dss-table-help'}));
     if(plan.comparison)container.append(make('p','Previous source: '+Object.entries(plan.comparison.counts).map(([key,value])=>key+': '+value).join(' · ')));
     const details=make('details');details.append(make('summary','Source and mapping identifiers'),make('pre',JSON.stringify({source:plan.source,mappingSha256:plan.mappingSha256,planSha256:plan.planSha256},null,2)));container.append(details);
     $('dss-json').value=JSON.stringify(plan.mapping,null,2);$('dss-preview-status').textContent='The complete mapping is ready to create or reopen under the chosen export name.';
