@@ -183,6 +183,8 @@ starforge fiscaldata --help
 
 The installed modules are `@tokenjunkielabs/starforge-merchant/seller/fiscaldata` for `openFiscalWorkspace`, `/seller/fiscaldata/server` for `startFiscalWorkspace`, and `/seller/fiscaldata/source` for the original Treasury source protocol. Source, installed command, browser and embedding share the same retained model and publisher.
 
+New merchant deliveries carry every original response, receipt, field review and row-position file through the shared publisher’s explicit source closure. Their source.json lists each relative path, byte count and digest; original-edition/source.json preserves the exact unmodified edition provenance. The original SF82 release manifest records and verifies those same bytes during staging and reopening. Previously retained exports keep their original format when retried.
+
 ## Native receiving
 
 The composed model workflow used the actual public Debt to the Penny API on 11 October 2026. The retained native catalogue contained 56 datasets and 180 endpoints (SHA-256 `2d0805b433d76c0faedd40dac6e429f6f983744e1478b401ede0f6e765bd217f`). Two full-field queries selected 1–8 October and 2–8 October with page size 2: three source pages each, containing six and five daily observations. Every original response, its receipt and all eleven reported fields remained retained.
