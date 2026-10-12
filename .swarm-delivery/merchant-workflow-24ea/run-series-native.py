@@ -552,26 +552,44 @@ def checkpoint_archive(selected_bundle, stage, native_exit):
         "bytes": selected_bundle.stat().st_size, "sha256": sha_file(selected_bundle),
         "path": str(selected_bundle), "savedAt": datetime.now(timezone.utc).isoformat()}
     if runtime.get("checkpointDirectory"):
+        # The complete private archive is already retained. An optional shared destination
+        # can fill independently of this native host; preserve progress and continue.
         receiving = Path(runtime["checkpointDirectory"]).resolve()
-        receiving.mkdir(parents=True, exist_ok=True, mode=0o700)
-        prior_checkpoint = original_record(receiving / "latest.json")
-        if prior_checkpoint and (prior_checkpoint.get("directory") != str(native)
-                or prior_checkpoint.get("workDirectory") != str(root)):
-            raise RuntimeError("Continue the original shared receiving checkpoint.")
-        target = receiving / (result["sha256"] + ".tar.gz")
-        if target.exists():
-            if target.is_symlink() or target.stat().st_size != result["bytes"] or sha_file(target) != result["sha256"]:
-                raise RuntimeError("Preserve the original shared archive bytes.")
-        else:
-            pending = target.with_name(target.name + "." + str(os.getpid()) + ".pending")
-            with selected_bundle.open("rb") as incoming, pending.open("wb") as outgoing:
-                os.chmod(pending, 0o600); shutil.copyfileobj(incoming, outgoing, 65536)
-                outgoing.flush(); os.fsync(outgoing.fileno())
-            if sha_file(pending) != result["sha256"]:
-                raise RuntimeError("Receive every original checkpoint archive byte.")
-            os.replace(pending, target)
-        result["path"] = str(target)
-        atomic(receiving / "latest.json", (json.dumps(result, indent=2) + "\n").encode())
+        pending = None
+        try:
+            receiving.mkdir(parents=True, exist_ok=True, mode=0o700)
+            prior_checkpoint = original_record(receiving / "latest.json")
+            if prior_checkpoint and (prior_checkpoint.get("directory") != str(native)
+                    or prior_checkpoint.get("workDirectory") != str(root)):
+                raise RuntimeError("Continue the original shared receiving checkpoint.")
+            target = receiving / (result["sha256"] + ".tar.gz")
+            if target.exists():
+                if target.is_symlink() or target.stat().st_size != result["bytes"] or sha_file(target) != result["sha256"]:
+                    raise RuntimeError("Preserve the original shared archive bytes.")
+            else:
+                import tempfile
+                descriptor, temporary = tempfile.mkstemp(prefix=target.name + ".", suffix=".pending", dir=receiving)
+                pending = Path(temporary)
+                with os.fdopen(descriptor, "wb") as outgoing, selected_bundle.open("rb") as incoming:
+                    shutil.copyfileobj(incoming, outgoing, 65536)
+                    outgoing.flush(); os.fsync(outgoing.fileno())
+                if sha_file(pending) != result["sha256"]:
+                    raise RuntimeError("Receive every original checkpoint archive byte.")
+                os.replace(pending, target)
+                pending = None
+            shared_result = {**result, "path": str(target)}
+            atomic(receiving / "latest.json", (json.dumps(shared_result, indent=2) + "\n").encode())
+            result = shared_result
+        except OSError as error:
+            result["sharedCheckpointError"] = {"directory": str(receiving), "type": type(error).__name__,
+                "errno": error.errno, "message": str(error)}
+            emit({"event": "ORIGINAL_NATIVE_SHARED_CHECKPOINT_UNAVAILABLE", **result})
+        finally:
+            if pending is not None:
+                try:
+                    pending.unlink(missing_ok=True)
+                except OSError:
+                    pass
     emit({"event": "ORIGINAL_NATIVE_PROGRAMME_SAVED", **result})
     return result
 

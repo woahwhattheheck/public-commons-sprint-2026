@@ -207,7 +207,7 @@ exports, both Console stores, merchant configuration, merchant release and
 customer-export stores, and the original configured source inputs. The native
 artifact selection and archive manifest record each complete file and application
 directory, including an empty customer-export directory. Archive creation,
-transfer and hashing stream file bodies. A supplied `--checkpoint-dir` retains each complete programme archive and its current `latest.json` on shared or persistent storage, independently of the private execution directory. The readable summary describes the actual companion archive's retained programmes.
+transfer and hashing stream file bodies. A supplied `--checkpoint-dir` additionally copies each complete programme archive and its current `latest.json` to shared or persistent storage. If that destination runs out of space or has an I/O failure, the runner reports the exact receiving error, retains the complete private archive, and continues the original customer programme. It cleans up only its own incomplete transfer. The readable summary describes the actual companion archive's retained programmes.
 
 Browser inspection images have their own transient selection. Completed legacy
 reports retain their bytes; only their exact named QA inspection images become
