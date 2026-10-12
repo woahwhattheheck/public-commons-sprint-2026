@@ -144,3 +144,73 @@ Reviewed October 12, 2026:
 - [Budget and deliverable guidance](https://stellar.gitbook.io/scf-handbook/scf-awards/build-award/budget-and-deliverable-guidelines).
 - [Official rules for submissions](https://stellar.gitbook.io/scf-handbook/scf-awards/official-rules-for-submissions).
 - [SCF #46 round](https://communityfund.stellar.org/awards/recxrSMYwAl8vcglg), listing the November 8, 2026 full Build deadline and the interest-to-invitation route.
+
+## Continue the original browser receiving with its existing Page
+
+The installed receiving operator imports `receiveGrantPlanning` from `GRANT_PLANNING_RECEIVING.mjs` alongside the existing grant callback. Pass the original Playwright Page while it is on the installed `/grant.html` reader or the retained `/grant-submission.html` editor, the exact original planning file and SHA-256, the selected installed source commit, and the operation's private output directory:
+
+```js
+import {receiveGrantPlanning} from './GRANT_PLANNING_RECEIVING.mjs';
+
+const result = await receiveGrantPlanning(page, {
+  expectedOrigin: existingGrantOrigin,
+  planningFile: originalPlanningZip,
+  planningSha256: originalPlanningSha256,
+  outputDirectory: privatePlanningDeliveryDirectory,
+  sourceCommit: installedSourceCommit,
+  operationId: 'SCF-PLAN-SUBMISSION-INTEGRATION-7F5A-20261012',
+  title: 'SCF native plan — $38,000 / 400 hours',
+});
+```
+
+Use the original `SCF-GRANT-REVIEWER-PUBLICATION-8910-20261012` receiving context and continue the same output directory. Each call uses the Page and listener already owned by that receiver. The callback compares the complete current submission and handover asset routes, including the original draft store, with their installed files.
+
+The first invocation retains its original manuscript draft identity, receives the actual native plan, selects its saved revisions, prepares the full Delivery preview and applies that reviewed text. It publishes the accepted complete draft and native roadmap before saving or beginning the subsequent reopen phases. The same original browser store then carries its saved draft and later revisions.
+
+### Resume a retained operation
+
+Repeat the same call with the original operation ID, planning file identity, title and output directory. The source file and output directory may be moved together to another equipped installation. The callback retains the selected file's exact bytes in `selected-input/` and uses that retained copy for native file intake. It checks that copy against the original input identity on every continuation. Select that installation's actual listener and source commit; the journal retains the original input/source selection and each subsequent installed source edition separately.
+
+The continuation first reads its accepted files. An existing `SCF_Native_Plan_Submission.json` supplies the draft identity and complete original planning source. Intake and plan application resume only when the original delivery has not yet been accepted. If the earlier callback saved in IndexedDB and stopped before its full export, the continuation can recover a complete saved record with the same original title and planning file. It retains the matching browser records before selecting that saved working edition. Until a native browser record is bound, more than one matching record leaves the selection unresolved. Open the intended record through **Browser drafts** and repeat the same callback from that editor. The visible editor carries its actual saved record ID and revision; the callback reads and verifies the full record through the original draft store before retaining that choice. A missing bound record stays unresolved instead of selecting another copy with the same logical draft ID.
+
+The accepted full draft must have a current planning review for the selected source, the exact selected preview basis, and the same reviewed replacement text in its current Delivery answer. An application retained only in an earlier version does not establish that current answer. If the accepted export is missing and later answer or review edits prevent that match, the callback retains the complete working and browser snapshots and leaves the original delivery unresolved. Open the exact accepted version, or explicitly review and apply the intended current Delivery in the original editor, before continuing. An already retained accepted export remains separate from later editorial work.
+
+An interrupted call leaves the existing editor open and retains its complete working draft. On resumption, the callback verifies that open draft belongs to the same operation before navigating or opening another file. Successful completion returns the Page to its original reader and scroll position.
+
+The remaining phases are explicit:
+
+| Phase | Retained work |
+| --- | --- |
+| Original manuscript | The exact initial working draft and its original identity. |
+| Delivery exported | Complete accepted draft, native planning file and exact applied roadmap. |
+| Browser saved | Original IndexedDB record identity, revision and browser origin. |
+| Full export reopened | The complete accepted draft received back through the original editor. |
+| Original version restored | Its preceding manuscript, planning selection and handover selection, with every original file retained. |
+| Browser reopened | The saved original browser record and its current editorial state. |
+| Reader restored | The receiving Page returned to its original reader URL and scroll position. |
+
+A phase's accepted export is read and verified before a retry repeats any browser action. Version restoration selects the retained version ID displayed by the editor. A later browser save is opened through its actual record and revision; the callback keeps its full newer answers, fields, notes, source selections and versions. The accepted native-plan delivery stays available beside that later editorial state.
+
+The callback preserves complete matching browser revisions in `browser-snapshots/`. It uses the maintained `listDrafts` and `loadDraft` functions for those reads. When the selected browser has no saved copy yet, it receives the accepted draft and saves it through the existing editor. A retry recovers an already accepted browser save before issuing another save. The save phase requires the accepted full state in the actual record, one of its retained versions, or a verified earlier snapshot of that same saved record. A record containing only the prepared manuscript does not complete that phase. If the original editor still holds the accepted working state with the same record ID and revision, **Save version** finishes through the native revision check. If that live binding is gone, the callback retains the complete files and reports the unfinished save for an explicit receiving decision; the ordinary **Open draft file** control creates a separate working copy and is not treated as an update to a bound record.
+
+### Receive the useful complete files
+
+| File | Purpose |
+| --- | --- |
+| `SCF_Native_Plan_Submission.json` | The accepted complete editable draft with all source files, native plan revisions, answers, notes and versions. |
+| `SCF_Native_Plan_Delivery.md` | The exact native budget and roadmap text that was applied. |
+| `Reopened_Full_Submission.json` | The accepted full export received back through the editor. |
+| `Restored_Previous_Submission.json` | The actual preceding manuscript restored through the editor. |
+| `Reopened_Browser_Submission.json` | The original saved browser draft, including later editorial work present when it is reopened. |
+| `Prepared_Source_Draft.json` | The original manuscript and draft identity retained before first native intake. |
+| `selected-input/` | The exact selected native planning bytes used by the original file chooser. |
+| `Planning_Delivery_Intent.json` | Fixed operation, planning bytes and input intent. |
+| `Planning_Delivery_Journal.json` | Current named phases, accepted artifacts, installed editions and saved browser records. |
+| `Planning_Delivery_Result.json` | The latest actual attempt result, updated atomically as the same operation continues. |
+| `Planning_Delivery_Complete.json` | The first complete result, retained unchanged on subsequent calls. |
+| `attempts/` | Each actual attempt and any complete interrupted editor draft; the earlier callback's result is retained here during adoption. |
+| `browser-snapshots/` | Complete original saved browser revisions, including later edits encountered during receiving. |
+
+An interrupted callback returns its actual phase and files on `error.result`. Repeating the original call continues that same operation. Its latest status can move from interrupted to complete, while completed delivery files and earlier attempts retain their original bytes. After completion, another identical call verifies and returns the saved completion with `reused: true`.
+
+The original saved five-revision case used for this delivery is `plan-93b727c8a44346bab4f923e60481e020`. Its complete planning ZIP is 96,869 bytes with SHA-256 `2fcc813903a1fbd66532c0a3a17ed07d250f04d3e856f8a4c5dc84309a10e086`. It is the `planning.zip` member of the retained original `SCF_Operating_Case_with_Freeform_Event_Timing_20261012.zip` (647,130 bytes; SHA-256 `c71303844660d5a859d3936a569b5461c7b1679b739dfead95d907759693df2b`). Other actual saved native plans use their own selected file identities.
