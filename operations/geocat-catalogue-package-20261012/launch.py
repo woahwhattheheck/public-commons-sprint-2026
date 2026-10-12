@@ -1,11 +1,29 @@
 #!/usr/bin/env python3
 """Prepare, reopen and start the original joint native operation in one context."""
 from __future__ import annotations
-import argparse, fcntl, hashlib, json, os, signal, stat, sys
+import argparse, errno, fcntl, hashlib, json, os, signal, stat, sys
 from pathlib import Path
 
 def need(value, code):
     if not value: raise RuntimeError(code)
+
+def terminal_control(fd):
+    need(os.isatty(fd), "ORIGINAL_PTY_REQUIRED")
+    try: return ("controlling", os.tcgetpgrp(fd))
+    except OSError as error:
+        if error.errno != errno.ENOTTY: raise
+        return ("noncontrolling", None)
+
+def slave_identity(fd, path):
+    selected = Path(path)
+    need(selected.parent == Path("/dev/pts") and selected.name and
+         all("0" <= char <= "9" for char in selected.name) and
+         selected.resolve(strict=True) == selected, "ORIGINAL_PTY_SLAVE_PATH_REQUIRED")
+    opened, named = os.fstat(fd), selected.lstat()
+    need(stat.S_ISCHR(opened.st_mode) and stat.S_ISCHR(named.st_mode) and
+         (opened.st_dev, opened.st_ino, opened.st_rdev) ==
+         (named.st_dev, named.st_ino, named.st_rdev), "ORIGINAL_PTY_SLAVE_CHANGED")
+    return [opened.st_dev, opened.st_ino, opened.st_rdev]
 
 def digest(data):
     return hashlib.sha256(data).hexdigest()
@@ -37,9 +55,10 @@ def main():
     terminal = None
     if cfg.get("source_feed"):
         need(os.isatty(0), "ORIGINAL_SOURCE_FEED_REQUIRES_OWNED_PTY")
-        info = os.fstat(0); terminal = {"path": os.ttyname(0),
-            "device": [info.st_dev, info.st_ino, info.st_rdev], "session": os.getsid(0)}
-        need(stat.S_ISCHR(info.st_mode) and os.tcgetpgrp(0) == os.getpgrp(),
+        path = os.ttyname(0); mode, foreground = terminal_control(0)
+        terminal = {"path": path, "device": slave_identity(0, path),
+                    "session": os.getsid(0), "controlMode": mode}
+        need(mode == "noncontrolling" or foreground == os.getpgrp(),
              "ORIGINAL_LAUNCHER_MUST_OWN_FOREGROUND_PTY")
     dev.mkdir(mode=0o700)
     save(dev/"context.json",{"operationId":cfg["operation_id"],"configSha256":digest(raw),"launcherPid":os.getpid()})
@@ -77,14 +96,17 @@ def main():
         if terminal is not None:
             need(launch.identity is not None and os.getsid(0) == terminal["session"],
                  "SOURCE_TERMINAL_SESSION_CHANGED")
-            need([os.fstat(0).st_dev, os.fstat(0).st_ino, os.fstat(0).st_rdev] == terminal["device"],
+            need(slave_identity(0, terminal["path"]) == terminal["device"],
                  "SOURCE_TERMINAL_DEVICE_CHANGED")
-            previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
-            try:
-                os.tcsetpgrp(0, os.getpgrp())
-            finally:
-                signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
-            need(os.tcgetpgrp(0) == os.getpgrp(), "SOURCE_TERMINAL_HANDOFF_FAILED")
+            mode, _ = terminal_control(0)
+            need(mode == terminal["controlMode"], "SOURCE_TERMINAL_CONTROL_MODE_CHANGED")
+            if mode == "controlling":
+                previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTTOU})
+                try:
+                    os.tcsetpgrp(0, os.getpgrp())
+                finally:
+                    signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+                need(os.tcgetpgrp(0) == os.getpgrp(), "SOURCE_TERMINAL_HANDOFF_FAILED")
             save(dev/"source-terminal.json", {**terminal, "schema": "starforge.geocat-source-terminal.v1",
                  "operationId": cfg["operation_id"], "configSha256": digest(raw),
                  "processGroup": os.getpgrp(), "supervisor": launch.identity})
