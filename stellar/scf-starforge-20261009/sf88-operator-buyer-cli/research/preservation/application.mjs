@@ -25,14 +25,21 @@ const PRESERVICA_SOURCE=Object.freeze([
   'research/preservation/preservica.py','research/preservation/preservica_client.py',
   'research/preservation/PRESERVICA.md','research/preservation/PRESERVICA_PROVIDER_CONTRACT.md',
 ]);
+const LIBNOVA_SOURCE=Object.freeze([
+  'research/preservation/libnova.py','research/preservation/libnova_client.py',
+  'research/preservation/LIBNOVA.md','research/preservation/LIBNOVA_PROVIDER_CONTRACT.md',
+  'research/preservation/libnova-requirements.txt',
+]);
 const field=(name,label,type,required,description)=>({name,label,type,required,description});
 const equal=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
 
 function nativeSources(value){
   need(plain(value),'APPLICATION_PRESERVATION_SOURCE_INCOMPLETE');
-  const names=Object.keys(value),optional=PRESERVICA_SOURCE.filter(name=>Object.hasOwn(value,name));
+  const names=Object.keys(value),groups=[PRESERVICA_SOURCE,LIBNOVA_SOURCE];
+  const optional=groups.flatMap(group=>group.filter(name=>Object.hasOwn(value,name)));
   need(BASE_SOURCE.every(name=>Object.hasOwn(value,name))&&
-    (optional.length===0||optional.length===PRESERVICA_SOURCE.length)&&
+    groups.every(group=>group.every(name=>Object.hasOwn(value,name))||
+      group.every(name=>!Object.hasOwn(value,name)))&&
     names.length===BASE_SOURCE.length+optional.length&&names.every(name=>SHA(value[name])),
     'APPLICATION_PRESERVATION_SOURCE_INCOMPLETE');
   return names;
@@ -59,12 +66,12 @@ export function preservationApplication(common=[]){
   return {
     id:'preservation-workspace',command:'preservation-workspace',title:'Research preservation',
     terminal:false,requiredSource:ROOT+'/workbench.py',
-    description:'Review the original research records, retain exact destination revisions, operate Archivematica, RODA and Preservica handoffs, and reopen complete editable workspaces.',
+    description:'Review the original research records, retain exact destination revisions, operate Archivematica, RODA, Preservica and LIBNOVA handoffs, and reopen complete editable workspaces.',
     fields:[
       field('directory','Preservation workspace','path',true,
         'Choose an initialized or received workspace, or a new directory path below an existing private parent.'),
       field('pythonExecutable','Existing Python executable','path',true,
-        'Select the original Python 3.11 or later executable. The workbench uses its standard library.'),
+        'Select the original Python 3.11 or later executable. The workbench uses its standard library; LIBNOVA S3 operations also use the declared boto3 dependency.'),
       ...common,
     ],
   };
