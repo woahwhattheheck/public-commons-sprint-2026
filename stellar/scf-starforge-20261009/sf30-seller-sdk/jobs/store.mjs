@@ -5,6 +5,7 @@ import { isAbsolute, resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { acquireStateLease } from '../../merchant-fleet-gateway/state-lease.mjs';
 import { canonical, digest, plain, JOB_ID, HASH, jobError } from './config.mjs';
+import { assertCurrentJobSourceBinding } from './source-binding.mjs';
 
 const RECORD_SCHEMA = 'stellar-forge.application-job.v1';
 const MAX_RECORD = 2097152;
@@ -138,6 +139,10 @@ export async function openJobStore(directory, source) {
     return pending;
   }
   try {
+    // Existing direct callers can pass a source object; merchant startup supplies
+    // an async reader so the binding is selected after acquiring this lifetime.
+    if (typeof source === 'function') source = await source();
+    await assertCurrentJobSourceBinding({ directory, source });
     await privateDirectory(recordDirectory); await privateDirectory(resultDirectory);
     const sourcePath = join(directory, 'source.json');
     let retained;
@@ -164,7 +169,7 @@ export async function openJobStore(directory, source) {
     }
   } catch (error) { closed = true; await lease.close(); throw error; }
 
-  return Object.freeze({ directory, recordDirectory, resultDirectory,
+  return Object.freeze({ directory, recordDirectory, resultDirectory, source,
     get fault() { return fault; },
     rows() { assertOpen(); return [...rows.values()].map(row => structuredClone(row)); },
     get(id) { assertOpen(); const row = rows.get(id); if (!row) fail('JOB_NOT_FOUND', 404); return structuredClone(row); },
