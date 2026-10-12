@@ -97,7 +97,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       if(connectionsPath){
         check(connectionsWorkspace,'ACCOUNTING_CONNECTION_SETUP_REQUIRED','Use the reviewed managed accounting Application to configure provider connections.',409);
-        const connected=await handleAccountingConnections(connectionsWorkspace,{method:request.method,path,value,query});
+        const connected=await handleAccountingConnections(connectionsWorkspace,{method:request.method,path,value,query,scope:request.headers['x-accounting-connection-scope']});
         check(connected,'NOT_FOUND','This connection operation was not found.',404);
         if(connected.file)send(response,200,connected.file.bytes,{type:connected.file.type,name:connected.file.name});
         else send(response,200,connected.value);return;
