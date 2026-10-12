@@ -6,7 +6,7 @@ This module operates the real Huwise / Opendatasoft Automation v1.0 API for a ho
 
 The current [Huwise Automation v1.0 reference](https://developer.huwise.com/apis/automation/v1.0/index.html), reviewed on 2026-10-12, supplies the current dataset, metadata, resource-file and translation behavior. [current-reference.json](./current-reference.json) records each applied correction, its method/path and official section. These corrections take precedence over the older SDK snapshot.
 
-The complete original [Opendatasoft Automation SDK](https://github.com/opendatasoft/opendatasoft-automation-sdk) specification is also retained unmodified as [upstream-openapi.json](./upstream-openapi.json), with its original [MIT license](./UPSTREAM_LICENSE):
+The complete original [Opendatasoft Automation SDK](https://github.com/opendatasoft/opendatasoft-automation-sdk) specification is also retained unmodified as [upstream-openapi.json](./upstream-openapi.json), with its original [MIT license](./UPSTREAM_LICENSE.txt):
 
 - Commit: `d8111887796815a7a2cf0755033a809b0f3f757e`.
 - Path: `generators/python/openapi/openapi_3.1.0_original.json`.
