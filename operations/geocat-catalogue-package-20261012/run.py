@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One admitted GeoCat source/package/install/receiving lifetime."""
 from __future__ import annotations
-import argparse, copy, fcntl, hashlib, importlib.util, json, os, shutil, stat
+import argparse, copy, errno, fcntl, hashlib, importlib.util, json, os, shutil, stat
 import subprocess, sys, tarfile, time, zipfile
 from pathlib import Path
 from types import SimpleNamespace
@@ -11,6 +11,24 @@ def now():
 
 def need(value, code):
     if not value: raise RuntimeError(code)
+
+def terminal_control(fd):
+    need(os.isatty(fd), "ORIGINAL_PTY_REQUIRED")
+    try: return ("controlling", os.tcgetpgrp(fd))
+    except OSError as error:
+        if error.errno != errno.ENOTTY: raise
+        return ("noncontrolling", None)
+
+def slave_identity(fd, path):
+    selected = Path(path)
+    need(selected.parent == Path("/dev/pts") and selected.name and
+         all("0" <= char <= "9" for char in selected.name) and
+         selected.resolve(strict=True) == selected, "ORIGINAL_PTY_SLAVE_PATH_REQUIRED")
+    opened, named = os.fstat(fd), selected.lstat()
+    need(stat.S_ISCHR(opened.st_mode) and stat.S_ISCHR(named.st_mode) and
+         (opened.st_dev, opened.st_ino, opened.st_rdev) ==
+         (named.st_dev, named.st_ino, named.st_rdev), "ORIGINAL_PTY_SLAVE_CHANGED")
+    return [opened.st_dev, opened.st_ino, opened.st_rdev]
 
 def digest_bytes(data):
     return hashlib.sha256(data).hexdigest()
@@ -324,10 +342,11 @@ class Run:
         need(observed_parent == binding["supervisor"], "SOURCE_SUPERVISOR_CHANGED")
         terminal = os.open(binding["path"], os.O_RDWR | os.O_NOCTTY | os.O_NOFOLLOW)
         try:
-            opened = os.fstat(terminal)
-            need(stat.S_ISCHR(opened.st_mode) and [opened.st_dev, opened.st_ino, opened.st_rdev] == binding["device"],
+            need(slave_identity(terminal, binding["path"]) == binding["device"],
                  "SOURCE_TERMINAL_DEVICE_CHANGED")
-            need(os.isatty(terminal) and os.tcgetpgrp(terminal) == binding["processGroup"],
+            mode, foreground = terminal_control(terminal)
+            need(mode == binding["controlMode"] and
+                 (mode == "noncontrolling" or foreground == binding["processGroup"]),
                  "SOURCE_TERMINAL_FOREGROUND_CHANGED")
             os.write(terminal, (json.dumps({"phase": "ADMITTED_SOURCE_FEED", **review,
                      "incoming": str(incoming)}, separators=(",", ":")) + "\r\n").encode())
