@@ -4,7 +4,7 @@ This controller exercises one complete public-source review exchange through the
 
 ## Inputs and runtime
 
-Use the exact selected `operator/` source from this feature/release and the adjacent `consultation-receiving.mjs`. Python 3.10 or newer runs the original application. Its declared `python-docx==1.2.0` and `reportlab==4.4.9` dependencies generate the successor edition. Supply an existing Node runtime, Playwright module and compatible Chromium executable. Paths in the configuration are absolute paths on the receiving machine.
+Use the exact selected `operator/` source from this feature/release and the adjacent `consultation-receiving.mjs`. Python 3.10 or newer runs the original application. Its declared `python-docx==1.2.0` and `reportlab==4.4.9` dependencies generate the successor edition. Supply an existing Node runtime, Playwright module and compatible Chromium executable. Paths in the configuration are absolute paths on the receiving machine. The Playwright path may be its ESM entry or CommonJS module; the controller resolves the original Chromium export from either.
 
 The program uses the bundled original Statistics Canada files and authored bilingual clauses. It creates its own practice comments and marks every response as an authored example. It requires no applicant records, actual reviewer correspondence, private restored project or external credentials. The selected workspace must be owned by this receiving operation and must not be an existing customer's project.
 
@@ -27,6 +27,12 @@ The original operator then retains those exact response bytes. It records one di
 The workbench freezes the successor edition and records the amendment's disposition. The reviewer opens the original returned file, corrects only the first entry, and exports a second response under the same declared response identity. Receiving that correction retains its exact predecessor. **Adopt unchanged decisions** transfers only the unchanged entry's earlier decision; the changed entry remains open for its own recorded resolution.
 
 A duplicate re-export retains its original bytes without creating another set of comments. The handover then includes a selected respondent reply and a successor publication containing only the explicitly selected public entry. Finally, a complete local archive restores into a fresh workspace and the same project reopens in the browser.
+
+## Review the exact desktop and phone package
+
+The same journey saves and reloads private reading progress, previews both authored comments, and downloads their complete readable HTML copy. The returned JSON retains its original response identity and packet bindings.
+
+After the original return, correction, amendment, successor and restoration stages, the controller opens every principal recipient view and operator section at 1440×1000 and 390×844. It captures both the complete page and its visible viewport. `buyer-views.json` records the selected headings and layout measurements beside those actual images. Read the downloaded recipient guide and readable response together with the screenshots before delivery.
 
 ## Outputs and continuation
 
@@ -57,3 +63,6 @@ standards-workbench --workspace ./review-workspace --review-demo
 ~~~
 
 Open **Consultation receiving**, download the ready packet, and follow the receiving guide bundled with the application. Subsequent use can start from an operator's own scoped standard and actual selected procedure. The demonstration does not populate committee membership, ballot results, approval, funding or actual customer response.
+
+
+The same source-specific final view phase reopens the retained corrected response, verifies its visible reviewer details and complete re-exported content, and saves Reopened_Reviewer_Readable_Copy.html. It also generates Current_Reviewed_Edition.zip through the original selected-edition exporter. The complete edition, source, case, language and consultation JSON remain byte-identical while the English and French document openings display the captured UTC instant naturally.

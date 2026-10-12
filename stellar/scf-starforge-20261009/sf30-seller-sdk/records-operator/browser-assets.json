@@ -17,6 +17,13 @@
       ]
     ],
     [
+      "/records-operator/workbook.mjs",
+      [
+        "web/workbook.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/records-operator/style.css",
       [
         "web/style.css",

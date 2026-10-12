@@ -210,6 +210,13 @@
       field('target.taxZone','Tax zone (optional)',t.taxZone,' maxlength="10"') + field('target.contractReference','Installed contract reference',t.contractReference,' required maxlength="2048"') +
       '<div><label class="erp-check"><input type="checkbox" data-map-path="target.hold"' + (t.hold ? ' checked' : '') + '>Receive the ERP order on hold</label><label class="erp-check"><input type="checkbox" data-map-path="target.allowLocal"' + (t.allowLocal ? ' checked' : '') +
       '>Administrator-approved loopback development</label></div></div></section>';
+    if (m.addressSubstitutions) {
+      const sub = m.addressSubstitutions;
+      html += '<section class="erp-section"><h3>Retained address substitutions</h3><p>Connector country and state values are mapped to the reviewed Acumatica values for order address overrides.</p>' +
+        '<p class="erp-small">Source edition <code>' + esc(sub.sourceEditionId) + '</code><br>' + sub.countries.length + ' country rules · ' + sub.states.length + ' state rules · Unmatched country: ' + esc(sub.unmappedCountries) +
+        ' · Unmatched state: ' + esc(sub.unmappedStates) + '</p><p class="erp-small">Both original addresses stay in the order edition. Export mapping JSON for the complete rules, or review their source recipe in Connector sources.</p>' +
+        '<a class="erp-button" href="' + esc(config.connectorUrl) + '">Review connector sources</a></section>';
+    }
     for (const key of Object.keys(TABLES)) html += renderBindings(key);
     html += '<section class="erp-section"><h3>Shipping</h3><label class="erp-check"><input id="erp-shipping-enabled" type="checkbox"' + (m.shippingBinding ? ' checked' : '') + '>Map original Woo shipping lines to an ERP inventory item</label>';
     if (m.shippingBinding) html += '<div class="erp-grid">' + field('shippingBinding.inventoryId','ERP shipping inventory',m.shippingBinding.inventoryId,' required maxlength="30"') +
@@ -397,5 +404,10 @@
       S.message = 'Original order updated: ' + S.selected.record.state.replaceAll('_',' ') + '.'; S.kind = 'info';
     });
   });
-  busy(async () => { await status(true); await queue(); });
+  busy(async () => {
+    await status(true); await queue();
+    const query = new URLSearchParams(location.search), operation = query.get('operation'), map = query.get('map');
+    if (operation && /^[a-f0-9]{64}$/.test(operation)) setSelected(await api('/orders/' + operation));
+    else if (map && /^[a-f0-9]{64}$/.test(map)) { S.draft = copy((await api('/maps/' + map)).mapping); S.view = 'mapping'; S.dirty = map !== S.status.currentMapId; }
+  });
 })();

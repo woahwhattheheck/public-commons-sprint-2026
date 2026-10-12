@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "role": "bgs-sensor",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Sensor",
+  "receivedAt": "2026-10-12T12:01:36Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "bgs-datastream-1-sensor.json",
+    "bytes": 574,
+    "sha256": "cb209de90407f1b23ec3ff0d86332a914f7db23c524e9688f76213f7ccf0fc77"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Sensor",
+    "filename": "bgs-datastream-1-sensor.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8156-8d30-00b28a4298bc\",\"filename\":\"bgs-datastream-1-sensor.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":574,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-8156-8d30-00b28a4298bc\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-8156-8d30-00b28a4298bc\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8156-8d30-00b28a4298bc\",\"filename\":\"bgs-datastream-1-sensor.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":574,\"content\":\"{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Sensors(2)\\\",\\\"@iot.id\\\":2,\\\"name\\\":\\\"P2TX-BV Barometer\\\",\\\"description\\\":\\\"P2TX-BV Barometer measuring air temperature and pressure\\\",\\\"encodingType\\\":\\\"text/html\\\",\\\"metadata\\\":\\\"https://www.seametrics.com/product/pt2x-bv/\\\",\\\"properties\\\":{\\\"category\\\":\\\"Barometer\\\",\\\"complex_data_yn\\\":\\\"N\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":\\\"2\\\"},\\\"Datastreams@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Sensors(2)/Datastreams\\\",\\\"MultiDatastreams@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Sensors(2)/MultiDatastreams\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

@@ -23,7 +23,8 @@ export function datasetDeliveryNames(native){
   const names=Object.keys(baseDatasetFiles);
   if(native.semantics!==undefined){
     const value=native.semantics;
-    need(object(value)&&['stellar-forge.ckan-semantics.v1','stellar-forge.odata-semantics.v1'].includes(value.schema)&&
+    need(object(value)&&['stellar-forge.ckan-semantics.v1','stellar-forge.odata-semantics.v1',
+      'stellar-forge.superset-semantics.v1','stellar-forge.directus-semantics.v1'].includes(value.schema)&&
       HASH.test(value.sha256??'')&&HASH.test(value.definitionSha256??'')&&
       HASH.test(value.captureManifestSha256??'')&&value.file==='semantics.json'&&
       value.scope==='PUBLISHED_DATASET'&&value.typedRowsFile==='dataset.jsonl'&&

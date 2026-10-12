@@ -3,13 +3,15 @@ import { constants } from 'node:fs';
 import { open, lstat, mkdir, readdir, link } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { createRetainedDownload } from './retained-download.mjs';
-import { GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, grpcHash, parseGrpcExportManifest } from './grpc-workspace-export.mjs';
+import { GRPC_EXPORT_MANIFEST, GRPC_EXPORT_MAX_BYTES, GRPC_TRANSFER_EXPORT_MAX_BYTES, grpcHash, parseGrpcExportManifest } from './grpc-workspace-export.mjs';
 
 const transport = createRetainedDownload({
-  manifestName: GRPC_EXPORT_MANIFEST, parseManifest: parseGrpcExportManifest, maximumBytes: GRPC_EXPORT_MAX_BYTES,
+  manifestName: GRPC_EXPORT_MANIFEST, parseManifest: parseGrpcExportManifest, maximumBytes: Math.max(GRPC_EXPORT_MAX_BYTES, GRPC_TRANSFER_EXPORT_MAX_BYTES),
   stateSchema: 'stellar-forge.grpc-workspace-download.v1', resultSchema: 'stellar-forge.grpc-workspace-received.v1',
   toolPrefix: 'merchant_grpc_export', errorPrefix: 'GRPC_EXPORT', clientName: 'starforge-grpc-workspace-receiver',
   describe: manifest => ({ workspace: manifest.workspace, kind: manifest.kind, original: manifest.original }),
+  fileRequestTimeoutMs: ({ manifest, file }) => manifest.kind === 'workspace-transfer' && file.path === 'grpc-workspace.tar.gz'
+    ? 3600000 : 120000,
 });
 const failure = (code, message) => Object.assign(new Error(message), { code: 'GRPC_EXPORT_DOWNLOAD_' + code });
 async function privateDirectory(path) {
@@ -56,7 +58,8 @@ export async function downloadGrpcExport(options) {
   const root = await privateDirectory(resolve(options.directory));
   await requireEntries(root, new Set(['transfer', GRPC_EXPORT_MANIFEST, 'methods.json', 'openapi.json', 'client',
     'grpc-revision.json', 'grpc-attempt.json', 'grpc-result.json', 'grpc-stream.ndjson', 'grpc-health.json',
-    'grpc-upgrade-review.json', 'grpc-upgrade-base.json', 'grpc-upgrade-candidate.json', 'grpc-upgrade-plan.json']));
+    'grpc-upgrade-review.json', 'grpc-upgrade-base.json', 'grpc-upgrade-candidate.json', 'grpc-upgrade-plan.json',
+    'grpc-workspace-transfer.json', 'grpc-workspace.tar.gz', 'grpc-operations.json', 'calls.csv', 'health.csv', 'actions.csv', 'report.html']));
   const result = await transport.download({ ...options, directory: join(root, 'transfer') });
   return { ...result, directory: root, transferDirectory: result.directory, ...await materialize(root, result.directory, result.exportId) };
 }

@@ -46,6 +46,6 @@ export function validateBuyerExpenseArguments(action,args) {
     }else if(spec.type==='boolean'&&typeof value!=='boolean')invalid(path+' must be a boolean.');
   }
   visit(args,definition.inputSchema,action);
-  if(action==='source_rebind'&&(Object.hasOwn(args,'ledger')===Object.hasOwn(args,'quoteSource')))invalid('source_rebind requires exactly one original ledger or quoteSource alias.');
+  if(action==='source_rebind'&&['ledger','quoteSource','governedSource'].filter(key=>Object.hasOwn(args,key)).length!==1)invalid('source_rebind requires exactly one original ledger, quoteSource or governedSource alias.');
   return definition;
 }

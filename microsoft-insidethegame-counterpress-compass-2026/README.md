@@ -2,7 +2,7 @@
 
 Counterpress Compass turns a live stream of synthetic football events into a useful coach and fan review: follow possession changes, locate counterpress moments, inspect the original play sequence, compare the two clubs, and save the match with tactical notes for later replay.
 
-The original Node/HTTP/SSE application runs locally with no package installation or provider call. It supports casual and analyst views in English and Spanish, independent viewer sessions, saved match collections, exact event bookmarks, and portable match packages. The Microsoft Inside the Game competition specifies football-realistic synthetic events; Harbor FC, Metro Rovers and their players are invented.
+The original Node/HTTP/SSE application runs locally with no package installation or provider call. It supports casual and analyst views in English and Spanish, independent viewer sessions, saved match collections, exact event bookmarks, and portable match packages. Player-focused recaps keep observed actions, half-by-half club context and a replay playlist in the same saved review. The Microsoft Inside the Game competition specifies football-realistic synthetic events; Harbor FC, Metro Rovers and their players are invented.
 
 ## Run the application
 
@@ -35,6 +35,14 @@ The directory is created with mode 0700. Keep it on a persistent volume across s
 Saved replays retain the actual event rows, so they continue to use the saved input when the scenario generator changes. Existing unsaved scenario/seed links continue to reconstruct their generated match. See [Saved matches and reviews](SAVED_MATCHES.md), [Tactical film room](TACTICAL-FILMROOM.md) and [Match links](MATCH-LINKS.md).
 
 The interface uses native keyboard controls and a neutral industrial layout. Space or K toggles playback and Right Arrow advances a play when focus is outside a control. Every saved moment opens its precise original frame.
+
+## Follow a player and build a replay playlist
+
+The **Player recap and replay playlist** section uses the plays already observed in the current match. Choose a player from your club, a half and an outcome. It separates the player's actual loss, pressure, regain, pass and shot actions from involvement in distinct club sequences.
+
+Each sequence opens its original outcome or plays from immediately before the loss through the actual closing event. The playlist stays available while the match is rewound. **Save playlist moments** stores the selected sequence endpoints through the existing saved-match controls; player, half, outcome and the observed position return when the review is reopened or imported.
+
+The half comparison shows press frequency against observed losses and regain efficiency against resolved attempts. The clock and last recorded action are displayed separately. Download a complete source-linked JSON recap or a printable standalone HTML report; the ordinary match download continues to provide the full portable replay. See [Player recaps](PLAYER_RECAP.md).
 
 ## What the match model means
 

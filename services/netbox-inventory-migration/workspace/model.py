@@ -16,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 import sys
 sys.path.insert(0, str(HERE.parent))
 from inventory_migration import (
-    CATALOG, FIELDS, LINKS, MAX_BYTES, MAX_OBJECTS, MAX_RESULT_BYTES, ORDER, REQUIRED_NEW,
+    CATALOG, FIELDS, LINKS, MANY, MAX_BYTES, MAX_OBJECTS, MAX_RESULT_BYTES, ORDER, REQUIRED_NEW,
     InventoryError, digest, keys, load_json, positive_id, validate_native_result,
 )
 from prepare_inventory import (
@@ -25,6 +25,7 @@ from prepare_inventory import (
     sync_directory, workspace_lock, write_atomic,
 )
 from operate_inventory import NativeApi, current_attempt, hash_file, inspect, restore
+from network_report import network_inventory
 
 SCHEMA = "tjlabs.netbox.customer-desk/v1"
 PROJECT_SCHEMA = "tjlabs.netbox.customer-project/v1"
@@ -44,6 +45,13 @@ CATALOGUES = {
     "platforms": ("/api/dcim/platforms/", ("manufacturer_id",)),
     "locations": ("/api/dcim/locations/", ("site_id",)),
     "vrfs": ("/api/ipam/vrfs/", ("tenant_id",)),
+    "route_targets": ("/api/ipam/route-targets/", ("tenant_id",)),
+    "vlans": ("/api/ipam/vlans/", ("tenant_id", "site_id", "group_id")),
+    "prefixes": ("/api/ipam/prefixes/", ("tenant_id", "vrf_id", "vlan_id")),
+    "vlan_groups": ("/api/ipam/vlan-groups/", ("tenant_id",)),
+    "ipam_roles": ("/api/ipam/roles/", ()),
+    "cables": ("/api/dcim/cables/", ("tenant_id",)),
+    "cable_bundles": ("/api/dcim/cable-bundles/", ()),
     "sites": ("/api/dcim/sites/", ("tenant_id",)),
     "racks": ("/api/dcim/racks/", ("tenant_id", "site_id", "location_id")),
     "devices": ("/api/dcim/devices/", ("tenant_id", "site_id", "rack_id")),
@@ -170,7 +178,7 @@ class Desk:
                 "token_configured": isinstance(name, str) and bool(os.environ.get(name, ""))}
 
     def schema(self):
-        return {"kinds": list(ORDER), "fields": FIELDS, "links": LINKS, "catalog": CATALOG,
+        return {"kinds": list(ORDER), "fields": FIELDS, "links": LINKS, "many": MANY, "catalog": CATALOG,
                 "required_new": REQUIRED_NEW, "catalogues": list(CATALOGUES),
                 "source_limits": {"file_bytes": MAX_SOURCE_BYTES, "total_bytes": MAX_TOTAL_SOURCE_BYTES,
                                   "files": MAX_UPLOADS, "rows": MAX_OBJECTS}}
@@ -529,7 +537,8 @@ class Desk:
         chosen = root / ("applied.json" if value["state"] == "APPLIED" else "review.json")
         result = read_json(chosen) if chosen.is_file() else None
         corrections = read_json(root / "corrections.json") if (root / "corrections.json").is_file() else None
-        return {"edition": value, "result": result, "corrections": corrections}
+        return {"edition": value, "result": result, "corrections": corrections,
+                "network": network_inventory(result) if result else None}
 
     def file_rows(self, project, identity, offset=0, limit=50):
         need(type(offset) is int and offset >= 0 and type(limit) is int and 1 <= limit <= 200,
@@ -750,6 +759,9 @@ class Desk:
                    "result.json": ("applied.json" if (root / "applied.json").is_file() else "review.json",
                                    "application/json", "native-inventory-result.json"),
                    "resolved.csv": ("exports/resolved-objects.csv", "text/csv; charset=utf-8", "resolved-objects.csv"),
+                   "network.html": ("exports/network-commissioning.html", "text/html; charset=utf-8", "network-commissioning.html"),
+                   "network.json": ("exports/network-commissioning.json", "application/json", "network-commissioning.json"),
+                   "network.csv": ("exports/network-commissioning.csv", "text/csv; charset=utf-8", "network-commissioning.csv"),
                    "request.json": ("request.json", "application/json", "request.json"),
                    "mapping.json": ("mapping.json", "application/json", "mapping.json")}
         need(name in choices, "download", "Select an original inventory output.", 404)

@@ -1,0 +1,951 @@
+{
+  "schema": "stellar-forge.gridfabric-plaid-public-contract.v1",
+  "source_scope": {
+    "vendor": "GridFabric",
+    "product": "Plaid",
+    "protocol": "OpenADR 2.0b",
+    "documentation_generation": "v2",
+    "highest_documented_version": "2.5.0",
+    "observed_date": "2026-10-12",
+    "vendor_json_schema": false,
+    "coverage": "Public wire examples and documented semantics; complete SDK schemas remain external."
+  },
+  "sources": [
+    {
+      "id": "sample",
+      "url": "https://github.com/gridfabric/nodejs-sample-middleware/blob/16dc5efa5d49610109cd8c3a111bafb32fde0dce/index.js",
+      "representation": "git_utf8",
+      "sha256": "12dc84d3699db86dc882bba51093069478c787611b94d09b52bb5ee98a4421a3",
+      "representation_bytes": 7375,
+      "retrieved_date": "2026-10-12",
+      "commit": "16dc5efa5d49610109cd8c3a111bafb32fde0dce",
+      "git_blob": "2bc4ebfabe31a30dc5e25cb0d1ff8730d42e9bed",
+      "original_file_bytes": 7375
+    },
+    {
+      "id": "plugin",
+      "url": "https://plaid-docs.gridfabric.io/reference/plugin-reference/",
+      "representation": "web_lines",
+      "sha256": "cfcecea8b925b004db3d1c82c9640c10c6cffea25f237802af608ebd98c31300",
+      "representation_bytes": 28403,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "management",
+      "url": "https://plaid-docs.gridfabric.io/reference/management-http-api/",
+      "representation": "web_lines",
+      "sha256": "96dbedbd6620d92715bfe37a6ba9b92e6d44d88a6c7b7242b1c818b4ba4c82b5",
+      "representation_bytes": 27037,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "events",
+      "url": "https://plaid-docs.gridfabric.io/implementation-guide/implementing-events/",
+      "representation": "web_lines",
+      "sha256": "d9a31cfc33cfdc88f3499ae047c3073219130ef96f6aca523b2b6208ee1c1d5e",
+      "representation_bytes": 10037,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "reporting",
+      "url": "https://plaid-docs.gridfabric.io/implementation-guide/implementing-reporting/",
+      "representation": "web_lines",
+      "sha256": "76ab78f62e0e685a5b6133778ad00f37758d5d22372be9c8cea354f63dc82832",
+      "representation_bytes": 7613,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "opt",
+      "url": "https://plaid-docs.gridfabric.io/implementation-guide/implementing-opt/",
+      "representation": "web_lines",
+      "sha256": "cdf17df337098f16db1f359be4d6625435213d70a1fa89a8ef23734d17d81fa0",
+      "representation_bytes": 4004,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "configuration",
+      "url": "https://plaid-docs.gridfabric.io/reference/configuring-plaid/",
+      "representation": "web_lines",
+      "sha256": "475d1be81ffa55b9deb330e8df3c4417af0cbf651b98d897c05d2e77f9b1fe7c",
+      "representation_bytes": 10437,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "event_overview",
+      "url": "https://plaid-docs.gridfabric.io/reference/openadr-events/",
+      "representation": "web_lines",
+      "sha256": "6df71274073b5d91078e60ee76491af59d307e9a5dc956b3cf0faa0f13e71e20",
+      "representation_bytes": 12996,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "report_overview",
+      "url": "https://plaid-docs.gridfabric.io/reference/openadr-reporting/",
+      "representation": "web_lines",
+      "sha256": "1feb15d3d2b741a4b62fad908885a589451ea4615439991e3453198b32dcfe23",
+      "representation_bytes": 7099,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "changelog",
+      "url": "https://plaid-docs.gridfabric.io/reference/change-log/",
+      "representation": "web_lines",
+      "sha256": "147c7a51734634736be00f8831ff724fa083a5ef88cd3a35f8826f94801f4b32",
+      "representation_bytes": 11335,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "quickstart",
+      "url": "https://plaid-docs.gridfabric.io/quickstart/",
+      "representation": "web_lines",
+      "sha256": "0bd4193dfb3858081872f0393bfb6ef0ca1de7f511517d43a4ef5f97e2868df4",
+      "representation_bytes": 12990,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "license",
+      "url": "https://plaid-docs.gridfabric.io/files/NOVA-LICENSE.txt",
+      "representation": "web_lines",
+      "sha256": "6033998e25f3abb30e7c99d662fb898f06a231dd1783f768c8441cad67d148f5",
+      "representation_bytes": 7603,
+      "retrieved_date": "2026-10-12"
+    },
+    {
+      "id": "boomerang",
+      "url": "https://plaid-docs.gridfabric.io/files/boomerang_config.json",
+      "representation": "reconstructed_json_lines",
+      "sha256": "e77b9a6b416040a5533e956486f38cf5bc4f459907ed64759a20b43aee227f5f",
+      "representation_bytes": 38517,
+      "retrieved_date": "2026-10-12",
+      "declared_lines": 1007,
+      "recovered_lines": 1007,
+      "overlap_conflicts": 0,
+      "json_valid": true,
+      "export_timestamp": 1614017504457,
+      "original_download_bytes_verified": false
+    }
+  ],
+  "transport": {
+    "source_ids": [
+      "plugin",
+      "configuration",
+      "changelog",
+      "sample"
+    ],
+    "callback": {
+      "method": "POST",
+      "format": "JSON",
+      "dispatch_path": "header.messageType",
+      "documented_header_fields": [
+        "instanceId",
+        "messageType",
+        "pluginApiVersion",
+        "pluginVersion",
+        "venId",
+        "vtnId"
+      ],
+      "required_header_fields_in_complete_sdk_schema": "UNVERIFIED",
+      "success_http_status": 200,
+      "empty_body": "Configured native defaults",
+      "non_200": "Native plugin retries",
+      "body_limit": "NOT_PUBLISHED",
+      "callbacks_serial": true
+    },
+    "identity": {
+      "stable_config_field": "plugin.instanceId",
+      "registration_assigned": [
+        "venId",
+        "vtnId"
+      ],
+      "instance_scope": "One Plaid instance per VTN"
+    },
+    "auth": {
+      "callback_basic_config": "plugin.httpAuth",
+      "callback_headers_config": "plugin.httpHeaders",
+      "custom_headers_since": "2.0.0",
+      "callback_tls_config": "plugin.tls",
+      "management_authentication": "None built in",
+      "management_binding": "Configured listener.ip/listener.port; localhost or secured proxy"
+    },
+    "callback_outbound_order": "Return callback before calling the same Plaid management listener.",
+    "retry_config": "retries.retryIntervalInSeconds",
+    "timeout_config_seconds": [
+      "timeouts.connect",
+      "timeouts.request"
+    ]
+  },
+  "callbacks": [
+    {
+      "endpoint": "startDistributeEvent",
+      "messageType": "OnDistributeEventStart",
+      "requestSchema": "on_distribute_event_start.json",
+      "responseSchema": "on_distribute_event_start_response.json",
+      "observedBodyMember": null,
+      "transition": "DISTRIBUTION_OPEN",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "completeDistributeEvent",
+      "messageType": "OnDistributeEventComplete",
+      "requestSchema": "on_distribute_event_complete.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "DISTRIBUTION_COMPLETE",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "event",
+      "messageType": "OnEvent",
+      "requestSchema": "on_event.json",
+      "responseSchema": "on_event_response.json",
+      "observedBodyMember": null,
+      "transition": "EVENT_RECEIVED",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "startEvent",
+      "messageType": "OnEventStart",
+      "requestSchema": "on_event_start.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "EFFECTIVE_START",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "startEventInterval",
+      "messageType": "OnEventIntervalStart",
+      "requestSchema": "on_event_interval_start.json",
+      "responseSchema": null,
+      "observedBodyMember": "onEventIntervalStartMessage",
+      "transition": "INTERVAL_START",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "cancelEvent",
+      "messageType": "OnEventCancel",
+      "requestSchema": "on_event_cancel.json",
+      "responseSchema": "on_event_cancel_response.json",
+      "observedBodyMember": null,
+      "transition": "CANCEL_RECEIVED",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "archiveEvent",
+      "messageType": "OnEventArchive",
+      "requestSchema": "on_event_archive.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "ARCHIVE_RECEIVED",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "endEvent",
+      "messageType": "OnEventComplete",
+      "requestSchema": "on_event_complete.json",
+      "responseSchema": null,
+      "observedBodyMember": "onEventCompleteMessage",
+      "transition": "EFFECTIVE_END",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "rampUp",
+      "messageType": "OnEventRampUp",
+      "requestSchema": "on_event_ramp_up.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "RAMP_UP",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "registerReports",
+      "messageType": "OnRegisterReports",
+      "requestSchema": "on_register_reports.json",
+      "responseSchema": "on_register_reports_response.json",
+      "observedBodyMember": null,
+      "transition": "REPORT_REGISTRATION",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "startPeriodicReport",
+      "messageType": "OnPeriodicReportStart",
+      "requestSchema": "on_periodic_report_start.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "REPORT_REQUEST_START",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "completePeriodicReport",
+      "messageType": "OnPeriodicReportComplete",
+      "requestSchema": "on_periodic_report_complete.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "REPORT_REQUEST_END",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "queryIntervals",
+      "messageType": "OnQueryIntervals",
+      "requestSchema": "on_query_intervals.json",
+      "responseSchema": "on_query_intervals_response.json",
+      "observedBodyMember": "onQueryIntervalsMessage",
+      "transition": "REPORT_DATA_REQUEST",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "heartbeat",
+      "messageType": "OnHeartbeat",
+      "requestSchema": "on_heartbeat.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "HEARTBEAT",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "onRegister",
+      "messageType": "OnRegister",
+      "requestSchema": "on_register.json",
+      "responseSchema": null,
+      "observedBodyMember": null,
+      "transition": "REGISTERED",
+      "source": "plugin"
+    },
+    {
+      "endpoint": "onError",
+      "messageType": "OnError",
+      "requestSchema": "on_error.json",
+      "responseSchema": null,
+      "observedBodyMember": "onErrorMessage",
+      "transition": "PLUGIN_ERROR",
+      "source": "plugin"
+    }
+  ],
+  "callback_schema_custody": {
+    "directory": "/oadr/oadrapi/oadrapi/pluginmessages/schema/",
+    "sample_generation": "plaidven --samples DIRECTORY",
+    "quicktype_generation": "quicktype -l javascript --src-lang schema schema/*.json > lang/quicktype.js",
+    "schema_files_in_public_reference_repository": false,
+    "unknown_body_members": "Preserve; do not infer nested member names from callback labels.",
+    "empty_heartbeat": "Documented POST with no body.",
+    "full_validation_requires": "The actual deployed vendor schema edition."
+  },
+  "events": {
+    "source_ids": [
+      "events",
+      "event_overview",
+      "changelog"
+    ],
+    "modification": {
+      "documented_field": "event_modification_number",
+      "json_since": "2.5.0",
+      "meaning": "Increased value replaces the preceding external event edition.",
+      "missing_older_version": "Unknown; preserve bytes and version."
+    },
+    "effective_start_field": "randomizedDtStartTimet",
+    "duration_zero": "Continues until modification or cancellation.",
+    "randomized_offset": "Applies to start, end, intervals and active cancellation.",
+    "implicit_cancellation": "Distribution absence can cancel/archive; after restart callbacks may not reveal prior absence.",
+    "complete_distribution": "Reconcile a complete distribution before concluding absence.",
+    "timing_authority": "Plaid callbacks",
+    "target_ids": "Provider/program-defined external identities; retain explicit mappings.",
+    "no_targets": "All resources within the applicable VEN/program.",
+    "simple_levels": {
+      "0": "normal",
+      "1": "moderate",
+      "2": "high",
+      "3": "program_defined"
+    },
+    "custom_signal_prefix": "x-",
+    "signal_table_columns": [
+      "name",
+      "type",
+      "published_unit",
+      "published_values_or_bounds"
+    ],
+    "published_signal_table": [
+      [
+        "SIMPLE",
+        "level",
+        null,
+        [
+          0,
+          1,
+          2,
+          3
+        ]
+      ],
+      [
+        "ELECTRICITY_PRICE",
+        "price",
+        "currency/kWh",
+        "any"
+      ],
+      [
+        "ELECTRICITY_PRICE",
+        "priceRelative",
+        "currency/kWh",
+        "any"
+      ],
+      [
+        "ELECTRICITY_PRICE",
+        "priceMultiplier",
+        null,
+        "any"
+      ],
+      [
+        "ENERGY_PRICE",
+        "price",
+        "currency/kWh",
+        "any"
+      ],
+      [
+        "ENERGY_PRICE",
+        "priceRelative",
+        "currency/kWh",
+        "any"
+      ],
+      [
+        "ENERGY_PRICE",
+        "priceMultiplier",
+        null,
+        "any"
+      ],
+      [
+        "DEMAND_CHARGE",
+        "price",
+        "currency/kWh",
+        "any"
+      ],
+      [
+        "DEMAND_CHARGE",
+        "priceRelative",
+        "currency/kW",
+        "any"
+      ],
+      [
+        "DEMAND_CHARGE",
+        "priceMultiplier",
+        null,
+        "any"
+      ],
+      [
+        "BID_PRICE",
+        "price",
+        "currency/kWh OR kW",
+        "any"
+      ],
+      [
+        "BID_LOAD",
+        "setpoint",
+        "power",
+        "any"
+      ],
+      [
+        "BID_ENERGY",
+        "setpoint",
+        "energy",
+        "any"
+      ],
+      [
+        "CHARGE_STATE",
+        "setpoint",
+        "energy",
+        "any"
+      ],
+      [
+        "CHARGE_STATE",
+        "delta",
+        "energy",
+        "any"
+      ],
+      [
+        "CHARGE_STATE",
+        "multiplier",
+        null,
+        [
+          0,
+          1
+        ]
+      ],
+      [
+        "LOAD_DISPATCH",
+        "setpoint",
+        "power",
+        "any"
+      ],
+      [
+        "LOAD_DISPATCH",
+        "delta",
+        "power",
+        "any"
+      ],
+      [
+        "LOAD_DISPATCH",
+        "multiplier",
+        null,
+        "any"
+      ],
+      [
+        "LOAD_DISPATCH",
+        "level",
+        "power",
+        [
+          -10,
+          10
+        ]
+      ],
+      [
+        "LOAD_CONTROL",
+        "x-loadControlCapacity",
+        null,
+        [
+          0,
+          1
+        ]
+      ],
+      [
+        "LOAD_CONTROL",
+        "x-loadControlLevelOffset",
+        null,
+        "nonzero_integer"
+      ],
+      [
+        "LOAD_CONTROL",
+        "x-loadControlSetpoint",
+        null,
+        "any"
+      ],
+      [
+        "LOAD_CONTROL",
+        "x-loadControlPercentOffset",
+        null,
+        [
+          -1,
+          1
+        ]
+      ]
+    ],
+    "signal_units_note": "Published table retained; event/program units remain authoritative.",
+    "semantic_target_categories": [
+      "venId",
+      "resourceId",
+      "groupId",
+      "partyId"
+    ],
+    "target_wire_paths": "The category labels are conceptual identifiers; complete nested callback field paths require the deployed schema or an original instance sample."
+  },
+  "reports": {
+    "source_ids": [
+      "reporting",
+      "report_overview",
+      "sample"
+    ],
+    "registration_response_member": "onRegisterReportsResponseMessage",
+    "registration_reports_member": "telemetryReports",
+    "registration_fields": [
+      "duration.duration",
+      "duration.durationModifier",
+      "reportSpecifierId",
+      "reportName",
+      "intervalDescriptions"
+    ],
+    "interval_description_fields": [
+      "rid",
+      "samplingPeriod.maxSamplingPeriod",
+      "samplingPeriod.minSamplingPeriod",
+      "samplingPeriod.samplingPeriodModifier",
+      "samplingPeriod.onChange",
+      "marketContext",
+      "resourceId",
+      "usageIntervalProperties"
+    ],
+    "observed_usage_properties": {
+      "readingType": "Direct Read",
+      "reportType": "usage",
+      "units": [
+        {
+          "description": "RealPower",
+          "siScaleCode": "none",
+          "units": "W",
+          "unitType": "POWER_REAL"
+        },
+        {
+          "description": "RealEnergy",
+          "siScaleCode": "none",
+          "units": "Wh",
+          "unitType": "ENERGY_REAL"
+        }
+      ]
+    },
+    "observed_duration_modifier": "M",
+    "status_registration": "Omit usageIntervalProperties.",
+    "request_member": "onQueryIntervalsMessage",
+    "observed_query_fields": {
+      "startTimet": "epoch_seconds",
+      "endTimet": "epoch_seconds",
+      "granularityInSeconds": "number",
+      "rIds": "string_array"
+    },
+    "documented_query_identity": [
+      "reportSpecifierId",
+      "rIds"
+    ],
+    "response_member": "onQueryIntervalsResponseMessage",
+    "response_reports_member": "reports",
+    "response_interval_fields": [
+      "dataQuality",
+      "dtStartTimet",
+      "rId",
+      "value"
+    ],
+    "documented_additional_interval_fields": [
+      "status",
+      "duration"
+    ],
+    "response_identity_override": "Optional reportIdentifier; omitted uses requested identity.",
+    "override_fields": [
+      "name",
+      "reportId",
+      "reportSpecifierId",
+      "reportRequestId"
+    ],
+    "reportId_mapping": "eiReportId",
+    "observed_data_quality": "Quality Good - Non Specific",
+    "full_quality_enum": "UNVERIFIED_IN_PUBLIC_PLAID_SCHEMA",
+    "status_object_shape": "UNVERIFIED_IN_PUBLIC_PLAID_SCHEMA",
+    "bounds": "Inclusive start and end",
+    "public_sample_point_count": "1 when callback granularity is 0 or start=end; otherwise 1+(end-start)/granularity",
+    "report_request_zeroes": {
+      "duration": "No end",
+      "granularity": "On change",
+      "reportBackDuration": "One report"
+    },
+    "next_window": "Latest returned timestamp plus granularity; Plaid owns requests.",
+    "missing_source_value": "Not a measured zero.",
+    "registration_duration": "Available source history.",
+    "requested_status": "Return the original status object; do not fabricate state from usage.",
+    "documented_report_categories": [
+      {
+        "published_category": "History usage report",
+        "wire_name_status": "Not established by the captured public wire example"
+      },
+      {
+        "published_category": "Telemetry usage report",
+        "observed_reportName": "TELEMETRY_USAGE"
+      },
+      {
+        "published_category": "Telemetry status report",
+        "observed_reportName": "TELEMETRY_STATUS"
+      }
+    ]
+  },
+  "management": {
+    "source_ids": [
+      "management",
+      "boomerang"
+    ],
+    "method": "POST",
+    "path": "/",
+    "content_type": "application/json",
+    "listener_origin": "Operator-configured; public examples use http://localhost:8000.",
+    "request_fields": [
+      "namespace",
+      "parameters"
+    ],
+    "operations": [
+      {
+        "namespace": "ven.queryRegistration",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.createPartyRegistration",
+        "parameter_shapes": {
+          "includeIds": "boolean"
+        }
+      },
+      {
+        "namespace": "ven.cancelPartyRegistration",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.clearRegistration",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.clearReports",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.start",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.stop",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.requestEvent",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.clearEvents",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.setVenId",
+        "parameter_shapes": {
+          "venId": "string"
+        }
+      },
+      {
+        "namespace": "ven.createOptSchedule",
+        "parameter_shapes": {
+          "optId": "string",
+          "optType": "optIn|optOut",
+          "optReason": "string",
+          "marketContext": "string",
+          "resourceId": "string?",
+          "endDeviceAsset": "string",
+          "availability": [
+            {
+              "dtstart": "epoch_seconds",
+              "duration": "integer_hours"
+            }
+          ]
+        }
+      },
+      {
+        "namespace": "ven.cancelOptSchedule",
+        "parameter_shapes": {
+          "optId": "string"
+        }
+      },
+      {
+        "namespace": "ven.eventOpt",
+        "parameter_shapes": {
+          "optId": "string",
+          "eventId": "string",
+          "optType": "optIn|optOut",
+          "optReason": "string",
+          "resourceId": "string?",
+          "requestId": "string"
+        }
+      },
+      {
+        "namespace": "ven.createdEvent",
+        "parameter_shapes": {
+          "eventId": "string",
+          "optType": "optIn|optOut",
+          "scheduleEvent": "boolean"
+        }
+      },
+      {
+        "namespace": "ven.registerReports",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.status",
+        "parameter_shapes": {}
+      },
+      {
+        "namespace": "ven.adhocReport",
+        "parameter_shapes": {
+          "reportRequestId": "string",
+          "start": "epoch_seconds?",
+          "end": "epoch_seconds?",
+          "reports": "onQueryIntervalsResponseMessage envelope?"
+        }
+      }
+    ],
+    "dynamic_namespace": "Forwarded to a registered native plugin namespace.",
+    "response_order": [
+      "HTTP result",
+      "status",
+      "exception",
+      "operation-specific response"
+    ],
+    "status_ok": "Understood/processed; not command success.",
+    "exception": "A present exception is failure even with status OK.",
+    "response_code": {
+      "200": "VTN accepted and processed",
+      "4xx": "Invalid request/identifier",
+      "5xx_or_other": "VTN could not process; retain result before any later retry"
+    },
+    "actual_documented_failure": {
+      "http_status": 200,
+      "body": {
+        "status": "OK",
+        "response": {
+          "code": 452,
+          "message": "Invalid ID - invalid or inactive"
+        }
+      }
+    },
+    "opt_types": [
+      "optIn",
+      "optOut"
+    ],
+    "published_opt_reason_tokens": [
+      "economic",
+      "emergency",
+      "mustRun",
+      "notParticipating",
+      "outageRunStatus",
+      "overrideStatus",
+      "participating",
+      "x_schedule"
+    ],
+    "opt_reason_enum_status": "Published prose tokens; complete SDK enum not obtained.",
+    "resource_id_empty": "Whole VEN and its resources.",
+    "availability_duration_unit": "hours",
+    "created_event_schedule_flag": "False suppresses callbacks for that event.",
+    "adhoc_reports": {
+      "since": "2.3.0",
+      "requires_existing_reportRequestId": true,
+      "window_variant": [
+        "start",
+        "end"
+      ],
+      "data_variant": "reports.onQueryIntervalsResponseMessage",
+      "data_variant_ignores": [
+        "start",
+        "end"
+      ]
+    },
+    "local_clear_operations": [
+      "ven.clearRegistration",
+      "ven.clearReports",
+      "ven.clearEvents"
+    ],
+    "clear_events_guidance": "Testing operation; not normal production handling.",
+    "status_observed_fields": [
+      "events",
+      "log",
+      "polling",
+      "registration",
+      "status",
+      "time",
+      "venCommunicationStatus",
+      "version"
+    ],
+    "registration_observed_fields": [
+      "defaultRegistrationId",
+      "defaultVenId",
+      "isRegistered",
+      "pollFrequency",
+      "registrationId",
+      "venId",
+      "vtnId"
+    ],
+    "communication_status_observed_fields": [
+      "exception.message",
+      "exception.time",
+      "httpResponse.code",
+      "httpResponse.message",
+      "httpResponse.time",
+      "oadrResponse.code",
+      "oadrResponse.message",
+      "oadrResponse.time"
+    ],
+    "command_effects_note": "Management commands may trigger asynchronous VTN registration, polling or protocol operations. In particular, ven.start must not be treated as a command with no VTN effects. The immediate local HTTP response is distinct from later VTN results."
+  },
+  "version_gates": [
+    {
+      "version": "2.0.0",
+      "features": [
+        "JSON-schema messaging",
+        "httpHeaders",
+        "non-200 callback retry",
+        "--samples"
+      ]
+    },
+    {
+      "version": "2.1.0",
+      "features": [
+        "Custom report metadata names begin x-"
+      ]
+    },
+    {
+      "version": "2.2.0",
+      "features": [
+        "rampUp",
+        "non-retry report errors dropped",
+        "maximum retry 10M"
+      ],
+      "retry_limit_note": "The changelog's literal 10M is retained without normalizing its unit."
+    },
+    {
+      "version": "2.3.0",
+      "features": [
+        "ven.adhocReport"
+      ]
+    },
+    {
+      "version": "2.4.0",
+      "features": [
+        "Larger HTTP API messages",
+        "curl proxy settings"
+      ]
+    },
+    {
+      "version": "2.5.0",
+      "features": [
+        "Event modification number in JSON",
+        "One-shot report duration with reportBackDuration 0",
+        "One-shot metadata report"
+      ]
+    }
+  ],
+  "source_discrepancies": [
+    {
+      "topic": "header",
+      "documentation": "messageTypes",
+      "actual_reference": "header.messageType",
+      "resolution": "Use exact observed singular dispatch."
+    },
+    {
+      "topic": "registration interval identity",
+      "documentation": "rId",
+      "actual_reference": "rid",
+      "resolution": "Registration rid; query rIds and response rId."
+    },
+    {
+      "topic": "query time names",
+      "documentation": "startTime/endTime/granularity",
+      "actual_reference": "startTimet/endTimet/granularityInSeconds",
+      "resolution": "Use exact public reference wire names."
+    },
+    {
+      "topic": "status polling",
+      "documentation": "pollFreqquency",
+      "actual_reference": "pollFrequency in complete recorded2.2.0 response",
+      "resolution": "Preserve original editions; no silent renaming."
+    },
+    {
+      "topic": "headers",
+      "documentation": "Older plugin prose requires C++ customization",
+      "actual_reference": "configuration.httpHeaders and2.0 changelog",
+      "resolution": "Use configured v2 header support."
+    },
+    {
+      "topic": "report interval zero",
+      "documentation": "Report granularity0 means on-change",
+      "actual_reference": "Public callback sample yields one point",
+      "resolution": "Keep subscription semantics separate from one callback."
+    },
+    {
+      "topic": "event revision",
+      "documentation": "event_modification_number",
+      "actual_reference": "Introduced in2.5.0",
+      "resolution": "No invented revision for older inputs."
+    }
+  ],
+  "access": {
+    "plaid_core_license": "Proprietary",
+    "public_node_sample_license_file": "No LICENSE in the three-file reference repository",
+    "trial_and_sdk": "Vendor-granted binary/source and Canvas access",
+    "schema_reuse": "Obtain deployed schemas through existing authorized vendor custody.",
+    "provider_run_executed": false,
+    "certification_claim": false
+  }
+}

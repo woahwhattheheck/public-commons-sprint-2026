@@ -92,12 +92,12 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
     return {title: current ? el('archiveTitle').value : (state.label || state.match.scenario) + ' · ' + state.match.seed,
       notes: current ? el('archiveNotes').value : '', bookmarks: structuredClone(bookmarks),
       insights: structuredClone(state.insights || []),
-      cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId, filters: state.filters};
+      cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId, filters: state.filters, recap: state.recap};
   }
   function stamp() {
     const state = snapshot();
     return JSON.stringify({cursor: state.cursor, view: state.view, selectedMomentId: state.selectedMomentId,
-      filters: state.filters, insights: (state.insights || []).map(item => item.id)});
+      filters: state.filters, recap: state.recap, insights: (state.insights || []).map(item => item.id)});
   }
   function schedule() {
     if (!current?.canEdit || conflict) return;
@@ -188,7 +188,7 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
     el('archiveTitle').value = record.review.title;
     el('archiveNotes').value = record.review.notes;
     viewStamp = JSON.stringify({cursor: record.review.cursor, view: record.review.view,
-      selectedMomentId: record.review.selectedMomentId, filters: record.review.filters,
+      selectedMomentId: record.review.selectedMomentId, filters: record.review.filters, recap: record.review.recap,
       insights: (record.review.insights || []).map(item => item.id)});
     updateCollection(record); renderBookmarks(); render();
   }
@@ -238,17 +238,36 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
     el('archiveTitle').value = ''; el('archiveNotes').value = '';
     renderBookmarks(); render(); notify(words().ready);
   }
-  async function addBookmark(item) {
+  async function addBookmarks(items) {
     const original = snapshot().sessionId;
-    if (!current?.canEdit || conflict) { if (!await save({copy: !!current})) return; }
-    if (snapshot().sessionId !== original) return;
-    if (!bookmarks.some(value => value.eventId === item.eventId)) {
-      if (bookmarks.length >= 64) { failure = '64 ' + words().moments; render(); return; }
-      bookmarks.push({...item, label: item.label.slice(0, 100), note: ''});
-      bookmarks.sort((a, b) => a.count - b.count);
-      markDirty(true); renderBookmarks(); onReviewChanged(); await save();
+    const additions = [...new Map(items.map(item => [item.eventId, item])).values()]
+      .filter(item => !bookmarks.some(value => value.eventId === item.eventId));
+    if (!additions.length) return true;
+    if (bookmarks.length + additions.length > 64) {
+      failure = (snapshot().view.locale === 'es'
+        ? 'La lista supera el límite de 64 momentos guardados. Elige un jugador, una mitad o un resultado.'
+        : 'This playlist exceeds the 64 saved-moment limit. Choose a player, half or outcome.');
+      render(); return false;
     }
+    if (!current?.canEdit || conflict) { if (!await save({copy: !!current})) return false; }
+    if (snapshot().sessionId !== original) return false;
+    const remaining = additions.filter(item => !bookmarks.some(value => value.eventId === item.eventId));
+    if (!remaining.length) return true;
+    if (bookmarks.length + remaining.length > 64) {
+      failure = (snapshot().view.locale === 'es'
+        ? 'La lista supera el límite de 64 momentos guardados. Elige un jugador, una mitad o un resultado.'
+        : 'This playlist exceeds the 64 saved-moment limit. Choose a player, half or outcome.');
+      render(); return false;
+    }
+    for (const item of remaining) {
+      if (!bookmarks.some(value => value.eventId === item.eventId))
+        bookmarks.push({...item, label: item.label.slice(0, 100), note: ''});
+    }
+    bookmarks.sort((a, b) => a.count - b.count);
+    markDirty(true); renderBookmarks(); onReviewChanged();
+    return await save();
   }
+  const addBookmark = item => addBookmarks([item]);
   el('archiveSave').addEventListener('click', () => { void save({copy: !!current && (!current.canEdit || conflict)}); });
   for (const id of ['archiveTitle', 'archiveNotes']) el(id).addEventListener('input', () => markDirty(true));
   el('archiveSelect').addEventListener('change', render);
@@ -310,7 +329,7 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
   addEventListener('pagehide', () => { clearTimers(); if (current?.canEdit && dirty() && !saving) void save({keepalive: true}); });
   render(); notify(words().ready);
   return {
-    load, reset, beforeSwitch,
+    load, reset, beforeSwitch, addBookmarks,
     requestOpen: id => request('/api/archives/' + id + '/open', 'POST', {}),
     async refreshCollection() {
       try { const data = await request('/api/archives'); collection = data.archives; renderCollection(); }

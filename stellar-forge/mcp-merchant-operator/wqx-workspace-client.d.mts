@@ -40,6 +40,7 @@ export interface WqxLaunch {
 }
 export interface WqxNativeResult<T = WqxObject> {
   workspace: string; launch: WqxLaunch; httpStatus: number; result: T; file: WqxRetainedFile;
+  error?: WqxObject;
 }
 export interface WqxPage<T = WqxObject> {
   total: number; snapshot: string; offset: number; items: T[]; nextOffset: number | null;
@@ -94,8 +95,8 @@ export interface WqxInputFiles {
 }
 export interface WqxFileReleased { fileId: string; readId: string; released: true }
 
-export type WqxRecordFamily = 'capture' | 'review' | 'plan' | 'decision' | 'edition';
-export interface WqxInventoryArgs extends WqxScope, WqxPageArgs { kind: 'captures' | 'reviews' | 'plans' | 'decisions' | 'editions' | 'jobs' }
+export type WqxRecordFamily = 'capture' | 'review' | 'plan' | 'decision' | 'scientific' | 'edition';
+export interface WqxInventoryArgs extends WqxScope, WqxPageArgs { kind: 'captures' | 'reviews' | 'plans' | 'decisions' | 'scientific' | 'editions' | 'jobs' }
 export interface WqxRecordArgs extends WqxScope {
   family: WqxRecordFamily; id: string; pointer?: string; offset?: number; limit?: number; expectedDocumentSha256?: string;
 }
@@ -104,19 +105,37 @@ export interface WqxTargetsArgs extends WqxScope {
   offset?: number; limit?: number; expectedPlanSha256?: string;
 }
 export interface WqxFileArgs extends WqxScope {
-  family: 'capture' | 'review' | 'plan' | 'decision' | 'customer';
+  family: 'capture' | 'review' | 'plan' | 'decision' | 'scientific' | 'customer';
   id: string; format?: string; index?: number; intentId?: string;
 }
 export type WqxDocumentSelection =
   | { document: WqxObject; documentRef?: never }
   | { document?: never; documentRef: WqxInputRef };
+export interface WqxConcentrationUnitsArgs extends WqxScope { planId: string; expectedPlanSha256?: string }
+export type WqxConcentrationSelection =
+  | { resultIds: string[]; fromUnit?: never; reportedLimitsOnly?: never }
+  | { resultIds?: never; fromUnit: string; reportedLimitsOnly?: never }
+  | { resultIds?: never; fromUnit?: never; reportedLimitsOnly: true };
+export type WqxConcentrationPrepareArgs = WqxScope & WqxDocumentSelection & WqxConcentrationSelection & {
+  targetUnit: string; reason: string; expectedPlanSha256?: string;
+};
+export interface WqxConcentrationPreparation extends WqxNativeResult {
+  /** A document is exposed only when the complete native proposal is PREPARED. */
+  documentFile: WqxRetainedFile | null; documentRef: WqxInputRef | null;
+  reportCsvFile: WqxRetainedFile | null; proposalFile?: WqxRetainedFile;
+}
+export interface WqxConcentrationReportArgs extends WqxScope { reviewId: string; format?: 'json' | 'csv' }
+export interface WqxConcentrationReport extends WqxNativeResult {
+  format?: 'csv'; reportFile?: WqxRetainedFile;
+}
+
 export type WqxTableExportArgs = WqxScope & WqxDocumentSelection & { format: 'csv' | 'tsv' };
 export interface WqxTableImportArgs extends WqxScope { inputRef: WqxInputRef; format: 'csv' | 'tsv' }
 export type WqxDecisionsPreviewArgs = WqxScope & WqxDocumentSelection & { newPlanId: string };
 export type WqxDecisionsSaveArgs = WqxScope & WqxDocumentSelection & {
   reviewId: string; newPlanId: string; expectedPreviewSha256: string;
 };
-export interface WqxReceiveArgs extends WqxScope { kind: 'review' | 'plan' | 'decision'; inputRef: WqxInputRef }
+export interface WqxReceiveArgs extends WqxScope { kind: 'review' | 'plan' | 'decision' | 'scientific'; inputRef: WqxInputRef }
 export interface WqxInputBeginArgs { inputId: string; name: string; contentType?: string; bytes: number; sha256: string }
 export interface WqxInputAppendArgs { inputId: string; sha256: string; offset: number; dataBase64: string }
 export interface WqxInputFinishArgs { inputId: string; sha256: string }
@@ -133,6 +152,43 @@ export type WqxNativeArguments<T> = WqxScope & (
   | { request: T; inputRef?: never }
   | { request?: never; inputRef: WqxInputRef }
 );
+export interface WqxScientificOptions {
+  window?: {start?:string|null;end?:string|null}|null;
+  baselineWindow?: {start?:string|null;end?:string|null}|null;
+  includeEstimated?: boolean; characteristics?: string[]; siteIds?: string[]; allowedQualifiers?: string[];
+}
+export interface WqxScientificPreviewRequest {
+  reviewId: string; decisionReviewId: string; expectedDecisionReviewSha256: string;
+  options?: WqxScientificOptions; title?: string; note?: string;
+  previousReviewId?: string|null; expectedPreviousReviewSha256?: string|null;
+}
+export interface WqxScientificSaveRequest extends WqxScientificPreviewRequest { expectedPreviewSha256: string }
+export type WqxScientificFormat = 'json'|'observations'|'observations-tsv'|'groups'|'changes'|'report'|'bundle';
+export interface WqxScientificIdentity {
+  captureId:string;captureSha256:string;sourceReviewId:string;sourceReviewSha256:string;
+  sourcePlanId:string;sourcePlanSha256:string;resultingPlanId:string;resultingPlanSha256:string;documentSha256:string;
+}
+export interface WqxExactScientificNumber {
+  numerator:string;denominator:string;display:string;decimal:string;value:number|null;exact:boolean;
+}
+export interface WqxScientificChangeCounts {
+  added:number;removed:number;sourceChanged:number;choiceChanged:number;choiceBindingChanged:number;
+  representationChanged:number;ambiguous:number;unchanged:number;
+}
+/** Complete downloaded JSON retains full original rows and reviewed fields. Large sections use the retained file, not inline truncation. */
+export interface WqxScientificAnalysis {
+  schema:'starforge.wqx-standardized-analysis.v1';analysisSha256:string;source:WqxScientificIdentity;
+  options:WqxScientificOptions;inventory:Record<string,number>;original:WqxObject;reviewed:WqxObject;
+  observations:WqxObject[];groups:WqxObject[];sourceNotes:string[];sources:Array<{title:string;url:string}>;
+}
+export interface WqxScientificReview {
+  schema:'starforge.wqx-standardized-review.v1';status:'COMPLETE';reviewId:string;title:string;note:string;
+  reviewSha256:string;previewSha256:string;requestSha256:string;request:WqxScientificPreviewRequest;
+  decision:WqxObject;analysis:WqxScientificAnalysis;previous:WqxScientificReview|null;
+  comparison:({counts:WqxScientificChangeCounts;rows:WqxObject[];comparisonSha256:string}&Record<string,unknown>)|null;
+  files?:Array<{format:WqxScientificFormat;mime:string;filename:string}>;
+}
+
 export interface WqxProjectSaveRequest { title: string; selection: WqxObject; expectedRevision: number }
 export interface WqxCaptureStartRequest { operationId: string; expectedRevision: number }
 export interface WqxAnalyzeRequest { captureId: string; options?: WqxObject; comparisonCaptureId?: string }
@@ -152,6 +208,11 @@ export interface WqxCustomerExecuteRequest { intentId: string }
 export interface WqxCustomerReopenRequest { editionId: string; intentId: string }
 
 export interface WqxToolContract {
+  merchant_wqx_scientific_preview:{args:WqxNativeArguments<WqxScientificPreviewRequest>;result:WqxNativeResult};
+  merchant_wqx_scientific_save:{args:WqxNativeArguments<WqxScientificSaveRequest>;result:WqxNativeResult};
+  merchant_wqx_concentration_units: { args: WqxConcentrationUnitsArgs; result: WqxNativeResult };
+  merchant_wqx_concentration_prepare: { args: WqxConcentrationPrepareArgs; result: WqxConcentrationPreparation };
+  merchant_wqx_concentration_report: { args: WqxConcentrationReportArgs; result: WqxConcentrationReport };
   merchant_wqx_result: {args:WqxResultArgs;result:WqxNativeResult};
   merchant_wqx_files: {args:WqxPageArgs;result:WqxPage<WqxRetainedFile>};
   merchant_wqx_input_files: {args:Record<string, never>;result:WqxInputFiles};
@@ -235,6 +296,8 @@ export declare class WqxWorkspaceClient {
   captureCancel(args: WqxCaptureCancelArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;
   projectSave(args:WqxNativeArguments<WqxProjectSaveRequest>, options?:WqxRequestOptions): Promise<WqxNativeResult>;
   captureStart(args:WqxNativeArguments<WqxCaptureStartRequest>, options?:WqxRequestOptions): Promise<WqxNativeResult>;
+  scientificPreview(args:WqxNativeArguments<WqxScientificPreviewRequest>,options?:WqxRequestOptions):Promise<WqxNativeResult>;
+  scientificSave(args:WqxNativeArguments<WqxScientificSaveRequest>,options?:WqxRequestOptions):Promise<WqxNativeResult>;
   analyze(args:WqxNativeArguments<WqxAnalyzeRequest>, options?:WqxRequestOptions): Promise<WqxNativeResult>;
   reviewSave(args:WqxNativeArguments<WqxReviewSaveRequest>, options?:WqxRequestOptions): Promise<WqxNativeResult>;
   planPreview(args:WqxNativeArguments<WqxPlanPreviewRequest>, options?:WqxRequestOptions): Promise<WqxNativeResult>;
@@ -254,6 +317,9 @@ export declare class WqxWorkspaceClient {
   inputAppend(args: WqxInputAppendArgs, options?: WqxRequestOptions): Promise<WqxInputState>;
   inputFinish(args: WqxInputFinishArgs, options?: WqxRequestOptions): Promise<WqxInputComplete>;
   inputStatus(args: { inputId: string }, options?: WqxRequestOptions): Promise<WqxInputState>;
+  concentrationUnits(args: WqxConcentrationUnitsArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;
+  concentrationPrepare(args: WqxConcentrationPrepareArgs, options?: WqxRequestOptions): Promise<WqxConcentrationPreparation>;
+  concentrationReport(args: WqxConcentrationReportArgs, options?: WqxRequestOptions): Promise<WqxConcentrationReport>;
   tableExport(args: WqxTableExportArgs, options?: WqxRequestOptions): Promise<WqxRetainedFile>;
   tableImport(args: WqxTableImportArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;
   decisionsPreview(args: WqxDecisionsPreviewArgs, options?: WqxRequestOptions): Promise<WqxNativeResult>;

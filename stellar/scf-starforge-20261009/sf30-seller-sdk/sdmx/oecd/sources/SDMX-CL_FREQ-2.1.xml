@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--NSI Web Service v10.11.8.0-->
+<message:Structure xmlns:message="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/message" xmlns:structure="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/structure" xmlns:common="http://www.sdmx.org/resources/sdmxml/schemas/v2_1/common">
+  <message:Header>
+    <message:ID>IDREF10032</message:ID>
+    <message:Test>false</message:Test>
+    <message:Prepared>2026-10-12T13:41:45.371442+02:00</message:Prepared>
+    <message:Sender id="Unknown" />
+    <message:Receiver id="Unknown" />
+  </message:Header>
+  <message:Structures>
+    <structure:Codelists>
+      <structure:Codelist id="CL_FREQ" agencyID="SDMX" version="2.1" isFinal="true">
+        <common:Name xml:lang="en">Code list for concept "Frequency"</common:Name>
+        <common:Name xml:lang="fr">Codelist pour le concept "Fréquence"</common:Name>
+        <common:Description xml:lang="en">This code list provides a set of values indicating
+					the "frequency" of the data (e.g. weekly, monthly, quarterly). The concept
+					"frequency" may refer to various stages in the production process, e.g. data
+					collection or data dissemination. For example, a time series could be
+					disseminated at annual frequency but the underlying data are compiled monthly.
+					The code list is applicable for all different uses of
+					"frequency".</common:Description>
+        <common:Description xml:lang="fr">Cette liste de codes fournit un ensemble de valeurs
+					indiquant la "fréquence" des données (par exemple, hebdomadaire, mensuelle,
+					trimestrielle). Le concept de "fréquence" peut faire référence à différentes
+					étapes du processus de production, par ex. collecte ou diffusion de données. Par
+					exemple, une série chronologique pourrait être diffusée à une fréquence
+					annuelle, mais les données sous-jacentes sont compilées mensuellement. La liste
+					de codes est applicable pour toutes les différentes utilisations de
+					"fréquence".</common:Description>
+        <structure:Code id="A">
+          <common:Name xml:lang="en">Annual</common:Name>
+          <common:Name xml:lang="fr">Annuelle</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every year</common:Description>
+        </structure:Code>
+        <structure:Code id="A2">
+          <common:Name xml:lang="en">Biennial</common:Name>
+          <common:Name xml:lang="fr">Biennale</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every two years</common:Description>
+        </structure:Code>
+        <structure:Code id="A3">
+          <common:Name xml:lang="en">Triennial</common:Name>
+          <common:Name xml:lang="fr">Triennale</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every three years</common:Description>
+        </structure:Code>
+        <structure:Code id="A4">
+          <common:Name xml:lang="en">Quadrennial</common:Name>
+          <common:Name xml:lang="fr">Quadriennale</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every four years</common:Description>
+        </structure:Code>
+        <structure:Code id="A5">
+          <common:Name xml:lang="en">Quinquennial</common:Name>
+          <common:Name xml:lang="fr">Quinquennale</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every five years</common:Description>
+        </structure:Code>
+        <structure:Code id="A10">
+          <common:Name xml:lang="en">Decennial</common:Name>
+          <common:Name xml:lang="fr">Décennale</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every ten years</common:Description>
+        </structure:Code>
+        <structure:Code id="A20">
+          <common:Name xml:lang="en">Bidecennial</common:Name>
+          <common:Name xml:lang="fr">Bidécennal</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every twenty years</common:Description>
+        </structure:Code>
+        <structure:Code id="A30">
+          <common:Name xml:lang="en">Tridecennial</common:Name>
+          <common:Name xml:lang="fr">Tridécennal</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every thirty years</common:Description>
+        </structure:Code>
+        <structure:Code id="A_3">
+          <common:Name xml:lang="en">Three times a year</common:Name>
+          <common:Name xml:lang="fr">Trois fois par an</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						three times a year</common:Description>
+        </structure:Code>
+        <structure:Code id="S">
+          <common:Name xml:lang="en">Half-yearly, semester</common:Name>
+          <common:Name xml:lang="fr">Semestrielle</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every semester</common:Description>
+        </structure:Code>
+        <structure:Code id="Q">
+          <common:Name xml:lang="en">Quarterly</common:Name>
+          <common:Name xml:lang="fr">Trimestrielle</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every quarter</common:Description>
+        </structure:Code>
+        <structure:Code id="M">
+          <common:Name xml:lang="en">Monthly</common:Name>
+          <common:Name xml:lang="fr">Mensuelle</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every month</common:Description>
+        </structure:Code>
+        <structure:Code id="M2">
+          <common:Name xml:lang="en">Bimonthly</common:Name>
+          <common:Name xml:lang="fr">Bimestrielle</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every two months</common:Description>
+        </structure:Code>
+        <structure:Code id="M_2">
+          <common:Name xml:lang="en">Semimonthly</common:Name>
+          <common:Name xml:lang="fr">Semi-mensuelle</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						twice a month</common:Description>
+        </structure:Code>
+        <structure:Code id="M_3">
+          <common:Name xml:lang="en">Three times a month</common:Name>
+          <common:Name xml:lang="fr">Trois fois par mois</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						three times a month</common:Description>
+        </structure:Code>
+        <structure:Code id="W">
+          <common:Name xml:lang="en">Weekly</common:Name>
+          <common:Name xml:lang="fr">Hebdomadaire</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every week</common:Description>
+        </structure:Code>
+        <structure:Code id="W2">
+          <common:Name xml:lang="en">Biweekly</common:Name>
+          <common:Name xml:lang="fr">Aux 2 semaines</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every two weeks</common:Description>
+        </structure:Code>
+        <structure:Code id="W3">
+          <common:Name xml:lang="en">Triweekly</common:Name>
+          <common:Name xml:lang="fr">Aux 3 semaines</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every three weeks</common:Description>
+        </structure:Code>
+        <structure:Code id="W4">
+          <common:Name xml:lang="en">Four-weekly</common:Name>
+          <common:Name xml:lang="fr">Aux 4 semaines</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every four weeks</common:Description>
+        </structure:Code>
+        <structure:Code id="W_2">
+          <common:Name xml:lang="en">Semiweekly</common:Name>
+          <common:Name xml:lang="fr">Bihebdomadaire</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						twice a week</common:Description>
+        </structure:Code>
+        <structure:Code id="W_3">
+          <common:Name xml:lang="en">Three times a week</common:Name>
+          <common:Name xml:lang="fr">Trois fois par semaine</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						three times a week</common:Description>
+        </structure:Code>
+        <structure:Code id="D">
+          <common:Name xml:lang="en">Daily</common:Name>
+          <common:Name xml:lang="fr">Quotidienne</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every day</common:Description>
+        </structure:Code>
+        <structure:Code id="D_2">
+          <common:Name xml:lang="en">Twice a day</common:Name>
+          <common:Name xml:lang="fr">Deux fois par jour</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						twice a day</common:Description>
+        </structure:Code>
+        <structure:Code id="H">
+          <common:Name xml:lang="en">Hourly</common:Name>
+          <common:Name xml:lang="fr">Horaire</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every hour</common:Description>
+        </structure:Code>
+        <structure:Code id="H2">
+          <common:Name xml:lang="en">Bihourly</common:Name>
+          <common:Name xml:lang="fr">Bihoraire</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every two hours</common:Description>
+        </structure:Code>
+        <structure:Code id="H3">
+          <common:Name xml:lang="en">Trihourly</common:Name>
+          <common:Name xml:lang="fr">Trihoraire</common:Name>
+          <common:Description xml:lang="en">To be used for data collected or disseminated
+						every three hours</common:Description>
+        </structure:Code>
+        <structure:Code id="B">
+          <common:Name xml:lang="en">Daily – business week</common:Name>
+          <common:Name xml:lang="fr">Jours ouvrable</common:Name>
+          <common:Description xml:lang="en">Similar to "daily", however there are no
+						observations for Saturdays and Sundays (so, neither “missing values” nor
+						“numeric values” should be provided for Saturday and
+						Sunday)</common:Description>
+        </structure:Code>
+        <structure:Code id="N">
+          <common:Name xml:lang="en">Minutely</common:Name>
+          <common:Name xml:lang="fr">Chaque minute</common:Name>
+          <common:Description xml:lang="en">While N denotes "minutely", usually, there may be
+						no observations every minute (for several series the frequency is usually
+						"irregular" within a day/days). And though observations may be sparse (not
+						collected or disseminated every minute), missing values do not need to be
+						given for the minutes when no observations exist: in any case the time stamp
+						determines when an observation is observed</common:Description>
+        </structure:Code>
+        <structure:Code id="I">
+          <common:Name xml:lang="en">Irregular</common:Name>
+          <common:Name xml:lang="fr">Irrégulière</common:Name>
+          <common:Description xml:lang="en">To be used with irregular time series that stores
+						data for a sequence of arbitrary timepoints. Irregular time series are
+						appropriate when the data arrives unpredictably, such as when the
+						application records every stock trade or when random events are recorded
+						(the interval between each element can be a different
+						length)</common:Description>
+        </structure:Code>
+        <structure:Code id="OA">
+          <common:Name xml:lang="en">Occasional annual</common:Name>
+          <common:Name xml:lang="fr">Occasionnelle annuelle</common:Name>
+          <common:Description xml:lang="en">The event occurs occasionally with an infrequent
+						update that could span from 1 year to several years between events. It
+						implies a survey that experiences a gap for several years prior to the next
+						survey update (this is commonly linked to funding available to run a
+						specific survey (i.e. health surveys), whereas a regular annual survey
+						refers typically to ‘programs’ that are funded regularly and fall under the
+						Statistics Act, and therefore never experience a gap)</common:Description>
+        </structure:Code>
+        <structure:Code id="OM">
+          <common:Name xml:lang="en">Occasional monthly</common:Name>
+          <common:Name xml:lang="fr">Occasionnelle mensuelle</common:Name>
+          <common:Description xml:lang="en">The event occurs occasionally with an infrequent
+						update that could span from 1 month to several months between events. It
+						implies a survey that experiences a gap for several months prior to the next
+						survey update</common:Description>
+        </structure:Code>
+        <structure:Code id="_O">
+          <common:Name xml:lang="en">Other</common:Name>
+          <common:Name xml:lang="fr">Autre</common:Name>
+          <common:Description xml:lang="en">To be used when the qualitative or quantitative
+						values that a variable takes in a data set is associated to multiple
+						occurrences with frequency other than the already defined ones (for example
+						every 5 hours and 32 minutes etc.)</common:Description>
+        </structure:Code>
+        <structure:Code id="_U">
+          <common:Name xml:lang="en">Unspecified</common:Name>
+          <common:Name xml:lang="fr">Non spécifié</common:Name>
+          <common:Description xml:lang="en">To be used when a set of values are reported
+						within a time range but not associated to sub ranges. Often this could
+						happen in case of missing or sparse information. (Let’s say we have two
+						observations for 2020 but we do not know if they are part of a monthly
+						reporting or quarterly reporting)</common:Description>
+        </structure:Code>
+        <structure:Code id="_Z">
+          <common:Name xml:lang="en">Not applicable</common:Name>
+          <common:Name xml:lang="fr">N'est pas applicable</common:Name>
+          <common:Description xml:lang="en">To be used when the qualitative or quantitative
+						values that a variable takes in a data set is not associated to multiple
+						occurrences (only single occurrence exists) one can use the _Z as
+						frequency</common:Description>
+        </structure:Code>
+      </structure:Codelist>
+    </structure:Codelists>
+  </message:Structures>
+</message:Structure>

@@ -1,0 +1,54 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "flowable-workspaces",
+  "description": "Complete native Flowable BPMN and DMN releases, process and decision operations, migration, execution audit and customer handover",
+  "commands": {
+    "flowable-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/cli.mjs"
+  },
+  "commandDescriptions": {
+    "flowable-workspace": "Open, operate, receive and export native Flowable process and decision workspaces."
+  },
+  "exports": {
+    "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
+    "./seller/flowable/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/model.mjs",
+    "./seller/flowable/workspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/server.mjs",
+    "./seller/flowable/workspace/actions": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/actions.mjs",
+    "./seller/flowable/workspace/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/http-client.mjs",
+    "./seller/flowable/workspace/delivery": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/delivery.mjs",
+    "./merchant/flowable/review": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/review.mjs",
+    "./seller/flowable/native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native-journey.mjs",
+    "./seller/flowable/dmn-native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native.mjs",
+    "./seller/flowable/dmn-native-journey": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/dmn-native-journey.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/NATIVE_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native-contract-sources.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/NATIVE_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/flowable-native-host.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/receive-source-release.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/process-catalog.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/grant-review-v1.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/grant-review-v2.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/customer-onboarding-v1.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/customer-onboarding-v2.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/vendor-approval-v1.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/examples/vendor-approval-v2.bpmn20.xml",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/DMN_NATIVE_CONTRACT.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/DMN_SOURCE_MAP.json",
+    "products/flowable-merchant/DECISIONS.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/grant-eligibility-v1.dmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/grant-eligibility-v2.dmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/vendor-review-v1.dmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/vendor-review-v2.dmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/onboarding-route-v1.dmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/onboarding-route-v2.dmn",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/fixtures/decisions/decision-catalog.json"
+  ],
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/browser-assets.json"
+    }
+  ]
+}

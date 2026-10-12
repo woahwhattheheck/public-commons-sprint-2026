@@ -41,7 +41,7 @@ export async function readFleetConfiguration(raw, base, releaseStore) {
 export async function readSupportConfiguration(path) {
   path = resolve(path);
   const raw = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(path, 1024 * 1024)));
-  exact(raw, ['schema', 'casesDirectory', 'incidentsDirectory', 'incidentSourcesFile', 'defaultIncidentSource', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
+  exact(raw, ['schema', 'casesDirectory', 'sourceDirectory', 'packagesDirectory', 'packageSourcesFile', 'incidentsDirectory', 'incidentSourcesFile', 'defaultIncidentSource', 'handoffs', 'workspaces', 'profiles'], ['schema', 'casesDirectory']);
   if (raw.schema !== SUPPORT_CONFIG_SCHEMA) throw failure('CONFIGURATION_ERROR', 'Expected an original merchant support connection.');
   const base = dirname(path), aliases = kind => {
     const source = raw[kind] ?? {};
@@ -68,7 +68,13 @@ export async function readSupportConfiguration(path) {
     }
   } else if (raw.defaultIncidentSource !== undefined)
     throw failure('CONFIGURATION_ERROR', 'A default incident source requires the original incident sources file.');
-  return { casesDirectory: await privateSupportDirectory(hostPath(raw.casesDirectory, base)),
+  const casesDirectory=await privateSupportDirectory(hostPath(raw.casesDirectory,base));
+  const sourceDirectory=raw.sourceDirectory===undefined?join(casesDirectory,'source-bundles'):hostPath(raw.sourceDirectory,base);
+  const packagesDirectory=raw.packagesDirectory===undefined?join(dirname(casesDirectory),basename(casesDirectory)+'-packages'):hostPath(raw.packagesDirectory,base);
+  if(sourceDirectory===casesDirectory||packagesDirectory===casesDirectory||packagesDirectory===sourceDirectory)
+    throw failure('CONFIGURATION_ERROR','Use distinct original case, source and complete-package directories.');
+  return { casesDirectory,sourceDirectory,packagesDirectory,
+    ...(raw.packageSourcesFile===undefined?{}:{packageSourcesFile:hostPath(raw.packageSourcesFile,base)}),
     ...(incidentSourcesFile === undefined ? {} : { incidentSourcesFile, incidentSources,
       ...(defaultIncidentSource === undefined ? {} : { defaultIncidentSource }) }),
     incidentsDirectory: raw.incidentsDirectory === undefined ? null
@@ -88,8 +94,8 @@ export async function readPublisherConfiguration(path) {
   for (const [alias, input] of Object.entries(raw.workspaces)) {
     identifier(alias, 'Publisher alias');
     exact(input, ['label', 'kind', 'directory', 'seller', 'resource'], ['kind', 'directory']);
-    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'nocodb', 'sftp', 'arcgis', 'census-acs', 'bls-labor', 'timescale'].includes(input.kind))
-      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, nocodb, sftp, arcgis, census-acs, bls-labor or timescale.');
+    if (!['postgres', 'sqlite', 'mysql', 'mongodb', 'sheets', 'sheetbest', 'nocodb', 'sftp', 'arcgis', 'census-acs', 'bls-labor', 'timescale', 'frictionless'].includes(input.kind))
+      throw failure('CONFIGURATION_ERROR', 'Publisher kind must be postgres, sqlite, mysql, mongodb, sheets, sheetbest, nocodb, sftp, arcgis, census-acs, bls-labor, timescale or frictionless.');
     const directory = hostPath(input.directory, base), info = await lstat(directory);
     if (!info.isDirectory() || info.isSymbolicLink() || process.platform !== 'win32' && (info.mode & 0o077))
       throw failure('CONFIGURATION_ERROR', 'Bind an existing private original publisher directory (0700).');
@@ -99,7 +105,7 @@ export async function readPublisherConfiguration(path) {
     const saved = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(await fileBytes(join(directory, 'workspace.json'), input.kind === 'timescale' ? 16384 : 4096)));
     const workspaceSchema = input.kind === 'timescale' ? 'stellar-forge.timescale-workspace.v1'
       : 'stellar-forge.' + input.kind + '-publisher-workspace.v1';
-    if (saved.schema !== workspaceSchema)
+    if (saved.schema !== workspaceSchema && !(input.kind === 'frictionless' && saved.schema === 'stellar-forge.frictionless-publisher-workspace.v2'))
       throw failure('CONFIGURATION_ERROR', 'The declared kind must match the original retained publisher workspace.');
     if (input.kind === 'timescale') {
       if (typeof saved.id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(saved.id))

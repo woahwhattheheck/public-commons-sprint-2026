@@ -1,0 +1,196 @@
+{
+  "schema": "starforge.lab-edd-cross-profile-members.v1",
+  "archive": {
+    "filename": "McCampbell_Cross_Profile_Review_20261012.zip",
+    "bytes": 8829090,
+    "sha256": "721a8d4a7a236179c6821e4a1100439003eeebedddc9e28a4825b2d368dfbe6b",
+    "gitBlob": "fc04abdf90802107b0dfad373b70a80460f77a88"
+  },
+  "members": [
+    {
+      "path": "original/source.zip",
+      "bytes": 10432,
+      "sha256": "a57c18f4bf8054503155e1c8ccdb0bf7b736e4cc5eefef5e8d4c61a145ed2879"
+    },
+    {
+      "path": "original/baseline.zip",
+      "bytes": 9862,
+      "sha256": "9253032d539ced2d60b04f1c3e9188dc55c8a2c0ce873c2e8cd4273f28db203d"
+    },
+    {
+      "path": "original/decisions.json",
+      "bytes": 574,
+      "sha256": "ff1f75bf15bc530029e7042b663b715d05be72ba35272ffc3dcd2e9cace8112d"
+    },
+    {
+      "path": "original/baseline_decisions.json",
+      "bytes": 574,
+      "sha256": "cdc5def0544a35517a9c608a6e0fe1dcf771caad621524483dc72a76c4befce1"
+    },
+    {
+      "path": "original/reconciliation.json",
+      "bytes": 13352,
+      "sha256": "2c5b581280b92775138c22b1b8ecc3e8974e9b80b092e2dbf6c7639764017f1c"
+    },
+    {
+      "path": "prepared/baseline-receiving-files.zip",
+      "bytes": 121638,
+      "sha256": "a3b16bdfca6c259802a600b0d65f30aabf6e79f8b49a1d04eb6ee66febd69be7"
+    },
+    {
+      "path": "baseline/native-preparation.json",
+      "bytes": 41,
+      "sha256": "0622a42de9574c67878572b4f016f3af93d007846bc5cea826027da1fc24e0ad"
+    },
+    {
+      "path": "baseline/source/manifest.json",
+      "bytes": 759,
+      "sha256": "7d4e075fb7c4585a5826ea592da8c1895c5d2524d0604cb8b476a8f9a81ae275"
+    },
+    {
+      "path": "baseline/source/rows.json",
+      "bytes": 1958619,
+      "sha256": "2f85f7c68a5c09dbfdd33d827a6845436fbd2a215b5f10386245ba4f448832d2"
+    },
+    {
+      "path": "baseline/decisions.json",
+      "bytes": 574,
+      "sha256": "cdc5def0544a35517a9c608a6e0fe1dcf771caad621524483dc72a76c4befce1"
+    },
+    {
+      "path": "baseline/review.json",
+      "bytes": 2705360,
+      "sha256": "2c5546d3bdfb462de8698e76ca6559ec361d1111b88210398199bd4bc213b029"
+    },
+    {
+      "path": "baseline/issues.csv",
+      "bytes": 2370,
+      "sha256": "ada3e45accd3a30357a1f3dbf9d43a16f35f6496b099e5836247a0b77ca8f100"
+    },
+    {
+      "path": "baseline/lineage.json",
+      "bytes": 245507,
+      "sha256": "d2170cdbe209d36a5a3624cc09395ff4d00a5d0339e2c849078d8a1c1062f882"
+    },
+    {
+      "path": "baseline/decisions.csv",
+      "bytes": 1558,
+      "sha256": "72b156714acc196aac11db2b30fc4249fd9bc2f70585742f0f9987a80a91e831"
+    },
+    {
+      "path": "reconciliation/decisions.csv",
+      "bytes": 407348,
+      "sha256": "96dd51d1aaa36734798bb1f61896c8ad77a33a17ee1c27bf8dce4a698a745d68"
+    },
+    {
+      "path": "baseline/decisions.tsv",
+      "bytes": 1558,
+      "sha256": "2e6a4ddbd2b0158b066c381855f577914843d4b685553bb1d39e46c58875d493"
+    },
+    {
+      "path": "reconciliation/decisions.tsv",
+      "bytes": 407344,
+      "sha256": "1faa64c77cac93a06a0309e4fc5bcb584c59c85a1668bf6094c0bc80e3bf45c4"
+    },
+    {
+      "path": "reconciliation/fields.csv",
+      "bytes": 14870965,
+      "sha256": "0a44ce52ab94d31be9273a646305e0dfcdf7b42ae8381e4234dda82be9d81296"
+    },
+    {
+      "path": "reconciliation/decisions.json",
+      "bytes": 13352,
+      "sha256": "2c5b581280b92775138c22b1b8ecc3e8974e9b80b092e2dbf6c7639764017f1c"
+    },
+    {
+      "path": "reconciliation/review.json",
+      "bytes": 381731,
+      "sha256": "86df4bb440dc2a9b5259e33ebad297be3b0236ed1ff3c1920c95fa4a15a562d6"
+    },
+    {
+      "path": "reconciliation/output-comparison.json",
+      "bytes": 44285595,
+      "sha256": "2b62719cb3b10c143f2390188efef3f260c26558633c6dac59f2cce88b372105"
+    },
+    {
+      "path": "baseline/report.html",
+      "bytes": 1298174,
+      "sha256": "618bea437720055ac04981d9805513d3d471d1e2b79ac632e30cd10687e6d4a6"
+    },
+    {
+      "path": "reconciliation.html",
+      "bytes": 9615933,
+      "sha256": "b41b534fb927353c5782e65fd96e16ac54285e3f88226387c60a63d46528487b"
+    },
+    {
+      "path": "prepared/receiving-files.zip",
+      "bytes": 76486,
+      "sha256": "14f9f9b9222cef37d77f4d393472c002a29916e943260569aa3f29503ba79491"
+    },
+    {
+      "path": "native-preparation.json",
+      "bytes": 41,
+      "sha256": "f1544ef6e70a933581b0d883a980ebecaa4fceab245a4b9a92ad84fb4cd825dc"
+    },
+    {
+      "path": "decisions.csv",
+      "bytes": 4114,
+      "sha256": "0a01bf9e0d9f42853f69abb134101fc9a285dc9b232c7c44f0c1c88961c98a4c"
+    },
+    {
+      "path": "decisions.tsv",
+      "bytes": 4114,
+      "sha256": "5235011c2caf20fdc509447fb12fd749d3c78d35111c2704827ace923d6ff5a0"
+    },
+    {
+      "path": "source/manifest.json",
+      "bytes": 905,
+      "sha256": "c24faf1276accd1ee9d210ff20f693ec20b212880db0925a15cee131ad939266"
+    },
+    {
+      "path": "source/rows.json",
+      "bytes": 1265029,
+      "sha256": "92cd00e28f3f56bfad7aed2f66758a57ee58ee9c1faf2f9ca3ebf5d1ae73eed6"
+    },
+    {
+      "path": "decisions.json",
+      "bytes": 574,
+      "sha256": "ff1f75bf15bc530029e7042b663b715d05be72ba35272ffc3dcd2e9cace8112d"
+    },
+    {
+      "path": "review.json",
+      "bytes": 2009832,
+      "sha256": "3e2da66f19500c094d19ab8c310e97ea1d1480743b3fda88aadaa113f1b4a9ee"
+    },
+    {
+      "path": "issues.csv",
+      "bytes": 7943,
+      "sha256": "8b432b44d5a2b68c3cca81d38a1634c405f0a93cbcdd7d221951918056bcfb9d"
+    },
+    {
+      "path": "lineage.json",
+      "bytes": 263779,
+      "sha256": "0d57f69a90aa9653b91684961d1e8b2d8e0cecfaba27fe4448faa566d1c97b2e"
+    },
+    {
+      "path": "comparison.json",
+      "bytes": 44285347,
+      "sha256": "708d86202558cb2d1df720ead89a903f13c26facbb1f60338b5ebb463c523f23"
+    },
+    {
+      "path": "report.html",
+      "bytes": 942633,
+      "sha256": "16b8865167329904d34c97a080cfaa1f7ea0b9e27ff2ce12345a3aed95c1f1d4"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3590,
+      "sha256": "80cf25b0c2b17a3636bed6cbd42f18c3b9697a030375cb10d9a7a5dc5516e985"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 19777,
+      "sha256": "7fdcc85c6d971f5cb1287931ecb06159183b2b833928ae310beee51e22b0f0fb"
+    }
+  ]
+}

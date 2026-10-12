@@ -52,7 +52,7 @@ class HandoffStore:
             if not row:
                 raise InputError("Provider review revision was not found")
             value = source.json_value(row["body"])
-            if value.get("schema") != handoff.REVIEW or value.get("id") != revision or value.get("sourceId") != row["source"] or value.get("parent") != row["parent"] or handoff.revision_id(value["profile"], value["parent"]) != revision:
+            if value.get("schema") != handoff.REVIEW or value.get("id") != revision or value.get("sourceId") != row["source"] or value.get("parent") != row["parent"] or handoff.record_revision_id(value) != revision:
                 raise InputError("Retained provider review identity changed")
             return {**value, "created": row["created"]}
 
@@ -94,18 +94,25 @@ class HandoffStore:
     def save(self, source_id, profile, expected_head=None):
         with self.workspace.mutex:
             c = self._capture(source_id)
-            checked = handoff.review(c, profile)
+            normalized = handoff.normalize_profile(profile, c)
             if expected_head is not None:
                 ident(expected_head)
-            revision = handoff.revision_id(checked["profile"], expected_head)
-            record = {"schema": handoff.REVIEW, "id": revision, "sourceId": c.id,
-                "parent": expected_head, **checked}
-            encoded = source.jbytes(record).decode("utf-8")
-            existing = self.workspace.db.execute("SELECT body FROM erddap_handoff_reviews WHERE id=?", (revision,)).fetchone()
+            # A retry names the original request, not the software version now
+            # evaluating it. Recover supported earlier records before new review.
+            candidates = {handoff.revision_id(normalized, expected_head),
+                handoff.revision_id(normalized, expected_head, handoff.CURRENT_EVALUATION)}
+            existing = [row for candidate in candidates for row in self.workspace.db.execute(
+                "SELECT id,body FROM erddap_handoff_reviews WHERE id=?", (candidate,))]
+            if len(existing) > 1:
+                raise InputError("The original review request has conflicting retained generations")
             if existing:
-                if existing["body"] != encoded:
-                    raise InputError("Existing review revision differs from this exact source and profile")
-                return self.get(revision)
+                selected, record = handoff.validate_record(c, source.json_value(existing[0]["body"]))
+                if record["parent"] != expected_head or source.jbytes(record["profile"]) != source.jbytes(normalized):
+                    raise InputError("Existing review differs from the exact original request")
+                return self.get(existing[0]["id"])
+            record = handoff.make_review_record(c, normalized, expected_head)
+            revision = record["id"]
+            encoded = source.jbytes(record).decode("utf-8")
             current = self._head(c.id)
             if current != expected_head:
                 error = InputError("The provider review changed. Reopen the latest revision and reconcile your edits.")
@@ -146,15 +153,18 @@ class HandoffStore:
                 _original.regular(path, handoff.MAX_HANDOFF)
                 raw = path.read_bytes()
                 digest = source.sha(raw)
+                verified = handoff.receive_bundle(raw)
+                if verified["revision"] != revision or verified["mode"] != mode or verified["sourceId"] != value["sourceId"] or source.jbytes(verified["review"]) != source.jbytes(value["review"]):
+                    raise InputError("Retained export differs from its original supported evaluation")
                 if receipt_path.exists():
                     _original.regular(receipt_path, 4 * handoff.MAX_PROFILE)
                     receipt = source.json_value(receipt_path.read_bytes())
-                    if receipt.get("sha256") != digest or receipt.get("bytes") != len(raw) or receipt.get("revision") != revision or receipt.get("mode") != mode or receipt.get("sourceId") != value["sourceId"]:
+                    if receipt.get("sha256") != digest or receipt.get("bytes") != len(raw) or receipt.get("revision") != revision or receipt.get("mode") != mode or receipt.get("sourceId") != value["sourceId"] or source.jbytes(receipt.get("review")) != source.jbytes(verified["review"]):
                         raise InputError("Retained provider export differs from its receipt")
                 else:
                     # The ZIP may have completed before its receipt. Reopen the
                     # existing bytes and adopt their original source/review identity.
-                    result = handoff.receive_bundle(raw)
+                    result = verified
                     if result["revision"] != revision or result["mode"] != mode or result["sourceId"] != value["sourceId"]:
                         raise InputError("Retained provider export belongs to another review")
                     receipt = {"schema": "stellar-forge.erddap-provider-export.v1",
@@ -163,7 +173,8 @@ class HandoffStore:
                     atomic(receipt_path, source.jbytes(receipt))
                 return {**receipt, "path": str(path)}
             c = self._capture(value["sourceId"])
-            built = handoff.build_bundle(c, value["profile"], mode, value["parent"])
+            record = {key: item for key, item in value.items() if key != "created"}
+            built = handoff.build_bundle(c, value["profile"], mode, value["parent"], record=record)
             if built["manifest"]["revision"] != revision:
                 raise InputError("Export review revision differs from the retained original")
             atomic(path, built["raw"])
@@ -218,7 +229,8 @@ class HandoffStore:
             with zipfile.ZipFile(path) as z:
                 record = source.json_value(z.read("provider-review.json"))
                 original = handoff.Capture(z.read("original/capture.erddap.zip"))
-            if original.id != receipt["sourceId"] or record.get("id") != receipt["revision"] or handoff.revision_id(record["profile"], record["parent"]) != receipt["revision"]:
+            original, record = handoff.validate_record(original, record)
+            if original.id != receipt["sourceId"] or record.get("id") != receipt["revision"] or source.jbytes(record["review"]) != source.jbytes(receipt["review"]):
                 raise InputError("Received provider profile differs from its original receipt")
             return {"receipt": receipt, "profile": record["profile"], "review": record["review"],
                 "source": original.summary()}

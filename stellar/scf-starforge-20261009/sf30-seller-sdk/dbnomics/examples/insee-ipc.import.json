@@ -1,0 +1,57 @@
+{
+  "schema": "stellar-forge.dbnomics-response-import.v1",
+  "selection": {
+    "title": "Insee France index including imputed rents, base 2015 — annual and monthly, 1990–2025",
+    "seriesIds": [
+      "INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE",
+      "INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE"
+    ]
+  },
+  "sourceMode": "IMPORTED_PUBLIC_ATTACHMENT",
+  "responses": [
+    {
+      "file": "insee-ipc-annual.response.json",
+      "receipt": {
+        "method": "GET",
+        "url": "https://api.db.nomics.world/v22/series/INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE?observations=1&align_periods=0",
+        "finalUrl": "https://api.db.nomics.world/v22/series/INSEE/IPC-2015/A.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE?observations=1&align_periods=0",
+        "status": null,
+        "completedAt": "2026-10-12T10:21:09.338Z",
+        "headers": {},
+        "bytes": 166662,
+        "sha256": "71603292efe149a08cd025231722a0809f25917a6e39dc676b21123c50638c31",
+        "transport": {
+          "kind": "notion-public-attachment",
+          "status": "uploaded",
+          "fileUploadId": "3f7dd772-3100-8125-990e-00b2d189c8aa",
+          "contentType": "application/json; charset=utf-8",
+          "contentLength": 166662,
+          "importTool": "notion_create_attachment(source_url)",
+          "downloadTool": "notion_download_attachment"
+        }
+      }
+    },
+    {
+      "file": "insee-ipc-monthly.response.json",
+      "receipt": {
+        "method": "GET",
+        "url": "https://api.db.nomics.world/v22/series/INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE?observations=1&align_periods=0",
+        "finalUrl": "https://api.db.nomics.world/v22/series/INSEE/IPC-2015/M.IPC.SO.00.00.INDICE.ENSEMBLE.FE.SO.BRUT.2015.FALSE?observations=1&align_periods=0",
+        "status": null,
+        "completedAt": "2026-10-12T10:21:43.945Z",
+        "headers": {},
+        "bytes": 178349,
+        "sha256": "031a92e135b398bf41f0fa3cf2d5325107d792dd13e630a4791b1d4302cd4ca8",
+        "transport": {
+          "kind": "notion-public-attachment",
+          "status": "uploaded",
+          "fileUploadId": "3f7dd772-3100-8162-bb42-00b25efade6a",
+          "contentType": "application/json; charset=utf-8",
+          "contentLength": 178349,
+          "importTool": "notion_create_attachment(source_url)",
+          "downloadTool": "notion_download_attachment"
+        }
+      }
+    }
+  ]
+}

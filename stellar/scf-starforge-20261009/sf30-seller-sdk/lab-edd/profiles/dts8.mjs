@@ -237,7 +237,11 @@ export function analyzeDts8d({sourceSha256,tables}) {
   for (const table of tables) {
     const origin=table.origin??{}, rows=table.rows??[], headers=table.headers??[];
     if (origin.containerSha256) stats.workbooks.add(origin.containerSha256);
-    if (origin.format!=='xlsx') issue('DTS8D_XLSX_REQUIRED','error','The native DTS8D receiving output is an Excel workbook.',[],{tableId:table.id});
+    if (!['xlsx','xls'].includes(origin.format)) issue('DTS8D_WORKBOOK_REQUIRED','error','Select an original Excel workbook for native DTS8D receiving.',[],{tableId:table.id});
+    if (origin.format==='xls') issue('DTS8D_LEGACY_XLS_REISSUE','info',
+      'The original BIFF8 XLS remains retained; native receiving creates a separately named XLSX workbook.',[],
+      {tableId:table.id,sourceFilename:table.filename,nativeFilename:table.filename+'.xlsx',
+       epoch:origin.epoch,sourceSha256:origin.containerSha256,parser:origin.parser},12);
     if (origin.sheetCount!==1) issue('DTS8D_ONE_SHEET','error','DTS8D requires the first and only worksheet.',[],{tableId:table.id,sheets:origin.sheetCount});
     if (headers.length!==DTS8D_HEADERS.length || headers.some((name,index)=>name!==DTS8D_HEADERS[index]))
       issue('DTS8D_COLUMN_LAYOUT','error','Use the 150 exact first-row field names in the published DTS8D order.',[],
@@ -379,7 +383,8 @@ export function analyzeDts8d({sourceSha256,tables}) {
   return {summary:{...stats,workbooks:stats.workbooks.size,errors:issues.filter(i=>i.severity==='error').length,
       reviews:issues.filter(i=>i.severity==='review').length},issues,lineage,
     facts:{format:'Enviro Data DTS8D',version:DTS8D_VERSION,sourceSha256,fields:DTS8D_FIELDS,samples,
-      nativeWorkbook:'One XLSX worksheet with all 150 exact ordered headers.',
+      nativeWorkbook:'One XLSX worksheet with all 150 exact ordered headers. BIFF8 XLS intake retains the complete original and records its separately named XLSX reissue.',
+      legacyWorkbooks:tables.filter(table=>table.origin?.format==='xls').map(table=>({filename:table.filename,sha256:table.sha256,legacy:table.origin.legacy})),
       referenceChecks:'The client Enviro Data configuration supplies receiving lookup membership and import options. Complete codes and descriptions remain in the source and prepared workbook.',
       retainedConventions:'Original values, qualifiers, units, duplicate indices, superseded indices and all five source limits remain explicit.'}};
 }
@@ -387,7 +392,7 @@ export const dts8dProfile = Object.freeze({
   id:'geotech-dts8d',version:DTS8D_VERSION,label:'Enviro Data DTS8D',
   references:[{title:'Geotech DTS8D, May 2026',url:DTS8D_REFERENCE},
     {title:'Geotech import and duplicate handling',url:'https://www.geotech.com/support/faq/joomfaq-using-enviro-data/faq-importing'}],
-  delimiters:[],nativeExtensions:['.xlsx'],
+  delimiters:[],sourceExtensions:['.xls','.xlsx'],nativeExtensions:['.xlsx'],
   match({headers}) { return ['SiteName','StationName','SampleDate_D','FieldSampleID','ParameterName'].every(name=>headers.includes(name))?'observations':null; },
   decode:decodeLabWorkbooks,renderPrepared:request=>renderLabWorkbooks({...request,fieldDefinitions:DTS8D_FIELDS}),
   analyze:analyzeDts8d,recordKey:dts8dRecordKey,

@@ -136,6 +136,13 @@
       ]
     ],
     [
+      "/runbook-profiles.mjs",
+      [
+        "runbook-profiles.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/runbooks.html",
       [
         "runbooks.html",
@@ -300,6 +307,27 @@
       "/source-changes.css",
       [
         "source-changes.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.html",
+      [
+        "portfolio.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.mjs",
+      [
+        "portfolio.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/portfolio.css",
+      [
+        "portfolio.css",
         "text/css; charset=utf-8"
       ]
     ]

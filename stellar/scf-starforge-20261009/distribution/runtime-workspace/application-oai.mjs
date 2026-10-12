@@ -15,9 +15,9 @@ const field = (name, label, type = 'path', required = false, description = '') =
 
 export function oaiApplication(common = []) {
   return {
-    id: 'oai-repository', command: 'oai', title: 'Repository metadata editions', terminal: false,
+    id: 'oai-repository', command: 'oai', title: 'Repository metadata and migration', terminal: false,
     requiredSource: ROOT + '/oai-pmh/managed.py',
-    description: 'Reopen original OAI responses, retained harvests, record changes, reviewed editions, typed datasets and complete receiving packages.',
+    description: 'Receive and review repository metadata, prepare Islandora migrations, operate native target changes and reopen complete handover packages.',
     fields: [
       field('workspaceDirectory', 'Original repository workspace', 'path', true,
         'Choose the private workspace initialized or restored by the original OAI command.'),
@@ -64,9 +64,32 @@ export async function prepareOaiApplication(settings, {
     (observed.python.version[0] > 3 || observed.python.version[0] === 3 && observed.python.version[1] >= 11),
     'APPLICATION_OAI_PYTHON_CHANGED');
   const sourceFiles = Object.entries(observed.source);
-  need(sourceFiles.length >= 15 && hex(observed.source['oai-pmh/managed.py']) &&
-    hex(observed.source['oai-pmh/harvest.py']) && hex(observed.source['xml/workspace.py']) &&
-    hex(observed.source['dataset-handler.mjs']), 'APPLICATION_OAI_SOURCE_INCOMPLETE');
+  const requiredSource = [
+    "oai-pmh/bridge.py",
+    "oai-pmh/protocol.py",
+    "oai-pmh/harvest.py",
+    "oai-pmh/workspace.py",
+    "oai-pmh/cli.py",
+    "oai-pmh/cli.mjs",
+    "oai-pmh/server.py",
+    "oai-pmh/managed.py",
+    "oai-pmh/index.html",
+    "oai-pmh/browser.mjs",
+    "oai-pmh/style.css",
+    "oai-pmh/islandora.py",
+    "oai-pmh/islandora_io.py",
+    "oai-pmh/islandora_cli.py",
+    "oai-pmh/islandora_cli.mjs",
+    "oai-pmh/islandora.mjs",
+    "oai-pmh/islandora.css",
+    "oai-pmh/ISLANDORA_OPERATOR_GUIDE.md",
+    "xml/xml_source.py",
+    "xml/workspace.py",
+    "xml/native.mjs",
+    "dataset-handler.mjs"
+  ];
+  need(requiredSource.every(name => hex(observed.source[name])),
+    'APPLICATION_OAI_SOURCE_INCOMPLETE');
   const indexed = new Set(inputs.map(item => item.path));
   for (const [relative, expected] of sourceFiles) {
     need(/^(?:oai-pmh\/[A-Za-z0-9_.-]+|xml\/[A-Za-z0-9_.-]+|dataset-handler\.mjs)$/.test(relative) &&

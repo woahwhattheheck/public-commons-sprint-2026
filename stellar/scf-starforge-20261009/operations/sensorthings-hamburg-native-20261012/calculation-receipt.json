@@ -1,0 +1,181 @@
+{
+  "schema": "stellar-forge.sensorthings-status-calculation-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
+  "completedAt": "2026-10-12T11:26:24Z",
+  "execution": {
+    "runtime": "Functions V8 JavaScript isolate",
+    "nativeNodeExecution": false,
+    "providerRequestsDuringCalculation": 0,
+    "originals": 29,
+    "description": "The complete original response and connector receipt identities were validated before calculation. The reusable operational source ran with the retained original exact-JSON, numeric-identity and time functions; only module loading and SHA binding were supplied by the V8 orchestration.",
+    "numericalModel": "Point-observation history; exact numeric lexemes and BigInt nanosecond time differences. No interpolation or status carry-forward.",
+    "moduleDependencies": [
+      {
+        "path": "sf30-seller-sdk/ogc/source.mjs",
+        "selectedCommit": "03ebf6d815b332b39e3b54a849cbce395e4203ce",
+        "bytes": 21826,
+        "sha256": "caea7c6a7925a4f589add4dac27c3f7b207cc184b392b34ae271df1e561ea4c2",
+        "gitBlob": "80660e2e7b3b79aab03257614503cc70fdfc18d0"
+      },
+      {
+        "path": "sf30-seller-sdk/stellar-expert/exact-json.mjs",
+        "selectedCommit": "03ebf6d815b332b39e3b54a849cbce395e4203ce",
+        "bytes": 2861,
+        "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26",
+        "gitBlob": "f24ed2620ee2460c780e6efea22c738edffbff75"
+      },
+      {
+        "path": "sf30-seller-sdk/sensorthings/contract.mjs",
+        "selectedCommit": "03ebf6d815b332b39e3b54a849cbce395e4203ce",
+        "bytes": 14298,
+        "sha256": "452eaefd5cf921ef53164b28c10b187d0792e824da44d8ae5b9ef9fc0c14c6f6",
+        "gitBlob": "1569d7bdffbdefd11fa5eddff3a7a2c38156b38e"
+      }
+    ],
+    "actualModuleSource": {
+      "bytes": 35943,
+      "sha256": "fd1a264bbed50cf15b9be0b403aa8891241ec4216f0d51db491ea3dc53f8eea0",
+      "gitBlob": "e7252706d3dd8823ffd0339a530f8de0debcfd37"
+    },
+    "renderedReportSource": {
+      "bytes": 23551,
+      "sha256": "9bb01d530af1e7f67aa79372fbae3678ba65188c45ce735d5d309ed0f9b48083",
+      "gitBlob": "e0a262bc13fa372a18754bb356c7449b2cc2079a"
+    },
+    "originalFunctionAssembly": {
+      "bytes": 6042,
+      "sha256": "577ad73bce9e48aa55c4ceae753ad0b0cda6d231f157404ff11c7e3d287a813c",
+      "gitBlob": "282fa29df8a6afb8c6fb1bca1eeeb25c2d166eae"
+    },
+    "orchestrationShaFunction": {
+      "bytes": 1902,
+      "sha256": "14c2b17420f3b7bcbf917c7b20dc9929f3d5f588e250fdcd65390c3e75e09987",
+      "gitBlob": "2842538b465633414487daafe42e086050fa7b21"
+    }
+  },
+  "recipe": {
+    "path": "report-recipe.json",
+    "bytes": 26341,
+    "sha256": "f8d53f631d62491ff1b21a6baa72cc0ed25ffdabe2933da8b4d2b0ae91d450b1",
+    "gitBlob": "b7302f08a71689b956a5ea982c7896e1b179a578"
+  },
+  "results": [
+    {
+      "window": "window-1",
+      "analysisId": "d611f38a6778baba35359d78cbd398e4704e67617ed20ae3412aeeac62bbfb04",
+      "resultSha256": "3da3c2d88c51c88cd1e53aca989ec4c92084df187341364d4867375d0fc2ac94",
+      "rows": 660
+    },
+    {
+      "window": "window-2",
+      "analysisId": "17065f1bf5f6e8d4ba99031e4b6fc49e770aee8f9f286b8112832e97afb38842",
+      "resultSha256": "9e840fd31abd893bf95ccddbff0a4f08b2253708481b3a1712d4b6b6d744ca3e",
+      "rows": 660
+    }
+  ],
+  "comparisonId": "bd6c15cebfeea7eb2f6fa2d9ca47f6d3afc312a9ecfac311ca81107a7d364462",
+  "artifacts": [
+    {
+      "path": "reports/comparison.json",
+      "gitBlob": "aef91028c3ba8e8e1ec7098b686ef0f74675bab9",
+      "bytes": 29172,
+      "sha256": "522fb3d42139a3f46499df1ea47b2569585b4610dbab3d84f0ab7247ff59b019"
+    },
+    {
+      "path": "reports/window-1/index.html",
+      "gitBlob": "d1628e3cf14e2cf376390ae78102fdbdb30f50b5",
+      "bytes": 468986,
+      "sha256": "58f8e80aaae850becdd6b7c093fcfcbc4888cd5c1632a2c748f80c6c3184be74"
+    },
+    {
+      "path": "reports/window-1/status-report.json",
+      "gitBlob": "48d97f7abd9250d267a50b4afc983b916e0a9484",
+      "bytes": 5163716,
+      "sha256": "54445447edb365de7fd5310307f23eefe16bfc0de8d501d77af1a36a4cdd47bd"
+    },
+    {
+      "path": "reports/window-1/status-history.csv",
+      "gitBlob": "ba1447028ad93e7420dfdd73fd27fb6d7b40b5d7",
+      "bytes": 216530,
+      "sha256": "715ff34cf72b0383a3a2a224f90dd2f1b2e4e433f89f2bb490166a80b0582772"
+    },
+    {
+      "path": "reports/window-1/observed-status-pairs.csv",
+      "gitBlob": "2a97624c4dad10fe71a4109571223342417012fd",
+      "bytes": 1380278,
+      "sha256": "6f628c3d849ca3be3ec33be0fd73a86d48e79846b2a566cfb7a7f223310629b4"
+    },
+    {
+      "path": "reports/window-1/daily-observation-counts.csv",
+      "gitBlob": "cee03728650aff2b19280dc8b73e4a23ebd3dcf3",
+      "bytes": 6486,
+      "sha256": "1439f9eaf17cf00d2b5015b97c6c5f38c2622e3377bda999b6efa7b2b2e35180"
+    },
+    {
+      "path": "reports/window-1/observation-gaps.csv",
+      "gitBlob": "7975fe50d7dc6fe18892c18be61ece1618b3f418",
+      "bytes": 1363795,
+      "sha256": "062c3df37b689e89f8fd6f98a6df46149eed923774c9ee1748279e9455ed6b59"
+    },
+    {
+      "path": "reports/window-1/status-transition-counts.csv",
+      "gitBlob": "f00a3752525e009951b006fd29914642a7df6a57",
+      "bytes": 962,
+      "sha256": "8bca0099f603cf1fde7555d1f8b89238efc62fb0b27ad176f068c270bbbd852e"
+    },
+    {
+      "path": "reports/window-2/status-report.json",
+      "gitBlob": "cff9758e75fadff6d623b3fdff5692fed99c5c08",
+      "bytes": 5164710,
+      "sha256": "ec5ba2a9bd3539c416953f31d9a1b65f64bd950cbce45250cb391f3deaf3b6d4"
+    },
+    {
+      "path": "reports/window-2/status-history.csv",
+      "gitBlob": "3585abce163b958853713d8c6b1d7967efd1665e",
+      "bytes": 216530,
+      "sha256": "95393708a61c4aba7878d47e6c8228d78d133a03f1fbae9ecbd0d06b914ee8e2"
+    },
+    {
+      "path": "reports/window-2/observed-status-pairs.csv",
+      "gitBlob": "092cd836705bd5ee2c33a3f0cfbfd672bdc89d7f",
+      "bytes": 1380278,
+      "sha256": "f9c7e5f6d2cb0a8383519d37ff36111cf9ab25fd42e5c3fa111b52bd1ff1d164"
+    },
+    {
+      "path": "reports/window-2/daily-observation-counts.csv",
+      "gitBlob": "cee03728650aff2b19280dc8b73e4a23ebd3dcf3",
+      "bytes": 6486,
+      "sha256": "1439f9eaf17cf00d2b5015b97c6c5f38c2622e3377bda999b6efa7b2b2e35180"
+    },
+    {
+      "path": "reports/window-2/observation-gaps.csv",
+      "gitBlob": "d1b4f33bcdc6cd866a13ce462f7c142bee4ad3b1",
+      "bytes": 1363795,
+      "sha256": "b45ccb732db92a932c2130a928183b1a0d9b28eafc6504799ec34925f91928a8"
+    },
+    {
+      "path": "reports/window-2/status-transition-counts.csv",
+      "gitBlob": "f00a3752525e009951b006fd29914642a7df6a57",
+      "bytes": 962,
+      "sha256": "8bca0099f603cf1fde7555d1f8b89238efc62fb0b27ad176f068c270bbbd852e"
+    }
+  ],
+  "completeOriginalsPreserved": true,
+  "sourceClockInterpretation": {
+    "body": "Complete literal UTF-8 text returned by Notion download_attachment.",
+    "identityBasis": "Body length agrees with original upload/download content_length. Both complete raw tool responses are retained.",
+    "providerHttpStatus": null,
+    "providerHttpHeaders": null,
+    "providerHttpMethod": null,
+    "providerHttpRequestTimes": null,
+    "contentTypeBasis": "Connector attachment metadata; not a provider HTTP header.",
+    "receivedAt": "Clock read after the complete connector download returned."
+  },
+  "executionStatus": {
+    "sourceCalculation": "COMPLETE",
+    "htmlRendering": "COMPLETE",
+    "nativeWorkspaceReceiving": "NOT_YET_EXECUTED",
+    "browserVisualInspection": "NOT_YET_EXECUTED",
+    "merchantBuyerReceiving": "NOT_YET_EXECUTED"
+  }
+}

@@ -9,30 +9,35 @@ let current = null, profileId = '', review = null, local = [], reviewEpoch = 0;
 let inventoryRows = [], inventoryCursor = null, journalCursor = null, requestCursor = null;
 const journal = new Map(), requests = new Map();
 let polling = false, lastRequests = '', requestsExpanded = false, starting = false, detailEpoch = 0, profileEpoch = 0;
-let lastDeclaredRestores = '';
-const busyButtons = new Set(), publisherSelections = new Map();
+let lastDeclaredRestores = '', lastFleetRestores = '';
+const busyButtons = new Set(), publisherSelections = new Map(), fleetSelections = new Map();
 const localResultStamps = new Map();
 const actionNames = {
   push: 'Upload encrypted snapshot', pull: 'Download encrypted snapshot', restore: 'Cold restore',
   snapshot: 'Create encrypted snapshot', verify: 'Verify local encrypted bundle', 'local-verify': 'Verify local encrypted bundle',
   'publisher-prepare': 'Prepare restored dataset publisher',
+  'fleet-prepare': 'Prepare restored merchant fleet',
 };
-const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare'].includes(command);
+const localCommand = command => ['snapshot', 'local-verify', 'publisher-prepare', 'fleet-prepare'].includes(command);
 const captureKindNames = {
   generic: 'Original snapshot plan',
   'paid-jobs': 'Paid-job merchant with original writer leases',
   'dataset-publisher': 'Dataset publisher with original writer leases',
+  'merchant-fleet': 'Merchant fleet with original release and gateway leases',
 };
 const capturePlans = () => profile()?.capturePlans ?? [];
 const publisherRestores = () => profile()?.publisherRestores ?? [];
+const fleetRestores = () => profile()?.fleetRestores ?? [];
+const fleetTargets = () => profile()?.fleetTargets ?? [];
 const remoteConfigured = (selected = profile()) => selected?.remoteConfigured === true;
 const remoteAction = action => ['push', 'pull', 'restore', 'resume'].includes(action);
 const defaultAction = () => remoteConfigured() ? 'push' : capturePlans().length ? 'snapshot' :
-  publisherRestores().length ? 'publisher-prepare' : 'verify';
+  publisherRestores().length ? 'publisher-prepare' : fleetTargets().length ? 'fleet-prepare' : 'verify';
 const supportedAction = action => (!remoteAction(action) || remoteConfigured()) &&
-  (action !== 'snapshot' || capturePlans().length > 0);
+  (action !== 'snapshot' || capturePlans().length > 0) &&
+  (action !== 'fleet-prepare' || fleetTargets().length > 0);
 function requireRemote() {
-  if (!remoteConfigured()) throw new Error('This profile uses local recovery. Choose capture, verification, or publisher preparation, or select a profile with a configured remote store.');
+  if (!remoteConfigured()) throw new Error('This profile uses local recovery. Choose capture, verification, publisher preparation, or fleet preparation, or select a profile with a configured remote store.');
 }
 const capturePlan = () => capturePlans().find(item => item.id === $('capture-plan').value);
 const bytes = value => {
@@ -165,11 +170,139 @@ function syncPublisherFields(publisher) {
     'The host administrator declares the original encrypted bundle and its existing plaintext restore within this profile’s roots.';
   refreshRestoreChoices();
 }
+function fleetDraftKey() {
+  return 'starforge-fleet-selection/v1/' + JSON.stringify([current?.id, current?.directory, profileId]);
+}
+function readFleetSelection() {
+  const key = fleetDraftKey();
+  if (fleetSelections.has(key)) return fleetSelections.get(key);
+  let saved = null;
+  try {
+    const value = JSON.parse(sessionStorage.getItem(key) ?? 'null');
+    if (value?.schema === 'starforge-fleet-selection/v1' &&
+        ['host', 'remote'].includes(value.source) &&
+        ['restoreId', 'fleetRestoreId', 'fleetTargetId', 'operationId'].every(name => typeof value[name] === 'string'))
+      saved = value;
+  } catch {}
+  fleetSelections.set(key, saved); return saved;
+}
+function rememberFleetSelection(active = $('action').value === 'fleet-prepare') {
+  if (!profileId) return;
+  const key = fleetDraftKey();
+  const previous = readFleetSelection();
+  const value = active ? {
+    schema: 'starforge-fleet-selection/v1', active: true,
+    source: $('fleet-source').value, restoreId: $('fleet-restore-operation').value,
+    fleetRestoreId: $('fleet-restore').value, fleetTargetId: $('fleet-target').value,
+    operationId: $('operation-id').value,
+  } : previous ? { ...previous, active: false } : null;
+  fleetSelections.set(key, value);
+  try {
+    if (value) sessionStorage.setItem(key, JSON.stringify(value));
+    else sessionStorage.removeItem(key);
+  } catch {}
+}
+function setSavedOption(id, value) {
+  const node = $(id); node.replaceChildren();
+  if (value) {
+    const option = element('option', value); option.value = value; node.append(option);
+  }
+}
+function restoreFleetSelection(saved = readFleetSelection(), { reopen = false } = {}) {
+  $('fleet-source').value = saved?.source ?? (fleetRestores().length ? 'host' : 'remote');
+  $('fleet-restore-operation').value = saved?.restoreId ?? '';
+  setSavedOption('fleet-restore', saved?.fleetRestoreId);
+  setSavedOption('fleet-target', saved?.fleetTargetId);
+  $('fleet-quiesced').checked = false;
+  if (reopen && saved?.active) {
+    $('action').value = 'fleet-prepare';
+    $('operation-id').value = saved.operationId;
+  }
+}
+function declaredOptions(id, rows, emptyLabel) {
+  const node = $(id), selected = node.value; node.replaceChildren();
+  for (const item of rows) {
+    const option = element('option', item.label + ' · ' + item.id);
+    option.value = item.id; node.append(option);
+  }
+  if (selected && !rows.some(item => item.id === selected)) {
+    const option = element('option', 'Saved declaration is unavailable: ' + selected);
+    option.value = selected; option.disabled = true; node.append(option);
+  }
+  if (selected) node.value = selected;
+  if (!rows.length && !selected) {
+    const option = element('option', emptyLabel); option.value = ''; node.append(option);
+  }
+}
+function syncFleetFields(fleet) {
+  const host = $('fleet-source').value === 'host';
+  declaredOptions('fleet-restore', fleetRestores(), 'No existing fleet restores declared for this profile');
+  declaredOptions('fleet-target', fleetTargets(), 'No fleet receiving targets declared for this profile');
+  $('fleet-field').hidden = !fleet;
+  $('fleet-source').disabled = !fleet;
+  $('fleet-remote-field').hidden = !fleet || host;
+  $('fleet-host-field').hidden = !fleet || !host;
+  $('fleet-restore-operation').disabled = !fleet || host;
+  $('fleet-restore-operation').required = fleet && !host;
+  $('fleet-restore').disabled = !fleet || !host;
+  $('fleet-restore').required = fleet && host;
+  $('fleet-target').disabled = !fleet; $('fleet-target').required = fleet;
+  $('fleet-quiesced').disabled = !fleet; $('fleet-quiesced').required = fleet;
+  const original = fleetRestores().find(item => item.id === $('fleet-restore').value);
+  $('fleet-restore-help').textContent = original ?
+    'Original encrypted bundle: ' + original.bundleDirectory + '. Existing cold restore: ' + original.restoreDirectory + '.' :
+    'The host declares the original encrypted fleet bundle and its existing plaintext restore.';
+  const target = fleetTargets().find(item => item.id === $('fleet-target').value);
+  $('fleet-target-help').textContent = target ?
+    'Receiving declaration: ' + target.targetFile + '. Original native operation: ' + target.operationDirectory + '.' :
+    'The host supplies the receiving parents and new deployment directory for the original captured fleet.';
+}
+function useRestoredFleet(id, source = 'remote') {
+  if (!fleetTargets().length) throw new Error('The host must declare the original fleet receiving target for this profile.');
+  invalidateReview(); detailEpoch++;
+  $('action').value = 'fleet-prepare'; $('operation-id').value = nextId();
+  $('fleet-source').value = source;
+  if (source === 'host') setSavedOption('fleet-restore', id);
+  else $('fleet-restore-operation').value = id;
+  $('sources-quiesced').checked = false; $('fleet-quiesced').checked = false;
+  syncFields(); rememberFleetSelection();
+  $('transfer-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  notice('Select the declared fleet target, keep the original fleet writers stopped, and review the complete receiving paths and retained releases.');
+}
+function renderFleetRestores() {
+  const declared = fleetRestores(), targets = fleetTargets();
+  const signature = JSON.stringify([profileId, declared, targets]);
+  if (signature === lastFleetRestores) return;
+  lastFleetRestores = signature;
+  $('fleet-restores-panel').hidden = !declared.length && !targets.length;
+  $('fleet-restores-count').textContent = declared.length;
+  const children = [];
+  for (const item of declared) {
+    const row = element('article');
+    row.append(element('h3', item.label + ' · ' + item.id),
+      element('p', 'Encrypted bundle: ' + item.bundleDirectory, 'mono'),
+      element('p', 'Existing cold restore: ' + item.restoreDirectory, 'mono'));
+    const actions = element('div', undefined, 'actions');
+    const use = button('Review fleet recovery', () => useRestoredFleet(item.id, 'host'));
+    use.disabled = !targets.length; actions.append(use); row.append(actions); children.push(row);
+  }
+  for (const target of targets) {
+    const row = element('article');
+    row.append(element('h3', 'Receiving target · ' + target.label + ' · ' + target.id),
+      element('p', target.targetFile, 'mono'),
+      element('p', 'Native receiving journal: ' + target.operationDirectory, 'mono'));
+    children.push(row);
+  }
+  $('fleet-restores-list').replaceChildren(...children);
+}
 function syncFields() {
-  if (!supportedAction($('action').value)) { invalidateReview(); $('action').value = defaultAction(); }
+  if (!supportedAction($('action').value)) {
+    invalidateReview();
+    if ($('action').value !== 'fleet-prepare') $('action').value = defaultAction();
+  }
   const action = $('action').value, capture = action === 'snapshot', verify = action === 'verify';
-  const publisher = action === 'publisher-prepare';
-  syncPublisherFields(publisher);
+  const publisher = action === 'publisher-prepare', fleet = action === 'fleet-prepare';
+  syncPublisherFields(publisher); syncFleetFields(fleet);
   syncCapabilities();
   const usesBundle = action === 'push' || action === 'restore' || verify;
   const usesRemote = action === 'pull' || action === 'restore';
@@ -207,7 +340,7 @@ function syncFields() {
     (action === 'restore' ? 'Plaintext destination under ' : 'Encrypted download under ') +
       (action === 'restore' ? profile()?.restoreRoot : profile()?.downloadRoot) + '.';
   $('review-button').textContent = capture ? 'Review capture' : verify ? 'Review verification' :
-    publisher ? 'Review restored publisher' : 'Review transfer';
+    publisher ? 'Review restored publisher' : fleet ? 'Review restored fleet' : 'Review transfer';
   const selected = $('bundle').value;
   $('bundle').replaceChildren();
   if (action === 'restore') {
@@ -273,7 +406,8 @@ function renderDeclaredRestores() {
 }
 function newSelection() {
   invalidateReview(); $('operation-id').value = nextId(); $('destination').value = '';
-  $('snapshot').value = ''; $('sources-quiesced').checked = false; $('action').value = defaultAction(); syncFields();
+  $('snapshot').value = ''; $('sources-quiesced').checked = false; $('fleet-quiesced').checked = false;
+  $('action').value = defaultAction(); syncFields(); rememberFleetSelection();
 }
 
 function intent() {
@@ -292,6 +426,22 @@ function intent() {
       if (!input.restoreId) throw new Error('Select the completed original remote restore operation ID.');
     }
   }
+  else if (action === 'fleet-prepare') {
+    if (!$('fleet-quiesced').checked)
+      throw new Error('Stop the receiving fleet and the original selected writers, then confirm they will stay stopped through preparation.');
+    input.fleetTargetId = $('fleet-target').value;
+    if (!fleetTargets().some(item => item.id === input.fleetTargetId))
+      throw new Error('Select a host-declared receiving target for this original fleet.');
+    if ($('fleet-source').value === 'host') {
+      input.fleetRestoreId = $('fleet-restore').value;
+      if (!fleetRestores().some(item => item.id === input.fleetRestoreId))
+        throw new Error('Select the host-declared original fleet restore.');
+    } else {
+      input.restoreId = $('fleet-restore-operation').value.trim();
+      if (!input.restoreId) throw new Error('Select the completed original cold-restore operation ID.');
+    }
+    input.quiesced = true;
+  }
   else if (action === 'snapshot') {
     if (!$('sources-quiesced').checked) throw new Error('Stop the declared source writers, then explicitly confirm they are quiesced before reviewing a capture.');
     if (!capturePlan()) throw new Error('Select a capture plan declared by the host administrator.');
@@ -303,6 +453,7 @@ function intent() {
     if ($('destination').value.trim()) input.destinationName = $('destination').value.trim();
     if (action === 'restore' && $('bundle').value) input.bundleId = $('bundle').value;
   }
+  if (action === 'fleet-prepare') rememberFleetSelection();
   return input;
 }
 
@@ -310,6 +461,7 @@ function showReview(value) {
   review = value;
   const isLocal = localCommand(value.command), capture = value.command === 'snapshot';
   const publisher = value.command === 'publisher-prepare', receiving = value.restoredPublisher;
+  const fleet = value.command === 'fleet-prepare';
   const files = value.files ?? value.plan?.files, size = value.plainBytes ?? value.plan?.bytes;
   const details = [
     ['Profile', current?.profiles.find(item => item.id === value.profileId)?.label ?? value.profileId],
@@ -360,20 +512,98 @@ function showReview(value) {
     $('review-roots').append(row);
   }
   renderPublisherReview(publisher ? receiving : null);
-  $('review-heading').textContent = capture ? 'Selected capture' : publisher ? 'Restored publisher binding' :
+  renderFleetReview(fleet ? value.restoredFleet : null, value.fleetTarget);
+  if (fleet) {
+    const sourceId = value.options.sourceFleetRestoreId ?? value.options.sourceRestoreId;
+    for (const [name, item] of [
+      ['Fleet recovery source', value.options.sourceFleetRestoreId ? 'Host-declared restored fleet' : 'Original completed remote restore'],
+      ['Original source ID', sourceId], ['Receiving target', value.fleetTarget.label + ' · ' + value.fleetTarget.id],
+      ['Native receiving operation', value.options.fleetOperationId],
+    ]) $('review-details').append(element('dt', name), element('dd', item));
+  }
+  $('review-heading').textContent = capture ? 'Selected capture' : publisher ? 'Restored publisher binding' : fleet ? 'Original fleet receiving' :
     isLocal ? 'Selected verification' : 'Selected transfer';
-  $('start-button').textContent = capture ? 'Start capture' : publisher ? 'Prepare restored publisher' :
+  $('start-button').textContent = capture ? 'Start capture' : publisher ? 'Prepare restored publisher' : fleet ? 'Prepare restored fleet' :
     isLocal ? 'Start verification' : 'Start transfer';
   $('review-state').textContent = value.originalStatus ?? 'REVIEWED';
   $('review-note').textContent = value.originalStatus === 'COMPLETE' ?
     'This original operation is complete. Opening it retains its completed result.' :
     capture ? 'Keep every declared source writer stopped until this capture finishes. Start rereads the exact original plan and binds its roots, output and native capture identity.' :
     publisher ? 'Preparation reopens the captured work through its original stores and adopts this reviewed dataset path. Keep this operation ID for continuation; the returned paths are used by the normal dataset seller and publisher.' :
+    fleet ? 'Keep the fleet and selected writers stopped. Preparation receives each original captured path and generates the declared deployment bundle under the original service account. Keep this workspace operation and its native receiving ID for continuation.' :
     isLocal ? 'The original recovery engine authenticates this exact manifest and every encrypted object. Its result remains attached to this workspace operation.' :
     value.command === 'restore' ? 'The original engine verifies the encrypted bundle and restores into this new destination. Keep the same operation ID to continue.' :
     'Starting repeats the exact selection check and uses the original transfer journal.';
   $('review-panel').hidden = false; updateStart();
   $('review-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function renderFleetReview(receiving, target) {
+  $('fleet-review-panel').hidden = !receiving;
+  for (const id of ['fleet-review-summary', 'fleet-review-roots', 'fleet-review-merchants'])
+    $(id).replaceChildren();
+  $('fleet-review-original').textContent = '';
+  if (!receiving) return;
+  const native = receiving.review, summary = receiving.summary;
+  const fields = [
+    ['Fleet', summary.fleet], ['Fleet plan digest', summary.planDigest],
+    ['Snapshot', native.snapshotId], ['Original recovery plan SHA-256', native.sourcePlanSha256],
+    ['Captured fleet profile SHA-256', native.profileSha256],
+    ['Original service UID / GID', native.serviceUid + ' / ' + native.serviceGid],
+    ['Receiving declaration', target?.targetFile ?? native.targetFile],
+    ['Receiving declaration SHA-256', native.targetSha256],
+    ['Receiving parents', native.destinationParents.join('\n')],
+    ['New deployment bundle', native.deploymentBundle],
+    ['Native receiving journal', native.operationDirectory],
+    ['Native review SHA-256', receiving.reviewSha256],
+    ['Native receiving operation', receiving.operationId],
+    ['Native phase', receiving.operation?.phase ?? 'Awaiting explicit preparation'],
+    ['Workspace port', summary.workspacePort],
+    ['Retained release links SHA-256', summary.linksSha256 ?? 'No retained release links'],
+  ];
+  for (const [name, value] of fields)
+    $('fleet-review-summary').append(element('dt', name), element('dd', value ?? '—'));
+  const availability = new Map(receiving.availability.map(item => [item.name, item.state]));
+  for (const root of native.roots) {
+    const row = element('tr');
+    row.append(element('td', root.name + ' · ' + root.kind),
+      element('td', root.restored, 'mono'), element('td', root.destination, 'mono'),
+      element('td', root.source.files + ' / ' + bytes(root.source.bytes)),
+      element('td', availability.get(root.name) ?? 'Read original operation'));
+    $('fleet-review-roots').append(row);
+  }
+  const retained = value => value === null || value === undefined ? '—' :
+    typeof value === 'string' ? value : JSON.stringify(value);
+  for (const merchant of summary.merchants) for (const slot of merchant.slots) {
+    const row = element('tr'), identity = element('td');
+    identity.append(element('div', merchant.id + ' · ' + merchant.host),
+      element('small', 'Startup slot: ' + merchant.startupSlot, 'hint'));
+    row.append(identity, element('td', slot.slot + ' / ' + slot.port),
+      element('td', slot.generation + ' / ' + slot.retainedChanges),
+      element('td', retained(slot.active), 'mono'), element('td', retained(slot.previous), 'mono'));
+    $('fleet-review-merchants').append(row);
+  }
+  if (!$('fleet-review-merchants').children.length)
+    emptyRow($('fleet-review-merchants'), 'The captured fleet contains no retained release slots.', 5);
+  $('fleet-review-original').textContent = JSON.stringify(receiving, null, 2);
+}
+function appendFleetResult(item, prepared) {
+  const paths = element('dl', undefined, 'key-values');
+  for (const [name, value] of [
+    ['Fleet', prepared.fleet], ['Native receiving operation', prepared.operationId],
+    ['Prepared deployment bundle', prepared.deploymentBundle],
+    ['Original deployment bundle', prepared.originalDeploymentBundle],
+    ['Original service UID / GID', prepared.serviceUid + ' / ' + prepared.serviceGid],
+    ['Native receiving journal', prepared.operationDirectory],
+    ['Systemd unit', prepared.runtime?.unit], ['Workspace port', prepared.runtime?.workspacePort],
+    ['Selected Node runtime', prepared.runtime?.node], ['Installed source', prepared.runtime?.sourceRoot],
+    ['Completed', date(prepared.completedAt)],
+  ]) if (value !== undefined && value !== null) paths.append(element('dt', name), element('dd', value));
+  const complete = element('details');
+  complete.append(element('summary', 'All received roots, retained merchants and original result'),
+    element('pre', JSON.stringify(prepared, null, 2)));
+  item.append(paths, complete, element('p',
+    'Use this deployment bundle and the existing fleet launch procedure under the original service account. The saved result retains every receiving root, merchant release and native operation identity.', 'hint'));
 }
 
 function renderPublisherReview(receiving) {
@@ -419,7 +649,7 @@ function applyState(value, initialize = false) {
   $('store-label').textContent = remoteConfigured(selected) ? 'Remote store' : 'Recovery mode';
   $('store-summary').textContent = remoteConfigured(selected) ?
     selected.store.bucket + '/' + selected.store.prefix + ' · ' + selected.store.region : 'Local recovery';
-  renderDeclaredRestores(); syncCapabilities();
+  renderDeclaredRestores(); renderFleetRestores(); syncCapabilities();
   if (review && !localCommand(review.command) && !remoteConfigured(selected)) invalidateReview();
   $('passphrase-summary').textContent = selected.passphraseAvailable ? 'Available from host environment' :
     'Set ' + selected.passEnv + ' in the host environment, then restart';
@@ -496,7 +726,7 @@ function renderInventory() {
     inventoryRows = []; inventoryCursor = null; $('snapshot-options').replaceChildren();
     $('inventory-more').hidden = true;
     $('inventory-observed').textContent = 'Local recovery profile. The host has not selected a remote store.';
-    emptyRow(tbody, 'Capture, verify, and prepare an existing restored publisher through the local controls.');
+    emptyRow(tbody, 'Capture, verify, and prepare existing restored publishers or fleets through the local controls.');
     return;
   }
   for (const item of inventoryRows) {
@@ -549,8 +779,15 @@ function restoreSavedSelection(row) {
     $('publisher-restore').append(option);
   }
   rememberPublisherSelection();
-  $('sources-quiesced').checked = false;
+  if (saved.action === 'fleet-prepare') restoreFleetSelection({
+    schema: 'starforge-fleet-selection/v1', active: true,
+    source: saved.fleetRestoreId ? 'host' : 'remote',
+    restoreId: saved.restoreId ?? '', fleetRestoreId: saved.fleetRestoreId ?? '',
+    fleetTargetId: saved.fleetTargetId ?? '', operationId: saved.id ?? row.operationId,
+  }, { reopen: true });
+  $('sources-quiesced').checked = false; $('fleet-quiesced').checked = false;
   syncFields();
+  if (saved.action === 'fleet-prepare') rememberFleetSelection();
   for (const [id, value] of [['capture-plan', saved.capturePlanId], ['bundle', saved.bundleId]]) {
     if (!value) continue;
     if (![...$(id).options].some(option => option.value === value)) {
@@ -563,6 +800,8 @@ function restoreSavedSelection(row) {
   $('transfer-heading').scrollIntoView({ behavior: 'smooth', block: 'start' });
   notice(saved.action === 'snapshot' ?
     'The saved capture selection is open. Stop the declared source writers, confirm their current quiescence, and review again before starting.' :
+    saved.action === 'fleet-prepare' ?
+      'The saved fleet selection is open with its original source, receiving target, and operation ID. Confirm current writer shutdown, then review the complete native binding.' :
     saved.action === 'publisher-prepare' ?
       'The saved restored-publisher selection is open. Review the original restore and native binding before continuing.' :
       'The saved local verification selection is open. Review the exact original bundle before continuing.');
@@ -616,6 +855,8 @@ function renderJournal() {
     controls.append(continuation);
     if (item.command === 'restore' && item.status === 'COMPLETE')
       controls.append(button('Review publisher recovery', () => useRestoredPublisher(item.operationId)));
+    if (item.command === 'restore' && item.status === 'COMPLETE' && fleetTargets().length)
+      controls.append(button('Review fleet recovery', () => useRestoredFleet(item.operationId)));
     const use = element('td'); use.append(controls);
     row.append(id, element('td', item.command), element('td', item.status), use); tbody.append(row);
   }
@@ -641,6 +882,7 @@ function progressText(row) {
     if (Number.isFinite(op?.plainBytes)) parts.push(bytes(op.plainBytes));
     if (op?.verified) parts.push('Original bundle verified');
     if (op?.prepared?.status === 'RESTORED_PUBLISHER_PREPARED') parts.push('Original dataset and publisher prepared');
+    if (op?.prepared?.status === 'FLEET_RECEIVING_COMPLETE') parts.push('Original merchant fleet received');
     if (op?.status) parts.push(op.status);
     return parts.join(' · ') || 'Following the retained original local recovery operation.';
   }
@@ -674,13 +916,22 @@ function renderRequests() {
       if (selectedId) item.append(element('p', 'Host-declared restored publisher: ' + selectedId, 'hint'));
       else if (restoreId) item.append(element('p', 'Original restore journal: ' + restoreId, 'hint'));
     }
+    if (row.review.command === 'fleet-prepare') {
+      const source = row.operation?.sourceFleetRestoreId ?? row.review.options?.sourceFleetRestoreId ??
+        row.operation?.sourceRestoreId ?? row.review.options?.sourceRestoreId;
+      item.append(element('p', 'Original fleet restore: ' + source, 'hint'),
+        element('p', 'Receiving target: ' + row.review.options.fleetTargetId, 'hint'));
+      const phase = row.local?.fleetPreparation?.nativeOperation?.phase ??
+        row.local?.fleetPreparation?.phase ?? row.operation?.prepared?.status;
+      if (phase) item.append(element('p', 'Native receiving phase: ' + phase, 'hint'));
+    }
     const count = row.operation?.progress?.nextObject, total = row.operation?.files;
     if (Number.isInteger(count) && total > 0) {
       const progress = document.createElement('progress'); progress.max = total; progress.value = count;
       progress.setAttribute('aria-label', 'Encrypted objects completed'); item.append(progress);
     }
     if (row.error) item.append(element('p', row.error.code + ': ' + row.error.message, 'request-error'));
-    if (row.cancelRequested) item.append(element('p', 'Stop requested. The current original capture, verification, restore or publisher preparation may finish before the final readback.', 'hint'));
+    if (row.cancelRequested) item.append(element('p', 'Stop requested. The current original capture, verification, restore, publisher preparation or fleet preparation may finish before the final readback.', 'hint'));
     const retained = row.local?.retainedCaptures ?? row.operation?.retainedCaptures;
     if (Array.isArray(retained) && retained.length) {
       const list = element('details', undefined, 'retained-captures');
@@ -711,6 +962,10 @@ function renderRequests() {
     controls.append(button('View selection', () => showDetails(row)));
     if (row.review.command === 'restore' && row.operation?.status === 'COMPLETE')
       controls.append(button('Review publisher recovery', () => useRestoredPublisher(row.operationId)));
+    if (row.review.command === 'restore' && row.operation?.status === 'COMPLETE' && fleetTargets().length)
+      controls.append(button('Review fleet recovery', () => useRestoredFleet(row.operationId)));
+    if (row.operation?.prepared?.status === 'FLEET_RECEIVING_COMPLETE')
+      appendFleetResult(item, row.operation.prepared);
     if (row.operation?.prepared?.status === 'RESTORED_PUBLISHER_PREPARED') {
       const prepared = row.operation.prepared, paths = element('dl', undefined, 'key-values');
       for (const [name, path] of [
@@ -739,7 +994,11 @@ async function loadProfile() {
   $('inventory-observed').textContent = 'Refresh to read the selected remote store.';
   emptyRow($('inventory-rows'), 'Remote inventory has not been read for this profile in this session.');
   $('inventory-more').hidden = true; $('snapshot-options').replaceChildren();
-  applyState(current); restorePublisherSelection(); newSelection();
+  const savedFleet = readFleetSelection();
+  applyState(current); restorePublisherSelection(); restoreFleetSelection(savedFleet); newSelection();
+  if (savedFleet?.active) {
+    restoreFleetSelection(savedFleet, { reopen: true }); syncFields(); rememberFleetSelection();
+  }
   if (!remoteConfigured()) renderInventory();
   const selected = profileId, generation = profileEpoch;
   const results = await Promise.allSettled([refreshBundles(), refreshJournal()]);
@@ -747,12 +1006,28 @@ async function loadProfile() {
   for (const result of results) if (result.status === 'rejected') notice(errorText(result.reason), true);
 }
 $('profile').addEventListener('change', () => task($('profile'), async () => {
-  rememberPublisherSelection(); profileId = $('profile').value; await loadProfile();
+  rememberPublisherSelection(); rememberFleetSelection(); profileId = $('profile').value; await loadProfile();
 }));
-$('action').addEventListener('change', () => { invalidateReview(); $('sources-quiesced').checked = false; syncFields(); });
+$('action').addEventListener('change', () => {
+  invalidateReview(); $('sources-quiesced').checked = false; $('fleet-quiesced').checked = false;
+  if ($('action').value === 'fleet-prepare') {
+    const saved = readFleetSelection();
+    restoreFleetSelection(saved ? { ...saved, active: true } : null, { reopen: true });
+  }
+  syncFields(); rememberFleetSelection();
+});
 $('capture-plan').addEventListener('change', () => { invalidateReview(); $('sources-quiesced').checked = false; syncFields(); });
 $('sources-quiesced').addEventListener('change', invalidateReview);
-for (const id of ['bundle', 'snapshot', 'operation-id', 'destination']) $(id).addEventListener('input', invalidateReview);
+for (const id of ['bundle', 'snapshot', 'operation-id', 'destination']) $(id).addEventListener('input', () => {
+  invalidateReview(); if (id === 'operation-id' && $('action').value === 'fleet-prepare') rememberFleetSelection();
+});
+$('fleet-quiesced').addEventListener('change', invalidateReview);
+$('fleet-restore-operation').addEventListener('input', () => {
+  $('fleet-quiesced').checked = false; invalidateReview(); rememberFleetSelection();
+});
+for (const id of ['fleet-source', 'fleet-restore', 'fleet-target']) $(id).addEventListener('change', () => {
+  $('fleet-quiesced').checked = false; invalidateReview(); syncFields(); rememberFleetSelection();
+});
 $('restore-operation').addEventListener('input', () => { rememberPublisherSelection(); invalidateReview(); });
 $('publisher-source').addEventListener('change', () => {
   rememberPublisherSelection(); invalidateReview(); syncFields();
@@ -768,6 +1043,7 @@ $('transfer-form').addEventListener('submit', event => {
     if (value) notice(value.command === 'snapshot' ? 'Review the exact source roots, plan and encrypted output below.' :
       value.command === 'local-verify' ? 'Review the exact original encrypted bundle below.' :
       value.command === 'publisher-prepare' ? 'Review the old and restored bindings, saved work, expiry and publication decisions below.' :
+      value.command === 'fleet-prepare' ? 'Review all original receiving roots, merchant slots, retained releases, service identity and the native operation below.' :
       'Review the exact snapshot, store and destination below.');
   });
 });
@@ -824,7 +1100,7 @@ async function boot() {
     await refreshState(); await loadProfile();
     notice(remoteConfigured() ?
       'Recovery workspace ready. Choose a declared source capture, an original encrypted bundle, or the remote inventory.' :
-      'Local recovery workspace ready. Choose a declared source capture, verify an encrypted bundle, or review an existing restored publisher.');
+      'Local recovery workspace ready. Choose a declared source capture, verify an encrypted bundle, or review an existing restored publisher or fleet.');
     setTimeout(poll, 5000);
   } catch (error) { notice(errorText(error), true); }
 }

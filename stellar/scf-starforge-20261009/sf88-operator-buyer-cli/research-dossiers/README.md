@@ -32,6 +32,36 @@ review/recovery. `research-crossref-documents` supplies the original-document
 intake; `research-citation-workflow` runs the complete browser and portable-reopen
 workflow using an installed Playwright module and Chromium executable.
 
+## Operate complete literature searches
+
+Open **Literature searches** from the Research header to save Europe PMC query
+revisions, acquire or import original core JSON pages, compare complete retained
+editions and review their native records. The same listener retains every query,
+source occurrence, decision and dossier receiving request. Large acquisitions
+continue in explicitly linked parts with their original cursor and boundary page.
+
+The [literature operator guide](EUROPE-PMC-OPERATOR.md) covers the browser,
+`research-europe-pmc` command, client, source limits and complete workspace
+receiving. The [Merchant guide](../../../../stellar-forge/mcp-merchant-operator/EUROPE_PMC.md)
+covers all twenty original operation tools and six complete export kinds.
+Receive selected editions into existing questions, then use the dossier's
+evidence selection, findings, citation review and full reports.
+
+## Receive and review original RIS files
+
+Open **RIS sources** in the Research browser to retain complete exported files,
+review field mappings and duplicate groups, and receive the selected edition into
+an existing question. Saved drafts preserve the original files and decisions;
+revision conflicts and unknown replies recover through the same request identity.
+
+The [RIS operating guide](ris-source/OPERATING_GUIDE.md) covers source inspection,
+explicit duplicate decisions, edition comparison, all original exports and the
+same workspace client, command line and Merchant tools. The
+[complete receiving guide](ris-source/RECEIVING_GUIDE.md) covers the full source
+selection, native browser and Merchant workflow, independent portable reopen,
+and the verified delivery archive. Source operation and metadata classification
+remain separate from study eligibility and scientific appraisal.
+
 ## Import original source bundles
 
 [Source bundles](SOURCE_BUNDLES.md) bring a manifest, its named original files,
@@ -427,3 +457,37 @@ Start the existing research command with `--pipeline-source /absolute/private/pi
 ## Acquired Object Buyer files
 
 [OBJECT_INPUTS.md](./OBJECT_INPUTS.md) joins a completed original whole or assembled Object Buyer file to this same Research workspace. Launch Research with `--object-state`, review the exact delivered file in Pipelines, then prepare and submit its original managed operation. Captured reviews and portable editions retain the native session, snapshot, configuration and content identity. The original Object workspace can connect through `--research-connection-file` and `--research-directory`; no second Research listener is started.
+
+## Recurring customer work
+
+[Customer updates](customer-updates/CUSTOMER_UPDATES.md) completes the original customer brief, query/source intake, native research selection, frozen reports and editable handover. Open `/customer-updates.html` in the existing workspace or use `research-client customer-updates-help`. Its received working forms, exact saved-request replay, Node attachment, Merchant tools and complete terminal receiving stay on the original dossier history.
+
+## Study extraction, evidence tables and appraisal
+
+[Study extraction](STUDY-EXTRACTION-OPERATOR.md) operates complete forms, independent reviewer entries, original source values, adjudication, immutable evidence-table publications and exact-request recovery in this same application. [The full browser receiving guide](STUDY-EXTRACTION-BROWSER.md) documents the original author/inspect programme. [Appraisal](risk-of-bias/BROWSER.md) adds source-bound design/result review on the same Eligibility studies and extraction records. Their Node and CLI operations preserve the same dossier revisions and editable portable history. Optional Zotero navigation opens its original library workspace through the current host.
+
+## Python customer commissioning and delivery
+
+The installed `ResearchWorkspace.customer_updates(dossier_id)` provides complete typed commissioning, retained briefs and source-bound update review, the ten original customer actions, all report formats, complete editable handover and receiving. Original submission and explicit replay attempts keep their separate durable client requests while preserving native operation IDs.
+
+The [Python customer guide](../python/RESEARCH-CUSTOMER-UPDATES.md) covers the 17 original Research CLI commands, exact request recovery, full-file readers and sender/receiver operation. Its complete Python receiving wrapper invokes the original customer programme with the same saved case and programme directory, keeping every original phase request, source record, frozen work/report and later correction.
+
+## Customer workbook template exchange
+
+The installed `research-template-exchange` command and the original Research workspace carry customer XLSX or delimited templates from source mapping through released files, returned workbook comparison, reviewed corrections and the original assigned-reviewer draft. Versioned layouts, frozen publications, source identities and every full workbook remain with the original dossier and travel through its ordinary or streamed portable handover.
+
+Open the current dossier's Template exchange view, or use the [complete operating guide](template-exchange/README.md). The [receiving guide](template-exchange/native/RECEIVING.md) continues the original study and customer programme, including the authored workbook, actual returned file, whole source-bound review and independent receiving. Existing Python and JavaScript customer workflows use the same dossier history.
+
+## Paid customer delivery and receiving
+
+[Paid delivery](customer-commerce/OPERATING.md) publishes an original frozen customer delivery through an existing Stellar merchant, carries the complete archive through the original Buyer approval and paid-file workflow, and receives the editable dossier, original source workspace and four exact frozen reports. Open **Paid delivery** in this workspace or use `research-client commerce-help` / the installed `research-commerce` command.
+
+The original launcher selects private merchant and Buyer aliases with `--customer-commerce-host`. Complete reviews, native orders and approvals, whole-file downloads, independent working forms and exact saved-request replay stay with the original Research and Buyer workspaces. The [typed client](customer-commerce/client.d.mts), retained terminal operators and full archive receiver use those same native engines. Later customer corrections preserve the purchased delivery and its original completed receiving result.
+
+## Registered protocol and page-linked methods
+
+Open **Protocol and methods** in the original dossier to inspect the complete registered NCT03529110 source, read its original PDF pages and planned methods, preview the selected question, and recover the same saved SourceBundle request after an interrupted reply. Full drafts and requests remain available across browser navigation and storage conflicts. Saved-revision reports and the editable dossier use the existing Research downloads.
+
+The installed `starforge research-protocol-review` command provides complete source inspection, immutable review preparation, original receive and read-only reconciliation; `ResearchWorkspaceClient.studyProtocol()` exposes those same operations on the original attachment. The existing `starforge research-study-protocol` command continues to own registered capture and the complete source-inclusive handover with the selected current engine.
+
+See [Protocol operator and receiving](./STUDY-PROTOCOL-OPERATOR.md) for the complete browser, terminal, SDK and interrupted-operation flow, and [Complete protocol delivery](./STUDY-PROTOCOL-RECEIVING.md) for packaging and fresh original-engine reopen. The indexed observations remain planned protocol methods; the original appraisal and extraction workflows retain their reviewed decisions.

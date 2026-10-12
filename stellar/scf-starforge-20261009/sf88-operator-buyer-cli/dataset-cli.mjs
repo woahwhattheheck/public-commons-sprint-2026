@@ -5,6 +5,7 @@ import { createDatasetSession, inspectDatasetSession, runDatasetSession,
 import { InputError, need } from './config.mjs';
 import { pathToFileURL } from 'node:url';
 
+const PORTABLE=['export-session','inspect-session-archive','receive-session'];
 const LOST=['inspect-lost-output','recover-lost-output','read-lost-output','export-lost-output'];
 const help = [
   'SF88 dataset acquisition',
@@ -22,6 +23,11 @@ const help = [
   'recover --session /private/session',
   'export --session /private/session --out /private/dataset-manifest.json',
   'deliver --session /private/session --out /private/dataset-data-room',
+  'export-session --session /private/session --out /private/session.zip --operation STABLE_EXPORT_ID',
+  'inspect-session-archive --archive /private/session.zip [--expect-sha ARCHIVE_SHA256]',
+  'receive-session --session /private/receiving-session --archive /private/session.zip',
+  '    --expect-sha ARCHIVE_SHA256 --operation STABLE_RECEIVING_ID',
+  '    Portable commands accept [--python /absolute/python3] [--max-bytes 2147483648].',
   'inspect-lost-output --session /private/session --page 1 --workspace /private/operator --approved-request /private/approved.json',
   'recover-lost-output --session /private/session --page 1 --workspace /private/operator --approved-request /private/approved.json',
   '    --transaction ORIGINAL_TX --request-sha ORIGINAL_APPROVAL_SHA [--expect-attempt ATTEMPT_SHA] [--expect-config CONFIG_SHA]',
@@ -49,8 +55,12 @@ const help = [
 ].join('\n') + '\n';
 function parse(args) {
   const command = args.shift();
-  need(['init','status','run','recover','export','deliver','accounting','finalize',...LOST].includes(command), 'DATASET_COMMAND_REQUIRED');
-  const allowed = LOST.includes(command)
+  need(['init','status','run','recover','export','deliver','accounting','finalize',...LOST,...PORTABLE].includes(command), 'DATASET_COMMAND_REQUIRED');
+  const allowed = PORTABLE.includes(command)
+    ? new Set(['python','max-bytes',...(command==='inspect-session-archive'
+      ? ['archive','expect-sha'] : command==='export-session'
+        ? ['session','out','operation'] : ['session','archive','expect-sha','operation'])])
+    : LOST.includes(command)
     ? new Set(['session','page','workspace',...(['inspect-lost-output','recover-lost-output'].includes(command)
       ? ['approved-request','expect-attempt','expect-config'] : []),
       ...(command==='recover-lost-output'?['transaction','request-sha','rpc-endpoint','rpc-proxy-env']:[]),
@@ -68,7 +78,7 @@ function parse(args) {
     need(allowed.has(name) && flags[name] === undefined, 'DATASET_FLAG_INVALID_OR_REPEATED');
     flags[name] = args[i+1];
   }
-  need(flags.session, 'DATASET_SESSION_REQUIRED');
+  need(command==='inspect-session-archive'||flags.session, 'DATASET_SESSION_REQUIRED');
   if(LOST.includes(command)) {
     need(flags.page,'DATASET_LOST_OUTPUT_PAGE_REQUIRED');
     if(['inspect-lost-output','recover-lost-output'].includes(command))
@@ -109,6 +119,29 @@ export async function main(args = process.argv.slice(2)) {
   }
   const {command, flags:f} = parse([...args]);
   let report;
+  if(PORTABLE.includes(command)) {
+    const portable=await import('./dataset-session-portable.mjs');
+    const controller=new AbortController();
+    let exit;
+    const interrupt=()=>{exit=130;controller.abort();};
+    const terminate=()=>{exit=143;controller.abort();};
+    process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
+    try {
+      need(f['max-bytes']===undefined||/^[1-9][0-9]{0,10}$/.test(f['max-bytes']),
+        'DATASET_ARCHIVE_TOTAL_LIMIT');
+      const settings={python:f.python,maxBytes:f['max-bytes']===undefined?undefined:Number(f['max-bytes']),
+        signal:controller.signal};
+      if(command==='export-session')report=await portable.exportDatasetSessionArchive({
+        directory:f.session,archive:f.out,operation:f.operation,...settings});
+      if(command==='inspect-session-archive')report=await portable.inspectDatasetSessionArchive({
+        archive:f.archive,expectedSha256:f['expect-sha'],...settings});
+      if(command==='receive-session')report=await portable.receiveDatasetSessionArchive({
+        directory:f.session,archive:f.archive,expectedSha256:f['expect-sha'],operation:f.operation,...settings});
+    }finally{
+      process.off('SIGINT',interrupt);process.off('SIGTERM',terminate);
+      if(exit)process.exitCode=exit;
+    }
+  }
   if(LOST.includes(command)) {
     const recovery=await import('./dataset-lost-output.mjs');
     const options={directory:f.session,index:number(f.page,true),workspace:f.workspace,

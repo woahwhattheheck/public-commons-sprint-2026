@@ -57,6 +57,26 @@ npx --no-install starforge installation inspect "$STARFORGE_PACKAGE_DIR" \
 The archive checksum identifies the `.tgz` file; the prepared SF46 `digest`
 identifies the installed release. Each value keeps its own file and purpose.
 
+## Receive a source-selected product
+
+A package built with a named source selection follows this same inspection,
+preparation, installation and rollback workflow. Its version retains the
+`.selection.SELECTION_ID` suffix. The package's original selection record names
+the exact recipe, byte count, SHA-256 and Git blob; SF46 checks that recipe
+against the retained source before composing its commands and dependencies.
+
+The selected product's source declaration supplies its repository, executable
+names and README. Inspection checks those package fields against that original
+declaration and checks every selected distribution input, contribution and
+component. The prepared release retains the same source repository and selection
+record, so it can be transferred and reopened through the existing installer.
+
+Use the supplied package directory and its published manifest digest with the
+commands below. A complete package without a selection keeps its original
+full-catalog behavior. The original native runtime manifests remain the source
+for optional dependency installation; selecting a product carries its required
+runtime declarations into inspection and receiving.
+
 ## Install and reopen the managed home
 
 ```sh

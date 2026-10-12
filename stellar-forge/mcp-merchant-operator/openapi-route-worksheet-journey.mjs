@@ -26,10 +26,11 @@ const canonical=value=>JSON.stringify(value,(_,entry)=>entry&&typeof entry==='ob
   ?Object.fromEntries(Object.keys(entry).sort().map(key=>[key,entry[key]])):entry);
 const withoutPrice=row=>{const result=clone(row);delete result.amountAtomic;return result;};
 
-export async function runRouteWorksheetJourney({parent,extension}={}) {
+export async function runRouteWorksheetJourney({parent,extension,operatorConsole=false}={}) {
   const root=await mkdtemp(join(resolve(parent),'merchant-route-worksheet-'));
   const senderRoot=join(root,'sender'),receiverRoot=join(root,'receiver'),hostFiles=join(root,'host-files');
   const downloads=join(root,'downloads'),downloadDirectory=join(downloads,'received-package');
+  let operatorDirectory=operatorConsole?join(root,'operator-console'):undefined;
   for(const directory of [senderRoot,receiverRoot,hostFiles,downloads])await mkdir(directory,{mode:0o700});
   const report={schema:'stellar-forge.api-route-worksheet-native-journey.v1',operation:OPERATION,
     startedAt:new Date().toISOString(),node:process.version,steps:[],source:{}};
@@ -108,7 +109,8 @@ export async function runRouteWorksheetJourney({parent,extension}={}) {
     assert(registered.contributions.length);assert(registered.tools.some(tool=>tool.name==='merchant_openapi_route_sheet_reconcile'));
     step('registered-source-provider-selected',{provider:registered.id,tools:registered.toolCount,sourceSha256:registered.sha256});
     ({configuration}=await initializeMerchantProvider('openapi-workspaces', {directory:join(root,'merchant-mcp'),connection,name:'Original route worksheet receiving'}));
-    mcp=await startMerchantMcp({configPath:configuration,port:0,tokenEnv:'WORKSHEET_NATIVE_TOKEN',environment});
+    mcp=await startMerchantMcp({configPath:configuration,port:0,tokenEnv:'WORKSHEET_NATIVE_TOKEN',environment,
+      ...(operatorDirectory?{consoleDirectory:operatorDirectory}:{})});
     client=await openMerchantFileClient({url:mcp.url,tokenEnv:'WORKSHEET_NATIVE_TOKEN',environment,
       errorPrefix:'OPENAPI_WORKSHEET',clientName:'original-route-worksheet-native'});
     const initialName='worksheet-base',firstName='worksheet-reviewed',currentName='worksheet-current',finalName='worksheet-reconciled';
@@ -256,13 +258,15 @@ export async function runRouteWorksheetJourney({parent,extension}={}) {
     if(extension?.run)await extension.run({root,senderRoot,receiverRoot,hostFiles,downloads,downloadDirectory,
       sender,receiver,mcp,client,configuration,environment,call,native,specText,originalText,plan,forecast,coordinates,
       finalName,finalProject,step,report,originalFetch,
-      reopen:async()=>{
+      reopen:async({consoleDirectory=operatorDirectory}={})=>{
+        operatorDirectory=consoleDirectory;
         globalThis.fetch=originalFetch;
         await mcp.close();mcp=null;await Promise.all([sender.close(),receiver.close()]);sender=null;receiver=null;
         sender=await startWorkspace({parent:senderRoot,port:0,noSignals:true});
         receiver=await startWorkspace({parent:receiverRoot,port:0,noSignals:true});
         await file(senderUrl,sender.url+'\n');await file(receiverUrl,receiver.url+'\n');
-        mcp=await startMerchantMcp({configPath:configuration,port:0,tokenEnv:'WORKSHEET_NATIVE_TOKEN',environment});
+        mcp=await startMerchantMcp({configPath:configuration,port:0,tokenEnv:'WORKSHEET_NATIVE_TOKEN',environment,
+      ...(operatorDirectory?{consoleDirectory:operatorDirectory}:{})});
         client=await openMerchantFileClient({url:mcp.url,tokenEnv:'WORKSHEET_NATIVE_TOKEN',environment,
           errorPrefix:'OPENAPI_WORKSHEET',clientName:'original-route-worksheet-native-reopen'});
         return {sender,receiver,mcp,client};

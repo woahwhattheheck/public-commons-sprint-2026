@@ -139,25 +139,47 @@ def schema_errors(package, schema_root):
         fail("Install this profile's requirements.txt with the selected Python: " + str(error))
     index = json_file(Path(schema_root) / "schema-sources.json")
     resources = []
+    required_formats = set()
     selected = None
     for row in index["schemas"]:
         data = raw_file(Path(schema_root) / row["file"])
         need(blob_id(data) == row["gitBlob"], "Official schema bytes changed: " + row["file"])
         document = json.loads(data)
+        pending = [document]
+        while pending:
+            value = pending.pop()
+            if isinstance(value, dict):
+                if isinstance(value.get("format"), str):
+                    required_formats.add(value["format"])
+                pending.extend(value.values())
+            elif isinstance(value, list):
+                pending.extend(value)
         resource = Resource(contents=document, specification=DRAFT202012)
-        resources.append((document["$id"], resource))
+        # The official 1.4.2 document has no $id; its captured URL is still its URI.
+        resources.append((row["url"], resource))
+        identifier = resource.id()
+        if identifier is not None:
+            resources.append((identifier, resource))
         for alias in row.get("aliases", []):
             resources.append((alias, resource))
         if row["role"] == "package":
             selected = document
     need(selected is not None, "Package schema is missing")
+    format_checker = FormatChecker()
+    missing_formats = sorted(required_formats.difference(format_checker.checkers))
+    need(not missing_formats,
+         "The selected Python is missing official schema format checkers: "
+         + ", ".join(missing_formats)
+         + ". Install the declared jsonschema[format-nongpl] extra with the same interpreter: "
+         + json.dumps([sys.executable, "-m", "pip", "install", "-r", str(HERE / "requirements.txt")])
+         + "; then repeat the original command.")
     number_types = Draft202012Validator.TYPE_CHECKER.redefine(
         "integer", lambda checker, value: (
             isinstance(value, int) and not isinstance(value, bool)) or (
             isinstance(value, Decimal) and value.is_finite() and value == value.to_integral_value()))
     Validator = validators.extend(Draft202012Validator, type_checker=number_types)
     validator = Validator(selected, registry=Registry().with_resources(resources),
-                          format_checker=FormatChecker())
+                          format_checker=format_checker)
     errors = sorted(validator.iter_errors(package), key=lambda e: (pointer(e.absolute_path), e.message))
     return [{"path": pointer(e.absolute_path), "rule": str(e.validator),
              "message": e.message, "schemaPath": pointer(e.absolute_schema_path)}
@@ -284,7 +306,11 @@ def verify_workspace(directory):
     manifest = json_file(directory / "manifest.json")
     need(manifest.get("schema") == FORMAT, "Unsupported publisher receiving manifest")
     expected = manifest["files"]
-    actual = artifact_files(directory)
+    need(isinstance(expected, list) and all(isinstance(row, dict) and isinstance(row.get("path"), str)
+                                          for row in expected), "Invalid publisher receiving file inventory")
+    # Original archives and filesystem traversal can order the same members differently.
+    expected = sorted(expected, key=lambda row: row["path"])
+    actual = sorted(artifact_files(directory), key=lambda row: row["path"])
     need(exact(expected) == exact(actual), "Receiving file inventory or bytes differ from the original manifest")
     return manifest
 

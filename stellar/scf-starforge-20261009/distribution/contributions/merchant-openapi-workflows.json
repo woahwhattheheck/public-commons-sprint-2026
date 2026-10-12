@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-openapi-workflows",
+  "description": "Original OpenAPI policy workflow recipes, reviewed merchant publication and complete portable customer receiving",
+  "commands": {
+    "merchant-openapi-workflows": "stellar-forge/mcp-merchant-operator/console/openapi-workflow-cli.mjs"
+  },
+  "commandDescriptions": {
+    "merchant-openapi-workflows": "Retain, review and run original API policy workflows; export complete packages and receive their original customer files"
+  },
+  "exports": {
+    "./merchant/console/openapi-workflows": "./source/stellar-forge/mcp-merchant-operator/console/openapi-workflow-client.mjs",
+    "./merchant/console/openapi-workflow-recipes": "./source/stellar-forge/mcp-merchant-operator/console/openapi-workflow-recipes.mjs"
+  },
+  "supportFiles": [
+    "stellar-forge/mcp-merchant-operator/console/OPENAPI_WORKFLOWS.md"
+  ]
+}

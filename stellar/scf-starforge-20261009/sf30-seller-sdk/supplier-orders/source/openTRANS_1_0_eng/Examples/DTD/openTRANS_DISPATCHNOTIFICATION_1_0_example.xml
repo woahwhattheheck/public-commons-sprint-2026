@@ -1,0 +1,271 @@
+<?xml version = "1.0" encoding = "UTF-8"?>
+<!DOCTYPE DISPATCHNOTIFICATION SYSTEM "openTRANS_DISPATCHNOTIFICATION_1_0.dtd">
+
+<!-- 
+
+  Name:                 opentrans_dispatchnotification_1_0_example.xml
+  Version:              1.0
+  Date:                 07.09.2001
+  Authors:              Oliver Kelkar (olk), Fraunhofer IAO Stuttgart
+                        Boris Otto (bo),     Fraunhofer IAO Stuttgart
+			
+
+  Copyright 2000-2001, All Rights Reserved
+  Fraunhofer IAO Stuttgart, Universitaet Essen BLI
+
+-->
+
+<DISPATCHNOTIFICATION version = "1.0">
+	<DISPATCHNOTIFICATION_HEADER>
+		<CONTROL_INFO>
+			<GENERATOR_INFO>Created by openTRANS-Generator V1.7 1.03.2001</GENERATOR_INFO>
+			<GENERATION_DATE>2001-03-27T15:22:02+01:00</GENERATION_DATE>
+		</CONTROL_INFO>
+		<DISPATCHNOTIFICATION_INFO>
+			<DISPATCHNOTIFICATION_ID>2001-2300001</DISPATCHNOTIFICATION_ID>
+			<DISPATCHNOTIFICATION_DATE>2001-03-27T09:26:22+01:00</DISPATCHNOTIFICATION_DATE>
+			<BUYER_PARTY>
+				<PARTY>
+					<PARTY_ID type = "buyer_specific">FhG-IAO-4356</PARTY_ID>
+					<ADDRESS>
+						<NAME>Fraunhofer IAO</NAME>
+						<NAME2>Gebaeude TIII</NAME2>
+						<DEPARTMENT>Marktstrategie Team E-Procurement</DEPARTMENT>
+						<CONTACT>
+							<CONTACT_NAME>Sekretariat</CONTACT_NAME>
+							<PHONE type = "office">+49 711 970 2331</PHONE>
+							<FAX>+49 711 970 2300</FAX>
+							<URL>http://www.iao.fhg.de</URL>
+						</CONTACT>
+						<STREET>Nobelstr. 12</STREET>
+						<ZIP>70569</ZIP>
+						<CITY>Stuttgart</CITY>
+						<COUNTRY>Germany</COUNTRY>
+						<VAT_ID>DE 129515865</VAT_ID>
+						<PHONE type = "office">+49 711 970 0</PHONE>
+						<URL>http://www.iao.fhg.de</URL>
+					</ADDRESS>
+				</PARTY>
+			</BUYER_PARTY>
+			<SUPPLIER_PARTY>
+				<PARTY>
+					<PARTY_ID type = "buyer_specific">UEG-FB5-BLI</PARTY_ID>
+					<ADDRESS>
+						<NAME>Universitaet Essen</NAME>
+						<NAME2>FB Wirtschaftswissenschaften/Wirtschaftsinformatik</NAME2>
+						<DEPARTMENT>Beschaffung, Logistik und Informationsmanagement</DEPARTMENT>
+						<CONTACT>
+							<CONTACT_NAME>Volker Schmitz</CONTACT_NAME>
+							<PHONE type = "office">+49 201 183 4084</PHONE>
+							<PHONE type = "office">+49 201 183 4076</PHONE>
+							<FAX>+49 201 183 934084</FAX>
+							<EMAIL>volker.schmitz@uni-essen.de</EMAIL>
+						</CONTACT>
+						<STREET>Universitaetsstr. 9</STREET>
+						<ZIP>45117</ZIP>
+						<CITY>Essen</CITY>
+						<COUNTRY>Germany</COUNTRY>
+						<PHONE type = "office">+49 201 183 0</PHONE>
+						<URL>http://www.bli.uni-essen.de</URL>
+					</ADDRESS>
+				</PARTY>
+			</SUPPLIER_PARTY>
+			<SHIPMENT_PARTIES>
+				<DELIVERY_PARTY>
+					<PARTY>
+						<PARTY_ID type = "buyer_specific">FhG-IAO-4356</PARTY_ID>
+						<ADDRESS>
+							<NAME>Fraunhofer IAO</NAME>
+							<NAME2>Gebaeude TIII</NAME2>
+							<DEPARTMENT>Marktstrategie Team E-Procurement</DEPARTMENT>
+							<CONTACT>
+								<CONTACT_NAME>Sekretariat</CONTACT_NAME>
+								<PHONE type = "office">+49 711 970 2331</PHONE>
+								<FAX>+49 711 970 2300</FAX>
+								<URL>http://www.iao.fhg.de</URL>
+							</CONTACT>
+							<STREET>Nobelstr. 12</STREET>
+							<ZIP>70569</ZIP>
+							<CITY>Stuttgart</CITY>
+							<STATE>
+							</STATE>
+							<COUNTRY>Germany</COUNTRY>
+							<PHONE type = "office">+49 711 970 0</PHONE>
+							<URL>http://www.iao.fhg.de</URL>
+						</ADDRESS>
+					</PARTY>
+				</DELIVERY_PARTY>
+				<FINAL_DELIVERY_PARTY>
+					<PARTY>
+						<PARTY_ID type = "buyer_specific">FhG-IAO-4356</PARTY_ID>
+						<ADDRESS>
+							<NAME>Fraunhofer IAO</NAME>
+							<NAME2>Gebaeude TIII</NAME2>
+							<DEPARTMENT>Marktstrategie Team E-Procurement</DEPARTMENT>
+							<CONTACT>
+								<CONTACT_NAME>Boris Otto</CONTACT_NAME>
+								<PHONE type = "office">+49 711 970 2369</PHONE>
+								<FAX>+49 711 970 2300</FAX>
+								<EMAIL>Boris.Otto@iao.fhg.de</EMAIL>
+								<URL>http://www.iao.fhg.de</URL>
+							</CONTACT>
+							<STREET>Nobelstr. 12</STREET>
+							<ZIP>70569</ZIP>
+							<CITY>Stuttgart</CITY>
+							<COUNTRY>Germany</COUNTRY>
+							<PHONE type = "office">+49 711 970 0</PHONE>
+							<URL>http://www.iao.fhg.de</URL>
+						</ADDRESS>
+					</PARTY>
+				</FINAL_DELIVERY_PARTY>
+				<TRANSPORT_PARTY>
+					<PARTY>
+						<PARTY_ID type = "DUNS">SFA-6934221</PARTY_ID>
+						<ADDRESS>
+							<NAME>SUPER FAST AIRCARGO</NAME>
+						</ADDRESS>
+					</PARTY>
+				</TRANSPORT_PARTY>
+				<TRANSPORT_PARTY>
+					<PARTY>
+						<PARTY_ID type = "DUNS">EPS-3014234</PARTY_ID>
+						<ADDRESS>
+							<NAME>EXPRESS PARCEL SERVICE</NAME>
+						</ADDRESS>
+					</PARTY>
+				</TRANSPORT_PARTY>
+			</SHIPMENT_PARTIES>
+			<MEANS_OF_TRANSPORT>
+				<MEANS_OF_TRANSPORT_ID>K-LH2001</MEANS_OF_TRANSPORT_ID>
+			</MEANS_OF_TRANSPORT>
+			<PACKAGE_INFO>
+				<PACKAGE_ID>234-456</PACKAGE_ID>
+				<PACKAGE_TYPE>BOX</PACKAGE_TYPE>
+			</PACKAGE_INFO>
+		</DISPATCHNOTIFICATION_INFO>
+	</DISPATCHNOTIFICATION_HEADER>
+	<DISPATCHNOTIFICATION_ITEM_LIST>
+		<DISPATCHNOTIFICATION_ITEM>
+			<LINE_ITEM_ID>0010</LINE_ITEM_ID>
+			<ARTICLE_ID>
+				<SUPPLIER_AID>55-K-31</SUPPLIER_AID>
+				<INTERNATIONAL_AID type = "EAN">8712670911213</INTERNATIONAL_AID>
+				<BUYER_AID type = "BRZNR">4711</BUYER_AID>
+				<DESCRIPTION_SHORT>Standard Briefkorb DIN A4</DESCRIPTION_SHORT>
+				<DESCRIPTION_LONG>Ein Klassiker unter den Briefkoerben.</DESCRIPTION_LONG>
+				<MANUFACTURER_INFO>
+					<MANUFACTURER_NAME>Plastikpartner</MANUFACTURER_NAME>
+					<MANUFACTURER_AID>123-RD-67-U</MANUFACTURER_AID>
+					<MANUFACTURER_TYPE_DESCR>Briefkorb 02133</MANUFACTURER_TYPE_DESCR>
+				</MANUFACTURER_INFO>
+			</ARTICLE_ID>
+			<QUANTITY>20</QUANTITY>
+			<ORDER_UNIT>C62</ORDER_UNIT>
+			<DELIVERY_COMPLETED>TRUE</DELIVERY_COMPLETED>
+			<DELIVERY_DATE type = "fixed">
+				<DELIVERY_START_DATE>2001-03-28</DELIVERY_START_DATE>
+				<DELIVERY_END_DATE>2001-03-28</DELIVERY_END_DATE>
+			</DELIVERY_DATE>
+			<ORDER_REFERENCE>
+				<ORDER_ID>PO4500002323</ORDER_ID>
+				<LINE_ITEM_ID>P100028</LINE_ITEM_ID>
+				<ORDER_DATE>2001-03-21T16:55:30+01:00</ORDER_DATE>
+			</ORDER_REFERENCE>
+			<SUPPLIER_ORDER_REFERENCE>
+				<SUPPLIER_ORDER_ID>AUF200110010</SUPPLIER_ORDER_ID>
+				<SUPPLIER_ORDER_ITEM_ID>10</SUPPLIER_ORDER_ITEM_ID>
+			</SUPPLIER_ORDER_REFERENCE>
+			<SUPPLIER_PARTY>
+				<PARTY>
+					<PARTY_ID type = "buyer_specific">UEG-FB5-BLI</PARTY_ID>
+					<ADDRESS>
+						<NAME>Universitaet Essen</NAME>
+						<NAME2>FB Wirtschaftswissenschaften/Wirtschaftsinformatik</NAME2>
+						<DEPARTMENT>Beschaffung, Logistik und Informationsmanagement</DEPARTMENT>
+						<CONTACT>
+							<CONTACT_NAME>Volker Schmitz</CONTACT_NAME>
+							<PHONE type = "office">+49 201 183 4084</PHONE>
+							<PHONE type = "office">+49 201 183 4076</PHONE>
+							<FAX>+49 201 183 934084</FAX>
+							<EMAIL>volker.schmitz@uni-essen.de</EMAIL>
+						</CONTACT>
+						<STREET>Universitaetsstr. 9</STREET>
+						<ZIP>45117</ZIP>
+						<CITY>Essen</CITY>
+						<COUNTRY>Germany</COUNTRY>
+						<PHONE type = "office">+49 201 183 0</PHONE>
+						<URL>http://www.bli.uni-essen.de</URL>
+					</ADDRESS>
+				</PARTY>
+			</SUPPLIER_PARTY>
+			<SHIPMENT_PARTIES>
+				<DELIVERY_PARTY>
+					<PARTY>
+						<PARTY_ID type = "buyer_specific">FhG-IAO-4356</PARTY_ID>
+						<ADDRESS>
+							<NAME>Fraunhofer IAO</NAME>
+							<NAME2>Gebaeude TIII</NAME2>
+							<DEPARTMENT>Marktstrategie Team E-Procurement</DEPARTMENT>
+							<CONTACT>
+								<CONTACT_NAME>Sekretariat</CONTACT_NAME>
+								<PHONE type = "office">+49 711 970 2331</PHONE>
+								<FAX>+49 711 970 2300</FAX>
+								<URL>http://www.iao.fhg.de</URL>
+							</CONTACT>
+							<STREET>Nobelstr. 12</STREET>
+							<ZIP>70569</ZIP>
+							<CITY>Stuttgart</CITY>
+							<STATE>
+							</STATE>
+							<COUNTRY>Germany</COUNTRY>
+							<PHONE type = "office">+49 711 970 0</PHONE>
+							<URL>http://www.iao.fhg.de</URL>
+						</ADDRESS>
+					</PARTY>
+				</DELIVERY_PARTY>
+				<FINAL_DELIVERY_PARTY>
+					<PARTY>
+						<PARTY_ID type = "buyer_specific">FhG-IAO-4356</PARTY_ID>
+						<ADDRESS>
+							<NAME>Fraunhofer IAO</NAME>
+							<NAME2>Gebaeude TIII</NAME2>
+							<DEPARTMENT>Marktstrategie Team E-Procurement</DEPARTMENT>
+							<CONTACT>
+								<CONTACT_NAME>Boris Otto</CONTACT_NAME>
+								<PHONE type = "office">+49 711 970 2369</PHONE>
+								<FAX>+49 711 970 2300</FAX>
+								<EMAIL>Boris.Otto@iao.fhg.de</EMAIL>
+								<URL>http://www.iao.fhg.de</URL>
+							</CONTACT>
+							<STREET>Nobelstr. 12</STREET>
+							<ZIP>70569</ZIP>
+							<CITY>Stuttgart</CITY>
+							<COUNTRY>Germany</COUNTRY>
+							<PHONE type = "office">+49 711 970 0</PHONE>
+							<URL>http://www.iao.fhg.de</URL>
+						</ADDRESS>
+					</PARTY>
+				</FINAL_DELIVERY_PARTY>
+				<TRANSPORT_PARTY>
+					<PARTY>
+						<PARTY_ID type = "DUNS">SFA-6934221</PARTY_ID>
+						<ADDRESS>
+							<NAME>SUPER FAST AIRCARGO</NAME>
+						</ADDRESS>
+					</PARTY>
+				</TRANSPORT_PARTY>
+				<TRANSPORT_PARTY>
+					<PARTY>
+						<PARTY_ID type = "DUNS">EPS-3014234</PARTY_ID>
+						<ADDRESS>
+							<NAME>EXPRESS PARCEL SERVICE</NAME>
+						</ADDRESS>
+					</PARTY>
+				</TRANSPORT_PARTY>
+			</SHIPMENT_PARTIES>
+		</DISPATCHNOTIFICATION_ITEM>
+	</DISPATCHNOTIFICATION_ITEM_LIST>
+	<DISPATCHNOTIFICATION_SUMMARY>
+		<TOTAL_ITEM_NUM>1</TOTAL_ITEM_NUM>
+	</DISPATCHNOTIFICATION_SUMMARY>
+</DISPATCHNOTIFICATION>

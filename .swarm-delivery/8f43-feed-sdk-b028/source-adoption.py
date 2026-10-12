@@ -175,12 +175,14 @@ def retain(path, data, mode=0o600):
         cleanup_temporary(temporary, owned)
 
 
-def replace_original(path, data, expected, backup, mode=0o600):
-    """Preserve the original inode's bytes before replacing this selected leaf."""
+def replace_original(path, data, expected, backup, mode=0o600, *, backup_mode=None):
+    """Preserve source bytes with independently selected live and private modes."""
+    if backup_mode is None:
+        backup_mode = mode
     current, observed = read_regular(path)
     if current == data:
         saved, metadata = read_regular(backup)
-        require(match(saved, expected) and stat.S_IMODE(metadata.st_mode) == mode,
+        require(match(saved, expected) and stat.S_IMODE(metadata.st_mode) == backup_mode,
                 "Retain the original source preimage before reopening its replacement")
         require(stat.S_IMODE(observed.st_mode) == mode,
                 "Preserve the selected private source mode")
@@ -188,7 +190,7 @@ def replace_original(path, data, expected, backup, mode=0o600):
         return
     require(match(current, expected) and stat.S_IMODE(observed.st_mode) == mode,
             "Preserve a changed original source: " + str(path))
-    retain(backup, current, mode)
+    retain(backup, current, backup_mode)
     temporary, owned = staged(path, data, mode)
     try:
         latest, metadata = read_regular(path)
@@ -240,7 +242,106 @@ def selection_payload(payload):
     return selection, data, driver_bytes, files
 
 
-def check_sources(selection):
+def adoption_receipt(selection, request_bytes, driver_mode):
+    return {"schema": SCHEMA, "state": "ADOPTED", "operationId": OPERATION,
+            "record": str(RECORD), "requestSha256": digest(request_bytes),
+            "requestBytes": len(request_bytes), "project": str(PROJECT),
+            "sourceRoot": str(SOURCE), "sourceSelectionBlob": SELECTION_BLOB,
+            "originalInventoryBlob": selection["originalInventory"]["sha"],
+            "originalDriverBlob": selection["originalDriver"]["sha"],
+            "driverBlob": DRIVER_BLOB, "driverMode": driver_mode,
+            "sdkSourceCommit": selection["sdkSourceCommit"],
+            "sourceFiles": 341, "sourceBytes": selection["bytes"],
+            "updatedFiles": 5, "addedFiles": 12,
+            "dependencyTarget": selection["dependency"]["target"],
+            "adoptionDirectory": str(ADOPTION), "runtimeSha256": HOST_SHA256}
+
+
+def driver_mode_binding(selection, request_bytes, mode):
+    return {"schema": "stellar-forge.feed-mcp-sdk-driver-mode.v1",
+            "operationId": OPERATION, "record": str(RECORD),
+            "requestSha256": digest(request_bytes), "requestBytes": len(request_bytes),
+            "sourceSelectionBlob": SELECTION_BLOB, "runtimeSha256": HOST_SHA256,
+            "originalDriverBlob": selection["originalDriver"]["sha"],
+            "driverBlob": DRIVER_BLOB, "driverMode": mode}
+
+
+def original_driver_mode(selection, data=None, metadata=None, request_bytes=None):
+    """Bind live caller permissions separately from the private source backup."""
+    if data is None:
+        data, metadata = read_regular(DRIVER)
+    if request_bytes is None:
+        request_bytes, _ = read_regular(RECORD / "request.json")
+    original = selection["originalDriver"]
+    is_original = match(data, original)
+    require(is_original or blob(data) == DRIVER_BLOB,
+            "Preserve the existing original customer caller")
+    backup = ADOPTION / "preimages" / "feed-mcp-native-journey.mjs"
+    backup_mode = None
+    if os.path.lexists(backup):
+        saved, saved_metadata = read_regular(backup)
+        require(match(saved, original),
+                "Retain the exact original caller before reopening its replacement")
+        backup_mode = stat.S_IMODE(saved_metadata.st_mode)
+    mode = None
+    completed = ADOPTION / "adopted.json"
+    if os.path.lexists(completed):
+        saved, saved_metadata = read_regular(completed)
+        value = json.loads(saved)
+        require(isinstance(value, dict), "Preserve the original completed adoption")
+        mode = value.get("driverMode", 0o600)
+        require(type(mode) is int and 0 <= mode <= 0o7777,
+                "Retain the original completed caller mode")
+        expected = adoption_receipt(selection, request_bytes, mode)
+        if "driverMode" not in value:
+            expected.pop("driverMode")
+        require(saved == encoded(expected) and stat.S_IMODE(saved_metadata.st_mode) == 0o600,
+                "Preserve the exact original completed adoption and native request")
+    intent = ADOPTION / "driver-mode.json"
+    if os.path.lexists(intent):
+        saved, saved_metadata = read_regular(intent)
+        value = json.loads(saved)
+        selected_mode = value.get("driverMode") if isinstance(value, dict) else None
+        require(type(selected_mode) is int and 0 <= selected_mode <= 0o7777 and
+                saved == encoded(driver_mode_binding(selection, request_bytes, selected_mode)) and
+                stat.S_IMODE(saved_metadata.st_mode) == 0o600,
+                "Preserve the original source-bound caller mode")
+        require(mode is None or mode == selected_mode,
+                "The prepared caller mode differs from the completed adoption")
+        mode = selected_mode
+    observed_mode = stat.S_IMODE(metadata.st_mode)
+    if is_original:
+        require(mode is None or mode == observed_mode,
+                "Preserve the caller permissions bound before source publication")
+        return observed_mode
+    require(backup_mode is not None,
+            "Retain the exact original caller before reopening its replacement")
+    if mode is None:
+        # The original published v1 preparer required 0600 for both files.
+        # Its interrupted replacement can continue, but a private 0600 backup
+        # cannot establish a different live caller mode.
+        require(observed_mode == backup_mode == 0o600,
+                "Retain the completed adoption or pre-publication caller-mode binding")
+        mode = 0o600
+    require(observed_mode == mode, "Preserve the original customer caller mode")
+    return mode
+
+
+def retain_adoption_receipt(receipt):
+    """Reopen the exact completed v1 receipt, including its older field shape."""
+    path = ADOPTION / "adopted.json"
+    if os.path.lexists(path):
+        saved, metadata = read_regular(path)
+        legacy = {key: value for key, value in receipt.items() if key != "driverMode"}
+        require(saved in (encoded(receipt), encoded(legacy)) and
+                stat.S_IMODE(metadata.st_mode) == 0o600,
+                "Preserve a different retained source adoption")
+        sync_directory(path.parent)
+        return
+    retain(path, encoded(receipt))
+
+
+def check_sources(selection, request_bytes=None):
     require(SOURCE.resolve(strict=True) == SOURCE and SOURCE.is_dir(),
             "Keep the original canonical native source root")
     inventory, _ = read_regular(SOURCE / selection["originalInventory"]["name"])
@@ -268,6 +369,11 @@ def check_sources(selection):
             if selected:
                 require(stat.S_IMODE(metadata.st_mode) == selected["mode"],
                         "Preserve the selected private SDK file mode: " + row["path"])
+                if selected["before"] is not None:
+                    saved, saved_metadata = read_regular(ADOPTION / "preimages" / row["path"])
+                    require(match(saved, selected["before"]) and
+                            stat.S_IMODE(saved_metadata.st_mode) == selected["before"]["mode"],
+                            "Retain the exact original SDK preimage: " + row["path"])
             continue
         require(selected is not None and selected["before"] is not None and
                 match(data, selected["before"]) and
@@ -279,8 +385,7 @@ def check_sources(selection):
     is_after = blob(driver) == DRIVER_BLOB
     require(is_after or match(driver, original),
             "Preserve the existing original customer caller")
-    require(stat.S_IMODE(metadata.st_mode) == 0o600,
-            "Keep the private original customer caller mode")
+    original_driver_mode(selection, driver, metadata, request_bytes)
     if is_after:
         selected_bytes, _ = read_regular(SOURCE / "sdk-receiving-source.json")
         require(blob(selected_bytes) == SELECTION_BLOB,
@@ -329,7 +434,7 @@ def prepare(payload, expected_request_sha256=None):
     selection, selection_bytes, driver_bytes, files = selection_payload(payload)
     with native.run_lock(RECORD):
         request_bytes = original_request(native, expected_request_sha256)
-        already = check_sources(selection)
+        already = check_sources(selection, request_bytes)
         if dispatched_or_owned(native):
             require(already, "Follow the original native owner before changing its selected source")
             return {"schema": SCHEMA, "state": "ADOPTED_SOURCE_ORIGINAL_OWNER",
@@ -337,17 +442,26 @@ def prepare(payload, expected_request_sha256=None):
                     "requestSha256": digest(request_bytes), "sourceSelectionBlob": SELECTION_BLOB,
                     "driverBlob": DRIVER_BLOB, "files": 341,
                     "native": native.report_value(native.inspect(RECORD), "summary")}
+        if already and os.path.lexists(ADOPTION / "adopted.json"):
+            driver_mode = original_driver_mode(selection, request_bytes=request_bytes)
+            receipt = adoption_receipt(selection, request_bytes, driver_mode)
+            retain_adoption_receipt(receipt)
+            return receipt
         directory(ADOPTION)
         retain(ADOPTION / "original-request.json", request_bytes)
         retain(ADOPTION / "source-selection.json", selection_bytes)
         driver_backup = ADOPTION / "preimages" / "feed-mcp-native-journey.mjs"
-        current_driver, _ = read_regular(DRIVER)
-        if match(current_driver, selection["originalDriver"]):
-            retain(driver_backup, current_driver)
-        else:
-            original_driver, _ = read_regular(driver_backup)
+        current_driver, driver_metadata = read_regular(DRIVER)
+        driver_mode = original_driver_mode(selection, current_driver, driver_metadata, request_bytes)
+        retain(ADOPTION / "driver-mode.json", encoded(driver_mode_binding(selection, request_bytes, driver_mode)))
+        backup_mode = 0o600
+        if os.path.lexists(driver_backup):
+            original_driver, original_metadata = read_regular(driver_backup)
             require(match(original_driver, selection["originalDriver"]),
                     "Retain the original customer caller before reopening adoption")
+            backup_mode = stat.S_IMODE(original_metadata.st_mode)
+        if match(current_driver, selection["originalDriver"]):
+            retain(driver_backup, current_driver, backup_mode)
         # New imports exist before their consumers change. Replaced bytes are
         # retained before publication; the existing native command is untouched.
         for row in selection["overlay"]:
@@ -367,18 +481,9 @@ def prepare(payload, expected_request_sha256=None):
         require(original_request(native, digest(request_bytes)) == request_bytes,
                 "Preserve the original native request throughout publication")
         require(not dispatched_or_owned(native), "Retain the original undispatched native scope")
-        replace_original(DRIVER, driver_bytes, selection["originalDriver"], driver_backup)
-        require(check_sources(selection), "Read back the complete original adopted customer source")
-        receipt = {"schema": SCHEMA, "state": "ADOPTED", "operationId": OPERATION,
-                   "record": str(RECORD), "requestSha256": digest(request_bytes),
-                   "requestBytes": len(request_bytes), "project": str(PROJECT),
-                   "sourceRoot": str(SOURCE), "sourceSelectionBlob": SELECTION_BLOB,
-                   "originalInventoryBlob": selection["originalInventory"]["sha"],
-                   "originalDriverBlob": selection["originalDriver"]["sha"],
-                   "driverBlob": DRIVER_BLOB, "sdkSourceCommit": selection["sdkSourceCommit"],
-                   "sourceFiles": 341, "sourceBytes": selection["bytes"],
-                   "updatedFiles": 5, "addedFiles": 12,
-                   "dependencyTarget": selection["dependency"]["target"],
-                   "adoptionDirectory": str(ADOPTION), "runtimeSha256": HOST_SHA256}
-        retain(ADOPTION / "adopted.json", encoded(receipt))
+        replace_original(DRIVER, driver_bytes, selection["originalDriver"],
+                         driver_backup, driver_mode, backup_mode=backup_mode)
+        require(check_sources(selection, request_bytes), "Read back the complete original adopted customer source")
+        receipt = adoption_receipt(selection, request_bytes, driver_mode)
+        retain_adoption_receipt(receipt)
         return receipt

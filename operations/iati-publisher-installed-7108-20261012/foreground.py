@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import contextlib
 import fcntl
 import gzip
@@ -18,6 +19,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import termios
 import time
 import threading
 import uuid
@@ -227,6 +229,118 @@ def bounded_intake(config):
     need(value["schema"] == INTAKE and value["operationId"] == config["operationId"] and
          value["sourceCommit"] == config["sourceCommit"], "The original intake selection differs")
     return value
+
+
+def receive_stdin_intake(config):
+    """Receive the original selected gzip in this same private foreground."""
+    expected = config["intake"]
+    project = directory(config["project"])
+    target = Path(expected["path"])
+    need(target == project / "intake" / "source-intake.json.gz",
+         "Stream the selected original input only into this foreground's private intake")
+    directory(target.parent)
+    retained = expected["retainedShared"]
+    shared_part = Path(retained["path"])
+    need(shared_part.is_absolute() and Path(retained["lock"]).is_absolute(),
+         "Retain the original shared intake and its existing lock")
+    with lease(Path(retained["lock"])):
+        prior = file_identity(shared_part) if shared_part.exists() else None
+        if prior:
+            need(prior["bytes"] <= expected["bytes"], "Original shared prefix exceeds the selected intake")
+        original_fd = os.open(shared_part, os.O_RDONLY | os.O_NOFOLLOW) if prior else None
+        original_stat = os.fstat(original_fd) if original_fd is not None else None
+        stage = target.with_name("." + target.name + "." + expected["sha256"] + ".part")
+        terminal = None
+        fd = None
+        try:
+            if target.exists():
+                verify(target, expected)
+                if stage.exists():
+                    a, b = stage.lstat(), target.lstat()
+                    if (a.st_dev, a.st_ino) == (b.st_dev, b.st_ino):
+                        stage.unlink()
+                        sync_directory(target.parent)
+            else:
+                fd = os.open(stage, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
+                info = os.fstat(fd)
+                need(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+                     and not (info.st_mode & 0o077) and info.st_size <= expected["bytes"],
+                     "The private retained intake changed")
+                if sys.stdin.isatty():
+                    terminal = termios.tcgetattr(0)
+                    raw = termios.tcgetattr(0)
+                    raw[3] &= ~(termios.ECHO | termios.ICANON)
+                    raw[6][termios.VMIN], raw[6][termios.VTIME] = 1, 0
+                    termios.tcsetattr(0, termios.TCSANOW, raw)
+                print(json.dumps({"phase": "PRIVATE_INTAKE_TRANSFER_READY", "operationId": config["operationId"],
+                    "bytes": expected["bytes"], "sha256": expected["sha256"],
+                    "existingPrivatePrefixBytes": info.st_size, "retainedShared": prior}), flush=True)
+                offset, index = 0, 0
+                while offset < expected["bytes"]:
+                    line = sys.stdin.buffer.readline(40000)
+                    need(line.endswith(b"\n"), "The original framed intake ended before a complete chunk")
+                    message = json.loads(line)
+                    need(isinstance(message, dict) and set(message) == {"index", "offset", "data"} and
+                         type(message["index"]) is int and type(message["offset"]) is int and
+                         message["index"] == index and message["offset"] == offset,
+                         "The original intake frame is out of sequence")
+                    chunk = base64.b64decode(message["data"], validate=True)
+                    need(0 < len(chunk) <= 24576 and offset + len(chunk) <= expected["bytes"],
+                         "The original intake frame exceeds its exact selected bytes")
+                    if original_fd is not None:
+                        saved = os.pread(original_fd, min(len(chunk), max(0, prior["bytes"] - offset)), offset)
+                        need(chunk.startswith(saved), "The original shared intake prefix differs")
+                    existing = os.pread(fd, len(chunk), offset)
+                    need(chunk.startswith(existing), "The original private intake prefix differs")
+                    remaining = memoryview(chunk)[len(existing):]
+                    os.lseek(fd, offset + len(existing), os.SEEK_SET)
+                    while remaining:
+                        count = os.write(fd, remaining)
+                        need(count > 0, "The original private intake could not be retained")
+                        remaining = remaining[count:]
+                    os.fsync(fd)
+                    offset += len(chunk)
+                    print(json.dumps({"phase": "PRIVATE_INTAKE_CHUNK_RETAINED", "index": index, "bytes": offset}), flush=True)
+                    index += 1
+                verify(stage, expected)
+                os.fsync(fd)
+                try:
+                    os.link(stage, target, follow_symlinks=False)
+                except FileExistsError:
+                    verify(target, expected)
+                sync_directory(target.parent)
+                stage.unlink()
+                sync_directory(target.parent)
+            actual = verify(target, expected)
+            need(target.lstat().st_nlink == 1, "The complete private intake has additional hard links")
+            if prior:
+                with target.open("rb") as complete:
+                    digest = hashlib.sha256()
+                    remaining = prior["bytes"]
+                    while remaining:
+                        block = complete.read(min(65536, remaining))
+                        need(block, "The complete intake is shorter than its original shared prefix")
+                        digest.update(block)
+                        remaining -= len(block)
+                need(digest.hexdigest() == prior["sha256"], "The complete input differs from the retained shared prefix")
+                after = os.fstat(original_fd)
+                need(all(getattr(original_stat, key) == getattr(after, key) for key in STAMP)
+                     and file_identity(shared_part) == prior, "The original shared intake changed during receiving")
+            bounded_intake(config)
+            receipt = {"schema": "commons.iati-stdin-intake/v1", "operationId": config["operationId"],
+                       "sourceCommit": config["sourceCommit"], "intake": actual,
+                       "retainedShared": prior, "sharedPrefixVerifiedBytes": prior["bytes"] if prior else 0,
+                       "sharedOriginalPreserved": True, "receivedAt": now()}
+            write_record(project / "stdin-intake-receipt.json", receipt, immutable=True)
+            print(json.dumps({"phase": "PRIVATE_SOURCE_INPUT_READY", **receipt}), flush=True)
+            return receipt
+        finally:
+            if terminal is not None:
+                termios.tcsetattr(0, termios.TCSANOW, terminal)
+            if fd is not None:
+                os.close(fd)
+            if original_fd is not None:
+                os.close(original_fd)
 
 
 def run_checked(argv, **kwargs):
@@ -750,11 +864,21 @@ def execute(config):
                     state["savedAt"] = now()
                 with lease(shared / "return.lock"):
                     delivered = []
-                    for row in state["publishers"]:
+                    for index, row in enumerate(state["publishers"]):
                         item = row["customerArchive"]
-                        target = shared / Path(item["path"]).name
-                        shared_bound(config, item["bytes"], target)
-                        delivered.append(copy_exact(item["path"], target, item))
+                        if config.get("returnMode", "files") == "durable":
+                            saved = state["durableFiles"]["results"][index + 1]
+                            need(saved["status"] == "succeeded" and saved["local_path"] == item["path"]
+                                 and saved["local_metadata_applied"], "The complete original customer save is not retained")
+                            delivered.append({"name": Path(item["path"]).name, "bytes": item["bytes"],
+                                "sha256": item["sha256"], "delivery": "durable",
+                                "file_id": saved["file_id"], "library_file_id": saved["library_file_id"],
+                                **({"current_version_number": saved["current_version_number"]}
+                                   if "current_version_number" in saved else {})})
+                        else:
+                            target = shared / Path(item["path"]).name
+                            shared_bound(config, item["bytes"], target)
+                            delivered.append(copy_exact(item["path"], target, item))
                     state["sharedCustomerArchives"] = delivered
                     write_record(returned / "customer-result.json", state)
                     copied = file_identity(returned / "customer-result.json")
@@ -780,7 +904,8 @@ def launch(config):
     project = directory(config["project"])
     shared = directory(config["sharedReturn"])
     with lease(shared / "foreground.lock"):
-        write_record(shared / "launch-selection.json", config, immutable=True)
+        if config.get("returnMode", "files") == "files":
+            shared_record(config, shared / "launch-selection.json", config, immutable=True)
         write_record(project / "foreground-selection.json", config, immutable=True)
         write_record(project / "preflight.json", {"observedAt": now(), "versions": observed,
             "files": len(intake["sourceManifest"]["files"]),
@@ -833,6 +958,7 @@ def launch(config):
                      "originalRecord": str(record)})
             original = retained["archive"]
             with lease(shared / "return.lock"):
+                shared_record(config, shared / "launch-selection.json", config, immutable=True)
                 shared_bound(config, original["bytes"], shared / "native-record.tar.gz")
                 copied = copy_exact(original["path"], shared / "native-record.tar.gz", original)
                 shared_record(config, shared / "native-result.json", result, immutable=True)
@@ -857,12 +983,18 @@ def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--execute", action="store_true")
+    parser.add_argument("--intake-stdin", action="store_true",
+                        help="Receive the exact selected gzip in this same private foreground before admission")
     parser.add_argument("input")
     args = parser.parse_args()
     selected = Path(args.input).resolve(strict=True)
     config = json.loads(selected.read_bytes())
     need(config["schema"] == SCHEMA and config["inputPath"] == str(selected),
          "Select the exact original foreground input")
+    need(config.get("returnMode", "files") in ("files", "durable"), "Select the original full-file or durable return")
+    need(not (args.execute and args.intake_stdin), "The admitted child consumes the completed original intake")
+    if args.intake_stdin:
+        receive_stdin_intake(config)
     if args.execute:
         execute(config)
         return 0

@@ -3,7 +3,12 @@
 // catalog and native owner. Native values are returned unchanged, not coerced.
 export type JsonValue = null | boolean | number | string | JsonValue[] | {[key:string]:JsonValue};
 export type JsonObject = {[key:string]:JsonValue};
+export type MatomoOriginalTable = 'actions'|'history'|'merchants'|'merchant_packages'|'deliveries'|'handovers'|'receivings'|'catalogs'|'captures'|'editions'|'comparisons'|'edition_reviews'|'comparison_reviews';
 export interface MatomoToolArguments {
+  "merchant_matomo_original_records": { "workspace": string; "table"?: MatomoOriginalTable; "offset"?: number; "limit"?: number; };
+  "merchant_matomo_original_files": { "workspace": string; "offset"?: number; "limit"?: number; };
+  "merchant_matomo_original_merchant": { "workspace": string; "originalMerchantId": string; };
+  "merchant_matomo_merchant_adopt_original": { "workspace": string; "workspaceInstanceId": string; "operationId": string; "expectedRevision": number; "originalMerchantId": string; };
   "merchant_matomo_workspaces": Record<string, never>;
   "merchant_matomo_open": { "workspace": string; };
   "merchant_matomo_close": { "workspace": string; "instanceId": string; };
@@ -25,7 +30,7 @@ export interface MatomoToolArguments {
   "merchant_matomo_receiving": { "workspace": string; "receivingId": string; };
   "merchant_matomo_receiving_rows": { "workspace": string; "receivingId": string; "offset"?: number; "limit"?: number; };
   "merchant_matomo_source_read": { "workspace": string; "sourceRequestId": string; };
-  "merchant_matomo_artifact_read": { "workspace": string; "artifact": "capture" | "edition" | "database" | "comparison" | "delivery" | "handover" | "source"; "id": string; "kind"?: "csv" | "config" | "manifest" | "archive" | "scan"; "readId"?: string; "expectedSha256"?: string; "offset"?: number; "limit"?: number; };
+  "merchant_matomo_artifact_read": { "workspace": string; "artifact": "capture" | "edition" | "database" | "comparison" | "delivery" | "handover" | "source" | "workspace-origin" | "workspace-archive" | "workspace-original"; "id": string; "kind"?: "csv" | "config" | "manifest" | "archive" | "scan"; "readId"?: string; "expectedSha256"?: string; "offset"?: number; "limit"?: number; };
   "merchant_matomo_artifact_release": { "workspace": string; "readId": string; };
   "merchant_matomo_discover": { "workspace": string; "workspaceInstanceId": string; "operationId": string; "expectedRevision": number; "scope": { "period": "day" | "week" | "month" | "year" | "range"; "date": string; "segment"?: string; "language"?: string; }; };
   "merchant_matomo_discover_resume": { "workspace": string; "workspaceInstanceId": string; "operationId": string; "expectedRevision": number; "catalogId": string; };
@@ -58,7 +63,7 @@ export interface MatomoToolArguments {
   "merchant_matomo_receiving_reopen": { "workspace": string; "workspaceInstanceId": string; "operationId": string; "expectedRevision": number; "receivingId": string; };
 }
 export type MatomoToolName = keyof MatomoToolArguments;
-export type MatomoMutationName = "merchant_matomo_discover" | "merchant_matomo_discover_resume" | "merchant_matomo_capture_start" | "merchant_matomo_capture_resume" | "merchant_matomo_edition_build" | "merchant_matomo_edition_resume" | "merchant_matomo_edition_review" | "merchant_matomo_comparison_start" | "merchant_matomo_comparison_resume" | "merchant_matomo_comparison_review" | "merchant_matomo_merchant_configure" | "merchant_matomo_merchant_resume" | "merchant_matomo_merchant_save" | "merchant_matomo_package_export" | "merchant_matomo_package_recover" | "merchant_matomo_release_stage" | "merchant_matomo_release_select" | "merchant_matomo_release_start" | "merchant_matomo_release_stop" | "merchant_matomo_release_console_open" | "merchant_matomo_delivery_prepare" | "merchant_matomo_delivery_recover" | "merchant_matomo_delivery_review" | "merchant_matomo_delivery_publish" | "merchant_matomo_handover_prepare" | "merchant_matomo_handover_resume" | "merchant_matomo_receiving_receive" | "merchant_matomo_receiving_resume" | "merchant_matomo_receiving_reopen";
+export type MatomoMutationName = "merchant_matomo_merchant_adopt_original" | "merchant_matomo_discover" | "merchant_matomo_discover_resume" | "merchant_matomo_capture_start" | "merchant_matomo_capture_resume" | "merchant_matomo_edition_build" | "merchant_matomo_edition_resume" | "merchant_matomo_edition_review" | "merchant_matomo_comparison_start" | "merchant_matomo_comparison_resume" | "merchant_matomo_comparison_review" | "merchant_matomo_merchant_configure" | "merchant_matomo_merchant_resume" | "merchant_matomo_merchant_save" | "merchant_matomo_package_export" | "merchant_matomo_package_recover" | "merchant_matomo_release_stage" | "merchant_matomo_release_select" | "merchant_matomo_release_start" | "merchant_matomo_release_stop" | "merchant_matomo_release_console_open" | "merchant_matomo_delivery_prepare" | "merchant_matomo_delivery_recover" | "merchant_matomo_delivery_review" | "merchant_matomo_delivery_publish" | "merchant_matomo_handover_prepare" | "merchant_matomo_handover_resume" | "merchant_matomo_receiving_receive" | "merchant_matomo_receiving_resume" | "merchant_matomo_receiving_reopen";
 export interface MatomoToolMetadata {
  name:MatomoToolName; description:string; inputSchema:JsonObject;
  annotations?:Readonly<{readOnly?:boolean;idempotent?:boolean;destructive?:boolean;openWorld?:boolean}>;
@@ -92,7 +97,27 @@ export interface MatomoArtifactChunk {
  readId:string;file:MatomoArtifactFile;offset:number;bytesRead:number;
  nextOffset:number|null;encoding:'base64';data:string;
 }
+export interface MatomoOriginalSource {
+ schema:"stellar-forge.matomo-received-source.v1";operationId:string;workspaceId:string;
+ originalWorkspaceId:string;sourceSha256:string;archive:{bytes:string;sha256:string};
+ originalRevision:number;receivedAt:string;mode:"independent-editable-source";
+ counts:Record<string,number>;manifestSha256:string;receivingBudget:JsonObject|null;
+}
+export interface MatomoOriginalRecords {
+ workspace:string;origin:MatomoOriginalSource;
+ page:{table:MatomoOriginalTable;offset:number;limit:number;total:number;rows:JsonObject[]};
+}
+export interface MatomoOriginalFiles {
+ workspace:string;files:{offset:number;limit:number;total:number;
+ rows:Array<{path:string;bytes:string;sha256:string;mode:number;id:string}>};
+}
+export interface MatomoOriginalMerchant {
+ merchant:JsonObject;draft:JsonObject;configuration:JsonObject;editionId:string;provenance:JsonObject;
+}
 export type MatomoToolResult<N extends MatomoToolName> =
+ N extends 'merchant_matomo_original_records' ? MatomoOriginalRecords :
+ N extends 'merchant_matomo_original_files' ? MatomoOriginalFiles :
+ N extends 'merchant_matomo_original_merchant' ? MatomoOriginalMerchant :
  N extends 'merchant_matomo_workspaces' ? MatomoWorkspaceInventory :
  N extends 'merchant_matomo_open'|'merchant_matomo_status' ? MatomoWorkspaceState :
  N extends 'merchant_matomo_operation' ? MatomoOperationInspection :

@@ -157,6 +157,13 @@ export async function encrypted(sourceRoot,action,options,{environment=process.e
     return result;
   }finally{clearTimeout(timeout);clearTimeout(timer);signal?.removeEventListener('abort',abort);}
 }
+/** These files belong to the live SQLite writer lease, never to durable quote state. */
+export function quoteStoreTemporaryFile(path,quoteDatabase) {
+  if(!quoteDatabase)return false;
+  const writer=join(dirname(quoteDatabase),'writer.sqlite');
+  return [writer,writer+'-wal',writer+'-shm',writer+'-journal',
+    quoteDatabase+'-wal',quoteDatabase+'-shm',quoteDatabase+'-journal'].includes(path);
+}
 /** Drain the application before capturing. This backups the original SQLite tables, including transitions. */
 async function quoteBackup(source,destination) {
   const {DatabaseSync,backup}=await import('node:sqlite');
@@ -180,8 +187,7 @@ export async function capturePaths({roots,destination,quoteDatabase,signal}) {
       for(const name of(await readdir(path)).sort()){
         const child=join(path,name);
         if(name==='.application-owner.lock')continue;
-        if(quoteDatabase&&[quoteDatabase+'-wal',quoteDatabase+'-shm',join(dirname(quoteDatabase),'writer.sqlite'),
-          join(dirname(quoteDatabase),'writer.sqlite-wal'),join(dirname(quoteDatabase),'writer.sqlite-shm')].includes(child))continue;
+        if(quoteStoreTemporaryFile(child,quoteDatabase))continue;
         need(name!=='operator-keys.json'&&!name.endsWith('.env'),'APPLICATION_PROJECT_PRIVATE_KEY_IN_APPLICATION_STATE');
         await walk(child,role,depth+1);
       }

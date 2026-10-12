@@ -5,7 +5,7 @@ import { constants } from 'node:fs';
 import { open, realpath, rename, unlink } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { compileMerchant, startWooMerchant } from './seller.mjs';
+import { compileMerchant, startWooMerchant, WOO_MERCHANT_MAX_BYTES } from './seller.mjs';
 import { need } from '../sf88-operator-buyer-cli/config.mjs';
 import { openOutbox } from '../sf98-merchant-delivery/outbox.mjs';
 import { runWorker, workerStatus } from '../sf98-merchant-delivery/worker.mjs';
@@ -44,14 +44,13 @@ export async function readWooManagedFile(path, {max = 2097152, privateFile = fal
     return {path, bytes, sha256:sha(bytes)};
   } finally { await file.close(); }
 }
-export async function wooManagedSources({basket = false} = {}) {
+export async function wooManagedSources() {
   const names = [
-    'managed.mjs', 'seller.mjs', 'buyer.mjs',
+    'managed.mjs', 'seller.mjs', 'buyer.mjs', 'basket.mjs', 'basket-seller.mjs', 'versioned-seller.mjs',
     '../sf98-merchant-delivery/worker.mjs', '../sf98-merchant-delivery/delivery-lock.mjs',
     '../sf98-merchant-delivery/deliver.mjs', '../sf98-merchant-delivery/outbox.mjs',
     '../sf30-seller-sdk/serve.mjs', '../sf30-seller-sdk/native-factory.mjs',
     '../sf30-seller-sdk/operations/server.mjs',
-    ...(basket ? ['basket.mjs', 'basket-seller.mjs'] : []),
   ];
   const files = [];
   for (const name of names) {
@@ -68,12 +67,12 @@ export function wooManagedFacilitator(raw, {allowLocal = false} = {}) {
 }
 export async function reviewWooManaged({configFile, facilitator, allowLocalFacilitator = false,
   expectedConfigSha256, expectedSourceSha256} = {}) {
-  const input = await readWooManagedFile(absolute(configFile));
+  const input = await readWooManagedFile(absolute(configFile),{max:WOO_MERCHANT_MAX_BYTES});
   let raw;
   try { raw = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(input.bytes)); }
   catch { throw fail('WOO_MANAGED_CONFIG_JSON_REQUIRED'); }
   const compiled = compileMerchant(raw);
-  const source = await wooManagedSources({basket:Boolean(compiled.baskets?.length)});
+  const source = await wooManagedSources();
   for (const [expected, observed, name] of [
     [expectedConfigSha256, input.sha256, 'WOO_MANAGED_CONFIG_CHANGED'],
     [expectedSourceSha256, source.sha256, 'WOO_MANAGED_SOURCE_CHANGED'],
@@ -90,6 +89,9 @@ export async function reviewWooManaged({configFile, facilitator, allowLocalFacil
     deliveryUrl, deliveryHost:admission.hostname,
     adminUrl:admission.origin + wordpressBase + '/wp-admin/admin.php?page=sf98-woocommerce',
     outbox:compiled.outbox, secretEnv:compiled.secretEnv, facilitator:facilitatorUrl,
+    ...(compiled.versioned ? {catalogOrderUrl:compiled.catalogOrderUrl,
+      routeVersions:compiled.routeVersions.map(({version,productId,routeId,url,method,expect})=>
+        ({version,productId,routeId,url,method,expect}))} : {}),
     routes:compiled.routes.map(route => ({routeId:route.routeId, productId:route.productId,
       url:route.url, method:route.method, expect:route.expect})),
     catalogs:(compiled.baskets ?? []).map(catalog => ({catalogDigest:catalog.catalogDigest,
@@ -218,6 +220,9 @@ export async function startManagedWoo(review, {env = process.env, port = 0, sell
         // returned seller. Its original close waits verification/settlement.
         await starting?.catch(() => {});
         try { await merchant?.close(); } catch (error) { failure ??= error; }
+        // A forced socket-close deadline can precede native settlement completion.
+        // Keep the original delivery worker and lease until dispatch is idle.
+        await merchant?.seller.lifecycle.whenIdle();
       } finally {
         controller.abort(fail('WOO_MANAGED_STOP_REQUESTED'));
         const final = await worker;

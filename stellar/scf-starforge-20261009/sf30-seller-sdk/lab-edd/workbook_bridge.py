@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""MIT. Lab EDD worksheet intake and literal reissue using the maintained XLSX reader.
+"""MIT. Lab EDD worksheet intake and literal reissue with source-bound Excel readers.
 Standalone JSON control arrives on stdin; unchanged workbook bytes arrive on fd 3.
 The original native process broker can use private regular control/source/result files.
 The original workbook reader owns ZIP/XML parsing, limits, cell identity and epochs.
@@ -94,16 +94,19 @@ def decode(workbook, request):
             "keys": header_keys(headers),
             "records": records,
             "origin": {
-                "format": "xlsx", "containerSha256": workbook.sha, "containerBytes": workbook.size,
+                "format": getattr(workbook, "format", "xlsx"), "containerSha256": workbook.sha, "containerBytes": workbook.size,
                 "containerFilename": request["filename"], "sheetName": descriptor["name"],
-                "sheetIndex": index, "sheetCount": len(workbook.sheets), "sheetPart": descriptor["part"],
+                "sheetIndex": descriptor.get("index", index), "sheetCount": getattr(workbook, "sheet_count", len(workbook.sheets)), "sheetPart": descriptor["part"],
                 "epoch": workbook.epoch, "headerCells": header_cells,
                 "mergedRanges": [item["range"] for item in sheet["merged"]],
                 "hiddenRows": sorted(sheet["hidden"]), "columnRanges": sheet["metadata"]["columnRanges"],
-                "blankRows": sorted({row for (_, row) in sheet["cells"] if row > 1} - set(row_numbers)),
+                "blankRows": sorted(({row for (_, row) in sheet["cells"] if row > 1} |
+                    {row for row in sheet["metadata"].get("rowNumbers", []) if row > 1}) - set(row_numbers)),
                 "calculationProperties": workbook.calculation, "externalRelationships": workbook.external,
-                "externalDataParts": [name for name in sorted(workbook.names) if "/externalLinks/" in name or name.endswith("/connections.xml")],
-                "parser": reader.PARSER
+                "externalDataParts": getattr(workbook, "external_data_parts",
+                    [name for name in sorted(workbook.names) if "/externalLinks/" in name or name.endswith("/connections.xml")]),
+                "parser": getattr(workbook, "parser", reader.PARSER),
+                **({"legacy": workbook.legacy} if hasattr(workbook, "legacy") else {})
             }
         })
     return {"schema": SCHEMA, "tables": tables}
@@ -305,10 +308,25 @@ def regular_input(filename):
     return incoming
 
 def native_result(source, request):
-    workbook = reader.Workbook(source, request["source"])
+    filename = request.get("filename", "")
+    demand(isinstance(filename, str) and filename.lower().endswith((".xls", ".xlsx")),
+           "LAB_EDD_WORKBOOK_FORMAT", "Select an original XLSX or Excel 97–2003 BIFF8 XLS workbook.")
+    legacy = None
+    if filename.lower().endswith(".xls"):
+        legacy_spec = importlib.util.spec_from_file_location("starforge_lab_legacy_workbook",
+            Path(__file__).resolve().with_name("workbook_legacy.py"))
+        legacy = importlib.util.module_from_spec(legacy_spec)
+        legacy_spec.loader.exec_module(legacy)
+        workbook = legacy.LegacyWorkbook(source, request["source"], reader)
+    else:
+        workbook = reader.Workbook(source, request["source"])
     try:
         if request["operation"] == "decode":
             result = json.dumps(decode(workbook,request),ensure_ascii=False,separators=(",",":")).encode("utf-8")
+        elif legacy is not None:
+            result = legacy.render_legacy(workbook, request, {"column_count":column_count,
+                "source_rows":source_rows, "text":text, "literal_cell":literal_cell,
+                "serialized_xml":serialized_xml})
         else:
             result = render(workbook,request)
         allowance = (512 if request["operation"] == "decode" else 128) * 1024 * 1024
@@ -316,7 +334,8 @@ def native_result(source, request):
                "The complete native result exceeds the file job output capacity.")
         return result
     finally:
-        workbook.zip.close()
+        if legacy is not None: workbook.close()
+        else: workbook.zip.close()
 
 def main(argv=None):
     args = sys.argv[1:] if argv is None else argv

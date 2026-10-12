@@ -70,14 +70,14 @@ async function identity(path){
  if(bytes!==stat.size)throw fault('COOPS_EXPORT_CHANGED','The retained export changed while being read.',409);
  return{bytes,sha256:digest.digest('hex')};
 }
-async function same(path,expected){const found=await identity(path);if(found.bytes!==expected.bytes||found.sha256!==expected.sha256)throw fault('COOPS_EXPORT_CHANGED','The retained export bytes changed.',409);return found;}
+export async function verifyRetainedFile(path,expected){const found=await identity(path);if(found.bytes!==expected.bytes||found.sha256!==expected.sha256)throw fault('COOPS_EXPORT_CHANGED','The retained export bytes changed.',409);return found;}
 export async function materializeExport(store,item,producer,{maximum=MAX,result}={}){
  if(!ID.test(item.id))throw fault('COOPS_EXPORT_ID','Use an original native export identity.');
  const directory=await privateDirectory(join(store.root,'exports'),{create:true}),target=join(directory,item.id+'.body'),receiptPath=join(directory,item.id+'.receipt.json'),
   selectionSha256=hashBytes(Buffer.from(stable(item)));
  let prior;
  try{prior=JSON.parse(await readFile(receiptPath,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
- if(prior){if(prior.selectionSha256!==selectionSha256)throw fault('COOPS_EXPORT_SELECTION','The original export identity belongs to another selection.',409);await same(target,prior);return prior;}
+ if(prior){if(prior.selectionSha256!==selectionSha256)throw fault('COOPS_EXPORT_SELECTION','The original export identity belongs to another selection.',409);await verifyRetainedFile(target,prior);return prior;}
  const temporary=join(directory,'.'+item.id+'.'+randomBytes(12).toString('hex')+'.tmp'),handle=await open(temporary,constants.O_WRONLY|constants.O_CREAT|constants.O_EXCL|constants.O_NOFOLLOW,0o600);
  const digest=createHash('sha256');let bytes=0,finished=false;
  try{
@@ -88,7 +88,7 @@ export async function materializeExport(store,item,producer,{maximum=MAX,result}
   }
   await handle.sync();await handle.close();finished=true;
   const sha256=digest.digest('hex');
-  try{await link(temporary,target);}catch(e){if(e.code!=='EEXIST')throw e;await same(target,{bytes,sha256});}
+  try{await link(temporary,target);}catch(e){if(e.code!=='EEXIST')throw e;await verifyRetainedFile(target,{bytes,sha256});}
   const dir=await open(directory,constants.O_RDONLY|constants.O_DIRECTORY);try{await dir.sync();}finally{await dir.close();}
   const receipt={...item,selectionSha256,relativeFile:'exports/'+item.id+'.body',bytes,sha256,downloadUrl:'/api/exports/'+item.id,...(result?{result:await result()}:{} )};
   await store.immutable(receiptPath,jsonBytes(receipt));return receipt;
@@ -96,7 +96,7 @@ export async function materializeExport(store,item,producer,{maximum=MAX,result}
 }
 export async function retainedExport(store,item){
  if(!ID.test(item.id)||item.relativeFile!=='exports/'+item.id+'.body')throw fault('COOPS_EXPORT_FILE','Use the original retained export path.',409);
- const path=join(store.root,item.relativeFile);await same(path,item);return{item,path,stream:()=>createReadStream(path)};
+ const path=join(store.root,item.relativeFile);await verifyRetainedFile(path,item);return{item,path,stream:()=>createReadStream(path)};
 }
 export function tableProjection(mapping,table){
  if(mapping&&mapping.table!==table)throw fault('COOPS_MAPPING_TABLE','The selected model-input mapping belongs to another table.');

@@ -73,8 +73,14 @@ export class MerchantSensorThingsWorkspaces{
     try{
       if(definition.applicationUrlFile){
         const saved=await privateJSON(definition.applicationUrlFile,65536);
-        if(saved.original?.schema!==STARTUP_SCHEMA||saved.original.workspaceId!==definition.workspaceId||typeof saved.url!=='string')
-          throw fault('MCP_APPLICATION_CHANGED','The original managed Applications record belongs to another workspace.',409);
+        const original=saved?.original;
+        const workspaceStartup=original?.schema===STARTUP_SCHEMA;
+        const deskStartup=saved?.schema==='stellar-forge.application-url.v1'&&saved.command==='sensorthings-desk'&&
+          original?.schema==='stellar-forge.sensorthings-desk-startup.v1'&&original.status==='SENSORTHINGS_DESK_READY';
+        // The maintained Applications observer keeps url on the outer record
+        // and preserves the actual source-owned startup in original.
+        if(!(workspaceStartup||deskStartup)||original.workspaceId!==definition.workspaceId||typeof saved.url!=='string')
+          throw fault('MCP_APPLICATION_CHANGED','Select the original workspace or Desk startup record for this exact workspace.',409);
         raw=saved.url;
       }else if(definition.consoleUrlFile)raw=new TextDecoder('utf-8',{fatal:true}).decode(await readOwned(definition.consoleUrlFile,4096)).trim();
       else raw=this.#environment[definition.consoleUrlEnv];
@@ -155,6 +161,46 @@ export class MerchantSensorThingsWorkspaces{
     if(name==='merchant_sensorthings_action'){
       fields(input.payload,ACTIONS[input.action]??[]);
       return wrap(await this.#request(session,'/api/action',{body:input,operationId:input.operationId}));
+    }
+    if(name==='merchant_sensorthings_analysis'){
+      const mode=input.mode,plainRead=['overview','inbox'].includes(mode),rowsRead=mode==='rows';
+      if(plainRead&&input.id!==undefined||!plainRead&&input.id===undefined||
+        !rowsRead&&(input.offset!==undefined||input.limit!==undefined))
+        throw fault('MCP_ANALYSIS_SELECTION','Use an exact selected ID for this read; row paging belongs only to rows.');
+      if(!plainRead)checked(input.id,['project','publication','python-source'].includes(mode)?/^[A-Za-z0-9_-]{8,100}$/:SHA,'analysis selection identity');
+      const paths={
+        overview:'/api/analysis',inbox:'/api/analysis/inbox',
+        project:'/api/analysis/projects/'+input.id,
+        version:'/api/analysis/versions/'+input.id,
+        summary:'/api/analysis/versions/'+input.id+'/summary',
+        rows:'/api/analysis/versions/'+input.id+'/rows?offset='+(input.offset??0)+'&limit='+(input.limit??100),
+        streams:'/api/analysis/editions/'+input.id+'/streams',
+        comparison:'/api/analysis/comparisons/'+input.id,
+        publication:'/api/analysis/publications/'+input.id,
+        'python-source':'/api/analysis/python-sources/'+input.id
+      };
+      const r=await this.#request(session,paths[mode]);
+      if(r.ok){
+        const v=r.native;
+        if(!plain(v))throw fault('MCP_ANALYSIS_RESPONSE','The original analysis response is incomplete.',409);
+        const invalid=
+          mode==='overview'&&(v.schema!=='stellar-forge.sensorthings-analysis-view.v1'||v.workspaceId!==definition.workspaceId)||
+          mode==='project'&&v.project?.id!==input.id||
+          ['version','comparison','publication','python-source'].includes(mode)&&v.id!==input.id||
+          mode==='python-source'&&(v.schema!=='stellar-forge.sensorthings-python-source.v1'||v.originalWorkspaceId!==definition.workspaceId||!Array.isArray(v.files))||
+          mode==='summary'&&(v.schema!=='stellar-forge.sensorthings-analysis-summary.v1'||!SHA.test(v.editionId??''))||
+          mode==='streams'&&(v.editionId!==input.id||!Array.isArray(v.streams))||
+          mode==='inbox'&&(typeof v.bound!=='boolean'||!Array.isArray(v.files));
+        if(invalid)throw fault('MCP_ANALYSIS_IDENTITY','The original analysis response belongs to another selected identity.',409);
+        if(rowsRead){
+          const offset=input.offset??0;
+          if(!SHA.test(v.editionId??'')||!Array.isArray(v.rows)||!Number.isSafeInteger(v.total)||v.total<0||
+             v.offset!==offset||v.rows.length>(input.limit??100)||v.nextOffset!==(offset+v.rows.length<v.total?offset+v.rows.length:null)||
+             v.rows.some(row=>!plain(row)||!plain(row.source)||!SHA.test(row.source.sha256??'')||typeof row.source.jsonPointer!=='string'))
+            throw fault('MCP_ANALYSIS_ROWS','The original selected row page or source identity is incomplete.',409);
+        }
+      }
+      return wrap(r);
     }
     let route;
     if(name==='merchant_sensorthings_view')route='/api/view';

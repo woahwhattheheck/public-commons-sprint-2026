@@ -167,3 +167,68 @@ A completed receiving writes:
 The bootstrap also retains `installed-receiving-checkpoint.json` and the generated direct manifest in its work directory. Build mode retains its original package build and runtime there. Retained mode records the exact external runtime descriptor and native inspection, while the original installation remains at its existing path. These files let another operator continue the same source and project without reconstructing the work from screenshots or a chat transcript.
 
 The managed application source was integrated in PR1640. The existing original MCP research and durable job recovery deliveries precede this installed Applications journey. Completion of this additional journey is recorded by its own final result after all seven stages return.
+
+
+## Continue an ended source failure before application creation
+
+An installer can produce a genuine READY receipt before the application review encounters a source defect. Preserve that READY receipt and the failed native result. A corrected source belongs to an explicit successor; the existing receiving manifest continues to describe the original attempt.
+
+This source-continuation path is available when the original application checkpoint has no review, application, HTTP request, run or completed stage. It can retain an attached runtime ID and the original database binding. The receiver verifies that the selected native result actually ended with a nonzero exit and that the original checkpoint is bound to its exact original application manifest. A completed receiving result or any saved application work requires the existing application's recovery path.
+
+Select four complete, retained originals in a private descriptor:
+
+```json
+{
+  "schema": "stellar-forge.coingecko-source-continuation.v1",
+  "reason": "Describe the observed source failure and the corrected source selected for this same receiving.",
+  "predecessor": {
+    "manifest": {
+      "path": "/absolute/original-attempt/applications-receiving.json",
+      "sha256": "<SHA-256 of those complete original bytes>"
+    },
+    "checkpoint": {
+      "path": "/absolute/original-output/application-checkpoint.json",
+      "sha256": "<SHA-256 of those complete original bytes>"
+    },
+    "terminal": {
+      "path": "/absolute/original-native-record/result.json",
+      "sha256": "<SHA-256 of the actual completed failed result>"
+    },
+    "runtime": {
+      "path": "/absolute/original-output/retained-runtime.json",
+      "sha256": "<SHA-256 of the actual original READY descriptor>"
+    }
+  }
+}
+```
+
+The terminal record uses the maintained native fields: `state: "failed"`, nonzero integer `exit_code`, and actual `started_at`/`ended_at`. The runtime descriptor must identify the source and runtime directory in the failed manifest. Its installation, profile, lock and source-manifest hashes remain original even when that completed invocation's temporary runtime directory no longer exists. Keep the original archive and its independently retained dependency graph available through their existing custody.
+
+Use the source publisher's complete corrected package and the original installer to prepare its runtime. When its compatible dependency graph already exists, use the original installer's explicit adoption API. Keep the real selected profile: a new complete schema/OpenAPI/MCP profile is distinct from a previously observed MCP-only profile. The new descriptor must come from the actual READY inspector result. This receiving continuation itself requires `--retained-runtime` and does not start a second source build or run npm.
+
+Continue the same original selection, project, source-file IDs and operation prefix through a new receiving work/output prefix:
+
+```sh
+node receiving/installed.mjs \
+  --selection /absolute/original/selection.json \
+  --work /absolute/original-operation/source-continuations/01/work \
+  --output /absolute/original-operation/source-continuations/01/output \
+  --retained-runtime /absolute/corrected-runtime/ready-descriptor.json \
+  --source-predecessor /absolute/original-operation/source-continuation.json
+```
+
+Use the maintained native placement's terminal-result successor when the original command has already ended. Retain its original business operation and input binding. The receiving work, console, runtime home and recipient directory are separate from the failed prefix; the research workspace and its database inode remain the originals. The old input, checkpoint, output, archive and result are not modified.
+
+For direct use of `applications.mjs`, add `sourceContinuation: {path, sha256}` to the new application manifest, selecting the exact private descriptor above. The full manifest continues to select the actual READY runtime. `readCoinGeckoSourceContinuation(path, selection)` is also exported for the original caller's preflight. It only reads and validates the original evidence; it does not start an application or mutate the research database.
+
+The successor validates the same operation prefix, project, workspace directory, actor, source-file list, private configuration and local-merchant choice. A true `allowLocalMerchant` selection is forwarded explicitly; an absent legacy flag continues to mean false. It then checks the actual original directory and database identities through the original managed-source API. Selecting corrected source never adopts a replacement research database.
+
+With `--source-predecessor`, the bootstrap calls its published sibling `applications.mjs` directly. The original selection's `driver` path stays unchanged as historical input; it is not assumed to contain the corrected receiver. The generated manifest pins the paired receiver's absolute path and SHA-256 as `sourceContinuationReceiver`, and the bootstrap verifies the returned continuation receipt against those bytes and the selected runtime before reporting completion. Ordinary receiving without a source predecessor continues to delegate to the original configured driver.
+
+Before any application review, the receiver retains the original managed API's configuration snapshot in `application-checkpoint.json.originalConfiguration`. This contains the configuration path and SHA-256, plus every selected profile's original path, config hash and workspace device/inode identity. The native configuration reader remains authoritative; this continuation does not create a signer or rewrite profiles. Reopening refuses a changed configuration or profile even if it remains at the same filename.
+
+For an older failed checkpoint that selected a configuration file but has no `originalConfiguration`, add `predecessor.configuration: {path, sha256}` to the private descriptor. This must identify an existing original receipt containing the native returned `{configuration: {path, sha256, profiles}}` or that direct snapshot. Its complete original bytes are retained alongside the four required records. A newly read current configuration is not historical evidence. If both the old checkpoint and a receipt contain a snapshot, they must agree exactly. An original selection without a configuration file has the native empty snapshot `{path:null, sha256:null, profiles:[]}` and needs no extra receipt.
+
+After verifying the actual database and configuration, and before creating the application, the receiver saves exact copies of the four small original JSON records, any supplied original configuration receipt, and the descriptor under `source-history/<descriptor-sha256>/`. Create-only publication preserves existing bytes. `SOURCE_CONTINUATION_RECEIPT.json` binds their original and retained paths, byte counts and hashes, the original failed outcome, the configuration snapshot, both runtime/source/profile identities, the actual receiver, the original configured driver and the successor manifest. It retains the original database binding and start time in the new checkpoint. The final native result and installed receiving checkpoint return that receipt's path and hash.
+
+If this continuation is interrupted, reopen with the identical selection, descriptor, runtime descriptor, work and output paths. Its own saved request IDs and application lifecycle resume normally. Changing or removing the source-continuation descriptor, reusing the failed checkpoint as the new output, changing the original project inputs, or substituting different evidence is refused. A later failure after review or application creation stays with that newly saved original application and its normal recovery operations.

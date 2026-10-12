@@ -10,11 +10,11 @@ import { gdeltLoopbackJson,gdeltLoopbackUrl } from './loopback.mjs';
 const ROOT='stellar/scf-starforge-20261009/sf30-seller-sdk/gdelt/';
 const STARTUP='stellar-forge.gdelt-workspace-startup.v1';
 export function gdeltApplication(common=[]) {
-  return {id:'gdelt-events',command:'gdelt',title:'GDELT event desk',terminal:true,
+  return {id:'gdelt-events',command:'gdelt',title:'GDELT article and event desk',terminal:true,
     requiredSource:ROOT+'launch.mjs',
-    description:'Acquire official Events and Mentions updates, review source coverage, publish paid datasets and reopen complete customer source files.',
+    description:'Acquire official Events/Mentions or GKG article updates, review entities and source coverage, publish paid datasets and reopen complete customer source files.',
     fields:[
-      field('workspaceDirectory','Original event project','path',true,'Select an initialized GDELT project or a received customer project.'),
+      field('workspaceDirectory','Original GDELT project','path',true,'Select an initialized GDELT project or a received customer project.'),
       field('buyerConfig','Original buyer configuration','path',false,'Existing private SF88 runtime, payer and intent journal for approval, paid acquisition and recovery.'),
       field('facilitator','Configured facilitator URL','text',false,'Original HTTPS facilitator; leave empty for challenge-only merchant serving.'),
       field('allowLocalFacilitator','Allow configured local facilitator','boolean',false,'Explicitly allow the original http://127.0.0.1 service.'),

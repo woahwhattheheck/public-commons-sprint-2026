@@ -21,15 +21,15 @@ Completion is published under the original output lease after SDK clients, MCP o
 | Original 329-file inventory | `0466d93ba98844dcc2cb1b4bc8efdfc5d10fb363` |
 | Complete adopted source selection | `cbe7f008696f6e2d63dca8481c06ce71c1e265ce` |
 | Published SDK product | `055c5231fa50c654e2d720062f72e0df42ea9865` |
-| Guarded source preparation | `92667ebfdda549d8ebd69afeade7b6f8ec5c681b` |
-| Complete compressed source packet | `96acd68fbf461ee6b5809a592f0f4de04f1065d4` |
-| Original-packet receiving launcher | `03355a9e2330ce07f13e31d8a73ece5bf13b174d` |
+| Guarded source preparation | `a8eb2c0e427fc7c3dda73e67dc438479c3785b61` |
+| Complete compressed source packet | `fe1b46df17427216376bf6709ddb37aa6139bd77` |
+| Original-packet receiving launcher | `1e17c48eacb2819b9d74a2651449f2153ba6009c` |
 
 The selected source contains 341 files and 3,906,741 bytes. Five native donor leaves receive the exact reviewed replacements and twelve files are added. The remaining 324 original donor files retain their original bytes. The four prerequisites supplement the thirteen-file SDK cohort: the feed tool catalogue, retained file limits, retained file reader and original MCP HTTP handler.
 
 The original publisher and draft-store implementations remain in this donor. Their complete buyer review, prepare, action result, saved metadata recovery, saved configuration and export interfaces were compared directly with the maintained implementations used during review.
 
-The source packet is 179,947 UTF-8 bytes. It uses the existing Commons source packet encoder and the original installed `cloud_source_command.decode_packet`; it expands to 409,533 bytes containing every selected new source body, the complete receiving driver, source selection and guarded preparer. Git blob identifiers above identify complete file bytes, independently of native artifact SHA-256 identifiers.
+The source packet is 165,372 UTF-8 bytes. It uses the existing `gzip+base64` Commons source-packet format and the original installed `cloud_source_command.decode_packet`; it expands to 415,391 bytes containing every selected new source body, the complete receiving driver, source selection and guarded preparer. Git blob identifiers above identify complete file bytes, independently of native artifact SHA-256 identifiers.
 
 ## Prepare the existing source
 
@@ -52,6 +52,12 @@ A carrier that already has the launcher can instead read the packet from an immu
 The launcher accepts `--request-sha256` when the original owner has already captured that exact request digest. On the first adoption it also freezes the entire unchanged original request in the private adoption directory under the native record lock. Every continuation checks the frozen original bytes, operation, project and command. The request is preserved with all its existing capacity, source, runtime and artifact fields.
 
 The preparer checks the selected complete host identity, original donor inventory, original OPML and installed dependency link. It checks every old or already-adopted file before publishing anything. It then retains the five replaced source files and the original driver, writes new imports before their updated consumers, reads back all 341 selected files, and publishes the receiving driver last. Each file is complete and fsynced before publication. A repeated preparation recognizes the exact existing postimages and preserved original bytes.
+
+The live driver and its private backup have separate permissions. The existing original adoption records `driverMode: 420` (0644), while its exact preserved preimage is private at 0600. The preparer validates the complete saved adoption against the same request, source, driver and runtime identities, then checks the live driver against that recorded mode. It does not infer 0644 from the backup or chmod either retained file.
+
+For a new adoption, the exact original caller supplies its mode. Before any replacement the preparer saves `driver-mode.json`, bound to the original operation, request, source selection and both driver identities. Its private preimage can therefore stay 0600 through interruption and reopen while the live caller retains its original mode. Existing exact preimages keep their own modes; the twelve new SDK leaves and five selected SDK replacements keep their declared 0600 modes.
+
+Completed v1 receipts with `driverMode` are reopened byte-for-byte. The original v1 shape without that field retains its original 0600 contract. An interrupted original v1 replacement without a receipt is accepted only with both original private files still at 0600; it cannot establish another live mode. A completed, fully matched source adoption returns its original receipt after directory sync without writing another source or mode-binding file.
 
 The driver independently checks the full selected source before starting its original consoles. Both the original inventory and the additional adopted-source manifest remain available.
 

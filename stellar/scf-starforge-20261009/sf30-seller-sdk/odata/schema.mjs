@@ -25,9 +25,16 @@ const EDM = 'http://docs.oasis-open.org/odata/ns/edm';
 const EDMX = 'http://docs.oasis-open.org/odata/ns/edmx';
 const IDENTIFIER = /^[\p{L}_][\p{L}\p{N}_]*$/u;
 const own = (value, key) => Object.prototype.hasOwnProperty.call(value, key);
-const name = value => {
+const standardName = value => {
   if (typeof value !== 'string' || value.length > 512 || !IDENTIFIER.test(value))
     throw fail('ODATA_CSDL_NAME', 'CSDL contains an invalid identifier.', 502);
+  return value;
+};
+// Central publishes dotted local type/set names and hyphenated repeat-parent keys.
+// The explicit dialect preserves those original names; standard CSDL remains strict.
+const centralName = value => {
+  if (typeof value !== 'string' || value.length > 512 || !/^[\p{L}_][\p{L}\p{N}_.-]*$/u.test(value))
+    throw fail('ODATA_CSDL_NAME', 'Central CSDL contains an invalid identifier.', 502);
   return value;
 };
 const bool = (value, fallback) => {
@@ -130,7 +137,7 @@ function addUnique(map, key, value) {
   if (own(map, key)) throw fail('ODATA_CSDL_DUPLICATE', 'CSDL repeats ' + key + '.', 502);
   map[key] = value;
 }
-function property(raw, json = false) {
+function property(raw, json = false, name = standardName) {
   const p = json ? '$' : '', type = raw[p + 'Type'] ?? (json ? 'Edm.String' : undefined);
   if (typeof type !== 'string') throw fail('ODATA_CSDL_TYPE', 'A property has no CSDL type.', 502);
   const collection = /^Collection\((.+)\)$/.exec(type);
@@ -138,7 +145,12 @@ function property(raw, json = false) {
     collection: collection !== null || bool(raw[p + 'Collection'], false),
     nullable: bool(raw[p + 'Nullable'], json ? false : true), ...facets(raw, p) };
 }
-function xmlModel(input) {
+function centralContainerName(value) {
+  if (typeof value !== 'string' || !value || value.length > 1024 || /[\u0000-\u001f\u007f]/u.test(value))
+    throw fail('ODATA_CSDL_NAME', 'Central CSDL contains an invalid form container name.', 502);
+  return value;
+}
+function xmlModel(input, name = standardName, containerName = name) {
   const root = xmlTree(input);
   if (root.ns !== EDMX || root.name !== 'Edmx') throw fail('ODATA_CSDL_VERSION', 'Expected an OData 4 EDMX document.', 502);
   const model = blankModel(root.attributes.Version);
@@ -161,8 +173,8 @@ function xmlModel(input) {
         const value = { name: attr.Name, qualifiedName: key, namespace: ns, baseType: attr.BaseType ?? null,
           abstract: bool(attr.Abstract, false), openType: bool(attr.OpenType, false), hasStream: bool(attr.HasStream, false),
           declaredKeys: keys.flatMap(keyNode => children(keyNode, 'PropertyRef').map(ref => ref.attributes.Name)),
-          properties: children(node, 'Property').map(child => property(child.attributes)),
-          navigationProperties: children(node, 'NavigationProperty').map(child => ({ ...property(child.attributes),
+          properties: children(node, 'Property').map(child => property(child.attributes, false, name)),
+          navigationProperties: children(node, 'NavigationProperty').map(child => ({ ...property(child.attributes, false, name),
             partner: child.attributes.Partner ?? null, containsTarget: bool(child.attributes.ContainsTarget, false) })) };
         addUnique(model[node.name === 'EntityType' ? 'entityTypes' : 'complexTypes'], key, value);
       } else if (node.name === 'EnumType') {
@@ -177,7 +189,7 @@ function xmlModel(input) {
         const key = ns + '.' + name(attr.Name);
         addUnique(model.typeDefinitions, key, { qualifiedName: key, underlyingType: attr.UnderlyingType, ...facets(attr) });
       } else if (node.name === 'EntityContainer') {
-        const key = ns + '.' + name(attr.Name);
+        const key = ns + '.' + containerName(attr.Name);
         addUnique(model.containers, key, { name: attr.Name, qualifiedName: key, extends: attr.Extends ?? null,
           entitySets: children(node, 'EntitySet').map(set => ({ name: name(set.attributes.Name), entityType: set.attributes.EntityType,
             includeInServiceDocument: bool(set.attributes.IncludeInServiceDocument, true) })),
@@ -187,7 +199,7 @@ function xmlModel(input) {
   }
   return model;
 }
-function jsonModel(input) {
+function jsonModel(input, name = standardName, containerName = name) {
   const doc = typeof input === 'string' || input instanceof Uint8Array ? parseLossless(input) : input;
   if (!plain(doc)) throw fail('ODATA_CSDL_JSON', 'Expected a CSDL JSON object.', 502);
   const model = blankModel(doc.$Version); model.entityContainer = doc.$EntityContainer ?? null;
@@ -202,12 +214,12 @@ function jsonModel(input) {
     if (schema.$Alias) addUnique(model.aliases, name(schema.$Alias), ns);
     for (const [local, node] of Object.entries(schema)) {
       if (local.startsWith('$') || local.includes('@') || !plain(node)) continue;
-      const key = ns + '.' + name(local);
+      const key = ns + '.' + (node.$Kind === 'EntityContainer' ? containerName(local) : name(local));
       if (['EntityType', 'ComplexType'].includes(node.$Kind)) {
         const props = [], navigation = [];
         for (const [field, value] of Object.entries(node)) {
           if (field.startsWith('$') || field.includes('@') || !plain(value)) continue;
-          const normalized = property({ ...value, Name: field }, true);
+          const normalized = property({ ...value, Name: field }, true, name);
           if (value.$Kind === 'NavigationProperty') navigation.push({ ...normalized, partner: value.$Partner ?? null, containsTarget: bool(value.$ContainsTarget, false) });
           else if (value.$Kind === undefined || value.$Kind === 'Property') props.push(normalized);
         }
@@ -309,10 +321,14 @@ export function normalizeCatalog(model) {
   }
   return model;
 }
-export function parseMetadata(input, { contentType = '' } = {}) {
+export function parseMetadata(input, { contentType = '', identifierDialect = 'odata' } = {}) {
+  if (!['odata', 'odk-central'].includes(identifierDialect))
+    throw fail('ODATA_CSDL_DIALECT', 'Choose the standard OData or native ODK Central identifier dialect.');
+  const readName = identifierDialect === 'odk-central' ? centralName : standardName;
+  const readContainer = identifierDialect === 'odk-central' ? centralContainerName : standardName;
   const leading = typeof input === 'string' ? input.trimStart()[0] : input instanceof Uint8Array ?
     new TextDecoder().decode(input.subarray(0, 64)).replace(/^\uFEFF/, '').trimStart()[0] : '{';
-  return normalizeCatalog(contentType.toLowerCase().includes('json') || leading === '{' ? jsonModel(input) : xmlModel(input));
+  return normalizeCatalog(contentType.toLowerCase().includes('json') || leading === '{' ? jsonModel(input, readName, readContainer) : xmlModel(input, readName, readContainer));
 }
 export function underlyingType(catalog, type) {
   const seen = new Set();

@@ -9,7 +9,9 @@ import { pathToFileURL, fileURLToPath } from 'node:url';
 import { absolute, privateDirectory, readJson, readBytes, parseJson, writeJson, writeBytes,
   syncDirectory, jsonBytes, digest, now, object, need, BuyerError, exists, prepareWriteReservations } from './store.mjs';
 import { checkWorkspace, workspaceCommand } from './workspace.mjs';
-import { unstartedAttempt, resultRecordLimit, attemptRecordLimit } from './runtime.mjs';
+import { NativeRuntime, unstartedAttempt, resultRecordLimit, attemptRecordLimit } from './runtime.mjs';
+import { readSuccessorRuntimeSource, verifySuccessorRuntimeSource } from './runtime-source.mjs';
+import { normalizeNativeFileReservation } from './file-reservation.mjs';
 import { inspectPreapprovalWireCheckpoint, readPreapprovalWireHistory,
   withPreapprovalWireHistory } from '../attempt-wire.mjs';
 
@@ -27,6 +29,122 @@ const checkSignal = signal => {
 };
 const details = ({ raw, ...value }) => value;
 
+const RUNTIME_SELECTION = 'stellar-forge.node-preapproval-runtime-selection.v1';
+const canonical = value => JSON.stringify(value, (_key, item) => object(item)
+  ? Object.fromEntries(Object.keys(item).sort().map(key => [key, item[key]])) : item);
+const same = (left, right) => canonical(left ?? null) === canonical(right ?? null);
+
+function validateRuntimeSelection(value) {
+  if (value === undefined) return undefined;
+  need(object(value) && value.schema === RUNTIME_SELECTION &&
+    Object.keys(value).every(key => ['schema', 'originalRuntimeDirectory', 'runtimeSource',
+      'nativeFileReservation'].includes(key)) &&
+    typeof value.originalRuntimeDirectory === 'string' &&
+    absolute(value.originalRuntimeDirectory) === value.originalRuntimeDirectory &&
+    value.runtimeSource?.schema === 'stellar-forge.node-successor-runtime-binding.v1' &&
+    HASH.test(value.runtimeSource.sha256 ?? '') &&
+    value.runtimeSource.directory !== value.originalRuntimeDirectory,
+    'PREAPPROVAL_RUNTIME_SELECTION_INVALID');
+  const reservation = normalizeNativeFileReservation(value.nativeFileReservation ?? undefined);
+  need(same(reservation, value.nativeFileReservation),
+    'PREAPPROVAL_RUNTIME_SELECTION_INVALID');
+  return copy(value);
+}
+
+function originalRuntimeOptions(runtime) {
+  return {
+    node: runtime.node, environment: { ...runtime.environment },
+    timeoutMs: runtime.timeoutMs, cleanupGraceMs: runtime.cleanupGraceMs,
+    outputLimit: runtime.outputLimit,
+    ...(runtime.reserveFile === undefined ? {} : { reserveFile: runtime.reserveFile }),
+    ...(runtime.nativeFileReservation === undefined ? {} :
+      { nativeFileReservation: copy(runtime.nativeFileReservation) }),
+    ...(runtime.nativeRuntimeSource === undefined ? {} :
+      { nativeRuntimeSource: copy(runtime.nativeRuntimeSource) }),
+  };
+}
+
+async function selectedRuntime(operation, selection, signal) {
+  if (selection === undefined) return operation.buyer.runtime;
+  const chosen = validateRuntimeSelection(selection);
+  need(chosen.originalRuntimeDirectory === operation.buyer.runtime.directory,
+    'PREAPPROVAL_ORIGINAL_RUNTIME_CHANGED');
+  const binding = await verifySuccessorRuntimeSource(chosen.runtimeSource, { signal });
+  return new NativeRuntime({
+    ...originalRuntimeOptions(operation.buyer.runtime), runtimeDirectory: binding.directory,
+    nativeRuntimeSource: binding,
+    nativeFileReservation: chosen.nativeFileReservation ?? undefined,
+  });
+}
+
+async function chooseRuntime(operation, current, descriptor, reservation, signal) {
+  const retained = current.history.at(-1)?.plan.executionRuntime;
+  if (descriptor === undefined) {
+    if (reservation !== undefined)
+      need(retained !== undefined && same(retained.nativeFileReservation, reservation),
+        'PREAPPROVAL_RUNTIME_SOURCE_REQUIRED');
+    if (retained !== undefined) await selectedRuntime(operation, retained, signal);
+    return retained === undefined ? undefined : copy(retained);
+  }
+  const binding = await readSuccessorRuntimeSource(descriptor, { signal });
+  need(binding.directory !== current.meta.runtimeDirectory &&
+    current.meta.runtimeDirectory === operation.buyer.runtime.directory,
+    'PREAPPROVAL_RUNTIME_MUST_BE_DISTINCT');
+  const selectedReservation = reservation ??
+    normalizeNativeFileReservation(operation.buyer.runtime.nativeFileReservation);
+  return validateRuntimeSelection({
+    schema: RUNTIME_SELECTION, originalRuntimeDirectory: current.meta.runtimeDirectory,
+    runtimeSource: binding, nativeFileReservation: selectedReservation ?? null,
+  });
+}
+
+function nativeDiagnostic(sources) {
+  const output = sources.find(value => value.name === 'stderr.log');
+  if (!output?.exists || output.bytes === 0) return undefined;
+  need(output.bytes <= 4096, 'PREAPPROVAL_NATIVE_OUTPUT_EXISTS');
+  const error = parseJson(output.raw);
+  need(object(error) && Object.keys(error).length === 2 &&
+    Object.keys(error).every(key => ['error', 'retry'].includes(key)) &&
+    typeof error.error === 'string' && /^[A-Z0-9_]{1,120}$/.test(error.error) &&
+    error.retry === 'NO_AUTOMATIC_RETRY', 'PREAPPROVAL_NATIVE_OUTPUT_EXISTS');
+  // This retained diagnostic grants no permission to repeat. The independent
+  // process, original zero-reservation audit and inactive wire remain required.
+  return { schema: 'stellar-forge.node-preapproval-native-diagnostic.v1',
+    code: error.error, bytes: output.bytes, sha256: output.sha256 };
+}
+
+/** Reopen the selected recovery controller while keeping the original native
+ * runtime/configuration identity. This read never prepares or executes a plan. */
+export async function openPreapprovalRecoveryOperation(operation, { signal } = {}) {
+  checkSignal(signal);
+  if (!await exists(join(operation.directory, 'preapproval-continuation.json')))
+    return operation;
+  const current = await chain(operation);
+  const selection = current.history.at(-1)?.plan.executionRuntime;
+  if (selection === undefined) return operation;
+  validateRuntimeSelection(selection);
+  need(selection.originalRuntimeDirectory === current.meta.runtimeDirectory &&
+    operation.buyer.runtime.directory === current.meta.runtimeDirectory,
+    'PREAPPROVAL_ORIGINAL_RUNTIME_CHANGED');
+  const binding = await verifySuccessorRuntimeSource(selection.runtimeSource, { signal });
+  const { Buyer } = await import(pathToFileURL(join(binding.directory, 'node/client.mjs')).href);
+  need(typeof Buyer === 'function', 'PREAPPROVAL_RUNTIME_BUYER_REQUIRED');
+  const original = operation.buyer;
+  const buyer = new Buyer({
+    ...originalRuntimeOptions(original.runtime),
+    runtimeDirectory: original.runtime.directory, stateDirectory: original.stateDirectory,
+    operatorProfile: original.operatorProfile,
+    datasetReportLimit: original.datasetReportLimit, inboxReportLimit: original.inboxReportLimit,
+  });
+  const opened = buyer.operation(operation.intentId);
+  const checked = await opened._bound();
+  need(checked.meta.configSha256 === current.meta.configSha256 &&
+    checked.meta.bodySha256 === current.meta.bodySha256 &&
+    (checked.meta.ticketSha256 ?? null) === (current.meta.ticketSha256 ?? null),
+    'PREAPPROVAL_CONFIGURATION_CHANGED');
+  await verifySuccessorRuntimeSource(selection.runtimeSource, { signal });
+  return opened;
+}
 
 async function wireInput(operation,current) {
   const body=current.config.operation.bodyFile===undefined?undefined:
@@ -83,6 +201,11 @@ function validPlan(plan, operation, directory) {
       typeof value.path === 'string' && typeof value.exists === 'boolean' &&
       (!value.exists || HASH.test(value.sha256 ?? '') && Number.isSafeInteger(value.bytes) && value.bytes >= 0)),
   'PREAPPROVAL_HISTORY_INVALID');
+  if (plan.executionRuntime !== undefined) {
+    validateRuntimeSelection(plan.executionRuntime);
+    need(same(plan.review?.executionRuntime, plan.executionRuntime),
+      'PREAPPROVAL_REVIEW_RUNTIME_CHANGED');
+  } else need(plan.review?.executionRuntime === undefined, 'PREAPPROVAL_REVIEW_RUNTIME_CHANGED');
   return plan;
 }
 
@@ -98,7 +221,8 @@ async function chain(operation) {
         attempt.configSha256 === meta.configSha256 && attempt.bodySha256 === meta.bodySha256,
       'PREAPPROVAL_ATTEMPT_BINDING_CHANGED');
       if (history.length) need(attempt.preapprovalRecovery?.planSha256 === history.at(-1).planSha256 &&
-        attempt.preapprovalRecovery?.sourceAttemptSha256 === history.at(-1).sourceAttemptSha256,
+        attempt.preapprovalRecovery?.sourceAttemptSha256 === history.at(-1).sourceAttemptSha256 &&
+        same(attempt.executionRuntime, history.at(-1).plan.executionRuntime),
       'PREAPPROVAL_ATTEMPT_LINEAGE_CHANGED');
     }
     const linkPath = join(directory, 'preapproval-continuation.json');
@@ -118,7 +242,9 @@ async function chain(operation) {
     const plan = validPlan(parseJson(planRaw), operation, link.directory);
     need(plan.sourceDirectory === directory && plan.sourceAttemptSha256 === link.sourceAttemptSha256 &&
       plan.configSha256 === meta.configSha256 && plan.bodySha256 === meta.bodySha256 &&
-      (plan.ticketSha256 ?? null) === (meta.ticketSha256 ?? null),
+      (plan.ticketSha256 ?? null) === (meta.ticketSha256 ?? null) &&
+      (plan.executionRuntime === undefined ||
+        plan.executionRuntime.originalRuntimeDirectory === meta.runtimeDirectory),
     'PREAPPROVAL_CONFIGURATION_CHANGED');
     await verifyArchive(plan);
     const wireHistory=await selectedWireHistory(operation,{meta,config},{...link,plan});
@@ -133,7 +259,12 @@ async function chain(operation) {
 
 async function readSources(operation, current, retainedPlan = null) {
   const { meta, config, directory, attempt } = current;
-  need(typeof meta.nativeWorkspace === 'string', 'PREAPPROVAL_ORIGINAL_WORKSPACE_REQUIRED');
+  need(meta.nativeWorkspace === undefined || typeof meta.nativeWorkspace === 'string',
+    'PREAPPROVAL_ORIGINAL_WORKSPACE_REQUIRED');
+  need(object(config.operator) && typeof config.signerModule === 'string' &&
+    [config.operator.python, config.operator.policy, config.operator.ledger,
+      config.signerModule].every(value => typeof value === 'string' && absolute(value) === value),
+    'PREAPPROVAL_ORIGINAL_OPERATOR_REQUIRED');
   need(attempt?.schema === NODE_SCHEMA && attempt.intentId === operation.intentId &&
     attempt.configSha256 === meta.configSha256 && attempt.bodySha256 === meta.bodySha256 &&
     attempt.kind !== 'INBOX_DELEGATED', 'PREAPPROVAL_ORIGINAL_ATTEMPT_REQUIRED');
@@ -159,7 +290,7 @@ async function readSources(operation, current, retainedPlan = null) {
   ]);
   need(sources[1].sha256 === meta.configSha256, 'PREAPPROVAL_CONFIGURATION_CHANGED');
   need(!sources[4].exists || sources[4].bytes === 0, 'PREAPPROVAL_NATIVE_OUTPUT_EXISTS');
-  need(!sources[5].exists || sources[5].bytes === 0, 'PREAPPROVAL_NATIVE_OUTPUT_EXISTS');
+  nativeDiagnostic(sources);
   const reviewed = parseJson(sources[2].raw);
   need(reviewed.intentId === operation.intentId && reviewed.configSha256 === meta.configSha256 &&
     reviewed.bodySha256 === meta.bodySha256 &&
@@ -219,6 +350,8 @@ async function processProof(operation, current, sources, nativeRecord, signal) {
       [name + 'Sha256', byName[name + '.json'].sha256])),
     ...(nativeRecord === undefined ? {} : { nativeRecord: copy(nativeRecord) }),
     ...(current.attempt?.processIdentity ? { processIdentity: copy(current.attempt.processIdentity) } : {}),
+    ...(current.attempt?.executionRuntime === undefined ? {} :
+      { executionRuntime: copy(current.attempt.executionRuntime) }),
   };
   const temporary = await mkdtemp(join(operation.buyer.stateDirectory, '.preapproval-inspect-'));
   const path = join(temporary, 'request.json');
@@ -297,7 +430,9 @@ function preparedView(entry) {
     planSha256: entry.planSha256, review: copy(plan.review),
     originalLedgerCheck: copy(plan.originalLedgerCheck), processProof: copy(plan.processProof),
     ...(entry.wireHistory?{wireHistory:copy(entry.wireHistory)}:{}),
-    ...(plan.wireCheckpoint?{originalWire:copy(plan.wireCheckpoint)}:{}) };
+    ...(plan.wireCheckpoint?{originalWire:copy(plan.wireCheckpoint)}:{}),
+    ...(plan.executionRuntime === undefined ? {} : { executionRuntime: copy(plan.executionRuntime) }),
+    ...(plan.nativeDiagnostic === undefined ? {} : { nativeDiagnostic: copy(plan.nativeDiagnostic) }) };
 }
 
 export async function readPreapprovalRecovery(operation) {
@@ -308,6 +443,8 @@ export async function readPreapprovalRecovery(operation) {
       directory: entry.directory, planSha256: entry.planSha256,
       attemptSha256: entry.sourceAttemptSha256, reason: entry.plan.reason, createdAt: entry.plan.createdAt,
       ...(entry.wireHistory?{wireHistory:copy(entry.wireHistory)}:{}),
+      ...(entry.plan.executionRuntime === undefined ? {} :
+        { executionRuntime: copy(entry.plan.executionRuntime) }),
     })), pending: current.pending ? preparedView(current.pending) : null };
 }
 
@@ -331,11 +468,15 @@ export async function inspectPreapprovalRecovery(operation, { nativeRecord, sign
   return { schema: SCHEMA, intentId: operation.intentId, status: 'AVAILABLE',
     attemptSha256: sources.find(value => value.name === 'attempt.json').sha256,
     configSha256: current.meta.configSha256, directory: current.directory,
-    sources: provisional.sources, processProof: checked.proof, originalLedgerCheck, originalWire };
+    sources: provisional.sources, processProof: checked.proof, originalLedgerCheck, originalWire,
+    ...(nativeDiagnostic(sources) === undefined ? {} : { nativeDiagnostic: nativeDiagnostic(sources) }) };
 }
 
 export async function preparePreapprovalRecovery(operation,
-  { expectedAttemptSha256, nativeRecord, reason, signal } = {}) {
+  { expectedAttemptSha256, nativeRecord, reason, signal, nativeRuntimeSource,
+    nativeFileReservation } = {}) {
+  const descriptor = nativeRuntimeSource === undefined ? undefined : copy(nativeRuntimeSource);
+  const reservation = normalizeNativeFileReservation(nativeFileReservation);
   checkSignal(signal);
   need(HASH.test(expectedAttemptSha256 ?? ''), 'PREAPPROVAL_ATTEMPT_REVIEW_REQUIRED');
   need(typeof reason === 'string' && reason.normalize('NFC').trim().length >= 1 &&
@@ -345,6 +486,11 @@ export async function preparePreapprovalRecovery(operation,
   if (current.pending) {
     need(current.pending.sourceAttemptSha256 === expectedAttemptSha256, 'PREAPPROVAL_ATTEMPT_CHANGED');
     await verifySources(current.pending.plan);
+    if (descriptor !== undefined || reservation !== undefined) {
+      const selected = await chooseRuntime(operation, current, descriptor, reservation, signal);
+      need(same(selected, current.pending.plan.executionRuntime),
+        'PREAPPROVAL_RUNTIME_ALREADY_SELECTED');
+    }
     return preparedView(current.pending);
   }
   const sources = await readSources(operation, current);
@@ -352,7 +498,9 @@ export async function preparePreapprovalRecovery(operation,
     'PREAPPROVAL_ATTEMPT_CHANGED');
   const checked = await processProof(operation, current, sources, nativeRecord, signal);
   const originalLedgerCheck = await ledgerProof(operation, current, signal);
-  const native = await operation.buyer.runtime.checked(['--review', '--config', operation.configPath],
+  const executionRuntime = await chooseRuntime(operation, current, descriptor, reservation, signal);
+  const runtime = await selectedRuntime(operation, executionRuntime, signal);
+  const native = await runtime.checked(['--review', '--config', operation.configPath],
     { stateDirectory: operation.buyer.stateDirectory, mode: 'OFFLINE_REVIEW', signal });
   const { meta } = current;
   need(native.intentId === operation.intentId && native.bodySha256 === meta.bodySha256 &&
@@ -360,6 +508,7 @@ export async function preparePreapprovalRecovery(operation,
   const review = { intentId: operation.intentId, configSha256: meta.configSha256,
     bodySha256: meta.bodySha256, ticketSha256: meta.ticketSha256 ?? null,
     ...(meta.nativeWorkspace ? { nativeWorkspace: meta.nativeWorkspace } : {}),
+    ...(executionRuntime === undefined ? {} : { executionRuntime }),
     native, reviewedAt: now() };
   const wireCheckpoint=await inspectPreapprovalWireCheckpoint(await wireInput(operation,current));
   const directory = join(operation.directory, 'preapproval-history', expectedAttemptSha256);
@@ -370,6 +519,8 @@ export async function preparePreapprovalRecovery(operation,
     nativeWorkspace: meta.nativeWorkspace ?? null, reason: reason.normalize('NFC').trim(), createdAt: now(),
     sources: sources.map(details), processProof: checked.proof, processRequest: checked.request,
     originalLedgerCheck, review, reviewSha256: digest(jsonBytes(review)), wireCheckpoint,
+    ...(executionRuntime === undefined ? {} : { executionRuntime }),
+    ...(nativeDiagnostic(sources) === undefined ? {} : { nativeDiagnostic: nativeDiagnostic(sources) }),
   };
   await verifySources(plan);
   checkSignal(signal);
@@ -380,7 +531,8 @@ export async function preparePreapprovalRecovery(operation,
     const existingRaw = await readBytes(planPath, 262144);
     const existing = validPlan(parseJson(existingRaw), operation, directory);
     need(existing.sourceAttemptSha256 === expectedAttemptSha256 &&
-      existing.configSha256 === plan.configSha256 && existing.reason === plan.reason,
+      existing.configSha256 === plan.configSha256 && existing.reason === plan.reason &&
+      same(existing.executionRuntime, plan.executionRuntime),
     'PREAPPROVAL_DIFFERENT_PLAN_ALREADY_RETAINED');
     await verifySources(existing);
     await verifyArchive(existing);
@@ -407,7 +559,8 @@ export async function preparePreapprovalRecovery(operation,
       (retainedReview.ticketSha256 ?? null) === (meta.ticketSha256 ?? null) &&
       (retainedReview.nativeWorkspace ?? null) === (meta.nativeWorkspace ?? null) &&
       retainedReview.native?.intentId === operation.intentId &&
-      retainedReview.native?.bodySha256 === meta.bodySha256, 'PREAPPROVAL_REVIEW_BINDING_CHANGED');
+      retainedReview.native?.bodySha256 === meta.bodySha256 &&
+      same(retainedReview.executionRuntime, executionRuntime), 'PREAPPROVAL_REVIEW_BINDING_CHANGED');
     plan.review = retainedReview;
     plan.reviewSha256 = digest(jsonBytes(retainedReview));
   } else await writeJson(retainedReviewPath, review, { exclusive: true });
@@ -434,7 +587,8 @@ export async function executePreapprovalRecovery(operation,
   need(selected && selected.planSha256===expectedPlanSha256,'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
   const plan=selected.plan;
   need(object(review) && digest(jsonBytes(review))===plan.reviewSha256,'MATCHING_REVIEW_REQUIRED');
-  const reserveFile=await operation.buyer.runtime.fileReservation();
+  const runtime = await selectedRuntime(operation, plan.executionRuntime, signal);
+  const reserveFile=await runtime.fileReservation();
   return withPreapprovalWireHistory({...await wireInput(operation,initial),
     historyDirectory:plan.directory,planSha256:expectedPlanSha256,
     sourceAttemptSha256:plan.sourceAttemptSha256,expectedCheckpoint:plan.wireCheckpoint,
@@ -449,9 +603,12 @@ export async function executePreapprovalRecovery(operation,
       const checked=await processProof(operation,originalCurrent,sources,plan.processRequest.nativeRecord,signal);
       const originalLedgerCheck=await ledgerProof(operation,current,signal);
       await verifySources(plan);
+      if (plan.executionRuntime !== undefined)
+        await verifySuccessorRuntimeSource(plan.executionRuntime.runtimeSource, { signal });
       checkSignal(signal);
       const executionCheck={schema:SCHEMA,intentId:operation.intentId,planSha256:expectedPlanSha256,
-        checkedAt:now(),processProof:checked.proof,originalLedgerCheck};
+        checkedAt:now(),processProof:checked.proof,originalLedgerCheck,
+        ...(plan.executionRuntime === undefined ? {} : { executionRuntime: plan.executionRuntime })};
       const checksDirectory=join(current.directory,'checks');
       await privateDirectory(checksDirectory);
       await writeJson(join(checksDirectory,digest(jsonBytes(executionCheck))+'.json'),executionCheck,{exclusive:true});
@@ -462,8 +619,8 @@ export async function executePreapprovalRecovery(operation,
     need(current.pending?.planSha256===expectedPlanSha256 && history.status==='RETAINED',
       'PREAPPROVAL_PREPARED_PLAN_REQUIRED');
     const {meta,config}=current;
-    let command={args:['--execute','--config',operation.configPath],entryFile:operation.buyer.runtime.cli};
-    if(meta.nativeWorkspace)command=workspaceCommand(operation.buyer,{
+    let command={args:['--execute','--config',operation.configPath],entryFile:runtime.cli};
+    if(meta.nativeWorkspace)command=workspaceCommand({...operation.buyer,runtime},{
       directory:meta.nativeWorkspace,configPath:operation.configPath,ticketSha256:meta.ticketSha256??null});
     const checkSha256=digest(jsonBytes(originalVerification));
   const reservation = plan.sources.find(value => value.name === 'download-reservation.json');
@@ -496,6 +653,7 @@ export async function executePreapprovalRecovery(operation,
     configSha256: meta.configSha256, bodySha256: meta.bodySha256, retry: 'NO_AUTOMATIC_RETRY',
     preapprovalRecovery: { planSha256: expectedPlanSha256, sourceAttemptSha256: plan.sourceAttemptSha256,
       wireSelectionSha256:history.selectionSha256,wireRetirementSha256:history.retirementSha256 },
+    ...(plan.executionRuntime === undefined ? {} : { executionRuntime: plan.executionRuntime }),
   };
   const attemptPath = join(current.directory, 'attempt.json');
   const reservations = await prepareWriteReservations([
@@ -504,7 +662,7 @@ export async function executePreapprovalRecovery(operation,
     { path: attemptPath, bytes: attemptRecordLimit },
     { path: attemptPath, bytes: attemptRecordLimit },
     { path: join(current.directory, 'result.json'),
-      bytes: resultRecordLimit(operation.buyer.runtime), exclusive: true },
+      bytes: resultRecordLimit(runtime), exclusive: true },
   ], { reserveFile, signal });
   const recordAttempt = async () => {
     try { await writeJson(attemptPath, attempt, { exclusive: true }); }
@@ -514,13 +672,15 @@ export async function executePreapprovalRecovery(operation,
     }
     let run;
     try {
-      run = await operation.buyer.runtime.run(command.args, {
+      run = await runtime.run(command.args, {
         directory: current.directory, signal, entryFile: command.entryFile,
         beforeSpawn: async nativeCommand => {
           await verifySources(plan);
           const retainedWire=await selectedWireHistory(operation,current,selected);
           need(retainedWire?.retirementSha256===history.retirementSha256,
             'PREAPPROVAL_WIRE_RETIREMENT_CHANGED');
+          if (plan.executionRuntime !== undefined)
+            await verifySuccessorRuntimeSource(plan.executionRuntime.runtimeSource, { signal });
           attempt = { ...attempt, nativeCommand };
           await writeJson(attemptPath, attempt);
         },
@@ -546,6 +706,7 @@ export async function executePreapprovalRecovery(operation,
       runtimeError: run.errorCode, recovered: false, recordedAt: now(),
       preapprovalRecovery: { directory: current.directory, planSha256: expectedPlanSha256,
         sourceAttemptSha256: plan.sourceAttemptSha256 },
+      ...(plan.executionRuntime === undefined ? {} : { executionRuntime: plan.executionRuntime }),
     };
     await writeJson(join(current.directory, 'result.json'), record, { exclusive: true });
     await writeJson(attemptPath, { ...attempt, state: 'RECORDED', exitCode: run.exitCode, endedAt: now() });
@@ -570,6 +731,8 @@ export async function recoverPreapprovalResult(operation) {
     configSha256: current.meta.configSha256, native, exitCode: null, exitSignal: null,
     runtimeError: 'PROCESS_EXIT_NOT_RECORDED', recovered: true, recordedAt: now(),
     preapprovalRecovery: { directory: current.directory, planSha256: current.history.at(-1).planSha256 },
+    ...(current.history.at(-1).plan.executionRuntime === undefined ? {} :
+      { executionRuntime: current.history.at(-1).plan.executionRuntime }),
   });
 }
 

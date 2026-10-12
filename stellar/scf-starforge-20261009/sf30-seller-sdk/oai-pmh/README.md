@@ -192,3 +192,36 @@ The `binding` command reads the original workspace marker and database identity 
 `distribution/runtime-workspace/application-oai.mjs` provides the maintained Applications entry, preparation and authenticated startup observer. Its application identifier is `oai-repository`; the operator command is `oai`. The publisher uses the separate `oai-publisher` entry. Both operate on the original source and receiving packages described above.
 
 The worked Zenodo case completed all six operator sections, exact original XML and full source/backup downloads, phone-width layout, saved mapping queries, and stop/reopen. Its managed launch additionally reopened the original four operations, one reviewed edition and one build unchanged through two full launch/stop cycles.
+
+
+## Islandora commissioning
+
+The **Islandora** console section carries a reviewed OAI dataset through metadata mapping, original-file and collection manifests, native target receiving, Workbench execution, and staff handover. It uses the same private workspace, retained XML source, dataset build and full backup as the existing repository console.
+
+Open [the complete Islandora operator guide](ISLANDORA_OPERATOR_GUIDE.md) for the interface, file formats and command reference. The console also serves this guide for download and includes it in each migration package.
+
+Choose the actual target content type, field machine names, cardinalities, controlled values and authentication environment. The crosswalk keeps repeated metadata explicit and supports staff overrides and source/target decisions. Record type, rights, access scope and embargo release belong in their separate configured target fields. The existing target platform supplies its access controls and editorial workflows.
+
+The native commands run the installed original [Islandora Workbench](https://mjordan.github.io/islandora_workbench_docs/). Prepared creation, field update, file and parent batches use its CSV/YAML contract. Workbench's source-to-node SQLite map stays with the job for recovery. Creation output supplies native identity; a separate Workbench export receives current typed metadata. Native receiving also reads actual node UUIDs, publication state, media identifiers, file digests and parent links.
+
+A completed edition becomes the baseline for a source refresh. Metadata changes reconcile the preceding source, current source and target; collection membership changes apply source additions/removals while retaining independent staff changes. A later source edition can therefore preserve work already done in the repository.
+
+```bash
+python sf30-seller-sdk/oai-pmh/islandora_cli.py --workspace /absolute/repository-workspace state
+python sf30-seller-sdk/oai-pmh/islandora_cli.py --workspace /absolute/repository-workspace create --build BUILD_ID --label "Repository migration" --host https://target.example.org --plan crosswalk.json --config target.json
+```
+
+Use the CLI's `configure` command to set the receiving installation before target writes. The original native process result, all input files, returned metadata, file selections and receiving state stay in the saved job. A job package delivers that operation; the original full workspace backup restores the complete operating environment and its source history. Re-enter host-local Workbench and Python paths after moving to a different machine.
+
+The source adds `islandora.py`, `islandora_io.py`, `islandora_cli.py`, `islandora.mjs`, `islandora.css` and the guide, with existing server and browser integration. The operation lock keeps native execution, inspection, editing and full workspace backup from racing. On POSIX, the child Workbench retains the original workspace lease until it exits.
+
+### Installed migration command
+
+The maintained `oai` contribution packages the complete original OAI and XML source, including the Islandora console, native commands and operator guide. Its additional `islandora` command uses the same Python selection, Node dataset engine, signal handling and native exit status as the original repository launcher:
+
+```sh
+starforge islandora --python /absolute/path/to/python --workspace /absolute/private/workspace state
+starforge islandora --python /absolute/path/to/python --workspace /absolute/private/workspace inventory --build BUILD_ID
+```
+
+The same entry point can be called directly with `node islandora_cli.mjs`. Managed Applications opens **Repository metadata and migration** under the original `oai-repository` identity. Its source review binds all 22 original runtime and migration files before launch, then verifies the original workspace and live session through the existing startup exchange. The native Workbench executable and environment are selected inside the retained migration.

@@ -1,6 +1,7 @@
 // MIT. Saved native workflows in the original merchant operator interface.
 import { createWorkflowRecipes } from './workflow-recipes.mjs';
-export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll}){
+import { createWorkflowReports } from './workflow-reports.mjs';
+export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,requireProfile,loadProfile,loadProfiles,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer}){
   const own={profileId:null,definitions:[],runs:[],definition:null,steps:[],editorId:null,dirty:false,run:null,pendingRun:null,pendingHandover:null,editorVersion:0,inputsVersion:0,definitionOpenSeq:0,runOpenSeq:0,refreshSeq:0,intentReady:false,mutating:false,sessionEpoch:null};
   const unchanged=(a,b)=>JSON.stringify(order(a))===JSON.stringify(order(b));
   function order(value){if(Array.isArray(value))return value.map(order);if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(key=>[key,order(value[key])]));return value;}
@@ -9,7 +10,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
   const context=()=>({session:state.sessionEpoch,selection:state.profileEpoch,profileId:state.profile?.id,workspaceId:state.host?.console.workspaceId});
   const current=ctx=>ctx.session===state.sessionEpoch&&ctx.selection===state.profileEpoch&&ctx.profileId===state.profile?.id&&ctx.workspaceId===state.host?.console.workspaceId;
   const invoke=async(path,body,ctx=context())=>api(path,{method:'POST',body,epoch:ctx.session});
-  let intentDatabase,recipes=null;
+  let intentDatabase,recipes=null,reports=null;
   function database(){
     if(!intentDatabase)intentDatabase=new Promise((resolve,reject)=>{
       const request=indexedDB.open('starforge-merchant-operator-actions',1);
@@ -111,7 +112,7 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     $('workflow-name').value='';$('workflow-inputs').value='{}';$('workflow-steps').replaceChildren();
     for(const id of ['workflow-run-json','workflow-run-events','workflow-run-inputs'])text($(id),'');
     for(const id of ['workflow-recipient-workspace','workflow-recipient-host','workflow-handover-note','workflow-recovery-note'])$(id).value='';
-    recipes?.reset();renderLists();renderPending();sync();
+    recipes?.reset();reports?.reset();renderLists();renderPending();sync();
   }
   function profileChanged(){if(own.profileId!==(state.profile?.id??null)||own.sessionEpoch!==state.sessionEpoch)reset();refreshDraftPicker();recipes?.profileChanged();sync();}
   function refreshDraftPicker(){
@@ -254,6 +255,15 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
       const row=node('tr'),stateCell=node('td'),actionCell=node('td');stateCell.append(tag(step.state));
       const button=node('button','Open request');button.type='button';button.disabled=step.draftRevision===null;
       action(button,()=>openCall(step.resolvedCallId??step.callId));actionCell.append(button);
+      const callId=step.resolvedCallId??step.callId,call=state.details?.calls.find(value=>value.id===callId);
+      if(finished(step)&&customerCallReady?.(call)){
+        const receive=node('button','Prepare customer');receive.type='button';
+        action(receive,()=>{
+          const ctx=context(),sequence=own.runOpenSeq,runId=run.id;
+          return prepareCustomer(callId,{isCurrent:()=>current(ctx)&&sequence===own.runOpenSeq&&own.run?.id===runId});
+        });
+        actionCell.append(receive);
+      }
       row.append(node('td',String(index+1)),node('td',step.id),stateCell,node('td',step.callId,'mono break'),actionCell);return row;
     }));
     const step=run.steps.find(value=>!finished(value)),choices=run.recoveryCalls??[];
@@ -349,11 +359,13 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
     $('workflow-open-edition').disabled=!run;$('workflow-export').disabled=!run;
     $('workflow-open-original').disabled=!run?.steps.find(step=>!finished(step)&&step.draftRevision!==null);
     if(own.mutating)for(const id of ['workflow-save','workflow-copy','workflow-start','workflow-continue','workflow-pause','workflow-resolve','workflow-handover-submit','workflow-retry-start','workflow-retry-handover'])$(id).disabled=true;
-    recipes?.sync();
+    recipes?.sync();reports?.sync();
   }
   recipes=createWorkflowRecipes({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,
     uid,requireProfile,loadProfile,context,current,intentRecord,markAttempt,releaseIntent,mutate,
     mutationActive:()=>own.mutating,openDefinition,getSelection,selectionCurrent,prefillInputs});
+  reports=createWorkflowReports({state,$,node,text,pretty,when,tag,properties,action,busy,api,notice,
+    context,current,getRun:()=>own.run,getRuns:()=>own.runs,loadProfiles,openRun,openCall,mutationActive:()=>own.mutating});
   action($('new-workflow'),()=>editor());
   action($('refresh-workflows'),async()=>{await loadProfile();if(own.run)await openRun(own.run.id);});
   action($('workflow-add-step'),addStep);action($('workflow-copy'),()=>mutate(()=>save(true)));action($('workflow-start'),()=>mutate(()=>start()));
@@ -368,5 +380,5 @@ export function createWorkflowPage({state,$,node,text,pretty,when,tag,properties
   $('workflow-recovery-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(resolveStep));});
   $('workflow-handover-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>mutate(()=>handover()));});
   action($('workflow-retry-start'),()=>mutate(()=>start(true)));action($('workflow-retry-handover'),()=>mutate(()=>handover(true)));
-  return{refresh,profileChanged,reset,sync,get hasActive(){return own.runs.some(run=>run.active);}};
+  return{refresh,profileChanged,reset,sync,useRecipe:(recipe,inputs)=>recipes.useRecipe(recipe,inputs),get hasActive(){return own.runs.some(run=>run.active);}};
 }

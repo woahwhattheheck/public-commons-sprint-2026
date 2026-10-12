@@ -27,7 +27,7 @@ export async function reviewDirectusBuyer({directory,seller,query={}}={}){
   const review=await readDatasetBuyerOffer({seller,resource,snapshot:prepared.description.snapshot,query:queryString(query)});
   return {...review,edition:editionSummary(prepared)};
 }
-export async function prepareDirectusBuyer({directory,seller,query={},intentId,acceptIndex,offerSha256,destination}={}){
+export async function prepareDirectusBuyer({directory,seller,query={},intentId,acceptIndex,offerSha256,destination,workspace}={}){
   const review=await reviewDirectusBuyer({directory,seller,query});
   const prepared=prepareDatasetBuyer(review,{intentId,acceptIndex,offerSha256});
   const content=Buffer.from(prepared.configText,'utf8');
@@ -35,13 +35,14 @@ export async function prepareDirectusBuyer({directory,seller,query={},intentId,a
   const saved=await saveExact(absolute(destination,'buyer configuration file'),content);
   await saveExact(saved.path+'.directus.json',{schema:'stellar-forge.directus-buyer-selection.v1',
     edition:review.edition,url:prepared.url,offer_sha256:offerSha256,configuration_sha256:prepared.configSha256});
-  return {...prepared,edition:review.edition,saved};
+  const retained=workspace?await workspace.retainBuyer({configuration:saved.path}):null;
+  return {...prepared,edition:review.edition,saved,...(retained?{projectBuyerId:retained.id}:{})};
 }
 
 /** Complete original paid/free responses become a portable native data room.
  * The requested snapshot and original URL must match this exact approved edition.
  * Source captures are optional because they can include unpurchased collection items. */
-export async function receiveDirectusBuyer({directory,sessionDirectory,destination,includeSourceCaptures=false}={}){
+export async function receiveDirectusBuyer({directory,sessionDirectory,destination,includeSourceCaptures=false,workspace}={}){
   if(typeof includeSourceCaptures!=='boolean')throw new TypeError('includeSourceCaptures must be a boolean.');
   const prepared=await readDirectusMerchant(directory);
   sessionDirectory=absolute(sessionDirectory,'original buyer session');
@@ -105,7 +106,9 @@ export async function receiveDirectusBuyer({directory,sessionDirectory,destinati
       include_source_captures:includeSourceCaptures,files};
     manifest.sha256=identity(manifest);
     await saveExact(join(destination,'delivery.json'),manifest);
-    return {...await inspectDirectusDelivery(destination),native};
+    const result={...await inspectDirectusDelivery(destination),native};
+    if(workspace){const retained=await workspace.retainDelivery({directory:destination});result.projectDeliveryId=retained.id;}
+    return result;
   }finally{await unlock();}
 }
 export async function inspectDirectusDelivery(directory){

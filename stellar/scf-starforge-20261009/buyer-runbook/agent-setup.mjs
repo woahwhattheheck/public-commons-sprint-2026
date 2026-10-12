@@ -68,3 +68,6 @@ export async function initializeBuyerRunbookMerchant(options={}){
     directory:binding.directory,selectionSha256:binding.expectedSelectionSha256})),ownership:'ORIGINAL_RUNNING_BUYER_WORKSPACE'};
  }finally{await lease.close();}
 }
+
+// The installed ./buyer/agent/setup entry also commissions its original connection.
+export {connectBuyerRunbookAgent,BUYER_AGENT_CONNECTION_SETUP} from './agent-connect.mjs';

@@ -71,6 +71,18 @@ This is also the way to reuse an older original archive with the current
 workspace. The original installed source and package identity remain selected;
 the current workspace supplies the user interface and maintained installer.
 
+## Build a product from committed source
+
+**Build a product** loads the selected Git commit's actual recipes, reviews a
+complete product, and invokes the original distribution builder in a retained
+workspace operation. A completed package can be downloaded or selected directly
+in **Source & profile** for adapter review and installation. Saved builds reopen
+with the same commit, recipe, request UUID and original output; interrupted
+builds continue through the existing builder and installer recovery paths.
+
+See [Build complete products](SOURCE_BUILDS.md) for the browser, CLI, API and
+recovery workflow. The original archive import remains available below.
+
 ## Receive a release and choose its adapters
 
 In **Source & profile**, open **Import another original archive**. Either choose

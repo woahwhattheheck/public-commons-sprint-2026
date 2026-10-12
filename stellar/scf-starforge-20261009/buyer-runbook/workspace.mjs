@@ -307,7 +307,11 @@ export async function startRunbookWorkspace({port = 8460, approvalMode = 'TERMIN
   ready = true;
   return {url:launch.url,server,model,launch,close};
   } catch (error) {
-    try { await close(); } catch (cleanupError) { error.cleanupCode = cleanupError.code ?? 'WORKSPACE_SHUTDOWN_FAILED'; }
+    try { await close(); } catch (cleanupError) {
+      error.cleanupCode = cleanupError.code ?? 'WORKSPACE_SHUTDOWN_FAILED';
+      // Retain this exact original owner after a failed startup cleanup.
+      Object.defineProperty(error,'close',{value:close,configurable:true});
+    }
     throw error;
   }
 }

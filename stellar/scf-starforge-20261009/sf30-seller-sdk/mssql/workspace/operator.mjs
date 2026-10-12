@@ -10,8 +10,8 @@ import { UUID, SHA, exact, checked, need, canonical, digest, readJSON, readBytes
 const REQUEST='stellar-forge.mssql-operator-request.v1';
 export async function createMssqlOperator(options={}) {
   const root=absolute(options.stateDirectory);
-  if(!await exists(join(root,'operator','workspace.json')))
-    await initializeMssqlOperator({sourceFile:options.sourceFile,stateDirectory:root});
+  // Reopen the original identity under its lease before reading retained work.
+  await initializeMssqlOperator({sourceFile:options.sourceFile,stateDirectory:root});
   const identity=await readMssqlOperatorIdentity(root),lease=await operatorLease(identity.directory);
   let model,transfers,pending=Promise.resolve(),closing=false,closePromise;
   const cachedReviews=new Map();

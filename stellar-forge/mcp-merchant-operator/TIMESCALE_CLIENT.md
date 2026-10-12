@@ -190,3 +190,12 @@ API hosts can call `runTimescaleRemediationReceiving({nativeResult, configPath, 
 ## Original equipped Ubuntu host
 
 The complete private Ubuntu host setup is [UBUNTU_NATIVE.md](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/UBUNTU_NATIVE.md). Its original `ubuntu-native-demo.py` reuses the selected Node dependency roots, verifies official PostgreSQL/Timescale package bytes, and keeps the native demonstration, merchant/browser receiving and this remediation client in one cluster lifetime. Select this executable with `--remediation-receiver stellar-forge/mcp-merchant-operator/timescale-remediation-receiving.mjs`. The final host checkpoint includes credentials and operating data; retain it in the original private customer custody, separately from public source and reports.
+
+
+## Complete source commissioning
+
+The same typed client now exposes `client.commissioning` for full intake, source-contract changes, native projection binding, original source files, complete comparisons, original native observations, acceptance, technical handover and reopening. Its thirteen declared MCP tools share the existing Timescale owner and retained-file reader.
+
+[The complete commissioning guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/postgres/timescale/COMMISSIONING.md) specifies every action and original native JSON format. Use `commissioning-command` with a retained private request file, `commissioning-report` to freeze the selected original revision and `commissioning-report-manifest` to inspect that completed report. The `commissioning-report-download` command and `client.commissioning.downloadReport` receive both complete files and their manifest through the existing resumable receiver.
+
+Commissioning report publication and receiving share the original Buffer reader's exact 256,000,000-byte per-file capacity. This is separate from assigned-work reports and the larger complete-project receiving limits described above. Oversized commissioning reports preserve every source and revision in the original workspace; use its complete project export. Original source file downloads, paged sections with revision/digest pins, retained operation inspection and host restart all preserve the same project and request identities.

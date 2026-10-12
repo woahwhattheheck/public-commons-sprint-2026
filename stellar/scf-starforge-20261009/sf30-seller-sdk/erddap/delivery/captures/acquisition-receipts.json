@@ -11,7 +11,7 @@
     "bytes": 7459,
     "executed": false
   },
-  "prior_receipt_blob": "85dd5221406abeef1a0eb5083dbed45c9cf5dd98",
+  "prior_receipt_blob": "d4ae3903d86c69f0dc8afa2d92721783fcc6192e",
   "diagnostics_receipt_blob": "8bedde32f44ee082b8eb3e794aa0dcab12b67305",
   "source_decision": {
     "original_2025": "MUR response retained. Both original NDBC data GETs returned explicit HTTP404; no body was provided by the connector. No fabricated empty table or replacement is presented as the2025 response.",
@@ -30,8 +30,10 @@
     "additional_paired_data_urls": 4,
     "additional_nearby_three_day_data_urls": 4,
     "exact_text_files": 15,
-    "original_attachment_waiting_raw_return": 1,
-    "source_get_failures": 2
+    "original_attachment_waiting_raw_return": 0,
+    "source_get_failures": 2,
+    "exact_binary_files": 1,
+    "complete_source_files": 16
   },
   "files": [
     {
@@ -234,7 +236,7 @@
       },
       "query": "analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
       "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.das",
-      "git_blob": null,
+      "git_blob": "646a0dbab5848cbdba0c0dab73ac077eef16c26c",
       "transport": {
         "kind": "notion-public-https-import.v1",
         "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.das",
@@ -245,18 +247,33 @@
           "content_length": 8108,
           "status": "uploaded"
         },
-        "download": null,
+        "download": {
+          "file_upload_id": "3f7dd772-3100-8121-82b8-00b2b102ce9f",
+          "filename": "mur-sst-june-2025-dataset-das.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 8108,
+          "method": "signed-file",
+          "fileReference": "notion-file-block://3bdbeaa2-566c-4e85-926f-80266d921867/88103cc0-9add-4867-b6ef-e7e078e30f50?space_id=cb7dd772-3100-81c5-a704-000397aad4c6&name=mur-sst-june-2025-dataset-das.txt",
+          "carrierStatus": 200,
+          "carrierContentType": "text/plain; charset=utf-8"
+        },
         "startedAt": "2026-10-12T09:14:37.301Z",
         "completedAt": "2026-10-12T09:14:41.591Z",
         "observedAt": null,
-        "downloadStartedAt": "2026-10-12T09:14:41.591Z",
-        "downloadCompletedAt": "2026-10-12T09:14:42.009Z",
+        "downloadStartedAt": "2026-10-12T09:55:41.836709+00:00",
+        "downloadCompletedAt": "2026-10-12T09:55:48.009884+00:00",
         "downloadObservedAt": null
       },
-      "state": "original-attachment-retained-reader-error",
-      "validation": null,
+      "state": "original-binary-body-returned",
+      "validation": {
+        "bytes": 8108,
+        "sha256": "bc98b208c4c6bd8744a8cd5c8a659b1cc6e46f82255449f15542b26a18a9ba5c",
+        "originalGitBlob": "646a0dbab5848cbdba0c0dab73ac077eef16c26c"
+      },
       "failed_attempts": [],
-      "error": {
+      "error": null,
+      "source_note": null,
+      "prior_reader_error": {
         "content": [
           {
             "type": "text",
@@ -267,8 +284,7 @@
           "error_code": "INVALID_ARGUMENT"
         },
         "isError": true
-      },
-      "source_note": null
+      }
     },
     {
       "selection": "mur-sst-june-2025",
@@ -1709,6 +1725,49 @@
           ]
         }
       }
+    }
+  ],
+  "raw_return_observed_at": "2026-10-12T11:27:37Z",
+  "complete_source_archives": [
+    {
+      "selection": "mur-sst-june-2025",
+      "path": "delivery/captures/mur-sst-june-2025.erddap.zip",
+      "bytes": 36997,
+      "sha256": "6a9a7b4ec9397bc779412d433300be77a43b97f2af421e78921bfe429e6614df",
+      "rowCount": 27,
+      "members": 6
+    },
+    {
+      "selection": "ndbc-46042-june-2023",
+      "path": "delivery/captures/ndbc-46042-june-2023.erddap.zip",
+      "bytes": 76522,
+      "sha256": "e52246a67df21d4acf58749e9b08ec76f32cc9d36f9d0595ed4f6040c4c48540",
+      "rowCount": 144,
+      "members": 6
+    },
+    {
+      "selection": "mur-sst-june-2023",
+      "path": "delivery/captures/mur-sst-june-2023.erddap.zip",
+      "bytes": 36975,
+      "sha256": "c48eec006b5c7b966e11981f643ad830acc11dfd4787fa0f766cb56dcd92902e",
+      "rowCount": 27,
+      "members": 6
+    },
+    {
+      "selection": "mur-46042-nearby-june-2023",
+      "path": "delivery/captures/mur-46042-nearby-june-2023.erddap.zip",
+      "bytes": 37109,
+      "sha256": "f1d08e8ade61a8a79d44e932ed4b7993cfffbbf796e35ad76ac42efa4ce7d8da",
+      "rowCount": 27,
+      "members": 6
+    },
+    {
+      "selection": "ndbc-46042-three-days-june-2023",
+      "path": "delivery/captures/ndbc-46042-three-days-june-2023.erddap.zip",
+      "bytes": 120162,
+      "sha256": "2e1ee02cde8c3e8afe3ffc1b3c68718364e98da7373de6b29eea5e774fe5f57c",
+      "rowCount": 432,
+      "members": 6
     }
   ]
 }

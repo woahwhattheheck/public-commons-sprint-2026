@@ -4,6 +4,11 @@
  * numeric tokens are carried in ValueCell.value or the original JSON text;
  * a string result must not be coerced to a JavaScript number.
  */
+import type {AnalysisActionPayloads,AnalysisActionResults,AnalysisReadArguments,AnalysisReadResults,
+  AnalysisReadMode,AnalysisOverview} from './analysis/types.mjs';
+export type {AnalysisActionPayloads,AnalysisActionResults,AnalysisReadArguments,AnalysisReadResults,
+  AnalysisReadMode,AnalysisOverview} from './analysis/types.mjs';
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
@@ -62,6 +67,10 @@ export interface WorkspaceSchema {
   workspaceSchema: 'stellar-forge.sensorthings-workspace.v1';
   workspaceId: WorkspaceId;
   sourceContract: SourceContract;
+  analysis?: {reads:Record<string,string>;meaning:Record<string,string>;limits:Record<string,number>;
+    componentSelection?:{schema:'stellar-forge.sensorthings-component-selection.v1';source:string;fields:readonly string[];
+      componentFields:readonly string[];interpretationFields:readonly string[];modes:readonly ('source-declared'|'numeric-json')[];
+      indexBasis:string;limits:{selections:80;index:4095;rows:250000;pageRows:500};receiving:string}};
   actions: { [K in SensorThingsActionName]: readonly string[] };
   tables: SourceTable[];
   captureReads: {
@@ -152,7 +161,12 @@ export interface ProviderReceipt extends NativeObject {
   completedAt: string;
   sourceCapturedAt: string | null;
   representation: 'RECORDED_ORIGINAL_APPLICATION_BODY' |
-    'ORIGINAL_APPLICATION_BODY_AFTER_HTTP_CONTENT_DECODING';
+    'ORIGINAL_APPLICATION_BODY_AFTER_HTTP_CONTENT_DECODING' | 'RETAINED_CONNECTOR_UTF8_TEXT';
+  /** Present only for explicit connector text; its MIME type is not a provider HTTP header. */
+  connectorTransfer?: { schema: 'stellar-forge.sensorthings-connector-text.v1'; connector: 'Notion attachment';
+    fileUploadId: string; filename: string; contentType: string; bytes: number; sha256: Sha256;
+    receivedAt: string; timestampBasis: string; httpStatusObserved: false; httpHeadersObserved: false; httpMethodObserved: false;
+    contentTypeBasis: string; };
   complete: boolean;
   error: NativeObject | null;
   sha256: Sha256;
@@ -356,6 +370,9 @@ export interface EditionScope {
   remaining: NativeObject[];
   captureStartedAt: string;
   captureLastResponseAt: string | null;
+  sourceAcquisition?: { representations: ProviderReceipt['representation'][]; connectorPages: number;
+    sourceReceivedAtStart: string | null; sourceReceivedAtEnd: string | null; sourceTimeBasis: string; nativeTimeBasis: string;
+    providerHttpStatusObserved: false; providerHttpHeadersObserved: false; providerHttpMethodObserved: false; };
 }
 export interface SourceFileIdentity extends NativeObject {
   sha256: Sha256;
@@ -452,6 +469,8 @@ export interface WorkspaceView {
   exports: NativeObject[];
   operations: OperationView[];
   running: CaptureId[];
+  /** Additive analysis uses this same original workspace and revision. */
+  analysis?: AnalysisOverview;
 }
 export type ActionResult<R = JsonValue> =
   | { operationId: OperationId; reused: boolean; result: R; view: WorkspaceView; state?: never }
@@ -515,7 +534,7 @@ export type SensorThingsActionPayloads = {
   'publisher.buyer.recover': { datasetId: DatasetId; id: string };
   'publisher.buyer.account': { datasetId: DatasetId; id: string };
   'publisher.buyer.export': { datasetId: DatasetId; id: string };
-};
+} & AnalysisActionPayloads;
 export type SensorThingsActionName = keyof SensorThingsActionPayloads;
 export type ActionArguments<A extends SensorThingsActionName = SensorThingsActionName> =
   A extends SensorThingsActionName ? {
@@ -538,7 +557,8 @@ export type FileSelection =
   | { kind: 'comparison'; id: string; file?: 'comparison.json' | 'changes.jsonl' }
   | { kind: 'transfer'; id: string; file?: TransferFile }
   | { kind: 'buyer'; id: string; file?: BuyerFile }
-  | { kind: 'publisher'; datasetId: DatasetId; id: string; file?: PublisherFile };
+  | { kind: 'publisher'; datasetId: DatasetId; id: string; file?: PublisherFile }
+  | { kind: 'analysis'; id: string; file?: string };
 export type ConcreteFileSelection =
   | { kind: 'source'; id: Sha256; sha256: Sha256 }
   | { kind: 'edition'; id: Sha256; file: 'edition.json' }
@@ -546,7 +566,8 @@ export type ConcreteFileSelection =
   | { kind: 'comparison'; id: string; file: 'comparison.json' | 'changes.jsonl' }
   | { kind: 'transfer'; id: string; file: TransferFile }
   | { kind: 'buyer'; id: string; file: BuyerFile }
-  | { kind: 'publisher'; datasetId: DatasetId; id: string; file: PublisherFile };
+  | { kind: 'publisher'; datasetId: DatasetId; id: string; file: PublisherFile }
+  | { kind: 'analysis'; id: string; file: string };
 export interface FixedFileMetadata extends NativeObject {
   selection: ConcreteFileSelection;
   name: string;
@@ -652,6 +673,7 @@ export interface SensorThingsToolArguments {
   merchant_sensorthings_publisher: WorkspaceScope & { datasetId: DatasetId };
   merchant_sensorthings_operation: WorkspaceScope & { operationId: OperationId };
   merchant_sensorthings_action: ActionArguments;
+  merchant_sensorthings_analysis: AnalysisReadArguments;
   merchant_sensorthings_files: FileListArguments;
   merchant_sensorthings_file_read: FileReadArguments;
   merchant_sensorthings_file_release: FileReleaseArguments;
@@ -668,6 +690,7 @@ export interface SensorThingsToolResults {
   merchant_sensorthings_publisher: NativeReply<NativeObject>;
   merchant_sensorthings_operation: NativeReply<RetainedOperation>;
   merchant_sensorthings_action: NativeReply<ActionResult>;
+  merchant_sensorthings_analysis: NativeReply<AnalysisReadResults[AnalysisReadMode]>;
   merchant_sensorthings_files: NativeReply<FilesPage>;
   merchant_sensorthings_file_read: NativeReply<FileRead>;
   merchant_sensorthings_file_release: NativeReply<FileReleased>;
@@ -719,6 +742,10 @@ export class MerchantSensorThingsWorkspaces {
     args: WorkspaceScope & { editionId: Sha256; mode: 'summary' }): Promise<NativeReply<EditionSummary>>;
   call(name: 'merchant_sensorthings_edition',
     args: WorkspaceScope & { editionId: Sha256; mode?: 'metadata' }): Promise<NativeReply<SourceEdition>>;
+  call<M extends AnalysisReadMode>(name: 'merchant_sensorthings_analysis',
+    args: AnalysisReadArguments<M>): Promise<NativeReply<AnalysisReadResults[M]>>;
+  call<A extends keyof AnalysisActionPayloads>(name: 'merchant_sensorthings_action',
+    args: ActionArguments<A>): Promise<NativeReply<ActionResult<AnalysisActionResults[A]>>>;
   call<K extends SensorThingsToolName>(name: K,
     ...args: K extends 'merchant_sensorthings_workspaces'
       ? [args?: SensorThingsToolArguments[K]] : [args: SensorThingsToolArguments[K]]

@@ -172,6 +172,8 @@ def main():
     p.add_argument("--workspace",type=Path)
     p.add_argument("--source-packet",type=Path,action="append",default=[])
     p.add_argument("--temporary-root",type=Path)
+    p.add_argument("--csv-policy",choices=["require-equivalent","canonical-json"],default="require-equivalent",
+                   help="Explicit original JSON/CSV edition decision; both original responses remain retained")
     a=p.parse_args()
     def interrupted(signum,frame):raise KeyboardInterrupt("Original receiving owner interrupted")
     signal.signal(signal.SIGTERM,interrupted)
@@ -190,7 +192,7 @@ def main():
     result_path=output/"native-result.json"
     report=load(result_path,{"schema":SCHEMA,"sources":[],"comparisons":[],"generations":[]})
     if report.get("schema")!=SCHEMA:raise ValueError("Existing native result has another schema")
-    generation={"startedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),"pid":os.getpid(),"state":"starting",
+    generation={"startedAt":datetime.datetime.now(datetime.timezone.utc).isoformat(),"pid":os.getpid(),"state":"starting","csvPolicy":a.csv_policy,
                 "sourceFiles":{n:identity(source/n) for n in ["erddap_source.py","erddap_workspace.py","delivery/native-receive.py"]}}
     report["generations"].append(generation)
     report["status"]="RUNNING";atomic(result_path,report)
@@ -215,8 +217,14 @@ def main():
                     prefix=str(index+1).zfill(2);path=Path(item["path"])
                     if identity(path)!={k:item[k]for k in ("bytes","sha256")}:raise ValueError("Original selected capture changed")
                     with path.open("rb")as inp:src=ws.add_source(inp,item["name"],item["name"])
-                    shape=src["inventory"]
-                    plan=ws.save_plan(ws.default_mapping(src["id"],shape["datasetId"]+" original observations"))
+                    # Reinspect the same original bytes with the current source parser; older
+                    # retained inventories remain the original acquisition-time observation.
+                    with path.open("rb") as current_source:shape=ws.format.inventory(current_source)
+                    selected_plan=ws.default_mapping(src["id"],shape["datasetId"]+" original observations")
+                    selected_plan["csvPolicy"]=a.csv_policy
+                    plan=ws.save_plan(selected_plan)
+                    if index<len(report["sources"]) and report["sources"][index]["mapping"]!=plan["id"]:
+                        raise ValueError("An already completed source belongs to its original retained mapping; preserve that receiving operation")
                     build=ws.build(src["id"],plan["id"])
                     query=whole_query(ws,build)
                     destination=output/("dataset-"+prefix)
@@ -226,7 +234,7 @@ def main():
                         raise ValueError("Original same-workspace export retry changed its bytes")
                     entry={"source":src["id"],"datasetId":shape["datasetId"],"publisherId":shape["metadata"].get("publisherId"),
                         "protocol":shape["protocol"],"sourceBytes":src["bytes"],"rowCount":shape["rowCount"],
-                        "mapping":plan["id"],"build":build,"query":query,"dataset":dataset,"packet":packet,
+                        "mapping":plan["id"],"csvPolicy":plan["plan"]["csvPolicy"],"build":build,"query":query,"dataset":dataset,"packet":packet,
                         "packetMembers":packet_members(packet["file"]),"csvComparison":shape["csvComparison"],
                         "selection":shape["selection"],"originalResponses":shape["files"]}
                     same=previous_by_plan.get(plan["id"])

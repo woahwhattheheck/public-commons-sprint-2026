@@ -1,7 +1,7 @@
 // MIT — SF88 privileged operator execution delegates to original source modules.
-import { stat } from 'node:fs/promises';
+import {stat,datasetStoragePath,datasetSourcePath} from './dataset-location.mjs';
 import { pathToFileURL } from 'node:url';
-import { OperatorApprovedBuyer, checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import * as operatorBridge from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { executeWithEvidence } from '../sf82-checkout-evidence/evidence.mjs';
 import { prepareBuyerResponseFile } from '../sf31-buyer-client/response-file.mjs';
 import { createPublicHttpsFetch } from '../sf31-buyer-client/public-transport.mjs';
@@ -9,6 +9,7 @@ import { selectStellarEvidenceEndpoint } from '../sf43-agent-commerce/verify.mjs
 import { execution, bytes, need } from './config.mjs';
 import { readRequestBody } from './request-body.mjs';
 import { createAttemptWireRecorder } from './attempt-wire.mjs';
+import { readNativeSigningDiagnostic } from '../sf103-native-buyer-signer/diagnostics.mjs';
 import { currentFileReservation } from './node/store.mjs';
 import { loadOperationTicket, operationTicketHeaders, requireOperationTicketFingerprint,
   requireCurrentOperationTicket } from './operation-ticket.mjs';
@@ -29,6 +30,31 @@ const reservationOf = value => {
     if (typeof value[key] === 'string' && value[key].length <= 160) result[key] = value[key];
   return Object.keys(result).length ? result : null;
 };
+
+function logicalResponseFile(value) {
+  if(!value||typeof value!=='object')return value;
+  const result={...value};
+  for(const key of ['path','destination','partialPath'])
+    if(typeof result[key]==='string')result[key]=datasetSourcePath(result[key]);
+  if(Array.isArray(result.cleanupWarnings))result.cleanupWarnings=result.cleanupWarnings.map(logicalResponseFile);
+  return result;
+}
+
+/** Use this selected bridge's real channel API; older bridges retain terminal mode. */
+async function checkSelectedOperatorChannel(intentId, environment) {
+  if (typeof operatorBridge.checkOperatorChannel === 'function') {
+    // An explicitly selected browser channel must keep its original failure.
+    await operatorBridge.checkOperatorChannel(intentId, {environment});
+    return;
+  }
+  // A terminal-only retained helper cannot consume a browser decision. Reject
+  // either supplied setting instead of silently changing the selected channel.
+  need(environment.SF81_APPROVAL_SOCKET === undefined &&
+    environment.SF81_APPROVAL_TOKEN === undefined, 'OPERATOR_BROWSER_CHANNEL_UNSUPPORTED');
+  need(typeof operatorBridge.checkOperatorTerminal === 'function',
+    'OPERATOR_TERMINAL_PREFLIGHT_UNAVAILABLE');
+  await operatorBridge.checkOperatorTerminal(intentId);
+}
 
 export async function execute(cfg, { signal, emitSummary = true, environment = process.env,
   operationTicketSha256, evidenceRpcEndpoint } = {}) {
@@ -52,23 +78,24 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
   const retainedBody=await readRequestBody(op);
   const body=retainedBody===undefined?undefined:Uint8Array.from(retainedBody);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
-  await checkOperatorChannel(op.intentId, {environment});
+  await checkSelectedOperatorChannel(op.intentId, environment);
   need(!signal?.aborted, 'OPERATOR_ABORTED');
 
   let output, download, delivery, evidence, evidenceError, nativeResult, nativeError;
-  let cleanupError, setupError, setupFailed = false, wire;
+  let cleanupError, setupError, setupFailed = false, wire, signingDiagnostic;
   try {
     // Refuse an existing/unusable destination before a buyer can run or sign.
     if (responseFile) output = await prepareBuyerResponseFile({ ...responseFile,
+      destination:datasetStoragePath(responseFile.destination),
       reserveFile: currentFileReservation()?.reserveFile, signal });
-    const signer = await import(pathToFileURL(cfg.signerModule).href);
+    const signer = await import(pathToFileURL(datasetStoragePath(cfg.signerModule)).href);
     const sign = signer.sign ?? signer.default?.sign;
     need(typeof sign === 'function', 'TRUSTED_SIGN_FUNCTION_REQUIRED');
     wire = await createAttemptWireRecorder({cfg,body,signal,
       reserveFile:currentFileReservation()?.reserveFile,fetchImpl:createPublicHttpsFetch({
       trustedProxy:transport, timeoutMs:requestTimeoutMs,
     })});
-    const buyer = new OperatorApprovedBuyer({
+    const buyer = new operatorBridge.OperatorApprovedBuyer({
       operator: { ...owner, environment }, fetchImpl:wire.fetch,
     });
     need(!signal?.aborted, 'OPERATOR_ABORTED');
@@ -107,13 +134,17 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
             await wire.signingInput(args);
             let signed;
             try { signed = await sign(args); }
-            catch (error) { try { await wire.signingError(error); } catch {} throw error; }
+            catch (error) {
+              try { signingDiagnostic=readNativeSigningDiagnostic(error?.nativeSigning); } catch {}
+              try { await wire.signingError(error); } catch {}
+              throw error;
+            }
             requireCurrentOperationTicket(ticket);
             await wire.signingResult(signed);
             return signed;
           }, ...(signal ? {signal} : {}),
         },
-        outputDir:cfg.evidenceDir,
+        outputDir:datasetStoragePath(cfg.evidenceDir),
         trustedPayer:cfg.trustedPayer,
         rpcEndpoint,
         // SF43 rejects non-2xx responses; this original transport never follows
@@ -163,14 +194,15 @@ export async function execute(cfg, { signal, emitSummary = true, environment = p
     intentId:op.intentId,
     requestTimeoutMs,
     ...(wire ? {transportCheckpoint:wire.snapshot()} : {}),
+    ...(signingDiagnostic ? {nativeSigning:signingDiagnostic} : {}),
     status:result?.status ?? null,
     httpStatus:result?.response?.status ?? null,
     sellerReportedSettlement:result?.settlement ?? null,
-    evidencePath:evidence?.evidencePath ?? null,
+    evidencePath:datasetSourcePath(evidence?.evidencePath ?? null),
     evidenceRpcEndpoint:rpcEndpoint,
     originalOutcomeReport:evidence?.report ?? null,
     operatorReservation:reservationOf(result?.operatorReservation ?? error?.operatorReservation),
-    ...(output ? {responseFile:delivery} : {}),
+    ...(output ? {responseFile:logicalResponseFile(delivery)} : {}),
     interrupted:signal?.aborted === true,
     retry:'NO_AUTOMATIC_RETRY',
     ...(error ? {error:{code:codeOf(error,'NATIVE_BUYER_ERROR'),

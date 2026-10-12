@@ -44,7 +44,8 @@ export async function readGdeltHostInput(entry,name,expectedSha256) {
   const bytes=await readBytes(input.path,LIMITS.projectBytes);
   need(hash(bytes)===input.sha256,'The original input changed.','GDELT_INPUT_CHANGED',409);
   const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));
-  need(value?.schema===(input.kind==='capture'?'stellar-forge.gdelt-capture.v1':'stellar-forge.gdelt-project-bundle.v1'),'The original input format differs from its declaration.');
+  need((input.kind==='capture'?['stellar-forge.gdelt-capture.v1','stellar-forge.gdelt-gkg-capture.v1']:
+    ['stellar-forge.gdelt-project-bundle.v1']).includes(value?.schema),'The original input format differs from its declaration.');
   return {input,bytes,value,sha256:input.sha256};
 }
 export class GdeltWorkspaceClient {

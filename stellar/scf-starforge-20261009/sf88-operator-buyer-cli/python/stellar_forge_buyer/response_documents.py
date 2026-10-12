@@ -163,8 +163,8 @@ def _payload(root, record):
     return parent / record["path"].split("/", 1)[1]
 
 
-def _delivery(root, record):
-    path = _payload(root, record)
+def _delivery(root, record, *, source_files=None):
+    path = _payload(root, record) if source_files is None else source_files[record["path"]]
     return FileDelivery({"returncode": 0, "native": {
         "status": "RETAINED_SOURCE_DOCUMENT",
         "file": {"path": str(path), **{key: record[key] for key in ("bytes", "sha256", "contentType")}},
@@ -214,7 +214,7 @@ def _settle_publication(path, stream, prefix):
         os.close(directory_fd)
 
 
-def _publish_file(origin, target, record):
+def _publish_file(origin, target, record, *, source_files=None):
     destination = _payload(target, record)
     if destination.exists() or destination.is_symlink():
         with _delivery(target, record).open() as retained:
@@ -222,7 +222,7 @@ def _publish_file(origin, target, record):
         return
     fd, temporary = tempfile.mkstemp(prefix=".document-", dir=destination.parent)
     try:
-        with os.fdopen(fd, "wb") as output, _delivery(origin, record).open() as source:
+        with os.fdopen(fd, "wb") as output, _delivery(origin, record, source_files=source_files).open() as source:
             before = os.fstat(source.fileno())
             count, checksum = 0, hashlib.sha256()
             while block := source.read(_CHUNK):
@@ -264,16 +264,32 @@ def document_path(directory, document_id):
     return selected / "source.json"
 
 
-def retain_document(manifest_file, directory):
+def retain_document(manifest_file, directory, *, source_files=None):
     """Copy one exact reviewed source closure; publish its original manifest last.
 
     Interrupted copies resume by verifying already-published content addresses.
+    source_files optionally maps every original descriptor path to an explicit
+    regular input file, such as a retained downloader\'s numbered local names.
+    The original descriptor bytes and document identity remain unchanged; the
+    same verified publisher copies directly into this existing document store.
     Nothing opens a provider or changes another source registration.
     """
     manifest_file = Path(manifest_file).expanduser().absolute()
     manifest, raw = _manifest(manifest_file)
     document_id = digest(raw)
     origin = _root(manifest_file.parent)
+    if source_files is not None:
+        expected = {record["path"] for record in _unique_files(manifest)}
+        _need(isinstance(source_files, dict) and set(source_files) == expected,
+              "SOURCE_FILE_SELECTION_INVALID")
+        selected = {}
+        for relative, value in source_files.items():
+            _need(isinstance(value, (str, Path)), "SOURCE_FILE_PATH_INVALID")
+            path = Path(value).expanduser().absolute()
+            _need(_root(path.parent) == path.parent and path.resolve() == path,
+                  "SOURCE_FILE_PATH_CHANGED")
+            selected[relative] = path
+        source_files = selected
     root = private_directory(Path(directory), create=False)
     collection = private_directory(root / DIRECTORY)
     _need(collection == root / DIRECTORY, "DIRECTORY_CHANGED")
@@ -281,7 +297,7 @@ def retain_document(manifest_file, directory):
     _need(target == collection / document_id, "DIRECTORY_CHANGED")
     private_directory(target / "files")
     for record in _unique_files(manifest):
-        _publish_file(origin, target, record)
+        _publish_file(origin, target, record, source_files=source_files)
     # Source metadata cannot change while its files are being retained.
     after = read(manifest_file, MAX_MANIFEST_BYTES)
     _need(after == raw, "MANIFEST_CHANGED_DURING_COPY")

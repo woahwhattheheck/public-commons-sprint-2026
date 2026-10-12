@@ -6,11 +6,11 @@ import { fileURLToPath } from 'node:url';
 import { RELEASE_SCHEMA, MANIFEST, MAX_BYTES, canonical, sha256, relativePath,
   plainDirectory, boundedFile, putFile, copyVerifiedFile, verifyRelease } from './release-core.mjs';
 import { CATALOG_PATH, DOCTOR_PATH, compileCommandCatalog } from './command-catalog.mjs';
+import { productPackageMetadata } from '../distribution/product-package.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_SCHEMA = 'stellar-forge.merchant-distribution-manifest.v1';
 const PACKAGE_NAME = '@tokenjunkielabs/starforge-merchant';
-const REPOSITORY = 'https://github.com/woahwhattheheck/public-commons-sprint-2026';
 const BASE = 'stellar/scf-starforge-20261009/sf46-release/';
 const SHA = /^[0-9a-f]{64}$/;
 const PIN = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
@@ -49,7 +49,7 @@ async function readPackage(packageDirectory, { expectedManifest } = {}) {
     throw new Error('Merchant package manifest digest mismatch');
   const manifest = JSON.parse(manifestBytes);
   if (manifest.schema !== PACKAGE_SCHEMA || manifest.packageName !== PACKAGE_NAME ||
-      manifest.sourceRepository !== REPOSITORY || !/^[0-9a-f]{40}$/.test(manifest.sourceCommit ?? '') ||
+      typeof manifest.sourceRepository !== 'string' || !/^[0-9a-f]{40}$/.test(manifest.sourceCommit ?? '') ||
       !PIN.test(manifest.packageVersion ?? '') || !Array.isArray(manifest.files) ||
       !manifest.files.length || manifest.files.length > 10000 ||
       !Number.isSafeInteger(manifest.sourceBytes) || manifest.sourceBytes < 0 ||
@@ -106,7 +106,7 @@ async function readPackage(packageDirectory, { expectedManifest } = {}) {
   await inspectDirectory(root);
   const metadata = JSON.parse(bytesByPath.get('package.json'));
   if (metadata.name !== manifest.packageName || metadata.version !== manifest.packageVersion ||
-      metadata.type !== 'module' || metadata.bin?.starforge !== './source/' + DOCTOR_PATH)
+      metadata.type !== 'module')
     throw new Error('Merchant package metadata differs from its manifest');
   const node = /^>=(\d+)\.(\d+)\.0$/.exec(metadata.engines?.node ?? '');
   if (!node) throw new Error('Unsupported merchant Node requirement');
@@ -114,10 +114,32 @@ async function readPackage(packageDirectory, { expectedManifest } = {}) {
   if (!catalogBytes || !sourcePaths.has(DOCTOR_PATH)) throw new Error('Original merchant catalog or doctor missing');
   const { catalog, commands, commandCatalog } = compileCommandCatalog(catalogBytes,
     path => sourcePaths.has(path), { prefix: 'source/', sourcePaths: [...sourcePaths],
-      readSource: path => bytesByPath.get('source/' + path) });
-  if (catalog.name !== manifest.packageName ||
-      catalog.version + '-source.g' + manifest.sourceCommit.slice(0, 12) !== manifest.packageVersion)
+      readSource: path => bytesByPath.get('source/' + path), sourceSelection: manifest.sourceSelection });
+  const product = productPackageMetadata(catalog.product);
+  const version = catalog.version + '-source.g' + manifest.sourceCommit.slice(0, 12) +
+    (manifest.sourceSelection ? '.selection.' + manifest.sourceSelection.id : '');
+  if (catalog.name !== manifest.packageName || version !== manifest.packageVersion)
     throw new Error('Merchant package version differs from its original catalog');
+  if (manifest.sourceRepository !== product.sourceRepository)
+    throw new Error('Merchant package repository differs from its original catalog');
+  same(metadata.repository, product.repository, 'repository');
+  same(metadata.bin, Object.fromEntries(Object.entries(product.bin)
+    .map(([name, path]) => [name, './source/' + path])), 'executables');
+  const originalReadme = bytesByPath.get('source/' + product.readme);
+  if (!originalReadme || !originalReadme.equals(bytesByPath.get('README.md')))
+    throw new Error('Merchant package README differs from its original source');
+  if (manifest.sourceSelection) {
+    const inputs = commandCatalog.inputs.map(input => {
+      const path = input.path.slice('source/'.length), bytes = bytesByPath.get(input.path);
+      return { path, gitBlob: gitBlob(bytes), sha256: input.sha256, bytes: input.bytes };
+    });
+    same(manifest.distributionInputs, inputs, 'selected distribution inputs');
+    same(manifest.distributionContributions, inputs.filter(input =>
+      input.path.startsWith('stellar/scf-starforge-20261009/distribution/contributions/'))
+      .map(input => ({ id: input.path.split('/').at(-1).slice(0, -5), path: input.path })),
+    'selected contributions');
+    same(manifest.components, catalog.components, 'selected components');
+  }
   same(metadata.exports, catalog.exports, 'exports');
   for (const path of exportPaths(metadata.exports)) {
     if (!path.startsWith('./') || !bytesByPath.has(relativePath(path.slice(2))))
@@ -167,6 +189,7 @@ async function readPackage(packageDirectory, { expectedManifest } = {}) {
   const summary = { packageDirectory: root, packageName: manifest.packageName,
     packageVersion: manifest.packageVersion, sourceCommit: manifest.sourceCommit,
     sourceRepository: manifest.sourceRepository, sourceManifestSha256,
+    ...(manifest.sourceSelection ? { sourceSelection: { ...manifest.sourceSelection } } : {}),
     sourceFiles: manifest.files.length, sourceBytes, packageFiles: files.length, packageBytes,
     commands, commandCatalog, runtime, separateDependencyEntries: mutableEntries.sort() };
   return { root, manifest, bytesByPath, files, summary, runtime, commands, commandCatalog };
@@ -201,10 +224,11 @@ export async function prepareMerchantPackage({ packageDirectory, output, expecte
     throw new Error('Prepared release exceeds size limit');
   const body = { schema: RELEASE_SCHEMA, product: 'Stellar Forge',
     version: original.manifest.packageVersion,
-    source: { repository: 'woahwhattheheck/public-commons-sprint-2026', commit: original.manifest.sourceCommit },
+    source: { repository: original.manifest.sourceRepository.slice('https://github.com/'.length), commit: original.manifest.sourceCommit },
     origin: { schema: 'stellar-forge.managed-merchant-package.v1',
       packageName: original.manifest.packageName, packageVersion: original.manifest.packageVersion,
       sourceManifest: { path: 'manifest.json', sha256: original.summary.sourceManifestSha256 },
+      ...(original.manifest.sourceSelection ? { sourceSelection: { ...original.manifest.sourceSelection } } : {}),
       sourcePrefix: 'source/', manager },
     runtime: original.runtime, commands: original.commands, commandCatalog: original.commandCatalog, files };
   const manifest = { ...body, digest: sha256(canonical(body)) };

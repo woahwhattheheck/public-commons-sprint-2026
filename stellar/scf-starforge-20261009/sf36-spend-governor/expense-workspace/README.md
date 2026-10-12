@@ -1,6 +1,6 @@
 # Buyer expense and period workspace
 
-A private operator workspace for taking original SF36 buyer statements and native MCP purchase records through source review, expense allocation, named period review, accountant delivery and receiving.
+A private operator workspace for taking original SF36 buyer statements, native MCP purchase records and complete original Node accounting exports through source review, expense allocation, named period review, accountant delivery and receiving.
 
 The application uses the maintained `../statement.py` reader and statement calculator for SF36 ledgers. Original MCP quote stores enter through their own unchanged validation and a read-only `SqliteQuoteStore.readSnapshot` transaction. The original buyers continue to own reservations, payment receipts and reconciliation. This workspace retains reviewed captures and operator decisions in its existing SQLite database.
 
@@ -19,6 +19,10 @@ Open the complete private URL printed by the server. It listens on 127.0.0.1 wit
 With the maintained Starforge package, the original command is `starforge buyer-expenses --state /absolute/private/buyer-expenses --port 0`. Its fixed Node forwarder runs this same Python server and preserves arguments, signals and exit status.
 
 Use a new private directory with mode 0700, separate from the buyer. An existing expense project opens in the same way. Opening a saved project reads its operator state without touching its source ledgers or quote databases. Use `--node /absolute/path/to/node` when a later MCP capture needs an explicitly selected host runtime.
+
+## Original Node accounting export intake
+
+Sources → Import Node accounting export retains the exact original producer file, producing attempt/evidence and saved SF36 accounting result. Preview identifies the source and previous capture; a named review makes its pending capture current. Unpaid outcomes remain source history without payment assets or reservations. Finalized original rows use the same exact allocation, duplicate-source review, issued periods and complete receiving. The complete browser/API/MCP/customer workflow and source meanings are in [NODE_OPERATIONS.md](NODE_OPERATIONS.md).
 
 ## Complete operating flow
 
@@ -212,3 +216,9 @@ Each original export may carry several adjustments. The source review accepts or
 The original API `POST /api/adjustment-packets` accepts `{expected_revision, payload:{name, provenance, data_context, source_file, source_sha256, event_id, expected_job?}}`. Its optional durable `request_id` envelope behaves like every existing mutation. Review, credit coding, period review/close/reopen and export reuse the same original routes. Accountant editions add `original-merchant-adjustments.csv` and preserve the exact source export plus buyer selection. Store-currency fields remain absent when the original source does not supply them.
 
 Complete project version `original-native-refund-v2` includes the new native source adapter, unchanged accounting compiler/reconciler and the full existing Woo reader closure. The trusted receiver also accepts previously issued `original-woo-refund-v1` projects with their original source member set. Receiving opens the retained state without reimporting any original source or starting a payment.
+
+## Governed native MCP purchases
+
+The original source workflow can join an MCP quote directory to the actual native spending owner through a private `stellar-forge.governed-mcp-expense-input.v1` descriptor. It retains original request bindings, the complete shared SF36 ledger snapshot, actual reserved capacity, settled expense and saved native result metadata. The existing browser, source review, allocation, period, accountant export and complete-project receiver handle this source end to end.
+
+Follow [GOVERNED_MCP.md](GOVERNED_MCP.md) to select the actual owner, register and review it, reconcile through the original buyer, count a shared reservation once across source views, issue expense and reopen or reattach a portable project.

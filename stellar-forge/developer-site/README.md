@@ -106,6 +106,40 @@ inbox read also passed from that package. These checks made no new store
 request, order, signature or payment. Native Site publication remains with the
 original authenticated publisher and unchanged owner-private project.
 
+## SCF application and reviewer downloads
+
+Open **SCF application** from the home navigation or footer to read the complete
+[reviewer page](dist/grant.html). It presents the maintained application answer,
+the original published presentation film, the retained economic briefing and
+direct downloads in the same static Site.
+
+The page's source and downloads travel together:
+
+- [Primary application answer](dist/grant-data/application.md): the current
+  manuscript author's complete project, customer, product, Stellar contribution,
+  independent-use targets, delivery and applicant-disclosure narrative.
+- [Product and financing companion](dist/grant-data/product-and-finance.md):
+  the detailed implementation, six funded packages, capacity and conditional
+  cash explanation that supports the primary answer.
+- [Six-package budget](dist/grant-data/budget.csv): the exact package hours,
+  USD 95 planning rate and USD 38,000 / 400-hour request.
+- [Source and measure index](dist/grant-data/source-index.json): original source
+  locations, artifact identities, financial assumptions and the distinction
+  between completed work and proposed outcomes.
+
+The ten- and thirty-purchase adoption targets are totals across the two
+independent buyers. The companion's 608 hours / USD 57,760 is modeled labor cost,
+not fee revenue. The award date and conditional cash schedule remain assumptions;
+the original invitation and submission retain their existing owner.
+
+The page links the actual published film and editable companion from the
+`scf-presentation-20261011` release. Its economic-report opening uses the complete
+existing `dist/examples/fred-briefing-20261012/` directory described below.
+Preserve that directory and every current Site route when receiving this source.
+The reviewer page, its CSS and four data files need no build, numerical run,
+merchant operation or payment to open. Hosted publication continues through the
+same existing Sites project and audience in the deployment section below.
+
 ## Source layout
 
 - dist/onboarding.mjs: pure original-config generator, supported imports, validation and deterministic ZIP writer.
@@ -302,3 +336,58 @@ Original CoCart product and managed operating results remain attached to
 PR1618 and PR1708; a following front-door receiving operation retains its own
 actual result. Publish this cumulative subtree through the same existing
 Site project and its current audience.
+
+## Prepare and retain the SCF submission
+
+The existing application reader now opens **Prepare submission** at
+/grant-submission.html. It receives the same nine complete canonical answers
+and their exact original source index, then carries answer editing, whole-text
+copying, actual issuer-field mapping, recorded limits and editorial review into
+a portable working draft.
+
+The editor uses the original browser draft store with optimistic revisions.
+Complete export/reopen includes every source edition, manual answer, field
+mapping, review note and saved version. A later source refresh preserves edited
+answers against their earlier baseline and shows the new source alongside them.
+The existing composer maintains the navigation entry and current source
+descriptor without another manuscript or data file.
+
+The complete [submission operating guide](GRANT_SUBMISSION.md) covers the
+issuer-form mapping, exact copy-format counts, receiving and source adoption.
+The maintained implementation is grant-submission.mjs, the four original
+dist/grant-submission assets and the three dist/grant-plan modules, registered
+in the existing browser-assets declaration. The same editor receives a complete
+native SF47 planning JSON or ZIP, lets staff review its exact source and selected
+revision, and applies the accepted planning material to the existing working draft. Continue the original Site and issuer-submission operation with
+this same complete source.
+
+## Review the operating product before the application
+
+The existing `/grant.html` opens with the retained purchase film, complete economic
+report and original reviewer operating path. Choose **Explore the working product**
+to follow Applications, prepare the installed or source command for the selected
+private workbench, and download its complete opening and handover guide.
+
+The original film remains linked from its previous application section. The guided
+entry uses the same report, package, purchase and source URLs as the current
+reader. Its [full operating guide](GRANT_ENTRY.md) covers command preparation,
+original purchase receiving and the existing customer-delivery recipes.
+
+The complete composer and installed source contract is in
+[GRANT_COMPOSITION.md](GRANT_COMPOSITION.md). Its public customer projection,
+reviewer opening and submission workspace are composed into the same current
+application edition before the four reader identities are emitted.
+
+### Maintain the financial application source
+
+The [merchant financial application chapter](GRANT_FINANCIAL_OPERATIONS.md) connects the current manuscript to settlement accounting, invoices, payment plans and Xero handover. The same composer accepts **--finance-commit** to select the actual merged product and preserves it through later manuscript refreshes. The concise nine answers and complete companion remain the original reader's source, and its current application identity also flows into **Prepare submission**.
+
+## Complete submission review and handover
+
+The existing SCF reader now opens **Review prepared draft** alongside **Prepare submission**. The original submission editor retains its native planning panel and adds the complete **Handover** view. These workspaces use the same saved-draft store and preserve full original source, plan, answer, field and version identities.
+
+An author can receive the complete application, prepare the actual issuer fields, send a full draft for named colleague review, receive a revised version with explicit decision carry, and retain that complete review as handover evidence. The original editor then freezes the selected output against its exact source bundle, records actual issuer observations or correction links, and compares subsequent working edits while keeping the prepared edition intact. Full draft, original source/evidence, readable review and prepared-output downloads support normal reopening and continued work.
+
+Use the [review-round guide](GRANT_REVIEW_ROUNDS.md), [handover guide](GRANT_HANDOVER.md) and [complete composition/receiving guide](GRANT_COMPOSITION.md). The original grant-reviewer installation contains both complete modules, their existing-page callbacks and original source-model examples. Source Tables remains available through its existing product navigation and `source-tables` selection.
+
+The cumulative manuscript owner supplies the current nine answers and detailed companion. The existing publisher retains the selected Site, and the original receiving owner supplies the actual source-bound browser and exported-work outcomes.

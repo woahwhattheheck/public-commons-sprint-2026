@@ -1,3 +1,4 @@
+import { connectPortable } from './portable.mjs';
 const $ = id => document.getElementById(id);
 const clone = value => structuredClone(value);
 const formatDate = value => value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -314,6 +315,8 @@ $('restore').addEventListener('click', () => run('Restoring selected revision…
   await refresh({ replaceDraft: true, message: 'Selected draft restored as revision ' + result.revision + '.' }); await loadHistory();
 }));
 window.addEventListener('beforeunload', event => { if (hasEdits()) { event.preventDefault(); event.returnValue = ''; } });
+
+connectPortable({ api, run, notice, hasEdits });
 
 await run('Opening the retained workspace…', async () => {
   const key = new URLSearchParams(location.hash.slice(1)).get('session');

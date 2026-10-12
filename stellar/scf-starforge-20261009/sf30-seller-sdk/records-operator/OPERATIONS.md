@@ -117,3 +117,9 @@ Monthly amounts retain the selected reconciliation period. Each group and month 
 ### Receiving the customer directory
 
 The customer summary, HTML report and README use the customer projection even when delivered inside a complete operator package. The operator retains the detailed source errors and original native preview separately. A customer input-correction code identifies a remaining source issue; open the same retained operator revision for its exact original value and diagnostic, then save an explicit correction edition.
+
+## Receive an original workbook in the same operation
+
+The complete workflow and exact commands are in [WORKBOOKS.md](WORKBOOKS.md). Use `adopt-workbooks` on an existing original Records head, or include original workbook descriptors when creating the prepared workspace. Receive and map exact sheet ranges; retain original documents and actual custody evidence; record source-bound row/context reviews; explicitly promote only a complete eligible custody descriptor; then use the unchanged four-ledger reconciliation.
+
+Workbook-only receiving and full workbook export remain available before financial or custody input completion. Use `records-workspace workbook --dir OPERATION --revision REVISION --workbook ID --out NEW_DIRECTORY` to retain the whole original source, all selected rows and the complete native portable. A mapping correction becomes a new saved revision, never a rewritten original file. The 22-file workbook-capable operator application and separate installation declaration travel with that handoff. Its manifests state every output identity and whether any custody rows were actually established.

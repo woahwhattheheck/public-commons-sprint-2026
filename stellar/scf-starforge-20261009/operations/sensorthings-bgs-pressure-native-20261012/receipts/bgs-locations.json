@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "role": "bgs-locations",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Things(8)/Locations",
+  "receivedAt": "2026-10-12T12:02:47Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "bgs-thing-8-locations.json",
+    "bytes": 753,
+    "sha256": "7ace37241c5d6691e0f5d229c3487b093279b6d9b096bc4a78a2d3f626127dd2"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Things(8)/Locations",
+    "filename": "bgs-thing-8-locations.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81ee-add2-00b27c0023f9\",\"filename\":\"bgs-thing-8-locations.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":753,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81ee-add2-00b27c0023f9\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81ee-add2-00b27c0023f9\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81ee-add2-00b27c0023f9\",\"filename\":\"bgs-thing-8-locations.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":753,\"content\":\"{\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Locations(11)\\\",\\\"@iot.id\\\":11,\\\"name\\\":\\\"BGS GGERFS Barometer\\\",\\\"description\\\":\\\"BGS GGERFS Barometer\\\",\\\"encodingType\\\":\\\"application/geo+json\\\",\\\"location\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[-4.2012,55.838255]},\\\"properties\\\":{\\\"active_yn\\\":\\\"Y\\\",\\\"comments\\\":\\\"Stored in Cabinet 1 with ERT monitoring equipment, XY estimated from Site 3 borehole coordinates\\\",\\\"from_date\\\":\\\"2020-01-16T14:00:00Z\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":162740041,\\\"site\\\":\\\"UKGEOS Glasgow Observatory\\\",\\\"sub_site\\\":\\\"Site 3\\\"},\\\"HistoricalLocations@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Locations(11)/HistoricalLocations\\\",\\\"Things@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Locations(11)/Things\\\"}]}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}

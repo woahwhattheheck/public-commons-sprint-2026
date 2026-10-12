@@ -7,9 +7,59 @@ const short=(v,n=120)=>String(v??"").length>n?String(v).slice(0,n)+"…":String(
 const uid=()=>crypto.randomUUID();
 const isoDate=()=>new Date().toISOString().slice(0,10);
 const fullDate=()=>new Date().toISOString();
-const badge=s=>'<span class="badge">'+esc(label(s??"not recorded"))+'</span>';
+const badge=s=>'<span class="badge">'+esc(humanValue(s))+'</span>';
 const money=s=>new Intl.NumberFormat("en-CA",{style:"currency",currency:"CAD"}).format(Number(s??0));
 const titleOf=r=>r?.title_en||r?.title||r?.label||r?.name||r?.number||r?.identifier||r?.id||"";
+
+const FIELD_CAPTIONS={title_en:"Title (English)",title_fr:"Title (French)",body_en:"Text (English)",body_fr:"Text (French)",
+ purpose_fr:"Purpose (French)",audience_fr:"Audience (French)",exclusions_fr:"Exclusions (French)",preface_en:"Preface (English)",preface_fr:"Preface (French)",
+ table_en:"Table (English)",table_fr:"Table (French)",author_label:"Author",procedure_id:"Procedure",source_procedure_id:"Source procedure",
+ edition_id:"Edition",resolution_edition_id:"Resolution edition",comparison_edition_id:"Comparison edition",clause_id:"Clause",
+ source_id:"Source",source_ids:"Sources",source_file_id:"Original file",report_id:"Phase report",response_id:"Report response",
+ invoice_id:"Invoice",person_id:"Person",reviewer_id:"Reviewer",author_id:"Author",publication_id:"Publication",closure_id:"Ballot decision",
+ ballot_id:"Ballot",consultation_id:"Consultation",comment_id:"Comment",procedural_review_id:"Procedural review",sha256:"Content fingerprint",
+ frozen_at:"Frozen",recorded_at:"Recorded",submitted_at:"Submitted",through:"Work through",base_cad:"Base amount (CAD)",ola_cad:"Official-language amount (CAD)",
+ net_cad:"Net amount (CAD)",hst_cad:"HST (CAD)",total_cad:"Total (CAD)",amount_cad:"Amount (CAD)",contract_start:"Contract start",contract_end:"Contract end"};
+const RECORD_NAMES={scope:"scope",sources:"source",references:"related standard",clauses:"clause",editions:"edition",cases:"worked case",
+ language_reviews:"language review",comments:"comment",consultations:"consultation",ballots:"ballot",votes:"vote",ballot_closures:"ballot decision",
+ technical_decisions:"technical decision",procedural_reviews:"procedural review",publications:"publication",maintenance:"maintenance action",uptake:"use record",
+ tasks:"delivery task",deliverables:"deliverable",phase_reports:"phase report",report_responses:"report response",communications:"communication",
+ delivery_registers:"scope and invoice register",ola_events:"official-language service",changes:"schedule or contract change",funding:"funding agreement",
+ costs:"cost",invoices:"invoice",invoice_responses:"invoice response",payments:"payment",people:"person",memberships:"membership",
+ procedures:"procedure",disclosures:"disclosure"};
+const WORKFLOW_TITLES={"edition.freeze":"Freeze edition","language.record":"Record language review","ballot.open":"Open ballot","ballot.close":"Record ballot decision",
+ "decision.record":"Record technical decision","procedure.review":"Record procedural review","phase.freeze":"Prepare phase report",
+ "phase.response":"Record report response","invoice.prepare":"Prepare invoice","invoice.response":"Record invoice response","payment.record":"Record payment",
+ "delivery.register":"Record scope and invoice register","comment.carry":"Carry comment to another edition"};
+const OPERATION_NAMES={"example.adopted":"Example opened","project.created":"Project created","project.rename":"Project renamed",
+ "source.add":"Original source retained","record.save":"Record saved","record.remove":"Record removed","records.import":"Source records imported",
+ "edition.freeze":"Edition frozen","language.record":"Language review recorded","ballot.open":"Ballot opened","ballot.close":"Ballot decision recorded",
+ "decision.record":"Technical decision recorded","procedure.review":"Procedural review recorded","phase.freeze":"Phase report prepared",
+ "phase.response":"Report response recorded","invoice.prepare":"Invoice prepared","invoice.response":"Invoice response recorded",
+ "payment.record":"Payment recorded","delivery.register":"Scope and invoice register recorded","comment.carry":"Comment carried to another edition"};
+const DATE_FIELDS=new Set(["date","opens","closes","due","new_due","issued","through","maintenance_due","period_end","contract_start","contract_end",
+ "planned_publication","actual_publication","submitted_to_scc_on","submitted_on","launch_on","provisional_review_ready_on","publication_date"]);
+const humanValue=value=>{const text=String(value??"Not recorded").replaceAll("_"," ").replaceAll("."," ");return text?text[0].toUpperCase()+text.slice(1):"Not recorded";};
+const fieldLabel=name=>FIELD_CAPTIONS[name]||label(String(name).replace(/_ids?$/,"").replace(/_cad$/," (CAD)"))
+ .replace(/\b(?:Scc|Ola|Hst|Cad|Url|Csv|Json|Pdf|Docx)\b/g,word=>word.toUpperCase());
+const recordName=collection=>RECORD_NAMES[collection]||humanValue(collection).toLowerCase();
+const operationName=value=>OPERATION_NAMES[value]||humanValue(value);
+function readableDate(value){
+ if(value===null||value===undefined||value==="")return "Not recorded";
+ const text=String(value);
+ if(/^\d{4}-\d{2}-\d{2}$/.test(text)){
+  const date=new Date(text+"T12:00:00Z");
+  if(Number.isNaN(date.valueOf())||date.toISOString().slice(0,10)!==text)return text;
+  return new Intl.DateTimeFormat("en-CA",{day:"numeric",month:"short",year:"numeric",timeZone:"UTC"}).format(date);
+ }
+ if(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(text)&&/(?:Z|[+-]\d{2}:\d{2})$/.test(text)){
+  const date=new Date(text);
+  if(!Number.isNaN(date.valueOf()))return new Intl.DateTimeFormat("en-CA",{day:"numeric",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hourCycle:"h23",timeZone:"UTC"}).format(date)+" UTC";
+ }
+ return text;
+}
+function dateCell(value){return value?'<time datetime="'+esc(value)+'">'+esc(readableDate(value))+'</time>':'<span class="muted">Not recorded</span>';}
+
 let catalog=null,project=null,projects=[],section="overview",subsection={},clauseId=null,editor=null,noticeTimer=null,renderEpoch=0,listOffset=0,listCache=null;
 const GROUPS=[
  ["Project",[["overview","Overview"],["scope","Scope & references"],["sources","Original sources"]]],
@@ -57,7 +107,16 @@ function projectHeading(title,description,actions=""){
  '</div><div class="toolbar">'+actions+'</div></div>';
 }
 function nav(){
- $("#nav").innerHTML=GROUPS.map(([group,items])=>'<span class="nav-group">'+esc(group)+'</span>'+items.map(([key,name])=>'<button data-section="'+key+'" class="'+(section===key?"active":"")+'" aria-current="'+(section===key?"page":"false")+'">'+esc(name)+'</button>').join("")).join("");
+ const navigation=$("#nav"),previousScroll=navigation.scrollLeft;
+ navigation.innerHTML=GROUPS.map(([group,items])=>'<span class="nav-group">'+esc(group)+'</span>'+items.map(([key,name])=>'<button data-section="'+key+'" class="'+(section===key?"active":"")+'" aria-current="'+(section===key?"page":"false")+'">'+esc(name)+'</button>').join("")).join("");
+ if(window.matchMedia("(max-width:760px)").matches){
+  navigation.scrollLeft=previousScroll;
+  const active=navigation.querySelector('[aria-current="page"]');
+  if(active){const start=active.offsetLeft-navigation.offsetLeft,end=start+active.offsetWidth;
+   if(start<navigation.scrollLeft)navigation.scrollLeft=start;
+   else if(end>navigation.scrollLeft+navigation.clientWidth)navigation.scrollLeft=end-navigation.clientWidth;
+  }
+ }
 }
 function stats(items){return '<div class="stats">'+items.map(([value,name])=>'<div class="stat"><strong>'+esc(value)+'</strong><span>'+esc(name)+'</span></div>').join("")+'</div>';}
 function panel(title,body){return '<section class="panel"><h2>'+esc(title)+'</h2>'+body+'</section>';}
@@ -65,7 +124,7 @@ function empty(message,button=""){return '<div class="empty"><p>'+esc(message)+'
 function actionButton(action,text,extra="",primary=false){return '<button data-action="'+esc(action)+'" '+extra+' class="'+(primary?"primary":"")+'">'+esc(text)+'</button>';}
 function refName(collection,id){return titleOf(project?.[collection]?.find(r=>r.id===id))||id||"—";}
 function textValue(v){return typeof v==="object"?pretty(v):String(v??"");}
-function table(headers,rows){return '<div class="table-wrap"><table><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+c+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>';}
+function table(headers,rows,className=""){return '<div class="table-wrap '+esc(className)+'"><table><thead><tr>'+headers.map(h=>'<th scope="col">'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map((c,i)=>'<td data-label="'+esc(headers[i]??"")+'"'+(headers[i]==="Actions"?' class="row-actions"':"")+'>'+c+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>';}
 function currentCollection(){const allowed=COLLECTIONS_BY_SECTION[section]||[];return allowed.includes(subsection[section])?subsection[section]:allowed[0];}
 function subtabs(collections,current){return '<div class="subtabs">'+collections.map(c=>'<button data-collection="'+c+'" class="'+(c===current?"active":"")+'">'+esc(COLLECTION_TITLES[c])+' <small>'+esc(project.collection_counts[c]??0)+'</small></button>').join("")+'</div>';}
 async function render(){
@@ -92,6 +151,13 @@ async function render(){
  }
  renderCollection(collection,rows);
 }
+function findingContext(finding){
+ const records=project?.[finding.collection],record=Array.isArray(records)?records.find(r=>r.id===finding.record_id):null;
+ const kind=humanValue(RECORD_NAMES[finding.collection]||finding.collection||"project");
+ if(!record)return kind;
+ const title=record.title_en||record.title||record.label||record.name||record.identifier||"";
+ return [kind,record.number,title].filter(value=>value!==undefined&&value!==null&&value!=="").join(" · ");
+}
 function renderOverview(){
  const a=project.analysis,reviewed=a.languages.filter(r=>r.review_status==="reviewed").length;
  const balance=a.live_interest_balance;
@@ -99,9 +165,9 @@ function renderOverview(){
  actionButton("workflow","Freeze edition",'data-operation="edition.freeze"')+actionButton("export","Export documents","",true));
  html+=stats([[a.counts.clauses,"Working clauses"],[a.counts.editions,"Retained editions"],[reviewed+"/"+a.languages.length,"Paired clauses reviewed"],[money(a.collected_cad),project.mode==="authored_example"?"Authored example receipts":"Actual collected payments"]]);
  html+='<div class="grid">'+panel("Working scope",a.scope?'<h3>'+esc(a.scope.title_en)+'</h3><p>'+esc(a.scope.purpose)+'</p><div class="meta-line">'+badge(a.scope.deliverable_type)+badge(a.funding_status)+'</div>'+actionButton("edit","Edit scope",'data-collection="scope" data-id="'+esc(a.scope.id)+'"'):empty("Set the proposed standard’s scope and the source-bound procedure.",actionButton("new-record","Set scope",'data-collection="scope"')))+
- panel("Next delivery work",'<p class="compact">Next progress report: <strong>'+esc(a.next_progress_report_due||"No previous submitted phase report")+'</strong></p>'+(a.reporting_schedule?.planning_due_before_first_phase_report?'<p class="compact">Planning date before the first phase report: '+esc(a.reporting_schedule.planning_due_before_first_phase_report)+'</p>':'')+
- '<ul class="list-plain">'+project.tasks.filter(t=>!["delivered","cancelled"].includes(t.status)).slice(0,5).map(t=>'<li><strong>'+esc(t.title)+'</strong><br>Phase '+esc(t.phase)+' · '+esc(t.due||"Date not set")+' · '+esc(t.owner||"Owner not set")+'</li>').join("")+'</ul>'+actionButton("section","Open phases",'data-target="delivery"'))+'</div>';
- html+=panel("Source and procedural attention",a.findings.length?'<ul class="list-plain">'+a.findings.slice(0,10).map(f=>'<li><strong>'+esc(label(f.code))+'</strong><br>'+esc(f.message)+(f.record_id?' '+actionButton("edit","Open",'data-collection="'+esc(f.collection)+'" data-id="'+esc(f.record_id)+'"'):"")+'</li>').join("")+'</ul>':"<p>No current record gaps are reported. Authority decisions and receipt evidence remain the operator’s records.</p>");
+ panel("Next delivery work",'<p class="compact">Next progress report: <strong>'+esc(a.next_progress_report_due?readableDate(a.next_progress_report_due):"No previous submitted phase report")+'</strong></p>'+(a.reporting_schedule?.planning_due_before_first_phase_report?'<p class="compact">Planning date before the first phase report: '+esc(readableDate(a.reporting_schedule.planning_due_before_first_phase_report))+'</p>':'')+
+ '<ul class="list-plain">'+project.tasks.filter(t=>!["delivered","cancelled"].includes(t.status)).slice(0,5).map(t=>'<li><strong>'+esc(t.title)+'</strong><br>Phase '+esc(t.phase)+' · '+esc(t.due?readableDate(t.due):"Date not set")+' · '+esc(t.owner||"Owner not set")+'</li>').join("")+'</ul>'+actionButton("section","Open phases",'data-target="delivery"'))+'</div>';
+ html+=panel("Source and procedural attention",a.findings.length?'<ul class="list-plain">'+a.findings.slice(0,10).map(f=>'<li><strong>'+esc(humanValue(f.code))+'</strong><br><small>'+esc(findingContext(f))+'</small><br>'+esc(f.message)+(f.record_id?' '+actionButton("edit","Open "+(RECORD_NAMES[f.collection]||"record"),'data-collection="'+esc(f.collection)+'" data-id="'+esc(f.record_id)+'"'):"")+'</li>').join("")+'</ul>':"<p>No current record gaps are reported. Authority decisions and receipt evidence remain the operator’s records.</p>");
  html+='<div class="grid">'+panel("Current committee composition",table(["Interest","Eligible voters"],Object.entries(balance.categories).map(([k,v])=>[esc(k),esc(v)]))+
  '<p class="compact">Current composition: '+esc(balance.eligible)+' eligible. '+esc(balance.balanced?"Recorded categories satisfy the DGSI balance formula.":"DGSI category balance is not currently established.")+' A frozen ballot retains its own roster and applicable profile.</p>')+
  panel("Retained work",'<p>Edits create an atomic project revision. Frozen editions, ballots, reports and financial receipts keep the exact content they concern. Later source edits remain visible without changing historical votes.</p><p>Complete private continuation ZIPs include original bytes and development history. Selected edition packages include only the chosen public text and explicitly selected source originals.</p>'+actionButton("section","View development history",'data-target="history"'))+'</div>';
@@ -119,7 +185,8 @@ function renderDraft(){
  html+='<div class="clause-layout"><aside class="outline" aria-label="Clause outline">'+clauses.map(c=>'<button data-clause="'+esc(c.id)+'" class="'+(c.id===clauseId?"selected":"")+'">'+esc(c.number)+' · '+esc(c.title_en)+'</button>').join("")+'</aside><article class="clause-card">';
  html+='<div class="toolbar"><span class="eyebrow">Clause '+esc(clause.number)+' · '+esc(clause.kind)+'</span><div class="right">'+actionButton("edit","Edit paired text",'data-collection="clauses" data-id="'+esc(clause.id)+'"')+' '+actionButton("workflow","Record language review",'data-operation="language.record" data-clause-id="'+esc(clause.id)+'"')+'</div></div>';
  html+='<div class="pair"><div><p class="eyebrow">English</p><h2>'+esc(clause.title_en)+'</h2><div class="prose">'+esc(clause.body_en)+'</div>'+clauseTable(clause.table_en)+'</div><div lang="fr"><p class="eyebrow">Français</p><h2>'+esc(clause.title_fr||"Titre à renseigner")+'</h2><div class="prose">'+esc(clause.body_fr||"Texte français non renseigné.")+'</div>'+clauseTable(clause.table_fr)+'</div></div>';
- html+='<div class="meta-line">'+badge(lang?.review_status)+(lang?.french_present?"":badge("French text incomplete"))+'</div><dl class="definition"><dt>Stable clause identity</dt><dd>'+esc(clause.id)+'</dd><dt>Linked sources</dt><dd>'+clause.source_ids.map(id=>'<button class="details-button" data-action="source" data-id="'+esc(id)+'">'+esc(refName("sources",id))+'</button>').join("; ")+'</dd></dl>';
+ html+='<div class="meta-line">'+badge(lang?.review_status)+(lang?.french_present?"":badge("French text incomplete"))+'</div><dl class="definition"><dt>Linked sources</dt><dd>'+clause.source_ids.map(id=>'<button class="details-button" data-action="source" data-id="'+esc(id)+'">'+esc(refName("sources",id))+'</button>').join("; ")+'</dd></dl>';
+ html+='<details class="record-details"><summary>Clause reference</summary><p class="compact">'+esc(clause.number)+' · '+esc(clause.id)+'</p></details>';
  if(clause.case_ids.length)html+='<h3>Worked source cases</h3>'+clause.case_ids.map(id=>actionButton("case","Open "+refName("cases",id),'data-id="'+esc(id)+'"')).join(" ");
  if(clause.notes)html+='<details><summary>Working notes</summary><p class="compact">'+esc(clause.notes)+'</p></details>';
  html+='</article></div>';$("#main").innerHTML=html;
@@ -150,13 +217,16 @@ const COLS={
 const FREEZE_OP={editions:"edition.freeze",language_reviews:"language.record",ballots:"ballot.open",ballot_closures:"ballot.close",
  technical_decisions:"decision.record",procedural_reviews:"procedure.review",phase_reports:"phase.freeze",report_responses:"phase.response",invoices:"invoice.prepare",
  invoice_responses:"invoice.response",payments:"payment.record",delivery_registers:"delivery.register"};
-function fieldCell(name,value){
+function fieldCell(name,value,collection="",truncate=true){
+ const kind=catalog?.collections?.[collection]?.[name]?.kind;
+ if(kind==="date"||DATE_FIELDS.has(name)||name.endsWith("_at")||name.endsWith("_on"))return dateCell(value);
+ if(value===null||value===undefined||value==="")return '<span class="muted">Not recorded</span>';
  if(REFS[name])return esc(refName(REFS[name],value));
  if(name.endsWith("_cad"))return '<span class="money">'+esc(money(value))+'</span>';
  if(typeof value==="boolean")return esc(value?"Yes":"No");
  if(Array.isArray(value))return esc(value.map(v=>LIST_REFS[name]?refName(LIST_REFS[name],v):v).join(", ")||"—");
- if(["status","disposition","decision","recorded_decision","basis","profile_status","representation"].includes(name))return badge(value);
- return esc(short(value,190)||"—");
+ if(kind==="enum"||["status","disposition","decision","recorded_decision","basis","profile_status","representation","deliverable_type","kind"].includes(name))return badge(value);
+ return esc((truncate?short(value,190):String(value??""))||"—");
 }
 function renderCollection(collection,rows){
  const descriptions={scope:"Define the proposed scope and the actual relationship to existing standards. Existing programme entries remain distinct from new proposals.",
@@ -167,17 +237,17 @@ function renderCollection(collection,rows){
  delivery:"Plan and retain the four SCC delivery phases, report versions, actual responses and official-language services.",
  finance:"CAD amounts exclude HST until an invoice records it separately. Estimated costs, accepted reports, invoices and cleared payments are distinct.",
  procedure:"Use real participants, source-bound profiles, recorded appointments and disclosures. Authored example people are labeled."};
- const newButton=FREEZE_OP[collection]?actionButton("workflow","Add "+label(collection.replace(/s$/,"")),'data-operation="'+FREEZE_OP[collection]+'"',true):
- actionButton("new-record","Add "+label(collection.replace(/s$/,"")),'data-collection="'+collection+'"',true);
+ const newButton=FREEZE_OP[collection]?actionButton("workflow",WORKFLOW_TITLES[FREEZE_OP[collection]]||"Record "+recordName(collection),'data-operation="'+FREEZE_OP[collection]+'"',true):
+ actionButton("new-record",(["scope","funding"].includes(collection)&&project[collection]?.length?"Edit ":"Add ")+recordName(collection),'data-collection="'+collection+'"',true);
  let html=projectHeading(COLLECTION_TITLES[collection],descriptions[section]||"",newButton);
  if(section==="delivery")html+=phaseCards();
  if(section==="finance")html+=stats([[money(project.analysis.collected_cad),project.mode==="authored_example"?"Authored example receipts":"Collected payments"],
- [project.analysis.funding_status,"Funding status"],[project.invoices.length,"Prepared invoices"],[project.report_responses.filter(r=>r.decision==="accepted").length,"Accepted report records"]]);
+ [humanValue(project.analysis.funding_status),"Funding status"],[project.invoices.length,"Prepared invoices"],[project.report_responses.filter(r=>r.decision==="accepted").length,"Accepted report records"]]);
  html+=subtabs(COLLECTIONS_BY_SECTION[section],collection);
- html+='<div class="toolbar"><input id="record-filter" placeholder="Filter these records" aria-label="Filter records"><span class="muted compact">'+esc(project.collection_counts[collection])+' retained records</span></div>';
+ html+='<div class="toolbar"><input id="record-filter" placeholder="Filter these records" aria-label="Filter records"><span class="muted compact">'+esc(project.collection_counts[collection])+' '+(project.collection_counts[collection]===1?'retained record':'retained records')+'</span></div>';
  const cols=COLS[collection]||["title","id"];
  const tableRows=rows.map(r=>{
-  const cells=cols.map((key,i)=>'<div class="'+(!i?"cell-title":"")+'">'+fieldCell(key,r[key])+'</div>');
+  const cells=cols.map((key,i)=>'<div class="'+(!i?"cell-title":"")+'">'+fieldCell(key,r[key],collection)+'</div>');
   let actions=actionButton("edit",catalog.immutable.includes(collection)?"View":"Edit",'data-collection="'+collection+'" data-id="'+esc(r.id)+'"');
   if(collection==="editions")actions+=actionButton("compare","Compare",'data-id="'+esc(r.id)+'"')+actionButton("export","Documents",'data-edition-id="'+esc(r.id)+'"');
   if(collection==="ballots")actions+=actionButton("ballot","Calculation",'data-id="'+esc(r.id)+'"')+(project.ballot_closures.some(c=>c.ballot_id===r.id)?"":actionButton("workflow","Close",'data-operation="ballot.close" data-ballot-id="'+esc(r.id)+'"'));
@@ -185,7 +255,7 @@ function renderCollection(collection,rows){
   if(collection==="cases")actions+=actionButton("case","Source rows",'data-id="'+esc(r.id)+'"');
   cells.push(actions);return cells;
  });
- html+=rows.length?table([...cols.map(label),"Actions"],tableRows):empty("No records in this collection.");
+ html+=rows.length?table([...cols.map(fieldLabel),"Actions"],tableRows,"record-table"):empty("No records in this collection.");
  const total=project.collection_counts[collection],shown=rows.length;
  html+='<div class="pagination"><span>'+esc(total?listOffset+1:0)+'–'+esc(listOffset+shown)+' of '+esc(total)+'</span><div>'+
  '<button data-action="prev-page" '+(listOffset?"":"disabled")+'>Previous</button> <button data-action="next-page" '+(listOffset+shown<total?"":"disabled")+'>Next</button></div></div>';
@@ -198,10 +268,10 @@ function renderCollection(collection,rows){
 function communicationPanel(){
  const rows=project.analysis.communication_reviews||[];
  return panel("Recorded review and launch timing",rows.length?table(["Communication","SCC submission","Review interval","Actual response"],rows.map(r=>[
- esc(r.title),esc(r.submitted_on||"Not recorded")+"<div class=\"row-note\">"+esc(r.submission_evidence_recorded?"Source retained":"Submission evidence missing")+"</div>",
- r.review_link_dispatch?esc(label(r.review_link_dispatch.timing))+"<div class=\"row-note\">Launch: "+esc(r.review_link_dispatch.launch_on||"Not set")+"</div>":
+ esc(r.title),dateCell(r.submitted_on)+"<div class=\"row-note\">"+esc(r.submission_evidence_recorded?"Source retained":"Submission evidence missing")+"</div>",
+ r.review_link_dispatch?esc(label(r.review_link_dispatch.timing))+"<div class=\"row-note\">Launch: "+esc(r.review_link_dispatch.launch_on?readableDate(r.review_link_dispatch.launch_on):"Not set")+"</div>":
  r.mandatory_notice_exception_supported?"Supported mandatory-notice exception":
- esc(r.provisional_review_ready_on||"Set submission date")+"<div class=\"row-note\">"+esc(r.calendar_status==="selected_calendar"?"15 business days under selected calendar":"Weekday estimate; select an actual calendar basis")+"</div>",
+ esc(r.provisional_review_ready_on?readableDate(r.provisional_review_ready_on):"Set submission date")+"<div class=\"row-note\">"+esc(r.calendar_status==="selected_calendar"?"15 business days under selected calendar":"Weekday estimate; select an actual calendar basis")+"</div>",
  badge(r.scc_response)
  ])):"<p>Record the actual SCC submission and the selected business-day calendar. Mandatory accredited-process notices retain their own supported exception. Public-review link dispatches are recorded against the actual launch date.</p>");
 }
@@ -219,20 +289,20 @@ function phaseCards(){
 function renderSources(){
  let html=projectHeading("Original sources","Retain exact files and explicit source versions. Inspect CSV, JSON, XLSX, Word paragraphs and tables, or text before adopting mapped records.",actionButton("upload","Add original file","",true)+actionButton("new-record","Add reference link",'data-collection="sources"'));
  html+=stats([[project.sources.length,"Source records"],[project.files.length,"Retained original files"],[project.files.reduce((n,f)=>n+f.bytes,0).toLocaleString(),"Original bytes"],[project.imports.length,"Saved import mappings"]]);
- html+=table(["Source","Representation & permission","Original identity","Actions"],project.sources.map(s=>{
+ html+=table(["Source","Use in publications","Original file","Actions"],project.sources.map(s=>{
   const f=project.files.find(r=>r.id===s.source_file_id);
   return ['<strong>'+esc(s.title)+'</strong><div class="row-note">'+esc(s.publisher)+' · '+esc(s.version)+'</div>',badge(s.representation)+'<div class="row-note">Citation: '+esc(s.citation_visibility)+' · Original redistribution: '+(s.public_redistribution?"enabled":"not enabled")+'</div>',
-   f?'<span class="compact">'+esc(f.filename)+'<br>'+esc(f.bytes.toLocaleString())+' bytes<br>'+esc(f.sha256.slice(0,24))+'…</span>':'<span class="muted">Reference metadata only</span>',
+   f?'<span class="compact">'+esc(f.filename)+'<br>'+esc(f.bytes.toLocaleString())+' bytes</span>':'<span class="muted">Reference metadata only</span>',
    actionButton("edit","Edit metadata",'data-collection="sources" data-id="'+esc(s.id)+'"')+(f? actionButton("source","Inspect / map",'data-id="'+esc(s.id)+'"')+' <a href="'+endpoint()+'/files/'+encodeURIComponent(f.id)+'" download>Original</a>':"")];
- }));
- html+=panel("Source-bound imports",project.imports.length?'<ul class="list-plain">'+project.imports.slice(-10).map(i=>'<li><strong>'+esc(refName("sources",i.source_id))+'</strong><br>'+esc(i.record_ids.length)+' records · '+esc(i.specification.collection)+' · '+esc(i.at)+'</li>').join("")+'</ul>':'<p>Choose an original and inspect its actual source cells. A saved mapping records the file hash, table, original row and imported identity. Repeated unchanged imports are reused; local edits are preserved.</p>');
+ }),"record-table");
+ html+=panel("Source-bound imports",project.imports.length?'<ul class="list-plain">'+project.imports.slice(-10).map(i=>'<li><strong>'+esc(refName("sources",i.source_id))+'</strong><br>'+esc(i.record_ids.length)+' records · '+esc(COLLECTION_TITLES[i.specification.collection]||humanValue(i.specification.collection))+' · '+esc(readableDate(i.at))+'</li>').join("")+'</ul>':'<p>Choose an original and inspect its actual source cells. A saved mapping records the file hash, table, original row and imported identity. Repeated unchanged imports are reused; local edits are preserved.</p>');
  $("#main").innerHTML=html;
 }
 async function renderHistory(epoch){
  $("#main").innerHTML=projectHeading("Development history","Perpetual development records include exact before/after changes and a hash-linked operation history.")+empty("Loading retained revisions…");
  const page=await api(endpoint()+"/history?offset="+listOffset+"&limit=100");if(epoch!==renderEpoch)return;
  $("#main").innerHTML=projectHeading("Development history","Every accepted operation is atomic. Corrections remain in history; the workspace does not hold certification records.")+
- table(["Revision","When / operator","Operation","Identity","Details"],page.rows.map(e=>[esc(e.revision),esc(e.at)+'<div class="row-note">'+esc(e.actor)+'</div>',esc(e.operation),'<span class="compact">'+esc(e.sha256.slice(0,18))+'…</span>',actionButton("history-item","View changes",'data-index="'+e.revision+'"')]))+
+ table(["Revision","When","Operator","Change","Actions"],page.rows.map(e=>[esc(e.revision),dateCell(e.at),esc(e.actor),esc(operationName(e.operation)),actionButton("history-item","View changes",'data-index="'+e.revision+'"')]),"record-table")+
  '<div class="pagination"><span>'+esc(page.total)+' revisions</span><div>'+actionButton("prev-page","Previous",listOffset?"":"disabled")+" "+actionButton("next-page","Next",listOffset+page.rows.length<page.total?"":"disabled")+'</div></div>';
  listCache={history:page.rows};
 }
@@ -253,7 +323,7 @@ function editableTable(name,rows){
  '<button type="button" data-action="table-add-row" data-table="'+esc(name)+'">Add row</button><button type="button" data-action="table-add-column" data-table="'+esc(name)+'">Add column</button></div><small>Each cell preserves its own text, including line breaks. First row is rendered as the table header.</small></div>';
 }
 function fieldControl(name,spec,value){
- let inner="",kind=spec.kind,caption=name==="acceptance_source_ids"?"Receipt / acceptance sources":name==="summary"&&editor?.operation==="phase.freeze"?"Progress, risks and report narrative":label(name),full=LONG_FIELDS.has(name)||kind==="json"||kind==="list"||["table_en","table_fr"].includes(name);
+ let inner="",kind=spec.kind,caption=name==="acceptance_source_ids"?"Receipt / acceptance sources":name==="summary"&&editor?.operation==="phase.freeze"?"Progress, risks and report narrative":fieldLabel(name),full=LONG_FIELDS.has(name)||kind==="json"||kind==="list"||["table_en","table_fr"].includes(name);
  if(name==="id"||name==="revision")return"";
  if(kind==="boolean")return '<label class="field check"><input type="checkbox" data-field="'+esc(name)+'" '+(value?"checked":"")+'><span>'+esc(caption)+'</span></label>';
  if(["table_en","table_fr"].includes(name))inner=editableTable(name,value||[]);
@@ -343,14 +413,14 @@ function openDialog(){
 async function editRecord(collection,id){
  const r=await api(endpoint()+"/records/"+collection+"/"+encodeURIComponent(id));
  if(catalog.immutable.includes(collection))return viewRecord(collection,r);
- editor={operation:"record.save",collection,title:"Edit "+label(collection.replace(/s$/,"")),values:clone(r),baseRecord:clone(r),
+ editor={operation:"record.save",collection,title:"Edit "+recordName(collection),values:clone(r),baseRecord:clone(r),
          baseRevision:project.revision,spec:catalog.collections[collection],requestId:uid(),hidden:collection==="sources"?["source_file_id","sha256"]:[]};
  openDialog();
 }
 function newRecord(collection){
  if(["scope","funding"].includes(collection)&&project[collection].length)return editRecord(collection,project[collection][0].id);
  if(FREEZE_OP[collection])return workflow(FREEZE_OP[collection]);
- editor={operation:"record.save",collection,title:"Add "+label(collection.replace(/s$/,"")),values:Object.fromEntries(Object.entries(catalog.collections[collection]).map(([k,s])=>[k,clone(s.default)])),
+ editor={operation:"record.save",collection,title:"Add "+recordName(collection),values:Object.fromEntries(Object.entries(catalog.collections[collection]).map(([k,s])=>[k,clone(s.default)])),
          baseRecord:null,baseRevision:project.revision,spec:catalog.collections[collection],requestId:uid(),hidden:collection==="sources"?["source_file_id","sha256"]:[]};
  if(project.mode==="authored_example"&&collection==="people")editor.values.authored_example=true;
  if(collection==="sources")editor.values.representation="reference_link";
@@ -362,7 +432,7 @@ function workflow(operation,defaults={}){
  if("date"in template&&!template.date)template.date=isoDate();
  if("issued"in template&&!template.issued)template.issued=isoDate();
  if("through"in template&&!template.through)template.through=isoDate();
- editor={operation,title:label(operation.replaceAll("."," ")),values:template,baseRecord:null,baseRevision:project.revision,
+ editor={operation,title:WORKFLOW_TITLES[operation]||humanValue(operation),values:template,baseRecord:null,baseRevision:project.revision,
          spec:workflowSpec(operation,template),requestId:uid(),hidden:[]};
  if("membership_ids"in template&&!template.membership_ids)editor.values.membership_ids=clone(editor.spec.membership_ids.default);
  openDialog();
@@ -423,7 +493,7 @@ async function presentConflict(payload,error){
  editor.conflict={current,desired,changes,conflicts,fresh};
  const box=$("#editor-conflict");box.hidden=false;
  box.innerHTML='<h3>Another edit was saved</h3><p>Your input is still present. Nonconflicting field edits can be reapplied. For fields changed in both versions, select only the values you intend to replace.</p>'+
- table(["Field","Current saved value","Your value","Use yours"],changes.map(k=>[esc(label(k)),esc(short(textValue(current[k]),350)),esc(short(textValue(desired[k]),350)),
+ table(["Field","Current saved value","Your value","Use yours"],changes.map(k=>[esc(fieldLabel(k)),esc(short(textValue(current[k]),350)),esc(short(textValue(desired[k]),350)),
  conflicts.includes(k)?'<input type="checkbox" data-conflict-field="'+esc(k)+'" aria-label="Use my '+esc(label(k))+'">':'<span class="muted">No overlap</span>']))+
  '<button type="button" data-action="reconcile">Apply this field selection to the current revision</button>';
 }
@@ -435,7 +505,12 @@ async function reconcile(){
  $("#editor-error").textContent="The selected fields are ready. Review them and save.";
 }
 function viewRecord(collection,r){
- let body='<dl class="definition">'+Object.entries(r).filter(([k,v])=>!["snapshot","input_snapshot","profile","roster","calculation","independence_snapshot"].includes(k)).map(([k,v])=>'<dt>'+esc(label(k))+'</dt><dd>'+esc(typeof v==="object"?pretty(v):v)+'</dd>').join("")+'</dl>';
+ const snapshotKeys=["snapshot","input_snapshot","profile","roster","calculation","independence_snapshot"];
+ const fields=Object.entries(r).filter(([key])=>!snapshotKeys.includes(key));
+ const isIdentity=key=>["id","revision","sha256","request_id"].includes(key)||key.endsWith("_sha256");
+ let body='<dl class="definition">'+fields.filter(([key])=>!isIdentity(key)).map(([key,value])=>'<dt>'+esc(fieldLabel(key))+'</dt><dd>'+
+  (value&&typeof value==="object"&&(!Array.isArray(value)||value.some(item=>item!==null&&typeof item==="object"))?'<pre>'+esc(pretty(value))+'</pre>':fieldCell(key,value,collection,false))+'</dd>').join("")+'</dl>'+
+  '<details class="record-details"><summary>Original record values and identity</summary><pre>'+esc(pretty(Object.fromEntries(fields)))+'</pre></details>';
  for(const key of ["calculation","profile","roster","snapshot","input_snapshot","independence_snapshot"])if(r[key])body+='<details><summary>'+esc(label(key))+'</summary><pre>'+esc(pretty(r[key]))+'</pre></details>';
  if(collection==="editions")body=actionButton("export","Build this edition’s documents",'data-edition-id="'+esc(r.id)+'"',true)+" "+actionButton("compare","Compare with current draft",'data-id="'+esc(r.id)+'"')+body;
  showViewer(COLLECTION_TITLES[collection]+" · "+titleOf(r),body);
@@ -488,10 +563,10 @@ function uploadDialog(){
  '<label class="field"><span>Language</span><select id="upload-language"><option>unspecified</option><option>en</option><option>fr</option><option>bilingual</option><option>other</option></select></label>'+
  '<label class="field"><span>License or usage terms</span><input id="upload-license"></label><label class="field check"><input id="upload-public-citation" type="checkbox"><span>This source metadata may be cited publicly</span></label>'+
  '<label class="field check"><input id="upload-redistribution" type="checkbox"><span>Original bytes may be redistributed in a selected publication package</span></label></div>'+
- '<p class="compact">The exact original bytes remain unchanged. A revised source is added as a distinct source identity. One file may be up to32MiB.</p><p id="upload-error" role="alert"></p><button type="submit" class="primary">Retain original</button></form>');
+ '<p class="compact">The exact original bytes remain unchanged. A revised source is added as a distinct source identity. One file may be up to 32 MiB.</p><p id="upload-error" role="alert"></p><button type="submit" class="primary">Retain original</button></form>');
  $("#upload-form").addEventListener("submit",async e=>{
   e.preventDefault();const file=$("#upload-file").files[0];if(!file)return;
-  if(file.size>32*1024*1024){$("#upload-error").textContent="Choose an original of at most32MiB.";return;}
+  if(file.size>32*1024*1024){$("#upload-error").textContent="Choose an original of at most 32 MiB.";return;}
   const button=e.submitter;button.disabled=true;
   try{
    const result=await api(endpoint()+"/operations",{method:"POST",body:JSON.stringify({operation:"source.add",expected_revision:project.revision,request_id:uid(),actor:"Local operator",
@@ -571,7 +646,7 @@ function renderMappingFields(){
   const constant=s.kind==="reference"?'<select data-constant="'+esc(name)+'">'+referenceOptions(s.collection)+"</select>":
    s.kind==="enum"?'<select data-constant="'+esc(name)+'"><option value="">Use default</option>'+s.values.map(v=>'<option>'+esc(v)+'</option>').join("")+'</select>':
    '<input data-constant="'+esc(name)+'" placeholder="'+esc(s.kind==="list"||s.kind==="json"?"Explicit JSON constant":"Explicit constant or default")+'">';
-  return '<div class="field-map"><label>'+esc(label(name))+(s.required?" *":"")+'</label><select data-map-field="'+esc(name)+'"><option value="">No source column</option>'+t.columns.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.name)+' ['+esc(c.key)+']</option>').join("")+'</select>'+constant+'</div>';
+  return '<div class="field-map"><label>'+esc(fieldLabel(name))+(s.required?" *":"")+'</label><select data-map-field="'+esc(name)+'"><option value="">No source column</option>'+t.columns.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.name)+' ['+esc(c.key)+']</option>').join("")+'</select>'+constant+'</div>';
  }).join("");
  const identity=$("#identity-column");if(identity)identity.innerHTML='<option value="">Original row identity</option>'+t.columns.map(c=>'<option value="'+esc(c.key)+'">'+esc(c.name)+'</option>').join("");
  intakeState.spec=null;

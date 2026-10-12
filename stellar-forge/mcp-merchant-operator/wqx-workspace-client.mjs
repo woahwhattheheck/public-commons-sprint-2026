@@ -171,6 +171,9 @@ export class WqxWorkspaceClient {
     object(args,'Input status'); identifier(args.inputId,'inputId');
     return inputState(await this.call('merchant_wqx_input_status',args,options),args);
   }
+  concentrationUnits(args, options) { return this.call('merchant_wqx_concentration_units',args,options); }
+  concentrationPrepare(args, options) { return this.call('merchant_wqx_concentration_prepare',args,options); }
+  concentrationReport(args, options) { return this.call('merchant_wqx_concentration_report',args,options); }
   async tableExport(args, options) { return validateWqxFile(await this.call('merchant_wqx_table_export',args,options)); }
   tableImport(args, options) { return this.call('merchant_wqx_table_import',args,options); }
   decisionsPreview(args, options) { return this.call('merchant_wqx_decisions_preview',args,options); }
@@ -178,6 +181,8 @@ export class WqxWorkspaceClient {
   receive(args, options) { return this.call('merchant_wqx_receive',args,options); }
   projectSave(args, options) { return this.call('merchant_wqx_project_save',args,options); }
   captureStart(args, options) { return this.call('merchant_wqx_capture_start',args,options); }
+  scientificPreview(args, options) { return this.call('merchant_wqx_scientific_preview',args,options); }
+  scientificSave(args, options) { return this.call('merchant_wqx_scientific_save',args,options); }
   analyze(args, options) { return this.call('merchant_wqx_analyze',args,options); }
   reviewSave(args, options) { return this.call('merchant_wqx_review_save',args,options); }
   planPreview(args, options) { return this.call('merchant_wqx_plan_preview',args,options); }

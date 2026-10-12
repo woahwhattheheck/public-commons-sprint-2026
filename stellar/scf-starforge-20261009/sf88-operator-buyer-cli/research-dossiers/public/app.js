@@ -4,8 +4,14 @@ import {createUnstructuredPanel} from './unstructured.js';
 import {createUnstructuredPipelinesPanel} from './unstructured-pipelines.js';
 import {createClinicalTrialsPanel} from './clinical-trials.js';
 import {createSourceBundlePanel,renderSourceBundleFiles} from './source-bundles.js';
+import {createStudyProtocolPanel} from './study-protocol.js';
 import {renderInspectedSource,renderOriginalRecordControl} from './source-inspection.js';
 import {createCitationReviewPanel} from './citation-review.js';
+import {createRisSourcesPanel} from './ris-sources.js';
+import {createEligibilityPanel} from './eligibility.js';
+import {createStudyExtractionPanel} from './study-extraction.js';
+import {createRiskOfBiasPanel} from '/risk-of-bias/browser.mjs';
+import {installZoteroResearchControl} from './zotero-browser.mjs';
 'use strict';
 (() => {
   const $ = id => document.getElementById(id);
@@ -13,7 +19,7 @@ import {createCitationReviewPanel} from './citation-review.js';
   const MAX_RESEARCH_FILE_BYTES = 16 * 1024 * 1024;
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
-  const state = {token: '', dossiers: [], dossier: null, activeTab: ['pipelines','citation-review'].includes(new URLSearchParams(location.hash.slice(1)).get('view'))?new URLSearchParams(location.hash.slice(1)).get('view'):'sources', sourceId: null, variantDigest: null,
+  const state = {token: '', workspaceId: null, instanceId: null, dossiers: [], dossier: null, activeTab: ['pipelines','citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(new URLSearchParams(location.hash.slice(1)).get('view'))?new URLSearchParams(location.hash.slice(1)).get('view'):'sources', sourceId: null, variantDigest: null,
     page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map(), noteEditVersions: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
@@ -97,12 +103,18 @@ import {createCitationReviewPanel} from './citation-review.js';
     pipelinePanel.updateBusy();
     clinicalTrialsPanel.updateBusy();
     sourceBundlePanel.updateBusy();
+    studyProtocolPanel.updateBusy();
     citationReviewPanel.updateBusy();
+    risSourcesPanel.updateBusy();
+    eligibilityPanel.updateBusy();
+    studyExtractionPanel.updateBusy();
+    riskOfBiasPanel.updateBusy();
   }
-  async function api(path, {method = 'GET', body, file, download = false} = {}) {
+  async function api(path, {method = 'GET', body, file, download = false, sourceProjection = 'inspection', workspaceId} = {}) {
     const requestUrl=new URL(path,location.origin);
-    if(!download&&requestUrl.pathname.startsWith('/api/'))requestUrl.searchParams.set('sourceProjection','inspection');
+    if(!download&&requestUrl.pathname.startsWith('/api/'))requestUrl.searchParams.set('sourceProjection',sourceProjection);
     const response = await fetch(requestUrl, {method, headers: {Authorization: 'Bearer ' + state.token,
+      ...(workspaceId ? {'X-Research-Workspace-Id': workspaceId} : {}),
       ...(file ? {'Content-Type': 'application/octet-stream'} : body === undefined ? {} : {'Content-Type': 'application/json'})},
       ...(file ? {body: file} : body === undefined ? {} : {body: JSON.stringify(body)}), credentials: 'omit', cache: 'no-store'});
     if (!response.ok) {
@@ -147,7 +159,11 @@ import {createCitationReviewPanel} from './citation-review.js';
   }
   async function refreshList() {
     const result = await api('/api/state');
+    if(state.workspaceId!==result.workspaceId)zoteroControl.profileChanged();
+    state.workspaceId=result.workspaceId;state.instanceId=result.instanceId;
     state.dossiers = asArray(result.dossiers);
+    $('zotero-tab').hidden=result.zotero?.configured!==true;
+    if(result.zotero?.configured===true)await zoteroControl.refresh();
     state.openalexConfigured = result.openalex?.configured === true;
     $('import-openalex-mode').hidden = !state.openalexConfigured;
     crossrefPanel.configure(result.crossref);
@@ -164,14 +180,14 @@ import {createCitationReviewPanel} from './citation-review.js';
     $('question-filter').value = '';
     $('selected-only').checked = false;
     const params = new URLSearchParams(); params.set('dossier', state.dossier.id);
-    if(state.activeTab==='citation-review')params.set('view','citation-review');
+    if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(state.activeTab))params.set('view',state.activeTab);
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
   function applyDossier(view) {
     state.dossier = view; state.page = 0; state.sourceId = null;
     const params = new URLSearchParams(); params.set('dossier', view.id);
-    if(state.activeTab==='citation-review')params.set('view','citation-review');
+    if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(state.activeTab))params.set('view',state.activeTab);
     history.replaceState(null, '', '#' + params.toString());
     render();
   }
@@ -199,7 +215,12 @@ import {createCitationReviewPanel} from './citation-review.js';
     pipelinePanel.setDossier(view);
     clinicalTrialsPanel.setDossier(view);
     sourceBundlePanel.setDossier(view);
+    studyProtocolPanel.setDossier(view);
     citationReviewPanel.setDossier(view);
+    risSourcesPanel.setDossier(view);
+    eligibilityPanel.setDossier(view);
+    studyExtractionPanel.setDossier(view);
+    riskOfBiasPanel.setDossier(view);
     if (!view) return;
     $('dossier-title').textContent = view.title || 'Untitled dossier';
     $('dossier-description').textContent = view.description || '';
@@ -567,8 +588,9 @@ import {createCitationReviewPanel} from './citation-review.js';
   function showTab(tab) {
     if (tab === 'crossref' && $('crossref-tab').hidden) tab = 'sources';
     if (tab === 'clinical-trials' && $('clinical-trials-tab').hidden) tab = 'sources';
+    if (tab === 'zotero' && $('zotero-tab').hidden) tab = 'sources';
     state.activeTab = tab;
-    ['sources', 'questions', 'findings', 'revisions', 'citation-review', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
+    ['sources', 'questions', 'findings', 'revisions', 'citation-review', 'ris-sources', 'eligibility', 'study-extraction', 'risk-of-bias', 'zotero', 'crossref', 'documents', 'pipelines', 'clinical-trials'].forEach(name => {
       $('view-' + name).hidden = name !== tab;
       const button = document.querySelector('[data-tab="' + name + '"]');
       button.classList.toggle('active', name === tab);
@@ -579,9 +601,13 @@ import {createCitationReviewPanel} from './citation-review.js';
     pipelinePanel.show(tab === 'pipelines');
     clinicalTrialsPanel.show(tab === 'clinical-trials');
     citationReviewPanel.show(tab === 'citation-review');
+    risSourcesPanel.show(tab === 'ris-sources');
+    eligibilityPanel.show(tab === 'eligibility');
+    studyExtractionPanel.show(tab === 'study-extraction');
+    riskOfBiasPanel.show(tab === 'risk-of-bias');
     const params=new URLSearchParams(location.hash.slice(1));
-    if(tab==='citation-review')params.set('view',tab);
-    else if(params.get('view')==='citation-review')params.delete('view');
+    if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(tab))params.set('view',tab);
+    else if(['citation-review','ris-sources','eligibility','study-extraction','risk-of-bias','zotero'].includes(params.get('view')))params.delete('view');
     if(state.dossier)params.set('dossier',state.dossier.id);
     history.replaceState(null,'',params.toString()?'#'+params.toString():location.pathname);
   }
@@ -711,9 +737,31 @@ import {createCitationReviewPanel} from './citation-review.js';
   const sourceBundlePanel=createSourceBundlePanel({root:$('source-bundle-dialog'),openButton:$('source-bundle-open'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const studyProtocolPanel=createStudyProtocolPanel({openButton:$('study-protocol-open'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
   const citationReviewPanel=createCitationReviewPanel({root:$('view-citation-review'),tab:$('citation-review-tab'),
     api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
     onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const risSourcesPanel=createRisSourcesPanel({root:$('view-ris-sources'),tab:$('ris-sources-tab'),
+    api:(path,options={})=>api(path,{sourceProjection:'full',workspaceId:state.workspaceId,...options}),
+    task,notify,getDossier:()=>state.dossier,
+    getWorkspace:()=>({workspaceId:state.workspaceId,instanceId:state.instanceId}),isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const eligibilityPanel=createEligibilityPanel({root:$('view-eligibility'),tab:$('eligibility-tab'),
+    api,task,notify,getDossier:()=>state.dossier,isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const studyExtractionPanel=createStudyExtractionPanel({root:$('view-study-extraction'),tab:$('study-extraction-tab'),
+    api,task,notify,getDossier:()=>state.dossier,
+    getWorkspace:()=>({workspaceId:state.workspaceId,instanceId:state.instanceId}),isBusy:()=>state.busy,
+    onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const riskOfBiasPanel=createRiskOfBiasPanel({root:$('view-risk-of-bias'),tab:$('risk-of-bias-tab'),
+    api:(path,options={})=>api(path,{sourceProjection:'full',workspaceId:state.workspaceId,...options}),
+    task,notify,getDossier:()=>state.dossier,getWorkspace:()=>({workspaceId:state.workspaceId,instanceId:state.instanceId}),
+    isBusy:()=>state.busy,onReceived:async view=>{applyDossier(view);await refreshList();}});
+  const zoteroControl=installZoteroResearchControl({container:$('zotero-control'),
+    open:()=>api('/api/zotero/open',{method:'POST',body:{},workspaceId:state.workspaceId}),
+    status:()=>api('/api/zotero'),onError:error=>notify(errorMessage(error),'error')});
   document.querySelectorAll('.dialog-close').forEach(button => button.addEventListener('click', () => {
     if (!state.busy) button.closest('dialog').close();
   }));
@@ -879,6 +927,15 @@ import {createCitationReviewPanel} from './citation-review.js';
       $('export-dialog').close(); notify('Dossier export downloaded.');
     }, form);
   });
+  $('template-exchange-open').addEventListener('click',()=>{
+    if(state.busy||!state.dossier||!state.token)return;
+    const destination=new URL('/template-exchange.html',location.origin);
+    destination.searchParams.set('dossierId',state.dossier.id);
+    if(state.workspaceId)destination.searchParams.set('workspaceId',state.workspaceId);
+    if(state.instanceId)destination.searchParams.set('instanceId',state.instanceId);
+    destination.hash=new URLSearchParams({token:state.token}).toString();
+    location.assign(destination.href);
+  });
   ['open-portable', 'empty-open'].forEach(id => $(id).addEventListener('click', () => {if (!state.busy) {$('portable-file').value = ''; $('portable-file').click();}}));
   $('portable-file').addEventListener('change', () => task(async () => {
     const file = $('portable-file').files?.[0]; if (!file) return;
@@ -900,7 +957,10 @@ import {createCitationReviewPanel} from './citation-review.js';
     }, form);
   });
   window.addEventListener('beforeunload', event => {
-    if (state.noteDrafts.size > 0 || citationReviewPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
+    if (state.noteDrafts.size > 0 || studyProtocolPanel.hasUnsaved() || citationReviewPanel.hasUnsaved() || risSourcesPanel.hasUnsaved() || eligibilityPanel.hasUnsaved() || studyExtractionPanel.hasUnsaved() || riskOfBiasPanel.hasUnsaved()) {event.preventDefault(); event.returnValue = '';}
+  });
+  window.addEventListener('pagehide', event => {
+    if (!event.persisted) {riskOfBiasPanel.close();risSourcesPanel.close();}
   });
   async function start() {
     const params = new URLSearchParams(location.hash.slice(1));

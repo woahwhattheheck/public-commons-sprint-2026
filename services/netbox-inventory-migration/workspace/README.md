@@ -42,14 +42,31 @@ Add one or more source mappings using the original inventory kinds:
 | sites | None | Tenant selected for the project |
 | racks | Site by source key or native ID | Location |
 | devices | Site and rack by source key or native ID | Device type, role, platform, location |
-| interfaces | Device by source key or native ID | None |
-| ip_addresses | Interface by source key or native ID | VRF |
+| route_targets | None | Tenant selected for the project |
+| vrfs | Complete import/export route-target memberships | None |
+| vlans | Optional Site by source key or native ID | VLAN group, IPAM role |
+| prefixes | Optional VRF, VLAN and Site scope | IPAM role |
+| interfaces | Device, optional VRF and untagged VLAN; complete tagged VLAN membership | Native IDs can be selected for each relationship |
+| ip_addresses | Interface and optional VRF by source key or native ID | Legacy VRF mappings remain readable |
+| cables | A/B Interfaces by source key or native ID | Cable bundle |
 
-The browser obtains field names, types and required new-object fields directly from the original FIELDS, LINKS, CATALOG and REQUIRED_NEW definitions. It supports every original expression option: a CSV column or literal value, trimming, lowercasing, explicit blank handling and explicit value replacements. Relationship expressions retain their by:key or by:id choice. Exact decimal values, including rack positions, remain strings as required by the original compiler.
+The browser obtains field names, types and required new-object fields directly from the original FIELDS, LINKS, MANY, CATALOG and REQUIRED_NEW definitions. It supports every original expression option: a CSV column or literal value, trimming, lowercasing, explicit blank handling and explicit value replacements. Relationship expressions retain their by:key or by:id choice. Exact decimal values, including rack positions, remain strings as required by the original compiler.
 
-The catalogue picker performs the original account-scoped NativeApi.pages request. It displays actual native IDs and returned objects for tenants, device types, roles, platforms, locations, VRFs, sites, racks, devices, interfaces and IP addresses. Search results are retained with their provider page receipts and observation time. A mapping uses the selected ID; the picker does not create a replacement catalogue or infer ambiguous names.
+The catalogue picker performs the original account-scoped NativeApi.pages request. It displays actual native IDs and returned objects for tenants, device types, roles, platforms, locations, route targets, VRFs, VLANs/groups, IPAM roles, prefixes, sites, racks, devices, interfaces, IP addresses and cables/bundles. Search results are retained with their provider page receipts and observation time. A mapping uses the selected ID; the picker does not create a replacement catalogue or infer ambiguous names.
 
 Save the complete mapping as a new project revision. An older browser revision receives a conflict and can reload the current project. The original save request ID remains attached to the retained revision when the reply is interrupted.
+
+## Network commissioning
+
+Use the [complete network example](../examples/network-mapping.json) to map route targets, VRFs, VLANs, scoped prefixes, Interface VLAN membership, IP addresses and A/B cable endpoints through the same project.
+
+For a complete membership such as tagged_vlans, choose a CSV column containing semicolon-separated source keys or native IDs. Fixed-value mode accepts the complete list and the native picker can add selected IDs. Conversion options retain a custom one-character separator or JSON-list value replacements. Blank → clear removes every membership; an unmapped field leaves it unchanged.
+
+The native review's Network commissioning panel groups the original result into route targets, VRFs, VLANs, prefixes, interfaces, IP addresses, cables and native endpoint/path effects. It supports search and paging, opens actual native object URLs, and retains the source reference and full before/after state on every row. Addresses display the most specific selected prefix within their explicit VRF. The same IPv4 address in two VRFs remains two independent native objects.
+
+Review Interface mode together with untagged/tagged VLAN fields: NetBox's native save may clear memberships when mode changes. Review cable endpoint/path effects together with the selected cable; these are read from the original native CableTermination, endpoint cache and CablePath records.
+
+Create report or Build handover in Delivery to download network.html, network.csv and network.json alongside the inventory report and original result. The complete handover includes those files and all operator/network-report/desk source. A restored edition keeps the same network report and native receipt. A corrected draft carries the applied object IDs into the next edition for an explicit reassignment or rename.
 
 ## Preview and prepare
 

@@ -294,6 +294,53 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     if (body.expectedSnapshot !== undefined && body.expectedSnapshot !== snapshot) fail('GRPC_HEALTH_SNAPSHOT_CHANGED', 409);
     return createGrpcHealthSnapshot(entry.operation, entry.events.slice(0, through));
   }
+
+  async function captureSnapshots(accept, throughAt, maximumBytes) {
+    assertHeld();
+    // The original workspace serializes starts/resumes while this captures the
+    // fixed operation inventory. Existing Watches retain their own append owner.
+    const ids = [...index.values()].filter(accept).map(row => row.id).sort();
+    const result = []; let bytes = 0;
+    for (const id of ids) {
+      const entry = await load(id); await settled(entry);
+      const firstLater = throughAt ? entry.events.findIndex(event => event.observedAt > throughAt) : -1;
+      const events = entry.events.slice(0, firstLater < 0 ? entry.events.length : firstLater);
+      const snapshot = createGrpcHealthSnapshot(entry.operation, events);
+      bytes += Buffer.byteLength(JSON.stringify(snapshot));
+      if (bytes > maximumBytes) fail('GRPC_OPERATIONS_CAPTURE_TOO_LARGE', 413);
+      result.push(snapshot);
+    }
+    return result;
+  }
+
+  async function visitTransferPrefixes(visit) {
+    assertHeld();
+    // Starts/resumes are serialized by the original workspace. A live Watch may
+    // append later events, while this visitor receives its exact committed LF
+    // prefix and original chain head without keeping a second whole journal.
+    const ids = [...index.keys()].sort();
+    for (const id of ids) {
+      const entry = await load(id); await settled(entry);
+      const selected = { id, directory: entry.root, bytes: entry.bytes,
+        throughSequence: entry.events.length,
+        snapshotSha256: entry.events.at(-1)?.sha256 ?? GRPC_HEALTH_ZERO_SHA256 };
+      await visit(selected);
+    }
+  }
+
+  async function verifyTransferPrefixes(expected) {
+    assertHeld();
+    const phases = {};
+    for (const selected of expected) {
+      const entry = await load(selected.id), summary = await settled(entry);
+      const digest = selected.throughSequence ? entry.events[selected.throughSequence - 1]?.sha256 : GRPC_HEALTH_ZERO_SHA256;
+      if (entry.events.length < selected.throughSequence || digest !== selected.snapshotSha256)
+        fail('GRPC_TRANSFER_HEALTH_PREFIX_CHANGED', 409);
+      phases[summary.phase] = (phases[summary.phase] ?? 0) + 1;
+    }
+    return { observations: expected.length, phases };
+  }
+
   function latest(revision) {
     return [...index.values()].filter(row => row.revision === revision)
       .sort((a, b) => (b.lastObservedAt ?? b.createdAt).localeCompare(a.lastObservedAt ?? a.createdAt)).slice(0, 10).map(visible);
@@ -310,6 +357,6 @@ export function createGrpcHealthWorkspace({ directory, loadRevision, selection, 
     })();
     return closed;
   }
-  return { initialize, start, resume, cancel, read, list, exportSnapshot, latest, close,
+  return { initialize, start, resume, cancel, read, list, exportSnapshot, captureSnapshots, visitTransferPrefixes, verifyTransferPrefixes, latest, close,
     runtime: () => [...jobs.keys()], count: () => index.size };
 }

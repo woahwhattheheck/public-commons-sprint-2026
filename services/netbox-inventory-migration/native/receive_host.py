@@ -42,6 +42,7 @@ APP_FILES = {
     "extras/models/scripts.py": "042744fc6986227349b7a05ffe11af2aae0c6cc0",
     "extras/api/views.py": "739901d828cf54e96cff332c6e5559e3593a50ee",
     "extras/api/urls.py": "dcc359c7a860204cc6923175d2b8ae7716c265cc",
+    "extras/api/serializers_/scripts.py": "77f0aeec1be16b79f384cb9ea1fb80989495df44",
     "core/models/files.py": "49cfbe2a30a8bf79b6aac2a8f6f19f6b681bcc99",
 }
 CHILD = r"""
@@ -301,9 +302,12 @@ def process_ownership(owned):
 class Host:
     def __init__(self, args):
         self.args = args
+        self.phase = getattr(args, "phase", "inventory")
+        need(self.phase in {"inventory", "network"}, "Select inventory or network receiving.")
+        self.network = self.phase == "network"
         self.root = directory(args.directory.resolve())
         self.runtime = directory(args.runtime_directory.resolve(), 0o755)
-        self.logs = directory(self.root / "host-logs")
+        self.logs = directory(self.root / ("network-host-logs" if self.network else "host-logs"))
         self.private = directory(self.runtime / "private")
         self.work = directory(self.root / "migration")
         self.env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1",
@@ -312,12 +316,43 @@ class Host:
                         NETBOX_MIGRATION_SOURCE=str(SOURCE))
         self.children = []
         self.desk = None
-        self.state_path = self.root / "host.json"
+        self.parent_state = None
+        self.state_path = self.root / ("network-host.json" if self.network else "host.json")
         binding = {"operation_id": OPERATION, "runtime": str(self.runtime),
                    "contract_source": SOURCE_COMMIT,
                    "redis_binary": str(args.redis_server.resolve()),
                    "redis_libraries": [str(p.resolve()) for p in args.redis_library_directory],
                    "netbox_source": str(args.netbox_source.resolve()) if args.netbox_source else None}
+        if self.network:
+            parent_path = self.root / "host.json"
+            need(parent_path.is_file() and not parent_path.is_symlink(),
+                 "Complete the original inventory host before its network continuation.")
+            parent = read_json(parent_path)
+            need(parent.get("schema") == "tjlabs.netbox.native-host/v1"
+                 and parent.get("complete") is True and parent.get("binding") == binding,
+                 "Select the same completed original instance, runtime and dependencies.")
+            need(set(parent.get("results", {})) == {"migration", "desk"},
+                 "The original inventory and customer desk results are required.")
+            for record in parent["results"].values():
+                result_path = Path(record["path"]).resolve()
+                need(result_path.is_relative_to(self.root)
+                     and result_path.is_file() and file_sha(result_path) == record["sha256"],
+                     "The original completed inventory or customer desk result changed.")
+            for child in parent.get("children", []):
+                members, unproven = process_ownership(child)
+                need(not members and not unproven,
+                     "Retain the original inventory foreground until its owned processes retire: " + child["name"])
+            # Preserve the interpreter path itself: resolving a venv symlink
+            # would execute its base Python and lose the installed environment.
+            parent_python = Path(parent["application"]["python"]).absolute()
+            need(parent_python.is_file(), "The original verified NetBox Python environment is required.")
+            if args.netbox_python is not None:
+                need(args.netbox_python.absolute() == parent_python,
+                     "The network continuation must use the original NetBox Python environment.")
+            self.args.netbox_python = parent_python
+            self.parent_state = parent
+            binding.update(phase="network", original_host_sha256=file_sha(parent_path),
+                           original_product_manifest_sha256=parent["product_manifest"]["sha256"])
         if self.state_path.exists():
             self.state = read_json(self.state_path)
             need(self.state["binding"] == binding, "Resume the same selected native instance and dependencies.")
@@ -326,17 +361,49 @@ class Host:
                 need(not members and not unproven, "Original native cleanup has live or unproven residual members; reconcile its retained foreground before resuming: " + child["name"])
         else:
             self.state = {"schema": "tjlabs.netbox.native-host/v1", "binding": binding,
-                          "ports": {"postgres": port(), "redis": port(), "netbox": port()},
+                          "ports": dict(self.parent_state["ports"]) if self.network else
+                                   {"postgres": port(), "redis": port(), "netbox": port()},
                           "stages": [], "children": [], "complete": False}
+            if self.network:
+                self.state["application"] = dict(self.parent_state["application"])
+                self.state["original_outputs"] = self.original_outputs()
+        if self.network:
+            self.verify_original_outputs()
         self.save()
         self.verify_product()
         secret_file = self.private / "configuration-secrets.json"
+        need(not self.network or secret_file.is_file(),
+             "Retain the original private instance configuration for network receiving.")
         if not secret_file.exists():
             write_atomic(secret_file, json_bytes({
                 "postgres": secrets.token_urlsafe(48), "application_database": secrets.token_urlsafe(48),
                 "redis": secrets.token_urlsafe(48), "secret_key": secrets.token_urlsafe(60),
                 "pepper": secrets.token_urlsafe(60)}), immutable=True)
         self.secrets = read_json(secret_file)
+
+    def original_outputs(self):
+        selected = ["host.json", "migration/native-result.json", "migration/fixture.json",
+                    "migration/connection.json", "migration/edition-002/applied.json",
+                    "migration/edition-002/exports/inventory-handover.zip",
+                    "migration/script-install-status.json", "migration/api-identity-intent.json",
+                    "migration/api-identity.json", "desk-output/desk-result.json"]
+        selected.extend(relative for relative in
+                        ("migration/script-upload-intent.json", "migration/script-upload-response.json")
+                        if (self.root / relative).is_file())
+        records = []
+        for relative in selected:
+            target = self.root / relative
+            need(target.is_file() and not target.is_symlink(),
+                 "Retain the original inventory receiving file: " + relative)
+            records.append({"path": relative, "bytes": target.stat().st_size, "sha256": file_sha(target)})
+        return records
+
+    def verify_original_outputs(self):
+        for record in self.state["original_outputs"]:
+            target = self.root / record["path"]
+            need(target.is_file() and not target.is_symlink()
+                 and target.stat().st_size == record["bytes"] and file_sha(target) == record["sha256"],
+                 "The original v1 receiving output changed: " + record["path"])
 
     def verify_product(self):
         manifest_path = SOURCE / "source-manifest.json"
@@ -352,7 +419,11 @@ class Host:
             need(target.is_file() and not target.is_symlink()
                  and target.stat().st_size == item["bytes"] and git_blob(target) == item["git_blob"],
                  "The selected product source differs: " + str(relative))
-        self.state["product_manifest"] = {"path": str(manifest_path), "sha256": file_sha(manifest_path)}
+        selected_manifest = {"path": str(manifest_path), "sha256": file_sha(manifest_path)}
+        if self.state.get("complete"):
+            need(self.state.get("product_manifest", {}).get("sha256") == selected_manifest["sha256"],
+                 "Reopen the completed phase from its original source; select --phase network for the reviewed network successor.")
+        self.state["product_manifest"] = selected_manifest
         self.save()
 
     def save(self):
@@ -556,7 +627,7 @@ class Host:
 
     def application(self):
         existing = self.args.netbox_python
-        python = existing.resolve() if existing else self.runtime / "venv/bin/python"
+        python = existing.absolute() if existing else self.runtime / "venv/bin/python"
         if not existing and not self.state.get("application"):
             selected_config = self.args.pg_config or shutil.which("pg_config", path=self.env["PATH"])
             need(selected_config is not None,
@@ -652,6 +723,8 @@ class Host:
             if os.geteuid() == 0:
                 os.chown(pwfile, uid, gid)
         data = pg / "data"
+        need(not self.network or (data / "PG_VERSION").is_file(),
+             "The original PostgreSQL data directory is required; the network phase does not initialize a database.")
         if not data.exists():
             self.call("postgres-initdb", [self.pgbin / "initdb", "-D", data, "-L", self.pgshare,
                 "--username=postgres", "--locale=C.UTF-8", "--encoding=UTF8", "--auth-local=trust",
@@ -670,6 +743,7 @@ class Host:
         role = self.call("database-role-read", [self.pgbin / "psql", "-XAt", "-d", "postgres"],
                          env=pgenv, input_data=role_sql)
         if not role.read_text().strip():
+            need(not self.network, "The original NetBox database role is missing.")
             sql = ("CREATE ROLE netbox LOGIN PASSWORD '" + self.secrets["application_database"] + "';\n").encode()
             self.call("database-role-create", [self.pgbin / "psql", "-X", "-v", "ON_ERROR_STOP=1", "-d", "postgres"],
                       env=pgenv, input_data=sql)
@@ -677,9 +751,12 @@ class Host:
                             env=pgenv, input_data=b"SELECT pg_get_userbyid(datdba) FROM pg_database WHERE datname='netbox';\n")
         owner = database.read_text().strip()
         if not owner:
+            need(not self.network, "The original NetBox database is missing.")
             self.call("database-create", [self.pgbin / "createdb", "--owner=netbox", "netbox"], env=pgenv)
         else:
             need(owner == "netbox", "The retained native database has another owner.")
+        need(not self.network or (self.runtime / "redis" / "appendonlydir").is_dir(),
+             "The original persisted Redis directory is required for the network continuation.")
         red = directory(self.runtime / "redis")
         redis_config = ("\n".join([
             "bind 127.0.0.1", "port " + str(self.state["ports"]["redis"]), "protected-mode yes",
@@ -705,6 +782,179 @@ class Host:
         env["NETBOX_NATIVE_SHELL_FILE"] = str(path)
         code = "import os;from pathlib import Path;p=Path(os.environ['NETBOX_NATIVE_SHELL_FILE']);exec(compile(p.read_text(),str(p),'exec'))"
         return self.call(name, [*self.command, "shell", "--command", code], env=env)
+
+    def start_http(self, api, name):
+        process, _ = self.spawn(name, [*self.command, "runserver",
+                                      "127.0.0.1:" + str(self.state["ports"]["netbox"]),
+                                      "--noreload", "--insecure"])
+        for _ in range(120):
+            need(process.poll() is None, "The original NetBox HTTP process exited during startup.")
+            try:
+                api.request("/api/status/")
+                return process
+            except Exception:
+                time.sleep(0.5)
+        raise InventoryError("The original NetBox API did not become ready.")
+
+    def network_script_status(self):
+        self.shell(SOURCE / "native/provision_instance.py", "network-script-readback",
+                   action="network-script-status")
+        return read_json(self.work / "network-source-upgrade/status.json")
+
+    def upgrade_network_script(self, api):
+        """Replace this original native module; reconcile its exact file before retry."""
+        root = directory(self.work / "network-source-upgrade")
+        script = (SOURCE / "inventory_migration.py").read_bytes()
+        target_sha = hashlib.sha256(script).hexdigest()
+        need(0 < len(script) <= 2 * 1024 * 1024, "The reviewed native script exceeds the receiving limit.")
+        status = self.network_script_status()
+        need(status["expected_sha256"] == target_sha, "The selected successor script changed during readback.")
+        original = root / "original-inventory_migration.py"
+        need(original.is_file() and file_sha(original) == status["previous_sha256"],
+             "The exact previously installed script must be retained before source replacement.")
+        boundary = "netbox-network-script-" + target_sha[:24]
+        body = (("--" + boundary + "\r\nContent-Disposition: form-data; name=\"file\"; filename=\"inventory_migration.py\"\r\n"
+                 "Content-Type: text/x-python\r\n\r\n").encode() + script
+                + ("\r\n--" + boundary + "--\r\n").encode())
+        intent = {"schema": "tjlabs.netbox.native-source-upgrade/v1", "operation_id": OPERATION,
+                  "phase": "network", "netbox_url": api.base, "method": "PUT",
+                  "path": "/api/extras/scripts/upload/" + str(status["module_id"]) + "/",
+                  "module_id": status["module_id"], "script_id": status["scripts"][0]["id"],
+                  "previous_sha256": status["previous_sha256"], "source_sha256": target_sha,
+                  "source_bytes": len(script), "body_sha256": hashlib.sha256(body).hexdigest()}
+        write_atomic(root / "target-inventory_migration.py", script, immutable=True)
+        write_atomic(root / "request.multipart", body, immutable=True)
+        write_atomic(root / "intent.json", json_bytes(intent), immutable=True)
+        intent_sha = file_sha(root / "intent.json")
+        attempts = directory(root / "attempts")
+        if status["state"] != "TARGET":
+            prior = list(attempts.glob("*.json"))
+            need(status["state"] == "ORIGINAL" or status["state"] == "TARGET_PREFIX" and bool(prior),
+                 "The installed module differs from both the retained original and this operation's target; keep its current source for reconciliation.")
+            for path in prior:
+                need(read_json(path).get("intent_sha256") == intent_sha,
+                     "An earlier source replacement attempt belongs to another selected script.")
+            attempt_path = attempts / (uuid.uuid4().hex + ".json")
+            attempt = {"schema": "tjlabs.netbox.native-source-upgrade-attempt/v1",
+                       "operation_id": OPERATION, "intent_sha256": intent_sha,
+                       "state": "INVOKING", "started_at": time.time(),
+                       "observed_source_sha256": status["sha256"]}
+            # The exact same native module/path and multipart precede invocation.
+            write_atomic(attempt_path, json_bytes(attempt), immutable=True)
+            failure = None
+            try:
+                response, meta = api.request(intent["path"], method="PUT", body=body,
+                    content_type="multipart/form-data; boundary=" + boundary)
+                attempt.update(state="RESPONSE_RECEIVED", response=response, meta=meta)
+            except Exception as error:
+                failure = error
+                attempt.update(state="RESPONSE_UNCERTAIN", error=type(error).__name__)
+            # Native file/class readback is authoritative even when HTTP reply was lost.
+            status = self.network_script_status()
+            attempt.update(observed_after=status["state"], source_sha256=status["sha256"],
+                           observed_at=time.time())
+            write_atomic(attempt_path, json_bytes(attempt))
+            if status["state"] != "TARGET":
+                raise InventoryError("The original source replacement needs its retained continuation"
+                                     + (" after " + type(failure).__name__ if failure else "") + ".")
+        need(status["state"] == "TARGET" and status["module_id"] == intent["module_id"]
+             and status["scripts"] == [{"id": intent["script_id"], "name": "InventoryMigration"}]
+             and status["class_loaded"], "The original module/class has not adopted the reviewed source.")
+        metadata, _ = api.script_metadata()
+        need(metadata["id"] == intent["script_id"], "The native script identity changed during source replacement.")
+        receipt_path = root / "receipt.json"
+        if receipt_path.exists():
+            receipt = read_json(receipt_path)
+            need(receipt.get("intent_sha256") == intent_sha
+                 and receipt.get("module_id") == intent["module_id"]
+                 and receipt.get("script_id") == intent["script_id"]
+                 and receipt.get("source_sha256") == target_sha,
+                 "The retained source replacement receipt differs.")
+        else:
+            receipt = {"schema": "tjlabs.netbox.native-source-upgrade-receipt/v1",
+                       "operation_id": OPERATION, "phase": "network", "state": "ADOPTED",
+                       "intent_sha256": intent_sha, "previous_sha256": intent["previous_sha256"],
+                       "source_sha256": target_sha, "source_bytes": len(script),
+                       "module_id": intent["module_id"], "script_id": intent["script_id"],
+                       "product_manifest_sha256": self.state["product_manifest"]["sha256"],
+                       "observed_at": time.time()}
+            write_atomic(receipt_path, json_bytes(receipt), immutable=True)
+        self.stage("native-network-source", "COMPLETE", module_id=intent["module_id"],
+                   script_id=intent["script_id"], source_sha256=target_sha,
+                   receipt=str(receipt_path))
+        return receipt_path
+
+    def receive_network(self):
+        """Continue completed v1 against its same native database and customer desk."""
+        self.verify_original_outputs()
+        self.postgres_runtime()
+        self.application()
+        self.services()
+        self.shell(SOURCE / "native/provision_instance.py", "original-api-identity-read",
+                   action="identity-read")
+        auth = read_json(self.work / "api-identity.json")["authorization"]
+        need(auth.startswith("Bearer "), "The retained original API identity is not a Bearer token.")
+        self.env["NETBOX_TOKEN"] = auth[len("Bearer "):]
+        self.env["NETBOX_NATIVE_URL"] = "http://127.0.0.1:" + str(self.state["ports"]["netbox"])
+        prior_token = os.environ.get("NETBOX_TOKEN")
+        os.environ["NETBOX_TOKEN"] = self.env["NETBOX_TOKEN"]
+        try:
+            api = NativeApi(read_json(self.work / "connection.json"))
+            http = self.start_http(api, "netbox-source-upgrade-http")
+            receipt_path = self.upgrade_network_script(api)
+            # A fresh server and original worker use the adopted class; no old
+            # provider process can retain a prior custom-script import.
+            selected = next(child for child in self.children if child[0] is http)
+            self.stop_one(*selected)
+            self.start_http(api, "netbox-network-http")
+            self.spawn("netbox-network-rqworker", [*self.command, "rqworker", "high", "default", "low"])
+            api.script_metadata()
+            self.env["NETBOX_NATIVE_IPAM"] = "1"
+            self.env["NETBOX_NATIVE_IPAM_RECEIPT"] = str(self.work / "edition-002/applied.json")
+            self.shell(SOURCE / "native/native_fixture.py", "original-network-fixture")
+            fixture_path = self.work / "ipam-fixture.json"
+            fixture = read_json(fixture_path)
+            need(fixture.get("operation_id") == OPERATION
+                 and fixture.get("binding", {}).get("netbox_url") == self.env["NETBOX_NATIVE_URL"],
+                 "The network fixture belongs to another original instance.")
+            sys.path.insert(0, str(SOURCE / "workspace"))
+            from server import start_desk
+            self.desk = start_desk(self.root / "customer-desk", self.work / "connection.json",
+                                   temporary_root=directory(self.root / "network-desk-uploads"), wait_seconds=120)
+            output = directory(self.root / "network-desk-output")
+            entry = {"url": self.desk.url, "token": self.desk.token,
+                     "inputs": str(self.work / "corrected-input"), "output": str(output),
+                     "fixture": str(self.work / "fixture.json"),
+                     "receipt": str(self.work / "edition-002/applied.json"),
+                     "chromium": str(self.args.chromium.resolve()),
+                     "archive": str(self.work / "edition-002/exports/inventory-handover.zip"),
+                     "network": {"fixture": str(fixture_path),
+                                 "original_desk_result": str(self.root / "desk-output/desk-result.json")}}
+            entry_path = self.private / "network-desk-entry.json"
+            write_atomic(entry_path, json_bytes(entry))
+            with tempfile.TemporaryDirectory(prefix="netbox-network-desk-", dir="/dev") as temporary:
+                browser_env = dict(self.env, NETBOX_DESK_ENTRY=str(entry_path),
+                                   TMPDIR=temporary, TMP=temporary, TEMP=temporary)
+                self.call("original-network-customer-desk",
+                          [self.args.node, SOURCE / "native/desk_receiving.mjs"], env=browser_env)
+            result_path = output / "network-result.json"
+            result = read_json(result_path)
+            need(result.get("operation_id") == OPERATION and result.get("state") == "COMPLETE"
+                 and not result.get("page_errors"),
+                 "The network customer desk needs its retained continuation.")
+            self.verify_original_outputs()
+            self.state["complete"] = True
+            self.state["results"] = {
+                "network": {"path": str(result_path), "sha256": file_sha(result_path)},
+                "fixture": {"path": str(fixture_path), "sha256": file_sha(fixture_path)},
+                "script": {"path": str(receipt_path), "sha256": file_sha(receipt_path)}}
+            self.stage("complete-native-network-receiving", "COMPLETE", phase="network",
+                       actual_netbox_version="4.7.2", results=self.state["results"])
+        finally:
+            if prior_token is None:
+                os.environ.pop("NETBOX_TOKEN", None)
+            else:
+                os.environ["NETBOX_TOKEN"] = prior_token
 
     def receive(self):
         self.postgres_runtime()
@@ -798,6 +1048,8 @@ class Host:
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--phase", choices=("inventory", "network"), default="inventory",
+                        help="Inventory receives the original v1; network continues its completed instance with the reviewed successor.")
     parser.add_argument("--directory", required=True, type=Path)
     parser.add_argument("--runtime-directory", required=True, type=Path)
     parser.add_argument("--postgres-helper", required=True, type=Path)
@@ -819,9 +1071,15 @@ def main():
             if host.state["complete"]:
                 for result in host.state["results"].values():
                     need(file_sha(result["path"]) == result["sha256"], "A completed native result changed.")
-                print(json.dumps({"operation_id": OPERATION, "state": "COMPLETE", "results": host.state["results"]}), flush=True)
+                if host.network:
+                    host.verify_original_outputs()
+                print(json.dumps({"operation_id": OPERATION, "phase": host.phase,
+                                  "state": "COMPLETE", "results": host.state["results"]}), flush=True)
                 return 0
-            host.receive()
+            if host.network:
+                host.receive_network()
+            else:
+                host.receive()
             return 0
     except (InventoryError, OSError, ValueError, KeyError, subprocess.SubprocessError) as exc:
         print(json.dumps({"operation_id": OPERATION, "state": "CONTINUATION_REQUIRED",

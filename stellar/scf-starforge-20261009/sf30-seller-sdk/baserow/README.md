@@ -14,11 +14,17 @@ The [Baserow operator workspace](workspace/README.md) supplies the source-author
 
 Use Node 24 on Linux with util-linux flock. Private operator directories use mode 0700 and their regular files use 0600. The standalone publisher chooses a free loopback port and prints its private browser URL.
 
+## Complete Rails customer delivery
+
+The [Baserow customer package](customer/README.md) carries an existing published query through the original SF100 dataset receiver into the configured Rails importer and operator. It retains the source selection, reviewed candidate, full typed dataset, original row IDs and every selected attachment with all row/field/alias references. Export the complete customer client, preview the full application changes, commit one retained business operation, and reopen the copied source and application independently.
+
+Run **baserow-source customer --help** for source-packet and complete-client commands. The generated **baserow/customer/customer.rb** handles receiving, rows, files and offline copies; the installed Rails operator supplies review, import, history and attachment access inside the application's existing tenant scope.
+
 ## Entry points
 
 | Installed command | Source entry | Purpose |
 | --- | --- | --- |
-| baserow-source | cli.mjs | Discover, capture, inspect, import, freeze and export original files |
+| baserow-source | cli.mjs | Discover, capture, inspect, import, freeze and export original files; customer packet and complete Ruby client |
 | baserow-publisher | publisher/cli.mjs | Original browser/CLI extraction, review, versions, schedules and buyer handoff |
 | baserow-deployment | deployment-cli.mjs | Published candidate to merchant package and seller console |
 

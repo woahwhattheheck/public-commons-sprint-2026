@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_BGS_PRESSURE_1B40_20261012",
+  "role": "bgs-native-catalogue",
+  "sourceUrl": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams?%24orderby=id+asc&%24top=3&%24count=true",
+  "receivedAt": "2026-10-12T12:04:04Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "bgs-native-catalogue.json",
+    "bytes": 4115,
+    "sha256": "4add8256192ecd4cf07718b5820910b59edd9de435a80ffab03a2e0c8be1cd02"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams?%24orderby=id+asc&%24top=3&%24count=true",
+    "filename": "bgs-native-catalogue.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81ec-8c15-00b2abf6933c\",\"filename\":\"bgs-native-catalogue.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":4115,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-81ec-8c15-00b2abf6933c\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-81ec-8c15-00b2abf6933c\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-81ec-8c15-00b2abf6933c\",\"filename\":\"bgs-native-catalogue.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":4115,\"content\":\"{\\\"@iot.count\\\":494,\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)\\\",\\\"@iot.id\\\":1,\\\"name\\\":\\\"GGERFS_01 Barometric Pressure\\\",\\\"description\\\":\\\"Barometric Pressure from BGS GGERFS Barometer - Measured (mbar)\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement\\\",\\\"unitOfMeasurement\\\":{\\\"name\\\":\\\"Millibar\\\",\\\"symbol\\\":\\\"mbar\\\",\\\"definition\\\":\\\"http://vocab.nerc.ac.uk/collection/P06/current/UPBB\\\"},\\\"observedArea\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[-4.201199802,55.838255175]},\\\"phenomenonTime\\\":\\\"2020-03-16T14:02:18Z/2026-07-01T07:15:00Z\\\",\\\"properties\\\":{\\\"access_restriction\\\":\\\"Unrestricted\\\",\\\"data_type\\\":\\\"Measured\\\",\\\"data_usage\\\":\\\"Available under the Open Government Licence subject to the following acknowledgement accompanying the reproduced UKRI materials \\\\\\\"Contains UKRI materials ©UKRI [year]\\\\\\\"\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":828},\\\"resultTime\\\":\\\"2020-03-16T14:02:18Z/2026-07-01T07:15:00Z\\\",\\\"ObservedProperty@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/ObservedProperty\\\",\\\"Sensor@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Thing\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(1)/Observations\\\"},{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(2)\\\",\\\"@iot.id\\\":2,\\\"name\\\":\\\"GGA06R_01 TDS\\\",\\\"description\\\":\\\"TDS from BGS Groundwater Logger GGA06r - Measured (mg/L)\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement\\\",\\\"unitOfMeasurement\\\":{\\\"name\\\":\\\"milligrammes per litre\\\",\\\"symbol\\\":\\\"mg/L\\\",\\\"definition\\\":\\\"http://vocab.nerc.ac.uk/collection/P06/current/UMGL\\\"},\\\"observedArea\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[-4.199457116,55.83765724]},\\\"phenomenonTime\\\":\\\"2020-03-16T14:00:00Z/2026-05-24T11:00:00Z\\\",\\\"properties\\\":{\\\"access_restriction\\\":\\\"Unrestricted\\\",\\\"data_type\\\":\\\"Measured\\\",\\\"data_usage\\\":\\\"Available under the Open Government Licence subject to the following acknowledgement accompanying the reproduced UKRI materials \\\\\\\"Contains UKRI materials ©UKRI [year]\\\\\\\"\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":821},\\\"resultTime\\\":\\\"2020-03-16T14:00:00Z/2026-05-24T11:00:00Z\\\",\\\"ObservedProperty@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(2)/ObservedProperty\\\",\\\"Sensor@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(2)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(2)/Thing\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(2)/Observations\\\"},{\\\"@iot.selfLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(4)\\\",\\\"@iot.id\\\":4,\\\"name\\\":\\\"GGA04_01 TDS\\\",\\\"description\\\":\\\"TDS from BGS Groundwater Logger GGA04 - Measured (mg/L)\\\",\\\"observationType\\\":\\\"http://www.opengis.net/def/observationType/OGC-OM/2.0/OM_Measurement\\\",\\\"unitOfMeasurement\\\":{\\\"name\\\":\\\"milligrammes per litre\\\",\\\"symbol\\\":\\\"mg/L\\\",\\\"definition\\\":\\\"http://vocab.nerc.ac.uk/collection/P06/current/UMGL\\\"},\\\"observedArea\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[-4.199763807,55.837714666]},\\\"phenomenonTime\\\":\\\"2020-03-16T14:00:00Z/2026-07-01T08:30:00Z\\\",\\\"properties\\\":{\\\"access_restriction\\\":\\\"Unrestricted\\\",\\\"data_type\\\":\\\"Measured\\\",\\\"data_usage\\\":\\\"Available under the Open Government Licence subject to the following acknowledgement accompanying the reproduced UKRI materials \\\\\\\"Contains UKRI materials ©UKRI [year]\\\\\\\"\\\",\\\"publish_yn\\\":\\\"Y\\\",\\\"sen_id\\\":819},\\\"resultTime\\\":\\\"2020-03-16T14:00:00Z/2026-07-01T08:30:00Z\\\",\\\"ObservedProperty@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(4)/ObservedProperty\\\",\\\"Sensor@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(4)/Sensor\\\",\\\"Thing@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(4)/Thing\\\",\\\"Observations@iot.navigationLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams(4)/Observations\\\"}],\\\"@iot.nextLink\\\":\\\"https://sensors.bgs.ac.uk/FROST-Server/v1.1/Datastreams?$top=3&$skip=3&$orderby=%40iot.id+asc&$count=true&$skipFilter=%28%40iot.id+gt+4%29\\\"}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
