@@ -206,7 +206,7 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
           let output;
           try{output=await readFile(outputPath);}catch(error){if(error.code!=='ENOENT')throw error;}
           if(!output){
-            output=await executeJob(merchant,row,{id:'lab-native-1'},{env:{...process.env,LAB_EDD_TEMP_ROOT:scratch},signal,inputDirectory:join(directory,'inputs')});
+            output=await executeJob(merchant,row,{id:'lab-native-1'},{env:{...process.env,LAB_EDD_TEMP_ROOT:scratch,SF30_JOB_TEMP:scratch,LAB_EDD_PYTHON:process.env.LAB_EDD_PYTHON||'python3'},signal,inputDirectory:join(directory,'inputs')});
             await immutable(outputPath,output);
           }
           const result=readLabResult(output,{signal});
@@ -216,7 +216,7 @@ export async function receiveLabJobs({configuration,directory,scratch,phase='all
           if(iteration.output)equal(iteration.output,identity,'The retained native result changed.');
           iteration.output=identity;await save(checkpoint);
           if(name==='reviewed'&&!iteration.replay){
-            const replay=await executeJob(merchant,row,{id:'lab-native-2'},{env:{...process.env,LAB_EDD_TEMP_ROOT:scratch},signal,inputDirectory:join(directory,'inputs')});
+            const replay=await executeJob(merchant,row,{id:'lab-native-2'},{env:{...process.env,LAB_EDD_TEMP_ROOT:scratch,SF30_JOB_TEMP:scratch,LAB_EDD_PYTHON:process.env.LAB_EDD_PYTHON||'python3'},signal,inputDirectory:join(directory,'inputs')});
             equal({bytes:replay.length,sha256:sha256(replay)},{bytes:identity.bytes,sha256:identity.sha256},'The same original worker request changed on replay.');
             iteration.replay={sameReference:row.id,sameInputSha256:row.inputSha256,bytes:replay.length,sha256:sha256(replay)};await save(checkpoint);
           }

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """MIT. Lab EDD worksheet intake and literal reissue using the maintained XLSX reader.
-JSON control arrives on stdin; the unchanged workbook arrives on inherited fd 3.
+Standalone JSON control arrives on stdin; unchanged workbook bytes arrive on fd 3.
+The original native process broker can use private regular control/source/result files.
 The original workbook reader owns ZIP/XML parsing, limits, cell identity and epochs.
 """
 import importlib.util
@@ -8,6 +9,7 @@ import io
 import json
 import os
 import re
+import stat
 from pathlib import Path
 import sys
 import tempfile
@@ -280,8 +282,8 @@ def render(workbook, request):
                 target.writestr(info, parts[info.filename] if info.filename in parts else workbook.zip.read(info.filename))
     return output.getvalue()
 
-def main():
-    raw = sys.stdin.buffer.read(MAX_CONTROL + 1)
+def read_request(incoming):
+    raw = incoming.read(MAX_CONTROL + 1)
     demand(len(raw) <= MAX_CONTROL, "LAB_EDD_CONTROL_SIZE", "The complete control document exceeds the original job input capacity.")
     request = json.loads(raw)
     demand(isinstance(request,dict) and request.get("schema") == SCHEMA and request.get("operation") in ("decode","render"),
@@ -289,6 +291,51 @@ def main():
     expected = request.get("source")
     demand(isinstance(expected,dict) and type(expected.get("bytes")) is int and 0 < expected["bytes"] <= reader.LIMITS["sourceBytes"],
            "LAB_EDD_WORKBOOK_SOURCE", "Supply the exact original workbook size and SHA-256.")
+    return request
+
+def regular_input(filename):
+    descriptor = os.open(filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+    try:
+        demand(stat.S_ISREG(os.fstat(descriptor).st_mode), "LAB_EDD_WORKBOOK_SOURCE",
+               "Use the original regular source or control file in the job's private directory.")
+        incoming = os.fdopen(descriptor, "rb")
+    except BaseException:
+        os.close(descriptor)
+        raise
+    return incoming
+
+def native_result(source, request):
+    workbook = reader.Workbook(source, request["source"])
+    try:
+        if request["operation"] == "decode":
+            result = json.dumps(decode(workbook,request),ensure_ascii=False,separators=(",",":")).encode("utf-8")
+        else:
+            result = render(workbook,request)
+        allowance = (512 if request["operation"] == "decode" else 128) * 1024 * 1024
+        demand(0 < len(result) <= allowance, "LAB_EDD_WORKBOOK_OUTPUT_SIZE",
+               "The complete native result exceeds the file job output capacity.")
+        return result
+    finally:
+        workbook.zip.close()
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+    if args:
+        demand(len(args) == 4 and args[0] == "--files", "LAB_EDD_WORKBOOK_REQUEST",
+               "Use the native job control, original source and result paths.")
+        with regular_input(args[1]) as control:
+            request = read_request(control)
+        with regular_input(args[2]) as source:
+            result = native_result(source, request)
+        # These files are in the original broker's private scratch. Creation is
+        # exclusive; an existing result is never replaced or followed through a link.
+        descriptor = os.open(args[3], os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW | os.O_CLOEXEC, 0o600)
+        with os.fdopen(descriptor, "wb") as outgoing:
+            outgoing.write(result)
+            outgoing.flush()
+        return
+    request = read_request(sys.stdin.buffer)
+    expected = request["source"]
     with tempfile.TemporaryFile(mode="w+b") as source:
         with os.fdopen(3,"rb",closefd=False) as incoming:
             received = 0
@@ -300,16 +347,8 @@ def main():
                 source.write(block)
         demand(received == expected["bytes"], "LAB_EDD_WORKBOOK_SOURCE", "The source workbook transfer is incomplete.")
         source.flush(); source.seek(0)
-        workbook = reader.Workbook(source, expected)
-        try:
-            if request["operation"] == "decode":
-                result = json.dumps(decode(workbook,request),ensure_ascii=False,separators=(",",":")).encode("utf-8")
-            else:
-                result = render(workbook,request)
-            sys.stdout.buffer.write(result)
-            sys.stdout.buffer.flush()
-        finally:
-            workbook.zip.close()
+        sys.stdout.buffer.write(native_result(source, request))
+        sys.stdout.buffer.flush()
 
 if __name__ == "__main__":
     try:

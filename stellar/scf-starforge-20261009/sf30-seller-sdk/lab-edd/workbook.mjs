@@ -1,6 +1,9 @@
 // MIT. Native lab workbook transport over the existing XLSX reader and file job.
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { constants } from 'node:fs';
+import { access, chmod, mkdtemp, open, realpath, rm, writeFile } from 'node:fs/promises';
+import { delimiter, isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 const HELPER = fileURLToPath(new URL('./workbook_bridge.py', import.meta.url));
 const SCHEMA = 'stellar-forge.lab-edd-workbook.v1';
@@ -17,13 +20,111 @@ function sourceIdentity(file) {
   if (sha256 !== file.sha256) throw error('LAB_EDD_WORKBOOK_CHANGED', 'The original workbook changed before native decoding.');
   return { bytes: file.bytes.byteLength, sha256 };
 }
-function nativeWorkbook(operation, file, control, signal) {
+const brokerDirectories = new WeakMap();
+async function pythonExecutable() {
+  const selected = process.env.LAB_EDD_PYTHON || 'python3';
+  const candidates = isAbsolute(selected) || selected.includes('/') || selected.includes('\\') ?
+    [resolve(selected)] : (process.env.PATH || '/usr/local/bin:/usr/bin:/bin').split(delimiter)
+      .filter(Boolean).map(directory => resolve(directory, selected));
+  for (const candidate of candidates) {
+    try {
+      const filename = await realpath(candidate);
+      await access(filename, constants.X_OK);
+      return filename;
+    } catch (cause) {
+      if (!['ENOENT', 'ENOTDIR', 'EACCES'].includes(cause.code)) throw cause;
+    }
+  }
+  throw error('LAB_EDD_WORKBOOK_START', 'Select the installed Python 3.10+ workbook reader.', { executable: selected });
+}
+function nativeFailure(code, nativeSignal, diagnostics, inputFailure) {
+  const stderr = Buffer.from(diagnostics).toString('utf8').trim();
+  let detail;
+  try { detail = JSON.parse(stderr); } catch {}
+  return error(detail?.error ?? 'LAB_EDD_WORKBOOK_FAILED',
+    detail?.message ?? 'The native workbook reader returned an error.',
+    detail?.details ?? { exitCode: code, signal: nativeSignal, stderr, input: inputFailure?.message });
+}
+function nativeReply(operation, file, source, bytes) {
+  if (operation === 'render') return bytes;
+  try {
+    const decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (decoded?.schema !== SCHEMA || !Array.isArray(decoded.tables) ||
+        decoded.tables.some(table => table.filename !== file.filename || table.origin?.containerSha256 !== source.sha256))
+      throw error('LAB_EDD_WORKBOOK_REPLY', 'The native reader returned a different workbook identity.');
+    return decoded;
+  } catch (cause) {
+    throw cause.code ? cause : error('LAB_EDD_WORKBOOK_REPLY', 'The native reader returned an invalid complete result.', { message: cause.message });
+  }
+}
+async function brokerWorkbook(operation, file, source, input, allowance, signal, processes) {
+  if (typeof processes?.directory !== 'function' || typeof processes?.run !== 'function')
+    throw error('LAB_EDD_WORKBOOK_PROCESS_HOST', 'Use the original file job native process manager.');
+  signal?.throwIfAborted();
+  const python = await pythonExecutable();
+  signal?.throwIfAborted();
+  let directoryPromise = brokerDirectories.get(processes);
+  if (!directoryPromise) {
+    directoryPromise = processes.directory();
+    brokerDirectories.set(processes, directoryPromise);
+  }
+  const root = await directoryPromise;
+  signal?.throwIfAborted();
+  const directory = await mkdtemp(join(root, 'lab-edd-'));
+  let submitted = false, returned = false, failure;
+  try {
+    await chmod(directory, 0o700);
+    const controlPath = join(directory, 'control.json');
+    const sourcePath = join(directory, 'source.xlsx');
+    const outputPath = join(directory, operation === 'decode' ? 'decoded.json' : 'prepared.xlsx');
+    await writeFile(controlPath, input, { flag: 'wx', mode: 0o600, signal });
+    await writeFile(sourcePath, file.bytes, { flag: 'wx', mode: 0o600, signal });
+    signal?.throwIfAborted();
+    // The original process manager owns Python and its process group even when the
+    // worker is terminated. Complete source/result files stay in its private root;
+    // the broker's bounded diagnostic pipes never carry the workbook payload.
+    submitted = true;
+    const result = await processes.run({
+      command: [python, HELPER, '--files', controlPath, sourcePath, outputPath],
+      cwd: directory, maxStdoutBytes: 4096, maxStderrBytes: 1024 * 1024,
+    });
+    returned = true;
+    signal?.throwIfAborted();
+    if (result.exitCode !== 0) throw nativeFailure(result.exitCode, result.signal, result.stderr);
+    if (result.stdout.byteLength !== 0)
+      throw error('LAB_EDD_WORKBOOK_REPLY', 'The native file reader returned an unexpected stdout payload.');
+    const output = await open(outputPath, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK);
+    try {
+      const stat = await output.stat();
+      if (!stat.isFile() || stat.size === 0 || stat.size > allowance)
+        throw error('LAB_EDD_WORKBOOK_OUTPUT_SIZE', 'The complete native result exceeds the file job output capacity.');
+      const bytes = await output.readFile();
+      signal?.throwIfAborted();
+      if (bytes.byteLength !== stat.size)
+        throw error('LAB_EDD_WORKBOOK_REPLY', 'The complete native result changed during delivery.');
+      return nativeReply(operation, file, source, bytes);
+    } finally { await output.close(); }
+  } catch (cause) {
+    failure = cause; throw cause;
+  } finally {
+    // A rejected broker request can precede process retirement. Its host removes
+    // the root after terminating descendants; only a returned result is ours to clean.
+    if (!submitted || returned) {
+      try { await rm(directory, { recursive: true, force: true }); }
+      catch (cause) {
+        if (!failure) throw error('LAB_EDD_WORKBOOK_CLEANUP', 'The completed workbook staging could not be removed.', { message: cause.message });
+      }
+    }
+  }
+}
+function nativeWorkbook(operation, file, control, signal, processes) {
   signal?.throwIfAborted();
   const source = sourceIdentity(file);
   const input = Buffer.from(JSON.stringify({ schema: SCHEMA, operation, filename: file.filename, source, ...control }), 'utf8');
   if (input.byteLength > CONTROL_BYTES)
     throw error('LAB_EDD_CONTROL_SIZE', 'The complete workbook control document exceeds the original job input capacity.');
   const allowance = operation === 'decode' ? 512 * 1024 * 1024 : 128 * 1024 * 1024;
+  if (processes != null) return brokerWorkbook(operation, file, source, input, allowance, signal, processes);
   return new Promise((resolve, reject) => {
     let child;
     try {
@@ -64,27 +165,12 @@ function nativeWorkbook(operation, file, control, signal) {
       closed = true; clearTimeout(killTimer);
       signal?.removeEventListener('abort', aborted);
       if (failure) { reject(failure); return; }
-      const stderr = Buffer.concat(diagnostics).toString('utf8').trim();
       if (code !== 0) {
-        let detail;
-        try { detail = JSON.parse(stderr); } catch {}
-        reject(error(detail?.error ?? 'LAB_EDD_WORKBOOK_FAILED',
-          detail?.message ?? 'The native workbook reader returned an error.',
-          detail?.details ?? { exitCode: code, signal: nativeSignal, stderr, input: inputFailure?.message }));
-        return;
+        reject(nativeFailure(code, nativeSignal, Buffer.concat(diagnostics), inputFailure)); return;
       }
       if (inputFailure) { reject(error('LAB_EDD_WORKBOOK_TRANSFER', 'The original workbook transfer did not complete.', { message: inputFailure.message })); return; }
-      const bytes = Buffer.concat(chunks, size);
-      if (operation === 'render') { resolve(bytes); return; }
-      try {
-        const decoded = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
-        if (decoded?.schema !== SCHEMA || !Array.isArray(decoded.tables) ||
-            decoded.tables.some(table => table.filename !== file.filename || table.origin?.containerSha256 !== source.sha256))
-          throw error('LAB_EDD_WORKBOOK_REPLY', 'The native reader returned a different workbook identity.');
-        resolve(decoded);
-      } catch (cause) {
-        reject(cause.code ? cause : error('LAB_EDD_WORKBOOK_REPLY', 'The native reader returned an invalid complete result.', { message: cause.message }));
-      }
+      try { resolve(nativeReply(operation, file, source, Buffer.concat(chunks, size))); }
+      catch (cause) { reject(cause); }
     });
     if (signal?.aborted) { aborted(); return; }
     // Both independent streams are drained by the same child: JSON first, then exact binary source.
@@ -92,7 +178,7 @@ function nativeWorkbook(operation, file, control, signal) {
     child.stdio[3].end(Buffer.from(file.bytes.buffer, file.bytes.byteOffset, file.bytes.byteLength));
   });
 }
-export async function decodeLabWorkbooks({ files, signal }) {
+export async function decodeLabWorkbooks({ files, signal, processes }) {
   if (!Array.isArray(files)) throw error('LAB_EDD_WORKBOOK_SOURCE', 'Supply the original source file set.');
   const tables = [], unassigned = [];
   for (const file of files) {
@@ -103,13 +189,13 @@ export async function decodeLabWorkbooks({ files, signal }) {
       unassigned.push({ filename: file.filename, sha256: file.sha256, reason: 'Retained supporting source member.' });
       continue;
     }
-    const decoded = await nativeWorkbook('decode', file, {}, signal);
+    const decoded = await nativeWorkbook('decode', file, {}, signal, processes);
     tables.push(...decoded.tables);
   }
   if (!tables.length) throw error('DTS8D_XLSX_REQUIRED', 'Select the original XLSX workbook with the DTS8D observation worksheet.');
   return { tables, unassigned };
 }
-export async function renderLabWorkbooks({ originals, tables, fieldDefinitions, signal }) {
+export async function renderLabWorkbooks({ originals, tables, fieldDefinitions, signal, processes }) {
   if (!Array.isArray(originals) || !Array.isArray(tables) || !Array.isArray(fieldDefinitions))
     throw error('LAB_EDD_WORKBOOK_REVIEW', 'Use the complete source-bound workbook review and native field contract.');
   const native = [];
@@ -132,7 +218,7 @@ export async function renderLabWorkbooks({ originals, tables, fieldDefinitions, 
     const bytes = await nativeWorkbook('render', file, {
       sheetName: table.origin.sheetName, headers: table.headers,
       fieldTypes: fieldDefinitions.map(field => field.type), rows,
-    }, signal);
+    }, signal, processes);
     native.push({ filename: file.filename, bytes, mediaType: XLSX });
   }
   return native;

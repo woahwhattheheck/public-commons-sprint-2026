@@ -113,6 +113,34 @@ for formula in (False,True):
         for name,data in parts.items():
             if name not in ("xl/worksheets/sheet1.xml","xl/calcChain.xml","xl/_rels/workbook.xml.rels","[Content_Types].xml"):assert w2.zip.read(name)==data
         assert w2.zip.comment==b"original-archive-comment"
-    reports.append({"case":"changed-formula-namespace-CR-implicit-cell-native-reissue" if formula else "unchanged-byte-exact-native-reissue","status":"PASS","headers":150,"retained_rows":[2,4],"blank_rows":[3],"source_bytes":len(raw),"output_bytes":len(rendered),"output_sha256":hashlib.sha256(rendered).hexdigest(),"epoch":reopened["origin"]["epoch"]})
+    # Exercise the exact file transport used by the original native process host.
+    with tempfile.TemporaryDirectory(prefix="lab-edd-file-receiving-", dir=os.environ.get("LAB_EDD_RECEIVING_TMP")) as folder:
+        root=Path(folder); source_path=root/"source.xlsx"; control_path=root/"control.json"
+        decode_path=root/"decoded.json"; render_path=root/"prepared.xlsx"
+        source_path.write_bytes(raw)
+        control={"schema":bridge.SCHEMA,"operation":"decode","filename":"DTS8D-native-contract.xlsx",
+                 "source":{"bytes":len(raw),"sha256":hashlib.sha256(raw).hexdigest()}}
+        control_path.write_text(json.dumps(control),encoding="utf-8")
+        bridge.main(["--files",str(control_path),str(source_path),str(decode_path)])
+        assert json.loads(decode_path.read_bytes())["tables"][0]==decoded
+        control.update({"operation":"render",**req})
+        control_path.write_text(json.dumps(control),encoding="utf-8")
+        bridge.main(["--files",str(control_path),str(source_path),str(render_path)])
+        assert render_path.read_bytes()==rendered
+        assert source_path.read_bytes()==raw
+        assert (render_path.stat().st_mode & 0o777)==0o600
+        try:
+            bridge.main(["--files",str(control_path),str(source_path),str(render_path)])
+            raise AssertionError("Existing native output was overwritten")
+        except FileExistsError:
+            assert render_path.read_bytes()==rendered
+        control["source"]["sha256"]="0"*64
+        control_path.write_text(json.dumps(control),encoding="utf-8")
+        try:
+            bridge.main(["--files",str(control_path),str(source_path),str(root/"changed-source.xlsx")])
+            raise AssertionError("A different source identity was accepted")
+        except bridge.reader.WorkbookError:
+            assert not (root/"changed-source.xlsx").exists()
+    reports.append({"case":"changed-formula-namespace-CR-implicit-cell-native-reissue" if formula else "unchanged-byte-exact-native-reissue","status":"PASS","headers":150,"retained_rows":[2,4],"blank_rows":[3],"source_bytes":len(raw),"output_bytes":len(rendered),"output_sha256":hashlib.sha256(rendered).hexdigest(),"epoch":reopened["origin"]["epoch"],"broker_file_decode_and_render":"PASS","source_unchanged":True,"exclusive_output":True})
     w2.zip.close();f2.close();w.zip.close();f.close()
 print(json.dumps({"schema":"lab-edd.native-workbook-contract-exercise.v1","status":"PASS","source_kind":"generated software-format fixture","bridge_sha256":hashlib.sha256(bridge_path.read_bytes()).hexdigest(),"reader_sha256":hashlib.sha256(bridge.READER_PATH.read_bytes()).hexdigest(),"cases":reports},separators=(",",":")))

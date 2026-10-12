@@ -67,7 +67,7 @@ function analyze(profile, source, tables) {
   return { ...report, lineage: report.lineage ?? [], counts,
     disposition: counts.error ? 'CORRECTION_REQUIRED' : counts.review ? 'REVIEW_REQUIRED' : 'PROFILE_CHECKS_COMPLETE' };
 }
-export async function inspectDelivery(files, profile, { encoding = 'utf-8', signal } = {}) {
+export async function inspectDelivery(files, profile, { encoding = 'utf-8', signal, processes } = {}) {
   checkedProfile(profile); signal?.throwIfAborted();
   if (!Array.isArray(files) || !files.length || files.length > 128) labError('FILES', 'Supply between one and 128 complete original files.');
   const names = new Set(), originals = [];
@@ -88,7 +88,7 @@ export async function inspectDelivery(files, profile, { encoding = 'utf-8', sign
     textEncoding: typeof profile.decode === 'function' ? null : encoding };
   const source = { schema: LAB_SOURCE_SCHEMA, ...binding, sourceSha256: sha256(canonicalJson(binding)) };
   let decoded = typeof profile.decode === 'function' ?
-    await profile.decode({ files: originals, signal }) : decodeCsvFiles(originals, profile, { encoding });
+    await profile.decode({ files: originals, signal, processes }) : decodeCsvFiles(originals, profile, { encoding });
   if (Array.isArray(decoded)) decoded = { tables: decoded, unassigned: [] };
   if (!plain(decoded) || !Array.isArray(decoded.tables) || !decoded.tables.length)
     labError('NO_TABLES', 'The selected profile found no complete source tables.');
@@ -200,7 +200,7 @@ export function previewDelivery(delivery, input) {
   }));
   return output;
 }
-export async function renderPreparedFiles(delivery, review, { signal } = {}) {
+export async function renderPreparedFiles(delivery, review, { signal, processes } = {}) {
   if (review.source.sourceSha256 !== delivery.source.sourceSha256 ||
       review.documentSha256 !== sha256(canonicalJson(normalizeDecisions(delivery,review.document))))
     labError('REVIEW_CHANGED', 'Use the preview of the same source-bound decision document.');
@@ -208,7 +208,7 @@ export async function renderPreparedFiles(delivery, review, { signal } = {}) {
   let files;
   if (typeof delivery.profile.renderPrepared === 'function') {
     files = await delivery.profile.renderPrepared({ source: delivery.source, originals: delivery.originals,
-      tables: tables, decisions: review.document.decisions, signal });
+      tables: tables, decisions: review.document.decisions, signal, processes });
   } else {
     const tableByFile = new Map();
     for (const table of tables) {
