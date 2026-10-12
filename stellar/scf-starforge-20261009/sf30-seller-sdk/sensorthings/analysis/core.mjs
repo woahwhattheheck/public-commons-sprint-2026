@@ -31,10 +31,15 @@ export function analysisContext(state,op,{inboxDirectory=null}={}){
     if(!inboxDirectory)throw fault('ANALYSIS_INBOX','Bind the existing host source inbox before receiving this original file.',409);
     c.inboxDirectory=inboxDirectory;
   }
-  if(op.action==='analysis.python.prepare'){
+  if(['analysis.python.prepare','analysis.python.components.prepare'].includes(op.action)){
     if(!state.editionIds.includes(hash(p.editionId,'source edition')))throw fault('ANALYSIS_EDITION','Select an immutable local source edition.',404);
     c.pythonExport=clone(find(state.exports,p.exportId,'completed original source export'));
     if(c.pythonExport.editionId!==p.editionId)throw fault('ANALYSIS_PYTHON_SOURCE','The selected source export belongs to another immutable edition.',409);
+    if(op.action==='analysis.python.components.prepare'){
+      const selected=versionRecord(state,hash(p.analysisVersionId,'saved component analysis version'));
+      if(selected.editionId!==p.editionId)throw fault('ANALYSIS_PYTHON_SOURCE','The saved analysis version belongs to another original source edition.',409);
+      c.pythonAnalysisVersionId=selected.id;
+    }
   }
   if(op.action==='analysis.create'){
     if(!state.editionIds.includes(hash(p.editionId,'source edition')))throw fault('ANALYSIS_EDITION','Select an immutable local source edition.',404);
@@ -196,11 +201,14 @@ export function createAnalysisManager({store,edition,inboxDirectory=null}){
         record={id:value.id,projectId:v.projectId,versionId:v.id,leftEditionId:left.id,rightEditionId:right.id,sha256:saved.sha256,createdAt:op.createdAt,counts:compared.counts};
       return finish(value,state=>uniquePush(state,'analysisComparisons',record));
     }
-    if(op.action==='analysis.python.prepare'){
+    if(['analysis.python.prepare','analysis.python.components.prepare'].includes(op.action)){
       const selected=await edition(hash(p.editionId,'source edition')),
-        value=await preparePythonSource(store,{edition:selected,exportReceipt:c.pythonExport,id:op.operationId,createdAt:op.createdAt});
+        analysisVersion=op.action==='analysis.python.components.prepare'?await version(c.pythonAnalysisVersionId):null,
+        value=await preparePythonSource(store,{edition:selected,exportReceipt:c.pythonExport,id:op.operationId,createdAt:op.createdAt,analysisVersion});
       if(value.schema!=='stellar-forge.sensorthings-python-source.v1'||value.id!==op.operationId||value.editionId!==selected.id||
-         value.exportId!==c.pythonExport.id||value.originalWorkspaceId!==c.workspaceId||!Array.isArray(value.files))
+         value.exportId!==c.pythonExport.id||value.originalWorkspaceId!==c.workspaceId||!Array.isArray(value.files)||
+         (analysisVersion&&value.componentAnalysis?.analysisVersionId!==analysisVersion.id)||
+         (!analysisVersion&&Object.hasOwn(value,'componentAnalysis')))
         throw fault('ANALYSIS_PYTHON_SOURCE','The Python document preparer returned another original source selection.',409);
       return finish(value,state=>uniquePush(state,'analysisPythonSources',value));
     }
