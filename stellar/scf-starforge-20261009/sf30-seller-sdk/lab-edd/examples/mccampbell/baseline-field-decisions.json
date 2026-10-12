@@ -1,0 +1,18 @@
+{
+  "schema": "starforge.lab-edd-decisions.v1",
+  "sourceSha256": "db4ac5c96d687b19c8a5b2dece909c3a338361258d213c2a0a84f482b0c0afc6",
+  "profile": {
+    "id": "equis-lab-3",
+    "version": "1.0.0"
+  },
+  "decisions": [
+    {
+      "recordId": "row-d1fe7852e1008b2bb57bf3217da837eb",
+      "rowSha256": "f2133c618d0efab9db8bfe284e643c4c5dc388d2809d3eab65f8d3d1394e3b8b",
+      "field": "result_unit",
+      "before": "mg/l",
+      "action": "keep",
+      "reason": "Preserve the exact original laboratory unit token in this source-bound cross-profile receiving."
+    }
+  ]
+}
