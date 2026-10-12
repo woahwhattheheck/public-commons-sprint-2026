@@ -598,9 +598,12 @@ class DatasetteAnalysis:
                     "Create a new export ID to deliver the current restored customer workspace.")
             result = dict(existing)
             if destination is not None:
-                directory = private_directory(Path(destination).expanduser().absolute(), create=True)
-                descriptors = [*existing["files"],
-                               *self._selected(self.record).get("files", [])]
+                destination_root = private_directory(
+                    Path(destination).expanduser().absolute(), create=True)
+                directory = private_directory(destination_root / export_id, create=True)
+                exported_edition = self._selected(
+                    self.record, existing.get("edition_id") or self.record["current_edition"])
+                descriptors = [*existing["files"], *exported_edition.get("files", [])]
                 received = []
                 for item in descriptors:
                     target = directory / item["filename"]
