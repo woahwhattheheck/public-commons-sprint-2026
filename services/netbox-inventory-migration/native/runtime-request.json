@@ -1,0 +1,44 @@
+{
+  "schema": "commons.native-source-operation/v1",
+  "operation_id": "NETBOX-INVENTORY-RECEIVING-20261012-B9D2",
+  "product": "Original NetBox customer inventory migration and recovery",
+  "source_directory": "services/netbox-inventory-migration",
+  "native_application": {
+    "repository": "netbox-community/netbox",
+    "version": "4.7.2",
+    "commit": "251458b89a5eb2f5fe0d20ecd1140ba08f141a9c",
+    "requirements": [
+      "Original configured Django/NetBox",
+      "PostgreSQL with original migrations and ltree triggers",
+      "Original Redis/RQ queue and live NetBox ScriptJob worker",
+      "Private shared source/input/output directory",
+      "Python3.12+ operator and original API token"
+    ]
+  },
+  "operation_owner": "B9D2",
+  "custody": "One accepting original runtime owner; preserve the same operation/directory and current owner upon continuation.",
+  "fixture": "native/native_fixture.py",
+  "executable": "native/run_native.py",
+  "cli": [
+    "python",
+    "-B",
+    "native/run_native.py",
+    "--directory",
+    "ACTUAL_RETAINED_RECEIVING_DIRECTORY",
+    "--config",
+    "ACTUAL_PRIVATE_CONNECTION_JSON"
+  ],
+  "output": "native-result.json",
+  "customer_artifact": "edition-002/exports/inventory-handover.zip",
+  "complete_journey": [
+    "real source preparation",
+    "actual native dry-run rollback",
+    "generated M2M/hierarchy/GFK/custom defaults",
+    "stale digest rejection",
+    "actual commit with lost HTTP response",
+    "same transaction journal recovery",
+    "original located parent/child propagation",
+    "corrected source using same object IDs",
+    "complete customer archive and cold native reopen"
+  ]
+}

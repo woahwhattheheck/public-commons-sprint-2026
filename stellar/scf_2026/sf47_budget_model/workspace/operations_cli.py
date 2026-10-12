@@ -79,6 +79,24 @@ def register(subparsers, common):
     deployment = target.add_mutually_exclusive_group(required=True)
     deployment.add_argument("--deployment", help="Original deployment ID from this operations case")
     deployment.add_argument("--deployment-file", help="JSON fields for a new original deployment")
+    target = command("completion-calendar", "Read payment-derived completion clocks and original award dates", case=True, output=True)
+    target.add_argument("--as-of", help="Explicit YYYY-MM-DD calendar date; defaults to current UTC date")
+    target = command("completion-seed", "Open the original tranche assignments without saving", case=True, output=True)
+    target.add_argument("--tranche", type=int, choices=(1, 2, 3), required=True)
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("completion-preview", "Preview completed deliverables against their actual previous payment", case=True, output=True)
+    target.add_argument("--data", required=True, help="JSON with receiptId, asOfDate and summary")
+    target.add_argument("--expected-version", type=int, required=True)
+    target = command("completion-save", "Save the complete original tranche assignment input", case=True, output=True)
+    target.add_argument("--inputs", required=True, help="Original completion-seed inputs JSON, edited by the operator")
+    mutation(target, version=True)
+    for verb in ("prepare", "extension", "submit", "decision"):
+        target = command("completion-" + verb, "Retain the original completion " + verb + " through its case journal", case=True, output=True)
+        target.add_argument("--data", required=True, help="Native completion action data JSON")
+        mutation(target, version=True)
+    target = command("completion-export", "Download the frozen form preparation and its exact selected sources", case=True)
+    target.add_argument("--review", required=True)
+    target.add_argument("--output", required=True)
     target = command("forecast-preview", "Calculate a dated forecast from current original records", case=True, output=True)
     target.add_argument("--inputs", required=True, help="Forecast input JSON file")
     target.add_argument("--expected-version", type=int, required=True)
@@ -180,6 +198,27 @@ def operate(workspace, args):
                     raise Problem("New deployment fields must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
             result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
                 "requestId": args.request_id, "note": args.note, "action": "support.receive", "data": data})
+    elif action == "completion-calendar":
+        result = ops.completion_calendar(args.case, args.as_of)
+    elif action == "completion-seed":
+        result = ops.seed_completion(args.case, {"expectedVersion": args.expected_version, "tranche": args.tranche})
+    elif action == "completion-export":
+        return {"reviewId": args.review, "output": publish(args.output, ops.export_completion(args.case, args.review))}
+    elif action.startswith("completion-"):
+        filename = args.inputs if action == "completion-save" else args.data
+        try:
+            data = json.loads(read_bytes(filename, MAX_SOURCE))
+        except (UnicodeError, ValueError) as exc:
+            raise Problem("Completion input must be a UTF-8 JSON object.", 422, "INVALID_JSON") from exc
+        if action == "completion-preview":
+            if not isinstance(data, dict) or "expectedVersion" in data:
+                raise Problem("Use only the native completion preview fields in the data file.", 422, "INVALID_COMPLETION")
+            result = ops.preview_completion(args.case, {"expectedVersion": args.expected_version, **data})
+        else:
+            if action == "completion-save":
+                data = {"inputs": data}
+            result = ops.command(args.case, {"expectedVersion": args.expected_version, "actor": args.actor,
+                "requestId": args.request_id, "note": args.note, "action": action.replace("-", ".", 1), "data": data})
     elif action in ("forecast-preview", "forecast-save"):
         try:
             inputs = json.loads(read_bytes(args.inputs, MAX_SOURCE))

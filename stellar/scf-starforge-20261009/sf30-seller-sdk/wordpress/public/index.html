@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="workspace-token" content="__WORKSPACE_TOKEN__"><title>WordPress source · Stellar Forge</title>
+<link rel="stylesheet" href="/style.css"><script type="module" src="/app.mjs"></script></head>
+<body><a class="skip-link" href="#main">Skip to workspace</a>
+<header class="topbar"><div><span class="brand">STELLAR FORGE</span><span class="product">WordPress source</span></div>
+<div class="header-tools"><span id="connection-status" role="status">Opening workspace</span><button id="refresh" type="button">Refresh</button><button id="handbook" type="button">Operator guide</button></div></header>
+<div class="shell"><aside class="sidebar"><div class="workspace-label">Source workspace</div><div id="workspace-id" class="mono small">—</div><div id="workspace-revision" class="muted small">Revision —</div>
+<nav aria-label="Source workflow">
+<button data-section="source" aria-current="page"><span>01</span> Source &amp; discovery</button>
+<button data-section="captures"><span>02</span> Captures &amp; records</button>
+<button data-section="projection"><span>03</span> Projection &amp; review</button>
+<button data-section="editions"><span>04</span> Editions &amp; changes</button>
+<button data-section="publisher"><span>05</span> Publisher &amp; buyer</button>
+<button data-section="exports"><span>06</span> Export &amp; receiving</button>
+</nav><div class="sidebar-bottom"><div class="small muted">Selected product</div><select id="product-select" aria-label="Selected publisher product"><option value="">Create a reviewed export</option></select><div id="product-summary" class="small muted"></div></div></aside>
+<main id="main" tabindex="-1"><div id="notice" class="notice" role="status" hidden></div>
+<div id="pending-operation" class="panel pending" hidden><div class="panel-heading"><strong>Retained action</strong><span id="pending-status" class="badge"></span></div><p id="pending-description"></p><div class="actions"><button id="pending-inspect" type="button">Read saved result</button><button id="pending-retry" type="button">Continue same action</button><button id="pending-clear" type="button">Dismiss local reminder</button></div><details><summary>Original action and input</summary><pre id="pending-details"></pre></details></div>
+<section id="section-source" data-panel="source" aria-labelledby="source-title">
+<div class="section-heading"><div><div class="eyebrow">01 / NATIVE WORDPRESS</div><h1 id="source-title">Select the original source</h1><p>Discover the collections and fields exposed by this WordPress REST root. Each account, context and filter is retained with its capture.</p></div></div>
+<div class="form-grid two-panels"><form id="source-form" class="panel"><h2>Source connection</h2>
+<label>Source label<input id="source-label" maxlength="160" required autocomplete="off" placeholder="Editorial website"></label>
+<label>Native REST root<input id="source-root" type="url" maxlength="2048" required spellcheck="false" placeholder="https://website.example/wp-json/"><span class="help">Use the advertised REST root, including index.php?rest_route=/ when the site uses query-form routes.</span></label>
+<div class="form-grid"><label>Context<select id="source-context"><option value="view">view · published content</option><option value="embed">embed · native compact fields</option><option value="edit">edit · selected account</option></select></label>
+<label>Access<select id="source-auth"><option value="none">Public</option><option value="application-password">Application password references</option></select></label>
+<label id="source-user-label" hidden>Username environment reference<input id="source-user-env" maxlength="128" spellcheck="false" placeholder="WORDPRESS_USERNAME"></label>
+<label id="source-password-label" hidden>Application-password reference<input id="source-password-env" maxlength="128" spellcheck="false" placeholder="WORDPRESS_APP_PASSWORD"></label>
+<label>Records per native page<input id="source-per-page" type="number" value="100" min="1" max="100" required></label>
+<label>Request timeout, milliseconds<input id="source-timeout" type="number" value="30000" min="1000" max="120000" required></label>
+<label>Maximum response bytes<input id="source-response-bytes" type="number" value="16777216" min="1024" max="67108864" required></label>
+<label class="checkbox-label"><input id="source-loopback" type="checkbox">Allow this local WordPress host</label></div>
+<p class="help">Credential values are read from the selected host environment when a request is sent. Save a new source after changing its account or context.</p>
+<button type="submit" class="primary" data-write>Save source connection</button></form>
+<div class="panel"><h2>Retained source</h2><label>Selected connection<select id="source-select"><option value="">Save a source first</option></select></label><div id="source-summary" class="facts"></div><div id="source-environment" class="help"></div><div class="actions"><button id="source-discover" type="button" class="primary" data-write>Discover native collections</button><button id="source-copy" type="button">Load connection into form</button><button id="source-download" type="button">Download connection</button></div><p class="help">Discovery retains the actual REST index, post types and taxonomies. Media and enabled custom types use their advertised namespace and route.</p><div id="source-discoveries"></div></div></div>
+<form id="capture-form" class="panel"><div class="panel-heading"><h2>Choose collections and native filters</h2><button id="discovery-load" type="button">Open selected discovery</button></div>
+<label>Completed discovery<select id="discovery-select"><option value="">Complete source discovery</option></select></label>
+<div id="discovery-summary" class="help"></div><div id="discovery-collections" class="table-scroll"></div>
+<label>Capture selection JSON<textarea id="capture-selection" rows="11" spellcheck="false" required placeholder='{"collections":[{"key":"type:post","query":{}}],"maxPages":10000,"maxRecords":250000,"maxBytes":536870912}'></textarea><span class="help">Select only original discovered filters. Context, page cursor and page size are controlled by the saved capture.</span></label>
+<button type="submit" class="primary" data-write>Start retained capture</button></form></section>
+<section id="section-captures" data-panel="captures" aria-labelledby="captures-title" hidden>
+<div class="section-heading"><div><div class="eyebrow">02 / CAPTURES &amp; RECORDS</div><h1 id="captures-title">Follow the original capture</h1><p>Each raw response is saved before its cursor advances. Resume and inspection use the same capture ID.</p></div></div>
+<div class="panel"><label>Capture or discovery<select id="job-select"><option value="">Create a native job</option></select></label><div id="job-summary" class="facts"></div><div class="actions"><button id="job-open" type="button">Refresh capture</button><button id="job-resume" type="button" class="primary" data-write>Resume capture</button><button id="job-pause" type="button" data-write>Pause capture</button><button id="job-project" type="button">Review projection</button></div><div id="job-findings"></div><details><summary>Native cursor, coverage and operation identity</summary><pre id="job-details"></pre></details></div>
+<div class="panel"><div class="panel-heading"><h2>Captured native records</h2><span id="records-count" class="badge">0 records</span></div><div class="toolbar"><label>Collection<select id="records-collection"><option value="">All captured collections</option></select></label><label>Page size<select id="records-limit"><option>25</option><option>50</option><option>100</option></select></label><button id="records-load" type="button">Load records</button></div><div id="records-table" class="table-scroll"></div><div class="pager"><button id="records-prev" type="button">Previous</button><span id="records-page" class="small muted"></span><button id="records-next" type="button">Next</button></div></div>
+<div class="panel"><h2>Original source response</h2><label>Saved response<select id="response-select"><option value="">Open a capture</option></select></label><div class="actions"><button id="response-open" type="button">Inspect response</button><button id="response-download" type="button">Download exact response</button></div><div id="response-summary" class="facts"></div><pre id="response-body" class="source-body">Select a retained response.</pre></div></section>
+<section id="section-projection" data-panel="projection" aria-labelledby="projection-title" hidden>
+<div class="section-heading"><div><div class="eyebrow">03 / PROJECTION &amp; REVIEW</div><h1 id="projection-title">Review the content edition</h1><p>Project fields from the retained native records. The saved mapping, reviewer and source digest stay with the resulting dataset.</p></div></div>
+<div class="panel"><label>Completed source capture<select id="projection-capture"><option value="">Complete a content capture</option></select></label><div id="projection-capture-summary" class="help"></div><div class="actions"><button id="projection-default" type="button">Load native content projection</button><button id="projection-open-mapping" type="button">Load saved mapping</button><select id="projection-saved" aria-label="Saved mapping"><option value="">No saved mapping</option></select></div>
+<label>Projection JSON<textarea id="projection-json" rows="19" required spellcheck="false"></textarea><span class="help">Use /record for uniform source fields or /native for exact original fields. String columns preserve numeric tokens; choose numeric columns explicitly. Native HTML is retained as content.</span></label>
+<div class="actions"><button id="projection-preview" type="button" class="primary">Preview typed rows</button><button id="projection-save" type="button" data-write>Save reviewed mapping</button></div><div id="projection-preview-summary" class="facts"></div><div id="projection-preview-table" class="table-scroll"></div><details><summary>Projection, exact source types and preview</summary><pre id="projection-preview-details"></pre></details></div>
+<form id="edition-form" class="panel"><h2>Build the selected edition</h2><label>Saved source mapping<select id="edition-mapping" required><option value="">Save a reviewed mapping</option></select></label>
+<label>Dataset configuration<textarea id="edition-dataset" rows="9" required spellcheck="false">{
+  "name": "wordpress-content",
+  "filters": ["collection", "status"],
+  "ranges": ["native_id"],
+  "sorts": ["native_id"],
+  "defaultLimit": 50,
+  "maxLimit": 250,
+  "maxPageBytes": 921600
+}</textarea></label><div class="form-grid"><label>Reviewer<input id="edition-reviewer" required maxlength="160" autocomplete="name"></label><label>Review note<input id="edition-note" maxlength="4000" autocomplete="off"></label></div>
+<label class="checkbox-label"><input id="edition-approve" type="checkbox" required>I approve this mapping against its displayed source capture.</label><div id="edition-review-pins" class="facts mono"></div><button type="submit" class="primary" data-write>Build retained dataset edition</button></form></section>
+<section id="section-editions" data-panel="editions" aria-labelledby="editions-title" hidden>
+<div class="section-heading"><div><div class="eyebrow">04 / EDITIONS &amp; CHANGES</div><h1 id="editions-title">Operate the reviewed editions</h1><p>Compare original record identities and content changes, preview the native dataset and attach the merchant’s configured terms.</p></div></div>
+<div class="panel"><label>Retained edition<select id="edition-select"><option value="">Build a reviewed edition</option></select></label><div id="edition-summary" class="facts"></div><div class="actions"><button id="edition-open" type="button">Inspect edition</button><button id="edition-csv" type="button">Download original CSV</button><button id="edition-source" type="button">Download source provenance</button></div><form id="dataset-preview-form"><label>Native dataset query<input id="dataset-query" value="limit=20" maxlength="8192" spellcheck="false"></label><button type="submit">Preview dataset</button></form><div id="dataset-preview-table" class="table-scroll"></div><details><summary>Exact dataset response</summary><pre id="dataset-preview-details"></pre></details></div>
+<form id="compare-form" class="panel"><h2>Compare native source editions</h2><div class="form-grid"><label>Before<select id="compare-before" required></select></label><label>After<select id="compare-after" required></select></label></div><button type="submit">Compare retained editions</button><div id="compare-summary" class="facts"></div><div id="compare-table" class="table-scroll"></div><div class="pager"><button id="compare-prev" type="button">Previous changes</button><span id="compare-page"></span><button id="compare-next" type="button">Next changes</button></div><details><summary>Source and projection compatibility</summary><pre id="compare-details"></pre></details></form>
+<form id="merchant-form" class="panel"><h2>Bind original merchant terms</h2><div class="form-grid"><label>Merchant origin<input id="merchant-origin" type="url" required spellcheck="false" placeholder="https://merchant.example"></label><label>Dataset route<input id="merchant-path" required pattern="/.*" spellcheck="false" placeholder="/wordpress/content"></label></div><label>Original payment configuration JSON<textarea id="merchant-payment" rows="8" required spellcheck="false" placeholder="Paste the configured Stellar payment object"></textarea></label><div class="form-grid"><label>Reviewer<input id="merchant-reviewer" required maxlength="160"></label><label>Review note<input id="merchant-note" maxlength="4000"></label></div><button type="submit" data-write>Save reviewed merchant terms</button><div id="merchant-saved" class="help"></div></form>
+<form id="export-form" class="panel"><h2>Prepare the maintained publisher export</h2><label>Merchant terms<select id="export-merchant" required></select></label><div class="form-grid"><label>Publisher product<select id="export-product"><option value="">Create new product</option></select></label><label>New product label<input id="export-product-label" maxlength="160" value="WordPress content"></label><label>Reviewer<input id="export-reviewer" required maxlength="160"></label><label>Review note<input id="export-note" maxlength="4000"></label></div><p class="help">Use the same product for compatible updates to its dataset query contract. The export carries its source capture and edition files into the original release.</p><button type="submit" class="primary" data-write>Export edition and open publisher</button></form></section>
+<section id="section-publisher" class="publisher-section" data-panel="publisher" aria-labelledby="publisher-title" hidden>
+        <div class="section-heading"><div><div class="eyebrow">05 / PUBLISHER &amp; BUYER</div><h2 id="publisher-title">Publish and deliver the dataset</h2><p>Use the retained export with the original dataset publisher, seller release and customer acquisition.</p></div><button id="pub-open" type="button" data-write>Open publisher</button></div>
+        <div id="pub-state-summary" class="panel muted">Open the publisher to inspect its retained versions, releases and customer sessions.</div>
+        <nav class="publisher-nav" aria-label="Publication workflow">
+          <button type="button" data-publisher-view="prepare" aria-current="page">1. Prepare dataset</button>
+          <button type="button" data-publisher-view="versions">2. Review versions</button>
+          <button type="button" data-publisher-view="release">3. Run seller</button>
+          <button type="button" data-publisher-view="buyer">4. Deliver to customer</button>
+        </nav>
+        <div data-publisher-panel="prepare">
+          <form id="pub-prepare-form" class="panel">
+            <h3>Prepare an exported edition</h3>
+            <p>The publisher retains the exact CSV, dataset configuration, source provenance and original merchant offer. Its first preparation initializes the original dataset version store.</p>
+            <label>Retained operator export<select id="pub-export"><option value="">Export an edition with merchant terms first</option></select></label>
+            <div id="pub-export-summary" class="help"></div>
+            <div class="actions"><button type="submit" id="pub-prepare" class="primary" data-write>Prepare publisher dataset</button><button type="button" id="pub-go-exports">Open export &amp; recovery</button></div>
+          </form>
+          <div class="panel"><div class="panel-heading"><h3>Retained drafts</h3><span id="pub-draft-count" class="badge">0 drafts</span></div><div id="pub-drafts"></div></div>
+        </div>
+        <div data-publisher-panel="versions" hidden>
+          <form id="pub-preview-form" class="panel">
+            <h3>Preview an exact draft or version</h3>
+            <div class="form-grid">
+              <label class="span-2">Preview target<select id="pub-preview-target" required><option value="">Prepare a dataset first</option></select></label>
+              <label class="span-2">Native query string<textarea id="pub-preview-query" rows="3" spellcheck="false" maxlength="8192" placeholder="limit=100"></textarea></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-preview" class="primary" data-write>Preview selected dataset</button><button type="button" id="pub-preview-next" data-write>Next preview page</button><button type="button" id="pub-load-query">Load operator query</button></div>
+            <p class="help">Draft previews use the original typed dataset. Published versions use the running seller’s original private control channel.</p>
+            <div id="pub-preview-summary" class="help"></div><div id="pub-preview-table" class="table-scroll query-table"></div>
+            <details><summary>Exact native preview</summary><pre id="pub-preview-result">No publisher preview yet.</pre></details>
+          </form>
+          <div class="panel">
+            <h3>Review and publish a retained draft</h3>
+            <label>Draft<select id="pub-review-draft"><option value="">Prepare a dataset first</option></select></label>
+            <div id="pub-review-summary" class="help"></div><div id="pub-publication-pins" class="facts mono"></div>
+            <div class="actions"><button type="button" id="pub-review" data-write>Review against current version</button><button type="button" id="pub-publish" class="primary" data-write>Publish reviewed draft</button></div>
+            <p class="help">Start the seller before reviewing or publishing. A changed target revision requires a fresh review of this same draft.</p>
+            <details><summary>Retained draft and publication history</summary><pre id="pub-review-result">Select a draft.</pre></details>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><h3>Published versions</h3><button type="button" id="pub-collect" data-write>Collect expired versions</button></div>
+            <p class="help">Select an existing version using the displayed current snapshot and revision. Retention and active cursor handling remain with the original dataset engine.</p>
+            <div id="pub-versions"></div>
+          </div>
+        </div>
+        <div data-publisher-panel="release" hidden>
+          <form id="pub-release-form" class="panel">
+            <h3>Stage the original seller release</h3>
+            <div class="form-grid">
+              <label class="span-2">Source draft<select id="pub-release-draft" required><option value="">Prepare a dataset first</option></select></label>
+              <label>Release ID<input id="pub-release-id" required maxlength="64" pattern="[a-z0-9][a-z0-9._-]*" autocomplete="off" spellcheck="false" placeholder="wordpress-content-01"></label>
+              <label>Release label<input id="pub-release-label" required autocomplete="off" placeholder="WordPress content edition"></label>
+              <label>Local listening port<input id="pub-release-port" type="number" min="0" max="65535" value="0" required><span class="help">0 lets the operating system select an available port.</span></label>
+              <label>Facilitator URL<input id="pub-facilitator" type="url" autocomplete="off" spellcheck="false" placeholder="Configured facilitator URL"><span class="help">Configure a facilitator for native payments. Leave empty to inspect payment challenges.</span></label>
+              <label class="checkbox-label span-2"><input id="pub-local-facilitator" type="checkbox">Allow a local facilitator for this configured runtime</label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-stage" class="primary" data-write>Stage seller release</button></div>
+          </form>
+          <div class="panel">
+            <div class="panel-heading"><h3>Release selection and runtime</h3><span id="pub-generation" class="badge">Generation —</span></div>
+            <div id="pub-runtime-summary"></div>
+            <div class="actions"><button type="button" id="pub-release-start" class="primary" data-write>Start selected seller</button><button type="button" id="pub-release-stop" data-write>Stop this operator’s seller</button><button type="button" id="pub-release-rollback" data-write>Roll back release selection</button></div>
+            <p class="help">Activation selects a retained release. Stop and start the owned seller to run a changed selection; its current process remains visible until then.</p>
+            <div id="pub-releases"></div>
+            <details><summary>Original release status</summary><pre id="pub-release-details">Open the publisher.</pre></details>
+          </div>
+        </div>
+        <div data-publisher-panel="buyer" hidden>
+          <form id="pub-buyer-review-form" class="panel">
+            <h3>Review the customer’s actual offer</h3>
+            <div class="form-grid">
+              <label class="span-2">Published snapshot<select id="pub-buyer-snapshot" required><option value="">Prepare and run the seller first</option></select></label>
+              <label class="span-2">First-page native query<textarea id="pub-buyer-query" rows="3" maxlength="8192" spellcheck="false" placeholder="limit=100"></textarea><span class="help">Choose the snapshot above; continuation cursors are generated by the original acquisition.</span></label>
+            </div>
+            <div class="actions"><button type="submit" id="pub-buyer-review" class="primary" data-write>Read actual customer offer</button><button type="button" id="pub-load-buyer-query">Load operator query</button></div>
+            <div id="pub-buyer-review-summary" class="help"></div><div id="pub-buyer-preview" class="table-scroll query-table"></div>
+            <details><summary>Original offer, accepted payment terms and query</summary><pre id="pub-buyer-offer">Read the running seller’s offer.</pre></details>
+          </form>
+          <form id="pub-buyer-prepare-form" class="panel">
+            <h3>Prepare the reviewed customer request</h3>
+            <div class="form-grid">
+              <label>Request intent ID<input id="pub-intent-id" required autocomplete="off" spellcheck="false" placeholder="A retained customer request ID"></label>
+              <label>Accepted payment option<select id="pub-accept" required><option value="">Review the actual offer first</option></select></label>
+            </div>
+            <p id="pub-accept-summary" class="help"></p>
+            <div class="actions"><button type="submit" id="pub-buyer-prepare" class="primary" data-write>Prepare customer request</button></div>
+          </form>
+          <form id="pub-session-form" class="panel">
+            <h3>Continue through the original buyer workspace</h3>
+            <div class="form-grid">
+              <label class="span-2">Prepared customer request<select id="pub-buyer-id" required><option value="">Prepare a customer request first</option></select></label>
+              <label class="span-2">Existing buyer workspace path<input id="pub-buyer-workspace" required autocomplete="off" spellcheck="false" placeholder="/absolute/path/to/original-buyer-workspace"><span class="help">Use the original workspace with its configured account and signer. Credentials stay in that workspace.</span></label>
+              <label>Maximum pages<input id="pub-max-pages" type="number" min="1" required placeholder="Number of reviewed pages"></label>
+              <label>Total payment limit, atomic units<input id="pub-max-total" required inputmode="numeric" pattern="[0-9]+" placeholder="Exact integer limit"></label>
+              <label>Maximum rows<input id="pub-max-rows" type="number" min="1" value="1000000" required></label>
+              <label>Maximum bytes per page<input id="pub-max-page-bytes" type="number" min="1" value="1048576" required></label>
+            </div>
+            <p id="pub-session-summary" class="help">The session retains its original request, selected snapshot, workspace and limits for run and recovery.</p>
+            <div class="actions"><button type="submit" id="pub-session" class="primary" data-write>Open retained buyer session</button><button type="button" id="pub-download-buyer">Download customer request</button></div>
+          </form>
+          <div class="panel"><h3>Customer acquisitions and delivery files</h3><div id="pub-sessions"></div></div>
+        </div>
+        <details class="panel"><summary>Retained publisher state</summary><pre id="pub-state-details">Open the publisher.</pre></details>
+      </section>
+
+      
+<section id="section-exports" data-panel="exports" aria-labelledby="exports-title" hidden>
+<div class="section-heading"><div><div class="eyebrow">06 / EXPORT &amp; RECEIVING</div><h1 id="exports-title">Deliver and reopen the source</h1><p>The complete packet carries the saved connection references, discoveries, capture cursors, projections and editions. Received source can be opened using the same installed operator.</p></div></div>
+<div class="panel"><div class="panel-heading"><h2>Publisher exports</h2><span id="exports-count" class="badge">0 exports</span></div><div id="exports-list"></div></div>
+<div class="panel"><div class="panel-heading"><h2>Complete source packets</h2><button id="packet-create" type="button" class="primary" data-write>Create complete source packet</button></div><p class="help">Pause active captures first to retain their exact continuation point. Credentials stay as environment references. Configure the receiving host before continuing private source requests.</p><div id="packets-list"></div></div>
+<form id="source-files-form" class="panel"><h2>Offer the complete source through the original buyer</h2><label>Complete source packet<select id="source-files-packet" required></select></label><label>Original merchant terms<select id="source-files-merchant" required></select></label><div class="form-grid"><label>Dataset name<input id="source-files-name" required maxlength="128" value="wordpress-source-files"></label><label>New product label<input id="source-files-label" required maxlength="160" value="WordPress complete source"></label><label>Reviewer<input id="source-files-reviewer" required maxlength="160"></label><label>Review note<input id="source-files-note" maxlength="4000"></label></div><p class="help">This creates the original chunked source-file dataset. Its manifest and each file digest are checked by wordpress.source_files.restore_wordpress_source after the original customer acquisition.</p><button type="submit" class="primary" data-write>Prepare complete-source product</button></form>
+<form id="receive-form" class="panel"><h2>Receive an existing packet on this host</h2><label>Existing source ZIP path<input id="receive-input" required spellcheck="false" placeholder="/absolute/path/wordpress-source.zip"></label><label>New private workspace directory<input id="receive-directory" required spellcheck="false" placeholder="/absolute/path/received-wordpress"></label><p class="help">A repeated receive validates and resumes the same exact packet. Open the resulting directory with the installed WordPress operator.</p><button type="submit" data-write>Receive and verify source</button><pre id="receive-result"></pre></form>
+<div class="panel"><h2>Action history</h2><div id="operations-list"></div></div></section>
+</main></div><dialog id="detail-dialog"><div class="panel-heading"><h2 id="detail-title">Retained source</h2><button id="detail-close" type="button">Close</button></div><pre id="detail-body"></pre></dialog>
+</body></html>

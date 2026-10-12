@@ -117,3 +117,5 @@ export declare function startODataMerchant(options: {
   port?: number; operationsPort?: number; nativeFactory?: ODataNativeFactory | null; allowLoopback?: boolean;
   lookup?: ODataLookup; historyRetentionDays?: number; navigationOrigin?: string | null;
 }): Promise<ODataMerchant>;
+
+export * from './live/collection.mjs';

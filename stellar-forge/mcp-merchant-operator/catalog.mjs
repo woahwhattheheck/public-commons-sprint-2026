@@ -1,59 +1,7 @@
-import { merchantProviderConfigured } from './providers.mjs';
-import { stacWorkspaceTools } from './catalog/stac-workspace.mjs';
-import { fredWorkspaceTools } from './catalog/fred-workspace.mjs';
-import { apiPassWorkspaceTools } from './api-pass-protocol.mjs';
+import { MERCHANT_PROVIDER_REGISTRY, merchantProviderConfigured } from './providers.mjs';
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { CLIENT_EXPORT_MANIFEST, CLIENT_EXPORT_FILES } from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/developer/client-export-contracts.mjs';
 import { MAX_RETAINED_CHUNK_BYTES } from './retained-file-contracts.mjs';
-import { discoveryTools } from './catalog/discovery.mjs';
-import { cacheControlTools } from './catalog/controls.mjs';
-import { fleetControlTools } from './catalog/fleet.mjs';
-import { accountingTools } from './catalog/accounting.mjs';
-import { supportTools } from './catalog/support.mjs';
-import { receivingTools } from './catalog/receiving.mjs';
-import { pythonWorkspaceTools } from './catalog/python-workspace.mjs';
-import { graphqlWorkspaceTools } from './catalog/graphql-workspace.mjs';
-import { s3WorkspaceTools } from './catalog/s3-workspace.mjs';
-import { openSearchWorkspaceTools } from './catalog/opensearch-workspace.mjs';
-import { socrataWorkspaceTools } from './catalog/socrata-workspace.mjs';
-import { odataWorkspaceTools } from './catalog/odata-workspace.mjs';
-import { worldbankWorkspaceTools } from './catalog/worldbank-workspace.mjs';
-import { fiscalDataWorkspaceTools } from './catalog/fiscaldata-workspace.mjs';
-import { geocodioWorkspaceTools } from './catalog/geocodio-workspace.mjs';
-import { censusGeocoderWorkspaceTools } from './catalog/census-geocoder-workspace.mjs';
-import { webDavWorkspaceTools } from './catalog/webdav-tools.mjs';
-import { edgarWorkspaceTools } from './catalog/sec-edgar-tools.mjs';
-import { sheetsWorkspaceTools } from './catalog/sheets-workspace.mjs';
-import { nocodbWorkspaceTools } from './catalog/nocodb-workspace.mjs';
-import { ckanWorkspaceTools } from './catalog/ckan-workspace.mjs';
-import { tenderlyWorkspaceTools } from './catalog/tenderly-workspace.mjs';
-import { opencageWorkspaceTools } from './catalog/opencage-workspace.mjs';
-import { stellarExpertWorkspaceTools } from './catalog/stellar-expert-workspace.mjs';
-import { coingeckoWorkspaceTools } from './catalog/coingecko-workspace.mjs';
-import { redisWorkspaceTools } from './catalog/redis-workspace.mjs';
-import { usaSpendingWorkspaceTools } from './catalog/usaspending-workspace.mjs';
-import { researchWorkspaceTools } from './catalog/research-workspace.mjs';
-import { grantsWorkspaceTools } from './catalog/grantsgov-workspace.mjs';
-import { sourceWorkspaceTools } from './catalog/source-workspace.mjs';
-import { clinicalTrialsWorkspaceTools } from './catalog/clinicaltrials-workspace.mjs';
-import { baserowWorkspaceTools } from './catalog/baserow-workspace.mjs';
-import { usgsWorkspaceTools } from './catalog/usgs-workspace.mjs';
-import { feedsWorkspaceTools } from './catalog/feeds-workspace.mjs';
-import { dspaceOperatorTools } from './catalog/dspace-operators.mjs';
-import { grantWorkspaceTools } from './catalog/grant-workspace.mjs';
-import { grpcWorkspaceTools } from './catalog/grpc-workspace.mjs';
-import { datasetLifecycleTools } from './catalog/dataset-lifecycle.mjs';
-import { openapiWorkspaceTools } from './catalog/openapi-workspace.mjs';
-import { harWorkspaceTools } from './catalog/har-workspace.mjs';
-import { n8nWorkspaceTools } from './catalog/n8n-workspace.mjs';
-import { paidJobWorkspaceTools } from './catalog/paid-jobs.mjs';
-import { publisherTools } from './catalog/publisher.mjs';
-import { arcgisWorkspaceTools } from './catalog/arcgis-workspace.mjs';
-import { pricingTools } from './catalog/pricing.mjs';
-import { woocommerceTools } from './catalog/woocommerce.mjs';
-import { cocartWorkspaceTools } from './catalog/cocart-workspace.mjs';
-import { mppTools } from './catalog/mpp-console.mjs';
-import { buyerExpenseTools } from './catalog/buyer-expenses.mjs';
 
 const idSchema = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' };
 
@@ -71,62 +19,13 @@ function tool(name, description, properties = {}, required = [], { readOnly = fa
     inputSchema: { type: 'object', properties, required, additionalProperties: false } };
 }
 
-const familyTools = {
-  fredWorkspaces: fredWorkspaceTools(tool),
-  stacWorkspaces: stacWorkspaceTools(tool),
-  apiPassWorkspaces: apiPassWorkspaceTools(tool),
-  discovery: discoveryTools(tool),
-  cache: cacheControlTools(tool),
-  fleet: fleetControlTools(tool),
-  accounting: accountingTools(tool),
-  support: supportTools(tool),
-  receiving: receivingTools(tool),
-  pythonWorkspaces: pythonWorkspaceTools(tool),
-  graphqlWorkspaces: graphqlWorkspaceTools(tool),
-  s3Workspaces: s3WorkspaceTools(tool),
-  opensearchWorkspaces: openSearchWorkspaceTools(tool),
-  socrataWorkspaces: socrataWorkspaceTools(tool),
-  odataWorkspaces: odataWorkspaceTools(tool),
-  worldbankWorkspaces: worldbankWorkspaceTools(tool),
-  fiscalDataWorkspaces: fiscalDataWorkspaceTools(tool),
-  geocodioWorkspaces: geocodioWorkspaceTools(tool),
-  censusGeocoderWorkspaces: censusGeocoderWorkspaceTools(tool),
-  webdavWorkspaces: webDavWorkspaceTools(tool),
-  edgarWorkspaces: edgarWorkspaceTools(tool),
-  sheetsWorkspaces: sheetsWorkspaceTools(tool),
-  nocodbWorkspaces: nocodbWorkspaceTools(tool),
-  ckanWorkspaces: ckanWorkspaceTools(tool),
-  tenderlyWorkspaces: tenderlyWorkspaceTools(tool),
-  opencageWorkspaces: opencageWorkspaceTools(tool),
-  stellarExpertWorkspaces: stellarExpertWorkspaceTools(tool),
-  coingeckoWorkspaces: coingeckoWorkspaceTools(tool),
-  redisWorkspaces: redisWorkspaceTools(tool),
-  usaSpendingWorkspaces: usaSpendingWorkspaceTools(tool),
-  researchWorkspaces: researchWorkspaceTools(tool),
-  grantsWorkspaces: grantsWorkspaceTools(tool),
-  sourceWorkspaces: sourceWorkspaceTools(tool),
-  clinicalTrialsWorkspaces: clinicalTrialsWorkspaceTools(tool),
-  baserowWorkspaces: baserowWorkspaceTools(tool),
-  usgsWorkspaces: usgsWorkspaceTools(tool),
-  feedsWorkspaces: feedsWorkspaceTools(tool),
-  dspaceOperators: dspaceOperatorTools(tool),
-  grantWorkspaces: grantWorkspaceTools,
-  grpcWorkspaces: grpcWorkspaceTools(tool),
-  dataset: datasetLifecycleTools(tool),
-  openapiWorkspaces: openapiWorkspaceTools(tool),
-  harWorkspaces: harWorkspaceTools(tool),
-  n8nWorkspaces: n8nWorkspaceTools(tool),
-  paidJobWorkspaces: paidJobWorkspaceTools(tool),
-  publishers: publisherTools(tool),
-  arcgisWorkspaces: arcgisWorkspaceTools(tool),
-  pricing: pricingTools(tool),
-  woocommerce: woocommerceTools(tool),
-  cocartWorkspaces: cocartWorkspaceTools(tool),
-  mpp: mppTools(tool),
-  buyerExpenses: buyerExpenseTools(tool)
-};
+const familyTools = Object.fromEntries(MERCHANT_PROVIDER_REGISTRY.catalogOrder.map(provider => {
+  const tools = provider.tools(tool);
+  if (!Array.isArray(tools)) throw new TypeError('Merchant provider must return its tool metadata: ' + provider.id);
+  return [provider.family, tools];
+}));
 
-const MERCHANT_TOOLS = [
+const coreTools = [
   tool('merchant_status', 'Inspect original release selection, retained history, seller readiness and this MCP process ownership. Makes only original loopback health/offer reads.', {}, [], { readOnly: true, idempotent: true }),
   tool('merchant_sources', 'List configured aliases or inspect an original API package, OpenAPI files, Python merchant, SQLite workbench, prepared DuckDB, S3, Stellar RPC, PostgreSQL, MySQL or ClickHouse package: exact source identities, public routes, payment choices and worker configuration. Reads configured local files without credential values, application imports or HTTP calls.', { source: idSchema }, [], { readOnly: true, idempotent: true }),
   tool('merchant_stage', 'Retain a configured source alias as a new immutable original SF82 release: saved API workspace, upstream snapshot, Python application, original DuckDB datasets, S3 objects, Stellar RPC products, one native SQLite database snapshot, or original PostgreSQL/MySQL/ClickHouse named-query merchant. PostgreSQL and ClickHouse configuration is retained while database contents remain live. Does not activate, import application code, start a listener or make a payment.',
@@ -171,65 +70,34 @@ const MERCHANT_TOOLS = [
     { exportId: idSchema, readId: { type: 'string' } }, ['exportId', 'readId'], { readOnly: true, idempotent: true }),
   tool('merchant_operations', 'Open the original merchant operations, retained history and private availability controls for this process-owned running instance. The control link grants availability changes; keep it in the operator session.',
     { instanceId: instanceSchema }, ['instanceId'], { readOnly: true, idempotent: true }),
-  ...familyTools.stacWorkspaces,
-  ...familyTools.fredWorkspaces,
-  ...familyTools.apiPassWorkspaces,
-  ...familyTools.discovery,
-  ...familyTools.cache,
-  ...familyTools.fleet,
-  ...familyTools.accounting,
-  ...familyTools.support,
-  ...familyTools.receiving,
-  ...familyTools.pythonWorkspaces,
-  ...familyTools.graphqlWorkspaces,
-  ...familyTools.s3Workspaces,
-  ...familyTools.opensearchWorkspaces,
-  ...familyTools.socrataWorkspaces,
-  ...familyTools.odataWorkspaces,
-  ...familyTools.worldbankWorkspaces,
-  ...familyTools.fiscalDataWorkspaces,
-  ...familyTools.geocodioWorkspaces,
-  ...familyTools.censusGeocoderWorkspaces,
-  ...familyTools.webdavWorkspaces,
-  ...familyTools.edgarWorkspaces,
-  ...familyTools.sheetsWorkspaces,
-  ...familyTools.nocodbWorkspaces,
-  ...familyTools.ckanWorkspaces,
-  ...familyTools.tenderlyWorkspaces,
-  ...familyTools.opencageWorkspaces,
-  ...familyTools.stellarExpertWorkspaces,
-  ...familyTools.coingeckoWorkspaces,
-  ...familyTools.redisWorkspaces,
-  ...familyTools.usaSpendingWorkspaces,
-  ...familyTools.researchWorkspaces,
-  ...familyTools.grantsWorkspaces,
-  ...familyTools.sourceWorkspaces,
-  ...familyTools.clinicalTrialsWorkspaces,
-  ...familyTools.baserowWorkspaces,
-  ...familyTools.usgsWorkspaces,
-  ...familyTools.feedsWorkspaces,
-  ...familyTools.dspaceOperators,
-  ...familyTools.grantWorkspaces,
-  ...familyTools.grpcWorkspaces,
-  ...familyTools.dataset,
-  ...familyTools.openapiWorkspaces,
-  ...familyTools.harWorkspaces,
-  ...familyTools.n8nWorkspaces,
-  ...familyTools.paidJobWorkspaces,
-  ...familyTools.publishers,
-  ...familyTools.arcgisWorkspaces,
-  ...familyTools.pricing,
-  ...familyTools.woocommerce,
-  ...familyTools.cocartWorkspaces,
-  ...familyTools.mpp,
-  ...familyTools.buyerExpenses,
+
 ];
+
+const MERCHANT_TOOLS = [...coreTools, ...Object.values(familyTools).flat()];
 
 export { MERCHANT_TOOLS, tool, idSchema, textSchema, digestSchema, generationSchema, instanceSchema };
 
-const families = new Map(Object.entries(familyTools));
-families.set('facilitators', MERCHANT_TOOLS.filter(value => value.name === 'merchant_facilitators' || value.name.startsWith('merchant_facilitator_')));
-const familyByTool = new Map([...families].flatMap(([family, values]) => values.map(value => [value.name, family])));
+const toolsByName = new Map(), coreByName = new Map(coreTools.map(value => [value.name, value]));
+for (const value of MERCHANT_TOOLS) {
+  if (!value || typeof value.name !== 'string' || !value.inputSchema || toolsByName.has(value.name))
+    throw new TypeError('Invalid or duplicate merchant tool: ' + value?.name);
+  toolsByName.set(value.name, value);
+}
+const families = new Map(), familyByTool = new Map();
+for (const provider of MERCHANT_PROVIDER_REGISTRY.catalogOrder) {
+  const values = [...familyTools[provider.family], ...provider.coreToolNames.map(name => {
+    if (!coreByName.has(name)) throw new TypeError('Provider claims an unknown core tool: ' + name);
+    return coreByName.get(name);
+  })];
+  if (!values.length) continue;
+  for (const value of values) {
+    if (familyByTool.has(value.name)) throw new TypeError('Merchant tool has multiple provider owners: ' + value.name);
+    familyByTool.set(value.name, provider.family);
+  }
+  for (const name of provider.concurrentTools)
+    if (!values.some(value => value.name === name)) throw new TypeError('Concurrent tool is outside its original provider: ' + name);
+  families.set(provider.family, values);
+}
 
 export function merchantToolFamily(name) { return familyByTool.get(name) ?? null; }
 

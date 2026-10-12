@@ -20,11 +20,40 @@ Related original operating surfaces:
 - [Original Node buyer SDK](../../sf88-operator-buyer-cli/node/)
 - [Original Tenderly analysis workspace](../../sf88-operator-buyer-cli/tenderly-analysis/)
 
+The [public Safe receiving guide](receiving/PUBLIC_SAFE_RECEIVING.md) supplies an original Gnosis execution from Safe's maintained source and a read helper using the caller's actual Protocol Kit. It obtains the original outer transaction and receipt, verifies the SDK hash and complete execution calldata, and captures the actual block position, caller, gas limit and value through `prepareSafeSelection`. The saved source, runtime selection and original buyer intent stay together through receiving.
+
 All CLI paths below are absolute. Set `SAFE_REVIEW_CLI` to this directory's `cli.mjs`; `BUYER_RUNTIME` to the original SF88 runtime directory; and `REVIEW_ROOT` to an operator-owned private working directory.
 
 ```sh
 node "$SAFE_REVIEW_CLI" --help
 ```
+
+## Installed package
+
+The source-owned `palmera-safe-review` registration includes this entire component and its receiving inputs in the normal merchant package. Use the installed command to run the same original CLI:
+
+```sh
+starforge registrations --source palmera-safe-review
+starforge registrations --command safe-review
+starforge safe-review --help
+starforge safe-review selection --directory "$REVIEW_ROOT/selection-a"
+starforge safe-review recover --intent safe-review-a --state "$REVIEW_ROOT/buyer-state" --runtime "$BUYER_RUNTIME"
+starforge safe-review receive --from "$REVIEW_ROOT/handover-a" --out "$REVIEW_ROOT/received/handover-a" --analysis "$REVIEW_ROOT/received/analysis"
+```
+
+Every command in the workflow below is available by replacing `node "$SAFE_REVIEW_CLI"` with `starforge safe-review`. Arguments, original buyer state, merchant selection and receiving directories keep the same meaning.
+
+Applications can import the maintained interfaces directly:
+
+```js
+import { SafeSimulationBuyer } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review';
+import { preparePalmeraSelection, prepareSafeSelection } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/transaction';
+import { prepareSafePurchase } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/preparation';
+import { exportHandover, openHandover, receiveHandover } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/handover';
+import { readPublicSafe } from '@tokenjunkielabs/starforge-merchant/buyer/safe-review/receiving';
+```
+
+The package includes the original native buyer, Tenderly customer and analysis source dependencies. The calling application supplies its existing Palmera / Safe SDK, provider and wallet connection. For the public receiving input, the loader resolves Protocol Kit from that exact caller-owned Palmera package and checks both recorded SDK versions.
 
 ## 1. Capture the transaction already selected in Palmera
 

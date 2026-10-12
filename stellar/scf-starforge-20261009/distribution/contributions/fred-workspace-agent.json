@@ -37,5 +37,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/cpiaucsl-20261012.public-table.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/gdp-20261012.public-table.json",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/fred/sources/MACRO_STARTER.md"
-  ]
+  ],
+  "merchantProviders": {
+    "fred-workspaces": "stellar-forge/mcp-merchant-operator/providers/fred-workspaces.mjs"
+  }
 }

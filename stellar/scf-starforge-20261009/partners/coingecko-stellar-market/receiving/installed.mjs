@@ -115,6 +115,7 @@ const receiving={
  receivingDirectory:join(work,'received-market'),operationPrefix:input.operationPrefix,
  originalSources:input.originalSources,actor:input.actor,
  playwrightModule:input.playwrightModule,browserExecutable:input.browserExecutable,
+ ...(input.browserArgs!==undefined?{browserArgs:input.browserArgs}:{}),
  ...(input.configurationFile?{configurationFile:input.configurationFile}:{})
 };
 const manifest=join(work,'applications-receiving.json');

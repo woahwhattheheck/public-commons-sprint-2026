@@ -60,6 +60,17 @@ export async function prepareProviderApplication(provider, type, settings, conte
       { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
 
+/** Bind run-specific arguments only when the reviewed original operation is retained. */
+export function retainedApplicationArguments(provider, command, requestId) {
+  const args = provider.runArguments
+    ? provider.runArguments({command:command.command, args:[...command.args], requestId})
+    : [...command.args];
+  need(Array.isArray(args) && args.every(value => typeof value === 'string'),
+    'APPLICATION_PROVIDER_RUN_ARGUMENTS_INVALID',
+    'The ' + provider.id + ' provider must return the original managed argument list.');
+  return args;
+}
+
 export function applicationPrivateUrl(text) {
   try {
     const url = new URL(text);

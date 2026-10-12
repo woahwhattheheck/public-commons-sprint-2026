@@ -10,7 +10,29 @@ const validId=value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(
 const validSha=value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value);
 const errorView=error=>({code:error.code??'CUSTOMER_RECEIVING_ERROR',message:error.message??String(error)});
 export function createConsoleCustomers({operator,store,definitions,releaseStore,getHost,authorize}) {
-  const active=new Map(); let closing=false;
+  const active=new Map(),archiveReaders=new Map(),archiveCalls=new Set(),archiveCloses=new Map();
+  let closing=false,closed,closeAttempts=0;
+  function closeArchive(id,reader) {
+    let entry=archiveCloses.get(id);
+    if(entry)return entry.promise;
+    entry={state:'CLOSING',promise:null};archiveCloses.set(id,entry);
+    entry.promise=reader.then(value=>value.close()).then(()=>{
+      entry.state='CLOSED';if(archiveReaders.get(id)===reader)archiveReaders.delete(id);
+    },error=>{entry.state='FAILED';throw error;});
+    entry.promise.catch(()=>{});return entry.promise;
+  }
+  function originalArchive(record) {
+    let pending=archiveReaders.get(record.id);
+    if(!pending){
+      pending=(async()=>{
+        const {createReleaseClientConsole}=await import('../../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-client.mjs');
+        return createReleaseClientConsole(releaseStore,{directory:join(store.directory,'customers',record.id),getManaged:()=>null});
+      })();
+      archiveReaders.set(record.id,pending);
+      pending.catch(()=>{if(archiveReaders.get(record.id)===pending)archiveReaders.delete(record.id);});
+    }
+    return pending;
+  }
   function identity(input) {
     if(!['core','opensearch'].includes(input.family)||!validId(input.exportId)||!validSha(input.expectedManifestSha256))
       throw fail('CONSOLE_CUSTOMER_SELECTION','Select the original family, export ID and manifest SHA-256.',400);
@@ -99,15 +121,39 @@ export function createConsoleCustomers({operator,store,definitions,releaseStore,
       return {file,bytes};
     },
     async archive(id,request,response){
+      if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
       const record=store.delivery(id);await requireRead(record,request);
-      const {createReleaseClientConsole}=await import('../../../stellar/scf-starforge-20261009/sf82-seller-pilot/release-client.mjs');
-      const original=await createReleaseClientConsole(releaseStore,{directory:join(store.directory,'customers',id),getManaged:()=>null});
-      try{await original.sendDownload(request,response,{exportId:record.identity.exportId,
-        expectedManifestSha256:record.identity.expectedManifestSha256});}
-      finally{await original.close();}
+      if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+      const owner=originalArchive(record);
+      const task=(async()=>{
+        const original=await owner;
+        if(closing)throw fail('CONSOLE_CLOSING','The original customer owner is closing.',503);
+        await original.sendDownload(request,response,{exportId:record.identity.exportId,
+          expectedManifestSha256:record.identity.expectedManifestSha256});
+      })();
+      archiveCalls.add(task);
+      try{await task;}finally{archiveCalls.delete(task);}
     },
     pause(id){const pending=active.get(id);if(pending)pending.controller.abort(fail('CONSOLE_DOWNLOAD_PAUSED','Receiving paused at the original durable checkpoint.'));return view(store.delivery(id));},
-    beginClose(){closing=true;for(const value of active.values())value.controller.abort(fail('CONSOLE_DOWNLOAD_PAUSED','The host is closing; the original customer checkpoint is retained.'));},
-    async close(){this.beginClose();await Promise.allSettled([...active.values()].map(value=>value.task));}
+    get summary(){return {activeDownloads:active.size,activeArchives:archiveCalls.size,originalArchiveOwners:archiveReaders.size,
+      failedArchiveCloses:[...archiveCloses.values()].filter(value=>value.state==='FAILED').length};},
+    beginClose(){
+      closing=true;
+      for(const value of active.values())value.controller.abort(fail('CONSOLE_DOWNLOAD_PAUSED','The host is closing; the original customer checkpoint is retained.'));
+      for(const [id,reader] of archiveReaders)closeArchive(id,reader);
+    },
+    close(){
+      if(!closed){
+        if(closeAttempts++)for(const [id,entry] of archiveCloses)if(entry.state==='FAILED')archiveCloses.delete(id);
+        this.beginClose();
+        closed=(async()=>{
+          await Promise.allSettled([...active.values()].map(value=>value.task).concat([...archiveCalls]));
+          const results=await Promise.allSettled([...archiveCloses.values()].map(value=>value.promise));
+          const errors=results.filter(value=>value.status==='rejected').map(value=>value.reason);
+          if(errors.length)throw Object.assign(new AggregateError(errors,'Original customer archive shutdown is incomplete; retry this owner.'),{code:'CONSOLE_CUSTOMER_CLOSE_INCOMPLETE'});
+        })().catch(error=>{closed=undefined;throw error;});
+      }
+      return closed;
+    }
   };
 }

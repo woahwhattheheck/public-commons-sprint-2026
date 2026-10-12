@@ -10,6 +10,11 @@ export interface BuyerResponseFileIntegrity {
   expectedContentType?: string;
 }
 
+export interface BuyerResponseFileAllocation {
+  mode: 'HELD_DESTINATION_DESCRIPTORS';
+  response: Readonly<{reservedBytes: number; device: string; inode: string; allocatedBytes: string; previousAllocatedBytes: string; logicalSizePreserved: true}>;
+  reservation: Readonly<{reservedBytes: number; device: string; inode: string; allocatedBytes: string; previousAllocatedBytes: string; logicalSizePreserved: true}>;
+}
 export interface BuyerResponseFileOptions extends BuyerResponseFileIntegrity {
   /** Absolute, operator-selected path in an existing trusted directory. */
   destination: string;
@@ -21,6 +26,11 @@ export interface BuyerResponseFileOptions extends BuyerResponseFileIntegrity {
   stream?: BuyerResponseStreamOptions;
   /** Nonsecret owner tag retained in the existing private reservation file. */
   reservationTag?: string;
+  /** Finish KEEP_SIZE allocation on this exact live FD before returning; preserve inode and EOF. */
+  reserveFile?: (input: {fileHandle: import('node:fs/promises').FileHandle; path: string;
+    kind: 'buyer-response' | 'buyer-response-reservation'; bytes: number; signal?: AbortSignal}) => Promise<unknown>;
+  /** Cancels preparation, including the awaited allocation helper. */
+  signal?: AbortSignal;
 }
 
 /** Raw metadata for the original object acquisition consumer, not verified claims. */
@@ -32,6 +42,7 @@ export interface BuyerResponseObjectMetadata {
 }
 
 export interface SavedBuyerResponse {
+  allocation?: BuyerResponseFileAllocation;
   path: string;
   bytes: number;
   sha256: string;
@@ -45,6 +56,7 @@ export interface SavedBuyerResponse {
 }
 
 export interface PreparedBuyerResponseFile {
+  readonly allocation?: BuyerResponseFileAllocation;
   readonly destination: string;
   /** Original private partial selected before the HTTP request. */
   readonly partialPath: string;
