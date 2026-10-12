@@ -158,6 +158,13 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    assert(['NOT_RESERVED','RUNNING','FAILED','COMPLETE'].includes(r.state),'Inspect the actual original operation state before continuing.');
    return r;
   };
+  function preserveLaterRequest(record,pending){
+   if(!pending||same(pending))return false;
+   // A phase resumes in order: its earlier completed actions must leave a
+   // later original browser request intact until that action is reached.
+   assert(typeof pending.request?.operationId==='string'&&pending.request.operationId&&pending.request.operationId!==entry.request.operationId&&record.state==='COMPLETE'&&entry.state==='COMPLETE'&&entry.native?.operationId===record.operationId&&stable(entry.result)===stable(record.result),'A different original browser request is pending before this action has an exact completed result.');
+   return true;
+  }
   async function retry(before){
    const pending=(await browserState())?.pending;
    assert(same(pending),'The original pending browser request is required; preserve any different request or later draft.');
@@ -171,6 +178,7 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
   }
   if(fresh)await visibleReply();
   let record=await current(),pending=(await browserState())?.pending;
+  if(preserveLaterRequest(record,pending))return entry.result;
   if(pending)assert(same(pending),'A different original browser request is pending; preserve it before continuing this phase.');
   if(record.state!=='COMPLETE'){
    // An interrupted request may never have reached reservation, or may retain
@@ -184,6 +192,7 @@ export async function runCoopsOperatorJourney(initialPage,options={}){
    },'Waiting for the resumed original '+entry.request.action);
   }
   pending=(await browserState())?.pending;
+  if(preserveLaterRequest(record,pending))return entry.result;
   if(pending){
    assert(same(pending),'A different original request must not be replaced after completion.');
    await retry(record);
