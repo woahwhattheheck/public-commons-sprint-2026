@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createMcpToolHandler } from '../mcp-paid-agent/http-tools.mjs';
 import { openMerchantOperator } from './operator.mjs';
-import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, failure } from './config.mjs';
+import { initializeMerchant, initializeFleetMerchant, initializeAccountingMerchant, initializeReceivingMerchant, initializePythonWorkspaceMerchant, initializePublisherMerchant, initializeS3WorkspaceMerchant, initializeSocrataWorkspaceMerchant, initializeSheetsWorkspaceMerchant, initializeCkanWorkspaceMerchant, initializeTenderlyWorkspaceMerchant, initializePricingMerchant, initializeWooCommerceMerchant, failure } from './config.mjs';
 
 const HELP = `Starforge merchant MCP
 
@@ -18,6 +18,7 @@ const HELP = `Starforge merchant MCP
   init-python-workspaces --dir NEW_DIRECTORY --python-workspaces CONNECTION_JSON [--name NAME]
   init-publishers --dir NEW_DIRECTORY --connection PUBLISHER_CONNECTION.json [--name NAME]
   init-s3-workspaces --dir NEW_DIRECTORY --connection S3_WORKSPACE_CONNECTION.json [--name NAME]
+  init-socrata-workspaces --dir NEW_DIRECTORY --connection SOCRATA_WORKSPACE_CONNECTION.json [--name NAME]
   init-sheets-workspaces --dir NEW_DIRECTORY --connection SHEETS_WORKSPACE_CONNECTION.json [--name NAME]
   init-ckan-workspaces --dir NEW_DIRECTORY --connection CKAN_WORKSPACE_CONNECTION.json [--workspace ALIAS] [--name NAME]
   init-tenderly-workspaces --dir NEW_DIRECTORY --connection TENDERLY_WORKSPACE_CONNECTION.json [--name NAME]
@@ -191,6 +192,12 @@ export async function main(args = process.argv.slice(2)) {
     const options = pairs(rest, ['--dir', '--connection', '--name']);
     if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
     const result = await initializeWooCommerceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
+    process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
+  }
+  if (command === 'init-socrata-workspaces') {
+    const options = pairs(rest, ['--dir', '--connection', '--name']);
+    if (!options.has('--dir') || !options.has('--connection')) throw failure('CONFIGURATION_ERROR', 'Supply --dir and --connection.');
+    const result = await initializeSocrataWorkspaceMerchant({ directory: options.get('--dir'), connection: options.get('--connection'), name: options.get('--name') });
     process.stdout.write(JSON.stringify(result, null, 2) + '\n'); return result;
   }
   if (command === 'init-s3-workspaces') {

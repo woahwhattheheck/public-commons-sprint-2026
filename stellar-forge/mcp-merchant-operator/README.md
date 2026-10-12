@@ -519,3 +519,16 @@ lost-response recovery. The original buyer configuration and merchant archives
 are available through SHA-pinned file reads. Both HTTP and stdio expose the same
 source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
 covers host configuration, the joined source-to-customer workflow and reopening.
+
+## Socrata source and customer workspaces
+
+[SOCRATA_WORKSPACES.md](./SOCRATA_WORKSPACES.md) connects this same merchant MCP to
+the original Socrata source application. Host-declared aliases cover real
+provider capture, typed editions, native queries, complete portable exports,
+dataset publication, release operation and customer acquisition.
+
+Use `init-socrata-workspaces --dir NEW_DIRECTORY --connection CONNECTION_JSON`,
+or add `socrataWorkspaceConnection` to the existing merchant configuration.
+The `merchant_socrata_*` tools use the original source and publisher objects.
+Their industrial browser borrows that same operator, and complete customer files
+use the existing verified retained-file reader.
