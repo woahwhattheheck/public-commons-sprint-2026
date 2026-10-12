@@ -11,6 +11,7 @@ const HELP = 'Grants.gov opportunity workspace\n\n'+
 'node grantsgov/cli.mjs <command> --workspace /private/grants [options]\n\n'+
 '  init | status                    Open or inspect the original workspace\n'+
 '  serve [--port 0]                  Start the private local operator UI\n'+
+'  serve --startup-format managed ...  Start the saved installed Applications selection\n'+
 '  action --action NAME --input JSON_FILE\n'+
 '                                   Run any documented native workspace action\n'+
 '  query --name NAME --keyword WORDS [--statuses posted,forecasted]\n'+
@@ -75,12 +76,30 @@ export async function main(argv=process.argv.slice(2)){
   const directory=resolve(required(options.workspace,'workspace'));
   const buyerWorkspaces=options.buyers?await readJSON(options.buyers):[];
   if(command==='serve'){
-    const server=await startGrantsServer({directory,port:number(options.port,0),buyerWorkspaces});
-    process.stdout.write(JSON.stringify({url:server.url,workspace:directory,pid:process.pid})+'\n');
+    const {prepareGrantsManagedLaunch,grantsManagedStartup}=await import('./launch.mjs');
+    if(options['startup-format']!==undefined&&options['startup-format']!=='managed')
+      throw Error('Use --startup-format managed with the saved Applications review.');
+    const launch=options['startup-format']==='managed'?await prepareGrantsManagedLaunch({
+      directory,sourceDirectory:required(options['source-directory'],'source-directory'),
+      expectedSourceSha256:required(options['source-sha256'],'source-sha256'),
+      expectedWorkspaceIdentity:required(options['workspace-identity'],'workspace-identity'),
+      buyersFile:options.buyers?resolve(options.buyers):undefined,
+      expectedBuyersSha256:options['buyers-sha256']
+    }):null;
+    const server=await startGrantsServer({directory,port:number(options.port,0),
+      buyerWorkspaces:launch?launch.buyers.buyerWorkspaces:buyerWorkspaces});
+    try{
+      const ready=launch?await grantsManagedStartup({launch,workspace:server.workspace,service:server}):
+        {url:server.url,workspace:directory,pid:process.pid};
+      process.stdout.write(JSON.stringify(ready)+'\n');
+    }catch(error){await server.close();throw error;}
     let stopping=false;
-    const close=async()=>{if(stopping)return;stopping=true;await server.close();process.exitCode=0;};
+    const close=()=>{if(stopping)return;stopping=true;void server.close().catch(error=>{
+      process.stderr.write(JSON.stringify({error:{code:error.code??'GRANTS_CLOSE_FAILED',message:error.message}})+'\n');
+      process.exitCode=1;
+    });};
     process.once('SIGINT',close);process.once('SIGTERM',close);
-    return;
+    return server;
   }
   const workspace=await openGrantsWorkspace({directory,buyerWorkspaces});
   const requestId=options.request??'request-'+randomUUID();
