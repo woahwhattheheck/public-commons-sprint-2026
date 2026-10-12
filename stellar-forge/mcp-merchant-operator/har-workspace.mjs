@@ -228,9 +228,11 @@ export class MerchantHarWorkspaces {
         url.username||url.password||url.pathname!=='/'||url.search||!/^#[A-Za-z0-9_-]{32,256}$/.test(url.hash))
       throw fail('HAR_CONSOLE_CONNECTION_INVALID','Use the exact private URL printed by the original SF61 workspace.');
     const connection={origin:url.origin,token:url.hash.slice(1)};
-    const status=await this.#json(connection,'/api/packages');
-    if(status.output!==def.projectsDirectory)throw fail('HAR_CONSOLE_IDENTITY_CHANGED','The running console belongs to another projects directory. Reconnect the declared original workspace.');
-    return {connection,status};
+    // Identity uses the native one-entry library page. Reopening and compiling
+    // every saved merchant package belongs only to actual package operations.
+    const library=await this.#json(connection,'/api/har/library?limit=1');
+    if(library.root!==join(def.projectsDirectory,'.har-captures'))throw fail('HAR_CONSOLE_IDENTITY_CHANGED','The running console belongs to another projects directory. Reconnect the declared original workspace.');
+    return {connection,library};
   }
   async #request(connection,route,{body,raw,maximum=MAX_REPLY}={}){
     try{
@@ -431,10 +433,10 @@ export class MerchantHarWorkspaces {
       }
       return this.#retain(workspace,current,input.kind,bytes);
     }
-    const {connection,status}=await this.#connection(def);
+    const {connection,library}=await this.#connection(def);
     switch(name){
       case 'merchant_har_status':{
-        const library=await this.#json(connection,'/api/har/library?limit=1');
+        const status=await this.#json(connection,'/api/packages');
         return {workspace,ownership:'EXISTING_SF61_MERCHANT_CONSOLE',captures:library.total,
           packages:status.packages.length,runtime:status.runtime,retainedExports:(await this.#exports(workspace)).length,
           fileReads:this.#reads.status(workspace)};
@@ -501,7 +503,10 @@ export class MerchantHarWorkspaces {
           throw fail('HAR_PACKAGE_CHANGED','The completed package differs from the exact reviewed source or merchant plan.');
         return result({...saved,reused:false});
       }
-      case 'merchant_har_packages':return result(paged(status.packages,input,workspace));
+      case 'merchant_har_packages':{
+        const status=await this.#json(connection,'/api/packages');
+        return result(paged(status.packages,input,workspace));
+      }
       case 'merchant_har_load':{
         const loaded=await this.#json(connection,'/api/load?'+new URLSearchParams({name:packageName(input.name)}));
         const source=await this.#json(connection,'/api/har/locate',{specText:loaded.specText});

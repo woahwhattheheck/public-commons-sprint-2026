@@ -23,7 +23,9 @@ node stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.
 Retain its complete printed URL in a private mode-0600 file or environment
 variable. The URL includes the original workspace token in its fragment. The
 adapter uses that token in the native x-workspace-token header and checks the
-authenticated projects-directory identity before every console operation.
+authenticated source-library identity against the declared projects directory
+before every console operation. This uses a one-entry library read; full merchant
+package inspection runs only for status and package operations.
 The original browser can remain open.
 
 Create a private connection document:
