@@ -124,7 +124,7 @@ function measures(row){
       const item=base(row,'V2Tone',index,raw,'tone',MEASURES);
       item.measure_key=GKG_TONE_FIELDS[index]??'unknown-'+(index+1);
       if(index<7&&(index===6?UNSIGNED.test(raw):DECIMAL.test(raw))){
-        item.measure_value=raw;item.measure_kind=index===6?'word-count':'tone-score';
+        item.measure_value=raw;item.measure_kind=index===6?'word-count':index===0?'tone-percentage-points':'percentage';
         item.parse_status=values.length===7?'PARSED':'PARTIAL_FIELD';
       }
       result.push(item);
@@ -188,7 +188,7 @@ export function gkgCollectionRows(models,table,{maxRows=1000000}={}){
   for(const model of models)for(const row of model.articles){
     const rows=table==='articles'?[gkgArticle(row)]:table==='article-entities'?entities(row):table==='article-measures'?measures(row):details(row);
     need(result.length+rows.length<=maxRows,'Selected expanded GKG table exceeds its one-million-row capacity. Choose fewer source updates.','GDELT_SOURCE_TOO_LARGE',413);
-    result.push(...rows);
+    for(const occurrence of rows)result.push(occurrence);
   }
   return result;
 }
@@ -225,6 +225,13 @@ const MEANINGS={
   TranslationInfo:'Original language/translation engine provenance. Blank also includes human-translated material supplied in English.',
   ExtrasXML:'Complete original extension XML as source text.',
   V2Tone:'Original seven-value comma-delimited tone/word-count cell.',
+  ToneScore:'Positive word percentage minus negative word percentage, in percentage points; preserves the original value.',
+  PositiveScore:'Percentage of source words identified as positive by the original tone dictionary.',
+  NegativeScore:'Percentage of source words identified as negative by the original tone dictionary.',
+  Polarity:'Combined positive and negative word percentages; measures emotional language regardless of sign.',
+  ActivityReferenceDensity:'Percentage of source words from the original active-language dictionary.',
+  SelfGroupReferenceDensity:'Percentage of source words from the original self/group-reference dictionary.',
+  WordCount:'Original total document word count; distinct from percentages and GCAM dictionary match counts.',
   GCAM:'Complete original sparse GCAM cell, including its original dictionary keys, word counts and scores.',
   tone_parse_status:'PARSED when all seven original tone values match their declared forms; original V2Tone always remains available.'
 };
@@ -235,6 +242,7 @@ export function gkgColumnMeaning(name){
     nullable:!['source_batch','source_row','GKGRECORDID','source_field','occurrence_index','occurrence_kind','parse_status',
       'document_key','record_translated','tone_parse_status'].includes(name),
     encoding:INTEGER.has(name)?'exact-safe-integer':NUMERIC_TEXT.has(name)?'numeric-text':'source-text',
+    ...(GKG_TONE_FIELDS.includes(name)?{unit:name==='ToneScore'?'percentage-points':name==='WordCount'?'words':'percent'}:{}),
     meaning:MEANINGS[name]??'Original GKG source text or a direct source-cell projection; complete raw cells remain retained.'};
 }
 export function gkgCoverage(models){
