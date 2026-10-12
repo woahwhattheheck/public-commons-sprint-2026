@@ -185,15 +185,25 @@ export async function main(argv = process.argv.slice(2)) {
     return binding;
   }
   const application = await startCensusGeocoderAgentWorkspace(options);
+  let stopping;
   const shutdown = signal => {
-    process.removeListener('SIGINT', interrupt);
-    process.removeListener('SIGTERM', terminate);
-    application.close().then(() => { process.exitCode = signal === 'SIGINT' ? 130 : 143; })
-      .catch(error => { process.stderr.write(JSON.stringify({ error: error.code ?? 'CENSUS_GEOCODER_AGENT_CLOSE_FAILED', message: error.message }) + '\n'); process.exitCode = 1; });
+    if (stopping) return stopping;
+    const disposing = Promise.resolve().then(() => application.close());
+    stopping = disposing;
+    void disposing.then(() => {
+      process.removeListener('SIGINT', interrupt);
+      process.removeListener('SIGTERM', terminate);
+      process.exitCode = signal === 'SIGINT' ? 130 : 143;
+    }, error => {
+      if (stopping === disposing) stopping = null;
+      process.stderr.write(JSON.stringify({ error: error.code ?? 'CENSUS_GEOCODER_AGENT_CLOSE_FAILED', message: error.message }) + '\n');
+      process.exitCode = 1;
+    });
+    return disposing;
   };
   const interrupt = () => shutdown('SIGINT'), terminate = () => shutdown('SIGTERM');
-  process.once('SIGINT', interrupt);
-  process.once('SIGTERM', terminate);
+  process.on('SIGINT', interrupt);
+  process.on('SIGTERM', terminate);
   process.stdout.write(JSON.stringify(application.startup) + '\n');
   return application;
 }
