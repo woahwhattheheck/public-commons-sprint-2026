@@ -5,11 +5,13 @@ import {SCHEMA,ENVELOPE,MAX_BYTES,ANSWERS,REQUIREMENTS,OFFICIAL,makeSource,creat
 import {listDrafts,loadDraft,saveDraft} from './drafts.mjs';
 import {MAX_PLAN_BYTES,receivePlanningFile,verifyPlanningSource} from './grant-plan-source.mjs';
 import {renderPlanning} from './grant-plan-workspace.mjs';
+import {readReviewerSource,retainSourceBundle,verifyHandover,createDraftEnvelope} from './grant-handover-source.mjs';
+import {renderHandover} from './grant-handover-workspace.mjs';
 const $=id=>document.getElementById(id);
 const node=(tag,text,cls)=>{const value=document.createElement(tag);if(text!==undefined)value.textContent=String(text);if(cls)value.className=cls;return value;};
 const uid=()=>crypto.randomUUID();
 const titleOf=id=>ANSWERS.find(x=>x[0]===id)?.[1]||id;
-let draft=null,published=null,savedId=null,savedRevision=0,dirty=false,busy=false,selectedAnswer='project',selectedField=null,filePurpose='draft';
+let draft=null,published=null,publishedBundle=null,savedId=null,savedRevision=0,dirty=false,busy=false,selectedAnswer='project',selectedField=null,filePurpose='draft';
 let currentStats=null,currentPreview=null,currentIssue=null,currentText=null;
 const view=()=>$('view').value,format=()=>$('format').value;
 const status=text=>{$('status').textContent=text;};
@@ -51,11 +53,8 @@ async function verifySource(source){
   framed.set(prefix);framed.set(bytes,prefix.length);
   if(bytes.length!==source.bytes||await sha(bytes)!==source.sha256||await sha(framed,'SHA-1')!==source.gitBlob)throw new Error('The complete application does not match its retained source edition. Reopen the original source or draft file.');
 }
-async function verifyDraft(value){validateDraft(value);for(const source of value.sources)await verifySource(source);for(const source of value.planSources||[])await verifyPlanningSource(source);return value;}
-async function envelope(value){
-  validateDraft(value);const body=JSON.stringify(value);
-  return JSON.stringify({schema:ENVELOPE,exportedAt:new Date().toISOString(),sha256:await sha(body),draft:value})+'\n';
-}
+async function verifyDraft(value){return verifyHandover(value);}
+async function envelope(value){return createDraftEnvelope(value);}
 async function parseEnvelope(text){
   const value=JSON.parse(text);
   if(value.schema!==ENVELOPE||!value.draft||typeof value.sha256!=='string')throw new Error('Open the complete submission draft export.');
@@ -72,11 +71,15 @@ async function boundedRead(url,maximum){
   const body=new Uint8Array(size);let offset=0;for(const part of parts){body.set(part,offset);offset+=part.length;}return body;
 }
 async function readPublished(){
-  const [applicationBytes,indexBytes]=await Promise.all([boundedRead('./grant-data/application.md',MAX_BYTES),boundedRead('./grant-data/source-index.json',MAX_BYTES)]);
-  const decode=value=>new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(value);
-  const source=makeSource({markdown:decode(applicationBytes),index:JSON.parse(decode(indexBytes)),url:new URL('./grant-data/application.md',document.baseURI).href});
-  await verifySource(source);return source;
+  const received=await readReviewerSource({baseUrl:document.baseURI});
+  publishedBundle={bundle:received.bundle,objects:received.objects};
+  return received.source;
 }
+function retainPublishedBundle(value){
+  return publishedBundle&&value.sources.some(source=>source.sha256===publishedBundle.bundle.body.applicationSha256)?
+    retainSourceBundle(value,publishedBundle,{select:true}):value;
+}
+
 async function preserveWorking(){
   if(!draft||!dirty)return;
   const value=retainVersion(draft,'Before opening another draft');
@@ -142,15 +145,18 @@ function nav(){
   $('source-summary').replaceChildren(node('strong','Selected source edition'),node('div',src.gitBlob.slice(0,12)),node('div',src.bytes.toLocaleString()+' bytes · '+draft.sources.length+' retained editions'));
   for(const [id,title]of ANSWERS){
     const answer=draft.answers.find(x=>x.id===id),b=button(title,()=>{$('view').value='answers';selectedAnswer=id;render();$('editor').focus();},'nav-answer');
-    b.setAttribute('aria-current',String(view()==='answers'&&selectedAnswer===id));
+    b.dataset.grantAnswerId=id;b.setAttribute('aria-current',String(view()==='answers'&&selectedAnswer===id));
     b.append(node('span',measureText(outputText(answer.text,format())).words+' words'+(answer.text!==answer.baseText?' · edited':'')));root.append(b);
   }
   const planButton=button('Planning edition',()=>{$('view').value='planning';render();},'nav-answer');
   planButton.setAttribute('aria-current',String(view()==='planning'));
   planButton.append(node('span',(draft.planSources?.length||0)+' retained native planning files'));root.append(planButton);
+  const handoverButton=button('Submission handover',()=>{$('view').value='handover';render();},'nav-answer');
+  handoverButton.setAttribute('aria-current',String(view()==='handover'));
+  handoverButton.append(node('span',(draft.handover?.editions.length||0)+' prepared editions · '+(draft.handover?.returns.length||0)+' observations'));root.append(handoverButton);
   if(draft.fields.length){root.append(node('h3','Form fields'));for(const field of draft.fields){
     const b=button(field.label||'Unlabeled field',()=>{$('view').value='fields';selectedField=field.id;render();},'nav-answer');
-    b.setAttribute('aria-current',String(view()==='fields'&&selectedField===field.id));root.append(b);
+    b.dataset.grantFieldId=field.id;b.setAttribute('aria-current',String(view()==='fields'&&selectedField===field.id));root.append(b);
   }}
 }
 function answerView(root){
@@ -223,13 +229,18 @@ function sourceView(root){
   root.append(node('h2','Source editions'),node('p','The full source text stays with its edition. Receiving a newer edition updates untouched answers and preserves edited answers against their original baselines.'));
   if(published){
     const card=node('section',undefined,'card');card.append(node('h3','Current application reader'),node('p',published.gitBlob,'code'),node('p',published.receivedAt,'muted'));
-    if(published.sha256!==draft.currentSource)card.append(button('Receive source and keep edited answers',()=>{draft=receiveSource(draft,published);touch();render();status('Received the current source. Edited answers and the preceding version remain available.');},'primary'));
-    else card.append(node('p','The selected source matches the current reader edition.','muted'));root.append(card);
+    if(published.sha256!==draft.currentSource)card.append(button('Receive source and keep edited answers',()=>{draft=retainPublishedBundle(receiveSource(draft,published));touch();render();status('Received the current source. Edited answers and the preceding version remain available.');},'primary'));
+    else {
+      card.append(node('p','The selected source matches the current reader edition.','muted'));
+      if(publishedBundle&&!draft.handover?.bundles.some(row=>row.id===publishedBundle.bundle.id))
+        card.append(button('Retain these four original reviewer files',()=>{draft=retainPublishedBundle(draft);touch();render();status('Retained the exact matching reader bundle. Existing answers and prepared editions remain unchanged.');}));
+    }
+    root.append(card);
     for(const change of compareSource(draft,published)){
       if(!change.sourceChanged&&!change.edited)continue;
       const detail=node('details'),summary=node('summary',change.title+' · '+(change.sourceChanged?(change.edited?'source and draft changed':'new source text'):'draft edited'));
       detail.append(summary,node('h4','Draft answer'),node('pre',change.draftText,'source-text'),node('h4','Original baseline'),node('pre',change.baseText,'source-text'),node('h4','Current reader answer'),node('pre',change.text,'source-text'),
-        button('Use current source for this answer',()=>{draft=useSourceAnswer(draft,change.id,published);touch();render();status('Selected the current source answer and retained the preceding full version.');}));
+        button('Use current source for this answer',()=>{draft=retainPublishedBundle(useSourceAnswer(draft,change.id,published));touch();render();status('Selected the current source answer and retained the preceding full version.');}));
       root.append(detail);
     }
   }else root.append(button('Read current source',refreshSource));
@@ -245,6 +256,11 @@ function planningView(root){
     getDraft:()=>draft,setDraft:value=>{draft=value;},
     showAnswer:id=>{selectedAnswer=id;$('view').value='answers';render();},
     showField:id=>{selectedField=id;$('view').value='fields';render();}});
+}
+function handoverView(root){
+  renderHandover(root,{getDraft:()=>draft,setDraft:value=>{draft=value;},touch,work,render,status,download,copy,
+    save:()=>save(false),openFull:()=>chooseFile('draft'),
+    exportFull:async()=>{download(await envelope(draft),filename()+'-complete-draft.json');status('Downloaded the complete editable draft with every retained original file, version, prepared edition and observation.');}});
 }
 function historyView(root){
   root.append(node('h2','Saved versions'),node('p','Each version retains the complete working answers, issuer mapping and review notes. Restoring one also keeps the current work as a preceding version.'));
@@ -270,16 +286,16 @@ async function savedView(root){
 }
 function render(){
   currentStats=currentPreview=currentIssue=currentText=null;metadata();nav();
-  const root=$('editor');root.replaceChildren();
+  const root=$('editor');root.replaceChildren();root.classList.toggle('grant-handover',view()==='handover');
   if(!draft){root.append(node('h2','Open a retained application'),node('p','Read the current source, open a complete draft JSON, or select a saved browser draft.'));
     if(view()==='saved')savedView(root);return;}
   $('draft-title').value=draft.title;
   $('copy-all').textContent=view()==='fields'?'Copy all form fields':'Copy all answers';
-  ({answers:answerView,fields:fieldView,review:reviewView,source:sourceView,planning:planningView,history:historyView,saved:savedView}[view()]||answerView)(root);updateStats();
+  ({answers:answerView,fields:fieldView,review:reviewView,source:sourceView,planning:planningView,handover:handoverView,history:historyView,saved:savedView}[view()]||answerView)(root);updateStats();
 }
 async function refreshSource(){
   published=await readPublished();
-  if(!draft){draft=createDraft(published,{id:uid()});dirty=false;}
+  if(!draft){draft=retainPublishedBundle(createDraft(published,{id:uid()}));dirty=false;}
   $('view').value='source';render();status('Read the current application edition. Compare its answers before receiving a newer source.');
 }
 function printPacket(){
@@ -292,7 +308,7 @@ function printPacket(){
 $('draft-title').addEventListener('input',()=>{if(draft){draft.title=$('draft-title').value;draft.folder='SCF submission — '+draft.title;touch();}});
 $('view').addEventListener('change',render);$('format').addEventListener('change',()=>{nav();updateStats();});
 $('save').addEventListener('click',()=>work(()=>save(false)));$('save-copy').addEventListener('click',()=>work(()=>save(true)));
-$('export-draft').addEventListener('click',()=>work(async()=>{if(!draft)throw new Error('Open a source or draft first.');download(await envelope(draft),filename()+'-complete-draft.json');status('Downloaded the complete draft with all source editions, field mapping and saved versions.');}));
+$('export-draft').addEventListener('click',()=>work(async()=>{if(!draft)throw new Error('Open a source or draft first.');download(await envelope(draft),filename()+'-complete-draft.json');status('Downloaded the complete draft with source files, native plans, field mapping, saved versions, prepared editions and observations.');}));
 $('import-draft').addEventListener('click',()=>chooseFile('draft'));
 $('file-input').addEventListener('change',()=>work(()=>openFile($('file-input').files[0])));
 $('refresh-source').addEventListener('click',()=>work(refreshSource));
@@ -301,4 +317,4 @@ $('export-answers').addEventListener('click',()=>work(()=>{const body=applicatio
 $('print').addEventListener('click',()=>{printPacket();window.print();});
 window.addEventListener('beforeprint',printPacket);
 window.addEventListener('beforeunload',event=>{if(dirty){event.preventDefault();event.returnValue='';}});
-work(async()=>{published=await readPublished();draft=createDraft(published,{id:uid()});render();status('Opened all nine original answers. Edit a draft or map the actual issuer form fields.');});
+work(async()=>{published=await readPublished();draft=retainPublishedBundle(createDraft(published,{id:uid()}));render();status('Opened all nine original answers. Edit a draft or map the actual issuer form fields.');});
