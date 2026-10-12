@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "opencage",
+  "description": "opencage original Applications",
+  "applicationProviders": {
+    "opencage": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/opencage.mjs"
+  }
+}

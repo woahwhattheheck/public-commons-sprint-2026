@@ -15,8 +15,11 @@ contains the prepare, install and inspection commands.
 
 Keep the merchant's source, packages and release store outside the replaceable
 software installation. The private source selects the connection, database,
-named commands, key templates, projections and execution limits. A password is
+named commands, key templates, projections and execution limits. A data-server password is
 supplied through the environment entry named by `connection.passwordEnv`.
+A Sentinel profile also resolves its independent monitor credential through
+`connection.sentinelPasswordEnv`. The profile retains standalone, Cluster or
+Sentinel topology, seeds, TLS settings and any advertised-address translation.
 The public merchant plan describes the customer routes, typed inputs, examples
 and exact payment terms.
 
@@ -40,9 +43,11 @@ The prepared package contains `source.json`, `service.json`,
 `merchant-plan.json`, `openapi.json`, the original generated `client` directory
 and `manifest.json`. The client directory contains the five generated customer
 files and their original `client-export.json` manifest; staging preserves all
-six together. When the connection uses an explicit CA, preparation copies
-it into the package as `database-ca.pem` and updates the package's private
-connection reference. Each retained file has an exact byte length and SHA-256.
+six together. Preparation copies an explicit data CA into the package as
+`database-ca.pem` and a Sentinel monitor CA as `sentinel-ca.pem`, then updates
+the corresponding private connection references. Each retained file has an exact
+byte length and SHA-256. Both environment names are recorded when the Sentinel
+and data connections use separate credentials.
 
 Preparation validates Redis declarations directly and passes their compiled
 parameter contracts to `compileQueryMerchantPlan`. That shared compiler owns
@@ -74,7 +79,9 @@ payment changes, plus the retained Redis execution identity:
 | `planSha256` | Reviewed public merchant plan |
 | `queryDefinitionSha256` | Named command, parameter, projection and limit definitions |
 | `connectionProfileSha256` | Connection, database, TLS and credential-reference configuration |
-| `databaseCaSha256` | Package-local CA certificate, when present |
+| `databaseCaSha256` | Package-local data CA certificate, when present |
+| `sentinelCaSha256` | Independent monitor CA for a Sentinel profile, when present |
+| `topology` | Explicitly selected standalone, Cluster or Sentinel profile |
 | `executionSha256` | Combined retained Redis execution configuration |
 
 Connection settings, key templates and credential reference names are retained
@@ -129,7 +136,10 @@ The running seller continues on its selected instance until the owning console
 or foreground manager restarts it. Each new process checks the retained package
 and opens Redis with the current runtime credential environment. The authoring
 directory can move after staging because the original package, client, plan and
-optional CA are copied into the release.
+optional CA files are copied into the release. A Sentinel release opens the
+currently discovered primary; a Cluster release routes each key through the
+native slot map. These discovery states follow the live deployment while the
+release keeps the exact reviewed configuration.
 
 Read the current generation from `status` before changing selection. To restore
 the earlier retained configuration:

@@ -84,6 +84,12 @@ export async function prepareCollectionsApplication(settings, { inputPath, runti
 
   let retained = null;
   if (state.exists) {
+    let receiver = null;
+    try { receiver = await selectedRecord(join(state.path, 'recovery.json'), inputPath, inputs); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    need(receiver?.schema !== 'stellar-forge.sf88.collection-recovery-operation.v1',
+      'APPLICATION_COLLECTION_DIRECTORY_IS_RECEIVER',
+      'This is a retained receiver journal. Keep receiving mode selected, or choose a separate original collection store.');
     try { retained = await selectedRecord(join(state.path, 'collections.json'), inputPath, inputs); }
     catch (error) { if (error.code !== 'ENOENT') throw error; }
     if (retained) need(retained.schema === 'stellar-forge.sf88.collections.v1' &&
