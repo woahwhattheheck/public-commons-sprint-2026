@@ -742,49 +742,100 @@ def receive(raw,directory,app_root=None):
         result=verify_database(database,manifest)
     base=Path(directory).expanduser().resolve()
     base.mkdir(mode=0o700,parents=True,exist_ok=True)
+    lease_path=base/(".receive-"+sha+".lock")
+    need(not lease_path.is_symlink(),"RECEIVING_LEASE","The receiving lease was replaced.",409)
+    with lease_path.open("a+b") as lease:
+        os.chmod(lease_path,0o600)
+        try:
+            fcntl.flock(lease.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise Problem("RECEIVING_BUSY","This original archive is already being received. Continue its existing operation.",409) from exc
+        return receive_prepared(base,sha,len(raw),manifest,entries,blobs,result)
+
+def receive_prepared(base,sha,source_bytes,manifest,entries,blobs,result):
+    """Resume one original archive's partial files under its exclusive lease."""
     target=base/("received-"+sha[:24])
-    receipt={"schema":SCHEMA,"source_sha256":sha,"source_bytes":len(raw),"source_workspace_id":manifest["workspace_id"],
+    receipt={"schema":SCHEMA,"source_sha256":sha,"source_bytes":source_bytes,"source_workspace_id":manifest["workspace_id"],
              "received_at":now(),"status":"complete","directory":str(target/"state"),"code_execution":"trusted_receiver_only",
              "data":result}
+    def original_receipt(path):
+        try:
+            saved=json.loads(path.read_bytes())
+        except (ValueError,UnicodeDecodeError) as exc:
+            raise Problem("RECEIVING_RECEIPT","The retained receiving record is incomplete or changed.",409) from exc
+        need(isinstance(saved,dict) and isinstance(saved.get("received_at"),str) and
+             canonical({k:v for k,v in saved.items() if k!="received_at"})==
+             canonical({k:v for k,v in receipt.items() if k!="received_at"}),
+             "RECEIVING_COLLISION","The existing receiving record belongs to a different source or destination.",409)
+        return saved
     if target.exists():
-        saved=json.loads((target/"RECEIVING.json").read_bytes())
-        need(saved["source_sha256"]==sha,"RECEIVING_COLLISION","An existing receiving directory has a different original source.",409)
+        need(target.is_dir() and not target.is_symlink(),"RECEIVING_DIRECTORY","The original receiving directory was replaced.",409)
+        saved=original_receipt(target/"RECEIVING.json")
         for entry in entries:
             path=target/entry["path"]
-            need(path.is_file() and not path.is_symlink(),
-                 "RECEIVING_INCOMPLETE", "A retained receiving member is missing or replaced.", 409,
+            need(path.is_file() and not path.is_symlink() and
+                 all(not parent.is_symlink() for parent in path.parents if parent!=base and base in parent.parents),
+                 "RECEIVING_INCOMPLETE","A retained receiving member is missing or replaced.",409,
                  {"path":entry["path"],"receipt":saved})
             actual=path.read_bytes()
             need(len(actual)==entry["bytes"] and digest(actual)==entry["sha256"],
                  "RECEIVING_ALREADY_OPENED" if entry["path"]=="state/state.sqlite3" else "RECEIVING_SOURCE_CHANGED",
                  "The received workspace has advanced or an included source file has changed. Its original receiving record is retained.",
                  409,{"path":entry["path"],"receipt":saved})
+        need((target/"MANIFEST.json").read_bytes()==canonical(manifest)+b"\n",
+             "RECEIVING_MANIFEST_CHANGED","The original receiving manifest has changed.",409)
         need(not any((target/"state"/name).exists() for name in ("state.sqlite3-journal","state.sqlite3-wal","state.sqlite3-shm")),
              "RECEIVING_ALREADY_OPENED","This received workspace has an active SQLite sidecar. Use its original process.",409,{"receipt":saved})
-        return saved | {"reopened":True}
-    staging=base/("."+ident("receiving"))
-    staging.mkdir(mode=0o700)
-    try:
-        for name,data in blobs.items():
-            path=staging/name
-            path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
-            with path.open("xb") as stream:
-                os.chmod(path,0o600)
-                stream.write(data);stream.flush();os.fsync(stream.fileno())
-        for name,data in (("MANIFEST.json",canonical(manifest)+b"\n"),("RECEIVING.json",canonical(receipt)+b"\n")):
-            path=staging/name
-            with path.open("xb") as stream:
-                os.chmod(path,0o600);stream.write(data);stream.flush();os.fsync(stream.fileno())
-        directories=[p for p in staging.rglob("*") if p.is_dir()]+[staging]
-        for folder in sorted(directories,key=lambda p:len(p.parts),reverse=True):
-            descriptor=os.open(folder,os.O_RDONLY|os.O_DIRECTORY)
-            try:os.fsync(descriptor)
-            finally:os.close(descriptor)
-        os.rename(staging,target)
         descriptor=os.open(base,os.O_RDONLY|os.O_DIRECTORY)
         try:os.fsync(descriptor)
         finally:os.close(descriptor)
-    except BaseException:
-        # Retain this partial receiving directory for recovery; do not replace an existing workspace.
-        raise
+        return saved|{"reopened":True}
+    staging=base/(".receiving-"+sha)
+    if staging.exists():
+        need(staging.is_dir() and not staging.is_symlink(),"RECEIVING_DIRECTORY","The partial receiving directory was replaced.",409)
+    else:
+        staging.mkdir(mode=0o700)
+    payload_names=set(blobs)
+    metadata_names={"MANIFEST.json","RECEIVING.json","MANIFEST.json.part","RECEIVING.json.part"}
+    allowed_dirs={str(parent) for name in payload_names for parent in Path(name).parents if str(parent)!="."}
+    for path in staging.rglob("*"):
+        name=str(path.relative_to(staging))
+        need(not path.is_symlink() and
+             ((path.is_dir() and name in allowed_dirs) or (path.is_file() and name in payload_names|metadata_names)),
+             "RECEIVING_PARTIAL_CHANGED","An unexpected member is present in the retained partial receiving directory.",409,{"path":name})
+    for name,data in blobs.items():
+        path=staging/name
+        path.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
+        offset=0
+        if path.exists():
+            need(path.is_file() and not path.is_symlink(),"RECEIVING_PARTIAL_CHANGED","A partial receiving file was replaced.",409,{"path":name})
+            actual=path.read_bytes()
+            need(len(actual)<=len(data) and data.startswith(actual),"RECEIVING_PARTIAL_CHANGED",
+                 "A retained partial file differs from the original archive. Its bytes have been preserved.",409,{"path":name})
+            offset=len(actual)
+        with path.open("ab" if path.exists() else "xb") as stream:
+            os.chmod(path,0o600)
+            stream.write(data[offset:]);stream.flush();os.fsync(stream.fileno())
+    if (staging/"RECEIVING.json").exists():
+        receipt=original_receipt(staging/"RECEIVING.json")
+    for name,data in (("MANIFEST.json",canonical(manifest)+b"\n"),("RECEIVING.json",canonical(receipt)+b"\n")):
+        path=staging/name
+        if path.exists():
+            need(path.read_bytes()==data,"RECEIVING_METADATA_CHANGED","The retained receiving metadata has changed.",409,{"path":name})
+            continue
+        temporary=staging/(name+".part")
+        # An uncommitted metadata temporary can be rebuilt; original payloads only resume exact prefixes.
+        with temporary.open("wb") as stream:
+            os.chmod(temporary,0o600)
+            stream.write(data);stream.flush();os.fsync(stream.fileno())
+        os.replace(temporary,path)
+    directories=[p for p in staging.rglob("*") if p.is_dir()]+[staging]
+    for folder in sorted(directories,key=lambda p:len(p.parts),reverse=True):
+        descriptor=os.open(folder,os.O_RDONLY|os.O_DIRECTORY)
+        try:os.fsync(descriptor)
+        finally:os.close(descriptor)
+    os.rename(staging,target)
+    descriptor=os.open(base,os.O_RDONLY|os.O_DIRECTORY)
+    try:os.fsync(descriptor)
+    finally:os.close(descriptor)
     return receipt

@@ -71,3 +71,7 @@ The full source record and complete Q&A are retained separately in the original 
 All responses use {ok:true,data:...} or {ok:false,error:{code,message,details}}. Authentication uses an HttpOnly same-origin session cookie. Mutations use Idempotency-Key; review and account changes require their expected revision. The browser preserves the exact pending mutation body in IndexedDB before dispatch and offers recovery after transport loss.
 
 Main routes: /api/session; /api/setup; /api/login; /api/suppliers; /api/users; /api/submissions; /api/products; /api/mappings; /api/releases; /api/audit; /api/notifications; /api/backup; /api/restore; /api/requests/REQUEST_ID. Original file downloads are attached to their submission; frozen export downloads are attached to their release.
+
+### Interrupted receiving
+
+Receiving holds one exclusive lease for the exact original archive. If a write is interrupted, repeat the same receive command and destination. It resumes each retained file only after verifying that the existing bytes are an exact prefix of that archive member. Changed or unexpected partial files are preserved for inspection. Completed metadata is published atomically, and the finished workspace appears only after its files and directories are synchronized. An unchanged completed receive returns its original receipt; later edits remain in the original received workspace.
