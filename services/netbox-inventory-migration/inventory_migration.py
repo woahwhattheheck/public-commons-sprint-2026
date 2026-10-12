@@ -504,7 +504,8 @@ def _managed_fields(row):
         result |= {"site", "rack", "location", "platform", "airflow", "cooling_method"}
     if row["kind"] == "interfaces":
         result |= {"device", "name", "type", "mode", "vrf", "untagged_vlan", "tagged_vlans",
-                   "cable", "cable_end", "cable_connector", "cable_positions", "mark_connected"}
+                   "cable", "cable_end", "cable_connector", "cable_positions", "mark_connected",
+                   "parent", "channel_id", "channels"}
     if row["kind"] == "ip_addresses":
         result |= {"address", "vrf", "interface", "status", "role", "dns_name"}
     if row["kind"] == "vrfs":
@@ -1116,6 +1117,71 @@ def _finalize_cable_effects(tracked, inverse, alias, user):
     return effects
 
 
+def _track_channel_rename(obj, models, alias, user, tracked):
+    """Retain the original channel scope before its native deferred rename."""
+    old_name = getattr(obj, "_original_name", obj.name)
+    if not obj.pk or not obj.channels or obj.name == old_name:
+        return
+    rename = getattr(obj, "_rename_channel_subinterfaces", None)
+    if not callable(rename):
+        raise InventoryError("The native Interface channel rename implementation is unavailable.")
+    Interface = models["interfaces"]
+    children = list(Interface.objects.using(alias).select_for_update().filter(
+        parent_id=obj.pk, channel_id__isnull=False).order_by("pk")[:MAX_OBJECTS + 1])
+    if len(children) > MAX_OBJECTS:
+        raise InventoryError("The native channel rename exceeds 5,000 affected interfaces.")
+    tracked.setdefault("renames", []).append((obj, old_name, obj.name))
+    captured = tracked.setdefault("children", {})
+    for child in children:
+        _allowed(user, Interface, "view", child, alias)
+        _allowed(user, Interface, "change", child, alias)
+        if child.pk not in captured:
+            # Freeze actual objects for late logical normalization, just as the
+            # native cable observer retains generated endpoint identities.
+            fields = {name: _cable_effect_freeze(getattr(child, name)) for name in
+                      ("name", "parent", "channel_id", "channels")}
+            captured[child.pk] = {"before": fields, "parent_id": obj.pk}
+    if len(captured) > MAX_OBJECTS:
+        raise InventoryError("The native channel rename exceeds 5,000 affected interfaces.")
+
+
+def _apply_native_channel_renames(tracked, models, alias, user):
+    """Run the SAME native deferred work after all source saves, in this transaction.
+
+    The original on_commit callback remains registered. Once the original
+    method has resolved these names, that callback observes the same resolved
+    children. The original collision, length and custom-name behavior is kept.
+    """
+    for original, old_name, new_name in tracked.get("renames", []):
+        parent = _one(models["interfaces"], alias, {"pk": original.pk}, user, lock=True)
+        if parent is None:
+            raise InventoryError("A selected native channel parent disappeared before its rename.")
+        _allowed(user, models["interfaces"], "change", parent, alias)
+        parent._rename_channel_subinterfaces(old_name, new_name, alias)
+
+
+def _finalize_channel_renames(tracked, models, alias, user, inverse):
+    effects = []
+    for pk, captured in sorted(tracked.get("children", {}).items()):
+        child = _one(models["interfaces"], alias, {"pk": pk}, user, lock=True)
+        if child is None:
+            raise InventoryError("An original channel child disappeared before final native review.")
+        _allowed(user, models["interfaces"], "change", child, alias)
+        # Explicitly mapped children already receive their complete final
+        # snapshot and intended-value checks in the normal source-row loop.
+        if ("dcim.interface", pk) in inverse:
+            continue
+        before = _cable_effect_value(captured["before"], inverse)
+        after = {name: _logical_native(getattr(child, name), inverse) for name in
+                 ("name", "parent", "channel_id", "channels")}
+        effects.append({"kind": "interface_channels", "key": str(pk),
+                        "action": "UPDATE" if before != after else "KEEP",
+                        "interface": _logical_native(child, inverse),
+                        "parent_id": captured["parent_id"], "before": before, "after": after,
+                        "source": "Original NetBox InterfaceChannelRenameMixin._rename_channel_subinterfaces"})
+    return effects
+
+
 def migrate(script, packet, tenant, commit, review_digest):
     from django.conf import settings
     from django.contrib.contenttypes.models import ContentType
@@ -1216,7 +1282,7 @@ def migrate(script, packet, tenant, commit, review_digest):
     resolved = dict(originals)
     changes, results, primary_requests, generated = [], [], {}, []
     created_devices = []
-    child_devices, intended_fields, cable_effects = {}, {}, {}
+    child_devices, intended_fields, cable_effects, channel_renames = {}, {}, {}, {}
     for row in rows:
         kind, key = row["kind"], row["key"]
         label = (kind, key)
@@ -1299,6 +1365,8 @@ def migrate(script, packet, tenant, commit, review_digest):
                 obj._changelog_message = "Inventory migration " + packet["operation_id"] + ": " + kind + "/" + key
                 if kind == "devices" and obj.pk:
                     _track_native_children(obj, models, alias, user, child_devices, inverse)
+                if kind == "interfaces":
+                    _track_channel_rename(obj, models, alias, user, channel_renames)
                 obj.save(using=alias)
                 _allowed(user, model, action, obj, alias)
             for field, values in memberships.items():
@@ -1366,6 +1434,7 @@ def migrate(script, packet, tenant, commit, review_digest):
                         "before": before, "after": after})
 
 
+    _apply_native_channel_renames(channel_renames, models, alias, user)
     generated = _generated_projection(created_devices, alias, inverse)
 
     # Later parent-device saves can update an earlier mapped child. Compare the
@@ -1394,6 +1463,7 @@ def migrate(script, packet, tenant, commit, review_digest):
                             ("UPDATE" if original_snapshots[label] != after else "KEEP"))
     changes.extend(_finalize_native_children(models, alias, user, child_devices, inverse))
     changes.extend(_finalize_cable_effects(cable_effects, inverse, alias, user))
+    changes.extend(_finalize_channel_renames(channel_renames, models, alias, user, inverse))
 
     catalogue_report = [{"model": model, "id": pk, "data": value[1]}
                         for (model, pk), value in sorted(catalogues.items())]

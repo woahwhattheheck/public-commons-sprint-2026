@@ -162,6 +162,8 @@ The desk provides column and fixed-value modes, native catalogue selection for I
 
 Tagged VLAN membership requires native tagged mode, and a VLAN must be unscoped to a site or belong to the Interface's device site. NetBox's own save behavior clears tagged membership when mode changes away from tagged, and clears an untagged VLAN when mode becomes empty. Every Interface review includes the resulting mode and both VLAN membership fields, including changes produced by that native behavior.
 
+For an existing channelized Interface rename, the migration retains the actual affected channel children and invokes NetBox's own _rename_channel_subinterfaces method after all mapped saves. Its original custom-name, length and collision handling determines the result. Those native renames appear before the final review/journal is recorded, and explicit mapped child names are checked against the completed cascade. The original commit callback remains in place and sees the resolved native names.
+
 ### Native connectivity
 
 A cable source maps one actual Interface at each A/B end. Use the original cable's match_id to move an existing connection. NetBox validates endpoint compatibility, channel restrictions, occupied interfaces, mark_connected and the original cable fields; the migration calls Cable.save inside the same original transaction.
