@@ -16,6 +16,7 @@ const quoted = value => "'" + value.replaceAll("'", "'\\''") + "'";
 function stageCommand(release) {
   const command = 'node release-cli.mjs stage --store ' + quoted(snapshot.root) + ' --id release-name';
   if (release?.source?.kind === 'VERSIONED_DATASET_PACKAGE') return command + ' --dataset-package prepared-dataset-package';
+  if (release?.grpc) return command + ' --grpc-package prepared-grpc-package';
   if (release?.clickhouse) return command + ' --clickhouse-package prepared-clickhouse-package';
   if (release?.postgres) return command + ' --postgres-package prepared-postgres-package';
   if (release?.sqlite) return command + ' --sqlite-package sqlite-workbench-export';
@@ -206,7 +207,7 @@ function renderStatus(value) {
   for (const release of value.releases) {
     const button = node('button', undefined, 'release-card'); button.dataset.id = release.id;
     button.setAttribute('aria-pressed', String(release.id === selected));
-    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.clickhouse ? 'ClickHouse · ' : release.postgres ? 'PostgreSQL live queries · ' : release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
+    button.append(node('strong', release.label), node('span', release.id + ' · ' + (release.grpc ? 'gRPC · ' : release.clickhouse ? 'ClickHouse · ' : release.postgres ? 'PostgreSQL live queries · ' : release.redis ? 'Redis / Valkey · ' : release.mysql ? 'MySQL / MariaDB · ' : release.sqlite ? 'SQLite snapshot · ' : release.jsonrpc ? 'Stellar RPC · ' : release.s3 ? 'S3 objects · ' : release.duckdb ? 'DuckDB / Parquet · ' : release.python ? 'Python · ' : '') + release.routes.length + ' routes'),
       node('span', date(release.createdAt)), node('span', release.id === value.state.active ? 'Selected for next start' : 'Prepared'));
     button.addEventListener('click', () => choose(release.id)); list.append(button);
   }
@@ -279,6 +280,21 @@ function clickhouseRuntimeChange(before, after) {
     fieldPair('Retained package identity', before?.packageSha256, after?.packageSha256)); section.append(contracts);
   return section;
 }
+function grpcRuntimeChange(before, after) {
+  const section = node('section', undefined, 'change'); section.append(node('h3', 'gRPC methods and message contracts'));
+  section.append(node('p', before?.protoSha256 === after?.protoSha256
+    ? 'Captured protobuf definitions are unchanged.' : 'Captured protobuf definitions changed.'));
+  section.append(node('p', 'This release retains the selected methods, message contracts, transport policy and payment configuration.'));
+  for (const [label, previous, next] of [['Methods', before?.methodCount, after?.methodCount],
+    ['Routes', before?.routeCount, after?.routeCount], ['Transport', before?.transport, after?.transport],
+    ['Request limits', before?.limits, after?.limits]])
+    if (JSON.stringify(previous) !== JSON.stringify(next)) section.append(fieldPair(label, previous, next));
+  const contracts = node('details'); contracts.append(node('summary', 'Methods, message types and retained source'),
+    fieldPair('Method contracts', before?.methods, after?.methods),
+    fieldPair('Protobuf source', before?.protoSha256, after?.protoSha256),
+    fieldPair('Package identity', before?.packageSha256, after?.packageSha256)); section.append(contracts);
+  return section;
+}
 function renderDiff(value) {
   comparison = value;
   $('#stage-command').textContent = stageCommand(value.after);
@@ -291,6 +307,7 @@ function renderDiff(value) {
     const item = node('div'); item.append(node('strong', String(count)), node('span', label)); summary.append(item);
   }
   const changes = $('#route-changes'); changes.replaceChildren();
+  const grpcReview = Boolean(value.before?.grpc || value.after.grpc);
   const rpcReview = Boolean(value.before?.jsonrpc || value.after.jsonrpc);
   const sqliteReview = Boolean(value.before?.sqlite || value.after.sqlite);
   const clickhouseReview = Boolean(value.before?.clickhouse || value.after.clickhouse);
@@ -299,11 +316,16 @@ function renderDiff(value) {
     const section = node('section', undefined, 'change'); section.append(node('h3', change.state + ' · ' + change.route));
     if (change.state !== 'CHANGED') {
       const route = change.after ?? change.before;
-      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', (rpcReview || sqliteReview || postgresReview || clickhouseReview) ? terms(route.payment) : literal(route.payment)));
+      section.append(node('small', 'Exact payment alternatives · amounts in atomic units'), node('pre', (grpcReview || rpcReview || sqliteReview || postgresReview || clickhouseReview) ? terms(route.payment) : literal(route.payment)));
       if (route.upstream) section.append(node('small', 'Original upstream configuration and sharing policy'), node('pre', literal(route.upstream)));
     }
     for (const field of change.fields) {
-      if (clickhouseReview && ['application', 'requestContractSha256'].includes(field.field)) {
+      if (grpcReview && ['application', 'requestContractSha256'].includes(field.field)) {
+        const details = node('details'); details.append(node('summary', field.field === 'application'
+          ? 'gRPC execution configuration changed' : 'gRPC request or response contract changed'),
+          fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
+        section.append(details);
+      } else if (clickhouseReview && ['application', 'requestContractSha256'].includes(field.field)) {
         const details = node('details'); details.append(node('summary', field.field === 'application'
           ? 'Retained ClickHouse execution changed' : 'ClickHouse request or response contract changed'),
           fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
@@ -323,15 +345,16 @@ function renderDiff(value) {
         details.append(node('summary', field.field === 'application' ? 'Retained RPC execution changed' : 'RPC request or response contract changed'),
           fieldPair(field.field === 'application' ? 'Execution identity' : 'Contract identity', field.before, field.after));
         section.append(details);
-      } else section.append(fieldPair((rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? 'Payment alternatives' : field.field,
-        (rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? terms(field.before) : field.before,
-        (rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? terms(field.after) : field.after));
+      } else section.append(fieldPair((grpcReview || rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? 'Payment alternatives' : field.field,
+        (grpcReview || rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? terms(field.before) : field.before,
+        (grpcReview || rpcReview || sqliteReview || postgresReview || clickhouseReview) && field.field === 'payment' ? terms(field.after) : field.after));
     }
     changes.append(section);
   }
   if (!value.changes.length) changes.append(node('p', 'Route offers, input contracts and application bindings match.', 'section-note'));
   const runtime = $('#runtime-changes'); runtime.replaceChildren();
-  for (const change of value.runtimeChanges) runtime.append(change.field === 'jsonrpc'
+  for (const change of value.runtimeChanges) runtime.append(change.field === 'grpc'
+    ? grpcRuntimeChange(change.before, change.after) : change.field === 'jsonrpc'
     ? rpcRuntimeChange(change.before, change.after) : change.field === 'sqlite'
       ? sqliteRuntimeChange(change.before, change.after) : change.field === 'clickhouse'
         ? clickhouseRuntimeChange(change.before, change.after) : change.field === 'postgres'
