@@ -35,7 +35,7 @@ async function worker(input,selected) {
       env:{LANG:'C.UTF-8',LC_ALL:'C.UTF-8',PATH:process.env.PATH??'/usr/bin:/bin'},
       stdio:['pipe','pipe','pipe']});
     const chunks=[];
-    let size=0,errors=0,settled=false,killTimer;
+    let size=0,errors=0,settled=false,killTimer,pendingError;
     const finish=(error,value)=>{
       if(settled)return;
       settled=true;
@@ -58,15 +58,17 @@ async function worker(input,selected) {
     child.stdin.on('error',()=>{}); // The child result carries its exact source failure.
     child.stdout.on('data',part=>{
       size+=part.length;
-      if(size>MAX_JSON){child.kill('SIGKILL');finish(new InputError('DATASET_ARCHIVE_OUTPUT_LIMIT'));}
-      else chunks.push(part);
+      if(size>MAX_JSON){pendingError??=new InputError('DATASET_ARCHIVE_OUTPUT_LIMIT');child.kill('SIGKILL');}
+      else if(!pendingError)chunks.push(part);
     });
     child.stderr.on('data',part=>{
       errors+=part.length;
-      if(errors>65536){child.kill('SIGKILL');finish(new InputError('DATASET_ARCHIVE_DIAGNOSTIC_LIMIT'));}
+      if(errors>65536){pendingError??=new InputError('DATASET_ARCHIVE_DIAGNOSTIC_LIMIT');child.kill('SIGKILL');}
     });
     child.once('close',code=>{
       if(settled)return;
+      // The original exporter retains its run lock until this writer is gone.
+      if(pendingError)return finish(pendingError);
       if(selected.signal?.aborted)return finish(new InputError('DATASET_ARCHIVE_INTERRUPTED'));
       try {
         const value=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));
