@@ -181,6 +181,17 @@ async function responseBytes(response, maximum) {
   if (length !== null && size !== Number(length)) fail('STAC_CLIENT_RESPONSE_INCOMPLETE', 'The original response ended before its declared byte length.');
   return Buffer.concat(chunks, size);
 }
+function awaitShared(promise, signal) {
+  if (!signal) return promise;
+  signal.throwIfAborted();
+  return new Promise((resolve, reject) => {
+    const stop = () => { signal.removeEventListener('abort', stop); reject(signal.reason); };
+    signal.addEventListener('abort', stop, { once: true });
+    promise.then(value => { signal.removeEventListener('abort', stop); resolve(value); },
+      error => { signal.removeEventListener('abort', stop); reject(error); });
+    if (signal.aborted) stop();
+  });
+}
 function filename(response, fallback) {
   const disposition = response.headers.get('content-disposition') ?? '';
   const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i), plainName = disposition.match(/filename="([^"]*)"/i);
@@ -248,9 +259,10 @@ export class StacWorkspaceClient {
     return { response, bytes };
   }
   async #connect(signal) {
+    signal?.throwIfAborted();
     const connection = await this.#connection();
     if (this.#session?.fingerprint === connection.fingerprint) return { connection, session: this.#session };
-    if (this.#auth) { await this.#auth; return this.#connect(signal); }
+    if (this.#auth) { await awaitShared(this.#auth, signal); return this.#connect(signal); }
     this.#auth = (async () => {
       const established = await this.#fetchResponse(connection, '/api/session', { method: 'POST', body: { token: connection.token }, signal, maximum: 16384 });
       let auth; try { auth = JSON.parse(established.bytes.toString('utf8')); } catch { fail('STAC_CLIENT_SESSION_INVALID', 'The original host returned an invalid session response.'); }
@@ -388,9 +400,9 @@ export class StacWorkspaceClient {
   async wait(operationId, { signal, timeoutMs = 60000, intervalMs = 500 } = {}) {
     actionId(operationId);
     if (!positive(timeoutMs, 30 * 60 * 1000) || !positive(intervalMs, 60000)) fail('STAC_CLIENT_LIMIT_INVALID', 'Choose positive bounded polling intervals.');
-    const until = Date.now() + timeoutMs;
-    const joined = AbortSignal.any([this.#lifetime.signal, ...(signal ? [signal] : [])]);
-    for (;;) {
+    const until = Date.now() + timeoutMs, deadline = AbortSignal.timeout(timeoutMs);
+    const joined = AbortSignal.any([this.#lifetime.signal, deadline, ...(signal ? [signal] : [])]);
+    try { for (;;) {
       joined.throwIfAborted();
       const job = await this.job(operationId, { signal: joined });
       if (job.status !== 'RUNNING') return job;
@@ -401,6 +413,10 @@ export class StacWorkspaceClient {
         const timer = setTimeout(end, Math.min(intervalMs, Math.max(1, until - Date.now())));
         joined.addEventListener('abort', stop, { once: true }); if (joined.aborted) stop();
       });
+    } } catch (error) {
+      if (deadline.aborted && !this.#lifetime.signal.aborted && !signal?.aborted)
+        fail('STAC_CLIENT_WAIT_EXPIRED', 'The wait deadline expired; inspect or wait on the same original operationId.', { operationId });
+      throw error;
     }
   }
   /** Complete ORIGINAL bytes. MCP uses RetainedFileReads to expose the same bytes in bounded chunks. */
