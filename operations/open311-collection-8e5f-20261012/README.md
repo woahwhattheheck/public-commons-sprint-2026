@@ -7,9 +7,9 @@ This operation runs the complete municipal collection and reporting journey on a
 | File | Purpose | Original Git blob |
 | --- | --- | --- |
 | `source-packet.json` | Complete collection product, browser assets, shared retained-file helpers, journey, connection profile, and real Helsinki source bodies | `8e731340359628b63e870b7164f5be65109ef4c2` |
-| `run_native.py` | Source materializer, collection/reporting process, retained-operation protocol, and archive producer | `23cd38c71b5c8e845c3b31fd1c4b1661661ef2c4` |
-| `receive_native.py` | Ordinary file receiver, local complete archive download, and optional prepared upload | `430c1691eb3c08b9c7114321f1c951af82857092` |
-| `launch_native.py` | Receive exact public source files or a supplied compact input and start the existing receiver in one foreground command | `b305c2f51e9820cca26bf323b6db9150da60ca8a` |
+| `run_native.py` | Source materializer, collection/reporting process, retained-operation protocol, and archive producer | `906d1c2240517e4bac9fd5a95bf720e7ccd0f9d5` |
+| `receive_native.py` | Ordinary file receiver, local complete archive download, and optional prepared upload | `615ca52f8a97b579d43567c610a32e45f5ce66c3` |
+| `launch_native.py` | Receive exact public source files or a supplied compact input and start the existing receiver in one foreground command | `826cf213f73a8e23eebdb2f34747bf4c0453c122` |
 | `../open311-service-reporting-8e5f-20261012/reporting-operation.json` | Complete reporting source files and retained reporting journey for this same collection | `500e844a86063c5a0bacc5a1238a4f29aa113465` |
 | `../open311-service-reporting-8e5f-20261012/run-reporting.mjs` | Standalone source of the same reporting journey embedded in the operation | `39c1aa7b850340057e22a8d0918cd79244261c4c` |
 
@@ -21,7 +21,7 @@ The complete native inputs have these byte identities. Hashes cover the actual U
 | --- | ---: | --- |
 | Collection packet | 667,687 | `e44e50a25d521ba1cbaa9da9113b5da54962e6fd446b493204dfe0163517df73` |
 | Reporting packet | 307,583 | `51735d92d21270d2b475f332a5c7eff16edc0c7711cb3e9e0a425869930d61a9` |
-| Portable bootstrap | 18,216 | `58b994e15464cdad99cdbc1ffa35d79f3676e5592fc2d4f0f86a9357536c12e2` |
+| Portable bootstrap | 21,155 | `57e3085cc96d0373468222038aff4b1a044ae642bc590bced356bbb33e52d676` |
 
 The commissioning adapters preserve optional provider coverage only when that field is present. Saved catalogue receipts retain their original fields without introducing an undefined JSON value. The collection and reporting product source files keep the same selected editions.
 
@@ -184,6 +184,8 @@ Keep the current bootstrap alive until its complete archive has been preserved. 
 
 ## Complete archive upload from the live process
 
+This section describes the direct bootstrap and the receiver's `--wait-for-upload` mode without a phase sink. For delivery before each subsequent phase, use the separately documented `--archive-sink` flow below; that flow retains a prepared-file ledger and requires a finalized acknowledgement before continuing.
+
 An operator can preserve the entire generated archive directly through an already authorized Slack file upload while the bootstrap remains alive. The normal file receiver above downloads the archive to its private output directory. The direct upload command is available to an existing driver of the same stdin protocol when it has prepared a Slack upload for the selected delivery conversation.
 
 For the direct bootstrap, prepare the upload after `OPEN311_REPORTING_RESULT`. For `receive_native.py --wait-for-upload` or `launch_native.py --wait-for-upload`, use `OPEN311_LOCAL_UPLOAD_READY`, which confirms the whole ZIP has already been saved and verified locally. Both descriptors supply the actual archive filename, byte count, and SHA256.
@@ -217,3 +219,32 @@ Replace the example byte count with the archive descriptor's actual integer. The
 An `UPLOADED` state records the provider's successful HTTP response. Require that state, the same prepared `uploadId`, and the selected archive's exact bytes and SHA256 before finalization. Finalize that same file ID into the selected delivery conversation using the existing Slack upload flow, then preserve the final file link and upload receipt. Keep the native foreground alive through this exchange and send `finish` after the delivery is complete. `REJECTED` records an explicit HTTP rejection; `UNCERTAIN` records a transport result that requires reconciliation with that existing upload. Repeating an identical command in the live process returns its retained result. The same upload ID cannot be reused for a changed URL or archive, and an uncertain upload is not automatically posted again.
 
 A source packet may also select `archiveFilename` for a different complete operation. It must be a plain `.zip` basename, beginning with a letter or digit and containing only letters, digits, dots, underscores, or hyphens, with at most 181 characters before `.zip`. Omitting the field preserves `helsinki-collection-reporting-workspace-8e5f-20261012.zip`. The ordinary local receiver uses that selected filename for its verified local download. With no explicit packet filename it keeps `helsinki-collection-reporting.zip` in the selected private output directory.
+
+## Preserve each completed phase and continue its delivery
+
+The launcher accepts an optional complete archive sink. Add `--archive-sink-path operations/request311-follow-through-8e5f-20261012/deliver-archive.py --archive-sink-git-blob 0c7e2db26eabca28cec217c8bced5c0e037c0cbf` to the existing pinned launch command. A receiving host with that exact file already saved may use `--archive-sink-file /absolute/deliver-archive.py`. The native receiver accepts the same source as `--archive-sink /absolute/deliver-archive.py`.
+
+The producer writes and fsyncs a complete immutable ZIP for each finished collection or reporting phase. The receiver retains its own checkpoint and records its exact descriptor in `receiver-result.json` under `checkpoints[].descriptor` before starting delivery. Keep that exact descriptor as the continuation identity. Its sibling `archive-descriptor.delivery.json` records the original prepared Slack file and the finalized destination. A source-side native descriptor is available for a phase that never reached receiving; an already admitted receiver delivery continues through the receiver's retained descriptor.
+
+With the sink selected, each phase emits `OPEN311_LOCAL_ARCHIVE_SAVED`, followed by `OPEN311_LOCAL_UPLOAD_READY`. Prepare one Slack upload for those exact bytes and send one complete JSON line:
+```json
+{"op":"upload","uploadId":"F...","uploadUrl":"<the prepared files.slack.com URL>","method":"POST","bytes":123,"archiveSha256":"<complete archive SHA256>"}
+```
+When `OPEN311_LOCAL_UPLOAD_RESULT` reports `UPLOADED`, complete that same Slack file upload into the original authorized channel/thread. After the provider returns the actual finalized file destination, acknowledge it:
+```json
+{"op":"finalized","uploadId":"F...","archiveSha256":"<same SHA256>","destinationUrl":"https://<workspace>.slack.com/files/...","provider":"slack"}
+```
+The sink fsyncs the finalized destination before emitting `OPEN311_ARCHIVE_DELIVERY_FINALIZED`. The receiver then emits `OPEN311_LOCAL_PHASE_DELIVERED` and starts the next retained reporting operation. Send one command per returned protocol state; keep the prepared URL out of logs.
+
+If the native upload return is lost, `OPEN311_ARCHIVE_DELIVERY_RECONCILE` preserves the original prepared file. Reconcile and finalize that same file through Slack, then send its finalized acknowledgement. The sink retains the full ZIP and its prepared identity when input ends.
+
+For an interrupted delivery, run the saved receiver against the same descriptor:
+```sh
+python3 operations/open311-collection-8e5f-20261012/receive_native.py \
+  --deliver-existing /absolute/original/checkpoints/collection/archive-descriptor.json \
+  --archive-sink /absolute/deliver-archive.py \
+  --archive-sink-git-blob 0c7e2db26eabca28cec217c8bced5c0e037c0cbf
+```
+This mode opens the retained archive and ledger directly. Its required runtime is Python. A finalized ledger returns its existing destination; an uncertain ledger waits for the same prepared file's reconciliation. The launcher also accepts `--deliver-existing` with `--archive-sink-file` or `--archive-sink-path`; an adjacent pinned receiver supports an offline reopen, while `--ref` selects the immutable source when it must be fetched.
+
+The existing `--wait-for-upload` upload/finish protocol remains available when no phase sink is selected. The producer's disk checkpoints are retained in that mode as well.
