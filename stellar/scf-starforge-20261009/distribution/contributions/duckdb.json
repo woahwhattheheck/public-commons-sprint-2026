@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "duckdb",
-  "description": "DuckDB and Parquet data products",
+  "description": "DuckDB and Parquet data products with complete paired reconciliation, review decisions and native customer handover",
   "commands": {
     "duckdb": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/start.mjs",
     "duckdb-inspect": "stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/inspect.mjs",
@@ -26,9 +26,36 @@
     "./seller/duckdb/workbench/catalog": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workbench/catalog.mjs",
     "./seller/duckdb/workbench/author": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workbench/author.mjs",
     "./seller/duckdb/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/server.mjs",
-    "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs"
+    "./seller/duckdb/workspace/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/duckdb/workspace/model.mjs",
+    "./buyer/duckdb/reconciliation": "./source/stellar-forge/mcp-paid-agent/duckdb-reconciliation-client.mjs",
+    "./buyer/duckdb/reconciliation/contract": "./source/stellar-forge/mcp-paid-agent/native-duckdb-reconciliation-schema.mjs"
   },
   "applicationProviders": {
     "duckdb-agent": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/duckdb-agent.mjs"
-  }
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/__init__.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/contracts.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/model.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/http.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/cli.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/package.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/receiving.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/browser-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/OPERATING.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/index.html",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/app.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/reconciliation/public/style.css",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/pyproject.toml",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/_duckdb_ui.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_dataset.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_http.py",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/stellar_forge_buyer/duckdb_cli.py",
+    "stellar-forge/mcp-paid-agent/native-duckdb-reconciliation-schema.mjs",
+    "stellar-forge/mcp-paid-agent/native-duckdb-reconciliation.mjs",
+    "stellar-forge/mcp-paid-agent/duckdb-reconciliation-client.mjs",
+    "stellar-forge/mcp-paid-agent/duckdb-reconciliation-receiving.mjs",
+    "stellar-forge/mcp-paid-agent/native-duckdb.mjs",
+    "stellar-forge/mcp-paid-agent/native-duckdb-schema.mjs"
+  ]
 }
