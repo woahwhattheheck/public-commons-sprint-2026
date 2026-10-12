@@ -148,7 +148,7 @@ export class MerchantOpendatasoftWorkspaces {
         const { openOpendatasoftWorkbench } = await import(NATIVE + 'engine.mjs');
         const workbench = await openOpendatasoftWorkbench({ directory: definition.directory, create: !exists,
           origin: definition.origin, authTokenEnv: definition.authTokenEnv, environment: this.#environment });
-        return { definition, workbench, instanceId: randomUUID(), browser: null, tail: Promise.resolve(), closing: false };
+        return { definition, workbench, instanceId: randomUUID(), browser: null, browserPending: null, stopping: null, tail: Promise.resolve(), closing: false };
       })();
       this.#handles.set(name, pending);
       try { await pending; } catch (error) { if (this.#handles.get(name) === pending) this.#handles.delete(name); throw error; }
@@ -158,11 +158,17 @@ export class MerchantOpendatasoftWorkspaces {
     return this.#status(name);
   }
   async #browser(handle) {
-    if (!handle.browser) {
+    if (handle.closing) throw fail('WORKSPACE_CLOSING', 'This original workspace is closing.');
+    if (handle.browser) return handle.browser;
+    if (!handle.browserPending) handle.browserPending = (async () => {
       const { startOpendatasoftServer } = await import(NATIVE + 'workspace/server.mjs');
-      handle.browser = await startOpendatasoftServer({ workbench: handle.workbench, port: 0 });
-    }
-    return handle.browser;
+      const browser = await startOpendatasoftServer({ workbench: handle.workbench, port: 0 });
+      handle.browser = browser;
+      return browser;
+    })();
+    const pending = handle.browserPending;
+    try { return await pending; }
+    finally { if (handle.browserPending === pending) handle.browserPending = null; }
   }
   async #status(name, offset = 0, limit = 50) {
     count(offset); count(limit, 1, 100);
@@ -185,15 +191,44 @@ export class MerchantOpendatasoftWorkspaces {
       browser: { open: Boolean(handle.browser), ...(handle.browser ? { url: handle.browser.url } : {}) } };
   }
   async #stop(name, handle) {
+    if (handle.stopping) return handle.stopping;
     handle.closing = true;
-    await handle.tail.catch(() => {});
-    if (handle.browser) { await handle.browser.close(); handle.browser = null; }
-    await handle.workbench.close(); this.#handles.delete(name);
-    return { workspace: name, instanceId: handle.instanceId, state: 'CLOSED' };
+    const stopping = (async () => {
+      await handle.tail.catch(() => {});
+      const errors = [];
+      if (handle.browserPending) await handle.browserPending.catch(error => errors.push(error));
+      if (handle.browser) {
+        try { await handle.browser.close(); handle.browser = null; }
+        catch (error) { errors.push(error); }
+      }
+      let nativeClosed = false;
+      try { await handle.workbench.close(); nativeClosed = true; }
+      catch (error) { errors.push(error); }
+      if (nativeClosed && !handle.browser) this.#handles.delete(name);
+      if (errors.length) throw new AggregateError(errors, 'An original Huwise resource did not finish closing.');
+      return { workspace: name, instanceId: handle.instanceId, state: 'CLOSED' };
+    })();
+    handle.stopping = stopping;
+    try { return await stopping; }
+    finally { if (handle.stopping === stopping) handle.stopping = null; }
   }
   async #retain(name, handle, args) {
     digest(args.expectedCaptureSha256); count(args.expectedNotesRevision);
     const editionId = originalId(args.editionId);
+    const selection = Object.fromEntries(['geometryField','sourceId','merchantExportId','buyerRequestId'].filter(key => args[key] !== undefined).map(key => [key, args[key]]));
+    if (args.geometryField !== undefined && (typeof args.geometryField !== 'string' || !args.geometryField)) throw failure('INVALID_PARAMS', 'Choose an original geographic field.');
+    let completed;
+    try { completed = await this.#files.manifest(args.exportId); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (completed) {
+      const retained = completed.manifest;
+      if (retained.workspace !== name || retained.source.editionId !== editionId ||
+          retained.source.captureSha256 !== args.expectedCaptureSha256 ||
+          retained.source.notesRevision !== args.expectedNotesRevision ||
+          JSON.stringify(retained.selection) !== JSON.stringify(selection))
+        throw fail('EXPORT_CONFLICT', 'This export ID belongs to another source, notes revision or selection. Use its original request.');
+      return completed;
+    }
     const current = async () => {
       const edition = await handle.workbench.edition(editionId);
       if (edition.state !== 'COMPLETE' || edition.manifestSha256 !== args.expectedCaptureSha256 ||
@@ -204,8 +239,7 @@ export class MerchantOpendatasoftWorkspaces {
     const edition = await current(), state = handle.workbench.status();
     const source = { catalogOrigin: state.catalogOrigin, datasetId: edition.datasetId, datasetUid: edition.datasetUid,
       editionId, captureSha256: edition.manifestSha256, notesRevision: edition.notes.revision, rowCount: edition.rowCount };
-    const selection = Object.fromEntries(['geometryField','sourceId','merchantExportId','buyerRequestId'].filter(key => args[key] !== undefined).map(key => [key, args[key]]));
-    if (args.geometryField !== undefined && (typeof args.geometryField !== 'string' || !args.geometryField)) throw failure('INVALID_PARAMS', 'Choose an original geographic field.');
+
     if (args.sourceId && item(state, 'sources', args.sourceId).editionId !== editionId)
       throw fail('EXPORT_SELECTION_CHANGED', 'The selected source belongs to another original edition.');
     if (args.merchantExportId) {
