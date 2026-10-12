@@ -205,7 +205,7 @@ function renderCues() {
     const row = node('li', undefined, 'cue'), header = node('div', undefined, 'cue-head');
     const meta = node('div'), heading = node('h3', W.caption + ' ' + (i + 1));
     meta.append(heading, node('p', W.matchTime + ' ' + clock(source?.matchSecond ?? event.second) +
-      ' · ' + event.team + ' · ' + W.event + ' ' + cue.count + ' · ' + cue.eventId, 'note metric'));
+      ' · ' + (source?.team ?? event.team) + ' · ' + W.event + ' ' + cue.count + ' · ' + cue.eventId, 'note metric'));
     const tools = node('div', undefined, 'cue-tools');
     for (const [label, delta] of [[W.up, -1], [W.down, 1]]) {
       const move = node('button', label); move.type = 'button';

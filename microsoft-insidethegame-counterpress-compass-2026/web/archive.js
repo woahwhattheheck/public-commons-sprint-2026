@@ -331,6 +331,24 @@ export function createArchiveUI({snapshot, onSaved, onDeleted, onOpen, onJump, o
   render(); notify(words().ready);
   return {
     load, reset, beforeSwitch, addBookmarks,
+    // Reuse this review's existing revision/copy path before leaving for a saved
+    // explanation. An unrelated match opened during the write cannot receive
+    // this navigation; the immutable result must be in the actual saved review.
+    savedInsightArchive(insightId) {
+      return current?.review.insights?.some(item => item.id === insightId) ? current.id : null;
+    },
+    insightSaveIsCopy() { return !!current && (!current.canEdit || conflict); },
+    async saveInsightReview(insightId) {
+      const state = snapshot(), original = state.sessionId, ownGeneration = generation;
+      if (busy || !state.hasFrame || !state.insights?.some(item => item.id === insightId)) return null;
+      const saved = current?.review.insights?.some(item => item.id === insightId);
+      if (saved) {
+        if (!await beforeSwitch()) return null;
+      } else if (!await save({copy: !!current && (!current.canEdit || conflict)})) return null;
+      if (generation !== ownGeneration || snapshot().sessionId !== original ||
+          !current?.review.insights?.some(item => item.id === insightId)) return null;
+      return current.id;
+    },
     requestOpen: id => request('/api/archives/' + id + '/open', 'POST', {}),
     async refreshCollection() {
       try { const data = await request('/api/archives'); collection = data.archives; renderCollection(); }
