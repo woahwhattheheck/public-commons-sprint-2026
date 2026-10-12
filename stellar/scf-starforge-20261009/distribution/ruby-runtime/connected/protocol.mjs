@@ -75,7 +75,7 @@ define('start', 'runtime_start_operation',
 define('run', 'runtime_run_customer_program',
   'Run an installed original customer lifecycle or complete record program in its selected environment. The original entry and literal argv are retained. The record lifecycle uses the existing managed application and its saved working dataset.',
   object({ id: identifier, operationId: uuid,
-    entry: choice('Installed original lifecycle entry.', ['native-dataset-lifecycle', 'baserow-customer-lifecycle', 'dataset-records', 'dataset-records-lifecycle']),
+    entry: choice('Installed original lifecycle entry.', ['native-dataset-lifecycle','baserow-customer-lifecycle','dataset-records','dataset-records-lifecycle','dataset-source','dataset-mapping-lifecycle']),
     argv: { type: 'array', maxItems: 512, items: text('Original literal argument.', { maxLength: 65536 }) } },
   ['id', 'operationId', 'entry']), false, true);
 define('resume', 'runtime_resume_operation',

@@ -18,7 +18,7 @@ const ROOT_FILE = 'ruby-runtime.json';
 const PROJECT_EXCLUDES = ['.git', '.bundle', 'vendor/bundle'];
 const terminal = new Set(['SUCCEEDED', 'FAILED', 'CANCELLED']);
 const SIMPLE_ACTIONS = new Set(['install', 'verify', 'export']);
-const CUSTOMER_ENTRIES = new Set(['native-dataset-lifecycle', 'baserow-customer-lifecycle', 'dataset-records', 'dataset-records-lifecycle']);
+const CUSTOMER_ENTRIES = new Set(['native-dataset-lifecycle','baserow-customer-lifecycle','dataset-records','dataset-records-lifecycle','dataset-source','dataset-mapping-lifecycle']);
 const CAPTURE_UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const DEFAULT_GEMFILE = '# Original managed Rails operator dependencies; the complete resolved lock is retained before install.\n' +
   'source "https://rubygems.org"\n' +
@@ -248,7 +248,7 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
       await once(join(path, 'support', name), bytes); entries.push({ name, bytes: bytes.length, sha256: digest(bytes) });
     }
     const capability = json({ schema: 'stellar-forge.ruby-runtime-support-capabilities.v1',
-      capturedWorkingState: 1, datasetRecords: 1 });
+      capturedWorkingState: 1, datasetRecords: 1, datasetSourceMapping: 1 });
     await once(join(path, 'support', 'capabilities.json'), capability);
     entries.push({ name: 'capabilities.json', bytes: capability.length, sha256: digest(capability) });
     return entries;
@@ -265,6 +265,37 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
       'RUBY_SUPPORT_CHANGED');
     need(await exists(join(envPath(value), 'client', 'developer/ruby-client/examples/rails_dataset/operator/records.rb')),
       'RUBY_WORKING_CAPTURE_CLIENT_REQUIRED', 'Select the complete customer package with committed-data records.');
+  }
+  async function requireMappingSupport(value) {
+    await requireRecordSupport(value);
+    const selection = await selected(value);
+    const descriptor = selection.support.find(file => file.name === 'capabilities.json');
+    const bytes = await regular(join(envPath(value), 'support', descriptor.name), 4096);
+    const capability = JSON.parse(bytes.toString('utf8'));
+    need(bytes.length === descriptor.bytes && digest(bytes) === descriptor.sha256 &&
+      capability.datasetSourceMapping === 1, 'RUBY_MAPPING_RUNTIME_REQUIRED',
+      'Select an installed environment containing the complete source-mapping runtime.');
+    const definition = selection.kind === 'received' ?
+      (await readJSON(join(envPath(value), 'received.json'))).definition : selection;
+    const files = definition?.client?.files;
+    need(Array.isArray(files) && hashObject(files) === definition.client.sha256,
+      'RUBY_CLIENT_SOURCE_CHANGED');
+    const prefix = 'developer/ruby-client/examples/rails_dataset/operator/';
+    const required = ['source.rb', 'mapping.rb', 'source_cli.rb', 'mapping_example.rb',
+      'views/starforge_dataset_operator/mapping.html.erb',
+      'views/starforge_dataset_operator/source_rows.html.erb'];
+    need(required.every(name => files.some(file => file.name === prefix + name)),
+      'RUBY_MAPPING_CLIENT_REQUIRED',
+      'Select the complete customer package with original source intake and application mapping.');
+    const current = await inventory(join(envPath(value), 'client'), { privateOnly: true });
+    need(hashObject(current) === definition.client.sha256, 'RUBY_CLIENT_SOURCE_CHANGED');
+    for (const name of ['engine.rb', 'application.rb', 'editions/native.rb']) {
+      const selectedFile = selection.support.find(file => file.name === name);
+      need(selectedFile, 'RUBY_MAPPING_RUNTIME_REQUIRED');
+      const source = await regular(join(envPath(value), 'support', name), 4 * 1024 * 1024);
+      need(source.length === selectedFile.bytes && digest(source) === selectedFile.sha256,
+        'RUBY_SUPPORT_CHANGED');
+    }
   }
   async function createEnvironment(input = {}) {
     const value = id(input.id), title = label(input.title), key = operationId(input.requestId);
@@ -390,6 +421,7 @@ export async function openRubyRuntime({ directory: root, create = false } = {}) 
     const observed = await selectionAdmission(value, null, async () => {
       need(await exists(join(envPath(value), 'installation.json')), 'RUBY_INSTALLATION_REQUIRED');
       if (entry === 'dataset-records' || entry === 'dataset-records-lifecycle') await requireRecordSupport(value);
+      if (entry === 'dataset-source' || entry === 'dataset-mapping-lifecycle') await requireMappingSupport(value);
       return admit({ environmentId: value, action: 'customer-command', operationId: key, parameters: { entry, argv } });
     });
     if (['FAILED','INTERRUPTED','CANCELLED'].includes(observed.phase)) return observed;

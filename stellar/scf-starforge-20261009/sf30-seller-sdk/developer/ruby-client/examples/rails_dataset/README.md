@@ -4,6 +4,16 @@ This example turns an original received SF88/SF100 dataset into a reviewed, repe
 
 A complete preview shows every incoming and removed key. Committing that selected preview writes all target changes, current key state, original source rows, edition history and the final receipt in one Active Record transaction. A repeated business operation key reopens its original committed result.
 
+## Receive, map and operate the dataset in the application
+
+The [complete dataset operator](operator/README.md) adds an authenticated, server-rendered source inbox, full source profiling and row browser, field-mapping forms, complete change review, edition import, original attachments and working-record delivery to this same application. Its resolver uses these original streams, models, tenant relation and importer.
+
+A received candidate can omit its mapping. Staff can then inspect the complete original CSV/JSONL source, choose actual application fields and an existing unique record key, and retain the selected mapping in a new review. Established streams keep their original record keys. Empty and missing values, exact decimal conversion, and the direction of a Boolean archive field are explicit form choices. The original importer compares every row and applies the selected preview through its existing transaction.
+
+`operator/source_cli.rb` exposes that same source → mapping → complete preview → import → receipt workflow. `operator/mapping_example.rb` continues an installed application through the rendered forms and actual CLI, saves the complete working dataset, copies the closed application and opens the independent recipient in a fresh Ruby process. The managed runtime exposes these as `dataset-source` and `dataset-mapping-lifecycle` without adding another importer.
+
+After import, [the working-record guide](operator/records.md) covers complete saved captures, typed search/filter/sort, original source and current-value comparisons, full attachments, exact CSV/JSON exports and portable application receiving. All three entry paths use the application's existing authorization, scope and edition history.
+
 ## Install the application side
 
 Use Ruby 3.1 or newer, Rails/Active Record 7.1 or newer and the application's existing database. The merchant package already includes the Ruby standard-library reader and source-bound Dataset receiving client. The application adds Active Record and Active Job through its normal Rails bundle.
