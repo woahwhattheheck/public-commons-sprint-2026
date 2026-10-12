@@ -15,6 +15,7 @@ import {initializationDirectory as directory, initializationBytes as bytes,
   retainInitializationRecord as retainRecord, initializationJson as encoded,
   acquireInitialization} from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs';
 import {createSavedFileReader} from './native-file.mjs';
+import {NATIVE_SOURCE,nativeSourceFiles,checkNativeSourceFiles,sealNativeSource} from './native-analysis-sources.mjs';
 
 const SCHEMA = 'stellar-forge.mcp-native-object.v1';
 const SOURCE = 'stellar-forge.mcp-native-object-source.v1';
@@ -330,6 +331,37 @@ export function createNativeObjects({manifest,currentWorkspace,runOwned,cancelOw
         report:reportView(report,args),delivery:{...output,status:'SAVED',fileRevalidated:true}};
     }finally{await lease.close();}
   }
+  async function completedObject(acquisitionId) {
+    need(!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
+    await currentWorkspace();
+    const saved=await completed(acquisitionId),output=await delivery(saved);
+    need(HASH.test(output.nativeReceiptSha256??''),'MCP_OBJECT_RECORDED_ASSEMBLY_REQUIRED');
+    const sourceId=saved.record.specification.sourceId;
+    const inputs=await nativeSourceFiles([
+      {role:'native-workspace',path:join(manifest.directory,'native-workspace.json'),maxBytes:65536},
+      {role:'object-request',path:join(saved.path,'request.json')},
+      {role:'object-config',path:join(saved.path,'buyer.json'),maxBytes:65536},
+      {role:'object-binding',path:join(saved.path,'binding.json')},
+      {role:'object-session',path:join(saved.session,'session.json'),maxBytes:131072},
+      {role:'object-delivery',path:join(saved.path,'delivery.json')},
+      {role:'object-assembly',path:join(saved.session,'assemblies',sha(output.destination)+'.json'),maxBytes:8192},
+      {role:'object-source',path:join(root,'sources',sourceId+'.json')},
+      {role:'object-description',path:join(root,'sources',sourceId+'.description.json'),maxBytes:8388608},
+    ]);
+    const report=await inspectObjectSession(saved.session);
+    need(report.status==='COMPLETE'&&report.sessionId===saved.pointer.sessionId&&
+      report.configurationSha256===saved.record.configSha256&&report.bytes===output.bytes&&
+      report.objectSha256===output.sha256,'MCP_OBJECT_COMPLETE_SESSION_REQUIRED');
+    await readSavedFile(output,{maxBytes:1});
+    await checkNativeSourceFiles(inputs);
+    return sealNativeSource({schema:NATIVE_SOURCE,kind:'object',id:acquisitionId,
+      nativeWorkspace:manifest.directory,paths:{session:saved.session},
+      file:{destination:output.destination,bytes:output.bytes,sha256:output.sha256,contentType:output.contentType??null},
+      original:{acquisitionId,sessionId:saved.pointer.sessionId,configurationSha256:saved.record.configSha256,
+        sessionSha256:saved.pointer.sessionSha256,sourceId,snapshot:saved.definition.expectedSnapshot??null,
+        objectSelection:saved.definition.selection,nativeReceiptSha256:output.nativeReceiptSha256,
+        nativeStatus:report.status}},inputs);
+  }
   async function history(args,sources=false) {
     const limit=args.limit??25;
     need(Number.isInteger(limit)&&limit>=1&&limit<=100&&
@@ -357,7 +389,7 @@ export function createNativeObjects({manifest,currentWorkspace,runOwned,cancelOw
       nextCursor:start+selected.length<keys.length?selected.at(-1):null};
   }
   return {
-    register,
+    register,completedObject,
     async call(args,context={}) {
       need(!isClosed(),'MCP_NATIVE_WORKSPACE_CLOSING');
       need(object(args)&&Object.hasOwn(fields,args.action)&&
@@ -426,3 +458,4 @@ export function createNativeObjects({manifest,currentWorkspace,runOwned,cancelOw
     async close(){await Promise.allSettled([...preparing]);},
   };
 }
+

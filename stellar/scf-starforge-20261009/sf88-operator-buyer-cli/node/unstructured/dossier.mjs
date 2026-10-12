@@ -137,8 +137,8 @@ export async function receivePartitionEnvelope(store, dossierId, {
     'UNSTRUCTURED_REVIEWED_EDITION_CHANGED');
   const bytes = canonicalBytes(checked.envelope), rawSha256 = digest(bytes);
   const origin = { mode: 'ORIGINAL_UNSTRUCTURED_SAVED_BUYER_RESULT', ...checked.binding,
-    projectionSha256: rawSha256 };
-  const current = await store.get(dossierId);
+    projectionSha256: rawSha256, elementCount: checked.elementCount };
+  const current = typeof store.getMetadata === 'function' ? await store.getMetadata(dossierId) : await store.get(dossierId);
   const matches = edition => edition.questionId === questionId &&
     (mode === 'reference' ? edition.mode === 'reference' && edition.provider === 'unstructured' &&
       same(edition.reference, checked.reference) :
@@ -150,7 +150,8 @@ export async function receivePartitionEnvelope(store, dossierId, {
     editionSha256: checked.editionSha256, elementCount: checked.elementCount, summary: checked.summary };
   if (previous) {
     need(previous.label === label, 'UNSTRUCTURED_RECEIVING_LABEL_CONFLICT');
-    return { dossier: current, receipt, reused: true, editionId: previous.id };
+    const dossier = Array.isArray(current.sources) ? current : await store.get(dossierId, {revision:current.revision});
+    return { dossier, receipt, reused: true, editionId: previous.id };
   }
   need(Number.isSafeInteger(expectedRevision) && expectedRevision >= 1, 'EXPECTED_REVISION_REQUIRED');
   need(!signal?.aborted, 'UNSTRUCTURED_RECEIVING_ABORTED');

@@ -49,6 +49,40 @@ A public-table import uses `commons.retained-public-table.v1`; `source.mjs` expo
 
 The public table's `as_of` column records the UTC retrieval date, with `time_basis=PUBLIC_TABLE_RETRIEVAL_DATE`. API editions use `time_basis=FRED_REALTIME_DATE` and retain their original real-time interval fields. Public-table real-time interval cells are empty because the page publishes a current snapshot. The edition manifest and browser series detail carry this distinction, the complete retrieval timestamp and original publisher metadata. A comparison of successive complete public tables includes newly published observation dates; API comparisons retain their explicitly selected interval.
 
+
+## Combine retained economic tables
+
+Import each complete original public table into the same project, then use **Editions & review → Combine retained public tables**. Select one retained capture for each series and choose **Create combined edition**. The resulting capture enters the existing review, comparison, publication, original customer and project handover workflow.
+
+For example, UNRATE, CPIAUCSL and GDP keep their original series rows in one long-form dataset. Monthly unemployment percentages, monthly price indexes and quarterly GDP values retain their own units, seasonal adjustment and frequency. Each original date/value pair remains in its series; the combined edition introduces no interpolated periods, resampling or cross-series arithmetic. Customers use the original `series` filter and observation-date ranges.
+
+The CLI uses the same retained sources and revision:
+
+```sh
+starforge fred combine --project /absolute/private/economic-project \
+  --id macro-edition-20261012 --expected-revision CURRENT_REVISION \
+  --captures UNRATE_CAPTURE_SHA,CPI_CAPTURE_SHA,GDP_CAPTURE_SHA
+```
+
+The result returns its new capture ID, original source capture IDs and project revision. Choose one original edition for each series; duplicate series selections return their actual conflict for correction. A combined capture can also supply a later composition when its series do not overlap the other selected captures.
+
+Programmatic receiving accepts `{version: "commons.retained-public-table-set.v1", tables: [originalTable, ...]}` through `importFredCapture`, or calls `sealFredPublicTables` directly. A complete set may contain up to fifty distinct series and one million original observations within the 64 MiB capture allowance. Its tables are ordered by original series ID for a stable source identity.
+
+Each customer row keeps that series' own public-table retrieval date. The manifest retains each original full retrieval timestamp plus a collection window; the edition's summary date is the latest collection date. The original source JSON contains every table's text and digest. The complete project export and receiving operation carry the combined edition and its selected original captures together.
+
+
+## Run the complete native receiving operation
+
+The [executable receiver](RECEIVER.md) drives the same original source, saved review, configured native seller and Buyer, two actual cursor pages, complete source/CSV deliveries, original intent recovery, project export and received-project reopen:
+
+```sh
+starforge fred receiver --project /absolute/private/economic-project \
+  --config /absolute/private/fred-receiver.json
+```
+
+The private configuration selects the existing operator resources. The included complete UNRATE table is the default input; the macro source starter can compose all three original series. The receiver retains the original project and selected native intents at every step. After an interrupted host, repeat the same command or use `--phase browser` to finish the actual browser/download/reopen portion of a completed native operation. Browser settings can change independently of the retained payment operation.
+
+
 ## Select the source and vintage
 
 The source selection has this format:
@@ -225,7 +259,7 @@ Every project mutation supplies the revision the operator reviewed. A concurrent
 | Export | Main interfaces |
 | --- | --- |
 | `./seller/fred/model` | `normalizeSelection`, `inspectCapture`, `projectionPolicy`, `compareCaptures`, `exactDifference` |
-| `./seller/fred/source` | `captureFred`, `sealFredCapture`, `sealFredPublicTable`, `validateCapture`, `readFredCapture` |
+| `./seller/fred/source` | `captureFred`, `sealFredCapture`, `sealFredPublicTable`, `sealFredPublicTables`, `validateCapture`, `readFredCapture` |
 | `./seller/fred/project` | Project initialization, source capture/import, review, publication, export and receiving |
 | `./seller/fred` | Immutable editions, original merchant, customer preparation, execution, recovery and delivery export |
 | `./seller/fred/workspace` | `startFredWorkspace` |

@@ -78,6 +78,8 @@ export async function openUnstructuredWorkspace({
   const provider = buyer ? createPartitionEditionProvider(buyer, { workspaceId, inboxDirectory }) : null;
   let cached = null;
   const clear = () => { cached = null; };
+  const dossierMetadata = id => typeof dossiers.getMetadata === 'function' ?
+    dossiers.getMetadata(id) : dossiers.get(id);
 
   async function sourcePurchases() {
     if (!buyer) return {items:[],warnings:[]};
@@ -130,7 +132,7 @@ export async function openUnstructuredWorkspace({
   }
   async function capture(dossierId, selection) {
     selection = selected(selection);
-    const dossier = await dossiers.get(dossierId);
+    const dossier = await dossierMetadata(dossierId);
     let envelope, retained = null;
     if (selection.purchaseId) {
       const purchase = await resolvePurchase(selection.purchaseId);
@@ -170,13 +172,13 @@ export async function openUnstructuredWorkspace({
   async function list(dossierId,{after='',limit=20}={}) {
     need(typeof after==='string' && (after==='' || ID.test(after)) &&
       Number.isSafeInteger(limit) && limit>=1 && limit<=100,'UNSTRUCTURED_LIST_SELECTION_INVALID');
-    const dossier=await dossiers.get(dossierId),source=await sourcePurchases();
+    const dossier=await dossierMetadata(dossierId),source=await sourcePurchases();
     const remaining=source.items.filter(item=>after==='' || item.id>after),purchases=remaining.slice(0,limit);
     const editions=dossier.editions.filter(edition=>edition.mode==='retained' &&
       edition.origin?.mode==='ORIGINAL_UNSTRUCTURED_SAVED_BUYER_RESULT').map(edition=>({
         id:edition.id,label:edition.label,questionId:edition.questionId,createdAt:edition.createdAt,
         document:copy(edition.origin.document),profileId:edition.origin.profileId,
-        intentId:edition.origin.intentId,elementCount:edition.itemCount,
+        intentId:edition.origin.intentId,elementCount:edition.origin.elementCount ?? edition.itemCount ?? null,
       }));
     return {configured:provider!==null,workspaceId:workspaceId??null,purchases,editions,warnings:source.warnings,
       nextAfter:remaining.length>limit?purchases.at(-1).id:null,revision:dossier.revision};

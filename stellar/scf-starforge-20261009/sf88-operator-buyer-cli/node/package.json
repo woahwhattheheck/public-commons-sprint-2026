@@ -27,6 +27,10 @@
     "./agents/sqlite": {
       "types": "./agents/sqlite.d.mts",
       "import": "./agents/sqlite.mjs"
+    },
+    "./unstructured": {
+      "types": "./unstructured/index.d.mts",
+      "import": "./unstructured/index.mjs"
     }
   },
   "files": [
@@ -42,7 +46,8 @@
     "ACQUISITIONS.md",
     "examples",
     "agents",
-    "FRAMEWORKS.md"
+    "FRAMEWORKS.md",
+    "unstructured"
   ],
   "sideEffects": false,
   "peerDependencies": {
