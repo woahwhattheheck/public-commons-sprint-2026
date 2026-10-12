@@ -54,6 +54,8 @@ Each workspace can declare:
 | services | label, full OData service-root url, optional authEnv and allowLoopback. |
 | imports | label, file and optional sha256 of a complete original workspace transfer. |
 | responses | label, file and optional sha256 of an original saved live merchant response. |
+| collectionSelections | label, file and required sha256 of a complete native collection selection. |
+| collectionSources | label, file and required sha256 of an original complete Analysis source document. |
 | merchants | Public merchant profile described below. |
 | runtime | Original dataset runtime port, optional facilitator and allowLocalFacilitator. |
 
@@ -192,9 +194,181 @@ The native receiver validates the operation, metadata identity, query, source ha
 
 Prepare the next original paid page with merchant_odata_buyer, a new stable intentId and the prior receivedId. The original cursor supplies that next request.
 
+## Complete live collections and analytical customer delivery
+
+A complete live collection joins the original saved response pages for one source and query. The original collection engine checks every request/cursor transition, declared entity key, scalar representation, page receipt and terminal response. It retains the whole source chain alongside typed rows, CSV, CSDL-derived projection and a portable Analysis source document.
+
+Use the same open workspace and live service already selected above. Six collection operations compose its original live-operation sequence:
+
+| Tool | Customer operation |
+| --- | --- |
+| merchant_odata_collections | Page READY and INCOMPLETE saved collections for a liveServiceId. |
+| merchant_odata_collection | Inspect the original collection and page each original-page/file inventory. |
+| merchant_odata_collect | Create or reopen a complete collection under a stable collectionId. |
+| merchant_odata_collection_rows | Read typed original rows and their nextOffset. |
+| merchant_odata_collection_source | Read the complete portable Analysis source document, required file identities and an original projection mapping. |
+| merchant_odata_collection_restore | Reconstruct the same complete collection from a declared source document or another declared workspace's original collection. |
+
+Collection records retain sourceBinding, queryFingerprint, manifestSha256, original row/page counts, completion, key fields, field mapping and their precise Analysis source identity. The full collection manifest is a retained file. In the inspect response, pages, originalFiles, retainedFiles, reportedCounts and files each have their own pagination entry. Follow every required nextOffset. A page of metadata is a view into the complete saved collection.
+
+### Select the original response chain
+
+After receiving the saved merchant responses, retain their actual receivedIds in original request order. Optional buyerIds bind the corresponding original SF88 requests. The first request comes from the original product package; later requests use the previous original response's next-request. The native engine rejects reordered, repeated, missing, cross-query or nonterminal chains and duplicate declared entity identities.
+
+For up to 500 pages, merchant_odata_collect accepts pages directly:
+
+~~~js
+const selection = {
+  workspace: "reference",
+  liveServiceId: "orders",
+  collectionId: "northwind-orders-complete",
+  title: "Northwind Orders — complete retained live query",
+  pages: receivedPages.map(page => ({
+    receivedId: page.receivedId,
+    ...(page.buyerId ? {buyerId: page.buyerId} : {})
+  })),
+  fields: ["OrderID", "CustomerID", "OrderDate", "Freight", "ShipCountry"]
+};
+const collection = await call("merchant_odata_collect", selection);
+~~~
+
+Here call is the existing authenticated merchant MCP client's tools/call adapter, returning the native structured result. receivedPages is the original receiving history selected above; the example does not run another request.
+
+A complete larger chain uses a private host-declared selection file. This keeps the existing 128 KiB MCP request ceiling while admitting the original collection engine's full 10,000-page range. The file has schema stellar-forge.odata-collection-selection.v1 and the complete liveServiceId, collectionId, pages, optional fields/title/limits. Its maximum size is two MiB. The [retained Northwind selection](examples/odata-collection-selection.json) contains all five original response IDs for the original orders service and its 830 rows.
+
+Declare the file under that workspace's collectionSelections:
+
+~~~json
+{
+  "collectionSelections": {
+    "orders-complete": {
+      "label": "Complete retained Orders selection",
+      "file": "/srv/starforge/inputs/orders-selection.json",
+      "sha256": "COPY_THE_ACTUAL_COMPLETE_SELECTION_FILE_SHA256"
+    }
+  }
+}
+~~~
+
+The host calculates the hash from the complete selected file. The original status call exposes its alias, label and pinned SHA. Use the actual selected service and collection IDs:
+
+~~~json
+{
+  "workspace": "reference",
+  "liveServiceId": "orders",
+  "collectionId": "northwind-orders-complete",
+  "selection": "orders-complete"
+}
+~~~
+
+A declared selection supplies all its pages, title, fields and limits; those fields are not combined with a different inline selection. The selected file's bytes and hash accompany the returned native result.
+
+The original hard ceilings are 10,000 pages, 1,000,000 rows, 128 MiB of original response input and 128 MiB per principal output. A selection can choose lower explicit limits. The original complete Analysis projection also enforces its receiving row and total-size limits before publication. Choose a different explicit source query if a complete selection exceeds its product limits.
+
+Keep the collectionId and exact selection across an interrupted reply. Inspect or repeat merchant_odata_collect with that same original selection to complete an INCOMPLETE record. An existing ID rejects different source pages, title, fields or limits. A separate customer edition receives its own ID.
+
+### Transfer the complete original Analysis source
+
+merchant_odata_collection_source returns the original source document and a complete files list. Each entry supplies path, bytes, sha256 and exact merchant_odata_file arguments. The source manifest and all its content-addressed payloads must retain their relative paths. Those payloads include the original collection manifest/transform and compressed complete original source packets.
+
+~~~js
+const source = await call("merchant_odata_collection_source", {
+  workspace: "reference", liveServiceId: "orders",
+  collectionId: "northwind-orders-complete"
+});
+for (const file of source.files) {
+  // The customer's existing file receiver writes file.path from the exact
+  // returned chunk stream and verifies file.bytes and file.sha256.
+  let offset = 0, readId;
+  do {
+    const part = await call(file.tool, {
+      ...file.arguments, expectedSha256: file.sha256,
+      offset, ...(readId ? {readId} : {}), limit: 65536
+    });
+    await receiver.accept(file.path, part.offset, part.data, "base64");
+    readId = part.readId;
+    offset = part.nextOffset;
+  } while (offset !== null);
+  await receiver.verify(file.path, file.bytes, file.sha256);
+}
+~~~
+
+receiver is the host's selected durable file receiver. Its output directory and filesystem policy are host configuration. Retain the original download hash and accepted byte offset for recovery; after an MCP restart, omit the expired readId and continue with that same hash. The existing reader verifies the original file once per read, releases it at EOF, and supports explicit release of unfinished reads.
+
+Register the received analysis/source.json through the original Python Analysis application. For this retained Northwind JSON projection, the host command is:
+
+~~~sh
+python -m stellar_forge_buyer.analysis_workspace \
+  --database /absolute/private/customer-analysis \
+  --checkout /absolute/stellar-forge-checkout \
+  response --name northwind_orders_live --input-kind document \
+  --manifest /absolute/private/received-collection/analysis/source.json \
+  --format json --expected-revision 0
+~~~
+
+Use the returned source document's actual format; larger original projections may use csv. Use the original current source revision when intentionally selecting another document under an existing source name. Registration copies and verifies the complete source closure inside the original Analysis workspace, retaining its document identity.
+
+The host starts that same AnalysisWorkspace service and registers it with the existing native buyer as described in [Native agent customer analysis](../mcp-paid-agent/ANALYSIS.md). The native agent tool is sf43_discover_review_and_pay with action:"analysis". Its analysisWorkspace is the actual host-registered alias; source names, job IDs and saved revisions remain the original service's values.
+
+Request the exact original mapping using the name and revision returned by registration:
+
+~~~js
+const mapping = await call("merchant_odata_collection_source", {
+  workspace: "reference", liveServiceId: "orders",
+  collectionId: "northwind-orders-complete",
+  expectedSha256: source.manifest.sha256,
+  source: registered.name, sourceRevision: registered.revision
+});
+await buyerCall("sf43_discover_review_and_pay", {
+  action: "analysis", analysisWorkspace: "customer",
+  analysisOperation: "response-preview",
+  analysisRequest: {id: savedPreviewId, ...mapping.analysisInput}
+});
+~~~
+
+Retain savedPreviewId before the call, then inspect the original job until COMPLETE. response-import takes the same preview ID and its actual preview_sha256. The native mapping preserves original Decimal/Int64 text, null/absent state columns and the declared scalar conversion. The collection's exact document format determines the mapping; a CSV fallback uses text values and explicit state columns.
+
+### Use the same SQL, report and workbook workspace
+
+The completed import returns its original immutable version_id and row_count. Activate that exact edition under a reviewed SQL view using the observed view revision. For the reference collection, the full source contains 830 rows. The original selected query and metadata remain attached to the imported edition.
+
+The existing Analysis operations now perform the whole customer workflow:
+
+1. Save a complete detail query using the actual imported column names, and a report query grouped by ShipCountry_state and ShipCountry with COUNT(*). Copy the original current views array into query/report requests.
+2. Run the saved SQL under stable job IDs. query-export streams complete typed JSONL, CSV and SQLite from the reviewed result and selected source editions. Retain the completed native manifest and its exact file hashes.
+3. Save a report definition pinned to the original query revisions. Run all sections in the same database snapshot, review the retained result, and publish it at the observed publication revision. report-export produces original HTML, JSON and the multi-section CSV ZIP.
+4. Select the complete typed query export or published report section through workbook-sources. Save the complete workbook definition, including exact source IDs/hashes and source column ordinals. Build that reviewed definition, then download workbook.xlsx, handoff.zip and manifest.json through workbook-file.
+5. Use the original whole-workspace archive operation to transfer imported data, source documents, view/query/report history, complete query exports and workbook delivery. Receiving reopens that same source and saved customer work.
+
+Every new job uses a retained 32-character lowercase hexadecimal ID. An uncertain reply is resolved through that same original job. save-query uses its saved revision comparison; read the current or historical query before retrying an ambiguous save. The [complete worked collection receiver](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/examples/COLLECTION_CUSTOMER.md) carries this entire native workflow through actual report/workbook files, source reconstruction and full customer packaging.
+
+### Restore the original collection after customer use
+
+The original analytical source retains the complete live collection and its original pages. A receiving live service must have the same source binding, metadata, public merchant origin and operation. Restoring a collection never silently substitutes another supplier or query.
+
+On the same host, select a collection under another declared workspace and its exact Analysis source digest:
+
+~~~js
+await call("merchant_odata_collection_restore", {
+  workspace: "receiving", liveServiceId: "orders",
+  collectionId: "northwind-orders-complete",
+  sourceWorkspace: "reference", sourceLiveServiceId: "orders",
+  sourceCollectionId: "northwind-orders-complete",
+  expectedSha256: source.manifest.sha256
+});
+~~~
+
+This can read the original immutable source collection while its source workspace is closed. The receiving operation uses the destination's original live sequence and collection lease. Reopening the same ID verifies its complete retained outputs.
+
+For a source transferred through Analysis or another host, declare collectionSources on the destination workspace with label, file and required sha256 pointing to the exact received source.json. Then merchant_odata_collection_restore selects sourceDocument by that alias. Its sibling files stay at their original relative paths. The native receiver verifies the full source closure and service identity before composing the saved collection.
+
+A whole OData workspace transfer already includes every complete collection's original files, Analysis source and receiving history. The MCP transfer reader supports its existing 256,000,000-byte retained-file limit. Larger complete workspace transfers use the original file-based CLI export/restore documented in the [collection guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/odata/live/COLLECTIONS.md); the individual collection-source files remain independently readable through the tools above.
+
+Closing the original merchant workspace drains accepted collection work with the same live/source operations, releases its file reads and closes its owned browser and merchants. Reopen then returns the same saved collections and customer artifacts.
+
 ## Transfer, download and reopen
 
-merchant_odata_transfer with action:"create" and a stable transferId saves the complete original bundle. Pause active imports first. The bundle includes source bytes, catalogs, plans, editions, reviews, dataset exports, live packages, buyer handoffs and committed customer receiving files.
+merchant_odata_transfer with action:"create" and a stable transferId saves the complete original bundle. Pause active imports first. The bundle includes source bytes, catalogs, plans, editions, reviews, dataset exports, live packages, buyer handoffs, committed customer receiving files and complete collection/Analysis source files.
 
 Repeated create returns that saved transfer. A later snapshot gets another transferId. action:"list" pages the retained transfers from oldest to newest.
 
@@ -217,6 +391,7 @@ merchant_odata_file supports:
 | live-package | Live service id and package filename. |
 | buyer | Live service id, buyer recordId and filename. |
 | receiving | Live service id, receiving recordId and filename. |
+| collection | Live service id, collection recordId and an exact filename from its retained inventory. |
 | transfer | Saved transfer id. |
 | comparison | Returned comparisonId as id. |
 

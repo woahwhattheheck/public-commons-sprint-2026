@@ -40,6 +40,8 @@ def parser():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument("--workspace",required=True,help="Original private saved workspace")
     sub=p.add_subparsers(dest="action",required=True)
     sub.add_parser("init");sub.add_parser("state")
+    a=sub.add_parser("provider-handoff",help="Complete source/provider review, handoff and independent receiving; accepts its own --workspace and --help")
+    a.add_argument("arguments",nargs=argparse.REMAINDER)
     a=sub.add_parser("search");a.add_argument("--server",required=True);a.add_argument("--text",default="");a.add_argument("--page",type=int,default=1);a.add_argument("--limit",type=int,default=50)
     a=sub.add_parser("metadata");a.add_argument("--server",required=True);a.add_argument("--dataset",required=True);a.add_argument("--protocol",choices=["griddap","tabledap"],required=True)
     a=sub.add_parser("metadata-read");a.add_argument("--id",required=True)
@@ -66,7 +68,15 @@ def parser():
     return p
 
 def main(argv=None):
-    a=parser().parse_args(argv)
+    values=list(sys.argv[1:] if argv is None else argv)
+    provider=None
+    if values and values[0]=="provider-handoff":provider=values[1:]
+    elif len(values)>=3 and values[0]=="--workspace" and values[2]=="provider-handoff":provider=values[:2]+values[3:]
+    elif len(values)>=2 and values[0].startswith("--workspace=") and values[1]=="provider-handoff":provider=values[:1]+values[2:]
+    if provider is not None:
+        from provider_handoff_cli import main as provider_main
+        return provider_main(provider)
+    a=parser().parse_args(values)
     if a.action=="init":
         with Workspace(a.workspace,create=True)as ws:emit({"workspace":str(ws.root),"state":ws.state()})
         return

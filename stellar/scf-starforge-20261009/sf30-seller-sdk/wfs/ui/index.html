@@ -125,9 +125,17 @@
 <form id="vector-export-form" class="card"><h3>2. Review and export native layers</h3><div class="form-grid">
 <label class="wide">Retained source capture<select id="vector-capture" required></select></label>
 <div class="toolbar"><button id="vector-load-profile" type="button">Load original capture profile</button><button id="vector-profile-download" type="button">Download profile</button></div>
-<label class="full">Complete native export profile<textarea id="vector-profile" rows="14" spellcheck="false" required></textarea></label>
+<div class="full toolbar"><label><input id="vector-format-gpkg" type="checkbox"> GeoPackage</label><label><input id="vector-format-shape" type="checkbox"> Shapefile</label></div>
+<label>Source layer<select id="vector-mapping-layer"></select></label>
+<label>Native layer name<input id="vector-layer-name" maxlength="128" placeholder="Use the original layer identity"></label>
+<label>Layer target CRS<input id="vector-target-crs" placeholder="Preserve or inherit the profile CRS"></label>
+<label>Shapefile long values<select id="vector-long-values"><option value="reference">Keep complete source references</option><option value="error">Require a native DBF value</option></select></label>
+<label>Geometry collections<select id="vector-collections"><option value="split">Keep every part in its native layer</option><option value="error">Require an unsplit native geometry</option></select></label>
 <label class="wide">Load a reviewed profile file<input id="vector-profile-file" type="file" accept=".json,application/json"></label></div>
-<p class="help">Keep the original source CRS binding. Set formats, native layer names, field aliases/codecs and target CRS in this profile. Exact numeric JSON stays intact.</p>
+<p id="vector-mapping-status" class="help">Load a captured source to review its original fields.</p>
+<div class="table-scroll"><table><thead><tr><th>Original field</th><th>Original value kinds</th><th>GeoPackage name</th><th>Shapefile name</th><th>Representation</th><th>Explicit native type</th></tr></thead><tbody id="vector-mapping-fields"></tbody></table></div>
+<details><summary>Complete native profile and additional settings</summary><label>Original profile JSON<textarea id="vector-profile" rows="14" spellcheck="false"></textarea></label></details>
+<p class="help">Field controls preserve the complete profile and its original numeric values. The captured source CRS stays bound; a layer target CRS requests a native transform. Original source fields remain in the delivery.</p>
 <button type="submit" class="primary">Export and reopen native files</button></form>
 <form id="vector-compare-form" class="card"><h3>Compare source editions</h3><div class="form-grid">
 <label>Earlier capture<select id="vector-before" required></select></label><label>Later capture<select id="vector-after" required></select></label></div>

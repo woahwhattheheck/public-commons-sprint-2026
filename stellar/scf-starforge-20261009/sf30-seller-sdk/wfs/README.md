@@ -164,6 +164,8 @@ Feature identity defaults to the original feature ID. To use actual source prope
 
 ### Review the complete profile and export
 
+The browser provides native format, layer name, target CRS, field alias, representation and physical-type controls over the complete profile. Those controls reuse the original exact-number JSON module, so editing a name preserves unrelated numeric values and metadata. The full profile remains available for additional settings and file import.
+
 Use the downloaded original profile as the starting point. Its `layers` map is keyed by the exact source layer IDs reported by native inspection. Review `formats`, native layer names, field order, per-field representation and target CRS using the [native mapping contract](../stac/vector/README.md#review-native-representation).
 
 The original `assignSourceCrs` and `sourceCoordinateBinding` remain attached to the capture. A new source interpretation belongs in a new capture. A `targetCrs` on that retained layer requests a transform through the existing native engine. The complete profile travels as exact JSON text, preserving original numeric tokens and additional native metadata.

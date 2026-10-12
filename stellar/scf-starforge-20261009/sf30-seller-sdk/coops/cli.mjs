@@ -30,6 +30,7 @@ const HELP=[
  'A running console owns the original workspace. Use its startup JSON with --session.',
  'Collect/import/backfill wait for the original capture or backfill; a stopped source remains explicitly partial.',
  'Every write needs its original operationId. The native journal reconciles exact replay before revision checks.',
+ 'dataset.prepare action payload may include mappingId; its exact saved revision and original file stay with native query/release provenance.',
  'Download files are created exclusively and streamed; an existing or partial selected path is preserved.'
 ].join('\n');
 function argumentsOf(args){

@@ -203,7 +203,7 @@ export async function openWfsApplication(options={}) {
       case'abandon':return abandonWfsOperation({...common,pendingId:request.pendingId,note:request.note});
       case'merchant-start':{
         if(merchant){need(runningPublication===request.publicationId,'Another selected edition is already served.','WFS_MERCHANT_RUNNING',409);return{...merchantView(),reused:true};}
-        await stageWfsMerchant({directory,publicationId:request.publicationId});
+        await stageWfsMerchant({directory,publicationId:request.publicationId,python:options.python,signal});
         merchant=await startWfsMerchant({directory:await publication(request.publicationId),port:binding.merchantPort,
           facilitator:binding.facilitator??undefined,allowLocalFacilitator:binding.allowLocalFacilitator,nativeFactory:options.nativeFactory});
         runningPublication=request.publicationId;return merchantView();

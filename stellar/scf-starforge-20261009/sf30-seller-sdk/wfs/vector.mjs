@@ -1,10 +1,12 @@
 // MIT. Native vector operations owned by the original WFS project and source orders.
-import { join, resolve, relative, dirname } from 'node:path';
-import { readdir, lstat, mkdir } from 'node:fs/promises';
+import { join, resolve, dirname } from 'node:path';
+import { readdir, lstat, open } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { privateDirectory, acquireWorkspace, readPrivate, atomicJson, digest as byteHash,
   stamp, object, fault } from '../postgres/publisher/files.mjs';
 import { readWfsProject } from './project.mjs';
-import { exactFile, durableDirectory, optionalJson } from './source.mjs';
+import { exactFile, reconcileRetainedFile, durableDirectory, optionalJson } from './source.mjs';
+import { reconcileWfsVectorSourceLinks } from '../stac/vector/wfs.mjs';
 import { operationId } from './model.mjs';
 import { retainWfsVectorSource, captureVectorSelection, openVectorCapture,
   exportVectorCapture, openVectorExport, compareVectorCaptures, openVectorComparison,
@@ -17,7 +19,6 @@ export const WFS_VECTOR_RECEIPT='stellar-forge.wfs-vector-receipt.v1';
 const MAX_JSON=256*1024*1024, MAX_PROFILE=4*1024*1024, MAX_ENVELOPE=2*MAX_PROFILE+262144;
 const HASH=/^[a-f0-9]{64}$/, OP=/^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$/;
 const need=(yes,code,detail=code,status=400)=>{if(!yes)throw fault(code,detail,status);};
-const own=(value,key)=>Object.hasOwn(value,key);
 const text=(value,maximum=8192)=>typeof value==='string'&&value.length>0&&value.length<=maximum&&!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(value);
 function sorted(value){
   if(value instanceof ExactNumber||value===null||typeof value!=='object')return value;
@@ -54,12 +55,43 @@ export function isWfsVectorDirectory(path){
     OP.test(p[1]??'')&&(p.length===2||['source','capture','output'].includes(p[2])));
 }
 export function ignoreWfsVectorMember(path){
-  const p=path.split('/');
-  return p[0]===WFS_VECTOR_ROOT&&(p.at(-1)==='.vector.lock'||
-    p.length===3&&p[2]==='download.zip');
+  const p=path.split('/'),name=p.at(-1);
+  if(p[0]!==WFS_VECTOR_ROOT)return false;
+  if(name==='.vector.lock'||/^\.wfs-staged-[a-f0-9]{64}$/.test(name)||
+    /^\..+\.[a-f0-9]{32}\.receiving$/.test(name))return true;
+  if(p.length===3&&(name==='download.zip'||/^\.pending-[a-f0-9-]{36}$/.test(name)))return true;
+  return p.length===4&&p[2]==='source'&&
+    /^(?:request\.json|source-receipt\.json|features\.geojson|original-order\.json|profile\.json|selection\.json)\.[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.receiving$/.test(name);
 }
 async function readOptional(path,maximum=MAX_JSON){
   try{return await readPrivate(path,maximum);}catch(error){if(error.code==='ENOENT')return null;throw error;}
+}
+/** Complete only the original exactFile link commit while owning its project lease. */
+async function readRetained(directory,path,maximum=MAX_JSON,leaseHeld=false){
+  try{return await readOptional(path,maximum);}catch(error){
+    if(error.code!=='PRIVATE_FILE_REQUIRED')throw error;
+    const observed=await lstat(path);
+    if(!observed.isFile()||observed.isSymbolicLink()||observed.nlink!==2||
+      observed.mode&0o077||observed.size>maximum)throw error;
+    const release=leaseHeld?null:await acquireWorkspace(resolve(directory));
+    try{
+      path=resolve(path);await privateDirectory(dirname(path));
+      const handle=await open(path,constants.O_RDONLY|(constants.O_NOFOLLOW??0));let raw,stat;
+      try{
+        stat=await handle.stat();
+        need(stat.isFile()&&[1,2].includes(stat.nlink)&&!(stat.mode&0o077)&&stat.size<=maximum,
+          'WFS_VECTOR_STAGED_FILE_INVALID');
+        raw=Buffer.alloc(stat.size);let size=0;
+        while(size<raw.length){const part=await handle.read(raw,size,raw.length-size,null);if(!part.bytesRead)break;size+=part.bytesRead;}
+        const after=await handle.stat();
+        need(size===stat.size&&after.size===stat.size&&after.mtimeMs===stat.mtimeMs&&after.ctimeMs===stat.ctimeMs,
+          'WFS_VECTOR_STAGED_FILE_CHANGED');
+      }finally{await handle.close();}
+      if(stat.nlink===2)await reconcileRetainedFile(path,hash(raw));
+      const retained=await readPrivate(path,maximum);
+      need(retained.equals(raw),'WFS_VECTOR_STAGED_FILE_CHANGED');return retained;
+    }finally{if(release)await release();}
+  }
 }
 async function immutable(path,bytes){
   await durableDirectory(dirname(path));
@@ -105,12 +137,12 @@ function receiptCheck(value,request){
   need(value.manifest.kind===nativeKind,'WFS_VECTOR_MANIFEST_KIND_CHANGED');
   return value;
 }
-async function record(directory,id,projectId){
+async function record(directory,id,projectId,leaseHeld=false){
   operationId(id);
-  const root=join(directory,WFS_VECTOR_ROOT,id), raw=await readOptional(join(root,'request.json'),MAX_ENVELOPE);
+  const root=join(directory,WFS_VECTOR_ROOT,id), raw=await readRetained(directory,join(root,'request.json'),MAX_ENVELOPE,leaseHeld);
   need(raw,'WFS_VECTOR_OPERATION_UNKNOWN','Choose an existing native vector operation.',404);
   const request=requestCheck(JSON.parse(raw),id,projectId);
-  const complete=await readOptional(join(root,'receipt.json'),4*1024*1024);
+  const complete=await readRetained(directory,join(root,'receipt.json'),4*1024*1024,leaseHeld);
   const receipt=complete?receiptCheck(JSON.parse(complete),request):null;
   return {root,request,receipt};
 }
@@ -124,8 +156,8 @@ function summary(value){
     requestSha256:value.request.requestSha256,input,
     state:value.receipt?'COMPLETE':'PENDING',...(value.receipt?{receipt:value.receipt}:{})};
 }
-async function completed(directory,id,projectId,kind){
-  const found=await record(directory,id,projectId);
+async function completed(directory,id,projectId,kind,leaseHeld=false){
+  const found=await record(directory,id,projectId,leaseHeld);
   need(found.receipt&&(!kind||found.request.kind===kind),'WFS_VECTOR_COMPLETED_SELECTION_REQUIRED');
   return found;
 }
@@ -150,7 +182,10 @@ function nativeSummary(result){
     nativeReceived:result.receiving?{schema:result.receiving.schema,nativeFeatures:result.receiving.nativeFeatures,
       allOriginalBindingsMatched:result.receiving.allOriginalBindingsMatched}:null};
 }
-function nativeOptions(options){return {python:options.python,signal:options.signal};}
+function nativeOptions(options){
+  return {python:options.python??process.env.STARFORGE_VECTOR_PYTHON??process.env.SF30_WFS_PYTHON??
+    process.env.CODEX_PRIMARY_RUNTIME_PYTHON??(process.platform==='win32'?'python':'python3'),signal:options.signal};
+}
 async function reopen(found,options={}){
   const m=found.receipt.manifest, native=nativeOptions(options),root=found.root;
   if(m.kind==='capture')return openVectorCapture(join(root,'capture'),{...native,expectedManifestSha256:m.sha256});
@@ -187,13 +222,13 @@ export async function runWfsVector({directory,application,id,kind,input={},...op
         ...(input.sourceId?{sourceId:input.sourceId}:{}),...(input.selectionId?{selectionId:input.selectionId}:{}),
         identityJson:exact(identity)};
     }else if(kind==='export'){
-      capture=await completed(directory,input.captureId,projectId,'capture');
+      capture=await completed(directory,input.captureId,projectId,'capture',true);
       await retainedProfile(capture,input.profileJson);
       intent={captureId:input.captureId,captureManifestSha256:capture.receipt.manifest.sha256,
         profileJson:input.profileJson};
     }else if(kind==='compare'){
-      before=await completed(directory,input.before,projectId,'capture');
-      after=await completed(directory,input.after,projectId,'capture');
+      before=await completed(directory,input.before,projectId,'capture',true);
+      after=await completed(directory,input.after,projectId,'capture',true);
       intent={before:input.before,after:input.after,beforeManifestSha256:before.receipt.manifest.sha256,
         afterManifestSha256:after.receipt.manifest.sha256};
     }else if(kind==='receive'){
@@ -210,11 +245,9 @@ export async function runWfsVector({directory,application,id,kind,input={},...op
     requestCheck(request,id,projectId);
     const root=join(directory,WFS_VECTOR_ROOT,id);
     await durableDirectory(root);
-    const original=await readOptional(join(root,'request.json'),MAX_ENVELOPE);
-    if(original)need(same(JSON.parse(original),request),'WFS_VECTOR_ORIGINAL_REQUEST_CONFLICT',
-      'Continue this operation with its original complete inputs.',409);
-    else await immutable(join(root,'request.json'),json(request));
-    const found=await record(directory,id,projectId);
+    // exactFile reconciles its same committed inode before the strict private read.
+    await immutable(join(root,'request.json'),json(request));
+    const found=await record(directory,id,projectId,true);
     if(found.receipt)return {...summary(found),reused:true};
     try{
       let result,additional={};
@@ -250,7 +283,7 @@ export async function runWfsVector({directory,application,id,kind,input={},...op
       return {...summary({request,receipt}),reused:false};
     }catch(error){
       // A durable successful result remains authoritative if its response was interrupted.
-      const complete=await readOptional(join(root,'receipt.json'),4*1024*1024);
+      const complete=await readRetained(directory,join(root,'receipt.json'),4*1024*1024,true);
       if(complete)return {...summary({request,receipt:receiptCheck(JSON.parse(complete),request)}),reused:true};
       try{await atomicJson(root,'error.json',{code:error.code??error.name,message:String(error.message).slice(0,4096),at:stamp()});}catch{}
       throw error;
@@ -262,7 +295,7 @@ export async function resumeWfsVector({directory,application,id,...options}){
   const input={...found.request.input};
   delete input.captureManifestSha256;delete input.beforeManifestSha256;delete input.afterManifestSha256;
   if(found.request.kind==='receive'){
-    const bytes=await readOptional(join(found.root,'incoming.zip'),found.request.input.archiveBytes);
+    const bytes=await readRetained(directory,join(found.root,'incoming.zip'),found.request.input.archiveBytes);
     need(bytes,'WFS_VECTOR_ORIGINAL_ARCHIVE_REQUIRED',
       'Repeat vector-receive with this original ID and the same archive; its request was saved before the archive copy completed.');
     need(hash(bytes)===input.archiveSha256,'WFS_VECTOR_ORIGINAL_ARCHIVE_CHANGED');
@@ -304,7 +337,7 @@ export async function inspectWfsVector({directory,id,...options}){
 export async function pageWfsVectorChanges({directory,id,...options}){
   const project=await readWfsProject(directory),found=await completed(directory,id,project.id);
   need(found.receipt.manifest.kind==='comparison','WFS_VECTOR_COMPARISON_REQUIRED');
-  const result=await vectorChanges(join(found.root,'output'),{...options,
+  const result=await vectorChanges(join(found.root,'output'),{...options,...nativeOptions(options),
     expectedManifestSha256:found.receipt.manifest.sha256});
   const {native,...view}=result;
   // Exact fractional values remain JSON text through the existing ordinary JSON UI transport.
@@ -313,7 +346,7 @@ export async function pageWfsVectorChanges({directory,id,...options}){
 export async function downloadWfsVector({directory,id,...options}){
   directory=resolve(directory);const release=await acquireWorkspace(directory);
   try{
-    const project=await readWfsProject(directory),found=await completed(directory,id,project.id);
+    const project=await readWfsProject(directory),found=await completed(directory,id,project.id,undefined,true);
     need(['export','comparison'].includes(found.receipt.manifest.kind),'WFS_VECTOR_DELIVERY_REQUIRED');
     const result=await createVectorBundle(join(found.root,'output'),join(found.root,'download.zip'),{
       ...nativeOptions(options),expectedManifestSha256:found.receipt.manifest.sha256});
@@ -342,6 +375,8 @@ export async function downloadWfsVectorDocument({directory,id,document,...option
 export async function wfsVectorFiles(directory){
   const names=[];
   async function visit(path){
+    if(/^native-vectors\/[A-Za-z0-9][A-Za-z0-9_-]{0,95}\/source$/.test(path))
+      await reconcileWfsVectorSourceLinks(join(directory,path));
     let entries;try{entries=await readdir(join(directory,path),{withFileTypes:true});}
     catch(error){if(error.code==='ENOENT')return;throw error;}
     for(const item of entries){
@@ -353,6 +388,8 @@ export async function wfsVectorFiles(directory){
         await privateDirectory(join(directory,name));await visit(name);
       }else{
         need(item.isFile()&&isWfsVectorPath(name),'WFS_VECTOR_UNSELECTED_MEMBER',name);
+        const info=await lstat(join(directory,name));
+        if(info.nlink===2)await readRetained(directory,join(directory,name),MAX_JSON,true);
         names.push(name);
       }
     }
@@ -381,9 +418,18 @@ export function inspectWfsVectorMembers(index,view){
       need(order?.state==='READY','WFS_VECTOR_BUNDLE_ORIGINAL_ORDER_MISSING');
       if(view.has(base+'/source/source-receipt.json')){
         const source=JSON.parse(view.get(base+'/source/source-receipt.json'));
+        const sourceRequest=parseExactJSON(memberAt(view,base+'/source/request.json').toString('utf8'));
         need(source.schema==='starforge.vector-wfs-received-source.v1'&&source.sourceEdition?.projectId===index.id&&
-          same(source.sourceEdition.order,order),'WFS_VECTOR_BUNDLE_ORDER_BINDING_CHANGED');
-        memberAt(view,base+'/source/'+safePath(source.file.path),source.file);
+          same(source.sourceEdition.order,order)&&source.file?.path==='features.geojson'&&
+          Number.isSafeInteger(source.file.bytes)&&source.file.bytes>0&&HASH.test(source.file.sha256??'')&&
+          sourceRequest.requestSha256===source.requestSha256&&HASH.test(source.requestSha256??'')&&
+          hash(exact(sourceRequest.request))===source.requestSha256&&
+          same(sourceRequest.request.binding,source.sourceEdition),'WFS_VECTOR_BUNDLE_ORDER_BINDING_CHANGED');
+        const originalFile=base+'/source/'+source.file.path;
+        if(view.has(originalFile))memberAt(view,originalFile,source.file);
+        else need(!receipt&&!view.has(base+'/capture/capture.json'),
+          'WFS_VECTOR_BUNDLE_COMPLETED_SOURCE_MISSING',
+          'Only an unfinished source copy can continue from the retained original WFS order.');
       }
     }
     if(request.kind==='receive'&&view.has(base+'/incoming.zip'))
@@ -428,14 +474,14 @@ export function wfsVectorMutableReplayPath(path,closure){
   return p.length===3&&p[2]==='error.json'||
     !original.complete&&['capture','output'].includes(p[2])&&p.at(-1)!=='request.json';
 }
-export async function verifyWfsVectors(directory,closure,{python,signal}={}){
+export async function verifyWfsVectors(directory,closure,{python,signal,leaseHeld=false}={}){
   if(!closure?.operations.length)return;
   for(const original of closure.operations){
-    const found=await record(directory,original.id,original.request.projectId);
+    const found=await record(directory,original.id,original.request.projectId,leaseHeld);
     need(same(found.request,original.request),'WFS_VECTOR_RECEIVING_REQUEST_CHANGED');
     if(found.receipt)await reopen(found,{python,signal});
     else for(const manifest of closure.manifests.filter(value=>value.id===original.id)){
-      const root=join(directory,dirname(manifest.path)),opts={python,signal,expectedManifestSha256:manifest.sha256};
+      const root=join(directory,dirname(manifest.path)),opts={...nativeOptions({python,signal}),expectedManifestSha256:manifest.sha256};
       if(manifest.kind==='capture')await openVectorCapture(root,opts);
       else if(manifest.kind==='export')await openVectorExport(root,opts);
       else await openVectorComparison(root,opts);

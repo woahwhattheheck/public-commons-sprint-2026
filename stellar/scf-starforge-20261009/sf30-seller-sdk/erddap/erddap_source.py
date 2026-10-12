@@ -2,7 +2,7 @@
 Destination values are preserved; source scale/offset, masks and units are never reapplied.
 """
 from __future__ import annotations
-import csv, hashlib, importlib.util, io, json, math, re, stat, sys, zipfile
+import csv, datetime, hashlib, importlib.util, io, json, math, re, stat, sys, zipfile
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from urllib.parse import quote, urlsplit, urlunsplit
@@ -255,6 +255,69 @@ def csv_comparison(raw,t):
     return {"status":"equivalent" if not differences else "different","jsonRows":len(t["rows"]),"csvRows":count,
             "numericMissingRepresentations":numeric_missing,"differences":differences}
 
+def validate_response_receipt(record,name,raw,expected_url,server):
+    """Bind complete source bytes to the original request and observed transport."""
+    if not isinstance(record,dict) or type(record.get("bytes"))is not int or record["bytes"]!=len(raw) or record.get("sha256")!=sha(raw) or record.get("url")!=expected_url:
+        raise InputError("Original response identity or request differs: "+name)
+    if "transport" not in record:
+        if record.get("status")!=200:raise InputError("Original HTTP response was not successful: "+name)
+        final=record.get("finalUrl",record["url"])
+        if not isinstance(final,str) or urlsplit(final).scheme not in {"https","http"} or urlsplit(final).netloc!=urlsplit(server).netloc:
+            raise InputError("Source response left the reviewed provider origin")
+        return
+    transport=record["transport"]
+    time_fields={"startedAt","completedAt","observedAt","downloadStartedAt","downloadCompletedAt","downloadObservedAt"}
+    fields={"kind","sourceUrl","upload","download"}|time_fields
+    if not isinstance(transport,dict) or set(transport)!=fields or transport.get("kind")!="notion-public-https-import.v1" or transport.get("sourceUrl")!=expected_url or urlsplit(expected_url).scheme!="https":
+        raise InputError("Unsupported or different original source import: "+name)
+    if any(field in record for field in ("status","headers","finalUrl")):
+        raise InputError("Native URL import does not report upstream HTTP status, headers or redirects: "+name)
+    upload=transport["upload"];download=transport["download"]
+    metadata_fields={"file_upload_id","filename","content_type","content_length"}
+    if not isinstance(upload,dict) or set(upload)!=metadata_fields|{"status"} or upload.get("status")!="uploaded" or not isinstance(download,dict):
+        raise InputError("Retain completed native upload and full download metadata: "+name)
+    binary=download.get("method")=="signed-file"
+    expected_download=metadata_fields|({"method","fileReference","carrierStatus","carrierContentType"}if binary else set())
+    if set(download)!=expected_download or any(upload.get(field)!=download.get(field) for field in metadata_fields):
+        raise InputError("Native download belongs to another uploaded source file: "+name)
+    uuid=r"[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}"
+    if not isinstance(upload["file_upload_id"],str) or not re.fullmatch(uuid,upload["file_upload_id"]):
+        raise InputError("Retain the original native source upload identity: "+name)
+    if type(upload["content_length"])is not int or upload["content_length"]!=len(raw):
+        raise InputError("Native source differs from the original uploaded byte length: "+name)
+    for field in ("filename","content_type"):
+        value=upload[field]
+        if not isinstance(value,str) or not value or len(value)>512 or re.search(r"[\x00-\x1f\x7f]",value):
+            raise InputError("Retain the original native source file metadata: "+name)
+    if binary:
+        ref=download["fileReference"];content_type=download["carrierContentType"]
+        if not isinstance(ref,str) or len(ref)>4096 or re.search(r"[\x00-\x20\x7f]",ref):
+            raise InputError("Retain the stable original Notion file reference: "+name)
+        try:u=urlsplit(ref)
+        except ValueError as e:raise InputError("Invalid stable original Notion file reference: "+name)from e
+        if u.scheme!="notion-file-block" or not re.fullmatch(uuid,u.netloc) or not re.fullmatch("/"+uuid,u.path) or u.fragment or download["carrierStatus"]!=200:
+            raise InputError("Retain the successful original binary file download: "+name)
+        if content_type is not None and (not isinstance(content_type,str) or len(content_type)>512 or re.search(r"[\x00-\x1f\x7f]",content_type)):
+            raise InputError("Invalid binary carrier content type: "+name)
+    else:
+        try:raw.decode("utf-8",errors="strict")
+        except UnicodeError as e:raise InputError("Native text download requires the original complete UTF-8 bytes: "+name)from e
+    try:
+        times={}
+        for key in time_fields:
+            value=transport[key]
+            if value is None:times[key]=None;continue
+            if not isinstance(value,str) or len(value)>64:raise ValueError("Invalid observed time")
+            instant=datetime.datetime.fromisoformat(value.replace("Z","+00:00"))
+            if instant.tzinfo is None or instant.utcoffset() is None:raise ValueError("Observed time requires its original timezone")
+            times[key]=instant
+        for start,end,observed in (("startedAt","completedAt","observedAt"),("downloadStartedAt","downloadCompletedAt","downloadObservedAt")):
+            if times[end] is None and times[observed] is None:raise ValueError("Retain completion or its separately labeled observation time")
+            if times[start] is not None and times[end] is not None and times[end]<times[start]:raise ValueError("Completion precedes the original request")
+        if times["completedAt"] is not None and times["downloadStartedAt"] is not None and times["downloadStartedAt"]<times["completedAt"]:raise ValueError("Download precedes the completed source import")
+    except (ValueError,OverflowError)as e:
+        raise InputError("Retain observed source import/download times; unavailable timestamps remain null: "+name)from e
+
 def read_capture(stream):
     try:
         with zipfile.ZipFile(stream) as z:
@@ -280,11 +343,7 @@ def read_capture(stream):
     expected_urls=urls(server,did,protocol,sel)
     if m.get("query")!=encode_query(sel,protocol):raise InputError("Source query is not the reviewed explicit selection")
     for n,r in m["files"].items():
-        if not isinstance(r,dict) or type(r.get("bytes"))is not int or r["bytes"]!=len(values[n]) or r.get("sha256")!=sha(values[n]) or r.get("status")!=200 or r.get("url")!=expected_urls[n]:
-            raise InputError("Original response identity or request differs: "+n)
-        final=r.get("finalUrl",r["url"])
-        if urlsplit(final).scheme not in {"https","http"} or urlsplit(final).netloc!=urlsplit(server).netloc:
-            raise InputError("Source response left the reviewed provider origin")
+        validate_response_receipt(r,n,values[n],expected_urls[n],server)
     t=table(values["data.json"]);expected=sel["variables"] if protocol=="tabledap" else [a["name"] for a in sel["axes"]]+sel["variables"]
     if t["columnNames"]!=expected:raise InputError("Original data columns differ from the selected variables or grid dimensions")
     return m,meta,t,values
