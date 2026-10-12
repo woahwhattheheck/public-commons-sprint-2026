@@ -131,7 +131,7 @@ def project_snapshot(snapshot):
         group["accounted_base_units"] = str(group["settled_base_units"])
         group["settled_base_units"] = str(group["settled_base_units"])
     return {"schema":"stellar-forge.mcp-expense-statement.v1", "captured_at":snapshot["capturedAt"],
-            "source":{"kind":"mcp_quote", "database_name":"quotes.sqlite", "reservations":len(rows),
+            "source":{"kind":"mcp_quote", "database_name":"quotes.sqlite",
                       "records":len(rows), "record_kind":"quotes", "journal_events":snapshot["transitionCount"],
                       "last_sequence":snapshot["lastSequence"], "projection_sha256":digest(rows),
                       "quote_projection_sha256":snapshot["quoteProjectionSha256"], "quote_bytes":snapshot["quoteBytes"]},
