@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 const sourceDirectory = path.dirname(fileURLToPath(import.meta.url));
 const operations = {
   state: [],
+  runtime: [],
+  logs: ["operation_id"],
   get: ["kind", "id"],
   list: ["kind"],
   events: ["kind", "id"],
@@ -34,16 +36,19 @@ const properties = {
   include_logs: {type: "boolean"}, left_id: {type: "string"}, right_id: {type: "string"},
   edition_id: {type: "string"}, dataset_id: {type: "string"},
   offset: {type: "integer", minimum: 0}, limit: {type: "integer", minimum: 1, maximum: 1000},
+  capture: {type: "integer", minimum: 0},
   after: {type: "integer", minimum: 0}, destination: {type: "string"}, source: {type: "string"},
 };
 const optional = {
   events: ["after", "limit"], import_source: ["filename", "script"],
   save_workflow: ["expected_revision", "actor"], adopt: ["expected_revision", "actor"],
   review: ["actor", "mode"], recover: ["native_run_id"], refresh: ["include_logs"],
-  rows: ["offset", "limit"],
+  rows: ["offset", "limit"], logs: ["capture", "offset", "limit"],
 };
 const descriptions = {
   state: "Open the original Wherobots workspace and its saved workflows, native runs and editions.",
+  runtime: "Read the selected SDK, output engines and original account target without exposing connection secrets.",
+  logs: "Page every entry from a selected original native log capture.",
   get: "Read one exact retained workspace record.",
   list: "Read the complete retained record collection for one kind.",
   events: "Continue the original operation's receiving progress cursor.",

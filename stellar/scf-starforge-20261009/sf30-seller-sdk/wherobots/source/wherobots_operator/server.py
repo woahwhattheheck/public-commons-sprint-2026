@@ -6,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor
 from http import HTTPStatus
 from http.cookies import SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import importlib.metadata
 import json
 import mimetypes
 import os
@@ -233,19 +232,8 @@ def _serve_locked(workspace, host="127.0.0.1", port=0, provider_factory=None, on
             if path == "/api/state":
                 self._send(200, operator.state()); return
             if path == "/api/runtime":
-                profile = {}
-                original_profile = os.environ.get("WHEROBOTS_OPERATOR_PROFILE")
-                if original_profile:
-                    profile = json.loads(Path(original_profile).read_text())
-                try:
-                    sdk = importlib.metadata.version("wherobots-python-sdk")
-                except importlib.metadata.PackageNotFoundError:
-                    sdk = None
-                self._send(200, {"sdk_version": sdk, "organization_id": profile.get("organization_id") or os.environ.get("WHEROBOTS_ORGANIZATION_ID"),
-                    "region": profile.get("region"), "runtimes": profile.get("runtimes", []),
-                    "api_base_url": profile.get("api_base_url") or os.environ.get("WHEROBOTS_API_BASE_URL") or "https://api.cloud.wherobots.com",
-                    "connection_configured": bool(os.environ.get("WHEROBOTS_API_KEY"))})
-                return
+                from .native import runtime_info
+                self._send(200, runtime_info()); return
             if len(parts) == 3 and parts[0] == "api":
                 kind = {"workflows": "workflow", "operations": "operation", "editions": "edition", "tasks": "task"}.get(parts[1])
                 if kind:
@@ -265,22 +253,9 @@ def _serve_locked(workspace, host="127.0.0.1", port=0, provider_factory=None, on
                 self._send(200, edition_rows(workspace, parts[2], query.get("dataset", [""])[0],
                     int(query.get("offset", ["0"])[0]), int(query.get("limit", ["100"])[0]))); return
             if len(parts) == 4 and parts[:2] == ["api", "operations"] and parts[3] == "logs":
-                operation = workspace.get_record("operation", parts[2])
-                captures = operation.get("log_captures", [])
-                capture_index = int(query.get("capture", [str(len(captures) - 1)])[0])
-                if not 0 <= capture_index < len(captures):
-                    self._send(200, {"items": [], "total": 0, "captures": len(captures)}); return
-                offset = max(0, int(query.get("offset", ["0"])[0])); limit = min(1000, max(1, int(query.get("limit", ["100"])[0])))
-                selected = captures[capture_index]
-                rows, cursor = [], 0
-                for ref in selected["pages"]:
-                    page = json.loads(workspace.object_path(ref["sha256"]).read_bytes())
-                    entries = page.get("items", [])
-                    if cursor + len(entries) > offset and len(rows) < limit:
-                        rows.extend(entries[max(0, offset - cursor):max(0, offset - cursor) + limit - len(rows)])
-                    cursor += len(entries)
-                self._send(200, {"items": rows, "total": cursor, "offset": offset, "limit": limit,
-                                 "capture": capture_index, "captures": len(captures), "complete": selected["complete"]}); return
+                capture = int(query["capture"][0]) if "capture" in query else None
+                self._send(200, workflow.captured_logs(workspace, parts[2], capture,
+                    int(query.get("offset", ["0"])[0]), int(query.get("limit", ["100"])[0]))); return
             raise OperationError("ROUTE", "Select a documented operator view.", status=404)
 
         def _post(self):

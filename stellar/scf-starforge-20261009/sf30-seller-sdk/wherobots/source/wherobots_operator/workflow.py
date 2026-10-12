@@ -306,6 +306,50 @@ def refresh(workspace, operation_id, provider, include_logs=False):
         return _save(workspace, operation, **changes)
 
 
+
+def captured_logs(workspace, operation_id, capture=None, offset=0, limit=100):
+    """Page an immutable saved native log capture through every operator surface."""
+    if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 1000:
+        raise OperationError("INVALID_PAGE", "Use a nonnegative offset and a page size between 1 and 1000.")
+    operation = workspace.get_record("operation", operation_id)
+    captures = operation.get("log_captures", [])
+    selected_index = len(captures) - 1 if capture is None else capture
+    if type(selected_index) is not int:
+        raise OperationError("LOG_CAPTURE", "Select an original log capture by its integer index.")
+    summaries = [{"index": index, "captured_at": item.get("captured_at"),
+                  "entries": item.get("entries"), "complete": item.get("complete", False)}
+                 for index, item in enumerate(captures)]
+    if not captures and capture is None:
+        return {"operation_id": operation_id, "native_run_id": operation.get("native_run_id"),
+                "items": [], "total": 0, "offset": offset, "limit": limit, "next_offset": None,
+                "capture": None, "captures": summaries, "complete": False}
+    if not 0 <= selected_index < len(captures):
+        raise OperationError("LOG_CAPTURE", "Select an existing original log capture.", status=404)
+    selected = captures[selected_index]
+    total = selected.get("entries")
+    known_total = type(total) is int and total >= 0
+    rows, cursor = [], 0
+    for ref in selected["pages"]:
+        page = json.loads(workspace.object_path(ref["sha256"]).read_bytes())
+        entries = page.get("items", [])
+        if not isinstance(entries, list):
+            raise OperationError("LOG_PAGE", "The retained native log page has no items array.")
+        start = max(0, offset - cursor)
+        if cursor + len(entries) > offset and len(rows) < limit:
+            rows.extend(entries[start:start + limit - len(rows)])
+        cursor += len(entries)
+        if known_total and len(rows) >= limit:
+            break
+    if not known_total:
+        total = cursor
+    return {"operation_id": operation_id, "native_run_id": operation.get("native_run_id"),
+            "items": rows, "total": total, "offset": offset, "limit": limit,
+            "next_offset": offset + len(rows) if rows and offset + len(rows) < total else None,
+            "capture": selected_index, "captures": summaries,
+            "captured_at": selected.get("captured_at"), "complete": selected.get("complete", False),
+            "error": selected.get("error")}
+
+
 def cancel(workspace, operation_id, provider):
     with workspace.operation_lock(operation_id):
         operation = workspace.get_record("operation", operation_id)

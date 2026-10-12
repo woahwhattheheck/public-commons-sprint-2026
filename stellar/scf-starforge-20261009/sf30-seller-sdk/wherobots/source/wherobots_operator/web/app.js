@@ -8,7 +8,9 @@ if (auth) { sessionStorage.setItem("wherobots_operator_token", auth); history.re
 const token = sessionStorage.getItem("wherobots_operator_token") || "";
 let state = null, runtime = {}, selection = null, selectedRecord = null, draft = null;
 let intake = null, intakeObject = null, intakeFiles = {}, rowOffset = 0, rowDataset = null, lastRows = null;
-let refreshing = false, pendingTasks = new Set(), workflowDirty = false;
+let refreshing = false, pendingTasks = new Set(), workflowDirty = false, navigationSequence = 0;
+let operationDetail = null, logCapture = null, logOffset = 0, lastLogs = null;
+let eventCursor = 0, eventRows = [], eventHasMore = false;
 
 function notice(message, error=false) {
   $("notice").hidden = !message; $("notice").textContent = message;
@@ -83,15 +85,27 @@ async function refreshState() {
   } finally { refreshing = false; }
 }
 async function show(kind, id) {
+  const sameOperation = kind === "operation" && selection?.kind === kind && selection?.id === id;
+  const requested = ++navigationSequence;
   selection = {kind,id}; sessionStorage.setItem("wherobots_selection",JSON.stringify(selection));
-  selectedRecord = await api(({workflow:"workflows",operation:"operations",edition:"editions"})[kind] + "/" + encodeURIComponent(id));
+  const record = await api(({workflow:"workflows",operation:"operations",edition:"editions"})[kind] + "/" + encodeURIComponent(id));
+  if (requested !== navigationSequence) return;
+  selectedRecord = record;
   rowOffset = 0; rowDataset = null;
+  if (!sameOperation) {
+    operationDetail = null; logCapture = null; logOffset = 0; lastLogs = null;
+    eventCursor = 0; eventRows = []; eventHasMore = false;
+  }
   if (kind === "workflow") { draft = structuredClone(selectedRecord.definition); workflowDirty=false; renderWorkflow(); }
-  else if (kind === "operation") renderOperation();
-  else await renderEdition();
+  else if (kind === "operation") {
+    renderOperation();
+    if (operationDetail === "logs") await loadLogs();
+    else if (operationDetail === "events") await loadEvents();
+  } else await renderEdition();
   renderNavigation();
 }
 function newWorkflow() {
+  navigationSequence++;
   selection = {kind:"workflow",id:null}; selectedRecord = null;
   draft = {schema:"starforge.wherobots.workflow.v1",id:"",title:"",
     account:{organization_id:runtime.organization_id || "",region:runtime.region || "",runtime:runtime.runtimes?.[0] || "",version:"latest",api_base_url:runtime.api_base_url || "https://api.cloud.wherobots.com"},
@@ -194,6 +208,39 @@ function renderOperation() {
     '<h3>Received editions</h3>'+((op.output_editions||[]).map((id)=>'<p><button class="link-button" data-select="edition" data-id="'+esc(id)+'">'+esc(id)+'</button></p>').join("") || '<p class="empty">No output edition has been received yet.</p>')+
     '<details><summary>Reviewed source and native response</summary><pre>'+esc(pretty(op))+'</pre></details><div class="toolbar"><button class="secondary" data-action="show-logs">Open captured logs</button><button class="secondary" data-action="show-events">Open receiving progress</button></div><div id="operation-detail"></div>';
 }
+
+async function loadLogs() {
+  const operationId = selectedRecord.id;
+  const query = "?offset=" + logOffset + "&limit=100" + (logCapture === null ? "" : "&capture=" + logCapture);
+  const result = await api("operations/" + encodeURIComponent(operationId) + "/logs" + query);
+  if (selection?.kind !== "operation" || selection.id !== operationId || operationDetail !== "logs") return;
+  lastLogs = result; logCapture = result.capture;
+  const captures = result.captures || [];
+  const position = result.items.length ? (result.offset + 1) + "–" + (result.offset + result.items.length) + " of " + result.total : "0 entries";
+  $("operation-detail").innerHTML = '<h3>Captured native logs</h3>' +
+    (captures.length ? '<label>Capture<select id="log-capture">' + captures.map((capture) =>
+      option(String(capture.index), String(result.capture), (capture.captured_at || "Capture " + (capture.index + 1)) +
+        " · " + (capture.entries ?? "?") + " entries" + (capture.complete ? "" : " · partial"))).join("") + '</select></label>' :
+      '<p class="empty">Refresh the native run with logs to retain its current log stream.</p>') +
+    (result.error ? '<p class="error">' + esc(result.error.message) + '</p>' : '') +
+    '<p class="muted">Original log pages remain available in the complete handover.</p>' +
+    renderTable(result.items) +
+    '<div class="pagination"><button class="secondary" data-action="previous-logs" ' + (logOffset === 0 ? "disabled" : "") +
+      '>Previous</button><span>' + esc(position) + '</span><button class="secondary" data-action="next-logs" ' +
+      (result.next_offset === null ? "disabled" : "") + '>Next</button></div>';
+}
+async function loadEvents() {
+  const operationId = selectedRecord.id;
+  const result = await api("operations/" + encodeURIComponent(operationId) + "/events?after=" + eventCursor + "&limit=100");
+  if (selection?.kind !== "operation" || selection.id !== operationId || operationDetail !== "events") return;
+  const seen = new Set(eventRows.map((row) => row.seq));
+  eventRows.push(...result.items.filter((row) => !seen.has(row.seq)));
+  eventCursor = result.next_cursor; eventHasMore = result.has_more;
+  $("operation-detail").innerHTML = '<h3>Receiving progress</h3><p class="muted">' + eventRows.length +
+    ' retained events loaded.</p>' + renderTable(eventRows, ["seq", "recorded_at", "event"]) +
+    '<button class="secondary" data-action="more-events">' + (eventHasMore ? "Load next events" : "Refresh progress") + '</button>';
+}
+
 async function renderEdition() {
   const edition=selectedRecord, datasets=edition.datasets || [];
   rowDataset=rowDataset || datasets[0]?.dataset_id;
@@ -272,11 +319,15 @@ document.addEventListener("click",async(event)=>{
     else if(action==="next-rows" && lastRows?.next_offset!==null) {rowOffset=lastRows.next_offset;await loadRows();}
     else if(action==="close-intake") $("intake-dialog").close();
     else if(action==="show-logs") {
-      const result=await api("operations/"+encodeURIComponent(selectedRecord.id)+"/logs?offset=0&limit=100");
-      $("operation-detail").innerHTML='<h3>Captured native logs</h3><p class="muted">'+result.total+' entries in this capture. Original page objects are included in the handover.</p>'+renderTable(result.items);
+      operationDetail="logs"; logCapture=null; logOffset=0; await loadLogs();
+    } else if(action==="previous-logs") {
+      logOffset=Math.max(0,logOffset-100); await loadLogs();
+    } else if(action==="next-logs" && lastLogs?.next_offset!==null) {
+      logOffset=lastLogs.next_offset; await loadLogs();
     } else if(action==="show-events") {
-      const result=await api("operations/"+encodeURIComponent(selectedRecord.id)+"/events?after=0&limit=1000");
-      $("operation-detail").innerHTML='<h3>Receiving progress</h3><pre>'+esc(pretty(result))+'</pre>';
+      operationDetail="events"; eventCursor=0; eventRows=[]; await loadEvents();
+    } else if(action==="more-events") {
+      await loadEvents();
     }
   } catch(error){displayError(error);}
 });
@@ -328,6 +379,8 @@ document.addEventListener("change",async(event)=>{
       draft.job.script={filename:file.name,object:source.object};workflowDirty=true;renderWorkflow();notice("Original script retained. Save the workflow to include it.");
     } else if(event.target.id==="dataset-select") {
       rowDataset=event.target.value;rowOffset=0;await loadRows();
+    } else if(event.target.id==="log-capture") {
+      logCapture=Number(event.target.value); logOffset=0; await loadLogs();
     } else if(event.target.id==="intake-document") {
       const file=event.target.files[0];if(!file)return;
       if(file.size>1048576)throw new Error("Select an original workflow document within 1 MiB.");
