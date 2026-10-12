@@ -144,10 +144,38 @@ export function commissioningHistory(workspace,{after='',limit=20}={}){
     if(!row)throw issue('REDIS_COMMISSIONING_PAGE_INVALID','Select a retained history cursor.');
     position=row.position;
   }
-  const rows=workspace.db.prepare("SELECT value FROM operations WHERE rowid<? AND json_extract(value,'$.kind') IN (?,?,?) ORDER BY rowid DESC LIMIT ?")
-    .all(position,...KINDS,limit+1).map(row=>JSON.parse(row.value)),more=rows.length>limit;
+  // Project only summaries in SQLite. Large expected matrices and complete
+  // receiving page records remain in the original operation until selected.
+  const rows=workspace.db.prepare(`
+    SELECT id,json_extract(value,'$.kind') AS kind,json_extract(value,'$.status') AS status,
+      json_extract(value,'$.createdAt') AS createdAt,json_extract(value,'$.finishedAt') AS finishedAt,
+      coalesce(json_extract(value,'$.input.revisionId'),json_extract(value,'$.result.revisionId')) AS revisionId,
+      json_extract(value,'$.input.contractId') AS contractId,json_extract(value,'$.input.runId') AS runId,
+      coalesce(json_extract(value,'$.input.note'),'') AS note,json_extract(value,'$.result.status') AS outcome,
+      json_extract(value,'$.error') AS error_json,json_extract(value,'$.progress') AS progress_json,
+      json_extract(value,'$.attempts') AS attempts,json_extract(value,'$.result.file') AS file_json,
+      json_extract(value,'$.input.input.operationId') AS operationId,
+      json_array_length(value,'$.input.input.checks') AS contractChecks,
+      CASE WHEN json_extract(value,'$.kind')=? THEN (
+        SELECT json_group_array(json_object('id',json_extract(item.value,'$.id'),
+          'query',json_extract(item.value,'$.query'),'passed',json_extract(item.value,'$.passed'),
+          'rowCount',json_extract(item.value,'$.rowCount'),'pageCount',json_array_length(item.value,'$.pages'),
+          'mismatches',json_extract(item.value,'$.mismatches')))
+        FROM json_each(operations.value,'$.result.checks') AS item
+      ) END AS checks_json
+    FROM operations WHERE rowid<? AND json_extract(value,'$.kind') IN (?,?,?) ORDER BY rowid DESC LIMIT ?
+  `).all(COMMISSION_RECEIVE_KIND,position,...KINDS,limit+1),more=rows.length>limit;
   if(more)rows.pop();
-  return {items:rows.map(commissioningSummary),nextCursor:more?rows.at(-1).id:null};
+  const items=rows.map(row=>({
+    id:row.id,kind:row.kind,status:row.status,createdAt:row.createdAt,finishedAt:row.finishedAt,
+    revisionId:row.revisionId,contractId:row.contractId,runId:row.runId,note:row.note,outcome:row.outcome,
+    error:row.error_json?JSON.parse(row.error_json):null,progress:row.progress_json?JSON.parse(row.progress_json):null,
+    attempts:row.attempts,resumable:row.status==='INTERRUPTED',
+    ...(row.kind===COMMISSION_CONTRACT_KIND?{operationId:row.operationId,checks:row.contractChecks}:{}),
+    ...(row.kind===COMMISSION_RECEIVE_KIND?{checks:(row.checks_json?JSON.parse(row.checks_json):[]).map(check=>({...check,passed:check.passed===1}))}:{}),
+    ...(row.kind===COMMISSION_HANDOVER_KIND&&row.file_json?{file:JSON.parse(row.file_json)}:{}),
+  }));
+  return {items,nextCursor:more?items.at(-1).id:null};
 }
 export function commissioningRows(workspace,{runId,checkId,cursor='',limit=50}={}){
   if(!Number.isInteger(limit)||limit<1||limit>100||typeof cursor!=='string'||cursor&&!/^(0|[1-9][0-9]*):(0|[1-9][0-9]*)$/.test(cursor))
@@ -157,9 +185,9 @@ export function commissioningRows(workspace,{runId,checkId,cursor='',limit=50}={
   const check=original?{...original,maxPages:original.maxPages??100,maxRows:original.maxRows??10000}:null;
   if(!check)throw issue('REDIS_COMMISSIONING_CHECK_INVALID','Select a check in this saved contract.',404);
   let [page,offset]=cursor?cursor.split(':').map(Number):[0,0];
-  if(!Number.isSafeInteger(page)||!Number.isSafeInteger(offset)||page>=check.maxPages||offset>check.maxRows)
+  if(!Number.isSafeInteger(page)||!Number.isSafeInteger(offset)||page>=check.maxPages||offset>100000)
     throw issue('REDIS_COMMISSIONING_PAGE_INVALID','The result cursor is outside this receiving contract.');
-  const rows=[],pages=[];let columns=null,nextCursor=null,complete=false,sourceIncomplete=null;
+  const rows=[],pages=[];let columns=null,nextCursor=null,complete=false,sourceIncomplete=null,receivingLimit=null;
   const observed=run.result?.checks?.find(value=>value.id===checkId);
   for(let visited=0;visited<20&&rows.length<limit;visited++){
     const requestId=redisCommissioningRequestId(input,'preview-'+check.id+'-'+page,run.id);
@@ -190,9 +218,14 @@ export function commissioningRows(workspace,{runId,checkId,cursor='',limit=50}={
       break;
     }
     page++;offset=0;nextCursor=page+':0';
-    if(page>=check.maxPages){complete=false;break;}
+    if(page>=check.maxPages){
+      complete=false;nextCursor=null;receivingLimit={code:'REDIS_COMMISSIONING_RECEIVING_LIMIT',requestId,
+        reason:'PAGE_LIMIT',maxPages:check.maxPages};break;
+    }
   }
-  return {runId,checkId,columns,rows,pages,nextCursor,complete,sourceIncomplete,waiting:false,expected:check.expected,
+  if(run.status==='FAILED'&&run.error?.code==='REDIS_COMMISSIONING_RECEIVING_LIMIT'&&!receivingLimit)
+    receivingLimit={code:run.error.code,requestId:run.error.operationId??null,message:run.error.message};
+  return {runId,checkId,columns,rows,pages,nextCursor,complete,sourceIncomplete,receivingLimit,waiting:false,expected:check.expected,
     outcome:observed?{passed:observed.passed,mismatches:observed.mismatches,rowCount:observed.rowCount,rowsSha256:observed.rowsSha256}:null};
 }
 export async function captureCommissioningHandover(workspace,input){
