@@ -12,7 +12,8 @@ import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { compileSellerOpenApi } from '../sf30-seller-sdk/developer-portal.mjs';
 import { CLIENT_EXPORT_FILES, CLIENT_EXPORT_MANIFEST, inspectSellerClientExport } from '../sf30-seller-sdk/developer/client-export.mjs';
 
-export const OPENSEARCH_SOURCE_SCHEMA = 'stellar-forge.opensearch-seller-release-manifest.v1';
+import { OPENSEARCH_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { OPENSEARCH_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'opensearch/package';
 const MiB = 1024 * 1024;
 const FILES = ['source.json', 'merchant-plan.json', 'service.json', 'bindings.json', 'openapi.json',

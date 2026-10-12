@@ -9,7 +9,8 @@ import { verifyPreparedMysqlSeller, compileMysqlMerchantPlan } from '../sf30-sel
 import { readMysqlSourceFile } from '../sf30-seller-sdk/mysql/config.mjs';
 import { startMysqlSeller, createMysqlNativeFactory } from '../sf30-seller-sdk/mysql/merchant.mjs';
 
-export const MYSQL_SOURCE_SCHEMA = 'stellar-forge.mysql-seller-release-manifest.v1';
+import { MYSQL_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { MYSQL_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 const PACKAGE = 'mysql/package';
 const MiB = 1024 * 1024;
 const hash = value => createHash('sha256').update(value).digest('hex');
