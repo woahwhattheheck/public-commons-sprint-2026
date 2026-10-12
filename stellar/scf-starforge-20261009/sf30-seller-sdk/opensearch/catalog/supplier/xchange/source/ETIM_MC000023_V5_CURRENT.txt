@@ -1,0 +1,108 @@
+MC000023 - Base conduit (https://viewer.etim-international.com/class/MC000023?lang=en-GB)
+【turn130view0】 [wordlim: 200] Crawled: today; Content type: text/html; Source: open({"ref_id":"https://viewer.etim-international.com/class/MC000023?lang=en-GB","lineno":null}); Total lines: 105
+L0: 【0†Image: ETIM English】
+L1:   * 【0†Image: EN】 ETIM English
+L2:   * 【1†Image: da-DK】 Danish
+L3:   * 【2†Image: de-CH】 German (CH)
+L4:   * 【3†Image: de-DE】 German (DE)
+L5:   * 【4†Image: en-GB】 English (UK)
+L6:   * 【5†Image: en-US】 English (US)
+L7:   * 【6†Image: es-ES】 Spanish
+L8:   * 【7†Image: fi-FI】 Finnish
+L9:   * 【8†Image: fr-BE】 French (BE)
+L10:   * 【2†Image: fr-CH】 French (CH)
+L11:   * 【9†Image: fr-FR】 French (FR)
+L12:   * 【2†Image: it-CH】 Italian (CH)
+L13:   * 【10†Image: it-IT】 Italian (IT)
+L14:   * 【11†Image: nb-NO】 Norwegian
+L15:   * 【8†Image: nl-BE】 Dutch (BE)
+L16:   * 【12†Image: nl-NL】 Dutch (NL)
+L17:   * 【13†Image: pl-PL】 Polish
+L18:   * 【14†Image: pt-PT】 Portuguese
+L19:   * 【15†Image: sl-SI】 Slovenian
+L20:   * 【16†Image: sv-SE】 Swedish
+L21:   * 【17†Image: uk-UA】 Ukrainian
+L22: Base conduit MC000023 · v5
+L23: 
+L24: Share Link copied
+L25: # Base conduit MC000023
+L26: 
+L27: Cylindrical channel used to protect, route, or convey cables, fluids, or gases in various installations.
+L28: 
+L29: Ready for publication
+L30: 
+L31: v5 of 5
+L32: 
+L33:   * 【18†v5 · Dynamic】
+L34: 
+L35: MG000032
+L36: 
+L37: [Input: Filter features or values]
+L38: 
+L39: [Button: Metric] [Button: Imperial]
+L40: 
+L41: ## Features 0
+L42: 
+L43: ### Port 1
+L44: 
+L45: Connection types:【19†CT000001】【20†CT000017】
+L46: ### Port 2
+L47: 
+L48: Connection types:【19†CT000001】
+L49: 
+L50: This class has no features.
+L51: 
+L52: Codes after each name are ETIM feature codes. Use them, not the names, in product data.
+L53: 
+L54: Image
+L55: 
+L56: 【21†Image: Example of Base conduit†cdn.etim-international.com】
+L57: 
+L58: [Button: ❮] [Button: ❯]
+L59: 
+L60: 1 / 3
+L61: 
+L62: Dimensional drawing
+L63: 
+L64: 【22†Image: Dimensional drawing of Base conduit†cdn.etim-international.com】
+L65: 
+L66: Letters point to the feature in the list. Select the drawing to enlarge.
+L67: 
+L68: Also known as
+L69: Aluminium pipe Base conduit Copper pipe Cunifer pipe Plastic pipe, smooth Stainless steel pipe Steel pipe Thin-walled steel pipe
+L70: 
+L71: About this class
+L72: 
+L73: Group
+L74:     MG000032
+L75: In releases
+L76:     Dynamic
+L77: Product classes
+L78:     【23†EC001173】【24†EC001174】【25†EC010032】【26†EC010225】【27†EC010882】【28†EC010950】【29†EC011303】【30†EC011386】【31†EC011441】【32†EC011533】【33†EC011756】
+L79: 
+L80: [Button: close]
+L81: ## Find an ETIM class
+L82: 
+L83: Find an ETIM class
+L84: 
+L85: Jump straight to a product or modelling class in the selected release.
+L86: 
+L87: Product EC Modelling MC
+L88: 
+L89: [Select]
+L90: 
+L91: Search ETIM classes [Input: Code, description or synonym]
+L92: 
+L93: Type an ETIM code, or words from a description or synonym.
+L94: 
+L95: Search the class index
+L96: 
+L97: Start with an ETIM code for the fastest match, or use words from a description or synonym.
+L98: 
+L99: Search by code, description or synonym
+L100: 
+L101: 【34†About ETIM Viewer】Version: 2.7.1
+L102: 【35†Licensing†www.etim-international.com】 【36†Privacy policy†www.etim-international.com】 【37†Cookie policy†www.etim-international.com】
+L103: 
+L104: © 2026 - ETIM International
+

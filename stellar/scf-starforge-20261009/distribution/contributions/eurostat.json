@@ -1,0 +1,32 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "eurostat",
+  "description": "Eurostat economic editions and original merchant/customer workspace",
+  "commands": {
+    "eurostat": "stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/cli.mjs"
+  },
+  "commandDescriptions": {
+    "eurostat": "Acquire and review Eurostat JSON-stat sources, publish retained economic editions and receive original buyer deliveries"
+  },
+  "exports": {
+    "./seller/eurostat": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/source.mjs",
+    "./seller/eurostat/model": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/model.mjs",
+    "./seller/eurostat/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/workspace.mjs",
+    "./seller/eurostat/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/publisher.mjs",
+    "./seller/eurostat/client": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/client.d.ts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/client.mjs"
+    },
+    "./seller/eurostat/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/release.mjs",
+    "./seller/eurostat/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/receiving.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/eurostat/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "eurostat": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/eurostat.mjs"
+  }
+}

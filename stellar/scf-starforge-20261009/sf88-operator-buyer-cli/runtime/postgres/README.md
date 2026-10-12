@@ -17,6 +17,7 @@ application views are shared by both runtimes.
 | native_postgres.py | Restore the original pinned native PostgreSQL package and Psycopg wheels, start a private server, run commands, restart and clean up its owned processes. |
 | streaming_pglite.py | Own the pinned PGlite package, Psycopg wheels, local socket and the responsive client broker. |
 | pglite_stream_worker.mjs | Run the actual PGlite PostgreSQL engine in a separate process with blocking native wire callbacks. |
+| ../../python/stellar_forge_buyer/processes.py | Supervise receiving commands and close their owned descendants after exit, timeout or caller interruption. |
 
 Both Python launchers use Linux x86-64 and Python 3.12 because their binary
 Psycopg wheel is pinned to that ABI. The PGlite worker additionally needs the
@@ -144,6 +145,33 @@ filesystem close and native closed flag have completed. The pinned engine may
 exit Node from Emscripten; a synchronous exit handler records that same completed
 close with native exit status zero. The broker requires that close record and a
 zero process exit before restarting the retained data directory.
+
+## Receiving command lifetime
+
+Put the buyer's python directory on the launcher's Python import path when
+using StreamingPGlite.run. The command runner uses the standard-library
+stellar_forge_buyer.processes module on Linux with child adoption and pidfds.
+
+Each run owns a separate supervisor and one command. The supervisor preserves
+the command's stdout, stderr and actual exit status. It retains the original
+process-group leader until cleanup finishes, adopts detached descendants such
+as Chromium, and uses process descriptors to signal those children across PID
+namespaces. A command timeout first requests termination, then removes and reaps
+surviving owned descendants. The caller's lifetime pipe also starts cleanup if
+the caller exits abruptly. Cleanup completes before run returns or raises
+TimeoutExpired. completed.owned_processes records that result.
+
+The original command may spend up to ten additional seconds in ordinary
+termination cleanup. A kernel task waiting for uninterruptible I/O can take
+longer to exit; its supervisor retains ownership until the task exits.
+This supervision is for commands with the lifetime of the receiving operation.
+Keep independently operated services outside that command's process tree.
+
+The semantic receiving example uses the same runner for its browser and CLI,
+saves the original command logs on timeout, removes its temporary private
+browser configuration, and leaves retained receiving checkpoints available for
+the same command to resume. Its browser closes explicitly on termination and
+publishes its final state only after that close.
 
 ## Run a complete original delivery and reopen it
 

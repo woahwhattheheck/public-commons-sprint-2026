@@ -35,7 +35,95 @@ function safeUrl(url){try{return new URL(url).pathname;}catch{return '<unparsed>
 function checkpoint(){write(resultPath,result);write(privatePath,saved);}
 async function preserveContext(){
   if(context){
-    if(page&&!page.isClosed())await page.evaluate
+    if(page&&!page.isClosed())await page.evaluate(async()=>{
+      if(typeof persistHandoffDrafts==='function')await persistHandoffDrafts();
+    });
+    saved.storageState=await context.storageState({indexedDB:true});write(privatePath,saved);
+  }
+}
+function attach(p){
+  p.on('pageerror',error=>{result.errors.push({phase:currentPhase,type:'page',message:String(error.message).slice(0,1000)});});
+  p.on('requestfailed',request=>{requestErrors.push({path:safeUrl(request.url()),error:request.failure()&&request.failure().errorText});requestErrors=requestErrors.slice(-20);});
+}
+async function phase(name,action){
+  if(result.completed.includes(name))return;
+  currentPhase=name;result.status='RUNNING';result.currentPhase=name;delete result.failure;checkpoint();
+  await action();await preserveContext();result.completed.push(name);result.phaseSources[name]=result.currentSourceRevision;delete result.currentPhase;checkpoint();
+  process.stdout.write(JSON.stringify({phase:name,complete:true})+'\n');
+}
+async function readyButton(selector){
+  const loc=page.locator(selector).first();await loc.waitFor({state:'visible',timeout:120000});
+  await page.waitForFunction(s=>{const e=document.querySelector(s);return e&&!e.disabled;},selector,{timeout:120000});
+  return loc;
+}
+async function click(selector){await(await readyButton(selector)).click();}
+async function nav(view){await click('[data-view="'+view+'"]');}
+async function selectedSource(id){
+  await page.waitForFunction(value=>{
+    const row=document.querySelector('[data-action="select-source"][data-id="'+value+'"]');
+    const action=document.querySelector('[data-action="default-mapping"]');
+    return row&&row.getAttribute('aria-current')==='true'&&action&&!action.disabled;
+  },id,{timeout:120000});
+}
+async function selectedBuild(id){
+  await page.waitForFunction(value=>{
+    const row=document.querySelector('[data-action="select-build"][data-id="'+value+'"]');
+    const action=document.querySelector('[data-action="native-query"]');
+    return row&&row.getAttribute('aria-current')==='true'&&action&&!action.disabled&&document.querySelector('#native-result');
+  },id,{timeout:120000});
+}
+async function proposeMapping(id){
+  await response('/api/sources/'+id+'/mapping','POST',()=>click('[data-action="default-mapping"]'));
+  await page.waitForFunction(()=>{
+    const dialog=document.querySelector('#review-dialog'),button=document.querySelector('[data-action="default-mapping"]');
+    return dialog.open||(document.querySelector('#mapping-name')&&button&&!button.disabled);
+  },null,{timeout:120000});
+  if(await page.locator('#review-dialog').isVisible())await click('[data-action="confirm-review"]');
+  await readyButton('[data-action="review-mapping"]');
+}
+async function response(route,method,action){
+  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000});
+  await action();const r=await pending;const body=await r.json();
+  if(!r.ok())throw new Error(route+' returned '+r.status()+': '+String(body.error||JSON.stringify(body)).slice(0,1500));
+  return body;
+}
+async function open(url){
+  await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
+  await page.locator('#workspace-name').waitFor({state:'visible'});
+  await page.waitForFunction(()=>document.querySelector('#status').textContent==='Saved workspace opened.'||
+    !document.querySelector('#error').hidden,{timeout:120000});
+  const error=page.locator('#error');
+  if(await error.isVisible())throw new Error(await error.innerText());
+}
+async function currentState(url){
+  const u=new URL(url),token=u.hash.slice(1);u.hash='';
+  const response=await context.request.get(new URL('/api/state',u).href,{headers:{Authorization:'Bearer '+token}});
+  if(!response.ok())throw new Error('Original state read returned '+response.status());
+  return response.json();
+}
+async function queryFirst(limit=1){
+  await page.locator('#native-query').fill('limit='+limit);
+  return response('/api/builds/'+result.currentBuild+'/query','GET',()=>click('[data-action="native-query"]'));
+}
+async function receiveDownload(action,name){
+  const dest=path.join(out,name);
+  const old=result.exports.find(x=>x.file===name);
+  if(fs.existsSync(dest)&&old){
+    if(old.sha256!==digest(dest)||old.bytes!==fs.statSync(dest).size)throw new Error('A completed original export changed: '+name);
+    return old;
+  }
+  const pending=page.waitForEvent('download',{timeout:180000});
+  await click('[data-action="'+action+'"]');
+  const d=await pending,temporary=dest+'.download-'+crypto.randomUUID();await d.saveAs(temporary);
+  const item={file:name,bytes:fs.statSync(temporary).size,sha256:digest(temporary)};
+  if(fs.existsSync(dest)){
+    if(digest(dest)!==item.sha256||fs.statSync(dest).size!==item.bytes)throw new Error('Unrecorded export conflicts with the same original response; both files remain retained: '+name);
+    fs.unlinkSync(temporary);
+  }else fs.renameSync(temporary,dest);
+  if(old&&(old.sha256!==item.sha256||old.bytes!==item.bytes))throw new Error('Reopened export differs from its retained identity: '+name);
+  if(!old)result.exports.push(item);checkpoint();return item;
+}
+
 function canonical(value){
   if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
   if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
@@ -79,7 +167,7 @@ async function handoffSelectedRevision(id){
 }
 async function handoffRead(route,url=ready.original.url){
   const target=new URL(url),token=target.hash.slice(1);
-  const response=await context.request.get(new URL('/api/handoffs/'+route,target).href,{headers:{Authorization:'Bearer '+token}});
+  const response=await context.request.get(new URL('/api/handoffs'+(route?'/'+route:''),target).href,{headers:{Authorization:'Bearer '+token}});
   if(!response.ok())throw new Error('Original provider handoff read returned '+response.status()+': '+route);
   return response.json();
 }
@@ -323,94 +411,6 @@ async function providerReceiveBrowser(){
   });
 }
 
-(async()=>{
-      if(typeof persistHandoffDrafts==='function')await persistHandoffDrafts();
-    });
-    saved.storageState=await context.storageState({indexedDB:true});write(privatePath,saved);
-  }
-}
-function attach(p){
-  p.on('pageerror',error=>{result.errors.push({phase:currentPhase,type:'page',message:String(error.message).slice(0,1000)});});
-  p.on('requestfailed',request=>{requestErrors.push({path:safeUrl(request.url()),error:request.failure()&&request.failure().errorText});requestErrors=requestErrors.slice(-20);});
-}
-async function phase(name,action){
-  if(result.completed.includes(name))return;
-  currentPhase=name;result.status='RUNNING';result.currentPhase=name;delete result.failure;checkpoint();
-  await action();await preserveContext();result.completed.push(name);result.phaseSources[name]=result.currentSourceRevision;delete result.currentPhase;checkpoint();
-  process.stdout.write(JSON.stringify({phase:name,complete:true})+'\n');
-}
-async function readyButton(selector){
-  const loc=page.locator(selector).first();await loc.waitFor({state:'visible',timeout:120000});
-  await page.waitForFunction(s=>{const e=document.querySelector(s);return e&&!e.disabled;},selector,{timeout:120000});
-  return loc;
-}
-async function click(selector){await(await readyButton(selector)).click();}
-async function nav(view){await click('[data-view="'+view+'"]');}
-async function selectedSource(id){
-  await page.waitForFunction(value=>{
-    const row=document.querySelector('[data-action="select-source"][data-id="'+value+'"]');
-    const action=document.querySelector('[data-action="default-mapping"]');
-    return row&&row.getAttribute('aria-current')==='true'&&action&&!action.disabled;
-  },id,{timeout:120000});
-}
-async function selectedBuild(id){
-  await page.waitForFunction(value=>{
-    const row=document.querySelector('[data-action="select-build"][data-id="'+value+'"]');
-    const action=document.querySelector('[data-action="native-query"]');
-    return row&&row.getAttribute('aria-current')==='true'&&action&&!action.disabled&&document.querySelector('#native-result');
-  },id,{timeout:120000});
-}
-async function proposeMapping(id){
-  await response('/api/sources/'+id+'/mapping','POST',()=>click('[data-action="default-mapping"]'));
-  await page.waitForFunction(()=>{
-    const dialog=document.querySelector('#review-dialog'),button=document.querySelector('[data-action="default-mapping"]');
-    return dialog.open||(document.querySelector('#mapping-name')&&button&&!button.disabled);
-  },null,{timeout:120000});
-  if(await page.locator('#review-dialog').isVisible())await click('[data-action="confirm-review"]');
-  await readyButton('[data-action="review-mapping"]');
-}
-async function response(route,method,action){
-  const pending=page.waitForResponse(r=>new URL(r.url()).pathname===route&&r.request().method()===method,{timeout:180000});
-  await action();const r=await pending;const body=await r.json();
-  if(!r.ok())throw new Error(route+' returned '+r.status()+': '+String(body.error||JSON.stringify(body)).slice(0,1500));
-  return body;
-}
-async function open(url){
-  await page.goto(url,{waitUntil:'domcontentloaded',timeout:60000});
-  await page.locator('#workspace-name').waitFor({state:'visible'});
-  await page.waitForFunction(()=>document.querySelector('#status').textContent==='Saved workspace opened.'||
-    !document.querySelector('#error').hidden,{timeout:120000});
-  const error=page.locator('#error');
-  if(await error.isVisible())throw new Error(await error.innerText());
-}
-async function currentState(url){
-  const u=new URL(url),token=u.hash.slice(1);u.hash='';
-  const response=await context.request.get(new URL('/api/state',u).href,{headers:{Authorization:'Bearer '+token}});
-  if(!response.ok())throw new Error('Original state read returned '+response.status());
-  return response.json();
-}
-async function queryFirst(limit=1){
-  await page.locator('#native-query').fill('limit='+limit);
-  return response('/api/builds/'+result.currentBuild+'/query','GET',()=>click('[data-action="native-query"]'));
-}
-async function receiveDownload(action,name){
-  const dest=path.join(out,name);
-  const old=result.exports.find(x=>x.file===name);
-  if(fs.existsSync(dest)&&old){
-    if(old.sha256!==digest(dest)||old.bytes!==fs.statSync(dest).size)throw new Error('A completed original export changed: '+name);
-    return old;
-  }
-  const pending=page.waitForEvent('download',{timeout:180000});
-  await click('[data-action="'+action+'"]');
-  const d=await pending,temporary=dest+'.download-'+crypto.randomUUID();await d.saveAs(temporary);
-  const item={file:name,bytes:fs.statSync(temporary).size,sha256:digest(temporary)};
-  if(fs.existsSync(dest)){
-    if(digest(dest)!==item.sha256||fs.statSync(dest).size!==item.bytes)throw new Error('Unrecorded export conflicts with the same original response; both files remain retained: '+name);
-    fs.unlinkSync(temporary);
-  }else fs.renameSync(temporary,dest);
-  if(old&&(old.sha256!==item.sha256||old.bytes!==item.bytes))throw new Error('Reopened export differs from its retained identity: '+name);
-  if(!old)result.exports.push(item);checkpoint();return item;
-}
 (async()=>{
   try{
     fs.mkdirSync(out,{recursive:true,mode:0o700});

@@ -1,0 +1,19 @@
+{
+  "schema": "starforge.lab-edd-receiving-config.v1",
+  "operationId": "LAB-EDD-DTS8D-RECEIVING-01",
+  "merchantFile": "./merchant.example.json",
+  "families": [
+    {
+      "name": "dts8d",
+      "profile": "geotech-dts8d",
+      "sourceFile": "/absolute/original-inputs/delivery.xlsx",
+      "tableScope": "issues"
+    }
+  ],
+  "browser": {
+    "playwrightModule": "/absolute/installed/playwright",
+    "executablePath": "/absolute/installed/chromium",
+    "args": [],
+    "tempDirectory": "/absolute/private-browser-temp"
+  }
+}

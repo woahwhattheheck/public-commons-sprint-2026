@@ -9,6 +9,7 @@ import { plain, hex, envName } from '../../sf30-seller-sdk/oauth-connections/pro
 import { quickbooksSource, quickBooksSelectionSummary } from '../../sf30-seller-sdk/oauth-connections/quickbooks.mjs';
 import { xeroSource, xeroSelectionSummary } from '../../sf30-seller-sdk/oauth-connections/xero.mjs';
 import { readAccountingSelections, openAccountingConnections } from './connections-workspace.mjs';
+import { inspectAccountingWorkspaceBinding } from './binding.mjs';
 
 export const ACCOUNTING_MANAGED_SCHEMA = 'stellar-forge.managed-accounting-binding.v1';
 export const ACCOUNTING_STARTUP_SCHEMA = 'stellar-forge.managed-accounting-startup.v1';
@@ -43,7 +44,7 @@ function settings(raw) {
     'Keep saved company selections separate from the original accounting state.');
   return value;
 }
-async function sourceInput(path, type) {
+async function sourceInput(path, type, maximumBytes = 16 * 1024 * 1024) {
   const before = await lstat(path);
   need(!before.isSymbolicLink() && (type === 'file' ? before.isFile() : before.isDirectory()) &&
     await realpath(path) === path, 'ACCOUNTING_MANAGED_INPUT_CHANGED', 'Use the original source file or directory.');
@@ -52,7 +53,7 @@ async function sourceInput(path, type) {
     const handle = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
     try {
       const first = await handle.stat();
-      need(first.isFile() && first.size <= 16 * 1024 * 1024 && first.dev === before.dev &&
+      need(first.isFile() && first.size <= maximumBytes && first.dev === before.dev &&
         first.ino === before.ino, 'ACCOUNTING_MANAGED_INPUT_CHANGED', 'The selected accounting input changed.');
       const bytes = await handle.readFile(), after = await handle.stat();
       need(bytes.length === first.size && after.size === first.size &&
@@ -87,7 +88,25 @@ export async function inspectAccountingLaunch(raw, { env = process.env, allowMis
       'ACCOUNTING_MANAGED_SELECTION_CHANGED', 'The saved company or tenant must belong to this registered source and alias.');
     }
   }
+  let workspaceBinding = null;
+  if (oauth.binding.output.exists) {
+    let original;
+    try { original = await inspectAccountingWorkspaceBinding(selected.directory); }
+    catch (error) { if (error.code !== 'ENOENT') throw error; }
+    if (original?.sources.sourceMode === 'buyer') {
+      need(['outboxDir', 'proofDir', 'termsFile', 'recoveredDir'].every(name => !selected[name]),
+        'ACCOUNTING_SOURCE_AMBIGUOUS', 'This original buyer workspace already retains its issued source. Review it without merchant source paths.', 400);
+      workspaceBinding = original;
+    }
+  }
   const inputs = [];
+  if (workspaceBinding) {
+    const expected = workspaceBinding.sources;
+    const original = await sourceInput(expected.buyerSourceFile, 'file', 64 * 1024 * 1024);
+    need(original.sha256 === expected.buyerSourceSha256 && original.bytes === expected.buyerSourceBytes,
+      'ACCOUNTING_MANAGED_INPUT_CHANGED', 'The retained issued buyer source differs from this original workspace.');
+    inputs.push({ name: 'buyerSourceFile', ...original });
+  }
   for (const name of ['outboxDir', 'proofDir', 'recoveredDir'])
     if (selected[name]) inputs.push({ name, ...await sourceInput(selected[name], 'directory') });
   if (selected.termsFile) inputs.push({ name: 'termsFile', ...await sourceInput(selected.termsFile, 'file') });
@@ -98,7 +117,8 @@ export async function inspectAccountingLaunch(raw, { env = process.env, allowMis
   const selectedDigests = Object.fromEntries(Object.entries(selections).map(([provider, value]) =>
     [provider, value?.integrity.sha256 ?? null]));
   const binding = { schema: ACCOUNTING_MANAGED_SCHEMA, settings: selected, oauth: oauth.binding,
-    selectionRoot, selections: selectedDigests, inputs };
+    selectionRoot, selections: selectedDigests, inputs,
+    ...(workspaceBinding ? { workspaceBinding } : {}) };
   return { binding, bindingSha256: identity(binding), selections,
     review: { schema: ACCOUNTING_MANAGED_SCHEMA, bindingSha256: identity(binding),
       directory: selected.directory, port: selected.port, allowLoopbackOAuth: selected.allowLoopbackOAuth,
@@ -107,7 +127,8 @@ export async function inspectAccountingLaunch(raw, { env = process.env, allowMis
       profiles: oauth.review.profiles, selections: selectedDigests, inputs,
       targets: { quickbooks: selections.quickbooks ? quickBooksSelectionSummary(selections.quickbooks) : null,
         xero: selections.xero ? xeroSelectionSummary(selections.xero) : null },
-      recoveryStartPaused: selected.recoveryStartPaused } };
+      recoveryStartPaused: selected.recoveryStartPaused,
+      sourceMode: workspaceBinding ? 'buyer' : 'merchant', workspaceBinding } };
 }
 
 export async function startManagedAccountingWorkspace(raw, {
@@ -149,6 +170,10 @@ export async function startManagedAccountingWorkspace(raw, {
     const { connectionsFile, selectionDirectory, allowLoopbackOAuth, ...accountingOptions } = selected;
     accounting = await startWorkspace({
       ...accountingOptions,
+      ...(before.binding.workspaceBinding ? {
+        expectedWorkspaceId: before.binding.workspaceBinding.workspaceId,
+        expectedSourcesSha256: before.binding.workspaceBinding.sourcesSha256,
+      } : {}),
       ...(connections ? { qboClient: connections.qboClient, xeroClient: connections.xeroClient,
         connectionsWorkspace: connections } : {}),
     });
@@ -169,6 +194,7 @@ export async function startManagedAccountingWorkspace(raw, {
       connectionsSha256: before.binding.oauth.registry?.sha256 ?? null,
       profileCount: before.binding.oauth.profiles.length, selections: before.binding.selections,
       url: accounting.url, connectionsUrl: connections ? accounting.url + '/connections.html' : null,
+      ...(before.binding.workspaceBinding ? { workspaceBinding: before.binding.workspaceBinding } : {}),
     };
     await announce(startup);
     return Object.freeze({ accounting, connections, managed: startup, url: accounting.url, close });

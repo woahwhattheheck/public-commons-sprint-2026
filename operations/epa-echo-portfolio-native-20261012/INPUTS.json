@@ -1,0 +1,89 @@
+{
+  "schema": "stellar-forge.epa-echo-native-operation-inputs.v1",
+  "operationId": "epa-echo-portfolio-complete-b3909-20261012",
+  "directory": "/workspace/scratch/b3909ae247f2/epa-echo-portfolio/native",
+  "sourceSelection": "EPA_ECHO_SOURCE_COMMIT must identify the complete published product and original registry/dependency closure",
+  "example": {
+    "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/epa-echo/examples/dc-wastewater-source-20261012.json",
+    "gitBlob": "413c5b35e907c60f4db04ded31ae33e29de10beb",
+    "bytes": 826432,
+    "sha256": "c737c859126057359c3918e20e4553651b31ab14532060c64aa49f25a7fe24d9",
+    "facilityIds": [
+      "110072033839",
+      "110072235550",
+      "110029030144",
+      "110072237877"
+    ],
+    "responses": 8
+  },
+  "originalCounts": {
+    "facilities": 4,
+    "permits": 25,
+    "compliance": 10,
+    "quarters": 4836,
+    "inspections": 54,
+    "enforcement": 8,
+    "metadata": 6624,
+    "source-fields": 9300
+  },
+  "customer": {
+    "route": "/epa-facilities",
+    "rows": 4,
+    "pageSize": 2,
+    "pages": 2,
+    "intentIds": [
+      "epa-echo-portfolio-b3909-20261012-p1",
+      "epa-echo-portfolio-b3909-20261012-p2"
+    ],
+    "payment": {
+      "scheme": "exact",
+      "network": "stellar:testnet",
+      "asset": "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC",
+      "amount": "10000",
+      "maxTimeoutSeconds": 600
+    }
+  },
+  "originalControlSource": {
+    "repo": "woahwhattheheck/public-commons-sprint-2026",
+    "merge": "9d72893075d34f62916b4eb97d38c85a6140857d",
+    "directory": "operations/nws-site-weather-native-20261012"
+  },
+  "runtime": {
+    "sourceRootEnvironment": "EPA_ECHO_PRODUCT_ROOT",
+    "readyDirectoryEnvironment": "EPA_ECHO_RUNTIME_DIRECTORY",
+    "sourceCommitEnvironment": "EPA_ECHO_SOURCE_COMMIT",
+    "preparedDependencySource": "Original equipped runtime producer, retained SDK and selected profile; no dependency rebuild in this programme"
+  },
+  "files": [
+    {
+      "name": "browser-journey.mjs",
+      "bytes": 35450,
+      "gitBlob": "312478b14e087ef0646591e7cecb9cbcdf1152e7"
+    },
+    {
+      "name": "native-journey.mjs",
+      "bytes": 21338,
+      "gitBlob": "7f251dc56fa7aa7be240f8ef82f477e5028950a9"
+    },
+    {
+      "name": "mcp-receiving.mjs",
+      "bytes": 23225,
+      "gitBlob": "e665dd047057a8ef69d5acb5f9ce42ea4903d0a1"
+    },
+    {
+      "name": "applications-receiving.mjs",
+      "bytes": 11295,
+      "gitBlob": "5dbebfe2aa8a9ccac76d58bb373bb80def2b6903"
+    },
+    {
+      "name": "native-run.py",
+      "bytes": 2030,
+      "gitBlob": "2cbbb047095568288483922fbb81299757ec3159"
+    },
+    {
+      "name": "README.md",
+      "bytes": 9020,
+      "gitBlob": "1d62c9d6b490f3fccb4a3559441305a251e6c1f0"
+    }
+  ]
+}
