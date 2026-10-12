@@ -5,9 +5,9 @@
   "applicant": "Bryce Muhlnickel / TokenJunkieLabs",
   "application": {
     "path": "application.md",
-    "bytes": 26991,
-    "sha256": "245ae8d3aa1515df74aaf1fad689d38af64b3aaf4f55d5532680ffc684d09a5c",
-    "git_blob": "5fc963b1acdf3747e85ec4170c76dd46173866bf"
+    "bytes": 27607,
+    "sha256": "8ae4324b2c25cd650f3131bd0787446e6a6599d38ae6641af093efaa9680169f",
+    "git_blob": "a851a50da120e96493e56e11ba57ce063508aaf0"
   },
   "request": {
     "basis": "prospective",
