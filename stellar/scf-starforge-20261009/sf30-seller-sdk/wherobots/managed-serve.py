@@ -96,7 +96,28 @@ def main():
             # native task work drain through the original owner.
             server.daemon_threads = False
             server.block_on_close = True
-            server.RequestHandlerClass.timeout = 30
+            handler_class = server.RequestHandlerClass
+            handler_class.timeout = 30
+            original_handle = handler_class._handle
+            def handle_request(handler, method):
+                # Shutdown stops new connections; an existing HTTP/1.1 browser
+                # can still poll or submit work on its retained connection.
+                # Reject its next request while accepted work finishes normally.
+                if stopped.is_set():
+                    handler.close_connection = True
+                    try:
+                        handler._send(503, {"error": "APPLICATION_CLOSING",
+                            "message": "The application is closing. Reopen it from Applications."},
+                            headers={"Connection": "close"})
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+                    return
+                try:
+                    return original_handle(handler, method)
+                finally:
+                    if stopped.is_set():
+                        handler.close_connection = True
+            handler_class._handle = handle_request
             listener["server"] = server
             if stopped.is_set():
                 threading.Thread(target=server.shutdown, name="wherobots-stop", daemon=True).start()
