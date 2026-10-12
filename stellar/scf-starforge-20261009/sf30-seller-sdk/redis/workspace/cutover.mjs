@@ -175,7 +175,7 @@ function reportBinding(report,input){
       typeof report.revisionId!=='string')
     throw fail('REDIS_CUTOVER_RECEIVING_REQUIRED','Receive both original commissioning inputs before comparing their saved outcomes.');
 }
-function collectCheck(workspace,report,check,maximum){
+function collectCheck(workspace,report,check,query,maximum){
   const recorded=report.checks.find(c=>c.id===check.id);
   if(!recorded||recorded.query!==check.query||!Array.isArray(recorded.pages)||!recorded.pages.length||
       recorded.pages.length>check.maxPages)
@@ -190,7 +190,8 @@ function collectCheck(workspace,report,check,maximum){
         op.input.query!==check.query||stable(op.input.input)!==key||stable(page.input)!==key)
       throw fail('REDIS_CUTOVER_PAGE_BINDING_CHANGED','The recorded page does not belong to this original check/revision.');
     const data=op.result?.data;
-    if(!Array.isArray(data?.rows)||!Array.isArray(data?.columns)||hash(stable(data))!==page.resultSha256||
+    if(data?.schema!=='stellar-forge.redis-result.v1'||data.query!==check.query||data.kind!==query.kind||
+        typeof data.truncated!=='boolean'||!Array.isArray(data?.rows)||!Array.isArray(data?.columns)||hash(stable(data))!==page.resultSha256||
         page.rows!==data.rows.length||stable(page.nextInput)!==stable(data.nextInput??null))
       throw fail('REDIS_CUTOVER_PAGE_CHANGED','The original full result does not match its retained receiving page.');
     columns??=data.columns;
@@ -201,6 +202,20 @@ function collectCheck(workspace,report,check,maximum){
       throw fail('REDIS_CUTOVER_DATA_LIMIT','The retained full rows exceed the selected comparison budget.');
     rows.push(...data.rows);windows.push(op.result.observedAt);
     const continuation=data.nextInput??null;
+    if(continuation!==null&&!plain(continuation))
+      throw fail('REDIS_CUTOVER_PAGE_SEQUENCE_INVALID','Keep the original nextInput object.');
+    if(check.allPages&&(data.continuationUnavailable!==undefined||data.truncated&&continuation===null))
+      throw fail('REDIS_CUTOVER_PAGE_SEQUENCE_INCOMPLETE','The original source reached its selected limit before the full collection completed.',
+        {checkId:check.id,requestId:op.id,continuationUnavailable:data.continuationUnavailable??null});
+    if(query.kind==='set'){
+      const cursor=data.scanCursor;
+      if(typeof cursor!=='string'||!/^(?:0|[1-9][0-9]{0,19})$/.test(cursor)||
+          BigInt(cursor)>18446744073709551615n||data.scanComplete!==(cursor==='0')||
+          data.truncated!==(cursor!=='0')||cursor==='0'&&continuation!==null||
+          cursor!=='0'&&(!plain(continuation)||continuation[query.cursor]!==cursor))
+        throw fail('REDIS_CUTOVER_PAGE_SEQUENCE_INCOMPLETE','Retain the original native SSCAN cursor and complete terminal batch.',
+          {checkId:check.id,requestId:op.id});
+    }
     if(index+1<recorded.pages.length){
       if(!check.allPages||!plain(continuation))
         throw fail('REDIS_CUTOVER_PAGE_SEQUENCE_INVALID','A saved page continues after the original source completed.');
@@ -211,6 +226,27 @@ function collectCheck(workspace,report,check,maximum){
   if(rows.length!==recorded.rowCount||hash(stable(rows))!==recorded.rowsSha256)
     throw fail('REDIS_CUTOVER_AGGREGATE_CHANGED','The full original rows differ from their receiving outcome.');
   return {rows,columns,windows,expected:matchesExpected(check.expected,columns,rows),bytes:used};
+}
+async function verifyReceivedPackage(workspace,report){
+  if(report.status==='ACCEPTANCE_MISMATCH')return null;
+  if(!report.package?.requestId||!Array.isArray(report.package.customerFiles))
+    throw fail('REDIS_CUTOVER_PACKAGE_REQUIRED','Receive the original complete customer package.');
+  const op=workspace.operation(report.package.requestId);
+  if(op.kind!=='prepare'||op.status!=='COMPLETED'||op.input.revisionId!==report.revisionId||
+      op.result.manifestSha256!==report.package.manifestSha256||
+      op.result.directory!==report.package.directory)
+    throw fail('REDIS_CUTOVER_PACKAGE_CHANGED','The selected package differs from the original completed preparation.');
+  const names=Object.keys(op.result.files??{}).filter(n=>n==='openapi.json'||n.startsWith('client/')).sort();
+  const received=report.package.customerFiles;
+  if(!names.length||names.length!==received.length||stable(names)!==stable(received.map(v=>v.path).sort()))
+    throw fail('REDIS_CUTOVER_CUSTOMER_FILES_CHANGED','Retain every original generated customer file once.');
+  for(const name of names){
+    const expected=received.find(v=>v.path===name),actual=await workspace.file(op.id,name);
+    if(actual.bytes.length!==expected.bytes||hash(actual.bytes)!==expected.sha256)
+      throw fail('REDIS_CUTOVER_CUSTOMER_FILES_CHANGED','The generated customer file differs from its completed receiving result.',{file:name});
+  }
+  return {requestId:op.id,directory:op.result.directory,manifestSha256:op.result.manifestSha256,
+    customerFiles:clone(received)};
 }
 async function compareSaved(root,selected,reports,environment){
   const workspaces={},result=[];
@@ -227,8 +263,8 @@ async function compareSaved(root,selected,reports,environment){
     }
     for(const rule of selected.comparisons){
       const check=selected.baseline.checks.find(c=>c.id===rule.checkId);
-      const baseline=collectCheck(workspaces.baseline,reports.baseline,check,selected.maxComparisonBytes);
-      const candidate=collectCheck(workspaces.candidate,reports.candidate,check,selected.maxComparisonBytes-baseline.bytes);
+      const baseline=collectCheck(workspaces.baseline,reports.baseline,check,selected.baseline.setup.source.queries[check.query],selected.maxComparisonBytes);
+      const candidate=collectCheck(workspaces.candidate,reports.candidate,check,selected.candidate.setup.source.queries[check.query],selected.maxComparisonBytes-baseline.bytes);
       const difference=compareRedisCutoverRows({baseline,candidate,mode:rule.mode});
       const full={schema:'stellar-forge.redis-cutover-difference.v1',...rule,
         baselineColumns:baseline.columns,candidateColumns:candidate.columns,
@@ -241,7 +277,9 @@ async function compareSaved(root,selected,reports,environment){
         file,differenceSha256:hash(encode(full)),
         windows:{baseline:baseline.windows,candidate:candidate.windows}});
     }
-    const match=result.every(r=>r.matched&&r.expectationsMatch);
+    const packages={};
+    for(const side of ['baseline','candidate'])packages[side]=await verifyReceivedPackage(workspaces[side],reports[side]);
+    const match=result.every(r=>r.matched&&r.expectationsMatch)&&Object.values(reports).every(r=>r.status==='RECEIVED');
     let release=null;
     if(match&&selected.input.release){
       const w=workspaces.candidate,report=reports.candidate;
@@ -258,7 +296,7 @@ async function compareSaved(root,selected,reports,environment){
       if(op.status!=='COMPLETED')throw fail('REDIS_CUTOVER_RELEASE_INCOMPLETE','Continue the original candidate release operation.',{requestId:op.id,status:op.status,error:op.error});
       release={requestId:op.id,...op.result};
     }
-    return {comparisons:result,release,status:match?'RECEIVED':'CONTRACT_MISMATCH',
+    return {comparisons:result,packages,release,status:match?'RECEIVED':'CONTRACT_MISMATCH',
       workspaceBindings:Object.fromEntries(Object.entries(workspaces).map(([side,w])=>[side,redisWorkspaceBinding(w.metadata())]))};
   }finally{
     const errors=[];
@@ -291,8 +329,7 @@ export async function receiveRedisCutover({input,inputSha256,directory,environme
       await writeJson(root,'cutover-created.json',result);return result;
     }
     const compared=await compareSaved(root,selected,reports,environment);
-    const result={...initial,...compared,directory:root,
-      packages:Object.fromEntries(Object.entries(reports).map(([side,r])=>[side,r.package??null]))};
+    const result={...initial,...compared,directory:root};
     await writeJson(root,'cutover-result.json',result);return result;
   }catch(error){
     await writeJson(root,'cutover-error.json',{schema:'stellar-forge.redis-cutover-error.v1',
