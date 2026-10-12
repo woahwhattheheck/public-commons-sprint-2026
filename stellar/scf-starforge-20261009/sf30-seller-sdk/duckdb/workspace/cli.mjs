@@ -7,9 +7,10 @@ import { startDuckdbWorkspace } from './server.mjs';
 import { WorkspaceError, publicIssue } from './model.mjs';
 import { readSavedWorkspaceSource } from './store.mjs';
 import { prepareWorkbenchSource } from '../workbench/bootstrap.mjs';
+import { emptyCloudSource } from '../cloud-delivery/model.mjs';
 
 const HELP = `Usage: node duckdb/workspace/cli.mjs --state PRIVATE_DIRECTORY
-  [--source SOURCE.json | --data-dir DATA_DIRECTORY [--database FILE] [--parquet FILE]...]
+  [--cloud | --source SOURCE.json | --data-dir DATA_DIRECTORY [--database FILE] [--parquet FILE]...]
   [--plan MERCHANT_PLAN.json] [--python /private/duckdb-venv/bin/python]
   [--port 8437] [--seller-port 0] [--operations-port 0]
   [--availability-dir PRIVATE_ABSOLUTE_DIRECTORY]
@@ -31,12 +32,13 @@ export async function main(args = process.argv.slice(2)) {
       parquetFiles.push(args[++index]); continue;
     }
     if (values.has(flag)) throw new WorkspaceError('DUPLICATE_COMMAND_OPTION');
-    if (flag === '--allow-local-facilitator') { values.set(flag, true); continue; }
+    if (flag === '--allow-local-facilitator' || flag === '--cloud') { values.set(flag, true); continue; }
     if (!['--source', '--data-dir', '--database', '--state', '--plan', '--python', '--port', '--seller-port', '--operations-port', '--facilitator', '--availability-dir'].includes(flag) ||
         !args[index + 1] || args[index + 1].startsWith('--')) throw new WorkspaceError('INVALID_COMMAND_OPTIONS', 422, HELP);
     values.set(flag, args[++index]);
   }
   if (!values.has('--state') || values.has('--source') && values.has('--data-dir') ||
+      values.has('--cloud') && (values.has('--source') || values.has('--data-dir')) ||
       !values.has('--data-dir') && (values.has('--database') || parquetFiles.length) ||
       values.has('--allow-local-facilitator') && !values.has('--facilitator'))
     throw new WorkspaceError('SOURCE_AND_WORKSPACE_REQUIRED', 422, HELP);
@@ -63,6 +65,13 @@ export async function main(args = process.argv.slice(2)) {
     await mkdir(directory, { recursive: true, mode: 0o700 });
     ({ sourceFile } = await prepareWorkbenchSource({ dataDirectory: resolve(values.get('--data-dir')),
       database: values.get('--database') ?? ':memory:', parquetFiles, workspace: directory }));
+  }
+  if (!sourceFile && values.has('--cloud')) {
+    try { sourceFile = await readSavedWorkspaceSource(directory); }
+    catch (error) {
+      if (error.code !== 'ENOENT' && !['SAVED_WORKSPACE_SOURCE_REQUIRED'].includes(error.code)) throw error;
+      sourceFile = await emptyCloudSource(directory);
+    }
   }
   sourceFile ??= await readSavedWorkspaceSource(directory);
   const session = await startDuckdbWorkspace({ sourceFile,

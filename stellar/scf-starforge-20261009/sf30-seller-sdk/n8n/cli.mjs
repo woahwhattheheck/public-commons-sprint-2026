@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 // MIT. Native configuration, serving, recovery and original job commands.
 import { readFile } from 'node:fs/promises';
-import { resolve, join } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { resolve, join, dirname } from 'node:path';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 import { readN8nConfiguration, fail } from './config.mjs';
 import { prepareN8nMerchant, inspectN8nMerchant, createAutomationWorkflow } from './prepare.mjs';
 import { writePrivate } from './store.mjs';
-import { openN8nMerchant, serveN8nMerchant } from './merchant.mjs';
+import { openN8nMerchant } from './merchant.mjs';
+import { startN8nMerchantLaunch } from './launch.mjs';
 import { runJobCommand } from '../jobs/cli.mjs';
 
 const HELP = `Starforge n8n automation merchant
@@ -14,11 +15,11 @@ const HELP = `Starforge n8n automation merchant
   n8n-merchant review --input FILE
   n8n-merchant workflow --input FILE --function ID --child-workflow ID --out NEW_JSON
       [--header-credential ID] [--header-credential-name NAME]
-  n8n-merchant prepare --input FILE --directory NEW_PRIVATE_DIRECTORY
+  n8n-merchant prepare --input FILE --directory NEW_PRIVATE_DIRECTORY [--resume]
   n8n-merchant inspect --directory DIRECTORY
-  n8n-merchant serve --directory DIRECTORY [--native-factory MODULE] [--start-worker]
+  n8n-merchant serve --directory DIRECTORY [--initialize FILE] [--native-factory MODULE] [--start-worker]
       [--seller-port N] [--customer-port N] [--operations-port N]
-      [--operator-port N] [--jobs-operator-port N]
+      [--operator-port N | --port N] [--jobs-operator-port N] [--managed-source ORIGINAL_SOURCE]
   n8n-merchant reconcile --directory DIRECTORY --job ID --revision N
       [--execution ID --reason TEXT]
   n8n-merchant rerun --directory DIRECTORY --job ID --revision N --job-revision N --reason TEXT
@@ -35,8 +36,8 @@ original directory after that process closes. Use the browser while it is runnin
 `;
 const declarations = {
   review: ['input'], workflow: ['input', 'function', 'child-workflow', 'out', 'header-credential', 'header-credential-name'],
-  prepare: ['input', 'directory'], inspect: ['directory'],
-  serve: ['directory', 'native-factory', 'start-worker', 'seller-port', 'customer-port', 'operations-port', 'operator-port', 'jobs-operator-port'],
+  prepare: ['input', 'directory', 'resume'], inspect: ['directory'],
+  serve: ['directory', 'initialize', 'managed-source', 'port', 'native-factory', 'start-worker', 'seller-port', 'customer-port', 'operations-port', 'operator-port', 'jobs-operator-port'],
   reconcile: ['directory', 'job', 'revision', 'execution', 'reason'],
   rerun: ['directory', 'job', 'revision', 'job-revision', 'reason'], jobs: ['directory'],
 };
@@ -49,7 +50,7 @@ function parse(argv) {
     if (!args[i].startsWith('--')) fail('COMMAND', 'Use named command options.');
     const key = args[i].slice(2);
     if (!declarations[command].includes(key) || Object.hasOwn(options, key)) fail('COMMAND', 'Unknown or repeated option: ' + args[i]);
-    if (key === 'start-worker') { options[key] = true; continue; }
+    if (['start-worker', 'resume'].includes(key)) { options[key] = true; continue; }
     const value = args[++i];
     if (!value || value.startsWith('--')) fail('COMMAND', 'Supply a value for --' + key + '.');
     options[key] = value;
@@ -81,7 +82,7 @@ export async function runN8nMerchantCommand(argv = process.argv.slice(2), { prin
     return emit({ file: destination, workflowName: workflow.name, nodes: workflow.nodes.length });
   }
   const directory = resolve(required(options, 'directory'));
-  if (command === 'prepare') return emit(await prepareN8nMerchant({ directory, configPath: required(options, 'input') }));
+  if (command === 'prepare') return emit(await prepareN8nMerchant({ directory, configPath: required(options, 'input'), resume: Boolean(options.resume) }));
   if (command === 'inspect') return emit(await inspectN8nMerchant(directory));
   if (command === 'jobs') {
     if (!remaining.length || remaining.some(arg => ['--config', '--state'].includes(arg)))
@@ -90,9 +91,18 @@ export async function runN8nMerchantCommand(argv = process.argv.slice(2), { prin
     return runJobCommand([remaining[0], '--config', join(directory, 'merchant.json'), '--state', join(directory, 'jobs'), ...remaining.slice(1)], { print });
   }
   if (command === 'serve') {
-    const service = await serveN8nMerchant({ directory, nativeFactoryPath: options['native-factory'], startWorker: Boolean(options['start-worker']),
+    if (options.port !== undefined && options['operator-port'] !== undefined)
+      fail('COMMAND', 'Select --port or --operator-port for the original private operator.');
+    const launchSourceDirectory = dirname(fileURLToPath(import.meta.url));
+    const sourceDirectory = resolve(options['managed-source'] ?? launchSourceDirectory);
+    const original = sourceDirectory === launchSourceDirectory ? { startN8nMerchantLaunch } :
+      await import(pathToFileURL(join(sourceDirectory, 'launch.mjs')).href);
+    if (typeof original.startN8nMerchantLaunch !== 'function')
+      fail('LAUNCH_SOURCE', 'Select the original installed n8n merchant launch source.');
+    const service = await original.startN8nMerchantLaunch({ directory, sourceDirectory, launchSourceDirectory,
+      configPath: options.initialize, nativeFactoryPath: options['native-factory'], startWorker: Boolean(options['start-worker']),
       sellerPort: number(options, 'seller-port', 0, 65535), customerPort: number(options, 'customer-port', 0, 65535),
-      operationsPort: number(options, 'operations-port', 0, 65535), operatorPort: number(options, 'operator-port', 0, 65535),
+      operationsPort: number(options, 'operations-port', 0, 65535), operatorPort: number(options, options.port === undefined ? 'operator-port' : 'port', 0, 65535),
       jobsOperatorPort: number(options, 'jobs-operator-port', 0, 65535) });
     let done, stopped = false;
     const wait = new Promise(resolve => { done = resolve; });
@@ -100,8 +110,7 @@ export async function runN8nMerchantCommand(argv = process.argv.slice(2), { prin
       process.exitCode = 1; print(JSON.stringify({ code: error.code ?? 'JOB_AUTOMATION_CLOSE_FAILED' })); done();
     }); };
     process.once('SIGINT', close); process.once('SIGTERM', close);
-    emit({ service: 'starforge-n8n-merchant', directory, operator: service.url, seller: service.seller,
-      customer: service.customer, operations: service.operations, jobsOperator: service.jobsOperator });
+    print(JSON.stringify(service.announcement));
     try { await wait; } finally { process.off('SIGINT', close); process.off('SIGTERM', close); await service.close(); }
     return;
   }
