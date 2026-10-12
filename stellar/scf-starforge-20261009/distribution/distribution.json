@@ -1064,6 +1064,10 @@
     "./seller/samgov/cli": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/cli.mjs"
+    },
+    "./seller/samgov/notice-document": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/notice-document.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/samgov/notice-document.mjs"
     }
   },
   "nativePeers": {

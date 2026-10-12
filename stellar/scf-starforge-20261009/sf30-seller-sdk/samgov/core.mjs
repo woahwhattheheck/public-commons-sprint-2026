@@ -267,6 +267,8 @@ export function compareNotices(before, after) {
     counts[kind]++;
     const changedFields = a && b ? [...new Set([...Object.keys(a.raw),...Object.keys(b.raw)])]
       .filter(key => canonical(a.raw[key] ?? null) !== canonical(b.raw[key] ?? null)) : [];
+    if(a && b)for(const field of ['documentResources','documentHistory'])
+      if(canonical(a[field]??null)!==canonical(b[field]??null))changedFields.push(field);
     if (a && b && canonical(a.resources.map(x=>[x.kind,x.url,x.sha256,x.bytes,x.status]).sort((x,y)=>canonical(x).localeCompare(canonical(y)))) !==
       canonical(b.resources.map(x=>[x.kind,x.url,x.sha256,x.bytes,x.status]).sort((x,y)=>canonical(x).localeCompare(canonical(y))))) changedFields.push('retainedResources');
     items.push({noticeId,kind,title:b?.title ?? a?.title,changedFields,

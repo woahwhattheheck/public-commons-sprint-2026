@@ -70,7 +70,7 @@ export async function prepareSamMerchant({
   const dataset=await loadDatasetConfig(join(directory,'dataset.json')),description=dataset.describe();
   const provenance={schema:'stellar-forge.samgov-merchant-source.v1',workspaceId,sourceRevision,
     selection:copy(selection),edition:copy(edition),noticeIds:rows.map(row=>row.noticeId),
-    sourceBasis:SOURCE_BASIS,capture:copy(capture),sources:copy(sources),
+    sourceBasis:edition.sourceBasis??SOURCE_BASIS,capture:copy(capture),sources:copy(sources),
     createdAt:intent.createdAt,columns:COLUMNS,sourceRowsSha256:sha(rows),
     numericRepresentation:'Original source number lexemes and deadlines remain strings.',
     queryMeaning:'String ranges use original dataset lexical ordering; raw response deadlines retain their source time-zone status.'};
@@ -95,7 +95,7 @@ export async function prepareSamMerchant({
   const bundle={schema:SCHEMA,id:publicationId,workspaceId,sourceRevision,inputSha256,createdAt:intent.createdAt,
     selectionId:selection.id,selectionRevision:selection.revision,editionId:edition.id,
     sourceEditionSha256:edition.sha256,sourceRowsSha256:sha(rows),dataset:description,
-    sourceBasis:SOURCE_BASIS,complete:edition.complete,
+    sourceBasis:edition.sourceBasis??SOURCE_BASIS,complete:edition.complete,
     files:Object.fromEntries(files.map(file=>[file.path,{sha256:file.sha256,bytes:file.bytes}])),
     seller:seller?{origin:seller.publicOrigin,path,resource:seller.publicOrigin+path,config:'seller.json'}:null,
     publisher:{kind:'original_dataset_versions',directory:'runtime/versions',snapshotSelection:true},

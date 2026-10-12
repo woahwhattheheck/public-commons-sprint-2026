@@ -7,9 +7,13 @@ export interface SamQueryDefinition {
     typeOfSetAside?:string;state?:string;zip?:string;rdlfrom?:string;rdlto?:string};
   pageSize:number;maxRecords:number;sourceTerms:string;
 }
+export interface SamNoticeDocumentInput {
+  contentBase64:string;url?:string;filename?:string;capturedAt?:string;
+  response?:{request:{method:'GET';url:string};status:200;headers?:Record<string,string>};
+}
 export interface SamQuery {id:string;name:string;revision:number;definition:SamQueryDefinition;createdAt:string;updatedAt:string}
 export interface SamSource {
-  id:string;kind:'search_page'|'description'|'attachment';url:string;filename:string;mediaType:string;
+  id:string;kind:'search_page'|'description'|'attachment'|'notice_record'|'notice_resources'|'notice_history';url:string;filename:string;mediaType:string;
   bytes:number;sha256:string;capturedAt:string;status:number|'received_file';request:{method:'GET';url:string}|null;
   headers:Record<string,string>;originalSha256:string;
   redactions:Array<{kind:string;replacements:number}>;redirects:Array<{status:number;from:string;to:string}>;
@@ -30,13 +34,22 @@ export interface SamNotice {
   awardNumber:string|null;awardDate:string|null;awardeeName:string|null;awardeeUei:string|null;
   pointOfContact:SamJson;placeOfPerformance:SamJson;raw:Record<string,SamJson>;recordSha256:string;
   deadlineStatus:'absent'|'explicit_offset'|'requires_timezone_review';
-  source:{sourceId:string;rowPointer:string;pageOffset:number;sha256:string;capturedAt:string;url:string};
+  source:{sourceId:string;rowPointer:string;pageOffset:number|null;sha256:string;capturedAt:string;url:string;
+    format?:'samgov_notice_document.v1';
+    companions?:Array<{kind:'notice_resources'|'notice_history';sourceId:string;sha256:string;
+      capturedAt:string;url:string;rowPointer:''}>};
+  documentResources?:SamJson|null;documentHistory?:SamJson|null;
+  organizationId?:string|null;issuedTimeZone?:string|null;
+  publicationState?:{status:SamJson;latest:boolean|null;archived:boolean|null;cancelled:boolean|null;
+    deleted:boolean|null;postedDate:string|null;modifiedDate:string|null;parentNoticeId:string|null};
+  descriptions?:Array<{body:string;sourceId:string;rowPointer:string;descriptionId:string|null;modifiedOn:string|null}>;
+  attachmentIndex?:Array<Record<string,SamJson>>;noticeHistory?:Array<Record<string,SamJson>>;
   resources:SamResource[];
 }
 export interface SamEdition {
-  id:string;name:string;kind:'api_observation'|'resource_enriched';captureId:string|null;parentEditionId:string|null;
+  id:string;name:string;kind:'api_observation'|'resource_enriched'|'notice_document_observation';captureId:string|null;parentEditionId:string|null;
   querySha256:string;rowCount:number;sourceCount:number;sourceIds:string[];sha256:string;objectSha256:string;
-  createdAt:string;complete:boolean;sourceBasis:'latest_api_observation';
+  createdAt:string;complete:boolean;sourceBasis:'latest_api_observation'|'retained_notice_document'|'mixed_retained_sources';
 }
 export interface SamPage {
   index:number;offset:number;limit:number;count:number;totalRecords:number;sourceId:string;
@@ -109,7 +122,7 @@ export interface SamPacket {
   objects:Array<{sha256:string;bytes:number;contentBase64:string}>;sha256:string;
 }
 export interface SamComparison {
-  before:SamEdition;after:SamEdition;sourceBasis:'latest_api_observation';
+  before:SamEdition;after:SamEdition;sourceBasis:'latest_api_observation'|'retained_notice_document'|'mixed_retained_sources';
   counts:{added:number;removed:number;changed:number;unchanged:number};
   items:Array<{noticeId:string;kind:'added'|'removed'|'changed'|'unchanged';title:string|null;
     changedFields:string[];before:SamNotice|null;after:SamNotice|null}>;
@@ -139,6 +152,8 @@ export interface SamActionPayloads {
   create_handoff:SamMutationEnvelope & {name:string;selectionId:string;note?:string};
   capture_resources:SamMutationEnvelope & {editionId:string;noticeIds:string[];descriptions?:boolean;
     attachments?:boolean;resourceUrls?:string[]};
+  import_notice:SamMutationEnvelope & {name?:string;editionId?:string;notice:SamNoticeDocumentInput;
+    resources?:SamNoticeDocumentInput;history?:SamNoticeDocumentInput};
   retain_resource:SamMutationEnvelope & {editionId:string;noticeId:string;kind:'description'|'attachment';
     url:string;filename:string;mediaType:string;capturedAt:string;contentBase64:string;
     response?:{request:{method:'GET';url:string};status:number;headers?:Record<string,string>}};

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import {readFile, stat, mkdir, open, rename, link, unlink} from 'node:fs/promises';
-import {resolve, dirname, join} from 'node:path';
+import {resolve, dirname, join, basename} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {openSamWorkspace} from './workspace.mjs';
@@ -30,6 +30,8 @@ Source acquisition
   run --capture-id ID    Resume the same retained capture
   resources --input FILE Capture the selected notices' issued description/attachment URLs
   retain --input FILE    Receive original bytes at an issued selected resource URL
+  notice --notice-file FILE
+                         Receive an original SAM notice JSON with optional index/history files
 
 Work and receiving
   action --name ACTION --input FILE
@@ -56,6 +58,10 @@ Shared options
                          Existing opportunity workspace for the source bridge
   --port N              Browser or seller loopback port; default 0 selects a free port
   --publication-id ID    Exact retained merchant preparation to serve
+  --notice-file FILE --resource-index-file FILE --history-file FILE
+                         Original SAM notice, attachment metadata and published history
+  --base-edition-id ID   Extend that retained notice collection
+  --captured-at ISO      Original file capture time; omitted means received here
   --offset N --limit N --search TEXT
                          Retained-record paging; defaults 0 / 50
   --selection-id ID      Export the selected retained notices
@@ -94,7 +100,8 @@ function parse(argv) {
   }
   const allowed=new Set(['help','force','workspace','operator','input','request-id','expected-revision','api-key-env',
     'endpoint','opportunity-workspace','port','offset','limit','search','selection-id','handoff-id','revision',
-    'format','out','id','source-id','before','after','name','query-id','query-revision','capture-id','publication-id']);
+    'format','out','id','source-id','before','after','name','query-id','query-revision','capture-id','publication-id',
+    'notice-file','resource-index-file','history-file','base-edition-id','captured-at']);
   for(const key of Object.keys(options))if(!allowed.has(key))fail('CLI_OPTION_UNKNOWN','Unknown option --'+key+'.');
   if(words.length>1)fail('CLI_ARGUMENT_INVALID','Use named options after the command.');
   return{command:words[0]||'help',options};
@@ -246,6 +253,24 @@ export async function runSamCli(argv=process.argv.slice(2),{
     else if(command==='run')result=await store.runCapture(required(options['capture-id'],'--capture-id ID'),{
       signal:controller.signal,onProgress:progress=>stderr.write(JSON.stringify({captureId:options['capture-id'],progress})+'\n'),
     });
+    else if(command==='notice' && options['notice-file']){
+      if(options.input)fail('NOTICE_INPUT_CONFLICT','Choose original notice files or one complete JSON input.');
+      const input={...(options.name?{name:options.name}:{}),
+        ...(options['base-edition-id']?{editionId:options['base-edition-id']}:{})};
+      for(const [field,key] of [['notice','notice-file'],['resources','resource-index-file'],['history','history-file']]){
+        if(!options[key])continue;
+        const file=resolve(options[key]),information=await stat(file);
+        if(!information.isFile() || information.size>64*1024*1024)
+          fail('NOTICE_FILE_INVALID','Each original notice document must be a regular file up to64 MiB.');
+        const bytes=await readFile(file);
+        input[field]={filename:basename(file),contentBase64:bytes.toString('base64'),
+          ...(options['captured-at']?{capturedAt:options['captured-at']}:{})};
+      }
+      const payload=preparedPayload(input,options);
+      stderr.write(JSON.stringify({action:'import_notice',requestId:payload.requestId,
+        expectedRevision:payload.expectedRevision,stage:'prepared'})+'\n');
+      result=await store.dispatch('import_notice',payload,{signal:controller.signal});
+    }
     else if(command==='capture') {
       const payload=preparedPayload({
         queryId:required(options['query-id'],'--query-id ID'),
@@ -259,7 +284,7 @@ export async function runSamCli(argv=process.argv.slice(2),{
       result=await store.runCapture(captureId,{signal:controller.signal,onProgress:progress=>stderr.write(JSON.stringify({captureId,progress})+'\n')});
     }
     else {
-      const aliases={query:'save_query',resources:'capture_resources',retain:'retain_resource',merchant:'prepare_merchant',
+      const aliases={query:'save_query',notice:'import_notice',resources:'capture_resources',retain:'retain_resource',merchant:'prepare_merchant',
         'buyer-review':'buyer_review','buyer-prepare':'prepare_buyer',opportunity:'prepare_opportunity'};
       const action=command==='action'?required(options.name,'--name ACTION'):aliases[command];
       if(!action)fail('COMMAND_UNKNOWN','Unknown SAM.gov command '+command+'. Use --help.');

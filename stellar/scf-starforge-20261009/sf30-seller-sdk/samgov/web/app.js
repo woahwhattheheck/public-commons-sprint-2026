@@ -105,7 +105,7 @@ function searchesView() {
  const w=state.workspace;
  const queryRows=(w.queries||[]).map(q=>'<tr><td class="title"><strong>'+esc(q.name)+'</strong><small>'+esc(q.id)+' · revision '+q.revision+'</small></td><td>'+esc(q.definition.filters.postedFrom)+'<br>'+esc(q.definition.filters.postedTo)+'</td><td>'+esc(q.definition.filters.noticeid||q.definition.filters.solnum||q.definition.filters.title||q.definition.filters.organizationName||'All matching notices')+'</td><td>'+q.definition.pageSize+' per page<br><span class="muted">'+Number(q.definition.maxRecords).toLocaleString()+' capacity</span></td><td><div class="actions">'+button('start-capture','Capture search',q.id,'',true)+button('edit-query','Edit',q.id)+'</div></td></tr>');
  const captureRows=[...(w.captures||[])].reverse().map(c=>'<tr><td class="title"><strong>'+esc(c.name)+'</strong><small>'+esc(c.id)+'</small></td><td>'+badge(c.status,c.status==='complete')+(c.error?'<small class="muted">'+esc(c.error.message||c.error)+'</small>':'')+'</td><td>'+Number(c.count||0).toLocaleString()+(c.totalRecords!==null&&c.totalRecords!==undefined?' / '+Number(c.totalRecords).toLocaleString():'')+'<br><span class="muted">'+(c.pageCount||0)+' pages · next page '+(c.nextOffset||0)+'</span></td><td class="nowrap">'+esc(date(c.updatedAt||c.startedAt))+'</td><td><div class="actions">'+button('capture-detail','Progress',c.id)+(c.editionId?button('open-edition','Open notices',c.editionId):'')+(['queued','paused','failed'].includes(c.status)?button('run-capture','Continue',c.id):'')+(c.status==='capacity'?button('resize-capture','Increase capacity',c.id):'')+(c.status==='running'?button('cancel-capture','Pause',c.id):'')+'</div></td></tr>');
- return panelHeading('Searches & captures','Every saved search records its date window, filters and page size. A complete capture retains every returned page and the terminal record total.',button('new-query','New search','','',true)+button('import-capture','Receive captured pages'))+
+ return panelHeading('Searches & captures','Every saved search records its date window, filters and page size. A complete capture retains every returned page and the terminal record total.',button('new-query','New search','','',true)+button('import-notice','Receive saved notice')+button('import-capture','Receive captured pages'))+
   captureProgress()+
   '<section class="box">'+boxHeading('Saved searches','Run a saved query again to retain a later observation.')+(queryRows.length?table(['Search','Posted window','Focus','Acquisition','Actions'],queryRows):empty('Create a source search','Choose the published date window and the notice, solicitation or subject you need.',button('new-query','Create search','','',true)))+'</section>'+
   '<section>'+boxHeading('Capture history','Interrupted work resumes its original query and next page. Capacity is explicit and can be increased on the same capture.')+(captureRows.length?table(['Capture','Status','Records & pages','Updated','Actions'],captureRows):empty('No captures yet','Save a query and run it, or receive complete original pages from an equipped operator.'))+'</section>';
@@ -142,15 +142,26 @@ async function noticeDetail(noticeId) {
  const data=await read('notice',{editionId:state.editionId,noticeId});
  const n=data.notice||data.record||data,r=data.review||reviewFor(state.editionId,noticeId);
  const resources=n.resources||[],sourceIds=new Set(resources.map(s=>s.sourceId));
- const sources=[...(n.source?.sourceId?[{sourceId:n.source.sourceId,filename:'Original notice response',kind:'notice',sha256:n.source.sha256,bytes:null}]:[]),...resources];
+ const companions=(n.source?.companions||[]).map(item=>{const source=(state.workspace.sources||[]).find(s=>s.id===item.sourceId);return{...item,filename:source?.filename||label(item.kind),bytes:source?.bytes??null};});
+ const sources=[...(n.source?.sourceId?[{sourceId:n.source.sourceId,filename:'Original notice response',kind:'notice',sha256:n.source.sha256,bytes:null}]:[]),...companions,...resources];
  const resourceList=sources.map(s=>'<div class="source-row"><div><strong>'+esc(s.filename||s.sourceId)+'</strong><small>'+esc(label(s.kind))+(s.bytes!==null?' · '+bytes(s.bytes):'')+' · '+esc(s.sha256||'')+'</small><small>'+esc(s.url||'')+'</small></div><div class="actions">'+button('view-source','Read source',s.sourceId)+button('download-source','Download',s.sourceId)+'</div></div>').join('');
  const retainedUrls=new Set(resources.map(s=>s.url));
  const remaining=[...(n.descriptionUrl?[{kind:'description',url:n.descriptionUrl}]:[]),...(n.resourceLinks||[]).map(url=>({kind:'attachment',url}))].filter(s=>!retainedUrls.has(s.url));
+ const descriptions=(n.descriptions||[]).map(item=>{
+  const document=new DOMParser().parseFromString(item.body.replace(/<\/(?:p|div|li|h[1-6]|tr)>/gi,'\n'),'text/html');
+  document.querySelectorAll('script,style').forEach(node=>node.remove());
+  return '<article><div class="prose">'+esc(document.body.textContent.trim())+'</div><p class="small-text mono">'+esc(item.sourceId+' '+item.rowPointer)+'</p></article>';
+ }).join('');
+ const historyRows=(n.noticeHistory||[]).map(item=>'<tr><td>'+esc(item.index)+'</td><td>'+esc(item.postedDate)+'</td><td>'+esc(item.actionType)+'</td><td>'+esc(item.latest)+'</td><td>'+link('https://sam.gov/workspace/contract/opp/'+item.opportunityId+'/view',item.opportunityId)+'</td></tr>');
+ const attachmentRows=(n.attachmentIndex||[]).map(item=>'<tr><td>'+esc(item.name)+'</td><td>'+bytes(item.size)+'</td><td>'+esc([item.accessLevel,item.accessStatus].filter(Boolean).join(' / '))+'</td><td>'+esc(item.deletedFlag??'')+'</td></tr>');
+ const documentDetails=(descriptions?'<section class="box">'+boxHeading('Issued description','Complete description text from the retained notice response.')+descriptions+'</section>':'')+
+  (historyRows.length?'<section class="box">'+boxHeading('Published notice history','Original entries and version identities supplied by SAM.')+table(['Version','Posted as issued','Action','Latest as issued','Notice'],historyRows)+'</section>':'')+
+  (attachmentRows.length?'<section class="box">'+boxHeading('Issued attachment index','Original filenames, sizes and access metadata.')+table(['File','Issued size','Access as issued','Deleted as issued'],attachmentRows)+'</section>':'');
  const contacts=(n.pointOfContact||[]).map(p=>'<li>'+esc([p.fullName||p.fullname,p.title,p.email,p.phone].filter(Boolean).join(' · '))+'</li>').join('');
  return '<section class="notice-detail"><div class="detail-heading"><div><p class="eyebrow">'+esc(n.solicitationNumber||n.noticeId)+'</p><h2>'+esc(n.title)+'</h2><p>'+esc(n.noticeId)+' · '+link(n.uiUrl,'Open issued notice')+'</p></div><div class="actions">'+button('review-notice','Review notice',n.noticeId,'',true)+button('capture-resources','Capture issued files',n.noticeId)+button('retain-resource','Receive source file',n.noticeId)+button('close-notice','Close')+'</div></div>'+
- '<div class="split"><section class="box">'+boxHeading('Issued notice','Provider fields retained from this selected edition.')+kv([['Organization',n.fullParentPathName],['Type / original type',[n.type,n.baseType].filter(Boolean).join(' / ')],['Active',n.active],['Posted',n.postedDate],['Response deadline',n.responseDeadLine||'Not supplied'],['Archive date',n.archiveDate],['NAICS',n.naicsCode],['Classification',n.classificationCode],['Set-aside',[n.setAsideCode,n.setAsideDescription].filter(Boolean).join(' · ')],['Award amount',n.awardAmount],['Awardee',n.awardeeName],['Place of performance',n.placeOfPerformance]])+(contacts?'<hr class="section-rule"><h3>Published contacts</h3><ul class="small-text">'+contacts+'</ul>':'')+'</section>'+
- '<section class="box">'+boxHeading('Operator review','The review and operating deadline stay attached to this notice edition.')+kv([['Status',label(r?.status||'unreviewed')],['Owner',r?.owner||'Unassigned'],['Reviewed deadline',r?.deadline?.at],['Time zone',r?.deadline?.timeZone],['Deadline basis',r?.deadline?.reason]])+(r?.notes?'<hr class="section-rule"><div class="prose">'+esc(r.notes)+'</div>':'')+'<hr class="section-rule">'+kv([['Record SHA256',n.recordSha256],['Page source',n.source?.sourceId],['Original row',n.source?.rowPointer],['Page index',n.source?.pageOffset]])+'</section></div>'+
- '<section class="box">'+boxHeading('Original source files','Open or download the retained bytes of this notice, description and its attachments.')+'<div class="source-list">'+resourceList+'</div>'+(remaining.length?'<hr class="section-rule"><h3>Issued links awaiting retained files</h3><div class="source-list">'+remaining.map(s=>'<div class="source-row"><div><strong>'+esc(label(s.kind))+'</strong><small>'+link(s.url,s.url)+'</small></div><div class="actions">'+button('retain-resource','Receive file',n.noticeId,'data-kind="'+esc(s.kind)+'" data-url="'+esc(s.url)+'"')+'</div></div>').join('')+'</div>':'')+'</section></section>';
+ '<div class="split"><section class="box">'+boxHeading('Issued notice','Provider fields retained from this selected edition.')+kv([['Organization',n.fullParentPathName],['Organization ID',n.organizationId],['Issued time zone',n.issuedTimeZone],['Source format',label(n.source?.format||'API search page')],['Type / original type',[n.type,n.baseType].filter(Boolean).join(' / ')],['Active',n.active],['Posted',n.postedDate],['Response deadline',n.responseDeadLine||'Not supplied'],['Archive date',n.archiveDate],['NAICS',n.naicsCode],['Classification',n.classificationCode],['Set-aside',[n.setAsideCode,n.setAsideDescription].filter(Boolean).join(' · ')],['Award amount',n.awardAmount],['Awardee',n.awardeeName],['Place of performance',n.placeOfPerformance]])+(contacts?'<hr class="section-rule"><h3>Published contacts</h3><ul class="small-text">'+contacts+'</ul>':'')+'</section>'+
+ '<section class="box">'+boxHeading('Operator review','The review and operating deadline stay attached to this notice edition.')+kv([['Status',label(r?.status||'unreviewed')],['Owner',r?.owner||'Unassigned'],['Reviewed deadline',r?.deadline?.at],['Time zone',r?.deadline?.timeZone],['Deadline basis',r?.deadline?.reason]])+(r?.notes?'<hr class="section-rule"><div class="prose">'+esc(r.notes)+'</div>':'')+'<hr class="section-rule">'+kv([['Record SHA256',n.recordSha256],['Source record',n.source?.sourceId],['Original row',n.source?.rowPointer],['Page index',n.source?.pageOffset]])+'</section></div>'+
+ documentDetails+'<section class="box">'+boxHeading('Original source files','Open or download the retained bytes of this notice, description and its attachments.')+'<div class="source-list">'+resourceList+'</div>'+(remaining.length?'<hr class="section-rule"><h3>Issued links awaiting retained files</h3><div class="source-list">'+remaining.map(s=>'<div class="source-row"><div><strong>'+esc(label(s.kind))+'</strong><small>'+link(s.url,s.url)+'</small></div><div class="actions">'+button('retain-resource','Receive file',n.noticeId,'data-kind="'+esc(s.kind)+'" data-url="'+esc(s.url)+'"')+'</div></div>').join('')+'</div>':'')+'</section></section>';
 }
 async function changesView() {
  const editions=state.workspace.editions||[];
@@ -168,7 +179,7 @@ async function changesView() {
    const id=change.noticeId||change.id,note=saved.find(s=>s.noticeId===id);
    let fields=Array.isArray(change.changedFields)?change.changedFields:Array.isArray(change.fields)?change.fields:Array.isArray(change.changes)?change.changes:[];
    if(fields.length&&typeof fields[0]==='string')fields=fields.map(field=>({field,before:field==='retainedResources'?change.before?.resources:(change.before?.raw?.[field]??change.before?.[field]),after:field==='retainedResources'?change.after?.resources:(change.after?.raw?.[field]??change.after?.[field])}));
-   return '<article class="change"><div class="change-heading"><div><h3>'+esc(change.title||change.after?.title||change.before?.title||id)+'</h3><p>'+esc(id)+' · '+esc(change.kind==='removed'?'no longer returned in this search':label(change.kind||change.status||'changed'))+'</p></div><div class="actions">'+(note?badge(note.decision):'')+button('review-change','Review change',id,'',true)+'</div></div>'+
+   return '<article class="change"><div class="change-heading"><div><h3>'+esc(change.title||change.after?.title||change.before?.title||id)+'</h3><p>'+esc(id)+' · '+esc(change.kind==='removed'?(result.after?.sourceBasis==='latest_api_observation'?'no longer returned in this search':'absent from the later retained edition'):label(change.kind||change.status||'changed'))+'</p></div><div class="actions">'+(note?badge(note.decision):'')+button('review-change','Review change',id,'',true)+'</div></div>'+
     (fields.length?'<div class="change-fields"><div class="column-label">Field</div><div class="column-label">Earlier</div><div class="column-label">Later</div>'+fields.map(f=>'<div class="field-name">'+esc(label(f.field||f.key))+'</div><div>'+esc(plain(f.before))+'</div><div>'+esc(plain(f.after))+'</div>').join('')+'</div>':'<pre class="mono">'+esc(JSON.stringify(change,null,2))+'</pre>')+
     (note?'<p class="small-text"><strong>'+esc(note.owner)+'</strong> · '+esc(note.note)+'</p>':'')+'</article>';
   }).join('');
@@ -326,6 +337,27 @@ async function fileBase64(file,maximum=64*1024*1024) {
  const data=new Uint8Array(await file.arrayBuffer());let binary='';
  for(let i=0;i<data.length;i+=32768)binary+=String.fromCharCode(...data.subarray(i,i+32768));
  return btoa(binary);
+}
+function importNotice() {
+ const editions=state.workspace.editions||[];
+ openEditor({title:'Receive saved SAM notice',kind:'Original notice documents',
+  fields:note('Receive the original SAM notice JSON. Add its attachment metadata and published history when those original files are available. The new edition retains all supplied source files.')+
+   field('name','Edition name',{full:true,placeholder:'Uses the issued notice title when empty'})+
+   field('editionId','Notice collection',{type:'select',full:true,value:'',options:[['','Create a new edition'],...editions.map(e=>[e.id,'Extend '+e.name])]})+
+   field('notice','Original notice JSON',{type:'file',accept:'.json,application/json',required:true,full:true})+
+   field('resources','Attachment metadata JSON (optional)',{type:'file',accept:'.json,application/json',full:true})+
+   field('history','Published history JSON (optional)',{type:'file',accept:'.json,application/json',full:true})+
+   field('capturedAt','Original capture time (optional)',{full:true,placeholder:'ISO timestamp with an offset',help:'Leave empty to record when the original files are received here.'}),
+  action:'import_notice',saveLabel:'Receive notice',
+  build:async data=>{const payload={},name=val(data,'name'),editionId=val(data,'editionId'),capturedAt=val(data,'capturedAt');
+   if(name)payload.name=name;if(editionId)payload.editionId=editionId;
+   for(const field of ['notice','resources','history']){const file=data.get(field);if(file instanceof File && file.size){
+    await readJsonFile(file,64*1024*1024);
+    payload[field]={filename:file.name,contentBase64:await fileBase64(file),...(capturedAt?{capturedAt}:{})};}}
+   if(!payload.notice)throw new Error('Choose the complete original SAM notice JSON.');
+   return payload;},
+  onDone:result=>{if(result.result?.editionId){state.editionId=result.result.editionId;state.tab='notices';state.detail=result.result.noticeId;state.selected.clear();state.offset=0;}}
+ });
 }
 function importCapture() {
  openEditor({title:'Receive original captured pages',kind:'Source receiving',fields:note('Choose the original capture JSON containing name, definition and every page with its request, actual status/time and response bytes. The complete captured page bodies stay attached.')+
@@ -504,6 +536,7 @@ async function handleAction(target) {
  else if(action==='capture-detail')await captureDetail(id);
  else if(action==='resize-capture')resizeCapture(id);
  else if(action==='import-capture')importCapture();
+ else if(action==='import-notice')importNotice();
  else if(action==='open-edition'){state.editionId=id;state.offset=0;state.search='';state.detail=null;state.selected.clear();state.tab='notices';await render();}
  else if(action==='notice-detail'){state.detail=id;await render();$('.notice-detail')?.scrollIntoView({block:'start',behavior:'auto'});}
  else if(action==='close-notice'){state.detail=null;await render();}
