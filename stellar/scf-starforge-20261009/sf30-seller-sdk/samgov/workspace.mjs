@@ -1045,10 +1045,11 @@ export async function openSamWorkspace({
       'PORTABLE_PATH_INVALID');
     return value;
   }
-  function packetSource(source,objects){
+  function packetSource(source,objects,validatedSources){
     requireThat(plain(source) && /^src_[a-f0-9]{64}$/.test(source.id),'SOURCE_RECORD_INVALID');
     const identity=copy(source);delete identity.id;
     requireThat(source.id==='src_'+sha(identity),'SOURCE_RECORD_CHANGED');
+    if(validatedSources.has(source.id))return objects.get(source.sha256);
     cleanSourceUrl(source.url);
     requireThat(validSourceAcquisition(source),'SOURCE_RECORD_INVALID');
     if(source.status!=='received_file')compareRequest(source.request,{url:source.url});
@@ -1058,6 +1059,13 @@ export async function openSamWorkspace({
       'SOURCE_RECORD_INVALID');
     const body=objects.get(source.sha256);
     requireThat(body && body.length===source.bytes,'SOURCE_BYTES_MISSING');
+    const projected=transport.sanitizeReceipt({body,headers:source.headers});
+    requireThat(projected.body.equals(body) && canonical(projected.headers)===canonical(source.headers),
+      'PORTABLE_CREDENTIAL_CONTENT','Receive the credential-redacted source representation and keep its original private copy at the source workspace.');
+    const routing=jsonBytes({url:source.url,request:source.request,redirects:source.redirects??[]});
+    requireThat(transport.sanitizeReceipt({body:routing,headers:{}}).body.equals(routing),
+      'PORTABLE_CREDENTIAL_CONTENT','Portable source routes must use their public or credential-redacted representation.');
+    validatedSources.add(source.id);
     return body;
   }
   function packetEdition(edition,objects,sources,parsedSources){
@@ -1157,10 +1165,10 @@ export async function openSamWorkspace({
     const required=requiredReferences(packet.versions.map(record=>record.state));
     requireThat(canonical([...objects.keys()].sort())===canonical(required),'PACKET_OBJECT_SET_CHANGED',
       'The portable source object set is incomplete or includes unselected private objects.');
-    const parsedSources=new Map(),editionRows=new Map();
+    const parsedSources=new Map(),editionRows=new Map(),validatedSources=new Set();
     for(const version of packet.versions){
       const current=version.state,sources=new Map(current.sources.map(source=>[source.id,source]));
-      for(const source of current.sources)packetSource(source,objects);
+      for(const source of current.sources)packetSource(source,objects,validatedSources);
       for(const edition of current.editions){
         if(!editionRows.has(edition.objectSha256))
           editionRows.set(edition.objectSha256,packetEdition(edition,objects,sources,parsedSources));

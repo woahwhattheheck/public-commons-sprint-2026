@@ -3,12 +3,13 @@ import { createPublicHttpsFetch } from '../../sf31-buyer-client/public-transport
 import {
   SAM_ENDPOINT, MAX_SOURCE_BYTES, endpoint, cleanSourceUrl, validateDescriptionUrl,
   safeHeaders, integer, text, sha, instant, requireThat, SamError, now,
+  credentialQueryKey, redactCredentialQueryText,
 } from './core.mjs';
 
 function publicReceiptUrl(value) {
   const url = new URL(value);
   for (const key of [...url.searchParams.keys()])
-    if (/api[_-]?key|access[_-]?token|authorization|password|secret|signature|credential|security.token/i.test(key))
+    if (credentialQueryKey(key))
       url.searchParams.set(key, '[REDACTED]');
   return url.href;
 }
@@ -24,16 +25,37 @@ function credentialSafeBody(bytes, secret) {
   catch{return {bytes,originalSha256:sha(bytes),redactions:[]};}
   const variants=secret?[...new Set([secret,encodeURIComponent(secret),JSON.stringify(secret).slice(1,-1)])]
     .filter(Boolean).sort((a,b)=>b.length-a.length):[];
-  let result=source,replacements=0;
-  for(const value of variants){
-    const parts=result.split(value);replacements+=parts.length-1;
-    if(parts.length>1)result=parts.join('[REDACTED_SAM_CREDENTIAL]');
-  }
-  result=result.replace(/([?&](?:api[_-]?key|access[_-]?token|authorization|password|secret)=)([^&#"'\\\s<>]+)/gi,
-    (whole,prefix,value)=>{
-      if(/^(?:\[REDACTED|%5BREDACTED)/i.test(value))return whole;
-      replacements++;return prefix+'[REDACTED_SAM_CREDENTIAL]';
-    });
+  let replacements=0;
+  const cleanText=value=>{
+    let result=value;
+    for(const candidate of variants){
+      const parts=result.split(candidate);replacements+=parts.length-1;
+      if(parts.length>1)result=parts.join('[REDACTED_SAM_CREDENTIAL]');
+    }
+    // JSON strings may contain escaped separators or quoted credential values.
+    // Parse a complete URL before the surrounding-text projection.
+    if(/^https?:\/\/\S+$/i.test(result)){
+      try{
+        const url=new URL(result);let changed=false;
+        if(url.username || url.password){url.username='';url.password='';replacements++;changed=true;}
+        for(const key of [...url.searchParams.keys()]){
+          if(credentialQueryKey(key) && !/^\[REDACTED(?:_SAM_CREDENTIAL)?\]$/i.test(url.searchParams.get(key))){
+            url.searchParams.set(key,'[REDACTED_SAM_CREDENTIAL]');replacements++;changed=true;
+          }
+        }
+        if(changed)result=url.href;
+      }catch{}
+    }
+    const cleaned=redactCredentialQueryText(result);replacements+=cleaned.replacements;
+    return cleaned.text;
+  };
+  let result;
+  if(/^\s*[\[{]/.test(source)){
+    try{
+      const parsed=JSON.parse(source,(_key,value)=>typeof value==='string'?cleanText(value):value);
+      result=replacements?JSON.stringify(parsed):source;
+    }catch{replacements=0;result=cleanText(source);}
+  }else result=cleanText(source);
   if(!replacements)return {bytes,originalSha256:sha(bytes),redactions:[]};
   return {bytes:Buffer.from(result,'utf8'),originalBytes:bytes,originalSha256:sha(bytes),
     redactions:[{kind:'credential_echo',replacements}]};
@@ -160,7 +182,12 @@ export function createSamTransport({
           const next = new URL(location,current);
           // Each hop uses the original connect-time public HTTPS guard; no API
           // credential, cookies or authorization are introduced on an asset hop.
-          cleanSourceUrl(next.href);
+          // A public file service may issue a short-lived signed download URL.
+          // Validate its public endpoint while keeping that query only in memory.
+          const publicNext=new URL(next);
+          for(const key of [...publicNext.searchParams.keys()])
+            if(credentialQueryKey(key))publicNext.searchParams.delete(key);
+          cleanSourceUrl(publicNext.href);
           redirects.push({status:response.status,from:publicReceiptUrl(current.href),to:publicReceiptUrl(next.href)});
           current = next; continue;
         }

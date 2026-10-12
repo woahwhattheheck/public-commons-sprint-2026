@@ -29,6 +29,9 @@ export function queryDefinition(value:Partial<SamQueryDefinition> & Pick<SamQuer
 export function queryIdentity(definition:SamQueryDefinition,selectedEndpoint?:string):string;
 export function searchRequest(definition:SamQueryDefinition,offset?:number,selectedEndpoint?:string):{
   method:'GET';url:string;offset:number;limit:number};
+export function credentialQueryKey(value:string):boolean;
+export function redactCredentialQueryText(value:string):{text:string;replacements:number};
+export function publicNoticeUrl(value:unknown):string|null;
 export function cleanSourceUrl(value:string,name?:string):string;
 export function validateDescriptionUrl(value:string,noticeId:string,selectedEndpoint?:string):string;
 export function safeHeaders(headers?:Headers|Record<string,string>):Record<string,string>;
