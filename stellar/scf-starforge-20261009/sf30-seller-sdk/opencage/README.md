@@ -4,6 +4,8 @@ A complete geocoding product inside the maintained Starforge seller and buyer so
 
 The component is in `sf30-seller-sdk/opencage/`. Its CLI is `cli.mjs`; its public API is `index.mjs`. The browser is a private loopback application with an industrial monochrome layout.
 
+The [deployment and receiving guide](DEPLOYMENT.md) connects the exact source release, host transport, original merchant and retained buyer/customer workflow. It also identifies the command and export differences between the prior cumulative archives and this workbench's source.
+
 ## Product workflow
 
 1. Initialize one private workspace from a geocoding plan and explicit merchant payment terms.
