@@ -155,7 +155,7 @@ export default defineMerchantProvider({
   title: 'Datasette source editions', order: 1110, catalogOrder: 1110,
   configKey: 'datasetteWorkspaces', summary: true, dependencies: [],
   concurrency: 'provider',
-  maxRequestBytes: 1024 * 1024,
+  maxRequestBytes: 12 * 1024 * 1024,
   configuration: {input: 'datasetteWorkspaceConnection', privateExports: true,
     read: async (value, {hostPath}) => readDatasetteWorkspaceConfiguration(hostPath(value))},
   tools: tool => [...datasetteWorkspaceTools(tool), ...datasetteReceivingTools(tool)],

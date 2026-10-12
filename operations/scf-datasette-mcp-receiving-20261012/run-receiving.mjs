@@ -1,4 +1,4 @@
-// MIT. Same-owner Datasette merchant receiving. No capture, publisher, payment or Analysis owner is opened.
+// MIT. Same-owner Datasette merchant receiving and exact completed-upload replay. No capture, publisher, payment or Analysis owner is opened.
 import {constants} from 'node:fs';
 import {open, mkdir, readdir, realpath, rename, unlink} from 'node:fs/promises';
 import {join, resolve, relative, isAbsolute, dirname} from 'node:path';
@@ -9,7 +9,7 @@ import {createServer} from 'node:http';
 const PREFIX='merchant_datasette_';
 const TOOL_NAMES=Object.freeze([
   'workspaces','health','status','operations','operation','reconnect','files','file','file_read','file_release',
-  'export_prepare','export_inventory','export_manifest','export_file','export_file_release',
+  'export_prepare','export_inventory','export_manifest','export_file','export_file_release','upload_status','upload_chunk',
 ].map(name=>PREFIX+name));
 const NATIVE_NAMES=Object.freeze([
   'source.capture','source.adopt','source.inspect','source.review','editions.create','editions.list',
@@ -18,6 +18,7 @@ const NATIVE_NAMES=Object.freeze([
   'publisher.buyer-offer','publisher.prepare-buyer','release.prepare','release.stage','source.export','source.receive',
   'files.list','files.inspect','files.read','workspace.export','workspace.receive','operations.inspect','operations.cancel',
 ]);
+const REQUEST_NAMES=Object.freeze(['requests.inspect','requests.list']);
 const READ_OPERATIONS=new Set(['source.inspect','editions.inspect','editions.list','operations.inspect']);
 const HASH=/^[a-f0-9]{64}$/;
 const plain=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -114,12 +115,13 @@ async function closeServer(server) {
 /**
  * Attach one already-open native workspace after its original source/publisher/customer operations.
  * The owner supplies an already-produced full workspace archive and exact reviewed edition identity.
- * All native calls below are reads. Only this private merchant receiving manifest/download is written.
+ * Native reads retain their original outcomes. An optional completed-upload declaration
+ * exercises only the original zero-byte replay; no new upload bytes or source action is submitted.
  */
 export async function runDatasetteMcpReceiving({
   sourceRoot,connectionFile,outputDirectory,workspaceAlias='portfolio',
   expectedWorkspaceId,editionId,expectedEditionSha256,captureId,expectedCaptureSha256,
-  expectedRows=189,workspaceArchive,requiredNativeFiles=[],
+  expectedRows=189,workspaceArchive,requiredNativeFiles=[],originalUpload,
 }={}) {
   for(const value of [sourceRoot,connectionFile,outputDirectory])
     need(printable(value)&&isAbsolute(value),'DATASETTE_RECEIVING_ABSOLUTE_PATH');
@@ -132,6 +134,17 @@ export async function runDatasetteMcpReceiving({
   'DATASETTE_RECEIVING_ORIGINAL_BINDING');
   need(plain(workspaceArchive)&&Array.isArray(requiredNativeFiles),'DATASETTE_RECEIVING_ARCHIVE_REQUIRED',
     'Pass the exact already-exported original workspace archive; this receiver does not create another native export.');
+  if(originalUpload!==undefined) {
+    need(plain(originalUpload)&&Object.keys(originalUpload).length===4&&
+      ['uploadId','name','bytes','sha256'].every(key=>Object.hasOwn(originalUpload,key))&&
+      /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(originalUpload.uploadId??'')&&
+      printable(originalUpload.name,240)&&!/[\\/]/.test(originalUpload.name)&&
+      typeof originalUpload.bytes==='string'&&/^(0|[1-9][0-9]*)$/.test(originalUpload.bytes)&&
+      Number(originalUpload.bytes)<=2*1024*1024*1024&&HASH.test(originalUpload.sha256??''),
+    'DATASETTE_RECEIVING_UPLOAD_BINDING','Pass the same complete original upload declaration, without creating another intake.');
+    originalUpload=structuredClone(originalUpload);
+  }
+  const requiredToolNames=originalUpload?TOOL_NAMES:TOOL_NAMES.filter(name=>!['upload_status','upload_chunk'].includes(name.slice(PREFIX.length)));
   const required=[workspaceArchive,...requiredNativeFiles].map(file=>{
     relativePath(file.path);need(HASH.test(file.sha256??'')&&/^(0|[1-9][0-9]*)$/.test(String(file.bytes))&&
       Number(file.bytes)<=2*1024*1024*1024,'DATASETTE_RECEIVING_FILE_PIN');
@@ -157,7 +170,10 @@ export async function runDatasetteMcpReceiving({
   need(new Set(definitions.map(item=>item.name)).size===TOOL_NAMES.length&&
     same(definitions.map(item=>item.name).sort(),[...TOOL_NAMES].sort()),'DATASETTE_RECEIVING_CATALOG');
   const advertisedNative=definitions.find(item=>item.name===PREFIX+'operation')?.inputSchema.properties.operation.enum;
-  need(same([...advertisedNative??[]].sort(),[...NATIVE_NAMES].sort()),'DATASETTE_RECEIVING_NATIVE_CATALOG');
+  const nativeNames=Array.isArray(advertisedNative)?[...advertisedNative]:[];
+  need(new Set(nativeNames).size===nativeNames.length&&
+    (same([...nativeNames].sort(),[...NATIVE_NAMES].sort())||
+     same([...nativeNames].sort(),[...NATIVE_NAMES,...REQUEST_NAMES].sort())),'DATASETTE_RECEIVING_NATIVE_CATALOG');
   const loaded=await descriptor.load();
   need(loaded.MerchantDatasetteWorkspaces===leaf.MerchantDatasetteWorkspaces,'DATASETTE_RECEIVING_PROVIDER_JOIN');
   await privateDirectory(outputDirectory);
@@ -166,6 +182,7 @@ export async function runDatasetteMcpReceiving({
   const config={
     sourceRoot,connectionFile,workspaceAlias,expectedWorkspaceId,editionId,expectedEditionSha256,
     captureId,expectedCaptureSha256:expectedCaptureSha256??null,expectedRows,requiredNativeFiles:required,
+    originalUpload:originalUpload??null,nativeOperationNames:nativeNames,
   };
   const configHash=sha(bytes(config));
   const save=async()=>{lease.assertHeld();journal.updatedAt=new Date().toISOString();await writeJSON(journalPath,journal);};
@@ -200,7 +217,7 @@ export async function runDatasetteMcpReceiving({
     }};
     const server=createServer(http.createMcpToolHandler(wrapped,{
       bearerToken:bearer,serverName:'datasette-original-receiving',serverVersion:'1.0.0',
-      maxRequestBytes:1024*1024,instructions:'Read the existing Datasette workspace and receive its exact retained source files. No source, publisher, payment or customer owner is created.',
+      maxRequestBytes:descriptor.maxRequestBytes,instructions:'Read the existing Datasette workspace and receive its exact retained source files. No source, publisher, payment or customer owner is created.',
     }));
     owner={server,provider,record,client:null};
     try{
@@ -301,9 +318,24 @@ export async function runDatasetteMcpReceiving({
     else{journal.original={health:ownerAtStart,status:current};await save();}
     await evidence('native-status-before.json',current);
     const operations=(await client.operations({})).native;
-    need(Array.isArray(operations)&&same(operations.map(item=>item.operation).sort(),[...NATIVE_NAMES].sort()),
+    need(Array.isArray(operations)&&same(operations.map(item=>item.operation).sort(),[...nativeNames].sort()),
       'DATASETTE_RECEIVING_NATIVE_CATALOG');
     await evidence('native-operation-catalog.json',operations);
+    if(originalUpload) {
+      const before=await client.uploadStatus({uploadId:originalUpload.uploadId},{timeoutMs:300000});
+      need(before.workspace===workspaceAlias&&before.native?.workspaceId===expectedWorkspaceId&&
+        before.native.state==='COMPLETE'&&Object.entries(originalUpload).every(([key,value])=>before.native[key]===value)&&
+        before.native.receivedBytes===originalUpload.bytes&&before.native.prefixSha256===originalUpload.sha256&&
+        before.native.uncheckpointedBytes==='0','DATASETTE_RECEIVING_UPLOAD_NOT_COMPLETE');
+      await evidence('original-complete-upload.json',before);
+      const repeated=await client.uploadChunk({...originalUpload,offset:originalUpload.bytes,length:'0',data:''},{timeoutMs:300000});
+      const {replayed,...native}=repeated.native??{};
+      need(repeated.workspace===workspaceAlias&&replayed===true&&same(native,before.native),
+        'DATASETTE_RECEIVING_UPLOAD_CHANGED','The zero-byte replay must return the same original completed upload.');
+      await evidence('original-complete-upload-replay.json',repeated);
+      journal.upload={...originalUpload,archiveFile:before.native.archiveFile,retainedFile:before.native.retainedFile,
+        replayed:true};await save();
+    }
     const savedEdition=current.editions.find(item=>item.id===editionId),savedCapture=current.captures.find(item=>item.operationId===captureId);
     need(savedEdition?.editionSha256===expectedEditionSha256&&savedCapture&&savedCapture.rowCount===expectedRows&&
       (expectedCaptureSha256===undefined||savedCapture.captureSha256===expectedCaptureSha256),'DATASETTE_RECEIVING_SOURCE_BINDING');
@@ -317,6 +349,8 @@ export async function runDatasetteMcpReceiving({
     await evidence('original-source-operation.json',await nativeRead(client,'operations.inspect',{operationId:captureId}));
     let files=await inventory(client);
     for(const pin of required)need(files.files.some(file=>fileMatches(file,pin)),'DATASETTE_RECEIVING_REQUIRED_FILE',pin.path);
+    if(journal.upload)need(files.files.some(file=>fileMatches(file,journal.upload.retainedFile)),
+      'DATASETTE_RECEIVING_REQUIRED_UPLOAD','The original completed upload must travel in the complete native file inventory.');
     for(const [path,pin] of [[savedEdition.editionFile,expectedEditionSha256],[savedCapture.captureFile,savedCapture.captureSha256]]){
       const name=relative(resolve(current.directory),resolve(path));relativePath(name);
       need(files.files.some(file=>file.path===name&&file.sha256===pin),'DATASETTE_RECEIVING_REQUIRED_SOURCE',name);
@@ -390,14 +424,16 @@ export async function runDatasetteMcpReceiving({
     }
     await evidence('offline-complete-file-reopen.json',journal.offline);
     const invoked=[...new Set(journal.calls.filter(call=>call.state==='RETURNED').map(call=>call.tool))].sort();
-    need(same(invoked,[...TOOL_NAMES].sort()),'DATASETTE_RECEIVING_TOOL_COVERAGE');
+    need(same(invoked,[...requiredToolNames].sort()),'DATASETTE_RECEIVING_TOOL_COVERAGE');
     journal.result={workspaceId:expectedWorkspaceId,editionId,editionSha256:expectedEditionSha256,
       captureId,captureSha256:savedCapture.captureSha256,rows:edition.rows.length,columns:edition.columns,
       sourceValuesPreserved:true,originalFiles:files.files.length,downloadFiles:journal.download.files,
       receivedBytes:journal.download.bytes,workspaceArchive:required[0],
-      advertisedToolNames:[...TOOL_NAMES],invokedToolNames:invoked,nativeOperations:[...NATIVE_NAMES],
+      advertisedToolNames:[...TOOL_NAMES],invokedToolNames:invoked,nativeOperations:nativeNames,originalUpload:journal.upload??null,
       originalOwnerUnchanged:true,nativeOwnerClosed:false,
-      classification:'Original retained-source, publisher and customer files received through the same 15-tool interface; no native mutation or provider/payment request.',
+      classification:'Original retained-source, publisher and customer files received through the same 17-tool interface; '+
+        (originalUpload?'the same completed upload was read and zero-byte replayed. ':'no upload was requested. ')+
+        'No capture, review, publication or provider/payment request was submitted.',
     };
     need(journal.attachments.filter(item=>item.closed).length>=2,'DATASETTE_RECEIVING_CLOSE');
     journal.state='COMPLETE';journal.completedAt=new Date().toISOString();await save();

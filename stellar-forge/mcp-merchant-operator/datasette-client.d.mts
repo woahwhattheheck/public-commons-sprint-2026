@@ -1,6 +1,6 @@
 /** MIT. Typed operations and complete receiving through the original Datasette workspace. */
-import type {DatasetteOperation, DatasetteOperationInputs, JsonValue} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/datasette/client.mjs';
-export type {DatasetteOperation, DatasetteOperationInputs, DatasetteSelection, DatasetteCapturedPage} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/datasette/client.mjs';
+import type {DatasetteOperation, DatasetteOperationInputs, DatasetteUploadDeclaration, DatasetteUploadRange, DatasetteUploadStatus, JsonValue} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/datasette/client.mjs';
+export type {DatasetteOperation, DatasetteOperationInputs, DatasetteSelection, DatasetteCapturedPage, DatasetteUploadDeclaration, DatasetteUploadRange, DatasetteUploadStatus} from '../../stellar/scf-starforge-20261009/sf30-seller-sdk/datasette/client.mjs';
 
 export interface MerchantRequestOptions {requestSignal?: AbortSignal | null; timeoutMs?: number;}
 export interface DatasetteMerchantConnection {
@@ -51,6 +51,8 @@ export interface DatasetteMerchantInputs {
   operations: Selected;
   operation: Selected & {operation: DatasetteOperation; input: DatasetteOperationInputs[DatasetteOperation]};
   reconnect: Selected & {workspaceId: string};
+  upload_status: Selected & {uploadId: string};
+  upload_chunk: Selected & DatasetteUploadRange & {data: string};
   files: Selected & {prefix?: string; offset?: number; limit?: number};
   file: Selected & {path: string; sha256?: string};
   file_read: Selected & Range & {path: string; expectedSha256: string};
@@ -77,6 +79,8 @@ export interface DatasetteMerchantResults {
   operations: NativeReply;
   operation: NativeReply;
   reconnect: {state: 'CONNECTED'; workspace: string; workspaceId: string; native: JsonValue; status: JsonValue; operations: JsonValue};
+  upload_status: NativeReply<DatasetteUploadStatus>;
+  upload_chunk: NativeReply<DatasetteUploadStatus>;
   files: NativeReply<NativeFilePage>;
   file: NativeReply<NativeFile>;
   file_read: RetainedChunk;
@@ -103,6 +107,7 @@ export type DatasetteMerchantClient = Readonly<ToolMethods & NativeMethods & {
     args: DatasetteMerchantInputs[K], requestOptions?: MerchantRequestOptions): Promise<DatasetteMerchantResults[K]>;
   /** This method requires a workspace alias selected when opening the client. */
   nativeOperation<K extends DatasetteOperation>(operation: K, input: DatasetteOperationInputs[K], requestOptions?: MerchantRequestOptions): Promise<NativeReply>;
+  uploadFile(options: Selected & DatasetteLocalUploadOptions): Promise<DatasetteUploadResult>;
   downloadExport(options: Selected & LocalDownloadOptions): Promise<DatasetteDownloadResult>;
   inspectExport(options: Selected & {exportId: string; signal?: AbortSignal}): Promise<{manifest: DownloadManifest; manifestSha256: string}>;
 }>;
@@ -144,3 +149,28 @@ export declare function downloadDatasetteExport(options: DatasetteDownloadOption
 export declare function inspectDatasetteExport(options: Omit<DatasetteDownloadOptions, keyof LocalDownloadOptions> & {exportId: string}): Promise<{manifest: DownloadManifest; manifestSha256: string}>;
 /** Reads only the complete local download under the original download lease. */
 export declare function reopenDatasetteExport(options: {directory: string; exportId: string; expectedManifestSha256?: string}): Promise<DatasetteDownloadResult>;
+
+export interface DatasetteLocalUploadOptions extends DatasetteUploadDeclaration {
+  /** Complete reviewed private local file. It is never sent as a remote filesystem path. */
+  path: string;
+  /** 64 KiB–8 MiB; default 1 MiB. Byte declarations and offsets remain exact decimal text. */
+  chunkSize?: number;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+  onProgress?: (value: {workspace: string; uploadId: string; state: DatasetteUploadStatus['state'];
+    receivedBytes: string; bytes: string; sha256: string}) => void | Promise<void>;
+}
+export interface DatasetteFileUploadOptions extends DatasetteLocalUploadOptions {
+  workspace: string;
+  client?: OriginalMerchantTransport;
+  url?: string;
+  tokenEnv?: string;
+  environment?: Record<string, string | undefined>;
+}
+export interface DatasetteUploadResult extends NativeReply<DatasetteUploadStatus> {
+  state: DatasetteUploadStatus['state'];
+  source: {path: string; bytes: string; sha256: string};
+  resumedBytes: string;
+}
+/** One explicit continuation. A failed mutating response is never retried automatically. */
+export declare function uploadDatasetteFile(options: DatasetteFileUploadOptions): Promise<DatasetteUploadResult>;

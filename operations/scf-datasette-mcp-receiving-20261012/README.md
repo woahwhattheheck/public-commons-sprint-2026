@@ -2,11 +2,11 @@
 
 This program receives a finished Datasette workspace through the same source-owned merchant provider. It does not open the source, publisher, seller, payer or Analysis workspace. The original native server stays open and retains its own lease.
 
-The native source owner should finish source capture, edition review, publisher/customer work and its ordinary full workspace export before running this attachment. Keep the original workspace idle during the receiving snapshot. The receiver writes only its own private MCP configuration, file inventory, download and operating journal.
+The native source owner should finish source capture, edition review, publisher/customer work and its ordinary full workspace export before running this attachment. Keep the original workspace idle during the receiving snapshot. The receiver writes its own private MCP configuration, file inventory, download and operating journal. When given the original completed upload declaration, it also submits that same native upload's zero-byte replay; no new file bytes, source action or upload identity are created.
 
 ## Existing source and input
 
-Use a complete repository-shaped installed source directory containing both stellar/ and stellar-forge/. Its Datasette provider must contain the final 31 native operations and the 15-tool receiving composition. The source-owned provider has privateExports: true, uses the original provider concurrency policy and loads the maintained Datasette receiving leaf. No npm dependency or MCP SDK is required by this receiving program; Node builtins and the original Linux flock helper are sufficient.
+Use a complete repository-shaped installed source directory containing both stellar/ and stellar-forge/. Its Datasette provider must contain the 17-tool upload/receiving composition and the original 31 native operations, with the two original request-history operations when that source join is present. The source-owned provider has privateExports: true, uses the original provider concurrency policy and loads the maintained Datasette receiving leaf. No npm dependency or MCP SDK is required by this receiving program; Node builtins and the original Linux flock helper are sufficient.
 
 The source owner supplies:
 
@@ -16,6 +16,7 @@ The source owner supplies:
 - The original capture operation ID and, when available, exact capture JSON SHA-256.
 - The expected complete source row count.
 - The relative path, exact byte count and SHA-256 of its already-exported original workspace archive.
+- The optional exact completed source upload declaration `{uploadId,name,bytes,sha256}`. Supply it for the original raw-upload customer journey; all four values come from the existing native upload receipt.
 - Any additional expected native files, such as the source edition archive or a customer/publisher handoff, that must be present in this complete receiving.
 
 The program verifies the edition and capture through every original native page. It preserves the original ordered columns, cell values and explicit cell types; it does not convert exact number tokens through JavaScript arithmetic. The WRI geothermal operation uses 189 rows and 26 ordered columns. Its original metadata supplies the column order because the captured pages omit columns. The observed unique gppd_idnr values remain a reviewed key rather than an invented database primary key.
@@ -41,7 +42,13 @@ await runDatasetteMcpReceiving({
     bytes: originalArchive.retainedFile.bytes,
     sha256: originalArchive.retainedFile.sha256
   },
-  requiredNativeFiles: []
+  requiredNativeFiles: [],
+  originalUpload: {
+    uploadId: originalUploadedSource.uploadId,
+    name: originalUploadedSource.name,
+    bytes: originalUploadedSource.bytes,
+    sha256: originalUploadedSource.sha256
+  }
 });
 ~~~
 
@@ -57,11 +64,11 @@ The program does not start or stop the native Datasette server. On completion th
 
 ## What is operated
 
-The receiver validates the actual HTTP tool catalog, not just a count from source. It uses all 15 declared merchant tools. The report distinguishes those actual tool invocations from the 31 native operations advertised by the original source client. It only dispatches native source/edition/operation inspection and the original file reads.
+The receiver validates the actual HTTP tool catalog, not just a count from source. It verifies all 17 advertised merchant tool names. With originalUpload it invokes all 17, including status and the exact completed upload's zero-byte replay. A source captured without an upload uses the 15 applicable tools and records that distinction. The report separately records the original 31 or 33 native operation names; catalog presence is not a claim that every native action ran. Source/edition/operation inspection and original file reads do not repeat publication or payment.
 
 The operating sequence is:
 
-1. Attach the host-declared original workspace, verify persistent identity and idle state, then retain the complete source/native operation catalog.
+1. Attach the host-declared original workspace, verify persistent identity and idle state, then retain the complete source/native operation catalog. If originalUpload is supplied, read its COMPLETE status, zero-byte replay that same upload, and require the unchanged original outcome.
 2. Page through every original capture and reviewed edition row, preserving ordered columns, numeric lexemes, nulls and cell types, and verify their complete equality.
 3. Read every page of the original retained-file catalog and verify the required edition, capture, full workspace archive and any additional declared publisher/customer files.
 4. Open and release a real native retained file handle, then prepare a content-addressed receiving manifest after two complete original inventories agree.
@@ -85,7 +92,7 @@ Preserve the entire receiving directory with the source owner's final customer p
 
 ## Interrupted receiving
 
-Run the same input against the same directory. The original config hash, source state, file inventory, capture, edition, archive and receiving manifest must still match. Read-only native calls can be reissued; no mutation is replayed.
+Run the same input against the same directory. The original config hash, source state, file inventory, capture, edition, archive and receiving manifest must still match. Read-only native calls can be reissued. A supplied originalUpload permits only its same COMPLETE zero-byte replay; no new source, review, publisher, buyer or upload-body mutation is issued.
 
 An original native state/file change produces an explicit stop. Inspect the native owner and the saved journey before deciding whether a new, separately reviewed receiving snapshot is needed. An occupied old merchant port is also explicit: the program will not silently change the endpoint bound to an existing download checkpoint.
 
