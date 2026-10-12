@@ -22,6 +22,7 @@ import { stellarExpertStartup, STELLAR_EXPERT_READY_SCHEMA } from './application
 import { atlasStartup } from './application-atlas.mjs';
 import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
+import { cryptoworthStartup } from './application-cryptoworth.mjs';
 import { openApiStartup } from './application-openapi.mjs';
 import { arcgisAgentStartup } from './application-arcgis.mjs';
 import { duckdbAgentStartup, DUCKDB_AGENT_STARTUP_SCHEMA } from './application-duckdb-agent.mjs';
@@ -656,16 +657,16 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
-    if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent'].includes(request.command)) {
+    if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent', 'merchant-accounting-workspace'].includes(request.command)) {
       const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
-        arcgis = request.command === 'arcgis-agent';
-      const startupSchema = arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
+        arcgis = request.command === 'arcgis-agent', cryptoworth = request.command === 'merchant-accounting-workspace';
+      const startupSchema = cryptoworth ? 'stellar-forge.accounting-workspace-startup.v1' : arcgis ? 'stellar-forge.arcgis-agent-workspace-startup.v1' :
         redis ? 'stellar-forge.redis-workspace-startup.v1' :
         tenderly ? 'stellar-forge.tenderly-workspace-startup.v1' : 'stellar-forge.blockscout-startup.v1';
       if (!text.startsWith('{"schema":"' + startupSchema + '",')) return;
       saving = saving.then(async () => {
         if (seen) return;
-        const startup = await (arcgis ? arcgisAgentStartup : redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
+        const startup = await (cryptoworth ? cryptoworthStartup : arcgis ? arcgisAgentStartup : redis ? redisStartup : tenderly ? tenderlyStartup : blockscoutStartup)(request, text);
         const url = startup && privateUrl(startup.url);
         if (!url) return;
         seen = true;

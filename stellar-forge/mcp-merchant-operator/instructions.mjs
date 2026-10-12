@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_accounting_cryptoworth_",
+    "text": "For Cryptoworth receiving, open the declared original accounting workspace and inspect the actual template alias, original handoff and explicit accountant revision. Preserve the complete normalized preview, source alias hashes, native request ID, workspace ID/revision and preview hash for profile, plan, capture and accountant-return saves. Reconcile the saved native ID before rereading changed input aliases after an uncertain response. PREPARED retains the same staged accountant request; COMMITTED and SUPERSEDED retain terminal history. Record a whole native import-unit rollback only with its actual completed vendor reference. Packet receiving binds both input and sealed packet SHA256s; complete retained files use the original accounting file reader. Close the original MCP workspace before launching its same directory in Applications."
+  },
+  {
     "prefix": "merchant_clinicaltrials_",
     "text": "For ClinicalTrials, attach the declared existing console and use its original capture, NCT, source SHA and integer revision. Read the original complete study and official PRS reports before retaining a review or modernization decision. Save the exact action UUID and payload before mutation; inspect that same operation after an interrupted reply. Portable receiving preserves original studies, reviews and source editions in a new receiver; inspect its actual operation/export inventory before continuation. Prepare declared native files and receive their complete SHA-pinned bytes through retained downloads. Closing this attachment drains its own reads and leaves the original Python console owner open."
   },
