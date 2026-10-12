@@ -48,6 +48,20 @@ export const usage = [
   '  opendatasoft offer --project DIR --id EXPORT_ID --input offer.json',
   '  opendatasoft buyer --project DIR --id EXPORT_ID --input buyer.json',
   '',
+  'Reviewed tenant ingestion',
+  '  opendatasoft serve --project DIR --automation-connection private-tenants.json',
+  '  opendatasoft tenant-targets --project DIR --automation-connection private-tenants.json',
+  '  opendatasoft tenant-prepare --project DIR --automation-connection private-tenants.json --input plan.json',
+  '  opendatasoft tenant-plan --project DIR --id PLAN_ID',
+  '  opendatasoft tenant-inspect --project DIR --automation-connection private-tenants.json --id PLAN_ID',
+  '  opendatasoft tenant-review --project DIR --id PLAN_ID --input review.json',
+  '  opendatasoft tenant-apply --project DIR --automation-connection private-tenants.json --id PLAN_ID --review-id REVIEW_ID',
+  '  opendatasoft tenant-recover --project DIR --automation-connection private-tenants.json --id PLAN_ID [--input recovery.json]',
+  '  opendatasoft tenant-status --project DIR --automation-connection private-tenants.json --id PLAN_ID',
+  '  opendatasoft tenant-receive --project DIR --automation-connection private-tenants.json --id PLAN_ID [--input receiving.json]',
+  '  opendatasoft tenant-export --project DIR --id PLAN_ID',
+  '  opendatasoft tenant-delivery --project DIR --id EXPORT_ID',
+  '',
   'Use --help with any command. huwise is an alias of opendatasoft.',
   'JSON inputs use the same fields as the browser workspace and the public engine.',
   'Complete captures use /exports/json. The records command is an interactive preview.',
@@ -57,7 +71,7 @@ export const usage = [
 
 const commandOptions = {
   init: ['project', 'origin', 'auth-token-env'],
-  serve: ['project', 'port'],
+  serve: ['project', 'port', 'automation-connection'],
   status: ['project'],
   search: ['project', 'origin', 'auth-token-env', 'input'],
   dataset: ['project', 'dataset'],
@@ -84,6 +98,17 @@ const commandOptions = {
   stage: ['project', 'id', 'input'],
   offer: ['project', 'id', 'input'],
   buyer: ['project', 'id', 'input'],
+  'tenant-targets':['project','automation-connection'],
+  'tenant-prepare':['project','automation-connection','input'],
+  'tenant-plan':['project','id'],
+  'tenant-inspect':['project','automation-connection','id'],
+  'tenant-review':['project','id','input'],
+  'tenant-apply':['project','automation-connection','id','review-id'],
+  'tenant-recover':['project','automation-connection','id','input'],
+  'tenant-status':['project','automation-connection','id'],
+  'tenant-receive':['project','automation-connection','id','input'],
+  'tenant-export':['project','id'],
+  'tenant-delivery':['project','id'],
 };
 
 const output = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
@@ -148,6 +173,7 @@ export async function main(argv = process.argv.slice(2)) {
   const project = await openOpendatasoftWorkbench({
     directory: resolve(required('project')),
     create: command === 'init',
+    ...(options['automation-connection'] ? { automationConnection:resolve(options['automation-connection']) }: {}),
     ...(command === 'init' ? { origin: required('origin'), authTokenEnv: options['auth-token-env'] } : {}),
   });
   let served = false;
@@ -204,6 +230,17 @@ export async function main(argv = process.argv.slice(2)) {
     else if (command === 'stage') result = await project.stageMerchant(required('id'), await input());
     else if (command === 'offer') result = await project.buyerOffer(required('id'), await input());
     else if (command === 'buyer') result = await project.prepareBuyer(required('id'), await input());
+    else if (command === 'tenant-targets') result = await project.tenantTargets();
+    else if (command === 'tenant-prepare') result = await project.prepareTenantPlan(await input());
+    else if (command === 'tenant-plan') result = await project.tenantPlan(required('id'));
+    else if (command === 'tenant-inspect') result = await project.inspectTenantPlan(required('id'));
+    else if (command === 'tenant-review') result = await project.reviewTenantPlan(required('id'),await input());
+    else if (command === 'tenant-apply') result = await project.applyTenantPlan(required('id'),{ reviewId:required('review-id') });
+    else if (command === 'tenant-recover') result = await project.recoverTenantPlan(required('id'),await input('input',true));
+    else if (command === 'tenant-status') result = await project.refreshTenantStatus(required('id'));
+    else if (command === 'tenant-receive') result = await project.receiveTenantPlan(required('id'),await input('input',true));
+    else if (command === 'tenant-export') result = await project.exportTenantPlan(required('id'));
+    else if (command === 'tenant-delivery') result = await project.tenantExport(required('id'));
     else throw new Error('Unknown command: ' + command);
     if (result?.completion) {
       result = await result.completion;

@@ -12,6 +12,8 @@ import { openOpendatasoftPublisher } from './publisher/model.mjs';
 import { exportOpendatasoftMerchantPackage, stageOpendatasoftMerchantRelease, readOpendatasoftMerchantBuyerOffer,
   prepareOpendatasoftMerchantBuyer } from './publisher/release.mjs';
 
+import { createOpendatasoftAutomationWorkspace } from './automation/workspace.mjs';
+
 const ID = /^[a-f0-9-]{36}$/;
 const id = value => { if (typeof value !== 'string' || !ID.test(value)) throw fault('ODS_ITEM_NOT_FOUND', 'Choose an existing project item.', 404); return value; };
 const text = (value, label, max = 256) => {
@@ -147,7 +149,7 @@ function editionExport(capture, notes, format, input = {}) {
   throw fault('ODS_EXPORT_FORMAT_INVALID');
 }
 
-export async function openOpendatasoftWorkbench({ directory, create = false, origin, authTokenEnv, environment = process.env } = {}) {
+export async function openOpendatasoftWorkbench({ directory, create = false, origin, authTokenEnv, automationConnection, environment = process.env } = {}) {
   directory = resolve(directory);
   if (create && await exists(join(directory, 'workbench.json'))) throw fault('ODS_PROJECT_EXISTS');
   await privateDirectory(dirname(directory));
@@ -236,8 +238,23 @@ export async function openOpendatasoftWorkbench({ directory, create = false, ori
         await persist(); throw error;
       }
     }
+    const tenant = createOpendatasoftAutomationWorkspace({ directory, connectionFile:automationConnection, environment,
+      state,persist,selectedCapture,selectedEdition:value => find('editions',value) });
+    await tenant.reconcile();
     const api = {
       directory,
+      tenantTargets: () => tenant.targets(),
+      tenantDatasets: (alias,input = {}) => tenant.datasets(alias,input),
+      tenantPlan: value => tenant.plan(value),
+      tenantExport: value => tenant.exportEntry(value),
+      prepareTenantPlan: input => launch('prepare tenant ingestion',() => tenant.prepare(input)),
+      inspectTenantPlan: value => launch('inspect tenant configuration',signal => tenant.inspect(value,signal)),
+      reviewTenantPlan: (value,input) => launch('review tenant ingestion',() => tenant.review(value,input)),
+      applyTenantPlan: (value,input) => launch('apply tenant ingestion',(signal,progress) => tenant.apply(value,input,signal,progress)),
+      recoverTenantPlan: (value,input = {}) => launch('recover tenant ingestion',(signal,progress) => tenant.recover(value,input,signal,progress)),
+      refreshTenantStatus: value => launch('read tenant processing',signal => tenant.status(value,signal)),
+      receiveTenantPlan: (value,input = {}) => launch('receive published tenant dataset',(signal,progress) => tenant.receive(value,input,signal,progress)),
+      exportTenantPlan: value => launch('export tenant delivery',() => tenant.export(value)),
       status: () => structuredClone({ ...state, directory, active: active ? active.operation.id : null }),
       async search(input = {}) {
         const received = await searchOpendatasoft(state.catalogOrigin, input, { authTokenEnv: state.authTokenEnv, env: environment });
