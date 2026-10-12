@@ -141,3 +141,18 @@ Use **Drain and stop** before choosing another profile or port. The original tra
 An edited policy is a new immutable named file. Start it only after the previous runtime finishes draining. Restarting the operator process reopens the saved files with no automatic payment or backend action. The original CLI and a prepared customer session can consume the same files, using that same shared ownership directory.
 
 Ctrl-C closes the management listener and drains its owned native backend. Keep the original process running while accepted SDK work is completing. See the parent `OPERATIONS.md` for readiness, signing-account custody and payment reconciliation.
+
+## Agent operations and durable receiving
+
+The original merchant MCP host can attach this operator through private
+host-declared aliases. Its source-owned provider adds profile review/save,
+native start/drain, catalog reads and complete export receiving. See
+[MERCHANT_AGENT.md](./MERCHANT_AGENT.md) for the complete installed connection,
+setup, 17 agent tools and resumable download workflow.
+
+The same native client now offers `streamCatalog(selection, {write})` for
+awaited per-page receiving; `receiveCatalog` and `exportCatalog` retain their
+existing collector interface. A durable catalog capture stores every original
+resource together with the exact selected native profile, original instance,
+network, resource version and first catalog/queue observation. The merchant
+receiver continues that retained export after its agent session ends.
