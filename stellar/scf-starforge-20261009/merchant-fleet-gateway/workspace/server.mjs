@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fleetControl } from '../control.mjs';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 
 const HOST = '127.0.0.1';
 const USAGE = `Usage: node workspace/server.mjs --state PRIVATE_FLEET_DIRECTORY
@@ -57,15 +58,9 @@ export async function startFleetWorkspace({ stateDirectory, manifests = {}, port
       throw new TypeError('Manifest requires a lowercase name and a file path');
     sources.set(name, resolve(path));
   }
-  const assets = new Map(await Promise.all([
-    ['/', 'index.html', 'text/html; charset=utf-8'],
-    ['/browser.mjs', 'browser.mjs', 'text/javascript; charset=utf-8'],
-    ['/clients.mjs', 'clients.mjs', 'text/javascript; charset=utf-8'],
-    ['/discovery.mjs', 'discovery.mjs', 'text/javascript; charset=utf-8'],
-    ['/delivery.mjs', 'delivery.mjs', 'text/javascript; charset=utf-8'],
-    ['/original-client.mjs', '../../sf82-seller-pilot/release-ui/client.mjs', 'text/javascript; charset=utf-8'],
-    ['/style.css', 'style.css', 'text/css; charset=utf-8'],
-  ].map(async ([path, file, type]) => [path, { type, bytes: await readFile(new URL(file, import.meta.url)) }])));
+  const assetSources = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
+  const assets = new Map(await Promise.all([...assetSources].map(async ([path, { url, type }]) =>
+    [path, { type, bytes: await readFile(url) }])));
   let releases = null, directory = managed ? null : resolve(stateDirectory);
   const snapshot = async () => {
     const releaseStatus = releases ? await releases.status() : undefined;

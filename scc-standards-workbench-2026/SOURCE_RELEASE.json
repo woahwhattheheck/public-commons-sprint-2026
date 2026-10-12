@@ -1,7 +1,11 @@
 {
   "schema": "standards-workbench/source-release/v1",
   "name": "scc-standards-workbench",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "parent_source_release": {
+    "commit": "4b8a1b8f9e7c0ea7e41155ced87bef3bf00fab6f",
+    "sha256": "f3b6d92c3d514af79b6e4d5c0f2745c24dfbe3341620f65dc6cbbc9a96495747"
+  },
   "files": [
     {
       "path": "API.md",
@@ -23,9 +27,9 @@
     },
     {
       "path": "README.md",
-      "bytes": 17685,
-      "sha256": "91e4432eb28b6a65cd314a454ca063cbcd5ffb74b98d76b74c1194cef8ec7a1f",
-      "git_blob": "13458c16f17a3fe88921c4da9988ef5efbad8562"
+      "bytes": 18427,
+      "sha256": "1ceb0e968c54d88c5e8d82f5fd94e6c5172080b2c18eda605ba137c902cf67ee",
+      "git_blob": "1e8f7116ccae4d7bb2be0e98122ba10b7427c937"
     },
     {
       "path": "SOURCE-NOTICES.md",
@@ -167,15 +171,15 @@
     },
     {
       "path": "publisher.py",
-      "bytes": 69729,
-      "sha256": "1fd76b6584d913a63a15b849a73b14cfb0924039c0d673b4817ac47e4bd84887",
-      "git_blob": "31323e8c47e58e436a329eed830f46237958dbe8"
+      "bytes": 72269,
+      "sha256": "c40e2a3849e6ef4ea432f539cf002a20c39561c5ece80ad9efef2aa5a5a17e90",
+      "git_blob": "be762fb720da57833f4d50e67b12dd39c8223b5d"
     },
     {
       "path": "pyproject.toml",
       "bytes": 807,
-      "sha256": "d4da911d5eeb94c2c3f3bbce4c1785d50409512fc5e9380378a64555a2047666",
-      "git_blob": "e8489a4c1742eea5df1858804e0d4d77f313c58b"
+      "sha256": "2c05e1ee59a89ad2275c4ba5755395a286163d00d94af2b4d5af682e0678b5ba",
+      "git_blob": "c0843c60d37c3adbb75d453f8eed3f0585428e21"
     },
     {
       "path": "server.py",

@@ -64,6 +64,11 @@ def parser():
     editions.add_argument("--before", type=int)
     edition = commands.add_parser("edition", help="Reopen an immutable edition")
     edition.add_argument("edition_id")
+    meaning = commands.add_parser("semantics", help="Read the original retained source dictionary and reviewed SQL mapping")
+    meaning.add_argument("edition_id")
+    meaning_compare = commands.add_parser("compare-meanings", help="Compare source definitions and SQL mappings between editions")
+    meaning_compare.add_argument("before_id")
+    meaning_compare.add_argument("after_id")
 
     activate = commands.add_parser("activate", help="Select an edition through a revisioned SQL view")
     activate.add_argument("name")
@@ -138,6 +143,10 @@ def main(argv=None):
             output = workspace.editions(limit=args.limit, before=args.before)
         elif args.command == "edition":
             output = workspace.edition(args.edition_id)
+        elif args.command == "semantics":
+            output = workspace.semantics(args.edition_id)
+        elif args.command == "compare-meanings":
+            output = workspace.compare_semantics(args.before_id, args.after_id)
         elif args.command == "activate":
             output = workspace.activate(args.name, args.edition_id, expected_revision=args.expected_revision)
         elif args.command == "views":

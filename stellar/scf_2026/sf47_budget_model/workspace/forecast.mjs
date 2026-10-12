@@ -21,7 +21,7 @@ function download(raw,filename,type='application/json') {
   const a=document.createElement('a');a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),10000);
 }
 
-export function mountForecast({container,current,api:transport,mutationId,recordingActor,onSaved,initialForecastId=null,onSelection=()=>{}}) {
+export function mountForecast({container,current,api:transport,mutationId,recordingActor,onSaved,initialForecastId=null,initialInputs=null,onSelection=()=>{}}) {
   const root=document.createElement('section');root.className='operating-forecast';container.replaceChildren(root);
   let active=true,busy=false,selected=null,preview=null,editing=true,inputState=null,request=null;
   const available=()=>active&&root.isConnected;
@@ -102,6 +102,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
   }
   function readEditor(){
     const form=$('[data-forecast-form]');if(!form)throw new Error('Choose Reforecast current case to edit assumptions.');
+    const explicitGrants=new Set(inputState.grantReceipts.map(row=>Number(row.tranche)));
     const inputs={name:value(form,'name'),asOfDate:value(form,'asOfDate'),calendarStart:value(form,'calendarStart'),
       openingCash:{amountUsd:optional(form,'openingAmount'),basis:value(form,'openingBasis'),sourceIds:selectedValues(form,'openingSources'),note:value(form,'openingNote')},
       capacity:{weeklyHours:optional(form,'weeklyHours'),note:value(form,'capacityNote')},note:value(form,'forecastNote'),
@@ -109,7 +110,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
         remainingCostUsd:optional(row,'remainingCostUsd'),remainingHours:optional(row,'remainingHours'),
         startDate:optional(row,'startDate'),endDate:optional(row,'endDate'),paymentMode:value(row,'paymentMode'),directCashIds:selectedValues(row,'directCashIds'),note:value(row,'note')})),
       invoiceOverrides:[...form.querySelectorAll('[data-forecast-invoice]')].map(row=>({invoiceId:row.dataset.forecastInvoice,dueDate:optional(row,'dueDate'),include:row.querySelector('[name=include]').checked,note:value(row,'note')})),
-      grantReceipts:[...form.querySelectorAll('[data-forecast-grant]')].map(row=>({tranche:Number(row.dataset.forecastGrant),date:optional(row,'date'),include:row.querySelector('[name=include]').checked,note:value(row,'note')})),
+      grantReceipts:[...form.querySelectorAll('[data-forecast-grant]')].map(row=>({tranche:Number(row.dataset.forecastGrant),date:optional(row,'date'),include:row.querySelector('[name=include]').checked,note:value(row,'note')})).filter(row=>explicitGrants.has(row.tranche)||row.date!==null||row.include===false||row.note!==''),
       commercial:[...form.querySelectorAll('[data-forecast-commercial]')].map(row=>({id:row.dataset.forecastCommercial,title:value(row,'title'),
         caseRef:value(row,'caseRef'),stage:value(row,'stage'),selected:row.querySelector('[name=selected]').checked,
         priceUsd:value(row,'priceUsd'),totalDeliveryCostUsd:value(row,'totalDeliveryCostUsd'),remainingHours:value(row,'remainingHours'),
@@ -198,7 +199,7 @@ export function mountForecast({container,current,api:transport,mutationId,record
       if(action==='export-json'){const body=structuredClone(selected);delete body.current;download(JSON.stringify(body,null,2)+'\n',selected.id+'.json');return;}
     });
   });
-  inputState=defaults();render();
-  const ready=initialForecastId?loadSaved(initialForecastId):Promise.resolve();
-  return {ready,dispose(){active=false;},root};
+  inputState=initialInputs?structuredClone(initialInputs):defaults();render();
+  const ready=initialForecastId&&!initialInputs?loadSaved(initialForecastId):Promise.resolve();
+  return {ready,draftInputs(){return editing&&available()?structuredClone(readEditor()):null;},dispose(){active=false;},root};
 }
