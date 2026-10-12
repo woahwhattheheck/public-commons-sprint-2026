@@ -292,7 +292,10 @@ class DuckDBWorkspace:
             info = self.path.lstat()
             if not stat.S_ISREG(info.st_mode) or info.st_mode & 0o077 or info.st_nlink != 1:
                 raise StateError("DUCKDB_PRIVATE_DATABASE_REQUIRED")
-        config = {"enable_external_access": "false", "autoinstall_known_extensions": "false",
+        # DuckDB requires the exact file allowance before external access is
+        # disabled. The connection is not yielded until both settings are locked.
+        config = {"enable_external_access": "true" if allowed_paths else "false",
+                  "autoinstall_known_extensions": "false",
                   "autoload_known_extensions": "false", "allow_unsigned_extensions": "false",
                   "threads": str(self.threads), "memory_limit": self.memory_limit}
         db = self.duckdb.connect(str(self.path), read_only=not writeable, config=config)
@@ -300,6 +303,7 @@ class DuckDBWorkspace:
             if allowed_paths:
                 literal = "[" + ",".join("'" + str(path).replace("'", "''") + "'" for path in allowed_paths) + "]"
                 db.execute("SET allowed_paths=" + literal)
+                db.execute("SET enable_external_access=false")
             db.execute("SET lock_configuration=true")
             yield db
         finally:
@@ -756,8 +760,8 @@ class DuckDBWorkspace:
                     else:
                         if csv_partial.exists():
                             csv_partial.rename(target / ("interrupted-" + _descriptor(csv_partial)["sha256"] + ".csv"))
-                        db.execute("COPY (SELECT * FROM read_parquet(?)) TO ? (FORMAT CSV, HEADER TRUE, NULL '\\N', FORCE_QUOTE *)",
-                                   [str(parquet), str(csv_partial)])
+                        db.execute("COPY (SELECT * FROM read_parquet($parquet_source)) TO $csv_target (FORMAT CSV, HEADER TRUE, NULL '\\N', FORCE_QUOTE *)",
+                                   {"parquet_source": str(parquet), "csv_target": str(csv_partial)})
                         with open(csv_partial, "rb") as stream:
                             os.fsync(stream.fileno())
                         os.chmod(csv_partial, 0o600)
