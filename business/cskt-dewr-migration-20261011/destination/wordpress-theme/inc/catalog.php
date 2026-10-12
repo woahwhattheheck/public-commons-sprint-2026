@@ -9,13 +9,25 @@ function cskt_dewr_choice($name, $choices, $fallback) {
     $value = cskt_dewr_get($name, $fallback);
     return in_array($value, $choices, true) ? $value : $fallback;
 }
-function cskt_dewr_catalog_context($role = '', $page_id = 0) {
+function cskt_dewr_catalog_context($role = '', $page_id = 0, $native_query = null) {
     $roles = cskt_dewr_roles();
     if (!isset($roles[$role])) { $role = ''; }
     $locked = $role !== '';
+    $native_types = array();
+    if (!($native_query instanceof WP_Query)) { $native_query = $GLOBALS['wp_query'] ?? null; }
     if (!$locked) {
         $candidate = cskt_dewr_get('dewr_kind');
         if (isset($roles[$candidate])) { $role = $candidate; }
+        if ($role === '' && $native_query instanceof WP_Query && $native_query->is_search()) {
+            // Read the original request, not post_type later expanded by this theme.
+            $requested = $native_query->query['post_type'] ?? null;
+            if (is_string($requested)) { $requested = array($requested); }
+            if (is_array($requested)) {
+                $requested = array_filter($requested, 'is_string');
+                $native_types = array_values(array_unique(array_intersect($requested, array_column($roles, 'type'))));
+                if (count($native_types) === 1) { $role = cskt_dewr_role_for_type($native_types[0]); }
+            }
+        }
         if ($role === '' && is_post_type_archive()) {
             $type = get_query_var('post_type');
             if (is_string($type)) { $role = cskt_dewr_role_for_type($type); }
@@ -36,7 +48,7 @@ function cskt_dewr_catalog_context($role = '', $page_id = 0) {
     $state = cskt_dewr_choice('dewr_state', array('current','all','archived'), 'current');
     if ($role === 'opportunities' && $opportunity === 'archived') { $state = 'all'; }
     return array(
-        'role' => $role, 'locked' => $locked, 'pageId' => (int) $page_id,
+        'role' => $role, 'locked' => $locked, 'pageId' => (int) $page_id, 'nativeTypes' => $native_types,
         'action' => $action,
         'query' => $query, 'state' => $state,
         'topic' => max(0, (int) cskt_dewr_get('dewr_topic', '0')),
@@ -49,7 +61,7 @@ function cskt_dewr_catalog_context($role = '', $page_id = 0) {
 }
 function cskt_dewr_catalog_args($context, $base = array()) {
     $roles = cskt_dewr_roles();
-    $types = isset($roles[$context['role']]) ? array($roles[$context['role']]['type']) : array_column($roles, 'type');
+    $types = isset($roles[$context['role']]) ? array($roles[$context['role']]['type']) : (!empty($context['nativeTypes']) ? $context['nativeTypes'] : array_column($roles, 'type'));
     $args = array_merge($base, array(
         'post_type' => count($types) === 1 ? $types[0] : $types, 'post_status' => 'publish', 'has_password' => false,
         'posts_per_page' => 20, 'paged' => $context['page'], 'ignore_sticky_posts' => true,
@@ -82,7 +94,7 @@ add_action('pre_get_posts', function ($query) {
     $role = $query->is_home() ? 'news' : '';
     $native_type = $query->get('post_type');
     if ($query->is_post_type_archive() && is_string($native_type)) { $role = cskt_dewr_role_for_type($native_type); }
-    $context = cskt_dewr_catalog_context($role);
+    $context = cskt_dewr_catalog_context($role, 0, $query);
     $context['query'] = (string) $query->get('s');
     $context['page'] = max(1, (int) $query->get('paged'));
     $args = cskt_dewr_catalog_args($context, array('meta_query' => $query->get('meta_query') ?: array(), 'tax_query' => $query->get('tax_query') ?: array()));
@@ -106,12 +118,17 @@ function cskt_dewr_catalog_form($context) {
     $id = wp_unique_id('dewr-catalog-');
     echo '<form class="dewr-catalog-filter" role="search" action="' . esc_url($context['action']) . '" method="get" aria-label="' . esc_attr__('Find published resources', 'cskt-dewr') . '">';
     cskt_dewr_form_action_fields($context['action']);
+    if (count($context['nativeTypes'] ?? array()) > 1) {
+        foreach ($context['nativeTypes'] as $type) {
+            echo '<input type="hidden" name="post_type[]" value="' . esc_attr($type) . '">';
+        }
+    }
     echo '<div class="dewr-filter-search"><label for="' . esc_attr($id) . '">' . esc_html__('Search this collection', 'cskt-dewr') . '</label><div class="dewr-search-line"><input type="search" id="' . esc_attr($id) . '" name="' . ($context['pageId'] ? 'dewr_q' : 's') . '" value="' . esc_attr($context['query']) . '" maxlength="512"><button type="submit">' . esc_html__('Search', 'cskt-dewr') . '</button></div></div>';
     echo '<div class="dewr-filter-options">';
     if ($context['locked']) {
         echo '<input type="hidden" name="dewr_kind" value="' . esc_attr($context['role']) . '">';
     } else {
-        echo '<div class="dewr-filter-field"><label for="' . esc_attr($id . '-kind') . '">' . esc_html__('Content', 'cskt-dewr') . '</label><select id="' . esc_attr($id . '-kind') . '" name="dewr_kind"><option value="">' . esc_html__('All content', 'cskt-dewr') . '</option>';
+        echo '<div class="dewr-filter-field"><label for="' . esc_attr($id . '-kind') . '">' . esc_html__('Content', 'cskt-dewr') . '</label><select id="' . esc_attr($id . '-kind') . '" name="dewr_kind"><option value="">' . esc_html(count($context['nativeTypes'] ?? array()) > 1 ? __('All selected types', 'cskt-dewr') : __('All content', 'cskt-dewr')) . '</option>';
         foreach ($roles as $role => $value) { echo '<option value="' . esc_attr($role) . '"' . selected($context['role'], $role, false) . '>' . esc_html($value['label']) . '</option>'; }
         echo '</select></div>';
     }
