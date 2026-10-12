@@ -11,7 +11,7 @@ import { nwsWorkspaceTools } from './mcp-protocol.mjs';
 const PREFIX='merchant_nws_';
 const MANIFEST='nws-transfer.json';
 const SCHEMA='stellar-forge.nws-file-transfer.v1';
-const MAXIMUM=256000000;
+const MAXIMUM=256 * 1024 * 1024;
 const SHA=/^[a-f0-9]{64}$/;
 const ALIAS=/^[a-z0-9][a-z0-9_-]{0,63}$/;
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
@@ -58,7 +58,7 @@ function parse(bytes,exportId){
       throw fail('MANIFEST','The transfer index has an invalid or duplicate original file selection.');
     names.add(file.name);total+=file.bytes;
   }
-  if(total>MAXIMUM)throw fail('CAPACITY','The selected transfer exceeds the maintained 256 MB download budget.');
+  if(total>MAXIMUM)throw fail('CAPACITY','The selected transfer exceeds the maintained 256 MiB download budget.');
   return value;
 }
 async function selected(options){
