@@ -1,6 +1,7 @@
 """MIT. Durable source, interval preparation, and same-upload recovery."""
 from __future__ import annotations
 import csv
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import io
@@ -18,12 +19,20 @@ from datetime import datetime, timedelta, timezone
 from leap_contracts import (
     SCHEMA, LOAD_COLUMNS, OPTIONAL_COLUMNS, ENERGY_COLUMNS, MAX_SOURCE_BYTES,
     LeapError, require, json_bytes, now_text, sha_value, identifier,
-    mapping_document, mapping_index, profile_row, validate_load, csv_rows,
+    mapping_document, mapping_index, profile_row, validate_load, validation_context, csv_rows,
     instant, utc_text, cutoff, text_value,
 )
 
 COLLECTIONS = {"imports", "mappings", "batches", "missing_snapshots", "api_receipts", "meters", "original_files", "exports", "files"}
 REMOTE_ACTIONS = {"batch.submit", "batch.refresh", "batch.reconcile", "missing.refresh"}
+
+
+def sync_directory(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
 
 
 def digest_file(path):
@@ -89,11 +98,68 @@ class LeapWorkspace:
             self.setmeta("revision", 0)
             self.setmeta("config", {"environment": "staging", "partner_account_id": "", "token_env": "LEAP_API_TOKEN"})
         require(self.meta("schema") == SCHEMA, "LOCAL_SCHEMA", "Open this workspace with its original application.")
-        # The exclusive lock proves the prior owner has ended.
-        for batch in self.documents("batches"):
-            if batch["status"] == "SENDING":
-                batch.update(status="UNKNOWN", interrupted_at=now_text())
-                self.put("batches", batch["id"], batch)
+        # The exclusive lock proves the prior physical owner has ended.
+        self.recover_interrupted()
+
+    def recover_interrupted(self):
+        from leap_delivery import recover_restore
+        recover_restore(self)
+        changed, operations = False, []
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            for batch in self.documents("batches"):
+                if batch["status"] == "SENDING":
+                    batch.update(status="UNKNOWN", interrupted_at=now_text())
+                    self.put("batches", batch["id"], batch)
+                    changed = True
+            for saved in self.db.execute("SELECT input_sha256,document FROM operations"):
+                operation = json.loads(saved["document"])
+                if operation["status"] != "RUNNING":
+                    continue
+                action, payload = operation["action"], operation.get("payload", {})
+                interrupted = {"code": "LOCAL_OPERATION_INTERRUPTED", "message": "The original physical owner ended during this action."}
+                if action in {"batch.submit", "batch.refresh", "batch.reconcile"} and payload.get("batch_id"):
+                    batch = self.get("batches", payload["batch_id"])
+                    batch["last_error"] = interrupted
+                    self.put("batches", batch["id"], batch)
+                    operation.update(status="COMPLETED", completed_at=now_text(), result=batch, recovered=True)
+                elif action == "missing.refresh":
+                    ident = hashlib.sha256(("leap-missing:" + operation["id"]).encode()).hexdigest()
+                    row = self.db.execute("SELECT document FROM objects WHERE collection='missing_snapshots' AND id=?", (ident,)).fetchone()
+                    result = json.loads(row[0]) if row else {"id": ident, "status": "INTERRUPTED"}
+                    if result["status"] == "RECEIVING":
+                        result.update(status="INTERRUPTED", error=interrupted, interrupted_at=now_text())
+                        self.put("missing_snapshots", ident, result)
+                    operation.update(status="COMPLETED", completed_at=now_text(), result=result, recovered=True)
+                else:
+                    operation.update(status="INTERRUPTED", recoverable=True, error=interrupted, interrupted_at=now_text())
+                operations.append((saved["input_sha256"], operation))
+                changed = True
+            if changed:
+                revision = self.meta("revision") + 1
+                self.setmeta("revision", revision)
+                for intent, operation in operations:
+                    operation["revision"] = revision
+                    self.db.execute("UPDATE operations SET document=? WHERE id=?", (json_bytes(operation).decode(), operation["id"]))
+            self.db.execute("COMMIT")
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+
+    @contextmanager
+    def read_view(self):
+        view = object.__new__(LeapWorkspace)
+        view.root = self.root
+        view.db = sqlite3.connect((self.root / "leap.sqlite").as_uri() + "?mode=ro", uri=True, isolation_level=None)
+        view.db.row_factory = sqlite3.Row
+        view.db.execute("PRAGMA trusted_schema=OFF")
+        view.db.execute("BEGIN")
+        try:
+            yield view
+        finally:
+            if view.db.in_transaction:
+                view.db.execute("ROLLBACK")
+            view.db.close()
 
     def close(self):
         with self.mutex:
@@ -172,12 +238,13 @@ class LeapWorkspace:
             require(expected_bytes is None or size == expected_bytes, "LOCAL_SOURCE_TRUNCATED", "The source ended before its declared complete byte length.")
             ident = digest.hexdigest()
             destination = self.root / "blobs" / ident
-            try:
-                os.link(temporary, destination)
-            except FileExistsError:
+            if destination.exists() or destination.is_symlink():
                 self.blob_path(ident)
-            finally:
                 os.unlink(temporary)
+            else:
+                # The existing exclusive workspace lease owns this publication.
+                os.replace(temporary, destination)
+                sync_directory(destination.parent)
             meta = {"id": ident, "name": name, "bytes": size, "sha256": ident, "kind": kind,
                     "download_url": "/api/file?id=" + ident, "created_at": now_text()}
             old = self.db.execute("SELECT document FROM objects WHERE collection='files' AND id=?", (ident,)).fetchone()
@@ -308,10 +375,11 @@ class LeapWorkspace:
                 detail = error.as_dict() if isinstance(error, LeapError) else {"code": "LOCAL_SOURCE_CSV", "message": str(error)}
                 self.add_issue(ident, {"row_index": None, "source_id": source_id, **detail})
         clock_us = instant(clock)
+        validation = validation_context(mapping, clock_us)
         optional = set()
         for row_index, saved in enumerate(self.db.execute("SELECT meter_id,start_us,end_us,document FROM batch_rows WHERE batch_id=? ORDER BY row_index", (ident,)), 1):
             row = json.loads(saved["document"])
-            wire, issues = validate_load(row, mapping, clock_us)
+            wire, issues = validate_load(row, mapping, clock_us, validation)
             wire.update(origins=row["origins"], row_index=row_index)
             optional.update(key for key in OPTIONAL_COLUMNS if wire[key] != "")
             self.db.execute("UPDATE batch_rows SET row_index=?,document=? WHERE batch_id=? AND meter_id=? AND start_us=? AND end_us=?",
@@ -346,17 +414,20 @@ class LeapWorkspace:
         self.put("batches", ident, batch)
         return batch
 
-    def missing_exclusion(self, snapshot_id, meter_id, start, end):
-        rows = self.db.execute("SELECT start_us,end_us,status FROM missing_rows WHERE snapshot_id=? AND meter_id=? AND data_type='LOAD_DATA' AND start_us<? AND end_us>?",
+    def missing_exclusion(self, snapshot_id, meter_id, start, end, clock=None):
+        rows = self.db.execute("SELECT start_us,end_us,status,document FROM missing_rows WHERE snapshot_id=? AND meter_id=? AND data_type='LOAD_DATA' AND start_us<? AND end_us>?",
                                (snapshot_id, meter_id, end, start)).fetchall()
+        clock = instant(now_text()) if clock is None else clock
         if any(row["status"] == "PENDING" for row in rows):
             return "PENDING"
-        if any(row["status"] == "OPEN" and row["start_us"] <= start and end <= row["end_us"] for row in rows):
+        covered = [row for row in rows if row["status"] == "OPEN" and row["start_us"] <= start and end <= row["end_us"]]
+        if any(clock < instant(json.loads(row["document"])["submission_deadline_date_time_utc"]) for row in covered):
             return None
-        return "OUTSIDE_OPEN_LOAD_WINDOW"
+        return "SUBMISSION_DEADLINE_ELAPSED" if covered else "OUTSIDE_OPEN_LOAD_WINDOW"
 
     def coverage(self, snapshot_id, batch_id):
-        report = {"open_windows": 0, "pending_windows": 0, "open_windows_fully_covered": 0, "open_windows_remaining": 0}
+        report = {"open_windows": 0, "pending_windows": 0, "open_windows_fully_covered": 0, "open_windows_remaining": 0, "open_windows_expired": 0}
+        clock = instant(now_text())
         for row in self.db.execute("SELECT * FROM missing_rows WHERE snapshot_id=? AND data_type='LOAD_DATA'", (snapshot_id,)):
             if row["status"] == "PENDING":
                 report["pending_windows"] += 1
@@ -364,6 +435,9 @@ class LeapWorkspace:
             if row["status"] != "OPEN":
                 continue
             report["open_windows"] += 1
+            if clock >= instant(json.loads(row["document"])["submission_deadline_date_time_utc"]):
+                report["open_windows_expired"] += 1
+                continue
             cursor = row["start_us"]
             for interval in self.db.execute("SELECT start_us,end_us FROM batch_rows WHERE batch_id=? AND meter_id=? AND start_us>=? AND end_us<=? ORDER BY start_us",
                                             (batch_id, row["meter_id"], row["start_us"], row["end_us"])):
@@ -428,7 +502,7 @@ class LeapWorkspace:
         batch = self.api_batch(payload.get("batch_id"))
         if batch.get("job_id"):
             return batch
-        require(batch["status"] in {"PREPARED", "DEFERRED", "AUTHENTICATION_REQUIRED"},
+        require(batch["status"] in {"PREPARED", "DEFERRED", "AUTHENTICATION_REQUIRED", "ELIGIBILITY_REVIEW"},
                 "LOCAL_SUBMIT_STATE", "Select a prepared batch, or reconcile its existing upload.")
         require(batch["issue_count"] == 0 and batch["row_count"] > 0, "LOCAL_VALIDATION", "Resolve the complete file's interval issues.")
         clock = instant(now_text())
@@ -474,6 +548,20 @@ class LeapWorkspace:
                          else "AUTHENTICATION_REQUIRED" if getattr(error, "status", None) in {401, 403} else "ELIGIBILITY_REVIEW")
             self.put("batches", batch["id"], batch)
             return batch
+        upload_clock = instant(now_text())
+        mapping = self.get("mappings", batch["mapping_id"])
+        current_custody = {}
+        for period in mapping["ownership"]:
+            if instant(period["start_utc"]) <= upload_clock < instant(period["end_utc"]):
+                current_custody[period["meter_id"]] = True
+        current_meters = [row[0] for row in self.db.execute("SELECT DISTINCT meter_id FROM batch_rows WHERE batch_id=?", (batch["id"],))]
+        require(all(meter in current_custody for meter in current_meters), "LOCAL_CURRENT_OWNERSHIP",
+                "Retain partner custody periods covering the upload time for every selected device.")
+        if batch.get("submission_missing_snapshot_id"):
+            for row in self.db.execute("SELECT meter_id,start_us,end_us FROM batch_rows WHERE batch_id=?", (batch["id"],)):
+                reason = self.missing_exclusion(batch["submission_missing_snapshot_id"], row["meter_id"], row["start_us"], row["end_us"], upload_clock)
+                require(reason is None, "LOCAL_SUBMISSION_DEADLINE",
+                        "Refresh this batch against its current eligible missing windows before submission.", reason=reason)
         self.blob_path(batch["upload"]["id"])
         batch.update(status="SENDING", attempt_started_at=now_text(), submit_request_id=request_id)
         self.put("batches", batch["id"], batch)
@@ -584,6 +672,9 @@ class LeapWorkspace:
         request_id = identifier(request_id or str(uuid4()), "Request ID")
         intent = hashlib.sha256(json_bytes({"action": action, "payload": payload})).hexdigest()
         with self.mutex:
+            if action == "workspace.restore":
+                from leap_delivery import recover_restore
+                recover_restore(self)
             old = self.db.execute("SELECT input_sha256,document FROM operations WHERE id=?", (request_id,)).fetchone()
             if old:
                 require(old["input_sha256"] == intent, "LOCAL_OPERATION_CONFLICT", "Keep the same request ID with its original input.")
@@ -592,18 +683,23 @@ class LeapWorkspace:
                     return {"request_id": request_id, "revision": operation["revision"], "result": operation["result"]}
                 if operation["status"] == "FAILED":
                     raise LeapError("LOCAL_SAVED_FAILURE", operation["error"]["message"], original_error=operation["error"], request_id=request_id)
-                if action in REMOTE_ACTIONS or action in {"package.export", "workspace.restore"}:
-                    return {"request_id": request_id, "revision": self.meta("revision"), "result": {"status": "INTERRUPTED", "operation": operation}}
+                require(operation["status"] == "INTERRUPTED" and operation.get("recoverable") is True,
+                        "LOCAL_OPERATION_ACTIVE", "Reopen the original active operation before continuing.", request_id=request_id)
+                operation.update(status="RUNNING", resumed_at=now_text())
+                operation.pop("recoverable", None)
+                operation.pop("error", None)
+                self.db.execute("UPDATE operations SET document=? WHERE id=?", (json_bytes(operation).decode(), request_id))
             else:
                 revision = self.meta("revision")
                 require(expected_revision is None or (isinstance(expected_revision, int) and not isinstance(expected_revision, bool)
                         and expected_revision == revision), "LOCAL_REVISION", "Refresh the original workspace revision.", revision=revision)
                 operation = {"id": request_id, "action": action, "status": "RUNNING", "input_sha256": intent,
-                             "started_at": now_text(), "accepted_revision": revision}
+                             "started_at": now_text(), "accepted_revision": revision, "payload": payload}
                 self.db.execute("INSERT INTO operations VALUES(?,?,?)", (request_id, intent, json_bytes(operation).decode()))
             external = action in REMOTE_ACTIONS or action in {"package.export", "workspace.restore"}
             if not external:
                 self.db.execute("BEGIN IMMEDIATE")
+            committed = False
             try:
                 if action == "configuration.save":
                     result = self.configure(payload)
@@ -626,7 +722,7 @@ class LeapWorkspace:
                     result = export_delivery(self, payload.get("batch_id"), request_id)
                 elif action == "workspace.restore":
                     from leap_delivery import restore_workspace
-                    result = restore_workspace(self, payload.get("file_id"))
+                    result = restore_workspace(self, payload.get("file_id"), operation)
                 else:
                     raise LeapError("LOCAL_ACTION", "Unknown Leap workspace action.", action=action)
                 if external:
@@ -636,12 +732,27 @@ class LeapWorkspace:
                 operation.update(status="COMPLETED", completed_at=now_text(), revision=revision, result=result)
                 self.db.execute("INSERT INTO operations(id,input_sha256,document) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET document=excluded.document", (request_id, intent, json_bytes(operation).decode()))
                 self.db.execute("COMMIT")
+                committed = True
+                if action == "workspace.restore":
+                    from leap_delivery import finish_restore
+                    try:
+                        finish_restore(self, request_id)
+                    except OSError:
+                        # Startup finishes cleanup from this committed original request.
+                        pass
                 return {"request_id": request_id, "revision": revision, "result": result}
             except BaseException as error:
+                if committed:
+                    raise
                 if self.db.in_transaction:
                     self.db.execute("ROLLBACK")
-                operation.update(status="FAILED", completed_at=now_text(), error=self.error_document(error))
-                self.db.execute("UPDATE operations SET document=? WHERE id=?", (json_bytes(operation).decode(), request_id))
+                recoverable = action in {"package.export", "workspace.restore"} and isinstance(error, (OSError, sqlite3.Error))
+                operation.update(status="INTERRUPTED" if recoverable else "FAILED", completed_at=now_text(),
+                                 error=self.error_document(error))
+                if recoverable:
+                    operation["recoverable"] = True
+                self.db.execute("INSERT INTO operations(id,input_sha256,document) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET document=excluded.document",
+                                (request_id, intent, json_bytes(operation).decode()))
                 raise
 
     def list_collection(self, collection, offset=0, limit=100):
@@ -706,7 +817,8 @@ class LeapWorkspace:
                                    (batch["job_id"], remaining, max(0, offset - local)))
             for saved in rows:
                 original = json.loads(saved[0])
-                items.append({"row_index": None, "provider_line": original.get("line"), "provider_job_id": batch["job_id"], **original})
+                detail = original if isinstance(original, dict) else {"original": original}
+                items.append({**detail, "row_index": None, "provider_line": detail.get("line"), "provider_job_id": batch["job_id"]})
         return {"items": items, "total": local + remote, "offset": offset, "limit": limit}
 
     def missing_rows_page(self, snapshot_id, offset=0, limit=100):
@@ -715,5 +827,9 @@ class LeapWorkspace:
         total = self.db.execute("SELECT COUNT(*) FROM missing_rows WHERE snapshot_id=?", (snapshot_id,)).fetchone()[0]
         rows = self.db.execute("SELECT row_index,document FROM missing_rows WHERE snapshot_id=? ORDER BY row_index LIMIT ? OFFSET ?",
                                (snapshot_id, limit, offset))
-        return {"items": [{"row_index": row["row_index"], **json.loads(row["document"])} for row in rows],
-                "total": total, "offset": offset, "limit": limit}
+        items = []
+        for row in rows:
+            original = json.loads(row["document"])
+            detail = original if isinstance(original, dict) else {"original": original}
+            items.append({**detail, "row_index": row["row_index"]})
+        return {"items": items, "total": total, "offset": offset, "limit": limit}

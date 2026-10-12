@@ -11,7 +11,7 @@ import tempfile
 import zipfile
 
 from leap_contracts import SCHEMA, LeapError, require, json_bytes, now_text, sha_value
-from leap_workspace import digest_file
+from leap_workspace import digest_file, sync_directory
 
 DELIVERY_SCHEMA = "stellar-forge.leap-interval-delivery.v1"
 MAX_PACKET_BYTES = 4 * 1024 * 1024 * 1024
@@ -28,13 +28,49 @@ def write_private(path, data):
 
 def export_path(workspace, ident):
     meta = workspace.get("exports", sha_value(ident, "Original export"))
+    require(meta.get("status", "READY") == "READY", "LOCAL_EXPORT_PUBLISHING",
+            "Continue the original export request to finish publishing its retained bytes.", request_id=meta.get("request_id"))
     path = workspace.root / "exports" / (ident + ".zip")
     info = path.lstat()
-    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid(),
+    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid() and info.st_mode & 0o077 == 0,
             "LOCAL_EXPORT", "Use the original retained customer export.")
     size, digest = digest_file(path)
     require(size == meta["bytes"] and digest == meta["sha256"], "LOCAL_EXPORT_CHANGED", "The retained customer export changed.")
     return path, meta
+
+
+def finish_export(workspace, metadata):
+    ident = sha_value(metadata["id"], "Original export")
+    require(metadata["workspace_id"] == workspace.meta("workspace_id"),
+            "LOCAL_EXPORT", "Finish this export in its original workspace.")
+    staging = workspace.root / "staging" / (".delivery-" + ident)
+    archive = staging / "delivery.zip"
+    destination = workspace.root / "exports" / (ident + ".zip")
+    if not destination.exists() and not destination.is_symlink():
+        info = archive.lstat()
+        require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+                and info.st_mode & 0o077 == 0, "LOCAL_EXPORT", "Retain the complete private export archive.")
+        size, digest = digest_file(archive)
+        require((size, digest) == (metadata["bytes"], metadata["sha256"]),
+                "LOCAL_EXPORT_CHANGED", "The original staged export changed.")
+        os.replace(archive, destination)
+        sync_directory(destination.parent)
+    ready = {**metadata, "status": "READY"}
+    # Read the complete published bytes before saving the ready state.
+    info = destination.lstat()
+    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+            and info.st_mode & 0o077 == 0, "LOCAL_EXPORT", "Retain the complete private export archive.")
+    require(digest_file(destination) == (ready["bytes"], ready["sha256"]),
+            "LOCAL_EXPORT_CHANGED", "The published export differs from its original byte identity.")
+    workspace.put("exports", ident, ready)
+    try:
+        shutil.rmtree(staging)
+    except FileNotFoundError:
+        pass
+    except OSError:
+        # The committed complete archive remains available; leftover staging is expendable.
+        pass
+    return ready
 
 
 def export_delivery(workspace, batch_id, request_id):
@@ -42,10 +78,20 @@ def export_delivery(workspace, batch_id, request_id):
     ident = hashlib.sha256(json_bytes({"batch_id": batch_id, "request_id": request_id})).hexdigest()
     existing = workspace.db.execute("SELECT document FROM objects WHERE collection='exports' AND id=?", (ident,)).fetchone()
     if existing:
-        return export_path(workspace, ident)[1]
-    staging = Path(tempfile.mkdtemp(prefix=".delivery-", dir=workspace.root / "staging"))
-    os.chmod(staging, 0o700)
-    destination = workspace.root / "exports" / (ident + ".zip")
+        metadata = json.loads(existing[0])
+        require(metadata.get("request_id", request_id) == request_id and metadata["batch_id"] == batch_id,
+                "LOCAL_EXPORT", "Keep this export bound to its original request and batch.")
+        return finish_export(workspace, metadata) if metadata.get("status") == "PUBLISHING" else export_path(workspace, ident)[1]
+    staging = workspace.root / "staging" / (".delivery-" + ident)
+    if staging.exists() or staging.is_symlink():
+        info = staging.lstat()
+        require(stat.S_ISDIR(info.st_mode) and info.st_uid == os.getuid() and info.st_mode & 0o077 == 0,
+                "LOCAL_EXPORT", "Keep the original private export staging directory.")
+        # There is no committed publication record yet; rebuild this request's unfinished archive.
+        shutil.rmtree(staging)
+    staging.mkdir(mode=0o700)
+    sync_directory(staging.parent)
+    publishing = False
     try:
         database = staging / "leap.sqlite"
         connection = sqlite3.connect(database)
@@ -58,6 +104,8 @@ def export_delivery(workspace, batch_id, request_id):
             connection.commit()
         finally:
             connection.close()
+        with open(database, "rb") as source:
+            os.fsync(source.fileno())
         members = {"workspace/leap.sqlite": database}
         for file in workspace.documents("files"):
             members["workspace/blobs/" + file["id"]] = workspace.blob_path(file["id"])
@@ -123,7 +171,8 @@ delivery.json declares every member's exact byte identity and the installed sour
             identities[name] = {"bytes": size, "sha256": digest}
         manifest = {"schema": DELIVERY_SCHEMA, "application_schema": SCHEMA, "created_at": now_text(),
                     "workspace_id": workspace.meta("workspace_id"), "snapshot_revision": workspace.meta("revision"),
-                    "batch_id": batch_id, "upload_sha256": batch["upload"]["sha256"], "source_files": source_files, "files": identities}
+                    "batch_id": batch_id, "export_id": ident, "request_id": request_id,
+                    "upload_sha256": batch["upload"]["sha256"], "source_files": source_files, "files": identities}
         archive = staging / "delivery.zip"
         with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as out:
             os.chmod(archive, 0o600)
@@ -134,18 +183,21 @@ delivery.json declares every member's exact byte identity and the installed sour
             os.fsync(out.fileno())
         size, digest = digest_file(archive)
         require(size <= MAX_PACKET_BYTES, "LOCAL_DELIVERY_CAPACITY", "The complete customer delivery exceeds the 4 GiB receiving capacity.")
-        os.link(archive, destination)
+        sync_directory(staging)
         metadata = {"id": ident, "name": "Leap_Device_Interval_Delivery_" + ident[:12] + ".zip",
                     "bytes": size, "sha256": digest, "download_url": "/api/export?id=" + ident,
                     "created_at": now_text(), "batch_id": batch_id, "workspace_id": workspace.meta("workspace_id"),
+                    "request_id": request_id, "status": "PUBLISHING",
                     "member_count": len(identities), "manifest_sha256": hashlib.sha256(json_bytes(manifest)).hexdigest()}
         workspace.put("exports", ident, metadata)
-        return metadata
+        publishing = True
+        return finish_export(workspace, metadata)
     finally:
-        shutil.rmtree(staging)
+        if not publishing:
+            shutil.rmtree(staging)
 
 
-def restore_workspace(workspace, file_id):
+def restore_workspace(workspace, file_id, operation):
     require(all(workspace.list_collection(name, 0, 1)["total"] == 0 for name in ("imports", "mappings", "batches", "missing_snapshots")),
             "LOCAL_RESTORE_TARGET", "Restore into a new private workspace directory.")
     source = workspace.blob_path(sha_value(file_id, "Original complete delivery"))
@@ -203,7 +255,7 @@ def restore_workspace(workspace, file_id):
                 finally:
                     if out:
                         out.close()
-        original = sqlite3.connect("file:" + str(staging / "leap.sqlite") + "?mode=ro", uri=True)
+        original = sqlite3.connect((staging / "leap.sqlite").as_uri() + "?mode=ro", uri=True)
         try:
             original.execute("PRAGMA trusted_schema=OFF")
             require(original.execute("PRAGMA integrity_check").fetchone()[0] == "ok", "LOCAL_PACKET_DATABASE", "The complete database did not reopen.")
@@ -223,10 +275,16 @@ def restore_workspace(workspace, file_id):
                         and file["bytes"] == manifest["files"]["workspace/blobs/" + ident]["bytes"],
                         "LOCAL_PACKET_DATABASE", "A retained file is missing from the complete delivery.")
                 target = workspace.root / "blobs" / ident
-                try:
-                    os.link(staging / ident, target)
-                except FileExistsError:
+                if target.exists() or target.is_symlink():
                     workspace.blob_path(ident)
+                else:
+                    os.replace(staging / ident, target)
+            sync_directory(workspace.root / "blobs")
+            marker = {"schema": "stellar-forge.leap-restore-operation.v1", "operation": operation,
+                      "prior_workspace_id": workspace.meta("workspace_id"), "target_workspace_id": manifest["workspace_id"],
+                      "file_id": file_id, "batch_id": manifest["batch_id"], "upload_sha256": manifest["upload_sha256"],
+                      "created_at": now_text()}
+            save_restore_marker(workspace, marker)
             original.backup(workspace.db)
         finally:
             original.close()
@@ -239,3 +297,77 @@ def restore_workspace(workspace, file_id):
                 "upload_sha256": manifest["upload_sha256"], "state": workspace.state()}
     finally:
         shutil.rmtree(staging)
+
+
+def save_restore_marker(workspace, marker):
+    path = workspace.root / "restore-operation.json"
+    fd, temporary = tempfile.mkstemp(prefix=".restore-operation-", dir=workspace.root)
+    try:
+        with os.fdopen(fd, "wb") as out:
+            out.write(json_bytes(marker))
+            out.flush()
+            os.fsync(out.fileno())
+        os.replace(temporary, path)
+        sync_directory(workspace.root)
+    finally:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+
+
+def finish_restore(workspace, request_id):
+    path = workspace.root / "restore-operation.json"
+    if path.exists():
+        marker = json.loads(path.read_text(encoding="utf-8"))
+        require(marker["operation"]["id"] == request_id, "LOCAL_RESTORE_OPERATION", "The current restore belongs to a different original request.")
+        path.unlink()
+        sync_directory(workspace.root)
+
+
+def recover_restore(workspace):
+    path = workspace.root / "restore-operation.json"
+    if not path.exists():
+        return
+    info = path.lstat()
+    require(stat.S_ISREG(info.st_mode) and info.st_nlink == 1 and info.st_uid == os.getuid()
+            and info.st_mode & 0o077 == 0 and info.st_size <= 2 * 1024 * 1024,
+            "LOCAL_RESTORE_OPERATION", "The original restore journal must remain private and complete.")
+    marker = json.loads(path.read_text(encoding="utf-8"))
+    require(marker.get("schema") == "stellar-forge.leap-restore-operation.v1", "LOCAL_RESTORE_OPERATION", "The restore journal has an unexpected format.")
+    operation = marker["operation"]
+    expected = hashlib.sha256(json_bytes({"action": operation["action"], "payload": operation["payload"]})).hexdigest()
+    require(operation["action"] == "workspace.restore" and expected == operation["input_sha256"],
+            "LOCAL_RESTORE_OPERATION", "Retain the original restore request and payload.")
+    saved = workspace.db.execute("SELECT input_sha256,document FROM operations WHERE id=?", (operation["id"],)).fetchone()
+    if saved:
+        require(saved["input_sha256"] == expected, "LOCAL_RESTORE_OPERATION", "The restore UUID belongs to a different input.")
+        if json.loads(saved["document"])["status"] == "COMPLETED":
+            finish_restore(workspace, operation["id"])
+            return
+    current = workspace.meta("workspace_id")
+    if current == marker["target_workspace_id"]:
+        batch = workspace.get("batches", marker["batch_id"])
+        require(batch["upload"]["sha256"] == marker["upload_sha256"], "LOCAL_RESTORE_OPERATION", "The restored upload differs from the original complete delivery.")
+        result = {"status": "RESTORED", "workspace_id": current, "delivery_sha256": marker["file_id"],
+                  "batch_id": marker["batch_id"], "upload_sha256": marker["upload_sha256"], "state": workspace.state()}
+        revision = workspace.meta("revision") + 1
+        operation.update(status="COMPLETED", completed_at=now_text(), revision=revision, result=result, recovered=True)
+        operation.pop("recoverable", None)
+        operation.pop("error", None)
+        workspace.db.execute("BEGIN IMMEDIATE")
+        try:
+            workspace.setmeta("revision", revision)
+            workspace.db.execute("INSERT INTO operations(id,input_sha256,document) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET document=excluded.document",
+                                 (operation["id"], expected, json_bytes(operation).decode()))
+            workspace.db.execute("COMMIT")
+        except BaseException:
+            workspace.db.execute("ROLLBACK")
+            raise
+        finish_restore(workspace, operation["id"])
+    else:
+        require(current == marker["prior_workspace_id"], "LOCAL_RESTORE_OPERATION", "Reopen the original restore destination.")
+        operation.update(status="INTERRUPTED", recoverable=True, interrupted_at=now_text(),
+                         error={"code": "LOCAL_RESTORE_INTERRUPTED", "message": "Continue this original restore UUID and complete delivery."})
+        workspace.db.execute("INSERT INTO operations(id,input_sha256,document) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET document=excluded.document",
+                             (operation["id"], expected, json_bytes(operation).decode()))

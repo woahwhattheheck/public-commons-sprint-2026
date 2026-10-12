@@ -111,6 +111,10 @@ class LeapAPI:
             status = response.code
             raw = response.read(32 * 1024 * 1024 + 1)
             require(len(raw) <= 32 * 1024 * 1024, "LEAP_RESPONSE_SIZE", "This provider response exceeds the 32 MiB response capacity.")
+            declared = response.headers.get("Content-Length")
+            if declared is not None and (not declared.isdigit() or len(raw) != int(declared)):
+                raise ProviderError("The provider response ended before its declared complete length.", status=status,
+                                    receipt=request_id, uncertain=method == "POST" and path == "/v1.1/interval-data")
             secret = self.token.encode("utf-8")
             retained = raw.replace(secret, b"[private API key redacted]") if secret in raw else raw
             blob = self.work.store_bytes(retained, "leap-response-" + request_id + ".json", "provider-response")
@@ -133,7 +137,7 @@ class LeapAPI:
             if not json_response:
                 return {"status": status, "location": response.headers.get("Location"), "receipt_id": request_id, "response": blob}
             try:
-                document = json.loads(raw.decode("utf-8"))
+                document = json.loads(retained.decode("utf-8"))
             except (ValueError, UnicodeError) as error:
                 raise ProviderError("The successful Leap response did not contain complete JSON.", status=status,
                                     receipt=request_id, uncertain=method == "POST" and path == "/v1.1/interval-data") from error
@@ -176,7 +180,7 @@ class LeapAPI:
                 identifier(row["last_job_id"], "Last upload job ID")
             yield value["uploads"], receipt
             token = value.get("next_page_token")
-            if token in {None, ""}:
+            if token is None or token == "":
                 break
             require(isinstance(token, str) and token not in seen, "LEAP_CURSOR", "Leap repeated or changed its opaque pagination token.", receipt=receipt)
             seen.add(token)
@@ -207,7 +211,7 @@ class LeapAPI:
             require(isinstance(value.get("missing_intervals"), list), "LEAP_MISSING_SHAPE", "Retain the complete missing_intervals array.", receipt=receipt)
             yield value["missing_intervals"], receipt
             token = value.get("next_page_token")
-            if token in {None, ""}:
+            if token is None or token == "":
                 break
             require(isinstance(token, str) and token not in seen, "LEAP_CURSOR", "Leap repeated or changed its opaque pagination token.", receipt=receipt)
             seen.add(token)
@@ -229,8 +233,11 @@ class LeapAPI:
                 location = unsigned_https(next_location or "")
                 continue
             break
-        require(response is not None and response.code == 200, "LEAP_ORIGINAL_FILE", "The temporary original-file URL did not return the complete file.",
-                receipt=value["receipt_id"])
+        if response is None or response.code != 200:
+            if response is not None:
+                response.close()
+            raise LeapError("LEAP_ORIGINAL_FILE", "The temporary original-file URL did not return the complete file.",
+                            receipt=value["receipt_id"])
         try:
             declared = response.headers.get("Content-Length")
             if declared is not None:
