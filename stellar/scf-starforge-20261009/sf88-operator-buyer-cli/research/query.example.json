@@ -1,0 +1,11 @@
+{
+  "id": "ncc-greenhouse-heat-pumps",
+  "label": "Greenhouse heat-pump literature",
+  "entity": "works",
+  "parameters": {
+    "search.title_and_abstract": "greenhouse AND \"heat pump\"",
+    "per_page": "100",
+    "select": "id,doi,title,display_name,publication_year,publication_date,type,language,cited_by_count,authorships,primary_location,open_access,topics,keywords,funders,awards,biblio,is_retracted,updated_date"
+  },
+  "expectedRevision": 0
+}

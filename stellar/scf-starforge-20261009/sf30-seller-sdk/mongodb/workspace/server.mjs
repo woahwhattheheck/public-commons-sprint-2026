@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pipeline } from 'node:stream/promises';
 import { openMongoWorkbench } from './model.mjs';
+import { readBrowserAssets } from '../../../distribution/browser-assets.mjs';
 
 const HELP = [
   'MongoDB merchant workspace — Node 22+, private loopback browser',
@@ -21,10 +22,7 @@ const HELP = [
   'start the original local seller, publish immutable datasets, schedule complete native refreshes,',
   'and prepare original buyer requests for the selected retained snapshot.',
 ].join('\n');
-const assets = new Map([['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']], ['/style.css', ['style.css', 'text/css; charset=utf-8']],
-  ['/publisher.mjs', ['publisher.mjs', 'text/javascript; charset=utf-8']],
-  ['/publisher-schedules.mjs', ['../../../postgres/publisher/public/schedules.mjs', 'text/javascript; charset=utf-8']]]);
+const assets = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
 const publicationFields = {
   plans: ['title', 'query', 'input', 'sourceHash', 'dataset', 'extraction'],
   extract: ['id', 'plan'], cancel: ['id'], review: ['id', 'reviewer', 'note', 'initialize', 'expectedSnapshot', 'expectedRevision'],
@@ -78,7 +76,7 @@ export async function startMongoWorkbench(options = {}) {
       const url = new URL(req.url, origin);
       if (url.origin !== origin || url.hash) return json(res, 400, { error: 'Invalid request target' });
       if (assets.has(url.pathname) && req.method === 'GET' && !url.search) {
-        const [name, type] = assets.get(url.pathname), bytes = await readFile(new URL('./public/' + name, import.meta.url));
+        const { url: file, type } = assets.get(url.pathname), bytes = await readFile(file);
         res.writeHead(200, { 'content-type': type, 'content-length': bytes.length }); return res.end(bytes);
       }
       if (!url.pathname.startsWith('/api/')) return json(res, 404, { error: 'Not found' });
