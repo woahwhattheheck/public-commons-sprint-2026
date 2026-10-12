@@ -47,6 +47,21 @@ covers all twenty original operation tools and six complete export kinds.
 Receive selected editions into existing questions, then use the dossier's
 evidence selection, findings, citation review and full reports.
 
+## Receive and review original RIS files
+
+Open **RIS sources** in the Research browser to retain complete exported files,
+review field mappings and duplicate groups, and receive the selected edition into
+an existing question. Saved drafts preserve the original files and decisions;
+revision conflicts and unknown replies recover through the same request identity.
+
+The [RIS operating guide](ris-source/OPERATING_GUIDE.md) covers source inspection,
+explicit duplicate decisions, edition comparison, all original exports and the
+same workspace client, command line and Merchant tools. The
+[complete receiving guide](ris-source/RECEIVING_GUIDE.md) covers the full source
+selection, native browser and Merchant workflow, independent portable reopen,
+and the verified delivery archive. Source operation and metadata classification
+remain separate from study eligibility and scientific appraisal.
+
 ## Import original source bundles
 
 [Source bundles](SOURCE_BUNDLES.md) bring a manifest, its named original files,
