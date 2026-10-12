@@ -12,6 +12,7 @@ import { PYTHON_SOURCE_SCHEMA, stagePythonRelease, inspectPythonRelease } from '
 import { DUCKDB_SOURCE_SCHEMA, stageDuckdbRelease, inspectDuckdbRelease } from './release-duckdb.mjs';
 import { S3_SOURCE_SCHEMA, stageS3Release, inspectS3Release } from './release-s3.mjs';
 import { MYSQL_SOURCE_SCHEMA, stageMysqlRelease, inspectMysqlRelease } from './release-mysql.mjs';
+import { MSSQL_SOURCE_SCHEMA, stageMssqlRelease, inspectMssqlRelease } from './release-mssql.mjs';
 import { POSTGRES_SOURCE_SCHEMA, stagePostgresRelease, inspectPostgresRelease } from './release-postgres.mjs';
 import { REDIS_SOURCE_SCHEMA, stageRedisRelease, inspectRedisRelease } from './release-redis.mjs';
 import { JSONRPC_SOURCE_SCHEMA, stageJsonrpcRelease, inspectJsonrpcRelease } from './release-jsonrpc.mjs';
@@ -30,6 +31,7 @@ const PYTHON_PILOT = fileURLToPath(new URL('./release-python.mjs', import.meta.u
 const DUCKDB_PILOT = fileURLToPath(new URL('./release-duckdb.mjs', import.meta.url));
 const S3_PILOT = fileURLToPath(new URL('./release-s3.mjs', import.meta.url));
 const MYSQL_PILOT = fileURLToPath(new URL('./release-mysql.mjs', import.meta.url));
+const MSSQL_PILOT = fileURLToPath(new URL('./release-mssql.mjs', import.meta.url));
 const POSTGRES_PILOT = fileURLToPath(new URL('./release-postgres.mjs', import.meta.url));
 const REDIS_PILOT = fileURLToPath(new URL('./release-redis.mjs', import.meta.url));
 const JSONRPC_PILOT = fileURLToPath(new URL('./release-jsonrpc.mjs', import.meta.url));
@@ -260,6 +262,13 @@ async function sourceSnapshot(path, upstreams, allowLoopback = false) {
       application: { ...route.application, mysqlExecutionSha256: snapshot.mysql.executionSha256 } }));
     return { ...snapshot, routes };
   }
+  if (manifest.schema === MSSQL_SOURCE_SCHEMA) {
+    if (upstreams) throw new TypeError('A SQL Server package owns its original query bindings.');
+    const snapshot = await inspectMssqlRelease(path);
+    const routes = sourceRoutes(snapshot.service, new Map()).map(route => ({ ...route,
+      application: { ...route.application, mssqlExecutionSha256: snapshot.mssql.executionSha256 } }));
+    return { ...snapshot, routes };
+  }
   if (manifest.schema === S3_SOURCE_SCHEMA) {
     if (upstreams) throw new TypeError('An S3 release owns its original object bindings.');
     const snapshot = await inspectS3Release(path);
@@ -343,6 +352,7 @@ function publicRelease(record) {
     ...(record.python ? { python: record.python } : {}),
     ...(record.duckdb ? { duckdb: record.duckdb } : {}),
     ...(record.mysql ? { mysql: record.mysql } : {}),
+    ...(record.mssql ? { mssql: record.mssql } : {}),
     ...(record.postgres ? { postgres: record.postgres } : {}),
     ...(record.redis ? { redis: record.redis } : {}),
     ...(record.s3 ? { s3: record.s3 } : {}),
@@ -390,6 +400,7 @@ async function releaseRecord(root, releaseId, verify = false) {
         stable(snapshot.python ?? null) !== stable(record.python ?? null) ||
         stable(snapshot.duckdb ?? null) !== stable(record.duckdb ?? null) ||
         stable(snapshot.mysql ?? null) !== stable(record.mysql ?? null) ||
+        stable(snapshot.mssql ?? null) !== stable(record.mssql ?? null) ||
         stable(snapshot.postgres ?? null) !== stable(record.postgres ?? null) ||
         stable(snapshot.redis ?? null) !== stable(record.redis ?? null) ||
         stable(snapshot.s3 ?? null) !== stable(record.s3 ?? null) ||
@@ -424,6 +435,7 @@ export async function stageRelease(root, options) {
   if (!postgresSource && options.postgresInputManifestSha256 !== undefined)
     throw new TypeError('A reviewed PostgreSQL input hash requires postgresPackage.');
   const mysqlSource = options.mysqlPackage !== undefined;
+  const mssqlSource = options.mssqlPackage !== undefined;
   const redisSource = options.redisPackage !== undefined;
   if (redisSource && (Object.keys(options).some(key =>
       !['id', 'label', 'alias', 'runtime', 'redisPackage'].includes(key) && options[key] !== undefined) ||
@@ -433,6 +445,10 @@ export async function stageRelease(root, options) {
       !['id', 'label', 'alias', 'runtime', 'mysqlPackage'].includes(key) && options[key] !== undefined) ||
       options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
     throw new TypeError('Choose the original prepared MySQL package or another source; the package owns its original query bindings.');
+  if (mssqlSource && (Object.keys(options).some(key =>
+      !['id', 'label', 'alias', 'runtime', 'mssqlPackage'].includes(key) && options[key] !== undefined) ||
+      options.runtime?.handlers || options.runtime?.upstreams || options.runtime?.allowLoopbackUpstream))
+    throw new TypeError('Choose the original prepared SQL Server package or another source; the package owns its original query bindings.');
   const jsonrpcSource = options.jsonrpcPackage !== undefined;
   const sqliteSource = options.sqlitePackage !== undefined;
   const clickhouseSource = options.clickhousePackage !== undefined;
@@ -481,6 +497,7 @@ export async function stageRelease(root, options) {
     else if (clickhouseSource) await stageClickHouseRelease(temp, options.clickhousePackage, { columnTypes: options.clickhouseColumnTypes });
     else if (redisSource) await stageRedisRelease(temp, options.redisPackage);
     else if (mysqlSource) await stageMysqlRelease(temp, options.mysqlPackage);
+    else if (mssqlSource) await stageMssqlRelease(temp, options.mssqlPackage);
     else if (sqliteSource) stagedSqlite = await stageSqliteRelease(temp, options.sqlitePackage,
       { maxBytes: options.sqliteSnapshotMaxBytes, timeoutMs: options.sqliteSnapshotTimeoutMs, signal: options.signal });
     else if (jsonrpcSource) await stageJsonrpcRelease(temp, options.jsonrpcPackage);
@@ -507,7 +524,7 @@ export async function stageRelease(root, options) {
         source.manifest.serviceBindingsSha256 !== workspace.hashes['route-bindings.json'] ||
         runtime.upstreams.sha256 !== workspace.hashes['upstreams.json']))
       throw new Error('Workspace inputs changed during staging. Reopen the original saved package and stage it again.');
-    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.postgres && !source.redis && !source.s3 && !source.jsonrpc && !source.sqlite && !source.dataset && !source.clickhouse && !runtime.handlers && !runtime.upstreams)
+    if (source.hasApplication && !source.python && !source.duckdb && !source.mysql && !source.mssql && !source.postgres && !source.redis && !source.s3 && !source.jsonrpc && !source.sqlite && !source.dataset && !source.clickhouse && !runtime.handlers && !runtime.upstreams)
       throw new Error('This release uses application/admission exports. Supply --handlers or --upstreams.');
     let handlerEntry = null;
     if (runtime.handlers) {
@@ -521,6 +538,7 @@ export async function stageRelease(root, options) {
       ...(source.python ? { python: source.python } : {}),
       ...(source.duckdb ? { duckdb: source.duckdb } : {}),
       ...(source.mysql ? { mysql: source.mysql } : {}),
+      ...(source.mssql ? { mssql: source.mssql } : {}),
       ...(source.postgres ? { postgres: source.postgres } : {}),
       ...(source.redis ? { redis: source.redis } : {}),
       ...(source.s3 ? { s3: source.s3 } : {}),
@@ -546,6 +564,9 @@ export async function stageRelease(root, options) {
           : source.mysql ? { kind: 'MYSQL_MERCHANT_PACKAGE', packageManifestSha256: source.mysql.packageManifestSha256,
           sourceConfigSha256: source.mysql.sourceConfigSha256, planSha256: source.mysql.planSha256,
           executionSha256: source.mysql.executionSha256 }
+          : source.mssql ? { kind: 'MSSQL_MERCHANT_PACKAGE', packageManifestSha256: source.mssql.packageManifestSha256,
+          sourceConfigSha256: source.mssql.sourceConfigSha256, planSha256: source.mssql.planSha256,
+          executionSha256: source.mssql.executionSha256 }
           : source.sqlite ? { kind: 'SQLITE_MERCHANT_PACKAGE', packageManifestSha256: source.sqlite.packageManifestSha256,
           sourceConfigSha256: source.sqlite.sourceConfigSha256, querySha256: source.sqlite.querySha256,
           databaseSha256: source.sqlite.databaseSha256, executionSha256: source.sqlite.executionSha256 } : source.jsonrpc ? { kind: 'JSONRPC_MERCHANT_PACKAGE', planSha256: source.jsonrpc.planSha256,
@@ -710,6 +731,8 @@ export async function compareReleases(root, beforeId, afterId, { beforeRoot = ro
     runtimeChanges.push({ field: 'duckdb', before: before?.duckdb ?? null, after: after.duckdb ?? null });
   if (stable(before?.mysql ?? null) !== stable(after.mysql ?? null))
     runtimeChanges.push({ field: 'mysql', before: before?.mysql ?? null, after: after.mysql ?? null });
+  if (stable(before?.mssql ?? null) !== stable(after.mssql ?? null))
+    runtimeChanges.push({ field: 'mssql', before: before?.mssql ?? null, after: after.mssql ?? null });
   if (stable(before?.postgres ?? null) !== stable(after.postgres ?? null))
     runtimeChanges.push({ field: 'postgres', before: before?.postgres ?? null, after: after.postgres ?? null });
   if (stable(before?.redis ?? null) !== stable(after.redis ?? null))
@@ -946,7 +969,7 @@ export async function runActiveRelease(root, { startupTimeoutMs = 45000, shutdow
     const cacheRoutes = record.routes.filter(route => route.upstream?.cache).map(route => ({
       id: route.id, binding: route.application.handler, policy: route.upstream.cache }));
     await releaseLock.update({ instanceId, releaseId: record.id, releaseDigest: record.digest, selectionGeneration: state.generation });
-    child = spawn(process.execPath, [CHILD, record.dataset ? DATASET_PILOT : record.clickhouse ? CLICKHOUSE_PILOT : record.postgres ? POSTGRES_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
+    child = spawn(process.execPath, [CHILD, record.dataset ? DATASET_PILOT : record.clickhouse ? CLICKHOUSE_PILOT : record.postgres ? POSTGRES_PILOT : record.redis ? REDIS_PILOT : record.mysql ? MYSQL_PILOT : record.mssql ? MSSQL_PILOT : record.sqlite ? SQLITE_PILOT : record.jsonrpc ? JSONRPC_PILOT : record.s3 ? S3_PILOT : record.duckdb ? DUCKDB_PILOT : record.python ? PYTHON_PILOT : PILOT, path, instanceId, releaseCacheControlPath(root, instanceId), releaseLock.lifetime ? '4' : '-'],
       { stdio: ['ignore', 'pipe', 'pipe', 'ipc', ...(releaseLock.lifetime ? [releaseLock.lifetime.fd] : [])],
         windowsHide: true, detached: process.platform !== 'win32', env: { ...env } });
     let readyResolve, readyReject, ownerResolve, ownerReject, stdout = '', stderr = '';
