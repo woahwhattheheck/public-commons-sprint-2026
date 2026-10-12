@@ -34,6 +34,7 @@ function checkedFile(info) {
   if (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1 || info.mode & 0o077 || info.size > MAX_FILE)
     throw fault('DATASETTE_PRIVATE_FILE_REQUIRED');
 }
+const nativeServiceMember = path => path === 'dataset/control.json' || path === 'dataset/control.sock';
 function internalTransient(name) {
   return name.endsWith('.lock') || name.endsWith('.sock') || name.endsWith('.pid') ||
     name.endsWith('-shm') || name.endsWith('-wal') || name.startsWith('.source-archive-stage-');
@@ -57,7 +58,7 @@ export function retainedDatasetteFiles({ directory, workspaceId }) {
       if (!info.isDirectory() || info.isSymbolicLink() || info.mode & 0o077)
         throw fault('DATASETTE_PRIVATE_DIRECTORY_REQUIRED');
     }
-    if (internalTransient(parts.at(-1))) throw fault('DATASETTE_FILE_NOT_RETAINED', 'Select a retained source, result or export file.');
+    if (nativeServiceMember(name) || internalTransient(parts.at(-1))) throw fault('DATASETTE_FILE_NOT_RETAINED', 'Select a retained source, result or export file.');
     const info = await lstat(path);
     checkedFile(info);
     return { path, info };
@@ -91,11 +92,11 @@ export function retainedDatasetteFiles({ directory, workspaceId }) {
     async function visit(path) {
       const entries = await readdir(path, { withFileTypes: true });
       for (const entry of entries) {
-        if (entry.isSymbolicLink() || internalTransient(entry.name)) continue;
         const next = resolve(path, entry.name);
+        const name = relative(directory, next).split(sep).join('/');
+        if (entry.isSymbolicLink() || internalTransient(entry.name) || nativeServiceMember(name)) continue;
         if (entry.isDirectory()) await visit(next);
         else if (entry.isFile()) {
-          const name = relative(directory, next).split(sep).join('/');
           if (name.startsWith(prefix)) names.push(name);
           if (names.length > MAX_FILES) throw fault('DATASETTE_FILE_INVENTORY_LIMIT');
         }

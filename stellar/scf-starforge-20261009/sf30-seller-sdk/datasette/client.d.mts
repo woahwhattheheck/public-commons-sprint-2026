@@ -71,7 +71,7 @@ export interface DatasetteOperationInputs {
   'editions.inspect': PageSelection & { id: string };
   'editions.compare': { left: string; right: string };
   'source.select': { editionId: string; query?: string };
-  'publisher.status': Record<string, never>;
+  'publisher.status': { limit?: number; plansOffset?: number; runsOffset?: number; historyOffset?: number };
   'publisher.source': Record<string, never>;
   'publisher.target': Record<string, never>;
   'publisher.plan': {
