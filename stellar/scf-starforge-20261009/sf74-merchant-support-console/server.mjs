@@ -18,8 +18,14 @@ import {inspectSupportSelection, supportSelectionSha256, createSupportLaunch, su
 import {inspectRuntimeFiles, reviewRuntime, exportRuntimeHandoff, importRuntimeHandoff,
   MAX_RUNTIME_BYTES, MAX_HANDOFF_BYTES} from './runtime-support.mjs';
 
+import {openCaseCommercial,commercialWorkspaceId} from './case-commercial.mjs';
+
 const ASSETS = Object.freeze({
   '/': ['index.html', 'text/html; charset=utf-8'],
+  '/commercial': ['commercial.html', 'text/html; charset=utf-8'],
+  '/commercial-app.mjs': ['commercial-app.mjs', 'text/javascript; charset=utf-8'],
+  '/commercial-desk.mjs': ['commercial-desk.mjs', 'text/javascript; charset=utf-8'],
+  '/commercial-desk.css': ['commercial-desk.css', 'text/css; charset=utf-8'],
   '/console.mjs': ['console.mjs', 'text/javascript; charset=utf-8'],
   '/terms-editor.mjs': ['terms-editor.mjs', 'text/javascript; charset=utf-8'],
   '/workspace-file.mjs': ['workspace-file.mjs', 'text/javascript; charset=utf-8'],
@@ -110,7 +116,7 @@ function compareUploadedSources(input) {
 export {workorderFromSources} from './workorder-source.mjs';
 
 // Injection is only for the focused loopback HTTP-contract check, not for deployed usage.
-export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, launchRecord = () => null} = {}) {
+export function createConsoleServer({runCapture = capture, allowLoopback = false, caseStore = null, handoffDesk = null, incidentDesk = null, commercialDesk = null, launchRecord = () => null} = {}) {
   let active = false;
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
@@ -124,7 +130,7 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
     }
     const route = (req.url || '').split('?')[0];
     if (req.method === 'GET' && route === '/health') {
-      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk)}); return;
+      json(res, 200, {status: 'LOCAL_READY', originalIntake: 'SF70', providerCallsOnPageLoad: 0, paidCalls: 0, casesEnabled:Boolean(caseStore),commercialEnabled:Boolean(commercialDesk),handoffsEnabled:Boolean(handoffDesk),incidentsEnabled:Boolean(incidentDesk)}); return;
     }
     if (route === '/api/support-launch') {
       if (req.method !== 'GET') {json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
@@ -280,6 +286,31 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         if (route === '/api/cases' && req.method === 'POST') {
           json(res,200,await caseStore.save(await boundedBody(req, (MAX_WORKSPACE_BYTES + MAX_RUNTIME_BYTES) * 2 + 100000))); return;
         }
+        const commercial=/^\/api\/cases\/([a-f0-9-]+)\/commercial(?:\/(preview|save-draft|publish|receive|receive-pricing|compare|download))?$/.exec(route);
+        if(commercial) {
+          if(!commercialDesk){json(res,503,{error:'COMMERCIAL_DISABLED',detail:'Open the original merchant workspace with its private case directory.'});return;}
+          if(req.method==='GET'&&!commercial[2]) {
+            if([...url.searchParams.keys()].some(key=>key!=='revision')||url.searchParams.getAll('revision').length>1)
+              throw new TypeError('Use one original case revision.');
+            json(res,200,await commercialDesk.read({id:commercial[1],...(url.searchParams.has('revision')?{revision:url.searchParams.get('revision')}:{})}));return;
+          }
+          if(req.method!=='POST'||!commercial[2]){json(res,405,{error:'METHOD_NOT_ALLOWED'});return;}
+          if(url.search)throw new TypeError('Unexpected quotation query');
+          const input=await boundedBody(req,MAX_WORKSPACE_BYTES*2+100000);
+          if(!input||typeof input!=='object'||Array.isArray(input)||Object.hasOwn(input,'id'))
+            throw new TypeError('Supply the quotation request for the selected case.');
+          const method={'save-draft':'saveDraft','receive-pricing':'receivePricing'}[commercial[2]]??commercial[2];
+          const result=await commercialDesk[method]({id:commercial[1],...input});
+          if(method==='download') {
+            const file=result.descriptor;
+            res.writeHead(200,{'content-type':file.mediaType,'content-length':file.bytes,
+              'content-disposition':'attachment; filename="'+file.filename+'"',
+              'x-sf74-file-name':encodeURIComponent(file.filename),'x-sf74-file-bytes':String(file.bytes),
+              'x-content-sha256':file.sha256,'etag':'"'+file.sha256+'"'});
+            res.end(result.body);return;
+          }
+          json(res,200,result);return;
+        }
         const implementation=/^\/api\/cases\/([a-f0-9-]+)\/implementation(?:\/(prepare))?$/.exec(route);
         if(implementation) {
           if(req.method==='GET'&&!implementation[2]) {
@@ -310,11 +341,13 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
         }
         json(res,404,{error:'NOT_FOUND'});
       } catch (error) {
-        const known = /^(?:CASE_|INVALID_|COMMISSIONING_|REQUEST_|EDITION_|SOURCE_CHANGE_|HISTORY_|MATERIAL_|UNKNOWN_COMMISSIONING_)/.test(error.code || '');
+        const known = /^(?:CASE_|INVALID_|COMMISSIONING_|COMMERCIAL_|PRICING_|REQUEST_|EDITION_|SOURCE_CHANGE_|HISTORY_|MATERIAL_|UNKNOWN_COMMISSIONING_)/.test(error.code || '');
         json(res, Number(error.status) || (error instanceof TypeError ? 422 : 503), {
           error:known ? error.code : 'CASE_OPERATION_FAILED',
           detail:known || error instanceof TypeError ? String(error.message).slice(0,240) : 'The case operation could not be completed. Your editor is unchanged.',
           ...(error.currentRevision ? {currentRevision:error.currentRevision} : {}),
+          ...(route.includes('/commercial/') && (error instanceof TypeError || error instanceof SyntaxError ||
+            known && [400,404,409,422].includes(Number(error.status))) ? {requestState:'REJECTED'} : {}),
         });
       }
       return;
@@ -424,6 +457,7 @@ export async function start({port = 0, allowLoopback = false, runCapture = captu
   if (startupFormat === 'json' && (casesDir === null || incidentSources === null || handoffSources !== null))
     throw new TypeError('Managed startup requires private cases and incident source profiles');
   const caseStore = casesDir === null ? null : await openCaseStore(casesDir);
+  const commercialDesk=caseStore?openCaseCommercial({store:caseStore,workspaceId:commercialWorkspaceId(resolve(casesDir))}):null;
   const handoffDesk = handoffSources === null ? null : await (await import('./handoff-store.mjs')).openHandoffDesk({configPath:handoffSources,casesDir,environment});
   let incidentDesk,selection=null,launch=null;
   try {
@@ -436,7 +470,7 @@ export async function start({port = 0, allowLoopback = false, runCapture = captu
           {code:'SUPPORT_APPLICATION_SELECTION_CHANGED'});
     }
   } catch(error) {await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);throw error;}
-  const server = createConsoleServer({allowLoopback, runCapture, caseStore,handoffDesk,incidentDesk,launchRecord:()=>launch});
+  const server = createConsoleServer({allowLoopback, runCapture, caseStore,handoffDesk,incidentDesk,commercialDesk,launchRecord:()=>launch});
   try {await new Promise((resolveListen, reject) => {
     server.once('error', reject);server.listen(port, '127.0.0.1', resolveListen);
   });}catch(error){await Promise.allSettled([handoffDesk?.close(),incidentDesk?.close()]);throw error;}
