@@ -1,18 +1,18 @@
 # Client runbooks and period handovers
 
-Client runbooks capture the instructions, supporting material and review decisions needed to hand a recurring close from one operator to another. They use the existing merchant accounting workspace, its accountant handoffs and original writer lease.
+Client runbooks capture the instructions, supporting material and review decisions needed to hand a recurring close from one operator to another. They use the existing merchant accounting workspace and original writer lease. A period can freeze the client's own close files or an existing accountant handoff.
 
 Open **Client runbooks** from the accounting navigation, or open /runbooks.html on the printed workspace address. Runbooks are also available through the original `merchant-accounting-workspace runbooks` command.
 
 ## Complete operating workflow
 
 1. **Publish procedures.** Create a client runbook with a name, client, description and ordered procedures. Each procedure has a stable identifier, title, complete instructions, required flag and selected supporting resources. Resources may be an HTTPS recording/document link, a written note, or an uploaded original file. Publishing a change creates another immutable edition.
-2. **Open a period.** Choose the saved edition, period label, preparer, reviewer and due date. Select an existing accountant handoff and either its original edition or an explicit returned revision. If choosing a period close, use the close already frozen into that handoff. The period retains the chosen procedures and accountant source.
+2. **Open a period.** Choose the saved edition, period label, preparer, reviewer and due date. Choose original client close files, supply a source label and working note, and select the uploaded originals. Alternatively select an existing accountant handoff and either its original edition or an explicit returned revision. If choosing a period close, use the close already frozen into that handoff. The period retains the chosen procedures and complete close source.
 3. **Prepare the work.** Record each procedure as pending, complete, not applicable or an open item. Nonapplicable procedures and open items require an explanation. Upload working files and attach them to the relevant procedure. Work remains editable during preparation and returned corrections.
 4. **Hand it to the reviewer.** Required procedures must be completed, explained as nonapplicable, or documented as open items. Submitting retains the full preparation round and its handover note. Review then operates on that unchanged submission.
 5. **Return corrections or approve.** Returning requires a correction note. The preparer can amend the same period and submit a further round. Approval requires every required open item to be resolved or explicitly accepted with a review note and follow-up responsibility.
-6. **Deliver the close.** Download the printable handover, the procedure/task CSV, and the complete portable JSON packet. The packet contains the frozen edition, current preparation, submission/review history, every selected supporting file and the original accountant files for that source revision.
-7. **Receive and continue.** Receive the packet in another existing accounting workspace. Its imported period retains the original completed work and files. Start the next local period from the received procedure edition, select the receiving workspace's actual accountant handoff, and optionally select the prior period. The new period begins with fresh pending work.
+6. **Deliver the close.** Download the printable handover, the procedure/task CSV, and the complete portable JSON packet. The packet contains the frozen edition, current preparation, submission/review history, every selected supporting file and the selected original client files or accountant source revision.
+7. **Receive and continue.** Receive the packet in another existing accounting workspace. Its imported period retains the original completed work and files. Start the next local period from the received procedure edition, select the receiving workspace's actual client files or accountant handoff, and optionally select the prior period. The new period begins with fresh pending work.
 
 An edition published after a period opens applies to later selected periods. Existing periods retain their chosen edition. When an imported edition joins a book that already exists locally, it is retained in that book's history without changing its current latest edition.
 
@@ -85,7 +85,7 @@ A committed request returns its original compact result and revision. After a tr
 |---|---|
 | `save` | `name, client, description, resources, steps`; later editions also `runbookId, expectedEditionId` |
 | `attach` | Optional `name, type`; select actual bytes with `--file` |
-| `create` | `runbookId, editionId, label, preparer, reviewer, dueDate, handoffId, accountantRevisionId`; optional `periodCloseId, previousCycleId` |
+| `create` | `runbookId, editionId, label, preparer, reviewer, dueDate`; optional `previousCycleId`. For `sourceKind: "files"`, add `sourceLabel, sourceNote, sourceFileIds`. For `sourceKind: "accountant"` (default), add `handoffId, accountantRevisionId` and optional `periodCloseId`. |
 | `work --id PERIOD` | `stepId, status, note, fileIds` |
 | `submit --id PERIOD` | `note` |
 | `review --id PERIOD` | `decision, note, acceptedExceptions` |
@@ -120,7 +120,7 @@ All JSON responses identify the original `workspaceId` and current `revision`. P
 | POST `/api/runbooks/books/save` | Publish a complete edition |
 | POST `/api/runbooks/files` | Retain base64 `content`, `name` and optional media `type` |
 | GET `/api/runbooks/files/:id` | Exact original file |
-| POST `/api/runbooks/cycles` | Create period from an explicit edition and accountant source |
+| POST `/api/runbooks/cycles` | Create period from an explicit edition and original close source |
 | GET `/api/runbooks/cycles/:id` | Complete period, work and preparation/review history |
 | POST `/api/runbooks/cycles/:id/work` | Save one procedure's completed work and files |
 | POST `/api/runbooks/cycles/:id/submit` | Retain a complete preparation round |
@@ -139,8 +139,8 @@ Kinds are `edition_saved, file_retained, cycle_created, procedure_saved, prepara
 
 Runbooks live in the existing `workspace.json`. Supporting files are content-addressed beneath `runbooks/files`; received complete packets are retained beneath `runbooks/packets`. All state changes use the original serial writer and workspace commit. New bytes are fully written and synchronized before create-only publication.
 
-A portable packet verifies its canonical content, every attachment, each preparation/review join, its original accountant handoff/return, and the report/manifest/input/close/adjustment bytes selected by those original records. Exact packet replay reuses the received period. The same period ID with different content requires resolving the existing selection.
+A portable packet verifies its canonical content, every attachment, each preparation/review join, its complete client-file source or original accountant handoff/return, and any report/manifest/input/close/adjustment bytes selected by those original accountant records. Exact packet replay reuses the received period. The same period ID with different content requires resolving the existing selection.
 
-Operational limits are 8 MiB per supporting upload, 64 MiB per complete portable packet, 100 procedures/resources per edition, 200 runbooks, 200 retained editions per book, 2,000 periods/files and 20,000 compact operation entries. The underlying workspace retains its existing 32 MB state limit. Keep long recordings at their source URL, retain the working instructions in the procedure, and include the original files needed by the next operator.
+Operational limits are 8 MiB per supporting upload, 64 MiB per complete portable packet, 100 procedures/resources per edition, 200 runbooks, 200 retained editions per book, 2,000 periods/files and 20,000 compact operation entries. The underlying workspace retains its existing 32 MB state limit. Client-file mode retains the exact source documents without translating their currencies, accounts or accounting system. Keep long recordings at their source URL, retain the working instructions in the procedure, and include the original files needed by the next operator.
 
 The browser keeps procedure, period, work, review and receiving drafts in its local IndexedDB, scoped to the original workspace and selected record. A retained pending request is reconciled against its original kind, target and digest before the browser accepts a committed result. The next operator receives the same complete period and opens the next close from its retained procedures.
