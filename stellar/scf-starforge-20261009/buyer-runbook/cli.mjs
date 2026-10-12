@@ -47,9 +47,11 @@ accounting-workspace binds one operation to its existing original operator; late
 finalize calls reuse that selection. Optional outbox arguments require --only.
 status rewrites only derived status.json/report.html, not plans or attempts.
 unlock releases an exact dead local process lease; it preserves every attempt.
-workspace opens the private browser planner and original run controls. Start it
-in the same controlling terminal used for SF81 approval. Existing workspaces can
-omit --configs to reuse their saved source directory. New workspaces can omit it
+workspace opens the private browser planner and original run controls. Terminal
+mode uses the same controlling terminal as original SF81 approval. Browser mode
+presents each original live-term decision at the printed workspace URL.
+Existing workspaces can omit --configs to reuse their saved source directory.
+New workspaces can omit it
 to create a private configs directory inside their state directory.
 backup-review resolves every original operator and retained acquisition under one
 private state root. backup requires the exact reviewed selection and stopped
@@ -66,6 +68,9 @@ preset to stdout. Signing and proxy environment values are never returned.
 budgets for receiving private merchant requests. Its path is retained for reopen.
 --claim-envs declares existing environment names available for paid-file delivery.
 Only names enter the browser; values stay in this process's existing environment.
+
+Workspace approval: --approval-mode terminal|browser (default terminal).
+Managed launch binding: --expected-selection-sha256 SHA256.
 `;
 const print = value => process.stdout.write(JSON.stringify(value, null, 2) + '\n');
 function options(args, names) {
@@ -161,21 +166,41 @@ export async function main(args = process.argv.slice(2)) {
     return;
   }
   if (command === 'workspace') {
-    const opts = options(tail, ['--state','--configs','--operator-settings','--claim-envs','--run','--port']);
+    const opts = options(tail, ['--state','--configs','--operator-settings','--claim-envs','--run','--port',
+      '--approval-mode','--expected-selection-sha256']);
     need(opts['--state'], 'WORKSPACE_STATE_DIRECTORY_REQUIRED');
-    const {startRunbookWorkspace} = await import('./workspace.mjs');
-    const service = await startRunbookWorkspace({directory:opts['--state'], configsDirectory:opts['--configs'],
-      operatorSettings:opts['--operator-settings'],
-      paidFileClaimEnvs:opts['--claim-envs']===undefined?undefined:opts['--claim-envs'].split(','),
-      runs:opts['--run'] ? [opts['--run']] : [], port:Number(opts['--port'] ?? 8460)});
-    const state = await service.model.state();
-    print({mode:'BUYER_RUNBOOK_WORKSPACE', url:service.url, directory:service.model.directory,
-      terminalAvailable:state.terminalAvailable});
-    let stopping;
-    const stop = code => { stopping ??= service.close().then(() => {process.exitCode = code;}, error => {
-      process.stderr.write(JSON.stringify({error:error.code ?? 'WORKSPACE_SHUTDOWN_FAILED'}) + '\n'); process.exitCode = 1;
-    }); };
-    process.once('SIGINT',() => stop(130)); process.once('SIGTERM',() => stop(143));
+    const controller = new AbortController();
+    let service, stopping, stopCode;
+    const removeSignals = () => { process.off('SIGINT',interrupt); process.off('SIGTERM',terminate); };
+    const stop = code => {
+      stopCode ??= code; controller.abort();
+      if (!service) return;
+      return stopping ??= service.close().then(() => { process.exitCode = stopCode; }, error => {
+        process.stderr.write(JSON.stringify({error:error.code ?? 'WORKSPACE_SHUTDOWN_FAILED'}) + '\n');
+        process.exitCode = 1;
+      }).finally(removeSignals);
+    };
+    const interrupt = () => stop(130), terminate = () => stop(143);
+    process.once('SIGINT',interrupt); process.once('SIGTERM',terminate);
+    try {
+      const {startRunbookWorkspace} = await import('./workspace.mjs');
+      service = await startRunbookWorkspace({directory:opts['--state'], configsDirectory:opts['--configs'],
+        operatorSettings:opts['--operator-settings'],
+        paidFileClaimEnvs:opts['--claim-envs']===undefined?undefined:opts['--claim-envs'].split(','),
+        runs:opts['--run'] ? [opts['--run']] : [], port:Number(opts['--port'] ?? 8460),
+        approvalMode:opts['--approval-mode'] ?? 'terminal',
+        expectedSelectionSha256:opts['--expected-selection-sha256'],signal:controller.signal});
+      if (controller.signal.aborted) { await stop(stopCode ?? 143); return; }
+      // Managed Applications consumes the one complete native announcement line.
+      process.stdout.write(JSON.stringify(service.launch) + '\n');
+    } catch (error) {
+      removeSignals();
+      if (service) await service.close();
+      if (stopCode !== undefined && error.code === 'WORKSPACE_START_INTERRUPTED') {
+        process.exitCode = stopCode; return;
+      }
+      throw error;
+    }
     return;
   }
   if (command === 'init') {

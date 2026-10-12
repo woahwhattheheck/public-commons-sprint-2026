@@ -553,6 +553,20 @@ export async function openNocoDBAuthoring({ directory, create = false, connectio
         try { return await action(original); } finally { await original.close(); }
       });
     }
+    /** Host-only access to the SAME browser-owned publisher and scheduler.
+     * The caller supplies code, never an agent-selected module or native handle.
+     * This serialized lifetime drains before closePublisher/deployment/close. */
+    async function withOpenPublisher(action) {
+      assertOpen();
+      if (typeof action !== 'function') throw fault('NOCODB_PUBLISHER_CALLBACK_REQUIRED');
+      return serializePublisherAccess(async () => {
+        assertOpen();
+        if (!publisherService)
+          throw fault('NOCODB_PUBLISHER_NOT_OPEN', 'Explicitly open the selected source publisher first.', 409);
+        return action({ publisher: publisherService.publisher, schedule: publisherService.schedule });
+      });
+    }
+
     function savedDeploymentOperation(request, kind) {
       const row = db.prepare('SELECT * FROM operations WHERE id=?').get(id(request));
       if (!row || row.kind !== kind || row.status !== 'complete')
@@ -819,7 +833,7 @@ export async function openNocoDBAuthoring({ directory, create = false, connectio
     return {
       directory, settings, discover, discovery: discoveryRecord, importSource, importPacket, readLive,
       inspectCapture, saveDraft, preview, saveVersion, selectVersion, exportVersion, exportCapture, captureAttempt, compareVersions,
-      openPublisher, resume, operation, version, deploymentStatus, reviewDeployment, prepareDeployment,
+      openPublisher, withOpenPublisher, resume, operation, version, deploymentStatus, reviewDeployment, prepareDeployment,
       inspectDeploymentPackage, stageDeployment, openDeploymentConsole, closeDeploymentConsole,
       compareDeployment, commandDeployment, deploymentFile,
       async status({ capturesOffset = 0, versionsOffset = 0, discoveriesOffset = 0, limit = 25 } = {}) {

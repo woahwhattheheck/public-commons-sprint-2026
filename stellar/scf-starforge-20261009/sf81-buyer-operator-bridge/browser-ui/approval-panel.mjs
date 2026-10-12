@@ -204,7 +204,7 @@ export function createApprovalPanel({ host, decide, refresh }) {
     const binding = { intent: selectedIntent, approvalId: current.id,
       requestSha256: current.review.request_sha256, decision: value };
     const originalId = current.id;
-    deciding = true; response.textContent = ''; controls();
+    deciding = true; uncertain = true; response.textContent = ''; controls();
     try {
       await decide(binding);
     } catch (error) {
@@ -214,6 +214,10 @@ export function createApprovalPanel({ host, decide, refresh }) {
           ' Refresh this original operation to read its recorded state.';
       }
     } finally {
+      // A POST response does not replace the original approval snapshot. Keep
+      // this decision disabled until its next authoritative read, including
+      // after navigation resets and reopens the same review while POST waits.
+      if (current?.id === originalId) uncertain = true;
       deciding = false;
       controls();
       try { await refresh(); } catch { disconnect(); }
