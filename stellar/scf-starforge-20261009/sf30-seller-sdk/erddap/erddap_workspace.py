@@ -135,7 +135,7 @@ class Workspace(_original.Workspace):
     def __init__(self,root,create=False):
         super().__init__(root,create=create,source_format=FORMAT)
         self.native=NativeEngine(self.root/"tmp")
-        for name in ["provider","acquisitions"]:
+        for name in ["provider","acquisitions","erddap-exports"]:
             p=self.root/name
             if not p.exists():p.mkdir(mode=0o700)
             if p.is_symlink()or not p.is_dir():raise InputError("Provider directories must be real private directories")
@@ -151,7 +151,9 @@ class Workspace(_original.Workspace):
             result=super().state()
             result["metadata"]=[{k:v for k,v in load_json(r["body"]).items()if k not in {"metadata","files"}}for r in self.db.execute("SELECT body FROM erddap_metadata ORDER BY created DESC")]
             result["queries"]=[{"id":r["id"],"query":load_json(r["body"])}for r in self.db.execute("SELECT * FROM erddap_queries ORDER BY created DESC")]
-            result["operations"]=[load_json(r["body"])for r in self.db.execute("SELECT body FROM erddap_operations ORDER BY created DESC")]
+            operation_ids={r["id"]for r in self.db.execute("SELECT id FROM erddap_operations")}
+            operation_ids.update(p.name for p in (self.root/"acquisitions").iterdir()if OP.fullmatch(p.name)and not p.is_symlink()and p.is_dir()and(p/"request.json").is_file())
+            result["operations"]=sorted((self.operation(i)for i in operation_ids),key=lambda x:(x.get("created")or 0,x["id"]),reverse=True)
             result["searches"]=[{k:v for k,v in load_json(r["body"]).items()if k!="table"}for r in self.db.execute("SELECT body FROM erddap_searches ORDER BY created DESC")]
             return result
 
@@ -234,9 +236,21 @@ class Workspace(_original.Workspace):
     def operation(self,operation_id):
         if not isinstance(operation_id,str)or not OP.fullmatch(operation_id):raise InputError("Use a stable short original acquisition operation ID")
         with self.mutex:
-            row=self.db.execute("SELECT body FROM erddap_operations WHERE id=?",(operation_id,)).fetchone()
-            if row is None:raise InputError("Unknown original acquisition operation")
-            return load_json(row["body"])
+            folder=self.root/"acquisitions"/operation_id;request_path=folder/"request.json"
+            _original.regular(request_path,262144);request_raw=request_path.read_bytes();request=load_json(request_raw)
+            if not isinstance(request,dict)or set(request)!={"queryId","label"}or not HEX.fullmatch(str(request.get("queryId","")))or not isinstance(request["label"],str)or not request["label"].strip()or len(request["label"])>160:
+                raise InputError("Retained acquisition request is invalid")
+            saved=folder/"operation.json"
+            if saved.exists():
+                _original.regular(saved,8*1024*1024);body=load_json(saved.read_bytes())
+            else:
+                row=self.db.execute("SELECT body FROM erddap_operations WHERE id=?",(operation_id,)).fetchone()
+                body=load_json(row["body"])if row else {"schema":"stellar-forge.erddap-acquisition.v1","id":operation_id,
+                    "queryId":request["queryId"],"requestSha256":source.sha(request_raw),"status":"prepared",
+                    "created":None,"requestOnly":True,"responses":{}}
+            if body.get("schema")!="stellar-forge.erddap-acquisition.v1"or body.get("id")!=operation_id or body.get("queryId")!=request["queryId"]or body.get("requestSha256")!=source.sha(request_raw):
+                raise InputError("Original acquisition request or operation identity changed")
+            return {**body,"request":request}
 
     def _save_operation(self,body):
         atomic(self.root/"acquisitions"/body["id"]/"operation.json",json_bytes(body))
@@ -306,6 +320,89 @@ class Workspace(_original.Workspace):
 
     def default_mapping(self,sid,name=None):
         return source.default_plan(self.source(sid)["inventory"],name)
+
+    def _retained_packet(self,build_id):
+        view=self.build_view(build_id);directory=self.root/"erddap-exports"
+        cached=directory/(view["id"]+".packet.zip");receipt=directory/(view["id"]+".packet.json")
+        if not cached.exists():
+            with self.scratch()as temporary:
+                pending=temporary/"packet.zip"
+                super().export_packet(view["id"],pending)
+                os.replace(pending,cached);_original.sync_dir(directory)
+        _original.regular(cached,MAX_PACKET)
+        actual={"build":view["id"],"bytes":cached.stat().st_size,"sha256":_original.file_digest(cached,MAX_PACKET)}
+        if receipt.exists():
+            _original.regular(receipt,16384)
+            if load_json(receipt.read_bytes())!=actual:raise InputError("Retained customer packet changed")
+        else:
+            # A completed original ZIP can precede its receipt after interruption.
+            # Adopt it only against every current original source/native byte identity.
+            paths={self.source_name:self.root/"sources"/(view["source"]+"."+self.kind),
+                "plan.json":self.root/"plans"/(view["plan"]+".json"),
+                **{n:self._build_path(view["id"],n)for n in ["data.csv","dataset.json","review.json"]}}
+            expected={n:{"bytes":_original.regular(p).st_size,"sha256":_original.file_digest(p)}for n,p in paths.items()}
+            with zipfile.ZipFile(cached)as z:
+                infos=z.infolist()
+                if len(infos)!=6 or{i.filename for i in infos}!=set(paths)|{"manifest.json"}or sum(i.file_size for i in infos)>MAX_PACKET:
+                    raise InputError("Retained original packet members changed")
+                if z.getinfo("manifest.json").file_size>16384 or any(i.flag_bits&1 or i.is_dir()or stat.S_ISLNK(i.external_attr>>16)or i.compress_type not in {zipfile.ZIP_STORED,zipfile.ZIP_DEFLATED}for i in infos):
+                    raise InputError("Retained packet metadata or compression changed")
+                manifest=load_json(z.read("manifest.json"))
+                if manifest!={"schema":self.packet_schema,"build":view["id"],"files":expected}:
+                    raise InputError("Retained packet belongs to another original source or native build")
+                for name,entry in expected.items():
+                    info=z.getinfo(name)
+                    if info.file_size!=entry["bytes"]or info.flag_bits&1 or stat.S_ISLNK(info.external_attr>>16):
+                        raise InputError("Retained customer packet member changed")
+                    h=hashlib.sha256();size=0
+                    with z.open(name)as stream:
+                        while block:=stream.read(65536):
+                            size+=len(block)
+                            if size>entry["bytes"]:raise InputError("Retained packet exceeded its original member size")
+                            h.update(block)
+                    if size!=entry["bytes"]or h.hexdigest()!=entry["sha256"]:raise InputError("Retained packet bytes changed")
+            atomic(receipt,json_bytes(actual))
+        return cached,actual
+
+    def export_packet(self,build_id,output):
+        with self.mutex:
+            cached,receipt=self._retained_packet(build_id);output=Path(output).absolute()
+            if output.exists()or output.is_symlink():
+                _original.regular(output,MAX_PACKET)
+                if output.stat().st_size!=receipt["bytes"]or _original.file_digest(output,MAX_PACKET)!=receipt["sha256"]:
+                    raise InputError("Existing customer export contains a different original packet")
+                return {"file":str(output),**receipt,"replayed":True}
+            descriptor=os.open(output,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600);owned=os.fstat(descriptor)
+            try:
+                with os.fdopen(descriptor,"wb")as target,cached.open("rb")as original:
+                    shutil.copyfileobj(original,target,1024*1024);target.flush();os.fsync(target.fileno())
+                _original.sync_dir(output.parent)
+            except Exception:
+                try:
+                    current=output.lstat()
+                    if(current.st_dev,current.st_ino)==(owned.st_dev,owned.st_ino):output.unlink()
+                except FileNotFoundError:pass
+                raise
+            return {"file":str(output),**receipt,"replayed":False}
+
+    def export_dataset(self,build_id,destination):
+        with self.mutex:
+            result=super().export_dataset(build_id,destination);view=result["build"]
+            original=self.source(view["source"]);shape=original["inventory"];plan=self.plan(view["plan"])
+            project={"schema":"stellar-forge.erddap-series-identity.v1",
+                     "server":shape["server"],"datasetId":shape["datasetId"],"protocol":shape["protocol"],
+                     "mapping":view["plan"],"title":plan["name"]}
+            project["id"]=source.sha(json_bytes({k:v for k,v in project.items()if k not in {"title"}}))
+            lineage={"schema":"stellar-forge.erddap-lineage.v1","build":view["id"],"project":project,
+                     "snapshot":view["native"]["snapshot"],"files":{n:view["files"][n]for n in ["data.csv","dataset.json"]},
+                     "sources":[{"id":original["id"],"bytes":original["bytes"],"name":original["name"],
+                                 "responses":shape["files"],"metadata":shape["metadata"]}],
+                     "selection":shape["selection"],"mapping":plan,"rowCount":view["rowCount"],
+                     "csvComparison":shape["csvComparison"],"engineBlob":view["engineBlob"],
+                     "created_at":original["created"]}
+            atomic(Path(destination)/"erddap-lineage.json",json_bytes(lineage))
+            result["lineage"]=lineage
+            return result
 
     def changes(self,comparison_id,offset=0,limit=100):
         return self.comparison_page(comparison_id,offset,limit)
