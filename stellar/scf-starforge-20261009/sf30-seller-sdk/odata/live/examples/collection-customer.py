@@ -20,14 +20,15 @@ SCF = Path("stellar/scf-starforge-20261009")
 PREFIX = SCF / "sf30-seller-sdk/odata/live/examples"
 NODE_HELPER_BLOB = "b6eb8b8697e6082a67ab94ce88573259ef690a50"
 CRITICAL = {
-    "sf30-seller-sdk/odata/live/collection.mjs": "cff025465f887fdfffe6d4f501a42ea767a6a712",
-    "sf30-seller-sdk/odata/live/collection-store.mjs": "59d9fa4904bc54bdfa692656047029d2a1e5a9a1",
+    "sf30-seller-sdk/odata/live/collection.mjs": "45a65fd30fc0458e007e24d5cf92749372f379b9",
+    "sf30-seller-sdk/odata/live/collection-store.mjs": "508b6bfe7c4886741ea4f1b92cae8615bdd4815c",
     "sf30-seller-sdk/odata/live/client.mjs": "fa149d4adcc2698d699c492f572f5840978addf9",
     "sf30-seller-sdk/odata/live/contract.mjs": "89929902571fae19b638dffa0b47dcefd31ae0cf",
     "sf30-seller-sdk/odata/source.mjs": "9fbe8ad327deaa14b1912ff3fe2cf97336202efc",
     "sf30-seller-sdk/odata/schema.mjs": "e39cf9c829c9af7e7edff8775ee9a6d05c9dec3a",
     "sf30-seller-sdk/odata/state.mjs": "b9907fde2d99357495f25ed0fcb1e70d261295ab",
     "sf30-seller-sdk/odata/live/startup.mjs": "253d7e79421fe32fbabeb15f75e5989f7a193bf0",
+    "sf82-seller-pilot/release-process.mjs": "22a62cc1ec9354453b0dd11fb669788decd80cae",
     "sf30-seller-sdk/odata/workspace.mjs": "8fb026cbe99e38f1473dd8555e147c557c1dd27a",
     "sf30-seller-sdk/odata/live-operations.mjs": "376238ba32a9a3d5764550b9ed216b9813197a8b",
     "sf30-seller-sdk/odata/server.mjs": "a8d6be60e79b3c1d817bc100e623e86db19a6bbf",
@@ -140,7 +141,7 @@ def options():
     parser.add_argument("--node", default="node")
     parser.add_argument("--source-ref", required=True, help="Immutable public product commit selected by the operator")
     parser.add_argument("--resume", action="store_true", help="Reconcile and continue this exact existing operation")
-    parser.add_argument("--resume-source-from", help="Exact prior selection SHA for the original workspace-identity preflight correction")
+    parser.add_argument("--resume-source-from", help="Exact prior selection SHA for an original pre-Analysis identity or native lease correction")
     return parser.parse_args()
 
 
@@ -254,9 +255,9 @@ def main():
                 need(journal["state"] == "NEEDS_ATTENTION" and journal["steps"] == {},
                      "The existing customer work must continue with its originally selected source.")
                 allowed = {"customer-input.json", "customer-operation.json", "customer-operation.lock",
-                           "runtime-source-selection.json"}
+                           "runtime-source-selection.json", "original-odata-transfer.json", "merchant-workspace"}
                 need(all(path.name in allowed for path in out.iterdir()),
-                     "The original customer preparation has output to reconcile before a source correction.")
+                     "The original preparation has completed customer output to reconcile before a source correction.")
                 old_inputs = {key: value for key, value in previous.items() if key not in {"source_files", "workspace_file"}}
                 new_inputs = {key: value for key, value in selection.items() if key not in {"source_files", "workspace_file"}}
                 need(old_inputs == new_inputs and previous.get("workspace_file", workspace_file) == workspace_file,
@@ -265,20 +266,39 @@ def main():
                 new_sources = {value["path"]: value for value in selection["source_files"]}
                 helper_name = str(PREFIX / "collection-customer.mjs")
                 identity_name = str(SCF / "sf30-seller-sdk/odata/live/startup.mjs")
+                lease_name = str(SCF / "sf82-seller-pilot/release-process.mjs")
+                core_name = str(SCF / "sf30-seller-sdk/odata/live/collection.mjs")
+                store_name = str(SCF / "sf30-seller-sdk/odata/live/collection-store.mjs")
+                known_before = {
+                    core_name: "cff025465f887fdfffe6d4f501a42ea767a6a712",
+                    store_name: "59d9fa4904bc54bdfa692656047029d2a1e5a9a1",
+                    helper_name: "793fc1add5517728b16e6376e0cc827c5638d1e9",
+                }
+                changed = {path for path in old_sources if old_sources[path] != new_sources.get(path)}
+                added = set(new_sources) - set(old_sources)
                 need(len(old_sources) == len(previous["source_files"]) and
-                     set(new_sources) == set(old_sources) | {identity_name} and identity_name not in old_sources and
-                     old_sources.get(helper_name, {}).get("git_blob") == "793fc1add5517728b16e6376e0cc827c5638d1e9" and
-                     all(value == new_sources.get(path) for path, value in old_sources.items() if path != helper_name),
-                     "Only the original workspace-identity preflight correction can be adopted here.")
+                     set(old_sources).issubset(new_sources) and
+                     added.issubset({identity_name, lease_name}) and lease_name in added and
+                     changed.issubset(known_before) and {core_name, store_name}.issubset(changed) and
+                     all(old_sources[path]["git_blob"] == known_before[path] for path in changed) and
+                     ((helper_name in changed and identity_name in added) or
+                      (helper_name not in changed and identity_name not in added)),
+                     "Only the original pre-Analysis workspace identity and SF82 lease corrections can be adopted here.")
+                # Both accepted preparations stopped before Analysis jobs. The original
+                # Node helper reopens the retained baseline and hash-addressed response
+                # pages before completing this same collection; no rows are recaptured.
+                need(not (out / "merchant-workspace/live/products/orders/collections/northwind-orders-complete/collection.json").exists(),
+                     "Reconcile the original completed collection before changing its selected source.")
                 journal.setdefault("source_upgrades", []).append({
                     "selection": previous, "selection_sha256": journal["selection_sha256"],
                     "state": journal["state"], "error": journal.get("error"),
-                    "reason": "Use original workspace creation identity and exact retained file bytes",
+                    "changed_paths": sorted(changed), "added_paths": sorted(added),
+                    "reason": "Use the maintained per-directory SF82 state.lock lease and original workspace identity",
                     "adopted_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
                 journal.update(selection=selection, selection_sha256=selection_sha, state="RUNNING")
                 journal.pop("error", None)
                 save()
-                progress("original-preflight-source-adopted", selection_sha256=selection_sha)
+                progress("original-preparation-source-adopted", selection_sha256=selection_sha)
         else:
             journal = {"schema": SCHEMA, "selection": selection, "selection_sha256": selection_sha,
                        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "state": "RUNNING", "steps": {}}

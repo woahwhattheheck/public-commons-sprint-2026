@@ -141,3 +141,11 @@ helper correction and the original identity-reader dependency, retains the full
 prior selection and error in the same journal, and continues the same customer
 operation. Once customer work exists, ordinary `--resume` keeps its original
 source and complete native jobs.
+
+## Continue the original native collection preparation
+
+The collection uses the maintained SF82 per-directory `state.lock` lifetime lease for receiving, row reads, inspection and restore. The lease file belongs to the selected collection directory, and the original helper retains its inode and closes its descriptor when that operation ends.
+
+The first native customer operation exposed an unsupported `collection.lock` caller name before it created the collection. Its five received response pages and merchant workspace were retained in the same operation. The corrected source calls the existing `state.lock` contract and includes that original helper in the runner's immutable source selection.
+
+To continue that exact pre-Analysis preparation, restore its complete operation checkpoint to the same selected output path, retain the original input packet, and run the command above with `--resume --resume-source-from 32b9b87f1ef85efeab180eb395e8c2434845b94a49b1abe655fb157239a4a652`. The runner preserves the previous selection and error, verifies every unchanged input and source, permits only the recorded identity/lease corrections, reopens the original received pages, and continues the original collection. An existing completed collection or Analysis job retains its original source selection.
