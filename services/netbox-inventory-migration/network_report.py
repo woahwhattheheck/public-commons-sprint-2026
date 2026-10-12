@@ -17,7 +17,7 @@ SCHEMA = "tjlabs.netbox.network-commissioning/v1"
 FAMILIES = ("route_targets", "vrfs", "vlans", "prefixes", "interfaces", "ip_addresses", "cables")
 LABELS = {"route_targets": "Route targets", "vrfs": "VRFs", "vlans": "VLANs",
           "prefixes": "Prefixes", "interfaces": "Interfaces", "ip_addresses": "IP addresses",
-          "cables": "Cables", "native_effects": "Native endpoint and path effects"}
+          "cables": "Cables", "native_effects": "Native interface and cable effects"}
 COLUMNS = {
     "route_targets": ("name", "description"),
     "vrfs": ("name", "rd", "enforce_unique", "import_targets", "export_targets"),
@@ -66,7 +66,7 @@ def network_inventory(result):
     objects = {kind: [] for kind in (*FAMILIES, "native_effects")}
     for change in result.get("changes", []):
         kind = change.get("kind", "")
-        family = kind if kind in FAMILIES else ("native_effects" if kind.startswith("cable_") else None)
+        family = kind if kind in FAMILIES else ("native_effects" if kind.startswith("cable_") or kind == "interface_channels" else None)
         if family is None:
             continue
         native = resolved.get((kind, change.get("key")), {})
@@ -166,6 +166,9 @@ def network_html(value):
              '<h1>Network commissioning</h1><p>' + esc(value["scope"]) + '</p>',
              '<p><strong>' + esc(value["state"]) + '</strong> · Operation <code>' + esc(value["operation_id"]) + '</code></p>',
              '<p>Native NetBox ' + esc(value["netbox_version"]) + ' · Review <code>' + esc(value["review_digest"]) + '</code></p>',
+             '<p>Target <code>' + esc(value.get("netbox_url") or "Awaiting native review") + '</code> · Tenant ' +
+             esc((value.get("tenant") or {}).get("name", "—")) + ' · Native tenant ID ' +
+             esc((value.get("tenant") or {}).get("id", "—")) + '</p>',
              '<div class="counts">']
     for family in FAMILIES:
         parts.append('<div class="count"><strong>' + str(value["counts"][family]) + '</strong> ' + esc(LABELS[family]) + '</div>')
@@ -211,7 +214,7 @@ def network_html(value):
             parts.append('</tr>')
         parts += ['</tbody></table></div></section>']
     if value["objects"]["native_effects"]:
-        parts += ['<section id="native_effects"><h2>Native endpoint and path effects</h2>']
+        parts += ['<section id="native_effects"><h2>Native interface and cable effects</h2>']
         for row in value["objects"]["native_effects"]:
             parts += ['<details class="object"><summary>' + esc(row["kind"]) + ' · ' + esc(row["key"]) + ' · ' + esc(row["action"]) + '</summary>',
                       '<h3>Before</h3><pre>' + esc(json.dumps(row["before"], ensure_ascii=False, indent=2)) + '</pre>',
