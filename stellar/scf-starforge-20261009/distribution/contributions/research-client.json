@@ -8,7 +8,8 @@
     "research-citation-workflow": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/citation-review-workflow.mjs",
     "research-citation-python-receive": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/python/examples/research_citation_analyst.mjs",
     "research-europe-pmc": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/europe-pmc-cli.mjs",
-    "research-template-exchange": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/cli.mjs"
+    "research-template-exchange": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/cli.mjs",
+    "research-study-protocol": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-cli.mjs"
   },
   "commandDescriptions": {
     "research-client": "Operate the Research listener, source and eligibility reviews, study extraction, evidence tables, appraisals, customer updates, Documents/Pipelines, and complete receiving",
@@ -16,7 +17,8 @@
     "research-citation-workflow": "Run original citation review, browser draft recovery, revision reports and complete portable reopening",
     "research-citation-python-receive": "Receive a saved citation review through Python, full revision reports, Analysis/workbook and complete customer reopening",
     "research-europe-pmc": "Operate saved literature queries, original Europe PMC pages, edition comparison, record review and complete dossier/workspace receiving",
-    "research-template-exchange": "Map a customer workbook to a reviewed publication, receive returned edits and recover the original reviewer draft."
+    "research-template-exchange": "Map a customer workbook to a reviewed publication, receive returned edits and recover the original reviewer draft.",
+    "research-study-protocol": "Capture the registered study protocol, receive it into the existing Research question, and preserve the complete selected engine for customer delivery."
   },
   "exports": {
     "./buyer/research-dossiers/client": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-client.mjs",
@@ -63,7 +65,11 @@
     "./buyer/research-dossiers/risk-of-bias/study-case": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/risk-of-bias/study-case.mjs",
     "./buyer/research-dossiers/risk-of-bias/receiving": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/risk-of-bias/receiving.mjs",
     "./buyer/research-dossiers/risk-of-bias/receiving-browser": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/risk-of-bias/receiving-browser.mjs",
-    "./buyer/research-dossiers/risk-of-bias/receiving-transports": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/risk-of-bias/receiving-transports.mjs"
+    "./buyer/research-dossiers/risk-of-bias/receiving-transports": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/risk-of-bias/receiving-transports.mjs",
+    "./buyer/research-dossiers/study-protocol/source": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-source.mjs",
+    "./buyer/research-dossiers/study-protocol/methods": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-methods.mjs",
+    "./buyer/research-dossiers/study-protocol/receiving": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-receiving.mjs",
+    "./buyer/research-dossiers/study-protocol/cli": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-cli.mjs"
   },
   "components": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/europe-pmc"
@@ -113,6 +119,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-EXTRACTION-OPERATOR.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-EXTRACTION-RECEIVING.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-EXTRACTION.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/STUDY-PROTOCOL-RECEIVING.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-updates/CUSTOMER_UPDATES.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-updates/cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/customer-updates/client.d.mts",
@@ -136,6 +143,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/extraction-publication.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/extraction-publication.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/index.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/package-study-protocol.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/app.js",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/customer-updates.css",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/public/customer-updates.html",
@@ -188,9 +196,14 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-extraction-workflow.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-extraction.d.mts",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-extraction.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-cli.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-methods.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-receiving.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/study-protocol-source.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/INTEGRATION.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/README.md",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/cli.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/client.d.mts",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/client.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/compare.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/contracts.mjs",
@@ -206,6 +219,7 @@
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/public/template-exchange.css",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/public/template-exchange.html",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/public/template-exchange.js",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/template-workspace-cli.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/workbook.mjs",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/template-exchange/workbook.py",
     "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/workspace-cli.mjs",

@@ -12,13 +12,14 @@ export async function runStudyProtocolCommand(argv){
     directory:{type:'string'},'study-file':{type:'string'},capture:{type:'string'},
     connection:{type:'string'},'workspace-id':{type:'string'},dossier:{type:'string'},question:{type:'string'},
     'base-revision':{type:'string'},operation:{type:'string'},pdftotext:{type:'string'},pdfinfo:{type:'string'},
-    help:{type:'boolean'}
+    'engine-source':{type:'string'},help:{type:'boolean'}
   }});
   if(values.help||!positionals.length)return {commands:{
     capture:'capture --study-file ABS_REGISTRY --directory ABS_CAPTURE [--operation ID]',
     receive:'receive --capture ABS_CAPTURE --directory ABS_RECEIVING --connection ABS_CONNECTION --workspace-id ID --dossier ID --question ID --base-revision N [--operation ID]',
     run:'run --study-file ABS_REGISTRY --directory ABS_OPERATION --connection ABS_CONNECTION --workspace-id ID --dossier ID --question ID --base-revision N [--operation ID]',
-    inspect:'inspect-capture --directory ABS_CAPTURE | inspect-receiving --directory ABS_RECEIVING'
+    inspect:'inspect-capture --directory ABS_CAPTURE | inspect-receiving --directory ABS_RECEIVING',
+    engine:'receive or run accepts --engine-source ABS_COMPLETE_ENGINE_MANIFEST; an omitted option resumes the saved selection or uses the original frozen engine'
   }};
   need(positionals.length===1&&typeof values.directory==='string','PROTOCOL_COMMAND_DIRECTORY_REQUIRED');
   const command=positionals[0],directory=resolve(values.directory);
@@ -39,7 +40,8 @@ export async function runStudyProtocolCommand(argv){
     'PROTOCOL_EXISTING_CONNECTION_SELECTION_REQUIRED');
   return receiveStudyProtocol({captureDirectory,directory:command==='run'?join(directory,'receiving'):directory,
     connectionFile:resolve(values.connection),expectedWorkspaceId:values['workspace-id'],
-    dossierId:values.dossier,questionId:values.question,baseRevision:Number(values['base-revision']),operation});
+    dossierId:values.dossier,questionId:values.question,baseRevision:Number(values['base-revision']),operation,
+    ...(values['engine-source']?{engineSourceFile:resolve(values['engine-source'])}:{})});
 }
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   try{const result=await runStudyProtocolCommand(process.argv.slice(2));process.stdout.write(JSON.stringify(result,null,2)+'\n');}
