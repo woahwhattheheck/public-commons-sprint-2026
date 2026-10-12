@@ -149,6 +149,23 @@ function atomic(path, bytes, exclusive = false) {
 }
 function parseJSON(bytes, what) { try {return JSON.parse(bytes.toString('utf8'));} catch {throw new CartError('JSON_INVALID', what + ' is not valid UTF-8 JSON.');} }
 
+
+/** Validate an original complete export before source review, recovery or receiving. */
+export function inspectReceiving(bytes) {
+  const b=parseJSON(bytes,'Receiving export');
+  need(b.schema===RECEIVING_SCHEMA&&Array.isArray(b.objects)&&b.objects.length<=100000,'RECEIVING_INVALID','Use an original CoCart receiving export.');
+  const {content_sha256,...body}=b;
+  need(content_sha256===digest(body),'RECEIVING_DIGEST','The complete receiving export has changed.');
+  need(b.workspace?.schema===SCHEMA&&Number.isSafeInteger(b.workspace.revision)&&Array.isArray(b.workspace.carts)&&Array.isArray(b.workspace.events)&&Array.isArray(b.workspace.catalogs),'WORKSPACE_INVALID','The receiving export needs its original workspace.');
+  validateProfile(b.workspace.profile);
+  need(sha256(JSON.stringify(b.workspace,null,2)+'\n')===b.workspace_version,'RECEIVING_WORKSPACE_CHANGED','The original workspace bytes differ from its saved revision.');
+    const seen=new Set();for(const o of b.objects){need(typeof o.sha256==='string'&&/^[a-f0-9]{64}$/.test(o.sha256)&&!seen.has(o.sha256),'OBJECT_ID_INVALID','Receiving object identities must be unique.');seen.add(o.sha256);const data=Buffer.from(o.base64,'base64');need(data.length===o.bytes&&sha256(data)===o.sha256,'RECEIVING_OBJECT_DAMAGED','A receiving object has changed.',{sha256:o.sha256});}
+    // Validate complete reachable closure before writing a new manifest.
+    const map=new Map(b.objects.map(o=>[o.sha256,o])),walk=v=>{if(Array.isArray(v)){v.forEach(walk);return;}if(!object(v))return;if(typeof v.sha256==='string'&&Number.isSafeInteger(v.bytes)&&typeof v.kind==='string'){const o=map.get(v.sha256);need(o&&o.bytes===v.bytes,'RECEIVING_OBJECT_MISSING','The complete receiving object closure is required.',{sha256:v.sha256});}Object.values(v).forEach(walk);};
+    walk(b.workspace);for(const o of b.objects){try{walk(JSON.parse(Buffer.from(o.base64,'base64').toString('utf8')));}catch(e){if(e instanceof CartError)throw e;}}
+  return b;
+}
+
 export class CartWorkspace {
   constructor({root, CoCart, MemoryStorage, create=false, profile=null, profileBytes=null, receivingTransport=null}) {
     this.root=resolve(root); this.path=join(this.root,'workspace.json'); this.sdk={CoCart,MemoryStorage}; this.active=false;
@@ -380,10 +397,8 @@ export class CartWorkspace {
     return Buffer.from(JSON.stringify({...body,content_sha256:digest(body)},null,2)+'\n');
   }
   static receive({root,bytes,CoCart,MemoryStorage}) {
-    const b=parseJSON(bytes,'Receiving export');need(b.schema===RECEIVING_SCHEMA&&Array.isArray(b.objects)&&b.objects.length<=100000,'RECEIVING_INVALID','Use an original CoCart receiving export.');
-    const {content_sha256,...body}=b;need(content_sha256===digest(body),'RECEIVING_DIGEST','The complete receiving export has changed.');
-    need(b.workspace?.schema===SCHEMA&&Array.isArray(b.workspace.carts)&&Array.isArray(b.workspace.events),'WORKSPACE_INVALID','The receiving export needs its original workspace.');
-    validateProfile(b.workspace.profile);const target=resolve(root),markerPath=join(target,'receiving.json');
+    const b=inspectReceiving(bytes), {content_sha256}=b;
+    const target=resolve(root),markerPath=join(target,'receiving.json');
     if(existsSync(markerPath)) {
       const marker=parseJSON(readFileSync(markerPath),'Receiving marker');
       need(marker.content_sha256===content_sha256&&marker.workspace_version===b.workspace_version,'RECEIVING_INPUT_CHANGED','Continue with the same original receiving input.',{},409);
@@ -391,10 +406,6 @@ export class CartWorkspace {
     } else {
       need(!existsSync(target)||readdirSync(target).length===0,'DESTINATION_EXISTS','Use an empty directory for the first receiving attempt.',{},409);
     }
-    const seen=new Set();for(const o of b.objects){need(typeof o.sha256==='string'&&/^[a-f0-9]{64}$/.test(o.sha256)&&!seen.has(o.sha256),'OBJECT_ID_INVALID','Receiving object identities must be unique.');seen.add(o.sha256);const data=Buffer.from(o.base64,'base64');need(data.length===o.bytes&&sha256(data)===o.sha256,'RECEIVING_OBJECT_DAMAGED','A receiving object has changed.',{sha256:o.sha256});}
-    // Validate complete reachable closure before writing a new manifest.
-    const map=new Map(b.objects.map(o=>[o.sha256,o])),walk=v=>{if(Array.isArray(v)){v.forEach(walk);return;}if(!object(v))return;if(typeof v.sha256==='string'&&Number.isSafeInteger(v.bytes)&&typeof v.kind==='string'){const o=map.get(v.sha256);need(o&&o.bytes===v.bytes,'RECEIVING_OBJECT_MISSING','The complete receiving object closure is required.',{sha256:v.sha256});}Object.values(v).forEach(walk);};
-    walk(b.workspace);for(const o of b.objects){try{walk(JSON.parse(Buffer.from(o.base64,'base64').toString('utf8')));}catch(e){if(e instanceof CartError)throw e;}}
     if(!existsSync(markerPath))atomic(markerPath,JSON.stringify({schema:'stellar-forge.cocart.receiving-marker.v1',content_sha256,workspace_version:b.workspace_version,started_at:now()},null,2)+'\n',true);
     for(const o of b.objects) {
       const path=join(target,'objects',o.sha256),bytes=Buffer.from(o.base64,'base64');
