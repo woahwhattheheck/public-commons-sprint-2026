@@ -169,7 +169,7 @@ export class MerchantSourceWorkspaces {
       throw fail('SOURCE_CONSOLE_UNAVAILABLE', 'Start or reconnect the original source console using its declared private connection file.');
     }
     let url; try { url = new URL(raw); } catch {}
-    if (!url || url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || !url.port || url.username || url.password ||
+    if (!url || url.protocol !== 'http:' || url.hostname !== '127.0.0.1' || Number(url.port || 80) < 1 || url.username || url.password ||
         url.pathname !== '/' || url.search || !/^#[A-Za-z0-9_-]{32,256}$/.test(url.hash))
       throw fail('SOURCE_CONSOLE_CONNECTION_INVALID', 'Use the exact private URL printed by the running original source console.');
     return { origin: url.origin, token: url.hash.slice(1) };

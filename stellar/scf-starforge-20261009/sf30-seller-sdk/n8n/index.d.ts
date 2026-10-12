@@ -380,6 +380,7 @@ export interface N8nMerchant {
   model: NativeJobModel;
   directory: string;
   prepared: InspectedN8nMerchant;
+  launch?: N8nLaunchRecord;
   services: ServiceAddresses;
   snapshot(): Promise<N8nMerchantSnapshot>;
   exportState(): Promise<N8nMerchantExport>;
@@ -424,8 +425,8 @@ export function environmentStatus(configuration: Pick<N8nCompilation, 'jobs'>, e
 export function createAutomationWorkflow(raw: N8nMerchantConfiguration, options: {
   functionId: string; childWorkflowId: string; headerCredentialId?: string; headerCredentialName?: string;
 }): NativeWorkflow;
-/** The destination must be new, private and beneath a canonical existing parent. */
-export function prepareN8nMerchant(options: { configPath: string; directory: string }): Promise<PreparedN8nMerchant>;
+/** Create a private merchant; explicit resume retains and completes the same original preparation. */
+export function prepareN8nMerchant(options: { configPath: string; directory: string; resume?: boolean }): Promise<PreparedN8nMerchant>;
 export function inspectN8nMerchant(directory: string, options?: { env?: Environment }): Promise<InspectedN8nMerchant>;
 /** Acquires the original job directory lease; close the returned owner when finished. */
 export function openN8nMerchant(directory: string, options?: { env?: Environment }): Promise<N8nMerchant>;
@@ -440,3 +441,37 @@ export function readDispatchResult(directory: string, id: string): Promise<{
 }>;
 export function runN8nMerchantCommand(argv?: string[], options?: { print?: (value: string) => void }): Promise<void>;
 
+export const N8N_LAUNCH_SCHEMA: 'stellar-forge.n8n-merchant-launch.v1';
+export interface N8nLaunchRecord extends ServiceAddresses {
+  schema: typeof N8N_LAUNCH_SCHEMA;
+  state: 'LISTENING' | 'STOPPING';
+  directory: string;
+  sourceDirectory: string;
+  launchSourceDirectory: string;
+  sourceFiles: Array<{ path: string; bytes: number; sha256: Sha256 }>;
+  privateLaunch: string;
+  pid: number;
+  ppid: number;
+  instanceId: string;
+  configurationSha256: Sha256;
+  applicationSha256: Sha256;
+  nativeFactoryPath: string | null;
+  startWorker: boolean;
+  requestedPorts: { sellerPort: number; customerPort: number; operatorPort: number; operationsPort: number; jobsOperatorPort: number };
+  startedAt: string;
+  stoppingAt?: string;
+  url: string;
+}
+export interface LaunchN8nOptions extends Omit<ServeN8nOptions, 'nativeFactory'> {
+  configPath?: string;
+  sourceDirectory?: string;
+  launchSourceDirectory?: string;
+}
+export interface N8nLaunchService extends N8nService { announcement: N8nLaunchRecord; }
+/** Owns the original merchant and retains its current private launch identity. */
+export function startN8nMerchantLaunch(options: LaunchN8nOptions): Promise<N8nLaunchService>;
+/** Reads the retained identity and verifies it against the live authenticated original operator. */
+export function readN8nMerchantLaunch(options: {
+  directory: string; sourceDirectory?: string; launchSourceDirectory?: string;
+  pid?: number; instanceId?: string; nativeFactoryPath?: string | null; startWorker?: boolean;
+}): Promise<N8nLaunchRecord>;

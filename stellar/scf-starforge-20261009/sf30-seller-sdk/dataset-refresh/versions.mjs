@@ -1,6 +1,6 @@
 // MIT. Version continuity around the original SF30 CSV loader and cursor contract.
 import { constants } from 'node:fs';
-import { open, mkdir, rename, rm, lstat, readdir } from 'node:fs/promises';
+import { open, mkdir, rename, rm, lstat, readdir, link } from 'node:fs/promises';
 import { createHash, randomUUID } from 'node:crypto';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { dirname, join, resolve } from 'node:path';
@@ -50,24 +50,79 @@ async function directory(path) {
   if (process.platform !== 'win32' && (info.mode & 0o077))
     throw new TypeError('Version storage must be private (chmod 700)');
 }
-async function acquireLegacy(directoryPath) {
+async function acquireLegacy(directoryPath, nativeLease = null) {
   const path = join(directoryPath, 'writer.lock');
-  const lock = { pid: process.pid, token: randomUUID(), createdAt: new Date().toISOString() };
+  const nativeUpgrade = nativeLease ? { schema: 'stellar-forge.dataset-native-upgrade-lease.v1',
+    ...nativeLease.identity() } : null;
+  const token = randomUUID();
+  const lock = { pid: process.pid, token, createdAt: new Date().toISOString(),
+    ...(nativeUpgrade ? { nativeUpgrade, nativeStaging: '.writer-upgrade-' + token } : {}) };
+  async function publish() {
+    if (!nativeLease) return privateFile(path, encode(lock));
+    const staging = join(directoryPath, lock.nativeStaging);
+    // Publish only a fully written, fsynced record. link() is atomic and
+    // create-only; a legacy writer that won the original name is never replaced.
+    const handle = await open(staging, 'wx', 0o600);
+    try {
+      try { await handle.writeFile(encode(lock)); await handle.sync(); }
+      finally { await handle.close(); }
+      nativeLease.assertHeld();
+      await link(staging, path);
+      await syncDirectory(directoryPath);
+    } finally {
+      await rm(staging, { force: true });
+    }
+    await syncDirectory(directoryPath);
+  }
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      await privateFile(path, encode(lock));
+      await publish();
       return async () => {
         const current = (await jsonFile(path)).value;
         if (current.token === lock.token) await rm(path);
       };
     } catch (error) {
       if (error.code !== 'EEXIST') throw error;
-      const before = await lstat(path), old = (await jsonFile(path)).value;
+      const before = await lstat(path), original = await jsonFile(path), old = original.value;
       if (!Number.isSafeInteger(old.pid) || old.pid < 1 || typeof old.token !== 'string')
         throw fault('DATASET_LOCK_INVALID', 'Invalid writer lock; inspect this private state directory');
-      if (process.platform === 'linux')
-        throw fault('DATASET_LEGACY_WRITER_PRESENT',
-          'Stop the original v1 writer before upgrading. If it crashed, retain its terminal record and exact writer.lock before operator recovery; a process number alone cannot establish ownership.');
+      if (process.platform === 'linux') {
+        // This marker exists only on a new native upgrade, while that process
+        // holds the same retained kernel lease. A successor could not acquire
+        // this lease until the original open file description was released.
+        if (!nativeLease || !object(old.nativeUpgrade) ||
+            JSON.stringify(canonical(old.nativeUpgrade)) !== JSON.stringify(canonical(nativeUpgrade)))
+          throw fault('DATASET_LEGACY_WRITER_PRESENT',
+            'Stop the original v1 writer before upgrading. An unmarked or differently bound legacy lock requires its original owner; a process number alone cannot establish ownership.');
+        nativeLease.assertHeld();
+        const current = await jsonFile(path), after = await lstat(path);
+        if (!before.isFile() || before.isSymbolicLink() || ![1, 2].includes(before.nlink) || before.mode & 0o077 ||
+            before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size ||
+            before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs || before.nlink !== after.nlink ||
+            digest(original.bytes) !== digest(current.bytes))
+          throw fault('DATASET_LEGACY_LOCK_CHANGED', 'The retained native upgrade lock changed during recovery.');
+        if (before.nlink === 2) {
+          // A crash may occur after atomic publication and before removal of
+          // its one staged hardlink. Reconcile only that exact native record.
+          if (old.nativeStaging !== '.writer-upgrade-' + old.token ||
+              !/^\.writer-upgrade-[a-f0-9-]{36}$/.test(old.nativeStaging))
+            throw fault('DATASET_LEGACY_LOCK_CHANGED', 'The native upgrade publication has an unknown hardlink.');
+          const staging = join(directoryPath, old.nativeStaging), staged = await lstat(staging);
+          if (!staged.isFile() || staged.isSymbolicLink() || staged.nlink !== 2 || staged.mode & 0o077 ||
+              staged.dev !== before.dev || staged.ino !== before.ino ||
+              digest((await jsonFile(staging)).bytes) !== digest(original.bytes))
+            throw fault('DATASET_LEGACY_LOCK_CHANGED', 'The original staged upgrade record changed.');
+          nativeLease.assertHeld(); await rm(staging); await syncDirectory(directoryPath);
+        }
+        const finalInfo = await lstat(path), finalBytes = (await jsonFile(path)).bytes;
+        if (!finalInfo.isFile() || finalInfo.isSymbolicLink() || finalInfo.nlink !== 1 || finalInfo.mode & 0o077 ||
+            finalInfo.dev !== before.dev || finalInfo.ino !== before.ino ||
+            digest(finalBytes) !== digest(original.bytes))
+          throw fault('DATASET_LEGACY_LOCK_CHANGED', 'The native upgrade record changed before reconciliation.');
+        nativeLease.assertHeld();
+        await rm(path); await syncDirectory(directoryPath);
+        continue;
+      }
       let alive = true;
       try { process.kill(old.pid, 0); } catch (probe) { if (probe.code === 'ESRCH') alive = false; }
       if (alive || attempt) throw fault('DATASET_WRITER_RUNNING', 'The dataset version store already has a live writer');
@@ -346,7 +401,7 @@ export async function openDatasetVersions({ directory: suppliedDirectory, initia
     // During the one-time upgrade, keep the original writer exclusion until v2
     // is durable. Older runtimes reject v2 before serving or committing state;
     // v2 preparation uses a namespace their pre-validation cleanup cannot remove.
-    if (existingSchema !== SCHEMA) legacyUnlock = await acquireLegacy(root);
+    if (existingSchema !== SCHEMA) legacyUnlock = await acquireLegacy(root, lease);
     for (const entry of await readdir(generations)) {
       if (/^\.(?:v2-)?stage-[a-f0-9-]{36}$/.test(entry))
         await rm(join(generations, entry), { recursive: true, force: true });
