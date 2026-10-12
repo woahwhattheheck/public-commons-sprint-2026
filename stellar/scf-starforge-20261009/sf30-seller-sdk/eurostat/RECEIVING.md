@@ -82,3 +82,7 @@ The ready [reviewed-source-handover.json](examples/reviewed-source-handover.json
 The complete [economic briefing](examples/briefing-20261012/briefing.html) and all three companion files are already generated from the same production model. They provide the full analyst product while the original equipped operator runs its configured native receiving.
 
 After native completion, reopen **Eurostat economic workspace** in the existing Applications surface using the same project path. Its source console shows the original retained edition, source review and full cell selection; the publisher panels show the original plan, candidate, publication, merchant/buyer handoff and history.
+
+### Recover the retained extraction
+
+If the host stopped after writing the complete original candidate but before saving its ready state, the receiving command invokes the maintained publisher recovery with the original run UUID. That recovery validates the original candidate manifest and exact dataset bytes before adopting it. An incomplete candidate remains with its original extraction result for direct inspection. The receiver closes the original publisher lease even when a retained configuration or initialization check fails, so the same project can be reopened after the correction.
