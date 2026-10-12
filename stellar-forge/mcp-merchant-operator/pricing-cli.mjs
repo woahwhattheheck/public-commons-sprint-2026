@@ -4,7 +4,7 @@ import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { callMerchantPricing,downloadMerchantScenario,pricingClientOperations } from './pricing-client.mjs';
+import { callMerchantPricing,downloadMerchantScenario,downloadMerchantCosts,pricingClientOperations } from './pricing-client.mjs';
 
 const fail=(code,message)=>Object.assign(new Error(message),{code:'PRICING_CLIENT_'+code});
 const HELP = `merchant-mcp pricing
@@ -19,6 +19,21 @@ const HELP = `merchant-mcp pricing
   download --url MCP_ENDPOINT --workspace ALIAS --plan-id UUID --out PRIVATE_DIRECTORY
       [--manifest-sha256 REVIEWED_DIGEST] [--chunk-bytes BYTES]
 
+  cost-state|cost-list|cost-inputs --url MCP_ENDPOINT --workspace ALIAS [--kind KIND]
+  cost-input --url MCP_ENDPOINT --workspace ALIAS --kind SOURCE|BOOK --input-alias ALIAS
+  cost-upload|cost-capture|cost-mapping|cost-weights --url MCP_ENDPOINT --input PRIVATE_JSON
+  cost-preview|cost-save|cost-request|cost-compare --url MCP_ENDPOINT --input PRIVATE_JSON
+  cost-edition --url MCP_ENDPOINT --workspace ALIAS --edition UUID [--view VIEW]
+  cost-proposal|cost-apply|cost-export --url MCP_ENDPOINT --input PRIVATE_JSON
+  cost-manifest --url MCP_ENDPOINT --workspace ALIAS --kind source|edition|export --id UUID
+  cost-download --url MCP_ENDPOINT --workspace ALIAS --kind source|edition|export --id UUID
+      --out PRIVATE_DIRECTORY [--manifest-sha256 SHA256] [--chunk-bytes BYTES]
+
+Cost operations use the existing pricing alias and original cost model.
+A complete large book is selected by a host-declared bookSource with inspected
+expectedSha256/expectedBytes; the existing MCP body limit remains in force.
+Sources and archives retain exact original bytes. COSTS.md covers this workflow.
+
 All commands accept --token-env NAME (default MCP_ACCESS_TOKEN).
 Paged reads accept --view, --offset, --limit, --scenario-id and --suggestion-kind.
 The private JSON contains the exact MCP arguments, including stable requestId,
@@ -29,9 +44,12 @@ See PRICING.md for scenario inputs, suggestions and the complete saved workflow.
 `;
 
 const flags=new Set(['--url','--workspace','--input','--version','--plan-id','--scenario-id',
-  '--view','--offset','--limit','--suggestion-kind','--out','--token-env','--manifest-sha256','--chunk-bytes']);
+  '--view','--offset','--limit','--suggestion-kind','--out','--token-env','--manifest-sha256','--chunk-bytes',
+  '--kind','--id','--source-id','--edition','--after','--input-alias','--expected-sha256','--expected-bytes']);
 const fieldFlags={'--workspace':'workspace','--version':'version','--plan-id':'planId',
-  '--scenario-id':'scenarioId','--view':'view','--offset':'offset','--limit':'limit','--suggestion-kind':'suggestionKind'};
+  '--scenario-id':'scenarioId','--view':'view','--offset':'offset','--limit':'limit','--suggestion-kind':'suggestionKind',
+  '--kind':'kind','--id':'id','--source-id':'sourceId','--edition':'edition','--after':'after',
+  '--input-alias':'input','--expected-sha256':'expectedSha256','--expected-bytes':'expectedBytes'};
 function options(args) {
   const result=new Map();
   for (let i=0;i<args.length;i+=2) {
@@ -64,12 +82,12 @@ async function inputFile(path) {
 export async function main(argv=process.argv.slice(2),{environment=process.env,write=value=>process.stdout.write(JSON.stringify(value)+'\n')}={}) {
   if (!argv.length || argv.length===1 && ['--help','help'].includes(argv[0])) {process.stdout.write(HELP);return;}
   const [operation,...rest]=argv, values=options(rest);
-  if (!Object.hasOwn(pricingClientOperations,operation) && operation !== 'download')
+  if (!Object.hasOwn(pricingClientOperations,operation) && !['download','cost-download'].includes(operation))
     throw fail('ARGUMENTS','Choose an operation listed by merchant-mcp pricing --help.');
   if (!values.has('--url')) throw fail('ARGUMENTS','Supply the existing --url MCP endpoint.');
   const args=values.has('--input') ? await inputFile(values.get('--input')) : {};
   for (const [flag,key] of Object.entries(fieldFlags)) if (values.has(flag)) {
-    const value=['offset','limit'].includes(key) ? count(values.get(flag),flag) : values.get(flag);
+    const value=['offset','limit','expectedBytes'].includes(key) ? count(values.get(flag),flag) : values.get(flag);
     if (Object.hasOwn(args,key) && args[key] !== value)
       throw fail('ARGUMENTS','The '+flag+' value differs from the retained input JSON.');
     args[key]=value;
@@ -80,7 +98,14 @@ export async function main(argv=process.argv.slice(2),{environment=process.env,w
   try {
     const connection={url:values.get('--url'),tokenEnv:values.get('--token-env')??'MCP_ACCESS_TOKEN',environment,signal:controller.signal};
     let result;
-    if (operation === 'download') {
+    if (operation === 'cost-download') {
+      if (!values.has('--out') || Object.keys(args).some(key=>!['workspace','kind','id'].includes(key)))
+        throw fail('ARGUMENTS','Cost download selects only --workspace, --kind, --id and --out.');
+      result=await downloadMerchantCosts({...connection,...args,directory:values.get('--out'),
+        ...(values.has('--manifest-sha256')?{expectedManifestSha256:values.get('--manifest-sha256')}:{ }),
+        ...(values.has('--chunk-bytes')?{chunkSize:count(values.get('--chunk-bytes'),'--chunk-bytes')}:{ }),
+        onProgress:progress=>process.stderr.write(JSON.stringify(progress)+'\n')});
+    } else if (operation === 'download') {
       if (!values.has('--out') || Object.keys(args).some(key=>!['workspace','planId'].includes(key)))
         throw fail('ARGUMENTS','Download selects only --workspace, --plan-id and --out.');
       result=await downloadMerchantScenario({...connection,...args,directory:values.get('--out'),
@@ -89,7 +114,7 @@ export async function main(argv=process.argv.slice(2),{environment=process.env,w
         onProgress:progress=>process.stderr.write(JSON.stringify(progress)+'\n')});
     } else {
       if (['--out','--manifest-sha256','--chunk-bytes'].some(flag=>values.has(flag)))
-        throw fail('ARGUMENTS','Output and chunk flags belong to download.');
+        throw fail('ARGUMENTS','Output and chunk flags belong to download or cost-download.');
       if (operation === 'manifest' && Object.hasOwn(args,'planId')) {
         if (Object.hasOwn(args,'id') && args.id !== args.planId || Object.hasOwn(args,'kind') && args.kind !== 'scenario')
           throw fail('ARGUMENTS','The plan selector conflicts with the original manifest selector.');
