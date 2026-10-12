@@ -97,11 +97,11 @@ export function createNativeSemanticActions(){
    }
    if(entry.metadata===null)return {version_id:versionId,available:false,items:[],
     note:'This original SQL edition has no semantic dictionary.'};
-   const {document,...metadata}=entry.metadata,section=body.section??'columns';
+   const {document,columns:mapping,...metadata}=entry.metadata,section=body.section??'columns';
    need(['columns','virtual-columns','issues','table','mapping'].includes(section),
     'MCP_ANALYSIS_SEMANTIC_SECTION_INVALID');
    let all;
-   if(section==='mapping')all=metadata.columns;
+   if(section==='mapping')all=mapping;
    else if(section==='columns')all=document.columns;
    else if(section==='virtual-columns')all=document.virtualColumns;
    else if(section==='issues')all=document.issues;
