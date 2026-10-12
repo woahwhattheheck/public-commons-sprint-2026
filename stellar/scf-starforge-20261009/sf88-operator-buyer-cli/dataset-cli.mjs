@@ -15,6 +15,10 @@ const help = [
   'status --session /private/session',
   'run --session /private/session [--workspace /private/existing-buyer]',
   '    [--retry-unpaid true --expect-attempt ORIGINAL_ATTEMPT_SHA256]',
+  '    [--retry-expired /private/original-source.json --expiry-reports /private/reports',
+  '     --request-sha ORIGINAL_APPROVAL_SHA --expect-attempt ORIGINAL_ATTEMPT_SHA256',
+  '     --resume-permit-file /private/resume-permit.json',
+  '     [--expect-unapproved-attempt ORIGINAL_UNSIGNED_SUCCESSOR_SHA256]]',
   'recover --session /private/session',
   'export --session /private/session --out /private/dataset-manifest.json',
   'deliver --session /private/session --out /private/dataset-data-room',
@@ -33,6 +37,10 @@ const help = [
   'Completed pages are reused. Signed or unresolved attempts remain retained for accounting.',
   'An explicitly reviewed unsigned page can continue after its original ledger proves the intent absent.',
   'Its failed attempt and evidence remain in the same page unpaid-history directory.',
+  'An expired untransferred reservation continues only after the original SF36 worker has released',
+  'its exact generation using the retained source and chain observation. The same page archives',
+  'the old attempt in expired-history, obtains a generation-bound permit, and asks for fresh consent.',
+  'A saved archive without a new attempt remains pending until the explicit continuation is resumed.',
   'accounting reads original saved receipts; finalize reconciles those original reservations without buying again.',
   'Paid lost-output recovery authenticates the original approved request and independently observes its selected transfer.',
   'It finalizes the existing reservation and retains a distinct recovery proof; it never invokes a buyer or signer.',
@@ -51,7 +59,7 @@ function parse(args) {
     ? new Set(['session','config','workspace','max-pages','max-total-atomic','max-rows','max-page-bytes','snapshot'])
     : new Set(['accounting','finalize'].includes(command)
       ? ['session','workspace','offset','limit',...(command==='finalize'?['outbox','merchant-route']:[])]
-      : ['export','deliver'].includes(command) ? ['session','out'] : command === 'run' ? ['session','workspace','retry-unpaid','expect-attempt'] : ['session']);
+      : ['export','deliver'].includes(command) ? ['session','out'] : command === 'run' ? ['session','workspace','retry-unpaid','retry-expired','expiry-reports','request-sha','resume-permit-file','expect-attempt','expect-unapproved-attempt'] : ['session']);
   const flags = {};
   need(args.length % 2 === 0, 'DATASET_FLAG_VALUE_REQUIRED');
   for (let i = 0; i < args.length; i += 2) {
@@ -69,10 +77,21 @@ function parse(args) {
       need(/^[a-f0-9]{64}$/.test(flags.transaction??'')&&/^[a-f0-9]{64}$/.test(flags['request-sha']??''),
         'LOST_OUTPUT_TRANSACTION_AND_DIGEST_REQUIRED');
   }
-  if(command==='run')need(flags['retry-unpaid']===undefined&&flags['expect-attempt']===undefined||
-    flags['retry-unpaid']==='true'&&/^[a-f0-9]{64}$/.test(flags['expect-attempt']??''),
-    'DATASET_UNPAID_ATTEMPT_REVIEW_REQUIRED');
+  if(command==='run') {
+    const expired=flags['retry-expired']!==undefined,unpaid=flags['retry-unpaid']!==undefined;
+    need(!(expired&&unpaid),'DATASET_ONE_ATTEMPT_CONTINUATION_REQUIRED');
+    need(unpaid?flags['retry-unpaid']==='true':true,'DATASET_UNPAID_ATTEMPT_REVIEW_REQUIRED');
+    need(expired||unpaid?/^[a-f0-9]{64}$/.test(flags['expect-attempt']??''):flags['expect-attempt']===undefined,
+      'DATASET_ATTEMPT_REVIEW_REQUIRED');
+    need(finiteUnapproved(flags['expect-unapproved-attempt'],expired),'DATASET_EXPIRED_UNSIGNED_REVIEW_REQUIRED');
+    const extra=['expiry-reports','request-sha','resume-permit-file'];
+    need(expired?extra.every(key=>flags[key])&&/^[a-f0-9]{64}$/.test(flags['request-sha'])
+      :extra.every(key=>flags[key]===undefined),'DATASET_EXPIRED_SOURCE_REVIEW_REQUIRED');
+  }
   return {command, flags};
+}
+function finiteUnapproved(value,expired) {
+  return value===undefined||expired&&/^[a-f0-9]{64}$/.test(value);
 }
 function number(value, required) {
   if (value === undefined && !required) return undefined;
@@ -126,6 +145,10 @@ export async function main(args = process.argv.slice(2)) {
         signal:controller.signal,outbox:f.outbox,merchantRoute:f['merchant-route']})
         : await runDatasetSession(f.session, {signal:controller.signal, workspace:f.workspace,
         retryUnpaid:f['retry-unpaid']==='true',expectedAttemptSha256:f['expect-attempt'],
+        ...(f['retry-expired']===undefined?{}:{retryExpired:{
+          sourceFile:f['retry-expired'],reportsDirectory:f['expiry-reports'],
+          expectedRequestSha256:f['request-sha'],resumePermitFile:f['resume-permit-file'],
+          ...(f['expect-unapproved-attempt']?{expectedUnapprovedAttemptSha256:f['expect-unapproved-attempt']}:{})}}),
         onPage:state => process.stderr.write('Dataset: ' + state.completedPages + ' pages, ' +
           state.acquiredRows + ' rows, ' + state.status + '\n')});
     } finally {

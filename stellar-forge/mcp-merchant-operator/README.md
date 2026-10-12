@@ -633,8 +633,12 @@ contains multiple projects. Initialization binds the original project's
 `seller-releases` to this merchant operator. Agents use the same capture, typed
 projection, edition comparison, original publisher and portable merchant model as
 the CKAN workbench, then activate and run its release with the normal merchant
-tools. Each change returns the original operation identity for status and
-lost-response recovery. The original buyer configuration and merchant archives
+tools. The 28 CKAN tools include read-only `merchant_ckan_semantics_preview`
+for a proposed field projection and `merchant_ckan_source_semantics` for the
+saved reviewed dictionary, including after project reopen. A live capture can
+select its original CSVW document with `schemaUrl`; source meaning stays bound
+through publication, merchant packaging and customer pages. Each change returns
+the original operation identity for status and lost-response recovery. The original buyer configuration and merchant archives
 are available through SHA-pinned file reads. Both HTTP and stdio expose the same
 source tools and release lifecycle. The [complete CKAN agent and operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/ckan/MCP_WORKFLOW.md)
 covers host configuration, the joined source-to-customer workflow and reopening.

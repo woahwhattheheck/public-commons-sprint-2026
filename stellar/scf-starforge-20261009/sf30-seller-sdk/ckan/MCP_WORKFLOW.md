@@ -143,12 +143,16 @@ running CKAN CLI/server before opening that directory through MCP.
 
 ## Tool map
 
+The CKAN family contains 28 tools. The ordinary merchant release controls in
+this map remain part of the same maintained operator.
+
 | Job | Original tools |
 | --- | --- |
 | Declare and own a project | `merchant_ckan_workspaces`, `merchant_ckan_open`, `merchant_ckan_status`, `merchant_ckan_close` |
 | Find a source | `merchant_ckan_search`, `merchant_ckan_package` |
 | Receive or capture an edition | `merchant_ckan_inputs`, `merchant_ckan_import`, `merchant_ckan_capture`, `merchant_ckan_capture_resume` |
 | Inspect and compare source | `merchant_ckan_edition`, `merchant_ckan_compare` |
+| Preview and reopen reviewed meaning | `merchant_ckan_semantics_preview`, `merchant_ckan_source_semantics` |
 | Save the explicit projection | `merchant_ckan_source_save` |
 | Prepare and query the original candidate | `merchant_ckan_publication_create`, `merchant_ckan_publication` |
 | Review, publish and recover | `merchant_ckan_publication_review`, `merchant_ckan_publish`, `merchant_ckan_publication_recover` |
@@ -311,6 +315,44 @@ unfiltered candidate keeps all 112 rows. Review the exact
 through `merchant_ckan_publish` with the saved
 `native.run.data.review.id`. Read the run again and require
 `PUBLISHED`.
+
+### Preview and reopen source meaning
+
+For a catalogue resource with a separate CSVW document, include its explicit
+same-catalogue HTTPS `schemaUrl` in `merchant_ckan_capture`. The original
+capture retains the schema before and after the DataStore pages. The edition
+also exposes the provider's retained field dictionary.
+
+Use the two read-only semantic tools around the ordinary source save:
+
+```js
+const preview = await call('merchant_ckan_semantics_preview', {
+  workspace: 'library', editionId: edition.id, projection
+});
+const proposedMeaning = preview.native;
+
+// Save the reviewed projection through the existing source-save operation.
+// After that operation completes, retain its returned source.id.
+const saved = await call('merchant_ckan_source_semantics', {
+  workspace: 'library', sourceId: source.id
+});
+const reviewedMeaning = saved.native;
+```
+
+Both calls return `{workspace, native}`; `native` is the original semantic
+document, or null when the selected source supplies no semantic definitions.
+They leave the original operation identity unchanged and take the saved item
+IDs directly. The saved-source read remains available after a later operation
+or a project close/reopen.
+
+Review the source definitions, projected aliases, units, key coverage, URI
+templates and issues before saving. The source's `semanticReview` binds the
+selected capture and normalized projection. The original loader and publisher
+check that review when they read the source. Public semantic dictionaries and
+package-local file locators remain intact in MCP results. The complete
+[semantic source and customer workflow](SEMANTIC_WORKFLOW.md) covers the
+retained schema, published sidecars and meaning carried through each customer
+page.
 
 ### Page saved project history
 
