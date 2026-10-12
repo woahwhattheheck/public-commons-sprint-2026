@@ -13,7 +13,22 @@ ran the unchanged compiler in the existing native environment. The bank supplies
 512 complete donors for size three and 512 for size four. Its full source
 identity, counts and runtime are retained in `corpus-compile.json` and in the bank.
 
-## Completed corpus and runtime candidate
+## Current candidate: finite public bounds
+
+The current `submission_corpus096.py` captures finite public bounds and the
+documented problem/parameter context before `prepare(unbounded=True)` selects
+unbounded search. It passes that snapshot to the original donor helper after the
+same random draws. This corrects initialization on the supported Objective,
+whose active `bounds` property is infinite in unbounded mode.
+
+The helper and the already compiled bank keep their original bytes. Package the
+corrected caller with the original `package_candidate.py` into a new filename,
+such as `corpus-seeded096-finite-bounds.zip`. The following retained archive
+receipt describes the earlier caller version. The integrated batched portfolio
+and its forty-cell GPU, twenty-cell CPU and four-hour native continuation are in
+[the adjacent original comparison project](../exact-hessian-107-20261011/batch-portfolio-d76c/README.md).
+
+## Completed corpus and original runtime archive
 
 The 74,920,439-byte original dataset has SHA-256
 `149f6aac17aff2e33750b4e1b6cebd3cef1c39d47ae49a3a7ed77315cb7838a7`.

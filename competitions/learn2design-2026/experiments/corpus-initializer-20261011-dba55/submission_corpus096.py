@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import math
 import time
+from types import SimpleNamespace
 
 from dfbench import Objective, OptimizationAlgorithm
 import jax
@@ -65,6 +66,13 @@ class CorpusSeeded096(OptimizationAlgorithm):
                 and math.isfinite(return_reserve_s) and 0.0 <= return_reserve_s <= 5.0):
             raise ValueError("invalid stop safeguard")
 
+        donor_context = None
+        if corpus_starts:
+            # Preserve bounded public context before selecting unbounded search.
+            obj.set_space_mode(False)
+            donor_context = SimpleNamespace(
+                bounds=jnp.array(obj.bounds), problem_spec=obj.problem_spec,
+                optimization_pairs=obj.optimization_pairs)
         _, key = self.prepare(obj, unbounded=True, random_seed=random_seed)
         if random_seed is None:
             random_seed = 0
@@ -79,7 +87,7 @@ class CorpusSeeded096(OptimizationAlgorithm):
         if corpus_starts:
             original_starts = starts
             starts, initializer = replace_start_slots(
-                obj, starts, preserve_first=init_params is not None)
+                donor_context, starts, preserve_first=init_params is not None)
             starts = [jnp.asarray(start, dtype=original.dtype)
                       for start, original in zip(starts, original_starts)]
 
