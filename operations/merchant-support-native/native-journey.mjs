@@ -20,12 +20,23 @@ const require=createRequire(import.meta.url);
 const playwright=selected.playwright?require(selected.playwright):require(require.resolve('playwright',{
   paths:[process.env.CODEX_PRIMARY_RUNTIME_NODE_MODULES,selected.nodeModules,process.cwd()].filter(Boolean)}));
 const {chromium}=playwright;
-const root=join(selected.work,'customer-'+randomUUID());
+let previous;
+try{previous=JSON.parse(await fs.readFile(join(selected.stage,'native-result.json'),'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
+const resumeGrant=!!(selected.grantReceiving&&previous?.savedSupportDirectory&&previous?.handoff&&previous?.caseId&&previous?.incidentId);
+const root=join(selected.work,(resumeGrant?'grant-resume-':'customer-')+randomUUID());
 await fs.mkdir(root,{mode:0o700});
 const workspace=join(root,'managed-workspace');
-const report={schema:'stellar-forge.merchant-support-applications-operation.v1',sourcePin:selected.sourceCommit,status:'RUNNING',
-  startedAt:new Date().toISOString(),stages:[],browserErrors:[],receiving:[]};
-const save=()=>fs.writeFile(join(selected.stage,'native-result.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600});
+const report=resumeGrant?{...previous,status:'RUNNING',resumedAt:new Date().toISOString(),currentSourcePin:selected.sourceCommit}:
+  {schema:'stellar-forge.merchant-support-applications-operation.v1',sourcePin:selected.sourceCommit,status:'RUNNING',
+    startedAt:new Date().toISOString(),stages:[],browserErrors:[],receiving:[]};
+if(resumeGrant){
+  assert.equal(report.schema,'stellar-forge.merchant-support-applications-operation.v1');
+  if(previous.currentSourcePin!==selected.sourceCommit&&previous.sourcePin!==selected.sourceCommit)
+    report.sourceRevisions=[...(previous.sourceRevisions||[]),{sourcePin:selected.sourceCommit,at:report.resumedAt}];
+  delete report.error;delete report.cleanupError;
+}
+const save=async()=>{const path=join(selected.stage,'native-result.json'),temporary=path+'.saving-'+randomUUID();
+  await fs.writeFile(temporary,JSON.stringify(report,null,2)+'\n',{mode:0o600});await fs.rename(temporary,path);};
 const note=async(stage,detail={})=>{report.stages.push({stage,at:new Date().toISOString(),...detail});await save();console.log(JSON.stringify({stage,...detail}));};
 const wait=async(fn,label,ms=60000)=>{const end=Date.now()+ms;while(Date.now()<end){const value=await fn();if(value)return value;await new Promise(r=>setTimeout(r,150));}throw Error('Timed out: '+label);};
 const read=async file=>JSON.parse(await fs.readFile(file,'utf8'));
@@ -93,6 +104,13 @@ async function stopApplication(browserAction=true) {
   return wait(async()=>{const value=await app();return value&&!value.current.active&&
     !['PENDING','QUEUED','RUNNING'].includes(value.current.phase)?value:false;},'managed support drain',45000);
 }
+async function openBrowser(){
+  const chromeRoot=join(root,'chrome');await fs.mkdir(chromeRoot,{mode:0o700});
+  browser=await chromium.launch({executablePath:selected.browser,headless:true,
+    args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--in-process-gpu','--no-zygote','--single-process','--renderer-process-limit=1','--js-flags=--max-old-space-size=128'],
+    env:{...process.env,TMPDIR:chromeRoot},downloadsPath:join(chromeRoot,'downloads')});
+  context=await browser.newContext({viewport:{width:1440,height:1024}});context.setDefaultTimeout(30000);
+}
 async function closeAll() {
   if(closing)return;closing=true;
   try {if(applicationId&&model)await stopApplication(false);}catch(error){report.cleanupError=error.message;}
@@ -105,6 +123,18 @@ async function closeAll() {
 const watchdog=setTimeout(()=>{report.error='Native managed journey deadline reached';report.status='FAILED';
   closeAll().finally(()=>save()).finally(()=>process.exit(2));},360000);
 try {
+  if(resumeGrant){
+    const raw=await fs.readFile(report.handoff.path);
+    assert.equal(raw.length,report.handoff.bytes);assert.equal(createHash('sha256').update(raw).digest('hex'),report.handoff.sha256);
+    assert.equal((await fs.stat(report.savedSupportDirectory)).isDirectory(),true);
+    await openBrowser();page=await context.newPage();
+    const {receiveGrantSupport}=await import(pathToFileURL(join(selected.stage,'grant-receiving.mjs')).href);
+    report.grantReceiving=await receiveGrantSupport({selected,context,handoffPath:report.handoff.path,
+      merchantCaseId:report.caseId,incidentId:report.incidentId,note});
+    report.status='COMPLETE';report.completedAt=new Date().toISOString();
+    await note('continued the same saved Support handoff and original grant case through receiving',
+      {caseId:report.caseId,incidentId:report.incidentId,handoffSha256:report.handoff.sha256});
+  }else{
   const config=JSON.parse(await fs.readFile(join(sourceRoot,'sf30-seller-sdk/examples/service.json'),'utf8'));
   seller=await startSellerService({config,port:0,drainGraceMs:1000});
   observer=observeSellerTraffic(seller);
@@ -128,11 +158,7 @@ try {
   await fs.writeFile(environmentPath,JSON.stringify({SF74_RECEIVING_URL:receiverURL,SF74_RECEIVING_SECRET:'local-native-receiver-secret-24ead3'}),{mode:0o600});
   await createRuntimeWorkspace({directory:workspace});model=await openRuntimeWorkspace({directory:workspace});
   const attached=await model.attach({directory:selected.runtime,label:'Native merchant support runtime'});
-  const chromeRoot=join(root,'chrome');await fs.mkdir(chromeRoot,{mode:0o700});
-  browser=await chromium.launch({executablePath:selected.browser,headless:true,
-    args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--in-process-gpu','--no-zygote','--single-process','--renderer-process-limit=1','--js-flags=--max-old-space-size=128'],
-    env:{...process.env,TMPDIR:chromeRoot},downloadsPath:join(chromeRoot,'downloads')});
-  context=await browser.newContext({viewport:{width:1440,height:1024}});context.setDefaultTimeout(30000);
+  await openBrowser();
   page=await context.newPage();page.on('pageerror',error=>report.browserErrors.push(error.message));
   await openHost();
   await page.getByRole('button',{name:'New application',exact:true}).click();
@@ -230,6 +256,8 @@ try {
   await fs.writeFile(join(supportCustody,'environment.json'),await fs.readFile(environmentPath),{flag:'wx',mode:0o600});
   await fs.writeFile(join(supportCustody,'managed-application.json'),JSON.stringify(await app(),null,2)+'\n',{flag:'wx',mode:0o600});
   report.savedSupportDirectory=supportCustody;
+  report.firstOperationId=first.current.id;report.reopenedOperationId=second.current.id;
+  report.caseSupportSha256=createHash('sha256').update(handoff.supportText).digest('hex');
   await note('original handoff, saved case and incident captures retained',{caseId,incidentId:incident.id,handoffPath,handoffSha256:handoffSha});
   await supportPage.close();supportPage=null;
   if(selected.grantReceiving){
@@ -242,6 +270,7 @@ try {
   await note('same retained case and captures received after managed Stop and reopen',{caseId,incidentId:incident.id,
     firstOperationId:first.current.id,reopenedOperationId:second.current.id,browserErrors:report.browserErrors.length});
   await page.screenshot({path:join(selected.stage,'native-managed-applications.png')}).catch(error=>{report.screenshotError=error.message;});
+  }
 } catch(error) {
   report.status='FAILED';report.error=String(error.stack).slice(0,5000);process.exitCode=1;
   if(page)try{report.applicationsUI=(await page.locator('body').innerText()).slice(-16000);}catch{}

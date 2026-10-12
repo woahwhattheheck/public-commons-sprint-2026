@@ -5,6 +5,7 @@ import {spawn,execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {createHash,randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
+import {operateGrantCompletion,verifyReceivedGrantCompletion} from './grant-completion-native.mjs';
 const execute=promisify(execFile);
 const sha=raw=>createHash('sha256').update(raw).digest('hex');
 const defer=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
@@ -16,12 +17,24 @@ export async function receiveGrantSupport({selected,context,handoffPath,merchant
   const root=join(selected.work,'grant-support-'+randomUUID());
   const stage=join(selected.stage,'grant-support');
   await fs.mkdir(root,{mode:0o700});await fs.mkdir(stage,{recursive:true,mode:0o700});
-  const report={schema:'stellar-forge.sf47-support-receiving-operation.v1',sourcePin:selected.sourceCommit,
+  let report={schema:'stellar-forge.sf47-support-receiving-operation.v1',sourcePin:selected.sourceCommit,
     merchantCaseId,incidentId,startedAt:new Date().toISOString(),status:'RUNNING',stages:[],browserErrors:[]};
-  const save=()=>fs.writeFile(join(stage,'result.json'),JSON.stringify(report,null,2)+'\n',{mode:0o600});
+  const resultPath=join(stage,'result.json');
+  const save=async()=>{const temporary=resultPath+'.saving-'+randomUUID();
+    await fs.writeFile(temporary,JSON.stringify(report,null,2)+'\n',{mode:0o600});await fs.rename(temporary,resultPath);};
   const mark=async(stageName,detail={})=>{report.stages.push({stage:stageName,at:new Date().toISOString(),...detail});await save();await note('grant support: '+stageName,detail);};
   const raw=await fs.readFile(handoffPath),file={filename:'managed-merchant-support.json',contentBase64:raw.toString('base64')};
   report.handoff={path:handoffPath,bytes:raw.length,sha256:sha(raw)};
+  let retained;
+  try{retained=JSON.parse(await fs.readFile(resultPath,'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}
+  if(retained?.supportPrepared){
+    assert.equal(retained.schema,report.schema);assert.equal(retained.merchantCaseId,merchantCaseId);assert.equal(retained.incidentId,incidentId);
+    assert.equal(retained.handoff.sha256,report.handoff.sha256);assert.equal(retained.handoff.bytes,raw.length);
+    report={...retained,status:'RUNNING',resumedAt:new Date().toISOString(),currentSourcePin:selected.sourceCommit};
+    if(retained.currentSourcePin!==selected.sourceCommit&&retained.sourcePin!==selected.sourceCommit){
+      report.sourceRevisions=[...(retained.sourceRevisions||[]),{sourcePin:selected.sourceCommit,at:report.resumedAt}];
+    }
+  }
   const cli=async(workspace,args)=>{const result=await execute(process.execPath,[launcher,'operations','--workspace',workspace,'--scenario',scenario,...args],
     {env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},maxBuffer:24*1024*1024,timeout:30000});return JSON.parse(result.stdout);};
   const workspace=join(stage,'original-workspace'),receivedWorkspace=join(stage,'reopened-workspace');
@@ -70,12 +83,68 @@ export async function receiveGrantSupport({selected,context,handoffPath,merchant
     await page.locator('[data-support-file]').waitFor();
     return page;
   }
+  async function finishReceiving(checkpoint){
+    const {caseId,generic,accepted,receivedSource,history}=checkpoint;
+    report.completion=await operateGrantCompletion({selected,context,server,caseId,stage,note,page});
+    let current=await server.api('/api/operations/'+caseId);
+    const archivePath=join(stage,'received-operations.zip');
+    let archive;
+    if(report.archive){
+      assert.equal(report.archive.path,archivePath);assert.equal(report.archive.caseId,caseId);
+      assert.equal(report.archive.version,current.program.version,'same frozen export version');
+      archive=await fs.readFile(archivePath);assert.equal(archive.length,report.archive.bytes);assert.equal(sha(archive),report.archive.sha256);
+    }else{
+      report.archivePreparation??={caseId,version:current.program.version};
+      assert.equal(report.archivePreparation.caseId,caseId);assert.equal(report.archivePreparation.version,current.program.version);
+      await save();
+      try{archive=await fs.readFile(archivePath);}catch(error){
+        if(error.code!=='ENOENT')throw error;
+        archive=await server.api('/api/operations/'+caseId+'/export.zip',undefined,{bytes:true});
+        const temporary=archivePath+'.saving-'+randomUUID();await fs.writeFile(temporary,archive,{mode:0o600});
+        try{await fs.link(temporary,archivePath);}finally{await fs.unlink(temporary);}
+      }
+      report.archive={path:archivePath,bytes:archive.length,sha256:sha(archive),caseId,version:current.program.version};await save();
+    }
+    await mark('concurrent case change retained the draft and re-previewed the current revision',{caseId,version:current.program.version,eventCount:history.events.length});
+    await page.close();page=null;await server.stop();server=null;
+    const cliPreviewPath=join(root,'cli-preview.json');
+    await cli(workspace,['support-preview','--case',caseId,'--expected-version',String(current.program.version),'--file',handoffPath,'--output',cliPreviewPath]);
+    const cliPreview=JSON.parse(await fs.readFile(cliPreviewPath,'utf8'));
+    const cliReceipt=await cli(workspace,['support-receive','--case',caseId,'--expected-version',String(current.program.version),
+      '--file',handoffPath,'--expected-preview-sha256',cliPreview.previewSha256,'--deployment',accepted.recordId,
+      '--actor','Native CLI receiving operator','--request-id','support-native-cli-receive','--note','Reopen the already received original source.']);
+    assert.equal(cliReceipt.unchanged,true);assert.equal(cliReceipt.version,current.program.version);
+    const imported=await cli(receivedWorkspace,['import','--file',archivePath,'--name','Received support case reopened',
+      '--actor','Native receiving operator','--request-id','support-native-import']);
+    server=await start(receivedWorkspace);const received=await server.api('/api/operations/'+imported.id);
+    const original=received.sources.find(row=>row.id===generic.recordId);
+    assert.deepEqual(original.supportHandoff,receivedSource.supportHandoff);
+    assert.deepEqual((await server.api('/api/operations/'+imported.id+'/sources/'+generic.recordId,undefined,{bytes:true})),raw);
+    await open(server,imported.id);
+    await page.getByRole('button',{name:'Open review',exact:true}).click();await page.locator('[data-support-review-json]').waitFor({state:'attached'});
+    assert.equal(await page.locator('.support-review code').first().textContent(),sha(raw));
+    assert.deepEqual(report.browserErrors,[]);
+    await page.screenshot({path:join(stage,'merchant-support-received.png')});
+    report.completionReceiving=await verifyReceivedGrantCompletion({server,caseId:imported.id,page,stage,completion:report.completion});
+    await page.close();page=null;await server.stop();server=null;
+    report.cliReceipt=cliReceipt;report.imported=imported;report.retainedDirectory=stage;
+    await mark('original CLI and case import reopened the same support source and rendered report',{originalCaseId:caseId,reopenedCaseId:imported.id,sourceCount:received.sources.length});
+    report.status='COMPLETE';report.completedAt=new Date().toISOString();await save();
+    return report;
+  }
   try{
     server=await start(workspace);
+    if(report.supportPrepared){
+      const checkpoint=report.supportPrepared,current=await server.api('/api/operations/'+checkpoint.caseId);
+      assert.equal(current.program.mode,'WALKTHROUGH');assert.equal(current.plan.contentSha256,checkpoint.planSha256);
+      assert.ok(current.program.version>=checkpoint.sourceVersion);
+      await open(server,checkpoint.caseId);
+      return await finishReceiving(checkpoint);
+    }
     const plans=(await server.api('/api/plans')).plans;assert.ok(plans.length);
     const plan=await server.api('/api/plans/'+plans[0].id);
     const opened=await server.api('/api/operations',{name:'Managed support native receiving',mode:'WALKTHROUGH',
-      planId:plan.id,selectedRevision:plan.revision,expectedContentSha256:plan.contentSha256,calendarStart:null,
+      planId:plan.id,selectedRevision:plan.revision,expectedContentSha256:plan.contentSha256,calendarStart:'2027-12-01',
       actor:'Native support receiving operator',requestId:randomUUID()});
     const caseId=opened.id,command='/api/operations/'+caseId+'/command',preview='/api/operations/'+caseId+'/support-preview';
     report.caseId=caseId;
@@ -151,34 +220,10 @@ export async function receiveGrantSupport({selected,context,handoffPath,merchant
     const supportEvent=history.events.find(event=>event.action==='support.receive');
     assert.equal(supportEvent.sourceChange.before.filename,'original-source.bin');
     assert.equal(supportEvent.sourceChange.after.supportHandoff.sourceSha256,sha(raw));
-    const archive=await server.api('/api/operations/'+caseId+'/export.zip',undefined,{bytes:true});
-    const archivePath=join(stage,'received-operations.zip');await fs.writeFile(archivePath,archive,{mode:0o600});
-    report.archive={path:archivePath,bytes:archive.length,sha256:sha(archive)};
-    await mark('concurrent case change retained the draft and re-previewed the current revision',{caseId,version:current.program.version,eventCount:history.events.length});
-    await page.close();page=null;await server.stop();server=null;
-    const cliPreviewPath=join(root,'cli-preview.json');
-    await cli(workspace,['support-preview','--case',caseId,'--expected-version',String(current.program.version),'--file',handoffPath,'--output',cliPreviewPath]);
-    const cliPreview=JSON.parse(await fs.readFile(cliPreviewPath,'utf8'));
-    const cliReceipt=await cli(workspace,['support-receive','--case',caseId,'--expected-version',String(current.program.version),
-      '--file',handoffPath,'--expected-preview-sha256',cliPreview.previewSha256,'--deployment',accepted.recordId,
-      '--actor','Native CLI receiving operator','--request-id','support-native-cli-receive','--note','Reopen the already received original source.']);
-    assert.equal(cliReceipt.unchanged,true);assert.equal(cliReceipt.version,current.program.version);
-    const imported=await cli(receivedWorkspace,['import','--file',archivePath,'--name','Received support case reopened',
-      '--actor','Native receiving operator','--request-id','support-native-import']);
-    server=await start(receivedWorkspace);const received=await server.api('/api/operations/'+imported.id);
-    const original=received.sources.find(row=>row.id===generic.recordId);
-    assert.deepEqual(original.supportHandoff,receivedSource.supportHandoff);
-    assert.deepEqual((await server.api('/api/operations/'+imported.id+'/sources/'+generic.recordId,undefined,{bytes:true})),raw);
-    await open(server,imported.id);
-    await page.getByRole('button',{name:'Open review',exact:true}).click();await page.locator('[data-support-review-json]').waitFor({state:'attached'});
-    assert.equal(await page.locator('.support-review code').first().textContent(),sha(raw));
-    assert.deepEqual(report.browserErrors,[]);
-    await page.screenshot({path:join(stage,'merchant-support-received.png')});
-    await page.close();page=null;await server.stop();server=null;
-    report.cliReceipt=cliReceipt;report.imported=imported;report.retainedDirectory=stage;
-    await mark('original CLI and case import reopened the same support source and rendered report',{originalCaseId:caseId,reopenedCaseId:imported.id,sourceCount:received.sources.length});
-    report.status='COMPLETE';report.completedAt=new Date().toISOString();await save();
-    return report;
+    report.supportPrepared={schema:'stellar-forge.sf47-support-receiving-checkpoint.v1',caseId,generic,accepted,receivedSource,history,
+      sourceVersion:current.program.version,planSha256:current.plan.contentSha256,completedAt:new Date().toISOString()};
+    await save();
+    return await finishReceiving(report.supportPrepared);
   }catch(error){report.status='FAILED';report.error=String(error.stack||error);await save();throw error;}
   finally{await page?.close().catch(()=>{});if(server)await server.stop().catch(async error=>{report.cleanupError=error.message;await save();});}
 }
