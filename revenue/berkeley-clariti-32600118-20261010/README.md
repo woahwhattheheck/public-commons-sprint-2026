@@ -29,6 +29,24 @@ Start with [the operator workflow](workspace/WORKFLOW.md), [API and input contra
 
 The browser pages both findings and the complete case population. Export metadata is indexed when captured, so refreshing the workspace does not repeatedly parse every retained file. Every comparison pins its original bytes, mappings, source revision and comparator hash. Concurrent writes use a workspace revision; a later reviewer change reopens a previously ready cutover decision.
 
+## Daily cashiering and receivables reconciliation
+
+The additive cashiering operator opens at `http://127.0.0.1:8798/cashiering/` on the same server and SQLite database. It implements the separate daily financial population described in Addendum E, question 80, and the cashiering/deposit workflows in To-Be Sessions 16 and 21. The existing permitting cutover interface and proposed partner offer stay intact.
+
+Start with [the cashiering workflow](cashiering/WORKFLOW.md), [the exact financial API](cashiering/API.md) and [the original financial requirements](cashiering/SOURCE_CONTRACT.md).
+
+The operator retains all four original source lanes—permits, receivables, processor and cashier—with explicit column/value mappings, source coverage, dates, currencies and tender applicability. It preserves decimal lexemes and large transaction identifiers, and calculates with declared integer minor units.
+
+Operators can allocate partial or many-to-many payments, retain refunds/voids/returns/chargebacks and denied-payment dispositions, correct interpreted rows without changing original files, and explicitly receive corrected exports. Daily balances and unresolved differences remain separate by currency. Source changes preserve earlier immutable editions and require renewed review of changed financial evidence.
+
+Supervisor signatures bind the exact financial revision and snapshot. Closing requires the configured distinct current reviewers and the native finding dispositions. An earlier signature cannot authorize a later correction or source refresh.
+
+Receiving layouts are explicit, versioned profiles supplied by the implementation partner. Preparing a CSV retains its exact bytes, source run and layout version. Actual transmission or receiving observations require a retained original receipt against that precise prepared file. The application does not infer a Munis/Clariti/ACI posting or claim a vendor schema from its own canonical field names.
+
+A financial handoff contains the printable report, complete exact JSON/CSVs, selected original files and mappings, allocations, corrections, reviewer history, actual receiving observations and runnable original/financial source. The original application backup preserves the complete SQLite workspace, including both permitting cases and financial history. The browser offers saved-request recovery and immutable-edition inspection; it does not automatically repeat an uncertain write.
+
+The local worked example is clearly labeled and uses supplied example exports to exercise the complete financial workflow. Actual native and browser results are recorded with their source revision and retained database. These examples are not City records or evidence of external acceptance.
+
 ## Original comparison contract
 
 The canonical same-cohort JSON input remains available to existing consumers:

@@ -394,7 +394,23 @@ def calculate(body):
                         "sources": [{k: cap.get(k) for k in ("capture_id", "sha256", "mapping_version", "coverage")}
                                     for cap in body["manifest"]]}
     def issue(code, message, details, waivable=True, severity="warning"):
-        ident = "f-" + fingerprint([code, details, evidence_context])[:28]
+        source_ids = set(details.get("capture_ids", []))
+        if details.get("capture_id"):
+            source_ids.add(details["capture_id"])
+        record_keys = list(details.get("record_keys", []))
+        if details.get("record_key"):
+            record_keys.append(details["record_key"])
+        source_ids.update(key.rsplit(":", 1)[0] for key in record_keys)
+        context = copy.deepcopy(evidence_context)
+        if source_ids:
+            context["sources"] = [cap for cap in context["sources"] if cap["capture_id"] in source_ids]
+        elif details.get("kind") in LANES:
+            relevant_kinds = {details["kind"]}
+            if code.startswith("daily_"):
+                relevant_kinds.add("permits")
+            selected_ids = {cap["capture_id"] for cap in body["manifest"] if cap["kind"] in relevant_kinds}
+            context["sources"] = [cap for cap in context["sources"] if cap["capture_id"] in selected_ids]
+        ident = "f-" + fingerprint([code, details, context])[:28]
         review = copy.deepcopy(reviews.get(ident, {"status": "open", "owner": "", "note": "", "updated_at": ""}))
         findings.append({"id": ident, "code": code, "severity": severity, "message": message,
                          "details": details, "waivable": waivable, "review": review})
