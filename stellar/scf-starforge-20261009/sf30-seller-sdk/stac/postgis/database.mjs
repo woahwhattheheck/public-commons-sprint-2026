@@ -1,0 +1,312 @@
+import {createHash} from 'node:crypto';
+import {META, need, canonical, digest, parseExactJSON, qi, ql, relation, geometryType, viewContract} from './contract.mjs';
+
+const TEXT_TYPES = {getTypeParser: () => value => value};
+const PRIVILEGES = ['select', 'insert', 'update', 'delete'];
+export async function createDatabase(connection, profile) {
+  const {Pool} = await import('pg');
+  need(connection && typeof connection === 'object', 'POSTGIS_WRITE_CONNECTION_REQUIRED');
+  const pool = new Pool({...connection, types: TEXT_TYPES, max: 3, application_name: 'starforge-postgis-intake'});
+  pool.on('error', () => {});
+  const first = await pool.connect();
+  let environment, extensionSchema, owner;
+  try {
+    const observed = (await first.query(
+      "SELECT current_database() AS name, current_user AS owner, current_setting('server_version') AS version, " +
+      "current_setting('server_version_num') AS version_number, n.nspname AS extension_schema, e.extversion AS extension_version " +
+      "FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace WHERE e.extname='postgis'")).rows;
+    need(observed.length === 1, 'POSTGIS_INSTALLED_EXTENSION_REQUIRED');
+    const row = observed[0];
+    need(row.name === profile.database.name, 'POSTGIS_SELECTED_DATABASE_CHANGED');
+    need(Number(row.version_number) >= 150000 && /^3\./.test(row.extension_version), 'POSTGIS_SUPPORTED_NATIVE_VERSION_REQUIRED');
+    extensionSchema = row.extension_schema; owner = row.owner;
+    const schema = (await first.query('SELECT oid FROM pg_namespace WHERE nspname=$1', [profile.database.schema])).rows;
+    need(schema.length === 1, 'POSTGIS_EXISTING_SCHEMA_REQUIRED', profile.database.schema);
+    await setup(first);
+    const native = (await first.query('SELECT postgis_full_version() AS version')).rows[0];
+    environment = {profileId: profile.database.profileId, name: row.name, schema: profile.database.schema,
+      postgresVersion: row.version, postgisVersion: native.version, metadataRelation: META.projects,
+      owner, extensionSchema};
+  } finally { first.release(); }
+  function q(name) { return relation(profile.database.schema, name); }
+  async function setup(client) {
+    await client.query("SET standard_conforming_strings=on");
+    await client.query("SET TIME ZONE 'UTC'");
+    await client.query("SET DateStyle='ISO, YMD'");
+    await client.query('SET search_path TO pg_catalog,' + qi(extensionSchema) + ',' + qi(profile.database.schema));
+  }
+  async function transaction(fn, {readOnly = false, lock = true, repeatable = false} = {}) {
+    const client = await pool.connect();
+    let committed = false, commitStarted = false;
+    try {
+      await setup(client);
+      await client.query('BEGIN ISOLATION LEVEL ' + (repeatable ? 'REPEATABLE READ' : 'READ COMMITTED') +
+        (readOnly ? ' READ ONLY' : ''));
+      if (lock) await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',
+        ['starforge.postgis:' + profile.database.schema + ':' + profile.projectId]);
+      const result = await fn(client);
+      commitStarted = true; await client.query('COMMIT'); committed = true;
+      return result;
+    } catch (error) {
+      if (!committed) await client.query('ROLLBACK').catch(() => {});
+      if (commitStarted && !committed) error.postgisCommitOutcome = 'reconcile-original-operation';
+      throw error;
+    } finally { client.release(); }
+  }
+  async function initialized(client) {
+    return (await client.query('SELECT to_regclass($1) AS relation', [q(META.projects)])).rows[0].relation !== null;
+  }
+  async function ensure(client) {
+    const rights = (await client.query("SELECT has_schema_privilege(current_user,$1,'USAGE') AS usage, " +
+      "has_schema_privilege(current_user,$1,'CREATE') AS create", [profile.database.schema])).rows[0];
+    need(rights.usage === 't' && rights.create === 't', 'POSTGIS_SCHEMA_COMMISSIONING_PERMISSION_REQUIRED');
+    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.projects) + ' (' +
+      'project_id text PRIMARY KEY, product_version integer NOT NULL DEFAULT 1, ' +
+      'profile_sha256 text NOT NULL, profile_json jsonb NOT NULL, revision bigint NOT NULL DEFAULT 0, ' +
+      'active_edition_id text, created_at timestamptz NOT NULL DEFAULT clock_timestamp(), ' +
+      'updated_at timestamptz NOT NULL DEFAULT clock_timestamp())');
+    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.editions) + ' (' +
+      'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), edition_id text NOT NULL, ' +
+      'request_sha256 text NOT NULL, source_json jsonb NOT NULL, profile_json jsonb NOT NULL, layers_json jsonb NOT NULL, ' +
+      "state text NOT NULL CHECK (state IN ('staged','accepted')), " +
+      'created_at timestamptz NOT NULL DEFAULT clock_timestamp(), accepted_at timestamptz, ' +
+      'PRIMARY KEY(project_id,edition_id))');
+    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.operations) + ' (' +
+      'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), operation_id text NOT NULL, ' +
+      'kind text NOT NULL, request_sha256 text NOT NULL, request_json jsonb NOT NULL, result_json jsonb NOT NULL, ' +
+      'committed_at timestamptz NOT NULL DEFAULT clock_timestamp(), PRIMARY KEY(project_id,operation_id))');
+    await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.identities) + ' (' +
+      'project_id text NOT NULL REFERENCES ' + q(META.projects) + '(project_id), layer_id text NOT NULL, row_key text NOT NULL, ' +
+      'sf_id bigint GENERATED ALWAYS AS IDENTITY UNIQUE, PRIMARY KEY(project_id,layer_id,row_key))');
+    await client.query('CREATE SEQUENCE IF NOT EXISTS ' + q('_sf_intake_operator_ids') + ' AS bigint');
+    for (const table of Object.values(META)) await client.query('REVOKE ALL ON TABLE ' + q(table) + ' FROM PUBLIC');
+    await client.query('REVOKE ALL ON SEQUENCE ' + q('_sf_intake_operator_ids') + ' FROM PUBLIC');
+    let current = await project(client);
+    if (!current) {
+      // Existing customer relations are not adopted as this project's views.
+      for (const layer of profile.layers) {
+        const existing = (await client.query('SELECT to_regclass($1) AS relation', [q(layer.relation)])).rows[0].relation;
+        need(existing === null, 'POSTGIS_EXISTING_CUSTOMER_RELATION_CONFLICT', layer.relation);
+      }
+      await client.query('INSERT INTO ' + q(META.projects) + '(project_id,profile_sha256,profile_json) VALUES($1,$2,$3::jsonb)',
+        [profile.projectId, digest(profile), canonical(profile)]);
+      current = await project(client);
+    }
+    need(current.productVersion === 1, 'POSTGIS_METADATA_VERSION_CHANGED');
+    need(canonical(viewContract(current.profile)) === canonical(viewContract(profile)),
+      'POSTGIS_EXPLICIT_COLUMN_CONTRACT_MIGRATION_REQUIRED');
+    await checkRoles(client, profile);
+    return current;
+  }
+  async function project(client, {forUpdate = false} = {}) {
+    if (!await initialized(client)) return null;
+    const row = (await client.query('SELECT * FROM ' + q(META.projects) + ' WHERE project_id=$1' +
+      (forUpdate ? ' FOR UPDATE' : ''), [profile.projectId])).rows[0];
+    if (!row) return null;
+    const revision = Number(row.revision);
+    need(Number.isSafeInteger(revision), 'POSTGIS_REVISION_EXACT_RANGE_EXCEEDED');
+    return {projectId: row.project_id, productVersion: Number(row.product_version), revision,
+      activeEditionId: row.active_edition_id, profileSha256: row.profile_sha256,
+      profile: parseExactJSON(row.profile_json), createdAt: row.created_at, updatedAt: row.updated_at};
+  }
+  async function edition(client, editionId) {
+    const row = (await client.query('SELECT * FROM ' + q(META.editions) + ' WHERE project_id=$1 AND edition_id=$2',
+      [profile.projectId, editionId])).rows[0];
+    need(row, 'POSTGIS_EDITION_NOT_FOUND', editionId);
+    return {editionId: row.edition_id, requestSha256: row.request_sha256,
+      source: parseExactJSON(row.source_json), profile: parseExactJSON(row.profile_json),
+      layers: parseExactJSON(row.layers_json), state: row.state, createdAt: row.created_at, acceptedAt: row.accepted_at};
+  }
+  async function savedOperation(client, operationId, requestSha256) {
+    if (!await initialized(client)) return null;
+    const row = (await client.query('SELECT * FROM ' + q(META.operations) + ' WHERE project_id=$1 AND operation_id=$2',
+      [profile.projectId, operationId])).rows[0];
+    if (!row) return null;
+    need(row.request_sha256 === requestSha256, 'POSTGIS_ORIGINAL_OPERATION_REQUEST_CONFLICT', operationId);
+    return parseExactJSON(row.result_json);
+  }
+  async function mutate(operationId, kind, request, fn) {
+    const requestSha256 = digest(request);
+    try {
+      return await transaction(async client => {
+        await ensure(client);
+        const saved = await savedOperation(client, operationId, requestSha256);
+        if (saved) return {...saved, replayed: true, current: await project(client)};
+        const current = await project(client, {forUpdate: true});
+        const result = await fn(client, current, requestSha256);
+        const body = {...result, operationId, requestSha256, replayed: false};
+        await client.query('INSERT INTO ' + q(META.operations) +
+          '(project_id,operation_id,kind,request_sha256,request_json,result_json) VALUES($1,$2,$3,$4,$5::jsonb,$6::jsonb)',
+          [profile.projectId, operationId, kind, requestSha256, canonical(request), canonical(body)]);
+        return body;
+      });
+    } catch (error) {
+      if (error.postgisCommitOutcome) {
+        // The same project lock waits for the original transaction to finish.
+        try {
+          const reconciled = await transaction(async client => {
+            const saved = await savedOperation(client, operationId, requestSha256);
+            return saved ? {...saved, replayed: true, reconciled: true, current: await project(client)} : null;
+          });
+          if (reconciled) return reconciled;
+        } catch {}
+        error.operationId = operationId;
+      }
+      throw error;
+    }
+  }
+  async function checkRoles(client, selectedProfile) {
+    const names = [...new Set(selectedProfile.layers.flatMap(layer => layer.roles.map(role => role.name)))];
+    const rows = (await client.query(
+      'SELECT rolname,rolsuper,rolbypassrls FROM pg_roles WHERE rolname=ANY($1::text[])', [names])).rows;
+    const byName = new Map(rows.map(row => [row.rolname, row]));
+    for (const layer of selectedProfile.layers) for (const role of layer.roles) {
+      const row = byName.get(role.name);
+      need(row, 'POSTGIS_EXISTING_ROLE_NOT_FOUND', role.name);
+      need(role.name !== owner && row.rolsuper !== 't' && row.rolbypassrls !== 't',
+        'POSTGIS_RECEIVING_ROLE_MUST_OBSERVE_ROW_SECURITY', role.name);
+      const canSet = (await client.query('SELECT pg_has_role(current_user,$1,\'USAGE\') AS permitted, ' +
+        '(SELECT rolsuper FROM pg_roles WHERE rolname=current_user) AS superuser', [role.name])).rows[0];
+      need(canSet.permitted === 't' || canSet.superuser === 't', 'POSTGIS_ROLE_OBSERVATION_MEMBERSHIP_REQUIRED', role.name);
+    }
+  }
+  async function sridDefinitions(client, selectedProfile) {
+    const ids = [...new Set(selectedProfile.layers.flatMap(layer => [layer.geometry.sourceSrid, layer.geometry.targetSrid]))];
+    const rows = (await client.query('SELECT srid,srtext FROM spatial_ref_sys WHERE srid=ANY($1::integer[])', [ids])).rows;
+    const result = new Map(rows.map(row => [Number(row.srid), row.srtext]));
+    need(result.size === ids.length && [...result.values()].every(Boolean), 'POSTGIS_REGISTERED_SRID_REQUIRED');
+    return result;
+  }
+  async function createFeatureTable(client, table, layer) {
+    const fields = layer.fields.map(field => qi(field.name) + ' ' + field.type + (field.nullable ? '' : ' NOT NULL'));
+    const columns = [
+      'sf_id bigint PRIMARY KEY DEFAULT (-nextval(' + ql(q('_sf_intake_operator_ids')) + '::regclass))',
+      "sf_key text NOT NULL UNIQUE DEFAULT ('operator:' || gen_random_uuid()::text)",
+      '_sf_source jsonb',
+      ...fields,
+      'geom geometry(' + geometryType(layer) + ',' + layer.geometry.targetSrid + ')'
+    ];
+    await client.query('CREATE TABLE ' + q(table) + ' (' + columns.join(',') + ')');
+    await client.query('REVOKE ALL ON TABLE ' + q(table) + ' FROM PUBLIC');
+    await client.query('CREATE INDEX ON ' + q(table) + ' USING gist(geom)');
+  }
+  async function lockTables(client, tables) {
+    for (const table of [...new Set(tables)].sort()) await client.query('LOCK TABLE ' + q(table) + ' IN SHARE ROW EXCLUSIVE MODE');
+  }
+  const userColumns = layer => ['sf_id', 'sf_key', ...layer.fields.map(field => field.name), 'geom'];
+  const allColumns = layer => ['sf_id', 'sf_key', '_sf_source', ...layer.fields.map(field => field.name), 'geom'];
+  function rowHashSQL(alias = 't') {
+    return "md5((to_jsonb(" + alias + ")-ARRAY['sf_id','sf_key','_sf_source','geom'])::text || '|' || " +
+      "COALESCE(encode(ST_AsEWKB(" + alias + ".geom),'hex'),'null'))";
+  }
+  async function copyFeatureRows(client, source, destination, layer, keys = null) {
+    const columns = allColumns(layer).map(qi).join(',');
+    await client.query('INSERT INTO ' + q(destination) + '(' + columns + ') SELECT ' + columns + ' FROM ' + q(source) +
+      (keys ? ' WHERE sf_key=ANY($1::text[])' : ''), keys ? [keys] : []);
+  }
+  async function installRoles(client, table, layer) {
+    await client.query('ALTER TABLE ' + q(table) + ' ENABLE ROW LEVEL SECURITY');
+    for (const role of layer.roles) {
+      const condition = role.scope ? qi(role.scope.column) + '::text = ANY(ARRAY[' +
+        role.scope.values.map(ql).join(',') + ']::text[])' : 'true';
+      for (const permission of role.permissions) {
+        const policy = '_sf_' + digest({role: role.name, permission}).slice(0, 32);
+        await client.query('CREATE POLICY ' + qi(policy) + ' ON ' + q(table) + ' FOR ' + permission.toUpperCase() +
+          ' TO ' + qi(role.name) +
+          (permission === 'insert' ? ' WITH CHECK (' + condition + ')' :
+            permission === 'update' ? ' USING (' + condition + ') WITH CHECK (' + condition + ')' : ' USING (' + condition + ')'));
+      }
+      await grantLayer(client, table, layer, role);
+    }
+  }
+  async function grantLayer(client, target, layer, role) {
+    for (const permission of role.permissions) {
+      const columns = layer.fields.map(field => field.name).concat('geom').map(qi).join(',');
+      await client.query('GRANT ' + permission.toUpperCase() +
+        (permission === 'insert' || permission === 'update' ? '(' + columns + ')' : '') +
+        ' ON TABLE ' + q(target) + ' TO ' + qi(role.name));
+      if (permission === 'insert') await client.query('GRANT USAGE ON SEQUENCE ' + q('_sf_intake_operator_ids') + ' TO ' + qi(role.name));
+    }
+  }
+  async function switchViews(client, selected, previous, selectedProfile) {
+    for (const layer of selectedProfile.layers) {
+      const physical = selected.layers.find(item => item.id === layer.id);
+      need(physical?.liveTable, 'POSTGIS_LIVE_EDITION_REQUIRED', layer.id);
+      const oldRoles = previous?.profile.layers.find(item => item.id === layer.id)?.roles || [];
+      const allRoles = [...new Set([...oldRoles, ...layer.roles].map(role => role.name))];
+      await client.query('CREATE OR REPLACE VIEW ' + q(layer.relation) + ' WITH (security_invoker=true) AS SELECT ' +
+        userColumns(layer).map(qi).join(',') + ' FROM ' + q(physical.liveTable));
+      await client.query('REVOKE ALL ON TABLE ' + q(layer.relation) + ' FROM PUBLIC');
+      for (const name of allRoles) await client.query('REVOKE ALL ON TABLE ' + q(layer.relation) + ' FROM ' + qi(name));
+      for (const role of layer.roles) await grantLayer(client, layer.relation, layer, role);
+      if (previous && previous.editionId !== selected.editionId) {
+        const old = previous.layers.find(item => item.id === layer.id);
+        if (old?.liveTable) for (const role of oldRoles)
+          await client.query('REVOKE ALL ON TABLE ' + q(old.liveTable) + ' FROM ' + qi(role.name));
+      }
+    }
+  }
+  async function observeRoles(client, selected, layer) {
+    const result = [];
+    for (const role of layer.roles) {
+      const privileges = {};
+      for (const privilege of PRIVILEGES) {
+        const fn = privilege === 'insert' || privilege === 'update' ? 'has_any_column_privilege' : 'has_table_privilege';
+        privileges[privilege] = (await client.query('SELECT ' + fn + '($1,$2,$3) AS permitted',
+          [role.name, q(layer.relation), privilege.toUpperCase()])).rows[0].permitted === 't';
+      }
+      for (const permission of role.permissions) need(privileges[permission], 'POSTGIS_ROLE_GRANT_NOT_OBSERVED', {role: role.name, permission});
+      let visibleRows;
+      try {
+        await client.query('SET LOCAL ROLE ' + qi(role.name));
+        visibleRows = (await client.query('SELECT count(*)::text AS count FROM ' + q(layer.relation))).rows[0].count;
+      } finally { await client.query('SET LOCAL ROLE NONE'); }
+      result.push({...role, observedPrivileges: privileges, visibleRows});
+    }
+    return result;
+  }
+  async function* cursorRows(client, statement, parameters = []) {
+    const {default: Cursor} = await import('pg-cursor');
+    const cursor = client.query(new Cursor(statement, parameters, {types: TEXT_TYPES}));
+    try {
+      for (;;) {
+        const rows = await new Promise((resolveRows, reject) => cursor.read(256, (error, rows) => error ? reject(error) : resolveRows(rows)));
+        if (!rows.length) break;
+        for (const row of rows) yield row;
+      }
+    } finally { await new Promise((resolveClose, reject) => cursor.close(error => error ? reject(error) : resolveClose())); }
+  }
+  async function tableDigest(client, table) {
+    const hash = createHash('sha256'); let count = 0n;
+    for await (const row of cursorRows(client, 'SELECT sf_id::text,sf_key,' + rowHashSQL('t') +
+      ' AS row_hash FROM ' + q(table) + ' t ORDER BY sf_key COLLATE "C"')) {
+      hash.update(canonical(row) + '\n'); count++;
+    }
+    return {rowCount: count.toString(), rowSha256: hash.digest('hex')};
+  }
+  async function describeLayers(client, selected) {
+    const result = [];
+    for (const layer of selected.profile.layers) {
+      const actual = selected.layers.find(item => item.id === layer.id);
+      need(actual?.liveTable, 'POSTGIS_ACCEPTED_LAYER_REQUIRED', layer.id);
+      const table = await tableDigest(client, actual.liveTable);
+      const columns = (await client.query(
+        'SELECT a.attname,format_type(a.atttypid,a.atttypmod) AS type FROM pg_attribute a ' +
+        'WHERE a.attrelid=$1::regclass AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum',
+        [q(layer.relation)])).rows;
+      need(canonical(columns.map(column => column.attname)) === canonical(userColumns(layer)),
+        'POSTGIS_STABLE_VIEW_COLUMNS_CHANGED', layer.relation);
+      result.push({id: layer.id, sourceLayerId: layer.sourceLayerId, title: layer.title,
+        schema: profile.database.schema, relation: layer.relation, relationType: 'view',
+        keyColumn: 'sf_id', sourceKeyColumn: 'sf_key', geometryColumn: 'geom',
+        geometryType: layer.geometry.type, dimension: layer.geometry.dimension, srid: layer.geometry.targetSrid,
+        fields: layer.fields, ...table, roles: await observeRoles(client, selected, layer),
+        observedColumns: columns});
+    }
+    return result;
+  }
+  return {pool, environment, owner, q, transaction, initialized, ensure, project, edition, savedOperation,
+    mutate, checkRoles, sridDefinitions, createFeatureTable, lockTables, userColumns, allColumns,
+    rowHashSQL, copyFeatureRows, installRoles, grantLayer, switchViews, observeRoles, cursorRows,
+    tableDigest, describeLayers, close: () => pool.end()};
+}
