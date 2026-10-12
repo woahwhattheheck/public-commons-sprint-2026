@@ -1,0 +1,44 @@
+{
+  "organizationId": "USGS",
+  "projectId": "32UFDQN00",
+  "locationMode": "existing",
+  "identityMode": "compact",
+  "locationOverrides": [],
+  "activityOverrides": [],
+  "resultOverrides": [],
+  "fieldTranslations": [],
+  "limitMappings": [
+    {
+      "type": "Censoring Level",
+      "field": null,
+      "reason": "Retain the reported type and value verbatim in the original source and native result comment."
+    },
+    {
+      "type": "Detection limit by DQCALC",
+      "field": null,
+      "reason": "Retain the reported type and value verbatim in the original source and native result comment."
+    },
+    {
+      "type": "Detection limit by blank data",
+      "field": null,
+      "reason": "Retain the reported type and value verbatim in the original source and native result comment."
+    },
+    {
+      "type": "Long Term Method Detection Level",
+      "field": null,
+      "reason": "Retain the reported type and value verbatim in the original source and native result comment."
+    },
+    {
+      "type": "Lower Reporting Limit",
+      "field": null,
+      "reason": "Retain the reported type and value verbatim in the original source and native result comment."
+    },
+    {
+      "type": "Reporting limit by DQCALC",
+      "field": null,
+      "reason": "Retain the reported type and value verbatim in the original source and native result comment."
+    }
+  ],
+  "referenceValues": {},
+  "notes": "Complete Chain Bridge Q1 2025 source. The organization, project identifier and location identifier are present in the original USGS response. Select their corresponding entries in the receiving Open Waters installation. This baseline retains all six original limit types and uses each receiving choice explicitly."
+}
