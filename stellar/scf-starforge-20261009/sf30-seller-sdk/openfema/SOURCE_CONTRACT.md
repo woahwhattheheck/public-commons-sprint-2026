@@ -146,7 +146,7 @@ The original store remains the sole writer. Capture owns its capture progress re
 
 ## Portable original-source handover
 
-exportBundle returns schema stellar-forge.openfema-source-bundle.v1. It contains the original source edition and all original dataset metadata, field dictionaries, pages and closing metadata. Each response carries its actual URL, HTTP200 status, observed timestamp, selected original headers, byte count, SHA256 and bodyBase64.
+exportBundle returns schema stellar-forge.openfema-source-bundle.v1. It contains the original source edition and all original dataset metadata, field dictionaries, pages and closing metadata. Each response retains its actual URL, observed timestamp, byte count, SHA256 and bodyBase64. Direct HTTP captures also retain the observed HTTP status and selected original headers. Connector captures retain their exact upload/download attachment identities and original response text; HTTP fields the connector did not expose remain null. Intermediate requestedAt and uploadReceivedAt clocks may be explicit null when not individually observed. The actual downloadReceivedAt remains required, all known clocks must be ordered, and original bytes, hashes, source URL and attachment identity are verified.
 
 importBundle validates each original response, exact cohort, disjoint pagination, source count, source epoch and dataset version. It then saves the **same original edition object and identifier**. Completed requests are idempotent; an interrupted import continues only with that same bundle.
 

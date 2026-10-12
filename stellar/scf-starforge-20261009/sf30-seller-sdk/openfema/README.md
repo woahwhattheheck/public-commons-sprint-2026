@@ -4,6 +4,10 @@ A complete local operator for acquiring FEMA Public Assistance records, building
 
 The application keeps original source responses, immutable source editions, successive portfolio versions, analyst decisions, native dataset packages, seller releases and received customer files in one private directory. It runs on the maintained Stellar Forge dataset, publisher and buyer engines. The interface uses a compact grayscale layout with seven work areas: Sources, Portfolios, Review, Changes, Publication, Customers and Handover.
 
+## Existing-programme project exchange
+
+The **Data integration** screen and matching CLI commands map a complete saved portfolio to a reviewed destination schema, retain and reconcile the customer’s original CSV, import selected analyst decisions into a new native version and compare subsequent deliveries. The full original workspace archive carries the field mapping, schema, review history and customer files. See [Reviewed project data exchange](DATA_INTEGRATION.md) for the complete operating workflow and exact commands.
+
 ## Commission a customer installation
 
 Use [COMMISSIONING.md](COMMISSIONING.md) to carry an actual analyst question through source receiving, review, native payment, complete output, recurring use and independent technical handover. The guide includes the complete retained DR 4724 example, a [native portfolio criteria file](examples/commissioning-dr4724.json) and a [customer workorder](examples/commissioning-workorder.md). It distinguishes the working portfolio, published table and private installation handover, and maps a selected installation into the existing SCF milestones.
