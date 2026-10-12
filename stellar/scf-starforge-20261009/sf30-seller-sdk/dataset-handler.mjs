@@ -75,6 +75,38 @@ export function validateDatasetSemantics(value, columns) {
     new Set(list).size === list.length) && key.projected.every(name => names.has(name)) &&
     (!key.complete || key.source.length > 0 && key.source.length === key.projected.length),
     'Retained dataset semantic key is incomplete or changed.');
+  if (value.schema === 'stellar-forge.odata-semantics.v1') {
+    const source = value.source, csdl = value.csdl;
+    need(source.provider === 'odata4' && ['4.0', '4.01'].includes(source.protocolVersion) &&
+      ['serviceUrl', 'schemaUrl', 'entityContainer', 'entitySet', 'entityType'].every(name =>
+        typeof source[name] === 'string' && source[name].length > 0) &&
+      HASH.test(source.schemaSha256 ?? '') && object(csdl) &&
+      csdl.entityType === source.entityType && Array.isArray(csdl.inheritance) &&
+      csdl.inheritance.every(name => typeof name === 'string' && name) &&
+      object(csdl.structuredTypes) && object(csdl.structuredTypes[source.entityType]) &&
+      object(csdl.typeDefinitions) && object(csdl.enumTypes) && value.columns.length % 2 === 0,
+      'Retained OData meaning requires its original source identifiers and CSDL types.');
+    const valueColumns = new Map();
+    for (let index = 0; index < value.columns.length; index += 2) {
+      const column = value.columns[index], state = value.columns[index + 1], definition = column.sourceDefinition;
+      need(column.role === 'value' && state.role === 'state' && column.stateColumn === state.name &&
+        state.valueColumn === column.name && column.sourceField === state.sourceField &&
+        state.type === 'string' && state.nullable === false && state.encoding === 'native' &&
+        object(definition) && definition.sourcePath === column.sourceField &&
+        definition.sourceEntityType === source.entityType && typeof definition.type === 'string' &&
+        typeof definition.collection === 'boolean' && typeof definition.nullable === 'boolean' &&
+        object(state.sourceDefinition) && state.sourceDefinition.sourcePath === column.sourceField &&
+        state.sourceDefinition.role === 'source-presence' &&
+        state.sourceDefinition.sourceNullable === definition.nullable &&
+        datasetSemanticIdentity(state.sourceDefinition.values) === datasetSemanticIdentity(['value', 'null', 'missing']),
+        'Retained OData value/state columns differ from their original source definition.');
+      valueColumns.set(column.name, column);
+    }
+    need(key.projected.every(name => valueColumns.has(name)) &&
+      (!key.complete || key.projected.every((name, index) =>
+        valueColumns.get(name).sourceField === key.source[index])),
+      'Retained OData entity keys must identify the corresponding value columns.');
+  }
   const expected = [...value.columns.map(column => column.projectedDefinition),
     ...value.virtualColumns.map(column => {
       need(object(column) && (column.projectedDefinition === null || object(column.projectedDefinition)),
