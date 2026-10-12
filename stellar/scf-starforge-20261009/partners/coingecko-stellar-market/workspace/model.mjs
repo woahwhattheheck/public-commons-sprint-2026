@@ -42,6 +42,14 @@ export class MarketModel {
     if(kind==='requests')result.items=result.items.map(request=>this.requestView(request));
     return result;
   }
+  operation(projectId,opId){
+    const saved=this.store.operation(projectId,opId),value=saved.response?.value;
+    if(value&&['probe','checkout'].includes(value.kind)&&Array.isArray(value.items)){
+      saved.response.value=this.jobView(value);
+      saved.currentJob=this.job(value.id).job;
+    }
+    return saved;
+  }
   createProject(body){
     return this.store.write(null,body,'project.created',()=>this.store.newProject(body.name,
       {merchantOrigin:'',merchantPrefix:'/api/v3/stellar',buyerProfileId:''}));
@@ -69,7 +77,7 @@ export class MarketModel {
       if(previous)need(previous.projectId===projectId,'WRONG_PROJECT');
       const normalized=normalizeRequest(body.request,this.requestConfig(projectId));
       return this.store.put('requests',{...normalized,id:requestId??uuid(),projectId,reference:previous?.reference??uuid()});
-    });
+    },requestId?{kind:'request',id:requestId}:null);
   }
   request(requestId){return{request:this.requestView(this.store.get('requests',requestId)),versions:this.store.versions('requests',requestId)}}
   saveCollection(projectId,body,collectionId=null){
@@ -81,7 +89,7 @@ export class MarketModel {
       requestIds.forEach(requestId=>this.store.owned('requests',requestId,projectId));
       return this.store.put('collections',{id:collectionId??uuid(),projectId,
         name:text(input.name,'collection name',240),description:text(input.description??'','description',10000,{empty:true}),requestIds});
-    });
+    },collectionId?{kind:'collection',id:collectionId}:null);
   }
   collection(collectionId){
     const collection=this.store.get('collections',collectionId);
@@ -211,7 +219,7 @@ export class MarketModel {
         assignee:text(note.assignee??'','assignee',240,{empty:true}),
         status:enumValue(note.status??'open',['open','reviewed','resolved'],'review status'),
         type:enumValue(note.type??'research',['research','data_quality','follow_up'],'review type'),sourceFileIds,reviewer:body.actor});
-    });
+    },noteId?{kind:'note',id:noteId}:null);
   }
   note(noteId){return{note:this.store.get('notes',noteId)}}
   async saveProviderPlan(projectId,body,planId=null){
@@ -220,7 +228,7 @@ export class MarketModel {
       if(planId)need(this.store.expected('providerPlans',planId,body.version).projectId===projectId,'WRONG_PROJECT');
       const{plan,...compiledValue}=compiled;
       return this.store.put('providerPlans',{...plan,id:planId??uuid(),projectId,compiled:compiledValue});
-    });
+    },planId?{kind:'provider-plan',id:planId}:null);
   }
   providerPlan(planId){
     const{compiled,...plan}=this.store.get('providerPlans',planId);return{plan,compiled};
@@ -244,7 +252,7 @@ export class MarketModel {
       return this.store.put('jobs',{projectId,name:text(body.name,'probe name',240),kind:'probe',target,status:'queued',
         total:items.length,completed:0,items,errors:[],cancelRequested:false});
     });
-    this.runner.schedule(response.value.id,'probe');return response;
+    if(!response.replayed)this.runner.schedule(response.value.id,'probe');return response;
   }
   async createCheckout(collectionId,body){
     need(this.runner,'RUNTIME_REQUIRED');
@@ -255,8 +263,8 @@ export class MarketModel {
       return this.store.put('jobs',{projectId:collection.projectId,id:prepared.id,name:text(body.name,'purchase name',240),
         kind:'checkout',collectionId,buyerProfileId:prepared.buyerProfileId,status:'queued',phase:'intake',purchaseStarted:false,
         total:prepared.items.length,completed:0,items:prepared.items,errors:[],cancelRequested:false});
-    });
-    this.runner.schedule(response.value.id,'prepare');return response;
+    },{kind:'checkout-collection',id:collectionId,responseKey:'collectionId'});
+    if(!response.replayed)this.runner.schedule(response.value.id,'prepare');return response;
   }
   async controlJob(jobId,action,body){
     need(this.runner,'RUNTIME_REQUIRED');
@@ -267,8 +275,8 @@ export class MarketModel {
       const next={...job,requestedAction:action,cancelRequested:action==='cancel',lastOperator:body.actor};
       if(action!=='cancel'){next.status='queued';next.completedAt=null}
       return this.store.put('jobs',next);
-    });
-    this.runner.schedule(jobId,action);return response;
+    },{kind:'job',id:jobId});
+    if(!response.replayed)this.runner.schedule(response.value.id,action);return response;
   }
   exportProject(projectId,body){
     return this.store.write(projectId,body,'handover.created',()=>{

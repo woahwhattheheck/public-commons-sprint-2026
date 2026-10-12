@@ -302,6 +302,30 @@ function validateCapturedProfile(manifest, planRaw) {
   }
 }
 
+/** Match a completed native capture to the exact privately retained plan.
+ * The caller must first authenticate this manifest with the original SF101
+ * verifier and keep its raw-byte identity stable. This is only the typed
+ * comparison: it performs no source read, writer acquisition or recapture. */
+export function inspectCapturedPublisherManifest({ planBytes, manifest } = {}) {
+  need(Buffer.isBuffer(planBytes) || planBytes instanceof Uint8Array,
+    'PUBLISHER_RECOVERY_PLAN_BYTES_REQUIRED', 'Supply the exact retained reviewed plan bytes.', 400);
+  const raw = Buffer.from(planBytes);
+  need(raw.length > 0 && raw.length <= PLAN_LIMIT, 'PUBLISHER_RECOVERY_PLAN_LIMIT', undefined, 400);
+  const { profile } = typedPlan(raw), planSha256 = digest(raw);
+  need(object(manifest) && manifest.schema === BUNDLE_SCHEMA &&
+    Array.isArray(manifest.roots) && Array.isArray(manifest.entries) &&
+    manifest.entries.length > 0 && manifest.entries.length <= MAX_ENTRIES &&
+    manifest.entries.every(entry => object(entry) && typeof entry.path === 'string' &&
+      ['directory', 'file'].includes(entry.kind)),
+  'PUBLISHER_RECOVERY_BUNDLE_INVALID', 'Supply the original authenticated SF101 manifest.');
+  need(manifest.capture?.schema === 'stellar-forge.merchant-recovery-capture.v1' &&
+    HASH.test(manifest.capture.id ?? '') && manifest.capture.planSha256 === planSha256,
+  'PUBLISHER_RECOVERY_CAPTURE_CHANGED', 'The authenticated capture must bind this exact reviewed typed plan.');
+  validateCapturedProfile(manifest, raw);
+  return { status: 'DATASET_PUBLISHER_RECOVERY_CAPTURE_MATCHED', planSha256,
+    profileSha256: identity(profile), captureId: manifest.capture.id };
+}
+
 /** Ordinary typed CLI capture. Encryption and verification are the native runner.
  * Shared workspaces instead wrap their existing new-capture block above. */
 export async function capturePublisherRecovery({ planFile, bundleDirectory, passphraseEnv,
@@ -323,8 +347,8 @@ export async function capturePublisherRecovery({ planFile, bundleDirectory, pass
       digest(await readPrivate(join(bundleDirectory, 'manifest.json'), 12 * 1024 ** 2)) === digest(manifestRaw),
     'PUBLISHER_RECOVERY_BUNDLE_CHANGED', 'The original verified recovery bundle changed.');
     const manifest = parse(manifestRaw, 'authenticated captured publisher');
-    validateCapturedProfile(manifest, raw);
-    need(manifest.capture?.id === id, 'PUBLISHER_RECOVERY_CAPTURE_CHANGED');
+    const matched = inspectCapturedPublisherManifest({ planBytes: raw, manifest });
+    need(matched.captureId === id, 'PUBLISHER_RECOVERY_CAPTURE_CHANGED');
     return { status: 'DATASET_PUBLISHER_CAPTURED', bundleDirectory, manifestSha256: digest(manifestRaw),
       planSha256: reviewed, captureId: id, original: { snapshot, verification } };
   });

@@ -5,6 +5,8 @@ import { dirname, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { exact, failure, identifier, line, plain, privateSupportDirectory } from './config.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
+import { MerchantOpenSearchDeployments, openSearchDeploymentTools, openSearchRuntimeOptions,
+  projectOpenSearchDeploymentOperation } from './opensearch-deployment.mjs';
 
 export const OPENSEARCH_WORKSPACE_CONNECTION_SCHEMA = 'stellar-forge.opensearch-workspace-connection.v1';
 const aliasSchema = { type:'string', pattern:'^[a-z0-9][a-z0-9_-]{0,63}$' };
@@ -81,7 +83,7 @@ export async function readOpenSearchWorkspaceConfiguration(path) {
   const base = dirname(path), workspaces = Object.create(null), directories = new Set();
   for (const [alias,item] of Object.entries(raw.workspaces)) {
     identifier(alias,'OpenSearch workspace alias');
-    exact(item,['label','directory','sourceFile','planFile'],['directory','sourceFile']);
+    exact(item,['label','directory','sourceFile','planFile','runtime'],['directory','sourceFile']);
     const directory = await realpath(hostPath(item.directory,base));
     await privateSupportDirectory(directory);
     const stat = await lstat(directory);
@@ -91,6 +93,7 @@ export async function readOpenSearchWorkspaceConfiguration(path) {
     directories.add(directory);
     workspaces[alias] = { label:line(item.label ?? alias,'OpenSearch workspace label'),directory,
       sourceFile:await declarationPath(item.sourceFile,base),
+      runtime:openSearchRuntimeOptions(item.runtime ?? {}),
       ...(item.planFile === undefined ? {} : {planFile:await declarationPath(item.planFile,base)}) };
   }
   return { workspaces };
@@ -127,6 +130,7 @@ export function openSearchWorkspaceTools(tool) {
     tool('merchant_opensearch_relevance_case','Page a retained native relevance case: original rated hit entries or strict-window hits, exact integer paths, failures and matched-window state. Does not search again.',fields({editionId:idSchema,variantId:caseSchema,caseId:caseSchema,view:{type:'string',enum:['native','strict']},offset:offsetSchema,limit:limitSchema}),['workspace','editionId','variantId','caseId'],read),
     tool('merchant_opensearch_relevance_promote','Promote one evaluated variant and case into the original merchant draft with exact query/input/plan and evaluation provenance. Continue with the original prepare tool.',fields({requestId:idSchema,editionId:idSchema,variantId:caseSchema,caseId:caseSchema,title:{type:'string',minLength:1,maxLength:120}}),['workspace','requestId','editionId','variantId','caseId'],write),
     tool('merchant_opensearch_read','Read exact original draft, operation, query/relevance result, customer report or package-file bytes through a retained SHA-256-pinned snapshot. Mutable definitions require explicit revision. Continue nextOffset with readId and expectedSha256; chunks are base64.',fields({kind:{type:'string',enum:['draft','operation','query-edition','query-result','query-csv','relevance-set','relevance-edition','relevance-native','relevance-report-json','relevance-report-html','relevance-csv','package-file']},id:idSchema,revision:revisionSchema,file:{type:'string',minLength:1,maxLength:512},readId:{type:'string',minLength:1,maxLength:160},expectedSha256:digestSchema,offset:offsetSchema,limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES}}),['workspace','kind','id'],read),
+    ...openSearchDeploymentTools(tool),
     tool('merchant_opensearch_read_release','Release an unfinished original retained file read before its idle expiry.',fields({readId:{type:'string',minLength:1,maxLength:160}}),['workspace','readId'],write),
   ];
 }
@@ -150,6 +154,7 @@ function setView(value) {
       judgmentCount:item.documents?.filter(document => document.rating !== null).length ?? item.judgmentCount ?? 0}))};
 }
 function operationView(value, includeRequest=false) {
+  value = projectOpenSearchDeploymentOperation(value);
   const result = {...pick(value,['id','kind','state','createdAt','updatedAt','requestSha256','error']),
     ...(includeRequest ? {request:value.request,...pick(value,['draft','relevanceSet','evaluation'])} : {})};
   if (value.result) {
@@ -345,7 +350,7 @@ async function retainedOriginal(model,args) {
     return {bytes:jsonBytes(revision(model,args.kind,id,args.revision)),name:'opensearch-'+args.kind+'-'+id+'-r'+args.revision+'.json',type:'application/json'};
   }
   if (args.kind === 'operation')
-    return {bytes:jsonBytes(omit(model.operation(id),['owner'])),name:'opensearch-operation-'+id+'.json',type:'application/json'};
+    return {bytes:jsonBytes(omit(projectOpenSearchDeploymentOperation(model.operation(id)),['owner'])),name:'opensearch-operation-'+id+'.json',type:'application/json'};
   if (args.kind === 'package-file') {
     if (typeof args.file !== 'string' || !args.file || args.file.length > 512)
       throw failure('INVALID_PARAMS','Select an original file name from this package manifest.');
@@ -360,7 +365,7 @@ async function retainedOriginal(model,args) {
 
 export class MerchantOpenSearchWorkspaces {
   #config; #environment; #handles = new Map(); #pending = new Map(); #closingAliases = new Map();
-  #files = new RetainedFileReads({errorPrefix:'OPENSEARCH'}); #closing = false; #close;
+  #files = new RetainedFileReads({errorPrefix:'OPENSEARCH'}); #deployment = new MerchantOpenSearchDeployments(); #closing = false; #close;
   constructor(config, {environment = process.env} = {}) {
     if (!plain(environment)) throw failure('CONFIGURATION_ERROR','The original source environment must be a host-selected object.');
     this.#config = config; this.#environment = environment;
@@ -368,7 +373,8 @@ export class MerchantOpenSearchWorkspaces {
   get summary() {
     const aliases = this.#config.opensearchWorkspaces?.workspaces ?? {};
     return {configured:Object.keys(aliases).length > 0,count:Object.keys(aliases).length,
-      opened:[...this.#handles.keys()],pending:this.#pending.size,closing:this.#closing,...this.#files.summary};
+      opened:[...this.#handles.keys()],pending:this.#pending.size,closing:this.#closing,...this.#files.summary,
+      deployment:this.#deployment.summary};
   }
   #entry(alias) {
     identifier(alias,'OpenSearch workspace alias');
@@ -406,12 +412,14 @@ export class MerchantOpenSearchWorkspaces {
     const accepted = [...this.#pending].filter(([,selected]) => selected === alias).map(([pending]) => pending);
     const pending = (async () => {
       await Promise.allSettled(accepted);
-      await this.#files.closeScope(alias);
+      const readers = await Promise.allSettled([this.#files.closeScope(alias),this.#deployment.closeWorkspace(alias)]);
       const handle = this.#handles.get(alias);
       if (handle) {
         try { await (await handle).close(); }
         finally { if (this.#handles.get(alias) === handle) this.#handles.delete(alias); }
       }
+      const failed = readers.find(result => result.status === 'rejected');
+      if (failed) throw failed.reason;
       return {workspace:alias,state:'CLOSED'};
     })().finally(() => this.#closingAliases.delete(alias));
     this.#closingAliases.set(alias,pending);
@@ -424,6 +432,10 @@ export class MerchantOpenSearchWorkspaces {
     if (!handle) throw failure('OPENSEARCH_WORKSPACE_CLOSED','Open the saved workspace with merchant_opensearch_open.');
     const model = await handle;
     try {
+      if (name.startsWith('merchant_opensearch_deployment_')) {
+        const value = await this.#deployment.call(name,args,{model,entry});
+        return value?.kind?.startsWith('deployment-') ? operationView(value) : value;
+      }
       switch (name) {
         case 'merchant_opensearch_catalog': {
           const {describeRelevanceMetrics} = await import('../../stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/relevance/native.mjs');
@@ -490,7 +502,9 @@ export class MerchantOpenSearchWorkspaces {
         }
         case 'merchant_opensearch_read_release':
           if (typeof args.readId !== 'string' || !args.readId || args.readId.length > 160) throw failure('INVALID_PARAMS','Use the original retained read ID.');
-          await this.#files.release(args.workspace,args.readId); return {released:true,readId:args.readId};
+          await this.#files.release(args.workspace,args.readId);
+          await this.#deployment.releaseArchive(args.workspace,args.readId);
+          return {released:true,readId:args.readId};
         default: throw failure('METHOD_NOT_FOUND','Unknown OpenSearch workspace tool.');
       }
     } catch (error) {
@@ -518,10 +532,10 @@ export class MerchantOpenSearchWorkspaces {
     this.#closing = true;
     this.#close = (async () => {
       await Promise.allSettled([...this.#pending.keys()]);
-      await this.#files.close();
+      const readers = await Promise.allSettled([this.#files.close(),this.#deployment.close()]);
       const results = await Promise.allSettled([...this.#handles.values()].map(async handle => (await handle).close()));
       this.#handles.clear();
-      const rejected = results.find(item => item.status === 'rejected');
+      const rejected = [...readers,...results].find(item => item.status === 'rejected');
       if (rejected) throw rejected.reason;
     })();
     return this.#close;

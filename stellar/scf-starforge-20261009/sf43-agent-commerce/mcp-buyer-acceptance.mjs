@@ -5,6 +5,7 @@ import { X402BuyerClient } from '../sf31-buyer-client/buyer.mjs';
 import {bindDiscoveryQuote, reviewPaymentRequired} from '../../../stellar-forge/quote-commitment/quote-commitment.mjs';
 import {decodeX402Header,checkStellarTestnetTransaction,createOfficialEventDecoder} from './verify.mjs';
 import {nativeAnalysisActions,nativeAnalysisSchema} from '../../../stellar-forge/mcp-paid-agent/native-analysis-schema.mjs';
+import {nativeCollectionActions,nativeCollectionsSchema} from '../../../stellar-forge/mcp-paid-agent/native-collections-schema.mjs';
 
 const REPORT=(reason,other={})=>({decision:'NOT_AUTHORIZED',reason,...other});
 /**
@@ -89,7 +90,7 @@ export async function executeDiscoveredHttpPayment({
 // owns streamable HTTP initialize/tools/list/tools/call JSON-RPC and consent state.
 export const mcpAgentCommerceTool = Object.freeze({
   name:'sf43_discover_review_and_pay',
-  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows or exact files, and inspect/finalize original accounting. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
+  description:'Use an independently approved native Stellar buyer for a discovered HTTP API. Native SF88 supports ordinary requests, complete object-* acquisition from an operator-registered S3 description, and dataset-* acquisition from an original SF30 dataset description. Dataset customers select an exact snapshot/query and whole-query limits, run/recover original per-page purchases, deliver through SF100, read typed rows or exact files, and inspect/finalize original accounting. The analysis action uses a host-registered original analytical workspace to import completed data, review editions, run SQL, publish reports and reopen verified exports. The collections action operates an existing host-registered collection browser: exact source review, original queue/run/pause/recovery, retained approvals, complete exports and saved customer files. All purchase types share the original operator approval gate and ledger. Legacy callbacks retain their original interface; a tool call cannot replace approval.',
   inputSchema:{type:'object',additionalProperties:false,
     properties:{
       action:{type:'string',enum:['prepare','execute','status','history','cancel','recover','read',
@@ -97,7 +98,7 @@ export const mcpAgentCommerceTool = Object.freeze({
         'object-cancel','object-recover','object-assemble','object-read','object-accounting','object-finalize',
         'dataset-sources','dataset-describe','dataset-prepare','dataset-history','dataset-status','dataset-run',
         'dataset-cancel','dataset-recover','dataset-deliver','dataset-rows','dataset-read','dataset-accounting','dataset-finalize',
-        ...nativeAnalysisActions],
+        ...nativeAnalysisActions,...nativeCollectionActions],
         description:'Native workspace action; omitted means execute. object-* and dataset-* use operator-registered original descriptions and native acquisition sessions. Non-native callbacks may support only the original execute arguments.'},
       intentId:{type:'string',pattern:'^[A-Za-z0-9._:-]{1,128}$',description:'Required by the native workspace. Keep this same ID to inspect or recover an existing operation.'},
       search:{type:'string',minLength:1,maxLength:256},targetResourceURL:{type:'string'},
@@ -120,7 +121,8 @@ export const mcpAgentCommerceTool = Object.freeze({
       maxPageBytes:{type:'integer',minimum:1024,maximum:2097152},
       filename:{type:'string',enum:['dataset.jsonl','dataset.csv','review.html','manifest.json'],
         description:'Exact original SF100 delivered file for dataset-read; return its bytes without reformatting.'},
-      ...nativeAnalysisSchema.properties
+      ...nativeAnalysisSchema.properties,
+      ...nativeCollectionsSchema.properties
     },
     anyOf:[
       {required:['search','targetResourceURL','maxAtomic'],properties:{action:{enum:['prepare','execute']}}},
@@ -136,6 +138,7 @@ export const mcpAgentCommerceTool = Object.freeze({
       {required:['action','acquisitionId'],properties:{action:{enum:['dataset-status','dataset-run','dataset-cancel',
         'dataset-recover','dataset-deliver','dataset-rows','dataset-accounting','dataset-finalize']}}},
       {required:['action','acquisitionId','filename'],properties:{action:{const:'dataset-read'}}},
-      ...nativeAnalysisSchema.anyOf
+      ...nativeAnalysisSchema.anyOf,
+      ...nativeCollectionsSchema.anyOf
     ]}
 });

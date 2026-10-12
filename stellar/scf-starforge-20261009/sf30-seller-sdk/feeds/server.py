@@ -39,8 +39,11 @@ class OperatorServer(ThreadingHTTPServer):
         self.slots = threading.BoundedSemaphore(8)
         self.jobs = threading.RLock()
         self.job, self.worker = None, None
+        self.launch = None
         super().__init__(("127.0.0.1", port), Handler)
-        self.origin = f"http://127.0.0.1:{self.server_port}"
+        self.origin = "http://127.0.0.1" + ("" if self.server_port == 80 else ":" + str(self.server_port))
+        self.hosts = {urlsplit(self.origin).netloc, f"127.0.0.1:{self.server_port}"}
+        self.origins = {self.origin, f"http://127.0.0.1:{self.server_port}"}
         self.url = self.origin + "/#" + self.token
 
     def process_request(self, request, client_address):
@@ -111,9 +114,9 @@ class Handler(BaseHTTPRequestHandler):
         target = urlsplit(self.path)
         if len(self.headers.get_all("Host", [])) != 1 or len(self.headers.get_all("Origin", [])) > 1:
             raise PermissionError("Repeated local host or origin")
-        if target.scheme or target.netloc or self.headers.get("Host") != urlsplit(self.server.origin).netloc:
+        if target.scheme or target.netloc or self.headers.get("Host") not in self.server.hosts:
             raise PermissionError("Invalid local host")
-        if self.headers.get("Origin") not in (None, self.server.origin):
+        if self.headers.get("Origin") not in self.server.origins | {None}:
             raise PermissionError("Cross-origin requests are not accepted")
         if api:
             supplied = self.headers.get("Authorization", "")
@@ -193,6 +196,10 @@ class Handler(BaseHTTPRequestHandler):
         q, ws = self._query(target), self.server.workspace
         if target.path == "/api/activity":
             self._json(self.server.activity()); return
+        if target.path == "/api/launch":
+            if self.server.launch is None:
+                raise InputError("Open this console with its original structured startup")
+            self._json(self.server.launch); return
         self.server.idle()
         if target.path == "/api/subscriptions":
             self._json(ws.subscriptions.state())

@@ -90,3 +90,7 @@ The original dataset query controls page limits, supported fields and snapshot-b
 - `workspace.mjs`, `ui/` and `cli.mjs`: the same operator and customer workflow
 
 The scientific source intake has no added npm dependency. The original native merchant and buyer require their existing x402 and Stellar dependencies. The complete journey uses the maintained local protocol fixture, with its returned payment and delivery outcomes recorded by the original buyer.
+
+## Open Waters receiving
+
+The **Open Waters** tab turns any saved review into a retained receiving plan for Open Environment’s published importer. It provides native identity mapping, location/activity/result fields, bulk translations, detection-limit choices, reference catalogs, six exact downloads, and complete-bundle receiving into an empty project. See [Open Waters receiving](OPEN_WATERS.md) for the full operator flow, CLI commands, pinned import contract and complete original-source journey.

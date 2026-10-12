@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 import { RetainedFileReads } from './retained-file-reads.mjs';
 import { adjustmentDefinitions, MerchantAdjustments } from './accounting-adjustments.mjs';
 import { statementDefinitions, statementFileNames, statementFileSelectors, MerchantCustomerStatements } from './accounting-statements.mjs';
-import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, MerchantPlatforms } from './accounting-platforms.mjs';
+import { platformDefinitions, platformFileNames, normalizePlatformConfig, platformSourceView, platformPathReferences, MerchantPlatforms } from './accounting-platforms.mjs';
 import { bitwaveDefinitions, normalizeBitwaveConfig, bitwaveSourceView, bitwavePathReferences, MerchantBitwave } from './bitwave.mjs';
 import { openAccountingWorkspace } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/store.mjs';
 import { openAccountingMaintenance } from '../../stellar/scf-starforge-20261009/merchant-settlement-accounting/workspace/recovery-controller.mjs';
@@ -166,7 +166,7 @@ export function normalizeAccountingConfig(raw, base) {
     for (const field of sourceKinds) entry[field] = sourceMap(value[field], base);
     entry.collectionInputs = collectionInputMap(value.collectionInputs, base);
     entry.bitwave = normalizeBitwaveConfig(value.bitwave, base);
-    entry.platforms = normalizePlatformConfig(value.platforms);
+    entry.platforms = normalizePlatformConfig(value.platforms, base);
     if (value.recovery !== undefined) {
       exact(value.recovery, ['stateRoot', 'backupRoot', 'passEnv', 'startPaused'], ['stateRoot', 'backupRoot']);
       const recovery = value.recovery, passEnv = recovery.passEnv ?? 'STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE';
@@ -223,15 +223,17 @@ function collectionResult(value, args = {}) {
 }
 
 export class MerchantAccounting {
-  #config; #sessions = new Map(); #closing = false; #close; #substitutions;
+  #config; #sessions = new Map(); #closing = false; #close; #substitutions; #platformOptions;
   #files = new RetainedFileReads({ errorPrefix: 'ACCOUNTING' });
-  constructor(config) {
+  constructor(config, { environment = process.env, quickbooksOAuth = {} } = {}) {
     this.#config = config.accounting ?? { workspaces: {} };
+    this.#platformOptions = { environment: { ...environment }, quickbooksOAuth: { ...quickbooksOAuth } };
     this.#substitutions = Object.entries(this.#config.workspaces).flatMap(([key, value]) => [
       ...['directory', 'outboxDir', 'proofDir', 'termsFile'].map(field => [value[field], 'accounting://' + key + '/' + field]),
       ...sourceKinds.flatMap(kind => Object.entries(value[kind] ?? {}).map(([alias, path]) => [path, 'accounting://' + key + '/' + kind + '/' + alias])),
       ...Object.entries(value.collectionInputs ?? {}).map(([alias, input]) => [input.file, 'accounting://' + key + '/collectionInputs/' + alias]),
       ...bitwavePathReferences(value.bitwave, key),
+      ...platformPathReferences(value.platforms, key),
       ...Object.entries(value.recovery ?? {}).filter(([field]) => ['stateRoot', 'backupRoot'].includes(field)).map(([field, path]) => [path, 'accounting://' + key + '/recovery/' + field]),
     ]).sort((a, b) => b[0].length - a[0].length);
   }
@@ -327,7 +329,7 @@ export class MerchantAccounting {
       runtime.adjustments = new MerchantAdjustments(workspace, { httpsProxyEnv: definition.adjustmentHttpsProxyEnv });
       runtime.statements = new MerchantCustomerStatements(workspace, { readSource: (source, maximum) => sourceBytes(this.#source(key, 'statementUsageInputs', source), maximum) });
       await runtime.statements.init();
-      runtime.platforms = new MerchantPlatforms(workspace, runtime.accountant, { definition: definition.platforms,
+      runtime.platforms = new MerchantPlatforms(workspace, runtime.accountant, { ...this.#platformOptions, definition: definition.platforms,
         readSource: (source, maximum) => sourceBytes(this.#source(key, 'platformInputs', source), maximum) });
       await runtime.platforms.init();
       if (definition.bitwave) {
