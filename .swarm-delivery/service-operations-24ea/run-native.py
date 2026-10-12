@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Run the retained Service receiving entrypoint with an explicitly selected host runtime."""
 import argparse
+import datetime
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
 import shutil
+import signal
+import socket
 import subprocess
 import sys
-import threading
+import uuid
 
 PACKET_SHA256 = "7a098fefcb5ad745810602f5d994a723f0e10317acb27bd85db2ac4f723a1fa0"
 SOURCE_COMMIT = "fe7329e0595d7ab77eddc832bee27785f13e9a4d"
@@ -19,13 +23,37 @@ def emit(value):
     print(json.dumps(value, separators=(",", ":")), flush=True)
 
 
+def now():
+    return datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+
+def process_start(pid):
+    try:
+        return Path("/proc/" + str(pid) + "/stat").read_text().rsplit(")", 1)[1].split()[19]
+    except (FileNotFoundError, ProcessLookupError):
+        return None
+
+
+def runtime_identity():
+    return {"hostname": socket.gethostname(),
+            "bootId": Path("/proc/sys/kernel/random/boot_id").read_text().strip(),
+            "pidNamespace": os.readlink("/proc/self/ns/pid")}
+
+
 def write_json(path, value):
-    temporary = path.with_name(path.name + ".tmp")
-    with temporary.open("w", encoding="utf-8") as stream:
-        json.dump(value, stream, indent=2)
-        stream.write("\n")
-    temporary.chmod(0o600)
-    temporary.replace(path)
+    # Same durable record pattern as the original managed Support receiving carrier.
+    temporary = path.with_name(path.name + ".pending-" + uuid.uuid4().hex)
+    with temporary.open("xb") as stream:
+        os.chmod(temporary, 0o600)
+        stream.write((json.dumps(value, indent=2) + "\n").encode())
+        stream.flush()
+        os.fsync(stream.fileno())
+    os.replace(temporary, path)
+    descriptor = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
 
 
 def read_existing(path):
@@ -86,8 +114,12 @@ def main():
             })
     if len({item["caseId"] for item in existing}) > 1:
         raise RuntimeError("The original checkpoint and completed result contain different cases")
+    owner = read_existing(native / "native-active.json")
+    owner_summary = None if owner is None else {
+        key: owner["value"].get(key) for key in
+        ("attemptId", "host", "phase", "pid", "processStart", "controllerPid", "controllerProcessStart", "startedAt", "finishedAt")}
     emit({"event": "service-existing-native-read", "operationId": OPERATION,
-          "directory": str(native), "records": existing, "nativeChildStarted": False})
+          "directory": str(native), "records": existing, "active": owner_summary, "nativeChildStarted": False})
     if args.inspect:
         return 0
 
@@ -99,94 +131,201 @@ def main():
 
     for path in (root, source, native):
         path.mkdir(parents=True, exist_ok=True, mode=0o700)
-    for name, content in packet["files"].items():
-        parts = PurePosixPath(name)
-        if parts.is_absolute() or ".." in parts.parts or "\\" in name:
-            raise RuntimeError("Unsafe source path")
-        data = content.encode("utf-8")
-        observed = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
-        if observed != packet["file_blobs"][name]:
-            raise RuntimeError("Source blob mismatch " + name)
-        target = source.joinpath(*parts.parts)
-        if not target.resolve().is_relative_to(source) or target.is_symlink():
-            raise RuntimeError("The selected source path leaves its retained source directory")
-        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        if target.exists():
-            if target.read_bytes() != data:
-                raise RuntimeError("Different selected source already exists " + name)
-        else:
-            with target.open("xb") as stream:
-                stream.write(data)
-            target.chmod(0o600)
-
-    entry = source / packet["nativeEntry"]
-    if packet["nativeEntry"] not in packet["files"] or not entry.is_file():
-        raise RuntimeError("The original native entrypoint is absent")
-    modules = source / "node_modules"
-    if modules.exists() or modules.is_symlink():
-        if modules.resolve() != deps:
-            raise RuntimeError("The existing source dependency selection differs")
-    else:
-        modules.symlink_to(deps, target_is_directory=True)
-    browser = root / "browser"
-    browser.mkdir(exist_ok=True, mode=0o700)
-    browser_link = native / "browser"
-    if not browser_link.exists() and not browser_link.is_symlink():
-        browser_link.symlink_to(browser, target_is_directory=True)
-    elif browser_link.is_symlink() and not browser_link.exists():
-        raise RuntimeError("Retain or restore the existing browser-profile destination")
-
-    selection = {
-        "operationId": OPERATION, "commit": SOURCE_COMMIT, "packetSha256": PACKET_SHA256,
-        "source": str(source), "native": str(native), "files": packet["file_blobs"],
-        "browserProfile": str(browser_link.resolve()),
-        "runtime": {"node": str(node), "chromium": str(chromium),
-                    "playwrightModule": str(playwright), "nodeModules": str(deps)},
-    }
-    for path in (root / "source-selection.json", native / "runtime-custody.json"):
-        prior = read_existing(path)
-        if prior and prior["value"].get("packetSha256") != PACKET_SHA256:
-            raise RuntimeError("The existing runtime custody selects a different original source")
-    write_json(root / "source-selection.json", selection)
-    write_json(native / "runtime-custody.json", {key: value for key, value in selection.items() if key != "files"})
-    emit({"event": "service-source-ready", "commit": SOURCE_COMMIT, "files": len(packet["files"]),
-          "native": str(native), "sharedFreeBytes": shutil.disk_usage(native).free,
-          "sourceFreeBytes": shutil.disk_usage(source).free})
-    argv = [str(node), str(entry), "--directory", str(native), "--source-commit", SOURCE_COMMIT,
-            "--chromium", str(chromium), "--playwright-module", str(playwright)]
-    log = native / "service-native-output.log"
-    with log.open("ab", buffering=0) as output:
-        child = subprocess.Popen(argv, cwd=str(source), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        emit({"event": "service-original-native-started", "pid": child.pid, "argv": argv})
-
-        def pump():
-            echo = True
-            for block in iter(lambda: child.stdout.read1(16384), b""):
-                output.write(block)
-                if echo:
-                    try:
-                        sys.stdout.buffer.write(block)
-                        sys.stdout.buffer.flush()
-                    except BrokenPipeError:
-                        echo = False
-
-        reader = threading.Thread(target=pump, daemon=True)
-        reader.start()
+    host_identity = runtime_identity()
+    lock_path = native / "native-receiving.lock"
+    with lock_path.open("a+b") as lease:
+        os.chmod(lock_path, 0o600)
         try:
-            code = child.wait()
-        finally:
-            if child.poll() is None:
-                child.terminate()
+            fcntl.flock(lease.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise RuntimeError("The original Service directory already has an active receiving controller")
+        active_path = native / "native-active.json"
+        previous = read_existing(active_path)
+        if previous:
+            prior = previous["value"]
+            if prior.get("phase") in ("STARTING", "RUNNING") and prior.get("host") == host_identity:
+                pid, expected_start = prior.get("pid"), prior.get("processStart")
+                actual_start = process_start(pid) if pid else None
+                if actual_start is not None and (expected_start is None or actual_start == expected_start):
+                    raise RuntimeError("Original Service child is still active: " + str(pid))
+        # Reconcile the same records under the inherited case lease before any source/native write.
+        selected_records = {item["path"]: item["sha256"] for item in existing}
+        for name in ("service-receiving-checkpoint.json", "service-native-run.json"):
+            path = native / name
+            current = read_existing(path)
+            if (current["sha256"] if current else None) != selected_records.get(str(path)):
+                raise RuntimeError("The original Service checkpoint changed during receiving selection")
+
+        for name, content in packet["files"].items():
+            parts = PurePosixPath(name)
+            if parts.is_absolute() or ".." in parts.parts or "\\" in name:
+                raise RuntimeError("Unsafe source path")
+            data = content.encode("utf-8")
+            observed = hashlib.sha1(b"blob " + str(len(data)).encode() + b"\0" + data).hexdigest()
+            if observed != packet["file_blobs"][name]:
+                raise RuntimeError("Source blob mismatch " + name)
+            target = source.joinpath(*parts.parts)
+            if not target.resolve().is_relative_to(source) or target.is_symlink():
+                raise RuntimeError("The selected source path leaves its retained source directory")
+            target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+            if target.exists():
+                if target.read_bytes() != data:
+                    raise RuntimeError("Different selected source already exists " + name)
+            else:
+                with target.open("xb") as stream:
+                    stream.write(data)
+                target.chmod(0o600)
+
+        entry = source / packet["nativeEntry"]
+        if packet["nativeEntry"] not in packet["files"] or not entry.is_file():
+            raise RuntimeError("The original native entrypoint is absent")
+        modules = source / "node_modules"
+        if modules.exists() or modules.is_symlink():
+            if modules.resolve() != deps:
+                raise RuntimeError("The existing source dependency selection differs")
+        else:
+            modules.symlink_to(deps, target_is_directory=True)
+        browser = root / "browser"
+        browser.mkdir(exist_ok=True, mode=0o700)
+        browser_link = native / "browser"
+        if not browser_link.exists() and not browser_link.is_symlink():
+            browser_link.symlink_to(browser, target_is_directory=True)
+        elif browser_link.is_symlink() and not browser_link.exists():
+            raise RuntimeError("Retain or restore the existing browser-profile destination")
+
+        selection = {
+            "operationId": OPERATION, "commit": SOURCE_COMMIT, "packetSha256": PACKET_SHA256,
+            "source": str(source), "native": str(native), "files": packet["file_blobs"],
+            "browserProfile": str(browser_link.resolve()),
+            "runtime": {"node": str(node), "chromium": str(chromium),
+                        "playwrightModule": str(playwright), "nodeModules": str(deps)},
+        }
+        for path in (root / "source-selection.json", native / "runtime-custody.json"):
+            prior = read_existing(path)
+            if prior:
+                value = prior["value"]
+                if value.get("commit") != SOURCE_COMMIT:
+                    raise RuntimeError("The existing runtime custody selects a different original source")
+                if value.get("packetSha256") not in (None, PACKET_SHA256):
+                    raise RuntimeError("The existing runtime custody selects different original packet bytes")
+                if value.get("files") not in (None, packet["file_blobs"]):
+                    raise RuntimeError("The existing runtime custody contains a different original file index")
+                if value.get("packetSha256") is None:
+                    # All 118 actual source bytes above have already matched the retained blob map.
+                    selection.setdefault("adoptedCustody", []).append({
+                        "path": str(path), "sha256": prior["sha256"], "verifiedFiles": len(packet["files"])})
+        write_json(root / "source-selection.json", selection)
+        write_json(native / "runtime-custody.json", {key: value for key, value in selection.items() if key != "files"})
+        emit({"event": "service-source-ready", "commit": SOURCE_COMMIT, "files": len(packet["files"]),
+              "native": str(native), "sharedFreeBytes": shutil.disk_usage(native).free,
+              "sourceFreeBytes": shutil.disk_usage(source).free})
+        argv = [str(node), str(entry), "--directory", str(native), "--source-commit", SOURCE_COMMIT,
+                "--chromium", str(chromium), "--playwright-module", str(playwright)]
+        attempt = uuid.uuid4().hex
+        active = {
+            "schema": "stellar-forge.service-receiving-active.v1",
+            "operationId": OPERATION, "attemptId": attempt, "sourceCommit": SOURCE_COMMIT,
+            "host": host_identity, "work": str(root), "directory": str(native),
+            "startedAt": now(), "phase": "STARTING",
+            "controllerPid": os.getpid(), "controllerProcessStart": process_start(os.getpid()),
+            "argv": argv, "packetSha256": PACKET_SHA256, "files": len(packet["files"]),
+        }
+        write_json(active_path, active)
+        log = native / "service-native-output.log"
+        child = None
+        prior_handlers = {}
+        interrupted = {"signal": None}
+
+        def forward(signum, _frame):
+            interrupted["signal"] = signum
+            if child and child.poll() is None:
                 try:
-                    child.wait(timeout=10)
+                    os.killpg(child.pid, signum)
+                except ProcessLookupError:
+                    pass
+
+        def close_owned_group():
+            if child is None:
+                return
+            try:
+                os.killpg(child.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            if child.poll() is None:
+                try:
+                    child.wait(timeout=15)
                 except subprocess.TimeoutExpired:
-                    child.kill()
+                    try:
+                        os.killpg(child.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
                     child.wait()
-            reader.join(timeout=5)
-    emit({"event": "service-original-native-completed", "pid": child.pid, "exitCode": code,
-          "checkpoint": str(native / "service-receiving-checkpoint.json"),
-          "result": str(native / "service-native-run.json")})
-    return code if code >= 0 else 128 - code
+
+        def retain_active():
+            write_json(active_path, active)
+            attempts = native / "native-attempts"
+            attempts.mkdir(exist_ok=True, mode=0o700)
+            write_json(attempts / (attempt + ".json"), active)
+
+        try:
+            for signum in (signal.SIGINT, signal.SIGTERM):
+                prior_handlers[signum] = signal.signal(signum, forward)
+            env = dict(os.environ)
+            env.update({"PATH": str(node.parent) + os.pathsep + env.get("PATH", ""),
+                        "TMPDIR": str(root), "PYTHONDONTWRITEBYTECODE": "1"})
+            with log.open("ab", buffering=0) as output:
+                os.chmod(log, 0o600)
+                if interrupted["signal"] is not None:
+                    raise InterruptedError("Service receiving interrupted before child creation")
+                child = subprocess.Popen(argv, cwd=str(source), env=env, stdout=subprocess.PIPE,
+                                         stderr=subprocess.STDOUT, start_new_session=True,
+                                         pass_fds=(lease.fileno(),))
+                if interrupted["signal"] is not None:
+                    forward(interrupted["signal"], None)
+                active.update({"phase": "RUNNING", "pid": child.pid,
+                               "processStart": process_start(child.pid)})
+                write_json(active_path, active)
+                emit({"event": "service-original-native-started", "pid": child.pid,
+                      "attemptId": attempt, "argv": argv})
+                echo = True
+                for block in iter(lambda: child.stdout.read1(16384), b""):
+                    output.write(block)
+                    if echo:
+                        try:
+                            sys.stdout.buffer.write(block)
+                            sys.stdout.buffer.flush()
+                        except BrokenPipeError:
+                            echo = False
+                code = child.wait()
+            if code:
+                close_owned_group()
+            else:
+                completed = read_existing(native / "service-native-run.json")
+                if not completed or completed["value"].get("result") != "PASS":
+                    raise RuntimeError("Original native journey exited without its completed Service receiving result")
+            active.update({"phase": "COMPLETE" if code == 0 else "FAILED",
+                           "exitCode": code, "finishedAt": now()})
+            if interrupted["signal"] is not None:
+                active.update({"phase": "INTERRUPTED", "signal": interrupted["signal"]})
+            retain_active()
+            emit({"event": "service-original-native-completed", "pid": child.pid,
+                  "exitCode": code, "phase": active["phase"], "attemptId": attempt,
+                  "checkpoint": str(native / "service-receiving-checkpoint.json"),
+                  "result": str(native / "service-native-run.json")})
+            return code if code >= 0 else 128 - code
+        except BaseException as error:
+            close_owned_group()
+            active.update({"phase": "CONTROLLER_ERROR", "error": str(error), "finishedAt": now()})
+            if interrupted["signal"] is not None:
+                active.update({"phase": "INTERRUPTED", "signal": interrupted["signal"],
+                               "exitCode": 128 + interrupted["signal"]})
+            retain_active()
+            if interrupted["signal"] is not None:
+                return 128 + interrupted["signal"]
+            raise
+        finally:
+            for signum, handler in prior_handlers.items():
+                signal.signal(signum, handler)
 
 
 if __name__ == "__main__":
