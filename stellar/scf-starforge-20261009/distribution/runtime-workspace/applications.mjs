@@ -7,6 +7,7 @@ import { blockscoutApplication, prepareBlockscoutApplication } from './applicati
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
+import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
@@ -15,6 +16,7 @@ import { openApiApplication, prepareOpenApiApplication } from './application-ope
 import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
+import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
@@ -54,12 +56,14 @@ export const APPLICATION_CATALOG = Object.freeze([
   mppApplication(common),
   cheesecakeApplication(common),
   odataApplication(common),
+  secEdgarApplication(common),
   jobResultReceiverApplication(common),
   sheetsApplication(common),
   redisApplication(common),
   arcgisAgentApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
+  pricingApplication(common),
   collectionsApplication(common),
   grantApplication(common),
   tenderlyApplication(common),
@@ -197,6 +201,7 @@ function normalizeSettings(type, input) {
   if (type.id === 'dataset') need(Boolean(settings.datasetFile) !== Boolean(settings.stateDirectory),
     'APPLICATION_DATASET_SELECTION_REQUIRED', 'Choose exactly one original dataset file or retained state');
   if (type.id === 'job-checkout') validateJobCheckoutSelection(settings);
+  if (type.id === 'merchant-pricing') validatePricingSelection(settings);
   if (type.id.endsWith('-publisher')) {
     need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
     need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
@@ -225,6 +230,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     stellarApplication = original.identity;
   } else if (type.id === 'odata') {
     const original = await prepareODataApplication(settings, { ...context, inputPath, selectedExecutable, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'sec-edgar') {
+    const original = await prepareSecEdgarApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'job-result-receiver') {
     const original = await prepareJobResultReceiverApplication(settings, {
@@ -261,6 +269,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'dataset-buyer') {
     const prepared = await prepareDatasetBuyerApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'merchant-pricing') {
+    const prepared = await preparePricingApplication(settings, { ...context, inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'browser-wallet') {
     const original = await prepareBrowserWalletApplication(settings, inputPath, runtimeDirectory);
@@ -385,6 +396,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
       await retain(profile.storeConfig, 'file');
       await retain(profile.operations, 'directory', true);
       for (const root of profile.bundleRoots) await retain(root.directory);
+      for (const plan of profile.capturePlans ?? []) await retain(plan.planFile, 'file', true);
       await retain(profile.downloadRoot);
       await retain(profile.restoreRoot);
     }
