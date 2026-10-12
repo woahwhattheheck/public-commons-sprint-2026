@@ -5,6 +5,7 @@ import { open, mkdir, lstat, realpath, readdir, link, unlink } from 'node:fs/pro
 import { createHash } from 'node:crypto';
 import { dirname, join, resolve, posix, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateSourceSelectionRecord, retainedSourceSelectionId, requireSourceSelectionMatch } from './source-selection.mjs';
 
 const SCHEMA = 'stellar-forge.distribution-build.v1';
 const MANIFEST = 'stellar-forge.merchant-distribution-manifest.v1';
@@ -73,6 +74,9 @@ async function lease(directory) {
 }
 
 function validIntent(value) {
+  if (value?.sourceSelection !== undefined) {
+    try { validateSourceSelectionRecord(value.sourceSelection); } catch { return false; }
+  }
   return value?.schema === SCHEMA && OID.test(value.sourceCommit ?? '') &&
     SHA256.test(value.manifestSha256 ?? '') && typeof value.packageName === 'string' &&
     typeof value.packageVersion === 'string' && /^[A-Za-z0-9_.-]+\.tgz$/.test(value.archiveName ?? '');
@@ -95,7 +99,9 @@ export async function readDistributionBuildPin(output) {
   if (manifest) {
     need(manifest.schema === MANIFEST && OID.test(manifest.sourceCommit ?? ''),
       'DISTRIBUTION_LEGACY_MANIFEST_INVALID');
-    return { sourceCommit: manifest.sourceCommit, legacy: true };
+    if (manifest.sourceSelection !== undefined) validateSourceSelectionRecord(manifest.sourceSelection);
+    return { sourceCommit: manifest.sourceCommit, legacy: true,
+      ...(manifest.sourceSelection === undefined ? {} : { sourceSelection: manifest.sourceSelection }) };
   }
   return null;
 }
@@ -125,6 +131,8 @@ async function completed(root, intent) {
   if (!receipt) return null;
   need(receipt.status === 'PACKAGED' && receipt.sourceCommit === intent.sourceCommit &&
     receipt.packageName === intent.packageName && receipt.packageVersion === intent.packageVersion &&
+    retainedSourceSelectionId(receipt.sourceSelection) === retainedSourceSelectionId(intent.sourceSelection) &&
+    (receipt.sourceSelection?.sha256 ?? null) === (intent.sourceSelection?.sha256 ?? null) &&
     receipt.archive === join(root, intent.archiveName) && SHA256.test(receipt.sha256 ?? ''),
   'DISTRIBUTION_RECEIPT_CONFLICT');
   const observed = await archiveIdentity(receipt.archive);
@@ -134,9 +142,10 @@ async function completed(root, intent) {
 }
 
 /** Return an existing completed operation without reading Git or running npm. */
-export async function recoverCompletedDistribution(output, ref) {
+export async function recoverCompletedDistribution(output, ref, selection) {
   const root = resolve(output), intent = await readDistributionBuildPin(root);
   if (!validIntent(intent)) return null;
+  requireSourceSelectionMatch(intent.sourceSelection, selection);
   // Symbolic refs require the original resolver to compare the caller's choice.
   if (ref !== undefined && ref !== intent.sourceCommit) return null;
   const owned = await lease(root);
@@ -158,6 +167,7 @@ export async function inspectDistributionBuild({ output } = {}) {
   }
   const staged = await info(join(root, 'package', 'manifest.json'));
   return { output: root, sourceCommit: pin?.sourceCommit ?? null,
+    sourceSelection: pin?.sourceSelection ?? null,
     state: receipt ? 'PACKAGED' : staged ? 'MATERIALIZED' : 'MATERIALIZING',
     packageName: pin?.packageName ?? receipt?.packageName ?? null,
     packageVersion: pin?.packageVersion ?? receipt?.packageVersion ?? null,
@@ -249,7 +259,8 @@ export async function openDistributionBuild({ output, resume = false, manifest, 
   need(!resume || process.platform === 'linux', 'DISTRIBUTION_RESUME_LINUX_REQUIRED');
   const archiveName = manifest.packageName.replace(/^@/, '').replace('/', '-') + '-' + manifest.packageVersion + '.tgz';
   const intent = { schema: SCHEMA, sourceCommit: manifest.sourceCommit, packageName: manifest.packageName,
-    packageVersion: manifest.packageVersion, manifestSha256: hash(Buffer.from(json(manifest))), archiveName };
+    packageVersion: manifest.packageVersion, manifestSha256: hash(Buffer.from(json(manifest))), archiveName,
+    ...(manifest.sourceSelection === undefined ? {} : { sourceSelection: manifest.sourceSelection }) };
   need(validIntent(intent), 'DISTRIBUTION_BUILD_INTENT_INVALID');
   if (resume) await directory(root);
   else { await mkdir(root, { mode: 0o700 }); await directory(root); await syncDirectory(dirname(root)); }
