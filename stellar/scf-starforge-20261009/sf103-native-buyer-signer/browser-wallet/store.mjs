@@ -38,7 +38,6 @@ export async function openWalletStore(config, verifier, { now = () => Date.now()
   function finish(row, nextState, error) {
     row.state = nextState; row.error = error;
     row.completedAt = stamp(); row.revision++; delete row.claimId;
-    providerSeen.delete(row.id);
   }
   function expire(next) {
     let changed = false;
@@ -53,8 +52,7 @@ export async function openWalletStore(config, verifier, { now = () => Date.now()
         finish(row, 'INTERRUPTED', 'WALLET_BUYER_DISCONNECTED'); changed = true;
       }
     }
-    if (disconnected) connection = null;
-    return changed;
+    return { changed, disconnected };
   }
   function transaction(fn) {
     const run = queue.then(async () => {
@@ -62,18 +60,38 @@ export async function openWalletStore(config, verifier, { now = () => Date.now()
       const next = clone(state);
       // Persist expiry before the requested action: a late heartbeat or failed
       // claim cannot revive the old connection or discard a terminal transition.
-      if (expire(next)) {
+      const expired = expire(next);
+      if (expired.changed) {
         next.revision++;
         await writeAtomic(path, next);
         state = clone(next);
+        // Keep the evidence for an interrupted heartbeat until its terminal
+        // transition is durable. A failed write must be retried before action.
+        for (const row of next.requests) {
+          if (TERMINAL.has(row.state)) providerSeen.delete(row.id);
+        }
       }
-      const outcome = await fn(next);
-      if (outcome.changed) {
-        next.revision++;
-        await writeAtomic(path, next);
-        state = next;
+      if (expired.disconnected) connection = null;
+      // Action effects belong to its successful transition. Keep any expiry
+      // already committed above, and restore volatile liveness if this action
+      // or its state write fails (including enqueue, complete and disconnect).
+      const originalConnection = clone(connection);
+      const originalProviderSeen = new Map(providerSeen);
+      try {
+        const outcome = await fn(next);
+        const value = clone(outcome.value);
+        if (outcome.changed) {
+          next.revision++;
+          await writeAtomic(path, next);
+          state = next;
+        }
+        return value;
+      } catch (error) {
+        connection = originalConnection;
+        providerSeen.clear();
+        for (const [id, seenAt] of originalProviderSeen) providerSeen.set(id, seenAt);
+        throw error;
       }
-      return clone(outcome.value);
     });
     queue = run.catch(() => {});
     return run;
