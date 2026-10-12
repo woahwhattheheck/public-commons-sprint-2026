@@ -1,5 +1,6 @@
 // MIT. Original tool metadata; provider runtimes load only when selected.
 import { MAX_RETAINED_CHUNK_BYTES } from '../retained-file-contracts.mjs';
+import { wooErpTools } from '../woo-erp-schema.mjs';
 
 const HASH = /^[0-9a-f]{64}$/;
 
@@ -85,6 +86,6 @@ const definitions = [
     { ...base, readId: uuid }, ['store', 'readId'], read],
 ];
 
-const woocommerceTools = tool => definitions.map(parts => tool(...parts));
+const woocommerceTools = tool => [...definitions.map(parts => tool(...parts)), ...wooErpTools(tool)];
 
 export { woocommerceTools, definitions, base, read, page, orderId, alias, reviewId, sha256, uuid, amount, currency, kind, exported, FILE, HASH, UUID };

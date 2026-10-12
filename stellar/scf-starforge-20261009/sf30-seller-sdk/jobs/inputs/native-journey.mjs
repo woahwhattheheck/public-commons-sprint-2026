@@ -6,6 +6,8 @@ import { readJson, writeJson, jsonBytes, digest, exists, privateDirectory } from
 import { openAllowedInput, planFromHandle } from './source.mjs';
 import { readChunk } from './files.mjs';
 import { CHUNK_BYTES, UPLOAD_PATH, uploadIdentity } from './protocol.mjs';
+import { startJobsWorkspace } from '../workspace/server.mjs';
+import { openJobInputWorkspace } from './workspace/model.mjs';
 
 const repetitions = 1000;
 const input = { reportName: 'Original invoice file receiving', maxExceptions: 20 };
@@ -197,7 +199,80 @@ export function openInputFileJourney({ fixture, operation, origin, jobId, immuta
     assert.equal(value.sourceFiles.length, 2);
     return true;
   }
+  async function inspectReceivingDesk() {
+    const resultPath = join(fixture, 'input-merchant-receiving.json');
+    if (await exists(resultPath)) {
+      const prior = await readJson(resultPath);
+      assert.equal(prior.operation, operation); assert.equal(prior.jobId, jobId);
+      assert.deepEqual(prior.originals, inputs.originals);
+      return prior;
+    }
+    let operator, desk, outcome, primary;
+    const files = [], outputs = join(fixture, 'merchant-input-downloads');
+    await privateDirectory(outputs);
+    const call = async (path, input) => {
+      const response = await fetch(operator.origin + path, {
+        method: input === undefined ? 'GET' : 'POST',
+        headers: { authorization: 'Bearer ' + operator.token, origin: operator.origin,
+          ...(input === undefined ? {} : { 'content-type': 'application/json' }) },
+        ...(input === undefined ? {} : { body: JSON.stringify(input) }) });
+      const value = await response.json();
+      if (!response.ok) throw Object.assign(new Error(value.code || value.message), { code: value.code, status: response.status });
+      return value;
+    };
+    try {
+      operator = await startJobsWorkspace({ model: getMerchant(), port: 0 });
+      desk = openJobInputWorkspace({ model: getMerchant() });
+      for (const path of ['/inputs/', '/job-inputs.mjs', '/job-inputs.css'])
+        assert.equal((await fetch(operator.origin + path)).status, 200, path);
+      const query = await call('/api/inputs/query', { reference: jobId });
+      assert.equal(query.total, 2);
+      for (const [slot, plan] of Object.entries(plans)) {
+        const id = uploadIdentity(plan), path = '/api/inputs/' + id;
+        const detail = await call(path);
+        assert.deepEqual(detail.original, plan); assert.equal(detail.upload.state, 'SEALED');
+        assert.equal(detail.job.id, jobId); assert.equal(detail.usesFile, true);
+        assert.equal(detail.release.allowed, false);
+        const preview = await call(path + '/preview', {});
+        assert.equal(preview.sha256, plan.file.sha256); assert.equal(preview.bytes, plan.file.bytes);
+        assert.equal(preview.truncated, plan.file.bytes > 262144);
+        const ticket = await call(path + '/download', {});
+        const downloadUrl = new URL(ticket.url, operator.origin);
+        assert.equal(downloadUrl.origin, operator.origin);
+        assert.match(downloadUrl.pathname, /^\/input-transfer\/[a-f0-9]{48}$/);
+        const response = await fetch(downloadUrl);
+        assert.equal(response.status, 200);
+        assert.equal(response.headers.get('x-content-sha256'), plan.file.sha256);
+        const downloaded = Buffer.from(await response.arrayBuffer());
+        assert.equal(downloaded.length, plan.file.bytes); assert.equal(digest(downloaded), plan.file.sha256);
+        const destination = join(outputs, slot + '.original');
+        if (!await exists(destination))
+          await immutable(destination, downloaded.subarray(0, Math.min(8193, downloaded.length)));
+        const saved = await desk.save(id, { path: destination, resume: true });
+        assert.equal(saved.bytes, plan.file.bytes); assert.equal(saved.sha256, plan.file.sha256);
+        await assert.rejects(call(path + '/discard', { expectedRevision: detail.upload.revision,
+          reason: 'Check the completed original job retains the input used by its worker.', releaseOrphan: true }),
+        error => error.status === 409 && error.code === 'JOB_INPUT_FILE_IN_USE');
+        files.push({ id, slot, bytes: plan.file.bytes, sha256: plan.file.sha256,
+          previewBytes: preview.previewBytes, truncated: preview.truncated, saved });
+      }
+      await operator.close(); operator = null;
+      operator = await startJobsWorkspace({ model: getMerchant(), port: 0 });
+      const reopened = await call('/api/inputs/query', { reference: jobId });
+      assert.deepEqual(reopened.items.map(row => row.id).sort(), files.map(file => file.id).sort());
+      assert.ok(reopened.items.every(row => row.job?.id === jobId && row.pinned));
+      outcome = { operation, jobId, originals: inputs.originals, files, reopened: true };
+    } catch (error) { primary = error; throw error; }
+    finally {
+      const results = await Promise.allSettled([operator?.close(), desk?.close()]);
+      const failures = results.filter(value => value.status === 'rejected').map(value => value.reason);
+      if (failures.length) throw new AggregateError([...(primary ? [primary] : []), ...failures], 'INPUT_RECEIVING_JOURNEY_CLOSE_FAILED');
+    }
+    await immutable(resultPath, jsonBytes(outcome));
+    return outcome;
+  }
   async function finish({ resourceId, claimToken }) {
+    const merchantReceiving = await inspectReceivingDesk();
     const path = '/api/job-intake/requests/' + requestId;
     const before = await api(path);
     const cleanup = await api(path + '/files/cleanup', { expectedRevision: before.revision });
@@ -215,16 +290,12 @@ export function openInputFileJourney({ fixture, operation, origin, jobId, immuta
     for (const plan of Object.values(plans)) {
       const id = uploadIdentity(plan), file = getMerchant().inputs.status(id, claimToken);
       assert.equal(file.state, 'SEALED'); assert.equal(file.pinned, true);
-      await assert.rejects(getMerchant().inputs.discard({ id, token: claimToken,
-        expectedRevision: file.revision, releaseOrphan: true,
-        reason: 'Verify retained original job protects its input bytes.' }),
-      error => error.code === 'JOB_INPUT_FILE_IN_USE');
     }
     return { operation, requestId, originalInputFiles: inputs.originals,
       sourceApplication: { path: inputs.applicationPath, sha256: inputs.applicationSha256 },
       repetitions, records: 6 * repetitions, localRestart: await readJson(localRestartPath),
       merchantRestart: await readJson(merchantRestartPath), lostChunkAck: await readJson(lostAckPath),
-      customerCopiesReleased: cleanup, merchantFiles: 2,
+      customerCopiesReleased: cleanup, merchantFiles: 2, merchantReceiving,
       canonicalInputSha256: after.inputSha256, handoffSha256: after.handoffSha256 };
   }
   return { wrapTransport, prepare, assertRequest, verifyReport, finish };
