@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { prepareMerchant, inspectOpenApi } from './workspace/model.mjs';
 import { parseOpenApiSource } from './source-document.mjs';
 import { createOpenApiResolver } from './importer.mjs';
+import { merchantPlanForOperations } from './workspace/transport-plan.mjs';
 
 export const REFRESH_SCHEMA = 'stellar-forge.api-source-refresh.v1';
 export const DECISIONS_SCHEMA = 'stellar-forge.api-source-refresh-decisions.v1';
@@ -137,6 +138,7 @@ function snapshot(prepared, index, spec, row) {
     binding:copy(binding),
     offer:copy(prepared.imported.offers[index].seller),
     upstream:copy(prepared.upstreams.bindings[binding.handler]),
+    ...(prepared.preview.routes[index]?.transport?{transport:copy(prepared.preview.routes[index].transport)}:{}),
     declaration:declared,
     referencedComponents:referencedComponents(spec, declared),
   };
@@ -180,7 +182,7 @@ export function reviewSourceRefresh({baseline, candidateSpecText, decisions = {}
     selected.add(key);
     plan.operations.push(row);
     try {
-      const compiled = prepareMerchant(candidateSpecText, {...copy(plan), operations:[row]});
+      const compiled = prepareMerchant(candidateSpecText, merchantPlanForOperations(plan,[row]));
       entry.after = snapshot(compiled, 0, newSpec, row);
       entry.id = compiled.bindings[0].id;
       entry.changes = sourceChanges(entry.before ?? {}, entry.after);
@@ -222,6 +224,9 @@ export function reviewSourceRefresh({baseline, candidateSpecText, decisions = {}
     add({...copy(addition), method:addition.method.toUpperCase()},
       {from:null, to:key, id:addition.id ?? null, action:'add', state:'UNRESOLVED', changes:[], before:null, after:null});
   }
+  // The original baseline was validated above. Dropped routes no longer retain unused profiles.
+  const selectedPlan=merchantPlanForOperations(plan,plan.operations);
+  if(own(selectedPlan,'transports'))plan.transports=selectedPlan.transports;else delete plan.transports;
   let prepared = null;
   if (!issues.length) {
     try { prepared = prepareMerchant(candidateSpecText, plan); }
@@ -239,6 +244,7 @@ export function reviewSourceRefresh({baseline, candidateSpecText, decisions = {}
     candidate:{sourceSha256:sha(candidateSpecText)}, decisions:decisionsUsed,
     ready:issues.length === 0, plan, operations, issues,
     sourceChanges:sourceChanges(oldSpec, newSpec),
+    ...(baseline.plan.transports===undefined?{}:{transportChanges:sourceChanges(baseline.plan.transports,plan.transports??{})}),
     unselected:candidates.filter(row => !selected.has(row.key)), summary,
     preview:prepared?.preview ?? null,
   };
