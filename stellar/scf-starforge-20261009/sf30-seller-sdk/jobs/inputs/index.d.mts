@@ -90,3 +90,5 @@ export function planFromHandle(options: {
   filename: string; contentType: string; signal?: AbortSignal; onProgress?: (value: InputFileProgress) => void;
 }): Promise<{plan: InputUploadPlan; info: Stats}>;
 export function runJobInputCommand(args?: string[], options?: {print?: (value: unknown) => void}): Promise<void>;
+
+export * from './workspace/index.mjs';

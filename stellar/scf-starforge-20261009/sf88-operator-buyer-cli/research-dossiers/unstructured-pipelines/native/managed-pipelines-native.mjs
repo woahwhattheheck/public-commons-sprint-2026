@@ -2,7 +2,8 @@
 // Run only through the already selected native resource operation.
 import assert from 'node:assert/strict';
 import { createServer } from 'node:https';
-import { readFile, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { readFile, mkdir, mkdtemp, realpath, stat, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { existsSync, readFileSync, writeFileSync, openSync, closeSync, fsyncSync, renameSync } from 'node:fs';
 import { join, resolve, dirname, isAbsolute, relative } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -18,7 +19,7 @@ function options(argv){
   const result={};
   for(let index=0;index<argv.length;index+=2){
     const name=argv[index],value=argv[index+1];
-    assert(['--source-root','--source-identity-file','--directory','--output','--playwright','--chromium','--private-runtime'].includes(name));
+    assert(['--source-root','--source-identity-file','--directory','--output','--playwright','--chromium','--temporary-root','--private-runtime'].includes(name));
     assert(!Object.hasOwn(result,name));assert(isAbsolute(value)&&resolve(value)===value);
     result[name]=value;
   }
@@ -71,15 +72,19 @@ async function checkedSource(root,path){
  */
 export async function runManagedPipelineNative(argv){
   const selected=options(argv);
+  const temporaryRoot=await realpath(selected['--temporary-root']??(process.platform==='linux'?'/dev':tmpdir()));
+  assert((await stat(temporaryRoot)).isDirectory(),'The selected temporary root must be an existing directory');
   if(!selected['--private-runtime']){
-    const privateRuntime=await mkdtemp('/dev/b9d2-managed-pipelines-');
+    const privateRuntime=await mkdtemp(join(temporaryRoot,'b9d2-managed-pipelines-'));
     try{
       const key=join(privateRuntime,'provider-key.pem'),certificate=join(privateRuntime,'provider-cert.pem');
       execFileSync('openssl',['req','-x509','-newkey','rsa:2048','-nodes','-days','1',
         '-keyout',key,'-out',certificate,'-subj','/CN=localhost',
         '-addext','subjectAltName=IP:127.0.0.1,DNS:localhost'],{stdio:['ignore','ignore','pipe']});
       const code=await new Promise((accept,reject)=>{
-        const child=spawn(process.execPath,[fileURLToPath(import.meta.url),...argv,'--private-runtime',privateRuntime],{
+        // Pin the outer temporary root: the child's TMPDIR points at its private runtime.
+        const temporaryArguments=selected['--temporary-root']?[]:['--temporary-root',temporaryRoot];
+        const child=spawn(process.execPath,[fileURLToPath(import.meta.url),...argv,...temporaryArguments,'--private-runtime',privateRuntime],{
           stdio:'inherit',env:{...process.env,NODE_EXTRA_CA_CERTS:certificate,TMPDIR:privateRuntime},
         });
         child.once('error',reject);child.once('exit',(code,signal)=>accept(code??(signal?1:0)));
@@ -88,7 +93,8 @@ export async function runManagedPipelineNative(argv){
     }finally{await rm(privateRuntime,{recursive:true,force:true});}
   }
   const privateRuntime=selected['--private-runtime'];
-  assert(dirname(privateRuntime)==='/dev'&&privateRuntime.startsWith('/dev/b9d2-managed-pipelines-'));
+  assert(dirname(privateRuntime)===temporaryRoot&&privateRuntime.startsWith(join(temporaryRoot,'b9d2-managed-pipelines-')));
+  assert.equal(await realpath(privateRuntime),privateRuntime);
   const sourceRoot=selected['--source-root'],directory=selected['--directory'],output=selected['--output'];
   assert(directory!==sourceRoot&&!directory.startsWith(sourceRoot+'/'));
   assert(output!==sourceRoot&&!output.startsWith(sourceRoot+'/'));

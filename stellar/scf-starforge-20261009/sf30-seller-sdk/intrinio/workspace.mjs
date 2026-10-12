@@ -3,7 +3,7 @@ import { lstat, realpath, link, rm, open } from 'node:fs/promises';
 import { dirname, resolve, join, relative, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
-import { createWorkspace, openWorkspace, importWorkspace } from '../python/workspace/model.mjs';
+import { createWorkspace, openWorkspace, importWorkspace, PythonWorkspace, WORKSPACE_SCHEMA } from '../python/workspace/model.mjs';
 import { startPythonWorkspace } from '../python/workspace/server.mjs';
 import {
   INDEX_PATH, FILE_LIMIT, parseIndex, captureManifest, importCaptureInput, saveReviewInput, saveSelectionInput,
@@ -67,6 +67,30 @@ export async function createIntrinioWorkspace(directory, {config, python, label 
     return result;
   } catch (error) { await native?.close().catch(() => {}); throw error; }
 }
+/** Inspect the original saved revision without recovery writes, previews or releases. */
+export async function inspectIntrinioWorkspace(directory) {
+  directory = resolve(directory);
+  const info = await lstat(directory);
+  if (!info.isDirectory() || info.isSymbolicLink() || await realpath(directory) !== directory)
+    throw fail('INTRINIO_WORKSPACE_DIRECTORY', 'Select the original real workspace directory.');
+  const database = join(directory, 'workspace.sqlite3'), databaseInfo = await lstat(database);
+  if (!databaseInfo.isFile() || databaseInfo.isSymbolicLink())
+    throw fail('INTRINIO_WORKSPACE_DATABASE', 'Select the original regular Python workspace database.');
+  const { DatabaseSync } = await import('node:sqlite');
+  const db = new DatabaseSync(database, { readOnly: true });
+  try {
+    const native = new PythonWorkspace(directory, db);
+    const metadata = native.metadata();
+    if (metadata.schema !== WORKSPACE_SCHEMA)
+      throw fail('INTRINIO_WORKSPACE_SCHEMA', 'Select an original Python workspace.');
+    const revision = native.revision(metadata.head);
+    if (!revision.validation.ok || !REQUIRED.every(name => revision.validation.functions[name]))
+      throw fail('INTRINIO_DECLARATION', 'The saved revision needs the complete Intrinio function contracts.');
+    const index = validateRevision(revision, parseIndex(await native.file(revision.id, INDEX_PATH)));
+    return { workspace: { ...metadata, directory }, revision, index };
+  } finally { db.close(); }
+}
+
 export async function openIntrinioWorkspace(directory) {
   const native = await openWorkspace(resolve(directory));
   try { const workspace = new IntrinioWorkspace(native); await workspace.state(); return workspace; }
@@ -209,7 +233,7 @@ export async function writeNewOutput(path, bytes) {
     finally { await directory?.close(); }
   } finally { await rm(temporary, {force: true}); }
 }
-export async function startIntrinioWorkspace(directory, {port = 0} = {}) {
+export async function startIntrinioWorkspace(directory, {port = 0, operatorBinding} = {}) {
   const workspace = typeof directory === 'string' ? await openIntrinioWorkspace(directory) : directory;
   const assets = [
     {path: '/intrinio', file: new URL('./public/index.html', import.meta.url), type: 'text/html; charset=utf-8'},
@@ -217,6 +241,6 @@ export async function startIntrinioWorkspace(directory, {port = 0} = {}) {
     {path: '/intrinio/data.mjs', file: new URL('./public/data.mjs', import.meta.url), type: 'text/javascript; charset=utf-8'},
     {path: '/intrinio/style.css', file: new URL('./public/style.css', import.meta.url), type: 'text/css; charset=utf-8'},
   ];
-  const server = await startPythonWorkspace(workspace.native, {port, operatorAssets: assets, operatorPath: '/intrinio'});
+  const server = await startPythonWorkspace(workspace.native, {port, operatorAssets: assets, operatorPath: '/intrinio', operatorBinding});
   return {...server, intrinio: workspace};
 }

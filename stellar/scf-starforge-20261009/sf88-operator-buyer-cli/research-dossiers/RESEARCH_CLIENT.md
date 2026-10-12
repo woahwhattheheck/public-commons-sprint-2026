@@ -245,3 +245,7 @@ A file-read snapshot expires after inactivity or closes on detach. Reattach and 
 The server's default browser responses remain complete. Metadata projection and section paging are additive for programmatic clients. Existing streamed portable export and reopen, original provider references, OpenAlex imports, Crossref state and optional document/source adapters retain their original routes. Applications remains responsible for starting, stopping and replacing its listener.
 
 The implementation joins the existing merchant registry and distribution contribution loader. It uses the same original Research store, its immutable numbered revisions and source edition IDs. No separate merchant research store is introduced.
+
+## Complete original-case operation
+
+The [original client operation](examples/README.md) uses this client, the actual CLI and the merchant attachment against one existing saved case. It preserves current notes and findings, resumes the same completed Crossref plan, writes the selected analyst note with fresh revision control, and delivers complete retained reports and portable receiving. Its private input keeps the original case, source configuration and operation identifiers.

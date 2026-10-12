@@ -1,0 +1,50 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "paid-job-operations",
+  "description": "Operate the original paid-job merchant through Applications, receive input files and resolve retained customer jobs.",
+  "commands": {
+    "jobs-resolution": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/resolution/cli.mjs",
+    "jobs-buyer-resolution": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/cli.mjs",
+    "jobs-merchant-receive": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/managed/receiving.mjs"
+  },
+  "commandDescriptions": {
+    "jobs-resolution": "Triage paid-job issues, recover delivery, record adjustments and export resolution records",
+    "jobs-buyer-resolution": "Inspect, refresh, receive and export support for the original retained customer job",
+    "jobs-merchant-receive": "Receive the original merchant through Applications and reopen its completed jobs"
+  },
+  "exports": {
+    "./seller/jobs/inputs": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/index.mjs"
+    },
+    "./seller/jobs/inputs/workspace": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/workspace/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/inputs/workspace/index.mjs"
+    },
+    "./seller/jobs/resolution": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/resolution/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/resolution/index.mjs"
+    },
+    "./buyer/job-workspace/resolution": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/index.mjs"
+    },
+    "./seller/jobs/managed": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/managed/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/managed/index.mjs"
+    },
+    "./seller/jobs/managed/receiving": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/managed/receiving.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/managed/receiving.mjs"
+    }
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/resolution/browser-assets.json"
+    }
+  ],
+  "applicationProviders": {
+    "paid-job-merchant": "stellar/scf-starforge-20261009/sf30-seller-sdk/jobs/managed/provider.mjs"
+  }
+}
