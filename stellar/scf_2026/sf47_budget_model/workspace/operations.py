@@ -18,6 +18,8 @@ import portfolio as portfolios
 import operations_support as support
 import operations_buyer as buyer
 import operations_completion as completion
+import operations_cohort as cohort
+import operations_installations as installations
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -92,6 +94,7 @@ class Operations:
                     body_json TEXT NOT NULL,PRIMARY KEY(program_id,id));
             """)
             completion.install(workspace.db)
+            installations.install(workspace.db)
             row = workspace.db.execute("SELECT value FROM ops_metadata WHERE key='schema'").fetchone()
             if row and row[0] != SCHEMA:
                 domain.fail("This workspace uses a newer operations schema.", "OPERATIONS_SCHEMA", 409)
@@ -116,8 +119,12 @@ class Operations:
             records[kind].append(json.loads(raw))
         sources = {row["id"]: row for row in (json.loads(raw[0]) for raw in self.db.execute(
             "SELECT metadata_json FROM ops_sources WHERE program_id=? ORDER BY id", (program_id,)))}
-        return {"program": program, "plan": plan, "records": records, "sources": sources,
-                "completionPlans": completion.load_plans(self, program_id)}
+        result = {"program": program, "plan": plan, "records": records, "sources": sources,
+                  "completionPlans": completion.load_plans(self, program_id)}
+        refs = installations.latest_refs(installations.load(self, program_id))
+        if refs:
+            result["installationRefs"] = refs
+        return result
 
     @staticmethod
     def _business(context):
@@ -127,6 +134,8 @@ class Operations:
                   "sources": sorted(context["sources"].values(), key=lambda row: row["id"])}
         if context.get("completionPlans"):
             result["completionPlans"] = context["completionPlans"]
+        if context.get("installationRefs"):
+            result["installationRefs"] = context["installationRefs"]
         return result
 
     def _read(self, program_id):
@@ -134,10 +143,13 @@ class Operations:
         result = {**context, "sources": list(context["sources"].values()),
                   "report": domain.report(**context)}
         result["completion"] = completion.dashboard(context)
+        cohort_history = self._cohort_history(program_id)
+        result["installations"] = installations.latest_summaries(installations.load(self, program_id))
         result["reviews"] = [{**{key: row[key] for key in ("id", "version", "createdAt", "actor", "note", "businessSha256")},
                               "purpose": row.get("purpose"),
                               **({"completionTranche": row["completion"]["clock"]["tranche"],
-                                  "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {})}
+                                  "receiptId": row["completion"]["receipt"]["id"]} if row.get("purpose") == "TRANCHE_COMPLETION" else {}),
+                              **(cohort.summary(row, context, cohort_history) if row.get("purpose") == "COHORT_EVALUATION" else {})}
             for row in (json.loads(raw[0]) for raw in self.db.execute(
                 "SELECT body_json FROM ops_reviews WHERE program_id=? ORDER BY rowid DESC", (program_id,)))]
         latest = self.db.execute("SELECT current_revision FROM plans WHERE id=?", (result["program"]["planId"],)).fetchone()
@@ -268,6 +280,11 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command == "cohort.prepare":
+                result = cohort.prepare(self, context, data, actor, next_version, self._cohort_history(program_id))
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
             elif command.startswith("completion."):
                 if command == "completion.submit" and self.db.execute("SELECT COUNT(*) FROM ops_records WHERE program_id=?", (program_id,)).fetchone()[0] >= MAX_RECORDS:
                     domain.fail("This operations case has reached its retained-record bound.", status=413)
@@ -278,6 +295,11 @@ class Operations:
                 if result["unchanged"]:
                     return {"id": program_id, "version": expected, "action": command, "kind": kind,
                             "recordId": record_id, **extra_receipt}
+            elif command == "installation.save":
+                result = installations.save(self, context, data, actor, next_version, note)
+                before, after, kind, record_id = (result[key] for key in ("before", "after", "kind", "recordId"))
+                extra_receipt = {key: value for key, value in result.items()
+                                 if key not in ("before", "after", "kind", "recordId")}
             elif command == "forecast.save":
                 candidate = forecasts.preview(context, data.get("inputs"))
                 if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed forecast", False):
@@ -381,6 +403,36 @@ class Operations:
         return self.workspace._transaction(body.get("requestId"), payload, action)
 
 
+    def _cohort_history(self, program_id):
+        events = [json.loads(row[0]) for row in self.db.execute(
+            "SELECT body_json FROM ops_events WHERE program_id=? ORDER BY version", (program_id,))]
+        return cohort.history_from_events(events)
+
+    def _cohort_reviews(self, program_id, selected):
+        if not isinstance(selected, list) or len(selected) > 20 or any(not isinstance(x, str) for x in selected) or len(selected) != len(set(selected)):
+            domain.fail("Select at most twenty distinct original cohort reviews.", "INVALID_COHORT")
+        result = []
+        for ident in selected:
+            review = self.review(program_id, ident)
+            cohort.validate_review(review)
+            result.append(review)
+        return result
+
+    def seed_cohort(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("tranche",))
+            return cohort.seed(context, body.get("tranche"))
+
+    def preview_cohort(self, program_id, body):
+        with self.workspace.mutex:
+            context = self._completion_context(program_id, body, ("inputs",))
+            return cohort.preview(context, body.get("inputs"), self._cohort_history(context["program"]["id"]))
+
+    def export_cohort(self, program_id, review_id):
+        with self.workspace.mutex:
+            review = self.review(program_id, review_id)
+            return cohort.review_files(review, lambda source_id: self.source(program_id, source_id))
+
     def completion_calendar(self, program_id, as_of=None):
         with self.workspace.mutex:
             return completion.dashboard(self._context(identifier(program_id, "operation")), as_of)
@@ -399,8 +451,10 @@ class Operations:
 
     def preview_completion(self, program_id, body):
         with self.workspace.mutex:
-            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary"))
-            return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"})
+            context = self._completion_context(program_id, body, ("receiptId", "asOfDate", "summary", "cohortReviewIds"))
+            reviews = self._cohort_reviews(program_id, body["cohortReviewIds"]) if "cohortReviewIds" in body else None
+            return completion.preview(context, {key: value for key, value in body.items() if key != "expectedVersion"},
+                                      reviews, self._cohort_history(program_id) if reviews is not None else None)
 
     def export_completion(self, program_id, review_id):
         with self.workspace.mutex:
@@ -518,6 +572,36 @@ class Operations:
             value.pop("current")
             return portfolios.select(context, value, short_id(body.get("alternativeId"), "Alternative ID"))
 
+    def seed_installation(self, program_id, body):
+        installations.object_value(body, ("expectedVersion",), "installation seed")
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            installations._current(context, body.get("expectedVersion"))
+            return {"document": installations.seed(context), "source": installations._source(context)}
+
+    def preview_installation(self, program_id, body):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return installations.preview(self, context, body)
+
+    def list_installations(self, program_id):
+        with self._snapshot():
+            self._program(identifier(program_id, "operation"))
+            return installations.latest_summaries(installations.load(self, program_id))
+
+    def installation(self, program_id, installation_id, revision=None):
+        with self._snapshot():
+            context = self._context(identifier(program_id, "operation"))
+            return installations.show(self, context, installation_id, revision)
+
+    def installation_history(self, program_id, installation_id, before=None, limit=25):
+        with self._snapshot():
+            self._program(identifier(program_id, "operation"))
+            return installations.history(self, program_id, installation_id, before, limit)
+
+    def export_installation(self, program_id, installation_id, revision):
+        return self.export(program_id, installation_id=installation_id, installation_revision=revision)
+
     def history(self, program_id, after=0, limit=100):
         domain.integer(after, "History cursor", 0, 10000000)
         domain.integer(limit, "History page size", 1, 200)
@@ -561,7 +645,7 @@ class Operations:
                 if own:
                     self.db.execute("ROLLBACK")
 
-    def export(self, program_id):
+    def export(self, program_id, installation_id=None, installation_revision=None):
         with self._snapshot():
             context = self._context(program_id)
             program = context["program"]
@@ -572,8 +656,11 @@ class Operations:
                 "SELECT body_json FROM ops_forecasts WHERE program_id=? ORDER BY rowid", (program_id,))]
             saved_portfolios = [json.loads(row[0]) for row in self.db.execute(
                 "SELECT body_json FROM ops_portfolios WHERE program_id=? ORDER BY rowid", (program_id,))]
+            saved_installations = installations.load(self, program_id)
             document = {"schema": SCHEMA, "exportedAt": now(), **context, "sources": list(context["sources"].values()),
                         "reviews": reviews, "events": events, "forecasts": saved_forecasts, "portfolios": saved_portfolios}
+            if saved_installations:
+                document["installations"] = saved_installations
             report = domain.report(**context)
             files = {"planning.zip": original,
                      "operations.json": (canonical(document) + "\n").encode(),
@@ -587,6 +674,8 @@ class Operations:
                          "Open through the existing workspace's operations import. This bundle preserves the original planner history, selected immutable plan, recorded source attachments, operations events, close reviews complete saved operating forecasts and delivery allocation portfolios.\n"
                          "Conditional planning amounts are separate from recorded cash. Testnet purchases are product operations. A work review or case close does not create an award, payment, customer agreement or external tranche acceptance.\n"
                          "Private access keys are not included.\n").encode()}
+            if installation_id is not None or installation_revision is not None:
+                files.update(installations.selected_files(context, saved_installations, installation_id, installation_revision))
             for metadata in context["sources"].values():
                 _, raw = self.source(program_id, metadata["id"])
                 files["sources/" + metadata["id"]] = raw
@@ -595,6 +684,8 @@ class Operations:
         manifest = {"schema": SCHEMA + ".bundle", "files": [{"path": name, "bytes": len(raw),
                     "sha256": hashlib.sha256(raw).hexdigest()} for name, raw in sorted(files.items())]}
         files["MANIFEST.json"] = (canonical(manifest) + "\n").encode()
+        if sum(len(raw) for raw in files.values()) > MAX_BUNDLE:
+            domain.fail("The complete operations bundle including its manifest exceeds 32 MiB.", status=413)
         output = io.BytesIO()
         with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
             for name, raw in sorted(files.items()):
@@ -602,7 +693,10 @@ class Operations:
                 info.external_attr = 0o600 << 16
                 info.compress_type = zipfile.ZIP_DEFLATED
                 archive.writestr(info, raw)
-        return output.getvalue()
+        raw = output.getvalue()
+        if len(raw) > MAX_BUNDLE:
+            domain.fail("The compressed complete operations bundle exceeds 32 MiB.", status=413)
+        return raw
 
     @staticmethod
     def _unpack(raw):
@@ -640,6 +734,9 @@ class Operations:
         # Original completion plans and source records retain their native validation below.
         if "completion-calendar.json" in files:
             expected.add("completion-calendar.json")
+        selected_names = {"installation-selection.json", "installation.html"}
+        if selected_names.intersection(files):
+            expected.update(selected_names)
         if set(files) != expected or len(source_ids) != len(document["sources"]):
             domain.fail("The operations source set is not exact.")
         for item in document["sources"]:
@@ -656,6 +753,7 @@ class Operations:
             content = files["sources/" + item["id"]]
             if len(content) != item["bytes"] or hashlib.sha256(content).hexdigest() != item["sha256"] or len(content) > MAX_SOURCE:
                 domain.fail("An original attachment differs from its source record.")
+        installations.selection_from_files(document, files)
         return document, files
 
     def import_bundle(self, raw, name, request_id, actor):
@@ -721,7 +819,14 @@ class Operations:
                 domain.fail("The complete original review snapshot and report are required.")
             if digest(review["snapshot"]) != review["businessSha256"]:
                 domain.fail("A frozen review differs from its retained business snapshot.")
+        cohort.validate_import(reviews, events)
         completion.validate_import(context, document.get("completionPlans", []), reviews, events, source_program["version"])
+        saved_installations = document.get("installations", [])
+        installations.validate_import(context, saved_installations, events, source_program["version"])
+        refs = installations.latest_refs(saved_installations)
+        if document.get("installationRefs", []) != refs:
+            domain.fail("The selected installation heads differ from their complete retained editions.")
+        selected_installation = installations.selection_from_files(document, files)
         saved_forecasts = document.get("forecasts", [])
         if not isinstance(saved_forecasts, list) or len(saved_forecasts) > forecasts.MAX_FORECASTS:
             domain.fail("The complete retained forecast set is invalid.", "INVALID_FORECAST")
@@ -810,11 +915,15 @@ class Operations:
                 self.db.execute("INSERT INTO ops_reviews VALUES(?,?,?)", (pid, review["id"], canonical(review)))
             for value in document.get("completionPlans", []):
                 completion.save_row(self, pid, value)
+            for value in saved_installations:
+                self.db.execute("INSERT INTO ops_installations VALUES(?,?,?,?)",
+                                (pid, value["id"], value["revision"], canonical(value)))
             for value in saved_forecasts:
                 self.db.execute("INSERT INTO ops_forecasts VALUES(?,?,?)", (pid, value["id"], canonical(value)))
             for value in saved_portfolios:
                 self.db.execute("INSERT INTO ops_portfolios VALUES(?,?,?)", (pid, value["id"], canonical(value)))
-            return {"id": pid, "version": source_program["version"], "action": "import", "planId": imported["id"], "mode": source_program["mode"]}
+            return {"id": pid, "version": source_program["version"], "action": "import", "planId": imported["id"], "mode": source_program["mode"],
+                    **({"selectedInstallation": selected_installation} if selected_installation else {})}
         with self.workspace.mutex:
             # Reuse the original receipt table before the original plan import.
             # A rejected reuse or invalid request cannot create an extra plan.

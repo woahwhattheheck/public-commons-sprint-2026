@@ -18,6 +18,7 @@ module Starforge
       request = Files.parse(bytes)
       Files.need(request.is_a?(Hash) && request["schema"] == NativeDatasetDelivery::SELECTION_SCHEMA &&
         request["sourceFormat"] == "SF100_SCAN" &&
+        [nil,"selected-absolute"].include?(request["runtimePathMode"]) &&
         %w[datasetId sourceKey].all? { |key| INTENT.match?(request[key].to_s) } &&
         HASH.match?(request["nativeManifestSha256"].to_s), "RUBY_NATIVE_DATASET_REQUEST_INVALID")
       [root,request,bytes]
@@ -75,7 +76,19 @@ module Starforge
         !path.include?("\0"), "RUBY_NATIVE_DATASET_EXECUTABLE_REQUIRED")
       real = File.realpath(path)
       Files.need(File.file?(real) && File.executable?(real), "RUBY_NATIVE_DATASET_EXECUTABLE_REQUIRED")
-      real
+      # Keep the invoked path: Python locates pyvenv.cfg before resolving this
+      # symlink (PEP 405). Launching the target would lose the selected environment.
+      path
+    end
+
+    def self.matches_executable?(provided, retained, legacy: false)
+      return false unless provided.is_a?(String) && retained.is_a?(String) &&
+        !provided.include?("\0")
+      absolute = File.expand_path(provided)
+      return true if absolute == retained
+      legacy && File.realpath(absolute) == retained
+    rescue Errno::ENOENT, Errno::EACCES, Errno::ENOTDIR, Errno::ELOOP
+      false
     end
 
     # Retain the selected original source modules, not a regenerated receiver.
@@ -100,6 +113,24 @@ module Starforge
       checkout:, python:, node:)
       Files.need(INTENT.match?(source_key.to_s) && INTENT.match?(dataset_id.to_s) &&
         HASH.match?(expected_native_manifest_sha256.to_s), "RUBY_NATIVE_DATASET_SELECTION_REQUIRED")
+      selected_directory = File.expand_path(directory)
+      if File.exist?(File.join(selected_directory,"request.json"))
+        root,original,raw = self.class.selected_request(selected_directory)
+        Files.lock(root) do
+          runtime = original["runtime"]
+          legacy = original["runtimePathMode"].nil?
+          Files.need(original["room"] == File.expand_path(room) &&
+            original["sourceKey"] == source_key && original["datasetId"] == dataset_id &&
+            original["nativeManifestSha256"] == expected_native_manifest_sha256 &&
+            runtime.is_a?(Hash) && runtime["directory"] == File.expand_path(checkout) &&
+            self.class.matches_executable?(python,runtime["python"],legacy: legacy) &&
+            self.class.matches_executable?(node,runtime["node"],legacy: legacy) &&
+            Files.read(File.join(root,"request.json"),1_048_576) == raw,
+            "RUBY_NATIVE_DATASET_ORIGINAL_REQUEST_CHANGED")
+          initialize_retained(root,original,raw)
+        end
+        return
+      end
       @room = Files.directory(room)
       Files.directory(File.join(@room,"pages"))
       original = Files.read(File.join(@room,"manifest.json"),4_194_304)
@@ -107,7 +138,8 @@ module Starforge
       @runtime = self.class.runtime_binding(checkout,python,node)
       @request = {"schema"=>NativeDatasetDelivery::SELECTION_SCHEMA,"sourceFormat"=>"SF100_SCAN",
         "sourceKey"=>source_key,"datasetId"=>dataset_id,"room"=>@room,
-        "nativeManifestSha256"=>expected_native_manifest_sha256,"runtime"=>@runtime}
+        "nativeManifestSha256"=>expected_native_manifest_sha256,"runtime"=>@runtime,
+        "runtimePathMode"=>"selected-absolute"}
       @request_bytes = Files.json(@request).freeze
       Files.need(@request_bytes.bytesize <= 1_048_576, "RUBY_NATIVE_DATASET_RUNTIME_SELECTION_LIMIT")
       @request_sha256 = Files.hash(@request_bytes).freeze
@@ -233,8 +265,8 @@ module Starforge
       @directory,@request,@request_bytes = root,request,bytes.dup.freeze
       @room,@runtime,@request_sha256 = request["room"],runtime,Files.hash(bytes).freeze
       DatasetDelivery.freeze_value(@request)
-      Files.directory(File.join(root,"attempts"))
-      Files.directory(File.join(root,"received"))
+      Files.directory(File.join(root,"attempts"),create: true)
+      Files.directory(File.join(root,"received"),create: true)
     end
 
     def copy_original(target, name, expected)

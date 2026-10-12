@@ -3,6 +3,7 @@ import { MAX_RETAINED_CHUNK_BYTES } from '../../../../stellar-forge/mcp-merchant
 const alias={type:'string',pattern:'^[a-z0-9][a-z0-9_-]{0,63}$'};
 const op={type:'string',pattern:'^[A-Za-z0-9][A-Za-z0-9_-]{0,95}$'};
 const hash={type:'string',pattern:'^[a-f0-9]{64}$'};
+const format={type:'string',enum:['events-mentions','gkg']};
 const workspace={workspace:alias},recorded={...workspace,id:op,expectedRevision:{type:'integer',minimum:1}};
 const publication={...workspace,publicationId:hash};
 const object={type:'object'},text={type:'string',maxLength:8000},read={readOnly:true,idempotent:true},change={idempotent:true};
@@ -10,7 +11,7 @@ export const gdeltFileSelection={kind:{type:'string',enum:['source','project','c
   captureId:hash,before:hash,after:hash,publicationId:hash,intentId:op,id:op,
   file:{type:'string',enum:['dataset.csv','dataset.jsonl','review.html','manifest.json','semantics.json']}};
 export function gdeltWorkspaceTools(tool){return[
-  tool('merchant_gdelt_workspaces','List configured original event desks, source aliases and merchant profiles.',{},[],read),
+  tool('merchant_gdelt_workspaces','List configured original GDELT article/event desks, source aliases and merchant profiles.',{},[],read),
   tool('merchant_gdelt_status','Read the original project identity, revision, pending action, buyer and merchant state.',workspace,['workspace'],read),
   tool('merchant_gdelt_records','Page captures, reviews, publications or operations at the original pinned revision. Follow nextOffset.',{
     ...workspace,kind:{type:'string',enum:['captures','reviews','publications','operations']},
@@ -22,11 +23,11 @@ export function gdeltWorkspaceTools(tool){return[
   tool('merchant_gdelt_query','Read fields, native paginated rows, source metadata, comparison, publication or original dataset preview. Row views use captureIds, policy, offset and limit; follow original offsets.',{
     ...workspace,kind:{type:'string',enum:['fields','rows','source-summary','compare','publication','preview']},input:object},['workspace','kind'],read),
   tool('merchant_gdelt_discover','Read the current official update or recent index once; retain its full manifest in the original project and use returned discoveryId for acquisition.',{
-    ...workspace,history:{type:'boolean'}},['workspace'],change),
+    ...workspace,history:{type:'boolean'},format},['workspace'],change),
   tool('merchant_gdelt_discovery','Recover the existing full manifest selection without a new provider request.',{
-    ...workspace,id:hash},['workspace','id'],read),
-  tool('merchant_gdelt_capture','Acquire both original ZIPs for one selected update under the same operation, revision and retained discovery. Retry the same ID after interruption.',{
-    ...recorded,batch:{type:'string',pattern:'^[0-9]{14}$'},discoveryId:hash},['workspace','id','expectedRevision','batch','discoveryId'],change),
+    ...workspace,id:hash,format},['workspace','id'],read),
+  tool('merchant_gdelt_capture','Acquire the selected Events/Mentions pair or complete GKG article ZIP under the same operation, revision and retained discovery. Retry the same ID after interruption.',{
+    ...recorded,batch:{type:'string',pattern:'^[0-9]{14}$'},discoveryId:hash,format},['workspace','id','expectedRevision','batch','discoveryId'],change),
   tool('merchant_gdelt_input','Inspect one complete host-pinned capture or project file before import.',{...workspace,input:alias},['workspace','input'],read),
   tool('merchant_gdelt_import','Import the exact configured capture under its original operation, or receive a complete project in the original workspace owner.',{
     ...recorded,input:alias,expectedSha256:hash},['workspace','id','expectedRevision','input','expectedSha256'],change),

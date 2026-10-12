@@ -2,7 +2,8 @@
 import {spawn} from 'node:child_process';
 import {createHash, randomUUID} from 'node:crypto';
 import {constants} from 'node:fs';
-import {lstat, mkdir, open, realpath, rename, unlink} from 'node:fs/promises';
+import {lstat, mkdir, open, realpath, rename, unlink} from './dataset-location.mjs';
+import {datasetStoragePath} from './dataset-location.mjs';
 import {dirname, isAbsolute, join, resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {config, execution, need, InputError} from './config.mjs';
@@ -26,7 +27,7 @@ const errorCode=error=>/^[A-Z0-9_]{1,120}$/.test(error?.code??'')?error.code:'IN
 async function privateDirectory(path) {
   need(typeof path==='string'&&isAbsolute(path)&&resolve(path)===path,'INBOX_FINALIZATION_ABSOLUTE_PATH_REQUIRED');
   const info=await lstat(path);
-  need(info.isDirectory()&&!info.isSymbolicLink()&&ownPrivate(info)&&await realpath(path)===path,
+  need(info.isDirectory()&&!info.isSymbolicLink()&&ownPrivate(info)&&await realpath(path) === datasetStoragePath(path),
     'INBOX_FINALIZATION_PRIVATE_DIRECTORY_REQUIRED');
 }
 async function readPrivate(path,limit=4_000_000) {
@@ -116,7 +117,7 @@ export async function finalizeOriginalAttempt({configurationPath,configSha256,in
   need(Boolean(outbox)===Boolean(merchantRoute),'OUTBOX_AND_ORIGINAL_MERCHANT_ROUTE_REQUIRED_TOGETHER');
   const {raw:cfgRaw}=await readPrivate(configurationPath,65536);
   need(sha(cfgRaw)===configSha256,'INBOX_CONFIG_CHANGED');
-  const cfg=await config(configurationPath);
+  const cfg=await config(datasetStoragePath(configurationPath));
   const {op,owner,transport}=execution(cfg);
   need(op.intentId===intentId&&(op.bodyFile!==undefined)===(bodySha256!==null),
     'INBOX_APPROVED_OPERATION_MISMATCH');
@@ -169,7 +170,7 @@ export async function finalizeOriginalAttempt({configurationPath,configSha256,in
   const reports=join(active.manifest.directory,'finalization-reports');
   await mkdir(reports,{mode:0o700}).catch(error=>{if(error.code!=='EEXIST')throw error;});
   await privateDirectory(reports);
-  const args=['--record',evidencePath,'--ledger',owner.ledger,'--policy',owner.policy,
+  const args=['--record',datasetStoragePath(evidencePath),'--ledger',owner.ledger,'--policy',owner.policy,
     '--payer',active.config.trustedPayer,'--node',process.execPath,'--reports',reports,
     '--rpc-endpoint',rpcEndpoint,'--expected-request-sha',approvedSha,
     ...(rpcProxyUrl===undefined?[]:['--rpc-proxy-env','SF36_RPC_PROXY_URL']),

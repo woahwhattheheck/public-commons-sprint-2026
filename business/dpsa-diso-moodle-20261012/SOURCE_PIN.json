@@ -12,7 +12,7 @@
   },
   "curriculumRepository": "woahwhattheheck/public-commons-sprint-2026",
   "curriculumBlobs": {
-    "curriculum/course.json": "caf01528542b2d315a73839aa3a64f54b00026c7",
+    "curriculum/course.json": "ca7795f53c6df120c623ea0de3669c61bbae51e5",
     "curriculum/sources.json": "55f08690ca6a0d8a93e4da4828410fa486576b2a",
     "curriculum/modules/M01.json": "f9468cae0eacb0c1b0332d9a7e87fab6d0656414",
     "curriculum/render_diagrams.py": "cd608ff8c3a898088a41c12fe55315a9aa62c891",
@@ -33,6 +33,7 @@
     "curriculum/images/diagrams.json": "73b25aa8f0bdd03028bdbf6bbb35064f4bb3c74c",
     "curriculum/images/M01-U02-Q06.svg": "203d16248ac864996ba9316145b6627338ebcc28",
     "curriculum/images/M08-U02-Q12.svg": "cfa5d64bf5d2a3a46ecc21931c5ce75ba52fb500",
-    "curriculum/EDITING.md": "223b10844a22cea0d00ea6bbf814e66831670a2b"
+    "curriculum/EDITING.md": "2488717dc9ade407607034f84bd8d76a73049858",
+    "curriculum/workbooks.json": "1538c4b74448c6f0f94b468af6fc0f0f143cfc6f"
   }
 }

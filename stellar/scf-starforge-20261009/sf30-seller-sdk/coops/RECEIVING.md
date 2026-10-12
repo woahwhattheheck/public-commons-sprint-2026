@@ -85,9 +85,10 @@ The function performs these existing staff operations:
 7. Receives its actual downloaded mapping convention as version 2 of the explicitly selected original target, makes one entered heading change, downloads both original input-file revisions and retains a new mapped export while preserving all earlier handoffs.
 8. Imports that exact reviewed package through the native file-input form. The receiving edition has its own native identity while preserving original response bytes and source-observed times. It carries the earlier review as imported provenance.
 9. Runs the original comparison and retains every comparison change entry. A byte-preserving import has no added, removed or changed values; any original ambiguous duplicate groups remain evidence.
-10. Prepares the original SF30 dataset and reads its actual first/next cursor pages. It does not clone the native dataset implementation.
-11. Captures the explicitly selected historical study through serial bounded child captures and retains the complete streamed CSV/JSONL plus each child's actual source coverage.
-12. Reopens the same origin again and checks the retained source editions, review, mapping, immutable exports, later draft and original dataset result at desktop and 390-pixel widths.
+10. Selects the exact saved version 2 mapping in the original dataset form, prepares that SF30 snapshot and reads its actual first/next cursor pages using the receiving headings. The receipt pins the original mapping file and ordered convention.
+11. Saves a later version 3 convention through the normal mapping editor, then reads the earlier dataset again. Its original version 2 headings, source mapping, snapshot and query result remain unchanged.
+12. Captures the explicitly selected historical study through serial bounded child captures and retains the complete streamed CSV/JSONL plus each child's actual source coverage.
+13. Reopens the same origin again and checks the retained source editions, review, mapping, immutable exports, later draft and original dataset result at desktop and 390-pixel widths.
 
 The default historical leg is two years of hourly heights. This is a selected receiving workload, not a claim that five years have already been captured. The application supports separately selected studies up to five calendar years, with annual-sized editions and provider-specific request chunks.
 
@@ -100,6 +101,8 @@ Keep the same positive listening port for this operator run. IndexedDB belongs t
 The module intercepts each real UI-issued action only to retain its exact original request and response. The native endpoint executes it. The deliberate lost-response phase forwards the original request once, confirms its actual reply, then drops that reply to exercise recovery. No alternate provider is substituted.
 
 An interrupted action is reconciled through the original native operation record and the original browser pending request. The function never fabricates a replacement accepted request. A definitively failed/unreserved action stops with its original journal for concrete operator correction.
+
+For a station save, archive or source-review save that was reserved before interruption, the native first write requires its original subject to remain unchanged. A newer staff decision produces a retained conflict; inspect the saved record and draft before issuing a new operation. A write already materialized before interruption replays its original result, preserving later changes and station history.
 
 On restart, the native application marks interrupted running captures/studies as paused. Inspect that retained capture and use its existing Resume action when the underlying cause is resolved; keep the original capture ID. The journey does not silently refetch a failed period under a new capture identity.
 

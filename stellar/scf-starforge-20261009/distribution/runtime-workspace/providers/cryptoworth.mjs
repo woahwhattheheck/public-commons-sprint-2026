@@ -11,7 +11,7 @@ export default {
   },
   matchRequest(request) {
     return !request.pythonCommand && request.command === 'merchant-accounting-workspace' &&
-      !(Array.isArray(request.args) && request.args.includes('--managed-launch-sha256'));
+      !(Array.isArray(request.args) && (request.args.includes('--managed-launch-sha256') || request.args.includes('--portfolio-config')));
   },
   createObserver(request, directory, context) {
     return observeApplicationStartup(request, directory, text => {

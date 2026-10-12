@@ -43,26 +43,23 @@ A griddap value selector asks ERDDAP for its nearest available coordinate. The w
 
 The provider route and publisher identifier are distinct. For example, NOAA's route jplMURSST41 carries the publisher identifier MUR-JPL-L4-GLOB-v04.1. Source inspection retains both.
 
-### Complete public NOAA source acquisition
+### Complete original NOAA source captures
 
-The maintained source collector captures two useful original selections from CoastWatch:
+Five fixed historical captures are included in `delivery/captures/`. Select the complete `.erddap.zip` file named for the desired edition:
 
-| Selection | Original source | Explicit request |
-|---|---|---|
-| MUR sea-surface temperature grid | griddap/jplMURSST41 | analysed_sst, analysis_error, mask and sea_ice_fraction; June 1–3, 2025 at 09:00 UTC; the stated latitude/longitude grid with stride 2 |
-| NDBC station observations | tabledap/cwwcNDBCMet | station 46042, June 1, 2025 UTC; station, coordinates, time, WD, WSPD, WVHT, ATMP and WTMP |
+| Original selection | Source | Rows |
+| --- | --- | ---: |
+| `mur-sst-june-2025` | griddap/jplMURSST41 | 27 |
+| `ndbc-46042-june-2023` | tabledap/cwwcNDBCMet | 144 |
+| `mur-sst-june-2023` | griddap/jplMURSST41 | 27 |
+| `mur-46042-nearby-june-2023` | griddap/jplMURSST41 | 27 |
+| `ndbc-46042-three-days-june-2023` | tabledap/cwwcNDBCMet | 432 |
 
-Run the collector once on the selected HTTP-capable host and retain that output directory:
+Each source ZIP contains exactly six root members: `manifest.json`, `metadata.json`, `dataset.dds`, `dataset.das`, `data.json` and `data.csv`. The manifest records the complete selection, exact request URLs and each response's actual status, receipt, byte count and SHA256. Use the complete source file with its original license and attribution.
 
-~~~sh
-python3 -B "$ERDDAP/delivery/acquire_noaa.py" --out /private/noaa-capture
-~~~
+[CAPTURE_IMPORT.md](delivery/CAPTURE_IMPORT.md) gives every exact archive identity and the complete retained-body assembly and receiving commands. It also records the original non-UTF8 DAS handling. The fixed June 2025 NDBC data requests returned HTTP 404; their actual history remains in `delivery/captures/acquisition-receipts.json`. The completed June 2023 station captures above provide the retained station inputs. The earlier `delivery/acquire_noaa.py` remains the original fixed-query collector; it is not needed to receive these already-complete archives.
 
-It produces mur-sst-june-2025.erddap.zip, ndbc-46042-june-2025.erddap.zip and capture-result.json after the actual responses complete. It retains partial responses and their original receipts. Repeating the same command reuses byte-verified completed responses and continues the same selected requests.
-
-Each source ZIP contains exactly six root members: manifest.json, metadata.json, dataset.dds, dataset.das, data.json and data.csv. The manifest records the complete selection, exact request URLs and each response's actual status, receipt, byte count and SHA256. Publication or customer use should carry the complete file and its current source/license records.
-
-The concrete request URLs and upstream serialization contract are listed in [PRIMARY_SOURCES.md](PRIMARY_SOURCES.md). The collector reports actual returned counts; this guide does not substitute an expected grid size for an executed provider response.
+The concrete request URLs and upstream serialization contract are listed in [PRIMARY_SOURCES.md](PRIMARY_SOURCES.md). For a new source selection, use the live metadata/query workflow above and retain its actual complete responses.
 
 ### Recover an interrupted acquisition
 
@@ -208,7 +205,7 @@ Continue an interrupted paid page using the same original session and recover. I
 
 ## Connect the existing merchant MCP host
 
-The source-owned erddap-workspaces provider adds 26 tools for existing operator aliases, complete catalogue/metadata/query/acquisition/source review, mappings, native builds/queries, edition comparisons and exact file receiving. It borrows the original running HTTP workspace.
+The source-owned erddap-workspaces provider adds 36 tools for existing operator aliases, complete catalogue/metadata/query/acquisition/source review, mappings, native builds/queries, edition comparisons and exact file receiving. It borrows the original running HTTP workspace.
 
 Create a private connection JSON using the actual absolute workspace/startup paths and original source-file hashes:
 
@@ -233,7 +230,7 @@ Create a private connection JSON using the actual absolute workspace/startup pat
 }
 ~~~
 
-The placeholder must be replaced with the real 64-character hash before initialization. A customer packet input uses kind packet. Input aliases are selected by the host; a tool caller cannot substitute an arbitrary filesystem path.
+The placeholder must be replaced with the real 64-character hash before initialization. A customer packet input uses kind packet; a complete provider intake bundle uses kind handoff. Input aliases are selected by the host; a tool caller cannot substitute an arbitrary filesystem path.
 
 In the complete merchant configuration, set erddapWorkspaceConnection to this private file. The original provider registry reads the source-owned distribution contribution automatically. A programmatic original setup helper is also available:
 
@@ -252,17 +249,27 @@ Large file receiving uses the existing RetainedFileReads interface, complete SHA
 
 The typed client export is ./client/erddap; merchant/buyer exports are ./seller/erddap and ./buyer/erddap. See [HTTP_API.md](HTTP_API.md) for the full native operator ABI.
 
+## Complete provider intake and receiving
+
+The same saved source now supplies an explicit provider profile, immutable reviewed revisions, readiness findings and complete review/ready bundles. Source-derived fields preserve their original descriptions, units, time representations, station identifiers, masks and license text. The operator reviews contacts, attribution, station context, time conventions and quality definitions before marking a ready bundle. Customer receiving independently verifies the complete retained source and original review; it keeps that handoff separate from the local source/build catalogue.
+
+Use `starforge-merchant erddap provider-handoff --help` or the installed `erddap-provider-handoff` command for the original standalone CLI. The typed `./provider/erddap` client and ten provider MCP methods use the same running ERDDAP HTTP owner. [PROVIDER_CLIENT.md](PROVIDER_CLIENT.md) gives complete original CLI, SDK, MCP and file-receiving instructions. [PROVIDER_HANDOFF.md](PROVIDER_HANDOFF.md) describes the complete station, time, quality, source and readiness rules.
+
 ## Whole native and browser receiving
 
-The complete source includes two reusable receiving entrypoints. They consume actual captured source ZIPs and keep their original workspaces and checkpoints through failure.
+The complete source includes reusable native dataset, provider handoff and browser receiving entrypoints. They consume actual captured source ZIPs and keep their original workspaces and checkpoints through failure.
 
-First, the original native source-to-customer operation:
+First, choose a retained `NOAA_OPERATION` directory and run the complete original source-to-customer operation with the five included captures in this order. Their 657 selected rows include the one-day NDBC edition's overlap with the three-day edition; the full source bounds and archive identities are in `delivery/CAPTURE_IMPORT.md`.
 
 ~~~sh
+NOAA_OPERATION=/private/erddap-operation
 python3 -B "$ERDDAP/delivery/native-receive.py" \
-  --source-root "$ERDDAP" --operation-root /private/erddap-operation \
-  --source-packet /private/noaa-capture/mur-sst-june-2025.erddap.zip \
-  --source-packet /private/noaa-capture/ndbc-46042-june-2025.erddap.zip
+  --source-root "$ERDDAP" --operation-root "$NOAA_OPERATION" \
+  --source-packet "$ERDDAP/delivery/captures/mur-sst-june-2025.erddap.zip" \
+  --source-packet "$ERDDAP/delivery/captures/ndbc-46042-june-2023.erddap.zip" \
+  --source-packet "$ERDDAP/delivery/captures/mur-sst-june-2023.erddap.zip" \
+  --source-packet "$ERDDAP/delivery/captures/mur-46042-nearby-june-2023.erddap.zip" \
+  --source-packet "$ERDDAP/delivery/captures/ndbc-46042-three-days-june-2023.erddap.zip"
 ~~~
 
 It imports complete originals, proposes the explicit lexical mapping, builds through the original engine, reads every native cursor page, exports seller datasets and complete customer packets, then independently reconstructs and closes/reopens each received edition. Actual same-mapping source pairs also produce the full original comparison. native/native-result.json records the actual results and source/engine identities.
@@ -271,8 +278,8 @@ Then run the existing browser owner on that same now-closed workspace:
 
 ~~~sh
 python3 -B "$ERDDAP/delivery/browser-owner.py" \
-  --source-root "$ERDDAP" --operation-root /private/erddap-operation \
-  --workspace /private/erddap-operation/workspace
+  --source-root "$ERDDAP" --operation-root "$NOAA_OPERATION" \
+  --workspace "$NOAA_OPERATION/workspace"
 ~~~
 
 The browser owner uses the selected Node/Playwright/Chromium environment. It owns one page/context, the original operator and one independent customer receiver. It operates real source upload, reviewed mapping, build/native cursor query, preserved drafts, edition comparison, source/native/project downloads and customer receiving, then reopens the closed receiving workspace.
@@ -280,6 +287,31 @@ The browser owner uses the selected Node/Playwright/Chromium environment. It own
 Set CODEX_PRIMARY_RUNTIME_NODE and CODEX_PRIMARY_RUNTIME_NODE_MODULES to the existing installed runtime. ERDDAP_CHROMIUM_EXECUTABLE selects the existing Chromium binary. A selected --temporary-root moves only this invocation's transient native/browser scratch to that volume; all input packets, original workspaces, outputs and checkpoints remain under the retained operation root. --screenshots records optional browser views in the private operation.
 
 Continue the same command and operation directory after a concrete failure. Original completed output identities are checked before reuse. The drivers do not repeat provider acquisition or issue a paid customer request.
+
+### Complete retained NDBC provider receiving
+
+For the exact retained NOAA NDBC station 46042 selection on 1 June 2023, the provider entrypoint runs the original dataset receiving operation and continues through the complete saved provider review:
+
+~~~sh
+python3 -B "$ERDDAP/delivery/provider-native-receive.py" \
+  --source-root "$ERDDAP" --operation-root "$PROVIDER_OPERATION" \
+  --capture "$NDBC_2023_CAPTURE" --ndbc-2023-reference
+~~~
+
+Select NDBC_2023_CAPTURE as the complete original five-response capture ZIP. The reference recipe verifies all five original response hashes, the 144 selected rows, the nine original columns and station/time selection before preparing its profile. It retains the exact public technical contact, source licensing and processing history. It leaves the separately appointed scientific contact for the provider to supply.
+
+The same entrypoint first completes the original native dataset build, full cursor read and independent customer reconstruction. It then saves two source-bound provider review revisions, recovers the exact saved request, exercises the original stale-parent conflict, exports both complete review bundles and independently receives and reopens their original bytes. A ready export follows the actual core review. The direct profile is retained as handoff-profile.json; provider-native/provider-result.json records the returned disposition and complete original artifacts.
+
+The browser continues that same closed workspace and profile:
+
+~~~sh
+python3 -B "$ERDDAP/delivery/browser-owner.py" \
+  --source-root "$ERDDAP" --operation-root "$PROVIDER_OPERATION" \
+  --workspace "$PROVIDER_OPERATION/workspace" \
+  --handoff-profile "$PROVIDER_OPERATION/handoff-profile.json"
+~~~
+
+Use Playwright 1.51 or later for the original IndexedDB draft-recovery phase. For another actual source, supply its complete reviewed direct profile with --profile instead of selecting the NDBC reference recipe. Keep the original operation directory across interruption: the helper retains its source, request, native workspaces, profile and accepted export/receiving checkpoints.
 
 ## Source, rights and operating limits
 

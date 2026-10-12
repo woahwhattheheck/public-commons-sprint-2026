@@ -6,6 +6,15 @@ whole source-owned contributions, component directories and explicit support
 files. The existing Git reader, source manifest, runtime profile, installer,
 Applications launcher and recovery commands remain the distribution workflow.
 
+## Build through the runtime workspace
+
+The private runtime workspace's **Build a product** view discovers the recipes
+at the chosen commit, reviews the complete selected product, builds its original
+package, and opens the resulting archive in **Source & profile**. It retains the
+same request and output through interruption and provides the original package
+download. Follow [the complete browser and CLI workflow](runtime-workspace/SOURCE_BUILDS.md)
+for source selection, adapter installation and recovery.
+
 ## Build a product
 
 Run the maintained builder from a repository that contains the selected commit:
@@ -44,6 +53,9 @@ the original `0.1.0-source.g0123456789ab` version form.
 
 | Selection | Product | Original Applications | Complete installed workflow |
 | --- | --- | --- | --- |
+| `dbnomics` | Exact economic series and source revisions, saved analyst reports, native publication, complete editable workspace and customer receiving | DBnomics economic workspace; Runtime management | [Operating guide](../../../products/dbnomics/OPERATING.md) |
+| `coastal-operations` | Original NOAA editions, reviewed multi-station studies, complete model-input/source delivery, returned-file comparison, coastal workbooks and native customer files | Coastal source operations; Runtime management | [Operating guide](../../../products/coops/OPERATING.md) |
+| `eurostat` | Eurostat official source editions, exact economic reports, native publication and complete customer receiving | Eurostat economic editions; Runtime management | [Operating guide](../../../products/eurostat/OPERATING.md) |
 | `water-operations` | USGS observations, editions, Water workspace, merchant and complete customer files | Water, Buyer, merchant console | [Operating guide](selections/WATER_OPERATIONS.md) |
 | `woo-merchant` | Existing WooCommerce orders, native checkout, Operations, purchased files and refunds | WooCommerce, Buyer, merchant console | [Operating guide](selections/WOO_MERCHANT.md) |
 | `openapi-merchant` | OpenAPI/Postman/HAR authoring, route worksheets, policy editions, seller releases and complete receiving | API merchant authoring, Buyer, merchant console | [Operating guide](selections/OPENAPI_MERCHANT.md) |
@@ -52,6 +64,7 @@ the original `0.1.0-source.g0123456789ab` version form.
 | `redis-applications` | Redis/Valkey commissioning, native products, customer clients, complete exports and cutover comparison | Redis, Buyer, merchant console | [Operating guide](selections/REDIS_APPLICATIONS.md) |
 | `safe-review` | Original Safe transaction intake, simulation purchase, retained result comparison and portable receiving | Safe simulation buyer, Tenderly, Buyer | [Operating guide](selections/SAFE_REVIEW.md) |
 | `study-research` | Source editions, property research, reports, PostgreSQL publishing and complete customer receiving | Study Source Refresh, PostgreSQL workspace and publisher, Buyer, merchant console | [Operating guide](selections/STUDY_RESEARCH.md) |
+| `publisher-360giving` | Complete 360Giving publisher source/reviews, native grant datasets, typed SDK/merchant operation and complete customer receiving | 360Giving publisher workspace; Runtime management | [Operating guide](../../../products/360giving-publisher/OPERATING.md) |
 | `all` or no flag on a new build | Complete maintained toolkit | All registered applications | [Runtime installation](RUNTIME_INSTALL.md) |
 
 The [API merchant installation and handover guide](selections/OPENAPI_MERCHANT.md)
@@ -63,6 +76,12 @@ for its included commands. Selected packages expose their explicit named package
 exports; the full toolkit's broad root `index.mjs` is excluded. This prevents
 its unrelated re-exports from forcing every product into a selected package.
 The original modules, their exports and implementations are unchanged.
+
+For Eurostat, use `--selection eurostat` and the [complete operating guide](../../../products/eurostat/OPERATING.md). Its selected source includes the original economic workspace, retained official responses and reviewed queries, full reports, browser and typed client, all 26 Eurostat MCP tools, native publication, merchant releases and complete customer receiving.
+
+For Coastal source operations, use `--selection coastal-operations` and the [complete operating guide](../../../products/coops/OPERATING.md). The selected source includes original station and archive operations, saved receiving mappings, reviewed multi-station studies, complete model-input/source deliveries and returned-file comparisons, full offline analytical workbooks, native query and releases, all 48 coastal merchant tools and complete customer receiving.
+
+For DBnomics economic work, use `--selection dbnomics` and the [complete operating guide](../../../products/dbnomics/OPERATING.md). The original application retains official provider responses, native periods and values, saved analyst reports, reviewed publication, complete editable exports and customer files.
 
 ## Continue the same build
 
@@ -92,10 +111,11 @@ its dependency profile from the complete installed workflow linked above:
 
 | Selected product | Profile flags for the complete installed edition |
 | --- | --- |
-| `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant` | `--native --feature schema --feature openapi --feature mcp --operator` |
+| `openapi-merchant`, `safe-review`, `water-operations`, `woo-merchant`, `eurostat`, `coastal-operations`, `dbnomics` | `--native --feature schema --feature openapi --feature mcp --operator` |
 | `redis-applications` | `--native --feature redis --feature schema --feature openapi --feature mcp --operator` |
 | `study-research` | `--native --feature schema --feature openapi --feature mcp --feature postgres --operator` |
 | `grant-reviewer` | `--native --feature mcp --operator` |
+| `publisher-360giving` | `--feature mcp --operator` |
 | `iati-operator` | `--operator` |
 
 The following example uses the common merchant profile. Substitute the flags

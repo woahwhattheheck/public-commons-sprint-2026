@@ -1,0 +1,79 @@
+{
+  "schema": "stellar-forge.odk-central-host-source.v1",
+  "selected_at": "2026-10-12",
+  "central": {
+    "repository": "https://github.com/getodk/central",
+    "release": "v2026.3.1",
+    "commit": "7d6de621955c5bb6a68e098ca10c9cbb92285cdf",
+    "files": {
+      "docker-compose.yml": "b93ddbcfa31ac590cf962a856e0c6aef9cae175f",
+      ".env.template": "53566ed78b361221988992c23d48b208f13a9676",
+      "service.dockerfile": "79b48319c148cea450bf8b7e80a5eb2c58bdc294",
+      "files/prebuild/write-version.sh": "4f24b71dc4332038230f8683350f395a8c412ea1",
+      "files/nginx/setup-odk.sh": "abfc632abb9f4b32b57ee4fa6ba2328dee844ee0",
+      "files/nginx/odk.conf.template": "d98dd3ae5ff7527d54152a0c5937e29cdf955e09"
+    }
+  },
+  "backend": {
+    "repository": "https://github.com/getodk/central-backend",
+    "commit": "de0d2a07fd7c9ff698cbc312e550dd40ff058340",
+    "files": {
+      "lib/bin/cli.js": "0e5c217d4a40d23107ad7a6e30c1434e626f55e5",
+      "lib/task/account.js": "35989a4f49ba17edb769738f61609bc74f1f2149",
+      "lib/resources/backup.js": "64b66e00f4d49277e0b2beba722067ad5f61c2db",
+      "lib/util/backup.js": "39022dd4004501b234cfd3e54f0e4f74bd6ed73a",
+      "lib/bin/restore.js": "f795fa84956c243a847ab2b723b2c5b10cf8cf52"
+    }
+  },
+  "documentation": [
+    "https://docs.getodk.org/central-install/",
+    "https://docs.getodk.org/central-install-digital-ocean/",
+    "https://docs.getodk.org/central-install-advanced/",
+    "https://docs.getodk.org/central-backup/",
+    "https://docs.getodk.org/central-command-line/"
+  ],
+  "interface": {
+    "workspace_module": "../workspace.mjs",
+    "factory": "openCentralWorkspace",
+    "connect_fields": [
+      "id",
+      "name",
+      "url",
+      "authEnv",
+      "allowLoopback"
+    ],
+    "auth_semantics": "The named host environment variable contains the complete original HTTP Authorization header.",
+    "tls_semantics": "Default certificate validation. Local receiving supplies its exact generated CA through NODE_EXTRA_CA_CERTS."
+  },
+  "host_requirements": {
+    "python": "3.10+",
+    "docker_engine": "installed and reachable",
+    "docker_compose": ">=2.24.4",
+    "git": "installed",
+    "openssl": "installed",
+    "incremental_host": "Use the accepted existing equipped worker; this program creates no provider account or VM."
+  },
+  "service_contract": {
+    "compose_services": [
+      "postgres",
+      "postgres14",
+      "mail",
+      "service",
+      "nginx",
+      "pyxform",
+      "secrets",
+      "enketo",
+      "enketo_redis_main",
+      "enketo_redis_cache"
+    ],
+    "retained_volumes": [
+      "postgres14",
+      "secrets",
+      "enketo_redis_main",
+      "enketo_redis_cache"
+    ],
+    "database_backup": "POST /v1/backup, native .pgdump.enc.bin, verified with the selected service image's OpenSSL and pg_restore",
+    "full_restore": "Original stopped Compose volumes in a different new project, using captured native image IDs.",
+    "remote_attachments": "The automatic full-host profile uses the original local attachment store."
+  }
+}

@@ -1,0 +1,26 @@
+<section>
+  <h2>Received deliveries</h2>
+  <p>Select a complete delivery from the application inbox. Its configured field mapping and source are copied into a private review before any import.</p>
+  <% if @candidates.empty? %><p class="empty">The application inbox has no selected deliveries.</p><% end %>
+  <% @candidates.each do |candidate| %>
+    <article class="candidate">
+      <div><h3><%= candidate["title"] %></h3><p>Stream <%= candidate["stream_id"] %> · <%= candidate["format"] %></p>
+      <details><summary>Source and field mapping</summary><p class="mono"><%= candidate["manifest_sha256"] %></p><pre><%= JSON.pretty_generate(candidate["mapping"]) %></pre></details></div>
+      <%= form_with url: {action: :create}, local: true do %>
+        <%= hidden_field_tag :selection, operator_token({"review_id"=>SecureRandom.uuid,"candidate_id"=>candidate["id"],"selection_sha256"=>candidate["selection_sha256"]},"create") %>
+        <%= submit_tag "Prepare complete review", class: "primary" %>
+      <% end %>
+    </article>
+  <% end %>
+</section>
+<section>
+  <h2>Review history</h2>
+  <div class="scroll"><table><thead><tr><th>Delivery</th><th>Selected</th><th>Operator</th><th>State</th><th></th></tr></thead><tbody>
+    <% @reviews["items"].each do |item| %><tr>
+      <td><%= item["title"] %></td><td><%= item["selected_at"] %></td><td><%= item["actor"] %></td>
+      <td><%= item.dig("state","phase").tr("_"," ") %></td><td><%= link_to "Open", action: :show, id: item["id"] %></td>
+    </tr><% end %>
+  </tbody></table></div>
+  <% if @reviews["items"].empty? %><p class="empty">Prepare a delivery to start the first review.</p><% end %>
+  <% if @reviews["next_before"] %><p><%= link_to "Earlier reviews",action: :index,before: @reviews["next_before"] %></p><% end %>
+</section>

@@ -5,8 +5,10 @@ import { resolve } from 'node:path';
 export async function main(args = process.argv.slice(2)) {
   if (args[0] === 'merchant') return (await import('./merchant.mjs')).main(args.slice(1));
   if (args[0] === 'buyer') return (await import('./customer.mjs')).main(args.slice(1));
+  const provider = args[0] === 'provider-handoff';
   const python = process.env.SF30_ERDDAP_PYTHON || process.env.CODEX_PRIMARY_RUNTIME_PYTHON || 'python3';
-  const child = spawn(python, ['-B', fileURLToPath(new URL('./cli.py', import.meta.url)), ...args], {
+  const script = provider ? './provider_handoff_cli.py' : './cli.py';
+  const child = spawn(python, ['-B', fileURLToPath(new URL(script, import.meta.url)), ...(provider ? args.slice(1) : args)], {
     stdio: 'inherit', env: { ...process.env, PYTHONDONTWRITEBYTECODE: '1', SF30_XML_NODE: process.execPath }
   });
   const onInt = () => child.kill('SIGINT'), onTerm = () => child.kill('SIGTERM');

@@ -46,7 +46,7 @@ function editionIdentity(value) {
   const {editionId,directory,datasetPath,publicationDirectory,...body}=value;return body;
 }
 function planIdentity(value){const{planSha256,...body}=value;return body;}
-export async function stageWfsMerchant({directory,publicationId}={}) {
+export async function stageWfsMerchant({directory,publicationId,python,signal}={}) {
   const selected=await getWfsPublication(directory,publicationId),root=await durableDirectory(join(selected.directory,'commerce'));
   return withPrivateLock(root,'merchant.lock',async()=>{
     if(await optionalJson(join(root,'merchant-plan.json')))return (await readWfsMerchant(selected.directory)).plan;
@@ -55,7 +55,7 @@ export async function stageWfsMerchant({directory,publicationId}={}) {
     // when this merchant was first staged. Later project edits do not replace it.
     let bundle=await optionalJson(join(root,'project-bundle.json'),SOURCE_ALLOWANCE);
     if(!bundle){
-      bundle=await exportWfsProject({directory,maxBytes:SOURCE_ALLOWANCE});
+      bundle=await exportWfsProject({directory,maxBytes:SOURCE_ALLOWANCE,python,signal});
       const bytes=jsonBytes(bundle);
       need(bytes.length<=SOURCE_ALLOWANCE,'This complete project exceeds the128 MiB native source product capacity. Export its full portable project separately.','WFS_SOURCE_PRODUCT_TOO_LARGE',413);
       await exactFile(root,'project-bundle.json',bytes);

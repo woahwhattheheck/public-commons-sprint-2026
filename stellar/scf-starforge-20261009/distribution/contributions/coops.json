@@ -1,7 +1,7 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "coops",
-  "description": "Original NOAA coastal sources, multi-year capture, source review, model-input exchange and native merchant/customer delivery",
+  "description": "Original NOAA coastal sources, multi-year capture, reviewed multi-station model-input deliveries, exact returned-file receiving and native merchant/customer publication",
   "commands": {
     "coops-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/workspace.mjs",
     "coops": "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/cli.mjs",
@@ -36,7 +36,9 @@
     "./seller/coops/analysis/bundle": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
     "./seller/coops/analysis/retained": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/retained.mjs",
     "./seller/coops/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving.mjs",
-    "./seller/coops/receiving-host": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving-host.mjs"
+    "./seller/coops/receiving-host": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving-host.mjs",
+    "./seller/coops/study": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/study.mjs",
+    "./seller/coops/study-exchange": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/study-exchange.mjs"
   },
   "browserAssets": [
     {
@@ -63,6 +65,10 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/app.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/RECEIVING.md",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/DELIVERY.md"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/DELIVERY.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/STUDIES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/study-input-columns.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/examples/coastal-receiving-selection.json",
+    "products/coops/OPERATING.md"
   ]
 }

@@ -57,7 +57,7 @@ function paths(input){
 function selectionFile(input){
  if(!input.selectionFile)return{value:{},file:null};
  const file=explicitFile(input.selectionFile,'source selection'),value=json(file,65536);
- assert(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>['capture','historical'].includes(k)),'Selection JSON accepts only capture and historical.');
+ assert(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>['capture','historical','study'].includes(k)),'Selection JSON accepts only capture, historical and an explicit optional study.');
  return{value,file};
 }
 export async function runCoopsReceivingHost(input={}){
@@ -67,7 +67,10 @@ export async function runCoopsReceivingHost(input={}){
  const configuration=selectionFile(input),mappingFile=explicitFile(input.mappingFile??join(here,'examples/model-input-columns.json'),'original mapping');
  const reviewResponse=resolve(input.reviewResponse??join(selected.output,'independent-source-review.json'));
  assert(!contains(selected.workspace,reviewResponse)&&!contains(selected.browserProfile,reviewResponse),'Keep the independent review response outside the application data and browser profile.');
+ const studyReviewResponse=configuration.value.study?resolve(input.studyReviewResponse??join(selected.output,'independent-study-review.json')):null;
+ if(studyReviewResponse)assert(!contains(selected.workspace,studyReviewResponse)&&!contains(selected.browserProfile,studyReviewResponse),'Keep the study decision outside the native data and browser profile.');
  const operator=String(input.operator??'Internal coastal source receiving'),selection={...selected,playwrightModule,chrome,selection:configuration.value,mappingFile,operator,reviewResponse,userAgent:input.userAgent??null};
+ if(studyReviewResponse)selection.studyReviewResponse=studyReviewResponse;
  if(input.operationId!==undefined)assert(typeof input.operationId==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(input.operationId),'Use the original stable receiving operation ID.');
  const intentSha256=sha(stable(selection)),recordPath=join(selected.output,'coops-receiving-host.json');
  let record=fs.existsSync(recordPath)?json(recordPath):{schema:'stellar-forge.coops-receiving-host.v1',operationId:input.operationId??randomUUID(),selection,intentSha256,createdAt:new Date().toISOString(),state:'PREPARED',workspaceId:null,origin:null,port:port||null,restarts:{},runs:[],sourceHistory:[],result:null};
@@ -78,7 +81,7 @@ export async function runCoopsReceivingHost(input={}){
   const exact=await identity(record.result.path);assert(exact.sha256===record.result.sha256&&exact.bytes===record.result.bytes,'The completed original receiving result changed.');
   return{...json(exact.path,128*1024*1024),hostRecordPath:recordPath,runtimeClosure:record.closure};
  }
- const sourceFiles=['receiving-host.mjs','receiving.mjs','workspace.mjs','core.mjs','provider.mjs','domain.mjs','schema.mjs','history.mjs','exports.mjs','dataset.mjs','web/app.js','analysis/retained.mjs','analysis/core.mjs','analysis/bundle.mjs'];
+ const sourceFiles=['receiving-host.mjs','receiving.mjs','workspace.mjs','core.mjs','provider.mjs','domain.mjs','schema.mjs','history.mjs','exports.mjs','dataset.mjs','web/app.js','study.mjs','study-exchange.mjs','web/study.js','web/index.html','web/style.css','browser-assets.json','analysis/retained.mjs','analysis/core.mjs','analysis/bundle.mjs'];
  const source=await Promise.all(sourceFiles.map(async path=>({path,...await identity(join(here,path),8*1024*1024)})));
  const sourceSha256=sha(stable(source.map(({path,bytes,sha256})=>({path:relative(here,path),bytes,sha256}))));
  if(record.sourceHistory.length&&record.sourceHistory.at(-1).sha256!==sourceSha256)assert(String(input.continuationNote??'').trim(),'Record the concrete source correction before continuing this incomplete operation.');
@@ -117,26 +120,31 @@ export async function runCoopsReceivingHost(input={}){
   assert(chromium&&typeof chromium.launchPersistentContext==='function','The selected original module must expose Playwright Chromium.');
   context=await chromium.launchPersistentContext(selected.browserProfile,{executablePath:chrome,headless:true,viewport:{width:1365,height:1000},acceptDownloads:true,args:['--no-sandbox','--disable-gpu']});
   const page=context.pages().find(p=>p.url().startsWith(record.origin+'/'))??context.pages()[0]??await context.newPage();
-  async function reviewEdition(packet){
+
+  async function independentReview(packet,kind){
    if(aborted)throw aborted;
-   const requestPath=join(selected.output,'independent-source-review-request.json'),request={schema:'stellar-forge.coops-independent-review-request.v1',hostOperationId:record.operationId,...packet};
-   if(fs.existsSync(requestPath)){const prior=json(requestPath,128*1024*1024);assert(prior.packetSha256===packet.packetSha256&&prior.editionId===packet.editionId&&prior.sourceSha256===packet.sourceSha256,'The original independent-review packet changed.');}
+   const study=kind==='study',requestPath=join(selected.output,'independent-'+kind+'-review-request.json'),responsePath=study?studyReviewResponse:reviewResponse,
+    nativeSchema=study?'stellar-forge.coops-independent-study-review-request.v1':'stellar-forge.coops-independent-review-request.v1',
+    recordKey=study?'studyReview':'review',pins=study?{studyId:packet.studyId,studyRevision:packet.studyRevision,studySha256:packet.studySha256}:{editionId:packet.editionId,sourceSha256:packet.sourceSha256},
+    exact=value=>value.packetSha256===packet.packetSha256&&Object.entries(pins).every(([key,v])=>value[key]===v),
+    request={schema:nativeSchema,hostOperationId:record.operationId,...packet};
+   if(fs.existsSync(requestPath))assert(exact(json(requestPath,128*1024*1024)),'The original independent '+kind+' review packet changed.');
    else atomic(requestPath,request);
-   record.review={state:'AWAITING_ACTUAL_DECISION',packetSha256:packet.packetSha256,editionId:packet.editionId,sourceSha256:packet.sourceSha256,requestPath,responsePath:reviewResponse};persist();
+   record[recordKey]={state:'AWAITING_ACTUAL_DECISION',packetSha256:packet.packetSha256,...pins,requestPath,responsePath};persist();
    const waitMs=Number(input.reviewTimeoutMs??1800000);assert(Number.isSafeInteger(waitMs)&&waitMs>0,'Choose a positive independent-review waiting limit.');
    const until=Date.now()+waitMs;let next=0;
    while(Date.now()<until){
     if(aborted)throw aborted;
-    if(fs.existsSync(reviewResponse)){
-     const response=json(reviewResponse,65536);
-     assert(response.packetSha256===packet.packetSha256&&response.editionId===packet.editionId&&response.sourceSha256===packet.sourceSha256,'The actual review must bind this exact captured source packet.');
+    if(fs.existsSync(responsePath)){
+     const response=json(responsePath,65536);assert(exact(response),'The actual '+kind+' review must bind this exact original packet.');
      assert(['reviewed','follow_up'].includes(response.status)&&typeof response.reviewer==='string'&&response.reviewer.trim()&&typeof response.note==='string'&&response.note.trim()&&typeof response.performedAt==='string'&&Number.isFinite(Date.parse(response.performedAt)),'The independent reviewer must supply their actual decision, note, identity and time.');
-     record.review={...record.review,state:'DECISION_RETAINED',response:await identity(reviewResponse,65536),decision:response.status,reviewer:response.reviewer};persist();return response;
+     if(study)assert(Array.isArray(response.acknowledgedWarnings)&&response.acknowledgedWarnings.every(id=>typeof id==='string'),'The actual study review must retain its explicit warning acknowledgements.');
+     record[recordKey]={...record[recordKey],state:'DECISION_RETAINED',response:await identity(responsePath,65536),decision:response.status,reviewer:response.reviewer};persist();return response;
     }
-    if(Date.now()>=next){next=Date.now()+15000;progress('Awaiting the independent decision on actual retained NOAA sources',{requestPath,responsePath:reviewResponse,packetSha256:packet.packetSha256});}
+    if(Date.now()>=next){next=Date.now()+15000;progress('Awaiting the independent decision on actual retained '+kind+' sources',{requestPath,responsePath,packetSha256:packet.packetSha256});}
     await delay(500);
    }
-   throw new Error('The actual independent review is still pending. Preserve its source packet and original response path for continuation.');
+   throw new Error('The actual independent '+kind+' review is still pending. Preserve its packet and original response path for continuation.');
   }
   async function restart(request){
    if(aborted)throw aborted;
@@ -155,7 +163,7 @@ export async function runCoopsReceivingHost(input={}){
    await openService();intent.state='REOPENED';intent.reopenedAt=new Date().toISOString();persist();return{workspaceUrl:service.url,page:request.page};
   }
   progress('Original console and persistent browser are open',{workspaceId:record.workspaceId,origin:record.origin,hostRecordPath:recordPath});
-  result=await runCoopsOperatorJourney(page,{workspaceUrl:service.url,outputDirectory:selected.output,operator,mappingFile,...configuration.value,continuationNote:input.continuationNote,operationTimeoutMs:input.operationTimeoutMs,captureTimeoutMs:input.captureTimeoutMs,reviewEdition,restart,onProgress:async event=>{if(aborted)throw aborted;progress(event.message,{phase:event.phase??null,journeyOperationId:event.operationId});}});
+  result=await runCoopsOperatorJourney(page,{workspaceUrl:service.url,outputDirectory:selected.output,operator,mappingFile,...configuration.value,continuationNote:input.continuationNote,operationTimeoutMs:input.operationTimeoutMs,captureTimeoutMs:input.captureTimeoutMs,reviewEdition:packet=>independentReview(packet,'source'),reviewStudy:configuration.value.study?packet=>independentReview(packet,'study'):undefined,restart,onProgress:async event=>{if(aborted)throw aborted;progress(event.message,{phase:event.phase??null,journeyOperationId:event.operationId});}});
   assert(result.status==='PASS'&&result.workspaceId===record.workspaceId,'The original receiving function must return its complete same-workspace result.');
   record.result=await identity(result.resultPath);record.state='RESULT_RETAINED';record.completedAt=new Date().toISOString();persist();
  }catch(error){
@@ -177,9 +185,9 @@ export async function runCoopsReceivingHost(input={}){
 }
 export async function main(args=process.argv.slice(2)){
  if(args.includes('--help')){
-  console.log('node coops/receiving-host.mjs --workspace PRIVATE_DIR --output OPERATOR_DIR --browser-profile PRIVATE_PROFILE --playwright-module ORIGINAL_MODULE_FILE --chrome ORIGINAL_CHROME [--operation-id ORIGINAL_ID] [--port 0] [--selection ORIGINAL_SELECTION_JSON] [--mapping-file ORIGINAL_MAPPING_JSON] [--review-response ACTUAL_REVIEW_JSON] [--operator TEAM] [--continuation-note REASON]');return;
+  console.log('node coops/receiving-host.mjs --workspace PRIVATE_DIR --output OPERATOR_DIR --browser-profile PRIVATE_PROFILE --playwright-module ORIGINAL_MODULE_FILE --chrome ORIGINAL_CHROME [--operation-id ORIGINAL_ID] [--port 0] [--selection ORIGINAL_SELECTION_JSON] [--mapping-file ORIGINAL_MAPPING_JSON] [--review-response ACTUAL_SOURCE_REVIEW_JSON] [--study-review-response ACTUAL_STUDY_REVIEW_JSON] [--operator TEAM] [--continuation-note REASON]');return;
  }
- const fields={'--workspace':'workspace','--output':'output','--browser-profile':'browserProfile','--playwright-module':'playwrightModule','--chrome':'chrome','--operation-id':'operationId','--port':'port','--selection':'selectionFile','--mapping-file':'mappingFile','--review-response':'reviewResponse','--operator':'operator','--continuation-note':'continuationNote','--review-timeout-ms':'reviewTimeoutMs','--operation-timeout-ms':'operationTimeoutMs','--capture-timeout-ms':'captureTimeoutMs','--user-agent':'userAgent'},options={};
+ const fields={'--workspace':'workspace','--output':'output','--browser-profile':'browserProfile','--playwright-module':'playwrightModule','--chrome':'chrome','--operation-id':'operationId','--port':'port','--selection':'selectionFile','--mapping-file':'mappingFile','--review-response':'reviewResponse','--study-review-response':'studyReviewResponse','--operator':'operator','--continuation-note':'continuationNote','--review-timeout-ms':'reviewTimeoutMs','--operation-timeout-ms':'operationTimeoutMs','--capture-timeout-ms':'captureTimeoutMs','--user-agent':'userAgent'},options={};
  for(let i=0;i<args.length;i+=2){const key=fields[args[i]];assert(key&&!Object.hasOwn(options,key)&&typeof args[i+1]==='string'&&!args[i+1].startsWith('--'),'Use paired documented arguments; see --help.');options[key]=args[i+1];}
  const result=await runCoopsReceivingHost(options);console.log(JSON.stringify({schema:'stellar-forge.coops-receiving-host-result.v1',status:result.status,operationId:result.operationId,workspaceId:result.workspaceId,resultPath:result.resultPath,hostRecordPath:result.hostRecordPath,runtimeClosure:result.runtimeClosure}));return result;
 }

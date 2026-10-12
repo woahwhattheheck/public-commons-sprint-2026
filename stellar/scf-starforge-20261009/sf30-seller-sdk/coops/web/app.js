@@ -13,6 +13,7 @@ function field(form,key,label,value='',type='text',extra=''){return'<label>'+esc
 function area(form,key,label,value='',extra=''){return'<label '+extra+'>'+esc(label)+'<textarea data-form="'+form+'" data-field="'+key+'" name="'+key+'">'+esc(value)+'</textarea></label>';}
 function select(form,key,label,items,value,extra=''){return'<label>'+esc(label)+'<select data-form="'+form+'" data-field="'+key+'" name="'+key+'" '+extra+'>'+items.map(x=>{const v=typeof x==='string'?x:x.value,l=typeof x==='string'?x:x.label;return'<option value="'+esc(v)+'"'+(v===value?' selected':'')+'>'+esc(l)+'</option>';}).join('')+'</select></label>';}
 function subjectBinding(key,value=A.drafts[key]){
+ const coastalStudy=studyUI.binding(key,value);if(coastalStudy)return coastalStudy;
  if(key==='station')return{type:'station',id:value?.profileId||null};
  if(key==='mapping')return{type:'mapping',id:value?.mappingId||null};
  if(key.startsWith('review:'))return{type:'review',editionId:key.slice(7),subject:String(value?.subject??'').trim()};
@@ -20,11 +21,13 @@ function subjectBinding(key,value=A.drafts[key]){
 }
 function recordKey(value){if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return'['+value.map(recordKey).join(',')+']';return'{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+recordKey(value[k])).join(',')+'}';}
 function savedSubject(binding,view=A.view){
+ if(binding.type.startsWith('study'))return studyUI.savedSubject(binding,view);
  if(binding.type==='station')return view.stations.find(p=>p.id===binding.id)??null;
  if(binding.type==='mapping')return view.mappings.find(m=>m.id===binding.id)??null;
  return view.annotations.find(a=>a.editionId===binding.editionId&&a.subject===binding.subject)??null;
 }
 function nativeDraft(binding,record,current){
+ if(binding.type.startsWith('study'))return studyUI.nativeDraft(binding,record,current);
  if(!record){const value=clone(current);if(binding.type==='station')value.profileId='';if(binding.type==='mapping')value.mappingId='';return value;}
  if(binding.type==='station')return{profileId:record.id,stationId:record.stationId,label:record.label,owner:record.owner,note:record.note,active:record.active};
  if(binding.type==='mapping')return{mappingId:record.id,name:record.name,table:record.table,columns:clone(record.columns),note:record.note};
@@ -45,7 +48,7 @@ function draft(key,defaults){
  A.draftTokens[key]??=crypto.randomUUID();
  const binding=subjectBinding(key);
  if(binding&&!A.draftBases[key]){
-  const saved=savedSubject(binding),unsaved=(binding.type==='station'||binding.type==='mapping')&&!binding.id;
+  const saved=savedSubject(binding),unsaved=(binding.type==='station'||binding.type==='mapping'||binding.type==='study')&&!binding.id;
   A.draftBases[key]={binding,known:unsaved,record:clone(saved)};
  }
  return A.drafts[key];
@@ -80,6 +83,7 @@ async function resolveDraftConflict(useCurrent){
   A.draftTokens[conflict.key]=crypto.randomUUID();
  }
  const selected=subjectBinding(conflict.key);
+ if(selected.type==='study'){A.drafts[conflict.key].expectedStudyRevision=savedSubject(selected)?.revision??null;delete A.drafts.studyPreview;}
  A.draftBases[conflict.key]={binding:clone(selected),known:true,record:clone(savedSubject(selected))};
  A.draftConflict=null;await persist();$('#dialog').close();renderPage();
  notice(useCurrent?'Current saved fields are open. Review and save any intended changes.':'The entered draft is retained against the version you reviewed. Save when ready.');
@@ -89,6 +93,7 @@ function applyDraftEffect(pending,response){
  if(!A.drafts[effect.key]||A.draftTokens[effect.key]!==effect.token){effect.outcome='different_draft_preserved';return;}
  const record=response.result,binding=effect.binding;
  if(!record||typeof record.id!=='string')throw Object.assign(new Error('The saved record identity is missing from the original reply.'),{uncertain:true});
+ if(binding.type.startsWith('study')){studyUI.applyDraft(effect,response);return;}
  if(binding.type==='station'||binding.type==='mapping'){
   const field=binding.type==='station'?'profileId':'mappingId',current=A.drafts[effect.key][field]||null;
   if(binding.id&&record.id!==binding.id)throw Object.assign(new Error('The original reply refers to another saved record.'),{uncertain:true});
@@ -131,21 +136,26 @@ function applyViewEffects(pending,response){
   A.preview={kind:preview.kind,payload:preview.payload,profile:preview.profile,result:clone(response.result)};
  }
 }
-async function perform(action,payload,{draftKey,editionEffect=null,previewEffect=null}={}){
+async function perform(action,payload,{draftKey,editionEffect=null,previewEffect=null,studyEffect=null}={}){
  if(A.pending)throw new Error('Resolve the retained original request before issuing another action.');
  if(A.busy)throw new Error('The current original request is still in progress.');
  const draftEffect=draftKey?checkDraftSave(draftKey):null;
- A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},draftEffect,editionEffect,previewEffect,createdAt:new Date().toISOString(),state:'prepared'};
+ A.pending={request:{action,payload:clone(payload),operationId:crypto.randomUUID(),expectedRevision:A.view.revision},draftEffect,editionEffect,previewEffect,studyEffect,createdAt:new Date().toISOString(),state:'prepared'};
  await persist();renderPending();return dispatch();
+}
+async function resumeOriginal(request){
+ if(A.pending||A.busy)throw new Error('Reconcile the retained request before resuming another original operation.');
+ if(request?.action!=='study.return.finish'||typeof request.operationId!=='string'||!request.payload?.uploadId||!Number.isSafeInteger(request.expectedRevision))throw new Error('Select the original native comparison request.');
+ A.pending={request:clone(request),createdAt:new Date().toISOString(),state:'prepared'};await persist();renderPending();return dispatch();
 }
 async function dispatch(){
  if(!A.pending||A.busy)return;const pending=A.pending;A.busy=true;pending.state='sending';await persist();renderPending();
  try{
   const response=await api('/api/action',{body:pending.request});
   if(response.operationId!==pending.request.operationId||!response.view)throw Object.assign(new Error('The original action reply did not retain its request identity.'),{uncertain:true});
-  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';if(pending.state==='complete'){applyDraftEffect(pending,response);applyViewEffects(pending,response);}await persist();
+  adoptView(response.view);pending.response=response;pending.state=response.state==='RUNNING'?'running':'complete';if(pending.state==='complete'){applyDraftEffect(pending,response);applyViewEffects(pending,response);studyUI.applyEffect(pending,response);}await persist();
   if(pending.state==='running'){notice('The original operation is running. Inspect its native outcome before continuing.');return response;}
-  A.history.push({request:pending.request,response,draftEffect:pending.draftEffect??null,editionEffect:pending.editionEffect?{token:pending.editionEffect.token,editionId:pending.editionEffect.edition.id}:null,previewEffect:pending.previewEffect??null,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
+  A.history.push(studyUI.completedHistory(pending,response)??{request:pending.request,response,draftEffect:pending.draftEffect??null,editionEffect:pending.editionEffect?{token:pending.editionEffect.token,editionId:pending.editionEffect.edition.id}:null,previewEffect:pending.previewEffect??null,completedAt:new Date().toISOString()});A.pending=null;A.lastResult=response.result;await persist();renderPending();notice('Saved '+pending.request.action+' at revision '+A.view.revision+(response.reused?' · original request replayed.':'.'));
   return response;
  }catch(error){A.pending??=pending;pending.state=error.uncertain?'uncertain':'rejected';pending.error=error.message;pending.status=error.status??null;await persist();renderPending();if([401,403].includes(error.status))notice('Open the current private session URL printed by the original workspace, then retry this retained request.',true);throw error;}
  finally{A.busy=false;}
@@ -330,10 +340,10 @@ function renderMappings(){
 }
 
 function renderDatasets(){
- const d=draft('dataset',{editionId:A.edition?.id??'',table:'observations',name:'',beginDate:'',endDate:'',products:''}),r=draft('release',{datasetId:A.view.datasets[0]?.id??'',origin:'',path:'/coastal',scheme:'exact',network:'stellar:testnet',asset:'',amount:'',payTo:'',maxTimeoutSeconds:'60'});
+ const d=draft('dataset',{editionId:A.edition?.id??'',table:'observations',name:'',beginDate:'',endDate:'',products:'',mappingId:''}),r=draft('release',{datasetId:A.view.datasets[0]?.id??'',origin:'',path:'/coastal',scheme:'exact',network:'stellar:testnet',asset:'',amount:'',payTo:'',maxTimeoutSeconds:'60'});
  return heading('Datasets and original merchant releases','Prepare an explicitly selected immutable SF30 dataset. The original publisher, payment runtime and generation controls own release behavior.')+
- '<form id="dataset-form"><h2>Prepare a source dataset</h2><div class="form-grid"><label>Retained edition<select data-form="dataset" data-field="editionId" required><option value="">Choose</option>'+editionOptions(d.editionId)+'</select></label>'+select('dataset','table','Source table',A.schema.tables.map(t=>({value:t.id,label:t.label})),d.table)+field('dataset','name','Dataset name',d.name,'text','required maxlength="128"')+field('dataset','beginDate','Optional first date inside the edition',d.beginDate,'date')+field('dataset','endDate','Optional last date inside the edition',d.endDate,'date')+field('dataset','products','Optional original product IDs, comma separated',d.products)+'</div><p>Coverage and metadata retain the original edition dates. Data tables may use a narrower period. A larger study keeps its annual source editions and combined streamed exports.</p><button class="primary" type="submit">Prepare original SF30 dataset</button></form>'+
- table(['Dataset','Rows / snapshot','Source edition',''],A.view.datasets.map(x=>[esc(x.name),esc(x.rows)+'<br><span class="pin">'+esc(x.snapshot)+'</span>','<span class="pin">'+esc(x.editionId)+'</span>',button('query-dataset','Query',x.id)+button('dataset-details','Provenance',x.id)+button('choose-release','Use for release',x.id)]))+
+ '<form id="dataset-form"><h2>Prepare a source dataset</h2><div class="form-grid"><label>Retained edition<select data-form="dataset" data-field="editionId" required><option value="">Choose</option>'+editionOptions(d.editionId)+'</select></label>'+select('dataset','table','Source table',A.schema.tables.map(t=>({value:t.id,label:t.label})),d.table)+select('dataset','mappingId','Original columns or saved receiving mapping',[{value:'',label:'Original source columns'},...A.view.mappings.map(m=>({value:m.id,label:m.name+' · revision '+m.revision+' · '+m.table}))],d.mappingId??'')+field('dataset','name','Dataset name',d.name,'text','required maxlength="128"')+field('dataset','beginDate','Optional first date inside the edition',d.beginDate,'date')+field('dataset','endDate','Optional last date inside the edition',d.endDate,'date')+field('dataset','products','Optional original product IDs, comma separated',d.products)+'</div><p>Coverage and metadata retain the original edition dates. Data tables may use a narrower period. A larger study keeps its annual source editions and combined streamed exports.</p><p>A selected mapping pins its current saved revision and exact original file to this dataset, query and release package. Native query headings start with a letter and contain up to 48 letters, digits or underscores. Keep the mapped valueType when value is included; incompatible headings require an explicit mapping revision.</p><button class="primary" type="submit">Prepare original SF30 dataset</button></form>'+
+ table(['Dataset','Rows / snapshot','Source edition','Pinned convention',''],A.view.datasets.map(x=>[esc(x.name),esc(x.rows)+'<br><span class="pin">'+esc(x.snapshot)+'</span>','<span class="pin">'+esc(x.editionId)+'</span>',x.mapping?esc(x.mapping.name)+' · revision '+esc(x.mapping.revision):'Original source columns',button('query-dataset','Query',x.id)+button('dataset-details','Provenance',x.id)+button('choose-release','Use for release',x.id)]))+
  '<form id="release-form"><h2>Prepare a native release</h2><div class="form-grid">'+select('release','datasetId','Saved dataset',A.view.datasets.map(x=>({value:x.id,label:x.name})),r.datasetId)+field('release','origin','Merchant origin',r.origin,'url','required')+field('release','path','Resource path',r.path,'text','required')+select('release','network','Reviewed network',['stellar:testnet','stellar:pubnet'],r.network)+field('release','asset','Original asset',r.asset,'text','required')+field('release','amount','Payment amount in original integer units',r.amount,'text','required pattern="[1-9][0-9]*"')+field('release','payTo','Receiving address',r.payTo,'text','required')+field('release','maxTimeoutSeconds','Payment timeout, seconds',r.maxTimeoutSeconds,'number','required min="1" max="86400" step="1"')+'</div><p>Runtime: '+esc(A.view.capabilities.releaseRuntime.mode)+'. Enter the actual reviewed payment terms. Native activation uses the saved publisher generation.</p><button type="submit">Prepare native release</button></form>'+
  '<h2>Saved releases</h2>'+A.view.releases.map(x=>'<article class="card"><h3>'+esc(x.id)+'</h3><p>'+esc(x.origin??x.resource??'Original publisher selection')+'</p><div class="actions">'+button('release-inspect','Inspect original publisher',x.id)+button('release-control','Activate',x.id,'data-operation="activate"')+button('release-control','Start',x.id,'data-operation="start"')+button('release-control','Stop',x.id,'data-operation="stop"')+button('release-control','Rollback',x.id,'data-operation="rollback"')+'</div>'+details('Original release / publisher generation',x)+'</article>').join('');
 }
@@ -355,7 +365,7 @@ function renderOperations(){
 }
 function renderPage(){
  if(!A.view)return;epoch++;$$('[data-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.tab===A.tab?'page':'false'));
- const render={overview:renderOverview,stations:renderStations,capture:renderCapture,backfills:renderBackfills,editions:renderEditions,compare:renderCompare,mappings:renderMappings,datasets:renderDatasets,customers:renderCustomers,exports:renderExports,operations:renderOperations};
+ const render={studies:studyUI.render,overview:renderOverview,stations:renderStations,capture:renderCapture,backfills:renderBackfills,editions:renderEditions,compare:renderCompare,mappings:renderMappings,datasets:renderDatasets,customers:renderCustomers,exports:renderExports,operations:renderOperations};
  $('#main').innerHTML=(render[A.tab]??renderOverview)();renderPending();
 }
 async function navigate(tab){A.tab=tab;await persist();renderPage();$('#main').focus();}
@@ -404,6 +414,7 @@ document.addEventListener('change',event=>{if(event.target.matches('select[data-
 document.addEventListener('submit',event=>{
  const form=event.target;if(!(form instanceof HTMLFormElement))return;event.preventDefault();
  void (async()=>{
+  if(form.id.startsWith('study-'))return studyUI.submit(form);
   if(form.id==='station-form'){
    const d=clone(draft('station',{}));if(!d.profileId)delete d.profileId;await perform('station.save',d,{draftKey:'station'});await refresh();return;
   }
@@ -424,7 +435,7 @@ document.addEventListener('submit',event=>{
   if(form.id==='mapping-file-import-form'){await inspectMappingFile(form);return;}
   if(form.id==='mapping-form'){const d=draft('mapping',{}),payload={...mappingFields(d),...(d.mappingId?{mappingId:d.mappingId}:{}),...(d.mappingSource?{mappingSource:clone(d.mappingSource)}:{})};await perform('mapping.save',payload,{draftKey:'mapping'});renderPage();return;}
   if(form.id==='dataset-form'){
-   const p=clone(A.drafts.dataset);for(const k of ['beginDate','endDate'])if(!p[k])delete p[k];if(p.products.trim())p.products=p.products.split(',').map(x=>x.trim());else delete p.products;
+   const p=clone(A.drafts.dataset);for(const k of ['beginDate','endDate','mappingId'])if(!p[k])delete p[k];if(p.products.trim())p.products=p.products.split(',').map(x=>x.trim());else delete p.products;
    await perform('dataset.prepare',p);renderPage();return;
   }
   if(form.id==='release-form'){
@@ -447,6 +458,7 @@ document.addEventListener('click',event=>{
  const cmd=control.dataset.cmd,id=control.dataset.id;
  if(!cmd)return;
  void(async()=>{
+  if(cmd.startsWith('study-'))return studyUI.click(cmd,id,control);
   if(cmd==='navigate')return navigate(id);
   if(cmd==='draft-use-current'||cmd==='draft-keep')return resolveDraftConflict(cmd==='draft-use-current');
   if(cmd==='retry'){await dispatch();if(A.edition&&!A.rows)await loadRows();await refresh();return;}
@@ -490,7 +502,7 @@ document.addEventListener('click',event=>{
    await persist();return navigate('compare');
   }
   if(cmd==='export-edition'){exportDialog('edition',id);return;}
-  if(cmd==='new-dataset'){A.drafts.dataset={editionId:id,table:A.table,name:A.edition.profile.label+' · '+A.table,beginDate:'',endDate:'',products:''};return navigate('datasets');}
+  if(cmd==='new-dataset'){A.drafts.dataset={editionId:id,table:A.table,name:A.edition.profile.label+' · '+A.table,beginDate:'',endDate:'',products:'',mappingId:''};return navigate('datasets');}
   if(cmd==='mapping-file-open'||cmd==='mapping-file-recompare')return mappingFileForm();
   if(cmd==='mapping-file-resume')return mappingFileReview();
   if(cmd==='mapping-file-apply')return applyMappingFile();
@@ -503,7 +515,7 @@ document.addEventListener('click',event=>{
   if(cmd==='remove-column'){A.drafts.mapping.columns.splice(Number(id),1);await persist();renderPage();return;}
   if(cmd==='mapping-json'){downloadJSON('coastal-model-input-mapping.json',mappingDocument());return;}
   if(cmd==='dataset-details'){modal('Original dataset and source identity',details('Native dataset receipt',A.view.datasets.find(d=>d.id===id)));return;}
-  if(cmd==='query-dataset'){modal('Query the original SF30 dataset','<form id="query-form" data-id="'+esc(id)+'"><label>Native URL-encoded fields, filters, order or cursor<textarea name="query">limit=20</textarea></label><button type="submit">Run original dataset query</button></form>');return;}
+  if(cmd==='query-dataset'){const dataset=A.view.datasets.find(d=>d.id===id);if(!dataset)throw new Error('Choose a retained original dataset.');modal('Query the original SF30 dataset',(dataset.mapping?'<p>Pinned receiving convention: '+esc(dataset.mapping.name)+' · revision '+esc(dataset.mapping.revision)+'. Later mapping edits do not change this dataset.</p>':'')+details('Original exposed query fields',dataset.description)+'<form id="query-form" data-id="'+esc(id)+'"><label>Native URL-encoded fields, filters, order or cursor<textarea name="query">limit=20</textarea></label><button type="submit">Run original dataset query</button></form>');return;}
   if(cmd==='choose-release'){A.drafts.release??={origin:'',path:'/coastal',network:'stellar:testnet',asset:'',amount:'',payTo:'',maxTimeoutSeconds:'60'};A.drafts.release.datasetId=id;await persist();renderPage();return;}
   if(cmd==='release-inspect'){await perform('release.inspect',{releaseId:id});modal('Original publisher inspection',details('Native publisher state',A.lastResult));return;}
   if(cmd==='release-control'){
@@ -526,6 +538,7 @@ document.addEventListener('submit',event=>{
 $('#close-dialog').onclick=()=>$('#dialog').close();
 $('#refresh').onclick=()=>{void refresh().catch(e=>notice(e.message,true));};
 window.addEventListener('beforeunload',event=>{if(A.pending){event.preventDefault();event.returnValue='';}});
+const studyUI=globalThis.createCoopsStudyView({A,$,$$,esc,clone,recordKey,details,table,button,heading,field,area,select,badge,draft,setDraft,clearDraft,api,perform,resumeOriginal,refresh,persist,renderPage,navigate,download,modal,notice});
 async function initialize(){
  try{
   A.schema=await api('/api/schema');A.db=await database();A.key=A.schema.workspaceId;adoptView(await api('/api/view'));

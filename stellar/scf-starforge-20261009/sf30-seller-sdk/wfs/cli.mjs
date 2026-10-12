@@ -87,6 +87,19 @@ starforge wfs source-file --source SOURCES_ABS --file ORIGINAL_MEMBER --out FILE
 starforge wfs project-import --project ABS --source PROJECT_JSON
 starforge wfs project-open --project ABS --bundle-sha SHA
 
+
+starforge wfs vector-capture --project ABS --id ID --order SHA --source-crs CRS
+  --coordinate-order x,y [--source-id ID] [--selection-id ID] [--identity JSON]
+starforge wfs vector-list --project ABS [--offset N] [--limit N]
+starforge wfs vector-show --project ABS --id ID
+starforge wfs vector-export --project ABS --id ID --capture ORIGINAL_CAPTURE_ID --profile JSON
+starforge wfs vector-compare --project ABS --id ID --before CAPTURE_ID --after CAPTURE_ID
+starforge wfs vector-changes --project ABS --id ID [--offset N] [--limit N] [--layer ID] [--status TEXT]
+starforge wfs vector-file --project ABS --id ID --out NATIVE_ZIP
+starforge wfs vector-document --project ABS --id ID --document manifest|inspection|profile|receiving --out JSON
+starforge wfs vector-receive --project ABS --id ID --source NATIVE_ZIP [--manifest-sha SHA]
+starforge wfs vector-resume --project ABS --id ORIGINAL_ID
+
 starforge wfs mcp-init --directory EMPTY_NATIVE_HOST_ABS --connection PRIVATE_JSON
   [--name TEXT] [--release-store EXISTING_ABS]
 
@@ -145,13 +158,19 @@ const allowed = {
   'source-receive': ['source', 'native-scan', 'capture-manifest', 'source-set'],
   'sources-open': ['source', 'id'], 'source-file': ['source', 'file'],
   'project-import': ['source'], 'project-open': ['bundle-sha'],
+  'vector-capture': ['id','order','source-crs','coordinate-order','source-id','selection-id','identity'],
+  'vector-list':['offset','limit'],'vector-show':['id'],
+  'vector-export':['id','capture','profile'],'vector-compare':['id','before','after'],
+  'vector-changes':['id','offset','limit','layer','status'],
+  'vector-file':['id'],'vector-document':['id','document'],
+  'vector-receive':['id','source','manifest-sha'],'vector-resume':['id'],
   'mcp-init': ['directory', 'connection', 'name', 'release-store']
 };
 const foregroundCommands = new Set(['serve', 'merchant', 'publication-open', 'customer-open', 'project-open']);
 const independentCommands = new Set(['inspect-bundle', 'source-file', 'mcp-init']);
 const outputCommands = new Set([
   'export', 'customer-file', 'dataset-file', 'capabilities-file', 'schema-file',
-  'raw-page', 'features-file', 'comparison-file', 'source-file'
+  'raw-page', 'features-file', 'comparison-file', 'source-file', 'vector-file', 'vector-document'
 ]);
 function flags(command, args) {
   need(Object.hasOwn(allowed, command), 'Unknown command; use wfs --help.');
@@ -284,7 +303,7 @@ export async function main(args = process.argv.slice(2), { signal } = {}) {
     else if (command === 'inspect-bundle') result = inspectWfsProjectBundle(await readBundle(f.source), { maxBytes: bundleLimit(f) });
     else if (command === 'receive') result = await receiveWfsProject({
       directory, bundle: await readBundle(f.source), id: f.id,
-      maxBytes: bundleLimit(f), signal: abort.signal
+      maxBytes: bundleLimit(f), signal: abort.signal, python: f.python
     });
     else if (command === 'source-receive') {
       need(Boolean(f.source) !== Boolean(f['native-scan']), 'Select one original delivery report or native source scan.');
@@ -302,7 +321,7 @@ export async function main(args = process.argv.slice(2), { signal } = {}) {
       sourceDirectory: resolve(text(f.source, '--source')), file: text(f.file, '--file'),
       python: f.python, signal: abort.signal
     })).bytes;
-    else if (command === 'export') result = await exportWfsProject({ directory, maxBytes: bundleLimit(f) });
+    else if (command === 'export') result = await exportWfsProject({ directory, maxBytes: bundleLimit(f),python:f.python,signal:abort.signal });
     else if (command === 'mcp-init') result = await initializeWfsMerchantWorkspace({
       directory: text(f.directory, '--directory'), connection: text(f.connection, '--connection'),
       ...(f.name ? { name: f.name } : {}), ...(f['release-store'] ? { releaseStore: f['release-store'] } : {})
@@ -324,6 +343,32 @@ export async function main(args = process.argv.slice(2), { signal } = {}) {
         abort.signal.throwIfAborted();
         if (resumed?.request) result = await application.action(resumed.request);
         else switch (command) {
+          case 'vector-capture':
+            result=await application.action({action:'vector-capture',id:operationId(f.id),orderId:f.order,
+              sourceCrs:text(f['source-crs'],'--source-crs'),coordinateOrder:text(f['coordinate-order'],'--coordinate-order'),
+              ...(f['source-id']?{sourceId:f['source-id']}:{}),...(f['selection-id']?{selectionId:f['selection-id']}:{}),
+              ...(f.identity?{identityJson:await readText(f.identity,131072,true)}:{})});break;
+          case 'vector-list':result=await application.query('vectors',{offset:integer(f.offset,'Offset',0),limit:integer(f.limit,'Limit',100)});break;
+          case 'vector-show':result=await application.query('vector',{id:operationId(f.id)});break;
+          case 'vector-export':
+            result=await application.action({action:'vector-export',id:operationId(f.id),captureId:operationId(f.capture),
+              profileJson:await readText(f.profile,4*1024*1024,true)});break;
+          case 'vector-compare':
+            result=await application.action({action:'vector-compare',id:operationId(f.id),
+              before:operationId(f.before),after:operationId(f.after)});break;
+          case 'vector-changes':
+            result=await application.query('vector-changes',{id:operationId(f.id),offset:integer(f.offset,'Offset',0),
+              limit:integer(f.limit,'Limit',100),...(f.layer?{layerId:f.layer}:{}),...(f.status?{status:f.status}:{})});break;
+          case 'vector-file':result=(await application.download('vector',{id:operationId(f.id)})).bytes;break;
+          case 'vector-document':result=(await application.download('vector-document',{
+            id:operationId(f.id),document:text(f.document,'--document')})).bytes;break;
+          case 'vector-receive':{
+            const bytes=await readBytes(resolve(text(f.source,'--source')),256*1024*1024);
+            result=await application.action({action:'vector-receive',id:operationId(f.id),
+              archiveBase64:bytes.toString('base64'),archiveSha256:hash(bytes),
+              ...(f['manifest-sha']?{manifestSha256:f['manifest-sha']}:{})});break;
+          }
+          case 'vector-resume':result=await application.action({action:'vector-resume',id:operationId(f.id)});break;
           case 'discover':
             result = await application.action({
               action: 'discover', ...recordedInput(), endpoint: text(f.endpoint, '--endpoint'),

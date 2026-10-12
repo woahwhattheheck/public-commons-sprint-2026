@@ -106,6 +106,40 @@ inbox read also passed from that package. These checks made no new store
 request, order, signature or payment. Native Site publication remains with the
 original authenticated publisher and unchanged owner-private project.
 
+## SCF application and reviewer downloads
+
+Open **SCF application** from the home navigation or footer to read the complete
+[reviewer page](dist/grant.html). It presents the maintained application answer,
+the original published presentation film, the retained economic briefing and
+direct downloads in the same static Site.
+
+The page's source and downloads travel together:
+
+- [Primary application answer](dist/grant-data/application.md): the current
+  manuscript author's complete project, customer, product, Stellar contribution,
+  independent-use targets, delivery and applicant-disclosure narrative.
+- [Product and financing companion](dist/grant-data/product-and-finance.md):
+  the detailed implementation, six funded packages, capacity and conditional
+  cash explanation that supports the primary answer.
+- [Six-package budget](dist/grant-data/budget.csv): the exact package hours,
+  USD 95 planning rate and USD 38,000 / 400-hour request.
+- [Source and measure index](dist/grant-data/source-index.json): original source
+  locations, artifact identities, financial assumptions and the distinction
+  between completed work and proposed outcomes.
+
+The ten- and thirty-purchase adoption targets are totals across the two
+independent buyers. The companion's 608 hours / USD 57,760 is modeled labor cost,
+not fee revenue. The award date and conditional cash schedule remain assumptions;
+the original invitation and submission retain their existing owner.
+
+The page links the actual published film and editable companion from the
+`scf-presentation-20261011` release. Its economic-report opening uses the complete
+existing `dist/examples/fred-briefing-20261012/` directory described below.
+Preserve that directory and every current Site route when receiving this source.
+The reviewer page, its CSS and four data files need no build, numerical run,
+merchant operation or payment to open. Hosted publication continues through the
+same existing Sites project and audience in the deployment section below.
+
 ## Source layout
 
 - dist/onboarding.mjs: pure original-config generator, supported imports, validation and deterministic ZIP writer.
