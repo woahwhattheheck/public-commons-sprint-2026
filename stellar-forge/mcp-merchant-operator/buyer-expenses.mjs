@@ -5,7 +5,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { dirname, join, resolve, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { exact, failure, identifier, privateSupportDirectory, writePrivate } from './config.mjs';
+import { exact, failure, identifier, privateSupportDirectory, writePrivate } from './host-files.mjs';
 import { RetainedFileReads, MAX_RETAINED_CHUNK_BYTES } from './retained-file-reads.mjs';
 import { BUYER_EXPENSE_ACTIONS, validateBuyerExpenseArguments } from './buyer-expense-protocol.mjs';
 export { buyerExpenseTools } from './buyer-expense-protocol.mjs';
