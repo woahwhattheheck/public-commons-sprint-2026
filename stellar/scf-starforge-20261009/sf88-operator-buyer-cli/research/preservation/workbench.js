@@ -99,6 +99,7 @@ async function mutation(path, body) {
     return value;
   } finally { S.requestBusy = false; renderControls(); }
 }
+function reviewChoice(selection) { return selection.revision + ":" + selection.reviewSha256; }
 function selectionOf(status) {
   return {sourceManifestSha256: status.project.binding.manifestSha256,
     revision: status.revision, reviewSha256: status.reviewSha256};
@@ -117,7 +118,7 @@ function savedSelection(id) {
   if (reviewDirty()) throw new Error("Save the review draft before preparing a package or destination.");
   const value = $(id).value;
   if (value === "current") return selectionOf(S.data.status);
-  const item = (S.data.reviewHistory || []).find(entry => entry.selection.reviewSha256 === value);
+  const item = (S.data.reviewHistory || []).find(entry => reviewChoice(entry.selection) === value);
   if (!item) throw new Error("Select a retained saved review.");
   return clone(item.selection);
 }
@@ -165,7 +166,8 @@ function mergeState(value) {
   S.data = value; S.csrf = value.csrf; S.connected = true;
   if (value.initialized) {
     if (!S.draftReview) adoptReview(value.status);
-    else if (S.baseSelection.reviewSha256 !== value.status.reviewSha256) {
+    else if (S.baseSelection.revision !== value.status.revision ||
+             S.baseSelection.reviewSha256 !== value.status.reviewSha256) {
       if (!reviewDirty() && !S.savePending) adoptReview(value.status);
       else S.externalReview = true;
     }
@@ -243,7 +245,7 @@ function renderHistory() {
     const current = element("option", "Current saved review · r" + S.data.status.revision, {value: "current"});
     select.replaceChildren(current, ...history.map(item => element("option",
       "Saved r" + item.selection.revision + " · " + date(item.createdAt) +
-      (item.note ? " · " + item.note.slice(0, 70) : ""), {value: item.selection.reviewSha256})));
+      (item.note ? " · " + item.note.slice(0, 70) : ""), {value: reviewChoice(item.selection)})));
     select.value = [...select.options].some(option => option.value === selected) ? selected : "current";
   }
   updateDestinationSelection();
@@ -501,15 +503,19 @@ async function applyReviewJson() {
   const review = parseObject(text, "Complete review");
   if (review.decisions === undefined) review.decisions = [];
   if (review.note === undefined) review.note = "";
-  const preview = await api("/api/preview", {review, query: $("record-query").value,
-    filter: $("record-filter").value, offset: 0});
+  const query = $("record-query").value, filter = $("record-filter").value;
+  const sequence = ++S.previewSeq;
+  const preview = await api("/api/preview", {review, query, filter, offset: 0});
   if (rawEpoch !== S.rawEpoch || epoch !== S.reviewEpoch || text !== $("review-json").value || S.recordDirty) {
     throw new Error("The draft changed while the JSON was being checked. Your current edits are retained.");
   }
-  S.draftReview = clone(review); S.rawDirty = false; S.offset = 0; S.preview = preview;
+  S.draftReview = clone(review); S.rawDirty = false; S.offset = 0;
   S.recordRow = null; S.recordForm = null;
   $("record-editor").hidden = true; $("record-empty").hidden = false;
-  markReviewChanged(); syncReviewWidgets(); renderRecords();
+  markReviewChanged(); syncReviewWidgets();
+  if (sequence === S.previewSeq && query === $("record-query").value && filter === $("record-filter").value) {
+    S.preview = preview; renderRecords();
+  } else await refreshPreview();
   message("The complete JSON is applied to the review draft. Save the review to retain it.");
 }
 
@@ -582,7 +588,7 @@ function updateDestinationSelection() {
   if (!S.data?.initialized) { $("destination-selection").textContent = ""; return; }
   const value = $("destination-revision").value;
   const selection = value === "current" || !value ? selectionOf(S.data.status) :
-    S.data.reviewHistory?.find(item => item.selection.reviewSha256 === value)?.selection;
+    S.data.reviewHistory?.find(item => reviewChoice(item.selection) === value)?.selection;
   $("destination-selection").textContent = selection
     ? "Original source " + shortHash(selection.sourceManifestSha256) + " · Saved r" + selection.revision +
       " · Review " + shortHash(selection.reviewSha256)
