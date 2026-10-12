@@ -2,6 +2,7 @@
 # frozen_string_literal: true
 # MIT. The original DatasetOperator over a complete received native or Baserow application.
 require_relative "engine"
+require_relative "editions/native"
 require "net/http"
 require "uri"
 require "base64"
@@ -44,7 +45,7 @@ module StarforgeRubyRuntime
         "RUBY_ORIGINAL_APPLICATION_CHANGED")
       [path,source]
     end
-    def open_package(root,marker)
+    def base_package(root,marker)
       if marker.fetch("format") == "baserow"
         config = Starforge::DatasetOperator::Commission.configuration(root)
         package = Starforge::BaserowCustomerDelivery.open(directory: File.join(root,"customer"),
@@ -56,31 +57,11 @@ module StarforgeRubyRuntime
         [NativePackage.new(packet.fetch("delivery")),packet.fetch("selected").fetch("source_key"),packet.fetch("mapping")]
       end
     end
+    def open_package(root,marker = nil)
+      Editions.current_package(root).first(3)
+    end
     def open_workspace(root)
-      marker = parse(File.join(root,MARKER))
-      need(marker["schema"] == "stellar-forge.managed-ruby-application.v1","RUBY_APPLICATION_MARKER_INVALID")
-      if marker.fetch("format") == "baserow"
-        return Starforge::DatasetOperator::Commission.open_workspace(root)
-      end
-      package,source_key,mapping = open_package(root,marker)
-      original_database = File.join(root,"application.sqlite3")
-      working = File.join(root,"operating.sqlite3")
-      unless File.exist?(working)
-        copy_file(original_database,working,file_descriptor(original_database))
-      end
-      Starforge::NativeDatasetLifecycle.connect(working)
-      streams = Starforge::DatasetExample::DatasetStream.where(tenant_key: Starforge::NativeDatasetLifecycle::TENANT)
-      stream = streams.find_by!(name: source_key)
-      Starforge::DatasetOperator::Workspace.new(directory: File.join(root,"operator"),
-        tenant_key: Starforge::NativeDatasetLifecycle::TENANT,streams: streams,
-        target_scope: lambda { |_stream| Starforge::NativeDatasetLifecycle::SourceRow.where(
-          tenant_key: Starforge::NativeDatasetLifecycle::TENANT) },
-        models: Starforge::DatasetExample::MODELS,
-        catalog: lambda {
-          [{"id"=>"received-native","title"=>"Received native dataset","stream_id"=>stream.id,
-            "directory"=>File.join(root,"dataset"),"format"=>"native",
-            "manifest_sha256"=>package.manifest_sha256,"mapping"=>mapping}]
-        },formats: {"native"=>lambda { |path,sha| NativePackage.open(path,sha) }})
+      Editions.workspace(root)
     end
     def open_app(root,workspace = nil)
       workspace ||= open_workspace(root)
@@ -143,11 +124,12 @@ module StarforgeRubyRuntime
     def verify_working(root,http: true)
       private_directory(root)
       marker = parse(File.join(root,MARKER))
-      workspace = open_workspace(root)
-      package,source_key,mapping = open_package(root,marker)
+      context = Editions.context(root)
+      workspace = Editions.workspace(root,context)
+      package,source_key,mapping = Editions.current_package(root,context)
       native = package.dataset
       importer = Starforge::NativeDatasetLifecycle.importer(native,source_key,mapping)
-      current = Starforge::NativeDatasetLifecycle.verify_current_targets(importer,native)
+      current = Editions.verify_current_targets(importer,native,context)
       connection = ActiveRecord::Base.connection
       need(connection.select_value("PRAGMA quick_check") == "ok","RUBY_APPLICATION_DATABASE_CHANGED")
       stream = Starforge::DatasetExample::DatasetStream.where(
@@ -333,6 +315,7 @@ module StarforgeRubyRuntime
       when "verify" then verify(record)
       when "snapshot" then snapshot(record,File.expand_path(input.fetch("out")))
       when "serve" then serve(record,input)
+      when "edition" then Editions.run(record,input.fetch("edition"))
       else raise Error.new("RUBY_APPLICATION_COMMAND_INVALID")
       end
     end

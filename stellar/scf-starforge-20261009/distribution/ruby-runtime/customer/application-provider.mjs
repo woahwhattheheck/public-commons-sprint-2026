@@ -8,7 +8,7 @@ import { absolute, need, plain } from '../files.mjs';
 const SOURCE='stellar/scf-starforge-20261009/distribution/ruby-runtime/customer';
 const SCHEMA='stellar-forge.ruby-customer-workspace-startup.v1';
 const FILES=['source.mjs','model.mjs','cli.mjs','server.mjs','launch.mjs','application-provider.mjs',
-  'browser.mjs','panel.mjs','index.html','runtime-browser.mjs','runtime-style.css','customer.css','README.md'];
+  'browser.mjs','panel.mjs','editions.mjs','index.html','runtime-browser.mjs','runtime-style.css','customer.css','README.md'];
 function option(args,name,optional=false) {
   need(Array.isArray(args),'APPLICATION_RUBY_CUSTOMER_ARGUMENTS_CHANGED');
   const indexes=args.flatMap((value,index)=>value===name?[index]:[]);
@@ -49,7 +49,7 @@ export default {
   catalog({common,field}) {
     return [{id:'ruby-customer-workspace',command:'ruby-customer-workspace',title:'Ruby customer commissioning',terminal:false,
       requiredSource:SOURCE+'/server.mjs',
-      description:'Review original native or Baserow source, adopt the existing customer job, commission the complete Rails application and operate its installed runtime.',
+      description:'Review original native or Baserow source, adopt the existing customer job, commission the complete Rails application, receive later data editions and operate its installed runtime.',
       fields:[field('workspaceDirectory','Private Ruby runtime','path',true,
         'Select the original initialized Ruby runtime directory. The customer desk keeps its existing environments, operations and received applications.'),
         field('port','Local port','port',false,'0 chooses an available port; the direct command defaults to 8475.'),
