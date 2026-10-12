@@ -102,7 +102,7 @@ class PublisherClient:
         record = selected["record"]
         if record is not None:
             original = record.get("original", {})
-            if (record["workspaceId"] != launch["workspaceId"]
+            if (not isinstance(original, dict) or record["workspaceId"] != launch["workspaceId"]
                     or original.get("bindingSha256") != launch.get("bindingSha256")
                     or original.get("workspace") != launch.get("workspace")):
                 raise InputError("The saved application points to a different publisher")

@@ -135,6 +135,6 @@ The original publisher accepts individual files up to 256 MiB. The complete hand
 
 ## Saved Applications and connected commands
 
-The same publisher can be saved in the original Applications manager as **360Giving publisher workspace**. Select its private initialized workspace and existing Python, then review, save, connect and start it. The complete setup and source-to-receiver workflow are in [360Giving Applications](../../../../distribution/runtime-workspace/360GIVING_APPLICATIONS.md).
+The same publisher can be saved in the original Applications manager as **360Giving publisher workspace**. Select its private initialized workspace and existing Python, then review, save, connect and start it. The complete setup and source-to-receiver workflow are in [360Giving Applications](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/stellar/scf-starforge-20261009/distribution/runtime-workspace/360GIVING_APPLICATIONS.md).
 
 Use `--connection <private connection file>` to operate the running application with the same publisher commands and stable request IDs. Applications keeps that connection path stable when the saved publisher reopens. `changes-file --dataset KEY --comparison SHA256 --out /absolute/complete-changes.jsonl` downloads the complete verified native field changes. The complete managed receiving driver transfers all saved editions, reviews and candidates, then compares full native content after cold reopening both workspaces.
