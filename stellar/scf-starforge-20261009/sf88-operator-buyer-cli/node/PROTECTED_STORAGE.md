@@ -64,6 +64,8 @@ A function cannot cross a subprocess boundary. `reserveFile` protects parent ope
 | Attempt recorder | The selected request source and future checkpoint slots | The held checkpoint pool is established before authorization can enter the transport |
 | Parent attempt/result | Selected output metadata slots around native execution | The parent can publish the original attempt and final result using retained backing |
 
+Ordinary execution and a selected preapproval recovery reserve four 65,536-byte attempt checkpoints before native execution: the initial attempt, the actual command before spawn, the child process identity, and the terminal state. Both paths use the same saved-result bound, `min(2147483647, 2 * outputLimit + 16384)`, when reserving and reopening the result wrapper. A pre-spawn allocation failure retains its definite unstarted command receipt through the held metadata pool. The original process identity and the actual bootstrap command remain attached to that attempt.
+
 Declaring a larger limit reserves more space. Use a genuine product limit that can contain the expected result. Insufficient backing must be resolved before starting the financial child. Linux may also reject allocation on an unsupported filesystem.
 
 Held blocks address disk-space contention. They do not prevent process termination, a full memory cgroup, device errors or an unsupported publication operation. The original attempt/result recovery remains useful after those failures: it reads the same retained stdout, response and checkpoint records.
@@ -163,7 +165,7 @@ try {
 }
 ```
 
-The receiver records one immutable runtime selection under the existing buyer state. Original page intents reopen through their recorded source. An already-prepared original intent retains its original native execution and approval behavior; the selected bootstrap descriptor is attached to the selected runtime. An already-selected recovery child is followed through its original choice. Only absent page intents are prepared through the selected replacement Buyer. Each new native invocation rechecks the selected source manifest. A native downstream finalizer can use \`await retrieval.openOperation(savedNativeIntentId)\` to reopen an exact recorded page across the original and selected runtimes.
+The receiver records one immutable runtime selection under the existing buyer state. Original page intents reopen through their recorded source. An already-prepared original intent retains its original native execution and approval behavior; the selected bootstrap descriptor is attached to the selected runtime. An already-selected recovery child is followed through its original choice. A saved preapproval recovery plan is executed only with its recorded plan hash and matching review; gathering does not prepare a new recovery plan. Only absent page intents are prepared through the selected replacement Buyer. Each new native invocation rechecks the selected source manifest. A native downstream finalizer can use `await retrieval.openOperation(savedNativeIntentId)` to reopen an exact recorded page across the original and selected runtimes.
 
 The CLI accepts the two descriptor files:
 
