@@ -58,8 +58,8 @@ export async function createDatabase(connection, profile) {
   }
   async function ensure(client) {
     const rights = (await client.query("SELECT has_schema_privilege(current_user,$1,'USAGE') AS usage, " +
-      "has_schema_privilege(current_user,$1,'CREATE') AS create", [profile.database.schema])).rows[0];
-    need(rights.usage === 't' && rights.create === 't', 'POSTGIS_SCHEMA_COMMISSIONING_PERMISSION_REQUIRED');
+      "has_schema_privilege(current_user,$1,'CREATE') AS can_create", [profile.database.schema])).rows[0];
+    need(rights.usage === 't' && rights.can_create === 't', 'POSTGIS_SCHEMA_COMMISSIONING_PERMISSION_REQUIRED');
     await client.query('CREATE TABLE IF NOT EXISTS ' + q(META.projects) + ' (' +
       'project_id text PRIMARY KEY, product_version integer NOT NULL DEFAULT 1, ' +
       'profile_sha256 text NOT NULL, profile_json jsonb NOT NULL, revision bigint NOT NULL DEFAULT 0, ' +
@@ -228,7 +228,31 @@ export async function createDatabase(connection, profile) {
       if (permission === 'insert') await client.query('GRANT USAGE ON SEQUENCE ' + q('_sf_intake_operator_ids') + ' TO ' + qi(role.name));
     }
   }
+  async function projectRoleAccess(client, selectedProfile, previousProfile = null) {
+    await client.query('ALTER TABLE ' + q(META.projects) + ' ENABLE ROW LEVEL SECURITY');
+    const names = [...new Set([...(previousProfile?.layers || []), ...selectedProfile.layers]
+      .flatMap(layer => layer.roles.map(role => role.name)))];
+    const currentNames = new Set(selectedProfile.layers.flatMap(layer => layer.roles.map(role => role.name)));
+    for (const name of names) {
+      const policy = '_sf_project_' + digest({project: profile.projectId, role: name}).slice(0, 32);
+      await client.query('DROP POLICY IF EXISTS ' + qi(policy) + ' ON ' + q(META.projects));
+      if (currentNames.has(name)) {
+        await client.query('CREATE POLICY ' + qi(policy) + ' ON ' + q(META.projects) +
+          ' FOR SELECT TO ' + qi(name) + ' USING (project_id=' + ql(profile.projectId) + ')');
+        await client.query('GRANT USAGE ON SCHEMA ' + qi(profile.database.schema) + ' TO ' + qi(name));
+        await client.query('GRANT SELECT(project_id,revision,active_edition_id) ON TABLE ' +
+          q(META.projects) + ' TO ' + qi(name));
+      }
+    }
+  }
+  async function revokeLayer(client, table, layer, role) {
+    await client.query('REVOKE ALL ON TABLE ' + q(table) + ' FROM ' + qi(role));
+    for (const permission of ['INSERT', 'UPDATE', 'SELECT', 'REFERENCES'])
+      await client.query('REVOKE ' + permission + '(' + userColumns(layer).map(qi).join(',') +
+        ') ON TABLE ' + q(table) + ' FROM ' + qi(role));
+  }
   async function switchViews(client, selected, previous, selectedProfile) {
+    await projectRoleAccess(client, selectedProfile, previous?.profile);
     for (const layer of selectedProfile.layers) {
       const physical = selected.layers.find(item => item.id === layer.id);
       need(physical?.liveTable, 'POSTGIS_LIVE_EDITION_REQUIRED', layer.id);
@@ -237,12 +261,12 @@ export async function createDatabase(connection, profile) {
       await client.query('CREATE OR REPLACE VIEW ' + q(layer.relation) + ' WITH (security_invoker=true) AS SELECT ' +
         userColumns(layer).map(qi).join(',') + ' FROM ' + q(physical.liveTable));
       await client.query('REVOKE ALL ON TABLE ' + q(layer.relation) + ' FROM PUBLIC');
-      for (const name of allRoles) await client.query('REVOKE ALL ON TABLE ' + q(layer.relation) + ' FROM ' + qi(name));
+      for (const name of allRoles) await revokeLayer(client, layer.relation, layer, name);
       for (const role of layer.roles) await grantLayer(client, layer.relation, layer, role);
       if (previous && previous.editionId !== selected.editionId) {
         const old = previous.layers.find(item => item.id === layer.id);
         if (old?.liveTable) for (const role of oldRoles)
-          await client.query('REVOKE ALL ON TABLE ' + q(old.liveTable) + ' FROM ' + qi(role.name));
+          await revokeLayer(client, old.liveTable, layer, role.name);
       }
     }
   }
@@ -254,14 +278,25 @@ export async function createDatabase(connection, profile) {
         const fn = privilege === 'insert' || privilege === 'update' ? 'has_any_column_privilege' : 'has_table_privilege';
         privileges[privilege] = (await client.query('SELECT ' + fn + '($1,$2,$3) AS permitted',
           [role.name, q(layer.relation), privilege.toUpperCase()])).rows[0].permitted === 't';
+        need(privileges[privilege] === role.permissions.includes(privilege),
+          'POSTGIS_ROLE_PRIVILEGE_PROFILE_CONFLICT', {role: role.name, privilege, observed: privileges[privilege]});
       }
-      for (const permission of role.permissions) need(privileges[permission], 'POSTGIS_ROLE_GRANT_NOT_OBSERVED', {role: role.name, permission});
-      let visibleRows;
+      const condition = role.scope ? qi(role.scope.column) + '::text = ANY(ARRAY[' +
+        role.scope.values.map(ql).join(',') + ']::text[])' : null;
+      const expected = await tableDigest(client, layer.relation, condition);
+      let visible;
       try {
         await client.query('SET LOCAL ROLE ' + qi(role.name));
-        visibleRows = (await client.query('SELECT count(*)::text AS count FROM ' + q(layer.relation))).rows[0].count;
+        const binding = (await client.query('SELECT project_id,revision,active_edition_id FROM ' +
+          q(META.projects) + ' WHERE project_id=$1', [profile.projectId])).rows;
+        need(binding.length === 1 && binding[0].active_edition_id === selected.editionId,
+          'POSTGIS_ROLE_CURRENT_EDITION_NOT_VISIBLE', role.name);
+        visible = await tableDigest(client, layer.relation);
       } finally { await client.query('SET LOCAL ROLE NONE'); }
-      result.push({...role, observedPrivileges: privileges, visibleRows});
+      need(visible.rowCount === expected.rowCount && visible.rowSha256 === expected.rowSha256,
+        'POSTGIS_NATIVE_ROW_SCOPE_CHANGED', role.name);
+      result.push({...role, observedPrivileges: privileges,
+        visibleRows: visible.rowCount, visibleRowSha256: visible.rowSha256});
     }
     return result;
   }
@@ -276,13 +311,37 @@ export async function createDatabase(connection, profile) {
       }
     } finally { await new Promise((resolveClose, reject) => cursor.close(error => error ? reject(error) : resolveClose())); }
   }
-  async function tableDigest(client, table) {
+  async function tableDigest(client, table, condition = null) {
     const hash = createHash('sha256'); let count = 0n;
     for await (const row of cursorRows(client, 'SELECT sf_id::text,sf_key,' + rowHashSQL('t') +
-      ' AS row_hash FROM ' + q(table) + ' t ORDER BY sf_key COLLATE "C"')) {
+      ' AS row_hash FROM ' + q(table) + ' t' + (condition ? ' WHERE ' + condition : '') + ' ORDER BY sf_key COLLATE "C"')) {
       hash.update(canonical(row) + '\n'); count++;
     }
     return {rowCount: count.toString(), rowSha256: hash.digest('hex')};
+  }
+  async function assertView(client, layer, table) {
+    const view = (await client.query("SELECT c.oid::text,c.relkind,c.reloptions::text FROM pg_class c WHERE c.oid=$1::regclass",
+      [q(layer.relation)])).rows[0];
+    need(view?.relkind === 'v' && view.reloptions?.includes('security_invoker=true'),
+      'POSTGIS_SECURITY_INVOKER_VIEW_REQUIRED', layer.relation);
+    const dependencies = (await client.query(
+      "SELECT DISTINCT d.refobjid::text AS oid FROM pg_rewrite r JOIN pg_depend d ON d.objid=r.oid " +
+      "JOIN pg_class c ON c.oid=d.refobjid WHERE r.ev_class=$1::oid AND d.refclassid='pg_class'::regclass " +
+      "AND c.relkind IN ('r','p','f')", [view.oid])).rows;
+    const expectedOid = (await client.query('SELECT $1::regclass::oid::text AS oid', [q(table)])).rows[0].oid;
+    need(dependencies.length === 1 && dependencies[0].oid === expectedOid, 'POSTGIS_VIEW_EDITION_BINDING_CHANGED', layer.relation);
+    const columns = (await client.query(
+      'SELECT a.attname,format_type(a.atttypid,a.atttypmod) AS type FROM pg_attribute a ' +
+      'WHERE a.attrelid=$1::regclass AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum',
+      [q(layer.relation)])).rows;
+    const physical = (await client.query(
+      'SELECT a.attname,format_type(a.atttypid,a.atttypmod) AS type FROM pg_attribute a ' +
+      'WHERE a.attrelid=$1::regclass AND a.attname=ANY($2::text[]) AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum',
+      [q(table), userColumns(layer)])).rows;
+    need(canonical(columns) === canonical(physical) &&
+      canonical(columns.map(column => column.attname)) === canonical(userColumns(layer)),
+      'POSTGIS_STABLE_VIEW_COLUMNS_CHANGED', layer.relation);
+    return columns;
   }
   async function describeLayers(client, selected) {
     const result = [];
@@ -290,12 +349,7 @@ export async function createDatabase(connection, profile) {
       const actual = selected.layers.find(item => item.id === layer.id);
       need(actual?.liveTable, 'POSTGIS_ACCEPTED_LAYER_REQUIRED', layer.id);
       const table = await tableDigest(client, actual.liveTable);
-      const columns = (await client.query(
-        'SELECT a.attname,format_type(a.atttypid,a.atttypmod) AS type FROM pg_attribute a ' +
-        'WHERE a.attrelid=$1::regclass AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum',
-        [q(layer.relation)])).rows;
-      need(canonical(columns.map(column => column.attname)) === canonical(userColumns(layer)),
-        'POSTGIS_STABLE_VIEW_COLUMNS_CHANGED', layer.relation);
+      const columns = await assertView(client, layer, actual.liveTable);
       result.push({id: layer.id, sourceLayerId: layer.sourceLayerId, title: layer.title,
         schema: profile.database.schema, relation: layer.relation, relationType: 'view',
         keyColumn: 'sf_id', sourceKeyColumn: 'sf_key', geometryColumn: 'geom',
@@ -306,7 +360,7 @@ export async function createDatabase(connection, profile) {
     return result;
   }
   return {pool, environment, owner, q, transaction, initialized, ensure, project, edition, savedOperation,
-    mutate, checkRoles, sridDefinitions, createFeatureTable, lockTables, userColumns, allColumns,
+    mutate, checkRoles, projectRoleAccess, sridDefinitions, createFeatureTable, lockTables, userColumns, allColumns,
     rowHashSQL, copyFeatureRows, installRoles, grantLayer, switchViews, observeRoles, cursorRows,
-    tableDigest, describeLayers, close: () => pool.end()};
+    tableDigest, assertView, describeLayers, close: () => pool.end()};
 }
