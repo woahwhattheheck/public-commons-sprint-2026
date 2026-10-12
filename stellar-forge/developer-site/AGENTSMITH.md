@@ -12,7 +12,7 @@ Open the page, review the original unpaid POST and advertised payment choices, a
 | --- | --- |
 | source-http.json | Complete original request and both HTTP response captures |
 | request.json | Exact UTF-8 request bytes |
-| capture.py | Original native capture and preparation program, unchanged |
+| capture.py | Maintained original capture and native preparation program |
 | buyer.mjs | Receiving runner that calls the original buyer and wallet commands |
 | packet.json | Operation settings and source/program digests |
 | setup-input.json | Complete editable receiving draft |
@@ -20,7 +20,7 @@ Open the page, review the original unpaid POST and advertised payment choices, a
 | README.md | Runtime, preparation, execution and reopen guide |
 | LICENSE | Original MIT license and attribution |
 
-The original offer decoder remains offer.mjs. The native capture program is retained from **stellar/scf-starforge-20261009/partners/agentsmith/capture.py** at source **41f15c0e57d2ba9655885399c1b37134e1a81d41**, SHA-256 **60dd7f472ec518846f50c222160c53751554648f492d150f384b70fa05fb4381**.
+The original offer decoder remains offer.mjs. The native capture program is retained from **stellar/scf-starforge-20261009/partners/agentsmith/capture.py** at source **aea13f36c6bddf09fcc16cc3825094d1d30cfbb9**, SHA-256 **93214bc738c9ad92c70aadddb07655d86ea7e304ea7ed1afda0e5c6b4a940098**.
 
 ## Captured operation
 
@@ -101,7 +101,11 @@ node /absolute/original/checkout/stellar/scf-starforge-20261009/sf103-native-buy
   --workspace /private/operation/wallet
 ~~~
 
-The packet's **inspect** also reopens the retained capture and reviewed request, reviews the original operator if present, and reports the saved response path and size. Repeating **prepare** reopens its completed native preparation. Repeating **operator-init** checks the existing trustedPayer and reviews the same operator. Repeating **wallet-prepare** inspects the existing wallet. Interrupted execution continues through the original buyer and wallet recovery commands with its retained ledger and keys.
+The packet's **inspect** also reopens the retained capture and reviewed request, reviews the original operator if present, and reports the saved response path and size. Repeating **prepare** completes an interrupted source restoration or native preparation in the same directory. Complete private files are published atomically and reused only when their original bytes match. The original SF88 preparer derives the expected configuration before reopening a retained draft, preserving the request, stable intent and response destination. A private operation lock prevents concurrent writers.
+
+Repeating **operator-init** invokes the maintained initializer's resume operation when its original initialization is incomplete, then checks the complete source configuration, actor, service, payer and exact request bytes. Wallet actions make those same checks before entering the original provider. The receiving manifest is created atomically, and an empty original receiving directory can finish its first creation.
+
+The runner forwards SIGINT and SIGTERM until the native child closes and returns the child's exit status. Repeating **wallet-prepare** inspects the existing wallet. Interrupted execution continues through the original buyer and wallet recovery commands with its retained ledger and keys.
 
 ## Site integration
 
@@ -117,7 +121,7 @@ Publishing consumes the complete current developer-site tree through the origina
 
 ## Validation
 
-The original HTTP source and unchanged capture program completed restore, native SF88 prepare, review and reopen with all commands exiting 0. The buyer retained the exact 21-byte request, source offer, stable intent and response destination. The browser wallet's owning engineering lane completed its native SDK/provider lifecycle on the maintained wallet source.
+The original HTTP source completed restore, native SF88 prepare, review and reopen at the original source release with all commands exiting 0. The buyer retained the exact 21-byte request, source offer, stable intent and response destination. The browser wallet's owning engineering lane completed its native SDK/provider lifecycle on the maintained wallet source.
 
 The receiving page's three ESM files passed V8 syntax parsing. Every directly referenced UI ID exists and all HTML IDs are unique. Exact capture and HTTP bundle content match their retained original source. The native nine-file packet operation and browser layout review belong to the receiving/publishing run on the original equipped host.
 
