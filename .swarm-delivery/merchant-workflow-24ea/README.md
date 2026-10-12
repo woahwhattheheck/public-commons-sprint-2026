@@ -239,6 +239,9 @@ newline-delimited command
 requested byte offset; advance by the returned byte count until the complete
 bundle is preserved and its reported digest matches. Send
 `{"op":"close"}` after transfer.
+The standalone command returns the native exit status after saving and transferring
+its outputs. A held receiver stays available for the next command in the original
+operation.
 
 A managed receiving session can include the complete current Library upload helper
 and its two companion modules as `payload.libraryHelpers`, or pass their existing

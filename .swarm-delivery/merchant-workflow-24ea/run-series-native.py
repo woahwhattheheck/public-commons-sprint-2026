@@ -3,7 +3,8 @@ from pathlib import Path, PurePosixPath
 from datetime import datetime, timezone
 
 # A held receiver supplies payload directly. A normal operator can select the complete packet file.
-if "payload" not in globals():
+_merchant_standalone = "payload" not in globals()
+if _merchant_standalone:
     import argparse
     parser = argparse.ArgumentParser(description="Continue the original native merchant/customer operation.")
     parser.add_argument("--source-packet", required=True)
@@ -687,3 +688,8 @@ for line in sys.stdin:
         emit({"event": "ORIGINAL_NATIVE_RECEIVER_CLOSED", "exitCode": code}); break
     else:
         emit({"event": "ORIGINAL_NATIVE_OUTPUT_READY", "bytes": bundle_bytes, "sha256": bundle_sha256})
+
+# A normal command returns the native result after preserving its complete outputs.
+# The held receiver remains available for the next original-operation command.
+if globals().get("_merchant_standalone", False):
+    raise SystemExit(code)
