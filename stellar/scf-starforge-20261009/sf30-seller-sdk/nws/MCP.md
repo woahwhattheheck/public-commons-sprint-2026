@@ -234,10 +234,20 @@ byte count distinguish those two selections.
 
 Downloads use the maintained retained-file engine: verified byte offsets,
 original hashes, a private directory lock, saved partial files and atomic
-completion. Repeat the same command and destination to continue its saved
-transfer. Preserve the MCP endpoint and selected manifest identity during that
-continuation. A named temporary read can finish after the operator console
-closes; completed receiving can be verified offline with `reopen`.
+completion. Repeat the same selection and destination to continue its saved
+transfer. If the MCP host restarts on a different port, use its new `--url` and
+current bearer token with the same workspace alias, original selection and
+reviewed manifest SHA256. The checkpoint is bound to the authenticated workspace
+UUID; a listener address change keeps that workspace identity. Temporary read
+handles are reacquired for the same original file hash when needed.
+
+Older downloads that recorded the listener URL are adopted under the original
+private directory lock. The receiver checks their saved transfer manifest,
+workspace UUID, export identity and file selections before updating that
+checkpoint label. Existing partial bytes remain in place and their hashes are
+checked before receiving continues. A named temporary read can finish after
+the operator console closes; completed receiving can be verified offline with
+`reopen`.
 
 Each file is checked against its original SHA256 and byte count. The maintained
 download budget is 256 MiB (268,435,456 bytes); source indexes above 65 KB use an individual page

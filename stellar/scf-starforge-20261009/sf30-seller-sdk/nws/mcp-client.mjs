@@ -89,7 +89,8 @@ async function selected(options){
 function receiver(selection){
   const {client,manifest,bytes,sha256}=selection;
   const transport={
-    endpoint:client.endpoint,
+    // The authenticated workspace survives a listener restart and port change.
+    endpoint:"nws-workspace:"+manifest.workspaceId,
     async call(name,args,options){
       if(args.exportId!==manifest.exportId)throw fail('IDENTITY_CHANGED','Keep the same selected transfer identity.');
       if(name==='nws_transfer_manifest')return {state:'MANIFEST_RETAINED',exportId:manifest.exportId,
@@ -130,9 +131,37 @@ export async function inspectNwsFiles(options={}){
   const value=await selected(options);
   return {manifest:value.manifest,manifestSha256:value.sha256};
 }
+async function adoptDownloadWorkspace(owner,selection,options){
+  if(options.expectedManifestSha256!==undefined&&
+      (!SHA.test(options.expectedManifestSha256)||options.expectedManifestSha256!==selection.sha256))
+    throw fail('DOWNLOAD_EXPORT_CHANGED','The retained completion manifest differs from the reviewed original export.');
+  const endpoint="nws-workspace:"+selection.manifest.workspaceId;
+  await owner.lockedDownload(options.directory,async context=>{
+    let previous;
+    try{previous=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(
+      await owner.bytesAt(resolve(context.stateDirectory,'checkpoint.json'),65000)));}
+    catch(error){if(error.code==='ENOENT')return;throw error;}
+    if(previous?.endpoint===endpoint)return;
+    // Older clients used the HTTP listener as the checkpoint identity. It is
+    // only a retained label here; all calls still use the selected live client.
+    let legacy;try{legacy=new URL(previous?.endpoint);}catch{}
+    if(!legacy||legacy.username||legacy.password||legacy.search||legacy.hash||
+        legacy.protocol!=='https:'&&!(legacy.protocol==='http:'&&['127.0.0.1','[::1]'].includes(legacy.hostname)))
+      throw fail('DOWNLOAD_CHECKPOINT_CONFLICT','The retained download belongs to a different original workspace.');
+    // The original locked loader checks schema, export ID, complete manifest
+    // SHA256 and file selections before changing this legacy transport label.
+    const savedManifest=await owner.bytesAt(resolve(context.stateDirectory,MANIFEST),65000);
+    if(!savedManifest.equals(selection.bytes))
+      throw fail('DOWNLOAD_EXPORT_CHANGED','The saved transfer manifest differs from this original workspace selection.');
+    await owner.loadContext(context,selection.bytes,selection.manifest.exportId);
+    context.state.endpoint=endpoint;
+    await owner.checkpoint(context);
+  });
+}
 export async function downloadNwsFiles(options={}){
-  const selection=await selected(options);
-  return receiver(selection).download({...options,exportId:selection.manifest.exportId});
+  const selection=await selected(options),owner=receiver(selection);
+  await adoptDownloadWorkspace(owner,selection,options);
+  return owner.download({...options,exportId:selection.manifest.exportId});
 }
 export async function reopenNwsFiles({directory,expectedManifestSha256}={}){
   const owner=createRetainedDownload({manifestName:MANIFEST,parseManifest:parse,maximumBytes:MAXIMUM,
