@@ -509,7 +509,7 @@ try{
     need(config.intentIds.length===1,'The joined agent phase requires one explicitly selected original purchase.');
     const helperPath=join(grant,'buyer-agent-receiving.mjs'),helperBytes=await readFile(helperPath);
     const helperGitBlob=createHash('sha1').update('blob '+helperBytes.length+'\0').update(helperBytes).digest('hex');
-    need(helperGitBlob==='603e0c05eeac9db8b3f2db8babbb8d29b9de2fa5','Use the exact original agent receiving phase.');
+    need(helperGitBlob==='0f1fdf851383f328538beddf353393c983228e03','Use the exact original agent receiving phase.');
     need(isAbsolute(python)&&isAbsolute(node),'The original managed agent requires absolute Python and Node executable paths.');
     const purchase=selectedPurchase(current,config.intentIds[0]),deployment=selectedDeployment(current);
     const phaseInput={schema:'sf47.native-buyer-agent-phase.v1',operationId:config.agentReceiving.operationId,
