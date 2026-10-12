@@ -54,13 +54,15 @@ export async function workerStatus(outbox) {
 
 export async function runWorker(outbox, options) {
   const { signal, pollMs = 5000, limit = 20, concurrency = 1,
-    timeoutMs = 7000, onCycle = () => {}, clock = Date.now } = options;
+    timeoutMs = 7000, onReady = () => {}, onCycle = () => {}, clock = Date.now } = options;
   if (!Number.isInteger(pollMs) || pollMs < 50 || pollMs > 60000)
     throw new RangeError('pollMs must be 50-60000');
   if (!Number.isInteger(limit) || limit < 1 || limit > 100 ||
       !Number.isInteger(concurrency) || concurrency < 1 || concurrency > 16 ||
       !Number.isInteger(timeoutMs) || timeoutMs < 100 || timeoutMs > 60000)
     throw new RangeError('Invalid delivery batch, concurrency or timeout');
+  if (typeof onReady !== 'function' || typeof onCycle !== 'function')
+    throw new TypeError('Worker callbacks must be functions');
   validateDestination(options.url, options.allowedHost);
   if (typeof options.secret !== 'string' || Buffer.byteLength(options.secret) < 32 ||
       Buffer.byteLength(options.secret) > 1024) throw new Error('WEBHOOK_SECRET_NOT_SET');
@@ -70,6 +72,9 @@ export async function runWorker(outbox, options) {
     startedAt: new Date(clock()).toISOString(), updatedAt: null,
     nextWakeAt: null, totals, outbox: null };
   try {
+    // Original lease is already held; controllers may admit their seller now.
+    // Callback failure follows the same checkpoint/release path as a drain failure.
+    await onReady({ schema: SCHEMA, owner: lease.owner, state: 'RUNNING', outbox: outbox.dir });
     while (!signal?.aborted) {
       await assertDeliveryLease(lease, outbox.dir);
       const result = await drainOnce(outbox, { ...options, lease, signal, limit, concurrency, timeoutMs, clock });
