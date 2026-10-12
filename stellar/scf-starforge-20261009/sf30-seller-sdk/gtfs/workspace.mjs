@@ -117,25 +117,79 @@ function validState(value) {
 }
 
 
+function initialization(value) {
+  only(value,['schema','workspaceId','title'],['schema','workspaceId','title']);
+  if(value.schema!=='stellar-forge.gtfs-initialization.v1')throw fault('GTFS_INITIALIZATION_CHANGED','Reopen the original workspace initialization.');
+  uuid(value.workspaceId);note(value.title,'the original workspace title',128);
+  if(value.title!==value.title.trim())throw fault('GTFS_INITIALIZATION_CHANGED');
+  return value;
+}
+function initialState(value,marker) {
+  validState(value);
+  only(value,['schema','id','title','createdAt','revision','publisher','selectedEditionId','selection',
+    'feeds','editions','comparisons','decisions','releases','exports','requests','pending'],
+    ['schema','id','title','createdAt','revision','publisher','selectedEditionId','selection',
+      'feeds','editions','comparisons','decisions','releases','exports','requests','pending']);
+  if(!marker||value.id!==marker.workspaceId||value.title!==marker.title||value.revision!==0||
+    value.selectedEditionId!==null||value.selection!==null||value.pending!==null||
+    ['feeds','editions','comparisons','decisions','releases','exports'].some(key=>value[key].length)||
+    Object.keys(value.requests).length||typeof value.createdAt!=='string'||
+    !Number.isFinite(Date.parse(value.createdAt))||new Date(value.createdAt).toISOString()!==value.createdAt)
+    throw fault('GTFS_INITIALIZATION_CHANGED','The interrupted first workspace publication differs from its original initialization.',409);
+  return value;
+}
+/** Inspect complete first-publication bytes without changing them. Only the
+ * acquired root writer may finish their original matching staging link. */
+async function readLaunchRecord(path,maximum,validate,{reconcile=false}={}) {
+  const handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW|constants.O_NONBLOCK);
+  let raw,value,linked;
+  try {
+    const before=await handle.stat({bigint:true});
+    if(!before.isFile()||before.mode&0o077n||![1n,2n].includes(before.nlink)||before.size<1n||before.size>BigInt(maximum))
+      throw fault('GTFS_PRIVATE_ARTIFACT_REQUIRED','The original launch record is not a complete private file.');
+    raw=await handle.readFile();
+    const after=await handle.stat({bigint:true}),named=await lstat(path,{bigint:true});
+    if(BigInt(raw.length)!==before.size||['dev','ino','size','mtimeNs','ctimeNs','nlink'].some(key=>before[key]!==after[key])||
+      named.isSymbolicLink()||named.dev!==before.dev||named.ino!==before.ino)
+      throw fault('GTFS_INITIALIZATION_CHANGED','The original launch record changed while being inspected.',409);
+    linked=before.nlink===2n;
+    value=validate(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw)),linked);
+    if(linked) {
+      if(!raw.equals(bytes(value)))throw fault('GTFS_INITIALIZATION_CHANGED','The interrupted launch publication is not its complete original bytes.',409);
+      const prefix=basename(path)+'.pending-';
+      let matched=false;
+      for(const name of await readdir(dirname(path))) {
+        if(!name.startsWith(prefix)||!GTFS_UUID.test(name.slice(prefix.length)))continue;
+        const candidate=await lstat(join(dirname(path),name),{bigint:true});
+        if(candidate.isFile()&&!candidate.isSymbolicLink()&&candidate.dev===before.dev&&candidate.ino===before.ino) {
+          matched=true;break;
+        }
+      }
+      const final=await handle.stat({bigint:true});
+      if(!matched||['dev','ino','size','mtimeNs','ctimeNs','nlink'].some(key=>before[key]!==final[key]))
+        throw fault('GTFS_PRIVATE_ARTIFACT_REQUIRED','The original launch record has no matching unchanged staging publication.');
+    }
+  } finally {await handle.close();}
+  if(linked&&reconcile) {
+    await finishLinkedPublication(path,raw);
+    if(!(await readPrivate(path,maximum)).equals(raw))throw fault('GTFS_INITIALIZATION_CHANGED');
+  }
+  return value;
+}
 /** Read the original launch identity without taking a writer lease or creating state. */
 export async function inspectGtfsLaunch(directory) {
   directory=absolute(resolve(directory),'GTFS workspace');
   if(!await exists(directory))return {schema:'stellar-forge.gtfs-launch-selection.v1',state:'NEW',directory,workspaceId:null};
   await privateDirectory(directory);
-  const stateFile=join(directory,'workspace.json');
+  const markerFile=join(directory,'initialization.json'),stateFile=join(directory,'workspace.json');
+  const marker=await exists(markerFile)?await readLaunchRecord(markerFile,INPUT_MAX,initialization):null;
   if(await exists(stateFile)) {
-    const state=validState(await readJson(stateFile,STATE_MAX));
+    const state=await readLaunchRecord(stateFile,STATE_MAX,(value,linked)=>linked?initialState(value,marker):validState(value));
     return {schema:'stellar-forge.gtfs-launch-selection.v1',state:'SAVED',directory,workspaceId:state.id,
       revision:state.revision,title:state.title};
   }
-  const marker=join(directory,'initialization.json');
-  if(await exists(marker)) {
-    const value=await readJson(marker,INPUT_MAX);
-    if(value.schema!=='stellar-forge.gtfs-initialization.v1'||!GTFS_UUID.test(value.workspaceId??'')||
-      typeof value.title!=='string'||!value.title||value.title.length>128)
-      throw fault('GTFS_INITIALIZATION_CHANGED','Reopen the original workspace initialization.');
-    return {schema:'stellar-forge.gtfs-launch-selection.v1',state:'INITIALIZING',directory,workspaceId:value.workspaceId,title:value.title};
-  }
+  if(marker)return {schema:'stellar-forge.gtfs-launch-selection.v1',state:'INITIALIZING',directory,
+    workspaceId:marker.workspaceId,title:marker.title};
   const names=await readdir(directory);
   if(names.some(name=>name!=='publisher.lock'&&
     !(name.startsWith('initialization.json.pending-')&&GTFS_UUID.test(name.slice('initialization.json.pending-'.length)))))
@@ -686,7 +740,21 @@ export async function openGtfsWorkspace({directory,create=false,title='GTFS Sche
         feeds:[],editions:[],comparisons:[],decisions:[],releases:[],exports:[],requests:{},pending:null};
       for(const name of ['feeds','editions','comparisons','decisions','releases','requests'])await privateDirectory(rootFile(name),true);
       await sameFile(rootFile('workspace.json'),bytes(state));
-    } else state=validState(await readJson(rootFile('workspace.json'),STATE_MAX));
+    } else {
+      const markerPath=rootFile('initialization.json');
+      const marker=await exists(markerPath)?await readLaunchRecord(markerPath,INPUT_MAX,value=>{
+        initialization(value);
+        if(expectedWorkspaceId!==undefined&&value.workspaceId!==expectedWorkspaceId)
+          throw fault('GTFS_WORKSPACE_ID_CHANGED','The initialization differs from the reviewed original UUID.',409);
+        return value;
+      },{reconcile:true}):null;
+      state=await readLaunchRecord(rootFile('workspace.json'),STATE_MAX,(value,linked)=>{
+        const original=linked?initialState(value,marker):validState(value);
+        if(expectedWorkspaceId!==undefined&&original.id!==expectedWorkspaceId)
+          throw fault('GTFS_WORKSPACE_ID_CHANGED','The native workspace differs from the reviewed original UUID.',409);
+        return original;
+      },{reconcile:true});
+    }
     if(expectedWorkspaceId!==undefined&&state.id!==expectedWorkspaceId)
       throw fault('GTFS_WORKSPACE_ID_CHANGED','The native workspace differs from the reviewed original UUID.',409);
     for(const name of ['feeds','editions','comparisons','decisions','releases','requests'])await privateDirectory(rootFile(name));
