@@ -15,6 +15,23 @@ It uses the existing XML source parser, retained Workspace, original SF30 immuta
 
 See [OPERATIONS.md](OPERATIONS.md) for browser, installed application, CLI, MCP and managed lifecycle commands, and [DOMAIN.md](DOMAIN.md) for financial interpretation and source references.
 
+## Complete installed receiving and included publisher
+
+[receiving/COMPLETE.md](receiving/COMPLETE.md) connects the original committed
+distribution, READY installation, complete publisher work, browser/CLI/MCP
+receiving and portable customer delivery in one resumable operation. Its
+customer archive contains the untouched original runtime release, final reviewed
+portfolio and report, all merchant datasets, source attribution and full guides.
+
+The included actual public input is AidData's Nigeria AIMS IATI 2.03 XML,
+generated on 18 April 2016, under
+`examples/aiddata-nigeria-2016/`. The original 309,331-byte XML is unchanged.
+[The complete source notice](receiving/AIDDATA_NIGERIA.md) records its immutable
+identity, release citation, ODC-By database license and source discrepancies.
+The software's license and the included research database's license are
+separate. Every dataset and financial total for this input is computed by the
+original IATI parser and native workspace.
+
 ## Source-owned components
 
 | Component | Responsibility |
