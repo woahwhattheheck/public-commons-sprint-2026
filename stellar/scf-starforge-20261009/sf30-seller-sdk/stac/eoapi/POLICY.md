@@ -39,6 +39,7 @@ The workspace exposes these methods:
 | Method | Arguments | Result |
 | --- | --- | --- |
 | `getState` | none | Current revision, draft, saved reviews, approvals and receiving receipts |
+| `getApproval` | `{approvalId?}` | Detached `{approval, review, policy, compilation}` for the selected or current saved approval |
 | `saveDraft` | `{policy, expectedRevision?}` | Normalized policy, digest and resulting revision |
 | `review` | `{expectedRevision?}` | Saved review ID, exact policy and compilation, changes from the currently approved version |
 | `approve` | `{reviewId, reviewer, expectedRevision?}` | Stable approval ID, review ID, policy digest, reviewer and time |
@@ -48,7 +49,7 @@ The workspace exposes these methods:
 
 Approval binds to the exact reviewed draft. Editing policy fields or reordering overlapping routes makes an earlier review stale. Reapproving the same review returns its original approval. Importing the same package returns its original receiving receipt. A receiving workspace preserves the source review and approval, allowing reopen and re-export of the same reviewed edition. Exporting an earlier approval remains possible after a later draft is saved.
 
-Each workspace write creates an immutable revision using the original store's exclusive file operation. `expectedRevision` lets a controller reject a stale edit. After a lost response, reopen with `create: false`, read `getState()` and reconcile the saved policy digest, review or approval before continuing. Retain the stable approval ID and `package.digest` beside the original STAC catalog edition, analyst selection and selected-file delivery manifest. Receiving creates its own workspace ID while retaining the original policy and approval identities.
+Each workspace write creates an immutable revision using the original store's exclusive file operation. `expectedRevision` lets a controller reject a stale edit. After a lost response, reopen with `create: false`, read `getState()` and reconcile the saved policy digest, review or approval before continuing. Retain the stable approval ID and `package.digest` beside the original STAC catalog edition, analyst selection and selected-file delivery manifest. Receiving creates its own workspace ID while retaining the original policy and approval identities. `getApproval({approvalId})` resolves the saved edition directly, verifies its policy and compilation against the original approval, and returns detached objects so caller edits cannot modify persisted review state.
 
 ## Intake
 
@@ -72,7 +73,7 @@ The portable policy accepts public connection settings and policy expressions. S
 
 ### Routes and precedence
 
-Route expressions begin with `^/` and use the common Python/ECMAScript regular-expression subset. Native endpoint method settings accept GET, POST, PUT, PATCH and DELETE. CORS configuration also supports HEAD and OPTIONS.
+Route expressions retain the authored Python regular-expression text. The selected native Auth Proxy reviewer evaluates Python syntax and the commissioning access cases with its original matcher; the configuration compiler does not substitute JavaScript expression validation. Native endpoint method settings accept GET, POST, PUT, PATCH and DELETE. CORS configuration also supports HEAD and OPTIONS.
 
 ```json
 {
@@ -85,7 +86,7 @@ Route expressions begin with `^/` and use the common Python/ECMAScript regular-e
 }
 ```
 
-The order shown is significant. The first matching private rule selects the required scopes; all scopes in its string are required. With `defaultPublic: false`, matching public rules are considered before private rules. The review records order within each access class, and order is preserved in stored JSON, digest calculation and exported environment values. Public patterns are case-sensitive; the native private matcher uses case-insensitive matching and its normalized request path.
+The order shown is significant. The first matching private rule selects the required scopes; all scopes in its string are required. The exact scope string is preserved: native matching splits a nonempty string on each literal space, including empty tokens between repeated spaces. A tuple with an empty scope string requires authentication without a scope. The review shows those exact token values for commissioning. With `defaultPublic: false`, matching public rules are considered before private rules. The review records order within each access class, and order is preserved in stored JSON, digest calculation and exported environment values. Public patterns are case-sensitive; the native private matcher uses case-insensitive matching and its normalized request path.
 
 ### Native filter constructors
 
