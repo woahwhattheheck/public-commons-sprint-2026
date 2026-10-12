@@ -355,6 +355,7 @@ export class MerchantReleaseOperator {
     this.#closing = true;
     this.#graphqlWorkspaces.beginClose();
     this.#fleet.cancelStaging();
+    this.#fleet.cancelClientTransfers();
     this.#close = (async () => {
       await this.#odataWorkspaces.cancelCaptures();
       await this.#active;
