@@ -15,7 +15,7 @@ import time
 import urllib.request
 import zipfile
 
-MANIFEST_SHA256 = "f8bbc9c3acf7e321800579f4c1c6423e065b31cefd815f610a63e89a1deffa4b"
+MANIFEST_SHA256 = "6514e216ea5cd3e4aba0c4d9f4b6434c3bed32889b3e184ba68001637ed3fa34"
 KIT_SHA256 = "dd547ddde2bcab285a8b44990bdd184d69665702aae287d7c8289e9df89ff8de"
 KIT_BYTES = 4653289
 KIT_PREFIX = "reference/buyer-handoff/"
@@ -69,6 +69,10 @@ def load_manifest(path):
             raise ValueError("Invalid source file descriptor")
         if len(item["sha256"]) != 64 or any(c not in "0123456789abcdef" for c in item["sha256"]):
             raise ValueError("Invalid source file hash")
+        selected_ref = item.get("ref", COMMIT)
+        if (not isinstance(selected_ref, str) or len(selected_ref) != 40
+                or any(c not in "0123456789abcdef" for c in selected_ref)):
+            raise ValueError("Invalid selected source commit")
         names.add(item["path"])
         total += item["bytes"]
     if len(names) != 110 or total != value["source_bytes"] or ENTRYPOINT not in names:
@@ -87,7 +91,7 @@ def prepare_source(manifest, destination, retained_source):
                 raise ValueError("Missing retained source: " + item["path"])
             raw = candidate.read_bytes()
         else:
-            url = "https://raw.githubusercontent.com/" + REPOSITORY + "/" + COMMIT + "/" + item["path"]
+            url = "https://raw.githubusercontent.com/" + REPOSITORY + "/" + item.get("ref", COMMIT) + "/" + item["path"]
             request = urllib.request.Request(url, headers={"User-Agent": "Commons-SCF-Receiving/1"})
             with urllib.request.urlopen(request, timeout=45) as response:
                 raw = response.read(item["bytes"] + 1)
@@ -106,7 +110,8 @@ def prepare_source(manifest, destination, retained_source):
             for future in futures:
                 future.cancel()
             raise
-    return {"files": len(received), "bytes": sum(received), "commit": COMMIT}
+    return {"files": len(received), "bytes": sum(received), "commit": COMMIT,
+            "selected_commits": sorted({item.get("ref", COMMIT) for item in manifest["files"]})}
 
 
 def receive_kit(kit, destination):
