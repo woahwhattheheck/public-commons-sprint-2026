@@ -91,7 +91,11 @@
     "nativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_receiving.py",
     "browserReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_browser.mjs",
     "connectedReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/RECEIVING.mjs",
-    "installedApplicationsReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_installed_applications.mjs"
+    "installedApplicationsReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_installed_applications.mjs",
+    "conformanceCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-conformance-schema.json",
+    "conformanceOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/conformance.mjs",
+    "conformanceNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance.py",
+    "conformanceConnectedReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance_clients.mjs"
   },
   "limits": {
     "nativeArchiveBytes": 2147483648,
@@ -102,7 +106,9 @@
   "guides": {
     "operating": "products/human-services-directory/OPERATING.md",
     "receiving": "products/human-services-directory/RECEIVING.md",
-    "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md"
+    "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md",
+    "conformance": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE.md",
+    "conformanceNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_NATIVE.md"
   },
   "nativeReceivingOperation": {
     "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
