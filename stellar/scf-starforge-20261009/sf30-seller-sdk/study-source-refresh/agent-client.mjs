@@ -19,8 +19,9 @@ const sourceOf = connection => ({schema:STUDY_INSTANCE_SCHEMA, instanceId:connec
   sourceSha256:connection.operator.source_sha256, baseUrl:connection.base_url});
 function origin(value) {
   const url = new URL(value);
+  const port = url.port === '' ? 80 : Number(url.port);
   need(url.protocol === 'http:' && url.hostname === '127.0.0.1' && !url.username && !url.password &&
-    !url.hash && !url.search && url.pathname === '/' && Number(url.port) >= 1 && Number(url.port) <= 65535,
+    !url.hash && !url.search && url.pathname === '/' && Number.isInteger(port) && port >= 1 && port <= 65535,
   'STUDY_LOOPBACK_REQUIRED', 'Use the original local Study operator listener.');
   return url;
 }

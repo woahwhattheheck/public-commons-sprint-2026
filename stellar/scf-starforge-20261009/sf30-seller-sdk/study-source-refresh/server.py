@@ -222,8 +222,8 @@ class Handler(BaseHTTPRequestHandler):
             shutil.rmtree(directory)
 
 
-def serve(directory, port=0, open_browser=False):
-    with operator_lease(directory) as identity:
+def serve(directory, port=0, open_browser=False, source_directory=None, expected_selection_sha256=None):
+    with operator_lease(directory, source_directory, expected_selection_sha256) as identity:
         return _serve(directory, port, open_browser, identity)
 
 
@@ -249,7 +249,13 @@ def _serve(directory, port, open_browser, identity):
         dump(connection_file, {"schema": "stellar-forge.study-operator-connection.v1",
                               "base_url": base, "token": token, "pid": os.getpid(),
                               "operator": server.operator_identity})
-        print(json.dumps({"base_url": base, "connection_file": str(connection_file)}), flush=True)
+        print(json.dumps({"schema": "stellar-forge.study-operator-startup.v1", "state": "LISTENING",
+                          "base_url": base, "connection_file": str(connection_file),
+                          "pid": identity["pid"], "instance_id": identity["instance_id"],
+                          "selection_sha256": identity["selection_sha256"],
+                          "source_sha256": identity["source_sha256"],
+                          "execution_source_directory": identity["execution"]["source_directory"]}),
+              flush=True)
         if open_browser:
             webbrowser.open(base + "/#" + token)
         if threading.current_thread() is threading.main_thread():
