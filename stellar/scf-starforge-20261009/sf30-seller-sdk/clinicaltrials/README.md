@@ -227,3 +227,7 @@ Read the result through `GET /api/clinical/prs-preview?previewId=ID`; `state.prs
 Portable receiving includes `prsPreviews` and exact `prs/preview-ID.json` files with the original XML, modernization plans and reconciliation reports. Customer sourceFiles retains the same closure for native SF82 publication. New workspaces can receive older packets without previews.
 
 The native dataset's declared column order is part of its snapshot. Customer export preserves that order when changing the adjacent CSV filename to `dataset.csv`; general metadata canonicalization does not reorder the dataset's columns. Failed provider-version response bytes remain retained with their validation outcome, while a completed capture still requires consistent original validated start/resume/finish editions.
+
+## Disclosure batch receiving
+
+[Batch receiving](BATCH_RECEIVING.md) keeps client XML references, duplicate inputs, original inspections, reviewed modernization, full or partial upload composition, explicit registry links, typed reconciliation, row dispositions and complete handover in this same original workspace. The browser receives multiple files through the original authenticated upload. Batch exports retain the register, exceptions, exact original/candidate bytes and a v2 portable workspace that reopens the same decisions.

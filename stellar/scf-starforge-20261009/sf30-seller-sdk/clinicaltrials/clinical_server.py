@@ -44,6 +44,10 @@ class Handler(RetainedHandler):
                 self._json({"error":"The managed ClinicalTrials console is not available"},503)
             else:self._json(self.server.launch)
             return
+        if target.path=="/batch.js":
+            self._gate(api=False)
+            body=(HERE/"public"/"batch.js").read_bytes()
+            self._headers(200,"text/javascript; charset=utf-8",len(body));self.wfile.write(body);return
         if target.path=="/publisher.mjs":
             self._gate(api=False)
             path=HERE.parent/"socrata"/"public"/"publisher.mjs"
@@ -60,6 +64,11 @@ class Handler(RetainedHandler):
                 self._json(ws.studies(q.get("captureId"),int(q.get("offset","0")),int(q.get("limit","50")),q.get("query","")))
             elif route=="/api/clinical/study":self._json(ws.study(q["captureId"],q["nctId"]))
             elif route=="/api/clinical/study-compare":self._json(ws.study_compare(q["beforeId"],q["afterId"],q["nctId"]))
+            elif route=="/api/clinical/batch":self._json(ws.batch(q["batchId"]))
+            elif route=="/api/clinical/batch-entry":self._json(ws.batch_entry(q["batchId"],q["entryId"]))
+            elif route=="/api/clinical/batch-export":
+                exported=ws.read_batch_export(q["exportId"],q["file"])
+                self._download(exported["path"],exported["filename"],media(exported["filename"]))
             elif route=="/api/clinical/prs":self._json(ws.prs_document(q["documentId"]))
             elif route=="/api/clinical/prs-plan":self._json(ws.prs_plan(q["planId"]))
             elif route=="/api/clinical/prs-reconciliation":self._json(ws.prs_reconciliation(q["reportId"]))
