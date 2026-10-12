@@ -5,7 +5,7 @@ import { mkdir, readdir, lstat, rm, rename, mkdtemp, unlink } from 'node:fs/prom
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { constants as osConstants } from 'node:os';
-import { HOME_SCHEMA, MANIFEST, UPDATE_CLAIMS, sha256, verifyRelease, plainDirectory, boundedFile, putFile,
+import { HOME_SCHEMA, MANIFEST, UPDATE_CLAIMS, sha256, verifyRelease, plainDirectory, boundedFile, putFile, copyVerifiedFile,
   atomicFile, atomicJson, jsonFile, validateId, withHomeLock } from './release-core.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -123,10 +123,14 @@ async function selectUnlocked(home, id) {
   await atomicJson(join(home, 'active.json'), state);
   return { ...state, changed: true };
 }
-export async function install(bundleInput, homeInput, { expected, activate = false, prepareInstalledRelease } = {}) {
+export async function install(bundleInput, homeInput, { expected, activate = false, prepareInstalledRelease,
+  consumePrepared = false } = {}) {
   if (prepareInstalledRelease !== undefined && typeof prepareInstalledRelease !== 'function')
     throw new TypeError('prepareInstalledRelease must be a function');
+  if (typeof consumePrepared !== 'boolean') throw new TypeError('consumePrepared must be a boolean');
   const bundle = await verifyRelease(bundleInput, expected), home = resolve(homeInput);
+  if (consumePrepared && (!Object.hasOwn(bundle.manifest.origin ?? {}, 'runtimeInstallation') || !prepareInstalledRelease))
+    throw new Error('Consuming an owned prepared release requires its runtime attachment');
   if (Object.hasOwn(bundle.manifest.origin ?? {}, 'runtimeInstallation') && !prepareInstalledRelease)
     throw new Error('Use starforge installation adopt-runtime to attach this release to its retained runtime');
   if (home === bundle.root || home.startsWith(bundle.root + '/')) throw new Error('Installation must be outside its release bundle');
@@ -140,14 +144,24 @@ export async function install(bundleInput, homeInput, { expected, activate = fal
     } else {
       const stage = await mkdtemp(join(lockedHome, 'releases', '.install-'));
       try {
-        for (const file of bundle.files)
-          await putFile(join(stage, file.path), await boundedFile(bundle.root, file.path, file.bytes), file.mode);
-        await putFile(join(stage, MANIFEST), bundle.manifestBytes);
+        let preparedStage = stage, consumed = false;
+        if (consumePrepared) {
+          // The runtime adopter explicitly hands over its own private prepared
+          // directory. The child does not already exist on any supported host.
+          const ownedStage = join(stage, 'release');
+          try { await rename(bundle.root, ownedStage); preparedStage = ownedStage; consumed = true; }
+          catch (error) { if (error.code !== 'EXDEV') throw error; }
+        }
+        if (!consumed) {
+          for (const file of bundle.files)
+            await copyVerifiedFile(bundle.root, file.path, join(stage, file.path), file);
+          await putFile(join(stage, MANIFEST), bundle.manifestBytes);
+        }
         // A changed input cannot be promoted after the initial source read.
-        await verifyRelease(stage, bundle.manifest.digest);
-        await rename(stage, target);
+        await verifyRelease(preparedStage, bundle.manifest.digest);
+        await rename(preparedStage, target);
         state = 'INSTALLED';
-      } catch (error) { await rm(stage, { recursive: true, force: true }); throw error; }
+      } finally { await rm(stage, { recursive: true, force: true }); }
     }
     // A runtime-aware caller prepares the installed dependency attachment under
     // this same lock. Selection only follows successful preparation, including

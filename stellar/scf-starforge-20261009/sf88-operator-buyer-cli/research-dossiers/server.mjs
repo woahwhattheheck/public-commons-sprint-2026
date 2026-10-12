@@ -9,6 +9,7 @@ import { openDossierStore } from './dossier.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 import { openUnstructuredWorkspace, openSavedDocumentBuyerSource } from './unstructured-workspace.mjs';
+import { openUnstructuredPipelineWorkspace, openSavedPipelineSource, PIPELINE_UPLOAD_BODY_BYTES } from './unstructured-pipelines-workspace.mjs';
 
 const PUBLIC = fileURLToPath(new URL('./public/', import.meta.url));
 const TYPES = Object.freeze({
@@ -18,6 +19,8 @@ const TYPES = Object.freeze({
   'crossref.js': 'text/javascript; charset=utf-8',
   'unstructured.js': 'text/javascript; charset=utf-8',
   'unstructured.css': 'text/css; charset=utf-8',
+  'unstructured-pipelines.js': 'text/javascript; charset=utf-8',
+  'unstructured-pipelines.css': 'text/css; charset=utf-8',
 });
 const MAX_RESEARCH_BODY = 96 * 1024 * 1024 + 65536; // 16 MiB raw UTF-8, worst-case JSON escaping plus envelope.
 const MAX_PORTABLE_BODY = 256 * 1024 * 1024 + 65536; // Engine caps the serialized portable record at 256 MiB.
@@ -94,7 +97,7 @@ export async function loadEditionAdapters(modulePath) {
 
 /** Reuses the existing SF88 loopback / fragment-token operator convention. */
 export async function startDossierWorkspace({directory, port = 0, providers = {}, openalexWorkspace = null,
-  crossrefSource = null, crossrefIdentity = null, documentSource = null} = {}) {
+  crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null} = {}) {
   requireValue(typeof directory === 'string' && isAbsolute(directory) && resolve(directory) === directory,
     'WORKSPACE_ABSOLUTE_PATH_REQUIRED');
   requireValue(Number.isInteger(port) && port >= 0 && port <= 65535, 'WORKSPACE_PORT_INVALID');
@@ -116,6 +119,7 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
     crossref = await openCrossrefWorkspace({directory:join(directory,'crossref'),dossiers:store,
       source:crossrefSource,identity:crossrefIdentity});
   }
+  const pipelines = await openUnstructuredPipelineWorkspace({dossiers:store,source:pipelineSource});
   const token = randomBytes(32).toString('hex');
   const expectedAuthorization = Buffer.from('Bearer ' + token);
   let origin;
@@ -152,7 +156,8 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200, {dossiers: await store.list(), providers: Object.keys(providers),
           openalex: {configured:openalexWorkspace !== null},
           crossref: {configured:crossref !== null,identity:crossrefIdentity},
-          unstructured: {configured:unstructured.configured,workspaceId:unstructured.workspaceId}}); return;
+          unstructured: {configured:unstructured.configured,workspaceId:unstructured.workspaceId},
+          pipelines: await pipelines.configured()}); return;
       }
       if (req.method === 'GET' && path === '/api/openalex/editions') {
         requireValue(openalexWorkspace !== null, 'OPENALEX_WORKSPACE_NOT_CONFIGURED');
@@ -193,6 +198,18 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
           limit:url.searchParams.has('limit') ? revisionQuery(url.searchParams.get('limit')) : 20,
         })); return;
       }
+      if (req.method === 'GET' && action === 'pipelines') {
+        send(200, await pipelines.list(id, {after:url.searchParams.get('after')??'',
+          limit:url.searchParams.has('limit')?revisionQuery(url.searchParams.get('limit')):30})); return;
+      }
+      const pipelineMatch = action.match(/^pipelines\/operations\/(up_[a-f0-9]{64})(?:\/(submit|refresh|cancel|reconcile|retain|provider-jobs|inputs|outputs)(?:\/((?:in_|out_)[a-f0-9]{64}))?)?$/);
+      if (pipelineMatch && req.method === 'GET') {
+        if (!pipelineMatch[2]) {send(200, await pipelines.inspect(id,pipelineMatch[1])); return;}
+        if (['inputs','outputs'].includes(pipelineMatch[2]) && pipelineMatch[3]) {
+          const original = await pipelines[pipelineMatch[2] === 'inputs' ? 'inputFile' : 'outputFile'](id,pipelineMatch[1],pipelineMatch[3]);
+          send(200,original.bytes,original.contentType,original.filename); return;
+        }
+      }
       if (req.method === 'GET' && action === 'crossref/operations') {
         requireValue(crossref !== null, 'CROSSREF_WORKSPACE_NOT_CONFIGURED');
         send(200, await crossref.list(id, {after:url.searchParams.get('after')??'',
@@ -229,7 +246,34 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
         send(200, Buffer.from(result.body), type, result.filename); return;
       }
       if (req.method !== 'POST') {send(405, {error: 'METHOD_NOT_ALLOWED'}); return;}
-      const data = await readJson(req, ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
+      const data = await readJson(req, action === 'pipelines/prepare' ? PIPELINE_UPLOAD_BODY_BYTES :
+        ['receive', 'reference'].includes(action) ? MAX_RESEARCH_BODY : MAX_CONTROL_BODY);
+      if (action === 'pipelines/prepare') {
+        send(201,await pipelines.prepare(id,data)); return;
+      }
+      if (pipelineMatch && !pipelineMatch[3]) {
+        if (pipelineMatch[2] === 'provider-jobs') {
+          send(200,await pipelines.providerJobs(id,pipelineMatch[1],data)); return;
+        }
+        if (['submit','refresh','cancel','reconcile','retain'].includes(pipelineMatch[2])) {
+          send(200,await pipelines.act(id,pipelineMatch[1],pipelineMatch[2],data)); return;
+        }
+      }
+      if (action === 'pipelines/review') {
+        send(200,await pipelines.review(id,data.selection)); return;
+      }
+      if (action === 'pipelines/elements') {
+        send(200,await pipelines.elements(id,selectedFields(data,
+          ['selection','expectedEditionSha256','offset','limit','page','type','query']))); return;
+      }
+      if (action === 'pipelines/download') {
+        const original=await pipelines.download(id,selectedFields(data,
+          ['selection','expectedEditionSha256','file']));
+        send(200,original.bytes,original.contentType,original.filename); return;
+      }
+      if (action === 'pipelines/receive') {
+        send(200,await pipelines.receive(id,data)); return;
+      }
       if (action === 'unstructured/review') {
         send(200, await unstructured.review(id, data.selection)); return;
       }
@@ -315,8 +359,10 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       if (res.headersSent) {res.destroy(); return;}
       const code = safeCode(error);
       const status = code === 'AUTH_REQUIRED' ? 401 : ['HOST_REFUSED', 'ORIGIN_REFUSED'].includes(code) ? 403 :
-        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
-          ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT'].includes(code) ? 413 : 400;
+        ['REVISION_CONFLICT','PORTABLE_HISTORY_CONFLICT','ROUTESCAN_RECORD_BUSY','CROSSREF_OPERATION_RUNNING_ELSEWHERE','UNSTRUCTURED_REVIEWED_EDITION_CHANGED','UNSTRUCTURED_RECEIVING_LABEL_CONFLICT','PIPELINE_REVISION_CHANGED','PIPELINE_REVIEWED_EDITION_CHANGED',
+          'PIPELINE_PREPARATION_REQUEST_CHANGED','PIPELINE_RECEIVING_REQUEST_CHANGED','PIPELINE_REVIEWED_PLAN_CHANGED',
+          'PIPELINE_ACTION_REQUEST_REUSED','PIPELINE_OPERATION_RUNNING_ELSEWHERE'].includes(code) ? 409 : code === 'ENOENT' || code === 'DOSSIER_NOT_FOUND' ? 404 :
+          ['UPLOAD_SIZE_LIMIT','PORTABLE_SIZE_LIMIT','PORTABLE_RECORD_SIZE_LIMIT','PIPELINE_UPLOAD_TOO_LARGE'].includes(code) ? 413 : 400;
       send(status, {error: code, ...(error.openAlexImport ? {openAlexImport:error.openAlexImport} : {})});
     }
   });
@@ -328,12 +374,13 @@ export async function startDossierWorkspace({directory, port = 0, providers = {}
       server.once('error', reject);
       server.listen(port, '127.0.0.1', accept);
     });
-  } catch (error) {unstructured.clear(); await crossref?.close(); throw error;}
+  } catch (error) {unstructured.clear(); await pipelines.close(); await crossref?.close(); throw error;}
   origin = 'http://127.0.0.1:' + server.address().port;
   let closing;
-  return {server, origin, url: origin + '/#token=' + token, token, crossref, unstructured,
+  return {server, origin, url: origin + '/#token=' + token, token, crossref, unstructured, pipelines,
     close: () => closing ??= (async () => {
       unstructured.clear();
+      await pipelines.close();
       await crossref?.close();
       await new Promise((accept, reject) => {
         server.close(error => error ? reject(error) : accept()); server.closeIdleConnections();
@@ -346,7 +393,7 @@ function parseOptions(args) {
   const options = {};
   for (let index = 0; index < args.length; index += 2) {
     const key = args[index];
-    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source'].includes(key) && !Object.hasOwn(options, key) &&
+    requireValue(['--dir', '--port', '--edition-adapter', '--openalex-workspace', '--openalex-module', '--crossref-config', '--crossref-state', '--document-source', '--pipeline-source'].includes(key) && !Object.hasOwn(options, key) &&
       typeof args[index + 1] === 'string' && args[index + 1].length > 0, 'ARGUMENT_INVALID_OR_REPEATED');
     options[key] = args[index + 1];
   }
@@ -357,11 +404,11 @@ function parseOptions(args) {
   return {directory: options['--dir'], port: Number(rawPort), adapter: options['--edition-adapter'],
     openalexDirectory:options['--openalex-workspace'], openalexModule:options['--openalex-module'],
     crossrefConfig:options['--crossref-config'],crossrefDirectory:options['--crossref-state'],
-    documentSourceConfig:options['--document-source']};
+    documentSourceConfig:options['--document-source'],pipelineSourceConfig:options['--pipeline-source']};
 }
 async function main(args) {
   if (args.length === 0 || args.length === 1 && ['--help', '-h'].includes(args[0])) {
-    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json]\n');
+    process.stdout.write('Usage: node server.mjs --dir /absolute/private/workspace [--port 8846] [--edition-adapter /absolute/provider-adapters.mjs] [--openalex-workspace /absolute/original/workspace] [--openalex-module /absolute/original/research/workspace.mjs] [--crossref-state /absolute/private/crossref-source] [--crossref-config /absolute/crossref-merchant.json] [--document-source /absolute/private/document-source.json] [--pipeline-source /absolute/private/pipeline-source.json]\n');
     return;
   }
   const options = parseOptions(args);
@@ -369,7 +416,7 @@ async function main(args) {
   const openalexWorkspace = options.openalexDirectory ? await openSavedOpenAlexWorkspace({
     directory:options.openalexDirectory, modulePath:options.openalexModule,
   }) : null;
-  let app, crossrefSource = null, crossrefIdentity = null, documentSource = null;
+  let app, crossrefSource = null, crossrefIdentity = null, documentSource = null, pipelineSource = null;
   try {
     if (options.crossrefDirectory) {
       requireValue(isAbsolute(options.crossrefDirectory) && (!options.crossrefConfig || isAbsolute(options.crossrefConfig)), 'CROSSREF_ABSOLUTE_PATHS_REQUIRED');
@@ -391,12 +438,14 @@ async function main(args) {
       crossrefIdentity = {configSha256,account:snapshot.account,mode:snapshot.mode};
     }
     if (options.documentSourceConfig) documentSource = await openSavedDocumentBuyerSource(options.documentSourceConfig);
-    app = await startDossierWorkspace({...options, providers, openalexWorkspace,crossrefSource,crossrefIdentity,documentSource});
-  } catch (error) {await crossrefSource?.close();await openalexWorkspace?.close();throw error;}
+    if (options.pipelineSourceConfig) pipelineSource = await openSavedPipelineSource(options.pipelineSourceConfig);
+    app = await startDossierWorkspace({...options, providers, openalexWorkspace,crossrefSource,crossrefIdentity,documentSource,pipelineSource});
+  } catch (error) {await pipelineSource?.operations.close();await crossrefSource?.close();await openalexWorkspace?.close();throw error;}
   process.stdout.write(JSON.stringify({mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
     url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
     crossrefConfigured:crossrefSource !== null, documentSourceConfigured:documentSource !== null,
-    documentWorkspaceId:documentSource?.workspaceId ?? null}) + '\n');
+    documentWorkspaceId:documentSource?.workspaceId ?? null,
+    pipelineSourceConfigured:pipelineSource !== null,pipelineWorkspaceId:pipelineSource?.workspaceId ?? null}) + '\n');
   let closing;
   const stop = () => closing ??= (async () => {
     try {await app.close();} finally {

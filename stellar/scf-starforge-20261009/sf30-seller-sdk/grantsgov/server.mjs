@@ -1,15 +1,13 @@
 // MIT. Authenticated local operator surface for the retained Grants.gov workspace.
 import { createServer } from 'node:http';
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { openGrantsWorkspace } from './workspace.mjs';
 
-const STATIC = Object.freeze({
-  '/':['index.html','text/html; charset=utf-8'],
-  '/app.mjs':['app.mjs','text/javascript; charset=utf-8'],
-  '/app.css':['app.css','text/css; charset=utf-8']
-});
+const ASSETS = JSON.parse(readFileSync(new URL('./browser-assets.json',import.meta.url),'utf8'));
+const STATIC = Object.freeze(Object.fromEntries(ASSETS.routes));
 const own = Object.prototype.hasOwnProperty;
 const error = (code,message,status=400) => Object.assign(new Error(message),{code,status});
 const object = value => value!==null && typeof value==='object' && !Array.isArray(value);
@@ -78,7 +76,7 @@ export async function startGrantsServer({directory,workspace,port=0,token,
   token??=randomBytes(32).toString('base64url');
   if(typeof token!=='string'||!/^[A-Za-z0-9_-]{32,256}$/.test(token))
     throw error('SESSION_TOKEN_INVALID','Configure a random local session token.');
-  const expected=Buffer.from('Bearer '+token);
+  const expected=Buffer.from('Bearer '+token),instanceId=randomUUID();
   const ownsWorkspace=!workspace;
   workspace??=await openGrantsWorkspace({directory,transport,buyerWorkspaces});
   const assets=new Map();
@@ -116,6 +114,11 @@ export async function startGrantsServer({directory,workspace,port=0,token,
         const asset=assets.get(target.pathname);return respond(response,200,asset.data,asset.type);
       }
       authorize(request);
+      if(method==='GET'&&target.pathname==='/api/identity'){
+        const state=await workspace.snapshot();
+        return respond(response,200,{ok:true,result:{schema:'stellar-forge.grantsgov-session.v1',
+          instanceId,pid:process.pid,workspaceId:state.id,createdAt:state.createdAt}});
+      }
       if(method==='GET'&&target.pathname==='/api/state')
         return respond(response,200,{ok:true,result:await workspace.snapshot()});
       if(method==='POST'&&target.pathname==='/api/action') {
@@ -157,5 +160,5 @@ export async function startGrantsServer({directory,workspace,port=0,token,
     if(ownsWorkspace)await workspace.close();
     await new Promise((accept,reject)=>{server.close(failure=>failure?reject(failure):accept());server.closeIdleConnections?.();});
   })();
-  return {server,workspace,origin,url:origin+'/#session='+token,token,close};
+  return {server,workspace,origin,url:origin+'/#session='+token,token,instanceId,close};
 }

@@ -4,7 +4,10 @@ This optional continuation runs the original NocoDB source-to-customer receiving
 workflow and then purchases the complete reviewed film edition through the
 original native Stellar payment path. It uses the same provider operation,
 retained film and actor captures, source workspaces, publisher target, SF82
-release store and customer package.
+release store and customer package. After the payment owners drain, it opens
+that same source through the installed Applications lifecycle and completes
+review, save, managed Start/Open, console restart, Stop and a second reviewed
+start without another source capture or purchase.
 
 Run [testnet-consumer.mjs](receiving/testnet-consumer.mjs) when the selected host
 has the returned complete captures and its native runtime. The driver creates
@@ -30,6 +33,16 @@ table with 200 records. Actual selected field IDs, aliases, types and source
 order come from those retained declarations. The driver does not create
 provider records or acquire the tables again.
 
+Raw provider page files may precede the original source-native capture. Keep
+that history and inspect its actual manifest. If it lacks the original reader's
+opening/closing schema and count observations, use the original NocoDB
+`discover`, `capture` and `freeze` commands from [PROVIDER_INPUT.md](PROVIDER_INPUT.md)
+and [README.md](README.md) against the same existing service. Obtain any required
+real observations there before constructing the private receiving template.
+The selected capture must preserve the actual table/view/filter, field IDs,
+types and unique source order. An earlier raw capture is not a restriction on
+the source reads needed to complete this same operation.
+
 The original distribution supplies the correct source and manifest layout:
 
 | Input | Original maintained location |
@@ -40,12 +53,15 @@ The original distribution supplies the correct source and manifest layout:
 | Native dependencies | `RUNTIME/node_modules`, an ancestor of the selected source |
 | Core driver | `source/stellar/scf-starforge-20261009/sf30-seller-sdk/nocodb/receiving/native-consumer.mjs` |
 | Testnet driver | The adjacent `testnet-consumer.mjs` |
+| Applications continuation | The adjacent `applications-consumer.mjs`, called by the same testnet entry |
+| `applications.runtimeDirectory` | The original READY `RUNTIME`, retaining its installer plan, archive, profile and lock |
 | Private receiving state | A separate mode-0700 directory outside `package/source` |
 
 The original manifest already lists repository-relative
 `files[{path,gitBlob,sha256,bytes,mode}]`. Use it directly. Both drivers verify all
 listed file hashes. The testnet driver also requires its original payment,
-release, buyer, approval and evidence entry modules in that manifest. The full
+release, buyer, approval, evidence and installed Applications entry modules in
+that manifest. The full
 distribution includes their static, dynamic, Python and browser assets.
 
 Keep the selected source complete and immutable. A small folder containing
@@ -81,7 +97,7 @@ node /source/stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs
   --dir /srv/nocodb-receiving/runtime \
   --archive /srv/nocodb-receiving/starforge-merchant.tgz \
   --sha256 ACTUAL_ARCHIVE_SHA256 \
-  --native --operator \
+  --native --feature mcp --operator \
   --pins /srv/nocodb-receiving/native-pins.json
 
 node /source/stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs install \
@@ -94,6 +110,11 @@ node /source/stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs
 Use the original retained installer recovery if installation was interrupted.
 It preserves the same archive, profile, lockfile and installation intent.
 NocoDB's REST/capture source needs no separate NocoDB native feature group.
+The complete receiving command also exercises the original MCP operator.
+Include `--feature mcp` with `--native --operator` when preparing its runtime,
+so the original profile resolves the MCP packages declared by the selected
+distribution. The four explicit payment pins above stay the same; the maintained
+profile owns the remaining MCP dependency selection and lock.
 
 The exact payment pins above correspond to the original SF88 lockfile.
 A distribution advertising optional peers does not establish that they are
@@ -106,20 +127,16 @@ does not make those packages available to the siblings. `NODE_PATH` does not
 repair ESM package resolution. The maintained installation places dependencies
 at the common runtime ancestor.
 
-If an existing authorized host needs only the four native payment packages,
-the ordinary free npm installation can use that same common ancestor:
+The full receiving command also uses the original installed Applications
+lifecycle. Select the READY directory created by the maintained installer;
+a bare npm directory does not contain its retained installation and source
+binding. An interrupted install continues through the same original installer
+and lock. Before funding accounts, the command checks that this READY runtime's
+source and manifest are the ones selected by the core input.
 
-```sh
-npm install --prefix /srv/nocodb-receiving/runtime \
-  --ignore-scripts --no-audit --no-fund \
-  @x402/core@2.28.0 @x402/stellar@2.28.0 \
-  @x402/extensions@2.28.0 @stellar/stellar-sdk@16.3.0
-```
-
-This fallback is not a substitute for the original operator profile and its
-other declared dependencies. Keep npm metadata and `node_modules` outside the
-selected `package/source`. Use the existing browser paths; the receiving driver
-does not install another browser or provision another machine.
+Keep npm metadata and `node_modules` outside the selected `package/source`.
+Use the existing browser paths; the receiving driver does not install another
+browser or provision another machine.
 
 ## Save the core receiving template
 
@@ -179,6 +196,9 @@ absolute paths and no symlinked private storage.
   "outputDirectory": "/srv/nocodb-receiving/private/native",
   "python": "/usr/bin/python3",
   "openssl": "/usr/bin/openssl",
+  "applications": {
+    "runtimeDirectory": "/srv/nocodb-receiving/runtime"
+  },
   "authorization": {
     "purpose": "NOCODB_RECEIVING",
     "network": "stellar:testnet",
@@ -215,7 +235,7 @@ node /srv/nocodb-receiving/runtime/package/source/stellar/scf-starforge-20261009
 
 Keep stdout, exit status and the complete private output with the original
 operation. The public command enters an exclusive POSIX kernel lease before
-generating accounts or starting either receiving phase. The lease is inherited
+generating accounts or starting the source, payment or Applications phases. The lease is inherited
 through the original core and paid worker and disappears when its actual
 owning processes end. A parallel invocation cannot create a second funding
 or purchase operation in that directory.
@@ -275,7 +295,9 @@ that directory to Slack, a public repository or a customer.
 | Accounting | Calls original dataset accounting/finalization, then reopens and reads the saved original results |
 | Data room | Uses original SF100 delivery for JSONL, CSV, review HTML and manifest; compares every delivered film value and verifies all output hashes |
 | Reopen | Reopens the same original buyer session, ledger views and data room with zero additional purchase commands |
-| Drain | Stops the original merchant, drains the native facilitator, closes approval and ingress, then records completion |
+| Payment drain | Stops the original merchant, drains the native facilitator, and closes approval and ingress |
+| Installed Applications | Reviews and saves the same NocoDB source as an installed application, recovers one lost Start reply, opens the original browser, reopens the runtime console around the same live managed process, stops and then reviews a second start |
+| Final source reopen | Stops the second managed run, opens the original source through its native model, and verifies the same capture, selected version, publisher and published film snapshot |
 
 The buyer configuration retains the exact prepared original handoff. A recorded
 local `requestTimeoutMs:120000` is the original supported transport timeout
@@ -292,6 +314,74 @@ The original dataset response files are the acquired source of the data room.
 The receiving driver does not synthesize or independently export a replacement
 dataset. Original page caps are allocations; actual payment claims come from
 matched transfers and finalized Governor entries.
+
+## Installed Applications receiving
+
+The same command calls [applications-consumer.mjs](receiving/applications-consumer.mjs)
+after the original payment phase has closed its merchant, buyer and facilitator
+owners. It selects the original READY runtime from `applications.runtimeDirectory`
+and the already initialized film workspace at `core/authoring/film`. It does not
+create another NocoDB workspace or publisher, nor does it acquire a provider
+observation.
+
+The runtime console state is retained under `applications/runtime-workspace`.
+This is the product's original runtime workspace. It attaches the selected
+READY installation through the original inspector and uses its maintained
+managed adoption when that installation has no existing adopted release.
+The source copy and its nine NocoDB launch files are checked by the original
+Applications and NocoDB startup observers.
+
+The browser performs the complete operator flow:
+
+1. Choose **Applications → New application** and **NocoDB source authoring**.
+   Review the original private film directory, the selected READY runtime and
+   local port `0`; the retained capture path needs no provider connection.
+2. **Review application** and **Save application**. Keep the original save
+   request UUID, application ID, revision and managed adoption identity.
+3. **Review start → Start reviewed application**. The receiving browser retains
+   the actual generated request before dispatch, withholds one already accepted
+   response, and exercises **Recover last application request** against that
+   same UUID and review. The same UUID must still identify one original managed run afterward.
+4. **Open application** follows the original CLI's retained private URL. The
+   authenticated source status must show the same capture, 1,000 records,
+   selected source version, publisher and target. No URL is guessed from a port.
+5. Close and reopen only the runtime console. The original application must
+   remain reachable under the same run, native instance and private URL. This
+   uses the maintained worker's actual lifetime behavior.
+6. **Stop application** and await the original terminal state. The original
+   source model must reacquire its same workspace lease and return the same
+   saved source after the drain.
+7. Review a second start of that same saved application. A fresh original
+   instance opens the retained source; its version, record totals, workspace
+   identity and publisher paths remain unchanged. Stop that instance and reopen
+   the source again.
+
+Finally, the original dataset engine's schema must still name the paid film
+snapshot. Applications cannot claim completion merely because a startup line
+or a configured port exists: the continuation reads the original authenticated
+state, actual retained managed records, Stop result and reopened native store.
+
+The final report includes the application/revision, the two completed receiving
+run and instance IDs, selected source version, published snapshot and successful
+Stop. If an interrupted attempt required cleanup, the same report also lists
+that original terminal run; the total includes every retained attempt. Desktop and mobile views are captured from the real installed UI. Raw
+managed receipts, local capability URLs, screenshots and runtime logs remain
+private with the worker. Return the safe report fields and selected artifacts
+through the original internal receiving thread.
+
+If this phase is interrupted, rerun the same outer command and exact input.
+A completed payment result is hash-verified and reused; the original account,
+core and buyer phases do not start another purchase. The continuation first
+reopens the retained application request or original managed recovery. It never
+uses a new application or Start UUID to answer an uncertain earlier request.
+A concrete failed original launch remains attached to its original operation
+for repair. Failure cleanup first saves the exact original Stop request and
+then its observed terminal run/instance/result. After the operator resumes the
+same receiving command, a pending cleanup replays that same Stop. Only after
+the original run is positively terminal may a new original review and Start
+UUID continue the unfinished stage. Prior requests, startup records and
+completed observations remain in the receiving history; no unresolved request
+is replaced. The normal lost-response path continues to reuse its original UUID.
 
 ## Resume the same retained work
 
@@ -337,8 +427,12 @@ available for native reconciliation.
 ## Read and return the actual result
 
 The outer `result.json` becomes `PASS` only when the original core, actual
-testnet purchase, complete data room, reopen and cleanup have completed.
+testnet purchase, complete data room, installed Applications lifecycle, reopen
+and cleanup have completed.
 `payment-result.json` retains the detailed original native references.
+`applications/result.json` retains the actual installed application, its two
+completed receiving runs, any interrupted terminal attempts, source continuity
+and terminal Stop.
 `payment-progress.json` and the two private logs retain concrete incomplete
 states.
 
@@ -356,6 +450,8 @@ Useful internal handoff fields are:
   original data room source binding.
 - Original customer package identity and actual browser screenshots from the
   core workflow.
+- Original Applications ID/revision, both managed run and instance IDs, recovered
+  Start UUID, console continuity, source version and terminal Stop.
 - Actual exit status, successful drain, or the precise original native error
   that still needs resolution.
 

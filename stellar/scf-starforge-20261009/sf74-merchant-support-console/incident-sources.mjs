@@ -1,5 +1,6 @@
 // MIT. Merchant incident operations composed with the original SF93 store and watcher.
 import {realpath} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
 import {dirname,resolve} from 'node:path';
 import {openIncidentStore,readPrivateFile,statusView} from '../sf93-seller-support-bundle/incident-store.mjs';
 import {configureIncidents,acknowledgeIncident,remindIncident,operateNotification} from '../sf93-seller-support-bundle/incident-operator.mjs';
@@ -106,39 +107,55 @@ export function incidentProblem(error) {
   return {status:500,error:'INCIDENT_OPERATION_FAILED',detail:'The original incident operation failed.'};
 }
 
+/** Read the original configured IDs and initialized stores without starting workers. */
+async function configuredIncidentSources(configPath) {
+  const sources=new Map();
+  if(configPath===undefined||configPath===null)return {path:null,sha256:null,sources};
+  const path=resolve(text(configPath,4096,'incident sources configuration path'));
+  let config,bytes;
+  try {bytes=await readPrivateFile(path,MAX_CONFIG_BYTES);config=JSON.parse(decoder.decode(bytes));}
+  catch(error) {
+    if(error instanceof SyntaxError)throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Incident sources configuration must be UTF-8 JSON.',422);
+    throw error;
+  }
+  fields(config,['schema','sources'],'incident sources configuration');
+  if(config.schema!==INCIDENT_SOURCES_SCHEMA||!Array.isArray(config.sources)||config.sources.length>8)
+    throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Use the original incident sources schema with at most eight sources.',422);
+  const directories=new Set();
+  for(const entry of config.sources) {
+    fields(entry,['id','label','directory'],'incident source');
+    const id=text(entry.id,64,'source ID');
+    if(!SOURCE_ID.test(id)||['profiles','__proto__','constructor','prototype'].includes(id)||sources.has(id))
+      throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Source IDs must be distinct lowercase identifiers; profiles is reserved.',422);
+    const label=text(entry.label??id,120,'source label');
+    const configured=resolve(dirname(path),text(entry.directory,4096,'source directory'));
+    const original=await openIncidentStore(configured),directory=await realpath(original.root);
+    if(directories.has(directory))
+      throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Each original incident store may have only one source ID.',422);
+    const store=directory===original.root?original:await openIncidentStore(directory);
+    const state=await store.read();
+    directories.add(directory);
+    sources.set(id,{id,label,directory,store,configuration:{revision:state.configRevision,sha256:state.configHash},
+      routeCache:new Map()});
+  }
+  return {path,sha256:createHash('sha256').update(bytes).digest('hex'),sources};
+}
+
+function sourceConfigurationView(selected) {
+  return {schema:INCIDENT_SOURCES_SCHEMA,path:selected.path,sha256:selected.sha256,
+    sources:[...selected.sources.values()].map(source=>({id:source.id,label:source.label,directory:source.directory,
+      configuration:{...source.configuration}}))};
+}
+/** Private managed-launch projection. Live incidents, capture bodies and tokens stay in the original store. */
+export async function inspectIncidentSourcesConfiguration(configPath) {
+  return sourceConfigurationView(await configuredIncidentSources(configPath));
+}
+
 /** Bind configured IDs to initialized private stores. Browser input never selects a path. */
 export async function openIncidentSources({configPath,environment=process.env}={}) {
-  const sources=new Map(),workers=new Map();
+  const selected=await configuredIncidentSources(configPath),sources=selected.sources,workers=new Map();
+  const configuration=()=>sourceConfigurationView(selected);
   let closing=false,closePromise=null;
-  if(configPath!==undefined&&configPath!==null) {
-    const path=resolve(text(configPath,4096,'incident sources configuration path'));
-    let config;
-    try {config=JSON.parse(decoder.decode(await readPrivateFile(path,MAX_CONFIG_BYTES)));}
-    catch(error) {
-      if(error instanceof SyntaxError)throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Incident sources configuration must be UTF-8 JSON.',422);
-      throw error;
-    }
-    fields(config,['schema','sources'],'incident sources configuration');
-    if(config.schema!==INCIDENT_SOURCES_SCHEMA||!Array.isArray(config.sources)||config.sources.length>8)
-      throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Use the original incident sources schema with at most eight sources.',422);
-    const directories=new Set();
-    for(const entry of config.sources) {
-      fields(entry,['id','label','directory'],'incident source');
-      const id=text(entry.id,64,'source ID');
-      if(!SOURCE_ID.test(id)||['profiles','__proto__','constructor','prototype'].includes(id)||sources.has(id))
-        throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Source IDs must be distinct lowercase identifiers; profiles is reserved.',422);
-      const label=text(entry.label??id,120,'source label');
-      const configured=resolve(dirname(path),text(entry.directory,4096,'source directory'));
-      // Validate the named private directory before canonicalizing ancestor aliases.
-      const original=await openIncidentStore(configured);
-      const directory=await realpath(original.root);
-      if(directories.has(directory))
-        throw fail('INCIDENT_SOURCES_CONFIG_INVALID','Each original incident store may have only one source ID.',422);
-      const store=directory===original.root?original:await openIncidentStore(directory);
-      await store.read();
-      directories.add(directory);sources.set(id,{id,label,directory,store,routeCache:new Map()});
-    }
-  }
   function sourceFor(id) {
     if(closing)throw fail('INCIDENT_SOURCES_CLOSED','The incident console is closing.',503);
     if(typeof id!=='string'||!sources.has(id))
@@ -346,6 +363,6 @@ export async function openIncidentSources({configPath,environment=process.env}={
     return {source:publicSource(source),incidentId,revision,
       handoff:result.handoff,html:result.html,report:result.report};
   }
-  return {profiles,list,view,configure,acknowledge,notify,notification,inspectDestination,start,stop,close,prepareCase};
+  return {profiles,configuration,list,view,configure,acknowledge,notify,notification,inspectDestination,start,stop,close,prepareCase};
 }
 

@@ -36,10 +36,10 @@ class OperatorServer(ThreadingHTTPServer):
     block_on_close = True
     def __init__(self, workspace, port=0):
         self.workspace, self.token = workspace, secrets.token_urlsafe(32)
+        self.launch = None
         self.slots = threading.BoundedSemaphore(8)
         self.jobs = threading.RLock()
         self.job, self.worker = None, None
-        self.launch = None
         super().__init__(("127.0.0.1", port), Handler)
         self.origin = "http://127.0.0.1" + ("" if self.server_port == 80 else ":" + str(self.server_port))
         self.hosts = {urlsplit(self.origin).netloc, f"127.0.0.1:{self.server_port}"}
@@ -194,14 +194,16 @@ class Handler(BaseHTTPRequestHandler):
             self._headers(200, media, len(data)); self.wfile.write(data); return
         self._gate()
         q, ws = self._query(target), self.server.workspace
-        if target.path == "/api/activity":
-            self._json(self.server.activity()); return
         if target.path == "/api/launch":
             if self.server.launch is None:
                 raise InputError("Open this console with its original structured startup")
             self._json(self.server.launch); return
+        if target.path == "/api/activity":
+            self._json(self.server.activity()); return
         self.server.idle()
-        if target.path == "/api/subscriptions":
+        if target.path == "/api/operation":
+            self._json(ws.operation(q["id"], q.get("family", "feed")))
+        elif target.path == "/api/subscriptions":
             self._json(ws.subscriptions.state())
         elif target.path == "/api/subscriptions/plan":
             self._json(ws.subscriptions.plan(q["source"]))
@@ -248,6 +250,23 @@ class Handler(BaseHTTPRequestHandler):
             if file_digest(path, MAX_FEED_BYTES) != ident:
                 raise InputError("Retained HTTP response bytes changed")
             self._download(path, ident + ".body")
+        elif target.path in ("/api/export/manifest", "/api/export/file"):
+            with ws.mutex, ws.scratch() as temp:
+                result = ws.export_edition(q["edition"], temp / "dataset")
+                files = result["files"]
+                manifest = {"schema": "stellar-forge.feed-dataset-export.v1",
+                            "editionId": result["editionId"], "files": files}
+                manifest_id = digest(json_bytes(manifest))
+                if target.path == "/api/export/manifest":
+                    self._json(manifest | {"manifestSha256": manifest_id})
+                else:
+                    name = q["file"]
+                    if q.get("manifest") != manifest_id or name not in files or Path(name).name != name:
+                        raise InputError("Select a file from this exact original dataset manifest")
+                    path = Path(result["directory"]) / name
+                    if file_digest(path) != files[name]["sha256"]:
+                        raise InputError("The original dataset file differs from its manifest")
+                    self._download(path, name)
         elif target.path in ("/api/export", "/api/project"):
             with ws.mutex, ws.scratch() as temp:
                 archive = temp / ("feed-project.zip" if target.path == "/api/project" else "feed-dataset.zip")
@@ -270,8 +289,16 @@ class Handler(BaseHTTPRequestHandler):
         target = self._gate()
         ws, q = self.server.workspace, self._query(target)
         if target.path == "/api/cancel":
-            self._body().read()
-            self._json(ws.cancel_capture()); return
+            raw = self._body().read()
+            body = load_json(raw) if raw else {}
+            if not isinstance(body, dict) or set(body) - {"expectedJobId"}:
+                raise InputError("Cancellation accepts only the selected original job ID")
+            with self.server.jobs:
+                if "expectedJobId" in body and (not self.server.job or
+                        self.server.job["id"] != checked_id(body["expectedJobId"]) or self.server.job["state"] != "RUNNING"):
+                    raise InputError("The selected original job is no longer running")
+                self._json(ws.cancel_capture())
+            return
         if target.path == "/api/action":
             body = load_json(self._body().read())
             if not isinstance(body, dict) or not isinstance(body.get("action"), str):
@@ -281,7 +308,10 @@ class Handler(BaseHTTPRequestHandler):
         if target.path == "/api/subscriptions/import":
             from opml_source import MAX_OPML_BYTES
             data = self._body(MAX_OPML_BYTES).read()
-            body = {"action": "opml-import", "operationId": q["operation"], "sha256": digest(data)}
+            source_hash = digest(data)
+            if q.get("sha256") is not None and checked_id(q["sha256"]) != source_hash:
+                raise InputError("The uploaded OPML differs from its selected complete SHA256")
+            body = {"action": "opml-import", "operationId": q["operation"], "sha256": source_hash}
             self._json(self.server.start(body, lambda: ws.subscriptions.import_opml(data, q["operation"])), 202)
         elif target.path == "/api/subscriptions/receive":
             from subscriptions import MAX_PACKET
@@ -290,7 +320,10 @@ class Handler(BaseHTTPRequestHandler):
                 with path.open("xb") as output:
                     path.chmod(0o600)
                     shutil.copyfileobj(self._body(MAX_PACKET), output, 65536)
-                body = {"action": "collection-receive", "operationId": q["operation"], "sha256": file_digest(path, MAX_PACKET)}
+                source_hash = file_digest(path, MAX_PACKET)
+                if q.get("sha256") is not None and checked_id(q["sha256"]) != source_hash:
+                    raise InputError("The uploaded collection differs from its selected complete SHA256")
+                body = {"action": "collection-receive", "operationId": q["operation"], "sha256": source_hash}
                 job = self.server.start(body, lambda: ws.subscriptions.receive(path, q["operation"]),
                                         lambda: path.unlink(missing_ok=True))
             except Exception:
@@ -298,8 +331,11 @@ class Handler(BaseHTTPRequestHandler):
             self._json(job, 202)
         elif target.path == "/api/import":
             data = self._body(MAX_FEED_BYTES).read()
+            source_hash = digest(data)
+            if q.get("sha256") is not None and checked_id(q["sha256"]) != source_hash:
+                raise InputError("The uploaded feed differs from its selected complete SHA256")
             body = {"action": "import", "feedId": q["feed"], "operationId": q["operation"],
-                    "sourceUrl": q.get("url"), "sha256": digest(data)}
+                    "sourceUrl": q.get("url"), "sha256": source_hash}
             self._json(self.server.start(body, lambda: ws.import_source(q["feed"], data, q["operation"], q.get("url"))), 202)
         elif target.path == "/api/receive":
             path = ws.root / "tmp" / ("feed-receive-" + uuid.uuid4().hex + ".zip")
@@ -307,7 +343,10 @@ class Handler(BaseHTTPRequestHandler):
                 with path.open("xb") as output:
                     path.chmod(0o600)
                     shutil.copyfileobj(self._body(1024 * 1024 * 1024), output, 65536)
-                body = {"action": "receive", "operationId": q["operation"], "sha256": file_digest(path, 1024 * 1024 * 1024)}
+                source_hash = file_digest(path, 1024 * 1024 * 1024)
+                if q.get("sha256") is not None and checked_id(q["sha256"]) != source_hash:
+                    raise InputError("The uploaded project differs from its selected complete SHA256")
+                body = {"action": "receive", "operationId": q["operation"], "sha256": source_hash}
                 job = self.server.start(body, lambda: ws.receive_project(path, q["operation"]),
                                         lambda: path.unlink(missing_ok=True))
             except Exception:

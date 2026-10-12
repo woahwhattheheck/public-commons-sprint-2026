@@ -28,6 +28,8 @@ if (resuming) {
 const nativePath = 'stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/';
 const merchantPath = 'stellar-forge/mcp-merchant-operator/';
 const imported = name => import(pathToFileURL(join(sourceRoot, name)).href);
+const { createGrpcStreamingHandler, runGrpcStreamingPhase, runGrpcStreamingBrowserPhase } =
+  await imported('experiments/grpc-streaming-phase-20261012-6f7c.mjs');
 const runtimeRequire = createRequire(join(sourceRoot, 'package.json'));
 const grpc = runtimeRequire('@grpc/grpc-js'), protoLoader = runtimeRequire('@grpc/proto-loader');
 const descriptor = runtimeRequire('protobufjs/ext/descriptor/index.js');
@@ -95,8 +97,8 @@ async function tlsMaterial() {
 }
 const plainFiles = {
   'defaults.proto': 'syntax = "proto2"; package commons.defaults; message Defaults { optional double ratio = 1 [default = 1.25]; optional bytes marker = 2 [default = "\\001\\377"]; optional uint64 precise = 3 [default = 18446744073709551615]; }\n',
-  'shared.proto': 'syntax = "proto3"; package commons.reflection.v1; import "defaults.proto"; message AccountRequest { uint64 account_id = 1 [json_name = "accountPublicId"]; map<string,sint64> tags = 2; optional string note = 3; oneof filter { string email = 4; uint64 customer = 5; } commons.defaults.Defaults defaults = 6; } message AccountReply { uint64 account_id = 1; map<string,sint64> tags = 2; optional string note = 3; sint64 sequence = 4; bytes evidence = 5; commons.defaults.Defaults defaults = 6; }\n',
-  'ledger.proto': 'syntax = "proto3"; package commons.reflection.v1; import "shared.proto"; service Ledger { rpc Get(AccountRequest) returns(AccountReply); } service Audit { rpc Inspect(AccountRequest) returns(AccountReply); rpc Check(AccountRequest) returns(AccountReply); } service Internal { rpc Hidden(AccountRequest) returns(AccountReply); }\n',
+  'shared.proto': 'syntax = "proto3"; package commons.reflection.v1; import "defaults.proto"; message AccountRequest { uint64 account_id = 1 [json_name = "accountPublicId"]; map<string,sint64> tags = 2; optional string note = 3; oneof filter { string email = 4; uint64 customer = 5; } commons.defaults.Defaults defaults = 6; string stream_mode = 7; } message AccountReply { uint64 account_id = 1; map<string,sint64> tags = 2; optional string note = 3; sint64 sequence = 4; bytes evidence = 5; commons.defaults.Defaults defaults = 6; }\n',
+  'ledger.proto': 'syntax = "proto3"; package commons.reflection.v1; import "shared.proto"; service Ledger { rpc Get(AccountRequest) returns(AccountReply); rpc Watch(AccountRequest) returns(stream AccountReply); } service Audit { rpc Inspect(AccountRequest) returns(AccountReply); rpc Check(AccountRequest) returns(AccountReply); } service Internal { rpc Hidden(AccountRequest) returns(AccountReply); }\n',
 };
 const field = (name, number, type, extra = {}) => ({ name, number, label: 1, type, ...extra });
 const mapEntry = { name: 'TagsEntry', options: { mapEntry: true }, field: [field('key', 1, 9), field('value', 2, 18)] };
@@ -110,7 +112,8 @@ const fileDescriptors = {
         field: [field('account_id', 1, 4, { jsonName: 'accountPublicId' }),
           field('tags', 2, 11, { label: 3, typeName: '.commons.reflection.v1.AccountRequest.TagsEntry' }),
           field('note', 3, 9, { oneofIndex: 1, proto3Optional: true }), field('email', 4, 9, { oneofIndex: 0 }),
-          field('customer', 5, 4, { oneofIndex: 0 }), field('defaults', 6, 11, { typeName: '.commons.defaults.Defaults' })] },
+          field('customer', 5, 4, { oneofIndex: 0 }), field('defaults', 6, 11, { typeName: '.commons.defaults.Defaults' }),
+          field('stream_mode', 7, 9)] },
       { name: 'AccountReply', nestedType: [mapEntry], oneofDecl: [{ name: '_note' }],
         field: [field('account_id', 1, 4), field('tags', 2, 11, { label: 3, typeName: '.commons.reflection.v1.AccountReply.TagsEntry' }),
           field('note', 3, 9, { oneofIndex: 0, proto3Optional: true }), field('sequence', 4, 18),
@@ -123,9 +126,9 @@ const method = '/commons.reflection.v1.Ledger/Get';
 function descriptorBytes(name, version) {
   let file = fileDescriptors[name];
   if (name === 'ledger.proto') file = { name, package: 'commons.reflection.v1', syntax: 'proto3', dependency: ['shared.proto'],
-    service: [['Ledger', ['Get']], ['Audit', version ? ['Inspect', 'Check'] : ['Inspect']], ['Internal', ['Hidden']]]
+    service: [['Ledger', ['Get', 'Watch']], ['Audit', version ? ['Inspect', 'Check'] : ['Inspect']], ['Internal', ['Hidden']]]
       .map(([name, methods]) => ({ name, method: methods.map(name => ({ name, inputType: '.commons.reflection.v1.AccountRequest',
-        outputType: '.commons.reflection.v1.AccountReply' })) })) };
+        outputType: '.commons.reflection.v1.AccountReply', serverStreaming: name === 'Watch' })) })) };
   return descriptor.FileDescriptorProto.encode(descriptor.FileDescriptorProto.fromObject(file)).finish();
 }
 async function startEndpoint(port) {
@@ -143,16 +146,20 @@ async function startEndpoint(port) {
       Buffer.isBuffer(call.metadata.get('operator-bin')[0]) &&
       call.metadata.get('operator-bin')[0].equals(Buffer.from('native-reflection-metadata'));
   }
+  function response(call) {
+    const value = { account_id: call.request.account_id, tags: call.request.tags,
+      sequence: '-9223372036854775808', evidence: Buffer.from('native-reflected-contract').toString('base64') };
+    if (Object.hasOwn(call.request, 'note')) value.note = call.request.note;
+    if (Object.hasOwn(call.request, 'defaults')) value.defaults = call.request.defaults;
+    return value;
+  }
   function application(call, done) {
     if (!authorized(call)) return done({ code: grpc.status.UNAUTHENTICATED, details: 'Original native authorization required.' });
     nativeCalls.push({ method, input: structuredClone(call.request) });
-    const response = { account_id: call.request.account_id, tags: call.request.tags,
-      sequence: '-9223372036854775808', evidence: Buffer.from('native-reflected-contract').toString('base64') };
-    if (Object.hasOwn(call.request, 'note')) response.note = call.request.note;
-    if (Object.hasOwn(call.request, 'defaults')) response.defaults = call.request.defaults;
-    done(null, response);
+    done(null, response(call));
   }
-  server.addService(service.Ledger.service, { get: application });
+  server.addService(service.Ledger.service, { get: application,
+    watch: createGrpcStreamingHandler({ grpc, authorized, response, nativeCalls }) });
   server.addService(service.Audit.service, { inspect: application, check: application });
   server.addService(service.Internal.service, { hidden: application });
   for (const protocol of ['v1', 'v1alpha']) {
@@ -208,7 +215,8 @@ try {
     transport: { mode: 'tls', caEnv: 'GRPC_REFLECTION_CA', certificateEnv: 'GRPC_REFLECTION_CERT',
       privateKeyEnv: 'GRPC_REFLECTION_KEY', serverName: 'localhost' },
     metadata: [{ name: 'authorization', valueEnv: 'GRPC_REFLECTION_AUTH' }, { name: 'operator-bin', valueEnv: 'GRPC_REFLECTION_BINARY' }],
-    limits: { timeoutMs: 15000, readyTimeoutMs: 5000 } };
+    limits: { timeoutMs: 15000, readyTimeoutMs: 5000,
+      stream: { maxBytes: 67108864, maxRecords: 100000, idleTimeoutMs: 10000 } } };
   if (!resuming) await privateJson('source.json', sourceConfig);
   const environment = { ...process.env, ...ownedEnvironment };
   for (const [name, value] of Object.entries(ownedEnvironment)) process.env[name] = value;
@@ -218,7 +226,10 @@ try {
     payment: { scheme: 'exact', network: 'stellar:testnet', amount: '25000', asset: 'UNVERIFIED_DEMO_ASSET',
       payTo: 'UNVERIFIED_DEMO_RECIPIENT', maxTimeoutSeconds: 60 },
     routes: [{ id: 'account', path: '/account', grpcMethod: method, serviceName: 'Reflected account ledger',
-      description: 'Original reflected typed account operation.', example: input }] };
+      description: 'Original reflected typed account operation.', example: input },
+      { id: 'account-events', path: '/account-events', grpcMethod: '/commons.reflection.v1.Ledger/Watch',
+        serviceName: 'Reflected account stream', description: 'Original reflected account events as retained typed NDJSON.',
+        example: { ...input, stream_mode: 'ok' } }] };
   if (!resuming) { await privateJson('request.json', input); await privateJson('plan.json', plan); }
   const { startGrpcWorkspace } = await imported(nativePath + 'workspace/server.mjs');
   const openWorkspace = async () => {
@@ -247,7 +258,7 @@ try {
       const captured = JSON.parse(await readFile(filename, 'utf8')), compiled = compileProtoSource(captured);
       need(captured.files.length === 3 && captured.files.every(x => !Object.hasOwn(x, 'content') &&
         hash(Buffer.from(x.descriptorBase64, 'base64')) === x.sha256), 'Exact native descriptor bytes or import closure changed.');
-      need(Object.keys(compiled.methods).length === 2 && !Object.keys(compiled.methods).some(x => x.includes('.Internal/')),
+      need(Object.keys(compiled.methods).length === 3 && !Object.keys(compiled.methods).some(x => x.includes('.Internal/')),
         'Unselected service methods escaped the reviewed descriptor selection.');
       const request = compiled.root.lookupType('commons.reflection.v1.AccountRequest');
       const defaults = compiled.root.lookupType('commons.defaults.Defaults');
@@ -363,6 +374,8 @@ try {
       return { ...state.customerExport, sourceExportId: revision.exportId, receivedRevision: imported.revision,
         sourceSha256: imported.protoSha256, sdkExports: Object.keys(sdk), sourceSection: source.section ?? 'source' };
     });
+    await runGrpcStreamingPhase({ call, phase, checkpoint, report, state, out, environment,
+      sourceRoot, workspace, endpoint, grpc, merchantUrl: merchant.url, nativeCalls });
     await phase('original-merchant-challenge-and-release-rollback', async () => {
       const running = await call('run', { preparation: ids.secondPreparation });
       const before = nativeCalls.length;
@@ -452,7 +465,8 @@ try {
       await page.locator('#reflection-save').click();
       await page.waitForFunction(() => document.getElementById('notice').textContent.startsWith('Reviewed reflected source saved as'));
       await page.locator('[data-view="methods"]').click();
-      await page.locator('#route-list').getByRole('button', { name: 'Edit route', exact: true }).click();
+      await page.locator('#route-list').locator(':scope > *').filter({ hasText: 'Reflected account ledger' })
+        .getByRole('button', { name: 'Edit route', exact: true }).click();
       await page.locator('#description').fill('Original reflected account operation reviewed by the native browser operator.');
       await page.locator('#apply-route').click(); await page.locator('#save').click();
       await page.waitForFunction(() => document.getElementById('revision-label').textContent.includes('current') &&
@@ -462,6 +476,8 @@ try {
         'The browser did not retain its edited merchant terms or dispatched an unintended application method.');
       need(errors.length === 0, 'The original reflection editor raised a browser error: ' + errors.join('; '));
       state.browserRevision = final.currentRevision; await checkpoint();
+      await runGrpcStreamingBrowserPhase({ page, phase, checkpoint, report, state, out, environment,
+        sourceRoot, workspace, endpoint, grpc, nativeCalls });
       await browser.close(); browser = null;
       return { desktop: 'reflection-desktop.png', mobile: 'reflection-mobile.png', sourceRevision: final.currentRevision,
         sourceSha256: state.nextCapture.protoSource.sha256, reopenedCaptureId: ids.nextCapture,
@@ -470,7 +486,10 @@ try {
     });
     report.state = 'COMPLETE';
   }
-  report.nativeApplicationCalls = report.phases.find(x => x.name === 'original-revision-call-and-reflected-source-refresh')?.nativeApplicationCalls ?? 0;
+  if (operationPhase === 'native') {
+    report.nativeApplicationCalls = nativeCalls.length;
+    report.nativeApplicationJournal = structuredClone(nativeCalls);
+  } else report.browserApplicationCalls = nativeCalls.length;
 } catch (error) {
   report.state = 'FAILED'; report.failure = { code: error.code ?? null, message: error.message }; process.exitCode = 1;
 } finally {

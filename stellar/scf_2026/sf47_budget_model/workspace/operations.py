@@ -14,6 +14,7 @@ import zipfile
 from model import Problem, canonical, digest, now, text, short_id, csv_bytes, MAX_BUNDLE
 import operations_domain as domain
 import forecast as forecasts
+import portfolio as portfolios
 
 SCHEMA = "stellar-forge.sf47-operations.v1"
 MAX_SOURCE = 8 * 1024 * 1024
@@ -83,6 +84,9 @@ class Operations:
                 CREATE TABLE IF NOT EXISTS ops_forecasts(
                     program_id TEXT NOT NULL REFERENCES ops_programs(id),id TEXT NOT NULL,
                     body_json TEXT NOT NULL,PRIMARY KEY(program_id,id));
+                CREATE TABLE IF NOT EXISTS ops_portfolios(
+                    program_id TEXT NOT NULL REFERENCES ops_programs(id),id TEXT NOT NULL,
+                    body_json TEXT NOT NULL,PRIMARY KEY(program_id,id));
             """)
             row = workspace.db.execute("SELECT value FROM ops_metadata WHERE key='schema'").fetchone()
             if row and row[0] != SCHEMA:
@@ -128,6 +132,8 @@ class Operations:
         result["program"]["currentPlanRevision"] = latest[0]
         result["forecasts"] = [forecasts.summary(json.loads(row[0])) for row in self.db.execute(
             "SELECT body_json FROM ops_forecasts WHERE program_id=? ORDER BY rowid DESC", (program_id,))]
+        result["portfolios"] = [portfolios.summary(json.loads(row[0])) for row in self.db.execute(
+            "SELECT body_json FROM ops_portfolios WHERE program_id=? ORDER BY rowid DESC", (program_id,))]
         return result
 
     def read(self, program_id):
@@ -241,6 +247,22 @@ class Operations:
                 forecasts.validate_saved(row, context["plan"])
                 self.db.execute("INSERT INTO ops_forecasts VALUES(?,?,?)", (program_id, record_id, canonical(row)))
                 after = forecasts.summary(row)
+            elif command == "portfolio.save":
+                if not isinstance(data.get("inputs"), dict):
+                    domain.fail("Use a portfolio input object.", "INVALID_PORTFOLIO")
+                saved_forecast = self._portfolio_forecast(program_id, data.get("inputs", {}).get("forecastId"))
+                candidate = portfolios.preview(context, saved_forecast, data.get("inputs"))
+                if candidate["previewSha256"] != domain.sha(data.get("expectedPreviewSha256"), "Reviewed portfolio", False):
+                    domain.fail("The portfolio inputs or source differ from the reviewed preview.", "PORTFOLIO_PREVIEW_CONFLICT", 409)
+                if self.db.execute("SELECT COUNT(*) FROM ops_portfolios WHERE program_id=?", (program_id,)).fetchone()[0] >= portfolios.MAX_PORTFOLIOS:
+                    domain.fail("This case has reached its retained portfolio bound.", status=413)
+                record_id, kind = generated("portfolio"), "portfolio"
+                row = {**candidate, "id": record_id, "version": next_version, "createdAt": now(),
+                       "actor": actor, "note": note, "snapshot": context, "baseForecastSnapshot": saved_forecast}
+                row["sha256"] = digest(row)
+                portfolios.validate_saved(row, context["plan"])
+                self.db.execute("INSERT INTO ops_portfolios VALUES(?,?,?)", (program_id, record_id, canonical(row)))
+                after = portfolios.summary(row)
             elif command in ("review", "close", "reopen"):
                 if not note:
                     domain.fail("Retain the reason for this review, close or reopening.")
@@ -350,6 +372,70 @@ class Operations:
         value.pop("current")
         return forecasts.export(value)
 
+    def _portfolio_forecast(self, program_id, forecast_id):
+        row = self.db.execute("SELECT body_json FROM ops_forecasts WHERE program_id=? AND id=?",
+            (program_id, identifier(forecast_id, "forecast"))).fetchone()
+        if not row:
+            domain.fail("Select an immutable forecast from this original case.", "FORECAST_NOT_FOUND", 404)
+        return json.loads(row[0])
+
+    def _portfolio_context(self, program_id, expected):
+        expected = domain.integer(expected, "Reviewed operations version", 1, 10000000)
+        context = self._context(identifier(program_id, "operation"))
+        if context["program"]["version"] != expected:
+            domain.fail("The original case changed. Reopen it before allocating work.", "OPERATIONS_CONFLICT", 409)
+        return context
+
+    def seed_portfolio(self, program_id, body):
+        if not isinstance(body, dict) or set(body) - {"expectedVersion", "forecastId"}:
+            domain.fail("Use the declared portfolio seed object.", "INVALID_PORTFOLIO")
+        with self.workspace.mutex:
+            context = self._portfolio_context(program_id, body.get("expectedVersion"))
+            return portfolios.seed(context, self._portfolio_forecast(program_id, body.get("forecastId")))
+
+    def preview_portfolio(self, program_id, body):
+        if not isinstance(body, dict) or set(body) - {"expectedVersion", "inputs"} or not isinstance(body.get("inputs"), dict):
+            domain.fail("Use the declared portfolio preview object.", "INVALID_PORTFOLIO")
+        with self.workspace.mutex:
+            context = self._portfolio_context(program_id, body.get("expectedVersion"))
+            saved = self._portfolio_forecast(program_id, body["inputs"].get("forecastId"))
+            return portfolios.preview(context, saved, body["inputs"])
+
+    def list_portfolios(self, program_id):
+        with self.workspace.mutex:
+            self._program(identifier(program_id, "operation"))
+            return [portfolios.summary(json.loads(row[0])) for row in self.db.execute(
+                "SELECT body_json FROM ops_portfolios WHERE program_id=? ORDER BY rowid DESC", (program_id,))]
+
+    def portfolio(self, program_id, portfolio_id):
+        with self.workspace.mutex:
+            context = self._context(identifier(program_id, "operation"))
+            row = self.db.execute("SELECT body_json FROM ops_portfolios WHERE program_id=? AND id=?",
+                (program_id, identifier(portfolio_id, "portfolio"))).fetchone()
+            if not row:
+                domain.fail("The saved portfolio is unavailable.", "PORTFOLIO_NOT_FOUND", 404)
+            value = json.loads(row[0])
+            if digest({key: item for key, item in value.items() if key != "sha256"}) != value.get("sha256"):
+                domain.fail("The saved portfolio differs from its retained identity.", "PORTFOLIO_CHANGED", 409)
+            current = forecasts.source_identity(context)
+            return {**value, "current": {"programId": program_id, "version": current["version"],
+                    "sourceChanged": current["factsSha256"] != value["source"]["factsSha256"],
+                    "retainedOriginalProgramId": value["source"]["programId"]}}
+
+    def export_portfolio(self, program_id, portfolio_id):
+        value = self.portfolio(program_id, portfolio_id)
+        value.pop("current")
+        return portfolios.export(value)
+
+    def select_portfolio(self, program_id, body):
+        if not isinstance(body, dict) or set(body) - {"expectedVersion", "portfolioId", "alternativeId"}:
+            domain.fail("Use the declared portfolio selection object.", "INVALID_PORTFOLIO")
+        with self.workspace.mutex:
+            context = self._portfolio_context(program_id, body.get("expectedVersion"))
+            value = self.portfolio(program_id, body.get("portfolioId"))
+            value.pop("current")
+            return portfolios.select(context, value, short_id(body.get("alternativeId"), "Alternative ID"))
+
     def history(self, program_id, after=0, limit=100):
         domain.integer(after, "History cursor", 0, 10000000)
         domain.integer(limit, "History page size", 1, 200)
@@ -402,8 +488,10 @@ class Operations:
             original = self.workspace.export(program["planId"])
             saved_forecasts = [json.loads(row[0]) for row in self.db.execute(
                 "SELECT body_json FROM ops_forecasts WHERE program_id=? ORDER BY rowid", (program_id,))]
+            saved_portfolios = [json.loads(row[0]) for row in self.db.execute(
+                "SELECT body_json FROM ops_portfolios WHERE program_id=? ORDER BY rowid", (program_id,))]
             document = {"schema": SCHEMA, "exportedAt": now(), **context, "sources": list(context["sources"].values()),
-                        "reviews": reviews, "events": events, "forecasts": saved_forecasts}
+                        "reviews": reviews, "events": events, "forecasts": saved_forecasts, "portfolios": saved_portfolios}
             report = domain.report(**context)
             files = {"planning.zip": original,
                      "operations.json": (canonical(document) + "\n").encode(),
@@ -413,7 +501,7 @@ class Operations:
                      "recorded-work.csv": csv_bytes(["id", "state", "contributorId", "costId", "description", "startDate", "endDate", "hours", "fundingBasis", "sourceBasis"], context["records"]["work"]),
                      "plan-versus-actual.csv": csv_bytes(["id", "tranche", "plannedUsd", "plannedHours", "recordedHours", "acceptedHours", "preawardHours", "invoicedUsd", "paidUsd", "invoiceVarianceUsd"], report["packages"]),
                      "README.txt": ("SF47 delivery and cash operations\n\nMode: " + program["mode"] + "\n"
-                         "Open through the existing workspace's operations import. This bundle preserves the original planner history, selected immutable plan, recorded source attachments, operations events, close reviews and complete saved operating forecasts.\n"
+                         "Open through the existing workspace's operations import. This bundle preserves the original planner history, selected immutable plan, recorded source attachments, operations events, close reviews complete saved operating forecasts and delivery allocation portfolios.\n"
                          "Conditional planning amounts are separate from recorded cash. Testnet purchases are product operations. A work review or case close does not create an award, payment, customer agreement or external tranche acceptance.\n"
                          "Private access keys are not included.\n").encode()}
             for metadata in context["sources"].values():
@@ -563,6 +651,26 @@ class Operations:
                 domain.fail("The saved forecast does not join its original save event.", "FORECAST_SOURCE_CONFLICT", 409)
         if {row.get("recordId") for row in events if row.get("action") == "forecast.save"} != forecast_ids:
             domain.fail("The complete operations history is missing a saved forecast.", "INVALID_FORECAST")
+        saved_portfolios = document.get("portfolios", [])
+        if not isinstance(saved_portfolios, list) or len(saved_portfolios) > portfolios.MAX_PORTFOLIOS:
+            domain.fail("The retained portfolio set is invalid.", "INVALID_PORTFOLIO")
+        portfolio_ids, original_forecasts = set(), {row["id"]: row for row in saved_forecasts}
+        for value in saved_portfolios:
+            portfolios.validate_saved(value, plan)
+            ident = identifier(value["id"], "portfolio")
+            if ident in portfolio_ids:
+                domain.fail("The operations bundle repeats a saved portfolio.", "INVALID_PORTFOLIO")
+            portfolio_ids.add(ident)
+            version = domain.integer(value.get("version"), "Portfolio save version", 2, source_program["version"])
+            event = events[version - 1]
+            base = original_forecasts.get(value["baseForecast"]["id"])
+            if (event.get("action") != "portfolio.save" or event.get("recordId") != ident
+                    or event.get("after", {}).get("sha256") != value["sha256"]
+                    or value["source"]["version"] != version - 1
+                    or not base or base != value["baseForecastSnapshot"]):
+                domain.fail("The portfolio does not join its original forecast and save event.", "PORTFOLIO_SOURCE_CONFLICT", 409)
+        if {row.get("recordId") for row in events if row.get("action") == "portfolio.save"} != portfolio_ids:
+            domain.fail("The complete operations history is missing a saved portfolio.", "INVALID_PORTFOLIO")
         payload = {"domain": SCHEMA, "action": "import", "sha256": hashlib.sha256(raw).hexdigest(),
                    "name": name, "actor": actor}
         request_id = short_id(request_id, "Request ID")
@@ -613,6 +721,8 @@ class Operations:
                 self.db.execute("INSERT INTO ops_reviews VALUES(?,?,?)", (pid, review["id"], canonical(review)))
             for value in saved_forecasts:
                 self.db.execute("INSERT INTO ops_forecasts VALUES(?,?,?)", (pid, value["id"], canonical(value)))
+            for value in saved_portfolios:
+                self.db.execute("INSERT INTO ops_portfolios VALUES(?,?,?)", (pid, value["id"], canonical(value)))
             return {"id": pid, "version": source_program["version"], "action": "import", "planId": imported["id"], "mode": source_program["mode"]}
         with self.workspace.mutex:
             # Reuse the original receipt table before the original plan import.

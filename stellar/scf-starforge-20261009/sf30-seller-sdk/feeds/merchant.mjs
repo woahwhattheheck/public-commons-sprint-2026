@@ -67,15 +67,7 @@ async function exactFile(path, bytes) {
 }
 const descriptor = (path, bytes) => ({ path, bytes: bytes.length, sha256: hash(bytes) });
 
-/** Exact feed export -> native dataset -> native version store -> original release.
- * The selected source package can be retried unchanged after an interrupted reply. */
-export async function prepareFeedMerchant({ datasetExport, versionDirectory, packageDirectory, releaseDirectory,
-  payment, origin, path = '/feed', retentionMs = 3600000, maxVersions = 4,
-  maxRetainedBytes = 256 * MiB } = {}) {
-  const input = resolve(datasetExport), out = resolve(packageDirectory), versionsPath = resolve(versionDirectory),
-    releasePath = resolve(releaseDirectory);
-  if (new Set([input, out, versionsPath, releasePath]).size !== 4)
-    fail('Use separate export, package, version-store and release directories.');
+async function readFeedDataset(input) {
   if (await realpath(input) !== input) fail('Use the canonical feed export directory.');
   const originalConfig = await read(join(input, 'dataset.json'));
   const config = parse(originalConfig);
@@ -92,6 +84,52 @@ export async function prepareFeedMerchant({ datasetExport, versionDirectory, pac
   const dataset = await loadDatasetConfig(join(input, 'dataset.json')), description = dataset.describe();
   if (description.rowCount !== lineage.rowCount || !isDeepStrictEqual(description.columns.map(c => c.name), lineage.fields))
     fail('The native dataset differs from the selected feed projection.');
+  return { originalConfig, config, csv, feedBytes, xmlBytes, lineage, xml, dataset, description };
+}
+
+/** The same verified feed edition as a source package for the maintained publisher.
+ * This opens no version writer or listener. The caller retains this exact private
+ * directory; original native source-file closure and package checks still apply. */
+export async function prepareFeedPublisherPackage({ datasetExport, packageDirectory, payment, origin, path = '/feed' } = {}) {
+  const input = resolve(datasetExport), out = resolve(packageDirectory);
+  if (input === out) fail('Use separate original dataset and merchant package directories.');
+  const { originalConfig, config, csv, feedBytes, xmlBytes, lineage, xml, dataset, description } = await readFeedDataset(input);
+  const seller = await buildDatasetSellerConfig(dataset, { payment, origin, path });
+  if (seller.routes[0].definition.queryParameters.length >= 32) fail('The original snapshot selector needs a native query slot.');
+  seller.routes[0].definition.queryParameters.push({ ...DATASET_SNAPSHOT_PARAMETER });
+  const request = { schema:'stellar-forge.feed-publisher-package-request.v1', datasetExport:input, packageDirectory:out,
+    editionId:lineage.editionId, csvSha256:hash(csv), configSha256:hash(originalConfig),
+    feedLineageSha256:hash(feedBytes), xmlLineageSha256:hash(xmlBytes), payment, origin, path };
+  await targetDirectory(out);
+  await exactFile(join(out, 'feed-package-request.json'), encode({ ...request, requestSha256:fingerprint(request) }));
+  await exactFile(join(out, 'dataset.csv'), csv);
+  await exactFile(join(out, 'dataset.json'), encode({ ...config, file:'dataset.csv' }));
+  await exactFile(join(out, 'seller.json'), encode(seller));
+  await targetDirectory(join(out, 'provenance'));
+  await exactFile(join(out, 'provenance', 'feed-lineage.json'), feedBytes);
+  await exactFile(join(out, 'provenance', 'xml-lineage.json'), xmlBytes);
+  const source = { schema:'stellar-forge.feed-merchant-source.v1', editionId:lineage.editionId, buildId:lineage.buildId,
+    normalizedXmlSha256:xml.source, fields:lineage.fields, feedRevisions:lineage.revisions, rowCount:lineage.rowCount,
+    sourceFiles:[descriptor('provenance/feed-lineage.json', feedBytes), descriptor('provenance/xml-lineage.json', xmlBytes)] };
+  await exactFile(join(out, 'source.json'), encode(source));
+  if (!(await read(join(input, 'dataset.json'))).equals(originalConfig) ||
+      !(await read(join(input, 'data.csv'), 256 * MiB)).equals(csv))
+    fail('The original dataset export changed during preparation.');
+  return { schema:'stellar-forge.feed-publisher-package.v1', editionId:lineage.editionId, buildId:lineage.buildId,
+    snapshot:description.snapshot, rowCount:description.rowCount, packageDirectory:out,
+    resource:seller.publicOrigin + path, sourceFiles:source.sourceFiles, requestSha256:fingerprint(request) };
+}
+
+/** Exact feed export -> native dataset -> native version store -> original release.
+ * The selected source package can be retried unchanged after an interrupted reply. */
+export async function prepareFeedMerchant({ datasetExport, versionDirectory, packageDirectory, releaseDirectory,
+  payment, origin, path = '/feed', retentionMs = 3600000, maxVersions = 4,
+  maxRetainedBytes = 256 * MiB } = {}) {
+  const input = resolve(datasetExport), out = resolve(packageDirectory), versionsPath = resolve(versionDirectory),
+    releasePath = resolve(releaseDirectory);
+  if (new Set([input, out, versionsPath, releasePath]).size !== 4)
+    fail('Use separate export, package, version-store and release directories.');
+  const { originalConfig, config, csv, feedBytes, xmlBytes, lineage, xml, dataset, description } = await readFeedDataset(input);
   const seller = await buildDatasetSellerConfig(dataset, { payment, origin, path });
   if (seller.routes[0].definition.queryParameters.length >= 32) fail('The original snapshot selector needs a native query slot.');
   seller.routes[0].definition.queryParameters.push({ ...DATASET_SNAPSHOT_PARAMETER });

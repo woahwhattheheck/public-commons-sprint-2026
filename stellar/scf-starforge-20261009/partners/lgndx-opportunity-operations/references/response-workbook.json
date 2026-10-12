@@ -1,0 +1,382 @@
+{
+  "schema": "stellar-forge.opportunity-response-workbook.v1",
+  "title": "MCC Software Development Recompete: response working draft",
+  "opportunityReference": "95332427K0001",
+  "seed": {
+    "path": "references/operator-seed.json",
+    "gitBlob": "5934cfa6108e7ad61bc17bb74611df8bd8cf6229",
+    "sha256": "d5bcae2868ab7220a2c822bbf065786dba6862dea0bbb83732e19bd75f22b49e"
+  },
+  "authoringBasis": "Authored engineering recommendations and company-evidence work orders against the exact retained MCC RFI/PWS. The response field is working material; a row marked unanswered remains a preparation task until its company evidence or explicit N/A disposition is reviewed.",
+  "ownerSemantics": "Owner labels propose the accountable functional role. The company assigns the actual person and accepts the role through its working review.",
+  "sourceBindings": [
+    {
+      "key": "mcc-rfi",
+      "filename": "mcc-rfi-government-text.txt",
+      "sha256": "a056f3412429ae69c389def65021d15eac4bed29df962cfdb91c91b9bdd2aa73",
+      "bytes": 11184,
+      "url": "https://govtribe.com/file/government-file/request-for-information-rfi-final-dot-docx"
+    },
+    {
+      "key": "mcc-pws",
+      "filename": "mcc-pws-government-text.txt",
+      "sha256": "c517b8df490e686da248c751b094fae9083bd46722e2f6fbb5484ccbe8cb908e",
+      "bytes": 52325,
+      "url": "https://govtribe.com/file/government-file/performance-work-statement-pws-final-dot-docx"
+    },
+    {
+      "key": "mcc-event",
+      "filename": "mcc-industry-day-excerpt.txt",
+      "sha256": "79d600d186d7c45d9941af6d02470ec014903c292533039fc3df23d7603fdca9",
+      "bytes": 2016,
+      "url": "https://govtribe.com/file/government-file/rfi-notice-of-intent-dot-docx"
+    },
+    {
+      "key": "mcc-notice",
+      "filename": "mcc-notice-record.json",
+      "sha256": "600c4082662047a72bb83dfd48ddf6478f11f5d31eef8894adbb6a11653b9b14",
+      "bytes": 2196,
+      "url": "https://sam.gov/workspace/contract/opp/ec4254f4fdf24f8998bd4e10d5b58050/view"
+    },
+    {
+      "key": "lgndx-company",
+      "filename": "lgndx-company-evidence.json",
+      "sha256": "bdbb1ce9861b04395d43e00b4ceba23252a45b36933ddbd379ad2221f5a40092",
+      "bytes": 4313,
+      "url": "https://lgndx.com/product/apollo-evo"
+    },
+    {
+      "key": "funded-prime-capture",
+      "filename": "funded-prime-capture.json",
+      "sha256": "c07abc56456e888407e561ac8b50906ce1f7884bcc6835fdfdb05fffb949f045",
+      "bytes": 1453,
+      "url": "https://api.usaspending.gov/api/v2/search/spending_by_award/"
+    },
+    {
+      "key": "funded-prime-response",
+      "filename": "funded-prime-response.json",
+      "sha256": "c0c74c897b95db8657cfe9bd3c1b76526f5ff057ad2966d6f4a0f98c06cd9319",
+      "bytes": 30030,
+      "url": "https://api.usaspending.gov/api/v2/search/spending_by_award/"
+    }
+  ],
+  "responseRules": {
+    "maxPages": 20,
+    "capabilityMaxPages": 1,
+    "excludedSections": [
+      "cover page",
+      "table of contents"
+    ],
+    "numbering": "Retain the original RFI number for every answer or explicit N/A.",
+    "deployedAiRule": "Question 6 requires sourced operational deployments; questions 6.a and 6.b retain their separate company-structure and proposed-method scopes.",
+    "pagination": "Review the actual final formatted response and one-page capability statement; the workbook does not infer page counts from word counts."
+  },
+  "rows": [
+    {
+      "number": "1",
+      "decision": "gap",
+      "owner": "Company capture lead",
+      "response": "Prepare the response header from company-approved records: legal entity name; complete business address; telephone; named response owner and direct contact information; UEI; and the company size representation applicable to the recommended NAICS. Compare a custom application engineering classification with the broader integration, administration and O&M scope before recommending one code. The retained award record identifies NAICS 541511 for that award; use it as a research lead when the company reviews this procurement’s predominant purpose. Ask the company contracts owner to approve the final code, applicable size standard and representation, then retain the approval as a new source.",
+      "reviewNote": "RFI 1, government text L60. The seed supplies the published company name, website and award UEI, but lacks an approved response contact, full address, telephone and current size representation. Assign the actual company response owner and retain the relevant company/SAM representation before turning this row into a substantive answer. Keep the original award NAICS separate from the procurement recommendation.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "2",
+      "decision": "partial",
+      "owner": "Capture lead and solution architect",
+      "response": "Proposed questions for MCC: (1) provide Appendix B’s application inventory, dependencies, data classifications, support tier, usage and available incident/change history; (2) reconcile RFI 5.c’s reference to Section 5.0 deliverables with the retained PWS’s Section 5.0 Labor Requirements, and provide the applicable deliverable schedule and Section H key-personnel requirements; (3) identify each application’s development, test, staging and production owner, approval path and access lead times; (4) provide current pipeline tools, infrastructure interfaces, patch windows, restore objectives and operational acceptance criteria; (5) define support hours, on-call expectations and severity-based service targets; (6) specify the backlog, expected enhancement volume and the boundary between recurring O&M and separately ordered surge work; and (7) clarify the available modernization budget, platform/license constraints, data migration responsibilities and acceptance authority. These inputs would support a defensible staffing and price basis.",
+      "reviewNote": "Proposed market-research feedback, for company selection and approval. Cross-references are RFI 2/5.c (L61/L71), PWS 2.2/4.2.1.1 (L150/L307), production boundaries L318–L319, surge planning L567–L569 and key personnel L588–L589. The retained package supports these exact clarification requests; actual answers become new question_response sources.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "3",
+      "decision": "gap",
+      "owner": "Contracts and teaming lead",
+      "response": "Build a vehicle comparison sheet with separate rows for vehicles LGNDX actually holds and vehicles it recommends. For each held vehicle, obtain the master contract identifier, legal awardee and UEI, ordering period, relevant scope or category, ordering access and company-authorized point of contact. For each recommendation, assess whether the development, platform administration, O&M and surge services fit its scope; who can compete for orders; the pricing method; and whether an eligible teaming arrangement is needed. Ask the company to select a route after the Government’s contemplated BPA structure and ordering constraints are confirmed.",
+      "reviewNote": "RFI 3, L62. Neither the published integration pages nor one reported federal award establish ownership of a government-wide acquisition contract. Retain the actual company contract/vehicle records and confirm current ordering eligibility. Any prospective vehicle-holder relationship remains a separately owned teaming decision with its own source.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "4",
+      "decision": "gap",
+      "owner": "Past-performance lead",
+      "response": "Prepare a one-page capability statement organized around MCC’s application engineering, Tier 3 support, platform administration, data integration and secure release responsibilities. Request two or three relevant Federal or multilateral engagements, each with client, contract or task identifier, actual company role, period, supported application/platform scope, operational responsibilities, accepted deliverables and an approved outcome statement. Select only the strongest source-supported examples for the one-page layout and keep the detailed reference records in the working package. Ask each engagement owner to approve client identification and reference-contact disclosure.",
+      "reviewNote": "RFI 4, L64, imposes the one-page limit and comparable Federal and/or multilateral scope. The retained LGNDX award row establishes reported award fields; it does not establish the delivered functions, quality or client acceptance required for a capability statement. Keep the answer open until those performance records and company approvals are supplied.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "5.a",
+      "decision": "partial",
+      "owner": "Delivery lead and contracts lead",
+      "response": "Proposed structure: use a short discovery and transition work package to establish the application inventory, service boundaries, priority outcomes, measurable acceptance conditions and assumptions. Price well-defined delivery increments on a firm-fixed-price basis using demonstrable business outcomes, explicit interfaces, deployment responsibilities and a named Government acceptance owner. Keep each increment small enough to review as a complete usable capability. Reprioritize the uncommitted backlog at planned order or increment boundaries; a changed committed scope receives an impact statement and an agreed substitution or contract change. Price recurring O&M by an explicitly defined service envelope, with stated workload and support assumptions. Where investigation or emergency work cannot yet be specified reliably, propose a separately authorized, capped discovery or surge mechanism and convert subsequent defined delivery into fixed-price increments.",
+      "reviewNote": "Proposed commercial and delivery design responding to RFI 5.a, L67–L68; the contracting officer would determine the permissible final vehicle and order structure. Review actual workload, data access, dependencies and acceptance timing before pricing. Distinguish the PWS’s 14-calendar-day surge plan response at L569 from authorization to begin work or a promise of staff deployment.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "5.b",
+      "decision": "gap",
+      "owner": "Service management lead",
+      "response": "Request a comparable operational engagement with the actual SLA schedule, measurement source, period of performance, service hours, incident priorities, exclusions, reporting owner and customer-approved results. Extract examples showing how incidents were detected and escalated, response and restoration were measured, planned maintenance was handled, and repeated faults drove a corrective change. Identify precisely which outcomes the company controlled and which depended on a separate hosting or security provider. Prepare a concise example table that links each claim to its retained contract, report or customer-approved account.",
+      "reviewNote": "RFI 5.b, L69, asks for experience and examples. No comparable SLA history is present in the seed. Proposed targets can be discussed as recommendations elsewhere, but cannot fill this experience row. Obtain the actual service schedule and measured results, or have the company explicitly select N/A.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "5.c",
+      "decision": "partial",
+      "owner": "Delivery assurance lead",
+      "response": "Proposed deliverable structure: maintain one living service inventory and responsibility map; a prioritized outcome backlog with acceptance criteria; a release package containing the changed source/configuration identity, dependency inventory, meaningful verification results, deployment instructions and rollback/recovery procedure; updated operator and user guidance for changed behavior; and a concise service report covering incidents, delivery, risk and cost. For a fixed-price increment, the package should identify the exact accepted outcome, included interfaces and data migrations, open exceptions and the Government acceptance decision. Reuse records produced by actual delivery and operations. Tailor the documentation set to the task so one authoritative backlog, runbook and release record satisfy the applicable requirements without duplicative reports.",
+      "reviewNote": "RFI 5.c, L71, and PWS tailored documentation L559–L562. First resolve the Section 5.0 cross-reference mismatch identified in row 2. MCC’s retained PWS specifies electronic documentation and names Word/Excel as current standards; agree the accepted final formats and delivery schedule rather than replacing those requirements with a repository-only handoff.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "5.d",
+      "decision": "partial",
+      "owner": "Program lead and solution architect",
+      "response": "Proposed key functions are a program/delivery manager accountable for contract performance and cross-vendor coordination; a hands-on technical or solution architect; a product/business-analysis lead connecting Government priorities to acceptance; an application/platform engineering lead; and a service/DevSecOps lead responsible for releases, operational readiness and incident coordination. Provide security, data engineering, accessibility and specialist platform expertise through named responsibilities matched to workload. A qualified person may cover compatible functions where capacity and independence permit; avoid a separate management layer for each technology. Size and nominate actual positions after reviewing the application inventory, service hours, delivery demand and Section H requirements.",
+      "reviewNote": "RFI 5.d, L73; PWS program manager L172, architecture support L267–L280, and key-personnel reference L588–L589. These are recommended functions, not asserted contract-mandated categories or committed LGNDX staff. The company must supply candidate qualifications, availability and the actual Section H mapping.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "6",
+      "decision": "gap",
+      "owner": "AI delivery owner and past-performance lead",
+      "response": "Assemble an operational AI delivery record for each example the company wishes to offer. Request the client or operating organization, mission use, actual company role, production deployment date, current or completed operational period, users and workload, approved technical scope, human accountability, data controls, operational monitoring, support responsibilities and retained acceptance evidence. Include an outcome only when its measurement period and source can be identified. Select examples from any organization; describe comparable Federal relevance where an actual example supports it. Have the operating owner approve the narrative and evidence before linking the record as a reviewed, deployed capability.",
+      "reviewNote": "RFI 6, L74–L75, is deployed_only. The seed contains a federal award description and published company positioning, with no verified production AI deployment record. A proposed solution, pilot, proof of concept or this response-workspace implementation cannot establish that experience. Preserve unanswered/open until a sourced deployed example is supplied or the company records N/A.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "6.a",
+      "decision": "gap",
+      "owner": "Company AI program owner",
+      "response": "Obtain a company-approved description of any formal AI organization or program: accountable executive, organizational location, named operating lead, charter, staffing, scope, internal/customer focus, delivery responsibilities, governance process and current operational activities. Link the charter or approved organizational statement and explain how the program supports actual delivery teams. If no formal program exists, the company can answer that fact directly and describe the accountable delivery arrangement it actually uses.",
+      "reviewNote": "RFI 6.a, L76, concerns present company structure. Published AI-related marketing or an award title does not establish a dedicated corporate program. Request an authorized organizational statement; do not infer headcount, charter, deployment activity or internal processes from the retained public pages.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "6.b",
+      "decision": "partial",
+      "owner": "Engineering lead and security lead",
+      "response": "Proposed approach: authorize specific development uses such as code explanation, draft changes, migration assistance and test design, with a human engineer accountable for each resulting change. Restrict models and connected tools to approved data and repositories; keep production credentials and unrestricted deployment rights outside the assistant’s reach. Require a human to review the functional change, dependency/license implications, security behavior and meaningful verification before merging or releasing. Treat repository content and retrieved documents as untrusted input to tool execution. Record the selected model/tool configuration and significant generated change context where it helps reproducibility. Evaluate the approach on actual delivery tasks using review effort, escaped defects and task completion time; expand use only where the observed benefit justifies operating cost and risk.",
+      "reviewNote": "Proposed method for RFI 6.b, L78, which explicitly retains human accountability. The company must select approved tools, data policy and accountable roles. This proposed development approach is separate from the operational AI experience requested in row 6 and supplies no deployed-company-history claim.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "7.a",
+      "decision": "partial",
+      "owner": "Workforce lead and delivery lead",
+      "response": "Proposed staffing method: maintain a skills-and-workload plan by service area, with a stable core responsible for recurring support and business context, plus explicitly scheduled specialist capacity for planned increments. Derive demand from the application inventory, incident and change history, committed backlog, support coverage and modernization work rather than from the number of platform names. Review capacity at each planning interval using actual queue age, completed work, incidents and the next committed outcomes. Cross-train owners of critical services and retain a named backup for essential operational tasks. Adjust the future work mix and staffing plan together when applications enter support, modernize or retire, with transition time visible in the plan.",
+      "reviewNote": "Proposed methodology for RFI 7.a, L81, and PWS flexibility/resource expectations L154–L162. The company still needs to provide its real employee/partner skills, availability, recruiting capacity and location/access constraints. No headcount, utilization level or immediate staffing commitment is asserted by this draft.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "7.b",
+      "decision": "gap",
+      "owner": "People operations and service continuity lead",
+      "response": "Request the actual retention and continuity practices used on comparable engagements, including accountable delivery managers, skills development, compensation/retention review, succession coverage, planned handover and access-removal procedures. Obtain an approved example showing how a staff departure or role change was handled, what knowledge and operating duties were transferred, and the effect on service delivery. For the proposed MCC plan, prepare a service ownership roster, current runbooks, paired knowledge transfer and a handover checklist for each critical role; ask the company to adopt the plan and identify who can sustain it.",
+      "reviewNote": "RFI 7.b, L82, asks what the organization uses to attract and retain staff. Retention statistics, compensation practices, Federal staffing experience and transition results are absent from the source packet. Supply company-approved practices and one actual continuity example before answering as company history. The proposed handover plan is working material for that review.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "7.c",
+      "decision": "team_required",
+      "owner": "Workforce and teaming lead",
+      "response": "Build a surge readiness matrix by specialty, showing the actual candidate or partner pool, relevant experience, current availability, employment/contracting route, access and investigation dependencies, onboarding steps and release from other work. Prepare a request-to-deployment plan with separate dates for triage, candidate identification, skills review, contracting, Government approvals, onboarding and productive access. Use a reusable written surge estimate that states scope, deliverables, labor, other costs, schedule and the effect on the stable support team. Retain the partner or individual availability confirmation for each offered timeline and define an exit/knowledge-transfer step when the temporary demand ends.",
+      "reviewNote": "RFI 7.c, L83–L84, requires an approach and invites actual anticipated deployment timing. PWS L569 requires a proposed surge plan within 14 calendar days and Government approval before surge work begins; it does not establish available staff or a deployment lead time. A reviewed specialist/partner bench and access assumptions are needed for a credible offer. Keep this team_required until the company selects and confirms the capacity.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "8",
+      "decision": "partial",
+      "owner": "Delivery lead and cost owner",
+      "response": "Proposed cost controls: establish an explicit recurring-service baseline and price new outcomes separately so maintenance effort, enhancement work and surge demand remain visible. Use one ordered backlog across applications to avoid duplicate work and competing priorities. Limit concurrent delivery to available engineering and review capacity, reuse maintained platform capabilities, and automate repeatable deployment or support tasks when their actual frequency warrants the investment. Review cloud usage, software licenses, data retention and tool charges against service owners and workload. Track the full cost of an accepted change, including review, release and early support, and retire redundant infrastructure or applications only after their users, data and responsibilities have moved successfully.",
+      "reviewNote": "Proposed delivery practices for RFI 8, L85–L86, and the PWS’s flexible service/cost objectives L161–L162. Establish the baseline from actual MCC workload and cost information; the draft does not assert a savings percentage or a fixed staffing reduction. Review each automation or managed-service choice against operating effort, license charges and acceptance needs.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "9.a",
+      "decision": "partial",
+      "owner": "Security lead and technical lead",
+      "response": "Proposed lifecycle: identify data sensitivity, user roles, service dependencies and misuse cases with each capability’s requirements. Review trust boundaries and the consequential security decisions during design. During implementation, use controlled dependencies, protected credentials, peer review and focused automated checks for the relevant risk. Before release, verify the critical authorization paths, data handling, upgrade and recovery behavior and resolve or explicitly assign any remaining security finding. Carry the release identity, dependency inventory, monitoring and incident responsibilities into operations. Feed actual vulnerabilities and incidents back into the same prioritized engineering backlog, with a named owner and an agreed remediation decision.",
+      "reviewNote": "Proposed operating approach for RFI 9.a, L89, and PWS security/operations responsibilities, including L367–L370 and L381–L406. MCC must provide the applicable system boundary, agency control requirements, security approval responsibilities and finding deadlines. This draft describes the proposed engineering work; it does not assert an existing authorization or company certification.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "9.b",
+      "decision": "partial",
+      "owner": "Dependency and platform owner",
+      "response": "Proposed component process: record the direct and transitive dependencies used by each deployable release, including version, source, purpose, license, integrity identity and responsible service owner. Prefer maintained components already suitable for the selected stack and document a review for unusual packages or external services. Resolve dependencies reproducibly, retain a software bill of materials or equivalent machine-readable inventory with the release, and distinguish development tooling from components running in production. Review updates for compatibility, security and operating consequences before promotion. Keep an explicit replacement or support plan for abandoned components and record approved exceptions with a review date.",
+      "reviewNote": "Proposed answer to RFI 9.b, L91, with the existing licensing responsibility at PWS L404. The actual company toolchain, package policies and MCC-approved repositories must be selected and retained. Do not add a second inventory that conflicts with the authoritative build and release records.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "9.c",
+      "decision": "partial",
+      "owner": "Vulnerability response owner",
+      "response": "Proposed monitoring process: match the retained release/component inventory to relevant vendor and ecosystem vulnerability advisories, with automated notifications routed to an accountable owner. Triage each match against the exact deployed version, affected feature, exposure, available fixes and compensating controls. Record the resulting remediation or exception decision with its source advisory and due date. Validate a dependency change through the affected application journey, deploy through the agreed release path, and verify that the observed production release uses the intended version. Recheck unresolved exceptions and end-of-support dependencies on a defined schedule and include material open risks in the normal service review.",
+      "reviewNote": "Proposed operating method for RFI 9.c, L93. MCC and the company need to agree the advisory sources, scanner ownership, actual remediation time requirements and production confirmation path. Do not invent universal fix deadlines or claim monitoring coverage before the selected components and tools are connected.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "9.d",
+      "decision": "partial",
+      "owner": "Identity and application security lead",
+      "response": "Proposed design: make authorization explicit for each user, workload and data action using the agency’s selected identity services; apply least-privilege roles and short-lived service credentials where supported. Validate intended token audience, scopes and request context at the receiving service, and keep administrative functions separate from ordinary application use. Restrict network and data access to the actual dependency set, with outbound destinations and service identities documented. Log security-relevant actions with useful correlation while excluding secrets. Test access removal, role changes, expired credentials and cross-user or cross-tenant access paths as part of the actual application workflow. Have the relevant agency owner approve exceptions and trust relationships.",
+      "reviewNote": "Proposed engineering response to RFI 9.d, L95. Select the actual agency identity, device, network and data policies before claiming coverage. Authentication alone does not decide application authorization; the service owner must identify the protected actions and the actual enforcement boundary.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "10.a",
+      "decision": "gap",
+      "owner": "DevSecOps engagement owner",
+      "response": "Obtain an actual end-to-end client pipeline example with the client and Federal/non-Federal classification, contract scope, company role, source/build/artifact/promotion stages, runtime environments, production-hosting responsibility, security review, incident support and accepted operating results. Retain an architecture or responsibility diagram and release record approved for use in the response. For MCC’s proposed model, prepare an interface agreement between application engineers, Cybersecurity and the infrastructure/operations provider: artifact identity, configuration and secrets handoff, environment readiness, release approval, deployment execution, observability, rollback and recovery ownership. Identify each platform-specific exception separately.",
+      "reviewNote": "RFI 10.a, L98, asks for company experience and explicitly distinguishes production hosting. No such client pipeline record is in the seed. PWS L318–L319 places most production changes with another vendor or the OCIO pipeline and names SharePoint, ServiceNow and Box exceptions. Preserve that actual proposed boundary while obtaining a sourced client example.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "11.a",
+      "decision": "partial",
+      "owner": "Service lead and application owners",
+      "response": "Proposed O&M model: group the application inventory by criticality, platform, support demand, data responsibilities and planned lifecycle. Maintain a shared Tier 3 intake and triage function with named application owners, backed by scheduled .NET, Power Platform, data and other platform specialists. Allocate stable support capacity from actual incident/change volume and required service coverage, then explicitly schedule preventive maintenance, patch validation and small enhancements. Reduce repeat incidents through documented fixes, automation and knowledge transferred to the service desk. Before an application enters O&M, require an accepted release identity, runbook, monitoring, support ownership and recovery path. Review capacity as demand changes and retire support only after data retention, interfaces and user migration are resolved.",
+      "reviewNote": "Proposed response to RFI 11.a, L101; PWS application/support descriptions L304–L319, maintenance L381–L415 and administration L574–L579. Appendix B and service-demand history are needed to propose a defensible headcount and coverage schedule. The PWS identifies service areas, but the retained packet does not contain enough per-application demand to commit a staffing number.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "12.a",
+      "decision": "team_required",
+      "owner": "Platform lead and teaming lead",
+      "response": "Build one evidence row per platform requested: .NET/C#, Power Apps/Power Platform, SharePoint Online, Box.com and ServiceNow. Record the actual client, application or tenant, engineering versus administration role, dates, technical scope, integrations, data/identity controls, release mechanism, operational support and accepted outcome. Identify which skills are available within the company and which require an explicitly selected partner. Prepare an architecture and delivery approach that keeps platform-native configuration/versioning, permission models and licensing constraints visible, uses supported integration interfaces, and coordinates releases with each platform owner. Match the response to the real inventory before offering migrations or consolidations.",
+      "reviewNote": "RFI 12.a, L104, requires both experience and approach. The seed’s general company positioning does not establish experience on any named platform. Obtain company or proposed teammate engagement records and an accountable specialist for each required platform; any partner must approve its scope and cited experience. Keep this team_required while that coverage is assembled.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "13.a",
+      "decision": "partial",
+      "owner": "Product and engineering lead",
+      "response": "Proposed methodology: organize delivery around a single Government-prioritized backlog and a stable, cross-functional team able to take a defined outcome from discovery through operation. Use short delivery increments with explicit acceptance criteria, a working demonstration and a production/recovery plan. Maintain a visible flow for incidents and maintenance alongside feature work so urgent service needs consume planned capacity rather than becoming hidden effort. Review priorities with the Government product owner, involve security and operations at the point their decisions matter, and use actual delivery and service results to adjust the next increment. Keep the artifacts needed for maintenance current as part of the completed change.",
+      "reviewNote": "Proposed overall methodology for RFI 13.a, L107–L108, expanded by rows 13.a.i–vii. PWS L458–L465 connects stakeholders, user stories and product owners; L559–L563 allows tailored documentation and proposed delivery methods. The company must review and adopt the operating model and supply actual comparable delivery examples separately.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.a.i",
+      "decision": "partial",
+      "owner": "Government product owner liaison",
+      "response": "Proposed flow: begin with a mission outcome, its affected users and a measurable operational problem. Break it into user workflows and the data, policy and integration decisions needed to support them. Write acceptance examples for the critical workflow, including permission and failure behavior, then identify the smallest complete increment that can deliver usable value. Rank work by mission importance, service risk, dependency and effort with a named Government decision owner. Retain links from the original need through the backlog item, implemented change and accepted result. Confirm the outcome with the users or service measures after release and use that result to refine the next priority.",
+      "reviewNote": "Proposed method for RFI 13.a.i, L109, and the stakeholder/product-owner interaction at PWS L458–L465. MCC must nominate the actual decision owner and provide access to relevant users and outcome measures. Planned benefit remains a hypothesis until the accepted production workflow produces an observed result.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.a.ii",
+      "decision": "partial",
+      "owner": "Technical delivery lead",
+      "response": "Proposed estimation: split committed work by complete workflow or integration outcome, identify the required skills, interfaces, environments and Government decisions, and estimate a range with explicit assumptions. For poorly understood dependencies, perform a focused investigation that produces a decision or implementation evidence before committing to the larger delivery price and date. Use completed comparable work within the engagement to recalibrate planning, tracking the causes of variation. Show external access, data migration and approval lead times separately from engineering effort. Carry a clearly assigned contingency or scope option for unresolved risks and agree when a change in assumptions triggers replanning.",
+      "reviewNote": "Proposed response to RFI 13.a.ii, L110. It offers an estimation process rather than unsupported delivery rates or an asserted company track record. Initial ranges must be updated from the actual environment and engagement results; retain the approved assumptions with each priced increment.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.a.iii",
+      "decision": "partial",
+      "owner": "Product owner liaison and contracts lead",
+      "response": "Proposed change handling: keep future backlog ordering flexible while making the currently committed outcome, dependencies and acceptance criteria explicit. When priorities change, describe what is already delivered, what work would be displaced, the reusable portions, and the effect on cost, schedule, security and operations. Offer a concrete substitution, smaller release or later increment for Government selection. Record the decision once in the authoritative backlog and the applicable order/change record. Use stable interfaces, configuration boundaries and small reversible deployments where they reduce the cost of changing direction. Reserve an agreed path for urgent operational fixes without silently expanding the fixed-price commitment.",
+      "reviewNote": "Proposed method for RFI 13.a.iii, L112, coordinated with the fixed-price approach in row 5.a. The Government’s actual contracting and product-decision authorities must remain distinct. A backlog reprioritization alone does not authorize a change to an agreed contractual scope.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.a.iv",
+      "decision": "partial",
+      "owner": "Engineering and quality lead",
+      "response": "Proposed balance: define completion around a usable and maintainable change, including the consequential security, data integrity and recovery behavior. Run quick checks during implementation, then exercise the critical integrated journey in the actual selected environment before release. Choose verification depth from the changed behavior and failure consequence; keep redundant checks from replacing implementation work. Maintain operator instructions, dependency identity and essential architectural decisions with the release. Limit work in progress so code review, security decisions and deployment readiness keep pace with development. Address recurring defects and excessive operating effort as part of the delivery backlog, with the service impact visible to the product owner.",
+      "reviewNote": "Proposed response to RFI 13.a.iv, L114. PWS L355–L365 calls for operationally relevant checks and L559–L562 requires tailored maintained documentation. The final acceptance and security criteria must be agreed for each system; this draft does not assert that a check count or nominal coverage percentage demonstrates useful quality.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.a.v",
+      "decision": "partial",
+      "owner": "Delivery and service measurement owner",
+      "response": "Proposed measures: track elapsed time from agreed work to accepted operational use, the age of unfinished work, the proportion of releases requiring unplanned remediation, service restoration time and repeated incident demand. Pair these with a small number of mission/user measures selected for the capability, such as task completion or reduced manual processing, and with the actual cost of delivery and operation. Review trends at the service or team level and examine the cause of large changes. Separate waiting on access or Government decisions from active engineering so the right owner can remove the delay. Use the findings to change staffing, backlog or implementation decisions, rather than to reward output volume.",
+      "reviewNote": "Proposed metrics for RFI 13.a.v, L115. Agree definitions, data sources, reporting periods and accountable owners with MCC before adopting targets. No current company baseline, production result or promised improvement is present in the retained source; initial operating data establishes the comparison.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.a.vi",
+      "decision": "gap",
+      "owner": "Federal past-performance lead",
+      "response": "Prepare one concise Federal example per distinctive delivery lesson needed for the response. Request the actual mission capability, client and contract/task identity, company role, delivery period, team and Government decision arrangement, implemented methodology, accepted increments and measured result. Show how a specific delivery choice handled changing priorities or technical risk, and link the account to the accepted deliverable or customer-approved reference. Explain which parts of that experience are comparable to MCC’s application engineering, multi-provider release boundaries and O&M responsibilities. Obtain company and reference-owner approval for the statements selected.",
+      "reviewNote": "RFI 13.a.vi, L117, specifically asks for comparable Federal efforts with successful mission delivery. A reported award amount, period and description does not establish methodology, completed delivery or results. Link actual performance records before answering; keep any teammate’s experience attributed to that teammate and its proposed role.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "13.a.vii",
+      "decision": "partial",
+      "owner": "Program lead and Government liaison",
+      "response": "Proposed enabling structure: name one Government product decision owner for each service area and a cross-portfolio owner able to settle competing priorities. Establish a regular working decision point with Digital Services, Cybersecurity, Production Operations and the relevant business representative. Record who supplies requirements and data, approves architecture/security changes, authorizes scope, accepts the outcome and executes the production release. Agree access and decision lead-time expectations at task initiation. Align service-area orders with a shared architecture, dependency and release view so an application change does not create an unowned cross-order integration problem. Keep escalation direct and reserve management forums for decisions that require them.",
+      "reviewNote": "Proposed organizational recommendations for RFI 13.a.vii, L118. PWS L142 identifies the OCIO branches, L181/L226 cross-provider collaboration, and L318–L319 production responsibilities. MCC must confirm actual decision authority and staffing; this draft describes the structure to review, not an asserted agency process.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "13.b",
+      "decision": "gap",
+      "owner": "Test automation engagement owner",
+      "response": "Request an actual application delivery example with the company’s role in designing, maintaining and executing automated checks. Retain the relevant test strategy, representative source/scripts, execution environment, data setup, critical user or API workflow, run results and a defect or release decision the checks informed. Identify the boundary between component tests, contract/integration checks, user workflows, performance and security checks, and explain how the suite was kept reliable and maintainable. For the proposed MCC approach, prioritize the workflows most consequential to users, data and operations, run them against controlled realistic inputs, and retain the selected source/release identity with the results.",
+      "reviewNote": "RFI 13.b, L120, asks for experience. PWS L160/L406 identifies automation as a delivery need, but it is not evidence that LGNDX has performed that work. Supply actual company-approved scripts/results and engagement context, or explicitly record N/A for this response number.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "13.c",
+      "decision": "gap",
+      "owner": "Cloud delivery engagement owner",
+      "response": "Assemble an actual cloud application example with the client, company role, runtime/provider, system boundary, data and identity design, release process, scaling/availability choices, monitoring, backup/recovery responsibility and accepted operational result. Explain which application duties belonged to the company and which to the infrastructure provider. For MCC’s proposed approach, design around the existing selected agency platforms and production boundaries, make environment configuration repeatable, externalize secrets through the approved service, and test the data migration and restore path. Retain an architecture decision explaining managed-service choices and their operating and cost consequences.",
+      "reviewNote": "RFI 13.c, L122, asks for both approach and experience. The source packet gives MCC’s cloud direction and general company positioning, with no specific LGNDX cloud engagement. Keep the historical answer open until a sourced example is available; use the proposed architecture work in row 14.a to develop the prospective approach.",
+      "responseDisposition": "unanswered",
+      "status": "open"
+    },
+    {
+      "number": "14.a",
+      "decision": "partial",
+      "owner": "Modernization architect and service cost owner",
+      "response": "Proposed transition: inventory the applications, data, integrations, service demand and lifecycle first, then choose per application whether to retain, retire, rehost, replatform or refactor. Start with a useful application or integration whose dependencies and acceptance can be understood, and prove its build, deployment, monitoring, data recovery and operating ownership through the actual production pathway. Use a target pattern with agency identity, controlled API/service boundaries, managed data services where suitable, repeatable environment configuration, versioned artifacts, centralized operational telemetry and a documented restore procedure. Prefer incremental replacement of a constrained interface or capability over a portfolio-wide rewrite. Evaluate managed platforms or serverless execution against workload shape, latency, data handling, service limits, portability and support skills. Model compute, storage, data transfer, licenses, logging and migration/parallel-run costs, then compare observed operating behavior before expanding the pattern. Retire the replaced server or service only after dependencies, retained data and support have transferred.",
+      "reviewNote": "Proposed answer to RFI 14.a, L123–L124. PWS L148 identifies existing AWS/O365 emphasis, and L307–L319 describes mixed custom and platform applications with separate production responsibilities. Appendix B, actual workload/cost information and agency-approved platform options are required for a selected target design and forecast. Benefits and cost reductions remain explicit objectives until measured.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    },
+    {
+      "number": "15",
+      "decision": "partial",
+      "owner": "Contracts lead and delivery architect",
+      "response": "Proposed feedback: a single-award BPA with service-area orders can give MCC a common accountability and architecture model while allowing different work packages to be scheduled and priced. Its practical design should make shared dependencies, release ownership and service boundaries explicit so orders do not duplicate management or leave integration work unowned. Define a service catalog, transparent labor/other-cost treatment, acceptance and change rules, and a repeatable approach to pricing fixed outcomes and temporary surge work. Review the risks of dependence on one provider, constrained specialist access, weak price comparisons after award and difficult transition. Address them through current handover artifacts, portable source/configuration/data, explicit transition responsibilities, measurable order-level performance and permitted specialist teaming. Compare the contemplated structure with alternatives against coordination cost, competition, specialist coverage and continuity, using the agency’s actual acquisition constraints.",
+      "reviewNote": "Proposed market-research feedback for RFI 15, L125, coordinated with rows 3 and 5.a. The company contracts owner must review eligibility, vehicle terms and pricing implications with the actual contemplated acquisition documents. This is a design comparison for MCC’s consideration, not a claim that a particular contract structure has been selected or is legally available.",
+      "responseDisposition": "answer",
+      "status": "in_progress"
+    }
+  ]
+}

@@ -452,3 +452,13 @@ previously returned descriptors. Source schema `sf30-grpc-descriptor-source-v1`
 retains opaque FileDescriptorProto bytes, selected services, imports and endpoint
 observation. The native operator guide’s reflection section covers browser editing,
 the installed CLI and original source/customer receiving.
+
+## Native server-stream receiving
+
+`merchant_grpc_call` uses the same native store for unary and server-streaming methods. A server-streaming route requires the source's explicit `limits.stream` values. Keep the original operation ID while reading its retained attempt. `merchant_grpc_cancel_call` requests cancellation of that active ID; the original native owner retains the received prefix and terminal outcome.
+
+Use `merchant_grpc_export` with `{workspace, kind: "stream", operationId}` to receive both `grpc-attempt.json` and `grpc-stream.ndjson`. The metadata carries the saved revision, exact input, original fingerprint, byte count, complete-record count, native terminal status and complete/partial state. The NDJSON file retains exactly those bytes, including a partial prefix. Both files use the existing manifest, verified chunk reads and `downloadGrpcExport` receiving layout. Repeating a completed export or resuming a verified byte prefix reuses those original files.
+
+The stream export supports the original native limit of 1 GiB plus its bounded metadata. It adopts the maintained `RetainedFileReads` read-only descriptor interface on current main, hashing and reading in bounded memory without loading or copying the whole immutable export. Customer, revision and ordinary result manifests keep their original size limits. A returned stream file is complete only when its original metadata records a complete native OK terminal; interruption and non-OK status travel with the retained prefix.
+
+The original `merchant_grpc_export` with `kind: "attempt"` also includes `grpc-stream.ndjson` whenever that native attempt has retained NDJSON. Unary and pre-dispatch attempts keep their original one-file JSON export. `kind: "stream"` selects only an attempt with retained stream output; both forms bind the same original operation, metadata, completion outcome, byte count and SHA256 and use the existing resumable downloader.
