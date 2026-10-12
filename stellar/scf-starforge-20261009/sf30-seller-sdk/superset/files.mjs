@@ -3,7 +3,7 @@ import {open,link,unlink} from 'node:fs/promises';
 import {dirname,resolve,relative,sep} from 'node:path';
 import {randomUUID} from 'node:crypto';
 export {absolute,object,bytes,digest,identity,readPrivate,readJson,hashPrivate,
-  privateDirectory,syncDirectory,fault,acquireWorkspace,stamp} from '../postgres/publisher/files.mjs';
+  privateDirectory,syncDirectory,fault,acquireWorkspace,stamp,atomicJson} from '../postgres/publisher/files.mjs';
 import {bytes,digest,hashPrivate,privateDirectory,syncDirectory,fault} from '../postgres/publisher/files.mjs';
 export const MiB=1024*1024;
 export function separated(a,b) {

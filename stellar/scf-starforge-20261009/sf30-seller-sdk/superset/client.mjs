@@ -45,7 +45,10 @@ class CookieJar {
       let allowed=true,maxAge=null;
       for(const piece of pieces){
         const at=piece.indexOf('='),key=(at<0?piece:piece.slice(0,at)).trim().toLowerCase(),val=at<0?'':piece.slice(at+1).trim();
-        if(key==='domain'&&val.replace(/^\./,'').toLowerCase()!==url.hostname.toLowerCase())allowed=false;
+        if(key==='domain'){
+          const domain=val.replace(/^\./,'').toLowerCase(),host=url.hostname.toLowerCase();
+          if(!domain||(host!==domain&&!host.endsWith('.'+domain)))allowed=false;
+        }
         if(key==='path'&&val.startsWith('/'))cookie.path=val;
         if(key==='secure')cookie.secure=true;
         if(key==='max-age'&&/^-?\d+$/.test(val))maxAge=Number(val);

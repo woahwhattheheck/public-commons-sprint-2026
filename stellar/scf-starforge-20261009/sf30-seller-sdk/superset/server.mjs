@@ -3,12 +3,14 @@ import {createServer} from 'node:http';
 import {readFile,open} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
-import {randomBytes,timingSafeEqual} from 'node:crypto';
-import {join} from 'node:path';
+import {randomBytes,randomUUID,timingSafeEqual} from 'node:crypto';
+import {join,resolve} from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {openSupersetWorkspace} from './workspace.mjs';
 import {startSupersetMerchant,supersetMerchantStatus} from './merchant.mjs';
 import {reviewSupersetBuyer,inspectSupersetDelivery} from './customer.mjs';
-import {object,fault,MiB} from './files.mjs';
+import {object,fault,MiB,absolute,privateDirectory,acquireWorkspace,atomicJson,digest,readJson} from './files.mjs';
+import {SUPERSET_OPERATOR_LAUNCH_SCHEMA,verifySupersetOperatorSourceSelection} from './launch.mjs';
 const equal=(a,b)=>{const x=Buffer.from(a??''),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
 const mountOf=value=>{
   if(typeof value!=='string'||!value.startsWith('/')||!value.endsWith('/')||value.includes('//')||
@@ -16,17 +18,31 @@ const mountOf=value=>{
     throw new TypeError('Use a canonical browser mount path ending in /.');
   return value;
 };
-export async function startSupersetWorkspaceServer({directory,port=0,host='127.0.0.1',mountPath='/',
+export async function startSupersetWorkspaceServer({directory,workspaceDirectory,sourceDirectory,expectedSelectionSha256,port=0,host='127.0.0.1',mountPath='/',
   env=process.env,fetchImpl=globalThis.fetch,merchantRuntime={port:0},nativeFactory}={}){
   if(host!=='127.0.0.1'||!Number.isInteger(port)||port<0||port>65535)throw new TypeError('Use a loopback port from 0 to 65535.');
   mountPath=mountOf(mountPath);
-  const workspace=await openSupersetWorkspace({directory,env,fetchImpl});
+  directory=absolute(resolve(directory));await privateDirectory(directory,true);
+  workspaceDirectory=workspaceDirectory==null?null:absolute(resolve(workspaceDirectory));
+  if(workspaceDirectory)await privateDirectory(workspaceDirectory,true);
+  if(mountPath!=='/'&&(sourceDirectory!==undefined||expectedSelectionSha256!==undefined))
+    throw fault('SUPERSET_MANAGED_MOUNT','Managed Applications uses the original root mount.');
+  const selectedSource=await verifySupersetOperatorSourceSelection({directory,workspaceDirectory,sourceDirectory,expectedSelectionSha256});
+  const workspaceRoot=workspaceDirectory??directory;
+  let unlockOperator=null,workspace;
+  try{
+    if(workspaceRoot!==directory)unlockOperator=await acquireWorkspace(directory);
+    workspace=await openSupersetWorkspace({directory:workspaceRoot,env,fetchImpl});
+  }catch(error){await unlockOperator?.();throw error;}
   const assets=new Map();
   try{for(const [path,name,type]of [['','index.html','text/html; charset=utf-8'],['app.mjs','app.mjs','text/javascript; charset=utf-8'],['style.css','style.css','text/css; charset=utf-8']])
     assets.set(path,{body:await readFile(new URL('./ui/'+name,import.meta.url)),type});}
-  catch(error){await workspace.close();throw error;}
+  catch(error){await workspace.close();await unlockOperator?.();throw error;}
   const token=randomBytes(32).toString('base64url'),authorization='Bearer '+token;
-  let origin,closing=false,closePromise;
+  const cookieName='superset_operator_'+digest(directory+'\n'+mountPath).slice(0,24);
+  const instanceId=randomUUID(),operatorId='superset-'+digest(directory).slice(0,32);
+  let origin,launch,closing=false,closePromise;
+  const publicLaunch=()=>({...launch,projectKey:workspace.meta('workspace_id'),workspaceId:workspace.meta('workspace_id')});
   const runs=new Map();
   const running=async merchantId=>{
     const merchant=workspace.get('merchants',merchantId),group=merchant.versionGroup??merchant.id,entry=runs.get(group);
@@ -65,9 +81,14 @@ export async function startSupersetWorkspaceServer({directory,port=0,host='127.0
       const url=new URL(req.url,origin);
       if(!url.pathname.startsWith(mountPath))return reply(res,404,{error:'NOT_FOUND'});
       const path=url.pathname.slice(mountPath.length),asset=assets.get(path);
-      if(req.method==='GET'&&asset){res.writeHead(200,headers(asset.type));res.end(asset.body);return;}
-      if(!equal(req.headers.authorization,authorization))return reply(res,401,{error:'SUPERSET_SESSION_REQUIRED'});
+      if(req.method==='GET'&&asset){
+        if(path==='')res.setHeader('set-cookie',cookieName+'='+token+'; HttpOnly; SameSite=Strict; Path='+mountPath);
+        res.writeHead(200,headers(asset.type));res.end(asset.body);return;
+      }
+      const cookie=(req.headers.cookie??'').split(';').map(value=>value.trim()).find(value=>value.startsWith(cookieName+'='))?.slice(cookieName.length+1);
+      if(!equal(req.headers.authorization,authorization)&&!equal(cookie,token))return reply(res,401,{error:'SUPERSET_SESSION_REQUIRED'});
       if(closing)return reply(res,503,{error:'SUPERSET_WORKSPACE_STOPPING'});
+      if(req.method==='GET'&&path==='api/launch')return reply(res,200,publicLaunch());
       if(req.method==='GET'&&path==='api/state'){
         const active=[];
         for(const [group,entry]of runs){
@@ -79,6 +100,9 @@ export async function startSupersetWorkspaceServer({directory,port=0,host='127.0
       if(req.method==='POST'&&path==='api/inventory'){
         const body=await readBody(req);return reply(res,200,await workspace.inventory(body.sourceId,body));
       }
+      const capture=path.match(/^api\/capture\/([A-Za-z0-9_-]+)$/);
+      if(capture&&req.method==='GET')return reply(res,200,workspace.captureDetail(capture[1],{
+        queryOrdinal:Number(url.searchParams.get('queryOrdinal')??0),offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??50)}));
       const operation=path.match(/^api\/operations\/([A-Za-z0-9_-]+)$/);
       if(operation&&req.method==='GET')return reply(res,200,workspace.operation(operation[1]));
       if(operation&&req.method==='POST'){
@@ -143,8 +167,16 @@ export async function startSupersetWorkspaceServer({directory,port=0,host='127.0
   try{
     await new Promise((done,reject)=>{server.once('error',reject);server.listen(port,host,done);});
     origin='http://127.0.0.1:'+server.address().port;
-  }catch(error){await workspace.close();throw error;}
-  return{server,workspace,url:origin+mountPath,sessionUrl:origin+mountPath+'#session='+token,
+    launch={schema:SUPERSET_OPERATOR_LAUNCH_SCHEMA,state:'running',operatorId,instanceId,pid:process.pid,
+      directory,workspaceDirectory,url:origin,serverFile:join(selectedSource.executionSourceDirectory,'server.mjs'),
+      serverSha256:selectedSource.serverSha256,sourceDirectory:selectedSource.selection.sourceDirectory,
+      executionSourceDirectory:selectedSource.executionSourceDirectory,sourceSha256:selectedSource.selection.sourceSha256,
+      selectionSha256:selectedSource.selectionSha256,startedAt:new Date().toISOString()};
+    await atomicJson(directory,'operator-launch.json',{...launch,token});
+  }catch(error){
+    await new Promise(done=>server.close(()=>done()));await workspace.close();await unlockOperator?.();throw error;
+  }
+  return{server,workspace,url:origin+mountPath,sessionUrl:origin+mountPath+'#session='+token,launch:publicLaunch(),
     async close(){
       if(closePromise)return closePromise;
       closing=true;const keeper=setInterval(()=>{},1000);
@@ -157,11 +189,42 @@ export async function startSupersetWorkspaceServer({directory,port=0,host='127.0
             try{const service=await entry.promise;await service.close();}catch(error){issues.push(error);}
           }
           runs.clear();
+          try{await atomicJson(directory,'operator-launch.json',{...launch,state:'stopped',stoppedAt:new Date().toISOString()});}catch(error){issues.push(error);}
           try{await workspace.close();}catch(error){issues.push(error);}
           try{await closeHttp;}catch(error){issues.push(error);}
           if(issues.length)throw issues[0];
-        }finally{clearInterval(keeper);}
+        }finally{try{await unlockOperator?.();}finally{clearInterval(keeper);}}
       })();
       return closePromise;
     }};
 }
+
+export const startSupersetOperator=startSupersetWorkspaceServer;
+export async function main(args=process.argv.slice(2)){
+  if(args.includes('--help')||!args.length){
+    process.stdout.write('Usage: starforge-merchant superset-workspace --directory PRIVATE_DIRECTORY [--workspace EXISTING_WORKSPACE] [--port PORT] [--runtime PRIVATE_JSON]\n');
+    return null;
+  }
+  const options={},mapping={'--directory':'directory','--workspace':'workspaceDirectory','--source-directory':'sourceDirectory',
+    '--expected-selection-sha256':'expectedSelectionSha256','--host':'host','--port':'port','--startup-format':'startupFormat','--runtime':'runtimeFile'};
+  for(let index=0;index<args.length;index+=2){
+    const key=mapping[args[index]],value=args[index+1];
+    if(!key||value===undefined||Object.hasOwn(options,key))throw new TypeError('Use each documented Superset workspace option once.');
+    options[key]=key==='port'?Number(value):value;
+  }
+  if(!options.directory)throw new TypeError('Choose --directory PRIVATE_DIRECTORY.');
+  if(options.startupFormat!==undefined&&options.startupFormat!=='managed')throw new TypeError('Use --startup-format managed.');
+  if(options.runtimeFile)options.merchantRuntime=await readJson(resolve(options.runtimeFile),MiB);
+  const service=await startSupersetWorkspaceServer(options);
+  process.stdout.write(JSON.stringify(service.launch)+'\n');
+  let stopping=false;
+  const stop=async()=>{
+    if(stopping)return;stopping=true;
+    try{await service.close();}catch(error){process.stderr.write((error.code??'SUPERSET_CLOSE_FAILED')+'\n');process.exitCode=1;}
+    finally{process.off('SIGINT',stop);process.off('SIGTERM',stop);}
+  };
+  process.on('SIGINT',stop);process.on('SIGTERM',stop);
+  return service;
+}
+if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)
+  main().catch(error=>{process.stderr.write((error.code??'SUPERSET_SERVER_FAILED')+': '+error.message+'\n');process.exitCode=1;});
