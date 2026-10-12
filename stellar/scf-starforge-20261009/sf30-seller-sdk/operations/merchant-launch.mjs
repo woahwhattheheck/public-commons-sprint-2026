@@ -10,6 +10,7 @@ import { readUpstreamBindings, compileUpstreamBindings,
   validateUpstreamService, createUpstreamApplication } from '../upstream.mjs';
 import { openOutbox, instrumentNativeSettlement } from '../../sf98-merchant-delivery/outbox.mjs';
 import { startSellerOperations } from './server.mjs';
+import { startCacheControl } from '../response-cache/control.mjs';
 import { validateAvailabilityDirectory } from '../availability/store.mjs';
 import {idPattern} from '../../sf93-seller-support-bundle/incident-config.mjs';
 
@@ -20,6 +21,8 @@ const HELP = [
   ' [--port 8423] [--operations-port 8424] [--max-in-flight 64]',
   ' [--drain-grace-ms 60000] [--allow-loopback-upstream] [--operation-controls]',
   ' [--history-dir /private/merchant/usage] [--history-days 90]',
+  ' [--cache-control-file /private/merchant/control/cache.json]',
+  ' [--cache-control-socket /private/merchant/control/cache.sock]',
   ' [--availability-dir /private/merchant/availability]',
   ' [--delivery-workspace /private/merchant/receiver-workspace]',
   ' [--incident-state /private/monitor --incident-merchant REGISTERED_ID]',
@@ -28,7 +31,7 @@ const HELP = [
 ].join('\n');
 const VALUE = new Set(['--config','--facilitator','--state','--handlers','--upstreams',
   '--port','--operations-port','--max-in-flight','--drain-grace-ms','--history-dir','--history-days','--availability-dir',
-  '--delivery-workspace','--incident-state','--incident-merchant']);
+  '--delivery-workspace','--incident-state','--incident-merchant','--cache-control-file','--cache-control-socket']);
 const SWITCH = new Set(['--check','--allow-loopback-upstream','--allow-local-facilitator','--operation-controls']);
 const fail = m => { throw new TypeError(m); };
 
@@ -76,6 +79,16 @@ function cliOptions(args) {
     fail('Absolute normalized private history directory separate from the outbox required');
   if(availabilityDirectory!==undefined && [directory,historyDirectory].includes(availabilityDirectory))
     fail('Use a separate private availability directory');
+  if(o.has('--cache-control-file') && o.has('--cache-control-socket'))
+    fail('Choose one private cache control file or socket');
+  const cacheControlPath=o.get('--cache-control-file') ?? o.get('--cache-control-socket') ?? null;
+  if(cacheControlPath!==null && (!isAbsolute(cacheControlPath) || resolve(cacheControlPath)!==cacheControlPath ||
+      cacheControlPath==='/' || cacheControlPath.includes('\0')))
+    fail('Absolute normalized private cache control path required');
+  if(o.has('--cache-control-socket') && (process.platform==='win32' || Buffer.byteLength(cacheControlPath)>100))
+    fail('Use a cache control file, or a supported Unix socket path of at most 100 bytes');
+  const cacheControl=cacheControlPath===null?null:o.has('--cache-control-file')
+    ?{controlFile:cacheControlPath}:{socketPath:cacheControlPath};
   const deliveryWorkspaceDirectory=o.get('--delivery-workspace') ?? null;
   const incidentDirectory=o.get('--incident-state') ?? null;
   if(o.has('--incident-state')!==o.has('--incident-merchant') ||
@@ -89,7 +102,7 @@ function cliOptions(args) {
   return {
     configPath:resolve(o.get('--config')),stateDirectory:directory,
     historyDirectory,historyRetentionDays:int('--history-days',90,1,365),
-    availabilityDirectory,
+    availabilityDirectory,cacheControl,
     deliveryWorkspaceDirectory,
     incidentSource:incidentDirectory===null?null:{directory:incidentDirectory,merchantId:o.get('--incident-merchant')},
     handlersPath:o.has('--handlers')?o.get('--handlers'):null,
@@ -111,6 +124,8 @@ async function sourceConfig(o, env) {
   } else if(config.routes.some(route=>route.handler) && !o.handlersPath) {
     fail('Merchant handler route requires --handlers or --upstreams');
   }
+  if(o.cacheControl && !Object.values(compiled??{}).some(binding=>binding.cache))
+    fail('Cache control requires an upstream binding with response caching');
   if(o.operationControls && !Object.values(compiled??{}).some(binding=>binding.idempotency))
     fail('--operation-controls requires an upstream binding with idempotency');
   if(o.handlersPath) {
@@ -148,6 +163,8 @@ export async function main(args=process.argv.slice(2), {env=process.env}={}) {
       nativeRoutes:prepared.original.routes.length,
       upstreamBindings:bindings.length,
       supplierQuotaBindings:bindings.filter(binding=>binding.supplierAccount).length,
+      cacheBindings:bindings.filter(binding=>binding.cache).length,
+      cacheControlEnabled:o.cacheControl!==null,
       externalHandlerModule:!!o.handlersPath,
       privateStateNotOpened:true,
       facilitatorNotContacted:true,
@@ -160,7 +177,7 @@ export async function main(args=process.argv.slice(2), {env=process.env}={}) {
     process.stdout.write(JSON.stringify(info)+'\n');
     return info;
   }
-  let application=null,handlers={},outbox,seller,operations,closing,cleanup;
+  let application=null,handlers={},outbox,seller,operations,cacheControl,closing,cleanup;
   let starting=true,stopRequested=false,startupStage='MERCHANT_HANDLER_SETUP_FAILED';
   const signals=['SIGINT','SIGTERM'];
   const shutdownError=cause=>Object.assign(new Error('MERCHANT_SHUTDOWN_FAILED',{cause}),
@@ -174,7 +191,8 @@ export async function main(args=process.argv.slice(2), {env=process.env}={}) {
       let failure;
       // Drain operator requests before closing the resources they inspect or
       // control. Its final observer checkpoint follows completed native work.
-      try {await operations?.close();} catch(error) {failure=error;}
+      try {await cacheControl?.close();} catch(error) {failure=error;}
+      try {await operations?.close();} catch(error) {failure??=error;}
       try {await application?.close();} catch(error) {failure??=error;}
       if(failure) throw failure;
     })();
@@ -244,6 +262,8 @@ export async function main(args=process.argv.slice(2), {env=process.env}={}) {
         seller.supplierQuotaSnapshot=application.supplierQuotaSnapshot;
       seller.operationControl=application.operationControl;
       seller.invalidateUpstreamCache=application.invalidateCache;
+      seller.cacheBinding=application.cacheBinding;
+      seller.cacheManagement=application.cacheManagement;
     }
     operations=await startSellerOperations(seller,{
       port:o.operationsPort,deliveryOutbox:outbox,operationControls:o.operationControls,
@@ -251,6 +271,12 @@ export async function main(args=process.argv.slice(2), {env=process.env}={}) {
       deliveryWorkspaceDirectory:o.deliveryWorkspaceDirectory,incidentSource:o.incidentSource,
     });
     requireStarting();
+    if(o.cacheControl) {
+      startupStage='MERCHANT_CACHE_CONTROL_START_FAILED';
+      cacheControl=await startCacheControl({...o.cacheControl,
+        binding:application.cacheBinding,management:application.cacheManagement});
+      requireStarting();
+    }
     starting=false;
   } catch(e) {
     starting=false;
@@ -268,10 +294,11 @@ export async function main(args=process.argv.slice(2), {env=process.env}={}) {
     upstreamBindings:application?application.snapshot().bindings.length:0,
     supplierAccounts:application?.supplierQuotaSnapshot?operations.url+'/supplier-quotas':null,
     upstreamControls:operations.operationControlUrl,
+    cacheControl:o.cacheControl,
     privateOriginalOutboxAttached:true,
     webhookDelivery:'OPERATOR_ONLY',
   })+'\n');
-  return {seller,operations,outbox,close};
+  return {seller,operations,outbox,cacheControl,close};
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)){
   main().catch(e=>{

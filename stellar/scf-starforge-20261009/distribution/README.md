@@ -5054,3 +5054,32 @@ commands use Python from `DATABENTO_PYTHON_EXECUTABLE` or `python3`.
 `starforge stac --help` opens the complete STAC analyst and customer command surface: catalog/AOI search, retained scene editions, decisions, public asset acquisition, comparisons, portable handover, original merchant staging and native customer receiving. The [STAC guide](../sf30-seller-sdk/stac/README.md) covers the full workflow, and its [merchant guide](../sf30-seller-sdk/stac/MERCHANT.md) covers the original dataset/file/object purchase and offline delivery. `starforge stac portable-export` creates the original received bundle plus its offline scene explorer, local STAC Catalog and GeoJSON; `portable-open` verifies that received directory.
 
 The same analyst workspace can retain processing inventories, workflow/run history, original responses and reviewed scene associations. Pass `--processing-workspace DIRECTORY` and the optional `--processing-config FILE` to `stac serve`; the [processing guide](../sf30-seller-sdk/stac/processing/PROCESSING.md) documents source configuration, capture, recovery, complete export and receiving. Package API exports include `seller/stac/processing`, `seller/stac/processing/provider`, `seller/stac/processing/cirrus` and `buyer/stac/processing`. The deployed Cirrus State API adapter retains original workflow links, native payload/output identities, separate count fields, capped counts and explicit page continuation; its complete receiving example and original public source package are included. The existing whole-SF30 component carries the source, browser assets and native examples; configured provider authentication uses the original SF31 source-auth transport.
+
+## Receive and operate the original grant demonstration
+
+`starforge grant-demo` receives the completed MySQL purchase shown in the SCF
+presentation into the original durable MCP buyer. The package includes both
+original closed quotes, exact terms and invocation, retained payment observations,
+full native response files, source query and original source checkpoints.
+
+~~~sh
+starforge doctor --feature mcp
+starforge grant-demo inspect
+starforge grant-demo receive --dir /private/reviewer/original-purchase
+starforge grant-demo open --dir /private/reviewer/original-purchase
+~~~
+
+The original Buyer console provides history, terms, retained observations,
+structured records and complete result downloads. The selected source remains
+the original 100-row HPD query and its full 53,468-byte native result. Stop the
+console before `grant-demo export`; receive that complete exported packet with
+its printed SHA-256 to reopen the same original quote and response identities
+elsewhere. A repeated receive keeps the original receiving receipt and history.
+
+This receiving command loads no signing or observation adapter. It uses Node
+22.16.0 or later and the existing optional MCP SDK 1.32.1 feature. The supported
+`./grant/demo` import exports inspectGrantDemo, receiveGrantDemo,
+inspectGrantDemoWorkspace, startGrantDemo and exportGrantDemo with TypeScript
+declarations. The complete [reviewer receiving guide](../../scf_2026/presentation/reviewer/RECEIVING.md)
+covers installation, access codes, source interpretation, full result export,
+interruption recovery, source-owner capture and same-workflow receiving.

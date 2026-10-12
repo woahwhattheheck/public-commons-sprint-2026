@@ -1,4 +1,5 @@
 // MIT. Merchant inputs → retained private request → original customer checkout.
+import { createInputFilePanel } from './files.mjs';
 const byId = id => document.getElementById(id);
 const SESSION = 'sf88-paid-job-customer-session';
 let token = location.hash.slice(1);
@@ -28,14 +29,24 @@ function problem(error) {
     JOB_QUEUE_FULL: 'The merchant queue is full. The saved request can be prepared again when capacity returns.',
     JOB_INTAKE_PROCESS_REOPENED: 'This workspace reopened. Continue the saved request to recover its original ticket.',
     JOB_INTAKE_OPERATION_CANCELLED: 'The local request stopped. Its saved reference and claim remain available for recovery.',
+    JOB_INPUT_LOCAL_FILES_NOT_READY: 'Save the required input files before preparing checkout.',
+    JOB_INPUT_REQUIRED_FILE_MISSING: 'Choose a file for every required input slot.',
+    JOB_INPUT_FILE_NOT_ALLOWED: 'This file exceeds the slot limit or uses a media type the merchant does not accept.',
+    JOB_INPUT_STORAGE_FULL: 'Private file storage is full. Remove unused draft files before adding another.',
+    JOB_INPUT_POLICY_CHANGED: 'The function file policy changed. Load the current catalog and choose files for a new request.',
+    JOB_INPUT_OPERATION_CANCELLED: 'File work stopped. Saved chunks remain available; reselect the same file to resume.',
+    JOB_INPUT_REQUEST_ALREADY_DISPATCHED: 'This request has already been sent. Its approved file identities are retained.',
+    JOB_INPUT_CHUNK_DIGEST_MISMATCH: 'The selected bytes differ from the saved file plan. Reselect the original file to resume.',
+    JOB_INPUT_SOURCE_CHANGED: 'The selected original changed during reading. Choose the intended file again before checkout.',
     JOB_INTAKE_PAYMENT_REQUESTED: 'The configured intake endpoint returned a payment challenge. Check the merchant origin.',
   };
   message(explanations[error?.code] ?? words(error?.code ?? error?.message ?? 'REQUEST_FAILED'), true);
 }
-async function api(path, { method = 'GET', body } = {}) {
+async function api(path, { method = 'GET', body, signal } = {}) {
   const response = await fetch(path, { method, credentials: 'omit',
-    headers: { authorization: 'Bearer ' + token, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(120000) });
+    headers: { authorization: 'Bearer ' + token, ...(body === undefined ? {} : { 'content-type': body instanceof Uint8Array ? 'application/octet-stream' : 'application/json' }) },
+    ...(body === undefined ? {} : { body: body instanceof Uint8Array ? body : JSON.stringify(body) }),
+    signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(120000)]) : AbortSignal.timeout(120000) });
   const value = await response.json();
   if (!response.ok) throw Object.assign(new Error(value.error ?? 'REQUEST_FAILED'), { code: value.error ?? 'REQUEST_FAILED' });
   return value;
@@ -56,6 +67,7 @@ function renderFields(input) {
   controls.clear(); byId('fields').replaceChildren();
   const required = new Set(definition.inputSchema.required ?? []);
   for (const [name, schema] of Object.entries(definition.inputSchema.properties)) {
+    if (definition.inputFiles && name === '$files') continue;
     const field = node('div', undefined, 'schema-field'), heading = node('div', undefined, 'field-heading');
     const label = node('label', name + (required.has(name) ? ' *' : ''));
     const includeLabel = node('label', undefined, 'include'), include = node('input');
@@ -126,6 +138,7 @@ function readFields() {
       try { input[name] = JSON.parse(control.value); } catch { throw new Error('Enter valid JSON for ' + name + '.'); }
     } else input[name] = control.value;
   }
+  if (definition?.inputFiles) input.$files = {};
   return input;
 }
 function syncJson() { try { byId('inputJson').value = JSON.stringify(readFields(), null, 2); } catch { /* Keep the last complete input while a field is being edited. */ } }
@@ -137,12 +150,13 @@ function renderFunction() {
   byId('output').textContent = definition.output.filename + ' · ' + definition.output.contentType + ' · up to ' + size(definition.maxOutputBytes);
   byId('timeout').textContent = (definition.timeoutMs / 1000).toLocaleString() + ' seconds';
   byId('accessField').hidden = catalog.authentication !== 'access-token';
+  byId('prepareNew').textContent = definition.inputFiles ? 'Save request and add files' : 'Prepare checkout';
   renderFields(definition.example);
 }
 function setPending(value) {
   pending = value;
   for (const id of ['loadCatalog','prepareNew','saveDraft','newRequest']) byId(id).disabled = value;
-  renderDetail();
+  renderDetail(); renderList();
 }
 async function saveDraft(prepare) {
   if (!catalog || !definition || pending) return;
@@ -154,8 +168,11 @@ async function saveDraft(prepare) {
     const result = await api(prefix + '/draft', { method: 'POST', body: { catalog, functionId: definition.id, input,
       reference, label: byId('label').value || reference, accessToken: byId('accessToken').value || null } });
     byId('accessToken').value = ''; await select(result.request.id);
-    if (prepare) await startSelected('prepare');
-    else message('Draft saved. Its inputs and reference are ready to prepare.');
+    if (prepare && !definition.inputFiles) await startSelected('prepare');
+    else if (definition.inputFiles) {
+      message('Request saved. Select its input files below, then prepare checkout.');
+      byId('inputFiles').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else message('Draft saved. Its inputs and reference are ready to prepare.');
     await refresh();
   } finally { setPending(false); }
 }
@@ -164,7 +181,8 @@ function renderList() {
   for (const value of rows) {
     const tr = node('tr'); if (selected?.id === value.id) tr.className = 'selected';
     const identity = node('td'), button = node('button', value.label || value.reference);
-    button.type = 'button'; button.addEventListener('click', () => select(value.id).catch(problem));
+    button.type = 'button'; button.disabled = pending;
+    button.addEventListener('click', () => { if (!pending) select(value.id).catch(problem); });
     identity.append(button, node('span', value.reference, 'small mono'),
       node('span', new URL(value.merchant.origin).host + ' · ' + value.merchant.functionId, 'small'));
     const phase = node('td'); phase.append(node('span', value.phase, 'state'));
@@ -181,6 +199,8 @@ function renderList() {
 }
 function progress(value) {
   if (value.task?.state === 'CANCELLING') return 'Stopping the current local request and retaining its saved identity.';
+  if (value.task?.state === 'RUNNING' && value.task.progress) return value.task.progress.phase.replaceAll('_', ' ').toLowerCase() +
+    ' · ' + value.task.progress.slot + ' · ' + size(value.task.progress.bytes) + ' of ' + size(value.task.progress.totalBytes);
   if (value.task?.state === 'RUNNING') return value.task.kind === 'withdraw' ?
     'Withdrawing this same unsubmitted request from the merchant.' : 'Preparing the saved merchant request and retaining its ticket.';
   if (value.phase === 'WITHDRAWN') return 'This request is withdrawn. Start another request when you need a new job.';
@@ -194,6 +214,7 @@ function progress(value) {
 }
 function renderDetail() {
   byId('unselected').hidden = Boolean(selected); byId('detail').hidden = !selected;
+  inputFilePanel.render(selected);
   if (!selected) return;
   const value = selected;
   byId('detailHeading').textContent = value.label; byId('identity').textContent = value.reference;
@@ -205,7 +226,8 @@ function renderDetail() {
   byId('requestHash').textContent = value.requestSha256; byId('inputHash').textContent = value.inputSha256;
   byId('catalogHash').textContent = value.merchant.catalogSha256;
   byId('attempts').textContent = value.requestAttempts + ' preparation / ' + value.withdrawalAttempts + ' withdrawal';
-  byId('prepareButton').disabled = pending || !value.actions.prepare;
+  byId('prepareButton').disabled = pending || !value.actions.prepare ||
+    value.requestAttempts === 0 && value.inputFiles && !value.inputFiles.ready || Boolean(value.inputFiles?.task);
   byId('importButton').disabled = pending || !value.actions.import;
   byId('withdrawButton').disabled = pending || !value.actions.withdraw;
   byId('stopButton').hidden = !value.actions.stop; byId('stopButton').disabled = pending;
@@ -278,6 +300,8 @@ byId('applyJson').addEventListener('click', () => {
     if (!value || typeof value !== 'object' || Array.isArray(value) ||
       Object.keys(value).some(key => !Object.hasOwn(definition.inputSchema.properties, key)))
       throw new Error('Input must be an object containing the configured fields.');
+    if (definition.inputFiles && value.$files && Object.keys(value.$files).length)
+      throw new Error('Select files on the saved request; the file descriptors are generated from the actual bytes.');
     renderFields(value); message('Input JSON applied to the fields.');
   } catch (error) { problem(error); }
 });
@@ -319,6 +343,8 @@ byId('downloadTicket').addEventListener('click', async () => {
     document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (error) { problem(error); } finally { setPending(false); }
 });
-window.addEventListener('pagehide', () => { disposed = true; clearTimeout(timer); });
+const inputFilePanel = createInputFilePanel({ element: byId('inputFiles'), api, getRequest: () => selected,
+  onChange: async () => { if (selected) await select(selected.id); }, onBusy: setPending, onError: problem });
+window.addEventListener('pagehide', () => { disposed = true; clearTimeout(timer); inputFilePanel.close(); });
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 refresh();
