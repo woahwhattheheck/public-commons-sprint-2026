@@ -1,0 +1,146 @@
+{
+  "schema": "stellar-forge.kafka-native-consumer-capsule.v1",
+  "operation": "SCF-KAFKA-MERCHANT-8F43-20261012",
+  "originalSourcePin": "d6938e1f333d92670a653f47d136b7d7cfb3abfa",
+  "sourcePin": "f1828c513b8c249b1dbaaf7e48e8a3e4a6c16548",
+  "inventory": {
+    "name": "consumer-source-inventory.json",
+    "gitBlob": "ffc56c908628ebf7ca8d96a04ebd62a3aabef5d6",
+    "bytes": 71627
+  },
+  "parts": [
+    {
+      "name": "consumer-source-part-01.json",
+      "gitBlob": "d1f08ebb279e07d6645ec128a538914c10aa3240",
+      "bytes": 591756,
+      "fileCount": 59
+    },
+    {
+      "name": "consumer-source-part-02.json",
+      "gitBlob": "f77d116d2098f49ff2827157a88f4817e34b01e2",
+      "bytes": 598806,
+      "fileCount": 128
+    },
+    {
+      "name": "consumer-source-part-03.json",
+      "gitBlob": "922722b5aae499a8a28a74a323d9fdde64265dee",
+      "bytes": 596977,
+      "fileCount": 174
+    },
+    {
+      "name": "consumer-source-part-04.json",
+      "gitBlob": "c0534abc6b275194755fce8905b87b9087d96e89",
+      "bytes": 595586,
+      "fileCount": 57
+    },
+    {
+      "name": "consumer-source-part-05.json",
+      "gitBlob": "6871471911d0a73a478155b4f29adffb55f5a11a",
+      "bytes": 586967,
+      "fileCount": 62
+    },
+    {
+      "name": "consumer-source-part-06.json",
+      "gitBlob": "8e1ac2b7c19d765cde7bb7d78cb03a9c16bc357c",
+      "bytes": 579545,
+      "fileCount": 58
+    },
+    {
+      "name": "consumer-source-part-07.json",
+      "gitBlob": "2c29a2e20be6d5b953128d2c92054d943cd735f0",
+      "bytes": 558157,
+      "fileCount": 40
+    }
+  ],
+  "helpers": [
+    {
+      "name": "native-customer-with-consumers.py",
+      "gitBlob": "7b052ca3f7f0276da38b768e738654245f1affcd",
+      "bytes": 41097
+    },
+    {
+      "name": "native-lifecycle-with-consumers.py",
+      "gitBlob": "dc23e7b5fdfc88b19ac0e51b4daf1b8e07a15c26",
+      "bytes": 32242
+    },
+    {
+      "name": "client-mcp-receiving.mjs",
+      "gitBlob": "af2e29cb5bb5cbc9e41303278373af1a76456f7b",
+      "bytes": 47773
+    },
+    {
+      "name": "CLIENT_MCP_RECEIVING.md",
+      "gitBlob": "a242e5e6e8b48b83563a752f7dd975aabd059fd8",
+      "bytes": 5334
+    }
+  ],
+  "sourceFiles": 578,
+  "sourceBytes": 3923393,
+  "providerMetadata": {
+    "buyer-runbook-workspaces": "stellar/scf-starforge-20261009/buyer-runbook/merchant-provider.mjs",
+    "census-geocoder-workspaces": "stellar-forge/mcp-merchant-operator/providers/census-geocoder-workspaces.mjs",
+    "fred-workspaces": "stellar-forge/mcp-merchant-operator/providers/fred-workspaces.mjs",
+    "kafka-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/kafka/merchant-provider.mjs",
+    "matomo-workspaces": "stellar-forge/mcp-merchant-operator/providers/matomo-workspaces.mjs",
+    "accounting": "stellar-forge/mcp-merchant-operator/providers/accounting.mjs",
+    "api-pass-workspaces": "stellar-forge/mcp-merchant-operator/providers/api-pass-workspaces.mjs",
+    "arcgis-workspaces": "stellar-forge/mcp-merchant-operator/providers/arcgis-workspaces.mjs",
+    "baserow-workspaces": "stellar-forge/mcp-merchant-operator/providers/baserow-workspaces.mjs",
+    "buyer-expenses": "stellar-forge/mcp-merchant-operator/providers/buyer-expenses.mjs",
+    "cache": "stellar-forge/mcp-merchant-operator/providers/cache.mjs",
+    "ckan-workspaces": "stellar-forge/mcp-merchant-operator/providers/ckan-workspaces.mjs",
+    "client-exports": "stellar-forge/mcp-merchant-operator/providers/client-exports.mjs",
+    "clinical-trials-workspaces": "stellar-forge/mcp-merchant-operator/providers/clinical-trials-workspaces.mjs",
+    "cocart-workspaces": "stellar-forge/mcp-merchant-operator/providers/cocart-workspaces.mjs",
+    "coingecko-workspaces": "stellar-forge/mcp-merchant-operator/providers/coingecko-workspaces.mjs",
+    "dataset": "stellar-forge/mcp-merchant-operator/providers/dataset.mjs",
+    "discovery": "stellar-forge/mcp-merchant-operator/providers/discovery.mjs",
+    "dspace-operators": "stellar-forge/mcp-merchant-operator/providers/dspace-operators.mjs",
+    "edgar-workspaces": "stellar-forge/mcp-merchant-operator/providers/edgar-workspaces.mjs",
+    "facilitators": "stellar-forge/mcp-merchant-operator/providers/facilitators.mjs",
+    "feeds-workspaces": "stellar-forge/mcp-merchant-operator/providers/feeds-workspaces.mjs",
+    "fiscal-data-workspaces": "stellar-forge/mcp-merchant-operator/providers/fiscal-data-workspaces.mjs",
+    "fleet": "stellar-forge/mcp-merchant-operator/providers/fleet.mjs",
+    "geocodio-workspaces": "stellar-forge/mcp-merchant-operator/providers/geocodio-workspaces.mjs",
+    "grant-workspaces": "stellar-forge/mcp-merchant-operator/providers/grant-workspaces.mjs",
+    "grants-workspaces": "stellar-forge/mcp-merchant-operator/providers/grants-workspaces.mjs",
+    "graphql-workspaces": "stellar-forge/mcp-merchant-operator/providers/graphql-workspaces.mjs",
+    "grpc-workspaces": "stellar-forge/mcp-merchant-operator/providers/grpc-workspaces.mjs",
+    "har-workspaces": "stellar-forge/mcp-merchant-operator/providers/har-workspaces.mjs",
+    "mpp": "stellar-forge/mcp-merchant-operator/providers/mpp.mjs",
+    "n8n-workspaces": "stellar-forge/mcp-merchant-operator/providers/n8n-workspaces.mjs",
+    "nocodb-workspaces": "stellar-forge/mcp-merchant-operator/providers/nocodb-workspaces.mjs",
+    "odata-workspaces": "stellar-forge/mcp-merchant-operator/providers/odata-workspaces.mjs",
+    "openapi-workspaces": "stellar-forge/mcp-merchant-operator/providers/openapi-workspaces.mjs",
+    "opencage-workspaces": "stellar-forge/mcp-merchant-operator/providers/opencage-workspaces.mjs",
+    "opensearch-workspaces": "stellar-forge/mcp-merchant-operator/providers/opensearch-workspaces.mjs",
+    "paid-job-workspaces": "stellar-forge/mcp-merchant-operator/providers/paid-job-workspaces.mjs",
+    "pricing": "stellar-forge/mcp-merchant-operator/providers/pricing.mjs",
+    "publishers": "stellar-forge/mcp-merchant-operator/providers/publishers.mjs",
+    "python-workspaces": "stellar-forge/mcp-merchant-operator/providers/python-workspaces.mjs",
+    "receiving": "stellar-forge/mcp-merchant-operator/providers/receiving.mjs",
+    "redis-workspaces": "stellar-forge/mcp-merchant-operator/providers/redis-workspaces.mjs",
+    "research-workspaces": "stellar-forge/mcp-merchant-operator/providers/research-workspaces.mjs",
+    "s3-workspaces": "stellar-forge/mcp-merchant-operator/providers/s3-workspaces.mjs",
+    "sheets-workspaces": "stellar-forge/mcp-merchant-operator/providers/sheets-workspaces.mjs",
+    "socrata-workspaces": "stellar-forge/mcp-merchant-operator/providers/socrata-workspaces.mjs",
+    "source-workspaces": "stellar-forge/mcp-merchant-operator/providers/source-workspaces.mjs",
+    "stac-workspaces": "stellar-forge/mcp-merchant-operator/providers/stac-workspaces.mjs",
+    "stellar-expert-workspaces": "stellar-forge/mcp-merchant-operator/providers/stellar-expert-workspaces.mjs",
+    "support": "stellar-forge/mcp-merchant-operator/providers/support.mjs",
+    "tenderly-workspaces": "stellar-forge/mcp-merchant-operator/providers/tenderly-workspaces.mjs",
+    "usa-spending-workspaces": "stellar-forge/mcp-merchant-operator/providers/usa-spending-workspaces.mjs",
+    "usgs-workspaces": "stellar-forge/mcp-merchant-operator/providers/usgs-workspaces.mjs",
+    "webdav-workspaces": "stellar-forge/mcp-merchant-operator/providers/webdav-workspaces.mjs",
+    "woocommerce": "stellar-forge/mcp-merchant-operator/providers/woocommerce.mjs",
+    "worldbank-workspaces": "stellar-forge/mcp-merchant-operator/providers/worldbank-workspaces.mjs",
+    "nws-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/nws/merchant-provider.mjs",
+    "opendatasoft-workspaces": "stellar-forge/mcp-merchant-operator/providers/opendatasoft-workspaces.mjs"
+  },
+  "selection": {
+    "configuration": "kafkaWorkspaceConnection",
+    "console": "original retained Kafka HTTP owner",
+    "receiver": "client-mcp-receiving.mjs",
+    "nodePackages": []
+  }
+}
