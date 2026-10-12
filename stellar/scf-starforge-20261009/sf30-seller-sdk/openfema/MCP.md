@@ -123,6 +123,8 @@ Composite applicant and declaration IDs remain their returned strings; do not re
 
 ## Action identity and interruption
 
+The review annotation accepts `applicantSourceId` for an explicit original applicant choice, up to 200 characters; the native engine requires an explanatory note for that choice. Buyer inspection and receiving accept 1–4,096 existing intent IDs, each at most 128 characters.
+
 Save the full intended request before dispatch. The operation ID accepts the original core's printable identifier contract: an alphanumeric first character followed by alphanumerics, dot, underscore, colon or hyphen, up to 160 characters. Every new action carries the displayed workspace revision. A portfolio revision also carries its actual prior version; release changes carry the original generation.
 
 If a response is interrupted, preserve the request and inspect its `operationId`. The native journal reconciles an existing ID and exact payload before checking the current revision. Repeat that same request when continuation is needed. `OUTCOME_UNCERTAIN` is an unknown reply, not a failed operation and not permission to invent another identity.
