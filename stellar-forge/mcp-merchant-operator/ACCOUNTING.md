@@ -26,6 +26,13 @@ reconciliation, accountant return recovery and exact files. The
 [shared customer SDK and durable CLI](./ACCOUNTING-PLATFORMS-CLIENT.md) preserve
 reviewed commands and original identities across an uncertain connection.
 
+The same [QuickBooks host workflow](./ACCOUNTING-PLATFORMS.md#use-a-reviewed-quickbooks-oauth-company)
+also accepts the original reviewed OAuth company selection. It reuses the native
+connection registry and provider inside this accounting lifetime. Retained plans,
+accountant returns and files remain available after a grant is revoked; explicit
+provider operations require the selected current authorization. Existing token
+environment configuration remains supported.
+
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
 remain in the original buyer, seller and facilitator.

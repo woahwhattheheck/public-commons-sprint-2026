@@ -1,4 +1,5 @@
 // MIT. Applications presentation over the original runtime and managed-command APIs.
+import { renderOpenApiApplicationReview } from './openapi-application.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -18,6 +19,17 @@ function facts(rows) {
     const row = element('div'); row.append(element('dt', label), element('dd', value ?? '—')); node.append(row);
   }
   return node;
+}
+function mppReviewRows(command) {
+  const workspace = command?.mppBinding;
+  if (!workspace) return [];
+  const roles = Object.entries(workspace.profiles).filter(([, profile]) => profile).map(([role]) => role);
+  return [
+    ['MPP workspace', workspace.workspace],
+    ['Workspace created', workspace.createdAt],
+    ['Saved profile revision', workspace.revision],
+    ['Configured roles', roles.join(', ') || 'Ready for merchant or customer configuration'],
+  ];
 }
 async function textHash(text) {
   const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
@@ -184,6 +196,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         ['Managed home', reviewed.homeDirectory], ['Connection', reviewed.releaseId ? 'Existing original release ' + reviewed.releaseId : 'Adopt this original ready runtime'],
         ['Input', reviewed.command.terminal ? 'Connected original terminal, explicit operator responses' : 'Original application output'],
         ['Environment file', reviewed.settings.environmentFile ?? 'Inherited operator environment'],
+        ...mppReviewRows(reviewed.command),
       ]);
       const save = button(editingId ? 'Save reviewed settings' : 'Save application', () => act(async () => {
         if (configurationReview !== reviewed) return;
@@ -195,7 +208,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
         configuration.open = false; configurationReview = null; reviewResult.hidden = true;
         await refresh(); await refreshWorkspace(); message(result.connectionError?.message ?? 'Application saved with its original runtime and data locations.');
       }));
-      reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows, save);
+      reviewResult.replaceChildren(element('h3', 'Reviewed application'), rows,
+        renderOpenApiApplicationReview(reviewed.command), save);
       if (reviewed.command.createDirectories.length) reviewResult.append(element('p', 'Creates private folder: ' + reviewed.command.createDirectories.join(', '), 'note'));
       reviewResult.hidden = false;
     });
@@ -221,7 +235,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       ['Release', reviewed.releaseId], ['Source', reviewed.runtime.sourceCommit],
       ['Inputs', reviewed.command.inputs.map(item => item.path).join('\n')],
       ['Terminal', reviewed.command.terminal ? 'Explicit operator input through the original controlling terminal' : 'Retained original output'],
-    ]), start); operationReview.hidden = false;
+      ...mppReviewRows(reviewed.command),
+    ]), renderOpenApiApplicationReview(reviewed.command), start); operationReview.hidden = false;
   }
   function renderSelected() {
     const app = selected(); selectedPanel.hidden = !app; history.hidden = !app;
