@@ -4,7 +4,7 @@ import { supportTools } from "../catalog/support.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "support", family: "support",
-  title: "support merchant", order: 90, catalogOrder: 50,
+  title: "support merchant", order: 100, catalogOrder: 60,
   configKey: "support", summary: true, dependencies: [],
   maxRequestBytes: 131072,
   configuration: { input: "supportConnection", privateExports: true,
@@ -14,12 +14,12 @@ export default defineMerchantProvider({
     {
       "prefix": "merchant_support_",
       "text": "For support observation, inspect host profiles and the current configuration revision, start explicitly and retain the owned watcher instance. Recover notifications using their original event IDs and attempt counts.",
-      "order": 230
+      "order": 240
     },
     {
       "prefix": "merchant_case",
       "text": "With a configured support connection, inspect source aliases or incidents, import exact original captures, and reopen the original case before changing owner terms. Case writes use its current revision; workorder and export use that exact saved revision. Inspect support export status after an interrupted reply.",
-      "order": 240
+      "order": 250
     }
   ],
   load: () => import("../support.mjs"),

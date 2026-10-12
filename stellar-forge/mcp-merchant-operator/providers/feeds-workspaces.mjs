@@ -4,7 +4,7 @@ import { feedsWorkspaceTools } from "../catalog/feeds-workspace.mjs";
 
 export default defineMerchantProvider({
   schema: MERCHANT_PROVIDER_SCHEMA, id: "feeds-workspaces", family: "feedsWorkspaces",
-  title: "feeds workspaces merchant", order: 360, catalogOrder: 330,
+  title: "feeds workspaces merchant", order: 370, catalogOrder: 340,
   configKey: "feedsWorkspaces", summary: true, dependencies: [],
   maxRequestBytes: 16842752,
   configuration: { input: "feedsWorkspaceConnection", privateExports: true,

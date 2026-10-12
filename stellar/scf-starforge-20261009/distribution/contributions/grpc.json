@@ -32,5 +32,8 @@
       "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grpc/workspace/browser-assets.json"
     }
-  ]
+  ],
+  "applicationProviders": {
+    "grpc": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/grpc.mjs"
+  }
 }
