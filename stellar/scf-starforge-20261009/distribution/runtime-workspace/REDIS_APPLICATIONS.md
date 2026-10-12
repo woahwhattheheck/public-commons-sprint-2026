@@ -84,10 +84,54 @@ The existing application resource lease covers the Redis directory throughout se
 
 The managed setup receives the existing queued operation UUID through `--setup-operation`. Creation retains that operation ID with the original setup ID, browser creation request, reviewed draft digest and selected initial-file SHA.
 
-If a process stops after creation, **Continue** reuses that original saved operation and argv. The setup command reads the retained creation identity first and recovers the existing workspace only when the explicit operation and selected input SHA match. The original workspace writer checks that creation identity again before recovery. It then reopens the created workspace and returns the original setup identity and completed result.
+Applications **Continue** reconnects to the original retained operation. It resumes a queued command that has not launched, reattaches to a still-running command, or reconciles an ended command and its retained output. When the setup process has ended after creating the workspace, use a fresh reviewed **Start** on the same saved application. The existing directory selects `workspace open` with its original immutable workspace and profile pins.
 
-A fresh application start uses its normal new start review. Once the destination exists, the same saved application selects `workspace open` with the original immutable workspace and profile pins.
+The original setup CLI also supports an explicit continuation of its own creation operation. Repeat `workspace setup` with the same `--setup-operation`, initial file and `--expected-input-sha256`. The setup reads the retained creation identity and matches the operation and input before opening the saved workspace. The original writer checks that identity again under its lease and returns the original setup identity and completed result. This explicit CLI invocation is separate from Applications' managed-operation reconciliation.
 
-For an unfinished setup whose destination has not been created, import the saved complete setup JSON into the resumed setup browser. Its own reviewed creation request determines the initial workspace.
+For an unfinished setup whose destination has not been created, keep the complete setup JSON. A queued or still-running original command can continue through its original operation; a new reviewed Start after an ended command opens a fresh setup for that still-new directory.
 
-The original retained workspace **Continue** action remains available for interrupted previews, preparation and release requests. [Applications](APPLICATIONS.md) describes the common managed review, save, connection, start, stop and recovery commands.
+The original retained workspace **Continue** action resumes interrupted previews, preparation and release requests. [Applications](APPLICATIONS.md) describes the common managed review, save, connection, start, stop and recovery commands.
+
+## Receive the installed six-product workflow
+
+The original native journey can create and operate its six-product workspace through an existing Applications home while the same native Redis fixture is running. Set `SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG` to a private JSON file containing the actual selected installation and original Applications locations:
+
+~~~json
+{
+  "runtimeDirectory": "/private/runtime/merchant",
+  "bootstrapSourceRoot": "/private/runtime/merchant/package/source",
+  "expectedSourceCommit": "ACTUAL_INSTALLED_40_HEX_COMMIT",
+  "expectedManifest": "ACTUAL_SOURCE_MANIFEST_SHA256",
+  "applicationWorkspace": "/private/applications",
+  "homeId": "EXISTING_MANAGED_HOME_ID",
+  "receptionDirectory": "/private/redis-applications-receiving"
+}
+~~~
+
+Use the exact READY installation's source root, commit, manifest and existing home ID. The runtime contains the cumulative Redis setup, List/Set and Applications provider implementation; its native Redis, browser and original merchant dependencies remain selected by that installation. The existing receiving directory's parent must be private.
+
+Run the original installed source with its full companion modes:
+
+~~~sh
+SF30_REDIS_JOURNEY_SETUP=1 \
+SF30_REDIS_JOURNEY_COLLECTIONS=1 \
+SF30_REDIS_JOURNEY_WORKSPACE=1 \
+SF30_REDIS_WORKSPACE_BROWSER=1 \
+SF30_REDIS_JOURNEY_APPLICATIONS_CONFIG=/private/redis-applications.json \
+node /private/runtime/merchant/package/source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/native-journey.mjs
+~~~
+
+The call site reviews and saves one Redis application for the new private destination, connects its selected runtime and starts the original setup command. The original browser imports, previews and creates the six-product workspace through that managed process, edits the saved products, downloads customer files and stages the prepared release. It reattaches to the same live managed setup operation, stops that process, and verifies the original setup constructor's explicit cold continuation against the same operation and input SHA. The same saved application then runs its two reviewed open/reopen passes. Both use the original workspace, managed home, source installation and creation identity.
+
+The receiving checks all six original query kinds and immutable connection/certificate/environment description. Live previews follow the actual source's continuation, including an empty Set page with a remaining cursor. Their complete results stay in the workspace under the original request IDs. Reopening reads those retained results and customer OpenAPI/client files again.
+
+The native result includes `applications`, its receiving receipt and `retainedWorkDirectory`. This explicit mode keeps the original native work directory so the saved application remains reopenable. Include that directory and the receiving receipt in the existing worker's retained outputs. The native journey still owns and closes its Redis fixture and original servers after receiving.
+
+For a separately retained workspace, the same consumer has an ordinary command entry:
+
+~~~sh
+node /private/runtime/merchant/package/source/stellar/scf-starforge-20261009/sf30-seller-sdk/redis/workspace/managed-journey.mjs \
+  /private/redis-managed-receiving.json
+~~~
+
+That configuration also supplies `redisDirectory`. Optional `expectedQueryKinds`, `previewAll`, `previewInputs` and `customerPackageId` select the original product and saved package receiving. The receipt retains its application/save/start IDs. Repeating its configuration reattaches to live or queued original operations and resumes the retained source requests. If its managed command has ended, read that operation's outcome and use the application's normal fresh reviewed Start to reopen the saved workspace.
