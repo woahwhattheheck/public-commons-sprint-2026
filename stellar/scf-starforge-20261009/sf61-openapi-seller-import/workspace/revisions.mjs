@@ -102,9 +102,22 @@ function view(ctx,shared) {
   result.reviewSha256=sha(canonical({schema:result.schema,base:result.base,refreshReviewId:result.refreshReviewId,pending}));
   return result;
 }
+async function withCurrentAuthorization(review,specText,validatePlan) {
+  if(typeof validatePlan!=='function')return review;
+  if(!review.plan)return {...review,authorization:{ready:false,code:'CANDIDATE_INCOMPLETE',
+    message:'Complete the candidate settings before checking its current provider grants.'}};
+  try {
+    await validatePlan(specText,review.plan);
+    return {...review,authorization:{ready:true}};
+  } catch(error) {
+    return {...review,ready:false,authorization:{ready:false,
+      code:typeof error.code==='string'?error.code:'AUTHORIZATION_REVIEW_REQUIRED',
+      message:String(error.message??'Review the current provider authorization before saving this candidate.')}};
+  }
+}
 export async function reviewMerchantRevision(options) {
   const ctx=await context(options);
-  return view(ctx,reviewSourceRefresh(ctx.input));
+  return withCurrentAuthorization(view(ctx,reviewSourceRefresh(ctx.input)),options.specText,options.validatePlan);
 }
 /** Shared refresh guard + current saved manifest before original create-only export. */
 export async function saveMerchantRevision(options) {
@@ -115,6 +128,7 @@ export async function saveMerchantRevision(options) {
   }
   if(!review.ready)fail('Choose an explicit decision for every original route');
   if(options.name===options.baseName)fail('Save a revision under a new package name');
+  if(typeof options.validatePlan==='function')await options.validatePlan(options.specText,review.plan);
   const sourceRevision={schema:REVISION_SCHEMA,reviewSha256:review.reviewSha256,refreshReviewId:review.refreshReviewId,base:review.base,
     candidate:{sourceSha256:sha(options.specText),planSha256:sha(json(review.plan)),compiledSha256:review.compiledSha256},
     decisions:review.routes.map(row=>({routeId:row.routeId,action:row.action,from:row.from,to:row.to,
@@ -131,12 +145,13 @@ export function releaseCommands(folder,name,store=resolve(folder,'..','merchant-
     stage:command(['stage','--store',store,'--id',name,'--workspace',folder,'--port','0']),
     console:command(['console','--store',store,'--port','0'])};
 }
-export async function stageMerchantRevision({parent,name,store,id,createStore=false}) {
+export async function stageMerchantRevision({parent,name,store,id,createStore=false,validatePlan}) {
   if(typeof store!=='string'||!isAbsolute(store))fail('Select an absolute release store directory');
   if(typeof createStore!=='boolean')fail('Create-store selection must be boolean');
   id=packageName(id);
   const project=await readPackage(parent,name);
   if(!project.sourceRevision)fail('Select a saved revision candidate');
+  if(typeof validatePlan==='function')await validatePlan(project.specText,project.plan);
   const original=await import('../../sf82-seller-pilot/releases.mjs');
   if(createStore)await original.initReleaseStore(store);
   const record=await original.stageRelease(store,{id,workspace:project.folder,runtime:{port:0}});
@@ -167,11 +182,11 @@ export async function saveMerchantRevisionDraft(options) {
   try{await file.writeFile(bytes);await file.sync();}finally{await file.close();}
   return {name,path,sha256:sha(bytes),review};
 }
-export async function readMerchantRevisionDraft(parent,name) {
+export async function readMerchantRevisionDraft(parent,name,{validatePlan}={}) {
   const bytes=await draftBytes(join(await draftDirectory(parent),packageName(name)+'.json')),value=JSON.parse(bytes);
   exact(value,['schema','name','base','createdAt','specText','decisions','additions'],'revision draft');
   if(value.schema!==DRAFT_SCHEMA||value.name!==name||!plain(value.base))fail('Invalid retained revision draft');
-  const review=await reviewMerchantRevision({parent,baseName:value.base.name,specText:value.specText,decisions:value.decisions,additions:value.additions});
+  const review=await reviewMerchantRevision({parent,baseName:value.base.name,specText:value.specText,decisions:value.decisions,additions:value.additions,validatePlan});
   if(canonical(review.base)!==canonical(value.base))fail('The draft base package changed. Reopen its original saved source before continuing.');
   return {...value,sha256:sha(bytes),review};
 }

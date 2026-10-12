@@ -136,7 +136,9 @@ configuration and outbox. Keep this packet for normal startup and recovery.
 
 The prepared directory contains wordpress-plugin/starforge-sf98-woo/ with
 the original receiver, checkout/admission, merchant-console PHP/JS/CSS,
-merchant-operator.php, OPERATIONS.md and NATIVE_REVIEW.md. Copy that whole folder to the shop's wp-content/plugins using its ordinary deployment
+merchant-operator.php, merchant-refunds PHP/JS/CSS, refund-networks.json,
+OPERATIONS.md, NATIVE_REVIEW.md and REFUNDS.md. Copy all 14 files in that folder
+to the shop's wp-content/plugins using its ordinary deployment
 process. Alternatively zip that single folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. PHP 8.0+, WooCommerce and
 real MySQL/MariaDB named locks are required. HPOS is supported.
@@ -226,6 +228,26 @@ For an uncertain/failed attempt, reconcile the original native result first.
 Only a merchant-attested non-settlement reset advances the attempt generation.
 The buyer downloads the newly available handoff and uses the SAME original
 workspace, budget ledger and inbox. Old attempts remain retained. See BUYER.md.
+
+## Verified order credits
+
+For a verified merchant refund, use the original accounting workspace's exported
+adjustments.json and the installed plugin's REFUNDS.md. Keep its original bytes.
+The native reverse transfer amount and chosen order-currency credit remain explicit.
+The packet forwards the original refund CLI with the existing merchant operator
+configuration:
+
+\`\`\`sh
+node merchant.mjs refund --toolkit "$TOOLKIT" -- inspect --config /private/woo-operator.json --order 123
+node merchant.mjs refund --toolkit "$TOOLKIT" -- prepare --config /private/woo-operator.json --adjustments /private/adjustments.json --adjustment UUID --order 123 --woo-amount 4.25
+node merchant.mjs refund --toolkit "$TOOLKIT" -- apply --config /private/woo-operator.json --adjustment UUID --confirm-order 123
+node merchant.mjs refund --toolkit "$TOOLKIT" -- recover --config /private/woo-operator.json --adjustment UUID
+\`\`\`
+
+Replace UUID and the example order/credit with the actual saved adjustment and
+reviewed store allocation. The operation records an amount-only Woo credit through
+native refund hooks. A full refunded order can lose download access through its
+native order status; item restock decisions remain in the merchant's Woo workflow.
 
 ## Files and updates
 
@@ -360,13 +382,16 @@ node merchant.mjs plugin --toolkit "$TOOLKIT" --out /private/new-plugin-files
 \`\`\`
 
 The command copies the exact original receiver, checkout/admission files,
-merchant-console PHP/JS/CSS, merchant-operator.php and both operating guides into the new output directory's
+merchant-console PHP/JS/CSS, merchant-operator.php, merchant-refunds PHP/JS/CSS,
+refund-networks.json and all three operating guides into the new output directory's
 starforge-sf98-woo folder. It makes no network request or store change.
 Copy that folder to WordPress wp-content/plugins using the shop's normal
 deployment process, or zip the folder and use WordPress Upload Plugin.
 Activate Starforge SF98 WooCommerce Merchant Bridge. Open WooCommerce → Stellar
-merchant operations for the native order, attempt and release console. Retain
-all nine delivered files when upgrading an existing plugin.
+merchant operations for native orders, payment review and verified order credits.
+Retain all 14 delivered files when upgrading an existing plugin. REFUNDS.md covers
+partial/full monetary credits from the original verified accounting adjustments,
+explicit store amounts and recovery of the same saved native refund.
 
 The original plugin requires WooCommerce, PHP 8.0+ and actual MySQL/MariaDB
 named locks. Define SF98_WEBHOOK_SECRET as a PHP constant in wp-config.php from

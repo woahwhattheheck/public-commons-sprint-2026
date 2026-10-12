@@ -57,6 +57,10 @@ The upstream target remains the original fixed public HTTPS hostname on port 443
 
 For an OAuth client-credentials binding, the token endpoint must also use HTTPS. The original token request uses that binding's selected Agent, preserves token validation and caching, and keeps its existing deadline. Bindings with different profiles have separate token-provider pools even if their other OAuth settings match.
 
+A reviewed `oauthConnection` binding also passes its selected Agent to the original retained-grant provider. When a paid request needs a refreshed token, that original OAuth request uses the configured connection while preserving its profile hash, grant identity, scopes, rotating-token persistence and timeout. The selected Agent must match the declared token endpoint's protocol. Interactive authorization and revocation through the original connection API retain their existing host options; a trusted application may pass that same Agent explicitly in those options.
+
+Shutdown waits for the original provider to finish its retained grant write before destroying the owned Agent. Cache, provider, idempotency and supplier resources all receive their original close operation even if one close fails.
+
 ## Check the original seller
 
 Supply the private variables through the same environment used for the eventual merchant process, then use the original launcher:
@@ -140,6 +144,7 @@ The factory creates one Agent per selected proxy profile and destroys only those
 
 - [Original upstream configuration](UPSTREAM.md)
 - [Original OAuth client credentials](OAUTH.md)
+- [Original reviewed OAuth connections](oauth-connections/README.md)
 - [Original SF82 release operator](../sf82-seller-pilot/RELEASES.md)
 - [Node HTTP Agent proxy configuration](https://nodejs.org/api/http.html#new-agentoptions)
 - [Node enterprise network configuration](https://nodejs.org/learn/http/enterprise-network-configuration)

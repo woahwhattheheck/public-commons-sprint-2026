@@ -14,8 +14,10 @@ const SOURCE = 'stellar/scf-starforge-20261009';
 const WOO = 'sf104-woocommerce-merchant-bridge';
 const PLUGIN = ['starforge-sf98-woo.php','checkout-gateway.php','checkout-admission.php',
   'merchant-console.php','merchant-console.js','merchant-console.css','OPERATIONS.md',
-  'merchant-operator.php','NATIVE_REVIEW.md'];
+  'merchant-operator.php','NATIVE_REVIEW.md', 'merchant-refunds.php','merchant-refunds.js',
+  'merchant-refunds.css','refund-networks.json','REFUNDS.md'];
 const ENTRIES = {seller:WOO + '/seller.mjs', buyer:WOO + '/buyer.mjs',
+  refund:WOO + '/refund-operator-cli.mjs',
   operator:'sf88-operator-buyer-cli/cli.mjs', queue:'sf88-operator-buyer-cli/queue-cli.mjs',
   worker:'sf98-merchant-delivery/worker.mjs', status:'sf98-merchant-delivery/deliver.mjs'};
 const PACKET = dirname(fileURLToPath(import.meta.url));
@@ -31,14 +33,17 @@ node merchant.mjs status --toolkit /absolute/checkout-or-installed-package
 node merchant.mjs buyer --toolkit /absolute/checkout-or-installed-package -- inspect --handoff /private/order.json
 node merchant.mjs operator --toolkit /absolute/checkout-or-installed-package -- --review --config /private/review.json
 node merchant.mjs queue --toolkit /absolute/checkout-or-installed-package -- show --root /private/inbox --intent EXACT_INTENT
+node merchant.mjs refund --toolkit /absolute/checkout-or-installed-package -- inspect --config /private/woo-operator.json --order 123
 
 plugin copies the original PHP, browser assets and operating guide for WordPress.
 prepare is offline and creates a NEW private directory plus the original plugin
 folder. inspect reuses it. preflight sends an unsigned {} to the shop and creates
 no order. serve / deliver run original foreground services with the existing
-SF98_WEBHOOK_SECRET environment. buyer / operator / queue forward only explicit
+SF98_WEBHOOK_SECRET environment. buyer / operator / queue / refund forward only explicit
 arguments to their original CLI, including its normal approval and wallet flow.
-Read README.md and BUYER.md before operating a real merchant or buyer.`;
+Read README.md and BUYER.md before operating a real merchant or buyer.
+The original plugin's REFUNDS.md covers verified adjustment import, order credits
+and recovery of the same saved WooCommerce refund.`;
 
 function need(value, message) { if (!value) throw new Error(message); }
 async function regular(path) {
@@ -141,7 +146,7 @@ export async function main(args = process.argv.slice(2)) {
   need(major > 22 || (major === 22 && minor >= 16), 'Use Node.js 22.16 or later.');
   const action = args[0], split = args.indexOf('--'), options = split < 0 ? args.slice(1) : args.slice(1,split);
   const forwarded = split < 0 ? [] : args.slice(split + 1);
-  need(['plugin','prepare','inspect','preflight','serve','deliver','status','buyer','operator','queue'].includes(action), 'Choose an action shown by --help.');
+  need(['plugin','prepare','inspect','preflight','serve','deliver','status','buyer','operator','queue','refund'].includes(action), 'Choose an action shown by --help.');
   need(options[0] === '--toolkit' && (action === 'plugin' ? options.length === 4 && options[2] === '--out' : options.length === 2), 'Supply --toolkit /absolute/checkout-or-installed-package; plugin also requires --out /absolute/new-directory.');
   const base = await originalSource(options[1]);
   if (action === 'plugin') {
@@ -150,11 +155,11 @@ export async function main(args = process.argv.slice(2)) {
     console.log(JSON.stringify({status:'WOO_ORIGINAL_PLUGIN_PREPARED',pluginDirectory:join(options[3],'starforge-sf98-woo'),files:PLUGIN.length,networkRequests:0}));
     return;
   }
-  if (['buyer','operator','queue'].includes(action)) {
-    need(forwarded.length > 0, 'Supply the original buyer, operator or queue arguments after --.');
+  if (['buyer','operator','queue','refund'].includes(action)) {
+    need(forwarded.length > 0, 'Supply the original buyer, operator, queue or refund arguments after --.');
     await sourceCommand(base,action,forwarded); return;
   }
-  need(forwarded.length === 0, 'Only buyer, operator and queue accept arguments after --.');
+  need(forwarded.length === 0, 'Only buyer, operator, queue and refund accept arguments after --.');
   const state = await setup(base);
   if (action === 'prepare') {
     await publishDirectory(state.input.privateDirectory,async staging => {

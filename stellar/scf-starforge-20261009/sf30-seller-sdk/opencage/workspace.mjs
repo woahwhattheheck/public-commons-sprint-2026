@@ -81,7 +81,8 @@ export class GeocodeWorkspace {
   constructor(directory,configuration,lease,sourceOptions) {
     this.directory=directory;this.configuration=configuration;this.lease=lease;
     this.readOnly=sourceOptions.readOnly===true;
-    this.source=createOpenCageSource(configuration.plan,sourceOptions);
+    this._runtimeEnvironment={...sourceOptions.env};
+    this.source=createOpenCageSource(configuration.plan,{...sourceOptions,env:this._runtimeEnvironment});
     this.releaseRoot=join(directory,'releases');this.queue=Promise.resolve();this.closing=false;this.runtime=null;
   }
   _serial(operation) {
@@ -347,7 +348,7 @@ export class GeocodeWorkspace {
   start({expectedGeneration}) {
     return this._serial(async()=>{
       if(this.runtime)fail('GEOCODE_RELEASE_ALREADY_OWNED');
-      const runtime=await runActiveRelease(this.releaseRoot,{expectedGeneration,handleSignals:false});
+      const runtime=await runActiveRelease(this.releaseRoot,{expectedGeneration,handleSignals:false,env:this._runtimeEnvironment});
       this.runtime=runtime;
       void runtime.completion.finally(()=>{if(this.runtime===runtime)this.runtime=null;}).catch(()=>{});
       return {url:runtime.url,mode:runtime.mode,release:runtime.release,observation:runtime.observation};
