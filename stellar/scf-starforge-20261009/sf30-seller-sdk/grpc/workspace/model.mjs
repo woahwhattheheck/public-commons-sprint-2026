@@ -352,16 +352,18 @@ export async function createGrpcWorkspace({ stateDirectory, sourceFile, protoDir
     if (result) {
       if (result.id !== id || result.fingerprint !== saved.fingerprint ||
           result.sha256 !== sha256(canonical(result.output))) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
-      if (result.requestStream && (result.requestStreamSha256 !== sha256(canonical(result.requestStream)) ||
-          !saved.requestSeries)) fail('GRPC_CALL_REQUEST_STREAM_CHANGED', 409);
+      if (saved.responseSha256 && saved.responseSha256 !== result.sha256) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
+      if (saved.requestSeries ? !result.requestStream || result.requestStreamSha256 !== sha256(canonical(result.requestStream))
+        : result.requestStream !== undefined) fail('GRPC_CALL_REQUEST_STREAM_CHANGED', 409);
       const phase = streaming && !result.output.complete ? 'OUTCOME_UNCONFIRMED' : 'COMPLETED';
-      if (recover && (saved.phase !== phase || result.requestStream && !saved.requestStream)) {
+      const staleCompletion = phase === 'COMPLETED' && ['error', 'grpcCode', 'nextAction'].some(key => Object.hasOwn(saved, key));
+      if (recover && (saved.phase !== phase || result.requestStream && !saved.requestStream || staleCompletion)) {
         Object.assign(saved, { phase, responseSha256: result.sha256, finishedAt: result.completedAt,
           ...(result.requestStream ? { requestStream: result.requestStream } : {}),
           ...(phase === 'OUTCOME_UNCONFIRMED' ? { nextAction: incompleteStreamAction } : {}) });
+        if (phase === 'COMPLETED') { delete saved.error; delete saved.grpcCode; delete saved.nextAction; }
         await atomicJson(file, saved);
       }
-      if (saved.responseSha256 && saved.responseSha256 !== result.sha256) fail('GRPC_CALL_OUTPUT_CHANGED', 409);
     }
     let stream;
     if (streaming && inspectStream) {
