@@ -36,10 +36,10 @@ function hostPath(value,base) {
 const decode=bytes=>JSON.parse(new TextDecoder('utf8',{fatal:true}).decode(bytes));
 export function consoleOrigin(value) {
   let url;try{url=new URL(value);}catch{fail('CONFIGURATION_ERROR','Use the original loopback MPP console origin.');}
-  need(typeof value==='string' && value===url.origin && url.protocol==='http:' &&
-    url.hostname==='127.0.0.1' && url.port && !url.username && !url.password,
+  need(typeof value==='string' && (value===url.origin || value==='http://127.0.0.1:80' && url.origin==='http://127.0.0.1') &&
+    url.protocol==='http:' && url.hostname==='127.0.0.1' && !url.username && !url.password,
     'CONFIGURATION_ERROR','Use the original http://127.0.0.1:PORT console origin without credentials or a path.');
-  return value;
+  return url.origin;
 }
 export function publicConfiguration(value) {
   if(!value)return null;

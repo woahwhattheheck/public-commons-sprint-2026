@@ -140,7 +140,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
   }
   const server=createServer({maxHeaderSize:16384},async(request,response)=>{
     try {
-      requireValue(request.headers.host===new URL(origin).host,'MPP_WORKSPACE_HOST_INVALID',403);
+      requireValue([new URL(origin).host,'127.0.0.1:'+server.address().port].includes(request.headers.host),'MPP_WORKSPACE_HOST_INVALID',403);
       const url=new URL(request.url,origin);
       requireValue(url.origin===origin,'MPP_WORKSPACE_ORIGIN_INVALID',403);
       if(request.method==='GET' && ['/','/app.js','/customer-workbench.js','/style.css'].includes(url.pathname)) {
@@ -308,7 +308,7 @@ export async function serveWorkspace({directory,port=8787,environment=process.en
   server.requestTimeout=30000;server.headersTimeout=10000;
   try {
     await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(portNumber(port),'127.0.0.1',resolve);});
-    origin='http://127.0.0.1:'+server.address().port;
+    origin=new URL('http://127.0.0.1:'+server.address().port).origin;
     const initialIdentity=await identity(),privateUrl=origin+'/#'+token;
     const readiness=Object.freeze({schema:'stellar-forge.mpp-console-ready.v1',
       pid:process.pid,ppid:process.ppid,origin,privateUrl,workspace:workspace.root,createdAt:initialIdentity.createdAt,
