@@ -1,6 +1,6 @@
 # AgentSmith buyer receiving page
 
-The existing Stellar Forge site exposes **/agentsmith.html**. It turns the retained AgentSmith HTTP source into a complete portable preparation and runs the maintained buyer and Freighter wallet from that preparation.
+The public [AgentSmith receiving page](https://agentsmith-receiving.tokenjunkielabs.chatgpt.site) turns the retained AgentSmith HTTP source into a complete portable preparation and runs the maintained buyer and Freighter wallet from that preparation.
 
 ## Product flow
 
@@ -12,7 +12,7 @@ Open the page, review the original unpaid POST and advertised payment choices, a
 | --- | --- |
 | source-http.json | Complete original request and both HTTP response captures |
 | request.json | Exact UTF-8 request bytes |
-| capture.py | Original native capture and preparation program, unchanged |
+| capture.py | Maintained original capture and native preparation program |
 | buyer.mjs | Receiving runner that calls the original buyer and wallet commands |
 | packet.json | Operation settings and source/program digests |
 | setup-input.json | Complete editable receiving draft |
@@ -20,7 +20,7 @@ Open the page, review the original unpaid POST and advertised payment choices, a
 | README.md | Runtime, preparation, execution and reopen guide |
 | LICENSE | Original MIT license and attribution |
 
-The original offer decoder remains offer.mjs. The native capture program is retained from **stellar/scf-starforge-20261009/partners/agentsmith/capture.py** at source **41f15c0e57d2ba9655885399c1b37134e1a81d41**, SHA-256 **60dd7f472ec518846f50c222160c53751554648f492d150f384b70fa05fb4381**.
+The original offer decoder remains offer.mjs. The native capture program is retained from **stellar/scf-starforge-20261009/partners/agentsmith/capture.py** at source **aea13f36c6bddf09fcc16cc3825094d1d30cfbb9**, SHA-256 **93214bc738c9ad92c70aadddb07655d86ea7e304ea7ed1afda0e5c6b4a940098**.
 
 ## Captured operation
 
@@ -101,7 +101,11 @@ node /absolute/original/checkout/stellar/scf-starforge-20261009/sf103-native-buy
   --workspace /private/operation/wallet
 ~~~
 
-The packet's **inspect** also reopens the retained capture and reviewed request, reviews the original operator if present, and reports the saved response path and size. Repeating **prepare** reopens its completed native preparation. Repeating **operator-init** checks the existing trustedPayer and reviews the same operator. Repeating **wallet-prepare** inspects the existing wallet. Interrupted execution continues through the original buyer and wallet recovery commands with its retained ledger and keys.
+The packet's **inspect** also reopens the retained capture and reviewed request, reviews the original operator if present, and reports the saved response path and size. Repeating **prepare** completes an interrupted source restoration or native preparation in the same directory. Complete private files are published atomically and reused only when their original bytes match. The original SF88 preparer derives the expected configuration before reopening a retained draft, preserving the request, stable intent and response destination. A private operation lock prevents concurrent writers.
+
+Repeating **operator-init** invokes the maintained initializer's resume operation when its original initialization is incomplete, then checks the complete source configuration, actor, service, payer and exact request bytes. Wallet actions make those same checks before entering the original provider. The receiving manifest is created atomically, and an empty original receiving directory can finish its first creation.
+
+The runner forwards SIGINT and SIGTERM until the native child closes and returns the child's exit status. Repeating **wallet-prepare** inspects the existing wallet. Interrupted execution continues through the original buyer and wallet recovery commands with its retained ledger and keys.
 
 ## Site integration
 
@@ -113,12 +117,16 @@ The additive receiving assets live in the existing **dist/** tree:
 
 The page imports the existing offer.mjs and onboarding.mjs. Shared styles come from style.css. The home navigation adds the same-origin AgentSmith buyer route. The page uses the existing grayscale industrial layout, explicit form labels, responsive panels, text-only source display, and local draft/ZIP downloads.
 
-Publishing consumes the complete current developer-site tree through the original Sites project and its existing audience. The nonsecret .openai/hosting.json remains its project binding. The original publisher can assemble these additive assets with the current WooCommerce, Fleet, CoinGecko, OpenSearch and merchant workspace edition.
+The standalone customer receiving page is published at **https://agentsmith-receiving.tokenjunkielabs.chatgpt.site** under the Bryce / TokenJunkieLabs Sites account, public project **appgprj_6acc430d195c8191a124909673496433**. Its first deployed source is **6f4ec6a14ff9f62464d2e356c5d5751289c9ab8c**, version **appgver_b6c72a5528308191a33f0bc44c2b89c6**. The receiving assets use the same original source as merged **9fec9b4df3d6933221aa4dae87a2b8866de80fd1**; its root page and navigation form the standalone customer destination.
+
+The existing developer-site copy remains available for an owner of that separate project to publish with its complete current merchant edition. Future AgentSmith customer page updates use the dedicated receiving project's original source and hosting binding. Send customers the branded receiving URL.
 
 ## Validation
 
-The original HTTP source and unchanged capture program completed restore, native SF88 prepare, review and reopen with all commands exiting 0. The buyer retained the exact 21-byte request, source offer, stable intent and response destination. The browser wallet's owning engineering lane completed its native SDK/provider lifecycle on the maintained wallet source.
+The generated nine-file customer packet completed original native **prepare → review → prepare → inspect** at **2026-10-12T02:25:33Z**, with every command exiting 0. Draft import reproduced the identical 66,463-byte ZIP. The complete original source, exact 21-byte request, stable intent, native review and saved receiving files remained unchanged on reopen.
 
-The receiving page's three ESM files passed V8 syntax parsing. Every directly referenced UI ID exists and all HTML IDs are unique. Exact capture and HTTP bundle content match their retained original source. The native nine-file packet operation and browser layout review belong to the receiving/publishing run on the original equipped host.
+The original interruption/recovery operation also completed at **2026-10-12T02:25:31Z**. It resumed after committed payment-required.json and after committed native review.json, continued through the original SF88 preparer and reviewer, and rejected a changed intent while retaining the original operation. All 15 original native source blobs and the customer receiving assets were checked before execution.
+
+The compact outcome and compressed complete native stdout are retained at **.swarm-delivery/8f43-agentsmith/customer-native-result.json** and **customer-native-result.json.gz**. The complete receiving modules passed original Acorn parsing, and the page's referenced UI IDs and source assets were checked during preparation.
 
 TokenJunkieLabs. Preserve the original MIT license in distributed packets.

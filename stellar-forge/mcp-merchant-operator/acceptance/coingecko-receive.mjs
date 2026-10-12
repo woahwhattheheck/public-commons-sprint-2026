@@ -36,7 +36,7 @@ catch(error){if(error.code!=='ENOENT')throw error;await initializeCoinGeckoWorks
 const bearer=randomBytes(32).toString('hex');
 let session,protocol,sequence=0;
 async function rpc(method,params={}){
-  const response=await fetch(session.url,{method:'POST',headers:{Authorization:'Bearer '+bearer,'Content-Type':'application/json',Accept:'application/json',
+  const response=await fetch(session.url,{method:'POST',headers:{Authorization:'Bearer '+bearer,'Content-Type':'application/json',Accept:'application/json, text/event-stream',
     ...(protocol?{'MCP-Protocol-Version':protocol}:{})},body:JSON.stringify({jsonrpc:'2.0',id:++sequence,method,params})});
   const value=await response.json();
   insist(response.ok&&!value.error,'Original MCP transport failed: '+JSON.stringify(value.error??{status:response.status}));

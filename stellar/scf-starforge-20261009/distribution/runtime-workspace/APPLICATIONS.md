@@ -9,6 +9,10 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | API merchant authoring | openapi-workspace | Source intake, paid routes, saved packages, seller preview and operations |
 | Redis and Valkey merchant authoring | redis workspace open | Saved products, source profiles, live previews, customer packages and managed release controls |
+| MPP merchant and customer | mpp serve | Saved merchant/customer profiles, original offers, purchases, packages, governor terminal and retained response receiving |
+| Stellar agent application | stellar-application serve | Original HTTP and governed MCP requests, current subject authorization, retained results and aggregate spending |
+| OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
+| Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
@@ -20,6 +24,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Workbook build and receiving | Selected Python environment: workbooks | Original build, receive, inspect and copy commands with retained output |
 | Workbook delivery and refresh | Selected Python environment: workbookDelivery | Original recipe or reviewed refresh and its retained delivery operation |
 | Paid application jobs | job-workspace serve | Prepared job checkout, original review and execution, verified results, customer library and collections |
+| Paid-job result receiver | jobs receiver serve | Signed completed files, original merchant/job/payment identity, private inspection, verified downloads and complete customer exports |
 | Object buyer workspace | buyer-object-workspace | Original sessions, receiving, chunk or whole acquisition, verified downloads and managed analysis |
 | GoldRush wallet research | goldrush workbench | Retained wallets, requests, source comparisons, notes and original buyer approval |
 | Freighter buyer wallet | browser-wallet serve | Original payer connection, exact native authorization, retained request recovery and private wallet history |
@@ -31,6 +36,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Tenderly simulation merchant | tenderly-workspace | Pinned EVM requests, original merchant, saved-provider observation review, exact-generation recovery and complete customer results |
 | Merchant recovery | merchant-recovery-remote workspace serve | Off-host inventory, original transfer journals and encrypted cold restore |
 | Commerce session | commerce-console start | An initialized SF66 session, original buyer/delivery/recovery and terminal approval |
+| RSS, Atom and subscription collections | dataset-feeds … serve | Original XML and OPML, saved selections, acquisition recovery, review, native editions and customer receiving |
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
 A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
@@ -151,6 +157,12 @@ jobs, result library and collections. Existing checkouts retain their originally
 selected source and operator; an installed upgrade supplies the source for future
 ticket imports. Review the updated original input files before starting if the
 operator configuration has changed.
+
+## Paid-job result receiver
+
+Choose **Paid-job result receiver** to reopen an original initialized customer receiver directory. Select its receiving port, separate private operator port and private environment JSON containing the configured HMAC secret. Review, Save, Review start and Start use the same managed worker and selected READY runtime. Open connects to the original private receiver desk; Stop drains both original listeners and the receiver lease. The selected directory and complete normalized configuration are bound to the actual receiver startup before the link is saved.
+
+The [complete installed receiving guide](JOB_RESULT_RECEIVER.md) includes archive/runtime setup, paired destination and private environment, HTTPS intake, merchant dispatch, result inspection, complete exports and same-state recovery.
 
 ## Dataset buyer
 
@@ -327,6 +339,34 @@ The original startup record contains schema stellar-forge.redis-workspace-startu
 
 **Stop application** closes that original authoring server and its owned release console. After it has stopped, a new reviewed start reopens the same workspace ID, saved revisions, requests, customer packages and release store with a fresh private URL. The Redis workspace's own Continue action resumes an original interrupted request; launching Applications preserves its normal recovery semantics.
 
+## API merchant connections and managed reopening
+
+The existing **API merchant authoring** application can select the original OAuth host configuration and private environment, review exact source/profile/callback bindings, and reopen the same authoring projects and private connection stores. Its managed start accepts the original host's bound startup announcement. See [API merchant authoring in Applications](./OPENAPI_APPLICATIONS.md) for original registration, fixed callbacks, private receiving, and stop/reopen instructions.
+
+## MPP merchant and customer
+
+**MPP merchant and customer** opens the original initialized MPP workspace. Review retains its saved merchant, buyer and customer profiles and the selected installed source. The original positional `mpp serve WORKSPACE PORT` command runs with its managed approval terminal. Open the existing private console, configure the intended role, inspect offers and saved purchases, and continue the original package, response and recovery operations. Stop drains the same managed process; reopen keeps the saved workspace. The complete installed dependency and merchant/customer flow is in [MPP_APPLICATIONS.md](./MPP_APPLICATIONS.md).
+
+## Stellar agent application
+
+Use the [installed application guide](../../partners/cheesecake-stellar-agent/INSTALLED.md) to initialize the original private application configuration from its original merchant handoff. Its selected runtime must contain `stellar-application`, the native operator dependencies and the original MCP feature when selected remote tools are configured.
+
+Choose **Stellar agent application**, select that `application.json`, and provide the original private environment JSON containing `STELLAR_APP_ACCESS_TOKEN`. The token is passed to the original process; enter it in that application's existing browser connection field. The optional terminal Python path supports the original payment approval prompt.
+
+**Review application** inspects the selected original configuration, handoff, private state, authorization and remote-tool source references without opening the signer or provider. The saved application's exclusive resource is its original private state directory. Two configuration filenames referring to the same state therefore share the same running-operation check. If the configuration is moved to another state directory, review and save that application before starting it.
+
+**Save application**, **Review start** and **Start reviewed application** use the existing managed release and worker. The installed command receives the exact reviewed configuration hash and selected original source. It checks all nine executed application files against the adopted release copy and announces the actual original source, launched source, native runtime, process and private server after the application opens. **Open application** uses that original startup record.
+
+The original browser provides selected HTTP and remote MCP requests, review, live authorization, native terminal approval, aggregate spending, cancellation, original payment reconciliation and complete retained result downloads. Closing and restarting through Applications keeps the same private application state, request identities, results and configured operator ledger. **Stop application** closes the original server and its owned operator instance; a later reviewed start opens that same configuration and retained work.
+
+## OData source and live merchant
+
+**OData source and live merchant** opens an original or received source workspace, or creates a private workspace in an existing parent. Select a saved live service to start its existing merchant alongside authoring. The original launch records the selected workspace, service, managed child and actual listener. Applications exposes the source workspace and, when selected, the merchant documentation and operations links. Stop drains all original listeners; reopen keeps the saved queries, received pages, continuation key and delivery state. Use the [complete OData workflow and installed receiving command](../../sf30-seller-sdk/odata/live/APPLICATIONS.md) to continue the same retained source and response sequence.
+
+## Google Sheets source authoring
+
+**Google Sheets source authoring** reopens the initialized original Sheets workspace. Select its private connection file when using the existing Google aliases, and its original seller/resource pair when continuing a buyer handoff. Review retains the workspace identity and immutable settings, selected source and declared connection snapshot. Ordinary source observations, drafts, versions and publication work continue inside the original store. Open starts the original source browser; Stop drains its publisher and merchant before the same workspace reopens. The [Sheets Applications guide](../../sf30-seller-sdk/sheets/APPLICATIONS.md) covers setup, saved-source review, receiving and the original launch lifecycle.
+
 ## Freighter buyer wallet
 
 Prepare the wallet once through the original [browser-wallet workflow](../../sf103-native-buyer-signer/browser-wallet/README.md), from the existing initialized SF88 operator configuration. Its original wallet.json, provider.mjs, native/buyer.json and native/signer.json retain the operation and signing bindings. The runtime needs the original native dependencies and **freighter-wallet** feature; the wallet browser needs Freighter, session storage and Web Locks.
@@ -365,3 +405,15 @@ Choose **Grant planning and delivery** to reopen the original SF47 planning and 
 The original launch keeps the selected runtime source identity and verifies the adopted execution copy before opening SQLite. Open comes from the matching private launch record and authenticated original listener. Stop removes readiness, drains existing requests and closes the original workspace lock; the next reviewed start reopens the same saved plans, revisions and operating cases.
 
 Follow [Grant planning and delivery in Applications](GRANT_APPLICATIONS.md) for the complete selection, operating, export, Stop/reopen and original CLI workflow.
+
+## RSS, Atom and subscription collections
+
+Choose **RSS, Atom and subscription collections** from an installation containing the original managed feed source. Select the existing private workspace initialized by **dataset-feeds … init**, or the workspace received from its original feed/collection project. Choose the original absolute Python 3.11+ executable, retaining its virtual environment. **Opening page** accepts **subscriptions** (the default) or **feeds**; port **0** chooses an available local listener.
+
+**Review application** reads the original workspace and database identity, selected interpreter and all 21 original feed/XML/dataset/browser source files. **Save**, **Review start** and **Start reviewed application** use the same installed release and managed process. The original launcher validates that binding before and after acquiring its workspace writer. The binding follows the installer's exact source bytes into the adopted release while the startup records its actual execution location.
+
+The managed run retains **Open retained feeds** and **Open subscription collections**. Applications matches the original compact startup with its authenticated live **/api/launch** response before exposing those destinations. Original XML, OPML folders, saved collection choices, capture progress, conflict review, private notes and selected native editions remain in the original console. The complete collection and customer workflows continue through those existing controls.
+
+**Stop application** requests original capture cancellation and drains the current worker and requests before closing the workspace lease. Repeated Stop signals preserve that drain. Reopen the saved application for a new private session on the same collection, source records and native edition. The XML and feed Applications entries share the same workspace resource, including existing saved XML applications; stop its current run before using that directory through the other original console.
+
+The [complete feed Applications guide](../../sf30-seller-sdk/feeds/MANAGED_APPLICATIONS.md) includes initialization, exact CLI selection, structured startup, original receiving and recovery. This entry uses the existing **dataset-feeds** command and generic Applications browser controls.
