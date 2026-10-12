@@ -2,6 +2,7 @@
 from __future__ import annotations
 import base64
 import contextlib
+from decimal import Decimal
 import hashlib
 import json
 import math
@@ -36,9 +37,73 @@ def _default(value):
         return {"$vector_binary": base64.b64encode(value).decode("ascii")}
     raise TypeError(type(value).__name__)
 
+def number_decimal(value):
+    """Exact numeric comparison against the decimal spelling a native float exposes."""
+    need(type(value) in (int, float) or isinstance(value, Decimal),
+         "VECTOR_NUMBER_REQUIRED")
+    if isinstance(value, Decimal):
+        need(value.is_finite(), "VECTOR_NONFINITE_JSON")
+        return value
+    if type(value) is float:
+        need(math.isfinite(value), "VECTOR_NONFINITE_JSON")
+        return Decimal(str(value))
+    return Decimal(value)
+
+def decimal_json(value):
+    """Serialize a finite JSON number without applying the Decimal context."""
+    need(value.is_finite(), "VECTOR_NONFINITE_JSON")
+    # Preserve earlier native-float spellings only when this conversion is exact.
+    try:
+        native = float(value)
+        if math.isfinite(native) and Decimal(str(native)) == value:
+            return json.dumps(native, allow_nan=False)
+    except (OverflowError, ValueError):
+        pass
+    sign, digits, exponent = value.as_tuple()
+    digits = list(digits)
+    while len(digits) > 1 and digits[-1] == 0:
+        digits.pop()
+        exponent += 1
+    coefficient = "".join(str(digit) for digit in digits)
+    prefix = "-" if sign else ""
+    if not any(digits):
+        return prefix + "0.0"
+    adjusted = len(digits) + exponent - 1
+    if -6 <= adjusted <= 20:
+        point = len(digits) + exponent
+        if point <= 0:
+            text = "0." + "0" * -point + coefficient
+        elif point >= len(digits):
+            text = coefficient + "0" * (point - len(digits)) + ".0"
+        else:
+            text = coefficient[:point] + "." + coefficient[point:]
+        return prefix + text
+    mantissa = coefficient[0] + ("." + coefficient[1:] if len(coefficient) > 1 else "")
+    return prefix + mantissa + "e" + ("+" if adjusted >= 0 else "") + str(adjusted)
+
 def canonical(value):
-    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"),
-                      allow_nan=False, default=_default)
+    if value is None:
+        return "null"
+    if type(value) is bool:
+        return "true" if value else "false"
+    if type(value) is int:
+        return str(value)
+    if isinstance(value, Decimal):
+        return decimal_json(value)
+    if type(value) is float:
+        need(math.isfinite(value), "VECTOR_NONFINITE_JSON")
+        return json.dumps(value, allow_nan=False)
+    if type(value) is str:
+        return json.dumps(value, ensure_ascii=False)
+    if type(value) is bytes:
+        return canonical(_default(value))
+    if isinstance(value, (list, tuple)):
+        return "[" + ",".join(canonical(item) for item in value) + "]"
+    if isinstance(value, dict):
+        need(all(isinstance(key, str) for key in value), "VECTOR_JSON_KEY_INVALID")
+        return "{" + ",".join(canonical(key) + ":" + canonical(value[key])
+                              for key in sorted(value)) + "}"
+    raise TypeError(type(value).__name__)
 
 def json_bytes(value):
     return (canonical(value) + "\n").encode("utf-8")
@@ -54,7 +119,7 @@ def strict_object(pairs):
     return result
 
 def parse_json(raw):
-    return json.loads(raw, object_pairs_hook=strict_object,
+    return json.loads(raw, object_pairs_hook=strict_object, parse_float=Decimal,
                       parse_constant=lambda value: (_ for _ in ()).throw(
                           VectorError("VECTOR_NONFINITE_JSON", value)))
 
@@ -174,8 +239,9 @@ def claim(directory, request):
         os.chmod(root / ".vector.lock", 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
         if request_path.exists():
-            need(read_json(request_path) == request, "VECTOR_ORIGINAL_REQUEST_CONFLICT",
-                 {"directory": str(root), "originalRequestSha256": digest(read_json(request_path)),
+            original = read_json(request_path)
+            need(canonical(original) == canonical(request), "VECTOR_ORIGINAL_REQUEST_CONFLICT",
+                 {"directory": str(root), "originalRequestSha256": digest(original),
                   "requestedSha256": digest(request)})
         else:
             atomic_json(request_path, request)
@@ -217,8 +283,8 @@ def verify_manifest(directory, name, schema, expected_sha256=None):
         verify_file(root, record)
     return value, manifest_file
 
-def clone_capture(source, target):
-    capture, manifest_file = verify_manifest(source, "capture.json", CAPTURE)
+def clone_capture(source, target, expected_sha256=None):
+    capture, manifest_file = verify_manifest(source, "capture.json", CAPTURE, expected_sha256)
     target = private_directory(target)
     for item in capture["files"] + [manifest_file]:
         copy_verified(member(source, item["path"]), member(target, item["path"]), item)
@@ -228,8 +294,8 @@ def value_kind(value):
     if value is None: return "null"
     if type(value) is bool: return "boolean"
     if type(value) is int: return "integer"
-    if type(value) is float:
-        need(math.isfinite(value), "VECTOR_NONFINITE_PROPERTY")
+    if type(value) is float or isinstance(value, Decimal):
+        number_decimal(value)
         return "number"
     if type(value) is str: return "string"
     if type(value) is bytes: return "binary"
@@ -257,8 +323,9 @@ def canonical_geometry(geometry):
     def normalized(value):
         if isinstance(value, (list, tuple)):
             return [normalized(v) for v in value]
-        need(type(value) in (int, float) and math.isfinite(value), "VECTOR_COORDINATE_INVALID")
-        return 0 if value == 0 else value
+        need(type(value) in (int, float) or isinstance(value, Decimal), "VECTOR_COORDINATE_INVALID")
+        number = number_decimal(value)
+        return 0 if number == 0 else number
     coordinates = normalized(coordinates)
     def ring(value):
         if not value: return value

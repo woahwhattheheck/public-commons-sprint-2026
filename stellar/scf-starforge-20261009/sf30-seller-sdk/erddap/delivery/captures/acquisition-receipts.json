@@ -1,0 +1,1714 @@
+{
+  "schema": "erddap-public-source-connector-capture.v2",
+  "operation_id": "scf-erddap-source-e42d-20261012",
+  "assembled_at": "2026-10-12T09:44:54.537Z",
+  "original_acceptance": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791796319442609?thread_ts=1791793765.760989",
+  "paired_2023_acceptance": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791797381814099?thread_ts=1791793765.760989",
+  "source_page": "https://app.notion.com/p/3f7dd772310081a7849de6940a22533d",
+  "helper": {
+    "git_blob": "faa48002d8068c401cf1ef135dd2ba623b81ba47",
+    "sha256": "152c578106bcb8b4c9405594acd9b0022912c7cf83715c63d959eec8abe94f19",
+    "bytes": 7459,
+    "executed": false
+  },
+  "prior_receipt_blob": "85dd5221406abeef1a0eb5083dbed45c9cf5dd98",
+  "diagnostics_receipt_blob": "8bedde32f44ee082b8eb3e794aa0dcab12b67305",
+  "source_decision": {
+    "original_2025": "MUR response retained. Both original NDBC data GETs returned explicit HTTP404; no body was provided by the connector. No fabricated empty table or replacement is presented as the2025 response.",
+    "paired_2023": "The original NOAA station history lists2023 but no2024/2025 historical standard-met files. Same exact encoded2023 NDBC selection returned144rows, confirming the station/query semantics. Root approved this distinct paired period; matching MUR JSON/CSV were acquired using only2025→2023 time replacements.",
+    "unchanged_metadata": "All additional 2023 selections reuse the already-captured whole-dataset metadata/DDS/DAS and their original receipts; these source bodies were not requested again.",
+    "nearby_three_day": "A separately approved scientific comparison uses MUR June 1–3, 2023 at 09:00Z with latitude 36.78..36.80 and longitude -122.42..-122.40, stride 1, and original four variables. The paired NDBC station 46042 uses the same three UTC dates, June 1 00:00Z inclusive through June 4 00:00Z exclusive, retaining the original nine variables. Its actual buoy coordinates are 36.789/-122.404. Earlier 2025 selections and first 2023 selections are unchanged and retained; this narrower nearby grid is a distinct source selection, not a tolerance change or silent replacement."
+  },
+  "transport_limits": [
+    "Successful source import does not expose original upstream HTTP status, response headers, response Date, redirect history or final URL. No such fields are invented.",
+    "First two metadata create calls preceded explicit timestamp instrumentation. Exact startedAt/completedAt remain null; their later observation times are separately labeled.",
+    "ASCII source text re-encodes to the same bytes under UTF-8 and ISO-8859-1, with create and download byte counts checked. A non-UTF8 MUR DAS was preserved as its original Notion attachment for the separately owned raw-byte return."
+  ],
+  "totals": {
+    "requested_selections": 6,
+    "original_urls_attempted": 10,
+    "additional_paired_data_urls": 4,
+    "additional_nearby_three_day_data_urls": 4,
+    "exact_text_files": 15,
+    "original_attachment_waiting_raw_return": 1,
+    "source_get_failures": 2
+  },
+  "files": [
+    {
+      "selection": "mur-sst-june-2025",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "metadata.json",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2025-06-01T09:00:00Z",
+            "stop": "2025-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json",
+      "git_blob": "37e9bf1bb6a387091173d29a2f1946bb08a1ed9b",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/info/jplMURSST41/index.json",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81e6-93d6-00b2515f401b",
+          "filename": "mur-sst-june-2025-metadata.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 13031,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81e6-93d6-00b2515f401b",
+          "filename": "mur-sst-june-2025-metadata.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 13031
+        },
+        "startedAt": null,
+        "completedAt": null,
+        "observedAt": "2026-10-12T09:14:08.996Z",
+        "downloadStartedAt": null,
+        "downloadCompletedAt": null,
+        "downloadObservedAt": "2026-10-12T09:14:08.997Z"
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 13031,
+        "utf8_bytes": 13031,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "variables": [
+          "time",
+          "latitude",
+          "longitude",
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "missing_requested_variables": []
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "mur-sst-june-2025",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "dataset.dds",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2025-06-01T09:00:00Z",
+            "stop": "2025-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.dds",
+      "git_blob": "f95af69e4f161e1061bde1a3f66b0fd6d9720b8d",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.dds",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81e6-b727-00b24ef62bfd",
+          "filename": "mur-sst-june-2025-dataset-dds.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 1105,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81e6-b727-00b24ef62bfd",
+          "filename": "mur-sst-june-2025-dataset-dds.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 1105
+        },
+        "startedAt": "2026-10-12T09:14:09.967Z",
+        "completedAt": "2026-10-12T09:14:20.270Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:14:20.271Z",
+        "downloadCompletedAt": "2026-10-12T09:14:20.645Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 1105,
+        "utf8_bytes": 1105,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector"
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "mur-sst-june-2025",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "dataset.das",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2025-06-01T09:00:00Z",
+            "stop": "2025-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.das",
+      "git_blob": null,
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.das",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-8121-82b8-00b2b102ce9f",
+          "filename": "mur-sst-june-2025-dataset-das.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 8108,
+          "status": "uploaded"
+        },
+        "download": null,
+        "startedAt": "2026-10-12T09:14:37.301Z",
+        "completedAt": "2026-10-12T09:14:41.591Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:14:41.591Z",
+        "downloadCompletedAt": "2026-10-12T09:14:42.009Z",
+        "downloadObservedAt": null
+      },
+      "state": "original-attachment-retained-reader-error",
+      "validation": null,
+      "failed_attempts": [],
+      "error": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"name\":\"APIResponseError\",\"code\":\"validation_error\",\"status\":400,\"headers\":{},\"body\":\"{\\\"object\\\":\\\"error\\\",\\\"status\\\":400,\\\"code\\\":\\\"validation_error\\\",\\\"message\\\":\\\"download_attachment only returns valid UTF-8 text files. Use the signed file URL from the containing Notion page for binary content.\\\",\\\"additional_data\\\":{\\\"tool_error_code\\\":\\\"invalid_utf8\\\",\\\"tool_error_class\\\":\\\"validation\\\",\\\"tool_error_retryable\\\":\\\"false\\\"},\\\"request_id\\\":\\\"ea9bad13-1d3e-4f3b-a517-e97b071c463f\\\"}\",\"additional_data\":{\"tool_error_code\":\"invalid_utf8\",\"tool_error_class\":\"validation\",\"tool_error_retryable\":\"false\"},\"request_id\":\"ea9bad13-1d3e-4f3b-a517-e97b071c463f\",\"message\":\"download_attachment only returns valid UTF-8 text files. Use the signed file URL from the containing Notion page for binary content.\"}"
+          }
+        ],
+        "structuredContent": {
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      },
+      "source_note": null
+    },
+    {
+      "selection": "mur-sst-june-2025",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "data.json",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2025-06-01T09:00:00Z",
+            "stop": "2025-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json?analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "git_blob": "605967d4c18644094b64c95f01279b2733815935",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json?analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81fe-acc4-00b268146ace",
+          "filename": "mur-sst-june-2025-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 2218,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81fe-acc4-00b268146ace",
+          "filename": "mur-sst-june-2025-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 2218
+        },
+        "startedAt": "2026-10-12T09:15:00.130Z",
+        "completedAt": "2026-10-12T09:15:08.927Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:15:08.927Z",
+        "downloadCompletedAt": "2026-10-12T09:15:09.361Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 2218,
+        "utf8_bytes": 2218,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "column_names": [
+          "time",
+          "latitude",
+          "longitude",
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "rows": 27,
+        "column_units": [
+          "UTC",
+          "degrees_north",
+          "degrees_east",
+          "degree_C",
+          "degree_C",
+          null,
+          "1"
+        ],
+        "column_types": [
+          "String",
+          "float",
+          "float",
+          "double",
+          "double",
+          "byte",
+          "double"
+        ]
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "mur-sst-june-2025",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "data.csv",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2025-06-01T09:00:00Z",
+            "stop": "2025-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "git_blob": "1cc4013e159341034e8434b00c72e88c80bd22de",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282025-06-01T09%3A00%3A00Z%29%3A1%3A%282025-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81f1-8427-00b214e99102",
+          "filename": "mur-sst-june-2025-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 1555,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81f1-8427-00b214e99102",
+          "filename": "mur-sst-june-2025-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 1555
+        },
+        "startedAt": "2026-10-12T09:15:10.246Z",
+        "completedAt": "2026-10-12T09:15:17.583Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:15:17.584Z",
+        "downloadCompletedAt": "2026-10-12T09:15:18.016Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 1555,
+        "utf8_bytes": 1555,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "nonempty_lines": 29,
+        "encoding_basis": "Every returned character is ASCII; UTF-8 and ISO-8859-1 encode this body identically, and provider byte counts match."
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "ndbc-46042-june-2025",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "metadata.json",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2025-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2025-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/info/cwwcNDBCMet/index.json",
+      "git_blob": "6fec1d71e8e89d9b320c2789efd2b90694a0535c",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/info/cwwcNDBCMet/index.json",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81f6-b3d4-00b27c335265",
+          "filename": "ndbc-46042-june-2025-metadata.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 27486,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81f6-b3d4-00b27c335265",
+          "filename": "ndbc-46042-june-2025-metadata.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 27486
+        },
+        "startedAt": null,
+        "completedAt": null,
+        "observedAt": "2026-10-12T09:14:08.999Z",
+        "downloadStartedAt": "2026-10-12T09:14:08.999Z",
+        "downloadCompletedAt": "2026-10-12T09:14:09.447Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 27486,
+        "utf8_bytes": 27486,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "variables": [
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "GST",
+          "WVHT",
+          "DPD",
+          "APD",
+          "MWD",
+          "BAR",
+          "ATMP",
+          "WTMP",
+          "DEWP",
+          "VIS",
+          "PTDY",
+          "TIDE",
+          "WSPU",
+          "WSPV",
+          "station",
+          "station_id",
+          "station_name",
+          "station_location",
+          "station_type",
+          "timezone",
+          "owner_code",
+          "owner_name",
+          "country_code",
+          "data_coverage_start",
+          "data_coverage_end"
+        ],
+        "missing_requested_variables": []
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "ndbc-46042-june-2025",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "dataset.dds",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2025-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2025-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.dds",
+      "git_blob": "0538ec2e50583c6b201df72cf2fb14cc548fd4e5",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.dds",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-815b-899a-00b2d4123e2e",
+          "filename": "ndbc-46042-june-2025-dataset-dds.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 650,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-815b-899a-00b2d4123e2e",
+          "filename": "ndbc-46042-june-2025-dataset-dds.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 650
+        },
+        "startedAt": "2026-10-12T09:15:46.711Z",
+        "completedAt": "2026-10-12T09:15:52.429Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:15:52.429Z",
+        "downloadCompletedAt": "2026-10-12T09:15:52.881Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 650,
+        "utf8_bytes": 650,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector"
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "ndbc-46042-june-2025",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "dataset.das",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2025-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2025-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.das",
+      "git_blob": "c9d97c6bc23118277072b5a16ef2a24679e640d5",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.das",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-812f-a398-00b228676305",
+          "filename": "ndbc-46042-june-2025-dataset-das.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 17775,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-812f-a398-00b228676305",
+          "filename": "ndbc-46042-june-2025-dataset-das.txt",
+          "content_type": "text/plain; charset=utf-8",
+          "content_length": 17775
+        },
+        "startedAt": "2026-10-12T09:15:53.528Z",
+        "completedAt": "2026-10-12T09:16:05.461Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:16:05.461Z",
+        "downloadCompletedAt": "2026-10-12T09:16:05.847Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 17775,
+        "utf8_bytes": 17775,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector"
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": null
+    },
+    {
+      "selection": "ndbc-46042-june-2025",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "data.json",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2025-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2025-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.json?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "git_blob": null,
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.json?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+        "upload": null,
+        "download": null,
+        "startedAt": "2026-10-12T09:16:06.419Z",
+        "completedAt": "2026-10-12T09:16:15.212Z",
+        "observedAt": null,
+        "downloadStartedAt": null,
+        "downloadCompletedAt": null,
+        "downloadObservedAt": null
+      },
+      "state": "source-get-failed",
+      "validation": null,
+      "failed_attempts": [],
+      "error": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"name\":\"APIResponseError\",\"code\":\"validation_error\",\"status\":400,\"headers\":{},\"body\":\"{\\\"object\\\":\\\"error\\\",\\\"status\\\":400,\\\"code\\\":\\\"validation_error\\\",\\\"message\\\":\\\"source_url returned HTTP 404 for the GET request. Make sure the file is directly downloadable and try again.\\\",\\\"additional_data\\\":{\\\"tool_error_code\\\":\\\"source_download_failed\\\",\\\"tool_error_class\\\":\\\"validation\\\",\\\"tool_error_retryable\\\":\\\"false\\\"},\\\"request_id\\\":\\\"efd193dc-a31f-4ab7-9441-b0bcf7edb6ea\\\"}\",\"additional_data\":{\"tool_error_code\":\"source_download_failed\",\"tool_error_class\":\"validation\",\"tool_error_retryable\":\"false\"},\"request_id\":\"efd193dc-a31f-4ab7-9441-b0bcf7edb6ea\",\"message\":\"source_url returned HTTP 404 for the GET request. Make sure the file is directly downloadable and try again.\"}"
+          }
+        ],
+        "structuredContent": {
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      },
+      "source_note": null
+    },
+    {
+      "selection": "ndbc-46042-june-2025",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "data.csv",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2025-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2025-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.csv?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+      "git_blob": null,
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.csv?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2025-06-01T00%3A00%3A00Z&time%3C2025-06-02T00%3A00%3A00Z",
+        "upload": null,
+        "download": null,
+        "startedAt": "2026-10-12T09:16:15.212Z",
+        "completedAt": "2026-10-12T09:16:32.835Z",
+        "observedAt": null,
+        "downloadStartedAt": null,
+        "downloadCompletedAt": null,
+        "downloadObservedAt": null
+      },
+      "state": "source-get-failed",
+      "validation": null,
+      "failed_attempts": [],
+      "error": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"name\":\"APIResponseError\",\"code\":\"validation_error\",\"status\":400,\"headers\":{},\"body\":\"{\\\"object\\\":\\\"error\\\",\\\"status\\\":400,\\\"code\\\":\\\"validation_error\\\",\\\"message\\\":\\\"source_url returned HTTP 404 for the GET request. Make sure the file is directly downloadable and try again.\\\",\\\"additional_data\\\":{\\\"tool_error_code\\\":\\\"source_download_failed\\\",\\\"tool_error_class\\\":\\\"validation\\\",\\\"tool_error_retryable\\\":\\\"false\\\"},\\\"request_id\\\":\\\"32670024-21b4-4dbe-82e1-a7603ae24edb\\\"}\",\"additional_data\":{\"tool_error_code\":\"source_download_failed\",\"tool_error_class\":\"validation\",\"tool_error_retryable\":\"false\"},\"request_id\":\"32670024-21b4-4dbe-82e1-a7603ae24edb\",\"message\":\"source_url returned HTTP 404 for the GET request. Make sure the file is directly downloadable and try again.\"}"
+          }
+        ],
+        "structuredContent": {
+          "error_code": "INVALID_ARGUMENT"
+        },
+        "isError": true
+      },
+      "source_note": null
+    },
+    {
+      "selection": "ndbc-46042-june-2023",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "data.json",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2023-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2023-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.json?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-02T00%3A00%3A00Z",
+      "git_blob": "c9121d0421605a4d97402f8cacc1e91ab5fc36d5",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.json?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-02T00%3A00%3A00Z",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-812e-b8b9-00b2c38da049",
+          "filename": "ndbc-46042-june-2023-listed-history-diagnostic.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 12798,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-812e-b8b9-00b2c38da049",
+          "filename": "ndbc-46042-june-2023-listed-history-diagnostic.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 12798
+        },
+        "startedAt": "2026-10-12T09:26:44.985Z",
+        "completedAt": "2026-10-12T09:26:53.043Z",
+        "observedAt": null,
+        "downloadStartedAt": null,
+        "downloadCompletedAt": null,
+        "downloadObservedAt": "2026-10-12T09:27:56.564Z"
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 12798,
+        "utf8_bytes": 12798,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "column_names": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "rows": 144,
+        "column_units": [
+          null,
+          "degrees_east",
+          "degrees_north",
+          "UTC",
+          "degrees_true",
+          "m s-1",
+          "m",
+          "degree_C",
+          "degree_C"
+        ],
+        "column_types": [
+          "String",
+          "float",
+          "float",
+          "String",
+          "short",
+          "float",
+          "float",
+          "float",
+          "float"
+        ]
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Source-supported2023 selection follows explicit404 responses for the original2025 window. Original failures and station history remain retained."
+    },
+    {
+      "selection": "ndbc-46042-june-2023",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "data.csv",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2023-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2023-06-02T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-02T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.csv?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-02T00%3A00%3A00Z",
+      "git_blob": "cbff8e387707356c59652d2d8f9b6357b73fb505",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.csv?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-02T00%3A00%3A00Z",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81f3-a3b3-00b22f365532",
+          "filename": "ndbc-46042-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 9526,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81f3-a3b3-00b22f365532",
+          "filename": "ndbc-46042-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 9526
+        },
+        "startedAt": "2026-10-12T09:29:01.045Z",
+        "completedAt": "2026-10-12T09:29:07.711Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:29:07.711Z",
+        "downloadCompletedAt": "2026-10-12T09:29:08.097Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 9526,
+        "utf8_bytes": 9526,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "nonempty_lines": 146,
+        "encoding_basis": "Every returned character is ASCII; UTF-8 and ISO-8859-1 encode this body identically, and provider byte counts match."
+      },
+      "failed_attempts": [
+        {
+          "create_started_at": "2026-10-12T09:27:57.138Z",
+          "create_finished_at": "2026-10-12T09:28:06.226Z",
+          "create_raw": {
+            "content": [
+              {
+                "type": "text",
+                "text": "{\"name\":\"APIResponseError\",\"code\":\"validation_error\",\"status\":400,\"headers\":{},\"body\":\"{\\\"object\\\":\\\"error\\\",\\\"status\\\":400,\\\"code\\\":\\\"validation_error\\\",\\\"message\\\":\\\"Notion could not download source_url within one minute. Make sure the URL is publicly reachable, permits an unauthenticated GET, and remains valid for at least one minute.\\\",\\\"additional_data\\\":{\\\"tool_error_code\\\":\\\"source_download_failed\\\",\\\"tool_error_class\\\":\\\"validation\\\",\\\"tool_error_retryable\\\":\\\"false\\\"},\\\"request_id\\\":\\\"c4103968-0043-41ff-bb5e-133ebe939019\\\"}\",\"additional_data\":{\"tool_error_code\":\"source_download_failed\",\"tool_error_class\":\"validation\",\"tool_error_retryable\":\"false\"},\"request_id\":\"c4103968-0043-41ff-bb5e-133ebe939019\",\"message\":\"Notion could not download source_url within one minute. Make sure the URL is publicly reachable, permits an unauthenticated GET, and remains valid for at least one minute.\"}"
+              }
+            ],
+            "structuredContent": {
+              "error_code": "INVALID_ARGUMENT"
+            },
+            "isError": true
+          }
+        }
+      ],
+      "error": null,
+      "source_note": "Source-supported2023 selection follows explicit404 responses for the original2025 window. Original failures and station history remain retained."
+    },
+    {
+      "selection": "mur-sst-june-2023",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "data.json",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2023-06-01T09:00:00Z",
+            "stop": "2023-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "git_blob": "4bdaec3ec69b37b77ad058cf34e73b07b5912029",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-81c3-9e18-00b2fa5a0b5c",
+          "filename": "mur-sst-june-2023-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 2207,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-81c3-9e18-00b2fa5a0b5c",
+          "filename": "mur-sst-june-2023-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 2207
+        },
+        "startedAt": "2026-10-12T09:29:41.887Z",
+        "completedAt": "2026-10-12T09:29:49.687Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:29:49.687Z",
+        "downloadCompletedAt": "2026-10-12T09:29:50.218Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 2207,
+        "utf8_bytes": 2207,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "column_names": [
+          "time",
+          "latitude",
+          "longitude",
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "rows": 27,
+        "column_units": [
+          "UTC",
+          "degrees_north",
+          "degrees_east",
+          "degree_C",
+          "degree_C",
+          null,
+          "1"
+        ],
+        "column_types": [
+          "String",
+          "float",
+          "float",
+          "double",
+          "double",
+          "byte",
+          "double"
+        ]
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Distinct June2023 paired comparison approved after NOAA source history and native data confirmed the original station's listed2023 observations. Original MUR2025 retained unchanged."
+    },
+    {
+      "selection": "mur-sst-june-2023",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "data.csv",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2023-06-01T09:00:00Z",
+            "stop": "2023-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.00",
+            "stop": "36.04",
+            "stride": 2
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-123.00",
+            "stop": "-122.96",
+            "stride": 2
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+      "git_blob": "1910f8420dd31aec91ffa3735e278f32746a19b3",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.00%29%3A2%3A%2836.04%29%5D%5B%28-123.00%29%3A2%3A%28-122.96%29%5D",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-8123-89bb-00b2be62ad4c",
+          "filename": "mur-sst-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 1544,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-8123-89bb-00b2be62ad4c",
+          "filename": "mur-sst-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 1544
+        },
+        "startedAt": "2026-10-12T09:29:50.707Z",
+        "completedAt": "2026-10-12T09:29:59.764Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:29:59.765Z",
+        "downloadCompletedAt": "2026-10-12T09:30:00.150Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 1544,
+        "utf8_bytes": 1544,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "nonempty_lines": 29,
+        "encoding_basis": "Every returned character is ASCII; UTF-8 and ISO-8859-1 encode this body identically, and provider byte counts match."
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Distinct June2023 paired comparison approved after NOAA source history and native data confirmed the original station's listed2023 observations. Original MUR2025 retained unchanged."
+    },
+    {
+      "selection": "mur-46042-nearby-june-2023",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "data.json",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2023-06-01T09:00:00Z",
+            "stop": "2023-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.78",
+            "stop": "36.80",
+            "stride": 1
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-122.42",
+            "stop": "-122.40",
+            "stride": 1
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D",
+      "git_blob": "fcdf9b489dc072325def2ca650e6c92162855e22",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.json?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-816b-97db-00b2769cb303",
+          "filename": "mur-46042-nearby-june-2023-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 2274,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-816b-97db-00b2769cb303",
+          "filename": "mur-46042-nearby-june-2023-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 2274
+        },
+        "startedAt": "2026-10-12T09:40:26.299Z",
+        "completedAt": "2026-10-12T09:40:36.473Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:40:36.474Z",
+        "downloadCompletedAt": "2026-10-12T09:40:36.799Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 2274,
+        "utf8_bytes": 2274,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "column_names": [
+          "time",
+          "latitude",
+          "longitude",
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "rows": 27,
+        "column_units": [
+          "UTC",
+          "degrees_north",
+          "degrees_east",
+          "degree_C",
+          "degree_C",
+          null,
+          "1"
+        ],
+        "column_types": [
+          "String",
+          "float",
+          "float",
+          "double",
+          "double",
+          "byte",
+          "double"
+        ]
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Additional scientific comparison selection using nearby grid cells around the actual2023 NDBC source coordinates; original selections are retained."
+    },
+    {
+      "selection": "mur-46042-nearby-june-2023",
+      "datasetId": "jplMURSST41",
+      "protocol": "griddap",
+      "name": "data.csv",
+      "selection_definition": {
+        "variables": [
+          "analysed_sst",
+          "analysis_error",
+          "mask",
+          "sea_ice_fraction"
+        ],
+        "axes": [
+          {
+            "name": "time",
+            "mode": "value",
+            "start": "2023-06-01T09:00:00Z",
+            "stop": "2023-06-03T09:00:00Z",
+            "stride": 1
+          },
+          {
+            "name": "latitude",
+            "mode": "value",
+            "start": "36.78",
+            "stop": "36.80",
+            "stride": 1
+          },
+          {
+            "name": "longitude",
+            "mode": "value",
+            "start": "-122.42",
+            "stop": "-122.40",
+            "stride": 1
+          }
+        ]
+      },
+      "query": "analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D",
+      "git_blob": "4c4da051e8f7ff596fabec12c8f06e8ba391ba20",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/griddap/jplMURSST41.csv?analysed_sst%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Canalysis_error%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Cmask%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D%2Csea_ice_fraction%5B%282023-06-01T09%3A00%3A00Z%29%3A1%3A%282023-06-03T09%3A00%3A00Z%29%5D%5B%2836.78%29%3A1%3A%2836.80%29%5D%5B%28-122.42%29%3A1%3A%28-122.40%29%5D",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-8156-a044-00b2647f0de3",
+          "filename": "mur-46042-nearby-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 1575,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-8156-a044-00b2647f0de3",
+          "filename": "mur-46042-nearby-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 1575
+        },
+        "startedAt": "2026-10-12T09:40:37.322Z",
+        "completedAt": "2026-10-12T09:40:43.370Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:40:43.370Z",
+        "downloadCompletedAt": "2026-10-12T09:40:43.947Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 1575,
+        "utf8_bytes": 1575,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "nonempty_lines": 29,
+        "encoding_basis": "Every returned character is ASCII; UTF-8 and ISO-8859-1 encode this body identically, and provider byte counts match."
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Additional scientific comparison selection using nearby grid cells around the actual2023 NDBC source coordinates; original selections are retained."
+    },
+    {
+      "selection": "ndbc-46042-three-days-june-2023",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "data.json",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2023-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2023-06-04T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-04T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.json?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-04T00%3A00%3A00Z",
+      "git_blob": "6b7d330e33c837680cbe808f2a4de3a5c1426f45",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.json?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-04T00%3A00%3A00Z",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-814e-99c1-00b2c3a67a16",
+          "filename": "ndbc-46042-three-days-june-2023-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 37598,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-814e-99c1-00b2c3a67a16",
+          "filename": "ndbc-46042-three-days-june-2023-data.json",
+          "content_type": "application/json; charset=utf-8",
+          "content_length": 37598
+        },
+        "startedAt": "2026-10-12T09:43:43.313Z",
+        "completedAt": "2026-10-12T09:43:49.389Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:43:49.390Z",
+        "downloadCompletedAt": "2026-10-12T09:43:49.810Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 37598,
+        "utf8_bytes": 37598,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "column_names": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "rows": 432,
+        "column_units": [
+          null,
+          "degrees_east",
+          "degrees_north",
+          "UTC",
+          "degrees_true",
+          "m s-1",
+          "m",
+          "degree_C",
+          "degree_C"
+        ],
+        "column_types": [
+          "String",
+          "float",
+          "float",
+          "String",
+          "short",
+          "float",
+          "float",
+          "float",
+          "float"
+        ]
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Additional matching three-day scientific comparison selection; original one-day and failed2025 selections are retained."
+    },
+    {
+      "selection": "ndbc-46042-three-days-june-2023",
+      "datasetId": "cwwcNDBCMet",
+      "protocol": "tabledap",
+      "name": "data.csv",
+      "selection_definition": {
+        "variables": [
+          "station",
+          "longitude",
+          "latitude",
+          "time",
+          "WD",
+          "WSPD",
+          "WVHT",
+          "ATMP",
+          "WTMP"
+        ],
+        "constraints": [
+          {
+            "variable": "station",
+            "operator": "=",
+            "value": "46042",
+            "kind": "string"
+          },
+          {
+            "variable": "time",
+            "operator": ">=",
+            "value": "2023-06-01T00:00:00Z",
+            "kind": "time"
+          },
+          {
+            "variable": "time",
+            "operator": "<",
+            "value": "2023-06-04T00:00:00Z",
+            "kind": "time"
+          }
+        ]
+      },
+      "query": "station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-04T00%3A00%3A00Z",
+      "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.csv?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-04T00%3A00%3A00Z",
+      "git_blob": "5a4a7dcc90bbba920c1872c15a7c9ae766635ccc",
+      "transport": {
+        "kind": "notion-public-https-import.v1",
+        "sourceUrl": "https://coastwatch.pfeg.noaa.gov/erddap/tabledap/cwwcNDBCMet.csv?station%2Clongitude%2Clatitude%2Ctime%2CWD%2CWSPD%2CWVHT%2CATMP%2CWTMP&station%3D%2246042%22&time%3E%3D2023-06-01T00%3A00%3A00Z&time%3C2023-06-04T00%3A00%3A00Z",
+        "upload": {
+          "file_upload_id": "3f7dd772-3100-8146-8378-00b2bbbabc1f",
+          "filename": "ndbc-46042-three-days-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 28339,
+          "status": "uploaded"
+        },
+        "download": {
+          "file_upload_id": "3f7dd772-3100-8146-8378-00b2bbbabc1f",
+          "filename": "ndbc-46042-three-days-june-2023-data.csv",
+          "content_type": "text/csv; charset=utf-8",
+          "content_length": 28339
+        },
+        "startedAt": "2026-10-12T09:43:50.424Z",
+        "completedAt": "2026-10-12T09:43:54.669Z",
+        "observedAt": null,
+        "downloadStartedAt": "2026-10-12T09:43:54.669Z",
+        "downloadCompletedAt": "2026-10-12T09:43:55.248Z",
+        "downloadObservedAt": null
+      },
+      "state": "exact-text-retained",
+      "validation": {
+        "characters": 28339,
+        "utf8_bytes": 28339,
+        "ascii_only": true,
+        "replacement_characters": false,
+        "provider_byte_count_matches": true,
+        "upstream_http_status": "not exposed by connector",
+        "upstream_http_headers": "not exposed by connector",
+        "nonempty_lines": 434,
+        "encoding_basis": "Every returned character is ASCII; UTF-8 and ISO-8859-1 encode this body identically, and provider byte counts match."
+      },
+      "failed_attempts": [],
+      "error": null,
+      "source_note": "Additional matching three-day scientific comparison selection; original one-day and failed2025 selections are retained."
+    }
+  ],
+  "nearby_three_day_acceptance": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791798026219769?thread_ts=1791793765.760989",
+  "observed_comparison_selections": [
+    {
+      "selection": "mur-46042-nearby-june-2023",
+      "rows": 27,
+      "columns": [
+        "time",
+        "latitude",
+        "longitude",
+        "analysed_sst",
+        "analysis_error",
+        "mask",
+        "sea_ice_fraction"
+      ],
+      "unique": {
+        "time": {
+          "count": 3,
+          "first": "2023-06-01T09:00:00Z",
+          "last": "2023-06-03T09:00:00Z",
+          "values": [
+            "2023-06-01T09:00:00Z",
+            "2023-06-02T09:00:00Z",
+            "2023-06-03T09:00:00Z"
+          ]
+        },
+        "latitude": {
+          "count": 3,
+          "first": 36.78,
+          "last": 36.8,
+          "values": [
+            36.78,
+            36.79,
+            36.8
+          ]
+        },
+        "longitude": {
+          "count": 3,
+          "first": -122.42,
+          "last": -122.4,
+          "values": [
+            -122.42,
+            -122.41,
+            -122.4
+          ]
+        }
+      }
+    },
+    {
+      "selection": "ndbc-46042-three-days-june-2023",
+      "rows": 432,
+      "columns": [
+        "station",
+        "longitude",
+        "latitude",
+        "time",
+        "WD",
+        "WSPD",
+        "WVHT",
+        "ATMP",
+        "WTMP"
+      ],
+      "unique": {
+        "time": {
+          "count": 432,
+          "first": "2023-06-01T00:00:00Z",
+          "last": "2023-06-03T23:50:00Z"
+        },
+        "latitude": {
+          "count": 1,
+          "first": 36.789,
+          "last": 36.789,
+          "values": [
+            36.789
+          ]
+        },
+        "longitude": {
+          "count": 1,
+          "first": -122.404,
+          "last": -122.404,
+          "values": [
+            -122.404
+          ]
+        }
+      }
+    }
+  ]
+}
