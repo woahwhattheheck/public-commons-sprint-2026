@@ -430,6 +430,11 @@ Draft exports preserve source for review; reopening a complete existing workspac
 continues through its host alias. This file transfer does not reconstruct a
 second database or imply that a draft-only transfer contains a complete runtime.
 
+Configured GraphQL hosts accept up to 8 MiB in an HTTP request or stdio frame,
+so a complete native draft fits with the MCP envelope and JSON escaping. The
+original SF105 request limit remains 7 MiB and its individual draft limits still
+apply. Other hosts retain their existing request limits.
+
 ## Reopen and operator recovery
 
 Keep the original private workspace directory and merchant configuration.

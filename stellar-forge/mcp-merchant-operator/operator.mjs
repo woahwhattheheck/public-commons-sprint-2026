@@ -147,7 +147,10 @@ export class MerchantReleaseOperator {
   #clientExports; #facilitators; #woocommerce; #buyerExpenses;
   constructor(config, { woocommerce, opensearch } = {}) { this.#config = config; this.#clientExports = new MerchantClientExports({ directory: config.exportsDirectory }); this.#discovery = new MerchantDiscovery(config); this.#fleet = new MerchantFleet(config.fleet); this.#accounting = new MerchantAccounting(config); this.#support = new MerchantSupport(config); this.#receiving = new MerchantReceiving(config); this.#pythonWorkspaces = new MerchantPythonWorkspaces(config); this.#graphqlWorkspaces = new MerchantGraphqlWorkspaces(config); this.#s3Workspaces = new MerchantS3Workspaces(config); this.#opensearchWorkspaces = new MerchantOpenSearchWorkspaces(config, opensearch); this.#socrataWorkspaces = new MerchantSocrataWorkspaces(config); this.#geocodioWorkspaces = new MerchantGeocodioWorkspaces(config); this.#webdavWorkspaces = new MerchantWebDavWorkspaces(config); this.#sheetsWorkspaces = new MerchantSheetsWorkspaces(config); this.#ckanWorkspaces = new MerchantCkanWorkspaces(config); this.#tenderlyWorkspaces = new MerchantTenderlyWorkspaces(config); this.#redisWorkspaces = new MerchantRedisWorkspaces(config); this.#usaSpendingWorkspaces = new MerchantUSASpendingWorkspaces(config); this.#sourceWorkspaces = new MerchantSourceWorkspaces(config); this.#publishers = new MerchantPublisher(config); this.#facilitators = createReleaseFacilitatorControl(config.releaseStore, config.facilitators); this.#pricing = new MerchantPricing(config); this.#woocommerce = new MerchantWooCommerce(config, woocommerce); this.#buyerExpenses = new MerchantBuyerExpenses(config); }
   get tools() { return structuredClone(MERCHANT_TOOLS); }
-  get maxRequestBytes() { return this.#config.opensearchWorkspaces ? 2 * 1024 * 1024 : 128 * 1024; }
+  get maxRequestBytes() {
+    if (this.#config.graphqlWorkspaces) return 8 * 1024 * 1024;
+    return this.#config.opensearchWorkspaces ? 2 * 1024 * 1024 : 128 * 1024;
+  }
   async status() {
     const result = await releaseStatus(this.#config.releaseStore);
     return { schema: 'stellar-forge.merchant-mcp-status.v1', merchant: this.#config.name,
