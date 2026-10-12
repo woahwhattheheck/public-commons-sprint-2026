@@ -169,7 +169,12 @@ export class MerchantBuyerExpenses {
   }
   async #sourceAllowed(s,selection,sourceId) {
     const source=(await this.#get(s,'/api/state')).sources.find(v=>v.id===sourceId);
-    if(!source||!Object.values(selection.ledgers).some(v=>v.path===source.path))throw fail('LEDGER_NOT_DECLARED','The host must declare this registered original ledger before a new capture.');
+    let declared=Boolean(source&&Object.values(selection.ledgers).some(v=>v.path===source.path));
+    if(source&&!declared)for(const value of Object.values(selection.ledgers)){
+      try{if(await realpath(value.path)===source.path){declared=true;break;}}
+      catch(error){if(!['ENOENT','ENOTDIR'].includes(error.code))throw error;}
+    }
+    if(!declared)throw fail('LEDGER_NOT_DECLARED','The host must declare this registered original ledger before a new capture.');
   }
   async #mutate(s,args,path,payload={}) {
     if(!new RegExp(request.pattern).test(args.requestId)||!Number.isSafeInteger(args.expectedRevision)||args.expectedRevision<0)throw fail('REQUEST','Retain the exact requestId and reviewed whole revision.');
@@ -179,7 +184,8 @@ export class MerchantBuyerExpenses {
   async #exportStatus(id) {
     identifier(id);const directory=join(await this.#rootReady(),id);
     await privateSupportDirectory(directory);
-    const request=parse(await privateBytes(join(directory,'request.json'),65536));
+    let request;try{request=parse(await privateBytes(join(directory,'request.json'),65536));}
+    catch(error){if(error.code!=='ENOENT')throw error;return {exportId:id,state:'PREPARING',phase:'REQUEST_NOT_RETAINED',request:null};}
     let bytes;try{bytes=await privateBytes(join(directory,BUYER_EXPENSE_MANIFEST),65536);}catch(error){if(error.code!=='ENOENT')throw error;}
     if(!bytes)return {exportId:id,state:'PREPARING',request};
     const manifest=parseBuyerExpenseExport(bytes,id);
@@ -233,7 +239,7 @@ export class MerchantBuyerExpenses {
   }
   async #execute(name,args) {
     const action=name.slice(PREFIX.length);
-    if(action==='workspaces')return {workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),open:this.#sessions.has(workspace)})),...this.summary};
+    if(action==='workspaces')return {...this.summary,workspaces:Object.entries(this.#config?.workspaces ?? {}).map(([workspace,s])=>({workspace,ledgers:Object.entries(s.ledgers).map(([alias,v])=>({alias,name:v.name,provenance:v.provenance})),open:this.#sessions.has(workspace)}))};
     if(action==='exports'){const root=await this.#rootReady(),names=(await readdir(root)).filter(v=>/^[a-z0-9][a-z0-9_-]{0,63}$/.test(v)).sort();const selected=page(names,args.offset,args.limit);return {...selected,items:await Promise.all(selected.items.map(id=>this.#exportStatus(id)))};}
     if(action==='export_status')return this.#exportStatus(args.exportId);
     if(action==='manifest'){const s=await this.#exportStatus(args.exportId);if(s.state!=='COMPLETE')throw fail('EXPORT_PENDING','Resume the retained original export request.');return {exportId:args.exportId,state:'MANIFEST_RETAINED',manifestFile:s.manifestFile};}
