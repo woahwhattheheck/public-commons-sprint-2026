@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "flowable-product",
+  "description": "Complete installed Flowable process operations product, original managed workspace, typed SDK and complete native customer receiving",
+  "components": [
+    "products/flowable-merchant",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable"
+  ],
+  "commands": {
+    "flowable-product": "products/flowable-merchant/cli.mjs"
+  },
+  "commandDescriptions": {
+    "flowable-product": "Open the saved Flowable portfolio, review and execute original deployments, process and human-task requests, and receive complete source/history handovers."
+  },
+  "exports": {
+    "./products/flowable-merchant": "./source/products/flowable-merchant/workspace.mjs",
+    "./products/flowable-merchant/managed": "./source/products/flowable-merchant/managed.mjs",
+    "./products/flowable-merchant/client": {
+      "types": "./source/products/flowable-merchant/client.d.mts",
+      "import": "./source/products/flowable-merchant/client.mjs"
+    }
+  },
+  "applicationProviders": {
+    "flowable-product": "products/flowable-merchant/application-provider.mjs"
+  },
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/distribution/selections/FLOWABLE_MERCHANT.md"
+  ]
+}

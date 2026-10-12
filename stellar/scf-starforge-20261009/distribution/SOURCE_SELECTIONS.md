@@ -207,3 +207,25 @@ that Applications and merchant provider catalogs contain its selected entries,
 that installed command help matches its registrations, and that the original
 product can complete its saved native journey. Reopen the same output with
 `--resume`, and confirm an explicit different selection cannot reuse it.
+
+## Flowable process operations and customer receiving
+
+Use [flowable-merchant.json](selections/flowable-merchant.json) to compose the
+complete installed Flowable workspace, native process source, typed client,
+Applications integration and merchant MCP provider. The original process
+engine handles deployment, human tasks, native migration validation and
+execution; the saved workspace retains complete request and source/history
+receiving.
+
+~~~sh
+node stellar/scf-starforge-20261009/distribution/build.mjs \
+  --repo /absolute/tjlabs-stellar-merchant-workspace \
+  --ref FULL_ORIGINAL_COMMIT --selection flowable-merchant \
+  --out /absolute/flowable-release --offline
+~~~
+
+Follow [FLOWABLE_MERCHANT.md](selections/FLOWABLE_MERCHANT.md) for the complete
+build/install/Open workflow, actual engine receiving and customer handover.
+The recipe includes the source-owned `flowable-workspaces`,
+`merchant-provider-flowable-workspaces` and `flowable-product`
+contributions, the original browser assets and complete installed guides.
