@@ -22,7 +22,7 @@ SOURCE_FILES = (
     "audit_operator/archive.py", "audit_operator/service.py", "audit_operator/exchange.py",
     "audit_operator/reporting.py", "audit_operator/host.py",
     "ui/index.html", "ui/style.css", "ui/app.js",
-    "examples/EXCHANGE_PRACTICE.py", "examples/OPERATOR_PRACTICE.py",
+    "examples/EXCHANGE_PRACTICE.py", "examples/OPERATOR_PRACTICE.py", "examples/UI_RECEIVING.mjs",
     "reference/audit-domain-contract.json", "reference/event-catalog.json",
     "tools/materialize_reference.py", "tools/extract_event_catalog.py",
 )

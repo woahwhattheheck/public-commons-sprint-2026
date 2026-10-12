@@ -237,6 +237,22 @@ python3 -B examples/EXCHANGE_PRACTICE.py
 
 [DEMONSTRATION.md](DEMONSTRATION.md) records the actual completed native operator outcome and its source distinctions.
 
+### Continue the interface on a retained workspace
+
+The optional interface receiver uses an existing Node runtime, Playwright installation, and Chromium executable. These are demonstration tools; the application itself runs with Python.
+
+~~~sh
+node examples/UI_RECEIVING.mjs \
+  --workspace=/absolute/private/audit-practice/restored-source \
+  --operation=/absolute/private/audit-ui \
+  --playwright=/absolute/existing/playwright/module \
+  --chromium=/absolute/existing/chromium
+~~~
+
+Use the original retained workspace and the same UI operation directory when continuing. The receiver retains its UI state, result, screenshots, and private recovery key in that operation directory. It exercises desktop views, workpaper correction and review, an executive handoff, scoped access and revocation, browser-driven backup and new-folder restoration, and mobile views.
+
+`--seed` is an explicit alternative for a new, absent workspace: it initializes marked Practice inputs from the shared fixture. It does not repeat the complete native service journey. Leave it off when using the already completed native workspace. The source release includes the receiver code, while its operating data stays outside the release.
+
 ## Create a source release
 
 ~~~sh
