@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { readBytes, parseJson, writeBytes, need } from '../node/store.mjs';
 import { openDossierStore } from './dossier.mjs';
+import { openPortableFile, writePortableFile } from './portable.mjs';
 import { receiveOpenAlexEdition } from './openalex.mjs';
 import { openSavedOpenAlexWorkspace } from './openalex-workspace.mjs';
 
@@ -19,8 +20,8 @@ const usage = 'Research dossiers\n\n' +
   '  note --store DIR --id ID --source ID --selected true|false --note TEXT --classification supports|contradicts|background|unreviewed --revision N\n' +
   '  finding --store DIR --id ID --file FINDING_JSON --revision N\n' +
   '  compare --store DIR --id ID --before N --after N\n' +
-  '  export --store DIR --id ID --format json|md|html --out FILE\n' +
-  '  reopen --store DIR --file PORTABLE_JSON\n';
+  '  export --store DIR --id ID --format json|json.gz|md|html --out FILE\n' +
+  '  reopen --store DIR --file PORTABLE_JSON_OR_GZIP [--projection full|metadata]\n';
 
 export async function main(argv = process.argv.slice(2)) {
   const command = argv[0];
@@ -28,7 +29,7 @@ export async function main(argv = process.argv.slice(2)) {
   const keys = ['store', 'id', 'title', 'description', 'text', 'revision', 'question', 'file',
     'provider', 'label', 'source-reference', 'source', 'selected', 'note', 'classification',
     'before', 'after', 'format', 'out', 'edition-adapter', 'buyer-state', 'runtime', 'intent',
-    'openalex-workspace', 'openalex-module', 'edition'];
+    'openalex-workspace', 'openalex-module', 'edition', 'projection'];
   const { values } = parseArgs({ args: argv.slice(1), options: Object.fromEntries(keys.map(key => [key, { type: 'string' }])), strict: true });
   need(values.store, 'STORE_REQUIRED');
   let providers = {};
@@ -83,13 +84,19 @@ export async function main(argv = process.argv.slice(2)) {
     case 'finding': result = await store.addFinding(values.id, { ...await input(), expectedRevision: revision }); break;
     case 'compare': result = await store.compare(values.id, { before: Number(values.before), after: Number(values.after) }); break;
     case 'export': {
-      const exported = await store.exportDossier(values.id, { format: values.format ?? 'json' });
-      const destination = resolve(values.out);
-      await writeBytes(destination, Buffer.from(exported.body), { exclusive: true });
-      result = { file: destination, contentType: exported.contentType, bytes: Buffer.byteLength(exported.body) };
+      const format = values.format ?? 'json', destination = resolve(values.out);
+      if (format === 'json' || format === 'json.gz') {
+        result = await writePortableFile(destination, await store.exportStream(values.id,
+          {compression: format === 'json.gz' ? 'gzip' : 'none'}));
+      } else {
+        const exported = await store.exportDossier(values.id, {format});
+        await writeBytes(destination, Buffer.from(exported.body), {exclusive: true});
+        result = {file: destination, contentType: exported.contentType, bytes: Buffer.byteLength(exported.body)};
+      }
       break;
     }
-    case 'reopen': result = await store.reopen(await input()); break;
+    case 'reopen': result = await store.reopenStream(await openPortableFile(resolve(values.file)),
+      {projection: values.projection ?? 'full'}); break;
     default: throw Object.assign(new Error('COMMAND_UNKNOWN'), { code: 'COMMAND_UNKNOWN' });
   }
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
