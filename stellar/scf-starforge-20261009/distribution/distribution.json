@@ -341,7 +341,8 @@
     "linkup-research": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/examples/linkup-dossier-cli.mjs",
     "socrata": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/cli.mjs",
     "socrata-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/socrata/publisher.mjs",
-    "census-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/cli.mjs"
+    "census-publisher": "stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/cli.mjs",
+    "fiscaldata": "stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -774,7 +775,10 @@
     "./seller/census-acs": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/source.mjs",
     "./seller/census-acs/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/model.mjs",
     "./seller/census-acs/publisher/plan": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/publisher/plan.mjs",
-    "./seller/census-acs/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/release.mjs"
+    "./seller/census-acs/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/census-acs/release.mjs",
+    "./seller/fiscaldata": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-model.mjs",
+    "./seller/fiscaldata/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/workspace-server.mjs",
+    "./seller/fiscaldata/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/fiscaldata/capture.mjs"
   },
   "nativePeers": {
     "@x402/core": {
