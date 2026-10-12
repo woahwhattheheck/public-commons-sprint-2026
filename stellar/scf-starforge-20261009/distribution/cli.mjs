@@ -63,6 +63,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   chainstack-buyer    Review, execute and recover its exact requests using installed Node/Python runtimes
   operations  Seller + live dashboard         dataset     Dataset API compiler
   jobs                                      Prepare and operate durable paid application jobs
+  n8n-merchant                              Sell selected automation runs and recover original n8n executions
   jobs-buyer                                Receive accepted jobs, follow execution and retrieve saved results
   jobs delivery                             Send completed original job files and operate retained delivery recovery
   jobs receiver                             Receive signed completed files, open the private desk and export original results

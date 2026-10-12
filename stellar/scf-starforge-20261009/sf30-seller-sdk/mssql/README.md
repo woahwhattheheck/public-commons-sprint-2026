@@ -142,3 +142,55 @@ profile, certificate, public terms, generated customer client, and exact package
 bytes. It resolves credentials only when the original SQL Server seller starts.
 The existing SF82 child owns the process handshake, readiness, shutdown, and
 recovery. Source execution and payment continue through the original SF30 routes.
+
+
+## Run native receiving in one command
+
+Use the host's existing SQL Server configuration, completed merchant plan, and
+typed query input with the pinned runtime installed. The receiving command uses
+the same source and original SF82 release owner as the browser and operator CLI:
+
+```sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/mssql/cli.mjs receive \
+  --source /private/sqlserver-merchant/source.json \
+  --plan /private/sqlserver-merchant/merchant-plan.json \
+  --query catalog --input /private/sqlserver-merchant/input.json \
+  --table '[dbo].[catalog]' --directory /private/sqlserver-receiving
+```
+
+The command first prepares one immutable copy of the approved source and public
+contract. It then reads the actual catalog and selected table metadata, runs the
+typed query, and retains its native version, column types and exact values. The
+same package enters a new SF82 store through init, stage, inspect, list, compare,
+and activate. After moving its own generated authoring package, receiving reopens
+the retained release and executes the query again. It starts the original owned
+SF82 child, checks the generated customer's selected contract with an unpaid
+request to the loopback merchant, reads the original 402 payment requirement, and
+closes that merchant through its original release owner.
+
+The receiving runtime uses the original SF82 platform contract. Linux requires
+`flock` from util-linux; the command acquires the original release lease before
+connecting to SQL Server. Windows and other platforms use the existing exclusive
+owner-directory and process-liveness path. The original release manager owns child
+startup and termination on each platform. A Linux client can also connect to an
+existing Windows SQL Server through its approved host profile. On Windows, use
+native paths beneath the merchant host's existing private directory.
+
+The source and merchant plan select the database and public contract. `--table`
+adds inspection of one actual table or view. `--route` selects the public route
+when multiple routes bind the chosen query. Each run needs a new private output
+directory with an existing parent. The selected query's original time, row and
+encoded-byte limits apply. Database contents remain live between the two reads;
+receiving compares their contract and retains each result separately.
+
+The output directory contains the complete merchant package, generated customer
+client, retained release store, input, catalog, query results, merchant response
+and `receiving.json`. Its summary records the actual Node, pinned driver, SQL
+Server version, loaded source file hashes, package and release identity, completed
+stages, and native process shutdown. The CLI emits the summary and exits with a
+nonzero status on a failed stage, retaining earlier outputs for the original
+operator to continue troubleshooting. Keep the whole directory on the authorized
+merchant host; the generated `client` subdirectory is the customer deliverable.
+
+This operation runs the merchant in its original `CHALLENGE_ONLY` mode. Existing
+facilitator and buyer flows remain available through normal seller startup.
