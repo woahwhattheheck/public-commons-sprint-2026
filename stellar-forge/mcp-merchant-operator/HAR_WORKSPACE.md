@@ -21,12 +21,14 @@ node stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.
 ~~~
 
 Retain its complete printed URL in a private mode-0600 file or environment
-variable. The URL includes the original workspace token in its fragment. The
-adapter uses that token in the native x-workspace-token header and checks the
-authenticated source-library identity against the declared projects directory
-before every console operation. This uses a one-entry library read; full merchant
-package inspection runs only for status and package operations.
-The original browser can remain open.
+variable. The private URL file can also be the original Applications
+application-url.v1 record for command openapi-workspace. The shared
+Sf61WorkspaceClient reads that original record after managed restart and uses the
+native x-workspace-token header and exact Origin. Each HAR call pins that selected
+console through its dependent reads and writes, then checks its authenticated
+source-library identity against the declared projects directory. This uses a
+one-entry library read; full merchant package inspection runs only for status and
+package operations. The original browser can remain open.
 
 Create a private connection document:
 
@@ -266,9 +268,12 @@ manifest. Installed JavaScript exports are:
 merchant_har_copy writes the full original native source to one declared
 destination. A refresh copy includes previous and candidate captures, comparison,
 draft, original reviewer and every immutable review. A completed equal receiving
-copy can be reopened after a lost reply. Existing different content is preserved.
-If the sender has acquired more reviews since an earlier copy, use a new receiving
-destination or re-adopt the current source into a configured receiving console.
+copy can be reopened after a lost reply. Repeating the same declared destination
+also retains later immutable reviews from both original refresh members. The
+native writer validates equal source manifests, adds absent valid revisions and
+keeps every existing receiving-only review. An interrupted empty final reservation
+is completed beside that same destination before native reopen. A destination
+containing another original source returns a conflict.
 
 merchant_har_receive copies a selection from fromWorkspace into the receiving
 workspace through the original adoption endpoint. It verifies the source and all
@@ -291,8 +296,9 @@ The native receiving entry is receiving/har-console-adoption.mjs. It consumes th
 completed AF825-HAR-CONSOLE-20261012 result and its retained original captures and
 merchant plan. It operates the actual original merchant MCP HTTP factory and both
 native SF61 consoles, continuing source intake/refresh, immutable decision save,
-merchant package/replay, receiver adoption, original file download/restart and
-complete package reopening. Source identity and the retained native request
+merchant package/replay, later immutable review continuation into the same copied
+source, receiving-owned review preservation, receiver adoption, original file
+download/restart and complete package reopening. Source identity and the retained native request
 results are recorded in its output directory.
 
 ~~~sh

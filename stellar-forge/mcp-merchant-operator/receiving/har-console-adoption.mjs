@@ -4,8 +4,8 @@ import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import {join,resolve,dirname,basename} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {randomBytes} from 'node:crypto';
-import {openRefresh} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/refresh.mjs';
-import {readRegular,readRevision,digest} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/store.mjs';
+import {openRefresh,saveRefreshReview} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/refresh.mjs';
+import {readRegular,readRevision,saveReview,digest} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/store.mjs';
 import {canonical} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/har/model.mjs';
 import {startWorkspace} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/server.mjs';
 import {readPackage} from '../../../stellar/scf-starforge-20261009/sf61-openapi-seller-import/workspace/model.mjs';
@@ -51,7 +51,7 @@ export async function receiveHarAgent({consoleResult,output}) {
     await write(connection,encode({schema:'stellar-forge.har-workspace-connection.v1',workspaces:{
       sender:{projectsDirectory:senderParent,consoleUrlFile:senderUrl,
         files:{candidate:{kind:'capture',path:join(original.candidate.root,'source.har'),sha256:original.candidate.manifest.sourceSha256},
-          decisions:{kind:'decisions',path:join(original.candidate.root,'reviews',saved.revision+'.json'),sha256:saved.revision},terms},
+          decisions:{kind:'decisions',path:join(original.candidate.root,'reviews',saved.revision+'.json'),sha256:saved.revision},continued_decisions:{kind:'decisions',path:join(output,'continued-decisions.json')},terms},
         imports:{previous:{kind:'capture',directory:original.previous.root}},
         destinations:{handover:{directory:join(output,'complete-receiving-source')}}},
       receiver:{projectsDirectory:receiverParent,consoleUrlFile:receiverUrl,files:{terms}}
@@ -92,6 +92,31 @@ export async function receiveHarAgent({consoleResult,output}) {
     const copied=await call('merchant_har_copy',{workspace:'sender',selection,destination:'handover'});
     const copyReplay=await call('merchant_har_copy',{workspace:'sender',selection,destination:'handover'});
     check(copyReplay.reused===true&&copied.state==='COMPLETE','Complete source copy did not reopen.');
+    // Continue the actual copied source in both ownership directions, keeping
+    // the original merchant's exact selected revision for the remaining journey.
+    const copyDirectory=join(output,'complete-receiving-source'),receiverReview=structuredClone(saved.review);
+    receiverReview.version='receiving-copy-revision';
+    const receiverReviewFile=join(output,'receiving-copy-review.json');await write(receiverReviewFile,encode(receiverReview));
+    const receivingOnly=await saveRefreshReview(copyDirectory,receiverReviewFile);
+    const senderReview=structuredClone(saved.review);senderReview.version='sender-copy-revision';
+    const continuedBytes=Buffer.from(encode(senderReview));await write(join(output,'continued-decisions.json'),continuedBytes);
+    const nextReview=await call('merchant_har_decisions_save',{workspace:'sender',selection,file:'continued_decisions',expectedSha256:digest(continuedBytes)});
+    const senderSource=await openRefresh(join(senderParent,'.har-captures','refresh',selection.id));
+    const prior=(await readRevision(senderSource.previous,senderSource.manifest.lineage.previousReviewSha256)).review;
+    prior.version='previous-copy-revision';
+    const priorFile=join(output,'previous-copy-review.json');await write(priorFile,encode(prior));
+    const previousAdditional=await saveReview(senderSource.previous.root,priorFile);
+    const copyContinued=await call('merchant_har_copy',{workspace:'sender',selection,destination:'handover'});
+    await call('merchant_har_copy',{workspace:'sender',selection:nextReview.native.selection,destination:'handover'});
+    const receivedSource=await openRefresh(copyDirectory);
+    await readRevision(receivedSource.candidate,selection.revision);
+    await readRevision(receivedSource.candidate,nextReview.native.revision);
+    await readRevision(receivedSource.candidate,receivingOnly.revision);
+    await readRevision(receivedSource.previous,previousAdditional.revision);
+    check(copyContinued.reused===true,'Later immutable reviews did not continue in the original receiving directory.');
+    const copyContinuation={directory:copyDirectory,originalReview:selection.revision,
+      senderReview:nextReview.native.revision,receivingOnlyReview:receivingOnly.revision,
+      previousAdditionalReview:previousAdditional.revision};
     const adopted=await call('merchant_har_receive',{workspace:'receiver',fromWorkspace:'sender',selection});
     const receivingSelection=adopted.native.selection;
     const receivedPackage=await call('merchant_har_save',{workspace:'receiver',selection:receivingSelection,file:'terms',expectedSha256:digest(planBytes),name:'received-merchant'});
@@ -126,11 +151,11 @@ export async function receiveHarAgent({consoleResult,output}) {
     await call('merchant_har_exports',{workspace:'sender',limit:1});
     await call('merchant_har_load',{workspace:'receiver',name:'received-merchant'});
     const sourceFiles={};
-    for(const file of ['../har-workspace.mjs','../har-export.mjs','../har-download.mjs','../config.mjs','../operator.mjs','../serve.mjs'])
+    for(const file of ['../har-workspace.mjs','../har-export.mjs','../har-download.mjs','../sf61-connection.mjs','../config.mjs','../operator.mjs','../serve.mjs'])
       sourceFiles[file]=digest(await readFile(new URL(file,import.meta.url)));
     const result={operation:'AF825-HAR-AGENT-WORKSPACE-20261012',node:process.version,platform:process.platform,
       directory:output,originalConsoleResult:resolve(consoleResult),sourceFiles,operations,
-      selection,receivingSelection,groups:groups.length,reviewOperations:reviews.length,changes:changes.length,
+      selection,receivingSelection,copyContinuation,groups:groups.length,reviewOperations:reviews.length,changes:changes.length,
       merchant:{directory:receivedPackage.native.folder,routes:receiving.manifest.preview.routes,planSha256:digest(planBytes)},
       exports:exports.map(v=>({exportId:v.exportId,manifestSha256:v.manifestSha256,kind:v.manifest.kind,files:v.manifest.files})),
       resumed:downloaded,sourceConsoleClosed:true};

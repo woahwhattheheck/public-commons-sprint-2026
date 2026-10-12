@@ -22,7 +22,8 @@ function isRuntimeFile(path, explicitRuntime = false) {
   const parts = path.split('/');
   return !parts.some(part => excludedDirs.has(part) || part.startsWith('.')) &&
     (explicitRuntime || !excludedName.test(parts.at(-1))) &&
-    (supported.test(path) || ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)));
+    (supported.test(path) || (explicitRuntime && /\.zip$/i.test(path)) ||
+      ['LICENSE', 'go.mod', 'Cargo.lock'].includes(parts.at(-1)));
 }
 function valuesDeep(value) {
   return typeof value === 'string' ? [value] : Object.values(value).flatMap(valuesDeep);
@@ -92,9 +93,9 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   if (spec.schema !== 'stellar-forge.merchant-distribution.v1') throw new TypeError('Unsupported distribution specification');
   const excluded = new Set(spec.excludeFiles ?? []);
   const explicitRuntime = new Set(spec.supportFiles);
-  // Exact maintained runtime files can override a test-like filename, such as
-  // the MCP buyer's imported acceptance descriptor. Directory, extension,
-  // explicit exclusion and regular-file checks still apply.
+  // Explicit support files include maintained ZIP data and can override a
+  // test-like filename. Undeclared archives remain outside source selection;
+  // directory, explicit exclusion and regular-file checks still apply.
   const selected = tree.filter(item => isRuntimeFile(item.path, explicitRuntime.has(item.path)) && !excluded.has(item.path) &&
     (spec.components.some(root => item.path.startsWith(root + '/')) || explicitRuntime.has(item.path)));
   for (const root of spec.components)

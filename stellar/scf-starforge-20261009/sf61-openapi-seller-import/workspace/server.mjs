@@ -5,8 +5,9 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName } from './model.mjs';
+import { inspectOpenApi, prepareMerchant, savePackage, readPackage, privateParent, packageName, readMerchantTransportConfiguration } from './model.mjs';
 import { prepareMerchantOperationDirectories } from './operation-plan.mjs';
+import { merchantTransportSummary } from './transport-plan.mjs';
 import { createMerchantTicketIssuer, saveMerchantTicket, readMerchantTicket, readMerchantOperationHandoff } from './operation-ticket.mjs';
 import { stageMerchantFileRequest, loadMerchantFileRequest, listMerchantFileRequests } from './file-requests.mjs';
 import { MAX_REQUEST_BODY_BYTES } from '../../sf31-buyer-client/request-body.mjs';
@@ -24,21 +25,13 @@ import { createOAuthWorkspaceAdapter } from './oauth-http.mjs';
 import { openCacheWorkspace } from '../../sf30-seller-sdk/response-cache/workspace/model.mjs';
 import { cacheWorkspaceApi, serveCacheWorkspaceAsset, sendCacheWorkspaceResponse } from '../../sf30-seller-sdk/response-cache/workspace/http.mjs';
 import { createMigrationRoutes } from '../blockworks/routes.mjs';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { cachePackageBinding, cachePolicyRevisionApi } from './cache-policy-revisions.mjs';
 import { createHarConsoleRoutes } from '../har/workspace-http.mjs';
 
 const here = fileURLToPath(new URL('.', import.meta.url));
-const STATIC = new Map([['/','index.html'],['/browser.mjs','browser.mjs'],['/stream-browser.mjs','stream-browser.mjs'],['/stream-customer-browser.mjs','stream-customer-browser.mjs'],['/authentication-browser.mjs','authentication-browser.mjs'],['/oauth-browser.mjs','oauth-browser.mjs'],['/oauth.css','oauth.css'],['/operation-panel.mjs','operation-panel.mjs'],['/file-input-browser.mjs','file-input-browser.mjs'],['/style.css','style.css']]);
-STATIC.set('/revision-browser.mjs','revision-browser.mjs');
-STATIC.set('/postman-browser.mjs','../postman/browser.mjs');
-STATIC.set('/har-browser.mjs','../har/browser.mjs');
-STATIC.set('/migrations','../blockworks/index.html');
-STATIC.set('/migrations/','../blockworks/index.html');
-STATIC.set('/migrations/browser.mjs','../blockworks/browser.mjs');
-STATIC.set('/migrations/style.css','../blockworks/style.css');
-STATIC.set('/migrations/comparison-view.mjs','../blockworks/comparison-view.mjs');
+const STATIC = await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
 
-const MIME = {'.html':'text/html; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'};
 const HELP = 'node workspace/server.mjs --out-parent PRIVATE_DIRECTORY [--port 0] [--oauth-connections HOST_JSON] [--allow-loopback-oauth]\nCreate a private directory first (mkdir -m 700 /path/to/merchant-projects).\nOAuth host JSON carries approved aliases and directory environment references only. Explicit loopback OAuth is for local development.\nNode 22+; the console prints the local browser URL. Ctrl-C closes its managed seller.';
 const limited = async req => {
   const chunks = []; let size = 0;
@@ -143,6 +136,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
     directory:customerActive.directory,seller:customerActive.session.seller.url} : null;
   const view = () => ({...(active ? {name:active.name, mode:active.session.mode, seller:active.session.seller,
     operations:active.session.operationsDashboard, state:'RUNNING',runtimeId:active.runtimeId,caches:cacheView(),credentials:credentialView(),
+    transports:merchantTransportSummary(active.upstreams),
     operationBindings:active.tickets.bindings,
     ...(active.tickets.bindings.length ? {operationConsole:active.session.operations.operationControlUrl ?? active.session.operations.merchantOperationsUrl} : {}),
     ...(active.acceptance?{acceptance:active.acceptance}:{})} : {state:'STOPPED'}),customer:customerView()});
@@ -176,8 +170,8 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
       if(await oauth.callback(req,res,url))return;
       if(await serveCacheWorkspaceAsset(req,res,pathname))return;
       if (req.method==='GET' && STATIC.has(pathname)) {
-        const file=STATIC.get(pathname), extension=file.slice(file.lastIndexOf('.'));
-        res.writeHead(200,{'Content-Type':MIME[extension]});res.end(await readFile(join(here,file)));return;
+        const asset=STATIC.get(pathname);
+        res.writeHead(200,{'Content-Type':asset.type});res.end(await readFile(asset.url));return;
       }
       if (!pathname.startsWith('/api/')) return send(404,{error:'Not found'});
       if (!constantEqual(req.headers['x-workspace-token'],token)) return send(401,{error:'Open the complete workspace URL printed by the launcher'});
@@ -198,6 +192,7 @@ export async function startWorkspace({ parent, port=0, noSignals=false, oauthCon
           plan:JSON.parse(await readFile(new URL('./examples/streaming-plan.json',import.meta.url),'utf8'))});
         if (pathname==='/api/packages') return send(200,{packages:await list(),runtime:view(),output});
         if (pathname==='/api/status') return send(200,view());
+        if (pathname==='/api/transports/export') return send(200,await readMerchantTransportConfiguration(output,url.searchParams.get('name')));
         if (pathname==='/api/revisions/drafts') return send(200,{drafts:await listMerchantRevisionDrafts(output)});
         if (pathname==='/api/revisions/load') return send(200,await readMerchantRevisionDraft(output,url.searchParams.get('name'),{validatePlan:oauth.validatePlan}));
         if (pathname==='/api/customer/options') {
