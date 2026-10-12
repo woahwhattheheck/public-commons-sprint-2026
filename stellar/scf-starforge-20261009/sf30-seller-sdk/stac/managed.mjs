@@ -1,7 +1,7 @@
 // MIT. Managed startup for the original STAC, eoAPI and Prescient hosts.
 import {constants} from 'node:fs';
 import {open,lstat,realpath} from 'node:fs/promises';
-import {resolve,join,dirname} from 'node:path';
+import {resolve,join,dirname,basename} from 'node:path';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,randomUUID} from 'node:crypto';
 
@@ -20,7 +20,7 @@ export const stacSelectionDigest=v=>digest(JSON.stringify(canonical(v)));
 const sourceFiles=['managed.mjs','cli.mjs','server.mjs','workspace.mjs','provider.mjs','ui.mjs','ui.html','ui.css'];
 const optionFiles=Object.freeze({transport:false,'source-config':true,deployment:true,'processing-config':false});
 const knownFlags=new Set(['workspace','port','transport','source-config','deployment','profile-sha256',
-  'processing-workspace','processing-config','max-request-bytes','startup-json','managed-selection']);
+  'processing-workspace','processing-config','policy-workspace','output-directory','max-request-bytes','startup-json','managed-selection']);
 
 function absolute(v){
   need(typeof v==='string'&&v===resolve(v)&&!v.includes('\0'),'STAC_MANAGED_ABSOLUTE_PATH_REQUIRED');
@@ -33,6 +33,12 @@ async function privateIdentity(path){
       (!process.getuid||Number(info.uid)===process.getuid()))),
     'STAC_MANAGED_PRIVATE_DIRECTORY_REQUIRED','Select the original private workspace directory.');
   return {directory:path,device:info.dev.toString(),inode:info.ino.toString()};
+}
+async function outputIdentity(path){
+  absolute(path);
+  try{return {exists:true,...await privateIdentity(path)};}
+  catch(error){if(error.code!=='ENOENT')throw error;}
+  return {exists:false,directory:path,parent:await privateIdentity(dirname(path))};
 }
 async function fileRecord(path,{privateOnly=false,json=false}={}){
   absolute(path);need(await realpath(dirname(path))===dirname(path),'STAC_MANAGED_REAL_PARENT_REQUIRED');
@@ -84,10 +90,17 @@ export async function inspectStacManagedSelection({command,flags,sourceDirectory
   need(state.schema==='scf-stac-workspace/v1'&&ID.test(state.id??'')&&typeof state.endpoint==='string',
     'STAC_MANAGED_WORKSPACE_INVALID');
   need(!flags['processing-config']||flags['processing-workspace'],'STAC_MANAGED_PROCESSING_WORKSPACE_REQUIRED');
-  need(command==='eoapi-serve'||!flags['source-config'],'STAC_MANAGED_SOURCE_CONFIGURATION_MODE');
+  need(command==='eoapi-serve'||(!flags['source-config']&&!flags['policy-workspace']&&!flags['output-directory']),
+    'STAC_MANAGED_SOURCE_CONFIGURATION_MODE');
   need(command==='prescient-serve'||(!flags.deployment&&!flags['profile-sha256']),'STAC_MANAGED_PRESCIENT_CONFIGURATION_MODE');
   need(command!=='prescient-serve'||(flags.deployment&&!flags['processing-workspace']&&
     !flags['processing-config']&&!flags.transport),'STAC_MANAGED_PRESCIENT_DEPLOYMENT_REQUIRED');
+  const eoapi=command==='eoapi-serve'?{
+    policy:await privateIdentity(absolute(flags['policy-workspace']??join(directory,'eoapi','policy'))),
+    output:await outputIdentity(absolute(flags['output-directory']??join(dirname(directory),basename(directory)+'-eoapi-deliveries')))
+  }:null;
+  if(eoapi)need(eoapi.output.directory!==directory&&!eoapi.output.directory.startsWith(directory+'/'),
+    'EOAPI_SEPARATE_DELIVERY_DIRECTORY_REQUIRED');
   const configurations=[];
   for(const [name,privateOnly]of Object.entries(optionFiles)){
     if(flags[name])configurations.push({option:name,...await fileRecord(absolute(flags[name]),{privateOnly,json:true})});
@@ -108,7 +121,7 @@ export async function inspectStacManagedSelection({command,flags,sourceDirectory
   }
   return {schema:STAC_MANAGED_SELECTION,command,directory,identity,
     workspace:{directory:workspaceDirectory,identity:workspaceIdentity,id:state.id,endpoint:state.endpoint},
-    processing,configurations,options,source:await readStacLaunchSource({sourceDirectory,command,processing:Boolean(processing)})};
+    processing,eoapi,configurations,options,source:await readStacLaunchSource({sourceDirectory,command,processing:Boolean(processing)})};
 }
 export function parseStacManagedSelection(value){
   need(typeof value==='string'&&Buffer.byteLength(value)<=32768,'STAC_MANAGED_SELECTION_INVALID');
@@ -146,7 +159,8 @@ async function responseJSON(response,maximum){
   }finally{await reader.cancel().catch(()=>{});}
 }
 async function sameDirectories(selection){
-  for(const expected of [selection.identity,selection.workspace.identity,selection.processing].filter(Boolean))
+  for(const expected of [selection.identity,selection.workspace.identity,selection.processing,selection.eoapi?.policy,
+    selection.eoapi?.output?.exists?(({exists,...identity})=>identity)(selection.eoapi.output):selection.eoapi?.output?.parent].filter(Boolean))
     need(stacSelectionDigest(await privateIdentity(expected.directory))===stacSelectionDigest(expected),
       'STAC_MANAGED_WORKSPACE_CHANGED','The reviewed workspace directory was replaced.');
 }
@@ -183,5 +197,6 @@ export async function createStacManagedStartup({selection,result}={}){
     directory:selection.directory,workspaceDirectory:selection.workspace.directory,workspaceId:live.workspaceId,
     workspaceRevision:live.revision,selectionSha256:stacSelectionDigest(selection),sourceSha256:selection.source.sha256,
     processingDirectory:selection.processing?.directory??null,profileSha256:selection.options.profileSha256??null,
+    policyDirectory:selection.eoapi?.policy.directory??null,outputDirectory:selection.eoapi?.output.directory??null,
     instanceId:randomUUID(),pid:process.pid,createdAt:new Date().toISOString()};
 }
