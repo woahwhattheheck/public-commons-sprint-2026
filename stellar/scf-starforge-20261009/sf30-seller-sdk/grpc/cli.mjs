@@ -11,6 +11,7 @@ import { createGrpcWorkspace } from './workspace/model.mjs';
 import { exportGrpcStream } from './stream-capture.mjs';
 import { atomicJson } from '../../sf46-release/release-core.mjs';
 const help = [
+  'node grpc/cli.mjs upgrade --help',
   'node grpc/cli.mjs capture --directory PRIVATE_PROTO_DIRECTORY --entry service.proto [--entry other.proto] --out NEW_PROTO_SOURCE_JSON',
   'node grpc/cli.mjs reflect --source PRIVATE_SOURCE_JSON [--protocol auto|v1|v1alpha]',
   'node grpc/cli.mjs reflect-capture --source PRIVATE_SOURCE_JSON --service package.Service [--service other.Service] --expected-inventory-sha SHA256 [--protocol auto|v1|v1alpha] --out NEW_PROTO_SOURCE_JSON',
@@ -22,6 +23,7 @@ const help = [
   'node grpc/cli.mjs export-stream --state PRIVATE_WORKSPACE --id ORIGINAL_UUID --out NEW_NDJSON_FILE',
 ].join('\n');
 export async function main(args = process.argv.slice(2), { stdout = process.stdout } = {}) {
+  if (args[0] === 'upgrade') return (await import('./upgrade-cli.mjs')).upgradeMain(args.slice(1), { stdout });
   if (!args.length || args[0] === '--help') { stdout.write(help + '\n'); return; }
   const [action, ...rest] = args, flags = new Map(), entries = [], services = [];
   const allowed = {
