@@ -771,8 +771,18 @@ def _cable_effect_value(value, inverse):
     return _logical_native(value, inverse)
 
 
+def _cable_effect_model_alias(model, alias, instance=None):
+    """Native signals also issue unhinted model reads and queryset updates."""
+    from django.db import router
+    for route in (router.db_for_read, router.db_for_write):
+        if route(model) != alias or (instance is not None and route(model, instance=instance) != alias):
+            raise InventoryError("Original " + model._meta.label
+                                 + " routing leaves the migration database transaction.")
+
+
 def _cable_effect_lock(obj, alias, user, change=False):
     model = obj._meta.model
+    _cable_effect_model_alias(model, alias, instance=obj)
     result = _one(model, alias, {"pk": obj.pk}, user, lock=True)
     if result is None:
         raise InventoryError("A native cable endpoint or path object disappeared before review.")
@@ -792,6 +802,7 @@ def _cable_effect_paths(nodes, alias):
     """Use NetBox's original indexed path-node lookup, without retracing."""
     from dcim.models import CablePath
     from django.db.models import Q
+    _cable_effect_model_alias(CablePath, alias)
     unique = {_cable_effect_key(node): node for node in nodes if node.pk is not None}
     result = {}
     ordered = [unique[key] for key in sorted(unique)]
@@ -807,10 +818,14 @@ def _cable_effect_paths(nodes, alias):
     return [result[pk] for pk in sorted(result)]
 
 
-def _cable_effect_path(path, alias, user):
+def _cable_effect_path(path, alias, user, cache=None):
     """Decode the actual stored hops with NetBox's own ContentType encoding."""
     from django.contrib.contenttypes.models import ContentType
     from dcim.utils import decompile_path_node
+    _cable_effect_model_alias(ContentType, alias)
+    _cable_effect_model_alias(path._meta.model, alias, instance=path)
+    if cache is not None and path.pk in cache:
+        return cache[path.pk]
     if (not isinstance(path.path, list) or not path.path or
             not isinstance(path.path[0], list) or not path.path[0]):
         raise InventoryError("An affected native CablePath has no original origin hop.")
@@ -830,6 +845,7 @@ def _cable_effect_path(path, alias, user):
                 model = object_type.model_class()
                 if model is None:
                     raise InventoryError("A native cable path refers to an unavailable original model.")
+                _cable_effect_model_alias(model, alias)
                 obj = _one(model, alias, {"pk": object_id}, user, lock=True)
                 if obj is None:
                     raise InventoryError("A native cable path contains a missing original node.")
@@ -843,7 +859,7 @@ def _cable_effect_path(path, alias, user):
         raise InventoryError("A complete native CablePath has no original destination.")
     # Path PKs, ContentType IDs and _nodes are database cache storage; none is
     # a review identity. The complete ordered native hops and flags are kept.
-    return {
+    result = {
         "path": hops,
         "origins": list(hops[0]),
         "destinations": list(hops[-1]) if path.is_complete else [],
@@ -851,11 +867,16 @@ def _cable_effect_path(path, alias, user):
         "is_complete": bool(path.is_complete),
         "is_split": bool(path.is_split),
     }
+    if cache is not None:
+        cache[path.pk] = result
+    return result
 
 
 def _cable_effect_terminations(cable, alias, user):
     from django.contrib.contenttypes.models import ContentType
     from dcim.models import CableTermination
+    _cable_effect_model_alias(ContentType, alias)
+    _cable_effect_model_alias(CableTermination, alias)
     if cable.pk is None:
         return []
     rows = _cable_effect_rows(
@@ -867,6 +888,7 @@ def _cable_effect_terminations(cable, alias, user):
         model = object_type.model_class()
         if model is None:
             raise InventoryError("A native CableTermination refers to an unavailable original model.")
+        _cable_effect_model_alias(model, alias)
         endpoint = _one(model, alias, {"pk": termination.termination_id}, user, lock=True)
         if endpoint is None:
             raise InventoryError("A native CableTermination has lost its original endpoint.")
@@ -880,13 +902,16 @@ def _cable_effect_terminations(cable, alias, user):
     return result
 
 
-def _cable_effect_endpoint(obj, alias, user):
+def _cable_effect_endpoint(obj, alias, user, path_cache=None):
     from dcim.models import CablePath
+    _cable_effect_model_alias(CablePath, alias)
     state = {}
     for name in ("cable", "cable_end", "cable_connector", "cable_positions"):
         if not hasattr(obj, name):
             raise InventoryError("The affected native endpoint lacks its original cable fields.")
-        value = getattr(obj, name)
+        # Scalar fields use the existing native reader; relations stay as
+        # private objects until the generated inverse is complete.
+        value = getattr(obj, name) if name == "cable" else _native_value(obj, name, {})
         if name == "cable" and value is not None:
             value = _cable_effect_lock(value, alias, user)
         state[name] = _cable_effect_freeze(value)
@@ -904,7 +929,7 @@ def _cable_effect_endpoint(obj, alias, user):
             path = CablePath.objects.using(alias).select_for_update().filter(pk=path_id).first()
             if path is None:
                 raise InventoryError("An affected endpoint retains a missing native CablePath.")
-            state["path"] = _cable_effect_path(path, alias, user)
+            state["path"] = _cable_effect_path(path, alias, user, path_cache)
     return state
 
 
@@ -914,7 +939,7 @@ def _cable_effect_capture_endpoint(obj, alias, user, tracked):
     if key not in tracked["endpoints"]:
         tracked["endpoints"][key] = {
             "object": _cable_effect_freeze(obj),
-            "before": _cable_effect_endpoint(obj, alias, user),
+            "before": _cable_effect_endpoint(obj, alias, user, tracked["_path_cache"]),
         }
     if len(tracked["endpoints"]) > MAX_OBJECTS:
         raise InventoryError("The affected native cable endpoints exceed 5,000 objects.")
@@ -934,7 +959,7 @@ def _cable_effect_capture_origins(candidates, alias, user, tracked):
         if key in tracked["origins"]:
             continue
         obj = _cable_effect_capture_endpoint(obj, alias, user, tracked)
-        raw_paths = [_cable_effect_path(path, alias, user)
+        raw_paths = [_cable_effect_path(path, alias, user, tracked["_path_cache"])
                      for path in _cable_effect_paths([obj], alias)]
         before = [path for path in raw_paths
                   if any(_cable_effect_key(origin) == key for origin in path["origins"])]
@@ -967,6 +992,9 @@ def _track_cable_effects(cable, proposed_endpoints, models, alias, user, tracked
         raise InventoryError("Native cable effects must be captured in the migration transaction.")
     if tracked.get("finalized"):
         raise InventoryError("Native cable effects were already finalized.")
+    # Reset at every before-save boundary: native signals may have changed
+    # these paths since the previous source cable. Original before images stay.
+    tracked["_path_cache"] = {}
     for name in ("cables", "endpoints", "origins"):
         tracked.setdefault(name, {})
     if isinstance(proposed_endpoints, dict):
@@ -979,6 +1007,7 @@ def _track_cable_effects(cable, proposed_endpoints, models, alias, user, tracked
         raise InventoryError("Cable effect capture requires the selected native Interface objects.")
     proposed = [obj for obj in proposed if obj is not None]
     Interface = models["interfaces"]
+    _cable_effect_model_alias(Interface, alias)
     for obj in proposed:
         if not hasattr(obj, "_meta") or obj._meta.model is not Interface or obj.pk is None:
             raise InventoryError("Select a saved original Interface before native cable review.")
@@ -1008,7 +1037,7 @@ def _track_cable_effects(cable, proposed_endpoints, models, alias, user, tracked
     locked = [_cable_effect_capture_endpoint(endpoints[key], alias, user, tracked)
               for key in sorted(endpoints)]
     anchors = locked + ([cable] if cable.pk is not None else [])
-    affected_paths = [_cable_effect_path(path, alias, user)
+    affected_paths = [_cable_effect_path(path, alias, user, tracked["_path_cache"])
                       for path in _cable_effect_paths(anchors, alias)]
     candidates = list(locked)
     for path in affected_paths:
@@ -1026,6 +1055,7 @@ def _finalize_cable_effects(tracked, inverse, alias, user):
     if tracked.get("finalized"):
         raise InventoryError("Native cable effects can be finalized only once.")
     source = "Original NetBox Cable.save, CableTermination and channel/path signals"
+    path_cache = {}
     effects = []
     cables = []
     for captured in tracked["cables"].values():
@@ -1048,7 +1078,7 @@ def _finalize_cable_effects(tracked, inverse, alias, user):
     # recomputed by this importer. All actual new origins must have been
     # authorized and captured before the first save that could change them.
     anchors = cables + [item["object"] for item in tracked["endpoints"].values()]
-    paths = [_cable_effect_path(path, alias, user)
+    paths = [_cable_effect_path(path, alias, user, path_cache)
              for path in _cable_effect_paths(anchors, alias)]
     by_origin = {key: [] for key in tracked["origins"]}
     for path in paths:
@@ -1070,7 +1100,7 @@ def _finalize_cable_effects(tracked, inverse, alias, user):
     for captured in tracked["endpoints"].values():
         endpoint = _cable_effect_lock(captured["object"], alias, user, change=True)
         before = _cable_effect_value(captured["before"], inverse)
-        after = _cable_effect_value(_cable_effect_endpoint(endpoint, alias, user), inverse)
+        after = _cable_effect_value(_cable_effect_endpoint(endpoint, alias, user, path_cache), inverse)
         identity = _logical_native(endpoint, inverse)
         effects.append({
             "kind": "cable_endpoints", "key": canonical(identity),
@@ -1080,6 +1110,7 @@ def _finalize_cable_effects(tracked, inverse, alias, user):
     effects.sort(key=lambda row: (row["kind"], row["key"]))
     if len(canonical(effects).encode("utf-8")) > MAX_RESULT_BYTES:
         raise InventoryError("The actual native cable effects exceed the 64 MiB retained result limit.")
+    tracked.pop("_path_cache", None)
     tracked["finalized"] = True
     return effects
 
