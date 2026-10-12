@@ -109,8 +109,9 @@ complete archive within the original native file reader's 8 GiB ceiling.
 
 Read `merchant_ckan_workspace_archives` after completion. Its `items` provide
 the original `archiveId`, `sha256`, `manifestSha256`, byte and file counts,
-and an authenticated `download` route. List and inventory pages accept
-`offset` and `limit` from 1 through 100; continue to `nextOffset: null`.
+and an authenticated `download` route. List and inventory pages accept a
+zero-based `offset` and a `limit` from 1 through 100; continue to
+`nextOffset: null`.
 
 Inspect the selected complete archive:
 
