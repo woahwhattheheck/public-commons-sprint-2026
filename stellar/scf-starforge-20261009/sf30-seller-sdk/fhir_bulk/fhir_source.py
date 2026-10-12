@@ -367,7 +367,11 @@ def manifest_value(raw, export, previous=None):
         raise InputError("Manifest requiresAccessToken must be explicit")
     organized = manifest.get("outputOrganizedBy")
     requested = export["parameters"]["organizeOutputBy"]
-    if organized != requested and not (organized is None and export["parameters"]["handling"] == "lenient"):
+    # The original SMART reference server spells an ungrouped response as "".
+    # Treat that spelling as unspecified for selection comparison only; retain
+    # the complete manifest and its lexical value unchanged in the source.
+    effective_organized = None if organized == "" else organized
+    if effective_organized != requested and not (effective_organized is None and export["parameters"]["handling"] == "lenient"):
         raise InputError("Manifest output organization differs from the reviewed export")
     for kind in ["output", "error", "deleted"]:
         items = manifest.get(kind, [] if kind == "deleted" else None)
