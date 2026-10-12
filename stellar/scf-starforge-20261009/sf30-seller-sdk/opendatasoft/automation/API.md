@@ -198,6 +198,8 @@ For a full publication review, receive the following original configuration:
 | Connections | `getConnection` / `listConnections` | Resolve the connection UIDs actually referenced by reviewed resources. |
 | Provider versions | `listVersions` / `getVersion` | Preserve the versions the provider returns; the native list is limited to the latest 20. |
 
+The current user/group ruleset permission values are retained in `current-reference.json`, including dataset, connection, page and form permissions. Preserve the complete returned ruleset when changing one part of it; the active contract accepts the current values.
+
 Some connection/security readbacks require the matching tenant permissions. A partial preimage must remain partial in the plan instead of becoming an empty configuration replacement.
 
 The resource list's documented `expand` value can be `datasource.connection` or `datasource.dataset`. Keep the actual native datasource and reference identity even when using expansion.

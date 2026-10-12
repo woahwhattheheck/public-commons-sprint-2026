@@ -263,5 +263,28 @@
       "Resource"
     ],
     "providerResponses": "Retained complete. Reference responseSchema properties are descriptive and do not project received bodies."
+  },
+  "security": {
+    "headings": [
+      "User ruleset schema",
+      "Group ruleset schema"
+    ],
+    "schemas": [
+      "DatasetUserSecurity",
+      "DatasetGroupSecurity"
+    ],
+    "permissionValues": [
+      "explore_restricted_dataset",
+      "explore_restricted_page",
+      "edit_dataset",
+      "publish_dataset",
+      "manage_dataset",
+      "manage_connection",
+      "edit_page",
+      "manage_page",
+      "submit_private_form",
+      "moderate_form",
+      "edit_form"
+    ]
   }
 }
