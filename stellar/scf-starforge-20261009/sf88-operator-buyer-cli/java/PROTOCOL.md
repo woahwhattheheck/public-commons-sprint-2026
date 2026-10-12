@@ -40,8 +40,9 @@ method options; recovery arguments contain `options`. The optional call ID is
 the native request, order, draft or acquisition identity, as selected by the
 command. The maintained Node API owns all review, execution and archive rules.
 
-Workflow failures carry the full original result in both `error.result` and
-`result`. Java checks the same envelope identity on normal, timeout and
+Workflow failures carry one complete original result in `result`; `error`
+contains the original code and diagnostics. Java also accepts a retained result
+in `error.result` from compatible bridge editions. Java checks the same envelope identity on normal, timeout and
 interrupted completion. It temporarily clears interruption for the private
 sidecar read and restores the caller's interrupted status before raising.
 

@@ -46,7 +46,7 @@ public final class CompleteRequest {
             Map<String, Object> draft = record(output, "04-draft", workspace.save(manifest));
             Map<String, Object> initialized = record(output, "05-initialized", workspace.initialize(
                 Json.string(draft, "id"), Json.integer(draft, "revision"), Json.string(draft, "reviewSha256")));
-            String acquisitionId = Json.string(initialized, "acquisitionId");
+            String acquisitionId = Json.string(initialized, "id");
             Map<String, Object> plan = record(output, "06-plan", workspace.inspect(acquisitionId));
             if (args[9].equals("--execute")) {
                 record(output, "07-executed",

@@ -44,10 +44,10 @@ Selection keys have their original Node meanings:
 | resultLimit | Original acquisition result ceiling, 1 MiB through 256 MiB; default 32 MiB. |
 
 The Java bridge has its own result ceiling, 64 MiB by default. A failed workflow
-retains its full original result in the error and completion envelope, so size
-the Java limit for that envelope when selecting unusually large native results.
-File delivery uses the original native destination rather than this metadata
-buffer.
+retains one complete copy of its original result in the response envelope.
+Select enough Java result headroom for the native metadata and its envelope
+when increasing the native result limit. File delivery uses the original native
+destination rather than this metadata buffer.
 
 ## Receive, review, execute, and deliver
 

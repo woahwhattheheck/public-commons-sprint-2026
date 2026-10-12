@@ -346,7 +346,6 @@ try {
     if (Number.isInteger(error.exitCode)) details.exitCode = error.exitCode;
     if (error.progress?.record) details.progress = objectSummary(error.progress);
     const completed = workflowResult(error);
-    if (completed !== undefined) details.result = completed;
     try {
       await save({schema:SCHEMA, callId:request.callId, action:request.action,
         id:request.id ?? null, ok:false, error:details,
