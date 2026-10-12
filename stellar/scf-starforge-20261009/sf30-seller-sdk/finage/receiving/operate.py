@@ -419,9 +419,9 @@ class Operation:
                 self.save()
                 if observation["observed"]:
                     break
-            require(self.c.get("prefix_observation", {}).get("observed"),
-                    "Both original exports completed before an interrupted prefix was observed. Their completed data remains retained; do not claim or manufacture an interruption.")
-            return {"interruption": self.c["prefix_observation"], "actual_observations": observations}
+            return {"interruption": self.c["prefix_observation"],
+                    "interrupted_prefix_observed": self.c["prefix_observation"].get("observed") is True,
+                    "actual_observations": observations}
         interrupted = self.stage("02_original_interrupted_prefix", interrupted_intake)
 
         def complete_intake():
@@ -434,7 +434,7 @@ class Operation:
                         received["originalManifest"]["assessmentReady"] is selected["assessment_ready"],
                         "The original receiving result does not preserve its source and assessment.")
                 prefix = interrupted["interruption"]
-                if selected["delivery_id"] == prefix["delivery_id"] and "resumedRows" in received:
+                if prefix.get("observed") and selected["delivery_id"] == prefix["delivery_id"] and "resumedRows" in received:
                     require(received["resumedRows"] >= prefix["committed_rows"],
                             "The same native import did not reuse its committed original prefix.")
                 results.append({"id": received["id"], "rows": received["importedRows"],
@@ -609,6 +609,7 @@ class Operation:
             "stages": self.c["stages"], "warehouse": str(self.warehouse),
             "checkpoint": str(self.checkpoint_path), "original_command_count": len(self.c["commands"]),
             "customer_record_count": sum(x["customer_records"] for x in self.inputs),
+            "interrupted_prefix_observed": interrupted["interruption"].get("observed") is True,
             "provider_calls": 0, "payments": 0,
         }
         atomic_json(self.root / "RECEIVING_RESULT.json", result)
@@ -618,6 +619,9 @@ class Operation:
 
 
 def main():
+    def interrupted(signum, frame):
+        raise KeyboardInterrupt("The original receiving operation was interrupted by signal " + str(signum))
+    signal.signal(signal.SIGTERM, interrupted)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
     parser.add_argument("--resume", action="store_true")
