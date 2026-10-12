@@ -1,0 +1,127 @@
+{
+  "schema": "stellar-forge.clinicaltrials-batch-mcp-source.v1",
+  "sourceCommit": "a1700f90b92fd7879a5ede18f11f9bfe1b24b92d",
+  "nodePackages": [],
+  "systemCommands": [
+    "flock"
+  ],
+  "toolNames": [
+    "merchant_clinicaltrials_action",
+    "merchant_clinicaltrials_batch",
+    "merchant_clinicaltrials_batch_entry",
+    "merchant_clinicaltrials_capture",
+    "merchant_clinicaltrials_exports",
+    "merchant_clinicaltrials_file",
+    "merchant_clinicaltrials_file_prepare",
+    "merchant_clinicaltrials_file_release",
+    "merchant_clinicaltrials_files",
+    "merchant_clinicaltrials_inventory",
+    "merchant_clinicaltrials_manifest",
+    "merchant_clinicaltrials_operation",
+    "merchant_clinicaltrials_prs",
+    "merchant_clinicaltrials_prs_candidate",
+    "merchant_clinicaltrials_prs_catalog",
+    "merchant_clinicaltrials_prs_plan",
+    "merchant_clinicaltrials_prs_preview",
+    "merchant_clinicaltrials_prs_reconciliation",
+    "merchant_clinicaltrials_prs_upload",
+    "merchant_clinicaltrials_restore",
+    "merchant_clinicaltrials_source_build",
+    "merchant_clinicaltrials_source_changes",
+    "merchant_clinicaltrials_source_compare",
+    "merchant_clinicaltrials_source_export",
+    "merchant_clinicaltrials_source_exports",
+    "merchant_clinicaltrials_source_file_read",
+    "merchant_clinicaltrials_source_file_release",
+    "merchant_clinicaltrials_source_import",
+    "merchant_clinicaltrials_source_ingest",
+    "merchant_clinicaltrials_source_ingest_text",
+    "merchant_clinicaltrials_source_inspect",
+    "merchant_clinicaltrials_source_inventory",
+    "merchant_clinicaltrials_source_merchant_prepare",
+    "merchant_clinicaltrials_source_plan",
+    "merchant_clinicaltrials_source_plan_save",
+    "merchant_clinicaltrials_source_query",
+    "merchant_clinicaltrials_source_status",
+    "merchant_clinicaltrials_source_workspaces",
+    "merchant_clinicaltrials_status",
+    "merchant_clinicaltrials_studies",
+    "merchant_clinicaltrials_study",
+    "merchant_clinicaltrials_study_compare",
+    "merchant_clinicaltrials_workspaces"
+  ],
+  "files": [
+    {
+      "path": "stellar-forge/mcp-merchant-operator/clinicaltrials-workspace.mjs",
+      "gitBlob": "5f06ab79c82c8a592e51f1032fe211ef54b6f925",
+      "bytes": 41695,
+      "sha256": "211f456f1cffaa2e7b8d3f374856b99f5686b2126fdd9918c6e2e6d2fee5098f"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/clinicaltrials-client.mjs",
+      "gitBlob": "255c9d6d651634a3d7a5a26843b5193f85c4d07c",
+      "bytes": 4280,
+      "sha256": "9ee68fd2a17384cc10518027f85acbd5cf7d2d159de35e044a6ab7f1aa8db67c"
+    },
+    {
+      "path": "stellar-forge/mcp-paid-agent/http-tools.mjs",
+      "gitBlob": "0d47bcb0b78de072870381247786a20ca86fdd24",
+      "bytes": 7148,
+      "sha256": "d9188cabfaea0fecf537fbe2486ffbf521c8500ed720718ed420c0e15e7965d7"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/source-workspace.mjs",
+      "gitBlob": "35e1d8aed2afc456e7227c58fc73861f1b48581a",
+      "bytes": 24670,
+      "sha256": "2d14ee51d8ccf0263450ef610018777dee56ec267ddc06a9485b74179f4fb71d"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/clinicaltrials-workspace.mjs",
+      "gitBlob": "97b2712623554fb74b87f6c177e4442536ad691b",
+      "bytes": 10396,
+      "sha256": "d02c346db37756b2f9951a56ea2073e953eca48fe94f2a1c61de57c71dfab0e3"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-file-reads.mjs",
+      "gitBlob": "546e4db6fe832b70adf13733b0bea3f96e64cdfa",
+      "bytes": 22746,
+      "sha256": "3993849a75a221dc45625e0e38ef8d371b7b9d8ee7ab15be5545af6ca1a6d5db"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-download.mjs",
+      "gitBlob": "60d671158175d8d23e6e889069443d01c7c12ea2",
+      "bytes": 24911,
+      "sha256": "65d0ea872e5f4d31ada1f20a27540ba6f9444cae442d26c343b866a6e314ccf9"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf33-failure-contract/contract.mjs",
+      "gitBlob": "715729bd4f404a677630342291da99755acce154",
+      "bytes": 7575,
+      "sha256": "f9764a337e60599a65cbb8d555d6e5e95c385e49ff1c43b91bc5a5b4193ca44c"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/source-workspace.mjs",
+      "gitBlob": "1ebf7ac691ef463e1ec4f51b0e219d2789672c9e",
+      "bytes": 5709,
+      "sha256": "5d208aea03cde829a82ffad1800b288572a131df7775561784e3842f49692276"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/retained-file-contracts.mjs",
+      "gitBlob": "16dbce5411cddc372ac93cbe4813c373b9d81457",
+      "bytes": 156,
+      "sha256": "81c52bc3e26e35ba719be72bab26aadea2d5c3105448cd76857abecafc76db34"
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/host-files.mjs",
+      "gitBlob": "a366cc4aa3e3ee3dfb7cb88320b84fcb00ab2fad",
+      "bytes": 2195,
+      "sha256": "19b96e241973e80bcfe907223f7b06cb6aa52214ccf37d52b1078ec109508055"
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/merchant-fleet-gateway/state-lease.mjs",
+      "gitBlob": "1c2a8f3a3488bc1c687ad9fdfb2fba7964baaedc",
+      "bytes": 1776,
+      "sha256": "8b41905d3ad920588a810e52157527ac887eb9785098c4c0f398657905163746"
+    }
+  ]
+}
