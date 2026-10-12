@@ -68,7 +68,7 @@ The tool prefix is **merchant_accounting_runbooks_**.
 | status | Counts and pages of client books, periods, retained files or received packets. |
 | sources | Actual handoff headers, one handoff's exact return revisions, period closes or retained client files. |
 | book | A selected immutable procedure edition, all edition headers, complete steps and resources. |
-| cycle | A frozen period, current work, source-file metadata, submissions, one submission's full work, reviews and history. |
+| cycle | A frozen period, current work, source-file metadata, submissions, one submission's full work, reviews, assignment identity, full handover snapshots and history. |
 | operation | The original committed action, target, request digest and result for a UUID. |
 | prepare | The complete original request and current workspace/revision, with actual file bytes pinned by alias. |
 | execute | The unchanged request through the original writer; a matching saved result is recovered first. |
@@ -304,3 +304,40 @@ accepting it. The recreated handoff must match every retained source field, row,
 label and identity. Selected returned CSV bytes and accountant return history
 keep their existing validation. A received period can supply its original
 procedures for the next locally selected close.
+
+
+## Lead-to-backup assignment and complete handover
+
+The original assign action changes a period's preparer, reviewer or due date.
+It requires the current assignment SHA256 and a complete operator handover note.
+The digest binds current work and phase as well as the selected people, so
+an intervening preparation edit requires a fresh assignment observation.
+
+~~~js
+const current = await client.cycle(cycleId, {view:'assignment'});
+const prepared = await client.prepare('assign', {
+  actor: 'Close manager',
+  expectedAssignmentSha256: current.assignment.sha256,
+  preparer: 'Assigned backup',
+  note: 'The saved preparation and unresolved close items are handed over with this deadline.'
+}, {cycleId});
+// Retain the complete prepared request in the original caller operation.
+const result = await client.execute(prepared);
+~~~
+
+Current cycle summary includes assignmentSha256 and handoverCount. The
+assignment view exposes the full current digest and initialAssignments.
+Read every handover header with allCycle(cycleId,'handovers'), then select
+handover_work with its handoverId to read the exact saved original work for
+every procedure. The handover retains its actor, note, prior/next assignments,
+phase, full work digest and prior handover ID.
+
+Periods in DRAFT, CHANGES_REQUESTED or IN_REVIEW can retain an assignment
+change. Their original preparation and review history remain in place.
+Received periods preserve that history read-only; a new local period can use
+their procedures and actual local close source.
+
+[Installed client portfolio](ACCOUNTING_PORTFOLIO.md) coordinates firm capacity,
+multiple original client workspaces, two-period calendars and separately
+identified portable client packets. Its client commands call these same
+Runbooks assign, work, submit and review methods through original admission.
