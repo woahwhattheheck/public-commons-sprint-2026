@@ -6,7 +6,7 @@ const PRIVILEGES = ['select', 'insert', 'update', 'delete'];
 export async function createDatabase(connection, profile) {
   const {Pool} = await import('pg');
   need(connection && typeof connection === 'object', 'POSTGIS_WRITE_CONNECTION_REQUIRED');
-  const pool = new Pool({...connection, types: TEXT_TYPES, max: 3, application_name: 'starforge-postgis-intake'});
+  const pool = new Pool({...connection, types: TEXT_TYPES, pipeline: false, max: 3, application_name: 'starforge-postgis-intake'});
   pool.on('error', () => {});
   const first = await pool.connect();
   let environment, extensionSchema, owner;
