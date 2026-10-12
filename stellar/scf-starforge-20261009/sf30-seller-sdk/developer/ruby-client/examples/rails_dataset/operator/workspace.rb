@@ -610,3 +610,6 @@ module Starforge
     end
   end
 end
+
+# The same private Workspace owns committed-data captures and query receiving.
+require_relative "records"

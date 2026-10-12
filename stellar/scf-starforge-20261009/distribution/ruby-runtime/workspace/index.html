@@ -102,6 +102,17 @@
           <button type="button" id="application-verify">Verify stopped application</button>
           <button type="button" id="application-export">Export environment and stopped application</button>
         </div>
+        <fieldset class="card">
+          <legend>Working data selection</legend>
+          <p id="application-capture-current"></p>
+          <label class="check"><input id="application-capture-selected" type="checkbox">Select a saved working dataset for verification or export</label>
+          <div id="application-capture-fields" hidden>
+            <label for="application-capture-selection">Saved dataset selection</label>
+            <textarea id="application-capture-selection" rows="7" spellcheck="false" aria-describedby="application-capture-help" style="width:100%;max-width:100%;box-sizing:border-box"></textarea>
+            <p id="application-capture-help">On the application's Working records screen, save the current records and copy the selection under “Use this saved dataset for an application export.” Paste the complete selection here. Later working edits require a new saved dataset.</p>
+          </div>
+          <details id="application-capture-retained" hidden><summary>Existing saved dataset selection</summary><pre id="application-capture-retained-value"></pre></details>
+        </fieldset>
         <p id="application-state-note"></p>
         <details><summary>Complete application and run history</summary><pre id="application-record"></pre></details>
       </section>
