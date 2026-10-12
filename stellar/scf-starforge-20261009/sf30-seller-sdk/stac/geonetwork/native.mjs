@@ -345,7 +345,7 @@ function harvesterConfigurationTree(node, { root = false } = {}) {
   const elements = children(node);
   const attributes = node.attributes.filter(value => value.namespaceURI !== XMLNS_NS)
     .map(value => [value.namespaceURI ?? '', value.localName, value.value])
-    .sort((left, right) => stable(left).localeCompare(stable(right)));
+    .sort((left, right) => { const a = stable(left), b = stable(right); return a < b ? -1 : a > b ? 1 : 0; });
   const content = node.children.filter(value => {
     if (typeof value === 'string') return !elements.length || value.trim().length > 0;
     return !(root && value.namespaceURI === node.namespaceURI && ['info', 'error'].includes(value.localName));
@@ -1083,3 +1083,4 @@ export function createGeoNetworkClient(connection, {
   }
   return Object.freeze(client);
 }
+
