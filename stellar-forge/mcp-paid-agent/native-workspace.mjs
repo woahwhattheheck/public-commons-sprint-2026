@@ -10,6 +10,9 @@ import { requiredQueryKeys } from './query-requirements.mjs';
 import {createNativeObjects, nativeObjectActions} from './native-objects.mjs';
 import {createNativeDatasets, nativeDatasetActions} from './native-datasets.mjs';
 import {createNativeAnalysis, nativeAnalysisActions} from './native-analysis.mjs';
+import {createNativeCollections,nativeCollectionActions} from './native-collections.mjs';
+import {NATIVE_SOURCE,nativeSourceFiles,checkNativeSourceFiles,sealNativeSource,
+  registerNativeSourceInbox,selectedNativeSourceInbox} from './native-analysis-sources.mjs';
 import {createSavedFileReader} from './native-file.mjs';
 import { initializeQueue, openQueue } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs';
 import { openWorkspace } from '../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/workspace.mjs';
@@ -269,7 +272,8 @@ export async function openNativeWorkspace(directory) {
       entry.controller.abort();await entry.promise;return true;
     }});
   const analysis=createNativeAnalysis({manifest,completedDataset:datasets.completedDataset,
-    isClosed:()=>closed});
+    completedObject:objects.completedObject,completedResponse,isClosed:()=>closed});
+  const collections=createNativeCollections({manifest,isClosed:()=>closed});
   async function retained(intentId) {
     const path = join(root, 'requests', intentKey(intentId));
     await privateDirectory(path);
@@ -411,6 +415,52 @@ export async function openNativeWorkspace(directory) {
     return {schema:RESULT,intentId:args.intentId,state:record.state,
       result:await readSavedFile({...file,destination},args),retry:'NO_AUTOMATIC_RETRY'};
   }
+  async function completedResponse(intentId,{inboxAlias}={}) {
+    need(!closed,'MCP_NATIVE_WORKSPACE_CLOSING');
+    await currentWorkspace();
+    const selected=await selectedNativeSourceInbox(manifest,inboxAlias),sourceQueue=selected.queue;
+    const saved=selected.alias===null?await retained(intentId):null;
+    const record=await sourceQueue.show(intentId);
+    if(saved)need(record.sourceConfigSha256===saved.saved.configSha256,'MCP_NATIVE_INBOX_BINDING_CHANGED');
+    const original=record.outcome,file=original?.responseFile;
+    const destination=selected.alias===null?join(root,'downloads',intentKey(intentId)+'.bin'):record.responseDestination;
+    need(original?.mode==='ORIGINAL_OPERATOR_APPROVED_BUYER_ATTEMPT'&&original.intentId===intentId&&
+      typeof record.attempt?.id==='string'&&record.attempt.id.length>0&&
+      file?.status==='SAVED'&&(file.destination??file.path)===destination,'MCP_NATIVE_SAVED_RESULT_REQUIRED');
+    const job=join(sourceQueue.root,'jobs',intentKey(intentId));
+    const request=await privateJson(join(job,'request.json'),2097152);
+    const specifications=[
+      {role:'native-workspace',path:join(root,'native-workspace.json'),maxBytes:65536},
+      ...selected.inputs,
+      ...(saved?[
+        {role:'native-request',path:join(saved.path,'request.json'),maxBytes:65536},
+        {role:'native-config',path:join(saved.path,'buyer.json'),maxBytes:65536},
+      ]:[]),
+      {role:'inbox-request',path:join(job,'request.json')},
+      {role:'inbox-source-config',path:join(job,'source-config.json'),maxBytes:65536},
+      {role:'inbox-execution',path:join(job,'execution.json'),maxBytes:65536},
+      {role:'inbox-attempt',path:join(job,'attempt.json')},
+      {role:'inbox-terminal',path:join(job,'terminal.json')},
+    ];
+    if(request.bodySha256!==null&&request.bodySha256!==undefined)
+      specifications.push({role:'inbox-body',path:join(job,'request-body.bin'),maxBytes:8388608});
+    if(request.operationTicket!==null&&request.operationTicket!==undefined)
+      specifications.push({role:'inbox-ticket',path:join(job,'operation-ticket.json'),maxBytes:131072});
+    const inputs=await nativeSourceFiles(specifications);
+    await readSavedFile({...file,destination},{maxBytes:1});
+    const after=await sourceQueue.show(intentId);
+    need(after.configSha256===record.configSha256&&after.sourceConfigSha256===record.sourceConfigSha256&&
+      after.attempt?.id===record.attempt.id&&JSON.stringify(after.outcome)===JSON.stringify(original),
+      'MCP_NATIVE_SAVED_SOURCE_CHANGED');
+    await checkNativeSourceFiles(inputs);
+    return sealNativeSource({schema:NATIVE_SOURCE,kind:'response',id:intentId,nativeWorkspace:root,
+      paths:{inbox:sourceQueue.root,config:join(job,'execution.json'),result:join(job,'terminal.json')},
+      file:{destination,bytes:file.bytes,sha256:file.sha256,contentType:file.contentType??null},
+      original:{intentId,inboxAlias:selected.alias,configurationSha256:record.configSha256,
+        sourceConfigSha256:record.sourceConfigSha256,attemptId:record.attempt.id,nativeStatus:original.status??null,
+        paymentStatus:original.paymentStatus??null,httpStatus:original.httpStatus??null,
+        responseFileStatus:file.status,stream:file.stream??null}},inputs);
+  }
   const allowedFields = {
     prepare:['intentId','search','targetResourceURL','targetMethod','maxAtomic','body','acceptIndex'],
     execute:['intentId','search','targetResourceURL','targetMethod','maxAtomic','body','acceptIndex'],
@@ -422,7 +472,10 @@ export async function openNativeWorkspace(directory) {
     registerObjects:objects.register,
     registerDatasets:datasets.register,
     completedDataset:datasets.completedDataset,
+    completedObject:objects.completedObject,completedResponse,
     registerAnalysis:analysis.register,
+    registerCollections:collections.register,
+    async registerSourceInbox(options){need(!closed,'MCP_NATIVE_WORKSPACE_CLOSING');await currentWorkspace();return registerNativeSourceInbox(manifest,options);},
     async call(args = {}, context = {}) {
       need(!closed, 'MCP_NATIVE_WORKSPACE_CLOSING');
       need(object(args) && object(context) &&
@@ -431,6 +484,7 @@ export async function openNativeWorkspace(directory) {
       if(nativeObjectActions.includes(action))return objects.call(args,context);
       if(nativeDatasetActions.includes(action))return datasets.call(args,context);
       if(nativeAnalysisActions.includes(action))return analysis.call(args,context);
+      if(nativeCollectionActions.includes(action))return collections.call(args,context);
       need(Object.hasOwn(allowedFields, action) &&
         Object.keys(args).every(key => key === 'action' || allowedFields[action].includes(key)), 'MCP_NATIVE_ARGUMENTS_INVALID');
       if (action !== 'history') intentKey(args.intentId);
@@ -467,8 +521,9 @@ export async function openNativeWorkspace(directory) {
     async close() {
       if (closed) return;
       closed = true; shutdown.abort();
-      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
+      await Promise.allSettled([objects.close(), datasets.close(), analysis.close(), collections.close(), ...preparing.values(), ...[...active.values()].map(value => value.promise)]);
     },
   };
 }
+
 

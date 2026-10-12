@@ -22,7 +22,7 @@ const html = value => String(value ?? '').replaceAll('&', '&amp;').replaceAll('<
 const withoutUndefined = object => Object.fromEntries(Object.entries(object).filter(([, value]) => value !== undefined));
 
 export async function openStacWorkspace({ directory, title = 'Satellite imagery workspace',
-  endpoint, transport, sourceAuth, create = true } = {}) {
+  endpoint, transport, sourceAuth, assetAccess, create = true } = {}) {
   directory = await privateDirectory(directory, { create });
   const versions = await privateDirectory(join(directory, 'versions'), { create });
   await privateDirectory(join(directory, 'captures'), { create });
@@ -62,7 +62,7 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
   }
   const opening = await readState();
   if (endpoint !== undefined) need(normalizeEndpoint(endpoint) === opening.endpoint, 'STAC_WORKSPACE_ENDPOINT_MISMATCH');
-  let provider = createStacProvider({ endpoint: opening.endpoint, transport, sourceAuth });
+  let provider = createStacProvider({ endpoint: opening.endpoint, transport, sourceAuth, assetAccess });
   async function mutate(change, expectedRevision) {
     const action = queue.then(async () => {
       for (let retry = 0; retry < 8; retry++) {
@@ -326,8 +326,9 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
     need(Number.isSafeInteger(maxBytes) && maxBytes > 0 && maxBytes <= 2 * 1024 ** 3, 'STAC_ASSET_BYTE_BUDGET_INVALID');
     const detail = await getEdition(editionId), item = detail.items.find(v => stacItemKey(v) === itemId);
     need(item, 'STAC_ITEM_NOT_FOUND');
-    const review = { id: identity('asset-review'), editionId, ...assetDescriptor(item, assetKey,
+    const descriptor = { id: identity('asset-review'), editionId, ...assetDescriptor(item, assetKey,
       detail.edition.collections.find(v => v.id === item.collection)), itemDigest: digestJson(item), maxBytes, createdAt: stamp() };
+    const review = await provider.reviewAsset(descriptor, { workspaceId: opening.id });
     return mutate(s => {
       if (operationId) need(!s.operations[operationId], 'STAC_OPERATION_ALREADY_EXISTS');
       s.assetReviews.push(review);
@@ -345,7 +346,12 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
       if (prior.status === 'COMPLETE') return state.assets.find(v => v.id === prior.assetId);
     }
     return lease('operation:' + operationId, async () => {
-      const id = prior?.assetId ?? identity('asset'), relative = 'captures/' + identity('asset-download');
+      const locked = await readState(), saved = locked.operations[operationId];
+      if (saved) {
+        need(saved.kind === 'ASSET' && saved.reviewId === reviewId, 'STAC_OPERATION_INPUT_CHANGED');
+        if (saved.status === 'COMPLETE') return locked.assets.find(v => v.id === saved.assetId);
+      }
+      const id = saved?.assetId ?? identity('asset'), relative = 'captures/' + identity('asset-download');
       await mutate(s => {
         s.operations[operationId] = { kind: 'ASSET', reviewId, assetId: id, status: 'RUNNING', startedAt: stamp() };
         let asset = s.assets.find(v => v.id === id);
@@ -354,7 +360,8 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
         asset.status = 'RUNNING'; asset.attempts.push(relative);
       });
       try {
-        const result = await provider.downloadAsset(review, { directory: join(directory, relative), maxBytes: review.maxBytes });
+        const result = await provider.downloadAsset(review, { directory: join(directory, relative), maxBytes: review.maxBytes,
+          selection: { workspaceId: locked.id, reviewId, itemDigest: review.itemDigest, operationId } });
         return mutate(s => {
           const asset = s.assets.find(v => v.id === id);
           Object.assign(asset, result, { status: 'COMPLETE', sourceStatus: result.status, path: relative + '/asset.bin' });
@@ -445,7 +452,7 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
       for (const name of ['request.json', 'response.json', 'response.bin', 'error.json']) paths.add(record.directory + '/' + name);
     }
     for (const asset of assets) for (const attempt of asset.attempts)
-      for (const name of ['request.json', 'response.json', 'error.json', 'asset.bin']) paths.add(attempt + '/' + name);
+      for (const name of ['request.json', 'response.json', 'error.json', 'asset.bin', 'prescient-receipt.json']) paths.add(attempt + '/' + name);
     for (const path of paths) { safePath(path); need(path.startsWith('captures/'), 'STAC_SOURCE_PATH_INVALID'); }
     return [...paths];
   }
@@ -563,7 +570,7 @@ export async function openStacWorkspace({ directory, title = 'Satellite imagery 
         files: bundle.files.length, bytes: total, completedAt: stamp() }; s.imports.push(receipt); return receipt;
     });
     await provider.close();
-    provider = createStacProvider({ endpoint: bundle.endpoint, transport, sourceAuth });
+    provider = createStacProvider({ endpoint: bundle.endpoint, transport, sourceAuth, assetAccess });
     return imported;
   }
   return Object.freeze({ directory, getState: owned(readState), discover: owned(discover), saveQuery: owned(saveQuery),

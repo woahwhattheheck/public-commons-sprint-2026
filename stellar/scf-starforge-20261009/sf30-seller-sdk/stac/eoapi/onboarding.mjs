@@ -127,7 +127,7 @@ export async function openEoapiOnboarding({workspace,policies,directory,outputDi
   async function approved(approvalId) {
     const exported=await policies.exportPackage(approvalId?{approvalId}:{});
     const checked=validateDeploymentPolicyPackage(exported.package);
-    return {...checked,package:exported.package};
+    return {...checked,package:exported.package,packageText:exported.packageText??jsonBytes(exported.package).toString('utf8')};
   }
   async function sourceReview(id) {
     key(id);const summary=(await read()).sourceReviews.find(item=>item.id===id);
@@ -136,6 +136,8 @@ export async function openEoapiOnboarding({workspace,policies,directory,outputDi
     const {sha256:digest,...core}=record;
     need(record.schema===REVIEW&&digest===hash(core)&&summary.sha256===digest,'EOAPI_SOURCE_REVIEW_CHANGED');
     const checked=validateDeploymentPolicyPackage(record.policyPackage);
+    if(record.policyPackageText!==undefined)need(typeof record.policyPackageText==='string'&&
+      same(JSON.parse(record.policyPackageText),record.policyPackage),'EOAPI_SOURCE_POLICY_BYTES_CHANGED');
     need(checked.approval.id===record.approvalId&&checked.digest===record.policyPackageDigest&&
       checked.compilation.digest===record.policyDigest,'EOAPI_SOURCE_POLICY_CHANGED');
     return record;
@@ -227,7 +229,7 @@ export async function openEoapiOnboarding({workspace,policies,directory,outputDi
     if(prior)return sourceReview(id);
     const core={schema:REVIEW,id,workspaceId:native.id,approvalId:selected.approval.id,
       policyDigest:selected.compilation.digest,policyPackageDigest:selected.digest,
-      policyPackage:selected.package,reviewer,source,ready:source.ready,at:stamp()};
+      policyPackage:selected.package,policyPackageText:selected.packageText,reviewer,source,ready:source.ready,at:stamp()};
     const reviewPath=join(directory,'reviews',id+'.json');
     const record=await exists(reviewPath)?await readJson(reviewPath,8*1024*1024):{...core,sha256:hash(core)};
     const {sha256:retainedDigest,...retainedCore}=record;

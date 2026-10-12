@@ -6,6 +6,94 @@ reviews and downloads. The original SF88/SF100 customer path remains responsible
 for payment, receipt, assembly, exact file hashes and reopen. The explorer does
 not need the merchant workspace or a Buyer.
 
+## Install the selected STAC commerce runtime
+
+Opening the complete received `scene-explorer.html` in a browser needs no Node
+installation or payment configuration. Merchant service and original customer
+acquisition use the selected Starforge native runtime. The lean source package
+declares those payment libraries as optional peers; installing that source
+package alone does not install the native commerce closure.
+
+Use the maintained [runtime installer](../../../distribution/RUNTIME_INSTALL.md)
+with the original package archive and its release SHA-256. Select native payment,
+the existing schema pattern engine, the original OpenAPI importer and the
+operator host requirements. The selected release's
+[distribution declaration](../../../distribution/distribution.json) and original
+component manifests determine the dependency list:
+
+| Selected component | Original compatible version |
+| --- | --- |
+| `@x402/core` | `2.28.0` |
+| `@x402/stellar` | `2.28.0` |
+| `@x402/extensions` | `2.28.0` |
+| `@stellar/stellar-sdk` | Original range `^16.3.0`; explicit selection below `16.3.1` |
+| `re2js` through `--feature schema` | `2.8.6` |
+| `yaml` through `--feature openapi` | `2.9.1` |
+
+The distribution requires Node.js 22.16 or newer. The original operator workflow
+also requires Linux, Python 3.11 or newer, and util-linux `flock`. The installer
+records the effective requirements of the selected release. Keep its generated
+profile and npm lockfile with the runtime so transitive dependencies and the
+previous working selection remain recoverable.
+
+Save this explicit compatible pin in `/srv/starforge/stac-pins.json`:
+
+~~~json
+{"@stellar/stellar-sdk":"16.3.1"}
+~~~
+
+Then use the maintained installed `starforge` entry point:
+
+~~~sh
+starforge runtime-install prepare \
+  --dir /srv/starforge/runtimes/stac-01 \
+  --archive /srv/starforge/downloads/original-merchant.tgz \
+  --sha256 REPLACE_WITH_THE_RELEASE_ARCHIVE_SHA256 \
+  --native --feature schema --feature openapi --operator \
+  --pins /srv/starforge/stac-pins.json
+
+starforge runtime-install install --dir /srv/starforge/runtimes/stac-01
+
+starforge runtime-install inspect \
+  --dir /srv/starforge/runtimes/stac-01 --load --source
+~~~
+
+Preparation verifies the original archive and source manifest before resolving
+its native and feature declarations. Inspection resolves and loads packages from
+the actual original component paths. Use its completed `READY` result before
+starting the selected merchant or customer. An existing incomplete installation
+continues with the original `runtime-install resume` command; an upgrade uses
+the original new-directory upgrade/recovery workflow.
+
+Run the existing STAC commands through that same runtime:
+
+~~~sh
+starforge runtime-install run \
+  --dir /srv/starforge/runtimes/stac-01 -- \
+  stac customer-open --directory /srv/stac/receiving
+
+starforge runtime-install run \
+  --dir /srv/starforge/runtimes/stac-01 -- \
+  stac portable-export --directory /srv/stac/receiving --out /srv/stac/portable
+
+starforge runtime-install run \
+  --dir /srv/starforge/runtimes/stac-01 -- \
+  stac portable-open --directory /srv/stac/portable \
+  --expected-manifest-sha256 REPLACE_WITH_THE_PORTABLE_EXPORT_RECEIPT_SHA256
+~~~
+
+The merchant and private customer commands, selected facilitator, original Buyer
+profile and acquisition caps remain in [MERCHANT.md](../MERCHANT.md). A completed
+runtime installation establishes usable dependencies; it does not create a
+payer, sign a request or acquire an edition.
+
+For a deployment that already has an equipped runtime, carry its original
+`sourceRoot` and `dependencyRoot` together and use the same
+[runtime-profile inspection](../../../distribution/RUNTIME.md). A module loader
+must resolve peers from those original component paths. The maintained installer's
+`package/source/` and ancestor `node_modules/` layout provides that relationship
+without a recipient needing a fleet-specific path or link.
+
 ## What a recipient can use
 
 Open `scene-explorer.html` in the received directory. It embeds its metadata,

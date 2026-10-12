@@ -181,6 +181,21 @@ export function createFleetRollout(fleet, { store = null, record = null,
         return promote(next, { snapshotId: saved.snapshotId, digest: saved.digest }, expectedRevision);
       });
     },
+    withServingMerchant({ tenant, host, port, expectedRevision, expectedDigest } = {}, useOwnedSession) {
+      return exclusive(async () => {
+        requireRevision(expectedRevision);
+        if (typeof useOwnedSession !== 'function')
+          throw rejected('FLEET_SERVING_CALLBACK_REQUIRED', 400);
+        const serving = current.fleet.tenants.find(row => row.id === tenant);
+        if (typeof expectedDigest !== 'string' || expectedDigest !== current.digest ||
+            !serving || serving.host !== host || serving.upstreamPort !== port)
+          throw rejected('FLEET_SERVING_MERCHANT_CHANGED');
+        // Sign against this exact active mapping while the existing activation,
+        // rollback and retirement guard remains held. Requests keep their normal
+        // admission path; shutdown awaits the original operationDone promise.
+        return useOwnedSession();
+      });
+    },
     withRetiredPort(port, expectedRevision, closeOwnedSession) {
       return exclusive(async () => {
         requireRevision(expectedRevision);

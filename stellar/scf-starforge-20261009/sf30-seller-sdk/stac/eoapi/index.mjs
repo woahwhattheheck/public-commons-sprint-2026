@@ -6,3 +6,4 @@ export {exportEoapiDelivery,openEoapiDelivery} from './delivery.mjs';
 export {openDeploymentPolicyWorkspace,validateDeploymentPolicyPackage} from './policy-workspace.mjs';
 export {compileDeploymentPolicy,normalizeDeploymentPolicy} from './deployment-policy.mjs';
 export {openCommissioningWorkspace,inspectCommissioningPackage} from './commissioning/workspace.mjs';
+export {createDeploymentPolicyController} from './policy-controller.mjs';

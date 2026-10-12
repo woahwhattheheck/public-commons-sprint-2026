@@ -7,12 +7,14 @@ const bytes = value => Number.isSafeInteger(value) ? value.toLocaleString() + ' 
 
 export function createPaidFileUI({request, notice, refreshState, openPanel, onPrepared, current, action}) {
   let state = {requests:[],claimEnvs:[]}, selected = null, busy = false, changed = false, generation = 0;
+  const hostChanged=()=>Boolean(selected?.review&&!selected.prepared&&!selected.preparing&&selected.review.settingsSha256!==state.operatorSettingsSha256);
   function controls() {
     for(const element of $('#file-review-form').elements)
       element.disabled=busy||!state.operator||Boolean(selected?.prepared)||Boolean(selected?.preparing);
     $('#upload-file-order').disabled=busy;
-    $('#prepare-file-order').disabled=busy||changed||!selected?.review||Boolean(selected?.prepared)||!state.operator;
+    $('#prepare-file-order').disabled=busy||changed||hostChanged()||!selected?.review||Boolean(selected?.prepared)||!state.operator&&!selected?.preparing;
     $('#add-file-to-plan').disabled=busy||!selected?.prepared;
+    $('#file-review-changed').hidden=!selected?.review||!(changed||hostChanged());
   }
   function list() {
     $('#file-order-count').textContent=String(state.requests.length);
@@ -21,7 +23,8 @@ export function createPaidFileUI({request, notice, refreshState, openPanel, onPr
       '<p class="muted">Received file orders appear here. Reopening an order keeps its original buyer and download.</p>';
     const operator=state.operator;
     $('#file-operator').innerHTML=operator?`<strong>Local buyer · ${escape(operator.actor)} / ${escape(operator.service)}</strong><p class="wrap">Payer <code>${escape(operator.payer)}</code></p><p class="muted">Maximum per prepared order: ${escape(operator.maxTotalAtomic)} total atomic · ${escape(operator.maxDailyAtomic)} per UTC day.</p>`:
-      `<strong>Local operator settings required for preparation</strong><p>${state.presetError?escape(readable(state.presetError)): 'Start with --operator-settings pointing to your existing private buyer preset.'}</p>`;
+      `<strong>Local operator settings required for preparation</strong><p>${state.presetError?escape(readable(state.presetError)): 'Open Local buyer setup to save this host’s payer, signing reference and limits.'}</p>`;
+    $('#file-operator').innerHTML+='<button type="button" data-operator-setup>Local buyer setup</button>';
     $('#file-order-errors').textContent=state.errors?.length?state.errors.map(item=>readable(item.code)).join('; '):'';
   }
   function render() {
@@ -74,10 +77,10 @@ export function createPaidFileUI({request, notice, refreshState, openPanel, onPr
     selected=await request('/api/paid-files/review',{id:selected.id,expectedRevision:selected.review?.revision??0,
       totalAtomic:$('#file-total').value,dailyAtomic:$('#file-daily').value,
       filename:$('#file-save-name').value,claimEnv:$('#file-claim-env').value});
-    render();notice('Order review saved. Prepare the original local buyer to continue.');
+    await refreshState();render();notice('Order review saved. Prepare the original local buyer to continue.');
   });});
   $('#prepare-file-order').addEventListener('click',()=>work(async()=>{
-    if(!selected?.review||changed)throw new Error('Save the current order review first.');
+    if(!selected?.review||changed||hostChanged())throw new Error('Save the current order review first.');
     notice('Preparing the original buyer and its retained spending ledger…');
     await request('/api/paid-files/prepare',{id:selected.id,reviewSha256:selected.review.reviewSha256});
     selected=await request('/api/paid-files/'+selected.id);await refreshState();render();

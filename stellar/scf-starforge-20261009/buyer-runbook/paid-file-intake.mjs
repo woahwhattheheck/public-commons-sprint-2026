@@ -106,9 +106,10 @@ function reviewedOperation(id, handoff) {
 /** Local launcher controls operator settings and the available claim environment
  * names. Received files supply only the existing SF101 public order promise. */
 export async function openPaidFileIntake({ directory, configsDirectory, settingsFile,
-  claimEnvs, environment = process.env } = {}) {
+  claimEnvs, operatorPreset, environment = process.env } = {}) {
   await privateDirectory(directory, true); await privateDirectory(configsDirectory);
   check(typeof settingsFile === 'function', 'PAID_FILE_OPERATOR_SETTINGS_REQUIRED');
+  check(operatorPreset===undefined||typeof operatorPreset==='function','PAID_FILE_OPERATOR_SETTINGS_REQUIRED');
   if (claimEnvs !== undefined) check(Array.isArray(claimEnvs) && claimEnvs.length > 0 && claimEnvs.length <= 32 &&
     claimEnvs.every(name => ENV.test(name)) && new Set(claimEnvs).size === claimEnvs.length, 'PAID_FILE_CLAIM_ENVS_INVALID');
   let meta = await optional(join(directory, 'intake.json'));
@@ -124,7 +125,7 @@ export async function openPaidFileIntake({ directory, configsDirectory, settings
   const root = id => { check(typeof id === 'string' && ORDER.test(id), 'PAID_FILE_ORDER_ID_INVALID'); return join(directory, id); };
   const source = id => join(root(id), 'merchant.handoff.json');
   const configName = id => 'paid-file-' + id.slice(5) + '.json';
-  const preset = async () => readBuyerOperatorPreset(await settingsFile(), { directory });
+  const preset = operatorPreset??(async () => readBuyerOperatorPreset(await settingsFile(), { directory }));
   const claimAvailable = name => typeof environment[name] === 'string' && Buffer.byteLength(environment[name]) >= 32 &&
     Buffer.byteLength(environment[name]) <= 1024 && !/[\x00-\x20\x7f]/.test(environment[name]);
   async function lease(action) {
@@ -345,16 +346,20 @@ export async function openPaidFileIntake({ directory, configsDirectory, settings
     } catch (error) { await file.close(); throw error; }
   }
   async function state() {
-    const requests = [], errors = []; let operator = null, presetError = null;
+    const requests = [], errors = []; let operator = null, presetError = null,operatorSettingsSha256=null;
     const path = await settingsFile();
-    if (path) try { operator = (await preset()).view; } catch (error) { presetError = codeOf(error); }
+    if (path) try { const current=await preset();operator=current.view;operatorSettingsSha256=current.sha256; }
+    catch (error) { presetError = codeOf(error); }
     for (const id of (await readdir(directory)).filter(name => ORDER.test(name))) {
       try { const item = await record(id); const { handoff, ...brief } = item;
-        requests.push({ ...brief, prepared: await ready(id) }); }
+        const review=await latestReview(id);
+        requests.push({ ...brief, prepared: await ready(id),preparing:Boolean(await optional(join(root(id),'preparing.json'))),
+          reviewSettingsSha256:review?.settingsSha256??null,
+          reviewRevision:review?.revision??null }); }
       catch (error) { errors.push({ id, code: codeOf(error) }); }
     }
     requests.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return { requests, errors, operator, presetError, settingsFile: path, maxHandoffBytes: MAX_BYTES,
+    return { requests, errors, operator, presetError, operatorSettingsSha256,settingsFile: path, maxHandoffBytes: MAX_BYTES,
       claimEnvs: meta.claimEnvs.map(name => ({ name, available: claimAvailable(name) })) };
   }
   return { state, get, ownsOperation, view, transfer, download,

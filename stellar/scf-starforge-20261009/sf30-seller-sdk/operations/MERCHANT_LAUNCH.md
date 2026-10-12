@@ -31,7 +31,7 @@ Execute from the repository root, with Node22+ and original native x402 SDK:
 
 The preflight uses the original SF30 seller config and offer compiler and the
 original upstream schema, validates handler-module existence if selected, and
-prints only route/binding counts. It does NOT import the handler, contact a
+prints its configuration summary, including route/binding counts. It does NOT import the handler, contact a
 facilitator, execute a payment, open/create the outbox or start a listener.
 No wallet/network access or remote resource is required for --check.
 
@@ -61,6 +61,151 @@ resource server. Only its processSettlement success with a supported original
 native receipt enters the durable SF98 outbox; original 402/HTTP2xx attempts do
 not represent chain payment evidence.
 
+## API merchant application and supplier accounts
+
+For an upstream-backed merchant, this launcher now runs the same
+`createUpstreamApplication` used by the maintained upstream entrypoint. Its
+compiled configuration supplies the original route admission and request-body
+limits to the native seller. The same handlers retain cache, OAuth connection,
+idempotency and shared supplier-account state throughout the merchant session.
+
+Use `--upstreams` with a matching generic seller and upstream configuration.
+Provider merchant exports may name their own admission handlers; those stay with
+the original provider command or its trusted handler module. For upstream
+bindings, preflight requires route admissions to match the binding's configured
+idempotency contract before the application opens.
+
+Use the installed `starforge merchant` command with the arguments above. Keep
+the original upstream file's credential references, cache directories and
+idempotency directories. A configured `supplierAccounts` map and each binding's
+`supplierAccount` select the shared original call allowance described in the
+[supplier account guide](../supplier-quota/README.md). Continue the same account
+directories when upgrading the installed source.
+
+The preflight summary includes `supplierQuotaBindings` alongside
+`upstreamBindings`. It validates account declarations and route membership
+before opening the application. The running startup record adds
+`supplierAccounts`, pointing to the account screen on the original operations
+listener when this merchant has configured accounts.
+
+The original operations console can now read this merchant's upstream
+snapshots, cache activity and supplier account snapshots. Open **Supplier
+accounts** to review original dispatch totals, remaining calls and provider
+cooldown. Its JSON and CSV exports describe the same local account state.
+
+For configured idempotent upstream bindings, pass `--operation-controls` to
+enable the original replay/recovery desk. Startup prints its private fragment
+link as `upstreamControls`; open that complete link on the merchant host.
+Without the flag, this desk keeps its original read-only mode. Preflight
+rejects the flag when no idempotent binding is configured. Cache invalidation
+remains the original `seller.invalidateUpstreamCache(bindingName)` application
+hook; the launcher attaches it and the operation control before opening the
+operations listener.
+
+One launch-time environment snapshot supplies upstream preflight and handler
+construction. Credential refresh and authorization-code connections still use
+their original provider implementations. Native payment verification and the
+SF98 successful-settlement journal retain their existing path.
+
+## Retain and change the running merchant's cache policy
+
+Add `--cache-control-file /private/merchant/control/cache.json` to the same
+`starforge merchant` command when at least one upstream binding has response
+caching enabled. The launcher attaches the original cache binding and management
+authority to this seller, then opens its maintained private control host. Its
+startup record contains the descriptor path under `cacheControl`.
+
+The original control helper requires a parent directory owned by the operator
+with mode 0700. It creates the descriptor with mode 0600, a random local token
+and an ephemeral loopback port. Keep that file on the merchant host. On Unix,
+`--cache-control-socket /private/merchant/control/cache.sock` selects the original
+private socket instead. Choose one option. Existing control paths stay intact,
+and the helper asks for a fresh path when one already exists.
+
+The `--check` summary includes `cacheBindings` and `cacheControlEnabled`. It
+requires an actual cached upstream binding and validates the selected path
+without creating the descriptor, opening a listener or acquiring source state.
+The existing source admission, supplier account, cache and native payment
+settings remain those of the selected merchant application.
+
+### Open the original cache operating workspace
+
+Save a host-local sources file, for example
+`/private/merchant/cache-sources.json`:
+
+```json
+[
+  {
+    "id": "merchant",
+    "label": "Merchant API",
+    "controlFile": "/private/merchant/control/cache.json"
+  }
+]
+```
+
+Start the existing workspace against that source:
+
+```sh
+starforge cache-operations serve \
+  --state /private/merchant/cache-operations \
+  --sources /private/merchant/cache-sources.json
+```
+
+Open the full loopback URL printed by that command. Select **Inspect current
+runtime**, capture a labeled snapshot, and review the current binding before
+preparing a retention change or invalidation. Applying the prepared operation
+uses the same runtime instance, inspected revision and operation ID. The source
+handler, private control descriptor and browser workspace all use one original
+`cacheManagement` authority. The merchant's existing operations console shows
+the resulting policy and cache activity through its upstream snapshot.
+
+The complete [cache operating workflow](../response-cache/workspace/README.md)
+covers comparison, notes, interrupted-response recovery, reports and the
+`capture`, `prepare`, `apply`, `recover`, `export` and `restore` commands.
+It preserves the source alias in a receiving archive, so a second operator can
+map `merchant` to the receiving host's actual descriptor.
+
+Retention changes apply to the current merchant process. Continue the saved
+operating history after a restart, inspect its new runtime identity, and review
+a fresh change against that instance. The upstream configuration supplies the
+next process's initial policy. For a versioned API merchant package, the existing
+**Save policy for restart** workflow saves the reviewed policy through the
+original package revision engine.
+
+The private control host is acquired inside the same startup transaction as the
+seller and operations listener. A failed control acquisition drains the acquired
+seller and releases its original resources. Once accepted native work becomes
+idle during shutdown, the launcher closes the control host and operations
+listener before releasing the application. The helper removes only the
+descriptor or socket inode it created. The separately running cache workspace
+keeps its durable operating history available for receiving and review.
+
+## Closing and restarting the native merchant
+
+Use the process's normal SIGINT/SIGTERM lifecycle, or await the returned
+session's `close()` when embedding this launcher. The launcher first drains
+the original seller. When its native work is idle, it closes any original
+cache control host, then drains the operations listener and saves its final
+checkpoint. It then closes the original
+application's cache, OAuth, idempotency and supplier resources. Operator requests
+finish while their original controls remain available. Repeated close calls join
+the same cleanup.
+
+If the seller exceeds its configured drain grace, the close call retains that
+failure while application cleanup waits for the original work to become idle.
+The operator listener remains attached during that continuation. A partial
+startup failure follows the same cleanup path, including a failure while
+opening the SF98 outbox, loading the facilitator client or binding operations.
+A stop signal received during startup is retained across the current acquisition;
+the returned resource is closed at the next boundary and readiness is not
+published for the interrupted launch.
+
+Restart with the same merchant configuration and private state directories.
+The application reopens its existing supplier allowance, cache and completed
+request records; the native SF98 journal retains its original settlement
+events. Programmatic close also removes this launch's signal handlers, so
+reopening the merchant does not accumulate old shutdown callbacks.
+
 ## Operator meaning and privacy
 
 The original seller's /_seller/ready and /_seller/offers endpoints report
@@ -88,10 +233,8 @@ seller is intended for an operator-controlled public HTTPS reverse proxy.
 Never expose the operations port to customers or to a shared reverse proxy.
 
 The --max-in-flight and --drain-grace-ms options reuse original SF30 request
-capacity and lifecycle. Closing the launcher first drains the original seller,
-then saves the final usage checkpoint and closes operations. The seller honors
-its configured in-flight drain period. A failed
-operations startup closes the seller, never leaving a half-launched merchant.
+capacity and lifecycle. Closing the launcher follows the seller, application and operations lifecycle
+above, using the configured in-flight drain period.
 The SF98 outbox itself preserves original 0700/0600 directory and file
 permissions. Multiple independent active merchants must use separate journals
 and ports; one merchant outbox should have only one writer/drainer owner.
