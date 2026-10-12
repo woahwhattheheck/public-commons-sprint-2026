@@ -235,7 +235,7 @@ export async function runLocalCapture({ options, state, save, cancelled = () => 
       const planBytes = retainedTypedPlan(state, options, declaredKind);
       const { inspectCapturedPublisherManifest } = await import('../dataset-publisher.mjs');
       const matched = await inspectCapturedPublisherManifest({ planBytes, manifest: current.manifest });
-      need(matched?.status === 'DATASET_PUBLISHER_CAPTURE_MATCHED' &&
+      need(matched?.status === 'DATASET_PUBLISHER_RECOVERY_CAPTURE_MATCHED' &&
         matched.planSha256 === options.expectedPlanSha256 && matched.captureId === expected.id &&
         HEX.test(matched.profileSha256 ?? ''), 'WORKSPACE_PUBLISHER_CAPTURE_VERIFICATION_CHANGED');
       state.datasetPublisherVerification = { schema: PUBLISHER_SCHEMA,
