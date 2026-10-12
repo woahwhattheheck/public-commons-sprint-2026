@@ -163,7 +163,8 @@ export async function serveCollections(collections, {
       response.setHeader('Content-Security-Policy',
         "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'none'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
       need(!closing, 'SERVER_CLOSING', 503);
-      need(origin && request.headers.host === new URL(origin).host, 'HOST_REFUSED', 403);
+      need(origin && (request.headers.host === new URL(origin).host
+        || new URL(origin).port === '' && request.headers.host === '127.0.0.1:80'), 'HOST_REFUSED', 403);
       need(!request.headers.origin || request.headers.origin === origin, 'ORIGIN_REFUSED', 403);
       need(!request.headers['sec-fetch-site']
         || ['none', 'same-origin'].includes(request.headers['sec-fetch-site']),
@@ -184,9 +185,14 @@ export async function serveCollections(collections, {
           directory: collections.directory, queueRoot: collections.queueRoot,
           busy: mutation || Boolean(runner?.busy), paymentApproval:
             approvals ? 'original-browser' : 'original-terminal',
-          command: 'buyer-collections', exportRoot: resolve(collections.directory, 'exports') });
+          command: 'buyer-collections', exportRoot: resolve(collections.directory, 'exports'), agentApi: 1 });
       if (request.method === 'GET' && url.pathname === '/api/run')
         return send({ run: runner ? await runner.inspect() : null });
+      const originalRun = /^\/api\/runs\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.exec(url.pathname);
+      if (request.method === 'GET' && originalRun) {
+        need(runner, 'COLLECTION_BROWSER_APPROVAL_DISABLED', 409);
+        return send({ run: await runner.inspect(originalRun[1]) });
+      }
       const runRoute = /^\/api\/runs\/([a-f0-9-]{36})\/(pause|decision|approvals\/([^/]+))$/
         .exec(url.pathname);
       if (runRoute) {
@@ -270,6 +276,7 @@ export async function serveCollections(collections, {
       const input = fields(await jsonBody(request),
         action === 'response' ? ['expectedManifestSha256', 'intentId', 'expectedResponseSha256']
           : action === 'run' ? ['expectedManifestSha256', 'intentIds', 'requestId', 'workspace', 'workspaceByIntent']
+          : action === 'export' ? ['expectedManifestSha256', 'exportId']
           : action === 'cancel' || action === 'recover' || action === 'command'
             ? ['expectedManifestSha256', 'intentIds'] : ['expectedManifestSha256']);
       const expectedManifestSha256 = pinned(input.expectedManifestSha256);
@@ -311,7 +318,10 @@ export async function serveCollections(collections, {
         const result = await mutate(async () => {
           const snapshot = await collections.inspect(id);
           snapshotPin(snapshot, expectedManifestSha256);
-          const key = randomBytes(16).toString('hex');
+          // A receiving agent can recover the SAME original export after a lost reply or browser restart.
+          need(input.exportId === undefined || typeof input.exportId === 'string'
+            && /^[a-f0-9]{32}$/.test(input.exportId), 'COLLECTION_EXPORT_ID_INVALID');
+          const key = input.exportId ?? randomBytes(16).toString('hex');
           const exportRoot = resolve(collections.directory, 'exports');
           await initializationDirectory(exportRoot, { create: true });
           const directory = resolve(exportRoot, key);
@@ -356,7 +366,7 @@ export async function serveCollections(collections, {
     server.once('error', reject);
     server.listen(port, '127.0.0.1', () => {
       server.off('error', reject);
-      origin = 'http://127.0.0.1:' + server.address().port;
+      origin = new URL('http://127.0.0.1:' + server.address().port).origin;
       done();
     });
   });
