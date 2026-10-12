@@ -1,6 +1,10 @@
 /** Guidance from the original merchant host, selected by advertised tool prefixes. */
 const sections = [
   {
+    "prefix": "merchant_research_",
+    "text": "For Research, list host-declared aliases and attach to the original authenticated Research application. The host-selected startup file follows the same managed listener after restart. Read its original dossier revision, selected question and complete paged source/finding records before writing. Keep saved Crossref request and operation IDs through prepare, review, start/resume, stop and reviewed receive; after an uncertain reply read the same original dossier and operation. Complete portable, report, raw-edition and comparison exports retain their source identities and hashes. Page the durable export inventory after reattachment; resume file reads with the same kind/exportId/hash and byte offset, then verify all decoded bytes. Reopen a host-declared portable source or that exact retained export through the original streaming importer. Detach with this attachment ID to drain its calls/readers; Applications keeps ownership of the original listener and saved acquisitions."
+  },
+  {
     "prefix": null,
     "text": "For Stellar asset workspaces, discover the host-declared alias and original workspaceId, then read schema/view before actions. Every original action requires operationId and expectedRevision; repeat the identical action identity after an unknown response, and preserve actual errors and revisions. Use retained file reads or stellar-expert-mcp to receive complete original sources, exports and customer receipts with their hashes. The original browser remains the workspace writer."
   },
