@@ -267,10 +267,6 @@ def inventory_source(root):
 def clone_workspace(args, directory, original):
     target = directory / "workspace"
     receipt_path = directory / "source-clone.json"
-    source = args.source_workspace.resolve()
-    need(source != target.resolve() and source not in target.resolve().parents,
-         "Select a separate receiving workspace")
-    need((source / "workspace.sqlite3").is_file(), "The selected original database is absent")
     retain_file(directory / "original-merchant-journey.json", regular(args.original_journey)[0])
     recipe = {"sourceReportSha256": original["report"]["sha256"],
               "editionId": original["capture"]["editionId"],
@@ -289,6 +285,12 @@ def clone_workspace(args, directory, original):
             need(actual["bytes"] == details["bytes"] and actual["sha256"] == details["sha256"],
                  "An original receiving asset changed: " + name)
         return target, receipt
+    need(args.source_workspace is not None,
+         "Select the original source workspace for the first receiving clone")
+    source = args.source_workspace.resolve()
+    need(source != target.resolve() and source not in target.resolve().parents,
+         "Select a separate receiving workspace")
+    need((source / "workspace.sqlite3").is_file(), "The selected original database is absent")
     staging = directory / ".workspace-initial"
     staging.mkdir(mode=0o700, exist_ok=True)
     source_lock = source.parent / "receiver.lock"
@@ -383,8 +385,10 @@ def main(argv=None):
     group.add_argument("--source-root", type=Path)
     parser.add_argument("--overlay", type=Path)
     parser.add_argument("--bridge-source", type=Path)
-    parser.add_argument("--original-journey", required=True, type=Path)
-    parser.add_argument("--source-workspace", required=True, type=Path)
+    parser.add_argument("--original-journey", type=Path,
+                        help="First clone source report; defaults to the retained receiving report")
+    parser.add_argument("--source-workspace", type=Path,
+                        help="Original workspace for the first clone; existing receivers reopen their retained copy")
     parser.add_argument("--expected-result-sha256", required=True)
     parser.add_argument("--node", default="node")
     parser.add_argument("--browser", required=True, type=Path)
@@ -393,6 +397,7 @@ def main(argv=None):
     os.umask(0o077)
     directory = args.directory.expanduser().resolve()
     runtime = args.runtime_root.expanduser().resolve()
+    args.original_journey = args.original_journey or directory / "original-merchant-journey.json"
     need(directory != runtime and directory not in runtime.parents and runtime not in directory.parents,
          "Keep the declared temporary runtime separate from retained receiving output")
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
