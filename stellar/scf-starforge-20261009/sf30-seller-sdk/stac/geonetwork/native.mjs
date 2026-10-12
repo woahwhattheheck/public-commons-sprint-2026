@@ -339,6 +339,19 @@ export function parseHarvesterResponseXml(input, options) {
     fail('GN_NATIVE_SHAPE', 'Unknown native harvester status.');
   return { id: id(valueOf(ids[0]), 'Harvester ID'), nativeStatus };
 }
+// Canonicalize the whole native configuration, retaining private values only inside
+// the digest. Only direct runtime info/error nodes are excluded from its identity.
+function harvesterConfigurationTree(node, { root = false } = {}) {
+  const elements = children(node);
+  const attributes = node.attributes.filter(value => value.namespaceURI !== XMLNS_NS)
+    .map(value => [value.namespaceURI ?? '', value.localName, value.value])
+    .sort((left, right) => stable(left).localeCompare(stable(right)));
+  const content = node.children.filter(value => {
+    if (typeof value === 'string') return !elements.length || value.trim().length > 0;
+    return !(root && value.namespaceURI === node.namespaceURI && ['info', 'error'].includes(value.localName));
+  }).map(value => typeof value === 'string' ? value : harvesterConfigurationTree(value));
+  return [node.namespaceURI ?? '', node.localName, attributes, content];
+}
 function parsedHarvester(node, xml) {
   const site = child(node, 'site'), options = child(node, 'options'), info = child(node, 'info');
   const content = child(node, 'content');
@@ -353,13 +366,22 @@ function parsedHarvester(node, xml) {
     ownerGroupId: field(child(node, 'ownerGroup'), 'id') || null,
     sourceUrl: field(site, 'url'), loopElement: field(site, 'loopElement'),
     recordIdPath: field(site, 'recordIdPath'), transform: field(site, 'toISOConversion'),
+    icon: field(site, 'icon'), numberOfRecordPath: field(site, 'numberOfRecordPath'),
+    pageFromParam: field(site, 'pageFromParam'), pageSizeParam: field(site, 'pageSizeParam'),
     validation: field(content, 'validate'), privileges,
     status: field(options, 'status'), oneRunOnly: xmlBoolean(field(options, 'oneRunOnly')),
+    scheduleEvery: field(options, 'every'), batchEdits: field(content, 'batchEdits'),
+    translateContent: xmlBoolean(field(content, 'translateContent')),
+    translateContentLangs: field(content, 'translateContentLangs'), translateContentFields: field(content, 'translateContentFields'),
+    ifRecordExistAppendPrivileges: xmlBoolean(field(node, 'ifRecordExistAppendPrivileges')),
+    categories: children(child(node, 'categories'), 'category').map(category => attribute(category, 'id') ?? valueOf(category)),
+    searches: children(child(node, 'searches'), 'search').map(safeXmlObject),
     overrideUuid: field(options, 'overrideUuid') || field(options, 'overrideUUID'),
     sourceAuth: { configured: Boolean(field(site, 'apiKey') || xmlBoolean(field(child(site, 'account'), 'use'))),
       header: field(site, 'apiKeyHeader') || null },
   };
-  return { ...config, configurationSha256: hash(stable(config)),
+  return { ...config, configurationSha256: hash(stable(harvesterConfigurationTree(node, { root: true }))),
+    configurationDigestVersion: 'native-node-v2',
     lastRun: field(info, 'lastRun') || null, running: xmlBoolean(field(info, 'running')),
     reindexing: xmlBoolean(field(info, 'reindexing')),
     result: safeXmlObject(child(info, 'result')), error: nativeError(child(node, 'error') ?? child(info, 'error'), xml) };
