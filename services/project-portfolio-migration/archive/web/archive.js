@@ -1,3 +1,4 @@
+import {createTimephasedPanel} from './timephased.js';
 /* Original portfolio archive desk. All mutations use the existing saved operator action. */
 export function createArchivePanel(C) {
   const {$,el,pretty,short,api,safe,artifacts,notice,lock,saveDraft,action,uploadArchive}=C;
@@ -82,7 +83,7 @@ export function createArchivePanel(C) {
         select.append(new Option(info.field+" · "+types.join(" / "),info.field));
     }
     if([...select.options].some(x=>x.value===old))select.value=old;
-    lock();
+    timephased.renderProfile();lock();
   }
   async function readFields() {
     const ids=draft().members.map(x=>x.edition_id);
@@ -121,6 +122,7 @@ export function createArchivePanel(C) {
     table.append(head,body);holder.append(table);node.replaceChildren(holder);
   }
   function renderReview() {
+    timephased.renderReview();
     const area=$("archive-review-summary");area.replaceChildren();const review=A.loaded?.review;
     if(!review){for(const id of ["archive-counts","archive-totals","archive-findings","archive-review-json"])$(id).replaceChildren();area.append(el("p",A.loading?"Reading the selected original cohort…":"Save and review the selected original project editions.","empty"));renderStatus();return;}
     const value=review.value;
@@ -142,6 +144,7 @@ export function createArchivePanel(C) {
     if(!rows.some(x=>x.id===old))A.publicationId=A.loaded?.cohort.latest_publication||rows.at(-1)?.id||"";
     select.value=A.publicationId;
     const p=rows.find(x=>x.id===A.publicationId);
+    timephased.selectPublication(p);
     artifacts($("archive-artifacts"),p?[p.archive,...p.artifacts.filter(x=>x.role!=="table_csv")]:[]);
     $("archive-publication-identity").textContent=p?"Archive "+p.archive.sha256+" · "+p.archive.bytes+" bytes · exact review "+p.review_sha256:"";
     const table=$("archive-table"),before=table.value;table.replaceChildren();
@@ -244,6 +247,9 @@ export function createArchivePanel(C) {
       $("archive-receive").dataset.unavailable="false";}
     paint();
   }
+  const timephased=createTimephasedPanel({$,el,pretty,safe,lock,mutate,profileValue,setProfile,api,
+    getDraft:draft,getCoverage:()=>A.coverage,getReview:()=>A.loaded?.review?.value,
+    getIdentity:()=>A.id,readFields,tableView});
   $("archive-name").oninput=$("archive-description").oninput=()=>safe(changed);
   $("archive-profile").oninput=()=>safe(()=>mutate(()=>{draft().profileText=$("archive-profile").value;}));
   $("archive-profile").onchange=()=>safe(commitProfile);
