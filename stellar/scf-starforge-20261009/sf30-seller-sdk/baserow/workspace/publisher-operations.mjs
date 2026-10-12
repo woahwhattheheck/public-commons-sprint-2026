@@ -1,3 +1,5 @@
+import { BASEROW_PUBLISHER_READ_ACTIONS, BASEROW_PUBLISHER_WRITE_ACTIONS, shapes } from './publisher-contracts.mjs';
+export { BASEROW_PUBLISHER_READ_ACTIONS, BASEROW_PUBLISHER_WRITE_ACTIONS } from './publisher-contracts.mjs';
 // MIT. Original publisher actions inside the Baserow source request journal.
 import { basename, join } from 'node:path';
 import { object, digest, readPrivate, fault } from '../../postgres/publisher/files.mjs';
@@ -5,24 +7,7 @@ import { openPostgresSchedule } from '../../postgres/publisher/schedule.mjs';
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/;
 const HASH = /^[a-f0-9]{64}$/;
-const shapes = {
-  'status': ['limit', 'plansOffset', 'runsOffset', 'historyOffset'],
-  'source': [], 'target': [], 'plan': ['planId'], 'run': ['runId', 'query'],
-  'buyer-offer': ['runId', 'query'], 'buyer-handoff': ['runId', 'handoffId'],
-  'schedule': ['limit', 'offset'],
-  'plan-save': ['plan'],
-  'extract': ['planId', 'planDigest', 'runId'],
-  'cancel': ['runId'],
-  'review': ['runId', 'candidateDigest', 'reviewer', 'note', 'initialize', 'expectedSnapshot', 'expectedRevision'],
-  'publish': ['runId', 'reviewId'],
-  'recover': ['runId'],
-  'buyer-prepare': ['runId', 'query', 'offerSha256', 'acceptIndex', 'intentId'],
-  'schedule-save': ['policy'],
-  'schedule-enable': ['revision', 'expectedSnapshot', 'expectedRevision'],
-  'schedule-pause': ['revision'],
-  'schedule-run': ['revision'],
-  'schedule-continue': ['revision'],
-};
+
 const required = {
   plan: ['planId'], run: ['runId'], 'buyer-offer': ['runId'], 'buyer-handoff': ['runId', 'handoffId'],
   'plan-save': ['plan'], extract: ['planId', 'planDigest', 'runId'], cancel: ['runId'],
@@ -31,8 +16,8 @@ const required = {
   'schedule-save': ['policy'], 'schedule-enable': ['revision', 'expectedSnapshot', 'expectedRevision'],
   'schedule-pause': ['revision'], 'schedule-run': ['revision'], 'schedule-continue': ['revision'],
 };
-export const BASEROW_PUBLISHER_READ_ACTIONS = Object.freeze(['status', 'source', 'target', 'plan', 'run', 'buyer-offer', 'buyer-handoff', 'schedule']);
-export const BASEROW_PUBLISHER_WRITE_ACTIONS = Object.freeze(Object.keys(shapes).filter(action => !BASEROW_PUBLISHER_READ_ACTIONS.includes(action)));
+
+
 function checkId(value) {
   if (typeof value !== 'string' || !UUID.test(value)) throw fault('BASEROW_PUBLISHER_ID_REQUIRED');
   return value;

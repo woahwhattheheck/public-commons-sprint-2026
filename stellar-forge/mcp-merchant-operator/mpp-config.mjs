@@ -1,10 +1,12 @@
+import { MAX_MPP_CHUNK_BYTES } from './mpp-contracts.mjs';
+export { MAX_MPP_CHUNK_BYTES } from './mpp-contracts.mjs';
 // MIT. Host-selected connections to original native MPP consoles and customer files.
 import { dirname, resolve, join } from 'node:path';
 import { regular, privateDirectory, digest, canonical, plain } from '../../stellar/scf-starforge-20261009/distribution/runtime-workspace/storage.mjs';
 
 export const MPP_CONNECTION_SCHEMA='stellar-forge.merchant-mpp-connection.v1';
 export const MPP_REVIEW_SCHEMA='stellar-forge.merchant-mpp-customer-review.v1';
-export const MAX_MPP_CHUNK_BYTES=49152;
+
 export const stable=value=>JSON.stringify(canonical(value));
 export function fail(code,message=code) {throw Object.assign(new Error(message),{code});}
 export function need(value,code,message) {if(!value)fail(code,message);}
