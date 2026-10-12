@@ -52,6 +52,29 @@ The cache has the original repository-relative paths and is checked against the 
 
 The fixed receiving, source, native record, operation and custody paths remain those in the reviewed carrier. The original installed PHP, WordPress, SQLite, Node, SDK, browser and native host dependencies are selected by the existing host input and preparer.
 
+
+## Use the connected caller's retained source when VM downloads are unavailable
+
+The original connected GitHub tool can retrieve the exact public carrier and Git blobs. Select the explicit stdin transport when the receiving VM cannot reach public raw GitHub:
+
+```sh
+python -u -B bootstrap.py \
+  --carrier-stdin --host-finalizer-stdin --source-stdin --no-network
+```
+
+The ordered handshakes are:
+
+1. `awaiting-carrier-input`: send one JSON line with exactly `name:"carrier.json"` and `content`, whose value is the original carrier's complete UTF-8 text.
+2. `awaiting-private-input`: send the private fifth input in the same two-field shape described above.
+3. `awaiting-source-input`: the event contains the preparer's actual current `missing` map. Receive those exact original Git blobs through the connected tool or retained caller cache, then send one JSON line shaped as `{"sources":[{"path":"ORIGINAL_REQUESTED_PATH","content":"ORIGINAL_UTF8_TEXT"}]}`.
+4. Repeat only when the original preparer discovers further missing dependencies. After its complete closure is reached, the same process enters the original courier.
+
+Each source bundle must contain every currently requested path exactly once, with no extra members. Every byte count and Git blob is validated before any bundle member is written. Path traversal and changed or duplicate members are rejected. After a transport interruption, recover the original tool session and its actual state before continuing an in-flight frame. When that preparation process has conclusively ended, a new preparation invocation can repeat the original input selection and reuse already committed exact files. Once the courier handoff occurred, continue its original native record.
+
+Use actual JSON encoding for all content strings. A tool may stream a large JSON line in contiguous chunks; add the newline only after its complete frame. Await the next handshake before starting the next frame. No input line is echoed, and the receiving process reads only through its newline. Preserve all native checkpoint frames emitted after the final handoff in the caller's private capture.
+
+These are alternative transport controls for the same five source inputs and original public dependency graph. Native registration, source identity, operation ID and recovery remain unchanged.
+
 ## Native handoff and continuation
 
 At `enter-original-courier`, the bootstrap calls `execv`: its PID becomes the existing courier. There is no intermediary relay or additional native operation. The courier emits its original status, checkpoint frames and final custody result directly to the same caller.
