@@ -302,7 +302,7 @@ def validate_dependency(name, expected, inputs):
     return blob, size
 
 
-def fill_dependency(name, expected, inputs, downloader, cache):
+def retained_dependency(name, expected, inputs, cache):
     blob, size = validate_dependency(name, expected, inputs)
     maximum = size if size is not None else 32 * 1024 * 1024
     target = SOURCE / name
@@ -313,6 +313,16 @@ def fill_dependency(name, expected, inputs, downloader, cache):
             if (size is None or len(raw) == size) and git_blob(raw) == blob:
                 written = retain_exact(target, raw, 0o755 if inputs["files"][name].get("mode") == "100755" else 0o644)
                 return {"path": name, "bytes": len(raw), "origin": "retained", "written": written}
+    return None
+
+
+def fill_dependency(name, expected, inputs, downloader, cache):
+    retained = retained_dependency(name, expected, inputs, cache)
+    if retained is not None:
+        return retained
+    blob, size = validate_dependency(name, expected, inputs)
+    maximum = size if size is not None else 32 * 1024 * 1024
+    target = SOURCE / name
     # Every commissioned override is already a complete captured source input.
     require(name not in inputs["special"] and name not in inputs.get("overlayBlobs", {}),
             "A complete captured source must be recovered from its original input")
@@ -366,6 +376,15 @@ def complete_sources(inputs, downloader, cache, workers, source_stdin=False):
         require(signature != previous, "Original dependency preparation made no progress")
         previous = signature
         if source_stdin:
+            retained = []
+            for name, expected in missing.items():
+                item = retained_dependency(name, expected, inputs, cache)
+                if item is not None:
+                    retained.append(item)
+            if retained:
+                emit("source-round", received=len(retained), bytes=sum(item["bytes"] for item in retained),
+                     failures=[], origin="retained-source-cache")
+                continue
             receive_sources(missing, inputs)
             continue
         complete = []
