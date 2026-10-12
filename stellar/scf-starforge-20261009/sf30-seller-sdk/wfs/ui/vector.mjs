@@ -302,6 +302,19 @@ export function initializeVectorPanel(ctx){
     const result=await loadMappingCapture(id,true);
     if(result&&mappingCapture?.id===id)await inspect(id);return result;
   }
+  async function downloadReviewedProfile(){
+    const selectedProject=projectId,captureId=chosen('vector-capture','a retained source capture'),
+      body=$('vector-profile').value;
+    currentProfile();await saveDraft();assertProject(selectedProject);
+    if($('vector-capture').value!==captureId||$('vector-profile').value!==body)
+      throw Error('The reviewed native profile changed before its file was saved.');
+    const url=URL.createObjectURL(new Blob([body],{type:'application/json; charset=utf-8'})),
+      link=document.createElement('a');
+    link.href=url;link.download='wfs-vector-'+captureId+'-reviewed-profile.json';
+    document.body.append(link);
+    try{link.click();}finally{link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+    return {projectId:selectedProject,captureId,profileBytes:new TextEncoder().encode(body).length};
+  }
   async function changes(){
     if(!comparison)return;
     const original=comparison,token=selectionGeneration;
@@ -399,8 +412,9 @@ export function initializeVectorPanel(ctx){
     },'Complete native vector package received.');
   });
   $('vector-load-profile').addEventListener('click',()=>void perform(()=>loadProfile()));
-  $('vector-profile-download').addEventListener('click',()=>void perform(()=>ctx.download('vector-document',{
-    id:chosen('vector-capture','a retained source capture'),document:'profile'})));
+  $('vector-profile-download').addEventListener('click',()=>void perform(downloadReviewedProfile,'Current reviewed profile downloaded.'));
+  $('vector-original-profile-download').addEventListener('click',()=>void perform(()=>ctx.download('vector-document',{
+    id:chosen('vector-capture','a retained source capture'),document:'profile'}),'Original capture profile downloaded.'));
   $('vector-pending-select').addEventListener('change',()=>{active=pending.find(row=>row.id===$('vector-pending-select').value)??null;drawPending();scheduleDraft();});
   $('vector-retry').addEventListener('click',()=>void perform(()=>sendSaved(),'The exact saved native request completed.'));
   $('vector-keep').addEventListener('click',()=>void perform(async()=>{
