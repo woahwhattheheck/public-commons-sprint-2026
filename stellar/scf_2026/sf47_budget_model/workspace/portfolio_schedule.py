@@ -108,18 +108,17 @@ def _topology(tasks):
     return order
 
 
-def _model(plan):
-    if not isinstance(plan, dict) or plan.get("schema") != SCHEMA:
-        raise PlanningError("Choose a supported programme planning schema.", field="schema")
-    start = _day(plan.get("start_date"), "start_date")
-    horizon = _int(plan.get("horizon_days", 730), "horizon_days")
+def calendar_dates(start_value, horizon_value=730, calendar=None):
+    """The original programme calendar, shared with relative delivery deadlines."""
+    start = _day(start_value, "start_date")
+    horizon = _int(horizon_value, "horizon_days")
     if horizon < 1:
         raise PlanningError("The planning horizon needs at least one day.", field="horizon_days")
     try:
         end = start + timedelta(days=horizon)
     except OverflowError:
         raise PlanningError("The planning horizon exceeds the supported calendar.", field="horizon_days") from None
-    calendar = plan.get("calendar", {})
+    calendar = calendar or {}
     weekdays = set(calendar.get("weekdays", [0, 1, 2, 3, 4]))
     holidays = {_day(value, "calendar.holidays") for value in calendar.get("holidays", [])}
     extra = {_day(value, "calendar.extra_working_dates") for value in calendar.get("extra_working_dates", [])}
@@ -129,6 +128,14 @@ def _model(plan):
     days = [day for day in days if day not in holidays and (day.weekday() in weekdays or day in extra)]
     if not days:
         raise PlanningError("The selected calendar has no working dates in this horizon.", code="calendar_empty", field="calendar")
+    return {"start": start, "end": end, "days": days}
+
+
+def _model(plan):
+    if not isinstance(plan, dict) or plan.get("schema") != SCHEMA:
+        raise PlanningError("Choose a supported programme planning schema.", field="schema")
+    calendar = calendar_dates(plan.get("start_date"), plan.get("horizon_days", 730), plan.get("calendar", {}))
+    start, end, days = calendar["start"], calendar["end"], calendar["days"]
     resources, capacity = {}, {}
     for value in plan.get("resources", []):
         key = value["id"]

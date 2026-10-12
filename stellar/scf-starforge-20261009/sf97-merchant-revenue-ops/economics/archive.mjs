@@ -87,7 +87,7 @@ export async function writeBundle({path,descriptor,items}) {
   catch(e){if(e.code!=='ENOENT')throw e;}
   const temporary=path+'.'+randomUUID()+'.pending',handle=await open(temporary,'wx',0o600),hash=createHash('sha256');
   let bytes=0,closed=false,published=false;const files=[],names=new Set();
-  async function write(buffer){bytes+=buffer.length;if(bytes>MAX_BUNDLE)throw fault('BUNDLE_TOO_LARGE','The complete private package exceeds 512 MiB.');
+  async function write(buffer){bytes+=buffer.length;if(bytes>MAX_BUNDLE)throw fault('BUNDLE_TOO_LARGE','The complete private package exceeds 512 MiB, including original sources and receiving lineage. Keep the full private workspace and download received originals from their retained history.');
     hash.update(buffer);await handle.writeFile(buffer);}
   async function member(name,data){safeName(name);if(names.has(name)||names.size>=MAX_FILES)throw fault('BUNDLE_MEMBER_INVALID','Duplicate or excessive package file.');
     if(!Buffer.isBuffer(data)||data.length>MAX_MEMBER)throw fault('BUNDLE_MEMBER_INVALID','Invalid package file size.');
@@ -114,7 +114,8 @@ function restorable(name){
     new RegExp('^economics/sources/records/'+uuid+'/(?:original|source\\.json)$').test(name)||
     new RegExp('^economics/books/editions/'+uuid+'/[A-Za-z0-9_.-]+$').test(name)||
     new RegExp('^economics/books/successors/'+hash+'\\.json$').test(name)||
-    new RegExp('^economics/pricing-links/'+uuid+'\\.json$').test(name);
+    new RegExp('^economics/pricing-links/'+uuid+'\\.json$').test(name)||
+    new RegExp('^economics/received/records/'+uuid+'/(?:receipt\\.json|parts/[0-9]{6}\\.part|drafts/'+uuid+'\\.json)$').test(name);
 }
 function requireWorkspaceBackup(descriptor) {
   if(descriptor?.schema!=='stellar-forge.merchant-cost-backup.v1'||descriptor.kind!=='WORKSPACE_BACKUP')
@@ -161,6 +162,7 @@ export async function inspectCostWorkspaceRestore({archive,directory}) {
       priceChanges:distinct('decisions/'),
       scenarioPlans:distinct('scenario-plans/'),
       pricingLinks:distinct('economics/pricing-links/'),
+      receivedCostReviews:distinct('economics/received/records/'),
     },
   };
 }

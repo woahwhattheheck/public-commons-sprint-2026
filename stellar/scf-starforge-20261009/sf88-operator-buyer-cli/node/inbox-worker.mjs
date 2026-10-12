@@ -24,7 +24,13 @@ async function main([runtimeDirectory, inputFile, resultFile, ...extra]) {
   let queue, native = null, responseFile = null, error = null;
   try {
     need(!controller.signal.aborted, 'OPERATION_ABORTED_BEFORE_START');
-    if (input.command === 'inspect-packet') {
+    if (['export-operations','inspect-operations'].includes(input.command)) {
+      const {exportSelectedInbox, inspectSavedHandoff} = await original('operations-handoff/customer.mjs');
+      native = input.command === 'export-operations'
+        ? await exportSelectedInbox({directory:absolute(input.root), destination:absolute(input.destination),
+          intentIds:input.intentIds, maxVerifyBytes:input.maxVerifyBytes, signal:controller.signal})
+        : await inspectSavedHandoff({file:absolute(input.file), signal:controller.signal});
+    } else if (input.command === 'inspect-packet') {
       const { inspectOperationHandoff } = await original('operation-handoff.mjs');
       native = await inspectOperationHandoff({ file:absolute(input.file),
         directory:dirname(absolute(inputFile)), acceptIndex:input.accept });

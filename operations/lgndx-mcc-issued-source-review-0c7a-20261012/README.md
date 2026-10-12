@@ -32,7 +32,9 @@ These are fixed inputs to this one existing operation. The preparer verifies the
 
 The baseline source is the complete merged [8505a3ec edition](https://github.com/woahwhattheheck/public-commons-sprint-2026/commit/8505a3ec99d584261754a2edcfca4113766dcc5b). The current selected dossier Git blob is **8458167af2e1fb03420042b095d03f10c326185f**; the original portable receiver remains **dae6154ded7a88c367e844807ecec664aca4200f**. The merged MCC applicator is **cfdc00d0a5af2908cb1b3f14bbcc677737072ad7**.
 
-The original operation custodian retains the three complete input files. The prepared packet includes the issued-document bytes and the reviewed edition. Use those original files or their verified byte-identical receiving copies.
+The complete prepared packet is included at [inputs/project-update.json](inputs/project-update.json). It retains the issued-document bytes, acquisition identities, all nine selected sources, the 74 reviewed business actions, the four source reviews, and the named-package request. Its exact Git blob is **c8bfb3dabb2557fd95dd8a35fcf301eea5b71208**. The preparer selects this adjacent file by default and verifies the same 896,542-byte/SHA-256 identity before dispatch. An explicit **--project-update** path can select a verified byte-identical receiving copy.
+
+The original operation custodian retains the baseline source ZIP and completed native handoff. Use those original files or their verified byte-identical receiving copies. Each prepared operation records the actual selected input path; its native continuation reuses that selection.
 
 ## Host selection and preparation
 
@@ -40,20 +42,19 @@ Use the maintained native foreground controller on the selected Linux host, Pyth
 
 Select four distinct locations:
 
-- The checked-out programme directory containing these six files.
+- The checked-out programme directory containing the six programme files and the complete inputs/project-update.json packet.
 - A persistent private operation directory for selection.json, native records, the paired checkpoint, and completed handoff.
 - A private working directory for the application databases, source materialization, and temporary files.
 - The existing controller and its original shared admission directories.
 
 The working directory must be disjoint from the retained operation, programme source, original inputs, Node executable, and controller. **prepare.py** records the absolute selected paths. Preserve that selection for subsequent continuations.
 
-The example below prepares and launches the one original operation. Substitute actual existing receiving paths. Each path argument is explicit; no environment or account is created.
+The example below prepares and launches the one original operation. Substitute actual existing receiving paths. Host paths are explicit; the exact prepared project update is selected from this checked-out programme. No environment or account is created.
 
 ~~~bash
 python3 -B operations/lgndx-mcc-issued-source-review-0c7a-20261012/prepare.py \
   --operation-root "$MCC_OPERATION" \
   --baseline-source "$MCC_BASELINE_SOURCE_ZIP" \
-  --project-update "$MCC_PROJECT_UPDATE" \
   --baseline-handoff "$MCC_BASELINE_HANDOFF_ZIP" \
   --node "$MCC_NODE" \
   --controller-host "$MCC_CONTROLLER_HOST" \

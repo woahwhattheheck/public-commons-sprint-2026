@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "ndjson-360giving",
+  "description": "Complete 360Giving publisher review and receiving",
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving"
+  ],
+  "commands": {
+    "dataset-360giving": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/360giving/cli.mjs"
+  },
+  "commandDescriptions": {
+    "dataset-360giving": "Prepare, review, correct, export and receive complete 360Giving publisher editions; example runs both retained SCVO funds"
+  }
+}
