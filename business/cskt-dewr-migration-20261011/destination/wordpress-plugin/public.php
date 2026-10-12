@@ -1,7 +1,9 @@
 <?php
 if (!defined('ABSPATH')) { exit; }
 function csktm_public_route(){if(is_admin()||defined('REST_REQUEST')&&REST_REQUEST)return null;$path=wp_parse_url($_SERVER['REQUEST_URI']??'/',PHP_URL_PATH);$homePath=wp_parse_url(home_url('/'),PHP_URL_PATH);if($homePath&&$homePath!=='/'&&str_starts_with($path,untrailingslashit($homePath).'/'))$path=substr($path,strlen(untrailingslashit($homePath)));$routes=get_option('cskt_migration_routes',array());return $routes[csktm_route_key($path?:'/')]??null;}
-add_filter('request',function($query){$route=csktm_public_route();if($route&&$route['type']==='content'){$id=(int)$route['postId'];$type=get_post_type($id);if($type==='page')return array('page_id'=>$id);if($type)return array('p'=>$id,'post_type'=>$type);}return $query;},1);
+// WordPress applies this filter before rest_api_loaded defines REST_REQUEST.
+// Keep its native REST query intact even when the reviewed home route is '/'.
+add_filter('request',function($query){if(array_key_exists('rest_route',$query))return $query;$route=csktm_public_route();if($route&&$route['type']==='content'){$id=(int)$route['postId'];$type=get_post_type($id);if($type==='page')return array('page_id'=>$id);if($type)return array('p'=>$id,'post_type'=>$type);}return $query;},1);
 add_filter('redirect_canonical',function($redirect){return csktm_public_route()?false:$redirect;},10,1);
 add_action('template_redirect',function(){
     $route=csktm_public_route();if(!$route)return;

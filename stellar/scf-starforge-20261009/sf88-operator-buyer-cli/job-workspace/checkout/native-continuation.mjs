@@ -14,6 +14,7 @@ import { createNativeSellerServer, NATIVE_SDK_VERSION } from '../../../sf30-sell
 import { openJobMerchant } from '../../../sf30-seller-sdk/jobs/model.mjs';
 import { startJobSeller } from '../../../sf30-seller-sdk/jobs/merchant.mjs';
 import { startCustomerServer } from '../../../sf30-seller-sdk/jobs/customer.mjs';
+import { CATALOG_PATH, REQUEST_PATH, WITHDRAW_PATH } from '../../../sf30-seller-sdk/jobs/intake/protocol.mjs';
 import { createPublicHttpsFetch } from '../../../sf31-buyer-client/public-transport.mjs';
 import { readBytes, readJson, writeBytes, writeJson, jsonBytes, digest, exists,
   privateDirectory } from '../../node/store.mjs';
@@ -45,9 +46,9 @@ const checkoutId = digest(JSON.stringify(['paid-job-checkout', origin + '/jobs/'
 const intentId = 'job-checkout:' + checkoutId;
 const fixtureAsset = 'C' + 'A'.repeat(55);
 let merchant, seller, customer, model, host, received, complete = false, interrupted = false;
-let frontend, proxy, facilitator, transport;
+let frontend, proxy, facilitator, transport, selfService = null;
 const sockets = new Set(), servers = new Set();
-const traffic = { connects: 0, status: 0, result: 0 };
+const traffic = { connects: 0, status: 0, result: 0, intakeCatalog: 0, intakePrepare: 0, intakeWithdraw: 0 };
 const progress = phase => process.stdout.write(JSON.stringify({ operation, phase }) + '\n');
 
 async function nativeSdkVersion() {
@@ -180,6 +181,7 @@ async function startWorkspace() {
   const ready = await readJobWorkspaceLaunch({ directory, runtimeDirectory,
     operatorProfile: profilePath, pid: process.pid });
   assert.equal(ready.checkoutUrl, host.checkoutUrl);
+  if (browserApproval) assert.equal(ready.intakeUrl, host.intakeUrl);
 }
 async function closeWorkspace() {
   try { await host?.close(); }
@@ -290,7 +292,8 @@ try {
     nativeFactory: compiled => createNativeSellerServer(compiled, {
       facilitatorClient: new HTTPFacilitatorClient({ url: 'http://127.0.0.1:' + facilitator.address().port }),
     }) });
-  customer = await startCustomerServer({ model: merchant, port: 0 });
+  customer = await startCustomerServer({ model: merchant, port: 0,
+    ...(browserApproval ? { intakeConfig: { enabled: true, functions: ['analyze'] } } : {}) });
 
   frontend = await serve(httpsServer({
     key: await readFile(join(fixture, 'tls', 'tls.key')), cert: await readFile(join(fixture, 'tls', 'tls.pem')),
@@ -300,11 +303,15 @@ try {
       request.url === '/analysis?sf98_order=' + encodeURIComponent(jobId);
     const allowedGet = request.method === 'GET' &&
       ['/jobs/' + encodeURIComponent(jobId), '/jobs/' + encodeURIComponent(jobId) + '/result'].includes(request.url);
-    if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet)) {
+    const allowedIntake = browserApproval && (request.method === 'GET' && request.url === CATALOG_PATH ||
+      request.method === 'POST' && [REQUEST_PATH, WITHDRAW_PATH].includes(request.url));
+    if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet || allowedIntake)) {
       response.writeHead(404); response.end(); return;
     }
     if (allowedGet) traffic[request.url.endsWith('/result') ? 'result' : 'status']++;
-    const target = new URL(allowedGet ? customer.url : seller.url);
+    if (allowedIntake) traffic[request.url === CATALOG_PATH ? 'intakeCatalog' :
+      request.url === REQUEST_PATH ? 'intakePrepare' : 'intakeWithdraw']++;
+    const target = new URL(allowedGet || allowedIntake ? customer.url : seller.url);
     const forwarded = httpRequest({ hostname: '127.0.0.1', port: target.port, method: request.method,
       path: request.url, headers: { ...request.headers, connection: 'close' }, agent: false }, incoming => {
       response.writeHead(incoming.statusCode, incoming.headers); incoming.pipe(response);
@@ -330,33 +337,80 @@ try {
   process.env.SF_JOBS_CHECKOUT_PROXY = 'http://127.0.0.1:' + proxy.address().port;
   transport = createPublicHttpsFetch({ trustedProxy: profile.buyerTransport, timeoutMs: 30000 });
 
-  // Save the capability before creating the merchant record or native operation.
   const claimPath = join(fixture, 'claim-token.txt');
-  if (!await exists(claimPath)) await immutable(claimPath, Buffer.from(randomBytes(32).toString('base64url') + '\n'));
-  const claimToken = (await readBytes(claimPath, 256)).toString('utf8').trim();
-  assert.match(claimToken, /^[A-Za-z0-9_-]{43}$/);
-  if (!await exists(handoffPath)) {
-    const recordPath = join(directory, 'checkout', 'records', checkoutId, 'record.json');
-    if (await exists(recordPath)) {
-      const record = await readJson(recordPath);
-      await immutable(handoffPath, await readBytes(join(directory, 'checkout', 'records', checkoutId,
-        'tickets', record.handoffSha256 + '.json')));
-    } else {
-      const handoff = await merchant.createJob({ functionId: 'analyze', input: report.input,
-        label: 'October checkout application', reference: jobId, claimToken });
-      assert.equal(handoff.job.state, 'PREPARED', 'Recover the retained original ticket for an already submitted job.');
-      await immutable(handoffPath, jsonBytes(handoff));
+  let imported, ticketBytes, ticket, claimToken;
+  if (browserApproval) {
+    // The same public HTTPS path and private customer routes used by Request.
+    // Its controller saves the input and claim before the merchant sees them.
+    await startWorkspace();
+    progress('merchant catalog and retained customer request');
+    const catalog = await api('/api/job-intake/catalog', { origin });
+    assert.equal(catalog.publicOrigin, origin);
+    assert.equal(catalog.functions.length, 1);
+    const selectedFunction = catalog.functions[0];
+    assert.equal(selectedFunction.id, 'analyze');
+    assert.equal(selectedFunction.payment.asset, fixtureAsset);
+    assert.equal(selectedFunction.payment.amount, '10000');
+    const draft = await api('/api/job-intake/draft', {
+      catalog, functionId: 'analyze', input: report.input,
+      reference: jobId, label: 'October checkout application',
+    });
+    const requestPath = '/api/job-intake/requests/' + draft.request.id;
+    const checkoutExisted = await exists(join(directory, 'checkout', 'records', checkoutId, 'record.json'));
+    if (draft.request.phase !== 'IMPORTED') {
+      await api(requestPath + '/start', { kind: 'prepare', expectedRevision: draft.request.revision });
+      const prepared = await model.intake.wait(draft.request.id);
+      assert.equal(prepared.task.state, 'COMPLETE', JSON.stringify({ requestId: prepared.id, error: prepared.lastError }));
+      assert.equal(prepared.phase, 'IMPORTED');
     }
+    const prepared = await api(requestPath);
+    assert.equal(prepared.checkoutId, checkoutId);
+    assert.equal(prepared.reference, jobId);
+    assert.deepEqual(prepared.input, report.input);
+    ticketBytes = await model.intake.ticket(prepared.id);
+    ticket = readJobCheckoutTicket(ticketBytes);
+    claimToken = ticket.handoff.claimToken;
+    await immutable(handoffPath, ticketBytes);
+    await immutable(claimPath, Buffer.from(claimToken + '\n'));
+    assert.equal(JSON.stringify(prepared).includes(claimToken), false);
+    imported = { checkout: await api('/api/job-checkout/checkouts/' + checkoutId), reused: checkoutExisted };
+    selfService = {
+      requestId: prepared.id, reference: prepared.reference, phase: prepared.phase,
+      requestSha256: prepared.requestSha256, inputSha256: prepared.inputSha256,
+      catalogSha256: prepared.merchant.catalogSha256, functionSha256: prepared.merchant.functionSha256,
+      responseSha256: prepared.responseSha256, handoffSha256: prepared.handoffSha256,
+      checkoutId: prepared.checkoutId, resumed: draft.reused,
+      requestAttempts: prepared.requestAttempts,
+    };
+  } else {
+    // Preserve the existing terminal fixture's private ticket and operation.
+    if (!await exists(claimPath)) await immutable(claimPath, Buffer.from(randomBytes(32).toString('base64url') + '\n'));
+    claimToken = (await readBytes(claimPath, 256)).toString('utf8').trim();
+    assert.match(claimToken, /^[A-Za-z0-9_-]{43}$/);
+    if (!await exists(handoffPath)) {
+      const recordPath = join(directory, 'checkout', 'records', checkoutId, 'record.json');
+      if (await exists(recordPath)) {
+        const record = await readJson(recordPath);
+        await immutable(handoffPath, await readBytes(join(directory, 'checkout', 'records', checkoutId,
+          'tickets', record.handoffSha256 + '.json')));
+      } else {
+        const handoff = await merchant.createJob({ functionId: 'analyze', input: report.input,
+          label: 'October checkout application', reference: jobId, claimToken });
+        assert.equal(handoff.job.state, 'PREPARED', 'Recover the retained original ticket for an already submitted job.');
+        await immutable(handoffPath, jsonBytes(handoff));
+      }
+    }
+    ticketBytes = await readBytes(handoffPath); ticket = readJobCheckoutTicket(ticketBytes);
+    await startWorkspace();
+    imported = await api('/api/job-checkout/import', {
+      handoffBase64: ticketBytes.toString('base64'), label: 'October checkout application',
+    });
   }
-  const ticketBytes = await readBytes(handoffPath), ticket = readJobCheckoutTicket(ticketBytes);
   assert.equal(ticket.id, checkoutId); assert.equal(ticket.handoff.claimToken, claimToken);
   assert.equal(ticket.summary.inputSha256, (await merchant.get(jobId)).inputSha256);
-  await startWorkspace();
-  for (const path of ['/jobs/', '/jobs/checkout/', '/jobs/checkout/app.mjs', '/jobs/checkout/style.css', '/', '/collections'])
+  for (const path of ['/jobs/', '/jobs/checkout/', '/jobs/checkout/app.mjs', '/jobs/checkout/style.css', '/', '/collections',
+    ...(browserApproval ? ['/jobs/request/', '/jobs/request/app.mjs', '/jobs/request/style.css'] : [])])
     assert.equal((await fetch(host.origin + path)).status, 200, path);
-  const imported = await api('/api/job-checkout/import', {
-    handoffBase64: ticketBytes.toString('base64'), label: 'October checkout application',
-  });
   assert.equal(imported.checkout.id, checkoutId);
   assert.equal(JSON.stringify(imported).includes(claimToken), false);
   const resumed = imported.reused;
@@ -443,6 +497,15 @@ try {
   assert.equal(reopenedJob.receipt.delivery.sha256, resource.sha256);
   assert.equal(reopenedJob.resource.annotation.note, note);
   assert.equal((await api('/api/collections/' + collectionId)).members.length, 1);
+  if (browserApproval) {
+    const reopenedRequest = await api('/api/job-intake/requests/' + selfService.requestId);
+    assert.equal(reopenedRequest.phase, 'IMPORTED');
+    assert.equal(reopenedRequest.checkoutId, checkoutId);
+    assert.equal(reopenedRequest.checkout.jobEntryId, entryId);
+    assert.equal(reopenedRequest.requestSha256, selfService.requestSha256);
+    assert.equal(reopenedRequest.handoffSha256, selfService.handoffSha256);
+    selfService.reopened = true;
+  }
   assert.equal(digest(await readBytes(join(checked.nativeDirectory, 'attempt.json'))), attemptsBeforeRestart);
   assert.deepEqual((await merchant.deliveryOutbox.rows()).map(row => row.event.id), settlementBeforeRestart);
   assert.equal(counters.verifies, 1); assert.equal(counters.settles, 1);
@@ -465,13 +528,18 @@ try {
     artifact: { sha256: resource.sha256, bytes: resource.bytes },
     collection: { id: collectionId, archiveSha256: exported.sha256, receivedResources: receivedRows.length },
     nativeVerifies: counters.verifies, nativeSettlements: counters.settles, traffic,
-    lifecycle: ['retained merchant application', 'prepared private ticket', 'original SDK offline review',
+    lifecycle: ['retained merchant application', browserApproval ? 'original merchant catalog and customer input request' :
+      'prepared private ticket', 'original SDK offline review',
       browserApproval ? 'original browser decision and SF62/SF36 reservation'
         : 'original native CLI and SF62/SF36 reservation', 'native paid 202 and SF98 activation',
       'actual BuyerResult adoption', 'verified application result', 'library preview and download',
       'collection export and receiving', 'same-checkout recovery and customer restart'],
   };
   if (browserApproval) {
+    summary.selfService = { ...selfService, source: {
+      merchantIntakeSha256: digest(await readFile(new URL('../../../sf30-seller-sdk/jobs/intake/service.mjs', import.meta.url))),
+      customerIntakeSha256: digest(await readFile(new URL('../intake/controller.mjs', import.meta.url))),
+    } };
     const review = await readJson(join(fixture, 'browser-review.json'));
     assert.equal(review.intentId, intentId);
     summary.browserApproval = { approvalId: review.id, intentId,

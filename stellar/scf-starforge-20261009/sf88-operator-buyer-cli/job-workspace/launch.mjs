@@ -25,13 +25,13 @@ export async function readJobWorkspaceLaunch({ directory, runtimeDirectory, oper
     value.operatorSelection.runtimeDirectory === value.runtimeDirectory, 'JOB_WORKSPACE_LAUNCH_BINDING_CHANGED', 409);
   let url;
   try { url = new URL(value.url); } catch { requireValue(false, 'JOB_WORKSPACE_LAUNCH_URL_INVALID'); }
-  requireValue(url.protocol === 'http:' && url.hostname === '127.0.0.1' &&
-    Number(url.port || 80) >= 1 && Number(url.port || 80) <= 65535 &&
+  requireValue(url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.port &&
     !url.username && !url.password && !url.search && url.pathname === '/jobs/' &&
     /^#[a-f0-9]{64}$/.test(url.hash) && value.url === url.href &&
     value.checkoutUrl === url.origin + '/jobs/checkout/' + url.hash &&
     value.libraryUrl === url.origin + '/' + url.hash &&
-    value.collectionsUrl === url.origin + '/collections' + url.hash,
+    value.collectionsUrl === url.origin + '/collections' + url.hash &&
+    (value.intakeUrl === undefined || value.intakeUrl === url.origin + '/jobs/request/' + url.hash),
     'JOB_WORKSPACE_LAUNCH_URL_INVALID');
   return value;
 }

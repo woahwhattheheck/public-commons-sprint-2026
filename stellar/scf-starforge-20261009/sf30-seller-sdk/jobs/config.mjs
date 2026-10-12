@@ -1,5 +1,6 @@
 // MIT. Durable application jobs compile into the original SF30 seller and SF89 admission.
 import { createHash } from 'node:crypto';
+import { compileJobIntake } from './intake/config.mjs';
 import { readFile, lstat, realpath } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { compileHttpSellerOffer, paymentRequiredResponse } from '../seller.mjs';
@@ -124,7 +125,8 @@ export function compileJobMerchant(input, { baseDir = process.cwd() } = {}) {
     workerCount: integer(input.workerCount, 2, 1, 16, 'WORKER_COUNT'),
     maxPending: integer(input.maxPending, 128, 1, 10000, 'QUEUE_LIMIT'),
     maxJobs: integer(input.maxJobs, 10000, 1, 100000, 'JOB_LIMIT'),
-    memoryLimitMb: integer(input.memoryLimitMb, 256, 32, 4096, 'WORKER_MEMORY'), functions, service });
+    memoryLimitMb: integer(input.memoryLimitMb, 256, 32, 4096, 'WORKER_MEMORY'),
+    intake: compileJobIntake(input.intake, functions), functions, service });
 }
 
 export async function readJobMerchant(configPath) {

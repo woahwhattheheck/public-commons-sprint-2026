@@ -19,13 +19,14 @@ const words = value => String(value ?? '').replaceAll('_', ' ').toLowerCase();
 function message(text, error = false) { byId('message').textContent = text; byId('message').dataset.error = String(error); }
 function problem(error) {
   const descriptions = {
+    JOB_CHECKOUT_BROWSER_RUNTIME_UNSUPPORTED: 'This checkout uses a saved runtime with terminal approval. Reopen the customer server with --approval-mode terminal to continue this purchase.',
     JOB_CHECKOUT_REVISION_CONFLICT: 'This checkout changed. Refresh it and review the current request before continuing.',
-    JOB_CHECKOUT_OPERATOR_REQUIRED: 'Start this customer workspace with its original operator workspace or profile.',
+    JOB_CHECKOUT_OPERATOR_REQUIRED: 'Start this customer workspace with its operator workspace or profile.',
     JOB_CHECKOUT_TICKET_EXISTS_USE_REPLACE: 'This job already has a retained ticket. Select its checkout to use a renewed merchant ticket.',
     JOB_CHECKOUT_ORIGINAL_ATTEMPT_DIRECTORY_REQUIRED: 'Restore the original operation directory shown below, then recover the retained purchase.',
-    JOB_CHECKOUT_NATIVE_RESULT_PENDING: 'The original operation has an attempt record. Recover it again when its original result is available.',
-    JOB_CHECKOUT_OPERATION_ACTIVE: 'One original checkout operation is already active in this workspace.',
-    JOB_CHECKOUT_ATTEMPT_REQUIRES_RECOVERY: 'This checkout has an original attempt. Use Recover original operation.',
+    JOB_CHECKOUT_NATIVE_RESULT_PENDING: 'This purchase started and its result is pending. Recover the checkout when the result becomes available.',
+    JOB_CHECKOUT_OPERATION_ACTIVE: 'A checkout operation is already running in this workspace.',
+    JOB_CHECKOUT_ATTEMPT_REQUIRES_RECOVERY: 'This checkout has already started. Use Recover checkout.',
     JOB_CHECKOUT_REVIEW_CHANGED: 'The saved original review changed. Review this request again.',
     JOB_CHECKOUT_APPROVAL_INTENT_CHANGED: 'The selected request changed. Refresh its payment review.',
     JOB_CHECKOUT_APPROVAL_TASK_CHANGED: 'This payment review belongs to an earlier run. Refresh the current checkout.',
@@ -124,7 +125,7 @@ function date(value) {
   return parsed && Number.isFinite(parsed.getTime()) ? parsed.toLocaleString() : '—';
 }
 function links() {
-  for (const [id, path] of [['checkoutLink','/jobs/checkout/'],['jobsLink','/jobs/'],['libraryLink','/'],['collectionsLink','/collections']])
+  for (const [id, path] of [['requestLink','/jobs/request/'],['checkoutLink','/jobs/checkout/'],['jobsLink','/jobs/'],['libraryLink','/'],['collectionsLink','/collections']])
     byId(id).href = path + '#' + token;
 }
 function renderList() {

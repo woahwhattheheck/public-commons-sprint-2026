@@ -5,12 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Merchant workspace · Stellar</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/incident-desk.css">
   <script type="module" src="/console.mjs"></script>
 </head>
 <body>
 <header><div class="wrap header"><div><p class="eyebrow">Stellar · Merchant operations</p><h1>Merchant workspace</h1><p>Manage the case, inspect the route, and prepare the workorder.</p></div><span class="local-badge">Local workspace</span></div></header>
 <main class="wrap">
-  <nav class="workflow" aria-label="Workspace stages"><a href="#cases"><span>01</span> Cases</a><a href="#handoffs" data-handoff-navigation hidden><span>↓</span> Handoffs</a><a href="#diagnose"><span>02</span> Diagnose</a><a href="#runtime"><span>03</span> Runtime</a><a href="#review"><span>04</span> Review</a><a href="#workorder"><span>05</span> Workorder</a></nav>
+  <nav class="workflow" aria-label="Workspace stages"><a href="#cases"><span>01</span> Cases</a><a href="#incidents" data-incident-navigation hidden><span>!</span> Incidents</a><a href="#handoffs" data-handoff-navigation hidden><span>↓</span> Handoffs</a><a href="#diagnose"><span>02</span> Diagnose</a><a href="#runtime"><span>03</span> Runtime</a><a href="#review"><span>04</span> Review</a><a href="#workorder"><span>05</span> Workorder</a></nav>
   <p class="boundary">Local case management and unpaid route diagnostics.</p>
   <section id="diagnose" class="card" aria-labelledby="diagnose-heading">
     <div class="section-heading"><div><p class="eyebrow">01 · Diagnose</p><h2 id="diagnose-heading">Inspect one merchant route</h2><p>Use the merchant's actual endpoint, facilitator and buyer settings.</p></div><span class="stage-hint">No probes until you choose Run</span></div>

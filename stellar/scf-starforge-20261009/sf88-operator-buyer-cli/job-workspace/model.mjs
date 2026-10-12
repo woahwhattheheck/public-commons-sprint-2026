@@ -5,6 +5,7 @@ import { openJobBuyer, createJobBuyer } from '../../sf30-seller-sdk/jobs/buyer.m
 import { acquireStateLease } from '../../merchant-fleet-gateway/state-lease.mjs';
 import { openLibrary } from '../resource-library/library.mjs';
 import { openJobCheckout } from './checkout/controller.mjs';
+import { openJobIntake } from './intake/controller.mjs';
 import { readBytes, writeBytes, exists, digest, privateDirectory } from '../node/store.mjs';
 import { SCHEMA, STATES, HASH, canonicalDirectory, readCatalog, saveCatalog, catalogPath,
   buyerId, resourceId, delivered, within, now, requireValue, failure } from './state.mjs';
@@ -17,7 +18,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
   for (const name of ['buyers','artifacts','intake','library'])
     await privateDirectory(join(directory, name));
   const lease = await acquireStateLease(directory);
-  let library, checkout;
+  let library, checkout, intake;
   try {
     const normalize = async roots => {
       requireValue(Array.isArray(roots) && roots.length <= 30, 'JOB_WORKSPACE_ROOTS_INVALID');
@@ -262,7 +263,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       return { schema: SCHEMA, directory, revision: catalog.revision,
         buyerRoots: [...catalog.buyerRoots], fileRoots: [...roots], entries: catalog.entries.length,
         counts, capacity: maxConcurrent, active: [...tasks.values()].map(task => ({ entryId: task.entryId, ...task.public })),
-        library: library.status(), checkout: checkout.status(), closing };
+        library: library.status(), checkout: checkout.status(), intake: intake.status(), closing };
     }
     checkout = await openJobCheckout({ ...checkoutOptions, directory: join(directory, 'checkout'), lease,
       adopt: async ({ result, handoff, label }) => {
@@ -272,7 +273,9 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
         return registerBuyer({ buyerDirectory: buyer.directory, label }, true);
       },
     });
-    return Object.freeze({ directory, library, checkout, register, retain, reconcile, update, start, cancel, scan, list, status,
+    intake = await openJobIntake({ directory: join(directory, 'requests'), lease, checkout,
+      transport, fetchImpl, requestTimeoutMs, maxConcurrent });
+    return Object.freeze({ directory, library, checkout, intake, register, retain, reconcile, update, start, cancel, scan, list, status,
       get(id) { return item(row(id)); },
       async wait(id) {
         const task = tasks.get(id);
@@ -285,7 +288,10 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
         closePromise = (async () => {
           await tail;
           for (const task of tasks.values()) task.controller.abort(new Error('JOB_WORKSPACE_CLOSED'));
-          const results = await Promise.allSettled([checkout.close(), ...[...tasks.values()].map(task => task.promise)]);
+          // An intake may be saving a ticket into checkout. Drain that producer
+          // before closing the existing checkout that receives its final write.
+          const results = await Promise.allSettled([intake.close()]);
+          results.push(...await Promise.allSettled([checkout.close(), ...[...tasks.values()].map(task => task.promise)]));
           // Checkout may have finished accepting a paid result while draining.
           // Its final catalog write uses this same lease and must finish first.
           await tail;
@@ -298,7 +304,8 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       },
     });
   } catch (error) {
-    const cleanup = await Promise.allSettled([checkout?.close(), library?.close()]);
+    const cleanup = await Promise.allSettled([intake?.close()]);
+    cleanup.push(...await Promise.allSettled([checkout?.close(), library?.close()]));
     try { await lease.close(); } catch (closed) { cleanup.push({ status: 'rejected', reason: closed }); }
     const failures = cleanup.filter(value => value.status === 'rejected').map(value => value.reason);
     if (failures.length) throw new AggregateError([error, ...failures], 'JOB_WORKSPACE_OPEN_FAILED');

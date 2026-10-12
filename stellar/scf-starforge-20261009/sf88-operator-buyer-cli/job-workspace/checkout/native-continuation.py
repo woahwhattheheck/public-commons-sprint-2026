@@ -209,6 +209,7 @@ def main() -> int:
     }
     if browser_approval:
         marker["approvalMode"] = "BROWSER"
+        marker["inputMode"] = "ORIGINAL_MERCHANT_INTAKE"
     immutable(fixture / "fixture.json", encoded(marker))
     keys_path = fixture / "fixture-keys.json"
     if not keys_path.exists():
@@ -324,6 +325,11 @@ def main() -> int:
     summary = json.loads(private_read(fixture / "native-result.json", 1048576))
     require(summary.get("result") == "PASS" and summary.get("operation") == operation,
             "ORIGINAL_CHECKOUT_RESULT_REQUIRED")
+    if browser_approval:
+        intake = summary.get("selfService", {})
+        require(intake.get("reference") == job and intake.get("phase") == "IMPORTED" and
+                intake.get("reopened") is True and intake.get("checkoutId") == summary["checkout"]["id"],
+                "ORIGINAL_INTAKE_CHECKOUT_RESULT_REQUIRED")
     with sqlite3.connect(fixture / "ledger.sqlite") as ledger:
         reservations = ledger.execute("SELECT request_id, amount, state FROM reservations ORDER BY request_id").fetchall()
         require(reservations == [(expected_intent, "10000", "reserved")], "ORIGINAL_RESERVATION_BINDING_CHANGED")

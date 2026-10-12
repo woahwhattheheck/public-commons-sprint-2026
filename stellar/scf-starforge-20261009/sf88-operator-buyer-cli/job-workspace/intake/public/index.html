@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Request a job</title>
+  <link rel="stylesheet" href="/jobs/request/style.css">
+  <script type="module" src="/jobs/request/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">STELLAR FORGE</span><h1>Request a job</h1></div>
+    <nav aria-label="Workspace"><a id="requestLink" href="/jobs/request/" aria-current="page">Request</a><a id="checkoutLink" href="/jobs/checkout/">Checkout</a><a id="jobsLink" href="/jobs/">Jobs</a><a id="libraryLink" href="/">Resource library</a><a id="collectionsLink" href="/collections">Collections</a></nav>
+  </header>
+  <main>
+    <div id="message" role="status" aria-live="polite"></div>
+    <section class="panel" aria-labelledby="newHeading">
+      <div class="section-heading"><div><h2 id="newHeading">Choose a merchant and function</h2><p class="hint">Prepare the inputs here, review payment in Checkout, then use the completed result in Jobs.</p></div><button id="newRequest" type="button">Start another request</button></div>
+      <form id="catalogForm" class="merchant-form">
+        <label>Merchant HTTPS origin<input id="merchantOrigin" type="url" required placeholder="https://merchant.example" autocomplete="url"></label>
+        <button id="loadCatalog" type="submit">Load functions</button>
+      </form>
+      <div id="catalogSection" hidden>
+        <div class="catalog-heading"><strong id="serviceName"></strong><span id="catalogOrigin" class="mono"></span></div>
+        <form id="draftForm" autocomplete="off">
+          <div class="form-columns">
+            <div>
+              <label>Function<select id="function"></select></label><p id="functionDescription" class="description"></p>
+              <div id="fields" class="schema-fields"></div>
+              <details class="json-editor"><summary>Edit complete input JSON</summary><textarea id="inputJson" rows="12" spellcheck="false" aria-label="Input JSON"></textarea><button id="applyJson" type="button">Apply JSON to fields</button><p class="hint">The merchant validates the full configured schema when the request is prepared.</p></details>
+            </div>
+            <aside class="terms">
+              <h3>Configured job</h3>
+              <dl><dt>Price in atomic units</dt><dd id="amount" class="mono"></dd><dt>Network</dt><dd id="network" class="mono"></dd><dt>Asset</dt><dd id="asset" class="mono break"></dd><dt>Recipient</dt><dd id="payTo" class="mono break"></dd><dt>Output</dt><dd id="output"></dd><dt>Execution limit</dt><dd id="timeout"></dd></dl>
+              <label>Request label <span class="optional">(optional)</span><input id="label" maxlength="300" placeholder="October account report"></label>
+              <label>Reference <span class="optional">(generated if empty)</span><input id="reference" maxlength="80" spellcheck="false"></label>
+              <label id="accessField" hidden>Merchant intake access token<input id="accessToken" type="password" autocomplete="off" spellcheck="false" maxlength="1024"></label>
+              <div class="form-actions"><button type="submit" class="primary" id="prepareNew">Prepare checkout</button><button type="button" id="saveDraft">Save draft</button></div>
+              <p class="hint">The private request is saved before its inputs are sent. Reopening it preserves the same merchant job.</p>
+            </aside>
+          </div>
+        </form>
+      </div>
+    </section>
+    <div class="workbench">
+      <section class="panel" aria-labelledby="requestsHeading">
+        <div class="section-heading"><h2 id="requestsHeading">Saved requests</h2><span id="count"></span></div>
+        <form id="filterForm" class="filters">
+          <label class="search">Search<input id="query" type="search" placeholder="Label, reference or merchant"></label>
+          <label>Phase<select id="phase"><option value="">All phases</option><option>DRAFT</option><option>READY</option><option>IMPORTED</option><option>RECOVERABLE</option><option>WITHDRAWN</option></select></label><button type="submit">Search</button>
+        </form>
+        <div class="table-scroll"><table><thead><tr><th>Request</th><th>Phase</th><th>Price</th></tr></thead><tbody id="rows"></tbody></table></div>
+        <p id="empty" class="empty">Choose a merchant to prepare your first job.</p>
+        <div class="pager"><button id="previous" type="button">Previous</button><span id="page"></span><button id="next" type="button">Next</button></div>
+      </section>
+      <section class="panel" aria-labelledby="detailHeading">
+        <p id="unselected" class="empty">Select a saved request to continue its checkout or recover its ticket.</p>
+        <div id="detail" hidden>
+          <div class="section-heading"><div><h2 id="detailHeading"></h2><p class="mono" id="identity"></p></div><span id="requestState" class="state"></span></div>
+          <p id="progress" class="description" aria-live="polite"></p>
+          <div class="detail-actions"><a id="openCheckout" class="button primary" hidden>Open checkout</a><a id="openJob" class="button" hidden>Open job and result</a><button id="prepareButton" type="button">Prepare / recover request</button><button id="importButton" type="button">Open retained ticket in Checkout</button><button id="stopButton" type="button" hidden>Stop request</button></div>
+          <dl class="detail-facts"><dt>Merchant</dt><dd id="selectedMerchant"></dd><dt>Function</dt><dd id="selectedFunction"></dd><dt>Price in atomic units</dt><dd id="selectedPrice" class="mono"></dd><dt>Updated</dt><dd id="updated"></dd></dl>
+          <details open><summary>Saved input</summary><pre id="savedInput"></pre></details>
+          <details id="accessUpdate" hidden><summary>Update merchant access token</summary><form id="accessForm"><label>New access token<input id="newAccessToken" type="password" autocomplete="off" maxlength="1024"></label><button type="submit">Save access token</button></form></details>
+          <details><summary>Request and recovery details</summary><dl class="detail-facts"><dt>Request identity</dt><dd id="requestHash" class="mono break"></dd><dt>Input identity</dt><dd id="inputHash" class="mono break"></dd><dt>Catalog identity</dt><dd id="catalogHash" class="mono break"></dd><dt>Request dispatches</dt><dd id="attempts"></dd></dl><ol id="history" class="history"></ol><button id="downloadTicket" type="button">Download private ticket</button></details>
+          <form id="withdrawForm" class="withdraw-form"><label>Withdrawal reason<input id="withdrawReason" maxlength="500" value="Customer withdrew the unsubmitted request." required></label><button id="withdrawButton" type="submit">Withdraw unsubmitted request</button></form>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
