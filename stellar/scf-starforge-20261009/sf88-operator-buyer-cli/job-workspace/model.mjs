@@ -6,19 +6,21 @@ import { acquireStateLease } from '../../merchant-fleet-gateway/state-lease.mjs'
 import { openLibrary } from '../resource-library/library.mjs';
 import { openJobCheckout } from './checkout/controller.mjs';
 import { openJobIntake } from './intake/controller.mjs';
+import { openJobResolutionController } from './resolution/controller.mjs';
 import { readBytes, writeBytes, exists, digest, privateDirectory } from '../node/store.mjs';
 import { SCHEMA, STATES, HASH, canonicalDirectory, readCatalog, saveCatalog, catalogPath,
   buyerId, resourceId, delivered, within, now, requireValue, failure } from './state.mjs';
 
 export async function openJobWorkspace({ directory, buyerRoots, fileRoots, transport, fetchImpl,
-  requestTimeoutMs = 60000, maxConcurrent = 4, checkout: checkoutOptions = {} } = {}) {
+  requestTimeoutMs = 60000, maxConcurrent = 4, checkout: checkoutOptions = {}, inputFileStorage,
+  transferTimeoutMs = 3600000 } = {}) {
   directory = await canonicalDirectory(directory, { privateState: true, create: true });
   requireValue(Number.isInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 4,
     'JOB_WORKSPACE_CONCURRENCY_INVALID');
   for (const name of ['buyers','artifacts','intake','library'])
     await privateDirectory(join(directory, name));
   const lease = await acquireStateLease(directory);
-  let library, checkout, intake;
+  let library, checkout, intake, resolution;
   try {
     const normalize = async roots => {
       requireValue(Array.isArray(roots) && roots.length <= 30, 'JOB_WORKSPACE_ROOTS_INVALID');
@@ -274,8 +276,11 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       },
     });
     intake = await openJobIntake({ directory: join(directory, 'requests'), lease, checkout,
+      transport, fetchImpl, requestTimeoutMs, maxConcurrent, library, fileRoots: roots,
+      inputFileStorage, transferTimeoutMs });
+    resolution = openJobResolutionController({ lease, getEntry: id => item(row(id)), listEntries: list,
       transport, fetchImpl, requestTimeoutMs, maxConcurrent });
-    return Object.freeze({ directory, library, checkout, intake, register, retain, reconcile, update, start, cancel, scan, list, status,
+    return Object.freeze({ directory, library, checkout, intake, resolution, register, retain, reconcile, update, start, cancel, scan, list, status,
       get(id) { return item(row(id)); },
       async wait(id) {
         const task = tasks.get(id);
@@ -290,7 +295,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
           for (const task of tasks.values()) task.controller.abort(new Error('JOB_WORKSPACE_CLOSED'));
           // An intake may be saving a ticket into checkout. Drain that producer
           // before closing the existing checkout that receives its final write.
-          const results = await Promise.allSettled([intake.close()]);
+          const results = await Promise.allSettled([intake.close(), resolution.close()]);
           results.push(...await Promise.allSettled([checkout.close(), ...[...tasks.values()].map(task => task.promise)]));
           // Checkout may have finished accepting a paid result while draining.
           // Its final catalog write uses this same lease and must finish first.
@@ -304,7 +309,7 @@ export async function openJobWorkspace({ directory, buyerRoots, fileRoots, trans
       },
     });
   } catch (error) {
-    const cleanup = await Promise.allSettled([intake?.close()]);
+    const cleanup = await Promise.allSettled([intake?.close(), resolution?.close()]);
     cleanup.push(...await Promise.allSettled([checkout?.close(), library?.close()]));
     try { await lease.close(); } catch (closed) { cleanup.push({ status: 'rejected', reason: closed }); }
     const failures = cleanup.filter(value => value.status === 'rejected').map(value => value.reason);

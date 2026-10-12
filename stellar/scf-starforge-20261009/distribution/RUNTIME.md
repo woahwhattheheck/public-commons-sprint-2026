@@ -203,3 +203,34 @@ Each inspection resolves the exact installed package and operates its SQLite bin
 Native operation runs even without `--load`; ordinary selected-module imports retain their existing optional behavior. Existing inspection callers therefore receive a usable readiness result for a declared native profile. Profiles without a native preparation declaration retain their original package selection and identity.
 
 The profile inspector remains read-only with respect to installed dependency files and customer databases. The original [runtime installer](RUNTIME_INSTALL.md#native-sqlite-preparation-and-restart) owns exact-package native preparation, private logs, the kernel installation lock, offline local headers and interrupted-stage recovery. Use its original new-directory recovery after a completed runtime changes host ABI or binding.
+
+## ClinicalTrials registry and PRS Python dependency
+
+The [ClinicalTrials operator](../sf30-seller-sdk/clinicaltrials/README.md) uses
+Python 3.11 or newer and the original PRS leaf's `lxml>=5.4,<7` requirement.
+Its source-owned [requirements file](../sf30-seller-sdk/clinicaltrials/requirements.txt)
+includes that original declaration directly. The selected Node runtime continues
+to run the original SF30 dataset and publisher engines.
+
+Set `SF30_XML_PYTHON` to an existing interpreter with those dependencies. To
+prepare a separate environment for this operator from the installed source:
+
+```sh
+python3 -m venv /private/clinicaltrials-python
+/private/clinicaltrials-python/bin/python -m pip install \
+  -r "$STARFORGE_SOURCE/stellar/scf-starforge-20261009/sf30-seller-sdk/clinicaltrials/requirements.txt"
+export SF30_XML_PYTHON=/private/clinicaltrials-python/bin/python
+starforge clinicaltrials --workspace /private/registry init
+starforge clinicaltrials --workspace /private/registry serve \
+  --port 0 --console-url-file /private/registry-console.url
+```
+
+The registry status reports the original PRS dependency availability. The
+`clinicaltrials` and `dataset-clinicaltrials` commands select the same original
+entrypoint. Attach [ClinicalTrials MCP](../../../stellar-forge/mcp-merchant-operator/CLINICALTRIALS_WORKSPACE.md)
+to the console's saved private URL to preserve that Python workspace owner.
+
+The archive carries the original Protocol and Results XSDs, OpenAPI YAML,
+source-contract manifests, and the published PRS example licenses and metadata.
+The contribution binds these files to the same installed source manifest as the
+operator and customer workflow.

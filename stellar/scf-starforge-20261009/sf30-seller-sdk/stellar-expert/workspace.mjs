@@ -30,7 +30,7 @@ export async function startStellarExpertWorkspace({directory,inboxDirectory,port
         'referrer-policy':'no-referrer','content-security-policy':CSP,...extra});res.end(body);
     };
     try{
-      if(req.headers.host!==new URL(origin).host||req.headers.origin&&req.headers.origin!==origin||req.headers['sec-fetch-site']==='cross-site')
+      if(![new URL(origin).host,'127.0.0.1:'+server.address().port].includes(req.headers.host)||req.headers.origin&&req.headers.origin!==origin||req.headers['sec-fetch-site']==='cross-site')
         return reply(403,{error:'LOCAL_ORIGIN_REQUIRED',message:'Use the original local workspace session.'});
       if(req.method==='GET'&&req.url==='/')return reply(200,files[0],'text/html; charset=utf-8');
       if(req.method==='GET'&&req.url==='/workspace.js')return reply(200,files[1],'text/javascript; charset=utf-8');
@@ -42,6 +42,7 @@ export async function startStellarExpertWorkspace({directory,inboxDirectory,port
       if(req.method==='GET'){
         if(url.pathname==='/api/schema')return reply(200,app.schema());
         if(url.pathname==='/api/view')return reply(200,await app.view());
+        if(url.pathname==='/api/edition')return reply(200,await app.edition(url.searchParams.get('editionId')));
         if(url.pathname==='/api/editions')return reply(200,await app.editions({
           offset:Number(url.searchParams.get('offset')??0),limit:Number(url.searchParams.get('limit')??100)}));
         if(url.pathname==='/api/rows'){
@@ -88,7 +89,7 @@ export async function startStellarExpertWorkspace({directory,inboxDirectory,port
   server.on('clientError',(_e,socket)=>socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n'));
   try{await new Promise((yes,no)=>{server.once('error',no);server.listen(port,'127.0.0.1',()=>{server.off('error',no);yes();});});}
   catch(e){await app.close();throw e;}
-  origin='http://127.0.0.1:'+server.address().port;
+  origin=new URL('http://127.0.0.1:'+server.address().port).origin;
   return {origin,url:origin+'/#'+token,token,app,
     async close(){if(closing)return;closing=true;await new Promise((yes,no)=>{server.close(e=>e?no(e):yes());server.closeIdleConnections?.();});await app.close();}};
 }

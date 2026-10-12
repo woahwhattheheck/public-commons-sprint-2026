@@ -2,10 +2,19 @@
 
 Applications opens the original merchant and buyer tools from a selected READY runtime. It retains the runtime binding, installed release, data paths, exact argv, original process operation and private session URL. The existing managed worker owns the process. Closing the runtime browser or its web server leaves that process available for reopening.
 
+Buyer receiving: [complete setup, acquisition, Stop and reopen guide](BUYER_RECEIVING_APPLICATIONS.md).
+
 ## Available original tools
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
+| Repository metadata editions | oai serve | Original OAI-PMH capture, retained metadata editions, mapping, publisher and complete customer handover |
+| Fiscal Data operations | fiscaldata managed | Named Treasury operator, exact source and decimal editions, comparisons, original merchant and buyer, complete package receiving |
+| Databento migration | databento-workspace managed | Complete original historical-data source, field mapping, named review, retained results and customer handover |
+| OpenCage geocoding | opencage-workbench serve | Original geocoding source, explicit candidate decisions, retained merchant releases and complete customer deliveries |
+| WebDAV source and merchant workspace | webdav serve | Original file-cloud versions, retained captures, exact source editions, publisher and complete customer receiving |
+| Merchant support | support-console | Original seller incidents, retained captures, named source profiles, merchant cases and saved remediation work |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -18,11 +27,19 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | OData source and live merchant | dataset odata | Saved source metadata, typed queries, retained editions, live paid pages, buyer handoffs and received records |
 | SEC EDGAR source operator | sec-edgar workspace | Original company facts and filings, retained source editions, merchant drafts and complete customer exports |
 | Google Sheets source authoring | sheets-source workspace serve | Retained workbook observations, typed source projections, original dataset publisher and merchant receiving |
+| NocoDB source authoring | nocodb-source workspace serve | Original database observations, complete captures, public projections, dataset publisher and retained workspace recovery |
+| Stellar asset investigation | dataset-workspace --stellar-expert | Original asset observations, exact editions, reviewed findings, native dataset and merchant releases, purchased page receiving |
 | ArcGIS merchant workspace | arcgis-agent serve | One original browser and MCP service for source capture, field mapping, publication, staged deployments and complete customer files |
+| World Bank economic data | worldbank-agent serve | Original indicator captures, exact editions and comparisons, reviewed merchant publication, browser and agent operations, complete customer receiving |
+| S3 object merchant | s3 workspace | Object source and complete prices, retained HEAD reviews and packages, original release controls, customer files and saved-workspace reopening |
+| DuckDB customer and agent | mcp-native serve | Original running customer warehouse, reviewed source reports, saved SQL, complete CSV/Parquet and portable receiving through the same browser and agent connection |
 | Dataset preview | dataset-workspace | A dataset configuration file or retained dataset state, native query and preview |
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
+| Buyer receiving | buyer-runbook workspace | Original SDK, request and paid-file intake, local buyer setup, browser approvals, acquired resources, accounting and recovery |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
+| Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
+| Grants.gov opportunities | grantsgov serve | Complete original federal opportunity capture, immutable editions, qualification, native dataset publication and complete source/customer receiving |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -47,6 +64,32 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | XML dataset onboarding | dataset xml … serve | An initialized XML workspace, source intake, mapping, native query, comparison and portable editions |
 
 A selected runtime must actually contain the command. XML and Object Buyer additionally require their original forwarding/server source; an older package cannot acquire these capabilities by selecting a label. The chosen original profile supplies the dependencies required by the application. Applications installs no replacement engine or new npm dependency.
+
+### S3 object merchant
+
+Select a READY installation containing the complete S3 Applications source and its original S3 dependency profile. Choose the private merchant workspace; its original release store is reused automatically. Source JSON, complete Stellar payment JSON and public HTTPS origin can initialize the first revision together. Once saved, subsequent starts use that revision even if its original import files have moved.
+
+**Open application** opens the original S3 authoring workspace. **Open merchant releases** opens its own SF82 release console. The same application owns both consoles and the seller started there. **Stop application** drains the original merchant and closes both windows' listeners; its source, prices, reviews, packages, release generation and customer files remain saved. Port **0** retains this workspace's original authoring port after first launch, so the same browser tab can restore unfinished edits on normal Stop/Start.
+
+The complete [S3 merchant Applications guide](./S3_MERCHANT_APPLICATIONS.md) covers installation selection, review/save, customer delivery, same-workspace receiving, ownership and recovery.
+
+## Merchant support
+
+Select the original private case directory and incident source profiles. A new case folder may be created in an existing private parent; the profiles select up to eight initialized SF93 stores. Review, save and start the application to open the original support console with its retained incidents, captures, notifications and merchant cases.
+
+The launch binds the case location, source configuration revisions and the original managed source bytes. It verifies the actual local support listener before making it available. Stop drains that console's original incident workers, and a subsequent start reopens the same saved work. The complete [Merchant support Applications guide](MERCHANT_SUPPORT_APPLICATIONS.md) covers source selection, incident operation, capture-to-case work and recovery.
+
+## WebDAV source and merchant workspace
+
+Choose an initialized private WebDAV workspace or an existing received source packet. Review and save the application with its original Python executable when needed, then review its start and open the original source operator. The selected workspace UUID and creation identity remain stable as captures, review decisions and native publisher records advance.
+
+Applications binds the fourteen original source files in the selected runtime and adopted release. The native CLI checks that source and the workspace identity under its original writer lock. Stop uses the original source and publisher close path; reopening keeps the same reviewed source, editions and customer files. Follow the complete [WebDAV Applications guide](../../sf30-seller-sdk/webdav/APPLICATIONS.md) for source capture, merchant publication, receiving and managed recovery.
+
+## OpenCage geocoding
+
+Choose the initialized private OpenCage workspace containing its saved source plan and payment terms. Review and save the application, then review its start and open the original geocoding operator. The saved selection binds the immutable configuration and the twelve original source and browser files in both the selected runtime and adopted release.
+
+The same operator retains provider observations, candidate decisions, packages, merchant generations and customer exports. Stop drains its original server, source transport and workspace lease; a later start reopens that saved work with a new private listener. The complete [OpenCage Applications guide](../../sf30-seller-sdk/opencage/APPLICATIONS.md) covers source preparation, merchant and customer work, managed launch and recovery.
 
 ## Save and start
 
@@ -79,6 +122,21 @@ reopens the retained state without repeating earlier calls.
 Follow [gRPC merchant authoring in Applications](GRPC_APPLICATIONS.md) for the
 complete setup, saved-source selection, native opening, Stop and recovery workflow.
 
+## Grants.gov opportunities
+
+Choose the initialized private research directory and optional original buyer
+bindings JSON. Review, save and start **Grants.gov opportunities** through the
+same managed application lifecycle. The selected installed command retains the
+original query, capture, edition, qualification and publisher records. The
+native browser and complete MCP workflow are documented in
+[Grants.gov research, publication and receiving](../../../../stellar-forge/mcp-merchant-operator/GRANTSGOV_WORKSPACE.md).
+
+Applications binds the original workspace identity, reviewed source files and
+optional buyer directory references. It checks the native startup announcement
+against the live authenticated instance before retaining its private browser
+URL. Source acquisition and qualification changes keep that workspace identity.
+Stop and reopen the same saved operation to retain all original work.
+
 ## Merchant pricing and scenario planning
 
 The complete [managed pricing workflow](PRICING_APPLICATIONS.md) covers original
@@ -102,6 +160,18 @@ Use the browser for source intake, field mapping, edition selection, extraction,
 Applications prevents a second managed launch of the same merchant configuration. The publisher retains its own native writer lease. A changed connection file requires a fresh application review; source records and ordinary workspace progress continue through their original controls.
 
 See `stellar-forge/mcp-merchant-operator/ARCGIS_WORKSPACE.md` in the selected source for complete configuration, native request recovery, deployment and file-delivery instructions.
+
+## DuckDB customer and agent
+
+Select **DuckDB customer and agent** from a complete READY Node runtime. Choose the original initialized native buyer MCP directory and a private DuckDB connection JSON containing the running customer directory and its exact source report aliases. The existing Python **DuckDB dataset workspace** owns that original warehouse and browser.
+
+Use **Agent port** for the MCP listener; the Python browser retains its own port. Supply the original MCP access configuration through the host environment or private environment JSON. Review checks the running original service and source reports, pins its persistent workspace ID and exact connection bytes, and retains the selected complete source and original directories.
+
+After **Review application → Save application → Review start → Start**, **Open application** opens the actual original DuckDB browser. The retained operation also includes the agent MCP endpoint and native buyer console. Work on source mappings, immutable editions, saved SQL, comparison, complete query exports and portable receiving in that same customer workspace.
+
+The native launcher serves its currently opened native instance, including when an older saved operator module points to a previous source checkout. The original buyer, wallet and ledger remain in use. **Stop** closes the managed MCP connection; the separately owned Python service remains available. A same-workspace Python restart rotates its browser capability while preserving the persistent workspace ID. Current database contents and the rotating launch file are not immutable input fingerprints.
+
+The complete [DuckDB customer and agent guide](../../../../stellar-forge/mcp-paid-agent/DUCKDB.md) includes registration creation, both launch routes, every agent operation, exact-value handling, whole-file delivery, source refresh and original request continuation.
 
 ## Publisher initialization and reopening
 
@@ -276,7 +346,8 @@ CLI state/output are private operator data and can include original capability U
 
 | Method | API | Purpose |
 | --- | --- | --- |
-| GET | /api/applications/state | Saved bindings, runs and current private URL |
+| GET | /api/applications/state | Saved bindings and current private URL; optional `historyLimit=1..100` (default 30) |
+| GET | /api/applications/history | One application's complete retained chronology, paged by `applicationId`, optional `limit=1..100` and returned `cursor` |
 | POST | /api/applications/review | New configuration or current revision review |
 | POST | /api/applications/save | Save configuration and join original managed adoption |
 | POST | /api/applications/connect | Continue the same pending adoption |
@@ -287,6 +358,21 @@ CLI state/output are private operator data and can include original capability U
 | GET | /api/applications/output | Retained original command output |
 | GET | /api/applications/terminal | Original PTY output, identities and input receipts |
 | POST | /api/applications/input | Explicit idempotent terminal input |
+
+### Browse retained application operations
+
+The Applications overview refreshes the current run for each saved application. Select an application to see its latest 30 operations, then use **Older operations**, **Newer operations** or **Latest operations** to navigate its full retained history. **Open output** works on any selected page. The selected page and operation reopen with the same browser session, while the application controls continue to show the current run.
+
+The CLI supplies the same navigation:
+
+```sh
+starforge runtime-workspace applications --workspace /absolute/workspace
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30
+starforge runtime-workspace application-history --workspace /absolute/workspace --application-id APPLICATION_ID --limit 30 --cursor RETURNED_NEXT_CURSOR
+starforge runtime-workspace application-output --workspace /absolute/workspace --application-id APPLICATION_ID --operation-id OPERATION_UUID
+```
+
+The application list defaults to one run per application in the CLI; use `--history-limit 30` for the earlier expanded list. History responses include `runs`, `totalRuns` and `nextCursor`; a null cursor ends the chronology. Cursors belong to one application and continue after the last returned operation, so newly created runs do not shift an older page. The JavaScript model exposes `applicationsHistory({ applicationId, limit, cursor })` and `applicationsState({ historyLimit })`. Existing model and HTTP state calls retain their default of 30 runs.
 
 These routes use the existing loopback, Host, Origin and capability checks. Output is rendered as text. No original application capability is placed in a public asset.
 
@@ -504,3 +590,61 @@ In the customer workspace, select a connection and adopt an existing pass or pre
 Use the ordinary Applications **Stop**, **Review start** and **Start reviewed application** controls to reopen the same customer directory. Each start reviews the current state, and the existing application resource lease serializes managed use of that directory.
 
 The complete [API-pass customer guide](../../sf101-merchant-receiver/api-access/workspace/README.md) covers configuration, connection setup, purchase approval, exact request recovery, customer reports, browser operations and installed package imports.
+
+## NocoDB source authoring
+
+Choose the original initialized private **NocoDB workspace** and, when live database access is needed, its optional **Private NocoDB connections file**. The connection stores the original server and credential environment references. Use the existing **Local port** and **Private environment JSON** fields for the original native listener and host environment.
+
+Review retains the workspace's original SQLite identity and immutable settings, the complete nine-file native source selection and the exact optional connection file. Start launches the maintained source authoring command with those selections. The original structured startup opens that same workspace and original dataset publisher; captures, projections and draft revisions can continue normally. Stop drains the original process, and a later start reopens its saved work. The complete [NocoDB Applications guide](../../sf30-seller-sdk/nocodb/APPLICATIONS.md) covers initialization, live and retained source intake, publisher/customer delivery and managed recovery.
+
+## Stellar asset investigation
+
+Choose **Stellar asset investigation** with its private **StellarExpert workspace**, optional **Original buyer inbox** and optional **Private merchant runtime JSON**. The workspace may be retained or one new directory in an existing private parent. Use the common **Local port** and **Private environment JSON** settings for the original source command.
+
+The selection carries the stable workspace UUID, source files, original inbox and exact merchant runtime configuration into the existing review and launch. Applications opens the original authenticated workspace from its structured startup record. Capture original asset observations, compare retained editions, review findings, prepare datasets, operate the original merchant releases and receive purchased dataset pages through the existing customer inbox. Captures, editions, notes and receipts remain normal mutable workspace progress across Stop and reopen. The complete [StellarExpert operator guide](../../sf30-seller-sdk/stellar-expert/OPERATOR_GUIDE.md) covers the source, merchant and customer workflow.
+
+## Baserow source authoring
+
+The **Baserow source authoring** application opens the same retained workspace used by `baserow-workspace`. Initialize its private working directory once:
+
+~~~sh
+starforge baserow-workspace init \
+  --directory /PRIVATE/baserow-source \
+  --target /PRIVATE/baserow-dataset
+~~~
+
+In Applications, select the current READY runtime and this original workspace. Choose port `0` for an available local port. Supply an optional private connections file for public-grid or authorized-table observations; token values are provided through the selected private environment file. An existing source packet can be imported with the connection field empty.
+
+Review and save the application, then review its start and select **Start → Open**. The retained start uses the original `baserow-workspace serve` command. It binds the private workspace's immutable settings and SQLite file identity, the nine native launch/browser files, the selected connections file and the actual managed release. The saved URL comes from that child process's `BASEROW_AUTHORING_READY` announcement.
+
+Inside the original workspace, discover the selected fields, retain the complete original rows and files, create a typed projection, preview it and save a reviewed version. Open the original publisher for that selected version; its merchant controls prepare and stage the original release and customer handoff. The source workspace also exports the complete retained packet for another operator. The [source workspace guide](../../sf30-seller-sdk/baserow/workspace/README.md) covers discovery, original file receiving, versions, packet import and merchant operation. The [provider guide](../../sf30-seller-sdk/baserow/README.md) covers the Baserow source and publication contract.
+
+**Stop** drains the owned source and publisher operations before releasing the workspace. **Reopen** returns to its retained captures, request history, versions and deployment state. A closed runtime browser can reopen the existing managed operation. If the selected source installation or connections file changes, review that current input before the next start. Normal source edits and publication versions stay within the retained workspace and preserve its managed identity.
+
+## CoinGecko market research
+
+Choose the original private CoinGecko workspace and optional saved project and buyer profile configuration. The same browser, model and native jobs run through Review/Save, managed connection, Start/Open, Stop and reopen. The startup observer binds the reviewed source to the actual installed release and original project; shutdown drains the original worker and database. Full operating instructions: [CoinGecko in Applications](COINGECKO_APPLICATIONS.md).
+
+## Repository metadata editions
+
+Choose **Repository metadata editions** with the original initialized XML/OAI workspace, its selected Python 3.11 or later executable, and the private environment file used by that operator. Review and Save retain the original workspace identity, selected Python runtime and complete native source binding. Review Start and Start use the maintained `oai` command from the adopted runtime; Open checks the original authenticated listener and returns to that repository's retained metadata editions. Repository metadata, feeds and XML share the original workspace resource lease, so a retained operation can be reopened or stopped before another application starts against that same directory.
+
+Within the original repository console, select the actual endpoint and metadata format, capture its complete records and resumption tokens, inspect retained metadata and mappings, and select an edition for the original publisher and customer handover. Stop drains the original server; reopen keeps the same repository history and unfinished capture state. The [OAI Applications guide](OAI_APPLICATIONS.md) covers the complete managed operation and recovery. The [original OAI operating guide](../../sf30-seller-sdk/oai-pmh/README.md) and [publisher guide](../../sf30-seller-sdk/oai-pmh/PUBLISHING.md) cover the source and complete publication workflow.
+
+## Fiscal Data operations
+
+Choose **Fiscal Data operations** with the original private Fiscal operator connection, the initialized workspace alias declared in that file, and an existing private source-package directory outside its source workspaces. The original terminal executable carries configured buyer approvals. Review and Save retain the exact connection, stable workspace identity and complete selected runtime source; the resolved workspace supplies the existing application resource lease. Start uses the original named MCP model and browser, and Open checks the same live local identity against the reviewed source and adopted release.
+
+The retained workspace provides source captures, exact decimal editions, comparisons, merchant preparation and buyer delivery. Its operator is displayed in the existing browser footer. Source edits and capture revisions stay writable within the same workspace. Stop drains the original model and browser; reopen preserves its captures, publisher history and complete source-package receiving. Follow the complete [Fiscal Data Applications guide](FISCALDATA_APPLICATIONS.md) for initialization or package receiving, private connections, runtime selection, managed operation, recovery and customer handover.
+
+## Databento migration
+
+Choose **Databento migration** with the initialized or received workbench directory containing its original `operation.json` and `workspace/` directory. Review and Save retain that operation marker, stable native workspace identity and selected source; Review Start and Start bind the same source in the adopted release. The application uses the original authenticated Python workspace server with the Databento operator assets, and Open selects the migration workspace after its live identity matches.
+
+Complete historical source editions, inspect field mappings, perform the named review, preserve results and export the customer handover from the original workbench. Stop closes its native server and model; reopen retains the same work and history. The complete [Databento Applications guide](DATABENTO_APPLICATIONS.md) covers initial setup or receiving, source/runtime selection, original producer and review actions, customer export, Stop and recovery.
+
+## World Bank economic data
+
+Choose **World Bank economic data** with the original private merchant configuration and a declared World Bank workspace alias. Review and Save retain both connection files, the workspace directory and the installed launcher. Start opens one original merchant MCP host and its World Bank model; the same model serves the authenticated browser. Open checks the running model and browser identities against the saved request and original configuration binding.
+
+Use the browser or agent to capture complete indicator pages, compare editions, record the review, publish the native dataset, operate the merchant and export the customer handover. Closing and reopening the Applications console reconnects to the same running operation. A saved start request can resume through the original recovery action; Stop closes the owned host and browser while retaining the workspace. The complete [World Bank Applications guide](WORLDBANK_APPLICATIONS.md) covers configuration, installed receiving, source and merchant operations, recovery, customer download and reopening.

@@ -2,6 +2,8 @@
 import { createHash } from 'node:crypto';
 import { PUBLIC_PROXY_FILENAME, PUBLIC_PROXY_FACTORY, PUBLIC_PROXY_SOURCE_REF, PUBLIC_PROXY_DEPENDENCY, PUBLIC_PROXY_SOURCE } from './public-proxy-runtime.mjs';
 
+import { ORIGINAL_PUBLIC_PROXY_SHA256, ORIGINAL_PUBLIC_PROXY_SOURCE, ORIGINAL_PUBLIC_RUNTIME_INSTRUCTIONS } from './public-proxy-original-runtime.mjs';
+
 export const POLICY_SCHEMA = 'scf-eoapi-deployment-policy/v1';
 export const POLICY_PACKAGE_SCHEMA = 'scf-eoapi-policy-package/v1';
 export const POLICY_SOURCES = Object.freeze([
@@ -184,7 +186,8 @@ export function normalizeDeploymentPolicy(input) {
   };
 }
 const json = value => JSON.stringify(value);
-export function compileDeploymentPolicy(input) {
+export function compileDeploymentPolicy(input) { return compilePolicyEdition(input); }
+function compilePolicyEdition(input, { legacyCors = false, runtimeSource = PUBLIC_PROXY_SOURCE } = {}) {
   const policy = normalizeDeploymentPolicy(input), publicMode = policy.identity.mode === 'public', environment = {
     UPSTREAM_URL: policy.upstream.url,
     ...(publicMode ? {} : { OIDC_DISCOVERY_URL: policy.identity.discoveryUrl, ALLOWED_JWT_AUDIENCES: json(policy.identity.audiences) }),
@@ -192,7 +195,7 @@ export function compileDeploymentPolicy(input) {
     PUBLIC_ENDPOINTS: json(policy.routing.publicEndpoints), PRIVATE_ENDPOINTS: json(policy.routing.privateEndpoints),
     ROOT_PATH: policy.deployment.rootPath, ROOT_PATH_SKIP_PREFIXES: policy.deployment.rootPathSkipPrefixes.join(','),
     CHECK_CONFORMANCE: 'true', WAIT_FOR_UPSTREAM: 'true', ENABLE_AUTHENTICATION_EXTENSION: publicMode ? 'false' : 'true',
-    ...(policy.identity.mode ? { CORS: json({ allow_origins: policy.cors.origins, allow_methods: policy.cors.methods,
+    ...(policy.identity.mode && !legacyCors ? { CORS: json({ allow_origins: policy.cors.origins, allow_methods: policy.cors.methods,
       allow_headers: policy.cors.headers, allow_credentials: policy.cors.credentials,
       expose_headers: policy.cors.exposeHeaders, max_age: policy.cors.maxAge }) } : {
       CORS_ALLOW_ORIGINS: policy.cors.origins.join(','), CORS_ALLOW_METHODS: policy.cors.methods.join(','),
@@ -203,7 +206,7 @@ export function compileDeploymentPolicy(input) {
   if (publicMode) environment.EOAPI_IDENTITY_MODE = 'public';
   if (policy.identity.internalDiscoveryUrl) environment.OIDC_DISCOVERY_INTERNAL_URL = policy.identity.internalDiscoveryUrl;
   const unset = ['PROXY_OPTIONS', 'ITEMS_FILTER', 'COLLECTIONS_FILTER', 'ITEMS_FILTER_PATH', 'COLLECTIONS_FILTER_PATH'];
-  if (policy.identity.mode) unset.push('CORS_ALLOW_ORIGINS', 'CORS_ALLOW_METHODS', 'CORS_ALLOW_HEADERS',
+  if (policy.identity.mode && !legacyCors) unset.push('CORS_ALLOW_ORIGINS', 'CORS_ALLOW_METHODS', 'CORS_ALLOW_HEADERS',
     'CORS_ALLOW_CREDENTIALS', 'CORS_EXPOSE_HEADERS', 'CORS_MAX_AGE');
   if (!policy.identity.internalDiscoveryUrl) unset.push('OIDC_DISCOVERY_INTERNAL_URL');
   if (publicMode) unset.push('OIDC_DISCOVERY_URL', 'ALLOWED_JWT_AUDIENCES', ...PUBLIC_OPENAPI_UNSET);
@@ -235,7 +238,7 @@ export function compileDeploymentPolicy(input) {
     sourceRef: policy.deployment.sourceRef, authProxyVersion: policy.deployment.authProxyVersion, policyOwner: policy.identity.policyOwner,
     defaultAccess: policy.routing.defaultPublic ? 'public' : 'authenticated',
     ...(policy.identity.mode ? { identityMode: policy.identity.mode } : {}),
-    ...(publicMode ? { runtime: { filename: PUBLIC_PROXY_FILENAME, factory: PUBLIC_PROXY_FACTORY, dependency: { ...PUBLIC_PROXY_DEPENDENCY }, sourceSha256: createHash('sha256').update(PUBLIC_PROXY_SOURCE).digest('hex') } } : {}),
+    ...(publicMode ? { runtime: { filename: PUBLIC_PROXY_FILENAME, factory: PUBLIC_PROXY_FACTORY, dependency: { ...PUBLIC_PROXY_DEPENDENCY }, sourceSha256: createHash('sha256').update(runtimeSource).digest('hex') } } : {}),
     routePrecedence: { public: 'When defaultPublic is false, public rules are checked before private rules.', private: 'The first matching private rule in the recorded order selects its required scopes.' },
     routes: [...Object.entries(policy.routing.publicEndpoints).flatMap(([pattern, methods], index) => methods.map(method => ({ pattern, order: index + 1, method, access: 'public', scopes: [], active: !policy.routing.defaultPublic, matching: 'case-sensitive, as written' }))),
       ...Object.entries(policy.routing.privateEndpoints).flatMap(([pattern, entries], index) => entries.map(value => ({ pattern, order: index + 1, method: Array.isArray(value) ? value[0] : value, access: 'authenticated', scopes: Array.isArray(value) && value[1] ? value[1].split(' ') : [], active: true, matching: 'case-insensitive; proxy normalizes one trailing slash' })))],
@@ -246,6 +249,34 @@ export function compileDeploymentPolicy(input) {
   const digest = policyDigest(policy);
   return { schema: 'scf-eoapi-policy-compilation/v1', id: 'eoapi-policy-' + digest.slice(0, 24), digest, policy, environment, unset, review, ready: !findings.length };
 }
+
+// Read an earlier compilation as its recorded source edition. Current drafts
+// always use compileDeploymentPolicy; this finite compatibility path recognizes
+// complete former compiler outputs, including their CORS representation.
+export function retainedDeploymentCompilation(value) {
+  need(value && value.schema === 'scf-eoapi-policy-compilation/v1', 'EOAPI_RETAINED_COMPILATION_INVALID');
+  const policy = normalizeDeploymentPolicy(value.policy), candidates = [compilePolicyEdition(policy)];
+  if (policy.identity.mode) candidates.push(compilePolicyEdition(policy, { legacyCors: true }));
+  if (policy.identity.mode === 'public') candidates.push(compilePolicyEdition(policy, {
+    legacyCors: true, runtimeSource: ORIGINAL_PUBLIC_PROXY_SOURCE
+  }));
+  need(candidates.some(candidate => policyDigest(candidate) === policyDigest(value)), 'EOAPI_RETAINED_COMPILATION_UNKNOWN');
+  return structuredClone(value);
+}
+export function deploymentRuntimeSource(compilation) {
+  if (compilation.policy.identity.mode !== 'public') return null;
+  const runtime = compilation.review.runtime;
+  need(runtime && runtime.filename === PUBLIC_PROXY_FILENAME && runtime.factory === PUBLIC_PROXY_FACTORY &&
+    policyDigest(runtime.dependency) === policyDigest(PUBLIC_PROXY_DEPENDENCY), 'EOAPI_POLICY_PACKAGE_RUNTIME_MISMATCH');
+  const source = runtime.sourceSha256 === ORIGINAL_PUBLIC_PROXY_SHA256 ? ORIGINAL_PUBLIC_PROXY_SOURCE : PUBLIC_PROXY_SOURCE;
+  need(createHash('sha256').update(source).digest('hex') === runtime.sourceSha256, 'EOAPI_POLICY_PACKAGE_RUNTIME_MISMATCH');
+  return source;
+}
+export function deploymentPolicyMarkdownEditions(compilation) {
+  return [...new Set([deploymentPolicyMarkdown(compilation),
+    ...(compilation.policy.identity.mode === 'public' ? [deploymentPolicyMarkdown(compilation, { legacyPublicInstructions: true })] : [])])];
+}
+
 export function compareDeploymentPolicies(before, after) {
   const oldValue = before ? normalizeDeploymentPolicy(before) : null, nextValue = normalizeDeploymentPolicy(after), changes = [];
   function walk(left, right, path) {
@@ -268,11 +299,11 @@ export function applyDeploymentEnvironment(existing, compilation) {
   for (const key of compilation.unset) delete result[key];
   return Object.assign(result, compilation.environment);
 }
-export function deploymentPolicyMarkdown(compilation) {
+export function deploymentPolicyMarkdown(compilation, { legacyPublicInstructions = false } = {}) {
   const escape = value => String(value ?? '').replaceAll('|', '\\|').replaceAll('\n', ' ');
   const lines = ['# ' + compilation.policy.title, '', 'Policy version: `' + compilation.id + '`', '',
     compilation.policy.identity.mode === 'public' ? 'This public-source policy uses the included native public factory without an identity provider. It preserves the selected STAC Auth Proxy request, path, link, CORS and reverse-proxy components and the original collection access terms.' : 'The selected upstream STAC Auth Proxy applies authentication and record access. This package records the reviewed deployment configuration and the original collection access terms.', '',
-    ...(compilation.policy.identity.mode === 'public' ? [
+    ...(compilation.policy.identity.mode === 'public' ? (legacyPublicInstructions ? ORIGINAL_PUBLIC_RUNTIME_INSTRUCTIONS.slice(0, -1).split('\n') : [
       "## Public runtime",
       "",
       "The package includes `eoapi_public_proxy.py`. Use an existing environment installed from the exact selected source, or create a receiving environment and install it:",
@@ -308,7 +339,7 @@ export function deploymentPolicyMarkdown(compilation) {
       "",
       "The original Auth Proxy application always initializes OIDC. Public mode uses this included factory with upstream-only startup checks and removes caller Authorization, Cookie and Proxy-Authorization before forwarding. Its typed settings require public routes, empty record filters and identity settings, and CORS credentials disabled. The native dependency and factory travel as the reviewed source selection and complete included Python file.",
       ""
-    ] : []),
+    ]) : []),
     '| Setting | Selected value |', '| --- | --- |',
     ...[['eoAPI version', compilation.policy.deployment.eoapiVersion], ['Auth Proxy version', compilation.policy.deployment.authProxyVersion], ['Source revision', compilation.policy.deployment.sourceRef], ['Public URL', compilation.policy.deployment.publicUrl], ['Policy owner', compilation.review.policyOwner], ['Default access', compilation.review.defaultAccess], ['Upstream boundary', compilation.review.upstreamBoundary], ['Receiving retention days', compilation.review.retentionDays]].map(([key, value]) => '| ' + key + ' | ' + escape(value) + ' |'), '',
     '## Routes', '', compilation.review.routePrecedence.public + ' ' + compilation.review.routePrecedence.private, '', '| Order within access class | Pattern | Method | Access | Required scopes, all | Active |', '| --- | --- | --- | --- | --- | --- |',

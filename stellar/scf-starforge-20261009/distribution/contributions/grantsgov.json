@@ -1,0 +1,29 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grantsgov",
+  "description": "Grants.gov opportunity research, native publication and complete receiving",
+  "commands": {
+    "grantsgov": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/cli.mjs",
+    "grantsgov-receive": "stellar-forge/mcp-merchant-operator/grantsgov-download.mjs"
+  },
+  "commandDescriptions": {
+    "grantsgov": "Capture, qualify, publish and reopen original grant opportunities",
+    "grantsgov-receive": "Download, resume and receive complete original grant exports"
+  },
+  "exports": {
+    "./research/grantsgov": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/workspace.mjs",
+    "./research/grantsgov/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/source.mjs",
+    "./research/grantsgov/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/capture.mjs",
+    "./research/grantsgov/storage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/capture-storage.mjs",
+    "./research/grantsgov/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/server.mjs",
+    "./research/grantsgov/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/launch.mjs",
+    "./merchant/mcp/grantsgov": "./source/stellar-forge/mcp-merchant-operator/grantsgov-workspace.mjs",
+    "./merchant/mcp/grantsgov/download": "./source/stellar-forge/mcp-merchant-operator/grantsgov-download.mjs"
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/browser-assets.json"
+    }
+  ]
+}

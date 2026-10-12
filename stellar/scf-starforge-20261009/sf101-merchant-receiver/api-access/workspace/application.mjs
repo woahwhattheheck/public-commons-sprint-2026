@@ -13,7 +13,9 @@ const KIND='api-pass-customer',COMMAND='api-pass-workspace';
 const SCHEMA='stellar-forge.sf101.api-pass-application.v1';
 const START='stellar-forge.sf101.api-pass-workspace-launch.v1';
 const STATE='stellar-forge.sf101.api-pass-workspace.v1';
-const SOURCE_FILES=['browser-assets.json','configuration.mjs','model.mjs','server.mjs','cli.mjs','public/index.html','public/style.css','public/app.mjs'];
+const SOURCE_FILES=['browser-assets.json','configuration.mjs','model.mjs','server.mjs','cli.mjs','agent-setup.mjs','public/index.html','public/style.css','public/app.mjs'];
+const AGENT_ROOT='stellar-forge/mcp-merchant-operator/';
+const AGENT_FILES=['api-pass-setup.mjs','api-pass-connection.mjs','api-pass-protocol.mjs','api-pass-operations.mjs','api-pass-exports.mjs','api-pass-workspace.mjs','client-config.mjs','config.mjs','catalog.mjs','providers.mjs','instructions.mjs','operator.mjs','serve.mjs','stdio.mjs'];
 const HASH=/^[a-f0-9]{64}$/,UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const same=(a,b)=>digest(json(canonical(a)))===digest(json(canonical(b)));
 const field=(name,label,type='path',required=false,description='')=>({name,label,type,required,description});
@@ -23,6 +25,7 @@ export function apiPassWorkspaceApplication(common){
   fields:[
    field('configurationFile','Customer workspace configuration','path',true,'Select the private configuration created by api-pass-workspace configure.'),
    field('workspaceDirectory','Private customer workspace','path',true,'Use the directory recorded in that configuration; existing passes and requests reopen here.'),
+   field('agentDirectory','Private agent connection directory','path',false,'Create or reopen the original customer MCP connection, saved operations, complete downloads and local client settings here.'),
    field('approvalMode','Purchase approval channel','text',false,'auto uses the selected original browser capability when available; terminal keeps its original terminal channel; browser requires that capability.'),
    field('approvalModule','Selected original approval broker','path',false,'Optional explicit source from the selected original runtime. The native bridge and Python helper remain that runtime’s own.'),
    field('terminalPython','Terminal Python executable','path',false,'Defaults to /usr/bin/python3; keeps the original terminal approval channel available beside browser approval.'),
@@ -89,6 +92,19 @@ export async function prepareApiPassWorkspaceApplication(settings,{runtimeDirect
  need(['auto','browser','terminal'].includes(mode),'API_PASS_APPLICATION_APPROVAL_MODE_INVALID');
  const args=['serve','--config',configPath,'--expected-config-sha256',configHash,
   '--expected-workspace-sha256',retained?.sha256??'new','--approval-mode',mode];
+ let agentSetup=null,agentSources=[];
+ if(settings.agentDirectory){
+  const directory=absolute(settings.agentDirectory),selected=await inputPath(directory,'directory',true,true);
+  inputs.push(selected);if(!selected.exists)createDirectories.push(directory);
+  const agent=await import(pathToFileURL(join(product,'agent-setup.mjs')).href);
+  need(typeof agent.inspectApiPassAgentSetup==='function','API_PASS_APPLICATION_AGENT_SOURCE_REQUIRED');
+  const view=await agent.inspectApiPassAgentSetup(directory,{workspaceDirectory:config.directory,workspaceId:retained?.id??null});
+  need(retained!==null||view.workspaceId===null,'API_PASS_APPLICATION_AGENT_WORKSPACE_CHANGED');
+  for(const file of view.files){const item=await inputPath(file.path,'file');need(item.sha256===file.sha256,'API_PASS_APPLICATION_AGENT_SETUP_CHANGED');inputs.push(item);}
+  for(const path of AGENT_FILES){const item=await inputPath(join(runtime.sourceRoot,AGENT_ROOT,path),'file');inputs.push(item);agentSources.push({path:AGENT_ROOT+path,bytes:item.bytes,sha256:item.sha256});}
+  agentSetup={directory,sha256:view.sha256,files:view.files};
+  args.push('--agent-directory',directory,'--expected-agent-setup-sha256',view.sha256);
+ }
  let approval=null;
  if(settings.approvalModule){
   need(mode!=='terminal','API_PASS_APPLICATION_APPROVAL_MODULE_UNUSED');
@@ -104,7 +120,8 @@ export async function prepareApiPassWorkspaceApplication(settings,{runtimeDirect
   entry:entry.path,entrySha256:entry.sha256,configurationModule:module,
   configurationModuleSha256:inputs[1].sha256,sourceRoot:runtime.sourceRoot,sourceFiles,runtimeDirectory:config.runtimeDirectory,
   buyerStateDirectory:config.buyerStateDirectory,inboxDirectory:config.inboxDirectory,buyerWorkspace:config.buyerWorkspace,
-  approvalMode:mode,approvalModule:approval?.path??null,approvalSha256:approval?.sha256??null,port:settings.port??0}};
+  approvalMode:mode,approvalModule:approval?.path??null,approvalSha256:approval?.sha256??null,port:settings.port??0,
+  agentSetup,agentSources}};
 }
 async function retainedLaunch(request,operationDirectory){
  need(request.applicationId&&request.command===COMMAND,'API_PASS_APPLICATION_REQUEST_REQUIRED');
@@ -121,7 +138,9 @@ async function retainedLaunch(request,operationDirectory){
  need(flag(request,'--config')===identity.configurationFile&&flag(request,'--expected-config-sha256')===identity.configurationSha256&&
   flag(request,'--expected-workspace-sha256')===identity.workspaceSha256&&flag(request,'--approval-mode')===identity.approvalMode&&
   flag(request,'--approval-module',true)===identity.approvalModule&&
-  flag(request,'--expected-approval-sha256',true)===identity.approvalSha256,'API_PASS_APPLICATION_REQUEST_CHANGED');
+  flag(request,'--expected-approval-sha256',true)===identity.approvalSha256&&
+  flag(request,'--agent-directory',true)===(identity.agentSetup?.directory??null)&&
+  flag(request,'--expected-agent-setup-sha256',true)===(identity.agentSetup?.sha256??null),'API_PASS_APPLICATION_REQUEST_CHANGED');
  return {identity,review};
 }
 async function productSources(sourceRoot,identity){
@@ -132,7 +151,13 @@ async function productSources(sourceRoot,identity){
   const bytes=await regular(join(absolute(sourceRoot),PRODUCT,file.path),4*1024*1024);
   need(bytes.length===file.bytes&&digest(bytes)===file.sha256,'API_PASS_APPLICATION_SOURCE_BYTES_CHANGED');
  }
- return {sourceRoot,entry:join(sourceRoot,PRODUCT,'cli.mjs'),sourceFiles:identity.sourceFiles};
+ const agents=identity.agentSources??[];
+ need(Array.isArray(agents)&&agents.length===(identity.agentSetup?AGENT_FILES.length:0)&&
+  agents.every((file,index)=>file.path===AGENT_ROOT+AGENT_FILES[index]&&HASH.test(file.sha256??'')&&Number.isSafeInteger(file.bytes)),
+  'API_PASS_APPLICATION_AGENT_SOURCE_CHANGED');
+ for(const file of agents){const bytes=await regular(join(absolute(sourceRoot),file.path),4*1024*1024);
+  need(bytes.length===file.bytes&&digest(bytes)===file.sha256,'API_PASS_APPLICATION_AGENT_SOURCE_CHANGED');}
+ return {sourceRoot,entry:join(sourceRoot,PRODUCT,'cli.mjs'),sourceFiles:identity.sourceFiles,agentSources:agents};
 }
 async function executedSources(request,identity){
  return productSources(join(absolute(request.releaseDirectory),'source'),identity);
@@ -151,6 +176,11 @@ export async function verifyApiPassWorkspaceLaunch(request,operationDirectory){
  const state=await stateAt(identity.directory);
  need((state?.sha256??'new')===identity.workspaceSha256&&(state?.id??null)===identity.workspaceId,
   'API_PASS_APPLICATION_REVIEWED_STATE_CHANGED');
+ if(identity.agentSetup){
+  const agent=await import(pathToFileURL(join(identity.sourceRoot,PRODUCT,'agent-setup.mjs')).href);
+  const view=await agent.inspectApiPassAgentSetup(identity.agentSetup.directory,{workspaceDirectory:identity.directory,workspaceId:identity.workspaceId});
+  need(view.sha256===identity.agentSetup.sha256,'API_PASS_APPLICATION_AGENT_SETUP_CHANGED');
+ }
 }
 async function processInfo(pid){
  need(Number.isSafeInteger(pid)&&pid>1,'API_PASS_APPLICATION_PROCESS_REQUIRED');
@@ -226,9 +256,21 @@ export async function apiPassWorkspaceStartup(request,operationDirectory,text,co
   state?.id===value.workspaceId,'API_PASS_APPLICATION_SESSION_CHANGED');
  const after=await processInfo(value.processId);
  need(before.started===after.started&&before.parent===after.parent,'API_PASS_APPLICATION_PROCESS_CHANGED');
+ let agentSetup=null;
+ if(identity.agentSetup){
+  need(same(value.agent,launch.agent)&&launch.agent?.directory===identity.agentSetup.directory&&
+   launch.agent.workspaceId===value.workspaceId,'API_PASS_APPLICATION_AGENT_STARTUP_CHANGED');
+  const agent=await import(pathToFileURL(join(executed.sourceRoot,PRODUCT,'agent-setup.mjs')).href);
+  const view=await agent.inspectApiPassAgentSetup(identity.agentSetup.directory,{workspaceDirectory:identity.directory,workspaceId:value.workspaceId});
+  need(view.initialized&&view.sha256===launch.agent.setupSha256,'API_PASS_APPLICATION_AGENT_STARTUP_CHANGED');
+  const client=await readJSON(view.clientConfiguration),server=client.mcpServers?.['starforge-api-customer'];
+  need(server?.args?.length===1&&server.args[0]===join(executed.sourceRoot,AGENT_ROOT,'stdio.mjs')&&
+   server.env?.MCP_MERCHANT_CONFIG===view.merchantConfiguration,'API_PASS_APPLICATION_AGENT_EXECUTION_CHANGED');
+  agentSetup=launch.agent;
+ }else need(value.agent===undefined&&launch.agent===undefined,'API_PASS_APPLICATION_AGENT_STARTUP_CHANGED');
  return {url:url.href,links:[],original:{schema:START,workspaceId:value.workspaceId,instanceId:value.instanceId,
   directory:identity.directory,configurationFile:identity.configurationFile,configurationSha256:identity.configurationSha256,
   source:launch.source,selectedSource:{sourceRoot:identity.sourceRoot,entry:identity.entry,sourceFiles:identity.sourceFiles},
   executedSource:executed,approval:launch.approval,process:{id:value.processId,parent:after.parent,start:after.started},
-  launchFile,port,startedAt:launch.startedAt}};
+  launchFile,port,startedAt:launch.startedAt,...(agentSetup?{agentSetup}:{})}};
 }

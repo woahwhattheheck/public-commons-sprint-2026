@@ -24,8 +24,11 @@ An optional trusted profile selects existing merchant objects and native buyer
 workspaces. Existing sessions reopen from --state without a profile. The native
 buyer keeps per-chunk approval in this launching terminal. Ctrl+C stops owned
 work, closes the private browser server and retains every original session.
-The original local operator preset also enables receiving public merchant object
-descriptions and offers, then creating a private buyer and reviewed download.
+Local buyer setup in this browser reviews and saves the host identity, public
+payer, signing reference and spending ceilings. No external preset is required.
+An optional --operator-settings preset can be adopted without changing its file.
+Received merchant descriptions and offers then create the original private buyer.
+Saved host revisions, existing buyers and interrupted preparations reopen together.
 Backup and recovery uses a separate SF88_BACKUP_PASSPHRASE environment variable
 set before launch. The browser receives its name only, never its value.
 Completed JSON and CSV files can be registered with the original Python analysis
@@ -64,6 +67,8 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
     ['/app.mjs', 'app.mjs', 'text/javascript; charset=utf-8'],
     ['/style.css', 'style.css', 'text/css; charset=utf-8'],
   ].map(async ([path, filename, type]) => [path, { bytes: await readFile(new URL('./public/' + filename, import.meta.url)), type }])));
+  assets.set('/operator.mjs', { bytes: await readFile(new URL('../../buyer-runbook/workspace-ui/operator.mjs', import.meta.url)),
+    type: 'text/javascript; charset=utf-8' });
   const tickets = new Map(), sockets = new Set(), downloadControllers = new Set();
   let origin, host, closing, closed = false;
   const server = createServer(async (req, res) => {
@@ -115,6 +120,17 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
       const supplied = Buffer.from(typeof req.headers['x-object-workspace-token'] === 'string' ? req.headers['x-object-workspace-token'] : '');
       if (supplied.length !== tokenBytes.length || !timingSafeEqual(supplied, tokenBytes))
         fail('OBJECT_WORKSPACE_CAPABILITY_REQUIRED', 401);
+      if (req.method === 'GET' && url.pathname === '/api/operator' && !url.search)
+        return send(200, await model.operatorState());
+      const operatorRevision = /^\/api\/operator\/(preset-[a-f0-9]{64})$/.exec(url.pathname);
+      if (req.method === 'GET' && operatorRevision && !url.search)
+        return send(200, await model.operatorRevision(operatorRevision[1]));
+      const operatorFile = /^\/files\/operator\/(preset-[a-f0-9]{64})\/settings\.json$/.exec(url.pathname);
+      if (req.method === 'GET' && operatorFile && !url.search) {
+        const saved = await model.operatorAttachment(operatorFile[1]);
+        return reply(200, 'application/json; charset=utf-8', saved.bytes,
+          { 'content-disposition': 'attachment; filename="' + saved.name + '"', 'x-content-sha256': saved.sha256 });
+      }
       if (req.method === 'GET' && url.pathname === '/api/products' && !url.search)
         return send(200, { products: await model.products() });
       if (req.method === 'GET' && url.pathname === '/api/receiving' && !url.search)
@@ -123,6 +139,10 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         return send(200, await model.recoveryState());
       if (req.method === 'GET' && url.pathname === '/api/analysis' && !url.search)
         return send(200, model.analysisState());
+      if (req.method === 'GET' && url.pathname === '/api/receiving/review') {
+        const value = params(url, ['reviewId']);
+        return send(200, await model.receivedReview(value.reviewId));
+      }
       if (req.method === 'GET' && url.pathname === '/api/receiving/options') {
         const value = params(url, ['id', 'objectId']);
         return send(200, await model.receivingOptions(value.id, value.objectId));
@@ -138,6 +158,8 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
         return reply(200, output.type, output.bytes, { 'content-disposition': 'attachment; filename="' + output.name + '"' });
       }
       const actions = {
+        '/api/operator/review': ['settings', 'expectedStateSha256', 'note', 'sourceRevision'],
+        '/api/operator/save': ['settings', 'expectedStateSha256', 'note', 'sourceRevision', 'expectedReviewSha256'],
         '/api/review': ['productId', 'sessionName', 'chunkBytes', 'maxTotalAtomic'],
         '/api/create': ['reviewId'], '/api/refresh': ['session', 'section'],
         '/api/run': ['session', 'expectedRevision', 'actionId'], '/api/stop': ['session', 'runId'],
@@ -156,7 +178,9 @@ export async function startObjectWorkspace({ stateDirectory, profilePath = null,
       if (req.method !== 'POST' || url.search || !actions[url.pathname]) fail('OBJECT_WORKSPACE_ROUTE_NOT_FOUND', 404);
       if (req.headers.origin !== origin) fail('OBJECT_WORKSPACE_ORIGIN_REQUIRED', 403);
       const value = await input(req, actions[url.pathname],
-        url.pathname === '/api/receiving/receive' ? OBJECT_RECEIVING_REQUEST_LIMIT : 8192);
+        url.pathname === '/api/receiving/receive' ? OBJECT_RECEIVING_REQUEST_LIMIT : url.pathname.startsWith('/api/operator/') ? 20480 : 8192);
+      if (url.pathname === '/api/operator/review') return send(200, await model.reviewOperatorSettings(value));
+      if (url.pathname === '/api/operator/save') return send(200, await model.saveOperatorSettings(value));
       if (url.pathname === '/api/recovery/review') return send(200, await model.inspectRecovery(value));
       if (url.pathname === '/api/analysis/review') return send(200, await model.reviewAnalysis(value));
       if (url.pathname === '/api/analysis/start') return send(202, model.startAnalysis(value));
@@ -246,3 +270,4 @@ export async function main(argv = process.argv.slice(2)) {
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href)
   main().catch(error => { process.stderr.write(workspaceError(error) + '\n'); process.exitCode = 1; });
+

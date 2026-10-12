@@ -93,9 +93,19 @@ function fieldNames(values, allowed, name, maximum = 8) {
 }
 
 /** One kernel-owned metadata writer. Background network reads commit one original page at a time. */
-export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], limits: suppliedLimits = {} } = {}) {
+export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], limits: suppliedLimits = {}, expectedWorkspace } = {}) {
   if (typeof directory !== 'string' || !isAbsolute(directory) || resolve(directory) !== directory || directory === '/')
     throw fault('WORKSPACE_PATH_REQUIRED', 'Use a normalized absolute private workspace directory.');
+  if (expectedWorkspace !== undefined) {
+    only(expectedWorkspace,['id','createdAt','directoryIdentity']);
+    only(expectedWorkspace.directoryIdentity,['dev','ino']);
+    if (!UUID.test(expectedWorkspace.id??'') || typeof expectedWorkspace.createdAt!=='string' ||
+        !Number.isFinite(Date.parse(expectedWorkspace.createdAt)) ||
+        !['dev','ino'].every(key=>typeof expectedWorkspace.directoryIdentity[key]==='string' &&
+          /^[0-9]+$/.test(expectedWorkspace.directoryIdentity[key])))
+      throw fault('WORKSPACE_IDENTITY_REQUIRED','Use the reviewed original workspace identity.');
+    expectedWorkspace=clone(expectedWorkspace);
+  }
   if (!object(suppliedLimits) || Object.keys(suppliedLimits).some(key => !Object.hasOwn(defaults, key)))
     throw fault('WORKSPACE_LIMITS', 'Use the documented workspace limits.');
   const limits = { ...defaults, ...suppliedLimits };
@@ -111,7 +121,7 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
         typeof binding.directory !== 'string' || !isAbsolute(binding.directory) || resolve(binding.directory) !== binding.directory)
       throw fault('BUYER_BINDINGS_INVALID', 'Each buyer workspace needs its original ID, label and canonical absolute directory.');
   }
-  await privateDirectory(directory, true);
+  await privateDirectory(directory, expectedWorkspace === undefined);
   const unlock = await acquireWorkspace(directory);
   const roots = Object.fromEntries([...GROUPS, 'downloads', 'staging'].map(key => [key, join(directory, key)]));
   const records = Object.fromEntries(GROUPS.map(group => [group, new Map()]));
@@ -176,6 +186,23 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
     return record;
   }
   try {
+    // The original kernel lease is held before checking a managed launch identity.
+    // Reject a replaced or uninitialized directory before reconstructing any saved state.
+    if (expectedWorkspace !== undefined) {
+      let selected,info;
+      try {
+        selected=await readJson(join(directory,'workspace.json'),MiB);
+        info=await lstat(directory,{bigint:true});
+      } catch(error) {
+        if(error.code==='ENOENT')throw fault('WORKSPACE_IDENTITY_CHANGED','Review the original retained workspace before starting.',409);
+        throw error;
+      }
+      if(selected.schema!==SCHEMA || selected.id!==expectedWorkspace.id ||
+          selected.createdAt!==expectedWorkspace.createdAt ||
+          String(info.dev)!==expectedWorkspace.directoryIdentity.dev ||
+          String(info.ino)!==expectedWorkspace.directoryIdentity.ino)
+        throw fault('WORKSPACE_IDENTITY_CHANGED','Review the original retained workspace before starting.',409);
+    }
     if (await absent(join(directory,'workspace.json'))) {
       const existing = await readdir(directory);
       if (existing.some(name => name !== 'publisher.lock' && !name.startsWith('.pending-')))
@@ -1217,3 +1244,4 @@ export async function openFiscalWorkspace({ directory, buyerWorkspaces = [], lim
   }
   return {snapshot,dispatch,file,startWorker,close};
 }
+

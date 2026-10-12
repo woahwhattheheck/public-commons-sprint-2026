@@ -24,6 +24,7 @@ const help = [
   '  jobs retry --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs cancel --config FILE --state DIR --id JOB --revision N --reason TEXT',
   '  jobs result --config FILE --state DIR --id JOB --out NEW_RESULT_FILE',
+  '  jobs inputs --help',
   '  jobs delivery --help',
   '  jobs receiver --help',
   '  jobs recovery --help', '',
@@ -100,6 +101,10 @@ async function publishNew(destination, bytes) {
 /** Maintained distribution entrypoint. */
 export async function runJobCommand(argv = process.argv.slice(2), { print = value => console.log(value) } = {}) {
   if (!argv.length || argv.length === 1 && ['--help', '-h', 'help'].includes(argv[0])) { print(help); return; }
+  if (argv[0] === 'inputs') {
+    const { runJobInputCommand } = await import('./inputs/cli.mjs');
+    return runJobInputCommand(argv.slice(1), { print });
+  }
   if (argv[0] === 'delivery') {
     const { runDeliveryCommand } = await import('./result-delivery/cli.mjs');
     return runDeliveryCommand(argv.slice(1), { print });
