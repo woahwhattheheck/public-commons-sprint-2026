@@ -49,9 +49,16 @@ async function publishSnapshot(parent, name, files, metadata) {
 }
 
 export async function openTenderlyWorkspace({
-  directory, planPath, env = process.env, merchantOptions = {},
+  directory, planPath, env = process.env, merchantOptions = {}, launchBinding,
 } = {}) {
   need(typeof directory === 'string' && directory.length > 0, 'Supply the private workspace directory');
+  need(launchBinding === undefined || launchBinding && typeof launchBinding === 'object' &&
+    !Array.isArray(launchBinding) &&
+    Object.keys(launchBinding).every(key => ['workspaceSha256', 'planSha256'].includes(key)) &&
+    (launchBinding.workspaceSha256 === 'new' || /^[a-f0-9]{64}$/.test(launchBinding.workspaceSha256 ?? '')) &&
+    (launchBinding.planSha256 === undefined || planPath && /^[a-f0-9]{64}$/.test(launchBinding.planSha256)),
+    'Invalid reviewed workspace launch binding');
+  const expectedWorkspace = launchBinding?.workspaceSha256;
   const root = resolve(directory);
   await mkdir(root, { mode: 0o700 }).catch(error => { if (error.code !== 'EEXIST') throw error; });
   return openExisting();
@@ -66,22 +73,34 @@ export async function openTenderlyWorkspace({
       await privateDirectory(join(root, name));
     }
     const manifestPath = join(root, 'workspace.json');
-    let manifest;
-    try { manifest = parse(await readBytes(manifestPath, { privateFile: true, max: 65536 }), 'workspace.json'); }
+    let manifest, manifestBytes, created = false;
+    const readManifest = async () => {
+      manifestBytes = await readBytes(manifestPath, { privateFile: true, max: 65536 });
+      manifest = parse(manifestBytes, 'workspace.json');
+    };
+    try { await readManifest(); }
     catch (error) {
       if (error.code !== 'ENOENT') throw error;
+      need(expectedWorkspace === undefined || expectedWorkspace === 'new',
+        'The reviewed Tenderly workspace identity is missing; review its current directory', 409);
       const release = await acquireRunbookMetadataLease(root);
       try {
-        try { manifest = parse(await readBytes(manifestPath, { privateFile: true, max: 65536 }), 'workspace.json'); }
+        try { await readManifest(); }
         catch (readError) {
           if (readError.code !== 'ENOENT') throw readError;
           manifest = { schema: SCHEMA, id: randomUUID(), createdAt: new Date().toISOString() };
-          await writeNew(manifestPath, json(manifest)); await syncDirectory(root);
+          manifestBytes = json(manifest);
+          await writeNew(manifestPath, manifestBytes); await syncDirectory(root);
+          created = true;
         }
       } finally { await release(); }
     }
     need(manifest.schema === SCHEMA && /^[a-f0-9-]{36}$/.test(manifest.id ?? ''),
       'This directory is not a Tenderly operator workspace');
+    const manifestSha256 = sha256(manifestBytes);
+    need(expectedWorkspace === undefined ||
+      (expectedWorkspace === 'new' ? created : expectedWorkspace === manifestSha256),
+      'The reviewed Tenderly workspace identity changed; review its current directory', 409);
 
     let active = null, closing = false, pending = Promise.resolve(), shutdown;
     const serial = operation => {
@@ -143,7 +162,12 @@ export async function openTenderlyWorkspace({
           const prepared = await readPreparedProduct(destination);
           need(saved.profile === id && prepared.planSha256 === profile.review.planSha256,
             'Prepared package does not match the saved profile', 409);
-          return saved;
+          // Reopening may receive the complete workspace at a new directory.
+          // Keep its saved identity, and use paths from the verified current package.
+          const { directory, stateDirectory, planFile, serviceFile,
+            upstreamsFile, openapiFile, clientDirectory } = prepared;
+          return { ...saved, directory, stateDirectory, planFile, serviceFile,
+            upstreamsFile, openapiFile, clientDirectory };
         } catch (error) { if (error.code !== 'ENOENT') throw error; }
         const result = await prepareProduct({ plan: profile.plan, out: destination });
         const saved = { ...result, schema: SCHEMA + '.package', profile: id,
@@ -301,13 +325,16 @@ export async function openTenderlyWorkspace({
       else if (active) await active.application.close();
       active = null;
     })();
-    let initialProfile = null;
+    let initialProfile = null, initialPlanSha256 = null;
     if (planPath) {
-      const input = parse(await readBytes(resolve(planPath), { max: 1024 * 1024 }), 'initial merchant plan');
-      initialProfile = await saveProfile({ plan: input });
+      const bytes = await readBytes(resolve(planPath), { max: 1024 * 1024 });
+      initialPlanSha256 = sha256(bytes);
+      need(launchBinding?.planSha256 === undefined || launchBinding.planSha256 === initialPlanSha256,
+        'The reviewed initial merchant plan changed; review its current bytes', 409);
+      initialProfile = await saveProfile({ plan: parse(bytes, 'initial merchant plan') });
     }
     return {
-      root, manifest, close, status,
+      root, manifest, manifestSha256, initialPlanSha256, close, status,
       bootstrap: async () => ({ schema: SCHEMA, id: manifest.id, directory: root,
         createdAt: manifest.createdAt, template: templatePlan(), initialProfile,
         profiles: await profiles({ limit: 25 }), status: status() }),
