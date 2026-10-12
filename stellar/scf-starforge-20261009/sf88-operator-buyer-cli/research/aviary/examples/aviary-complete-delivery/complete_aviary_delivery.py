@@ -8,7 +8,7 @@ ROOT=Path("/dev/aviary-complete-final-6ba15")
 SHARED=Path("/workspace/scratch/6ba15c52ace4/aviary-final-delivery-20261012")
 ORIGINAL=Path("/workspace/scratch/6ba15c52ace4/aviary-native-restored")
 CAPTURES=Path("/dev/shm/avp-aviary-workshare-6ba15/example/captures")
-SOURCE_SHA="12da23f08cda04634318e6944c071286348effc0ec88ed63fa79cceaa61e34bf"
+SOURCE_SHA="cb5f1cd8d5fabee6b6e43eb1571f13fe660b1c195462118ec929328607855fc3"
 WORKSPACE_ID="e2c87db6-5832-4c62-8e22-90a407770ec2"
 PROVIDER_OPERATION="aviary-http-receiving-6ba15-20261012"
 ARCHIVES=[
@@ -142,15 +142,16 @@ def retain_command_producer(program):
  if previous==raw:return
  allowed={"ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3":36626,
           "c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33":53244,
-          "073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18":70704}
+          "073938b61dbe10e7d771741ffe5f76a0f455c3f5515ddebf86245c68e6f71d18":70704,
+           "6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98":74496}
  require(allowed.get(previous_sha)==len(previous),
   "Original producer source needs exact source reconciliation")
  publish(ROOT/"producer-source"/(previous_sha+".py"),previous)
  pubjson(ROOT/"producer-source"/("adoption-"+previous_sha+"-"+current_sha+".json"),
   {"schema":"commons.aviary-producer-source-adoption.v1","operation":OP,"previous":record(original),"selected":record(retained),
    "sourcePacketSha256":SOURCE_SHA,"callerSha256":"d1047f61b8c6b6b3a7f24a2d1fffe4b68e6407aa146f034b18beab3824bfb39e",
-   "reason":"Preserve original command attempts, own the gated child, and reconcile completed original logs without redispatch.",
-   "originalSourceChanged":False,"applicationSourceChanged":False})
+   "reason":"Preserve original producer and command history while selecting the explicit supplemental source-mapping correction.",
+   "originalSourceChanged":False,"nativeApplicationSourceChanged":False,"exampleMappingChanged":True})
 COMMAND_BOOTSTRAP = r'''
 import hashlib,json,os,pathlib,sys
 def need(ok,message):
@@ -848,27 +849,105 @@ def wait_visual(screens):
   v={"schema":"commons.aviary.visual-inspection.v1","operation":OP,"inspectedAt":now(),"sourceScreenshots":screens,"summary":command["summary"],"images":rows,"pixelFiles":"LOCAL_QA_NOT_DELIVERABLES"}
   pubjson(saved,v);return v
  raise RuntimeError("Visual review deadline reached; original PNGs and browser result retained")
+def retain_source_correction(packet):
+ correction=PAYLOAD.get("sourceCorrection")
+ require(isinstance(correction,dict) and correction.get("schema")=="commons.aviary.supplemental-source-correction.v1"
+         and correction.get("operation")==OP,"The exact original mapping correction is absent")
+ selected={item["path"]:item for item in packet["files"]}
+ require(len(selected)==20,"Selected complete source contains duplicate members")
+ original=json.loads(json.dumps(correction["originalPacketTemplate"],ensure_ascii=False))
+ order=original["files"]
+ require(isinstance(order,list) and len(order)==20 and set(order)==set(selected),
+         "Original complete source member order differs")
+ previous_members=correction["originalMembers"]
+ require(isinstance(previous_members,list) and len(previous_members)==1
+         and previous_members[0]["path"]=="examples/usgs-example-input.json",
+         "The source correction must retain exactly its original example member")
+ previous=previous_members[0];changed_path=previous["path"]
+ original["files"]=[previous if path==changed_path else selected[path] for path in order]
+ original_raw=(json.dumps(original,ensure_ascii=False,indent=2,allow_nan=False)+"\n").encode()
+ require(len(original_raw)==601618 and sha(original_raw)=="12da23f08cda04634318e6944c071286348effc0ec88ed63fa79cceaa61e34bf",
+         "The exact preceding complete source cannot be reconstructed")
+ require(correction["originalSourcePacket"]=={"bytes":len(original_raw),"sha256":sha(original_raw)}
+         and correction["selectedSourcePacket"]=={"bytes":len(PAYLOAD["sourcePacket"].encode()),"sha256":SOURCE_SHA},
+         "Original and selected source identities changed")
+ old_doc=json.loads(previous["content"]);new_doc=json.loads(selected[changed_path]["content"])
+ expected=json.loads(previous["content"])
+ require(expected["mapping"]["tables"]["supplemental"]["columns"].pop("Sequence #")=="sequence"
+         and expected["mapping"]["tables"]["supplemental"]["ignoredColumns"]==["attachment_key"],
+         "The original failed supplemental mapping differs")
+ expected["mapping"]["tables"]["supplemental"]["ignoredColumns"].append("sequence")
+ expected["mapping"]["note"]+=(" Supplemental source sequence values remain in the exact original CSV and are explicitly unmapped: "
+   "this application's supplemental import sends no sequence or sort parameter and retains original CSV row order. "
+   "No provider-side supplemental ordering is claimed. The original rejected Sequence # mapping and its receiving failure are retained in the delivery history.")
+ require(new_doc==expected and new_doc["files"]==old_doc["files"],
+         "The supplemental correction changed an unrelated mapping or source file")
+ require(len(selected[changed_path]["content"].encode())==18329
+         and sha(selected[changed_path]["content"].encode())=="080565897337c1c0d352c3ac238368271f93b25f18e00c8a06528b82677b6e03",
+         "The corrected example bytes differ")
+ ancestors={item["sha256"]:item for item in PAYLOAD["producerAncestors"]}
+ previous_program=ancestors["6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98"]["content"]
+ previous_guide=correction["originalProducerGuide"]
+ require(len(previous_guide.encode())==15321
+         and sha(previous_guide.encode())=="57b84e93a575e7fd5f1b22559effd9afe6795e93ef11ea00dd56c9992536c818",
+         "The original complete producer guide changed")
+ prior_input={"schema":correction["originalInputSchema"],"sourcePacket":original_raw.decode(),
+              "caller":PAYLOAD["caller"],"program":previous_program,
+              "producerAncestors":[ancestors[key] for key in (
+               "ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3",
+               "c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33")],
+              "producerGuide":previous_guide}
+ prior_raw=(json.dumps(prior_input,ensure_ascii=False,indent=2,allow_nan=False)+"\n").encode()
+ require(len(prior_raw)==832813 and sha(prior_raw)=="99fdb99fe21012f6bfe76947d72bb0fe2a402f02e90eb81eb5f762d9633569da"
+         and correction["originalInput"]=={"bytes":len(prior_raw),"sha256":sha(prior_raw)},
+         "The complete original receiving input changed")
+ history=correction["receivingHistory"].encode()
+ require(len(history)==24887 and sha(history)=="2ac7d003fb075ec99dabb4ad4205cfc641b6d762dfb0e0ffd357972d84f1e54f"
+         and correction["receivingHistoryIdentity"]=={"bytes":len(history),"sha256":sha(history)},
+         "The original 50662 failure and reconciliation history changed")
+ folder=ROOT/"producer-source"/"history-50662"
+ for name,raw in (("original-source-packet.json",original_raw),("original-input.json",prior_raw),
+                  ("original-usgs-example-input.json",previous["content"].encode()),
+                  ("original-delivery-guide.md",previous_guide.encode()),("receiving-history.json",history)):
+  publish(folder/name,raw)
+ receipt={"schema":"commons.aviary.supplemental-source-correction.v1","operation":OP,
+          "reason":correction["reason"],"previousSourcePacket":record(folder/"original-source-packet.json"),
+          "selectedSourcePacket":{"bytes":len(PAYLOAD["sourcePacket"].encode()),"sha256":SOURCE_SHA},
+          "previousInput":record(folder/"original-input.json"),"receivingHistory":record(folder/"receiving-history.json"),
+          "previousExample":record(folder/"original-usgs-example-input.json"),
+          "selectedExample":{key:selected[changed_path][key] for key in ("path","bytes","sha256")},
+          "nativeApplicationFilesChanged":0,"sourceDataFilesChanged":0,
+          "sequenceOutcome":"Retained verbatim in source CSV; explicitly ignored by the supplemental mapping; no provider ordering claimed."}
+ pubjson(folder/"source-correction.json",receipt)
+ emit("ORIGINAL_FAILURE_HISTORY_RETAINED",nativeSession=50662,
+      history=receipt["receivingHistory"],previousInput=receipt["previousInput"],
+      nativeApplicationFilesChanged=0,sourceDataFilesChanged=0)
+ return {"correction":record(folder/"source-correction.json"),"history":receipt["receivingHistory"],
+         "previousInput":receipt["previousInput"],"previousSourcePacket":receipt["previousSourcePacket"]}
+
 def main():
  global APP,ENV
  ROOT.mkdir(parents=True,exist_ok=True,mode=0o700)
  try:SHARED.mkdir(parents=True,exist_ok=True,mode=0o700)
  except OSError as error:emit("SHARED_DIRECTORY_UNAVAILABLE",errorType=type(error).__name__)
  lock=open(ROOT/".delivery.lock","a+b");fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
- packet_raw=PAYLOAD["sourcePacket"].encode();require(len(packet_raw)==601618 and sha(packet_raw)==SOURCE_SHA,"Final20 source carrier differs")
+ packet_raw=PAYLOAD["sourcePacket"].encode();require(len(packet_raw)==603245 and sha(packet_raw)==SOURCE_SHA,"Final20 source carrier differs")
  packet=json.loads(packet_raw)
  require(packet["operation"]==OP and len(packet["files"])==20,"Wrong delivery source")
  restore_receiving_checkpoint(PAYLOAD.get("restoreCheckpoint"))
  publish(ROOT/"source-input.json",packet_raw);retain_command_producer(PAYLOAD["program"])
  ancestors=PAYLOAD.get("producerAncestors",[])
  expected_ancestors={"ff6762270c9eb821ff649b253ff3d1a9ab378dd9c4353999af226b18d126cbf3":36626,
-                     "c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33":53244}
- require(isinstance(ancestors,list) and len(ancestors)==2,"The retained complete producer lineage is absent")
+                     "c74bfc791f70039662d4e6e0ab9875e679d2fc04edc0549db16acbf5c72bff33":53244,
+                      "6347c3a562dfcff119b4ea83f3ddc84f7091a03adbc70ea6ec5923f898078b98":74496}
+ require(isinstance(ancestors,list) and len(ancestors)==3,"The retained complete producer lineage is absent")
  require({item.get("sha256") for item in ancestors}==set(expected_ancestors),"The retained producer lineage changed")
  for item in ancestors:
   raw=item["content"].encode()
   require(sha(raw)==item["sha256"] and len(raw)==item["bytes"]==expected_ancestors[item["sha256"]],
           "A retained ancestor producer changed")
   publish(ROOT/"producer-source"/(item["sha256"]+".py"),raw)
+ source_history=retain_source_correction(packet)
  guide=PAYLOAD.get("producerGuide")
  require(isinstance(guide,str) and guide.startswith("# Aviary"),"The complete delivery/restore guide is absent")
  publish(ROOT/"producer-source"/("guide-"+sha(guide.encode())+".md"),guide.encode())
@@ -890,7 +969,7 @@ def main():
  tmp=ROOT/"tmp";tmp.mkdir(exist_ok=True,mode=0o700)
  ENV={**os.environ,"PYTHONDONTWRITEBYTECODE":"1","TMPDIR":str(tmp)}
  os.environ["TMPDIR"]=str(tmp);tempfile.tempdir=str(tmp)
- pubjson(ROOT/"source-verification.json",{"packet":{"bytes":len(packet_raw),"sha256":SOURCE_SHA},"merge":"79586025b5b8916b8ea254ce43093623931b8544","files":[{k:r[k] for k in ("path","bytes","sha256")} for r in packet["files"]],"python":sys.version,"pythonAst":"PASS"})
+ pubjson(ROOT/"source-verification.json",{"packet":{"bytes":len(packet_raw),"sha256":SOURCE_SHA},"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","sourceCorrection":source_history,"files":[{k:r[k] for k in ("path","bytes","sha256")} for r in packet["files"]],"python":sys.version,"pythonAst":"PASS"})
  emit("SOURCE_READY",files=20,root=str(ROOT),python=sys.version.split()[0])
  restored=[restore_archive(r) for r in ARCHIVES];pubjson(ROOT/"archive-restoration.json",restored)
  native=Path(ARCHIVES[0]["target"]);provider=native/"received"/"workspace"
@@ -944,7 +1023,7 @@ def main():
  native_zip=artifacts/"Aviary_USGS_Native_Package_20261012.zip";copy_exact(result["nativePackage"]["path"],native_zip,result["nativePackage"])
  summary={
  "schema":"commons.aviary.complete-delivery-result.v1","operation":OP,"state":"COMPLETE","completedAt":now(),
- "source":{"gitMerge":"79586025b5b8916b8ea254ce43093623931b8544","pullRequest":2164,"packetSha256":SOURCE_SHA,"files":20},
+ "source":{"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","pullRequest":2164,"packetSha256":SOURCE_SHA,"files":20,"correction":source_history},
  "nativeAccepted":{"workspaceId":WORKSPACE_ID,"operationId":PROVIDER_OPERATION,"checks":accepted["checks"],"scope":accepted["scope"],"archives":restored,"replayedProviderRequests":0},
  "publicExample":source,"browser":result,"visualInspection":visual,
  "savedBrowserCheckpoint":{"source":checkpoint["source"],"result":checkpoint["providerReceipt"]["result"],"privateRecoveryPixelsIncluded":checkpoint.get("pixelFilesSaved",False),"customerPixelFilesSaved":False},
@@ -968,6 +1047,7 @@ The complete source mapping, five-table native package, saved migration workflow
 - Original native provider-contract receiving: all 19 checks passed in the retained original operation. Its saved workspace remains {WORKSPACE_ID}; its operation is {PROVIDER_OPERATION}.
 - Public example: 2 resources, 3 media records, 1 original transcript, 2 authored navigation indexes and 2 supplemental records.
 - Original public binaries: all five retained exact captures were reused. Their original SHA-256 receipts and all five publisher representations are included.
+- Supplemental source sequence values are retained byte for byte in the original CSV and explicitly unmapped. The maintained supplemental import sends no ordering parameter. The rejected mapping and exact 50662 failure/reconciliation remain in delivery history.
 - Browser: complete mapping/key allocation, delayed-save/later typing, exclusion and restoration, all five previews, original queued native/export downloads, cold application receiving and saved-operation/new-draft continuity passed.
 - Original provider mutations during this browser journey: zero. Every original provider action and ID remains retained.
 - Browser pages, servers, context, browser and control children drained before the original PASS publication.
@@ -1000,9 +1080,10 @@ The native service exercise uses the actual application and a pinned-contract lo
 
 ## Exact provenance
 
-Merged source: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2164
-Merge: 79586025b5b8916b8ea254ce43093623931b8544
-Final20 carrier SHA256: {SOURCE_SHA}
+Native application base: https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/2164
+Application base merge: 79586025b5b8916b8ea254ce43093623931b8544
+Selected20 carrier SHA256: {SOURCE_SHA}
+The only selected application-packet correction is the explicit supplemental example mapping. All nineteen other source members and every original source data file remain byte-identical. Original complete input and failed-run evidence are in delivery-history/producer-source/history-50662/.
 Official Aviary OpenAPI source: https://www.aviaryplatform.com/aviary-api.json
 Original schema capture: 200,348 bytes; SHA2561bf29e93ede6bc7aa755be25603e1fed4ddb899dac1964f4f63eaaca930c1291; retrieved2026-10-12T09:20:11.412169+00:00.
 Original provider/importer source: https://github.com/WeAreAVP/aviary-api-scripts/tree/9f189144f6434e6561696983edce17494aa66dd0
@@ -1044,7 +1125,7 @@ The complete machine-readable result records every source, package, screenshot d
   if rel in (Path(result["nativePackage"]["path"]).name,Path(result["publicWorkspaceExport"]["path"]).name):continue
   items.append(("browser-evidence/"+rel,browser/rel))
  complete=artifacts/"Aviary_Complete_Application_and_Receiving_20261012.zip"
- zip_selected(complete,items,{"sourceMerge":"79586025b5b8916b8ea254ce43093623931b8544","nativeWorkspaceId":WORKSPACE_ID,"publicWorkspaceId":result["publicWorkspaceId"],"originalProviderOperation":PROVIDER_OPERATION,"localQAScreenshotDescriptors":result["screenshots"],"pixelFilesIncluded":False})
+ zip_selected(complete,items,{"applicationBaseMerge":"79586025b5b8916b8ea254ce43093623931b8544","sourcePacketSha256":SOURCE_SHA,"sourceCorrection":source_history,"nativeWorkspaceId":WORKSPACE_ID,"publicWorkspaceId":result["publicWorkspaceId"],"originalProviderOperation":PROVIDER_OPERATION,"localQAScreenshotDescriptors":result["screenshots"],"pixelFilesIncluded":False})
  saved=[]
  for path in (complete,public_zip,native_zip,reporthtml,reportmd,evidence):
   saved.append(save_artifact(path))
