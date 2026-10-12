@@ -18,6 +18,18 @@ const window = {editionId:uuid,editionDigest:hash,aggregateKey:hash,timeColumn:i
 const windowRequired=['editionId','editionDigest','aggregateKey','timeColumn','timeType','start','end','title','owner','note'];
 const prepared = {planId:uuid,planDigest:hash,timeoutMs:{type:'integer',minimum:1,maximum:3600000}};
 const chunk = {expectedSha256:hash,offset:integer,limit:{type:'integer',minimum:1,maximum:MAX_RETAINED_CHUNK_BYTES},readId:uuid};
+const workText={type:'string',minLength:1,maxLength:8000};
+const workState={enum:['OPEN','IN_PROGRESS','DEFERRED']};
+const itemPin={workItemId:uuid,itemRevision:{type:'integer',minimum:1},itemDigest:hash};
+const source=object({reviewId:uuid,comparisonDigest:hash,changeKey:hash,digest:hash},
+  ['reviewId','comparisonDigest','changeKey','digest']);
+const workFields=object({title,owner:title,dueDate:{type:'string',pattern:'^(?:|[0-9]{4}-[0-9]{2}-[0-9]{2})$'},
+  priority:{enum:['NORMAL','HIGH','URGENT']},intent:workText,acceptance:workText,status:workState},
+  ['title','owner','priority','intent','acceptance','status']);
+const resolution=object({editionId:uuid,editionDigest:hash,comparisonDigest:hash,
+  mode:{enum:['CURRENT_STATE_REVIEW','COMPLETE_AGGREGATE_VERIFICATION']},verificationOperationId:uuid,
+  verificationOperationDigest:hash,outcome:{enum:['REMEDIATED','ACCEPTED_CURRENT_STATE','SUPERSEDED']},statement:workText},
+  ['editionId','editionDigest','comparisonDigest','mode','outcome','statement']);
 export function timescaleWorkspaceTools(tool) {
   const selected=(name,description,properties,required=[],annotations=read)=>
     tool('merchant_timescale_'+name,description,{...scope,...properties},['workspace','workspaceId',...required],annotations);
@@ -73,6 +85,28 @@ export function timescaleWorkspaceTools(tool) {
       {exportId:uuid,file:{type:'string',minLength:1,maxLength:4096},expectedManifestSha256:hash,...chunk},
       ['exportId','file','expectedManifestSha256','expectedSha256']),
     selected('export_file_release','Release an original retained package descriptor for this export.',
+      {exportId:uuid,readId:uuid},['exportId','readId'],{idempotent:true}),
+    selected('remediation_list','Page the original assigned work, ownership, due dates and current states. Every item remains in the existing Timescale journal.',
+      {...page,status:{enum:['OPEN','IN_PROGRESS','DEFERRED','RESOLVED']},owner:title,q:text}),
+    selected('remediation_sources','Page original Remediate/Defer review choices with exact source/comparison references and changed field names. Complete before/after values remain in the original edition files and retained report JSON.',
+      {...page}),
+    selected('remediation_item','Inspect the current original item and digest; page every plan binding, observed outcome or revision using that exact item revision/digest. Complete source values and operation bodies remain in the full retained report.',
+      {...itemPin,section:{enum:['summary','plans','observations','history']},...page},['workItemId']),
+    selected('remediation_context','Read the original applicable plans, bound native operation identities and editions. Select a later edition for its exact comparison digest and paged change identities; catalog stability alone asserts no aggregate coverage.',
+      {...itemPin,editionId:uuid,...page,changeOffset:integer,changeLimit:page.limit},['workItemId','itemRevision','itemDigest']),
+    selected('remediation_command','Apply one original source-bound work command through workspace.exclusive. Preserve requestId and exact input after response loss; actor, reason, current item revision and original source/plan/outcome digests control changes.',
+      {...request,action:{enum:['create','edit','rebase','bind-plan','observe','resolve','reopen']},actor:title,note:workText,
+        workItemId:uuid,expectedRevision:{type:'integer',minimum:1},source,fields:workFields,planId:uuid,planDigest:hash,
+        relevance:workText,operationId:uuid,operationDigest:hash,resolution,status:workState},
+      ['requestId','expectedVersion','action','actor','note'],retained),
+    selected('remediation_report','Retain the original complete JSON and printable HTML for the exact selected item revision through the same workspace journal. Stable request recovery returns the same bytes after owner restart; full project export includes these reports.',
+      {...request,...itemPin},['requestId','expectedVersion','workItemId','itemRevision','itemDigest'],retained),
+    selected('remediation_report_manifest','Inspect the completed original remediation report manifest without generating another report or reading the database source.',
+      {exportId:uuid},['exportId']),
+    selected('remediation_report_file','Read complete retained report JSON, HTML or manifest by exact original digest and byte offset, using the existing immutable descriptor reader.',
+      {exportId:uuid,file:{enum:['Timescale_Remediation_Manifest.json','report.json','report.html']},expectedManifestSha256:hash,...chunk},
+      ['exportId','file','expectedManifestSha256','expectedSha256']),
+    selected('remediation_report_file_release','Release this original remediation report descriptor.',
       {exportId:uuid,readId:uuid},['exportId','readId'],{idempotent:true}),
   ];
 }
