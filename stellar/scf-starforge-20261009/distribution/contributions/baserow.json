@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "baserow",
+  "description": "baserow original Applications",
+  "applicationProviders": {
+    "baserow": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/baserow.mjs"
+  }
+}
