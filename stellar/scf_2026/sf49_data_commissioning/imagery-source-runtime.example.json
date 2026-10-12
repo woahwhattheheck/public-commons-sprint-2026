@@ -1,0 +1,20 @@
+{
+  "schema": "starforge.stac-eoapi-source-runtime.v1",
+  "bindings": [
+    {
+      "origin": "https://catalog.example.invalid",
+      "tokenEnv": "IMAGERY_OPERATOR_ACCESS_TOKEN"
+    }
+  ],
+  "principals": {
+    "customerReader": {
+      "name": "Customer imagery reader",
+      "bindings": [
+        {
+          "origin": "https://catalog.example.invalid",
+          "tokenEnv": "IMAGERY_READER_ACCESS_TOKEN"
+        }
+      ]
+    }
+  }
+}

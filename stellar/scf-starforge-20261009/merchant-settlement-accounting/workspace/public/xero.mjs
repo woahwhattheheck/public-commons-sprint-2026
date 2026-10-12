@@ -55,19 +55,23 @@ function labelled(text,input){const label=node('label',text);label.append(input)
 function input(name,{value='',required=false,type='text',placeholder='',maxLength}={}){const element=node('input',null,{name,type});element.value=value;element.required=required;element.placeholder=placeholder;if(maxLength)element.maxLength=maxLength;return element;}
 function accountSelect(name,accounts){const el=node('select',null,{name});el.required=true;el.append(node('option','Choose an account',{value:''}));for(const account of accounts)el.append(node('option',account.code+' · '+account.name,{value:account.code}));return el;}
 function renderSource(){
-  $('components').replaceChildren();$('source-summary').textContent=source.components.length+' original payment or verified refund components. Choose an accounting treatment for each.';
+  $('components').replaceChildren();$('source-summary').textContent=source.components.length+' retained source components. Choose an accounting treatment for each.';
   $('plan-form').elements.purpose.value=source.context.organization.isDemoCompany?'demo':'books';
   $('plan-form').elements.name.value=source.handoff.name+' · Xero';
   const accounts=source.context.accounts.filter(account=>account.eligible);
   for(const [index,component]of source.components.entries()){
     const article=node('article',null,{class:'xero-component','data-component':component.id});
-    article.append(node('h4',(index+1)+'. '+component.kind+' · '+component.eventId),node('p','Original '+component.amountAtomic+' atomic units · '+component.network,{class:'source'}),jsonDetails('Original component',component));
+    article.append(node('h4',(index+1)+'. '+component.kind+' · '+(component.sourceLineId??component.eventId)),node('p','Original '+component.amountAtomic+' atomic units · '+component.network,{class:'source'}),jsonDetails('Original component',component));
     const decision=node('select',null,{name:'decision'});decision.append(node('option','Choose treatment',{value:''}),node('option','Include in journals',{value:'include'}),node('option','Exclude with a reason',{value:'exclude'}));decision.required=true;article.append(labelled('Accounting treatment',decision));
+    if(component.kind.startsWith('BUYER_')&&BigInt(component.amountAtomic)===0n){
+      decision.querySelector('option[value="include"]').disabled=true;
+      article.append(node('p','This original allocation is zero. Select exclusion and record its reason; a separate fee must retain its own source.',{class:'source'}));
+    }
     const included=node('div',null,{'data-included':'1',hidden:''}),excluded=node('div',null,{'data-excluded':'1',hidden:''});
     const first=node('div',null,{class:'xero-grid'}),second=node('div',null,{class:'xero-grid'});
     first.append(labelled('Value in '+source.context.organization.baseCurrency,input('amount',{placeholder:'0.00',required:true})),labelled('Journal date',input('date',{type:'date',value:component.sourceAt?.slice(0,10)??'',required:true})));
     second.append(labelled('Debit account',accountSelect('debitAccountCode',accounts)),labelled('Credit account',accountSelect('creditAccountCode',accounts)));
-    included.append(first,second,labelled('Valuation source for this component',input('valuationNote',{required:true,maxLength:2000})),labelled('Description',input('description',{value:component.kind+' '+component.eventId,maxLength:2000})));
+    included.append(first,second,labelled('Valuation source for this component',input('valuationNote',{required:true,maxLength:2000})),labelled('Description',input('description',{value:component.kind+' '+(component.sourceLineId??component.eventId),maxLength:2000})));
     excluded.append(labelled('Exclusion reason',input('reason',{required:true,maxLength:2000})));
     function treatment(){included.hidden=decision.value!=='include';excluded.hidden=decision.value!=='exclude';for(const control of included.querySelectorAll('input,select'))control.disabled=included.hidden;for(const control of excluded.querySelectorAll('input'))control.disabled=excluded.hidden;invalidatePreview();}
     decision.addEventListener('change',treatment);article.append(included,excluded);$('components').append(article);treatment();

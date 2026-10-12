@@ -1,0 +1,15 @@
+{
+  "collections": [
+    "sentinel-2-l2a"
+  ],
+  "bbox": [
+    -97.85,
+    30.15,
+    -97.55,
+    30.45
+  ],
+  "datetime": "2026-09-01T00:00:00Z/2026-09-30T23:59:59Z",
+  "cloudCoverMax": 70,
+  "pageSize": 100,
+  "maxPages": 1000
+}
