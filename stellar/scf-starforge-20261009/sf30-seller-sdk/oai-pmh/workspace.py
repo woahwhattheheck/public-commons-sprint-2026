@@ -176,6 +176,67 @@ class Workspace(HarvestWorkspace):
             "allowEmpty":False,"maxRows":250000,"maxBytes":67108864,"maxCellChars":65536,
             "maxLimit":250,"defaultLimit":50}
 
+    def metadata_mapping(self,edition_id,name="repository_metadata"):
+        """Offer an explicit editable mapping from this edition's actual metadata namespace."""
+        with self.mutex:
+            self.edition(edition_id)
+            row=self.db.execute("""SELECT o.body FROM oai_edition_records e JOIN oai_observations o
+                ON o.id=e.observation_id WHERE e.edition_id=? AND o.status='active'
+                ORDER BY e.identifier LIMIT 1""",(edition_id,)).fetchone()
+            if row is None: raise InputError("Inspect an active metadata record before choosing a metadata preset")
+            record=unpacked(decode(row[0])["node"])
+            metadata=next((n for n in record.children if n.name==Q("metadata")),None)
+            if metadata is None or len(metadata.children)!=1: raise InputError("This record has no single original metadata payload")
+            payload=metadata.children[0]
+            plan=self.default_mapping(name)
+            def array(column,path,attribute=None):
+                value={"name":column,"path":path,"type":"string","mode":"json",
+                       "missing":"default","default":"[]","text":"descendant"}
+                if attribute is not None: value["attribute"]=attribute
+                plan["columns"].append(value)
+            def scalar(column,path,kind="string",attribute=None):
+                value={"name":column,"path":path,"type":kind,"nullable":True,
+                       "missing":"empty","text":"descendant"}
+                if attribute is not None: value["attribute"]=attribute
+                plan["columns"].append(value)
+            dc="{http://www.openarchives.org/OAI/2.0/oai_dc/}dc"
+            kernel="{http://datacite.org/schema/kernel-4}"
+            wrapper="{http://schema.datacite.org/oai/oai-1.1/}"
+            if payload.name==dc:
+                for key in ("title","creator","subject","description","publisher","contributor","date",
+                            "type","format","identifier","source","language","relation","coverage","rights"):
+                    array("dc_"+key,[Q("metadata"),dc,"{http://purl.org/dc/elements/1.1/}"+key])
+            else:
+                if payload.name==wrapper+"oai_datacite":
+                    parent=next((n for n in payload.children if n.name==wrapper+"payload"),None)
+                    if parent is None or len(parent.children)!=1 or parent.children[0].name!=kernel+"resource":
+                        raise InputError("Choose an explicit mapping for this DataCite payload namespace")
+                    base=[Q("metadata"),payload.name,wrapper+"payload",kernel+"resource"]
+                elif payload.name==kernel+"resource":
+                    base=[Q("metadata"),kernel+"resource"]
+                else: raise InputError("Inspect this metadata format and define its original expanded-name paths")
+                path=lambda *names:base+[kernel+n for n in names]
+                scalar("metadata_identifier",path("identifier"))
+                scalar("metadata_identifier_type",path("identifier"),attribute="identifierType")
+                array("titles",path("titles","title"))
+                array("creator_names",path("creators","creator","creatorName"))
+                scalar("publication_year",path("publicationYear"),"integer")
+                scalar("publisher",path("publisher"))
+                scalar("resource_type",path("resourceType"),attribute="resourceTypeGeneral")
+                scalar("resource_type_label",path("resourceType"))
+                scalar("language",path("language"))
+                scalar("version",path("version"))
+                array("subjects",path("subjects","subject"))
+                array("related_identifiers",path("relatedIdentifiers","relatedIdentifier"))
+                array("rights",path("rightsList","rights"))
+                array("rights_uris",path("rightsList","rights"),attribute="rightsURI")
+                array("descriptions",path("descriptions","description"))
+                plan["filters"]=["identifier","datestamp","metadata_identifier","publication_year","publisher","resource_type","language"]
+                plan["ranges"]=["publication_year"]
+                plan["sorts"]=["identifier","datestamp","metadata_identifier","publication_year","publisher","resource_type","language"]
+            plan["maxCellChars"]=1048576
+            return xml.validate_plan(plan)
+
     def _build_file(self,build,name):
         if name not in build["files"]: raise InputError("Unknown build member")
         path=self.area/"builds"/build["id"]/name
@@ -305,6 +366,13 @@ class Workspace(HarvestWorkspace):
                     attempts=self.db.execute("SELECT body FROM oai_http_exchanges WHERE request_id=? ORDER BY rowid",(request["id"],)).fetchall()
                     for row in attempts or [(jbytes(request),)]:
                         req=decode(row[0])
+                        req["retainedExchangeSha256"]=sha(jbytes(req))
+                        http=dict(req.get("http",{}))
+                        sensitive={"set-cookie","set-cookie2","authorization","proxy-authorization","cookie"}
+                        withheld=[key for key,value in http.get("headers",[]) if key.lower() in sensitive]
+                        http["headers"]=[[key,value] for key,value in http.get("headers",[]) if key.lower() not in sensitive]
+                        if withheld: http["withheldHeaderNames"]=withheld
+                        if http: req["http"]=http
                         response=req.get("response")
                         if response:
                             suffix=".xml" if response.get("xmlSourceId") else ".bin"
@@ -322,7 +390,11 @@ class Workspace(HarvestWorkspace):
                     "edition":{k:edition[k] for k in ("id","review","activeRecords","deletedRecords")},
                     "build":{k:build[k] for k in ("id","planId","datasetSnapshot","rowCount")},
                     "dataFile":"data.csv","datasetFile":"dataset.json","mappingFile":"mapping.json","lineageFile":"lineage.json",
-                    "recordsFile":"records.jsonl","requestsFile":"requests.jsonl","files":sorted(files,key=lambda x:x["file"])}
+                    "recordsFile":"records.jsonl","requestsFile":"requests.jsonl",
+                    "transportDisclosure":{"omittedHeaders":["authorization","proxy-authorization","cookie","set-cookie","set-cookie2"],
+                        "originals":"Complete transport remains in the private workspace and its full backup",
+                        "digest":"retainedExchangeSha256 binds original canonical exchange JSON before package path relocation"},
+                    "files":sorted(files,key=lambda x:x["file"])}
                 manifest_bytes=jbytes(manifest)
                 storage.private_write(capture/"capture.json",manifest_bytes)
                 source={"schema":"stellar-forge.oai-pmh-source.v1",
