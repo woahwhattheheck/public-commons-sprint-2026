@@ -1,6 +1,0 @@
-{
-  "testnet": {
-    "network": "stellar:testnet",
-    "rpcUrl": "https://soroban-testnet.stellar.org"
-  }
-}

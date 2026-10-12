@@ -1,2 +1,0 @@
-# The original PRS leaf owns the complete lxml requirement.
--r prs/requirements.txt

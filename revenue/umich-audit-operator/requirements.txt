@@ -1,2 +1,0 @@
-cryptography>=43,<51
-PyJWT==2.15.1

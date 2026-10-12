@@ -1,0 +1,504 @@
+{
+  "schema": "commons.clinicaltrials-original-result-projection.v1",
+  "purpose": "Complete original result-field review input for the maintained Research extraction product.",
+  "source": {
+    "nct_id": "NCT03529110",
+    "filename": "NCT03529110_Original_Registry_Study.json",
+    "bytes": 99951,
+    "sha256": "1e8f401843a30673b2d653ceb2682ad8f6d038af268a185c3333028d339d14c1",
+    "library_file_id": "libfile_dd72ba9b31288191a91c7ac884bc7921",
+    "underlying_file_id": "file_00000000250c822f82c7b76d425ba239",
+    "source_url": "https://clinicaltrials.gov/api/v2/studies?aggFilters=results%3Awith&query.lead=Daiichi+Sankyo&sort=LastUpdatePostDate%3Adesc&format=json&markupFormat=markdown&pageSize=50&countTotal=true",
+    "capture_id": "capture-fb551338-f35d-46b3-b257-1138ba449c28",
+    "api_version": "2.0.5",
+    "data_timestamp": "2026-10-09T09:00:05",
+    "original_observed_at": "2026-10-12T03:54:02.721Z",
+    "page_body_sha256": "9d43f7f4a09a64f0d2f0e347e8ad43f7949661ef60af8fda22d4fee3604a6b91",
+    "projection_created_at": "2026-10-12T12:22:00Z"
+  },
+  "representation": {
+    "measurements": "Every measurement field is retained as its exact original JSON value; numeric strings are not coerced.",
+    "denominators": "Outcome, class and category denominator containers are retained separately. A selected denominator must record its actual container and pointer; no parent container is overwritten.",
+    "missing_values": "The literal source value NA and its original explanatory comment remain distinct from absent JSON keys, empty strings, zero or an authored reviewer missing-value decision.",
+    "derived_statistics": "No effect, event count, median, confidence bound or statistical judgment is derived by this projection."
+  },
+  "counts": {
+    "outcomes": 5,
+    "classes": 7,
+    "categories": 7,
+    "measurements": 14
+  },
+  "outcomes": [
+    {
+      "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/0",
+      "metadata": {
+        "type": "PRIMARY",
+        "title": "Progression-Free Survival (PFS) Based on Blinded Independent Central Review (BICR) in Participants With HER2-Positive, Unresectable and/or Metastatic Breast Cancer Previously Treated With Trastuzumab and Taxane",
+        "description": "Progression-free survival (PFS) by BICR was defined as the time from the date of enrollment to the earlier of the dates of the first objective documentation of disease progression (as per RECIST v1.1) or death due to any cause. Progressive disease was defined as at least a 20% increase in the sum of diameters of target lesions.",
+        "populationDescription": "Progression-free survival (PFS) was assessed in the Full Analysis Set at data cut-off date of 21 May 2021.",
+        "reportingStatus": "POSTED",
+        "paramType": "MEDIAN",
+        "dispersionType": "95% Confidence Interval",
+        "unitOfMeasure": "months",
+        "timeFrame": "Up to 33 months (data cut-off)",
+        "groups": [
+          {
+            "id": "OG000",
+            "title": "Trastuzumab Deruxtecan (T-DXd)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DXd as a sterile intravenous (IV) solution at a dose of 5.4 mg/kg every 3 weeks (Q3W)."
+          },
+          {
+            "id": "OG001",
+            "title": "Ado-trastuzumab Emtansine (T-DM1)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DM1 in accordance with the approved label."
+          }
+        ],
+        "denoms": [
+          {
+            "units": "Participants",
+            "counts": [
+              {
+                "groupId": "OG000",
+                "value": "261"
+              },
+              {
+                "groupId": "OG001",
+                "value": "263"
+              }
+            ]
+          }
+        ]
+      },
+      "classes": [
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/0/classes/0",
+          "metadata": {},
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/0/classes/0/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/0/classes/0/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "NA",
+                    "lowerLimit": "18.5",
+                    "upperLimit": "NA",
+                    "comment": "Median and upper CI was not estimable due to insufficient number of events."
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/0/classes/0/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "6.8",
+                    "lowerLimit": "5.6",
+                    "upperLimit": "8.2"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/1",
+      "metadata": {
+        "type": "SECONDARY",
+        "title": "Overall Survival (OS) in Participants With HER2-Positive, Unresectable and/or Metastatic Breast Cancer Previously Treated With Trastuzumab and Taxane",
+        "description": "Overall survival (OS) was defined as the time from the date of first dose of study drug to the date of death due to any cause.",
+        "populationDescription": "Overall survival (OS) was assessed in the Full Analysis Set at data cut-off date of 21 May 2021.",
+        "reportingStatus": "POSTED",
+        "paramType": "MEDIAN",
+        "dispersionType": "95% Confidence Interval",
+        "unitOfMeasure": "months",
+        "timeFrame": "Up to 33 months (data cut-off)",
+        "groups": [
+          {
+            "id": "OG000",
+            "title": "Trastuzumab Deruxtecan (T-DXd)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DXd as a sterile intravenous (IV) solution at a dose of 5.4 mg/kg every 3 weeks (Q3W)."
+          },
+          {
+            "id": "OG001",
+            "title": "Ado-trastuzumab Emtansine (T-DM1)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DM1 in accordance with the approved label."
+          }
+        ],
+        "denoms": [
+          {
+            "units": "Participants",
+            "counts": [
+              {
+                "groupId": "OG000",
+                "value": "261"
+              },
+              {
+                "groupId": "OG001",
+                "value": "263"
+              }
+            ]
+          }
+        ]
+      },
+      "classes": [
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/1/classes/0",
+          "metadata": {},
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/1/classes/0/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/1/classes/0/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "NA",
+                    "lowerLimit": "NA",
+                    "upperLimit": "NA",
+                    "comment": "Median and 95% CI was not estimable due insufficient number of events."
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/1/classes/0/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "NA",
+                    "lowerLimit": "NA",
+                    "upperLimit": "NA",
+                    "comment": "Median and 95% CI was not estimable due insufficient number of events."
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2",
+      "metadata": {
+        "type": "SECONDARY",
+        "title": "Percentage of Participants With Objective Response Rate (ORR) Based on BICR and Investigator Assessment in Participants With HER2-Positive, Unresectable and/or Metastatic Breast Cancer Previously Treated With Trastuzumab and Taxane",
+        "description": "The Objective Response Rate (ORR) was defined as the percentage of participants who achieved a best overall response of confirmed Complete Response (CR) or Partial Response (PR), assessed by BICR and investigator assessment based on RECIST version 1.1. CR was defined as a disappearance of all target lesions and PR was defined as at least a 30% decrease in the sum of diameters of target lesions. Confirmed ORR is reported.",
+        "populationDescription": "Objective response rate was assessed in the Full Analysis Set at data cut-off date of 21 May 2021.",
+        "reportingStatus": "POSTED",
+        "paramType": "NUMBER",
+        "dispersionType": "95% Confidence Interval",
+        "unitOfMeasure": "Percentage of Participants",
+        "timeFrame": "Up to 33 months (data cut-off)",
+        "groups": [
+          {
+            "id": "OG000",
+            "title": "Trastuzumab Deruxtecan (T-DXd)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DXd as a sterile intravenous (IV) solution at a dose of 5.4 mg/kg every 3 weeks (Q3W)."
+          },
+          {
+            "id": "OG001",
+            "title": "Ado-trastuzumab Emtansine (T-DM1)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DM1 in accordance with the approved label."
+          }
+        ],
+        "denoms": [
+          {
+            "units": "Participants",
+            "counts": [
+              {
+                "groupId": "OG000",
+                "value": "261"
+              },
+              {
+                "groupId": "OG001",
+                "value": "263"
+              }
+            ]
+          }
+        ]
+      },
+      "classes": [
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/0",
+          "metadata": {
+            "title": "BICR"
+          },
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/0/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/0/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "79.7",
+                    "lowerLimit": "74.3",
+                    "upperLimit": "84.4"
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/0/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "34.2",
+                    "lowerLimit": "28.5",
+                    "upperLimit": "40.3"
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/1",
+          "metadata": {
+            "title": "Investigator Assessment"
+          },
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/1/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/1/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "77.0",
+                    "lowerLimit": "71.2",
+                    "upperLimit": "82.0"
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/2/classes/1/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "36.9",
+                    "lowerLimit": "31.0",
+                    "upperLimit": "43.0"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3",
+      "metadata": {
+        "type": "SECONDARY",
+        "title": "Duration of Response (DoR) Based on BICR and Investigator Assessment in Participants With HER2-Positive, Unresectable and/or Metastatic Breast Cancer Previously Treated With Trastuzumab and Taxane",
+        "description": "Duration of Response (DoR) was defined as the time from the date of the first documentation of objective response (complete response \\[CR\\] or partial response \\[PR\\]) to the date of the first objective documentation of progressive disease (PD) or death due to any cause. DoR in participants with confirmed CR/PR based on BICR and investigator assessment is reported.",
+        "populationDescription": "Duration of Response (DoR) was assessed in the Full Analysis Set of participants with confirmed CR/PR at data cut-off date of 21 May 2021.",
+        "reportingStatus": "POSTED",
+        "paramType": "MEDIAN",
+        "dispersionType": "95% Confidence Interval",
+        "unitOfMeasure": "months",
+        "timeFrame": "Up to 33 months (data cut-off)",
+        "groups": [
+          {
+            "id": "OG000",
+            "title": "Trastuzumab Deruxtecan (T-DXd)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DXd as a sterile intravenous (IV) solution at a dose of 5.4 mg/kg every 3 weeks (Q3W)."
+          },
+          {
+            "id": "OG001",
+            "title": "Ado-trastuzumab Emtansine (T-DM1)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DM1 in accordance with the approved label."
+          }
+        ],
+        "denoms": [
+          {
+            "units": "Participants",
+            "counts": [
+              {
+                "groupId": "OG000",
+                "value": "261"
+              },
+              {
+                "groupId": "OG001",
+                "value": "263"
+              }
+            ]
+          }
+        ]
+      },
+      "classes": [
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/0",
+          "metadata": {
+            "title": "BICR",
+            "denoms": [
+              {
+                "units": "Participants",
+                "counts": [
+                  {
+                    "groupId": "OG000",
+                    "value": "208"
+                  },
+                  {
+                    "groupId": "OG001",
+                    "value": "90"
+                  }
+                ]
+              }
+            ]
+          },
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/0/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/0/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "NA",
+                    "lowerLimit": "20.3",
+                    "upperLimit": "NA",
+                    "comment": "Median and upper CI was not estimable due insufficient number of events."
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/0/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "NA",
+                    "lowerLimit": "12.6",
+                    "upperLimit": "NA",
+                    "comment": "Median and upper CI was not estimable due insufficient number of events."
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/1",
+          "metadata": {
+            "title": "Investigator Assessment",
+            "denoms": [
+              {
+                "units": "Participants",
+                "counts": [
+                  {
+                    "groupId": "OG000",
+                    "value": "201"
+                  },
+                  {
+                    "groupId": "OG001",
+                    "value": "97"
+                  }
+                ]
+              }
+            ]
+          },
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/1/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/1/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "NA",
+                    "lowerLimit": "20.8",
+                    "upperLimit": "NA",
+                    "comment": "Median and upper CI was not estimable due insufficient number of events."
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/3/classes/1/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "NA",
+                    "lowerLimit": "14.1",
+                    "upperLimit": "NA",
+                    "comment": "Median and upper CI was not estimable due insufficient number of events."
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/4",
+      "metadata": {
+        "type": "SECONDARY",
+        "title": "Progression-Free Survival (PFS) Based on Investigator Assessment in Participants With HER2-Positive, Unresectable and/or Metastatic Breast Cancer Previously Treated With Trastuzumab and Taxane",
+        "description": "Progression-free survival (PFS) by investigator assessment was defined as the time from the date of enrollment to the earlier of the dates of the first objective documentation of disease progression (as per RECIST v1.1) or death due to any cause. Progressive disease was defined as at least a 20% increase in the sum of diameters of target lesions.",
+        "populationDescription": "Progression-free survival (PFS) was assessed in the Full Analysis Set at data cut-off date of 21 May 2021.",
+        "reportingStatus": "POSTED",
+        "paramType": "MEDIAN",
+        "dispersionType": "95% Confidence Interval",
+        "unitOfMeasure": "months",
+        "timeFrame": "Up to 33 months (data cut-off)",
+        "groups": [
+          {
+            "id": "OG000",
+            "title": "Trastuzumab Deruxtecan (T-DXd)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DXd as a sterile intravenous (IV) solution at a dose of 5.4 mg/kg every 3 weeks (Q3W)."
+          },
+          {
+            "id": "OG001",
+            "title": "Ado-trastuzumab Emtansine (T-DM1)",
+            "description": "Participants with HER2-positive, unresectable and/or metastatic breast cancer participants previously treated with trastuzumab and taxane who received T-DM1 in accordance with the approved label."
+          }
+        ],
+        "denoms": [
+          {
+            "units": "Participants",
+            "counts": [
+              {
+                "groupId": "OG000",
+                "value": "261"
+              },
+              {
+                "groupId": "OG001",
+                "value": "263"
+              }
+            ]
+          }
+        ]
+      },
+      "classes": [
+        {
+          "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/4/classes/0",
+          "metadata": {},
+          "categories": [
+            {
+              "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/4/classes/0/categories/0",
+              "metadata": {},
+              "measurements": [
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/4/classes/0/categories/0/measurements/0",
+                  "original": {
+                    "groupId": "OG000",
+                    "value": "25.1",
+                    "lowerLimit": "22.1",
+                    "upperLimit": "NA",
+                    "comment": "Upper CI was not estimable due to insufficient number of events."
+                  }
+                },
+                {
+                  "json_pointer": "/resultsSection/outcomeMeasuresModule/outcomeMeasures/4/classes/0/categories/0/measurements/1",
+                  "original": {
+                    "groupId": "OG001",
+                    "value": "7.2",
+                    "lowerLimit": "6.8",
+                    "upperLimit": "8.3"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

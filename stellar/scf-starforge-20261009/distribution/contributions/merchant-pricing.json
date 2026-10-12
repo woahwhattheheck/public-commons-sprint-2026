@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-pricing",
-  "description": "merchant pricing original Applications",
-  "applicationProviders": {
-    "pricing": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/pricing.mjs"
-  }
-}

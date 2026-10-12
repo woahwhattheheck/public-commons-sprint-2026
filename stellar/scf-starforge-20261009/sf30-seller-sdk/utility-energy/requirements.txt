@@ -1,2 +1,0 @@
-# Original Python standard-library application. Python 3.11+ with Expat 2.6+.
-# Node 22 runs the existing SF30 native dataset and publisher modules.

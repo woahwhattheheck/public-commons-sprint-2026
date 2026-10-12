@@ -1,5 +1,0 @@
-source_key,match_id,prefix,status,is_pool,mark_utilized,description,vrf_key,vlan_key,scope_site_key,ipam_role_id
-prod-v4,,192.0.2.0/24,active,false,false,Production IPv4,prod,mgmt,site-b,
-prod-v6,,2001:db8::/64,active,false,false,Production IPv6,prod,mgmt,site-b,
-guest-v4,,192.0.2.0/24,active,false,false,Guest IPv4 in its separate VRF,guest,guest,site-b,
-guest-v6,,2001:db8:1::/64,active,false,false,Guest IPv6,guest,guest,site-b,

@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-provider-redis-workspaces",
-  "description": "Original redis workspaces MCP provider",
-  "merchantProviders": {
-    "redis-workspaces": "stellar-forge/mcp-merchant-operator/providers/redis-workspaces.mjs"
-  }
-}

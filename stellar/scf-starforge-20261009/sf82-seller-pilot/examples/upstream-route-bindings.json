@@ -1,3 +1,0 @@
-[
-  { "method": "GET", "path": "/dataset", "id": "dataset", "handler": "merchantDataset", "validateInput": true }
-]
