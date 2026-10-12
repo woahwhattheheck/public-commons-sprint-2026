@@ -232,3 +232,7 @@ Retained merchant profiles preserve their configured route values and file paths
 ## Customer receiving and purchasing
 
 The private console includes a **Customer workbench** for receiving merchant contracts and customer packages, configuring the payer and spending limits, preparing exact offer requests, operating the original approval and recovery flow, and downloading purchased resources. See the [workbench guide](./customer/workbench-guide.md) for its console, CLI and typed API interfaces.
+
+## Native customer agents
+
+The [merchant MCP native guide](../../../stellar-forge/mcp-merchant-operator/MPP.md) connects this same console to the maintained HTTP and stdio merchant operator. It covers retained customer reviews, native preparation and payment jobs, original recovery, and complete resumable response or package delivery. `serve WORKSPACE [PORT] --token-env ENV` shares an explicitly selected 64-character lowercase hexadecimal console token with the existing host; startup retains the usual private URL marker and adds its original process/workspace readiness JSON.

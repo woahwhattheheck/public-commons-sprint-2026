@@ -4,7 +4,7 @@ import {readFile,stat} from 'node:fs/promises';
 import {createReadStream} from 'node:fs';
 import {pipeline} from 'node:stream/promises';
 
-const STATIC=new Map([['/eoapi/ui.mjs',['eoapi/ui.mjs','text/javascript; charset=utf-8']],['/eoapi/ui.css',['eoapi/ui.css','text/css; charset=utf-8']],['/eoapi/commissioning/view.mjs',['eoapi/commissioning/view.mjs','text/javascript; charset=utf-8']],['/eoapi/commissioning/view.css',['eoapi/commissioning/view.css','text/css; charset=utf-8']],['/',['ui.html','text/html; charset=utf-8']],['/ui.html',['ui.html','text/html; charset=utf-8']],['/ui.css',['ui.css','text/css; charset=utf-8']],['/ui.mjs',['ui.mjs','text/javascript; charset=utf-8']]]);
+import {readBrowserAssets} from '../../distribution/browser-assets.mjs';
 const randomToken=()=>randomBytes(32).toString('base64url');
 const equal=(a,b)=>typeof a==='string'&&typeof b==='string'&&Buffer.byteLength(a)===Buffer.byteLength(b)&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 const fail=(status,message,code='REQUEST_FAILED')=>Object.assign(new Error(message),{status,code});
@@ -94,16 +94,12 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
   }
   const bootstrap=randomToken(),session=randomToken(),csrf=randomToken();
   let origin='',authority='',cookieName='',closing=false;
+  if(prescient&&(typeof prescient.getState!=='function'||typeof prescient.dispatch!=='function'))
+    throw new TypeError('A Prescient controller must expose getState and dispatch.');
   const jobs=new Map();
   const staticCache=new Map();
-  for(const [route,[filename,mime]] of STATIC){const prior=[...staticCache.values()].find(x=>x.filename===filename);staticCache.set(route,prior||{filename,mime,bytes:await readFile(new URL(filename,import.meta.url))});}
-  if(prescient){
-    if(typeof prescient.getState!=='function'||typeof prescient.dispatch!=='function')
-      throw new TypeError('A Prescient controller must expose getState and dispatch.');
-    for(const [route,filename,mime]of [['/prescient/view.mjs','prescient/view.mjs','text/javascript; charset=utf-8'],
-      ['/prescient/view.css','prescient/view.css','text/css; charset=utf-8']])
-      staticCache.set(route,{filename,mime,bytes:await readFile(new URL(filename,import.meta.url))});
-  }
+  const staticAssets=await readBrowserAssets(new URL('./browser-assets.json',import.meta.url));
+  for(const [route,{url,type:mime}] of staticAssets){const filename=url.href,prior=[...staticCache.values()].find(x=>x.filename===filename);staticCache.set(route,prior||{filename,mime,bytes:await readFile(url)});}
   const summarizeJob=job=>({id:job.id,kind:job.kind,status:job.status,createdAt:job.createdAt,finishedAt:job.finishedAt,...(job.error?{error:job.error}:{}),...(job.result===undefined?{}:{result:job.result})});
   function beginJob(kind,operationId,request,operation){
     const requestJSON=JSON.stringify(request);
@@ -175,7 +171,7 @@ export async function startStacServer({workspace,eoapi,prescient=null,processing
       if(path.startsWith('/api/eoapi/')){
         if(!eoapi)throw fail(404,'Start the customer onboarding operator to open this view.','EOAPI_RUNTIME_REQUIRED');
         const body=method==='POST'?await bodyJSON(req,maxRequestBytes):{};
-        const result=await eoapi.dispatch({method,path:path.slice('/api/eoapi'.length),body});
+        const result=await eoapi.dispatch({method,path:path.slice('/api/eoapi'.length)+url.search,body});
         if(result&&typeof result.status==='number'&&Object.hasOwn(result,'body'))json(res,result.status,result.body);
         else json(res,200,result);
         return;

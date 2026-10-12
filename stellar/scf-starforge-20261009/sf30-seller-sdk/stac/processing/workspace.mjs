@@ -8,7 +8,9 @@ import { privateDirectory, readBytes, readJson, writeBytes, writeJson, exists, n
   from '../../../sf88-operator-buyer-cli/node/store.mjs';
 import { sha256, canonicalJson } from '../provider.mjs';
 import { normalizeDeployment, readProcessingContract, routeRequest, nextProcessingRequest,
-  processingUrl, createProcessingProvider, readProcessingCapture } from './provider.mjs';
+  processingUrl, createProcessingProvider, readProcessingCapture, processingCaptureUsable } from './provider.mjs';
+import { isCirrus, cirrusRunKey, cirrusWorkflowId, cirrusRunRequest, cirrusSummaryRequest,
+  cirrusCoverage, selectCirrusContinuation, cirrusTaskRows, bindCirrusConnectorDocument } from './cirrus.mjs';
 import { proposeProcessingAssociations, validateProcessingAssociation } from './associations.mjs';
 import { exportProcessingHandover, importProcessingHandover, packProcessingHandover, unpackProcessingHandover } from './portable.mjs';
 
@@ -23,6 +25,7 @@ const object = value => value !== null && typeof value === 'object' && !Array.is
 const relative = value => { need(typeof value === 'string' && value.split('/').every(p => /^[A-Za-z0-9._-]+$/.test(p) && !['.', '..'].includes(p)), 'PROCESSING_PATH_INVALID'); return value; };
 const errorCode = error => /^[A-Z0-9_]{1,120}$/.test(error.code ?? '') ? error.code : 'PROCESSING_OPERATION_FAILED';
 export const processingRunKey = run => {
+  if (object(run) && typeof run.collections === 'string' && typeof run.workflow === 'string' && typeof run.items === 'string') return cirrusRunKey(run);
   need(object(run) && ['source_id', 'workflow_definition_id', 'run_id', 'payload_id'].every(k => typeof run[k] === 'string'), 'PROCESSING_RUN_IDENTITY_INVALID');
   return sha256(canonicalJson([run.source_id, run.workflow_definition_id, run.run_id, run.payload_id]));
 };
@@ -139,14 +142,24 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
   const makeTask = ({ id, kind, request, rowsKey = null, immutableQuery = {}, scope = {} }) => ({ id, kind, request,
     initialRequest: request, requestHash: digest(request), rowsKey, immutableQuery, scope, state: 'PENDING', pages: [], attempts: [],
     pending: null, next: request, error: null, terminal: null });
-  async function prepareInventory({ deploymentKey, operationId, kinds = ['instances', 'sources', 'definitions'] } = {}) {
-    operationId = intent(operationId); const { entry, contract } = await sourceFor(deploymentKey);
-    need(Array.isArray(kinds) && kinds.includes('instances') && kinds.every(v => ['instances', 'sources', 'definitions'].includes(v)), 'PROCESSING_INVENTORY_KINDS_INVALID');
-    const selected = [...new Set(kinds)].filter(v => contract.routes[v]);
-    const selection = { kind: 'INVENTORY', deploymentKey, kinds: selected }, fingerprint = digest(selection);
-    const tasks = selected.map(kind => makeTask({ id: 'inventory-' + kind, kind, request: routeRequest(contract, kind, { limit: entry.deployment.pageSize }),
-      rowsKey: { instances: 'workflows', sources: 'sources', definitions: 'workflows_definitions' }[kind], immutableQuery: { limit: entry.deployment.pageSize } }));
-    return createEdition({ operationId, fingerprint, selection, tasks });
+  async function prepareInventory({ deploymentKey, operationId, kinds } = {}) {
+    operationId = intent(operationId); const source = await sourceFor(deploymentKey);
+    try {
+      const { entry, contract } = source, cirrus = isCirrus(contract);
+      kinds ??= cirrus ? ['instances', ...(contract.routes.stats ? ['stats'] : [])] : ['instances', 'sources', 'definitions'];
+      const allowed = cirrus ? ['instances', 'stats'] : ['instances', 'sources', 'definitions'];
+      need(Array.isArray(kinds) && kinds.includes('instances') && kinds.every(v => allowed.includes(v)), 'PROCESSING_INVENTORY_KINDS_INVALID');
+      const selected = [...new Set(kinds)].filter(v => contract.routes[v]);
+      const selection = { kind: 'INVENTORY', deploymentKey, kinds: selected, ...(cirrus ? { dialect:'cirrus-state' } : {}) };
+      const tasks = selected.map(kind => {
+        const query = cirrus ? {} : { limit:entry.deployment.pageSize };
+        return makeTask({ id:'inventory-' + kind, kind, request:routeRequest(contract, kind, query),
+          rowsKey:cirrus ? kind === 'instances' ? 'links' : null :
+            {instances:'workflows',sources:'sources',definitions:'workflows_definitions'}[kind],
+          immutableQuery:query, scope:cirrus ? {dialect:'cirrus-state'} : {} });
+      });
+      return createEdition({ operationId, fingerprint:digest(selection), selection, tasks });
+    } finally { source.provider.close(); }
   }
   async function createEdition({ operationId, fingerprint, selection, tasks }) {
     const id = identity('processing-edition');
@@ -165,29 +178,47 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     const deployment = state.deployments.find(v => v.key === edition.deploymentKey);
     return { edition, deployment, associations: state.associations.filter(v => v.editionId === id) };
   }
-  async function readTaskRows(task) {
+  async function readTaskRows(task, contract) {
     const rows = [];
     for (const page of task.pages) {
       const captured = await readProcessingCapture(join(directory, relative(page.directory)), page.requestHash);
-      need(captured && captured.record.sha256 === page.sha256 && captured.record.status === 200, 'PROCESSING_CAPTURE_CHANGED');
-      const values = captured.document?.[task.rowsKey]; need(Array.isArray(values), 'PROCESSING_PAGE_RECORDS_INVALID');
-      for (const value of values) rows.push({ value, capture: { directory: page.directory, sha256: page.sha256,
-        capturedAt: captured.record.capturedAt, retainedAt: captured.record.retainedAt ?? captured.record.importedAt ?? null } });
+      need(captured && captured.record.sha256 === page.sha256 && processingCaptureUsable(captured), 'PROCESSING_CAPTURE_CHANGED');
+      const values = isCirrus(task.scope) ? cirrusTaskRows(captured.document, task, contract) :
+        task.rowsKey === null ? [captured.document] : captured.document?.[task.rowsKey];
+      need(Array.isArray(values), 'PROCESSING_PAGE_RECORDS_INVALID');
+      for (const [index,value] of values.entries()) rows.push({ value, capture: { directory:page.directory,sha256:page.sha256,
+        capturedAt:captured.record.capturedAt,retainedAt:captured.record.retainedAt ?? captured.record.importedAt ?? null,
+        status:captured.record.status,imported:captured.record.imported,
+        pointer:task.rowsKey === null ? '' : isCirrus(task.scope) && task.kind === 'instances' ?
+          '/links/' + captured.document.links.findIndex(link => canonicalJson(link) === canonicalJson(value.nativeLink)) :
+          '/' + task.rowsKey + '/' + index,
+        ...(captured.record.bodyOrigin ? {bodyOrigin:captured.record.bodyOrigin} : {}) } });
     }
     return rows;
   }
-  async function reviewCapture({ inventoryId, workflowIds, since, stacEditionId = null,
-    details = ['events', 'input_payload', 'output_payload'], logs = true, actor, note = '', operationId } = {}) {
+  async function reviewCapture({ inventoryId, workflowIds, since, state = null, stacEditionId = null,
+    details, logs, actor, note = '', operationId } = {}) {
     const { edition: inventory } = await getEdition(inventoryId);
     const instances = inventory.tasks.find(v => v.kind === 'instances');
     need(instances?.state === 'COMPLETE', 'PROCESSING_COMPLETE_INSTANCE_CHAIN_REQUIRED');
-    const workflows = (await readTaskRows(instances)).map(v => v.value);
+    const source = await sourceFor(inventory.deploymentKey), { contract } = source;
+    source.provider.close();
+    const cirrus = isCirrus(contract);
+    details ??= cirrus ? ['summary'] : ['events', 'input_payload', 'output_payload'];
+    logs ??= !cirrus; since ??= cirrus ? '1h' : 'P1D';
+    const workflows = (await readTaskRows(instances, contract)).map(v => v.value);
     need(Array.isArray(workflowIds) && workflowIds.length && workflowIds.every(v => typeof v === 'string' && workflows.some(w => w.id === v)), 'PROCESSING_NATIVE_WORKFLOW_SELECTION_REQUIRED');
-    need((typeof since === 'string' && /^P(?=\d|T\d).{1,120}$/.test(since)) || Number.isFinite(since) && since >= 0, 'PROCESSING_NATIVE_SINCE_REQUIRED');
-    need(Array.isArray(details) && details.every(v => ['events', 'input_payload', 'output_payload', 'definition'].includes(v)), 'PROCESSING_DETAIL_SELECTION_INVALID');
+    need(cirrus ? typeof since === 'string' && /^\d+(?:s|m|h|d|w)$/.test(since) :
+      (typeof since === 'string' && /^P(?=\d|T\d).{1,120}$/.test(since)) || Number.isFinite(since) && since >= 0,
+      'PROCESSING_NATIVE_SINCE_REQUIRED');
+    need(Array.isArray(details) && details.every(v => (cirrus ? ['summary'] :
+      ['events','input_payload','output_payload','definition']).includes(v)), 'PROCESSING_DETAIL_SELECTION_INVALID');
+    if (cirrus) {
+      need(logs === false, 'PROCESSING_CIRRUS_LOGS_NOT_ADVERTISED');
+      need(state === null || typeof state === 'string' && /^[A-Z][A-Z0-9_]{0,63}$/.test(state), 'PROCESSING_CIRRUS_STATE_INVALID');
+    } else need(state === null, 'PROCESSING_STATE_FILTER_NOT_DOCUMENTED');
     need(typeof actor === 'string' && actor.trim().length > 0, 'PROCESSING_REVIEW_ACTOR_REQUIRED');
-    const { contract } = await sourceFor(inventory.deploymentKey);
-    need(contract.routes.runs.query.some(p => p.name === 'since'), 'PROCESSING_SINCE_NOT_DOCUMENTED');
+    if (!cirrus) need(contract.routes.runs.query.some(p => p.name === 'since'), 'PROCESSING_SINCE_NOT_DOCUMENTED');
     let stacBinding = null;
     if (stacEditionId !== null) {
       need(stacWorkspace, 'PROCESSING_ORIGINAL_STAC_WORKSPACE_REQUIRED');
@@ -197,7 +228,8 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
         editionHash: digest(nativeEdition(native.edition)), itemCount: native.items.length };
     }
     const selection = { kind: 'RUN_HISTORY', deploymentKey: inventory.deploymentKey, inventoryId,
-      workflowIds: [...new Set(workflowIds)], since, details: [...new Set(details)], logs: Boolean(logs), stac: stacBinding };
+      workflowIds: [...new Set(workflowIds)], since, details: [...new Set(details)], logs: Boolean(logs), stac: stacBinding,
+      ...(cirrus ? {dialect:'cirrus-state',state} : {}) };
     const review = { id: identity('processing-review'), fingerprint: digest(selection), selection,
       actor: actor.trim().slice(0, 160), note: String(note).slice(0, 4000), reviewedAt: stamp() };
     if (operationId !== undefined) operationId = intent(operationId);
@@ -213,14 +245,26 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
   async function prepareCapture({ reviewId, operationId } = {}) {
     operationId = intent(operationId); const review = (await getState()).reviews.find(v => v.id === reviewId);
     need(review && review.fingerprint === digest(review.selection), 'PROCESSING_REVIEW_NOT_FOUND');
-    const { entry, contract } = await sourceFor(review.selection.deploymentKey);
-    const tasks = review.selection.workflowIds.map(workflowId => {
-      const query = { [contract.workflowFilter]: [workflowId], since: review.selection.since, limit: entry.deployment.pageSize };
-      return makeTask({ id: 'runs-' + sha256(workflowId), kind: 'runs', request: routeRequest(contract, 'runs', query),
-        rowsKey: 'runs', immutableQuery: query, scope: { workflowId } });
-    });
-    return createEdition({ operationId, fingerprint: digest({ reviewId, fingerprint: review.fingerprint }),
-      selection: { ...review.selection, reviewId }, tasks });
+    const source = await sourceFor(review.selection.deploymentKey);
+    try {
+      const { entry, contract } = source, cirrus = isCirrus(contract);
+      const tasks = review.selection.workflowIds.flatMap(workflowId => {
+        if (cirrus) {
+          const request = cirrusRunRequest(contract, workflowId, review.selection, entry.deployment.pageSize);
+          const scope = {dialect:'cirrus-state',workflowId,state:review.selection.state ?? null};
+          const task = makeTask({id:'runs-' + sha256(workflowId),kind:'runs',request,rowsKey:'items',
+            immutableQuery:Object.fromEntries(new URL(request.url).searchParams),scope});
+          return [task, ...(review.selection.details.includes('summary') ?
+            [makeTask({id:'summary-' + sha256(workflowId),kind:'summary',
+              request:cirrusSummaryRequest(contract,workflowId),scope})] : [])];
+        }
+        const query = { [contract.workflowFilter]:[workflowId],since:review.selection.since,limit:entry.deployment.pageSize };
+        return [makeTask({id:'runs-' + sha256(workflowId),kind:'runs',request:routeRequest(contract,'runs',query),
+          rowsKey:'runs',immutableQuery:query,scope:{workflowId}})];
+      });
+      return createEdition({operationId,fingerprint:digest({reviewId,fingerprint:review.fingerprint}),
+        selection:{...review.selection,reviewId},tasks});
+    } finally { source.provider.close(); }
   }
   async function claim(id) {
     const { edition } = await getEdition(id), owner = await ownerIdentity();
@@ -239,6 +283,7 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       const result = change(e); e.updatedAt = stamp(); return result; });
   }
   function detailTasks(document, task, edition, contract) {
+    if (isCirrus(contract)) return [];
     const tasks = [];
     if (task.kind === 'runs') for (const run of document.runs) {
       const runKey = processingRunKey(run);
@@ -283,15 +328,17 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       need(pending && pending.requestHash === captured.requestHash, 'PROCESSING_PENDING_PAGE_CHANGED');
       const ledger = { ...pending, status: captured.record.status, bytes: captured.record.bytes, sha256: captured.record.sha256,
         capturedAt: captured.record.capturedAt, retainedAt: captured.record.retainedAt ?? captured.record.importedAt ?? null,
-        imported: captured.record.imported, retryAt: captured.record.retryAt ?? null };
+        imported: captured.record.imported, retryAt: captured.record.retryAt ?? null,
+        ...(captured.record.bodyOrigin ? {bodyOrigin:captured.record.bodyOrigin,provenance:captured.record.provenance} : {}) };
       task.attempts[task.attempts.length - 1] = { ...ledger, state: 'RECEIVED' }; task.pending = null;
-      if (captured.record.status !== 200 || captured.parseError || !object(captured.document)) {
+      if (!processingCaptureUsable(captured) || captured.parseError || !object(captured.document)) {
         task.error = captured.parseError ?? ('PROCESSING_HTTP_' + String(captured.record.status));
         task.state = [401, 429, 503].includes(captured.record.status) ? 'PAUSED' : 'FAILED';
         if (task.state === 'PAUSED') { e.state = 'PAUSED'; e.retryAt = captured.record.retryAt ?? null; }
         e.history.push({ at: stamp(), kind: 'RESPONSE_REJECTED', taskId, status: captured.record.status, capture: ledger.directory, code: task.error }); return;
       }
       const doc = captured.document;
+      if (isCirrus(contract)) cirrusTaskRows(doc, task, contract);
       if (task.rowsKey) {
         need(Array.isArray(doc[task.rowsKey]), 'PROCESSING_PAGE_RECORDS_INVALID');
         if (doc.record_count !== undefined) need(doc.record_count === doc[task.rowsKey].length, 'PROCESSING_RECORD_COUNT_MISMATCH');
@@ -305,6 +352,12 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       task.next = settledLogTail ? null : next; task.error = null;
       task.state = task.next ? 'PENDING' : 'COMPLETE';
       task.terminal = settledLogTail ? 'unchanged-empty-native-log-cursor' : next ? null : 'no-next-link';
+      if (isCirrus(contract) && task.kind === 'runs') {
+        task.coverage = cirrusCoverage(doc, captured.request, next);
+        const selected = (task.continuations ?? []).find(v => v.requestHash === captured.requestHash);
+        if (selected) task.coverage.requestContinuationSource = 'operator-last-native-payload-id';
+        task.terminal = next ? null : doc.items.length ? 'no-native-cursor-returned' : 'empty-native-page';
+      }
       for (const addition of additions) if (!e.tasks.some(v => v.id === addition.id)) e.tasks.push(addition);
       e.history.push({ at: stamp(), kind: 'PAGE_RETAINED', taskId, capture: ledger.directory, status: captured.record.status,
         recordCount: task.rowsKey ? doc[task.rowsKey].length : null, terminal: task.terminal });
@@ -380,6 +433,70 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     });
     return prepared ? runEdition(editionId) : getEdition(editionId);
   }
+  async function continuePage({ editionId, taskId, expectedCaptureSha256, operationId, execute = true } = {}) {
+    operationId = intent(operationId);
+    need(typeof execute === 'boolean' && /^[a-f0-9]{64}$/.test(expectedCaptureSha256 ?? ''),
+      'PROCESSING_CONTINUATION_INPUT_INVALID');
+    const shouldRun = await withEditionLease(editionId, async () => {
+      const { edition } = await getEdition(editionId), source = await sourceFor(edition.deploymentKey);
+      try {
+        need(isCirrus(source.contract), 'PROCESSING_CIRRUS_CONTINUATION_REQUIRED');
+        need(!edition.cancelled && !await legacyOwnerActive(edition.lease), 'PROCESSING_CONTINUATION_EDITION_UNAVAILABLE');
+        const fingerprint = digest({editionId,taskId,expectedCaptureSha256});
+        const operationKey = 'continuation:' + operationId, prior = (await getState()).operations[operationKey];
+        const task = edition.tasks.find(value => value.id === taskId);
+        need(task?.kind === 'runs' && isCirrus(task.scope), 'PROCESSING_CIRRUS_RUN_TASK_REQUIRED');
+        if (prior) {
+          need(prior.fingerprint === fingerprint, 'PROCESSING_CONTINUATION_OPERATION_CHANGED');
+          if (task.pages.some(page => page.requestHash === prior.requestHash)) return false;
+          return ['PENDING','RUNNING','PAUSED'].includes(task.state) &&
+            task.next && digest(task.next) === prior.requestHash;
+        }
+        const page = task.pages.at(-1);
+        need(task.state === 'COMPLETE' && !task.pending && !task.next && page?.sha256 === expectedCaptureSha256 &&
+          task.coverage?.complete === false, 'PROCESSING_CONTINUATION_PAGE_CHANGED');
+        need(task.pages.length < source.entry.deployment.maxPages, 'PROCESSING_PAGE_LIMIT_REACHED');
+        const captured = await readProcessingCapture(join(directory,relative(page.directory)),page.requestHash);
+        need(captured && captured.record.sha256 === expectedCaptureSha256 && processingCaptureUsable(captured),
+          'PROCESSING_CAPTURE_CHANGED');
+        cirrusTaskRows(captured.document,task,source.contract);
+        const selected = selectCirrusContinuation(captured.document,captured.request), requestHash = digest(selected.request);
+        need(![task.initialRequest,...task.pages.map(value => value.request)].some(request => digest(request) === requestHash),
+          'PROCESSING_PAGINATION_CYCLE');
+        await mutate(state => {
+          const current = state.editions.find(value => value.id === editionId), target = current.tasks.find(value => value.id === taskId);
+          need(!current.lease && target.state === 'COMPLETE' && !target.pending && !target.next &&
+            target.pages.at(-1)?.sha256 === expectedCaptureSha256, 'PROCESSING_CONTINUATION_PAGE_CHANGED');
+          const receipt = {operationId,sourceCaptureSha256:expectedCaptureSha256,sourceRequestHash:captured.requestHash,
+            payloadId:selected.payloadId,request:selected.request,requestHash,selectedAt:stamp(),
+            basis:'operator-last-native-payload-id'};
+          target.continuations ??= []; target.continuations.push(receipt);
+          target.next = selected.request; target.state = 'PENDING'; target.error = null; target.terminal = null;
+          target.coverage = {...target.coverage,continuationSource:'operator-last-native-payload-id'};
+          current.state = 'PREPARED'; current.error = null; current.retryAt = null; current.updatedAt = stamp();
+          current.history.push({at:stamp(),kind:'NATIVE_CONTINUATION_SELECTED',taskId,...receipt});
+          state.operations[operationKey] = {fingerprint,editionId,taskId,requestHash};
+        });
+        return true;
+      } finally { source.provider.close(); }
+    });
+    return execute && shouldRun ? runEdition(editionId) : getEdition(editionId);
+  }
+  async function statistics(editionId) {
+    const { edition, deployment } = await getEdition(editionId);
+    const selected = [edition];
+    if (edition.selection.inventoryId) selected.push((await getEdition(edition.selection.inventoryId)).edition);
+    const result = {editionId,dialect:deployment.deployment.dialect ?? 'filmdrop',statistics:[],summaries:[]};
+    for (const selectedEdition of selected) for (const task of selectedEdition.tasks) {
+      if (!['stats','summary'].includes(task.kind)) continue;
+      for (const row of await readTaskRows(task,deployment.contract)) {
+        const value = {document:row.value,capture:row.capture,editionId:selectedEdition.id};
+        if (task.kind === 'summary') result.summaries.push({workflowId:task.scope.workflowId,...value});
+        else result.statistics.push(value);
+      }
+    }
+    return result;
+  }
   async function cancel({ editionId } = {}) {
     await mutate(s => { const e = s.editions.find(v => v.id === editionId); need(e, 'PROCESSING_EDITION_NOT_FOUND');
       if (!['COMPLETE', 'COMPLETE_WITH_ERRORS'].includes(e.state)) { e.cancelled = true; if (!e.lease) e.state = 'CANCELLED'; } });
@@ -396,6 +513,11 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       const source = await sourceFor(edition.deploymentKey), { contract } = source; provider = source.provider;
       let attempt = task.pending;
       if (!attempt) attempt = await pendingAttempt(editionId, owner.token, taskId);
+      if (metadata?.bodyOrigin === 'connector-document') {
+        need(isCirrus(contract), 'PROCESSING_CIRRUS_CONNECTOR_BINDING_REQUIRED');
+        const sourceBody = await readBytes(join(directory,relative(source.entry.source.path)), source.entry.source.bytes);
+        metadata = bindCirrusConnectorDocument(body, metadata, sourceBody, attempt.request);
+      }
       const captured = await provider.importResponse(attempt.request, { directory: join(directory, attempt.directory), body, metadata });
       await applyCaptured(editionId, owner.token, taskId, captured, contract);
       await owned(editionId, owner.token, e => {
@@ -409,9 +531,10 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
     });
   }
   async function runs(editionId) {
-    const { edition } = await getEdition(editionId), byKey = new Map();
-    for (const task of edition.tasks.filter(v => v.kind === 'runs')) for (const row of await readTaskRows(task)) {
-      const key = processingRunKey(row.value), existing = byKey.get(key) ?? { key, observations: [] };
+    const { edition, deployment } = await getEdition(editionId), byKey = new Map();
+    for (const task of edition.tasks.filter(v => v.kind === 'runs')) for (const row of await readTaskRows(task, deployment.contract)) {
+      const key = processingRunKey(row.value), existing = byKey.get(key) ?? { key, observations: [],
+        ...(isCirrus(task.scope) ? {dialect:'cirrus-state',workflowId:cirrusWorkflowId(row.value)} : {}) };
       existing.observations.push(row); existing.latest = row.value; byKey.set(key, existing);
     }
     return [...byKey.values()];
@@ -456,12 +579,13 @@ export async function openProcessingWorkspace({ directory, stacWorkspace, transp
       need(edition.selection.kind === 'INVENTORY', 'PROCESSING_INVENTORY_EDITION_REQUIRED');
       const chains = [];
       for (const task of edition.tasks) chains.push({ kind: task.kind, state: task.state, error: task.error,
-        terminal: task.terminal, pages: task.pages.length, records: await readTaskRows(task) });
-      return { editionId, state: edition.state, deploymentKey: deployment.key, chains };
+        terminal: task.terminal, pages: task.pages.length, records: await readTaskRows(task, deployment.contract) });
+      return { editionId, state: edition.state, deploymentKey: deployment.key, chains,
+        dialect:deployment.deployment.dialect ?? 'filmdrop' };
     },
     discover: async input => { const e = await prepareInventory(input); return runEdition(e.id); },
     reviewCapture, capture: async input => { const e = await prepareCapture(input); return runEdition(e.id); },
-    resume, cancel, importPage, associations, recordAssociation,
+    resume, cancel, continuePage, statistics, importPage, associations, recordAssociation,
     readCapture: async path => readProcessingCapture(join(directory, relative(path))),
     exportHandover: input => exportProcessingHandover(workspace, input),
     importHandover: input => importProcessingHandover(workspace, input),
@@ -510,13 +634,19 @@ export async function createProcessingController({ stacWorkspace, directory, con
     error: edition.error ?? null, cancelled: edition.cancelled, history: edition.history,
     tasks: edition.tasks.map(task => ({ id: task.id, kind: task.kind, state: task.state, scope: task.scope,
       pages: task.pages.length, attempts: task.attempts.length, error: task.error, terminal: task.terminal,
-      next: task.next, pending: task.pending ? { directory: task.pending.directory, requestHash: task.pending.requestHash } : null })) });
+      next: task.next, pending: task.pending ? { directory: task.pending.directory, requestHash: task.pending.requestHash } : null,
+      latestCaptureSha256:task.pages.at(-1)?.sha256 ?? null,coverage:task.coverage ?? null,
+      continuationAvailable:isCirrus(task.scope) && task.kind === 'runs' && task.state === 'COMPLETE' &&
+        !task.next && !task.pending && task.coverage?.complete === false && task.coverage?.returned > 0,
+      continuations:task.continuations ?? [] })) });
   const getState = async () => {
     const state = await workspace.getState();
     return { schema: state.schema, id: state.id, revision: state.revision, updatedAt: state.updatedAt,
       deployments: state.deployments.map(entry => ({ key: entry.key, fingerprint: entry.fingerprint,
         deployment: entry.deployment, source: entry.source, routes: Object.keys(entry.contract.routes),
         workflowFilter: entry.contract.workflowFilter, configuredAt: entry.configuredAt,
+        dialect:entry.deployment.dialect ?? 'filmdrop',nativeRootId:entry.contract.nativeRootId ?? null,
+        workflowCount:entry.contract.workflows?.length ?? null,
         credentialsConfiguredHere: (state.configuredLocally ?? []).includes(entry.key) })),
       editions: state.editions.map(summarize), reviews: state.reviews, associations: state.associations,
       imports: state.imports, operations: state.operations, exports: await (async () => {
@@ -544,6 +674,7 @@ export async function createProcessingController({ stacWorkspace, directory, con
       } finally { source.provider.close(); }
     },
     inventory: async ({ query = {} } = {}) => workspace.inventory(selected(query.editionId)),
+    statistics: async ({ query = {} } = {}) => workspace.statistics(selected(query.editionId)),
     edition: async ({ query = {} } = {}) => workspace.getEdition(selected(query.editionId)),
     runs: async ({ query = {} } = {}) => ({ editionId: selected(query.editionId), runs: await workspace.runs(query.editionId) }),
     run: async ({ query = {} } = {}) => workspace.getRun({ editionId: selected(query.editionId), runKey: selected(query.runKey) }),
@@ -569,6 +700,10 @@ export async function createProcessingController({ stacWorkspace, directory, con
     'prepare-capture': async ({ input = {}, operationId } = {}) => workspace.prepareCapture({ reviewId: selected(input.reviewId), operationId: intent(operationId) }),
     resume: async ({ input = {} } = {}) => workspace.resume({ editionId: selected(input.editionId), retryFailed: input.retryFailed === true }),
     cancel: async ({ input = {} } = {}) => workspace.cancel({ editionId: selected(input.editionId) }),
+    'continue-page': async ({ input = {}, operationId } = {}) => workspace.continuePage({editionId:selected(input.editionId),
+      taskId:selected(input.taskId),expectedCaptureSha256:input.expectedCaptureSha256,operationId:intent(operationId)}),
+    'prepare-continuation': async ({ input = {}, operationId } = {}) => workspace.continuePage({editionId:selected(input.editionId),
+      taskId:selected(input.taskId),expectedCaptureSha256:input.expectedCaptureSha256,operationId:intent(operationId),execute:false}),
     'import-page': async ({ input = {} } = {}) => workspace.importPage({ editionId: selected(input.editionId),
       taskId: selected(input.taskId), body: body(input.bodyBase64), metadata: input.metadata }),
     'associate': async ({ input = {}, operationId } = {}) => workspace.recordAssociation({ ...input, operationId: intent(operationId) }),

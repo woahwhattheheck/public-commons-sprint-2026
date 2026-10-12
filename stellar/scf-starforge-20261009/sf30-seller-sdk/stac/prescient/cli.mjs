@@ -71,10 +71,11 @@ export async function runPrescientCommand({command,flags={}}={}){
     ...(flags['profile-sha256']?{profileSha256:flags['profile-sha256']}:{})});
   try{
     if(command==='serve'){
-      let server;
-      try{server=await startStacServer({workspace:runtime.workspace,prescient:runtime.controller,port:Number(flags.port??0)});}
+      let server,workspaceId;
+      try{workspaceId=(await runtime.workspace.getState()).id;
+        server=await startStacServer({workspace:runtime.workspace,prescient:runtime.controller,port:Number(flags.port??0)});}
       catch(error){await runtime.close();throw error;}
-      return {result:{url:server.url,directory,profileSha256:runtime.selectedProfileSha256},
+      return {result:{url:server.url,workspaceId,directory,profileSha256:runtime.selectedProfileSha256},
         close:async()=>{await runtime.close();await server.close();}};
     }
     const routes={connect:'/connect',session:'/session','delivery-review':'/deliveries/review',

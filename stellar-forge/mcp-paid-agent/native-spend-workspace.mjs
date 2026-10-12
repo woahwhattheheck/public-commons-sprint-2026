@@ -106,9 +106,41 @@ export async function openMcpSpendingHost(configPath, {environment = process.env
 export async function configureMcpSpendingModule(configPath, modulePath) {
   await readMcpSpendingHost(configPath);
   absolute(modulePath); await privateParent(modulePath);
-  const source = 'import {openMcpSpendingHost} from ' + JSON.stringify(import.meta.url) + ';\n' +
-    'const operator = await openMcpSpendingHost(' + JSON.stringify(resolve(configPath)) + ');\n' +
-    'export const {approve, signPayment, spendingStatus, reconcilePayment, close} = operator;\n';
+  const source = [
+    'import {openMcpSpendingHost, readMcpSpendingHost} from ' + JSON.stringify(import.meta.url) + ';',
+    'const configPath = ' + JSON.stringify(resolve(configPath)) + ';',
+    'const configured = await readMcpSpendingHost(configPath);',
+    'export const openOperator = () => openMcpSpendingHost(configPath);',
+    '// Declarative host metadata is available before a signing operator is needed.',
+    'export let readiness = Object.freeze({provider:"ORIGINAL_X402_STELLAR",network:configured.limits.network,payer:configured.payer,',
+    '  asset:configured.limits.asset,payTo:configured.limits.payTo,maxAtomic:configured.limits.maxAtomic,',
+    '  sdkVersions:null,aggregateSpending:Object.freeze({provider:"ORIGINAL_SF36",',
+    '    actor:configured.spending.actor,service:configured.spending.service,',
+    '    reservationPoint:"LIVE_CHALLENGE_BEFORE_NATIVE_SIGNING"})});',
+    'let opening, closing, closed = false;',
+    'const stopped = () => Object.assign(new Error("MCP_SPENDING_OPERATOR_CLOSED"),{code:"MCP_SPENDING_OPERATOR_CLOSED"});',
+    'async function shared() {',
+    '  if (closed) throw stopped();',
+    '  opening ??= openOperator().then(operator => {readiness = operator.readiness;return operator;},',
+    '    error => {opening = undefined;throw error;});',
+    '  const operator = await opening;',
+    '  if (closed) throw stopped();',
+    '  return operator;',
+    '}',
+    'export const approve = async (...args) => (await shared()).approve(...args);',
+    'export const signPayment = async (...args) => (await shared()).signPayment(...args);',
+    'export const spendingStatus = async (...args) => (await shared()).spendingStatus(...args);',
+    'export const reconcilePayment = async (...args) => (await shared()).reconcilePayment(...args);',
+    'export function close() {',
+    '  if (closing) return closing;',
+    '  closed = true;',
+    '  closing = (async () => {',
+    '    try {if (opening) await (await opening).close();}',
+    '    finally {opening = undefined;}',
+    '  })();',
+    '  return closing;',
+    '}',
+  ].join('\n') + '\n';
   const temporary = join(dirname(modulePath),'.mcp-module-'+randomUUID());
   const file = await open(temporary,'wx',0o600);
   try {

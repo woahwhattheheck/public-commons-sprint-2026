@@ -6,11 +6,12 @@ import { hostname } from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { config, operation, execution, InputError, need } from './config.mjs';
 import { execute } from './execute.mjs';
-import { createOperatorApproval, checkOperatorTerminal } from '../sf81-buyer-operator-bridge/bridge.mjs';
+import { createOperatorApproval, checkOperatorChannel } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { analyzeOne } from '../sf52-buyer-outcomes/outcomes.mjs';
-import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery } from './dataset-page.mjs';
+import { canonical, digest, inspectDatasetPage, object, validateDatasetQuery, bindDatasetResponseMetadata } from './dataset-page.mjs';
 import { MAX_DATASET_PAGE_BYTES, MAX_DATASET_PAGES } from '../sf100-buyer-dataset-delivery/deliver.mjs';
 import {pendingUnpaidContinuation,inspectUnpaidContinuation,continueUnpaidPage} from './dataset-unpaid.mjs';
+import {pendingExpiredContinuation,continueExpiredPage} from './dataset-expired.mjs';
 
 const VERSION = 'stellar-forge.sf88.dataset-session.v1';
 const MAX_ATOMIC = 170141183460469231731687303715884105727n;
@@ -121,7 +122,12 @@ function validateDefinition(value, directory) {
     typeof value.createdAt === 'string' && object(value.config) && object(value.limits) &&
     digest(canonical(value.config)) === value.configurationSha256, 'DATASET_SESSION_INVALID');
   const op = operation(value.config.operation);
-  execution(value.config);
+  // Dataset pages write only to this session's own evidence directory. A
+  // prepared source configuration need not allocate a separate evidence path.
+  // Validate that effective path without changing the immutable source config
+  // or its digest; explicitly supplied invalid paths still fail execution().
+  execution(value.config.evidenceDir === undefined
+    ? {...value.config, evidenceDir:join(directory, 'evidence')} : value.config);
   need(op.method === 'GET' && op.bodyFile === undefined && value.config.responseFile === undefined &&
     (value.config.captureBody === undefined || value.config.captureBody === false), 'DATASET_GET_CONFIG_REQUIRED');
   const query = validateDatasetQuery(op.url, {initial:true});
@@ -281,14 +287,15 @@ async function nativePage(definition, cfg, result, previous, index) {
       f.bytes === body.length && f.path === cfg.responseFile.destination &&
       !f.cleanupWarnings?.length && s.evidencePath === evidencePath, 'DATASET_RESULT_NOT_COMPLETE');
   }
-  const page = inspectDatasetPage(body, {url:cfg.operation.url, previous,
-    expectedSnapshot:definition.expectedSnapshot, maxRows:definition.limits.maxRows});
+  const page = await bindDatasetResponseMetadata(inspectDatasetPage(body, {url:cfg.operation.url, previous,
+    expectedSnapshot:definition.expectedSnapshot, maxRows:definition.limits.maxRows}), cfg,
+    {status:b.httpStatus, nativeBuyerStatus:b.status});
   return {...page, intentId, requestUrl:cfg.operation.url, responsePath:cfg.responseFile.destination,
     evidencePath, evidenceSha256:digest(evidenceBytes), nativeBuyerStatus:b.status,
     originalOutcome:outcome, operatorReservation:e.operatorReservation,
     recoveredFromOriginalFiles:result === null};
 }
-async function inspectUnlocked(directory) {
+async function inspectUnlocked(directory, {expiredContinuation} = {}) {
   await privateDirectory(directory);
   await privateDirectory(join(directory, 'pages'));
   await privateDirectory(join(directory, 'evidence'));
@@ -304,6 +311,22 @@ async function inspectUnlocked(directory) {
     const cfg = pageConfig(definition, index, previous?.nextCursor ?? null, allocated);
     const dir = join(directory, 'pages', indexName(index));
     await privateDirectory(dir);
+    const expired = await pendingExpiredContinuation(dir,cfg);
+    if(expired) {
+      const accepted=expired.status==='ARCHIVED_AWAITING_REAPPROVAL'&&expiredContinuation&&
+        ['index','intentId','attemptSha256','generation','releaseJournalMac','previousReleaseJournalMac','proofSha256',
+          'historyDirectory','sourceFile','sourceSha256','requestSha256','reportsDirectory']
+          .every(key=>expired[key]===expiredContinuation[key]);
+      if(!accepted) {
+        report.status='RECONCILIATION_REQUIRED';
+        report.capAllocatedAtomic=(allocated+BigInt(cfg.operation.expect.maxAtomic)).toString();
+        report.stoppedPage={index,intentId:cfg.operation.intentId,
+          code:'DATASET_EXPIRED_CONTINUATION_PENDING',responsePath:cfg.responseFile.destination};
+        report.expiredContinuation=expired;
+        report.next='Continue the original released generation with its exact source, attempt SHA-256 and a fresh operator approval.';
+        return report;
+      }
+    }
     const pending = await pendingUnpaidContinuation(dir,cfg);
     if(pending) {
       report.status='RECONCILIATION_REQUIRED';
@@ -354,6 +377,7 @@ async function inspectUnlocked(directory) {
     report.acquiredRows = page.nextOffset;
     report.totalRows = page.total;
     report.snapshot = page.snapshot;
+    if (page.semantics) report.semantics = page.semantics;
     previous = page;
   }
   if (previous?.nextCursor === null) report.status = 'COMPLETE';
@@ -382,7 +406,7 @@ async function originalPreflight(cfg, environment) {
   need(info.isFile(), 'SIGNER_MODULE_MUST_EXIST');
   // Constructor-only original approval validation: no ledger mutation, signer or HTTP call.
   createOperatorApproval({...cfg.operator, environment});
-  await checkOperatorTerminal(cfg.operation.intentId);
+  await checkOperatorChannel(cfg.operation.intentId, {environment});
 }
 async function executionContext(definition,{workspace,environment,executePage}) {
   let operatorEnvironment = environment, evidenceRpcEndpoint;
@@ -397,10 +421,10 @@ async function executionContext(definition,{workspace,environment,executePage}) 
   if (workspace !== undefined && definition.workspaceDirectory === undefined) {
     // Query-specific configs still use the selected original workspace's
     // keys, current cap and evidence RPC. Keep executePage unchanged so its
-    // original terminal preflight remains before the durable attempt marker.
+    // original approval-channel preflight remains before the durable attempt marker.
     const queue = await import('./queue.mjs');
     if (executePage === execute) {
-      const selected = await queue.workspaceExecution(definition.config, workspace);
+      const selected = await queue.workspaceExecution(definition.config, workspace, {environment});
       operatorEnvironment = selected.environment;
       evidenceRpcEndpoint = selected.evidenceRpcEndpoint;
     } else await queue.workspaceConfiguration(workspace, {configuration:definition.config});
@@ -410,14 +434,16 @@ async function executionContext(definition,{workspace,environment,executePage}) 
 /** Trusted host seam: CLI always supplies the original SF88 execute function. */
 export async function runDatasetSession(directory, {signal, executePage = execute, onPage = () => {},
   environment = process.env, emitPageSummaries = true, workspace,
-  retryUnpaid = false, expectedAttemptSha256} = {}) {
+  retryUnpaid = false, retryExpired, expectedAttemptSha256} = {}) {
   need(signal === undefined || signal instanceof AbortSignal, 'INVALID_ABORT_SIGNAL');
   need(typeof executePage === 'function' && typeof onPage === 'function', 'DATASET_EXECUTOR_INVALID');
   need(typeof emitPageSummaries === 'boolean', 'INVALID_SUMMARY_OUTPUT_OPTION');
-  need(typeof retryUnpaid==='boolean'&&
-    (retryUnpaid?/^[a-f0-9]{64}$/.test(expectedAttemptSha256??''):expectedAttemptSha256===undefined),
-    'DATASET_UNPAID_ATTEMPT_REVIEW_REQUIRED');
-  if(retryUnpaid)need(executePage===execute,'DATASET_UNPAID_CONTINUATION_REQUIRES_ORIGINAL_EXECUTOR');
+  need(typeof retryUnpaid==='boolean'&&(retryExpired===undefined||object(retryExpired))&&
+    !(retryUnpaid&&retryExpired!==undefined),'DATASET_ONE_ATTEMPT_CONTINUATION_REQUIRED');
+  const retry=retryUnpaid||retryExpired!==undefined;
+  need(retry?/^[a-f0-9]{64}$/.test(expectedAttemptSha256??''):expectedAttemptSha256===undefined,
+    'DATASET_ATTEMPT_REVIEW_REQUIRED');
+  if(retry)need(executePage===execute,'DATASET_CONTINUATION_REQUIRES_ORIGINAL_EXECUTOR');
   const release = await lock(directory);
   try {
     const definition = validateDefinition(await readJson(join(directory, 'session.json')), directory);
@@ -426,6 +452,7 @@ export async function runDatasetSession(directory, {signal, executePage = execut
     need(workspace === undefined || definition.workspaceDirectory === undefined ||
       workspace === definition.workspaceDirectory, 'DATASET_SAVED_WORKSPACE_MISMATCH');
     let report = await inspectUnlocked(directory);
+    let resumedPage=null;
     if(retryUnpaid) {
       need(report.status==='RECONCILIATION_REQUIRED'&&report.unpaidContinuation&&
         report.unpaidContinuation.attemptSha256===expectedAttemptSha256,
@@ -440,11 +467,28 @@ export async function runDatasetSession(directory, {signal, executePage = execut
         {expectedAttemptSha256,environment:operatorEnvironment,signal});
       report=await inspectUnlocked(directory);
     }
+    if(retryExpired!==undefined) {
+      need(report.status==='RECONCILIATION_REQUIRED','DATASET_EXPIRED_ORIGINAL_ATTEMPT_REQUIRED');
+      const index=report.completedPages+1,previous=report.pages.at(-1);
+      need(report.stoppedPage?.index===index,'DATASET_EXPIRED_PAGE_CHANGED');
+      const allocated=report.pages.reduce((total,page)=>total+BigInt(page.capAllocatedAtomic),0n);
+      const cfg=pageConfig(definition,index,previous?.nextCursor??null,allocated);
+      need(report.stoppedPage.intentId===cfg.operation.intentId,'DATASET_EXPIRED_PAGE_CHANGED');
+      const {operatorEnvironment}=await executionContext(definition,{workspace,environment,executePage});
+      await originalPreflight(cfg,operatorEnvironment);
+      resumedPage=await continueExpiredPage(join(directory,'pages',indexName(index)),cfg,
+        {selection:retryExpired,expectedAttemptSha256,environment:operatorEnvironment,signal});
+      report=await inspectUnlocked(directory,{expiredContinuation:resumedPage});
+    }
     while (report.status === 'READY' && !signal?.aborted) {
       const index = report.completedPages + 1;
       const previous = report.pages.at(-1);
       const cfg = pageConfig(definition, index, previous?.nextCursor ?? null, BigInt(report.capAllocatedAtomic));
-      const {operatorEnvironment,evidenceRpcEndpoint}=await executionContext(definition,{workspace,environment,executePage});
+      const context=await executionContext(definition,{workspace,environment,executePage});
+      const {evidenceRpcEndpoint}=context;
+      const operatorEnvironment=resumedPage?.intentId===cfg.operation.intentId
+        ? {...context.operatorEnvironment,SF36_EXPIRED_RESUME_FILE:resumedPage.resumePermitFile}
+        : context.operatorEnvironment;
       if (executePage === execute) await originalPreflight(cfg, operatorEnvironment);
       const dir = join(directory, 'pages', indexName(index));
       try { await mkdir(dir, {mode:0o700}); } catch (e) { if (e.code !== 'EEXIST') throw e; }
@@ -454,7 +498,8 @@ export async function runDatasetSession(directory, {signal, executePage = execut
       else need(equal(savedCfg, cfg), 'DATASET_PAGE_CONFIG_CHANGED');
       if (signal?.aborted) break;
       // This marker is durable BEFORE execution. Only an explicit authenticated
-      // unsigned continuation can archive an earlier marker; recover stays read-only.
+      // unsigned or released-expired continuation archives its earlier marker.
+      // Every new attempt uses the original quote review and reservation path.
       await createJson(join(dir, 'attempt.json'), {schema:'stellar-forge.sf88.dataset-attempt.v1',
         index, intentId:cfg.operation.intentId, configurationSha256:digest(canonical(cfg)),
         capAtomic:cfg.operation.expect.maxAtomic, startedAt:new Date().toISOString()});
