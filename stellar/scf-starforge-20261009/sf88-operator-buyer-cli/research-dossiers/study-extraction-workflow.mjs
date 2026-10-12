@@ -8,6 +8,7 @@ import {openDossierStore} from './dossier.mjs';
 import {startDossierWorkspace} from './server.mjs';
 import {extractionDigest,extractionInput,extractionDefinition} from './study-extraction.mjs';
 import {eligibilityInput} from './eligibility-review.mjs';
+import {receiveRiskOfBiasStudy,verifyRiskOfBiasReceiving,continueRiskOfBiasReceiving} from './risk-of-bias/receiving.mjs';
 import {publicationInput,publicationDefinition} from './extraction-publication.mjs';
 import {openPortableFile,writePortableFile} from './portable.mjs';
 import {readResearchHostFile} from './workspace-files.mjs';
@@ -383,7 +384,7 @@ async function reopen({store,file,format}){
   if(format==='json')return store.reopen(JSON.parse((await readBytes(file,MAX_PORTABLE)).toString('utf8')));
   return store.reopenStream(await openPortableFile(file),{projection:'metadata'});
 }
-async function verifyReceiving({original,received,id,revision,sourceCase,selections,sibling,appraisal}){
+async function verifyReceiving({original,received,id,revision,sourceCase,selections,sibling}){
   const left=await original.getMetadata(id,{revision}),right=await received.getMetadata(id,{revision});
   need(same(left,right),'STUDY_WORKFLOW_RECEIVING_METADATA_CHANGED');
   need(same(await siblingState(received,id,sibling.question.id,revision),sibling),'STUDY_WORKFLOW_SIBLING_CHANGED');
@@ -413,21 +414,6 @@ async function verifyReceiving({original,received,id,revision,sourceCase,selecti
       need(Buffer.from(a.body).equals(Buffer.from(b.body)),'STUDY_WORKFLOW_RECEIVING_TABLE_CHANGED');
     }
   }
-  if(appraisal){
-    const selected={revision,reviewId:appraisal.reviewId,assessmentId:appraisal.assessmentId,
-      assessmentEditionId:appraisal.assessmentEditionId};
-    for(const section of ['overview','reviews','protocols','studies','results','assessments','drafts',
-      'submissions','comparisons','adjudications','impact','operations','sources']){
-      const a=await allPages(original,'riskOfBias',id,{...selected,section}),
-        b=await allPages(received,'riskOfBias',id,{...selected,section});
-      need(same(a,b),'STUDY_WORKFLOW_RECEIVING_APPRAISAL_CHANGED');
-    }
-    for(const format of ['json','csv','md','html']){
-      const a=await original.exportRiskOfBias(id,{...selected,format}),
-        b=await received.exportRiskOfBias(id,{...selected,format});
-      need(Buffer.from(a.body).equals(Buffer.from(b.body)),'STUDY_WORKFLOW_RECEIVING_APPRAISAL_REPORT_CHANGED');
-    }
-  }
   for(const format of ['md','html']){
     const a=await original.exportDossier(id,{revision,format}),b=await received.exportDossier(id,{revision,format});
     need(Buffer.from(a.body).equals(Buffer.from(b.body)),'STUDY_WORKFLOW_RECEIVING_REPORT_CHANGED');
@@ -438,9 +424,7 @@ async function verifyReceiving({original,received,id,revision,sourceCase,selecti
   need(same(a,b),'STUDY_WORKFLOW_RECEIVING_SOURCE_VALUES_CHANGED');
   return {dossierId:id,revision,sources,formIds:[...new Set(selections.map(value=>value.formId))],
     resultSetIds:selections.map(value=>value.resultSetId),publicationIds:selections.map(value=>value.publicationId),
-    originalStudySha256:ORIGINAL_STUDY.sha256,sourcePointers:pointers.length,
-    ...(appraisal?{appraisal:{reviewId:appraisal.reviewId,assessmentId:appraisal.assessmentId,
-      assessmentEditionId:appraisal.assessmentEditionId,adjudicationId:appraisal.adjudicationId}}:{})};
+    originalStudySha256:ORIGINAL_STUDY.sha256,sourcePointers:pointers.length};
 }
 async function openApp(directory,connectionFile,signal,python='python3'){
   signal?.throwIfAborted();
@@ -539,6 +523,37 @@ function customerUpdateRecord(value,root){
   const {files,...record}=value;
   return {...clone(record),files:files.map(file=>deliveryReference(root,file))};
 }
+function appraisalRecord(value,root){
+  need(value?.schema==='sf88-research-appraisal-receiving/v1'&&value.state==='COMPLETE',
+    'STUDY_WORKFLOW_APPRAISAL_COMPLETION_REQUIRED');
+  const source=value.sourceCase,selected=source.selectedResult;
+  const reference=descriptor=>deliveryReference(root,{...descriptor,file:descriptor.file??descriptor.path});
+  return {schema:value.schema,state:value.state,phase:value.binding.phase,dossierId:source.dossierId,
+    revision:value.revision,originalRevision:value.originalRevision,selection:clone(value.selection),
+    sourceCaseSha256:source.sha256,packetSha256:source.packetSha256,
+    source:{occurrenceId:source.source.occurrenceId,fileName:source.source.fileName,bytes:source.source.bytes,
+      sha256:source.source.sha256,studyId:source.studyId,studyVersion:source.studyVersion,
+      studySha256:source.studySha256,resultId:selected.resultId,resultVersion:selected.resultVersion,
+      resultSha256:selected.resultSha256,passages:source.sourcePassageCount,pointers:source.sourcePointerCount},
+    reviewers:source.reviewers.map(item=>clone(item.actor)),resolver:clone(source.adjudication.actor),
+    operationIds:clone(value.operationIds),...(value.correction?{correction:clone(value.correction)}:{}),
+    browser:{schema:value.browser.schema,status:value.browser.status,mode:value.browser.mode,
+      workspace:clone(value.browser.workspace),originalRevision:value.browser.originalRevision,
+      currentRevision:value.browser.currentRevision,
+      requests:value.browser.requestFiles.map(item=>({stage:item.stage,requestId:item.requestId,action:item.action})),
+      sourceCase:reference(value.browser.sourceCase),
+      downloads:value.browser.downloads.map(reference),
+      screenshots:value.browser.screenshots.map(reference)},
+    transports:{state:value.transport.state,selection:clone(value.transport.selection),
+      files:value.transport.artifacts.map(reference)},
+    files:value.artifacts.map(item=>deliveryReference(root,item)),completedAt:value.completedAt};
+}
+function appraisalReceivingRecord(value,root){
+  need(value?.schema==='sf88-research-appraisal-receiving/v1'&&value.state==='COMPLETE',
+    'STUDY_WORKFLOW_APPRAISAL_PORTABLE_REQUIRED');
+  return {schema:value.schema,state:value.state,record:clone(value.record),
+    files:value.artifacts.map(item=>deliveryReference(root,item)),completedAt:value.completedAt};
+}
 function templateExchangeRecord(value,root){
   need(value?.schema==='sf88-study-extraction-template-programme/v1'&&value.state==='COMPLETE',
     'STUDY_WORKFLOW_TEMPLATE_COMPLETION_REQUIRED');
@@ -548,18 +563,8 @@ function templateExchangeRecord(value,root){
     screenshots:browser.screenshots.map(file=>deliveryReference(root,file))},
     files:files.map(file=>deliveryReference(root,file))};
 }
-function appraisalRecord(value,root){
-  need(value?.schema==='sf88-study-extraction-appraisal-programme/v1'&&value.state==='COMPLETE',
-    'STUDY_WORKFLOW_APPRAISAL_COMPLETION_REQUIRED');
-  const {files,sourceCaseFile,requests,...record}=value;
-  return {...clone(record),sourceCaseFile:deliveryReference(root,sourceCaseFile),
-    requests:requests.map(item=>({...clone(item),request:deliveryReference(root,item.request),
-      response:deliveryReference(root,item.response),envelope:deliveryReference(root,item.envelope)})),
-    files:files.map(file=>deliveryReference(root,file))};
-}
 async function completeResult({runDirectory,binding,seed:originalSeed,selection,receivedSelection,artifacts,
-  jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility,customerUpdates,templateExchange,
-  appraisalAuthor,appraisalReceived}){
+  jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility,customerUpdates,appraisal,templateExchange}){
   const unique=new Map();
   for(const value of artifacts){
     const file=safeArtifactPath(runDirectory,value.file),path=relative(runDirectory,file).split(sep).join('/');
@@ -579,7 +584,10 @@ async function completeResult({runDirectory,binding,seed:originalSeed,selection,
     customer:eligibilityRecord(eligibility,runDirectory),
     customerUpdates:customerUpdateRecord(customerUpdates,runDirectory),
     templateExchange:templateExchangeRecord(templateExchange,runDirectory),
-    appraisal:{authored:appraisalRecord(appraisalAuthor,runDirectory),received:appraisalRecord(appraisalReceived,runDirectory)},
+    appraisal:{sender:appraisalRecord(appraisal.sender,runDirectory),received:appraisalRecord(appraisal.received,runDirectory),
+      jsonReceiving:appraisalReceivingRecord(appraisal.jsonReceiving,runDirectory),
+      gzipReceiving:appraisalReceivingRecord(appraisal.gzipReceiving,runDirectory),
+      continuedReceiving:appraisalReceivingRecord(appraisal.continuedReceiving,runDirectory)},
     merchant:{sender:merchantRecord(merchant,runDirectory),received:merchantRecord(receivedMerchant,runDirectory)},
     artifacts:[...unique.values()],completedAt:new Date().toISOString()};
   await immutableJson(join(runDirectory,'result.json'),result);return result;
@@ -652,8 +660,11 @@ async function runHeld(options,drivers){
   const eligibilityDriver=drivers.eligibility??(await import('./study-extraction-eligibility.mjs')).runStudyExtractionEligibility;
   const customerDriver=drivers.customer??(await import('./study-extraction-customer.mjs')).runStudyExtractionCustomer;
   const templateDriver=drivers.template??(await import('./study-extraction-template.mjs')).runStudyExtractionTemplate;
-  const appraisalDriver=drivers.appraisal??(await import('./study-extraction-appraisal.mjs')).runStudyExtractionAppraisal;
-  need([browserDriver,merchantDriver,eligibilityDriver,customerDriver,templateDriver,appraisalDriver].every(value=>typeof value==='function'),
+  const appraisalDriver=drivers.appraisal??receiveRiskOfBiasStudy;
+  const appraisalReceivingDriver=drivers.appraisalReceiving??verifyRiskOfBiasReceiving;
+  const appraisalContinueDriver=drivers.appraisalContinue??continueRiskOfBiasReceiving;
+  need([browserDriver,merchantDriver,eligibilityDriver,customerDriver,templateDriver,
+    appraisalDriver,appraisalReceivingDriver,appraisalContinueDriver].every(value=>typeof value==='function'),
     'STUDY_WORKFLOW_ORIGINAL_DRIVERS_REQUIRED');
   const storeOptions={extractionOptions:{signal,python:options.python??'python3'}};
   const openStore=async directory=>{
@@ -678,7 +689,7 @@ async function runHeld(options,drivers){
   const requestDirectory=await privateDirectory(join(runDirectory,'requests','sender'));
   const step=steps({store:original,dossierId:id,operation:operation+'-sender',directory:requestDirectory});
   const senderConnection=join(runDirectory,'connection.json'),app=await openApp(workspaceDirectory,senderConnection,signal,options.python);
-  let senderBrowser,selection,formEdition,merchant,eligibility;
+  let senderBrowser,selection,formEdition,merchant,eligibility,senderAppraisal;
   try{
     senderBrowser=await checkpoint(join(runDirectory,'sender-browser.json'),async()=>{
       const result=await browserDriver({url:app.url,dossierId:id,questionId:originalSeed.questionId,
@@ -696,6 +707,16 @@ async function runHeld(options,drivers){
       reviewRequestFile:senderBrowser.reviewRequestFile,summary:accepted.summary};
     selection=await checkpoint(join(runDirectory,'sender-publication.json'),()=>publishTable({
       store:original,id,sourceCase,selection:initial,step,edition:1}));
+    senderAppraisal=await appraisalDriver({store:original,url:app.url,connectionFile:senderConnection,
+      workspaceDirectory,expectedWorkspaceId:app.workspaceId,
+      runDirectory:await privateDirectory(join(runDirectory,'sender-appraisal')),dossierId:id,
+      questionId:originalSeed.questionId,eligibilityReviewId:originalSeed.reviewId,
+      studyId:originalSeed.studyId,studyVersion:originalSeed.studyVersion,occurrenceId:originalSeed.occurrenceId,
+      extractionResultSetId:selection.resultSetId,inputs,playwrightModule,chromiumExecutable,signal,
+      python:options.python??'python3',node:process.execPath,
+      browserDriver:drivers.appraisalBrowser,transportDriver:drivers.appraisalTransports});
+    need(senderAppraisal?.state==='COMPLETE'&&senderAppraisal.sourceCase.dossierId===id&&
+      senderAppraisal.sourceCase.extractionResultSetId===selection.resultSetId,'STUDY_WORKFLOW_ORIGINAL_APPRAISAL_REQUIRED');
     formEdition=await checkpoint(join(runDirectory,'form-v2.json'),()=>reviseForm({
       store:original,id,sourceCase,selection,step}));
     await reviewPublicationImpacts({store:original,id,selection,step,label:'baseline',
@@ -722,6 +743,7 @@ async function runHeld(options,drivers){
     need(same(await siblingState(original,id,originalSeed.siblingQuestionId,selection.currentRevision),originalSeed.sibling),
       'STUDY_WORKFLOW_SIBLING_CHANGED');
   }finally{await app.close();}
+  artifacts.push(...senderAppraisal.artifacts);
   artifacts.push(...await screenshots(senderBrowser,runDirectory));
   artifacts.push(...await verifiedDeliveryArtifacts(merchant,runDirectory,'merchant-sender'));
   artifacts.push(...await verifiedDeliveryArtifacts(eligibility,runDirectory,'eligibility-customer'));
@@ -737,10 +759,18 @@ async function runHeld(options,drivers){
   const jsonStore=await openStore(eligibility.jsonDirectory);
   const jsonReceiving=await checkpoint(join(runDirectory,'json-receiving.json'),()=>verifyReceiving({
     original,received:jsonStore,id,revision:selection.currentRevision,sourceCase,selections:[selection],sibling:originalSeed.sibling}));
+  const jsonAppraisal=await appraisalReceivingDriver({original,received:jsonStore,dossierId:id,
+    revision:selection.currentRevision,sourceCase:senderAppraisal.sourceCase,selection:senderAppraisal.selection,
+    runDirectory:await privateDirectory(join(runDirectory,'json-appraisal-receiving')),signal});
+  artifacts.push(...jsonAppraisal.artifacts);
   const receivingDirectory=await privateDirectory(eligibility.streamDirectory);
   const receiving=await openStore(receivingDirectory);
   const gzipReceiving=await checkpoint(join(runDirectory,'gzip-receiving.json'),()=>verifyReceiving({
     original,received:receiving,id,revision:selection.currentRevision,sourceCase,selections:[selection],sibling:originalSeed.sibling}));
+  const gzipAppraisal=await appraisalReceivingDriver({original,received:receiving,dossierId:id,
+    revision:selection.currentRevision,sourceCase:senderAppraisal.sourceCase,selection:senderAppraisal.selection,
+    runDirectory:await privateDirectory(join(runDirectory,'gzip-appraisal-receiving')),signal});
+  artifacts.push(...gzipAppraisal.artifacts);
   const receivedStep=steps({store:receiving,dossierId:id,operation:operation+'-received',
     directory:await privateDirectory(join(runDirectory,'requests','received'))});
   const continued=await checkpoint(join(runDirectory,'received-review.json'),()=>continueInReceiving({
@@ -752,8 +782,18 @@ async function runHeld(options,drivers){
   const current=await checkpoint(join(runDirectory,'received-revision.json'),async()=>({revision:(await receiving.getMetadata(id)).revision}));
   receivedSelection={...receivedSelection,currentRevision:current.revision};
   const receivedConnection=join(runDirectory,'received-connection.json'),receivedApp=await openApp(receivingDirectory,receivedConnection,signal,options.python);
-  let receivedBrowser,receivedMerchant,templateExchange,appraisalAuthor;
+  let receivedBrowser,receivedMerchant,receivedAppraisal,templateExchange;
   try{
+    receivedAppraisal=await appraisalContinueDriver({store:receiving,url:receivedApp.url,
+      connectionFile:receivedConnection,workspaceDirectory:receivingDirectory,expectedWorkspaceId:receivedApp.workspaceId,
+      runDirectory:await privateDirectory(join(runDirectory,'received-appraisal')),
+      sourceCase:senderAppraisal.sourceCase,selection:senderAppraisal.selection,browserSelection:senderAppraisal.browser,
+      playwrightModule,chromiumExecutable,signal,python:options.python??'python3',node:process.execPath,
+      browserDriver:drivers.appraisalBrowser,
+      transportDriver:drivers.appraisalTransports});
+    need(receivedAppraisal?.state==='COMPLETE'&&receivedAppraisal.revision>=receivedSelection.currentRevision&&
+      receivedAppraisal.sourceCase.dossierId===id,'STUDY_WORKFLOW_RECEIVED_APPRAISAL_REQUIRED');
+    receivedSelection={...receivedSelection,currentRevision:receivedAppraisal.revision};
     receivedBrowser=await checkpoint(join(runDirectory,'received-browser.json'),async()=>browserDriver({
       url:receivedApp.url,dossierId:id,questionId:originalSeed.questionId,studyId:originalSeed.studyId,
       studyVersion:originalSeed.studyVersion,sourceCase,selection:receivedSelection,
@@ -778,13 +818,6 @@ async function runHeld(options,drivers){
     });
     need(reviewed.dossierId===id&&reviewed.revision===receivedSelection.currentRevision&&
       reviewed.publicationId===receivedSelection.publicationId,'STUDY_WORKFLOW_RECEIVED_REVIEW_CHANGED');
-    appraisalAuthor=await checkpoint(join(runDirectory,'appraisal-author.json'),()=>appraisalDriver({
-      store:receiving,url:receivedApp.url,expectedWorkspaceId:receivedApp.workspaceId,seed:originalSeed,
-      receivedSelection,inputs,runDirectory:join(runDirectory,'appraisal-author'),playwrightModule,chromiumExecutable,
-      signal,mode:'author'}));
-    need(appraisalAuthor?.dossierId===id&&appraisalAuthor.workspaceId===receivedApp.workspaceId&&
-      appraisalAuthor.sourceRevision===receivedSelection.currentRevision&&
-      appraisalAuthor.currentRevision>receivedSelection.currentRevision,'STUDY_WORKFLOW_APPRAISAL_AUTHOR_CHANGED');
     templateExchange=await checkpoint(join(runDirectory,'template-exchange.json'),()=>templateDriver({
       store:receiving,url:receivedApp.url,expectedWorkspaceId:receivedApp.workspaceId,dossierId:id,
       revision:receivedSelection.currentRevision,tableId:receivedSelection.tableId,publicationId:receivedSelection.publicationId,
@@ -796,9 +829,9 @@ async function runHeld(options,drivers){
       Number.isSafeInteger(templateExchange.revision),'STUDY_WORKFLOW_TEMPLATE_SELECTION_CHANGED');
   }finally{await receivedApp.close();}
   const continuedRevision=templateExchange.revision;
+  artifacts.push(...receivedAppraisal.artifacts);
   artifacts.push(...await screenshots(receivedBrowser,runDirectory));
   artifacts.push(...await verifiedDeliveryArtifacts(templateExchange,runDirectory,'template-exchange'));
-  artifacts.push(...await verifiedDeliveryArtifacts(appraisalAuthor,runDirectory,'appraisal-authored'));
   artifacts.push(...await verifiedDeliveryArtifacts(receivedMerchant,runDirectory,'merchant-received'));
   artifacts.push(...await saveDossierReports({store:receiving,id,revision:continuedRevision,directory:outputDirectory,label:'continued'}));
   artifacts.push(...await saveExtractionReports({store:receiving,id,selection:receivedSelection,revision:continuedRevision,directory:outputDirectory,label:'continued'}));
@@ -813,20 +846,17 @@ async function runHeld(options,drivers){
   await reopen({store:finalStore,file:continuedGzip,format:'json.gz'});
   const continuedReceiving=await checkpoint(join(runDirectory,'continued-receiving.json'),()=>verifyReceiving({
     original:receiving,received:finalStore,id,revision:continuedRevision,sourceCase,
-    selections:[selection,receivedSelection],sibling:originalSeed.sibling,appraisal:appraisalAuthor.selection}));
+    selections:[selection,receivedSelection],sibling:originalSeed.sibling}));
+  const continuedAppraisal=await appraisalReceivingDriver({original:receiving,received:finalStore,dossierId:id,
+    revision:continuedRevision,sourceCase:senderAppraisal.sourceCase,selection:receivedAppraisal.selection,
+    runDirectory:await privateDirectory(join(runDirectory,'continued-appraisal-receiving')),signal});
+  artifacts.push(...continuedAppraisal.artifacts);
   const customerSenderConnection=join(runDirectory,'customer-connection.json'),
     customerReceiverConnection=join(runDirectory,'customer-received-connection.json');
-  let customerSenderApp,customerReceiverApp,customerUpdates,appraisalReceived;
+  let customerSenderApp,customerReceiverApp,customerUpdates;
   try{
     customerSenderApp=await openApp(receivingDirectory,customerSenderConnection,signal,options.python);
     customerReceiverApp=await openApp(join(runDirectory,'final-received-workspace'),customerReceiverConnection,signal,options.python);
-    appraisalReceived=await checkpoint(join(runDirectory,'appraisal-received.json'),()=>appraisalDriver({
-      store:finalStore,url:customerReceiverApp.url,expectedWorkspaceId:customerReceiverApp.workspaceId,seed:originalSeed,
-      receivedSelection,inputs,runDirectory:join(runDirectory,'appraisal-received'),playwrightModule,chromiumExecutable,
-      signal,mode:'inspect',authored:appraisalAuthor}));
-    need(appraisalReceived?.dossierId===id&&appraisalReceived.workspaceId===customerReceiverApp.workspaceId&&
-      appraisalReceived.currentRevision===continuedRevision&&same(appraisalReceived.selection,appraisalAuthor.selection),
-      'STUDY_WORKFLOW_APPRAISAL_RECEIVING_CHANGED');
     customerUpdates=await checkpoint(join(runDirectory,'customer-updates.json'),()=>customerDriver({
       senderConnectionFile:customerSenderConnection,receiverConnectionFile:customerReceiverConnection,
       runDirectory:join(runDirectory,'customer-updates'),seed:originalSeed,sourceCase,
@@ -839,10 +869,10 @@ async function runHeld(options,drivers){
     const failure=closed.find(value=>value.status==='rejected');if(failure&&!signal?.aborted)throw failure.reason;
   }
   artifacts.push(...await verifiedDeliveryArtifacts(customerUpdates,runDirectory,'customer-update'));
-  artifacts.push(...await verifiedDeliveryArtifacts(appraisalReceived,runDirectory,'appraisal-received'));
+  const appraisal={sender:senderAppraisal,received:receivedAppraisal,jsonReceiving:jsonAppraisal,
+    gzipReceiving:gzipAppraisal,continuedReceiving:continuedAppraisal};
   return completeResult({runDirectory,binding,seed:originalSeed,selection,receivedSelection,artifacts,
-    jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility,customerUpdates,templateExchange,
-    appraisalAuthor,appraisalReceived});
+    jsonReceiving,gzipReceiving,continuedReceiving,senderBrowser,receivedBrowser,merchant,receivedMerchant,eligibility,customerUpdates,appraisal,templateExchange});
 }
 export async function runStudyExtractionWorkflow(options,drivers={}){
   need(object(options)&&typeof options.operation==='string'&&/^[A-Za-z0-9_-]{8,100}$/.test(options.operation),

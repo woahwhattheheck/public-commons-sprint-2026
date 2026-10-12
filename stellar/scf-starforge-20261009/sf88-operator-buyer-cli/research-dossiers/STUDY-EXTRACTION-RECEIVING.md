@@ -203,35 +203,30 @@ programme finishes. The programme retains those exact files for the receiving
 owner's visual review.
 
 
-## Independent appraisal in the same dossier
+## Appraisal in this original programme
 
-The original full appraisal follows the completed received extraction review.
-The programme calls the maintained risk-of-bias/study-case.mjs binder against
-the actual selected second result set, original Eligibility Study, source
-occurrence and frozen review revision. That binder verifies both independently
-authored reviewer packets, their complete source passages and the actual
-selected immutable result against the original retained registry bytes.
+The complete Appraisal product is part of this same study workflow. Its full operator/source guide is [risk-of-bias/RISK_OF_BIAS.md](./risk-of-bias/RISK_OF_BIAS.md), with the browser controls in [risk-of-bias/BROWSER.md](./risk-of-bias/BROWSER.md) and exact native fields in [risk-of-bias/API.md](./risk-of-bias/API.md).
 
-The existing runRiskOfBiasBrowser authors the review and protocol, creates the
-exact result-level assessment, records both independent drafts and submissions,
-and records their explicit adjudication. Each of the seven UI requests and its
-original browser request envelope are retained before native dispatch. The
-programme recovers those unchanged requests after the completed review and
-again in the final received workspace. Both recovery passes return their
-original immutable operations and preserve the current dossier revision.
+The original sender first completes its fourteen-row extraction and first evidence publication. The appraisal binder then selects the actual resolved primary PFS result from that original result set and the existing study/version. It binds the full independent A/B and resolver packet to the retained registry file: 99,951 bytes, SHA-256 1e8f401843a30673b2d653ceb2682ad8f6d038af268a185c3333028d339d14c1. All 301 passage occurrences use the original typed source resolver and 53 actual pointers.
 
-The template continuation then extends the same dossier. The main portable
-receiving comparison includes every original appraisal section and all four
-appraisal report formats at the actual continued revision. The existing final
-Research listener opens the same appraisal, original source and selected result
-before the customer handover begins. The complete source case, independent
-comparison, adjudication, selected reports and desktop/mobile screenshots are
-included in the programme's artifacts.
+The existing Appraisal browser authors the protocol/review, assessment, two complete drafts, two immutable submissions and source-based adjudication. The same authenticated listener then receives the typed client, actual CLI and Merchant reads, replays one already-committed request, and compares all four complete report formats. The sender's final revision and complete dossier exports include that original review.
 
-Source and receiving summaries are appraisal-author.json and
-appraisal-received.json. Their operating directories have the corresponding
-names. The complete root result reports the unchanged study/result identities,
-both assigned reviewers, original request and operation identities, source
-passage counts, selected assessment/protocol editions and both actual
-workspace identities. Resume the same root command and operation directory to
-continue an interrupted phase using its original requests.
+Both original JSON and gzip receiving workspaces are compared at the same selected revision. Their complete appraisal views retain the exact protocol, study/result/source binding, all independent submissions, original adjudication and native operations. The received browser opens that saved review in its own actual workspace context.
+
+The received continuation makes one explicit source clarification: A's baseline answer names the original MEDIAN statistic while preserving the reported 54.5 and 54.2 values. The new draft supersedes A's original draft; the new submission supersedes A's original submission; the new adjudication resolves the complete new A plus original B set and retains the earlier adjudication. This adds three original mutations and leaves B's independent submission unchanged. The existing full final export/reopen carries that corrected review before the maintained recurring customer programme continues.
+
+The parent retains the earlier extraction revision checkpoint and uses the actual later appraisal revision for the received report/export and native head comparison. Its original operation ID, workspace, listeners, child wrapper, Python selection, cancellation signal, source input and canonical request recovery remain the same. Appraisal adds no other native controller.
+
+The full result includes:
+
+| Field | Retained output |
+|---|---|
+| appraisal.sender | Actual seven-action browser review, exact source selection, native transport receiving, reports and screenshots |
+| appraisal.jsonReceiving | Complete original appraisal equality in the existing JSON receiver |
+| appraisal.gzipReceiving | Complete original appraisal equality in the existing gzip receiver |
+| appraisal.received | Actual received browser inspection, source-linked A correction, new submission and superseding adjudication |
+| appraisal.continuedReceiving | Complete corrected appraisal equality after the original final fresh reopen |
+
+The declared artifacts include each original browser request body, workspace-bound recovery envelope, accepted response, receiving state/result, source case, report, screenshot and typed/CLI/Merchant file. Private listener connections remain with the original application owner. The customer receives the complete editable dossier and its selected reports through the existing delivery paths.
+
+The workbook exchange follows the complete received appraisal correction. Final report, portable dossier, and appraisal receiving use the actual final template revision. All original Research hosts receive the same programme cancellation signal and selected Python interpreter.
