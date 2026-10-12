@@ -530,6 +530,23 @@ class AnalysisReports:
                    esc(json.dumps({"dataset": dataset, "column_types": source["column_types"],
                                    "manifestSha256": source["manifestSha256"], "jsonl": source["jsonl"]},
                                   ensure_ascii=False, indent=2)) + '</pre>').encode()
+            if source.get("semantic_dictionary") is not None:
+                dictionary = source["semantic_dictionary"]
+                metadata = source["semantics"]
+                meanings = {column["name"]: column for column in dictionary["columns"]}
+                yield ('<h4>Reviewed source meanings</h4><p>These definitions belong to the imported source fields and their SQL aliases. The saved SQL describes calculations and aggregation in this report.</p><p class="meta">Meaning ' +
+                       esc(metadata["semantic_sha256"]) + ' · Definition ' + esc(metadata["definition_sha256"]) +
+                       '</p><div class="table-scroll"><table><thead><tr><th>Source field</th><th>SQL column</th><th>Definition</th></tr></thead><tbody>').encode()
+                for column in metadata["columns"]:
+                    meaning = meanings[column["source"]]
+                    yield ('<tr><td>' + esc(column["source"]) + '</td><td>' + esc(column["column"]) +
+                           '</td><td><pre>' + esc(json.dumps(meaning["projectedDefinition"], ensure_ascii=False, indent=2)) +
+                           '</pre></td></tr>').encode()
+                yield ('</tbody></table></div><details><summary>Source identity and attribution</summary><pre>' +
+                       esc(json.dumps({"source": dictionary["source"], "primaryKey": dictionary["primaryKey"],
+                                       "aboutUrl": dictionary["aboutUrl"], "virtualColumns": dictionary["virtualColumns"],
+                                       "issues": dictionary["issues"], "originalDictionary": metadata["file"]},
+                                      ensure_ascii=False, indent=2)) + '</pre></details>').encode()
         for section, recipe in zip(report["sections"], definition["sections"]):
             yield ('<h3>' + esc(section["title"]) + ' — query</h3><pre>' + esc(recipe["query"]["sql"]) +
                    '\n\nParameters: ' + esc(section["parameters_text"]) + '</pre>').encode()
@@ -565,9 +582,22 @@ class AnalysisReports:
                             writer.writerow([value["text"] if value["type"] != "null" else "" for value in values])
                             if stream.tell() > _MAX_EXPORT_BYTES:
                                 raise StateError("ANALYSIS_REPORT_EXPORT_LIMIT")
+            for source in report["sources"]:
+                if source.get("semantics") is None:
+                    continue
+                raw = self.database.semantics_bytes(source["version_id"])
+                expected = source["semantics"]["file"]
+                if raw is None or len(raw) != expected["bytes"] or digest(raw) != expected["sha256"]:
+                    raise StateError("ANALYSIS_REPORT_SOURCE_SEMANTICS_CHANGED")
+                name = "sources/" + source["version_id"] + "-semantics.json"
+                with archive.open(self._zip_info(name), "w") as member:
+                    member.write(raw)
+                if stream.tell() > _MAX_EXPORT_BYTES:
+                    raise StateError("ANALYSIS_REPORT_EXPORT_LIMIT")
             with archive.open(self._zip_info("README.txt"), "w") as member:
                 member.write(("Customer report: " + report["definition"]["title"] + "\n" +
                     "Each sections/*.csv file contains the complete table in report order. report.json retains scalar types, NULL, exact source queries and the original reviewed publication. report.html is the complete offline printable report. CSV uses original values; NULL and an empty string both appear as an empty CSV field.\n" +
+                    "Where reviewed source meanings exist, sources/*-semantics.json retains each exact original dictionary. report.json binds it to the imported source and reviewed SQL aliases; derived output meaning follows the saved SQL.\n" +
                     "Publication: " + publication["id"] + "\nResult SHA-256: " + report["result_sha256"] + "\n").encode())
 
     def export(self, spec):

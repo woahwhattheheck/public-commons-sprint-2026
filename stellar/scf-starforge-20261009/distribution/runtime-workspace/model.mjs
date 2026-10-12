@@ -21,7 +21,7 @@ import { imageOperationFields, imageWorkspaceState, reviewWorkspaceImage, attach
   openWorkspaceImageDownload, reviewWorkspaceImageContainer, normalizeImageOperation,
   executeImageOperation } from './image-workspace.mjs';
 
-import { initializeApplications, applicationsState, reviewApplication, saveApplication, applicationBindingOperation,
+import { initializeApplications, applicationsState, applicationsHistory, reviewApplication, saveApplication, applicationBindingOperation,
   reviewApplicationStart, dispatchApplicationStart, cancelApplicationRun, applicationOperation, applicationOutput,
   readApplicationTerminal, sendApplicationTerminal } from './applications.mjs';
 import { transferOperationFields, initializeTransferWorkspace, runtimeTransferWorkspaceState,
@@ -33,6 +33,7 @@ import { pythonOperationFields, initializePythonWorkspace, reviewPythonRuntime, 
   executePythonOperation, recoverPythonOperation, pythonWorkspaceState, receivePythonArchive,
   openPythonBundle } from '../python-runtime/workspace.mjs';
 import { bindPythonApplicationCommand } from '../python-runtime/command-binding.mjs';
+import { openApiConnectionSetupAction } from './openapi-connection-setup.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
@@ -174,7 +175,8 @@ const fields = {
   recover: ['runtimeId', 'name', 'offline', 'cache', 'nodeHeaders', 'install'],
 };
 
-export async function openRuntimeWorkspace({ directory } = {}) {
+export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} } = {}) {
+  const setupPolicy = Object.freeze({ ...openApiSetupPolicy });
   const { root, config } = await context(directory);
   await initializeManagedWorkspace(root);
   await initializeApplications(root);
@@ -402,7 +404,12 @@ export async function openRuntimeWorkspace({ directory } = {}) {
         'RUNTIME_WORKSPACE_INSTALL_LOG_UNAVAILABLE', 'This runtime has no npm attempt log yet');
       return { name: state.logFile, ...await tailFile(join(selected.directory, state.logFile)) };
     },
-    async applicationsState() { return applicationsState(root); },
+    async applicationsState(options) { return applicationsState(root, options); },
+    async applicationsHistory(options) { return applicationsHistory(root, options); },
+    async applicationsOpenApiSetup(input) {
+      const selected = await entry(root, recordId(input.runtimeId));
+      return openApiConnectionSetupAction(root, { ...input, runtimeDirectory: selected.directory }, { policy: setupPolicy });
+    },
     async applicationsReview(input) {
       const selected = await entry(root, recordId(input.runtimeId));
       return reviewApplication(root, { ...input, runtimeDirectory: selected.directory });

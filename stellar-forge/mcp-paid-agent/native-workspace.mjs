@@ -471,6 +471,7 @@ export async function openNativeWorkspace(directory) {
     manifest:structuredClone(manifest),
     registerObjects:objects.register,
     registerDatasets:datasets.register,
+    registerReceivedDataset:datasets.registerReceived,
     completedDataset:datasets.completedDataset,
     completedObject:objects.completedObject,completedResponse,
     registerAnalysis:analysis.register,
