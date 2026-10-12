@@ -183,3 +183,21 @@ The receiver validates complete edition identities, normalized inputs, original 
 All source files remain in the existing sources/ members. The original planner ZIP, original case event/review history, Cohort and Completion preparations, forecasts, portfolios and every earlier Installation edition travel in the same complete case. The existing 32 MiB archive and original-source bounds apply to the complete handover.
 
 For maintained source adoption, include operations_installations.py, operations_installations.mjs and operations_installations.css together with the composed Operations, HTTP, CLI, agent-client/catalog/provider and managed-launch joins. Reopen the selected managed application after adopting a changed native source selection, then continue the original case and its saved request IDs.
+
+## Continue the original Routescan installation operation
+
+`installation-operations-receiving.mjs` is the complete operating entrypoint for the retained SCF v37 case. It invokes the maintained Merchant MCP provider, which opens the original private Operations service; after those owned services close, it reopens the same received edition through the original CLI. Use the complete repository source and the retained original input:
+
+```sh
+node stellar/scf_2026/sf47_budget_model/workspace/installation-operations-receiving.mjs \
+  --work /absolute/private/installation-operation \
+  --case /absolute/SCF_Operating_Case_with_Freeform_Event_Timing_20261012.zip \
+  --python /absolute/python3 \
+  --scenario /absolute/sf10_current_candidate.json
+```
+
+The operation binds the original 647,130-byte case SHA `c71303844660d5a859d3936a569b5461c7b1679b739dfead95d907759693df2b`. It selects the retained Routescan deployment, reads its complete original source ZIP through MCP byte paging, opens the original 50-byte JSON response, and preserves the query, original testnet settlement, six funded packages and open grant criteria. The selected task's receiving specification becomes a complete saved installation. A second edition completes its change, receiving and maintenance instructions; the original edition remains available through paged history.
+
+The selected-edition archive is then received into a separate original workspace with every prior edition, all original records, complete sources and plan history. The command reopens both editions, recovers the same native save and import request IDs, compares the complete original source, and reads/exports the second edition through the original CLI. Its delivery directory contains both source editions, the independently received edition, the CLI export, readable opening instructions and the original CLI records. `result.json` names the retained workspaces, installation, source identity and whole-file downloads.
+
+Keep the same `--work` directory to continue after an interrupted response. Each native phase records its exact original request before dispatch and retains the returned snapshot and complete bytes before advancing. A later source correction records its current native binding alongside the original binding; the original scenario, case bytes and phase request identities remain fixed. Inspect a retained interrupted native phase and continue the same command against the corrected source. The operating case remains available through the standard browser, CLI and MCP controls.
