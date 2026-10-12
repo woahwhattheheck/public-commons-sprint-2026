@@ -44,7 +44,18 @@ An established warehouse reopens with its existing schema and identity. The brow
 
 ## Open the original application
 
-For a managed host, use the composition below. For a direct source operation:
+For the installed managed application, select **Reporting warehouse profiles**
+in Applications or add `--warehouse-profiles /private/postgres-profiles.json`
+to `starforge odk-central-workspace`. Open **Reporting warehouse** on the
+same authenticated listener.
+
+The installed `starforge odk-central-workspace warehouse` command accepts the
+managed workspace's original `odk.connection.json` through `--operator-file`.
+Its client verifies the actual workspace and current connection identity before
+each action. The main SDK and dedicated `./seller/odk/warehouse` export provide
+the complete typed warehouse API.
+
+For source-owner composition, use the original factory below. For a direct source operation:
 
 ~~~sh
 node stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/cli.mjs \

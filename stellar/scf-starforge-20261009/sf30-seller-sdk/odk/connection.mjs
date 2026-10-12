@@ -246,9 +246,11 @@ export function centralOperationId(input) {
 }
 export function centralActionRoute(namespace,method) {
   const actions=namespace==='actions'?CENTRAL_ACTIONS:
-    namespace==='commissioning'?CENTRAL_COMMISSIONING_ACTIONS:null;
+    namespace==='commissioning'?CENTRAL_COMMISSIONING_ACTIONS:
+    namespace==='warehouse'?CENTRAL_WAREHOUSE_ACTIONS:null;
   odkNeed(actions?.has(method),'ODK_ACTION_INVALID','Choose a declared original Central namespace and action.');
-  const readOnly=(namespace==='commissioning'?CENTRAL_COMMISSIONING_READ_ACTIONS:CENTRAL_READ_ACTIONS).has(method);
+  const readOnly=(namespace==='commissioning'?CENTRAL_COMMISSIONING_READ_ACTIONS:
+    namespace==='warehouse'?CENTRAL_WAREHOUSE_READ_ACTIONS:CENTRAL_READ_ACTIONS).has(method);
   return {path:'/api/'+namespace+'/'+method,readOnly};
 }
 /** SDK and MCP use the same authenticated original response/recovery boundary. */
@@ -269,6 +271,13 @@ export async function inspectCentralCommissioning(connection,options={}) {
   odkNeed(state?.schema==='stellar-forge.central-commissioning.v1'&&
     state.workspaceId===connection.value.workspaceId&&Number.isSafeInteger(state.revision)&&state.revision>=0,
     'ODK_COMMISSIONING_CHANGED','The authenticated commissioner differs from the selected original workspace.',409);
+  return state;
+}
+export async function inspectCentralWarehouse(connection,options={}) {
+  const state=await odkRequest(connection,'/api/warehouse/state',{...options,maximum:64*1024*1024});
+  odkNeed(state?.schema==='stellar-forge.central-warehouse.v1'&&
+    state.workspaceId===connection.value.workspaceId&&Number.isSafeInteger(state.revision)&&state.revision>=0,
+    'ODK_WAREHOUSE_CHANGED','The authenticated warehouse differs from the selected original workspace.',409);
   return state;
 }
 /** A remote client borrows the Applications listener; close never stops that application. */
@@ -294,6 +303,19 @@ export class CentralWorkspaceClient {
   async commissioningState(options={}){
     return inspectCentralCommissioning(await this.#current(),{...options,fetchImpl:this.#fetch});
   }
+  warehouseAction(method,input={},options={}){return this.namespaceAction('warehouse',method,input,options);}
+  async warehouseState(options={}){
+    return inspectCentralWarehouse(await this.#current(),{...options,fetchImpl:this.#fetch});
+  }
+  warehousePrepare(input,options){return this.warehouseAction('prepare',input,options);}
+  warehouseConnect(input,options){return this.warehouseAction('connect',input,options);}
+  warehouseInspect(input,options){return this.warehouseAction('inspect',input,options);}
+  warehouseReview(input,options){return this.warehouseAction('review',input,options);}
+  warehouseImport(input,options){return this.warehouseAction('import',input,options);}
+  warehousePeriodReport(input,options){return this.warehouseAction('periodReport',input,options);}
+  warehouseOperation(input,options){return this.warehouseAction('operation',input,options);}
+  warehouseApproval(input,options){return this.warehouseAction('approval',input,options);}
+  warehouseResume(input,options){return this.warehouseAction('resume',input,options);}
   connect(input,options){return this.action('connect',{...input,id:input.id??randomUUID()},options);}
   projects(input,options){return this.action('projects',input,options);}
   forms(input,options){return this.action('forms',input,options);}
@@ -344,6 +366,9 @@ export const CENTRAL_ACTIONS=new Set(['connect','createPlan','capture','resume',
 export const CENTRAL_COMMISSIONING_READ_ACTIONS=new Set(['readiness']);
 export const CENTRAL_COMMISSIONING_ACTIONS=new Set(['recordHost','inspect','saveDraft','prepare','install',
   'capturePeriod','resumeCapture','deliver',...CENTRAL_COMMISSIONING_READ_ACTIONS]);
+export const CENTRAL_WAREHOUSE_READ_ACTIONS=new Set(['operation','approval']);
+export const CENTRAL_WAREHOUSE_ACTIONS=new Set(['prepare','connect','inspect','review','import',
+  'periodReport','resume',...CENTRAL_WAREHOUSE_READ_ACTIONS]);
 export async function connectCentralWorkspace({connectionFile,directory,fetchImpl=fetch}){
   const connection=await readCentralConnection(connectionFile,{directory});
   await inspectCentralListener(connection,{fetchImpl});

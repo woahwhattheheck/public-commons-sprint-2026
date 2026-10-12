@@ -1,12 +1,16 @@
 {
   "schema": "stellar-forge.merchant-distribution-contribution.v1",
   "id": "odk",
-  "description": "Original ODK Central field captures, source-linked reporting, Stellar dataset releases and complete receiving",
+  "description": "Complete ODK Central field reporting, two-period commissioning, approved PostgreSQL receiving and reports, native host recovery, dataset publication and portable receiving",
   "commands": {
-    "odk-central-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs"
+    "odk-central-workspace": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/managed.mjs",
+    "odk-central-host": "products/odk-central/host.mjs",
+    "odk-central-receive": "products/odk-central/receive.mjs"
   },
   "commandDescriptions": {
-    "odk-central-workspace": "Open the original Central workspace through Applications or its native data commands"
+    "odk-central-workspace": "Open the original Central field, commissioning and warehouse application or run its retained data commands",
+    "odk-central-host": "Operate the original Central host, complete native backup, restore and service handover",
+    "odk-central-receive": "Receive an existing Central source or the released forms through the original capture, review, reports, archive and reopening"
   },
   "exports": {
     "./seller/odk": {
@@ -24,6 +28,12 @@
     "./seller/odk/mcp": {
       "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/mcp.d.mts",
       "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/mcp.mjs"
+    },
+    "./seller/odk/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive.mjs",
+    "./seller/odk/released-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/run-released-fixtures.mjs",
+    "./seller/odk/warehouse": {
+      "types": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/index.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/index.mjs"
     }
   },
   "applicationProviders": {
@@ -31,5 +41,43 @@
   },
   "merchantProviders": {
     "odk-workspaces": "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/merchant-provider.mjs"
-  }
+  },
+  "components": [
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk",
+    "products/odk-central"
+  ],
+  "supportFiles": [
+    "products/odk-central/OPERATING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/APPLICATIONS_MCP.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/COMMISSIONING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/PUBLISHER_TRANSFER.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/PROVIDER_SOURCES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/ui.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/ui.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/commissioning/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/commissioning/browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/commissioning/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/commissioning/agreement.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/central-host/central_host.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/central-host/HOST.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/central-host/UPSTREAM.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/central-host/host.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_FIXTURES.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/CENTRAL_FIXTURES_LICENSE.txt",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/run-released-fixtures.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/released-fixtures.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/archive.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/index.html",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/browser.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/style.css",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/invoke.py",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/README.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/warehouse/profiles.example.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/receive-released-periods.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/odk/native/RELEASED_PERIODS.md"
+  ]
 }

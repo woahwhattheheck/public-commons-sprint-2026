@@ -140,9 +140,20 @@ export class CentralWorkspaceClient {
   readonly binding:{instanceId:string;workspaceId:string;operator:string;startedAt:string;origin:string;pid:number};
   state(options?:CentralRequestOptions):Promise<CentralState>;
   action<T=unknown>(method:CentralAction,input?:RecordValue,options?:CentralRequestOptions):Promise<T>;
-  namespaceAction<T=unknown>(namespace:CentralActionNamespace,method:CentralAction|CentralCommissioningAction,input?:RecordValue,options?:CentralRequestOptions):Promise<T>;
+  namespaceAction<T=unknown>(namespace:CentralActionNamespace,method:CentralAction|CentralCommissioningAction|CentralWarehouseAction,input?:RecordValue,options?:CentralRequestOptions):Promise<T>;
   commissioningAction<T=unknown>(method:CentralCommissioningAction,input?:RecordValue,options?:CentralRequestOptions):Promise<T>;
   commissioningState(options?:CentralRequestOptions):Promise<CentralCommissioningState>;
+  warehouseAction<T=unknown>(method:CentralWarehouseAction,input?:RecordValue,options?:CentralRequestOptions):Promise<T>;
+  warehouseState(options?:CentralRequestOptions):Promise<CentralWarehouseState>;
+  warehousePrepare(input:CentralWarehousePrepareInput,options?:CentralRequestOptions):Promise<CentralWarehouseApproval>;
+  warehouseConnect(input:CentralWarehouseConnectInput,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
+  warehouseInspect(input:CentralWarehouseInspectInput,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
+  warehouseReview(input:CentralWarehouseReviewInput,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
+  warehouseImport(input:CentralWarehouseImportInput,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
+  warehousePeriodReport(input:CentralWarehousePeriodReportInput,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
+  warehouseOperation(input:CentralWarehouseRequest,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
+  warehouseApproval(input:CentralWarehouseRequest,options?:CentralRequestOptions):Promise<CentralWarehouseApproval>;
+  warehouseResume(input:CentralWarehouseRequest,options?:CentralRequestOptions):Promise<CentralWarehouseOperation>;
   connect(input:CentralConnectionInput,options?:CentralRequestOptions):Promise<RecordValue>;
   projects(input:{connectionId:string},options?:CentralRequestOptions):Promise<unknown>;
   forms(input:{connectionId:string;projectId:number|string},options?:CentralRequestOptions):Promise<unknown>;
@@ -190,11 +201,13 @@ export interface CentralManagedOptions {
   fetchImpl?:typeof fetch;signal?:AbortSignal;
   commissioningConnection?:CentralCommissioningConnectionInput;
   commissioningConnectionFile?:string;commissioningEnvironmentFile?:string;
+  warehouseProfiles?:CentralWarehouseProfileInput[];warehouseProfilesFile?:string;
 }
 export interface ManagedCentralWorkspace extends CentralServer {
   workspace:CentralWorkspace;operator:string;connection:{path:string;sha256:string;bytes:number;value:CentralConnectionValue};
   instanceId:string;restored:RestoreCentralResult|null;commissioning:CentralCommissioning;
-  commissioningUrl:string;close():Promise<void>;
+  commissioningUrl:string;warehouse:CentralWarehouse;warehouseUrl:string;
+  warehouseProfilesSha256:string|null;close():Promise<void>;
 }
 export function centralManagedOptions(argv:string[]):CentralManagedOptions;
 export function startManagedCentralWorkspace(options:CentralManagedOptions):Promise<ManagedCentralWorkspace>;
@@ -416,7 +429,7 @@ export function serveCentralCommissioning(options:{
 }):Promise<ServedCentralCommissioning>;
 export type CentralCommissioningAction='recordHost'|'inspect'|'saveDraft'|'readiness'|'prepare'|
   'install'|'capturePeriod'|'resumeCapture'|'deliver';
-export type CentralActionNamespace='actions'|'commissioning';
+export type CentralActionNamespace='actions'|'commissioning'|'warehouse';
 export interface CentralPublisherCaptureInput {id:string;expectedGeneration?:number}
 export interface CentralPublisherReceiveInput {id:string;snapshotId:string;maxResidentRows?:number}
 export interface CentralPublisherSourceFile {path:string;sha256:string;bytes:number}
@@ -449,7 +462,122 @@ export interface CentralPublisherTransfers extends RecordValue {
   snapshots:CentralPublisherSnapshot[];receiving:CentralPublisherReceiving[];
 }
 export function centralOperationId(input:unknown):string|null;
-export function centralActionRoute(namespace:CentralActionNamespace,method:CentralAction|CentralCommissioningAction):{path:string;readOnly:boolean};
+export function centralActionRoute(namespace:CentralActionNamespace,method:CentralAction|CentralCommissioningAction|CentralWarehouseAction):{path:string;readOnly:boolean};
 export function requestCentralAction<T=unknown>(connection:CentralConnection,namespace:CentralActionNamespace,
-  method:CentralAction|CentralCommissioningAction,input?:unknown,options?:CentralRequestOptions):Promise<T>;
+  method:CentralAction|CentralCommissioningAction|CentralWarehouseAction,input?:unknown,options?:CentralRequestOptions):Promise<T>;
 export function inspectCentralCommissioning(connection:CentralConnection,options?:CentralRequestOptions):Promise<CentralCommissioningState>;
+
+/** Approved native Central periods and the existing PostgreSQL warehouse. */
+export type CentralWarehouseAction='prepare'|'connect'|'inspect'|'review'|'import'|
+  'periodReport'|'operation'|'approval'|'resume';
+export interface CentralWarehouseRequest {
+  /** Persist a caller-generated 32-character lowercase hexadecimal ID before dispatch. */
+  requestId:string;
+}
+export interface CentralWarehouseProfileInput {
+  id:string;name?:string;workspace:string;connectionEnv?:string;schema?:string;
+  expectedWarehouse?:string|null;python?:string;timeoutSeconds?:number;
+}
+export interface CentralWarehouseProfile {
+  id:string;name:string;workspace:string;connectionEnv:string;schema:string;
+  expectedWarehouse:string|null;python:string;timeoutSeconds:number;
+}
+export type CentralWarehousePublicProfile=Omit<CentralWarehouseProfile,'python'>&{
+  binding:(RecordValue&{warehouseId:string;warehouseSchema:string})|null;
+};
+export interface CentralWarehouseSelection {deliveryId:string;datasetId:string;period:CentralPeriod}
+export interface CentralWarehousePrepareInput extends CentralWarehouseRequest,CentralWarehouseSelection {}
+export interface CentralWarehouseConnectInput extends CentralWarehouseRequest {profileId:string}
+export interface CentralWarehouseInspectInput extends CentralWarehouseRequest {approvalId:string;profileId:string}
+export type CentralWarehouseSqlType='text'|'boolean'|'bigint'|'numeric'|'double precision'|
+  'date'|'timestamp with time zone'|'json';
+export interface CentralWarehouseSqlMapping extends RecordValue {
+  keys:string[];
+  columns:Array<{source:string;column:string;type:CentralWarehouseSqlType;nullable:boolean}>;
+}
+export interface CentralWarehouseReviewInput extends CentralWarehouseRequest {
+  inspectionId:string;mapping:CentralWarehouseSqlMapping;reviewer:string;note?:string;
+}
+export interface CentralWarehouseImportInput extends CentralWarehouseRequest {reviewId:string}
+export interface CentralWarehousePeriodReportInput extends CentralWarehouseRequest {
+  previousImportId:string;currentImportId:string;title:string;
+}
+export interface CentralWarehouseFileReceipt extends RecordValue {sha256:string;bytes:number;name?:string;type?:string}
+export const WAREHOUSE_SCHEMA:'stellar-forge.central-warehouse.v1';
+export const APPROVAL_SCHEMA:'stellar-forge.odk-central-postgres-approval.v1';
+export interface CentralWarehouseApprovalDocument extends RecordValue {
+  schema:typeof APPROVAL_SCHEMA;
+  workspace:{schema:string;id:string};
+  commissioning:RecordValue&{id:string;definitionSha256:string;agreementSha256:string;sourceDefinition:RecordValue};
+  delivery:RecordValue&{id:string;requestSha256:string;selectionSha256:string};
+  period:RecordValue&{index:CentralPeriod;label:string;planId:string;scope:RecordValue};
+  capture:RecordValue&{id:string;contentHash:string;completedAt:string;connectionId:string};
+  table:RecordValue&{id:string;name:string;formKey:string;projectId:string;formId:string;
+    relationship:RecordValue|null;keyFields:string[]};
+  review:RecordValue;
+  export:RecordValue&{id:string;kind:string;fingerprint:string;requestFingerprint:string;
+    editionId:string;createdAt:string;rowCount:number};
+  projection:RecordValue&{approvedFields:string[];mapping:RecordValue[];columns:RecordValue;semantics:RecordValue};
+  exportRoot:string;files:Array<{path:string;sha256:string;bytes:number}>;
+}
+export interface CentralWarehouseApproval extends RecordValue {
+  schema:typeof WAREHOUSE_SCHEMA;id:string;revision:number;intent:CentralWarehouseSelection;
+  status:'PREPARING'|'INTERRUPTED'|'COMPLETE';createdAt:string;completedAt?:string;
+  approval?:CentralWarehouseApprovalDocument;receipt?:CentralWarehouseFileReceipt;error:RecordValue|null;
+}
+export interface CentralWarehouseOperation extends RecordValue {
+  schema:typeof WAREHOUSE_SCHEMA;id:string;revision:number;
+  action:Exclude<CentralWarehouseAction,'prepare'|'operation'|'approval'|'resume'>;
+  intent:RecordValue;status:'PREPARED'|'RUNNING'|'INTERRUPTED'|'COMPLETE';createdAt:string;completedAt?:string;
+  profile?:RecordValue|null;context?:RecordValue|null;attempts:RecordValue[];
+  result?:RecordValue;resultReceipt?:CentralWarehouseFileReceipt;report?:RecordValue|null;error:RecordValue|null;
+}
+export interface CentralWarehouseState extends RecordValue {
+  schema:typeof WAREHOUSE_SCHEMA;workspaceId:string;revision:number;activeRequestId:string|null;
+  storageReopenRequired:boolean;profiles:CentralWarehousePublicProfile[];
+  deliveries:Array<RecordValue&{id:string;commissioningId:string;datasets:Array<RecordValue&{
+    id:string;name:string;period:CentralPeriod;periodLabel:string;captureId:string;tableId:string}>}>;
+  approvals:Array<RecordValue&{id:string;status:string;intent:CentralWarehouseSelection}>;
+  operations:Array<RecordValue&{id:string;action:CentralWarehouseOperation['action'];status:string}>;
+}
+export interface CentralWarehouse {
+  state():CentralWarehouseState;
+  prepare(input:CentralWarehousePrepareInput):Promise<CentralWarehouseApproval>;
+  connect(input:CentralWarehouseConnectInput):Promise<CentralWarehouseOperation>;
+  inspect(input:CentralWarehouseInspectInput):Promise<CentralWarehouseOperation>;
+  review(input:CentralWarehouseReviewInput):Promise<CentralWarehouseOperation>;
+  import(input:CentralWarehouseImportInput):Promise<CentralWarehouseOperation>;
+  periodReport(input:CentralWarehousePeriodReportInput):Promise<CentralWarehouseOperation>;
+  operation(input:CentralWarehouseRequest):CentralWarehouseOperation;
+  approval(input:CentralWarehouseRequest):CentralWarehouseApproval;
+  resume(input:CentralWarehouseRequest):Promise<CentralWarehouseOperation>;
+  close():Promise<void>;
+}
+export function normalizeWarehouseProfiles(profiles?:CentralWarehouseProfileInput[]):Readonly<CentralWarehouseProfile>[];
+export function prepareCentralApproval(options:{
+  workspace:CentralWorkspace;store:CentralExtensionStore;input:CentralWarehouseSelection;
+}):Promise<CentralWarehouseApprovalDocument>;
+export function createCentralWarehouse(options:{
+  workspace:CentralWorkspace;store:CentralExtensionStore;profiles?:CentralWarehouseProfileInput[];
+}):CentralWarehouse;
+export const WAREHOUSE_ASSETS:Map<string,{url:URL;type:string}>;
+export function createWarehouseExtension(options:{workspace:CentralWorkspace;warehouse:CentralWarehouse}):CentralServerExtension;
+export interface OpenCentralWarehouse {
+  workspace:CentralWorkspace;commissioning:CentralCommissioning;warehouse:CentralWarehouse;
+  extensions:CentralServerExtension[];close():Promise<void>;
+}
+export interface OpenCentralWarehouseOptions {
+  directory:string;connection?:CentralCommissioningConnectionInput;profiles?:CentralWarehouseProfileInput[];
+  fetchImpl?:typeof fetch;
+}
+export function openCentralWarehouse(options:OpenCentralWarehouseOptions):Promise<OpenCentralWarehouse>;
+export interface ServedCentralWarehouse extends OpenCentralWarehouse {
+  schema:'stellar-forge.central-warehouse-listener.v1';workspaceId:string;directory:string;
+  origin:string;url:string;fieldWorkspaceUrl:string;commissioningUrl:string;token:string;
+}
+export function serveCentralWarehouse(options:OpenCentralWarehouseOptions&{
+  host?:string;port?:number;token?:string;
+}):Promise<ServedCentralWarehouse>;
+export function runCentralWarehouseCli(argv?:string[]):Promise<unknown>;
+export function inspectCentralWarehouse(connection:CentralConnection,options?:CentralRequestOptions):Promise<CentralWarehouseState>;
+export const CENTRAL_WAREHOUSE_READ_ACTIONS:Set<CentralWarehouseAction>,CENTRAL_WAREHOUSE_ACTIONS:Set<CentralWarehouseAction>;

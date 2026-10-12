@@ -65,7 +65,9 @@
     "merchant-provider-facilitators",
     "merchant-provider-publishers",
     "merchant-provider-receiving",
-    "merchant-provider-tools"
+    "merchant-provider-tools",
+    "job-intake-browser",
+    "paid-job-operations"
   ],
   "components": [
     "stellar/scf-starforge-20261009/distribution",
