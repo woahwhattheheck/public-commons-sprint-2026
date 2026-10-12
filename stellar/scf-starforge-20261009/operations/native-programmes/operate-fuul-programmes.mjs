@@ -17,7 +17,7 @@ for(let i=0;i<argv.length;i++){
  if(Object.hasOwn(options,key.slice(2)))throw new Error('Repeated option '+key);
  options[key.slice(2)]=argv[++i];
 }
-const allowed=new Set(['source-packet','source-directory','operation-directory','connections-file','programme-file','operations-file','activity-file','bun-executable','npm-executable','playwright-module','chromium-executable','runtime-directory','manifest-sha256','courier-stdin']);
+const allowed=new Set(['source-packet','source-directory','operation-directory','connections-file','programme-file','operations-file','activity-file','bun-executable','npm-executable','node-heap-mb','playwright-module','chromium-executable','runtime-directory','manifest-sha256','courier-stdin']);
 for(const key of Object.keys(options))if(!allowed.has(key))throw new Error('Unknown option --'+key);
 if(!options['operation-directory']||(!options['source-packet']&&!options['source-directory']))throw new Error('Use --operation-directory and --source-packet or --source-directory.');
 const root=path.resolve(options['operation-directory']);
@@ -146,7 +146,7 @@ const runtimeResult=await step('source-built-runtime',async()=>{
    bun=path.join(toolRoot,'node_modules','.bin','bun');
   }
  }
- const value=await imports.runtime.buildFuulRuntime({installationDirectory:target('sdk-consumer'),directory:target('runtime-original'),bunExecutable:bun,npmExecutable:options['npm-executable']??'npm',signal:controller.signal,progress:value=>announce('NATIVE_BUILD',{detail:value})});
+ const value=await imports.runtime.buildFuulRuntime({installationDirectory:target('sdk-consumer'),directory:target('runtime-original'),bunExecutable:bun,npmExecutable:options['npm-executable']??'npm',nodeHeapMB:options['node-heap-mb']===undefined?undefined:Number(options['node-heap-mb']),signal:controller.signal,progress:value=>announce('NATIVE_BUILD',{detail:value})});
  return {id:value.id,directory:value.directory,manifestSha256:value.manifestSha256,entrypoints:value.entrypoints,requireEntrypoints:value.requireEntrypoints,stellarEntrypoints:value.stellarEntrypoints,stellarRequireEntrypoints:value.stellarRequireEntrypoints,build:value.build};
 });
 if(!runtimeResult.error){
