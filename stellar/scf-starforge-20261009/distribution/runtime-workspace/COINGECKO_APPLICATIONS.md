@@ -92,3 +92,5 @@ The launch hashes cover the original CLI, common definitions, managed launcher, 
 Exercise the saved research project through the real Applications lifecycle: Review/Save and connection, Start/Open, source and research readback, an ordinary saved research edit, Stop, reopen the same project, interrupted process recovery and complete original handover/restore. Retain the original application and process IDs while completing each stage.
 
 The preceding standalone and merchant MCP receiving already preserve all five source families and all 15 original input hashes. This Applications integration continues that original project; it does not replace the source intake or repeat a paid acquisition.
+
+Run the [complete installed receiving workflow](../../partners/coingecko-stellar-market/receiving/README.md) against an existing READY runtime, or build and install one exact source commit through the original tools. Its retained checkpoints cover all seven stages and preserve the original database, source files and application history across interruptions.

@@ -1,6 +1,6 @@
 // MIT. Receive both real scientific input families through original sealed files and native workers.
 import { createReadStream } from 'node:fs';
-import { readFile, open, realpath } from 'node:fs/promises';
+import { readFile, open, realpath, rm } from 'node:fs/promises';
 import { join, resolve, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash, randomBytes } from 'node:crypto';
@@ -65,8 +65,8 @@ async function stageFile(store, definition, origin, reference, slot, path, token
   if (status.state !== 'SEALED') fail('The original input was not sealed');
   return { file, id: status.id, chunks: chunks.length, status: status.state };
 }
-async function verifyArchive(path, output, python, kinds) {
-  const args = [join(ROOT, 'verify-result.py'), path, '--out', output];
+async function verifyArchive(path, output, python, kinds, extractionDirectory) {
+  const args = [join(ROOT, 'verify-result.py'), path, '--out', output, '--extraction-directory', extractionDirectory];
   for (const name of kinds) args.push('--extract', name);
   const result = await run(python, args, { maxBuffer: 1048576 });
   return JSON.parse(result.stdout);
@@ -120,8 +120,9 @@ export async function receiveScientificJobs({ sourceFile, directory, scratch, ch
     const choices = JSON.parse(await readFile(choicesFile, 'utf8'));
     if (choices.schema !== 'starforge.wqx-job-choices.v1' || choices.sourceReviewSha256 !== original.reviewSha256)
       fail('The scientific choices must name this original review SHA-256');
-    await privateDirectory(join(directory, 'sources'));
-    const reviewSource = join(directory, 'sources', 'complete-original-review.json');
+    const receivingScratch = join(scratch, 'scientific-receiving-' + hash(json([directory, sourceMetadata.sha256])).slice(0,24));
+    await privateDirectory(receivingScratch);
+    const reviewSource = join(receivingScratch, 'complete-original-review.json');
     await immutable(reviewSource, Buffer.from(json(envelope.reviewBundle)));
     envelope = null; global.gc?.();
     const merchant = await readJobMerchant(configFile), definition = merchant.compiled.functions.waterQualityReview;
@@ -176,7 +177,9 @@ export async function receiveScientificJobs({ sourceFile, directory, scratch, ch
       }
       const selected = ['review/complete-review.json'];
       if (kind === 'openWaters') selected.push('open-waters/complete-open-waters.json');
-      const archive = await verifyArchive(resultPath, join(receivingRoot, 'archive-verification.json'), python, selected);
+      const extractionDirectory = join(receivingScratch, kind);
+      await privateDirectory(extractionDirectory);
+      const archive = await verifyArchive(resultPath, join(receivingRoot, 'archive-verification.json'), python, selected, extractionDirectory);
       const manifest = archive.manifest;
       equal(manifest.sourceDecision.captureSha256, original.captureSha256, 'Source capture identity changed');
       equal(manifest.sourceDecision.reviewSha256, original.reviewSha256, 'Source review identity changed');
@@ -195,7 +198,7 @@ export async function receiveScientificJobs({ sourceFile, directory, scratch, ch
       let resultIdentity;
       try {
         const member = kind === 'openWaters' ? 'open-waters/complete-open-waters.json' : 'review/complete-review.json';
-        let bundle = JSON.parse(await readFile(join(receivingRoot, 'extracted', member), 'utf8'));
+        let bundle = JSON.parse(await readFile(join(extractionDirectory, member), 'utf8'));
         let received = kind === 'openWaters' ? await project.receiveOpenWaters({ bundle }) :
           (await project.receiveReviewBundle({ bundle })).review;
         resultIdentity = kind === 'openWaters' ? { planId: received.planId, planSha256: received.planSha256,
@@ -212,6 +215,7 @@ export async function receiveScientificJobs({ sourceFile, directory, scratch, ch
         if (kind === 'openWaters') equal(reopened.planSha256, resultIdentity.planSha256, 'The reopened plan changed');
         reopened = null;
       } finally { await project.close(); }
+      await rm(extractionDirectory, { recursive: true, force: true });
       state.archive = { members: archive.members, logicalBytes: archive.logicalBytes, sha256: archive.sha256 };
       state.receivedProject = { directory: projectDirectory, ...resultIdentity, reopened: true };
       state.decisionSelection = manifest.decisionSelection; state.completedAt ??= new Date().toISOString();
@@ -227,6 +231,7 @@ export async function receiveScientificJobs({ sourceFile, directory, scratch, ch
         const { token, ...publicResult } = value; return [name, publicResult];
       })) };
     await writePrivateJson(join(directory, 'result.json'), result, () => lease.assertHeld());
+    await rm(receivingScratch, { recursive: true, force: true });
     return result;
   } finally { try { await inputs?.close(); } finally { await lease.close(); } }
 }

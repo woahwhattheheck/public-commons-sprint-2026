@@ -1,0 +1,48 @@
+{
+  "schema": "stellar-forge.browser-assets.v1",
+  "root": "./",
+  "routes": [
+    [
+      "/jobs/request/",
+      [
+        "public/index.html",
+        "text/html"
+      ]
+    ],
+    [
+      "/jobs/request/app.mjs",
+      [
+        "public/app.mjs",
+        "text/javascript"
+      ]
+    ],
+    [
+      "/jobs/request/style.css",
+      [
+        "public/style.css",
+        "text/css"
+      ]
+    ],
+    [
+      "/jobs/request/files.mjs",
+      [
+        "../inputs/public/files.mjs",
+        "text/javascript"
+      ]
+    ],
+    [
+      "/jobs/request/sha256.mjs",
+      [
+        "../inputs/public/sha256.mjs",
+        "text/javascript"
+      ]
+    ],
+    [
+      "/jobs/request/hash-worker.mjs",
+      [
+        "../inputs/public/hash-worker.mjs",
+        "text/javascript"
+      ]
+    ]
+  ]
+}

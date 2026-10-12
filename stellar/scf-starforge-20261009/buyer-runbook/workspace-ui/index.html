@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Buyer runbooks · Stellar Forge</title>
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/approval-ui/approval.css">
   <script type="module" src="/app.mjs"></script>
 </head>
 <body>
@@ -23,7 +24,7 @@
     </aside>
     <main id="main" tabindex="-1">
       <div id="notice" role="status" aria-live="polite" hidden></div>
-      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from terminal approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-operator">Set up local buyer</button><button id="welcome-clients">Receive customer SDK</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
+      <section id="welcome" class="welcome"><p class="eyebrow">RESOURCE ACQUISITION</p><h1>One plan. Every selected resource.</h1><p>Receive a private merchant request or arrange existing buyer configurations. Review exact request ceilings and follow each acquisition from live purchase approval to saved files.</p><div class="toolbar"><button id="welcome-new" class="primary">Create a plan</button><button id="welcome-operator">Set up local buyer</button><button id="welcome-clients">Receive customer SDK</button><button id="welcome-requests">Receive merchant request</button><button id="welcome-paid-files">Receive paid file order</button></div><div id="source-summary" class="source-summary"></div></section>
       <section id="operator-panel" hidden>
         <div class="page-heading"><div><p class="eyebrow">RECEIVING HOST</p><h1>Local buyer setup</h1><p class="muted">Configure the host used when preparing merchant requests and file orders. Existing prepared buyers retain their own settings, keys and spending ledgers.</p></div></div>
         <section id="operator-current" class="panel"></section>
@@ -113,7 +114,7 @@
           <div class="section-heading"><h2 id="file-order-title" class="wrap"></h2><span id="file-order-state" class="badge"></span></div>
           <p id="file-order-url" class="operation-url"></p><dl id="file-order-summary" class="detail-grid"></dl>
           <a id="file-handoff-download" class="button quiet">Download original handoff</a>
-          <form id="file-review-form" class="panel"><h3>Local purchase and delivery settings</h3><p class="muted">The original buyer reviews live merchant terms and asks for approval in the terminal when the acquisition runs.</p>
+          <form id="file-review-form" class="panel"><h3>Local purchase and delivery settings</h3><p class="muted" data-live-terms-help>The buyer reads live merchant terms when this acquisition runs.</p>
             <div class="fields two request-budgets"><label>Total budget · atomic<input id="file-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="file-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
             <label>Save customer file as<input id="file-save-name" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,127}" maxlength="128" required></label>
             <label>Existing claim token environment<select id="file-claim-env" required></select></label>
@@ -136,7 +137,7 @@
           <details><summary>Exact request bytes and headers</summary><div id="request-bytes" class="panel wrap"></div></details>
           <p id="request-expired" class="panel" hidden>This ticket has expired. Retained inputs remain available; obtain a current operation from the merchant before preparing a new purchase.</p>
           <form id="request-review-form" class="panel">
-            <h3>Payment option and local budget</h3><p class="muted">These limits apply to this prepared request. The buyer still reviews live terms and asks for approval in the operator terminal.</p>
+            <h3>Payment option and local budget</h3><p class="muted">These limits apply to this prepared request.</p><p class="muted" data-live-terms-help>The buyer reads live merchant terms when this acquisition runs.</p>
             <label>Merchant payment option<select id="request-option" required><option value="">Choose a payment option</option></select></label>
             <div id="request-option-terms" class="table-wrap"></div>
             <div class="fields two request-budgets"><label>Total budget · atomic<input id="request-total" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label><label>Per UTC day · atomic<input id="request-daily" inputmode="numeric" pattern="[1-9][0-9]{0,18}" maxlength="19" required></label></div>
@@ -172,6 +173,18 @@
         <div class="page-heading"><div><p class="eyebrow">SAVED ACQUISITION</p><h1 id="run-title"></h1><p id="run-subtitle" class="muted"></p></div><span id="run-status" class="badge"></span></div>
         <div id="run-metrics" class="metrics"></div>
         <div class="run-toolbar panel"><div><strong id="execution-message"></strong><p id="execution-detail" class="muted"></p></div><div class="toolbar"><button id="execute-run" class="primary">Execute untouched operations</button><button id="cancel-run" hidden>Cancel current execution</button><button id="recover-run">Recover retained output</button></div></div>
+        <section id="purchase-approval-section" class="runbook-approval" aria-labelledby="approval-heading" hidden>
+          <div class="section-heading"><div><h2 id="approval-heading">Purchase approval</h2><p id="approval-operation" class="muted"></p></div><span id="approval-mode-badge" class="badge">Browser approval</span></div>
+          <p id="approval-connection" class="approval-connection" role="status" aria-live="polite"></p>
+          <dl id="approval-binding" class="detail-grid approval-binding" hidden>
+            <div><dt>Acquisition</dt><dd><code id="approval-run-id"></code></dd></div>
+            <div><dt>Execution</dt><dd><code id="approval-execution-id"></code></dd></div>
+            <div><dt>Operation</dt><dd><code id="approval-operation-id"></code></dd></div>
+            <div><dt>Stable purchase intent</dt><dd><code id="approval-intent-id"></code></dd></div>
+          </dl>
+          <div class="toolbar"><button id="refresh-approval" type="button">Refresh original operation</button><button id="open-current-approval" type="button" hidden>Open active acquisition</button></div>
+          <div id="purchase-approval"></div>
+        </section>
         <div id="lease-panel" class="panel" hidden><h2>Original execution owner</h2><p id="lease-description"></p><button id="unlock-run">Release this dead owner's lease</button></div>
         <section><div class="section-heading"><h2>Atomic request ceilings</h2><span class="muted">Grouped by network and asset</span></div><div id="run-budgets"></div></section>
         <section class="acquisition-accounting" aria-label="Acquisition accounting"><div class="section-heading"><div><h2>Accounting and receipts</h2><p id="accounting-summary" class="muted"></p></div><div class="toolbar"><button id="finalize-run">Refresh all accounting</button><a id="download-accounting" class="button quiet">Download accounting CSV</a></div></div><p class="muted">Actual totals include retained original finalized receipts. Unsigned responses, unresolved attempts and untouched operations keep their own counts. Refreshing accounting uses the original ledger and requires no wallet or new purchase.</p><div id="accounting-live-result" class="panel" role="status" hidden></div><div id="accounting-totals"></div></section>

@@ -173,7 +173,7 @@ node --expose-gc --max-old-space-size=384 \
 
 The default merchant.example.json declares the complete scientific function and its 768 MiB worker heap. The default choices.example.json selects the retained Potomac March-versus-January decision. For another original review, pass --choices with a corresponding choice document whose sourceReviewSha256 matches that review. Use --config to select an existing installation of this same scientific function. All input staging occurs through the original sealed-file store; the receiver executes the native worker directly as an operator receiving operation.
 
-The operation retains its original source identities, upload plans and sealed files, both result ZIPs, the independent standard-library ZIP checks, all native export comparisons, and two independently received native projects. result.json contains the useful outcome and project paths. receiving.json is the private continuation record containing the original upload claims; keep that record with its original input store.
+The operation retains its original source identities, upload plans and sealed files, both result ZIPs, the independent standard-library ZIP checks, all native export comparisons, and two independently received native projects. Temporary bundle extraction uses the supplied private scratch directory and is retired after successful native receiving; the complete bundles remain in the result ZIPs. result.json contains the useful outcome and project paths. receiving.json is the private continuation record containing the original upload claims; keep that record with its original input store.
 
 For the supplied full Potomac source, the receiving operation covers:
 
