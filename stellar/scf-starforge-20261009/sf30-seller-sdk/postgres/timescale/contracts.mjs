@@ -79,8 +79,21 @@ function nativeTarget(edition) {
     serverAddress: value.server_address, serverPort: value.server_port,
     systemIdentifier: value.system_identifier ?? null };
 }
+function sameNativeTarget(left, right) {
+  if (!object(left) || !object(right)) return false;
+  const fields = ['database','databaseOid','serverAddress','serverPort'];
+  if (typeof left.database !== 'string' || typeof right.database !== 'string' ||
+      typeof left.databaseOid !== 'string' || typeof right.databaseOid !== 'string' ||
+      fields.some(key => !Object.hasOwn(left,key) || !Object.hasOwn(right,key) || left[key] !== right[key]))
+    return false;
+  // Source and maintenance roles may expose different optional metadata. Keep
+  // every mandatory identity field equal, and compare native cluster IDs when
+  // both selected roles can read them.
+  return left.systemIdentifier == null || right.systemIdentifier == null ||
+    left.systemIdentifier === right.systemIdentifier;
+}
 function sameTarget(left, right) {
-  return identity(nativeTarget(left)) === identity(nativeTarget(right));
+  return sameNativeTarget(nativeTarget(left), nativeTarget(right));
 }
 function timeValue(value, type, label) {
   const text = checkText(value, label, 128);
@@ -183,4 +196,4 @@ function jobDefinition(row, schedule) {
     timezone:schedule?.timezone??null };
 }
 
-export { IDENT, UUID, HASH, TIME_TYPES, checkText, only, uuid, hash, identifier, relationName, tableRows, catalog, selectedAggregate, nativeTarget, sameTarget, timeValue, windowContract, refreshContract, projectionContract, compareEditions, jobDefinition };
+export { IDENT, UUID, HASH, TIME_TYPES, checkText, only, uuid, hash, identifier, relationName, tableRows, catalog, selectedAggregate, nativeTarget, sameNativeTarget, sameTarget, timeValue, windowContract, refreshContract, projectionContract, compareEditions, jobDefinition };
