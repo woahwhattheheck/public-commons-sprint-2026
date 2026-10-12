@@ -149,11 +149,11 @@ export function createConsoleServer({runCapture = capture, allowLoopback = false
   const server = createServer(async (req, res) => {
     for (const [key, value] of Object.entries(HEADERS)) res.setHeader(key, value);
     const port = server.address()?.port;
-    const ownOrigin = `http://127.0.0.1:${port}`;
+    const ownOrigin = new URL(`http://127.0.0.1:${port}`).origin;
     if (req.socket.remoteAddress !== '127.0.0.1' && req.socket.remoteAddress !== '::ffff:127.0.0.1') {
       json(res, 403, {error: 'LOOPBACK_ONLY'}); return;
     }
-    if (req.headers.host !== `127.0.0.1:${port}`) {
+    if (req.headers.host !== new URL(ownOrigin).host) {
       json(res, 403, {error: 'INVALID_LOCAL_HOST'}); return;
     }
     const route = (req.url || '').split('?')[0];
