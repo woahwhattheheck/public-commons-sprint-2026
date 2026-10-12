@@ -36,7 +36,8 @@ function separate(directory,sourceRoot,packageRoot,settings){
 async function generatorBinding(){
   const files=[];
   for(const value of ['./deployment.mjs','./merchant.mjs','../../sf99-merchant-deploy/host.mjs',
-      '../../sf99-merchant-deploy/runbook.mjs','../../sf99-merchant-deploy/cli.mjs']){
+      '../../sf99-merchant-deploy/runbook.mjs','../../sf99-merchant-deploy/cli.mjs',
+      '../../sf99-merchant-deploy/generation.mjs','../../merchant-fleet-gateway/state-lease.mjs']){
     const path=await realpath(fileURLToPath(new URL(value,import.meta.url))),bytes=await readBytes(path,1048576);
     files.push(fileRecord(path,bytes));
   }
@@ -138,10 +139,8 @@ async function incompleteGeneration(saved){
     return {schema:HOST_REVIEW,state:'HOST_BUNDLE_INCOMPLETE',directory:saved.directory,
       reviewSha256:saved.reviewSha256,bundle,packageIdentity:saved.review.package.identity,
       reason:error.code==='ENOENT'?'ORIGINAL_MANIFEST_MISSING':'ORIGINAL_MANIFEST_INCOMPLETE',
-      recovery:{command:'host-review',packageDirectory:saved.request.package.directory,
-        hostPlanFile:join(saved.directory,'host-settings.json'),
-        directory:saved.directory+'-recovery-'+saved.reviewSha256.slice(0,12),
-        previousDirectory:saved.directory,previousReviewSha256:saved.reviewSha256}};
+      recovery:{command:'host-bundle',directory:saved.directory,
+        expectedReviewSha256:saved.reviewSha256}};
   }
   return null;
 }
@@ -151,10 +150,12 @@ export async function generateGeocodeDeployment({directory,expectedReviewSha256}
   const saved=await inspectGeocodeDeployment(directory);
   if(saved.reviewSha256!==expectedReviewSha256)fail('GEOCODE_HOST_REVIEW_CHANGED');
   const bundle=join(saved.directory,'host'),reused=await exists(bundle);
-  if(!reused)await generate(saved.review.hostPlan.path,bundle,{sourceRoot:saved.request.sourceRoot});
-  const incomplete=await incompleteGeneration(saved);if(incomplete)return incomplete;
-  const checked=await checkedHost(saved);
-  return hostSummary(saved,checked,reused);
+  // A completed installed bundle can be reopened after the runbook hands it to
+  // the service group. Only an incomplete private preparation enters generation.
+  if(reused&&!await incompleteGeneration(saved))
+    return hostSummary(saved,await checkedHost(saved),true);
+  await generate(saved.review.hostPlan.path,bundle,{sourceRoot:saved.request.sourceRoot,resume:true});
+  return hostSummary(saved,await checkedHost(saved),reused);
 }
 function hostSummary(saved,checked,reused){
   return {schema:HOST_REVIEW,state:'BUNDLE_CHECKED',directory:saved.directory,

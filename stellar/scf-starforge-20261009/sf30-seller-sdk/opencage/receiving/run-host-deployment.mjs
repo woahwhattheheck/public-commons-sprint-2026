@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // MIT. Exercise one original package-to-host preparation without starting host services.
 import {resolve,join,dirname,relative,isAbsolute} from 'node:path';
-import {realpath,readFile,mkdir} from 'node:fs/promises';
+import {realpath,readFile,mkdir,lstat} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {pathToFileURL,fileURLToPath} from 'node:url';
 import assert from 'node:assert/strict';
@@ -57,17 +57,43 @@ const staged=await merchant.stageGeocodePackage(join(out,'releases'),join(direct
 assert.equal(staged.handlerSha256,saved.review.handlerSha256);
 assert.equal(staged.packageIdentity,pkg.manifest.identity);
 const interruptedDirectory=join(out,'incomplete-deployment');
-await host.prepareGeocodeDeployment({packageDirectory:packageRoot,hostPlanFile:profilePath,directory:interruptedDirectory});
-if(!await files.exists(join(interruptedDirectory,'host')))await mkdir(join(interruptedDirectory,'host'),{mode:0o700});
+const interruptedReview=await host.prepareGeocodeDeployment({
+ packageDirectory:packageRoot,hostPlanFile:profilePath,directory:interruptedDirectory});
+const interruptedSaved=await host.inspectGeocodeDeployment(interruptedDirectory);
+const interruptedBundle=join(interruptedDirectory,'host');
+if(!await files.exists(interruptedBundle))await mkdir(interruptedBundle,{mode:0o700});
+const expectedCaddy=Buffer.from(original.caddyfile(interruptedSaved.review.host));
+const caddyPrefix=expectedCaddy.subarray(0,Math.max(1,Math.floor(expectedCaddy.length/3)));
+const expectedRecovery=files.jsonBytes(original.recoveryPlan(interruptedSaved.review.host));
+const caddyPath=join(interruptedBundle,'Caddyfile'),recoveryPath=join(interruptedBundle,'recovery-plan.json');
+// Retain actual generator bytes: one interrupted file and one complete file.
+// A repeated receiving command rejoins these same original files and review.
+if(!await files.exists(caddyPath))await files.putOnce(caddyPath,caddyPrefix);
+if(!await files.exists(recoveryPath))await files.putOnce(recoveryPath,expectedRecovery);
+const caddyBefore=await lstat(caddyPath),recoveryBefore=await lstat(recoveryPath);
 const interrupted=await host.checkGeocodeDeployment(interruptedDirectory);
-assert.equal(interrupted.state,'HOST_BUNDLE_INCOMPLETE');
-assert.equal(interrupted.recovery.packageDirectory,packageRoot);
-const recovery=await host.prepareGeocodeDeployment(interrupted.recovery);
-const recovered=await host.generateGeocodeDeployment({directory:recovery.directory,expectedReviewSha256:recovery.reviewSha256});
+if(interrupted.state!=='BUNDLE_CHECKED'){
+ assert.equal(interrupted.state,'HOST_BUNDLE_INCOMPLETE');
+ assert.deepEqual(interrupted.recovery,{command:'host-bundle',directory:interruptedDirectory,
+  expectedReviewSha256:interruptedReview.reviewSha256});
+}
+const recovered=await host.generateGeocodeDeployment({
+ directory:interruptedDirectory,expectedReviewSha256:interruptedReview.reviewSha256});
 assert.equal(recovered.state,'BUNDLE_CHECKED');
+assert.equal(recovered.directory,interruptedDirectory);
+assert.equal(recovered.reviewSha256,interruptedReview.reviewSha256);
 assert.equal(recovered.packageIdentity,pkg.manifest.identity);
 assert.equal(recovered.termsSha256,pkg.built.termsSha256);
-assert.equal((await host.checkGeocodeDeployment(interruptedDirectory)).state,'HOST_BUNDLE_INCOMPLETE');
+assert.equal(recovered.bundle,interruptedBundle);
+assert.deepEqual(await readFile(caddyPath),expectedCaddy);
+assert.deepEqual(await readFile(recoveryPath),expectedRecovery);
+const caddyAfter=await lstat(caddyPath),recoveryAfter=await lstat(recoveryPath);
+assert.equal(caddyAfter.dev,caddyBefore.dev);assert.equal(caddyAfter.ino,caddyBefore.ino);
+assert.equal(recoveryAfter.dev,recoveryBefore.dev);assert.equal(recoveryAfter.ino,recoveryBefore.ino);
+assert.equal(recoveryAfter.mtimeMs,recoveryBefore.mtimeMs);
+assert.deepEqual(await host.checkGeocodeDeployment(interruptedDirectory),{...recovered,reused:true});
+assert.deepEqual(await host.generateGeocodeDeployment({
+ directory:interruptedDirectory,expectedReviewSha256:interruptedReview.reviewSha256}),{...recovered,reused:true});
 const artifacts=[];
 for(const name of generated.files){
  const bytes=await readFile(join(generated.bundle,name));artifacts.push({path:'deployment/host/'+name,bytes:bytes.length,sha256:sha(bytes)});
@@ -78,8 +104,9 @@ const report={schema:'stellar-forge.opencage-host-receiving.v1',state:'COMPLETE'
   termsSha256:pkg.built.termsSha256,publicOrigin:pkg.built.terms.publicOrigin},
  review:{directory,sha256:prepared.reviewSha256,handlerSha256:saved.review.handlerSha256},
  generated:reopened,originalStage:{id:'host-receiving-v1',handlerSha256:staged.handlerSha256},
- incompleteRecovery:{previousDirectory:interruptedDirectory,previousReviewSha256:interrupted.reviewSha256,
-  directory:recovery.directory,reviewSha256:recovery.reviewSha256,bundle:recovered.bundle},
+ incompleteRecovery:{directory:interruptedDirectory,reviewSha256:interruptedReview.reviewSha256,
+  bundle:recovered.bundle,retainedCaddyPrefix:{bytes:caddyPrefix.length,sha256:sha(caddyPrefix)},
+  reusedRecovery:{bytes:expectedRecovery.length,sha256:sha(expectedRecovery)}},
  artifacts};
 await files.putOnce(join(out,'host-receiving.json'),files.jsonBytes(report));
 process.stdout.write(JSON.stringify({state:report.state,packageIdentity:pkg.manifest.identity,
