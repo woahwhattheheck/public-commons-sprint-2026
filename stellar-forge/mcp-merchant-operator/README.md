@@ -1,5 +1,14 @@
 # Starforge merchant operations through MCP
 
+Federal grant opportunity research uses this same host's 36 original-workspace
+tools. Open retained source captures, qualify full notices, save immutable
+editions and workshares, prepare and publish the native dataset, complete
+original customer sessions, and download/reopen every source byte after
+interruption. The installed **Grants.gov opportunities** application opens the
+same research model. See [Grants.gov research, publication and complete
+receiving](GRANTSGOV_WORKSPACE.md) for host setup, Applications, all tools and
+the original receiving commands.
+
 Native Stellar MPP customer operations use the existing private console and original payment records. The [MPP guide](./MPP.md) covers host connections, retained customer reviews, native jobs, recovery, and complete resumable response or customer-package downloads through this same operator.
 
 Create and revise OpenAPI merchants through this same operator. Attach the host's

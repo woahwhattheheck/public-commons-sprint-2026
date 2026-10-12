@@ -25,6 +25,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Dataset buyer | buyer-dataset-workspace | Original acquisitions, received rows and files, private customer history and Python analysis |
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
+| Grants.gov opportunities | grantsgov serve | Complete original federal opportunity capture, immutable editions, qualification, native dataset publication and complete source/customer receiving |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -80,6 +81,21 @@ reopens the retained state without repeating earlier calls.
 
 Follow [gRPC merchant authoring in Applications](GRPC_APPLICATIONS.md) for the
 complete setup, saved-source selection, native opening, Stop and recovery workflow.
+
+## Grants.gov opportunities
+
+Choose the initialized private research directory and optional original buyer
+bindings JSON. Review, save and start **Grants.gov opportunities** through the
+same managed application lifecycle. The selected installed command retains the
+original query, capture, edition, qualification and publisher records. The
+native browser and complete MCP workflow are documented in
+[Grants.gov research, publication and receiving](../../../../stellar-forge/mcp-merchant-operator/GRANTSGOV_WORKSPACE.md).
+
+Applications binds the original workspace identity, reviewed source files and
+optional buyer directory references. It checks the native startup announcement
+against the live authenticated instance before retaining its private browser
+URL. Source acquisition and qualification changes keep that workspace identity.
+Stop and reopen the same saved operation to retain all original work.
 
 ## Merchant pricing and scenario planning
 

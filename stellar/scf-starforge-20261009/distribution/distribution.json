@@ -111,6 +111,10 @@
     {
       "server": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/server.mjs",
       "manifest": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/browser-assets.json"
+    },
+    {
+      "server": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/browser-assets.json"
     }
   ],
   "supportFiles": [
@@ -435,7 +439,9 @@
     "unstructured-merchant": "stellar/scf-starforge-20261009/partners/unstructured/merchant.mjs",
     "unstructured-commerce": "stellar/scf-starforge-20261009/partners/unstructured/commerce.mjs",
     "dataset-ndjson-customer": "stellar/scf-starforge-20261009/sf30-seller-sdk/ndjson/consumer/cli.mjs",
-    "api-pass-workspace": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs"
+    "api-pass-workspace": "stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs",
+    "grantsgov": "stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/cli.mjs",
+    "grantsgov-receive": "stellar-forge/mcp-merchant-operator/grantsgov-download.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -1075,7 +1081,15 @@
     "./merchant/api-pass-workspace/cli": "./source/stellar/scf-starforge-20261009/sf101-merchant-receiver/api-access/workspace/cli.mjs",
     "./merchant/mcp/grpc": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace.mjs",
     "./merchant/mcp/grpc/receiving": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-download.mjs",
-    "./merchant/mcp/grpc/export": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-export.mjs"
+    "./merchant/mcp/grpc/export": "./source/stellar-forge/mcp-merchant-operator/grpc-workspace-export.mjs",
+    "./research/grantsgov": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/workspace.mjs",
+    "./research/grantsgov/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/source.mjs",
+    "./research/grantsgov/capture": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/capture.mjs",
+    "./research/grantsgov/storage": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/capture-storage.mjs",
+    "./research/grantsgov/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/server.mjs",
+    "./research/grantsgov/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/grantsgov/launch.mjs",
+    "./merchant/mcp/grantsgov": "./source/stellar-forge/mcp-merchant-operator/grantsgov-workspace.mjs",
+    "./merchant/mcp/grantsgov/download": "./source/stellar-forge/mcp-merchant-operator/grantsgov-download.mjs"
   },
   "nativePeers": {
     "@x402/core": {

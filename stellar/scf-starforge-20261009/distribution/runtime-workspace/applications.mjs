@@ -25,6 +25,7 @@ import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './appli
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
 import { fredApplication, prepareFredApplication } from './application-fred.mjs';
 import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
@@ -80,6 +81,7 @@ export const APPLICATION_CATALOG = Object.freeze([
   pricingApplication(common),
   collectionsApplication(common),
   grantApplication(common),
+  grantsgovApplication(common),
   fredApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
@@ -301,6 +303,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
   } else if (type.id === 'buyer-collections') {
     const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
+    createDirectories.push(...prepared.createDirectories);
+  } else if (type.id === 'grantsgov') {
+    const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
     args.push(...prepared.args); inputs.push(...prepared.inputs);
     createDirectories.push(...prepared.createDirectories);
   } else if (type.id === 'grant-workspace') {
