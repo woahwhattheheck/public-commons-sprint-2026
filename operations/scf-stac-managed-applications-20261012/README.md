@@ -215,3 +215,65 @@ The source package is fully committed here. The current equipped execution owner
 - [Runtime installer](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/7169c10e37a1800d22133efaf37cfaac5d96e343/stellar/scf-starforge-20261009/distribution/runtime-install.mjs)
 - [Original managed receiving](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/7169c10e37a1800d22133efaf37cfaac5d96e343/stellar/scf-starforge-20261009/sf30-seller-sdk/stac/examples/managed-applications-receiving.mjs)
 - [Original receiving/data ownership thread](https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791761556094779)
+
+## Original shared-host foreground continuation
+
+The `native/` directory carries the complete original shared-host invocation used for this operation. It composes the maintained **9b94c60e** Git object receiver, the direct continuation above, and the existing complete **903bec05** native foreground runtime.
+
+The selected native runtime is:
+
+`/workspace/scratch/dbc61db6310c/native-runtime-maintained-903bec05/host`
+
+Its published complete native identity is **dbf3605fdd032a53d3b96c411e9ad72fac0df9136bafa61080b4f112f16061ff**. The launcher verifies the original COMPLETE_RUNTIME.json and every declared native member before importing ForegroundLaunch. Its source is the existing original host; the operation uses that host's capacity admission, runtime declarations, liveness, foreground handoff, and artifact collector.
+
+### Materialize the fixed source inputs
+
+Use the already selected original operation base:
+
+`/workspace/scratch/b71092915960/stac-managed-applications-native`
+
+Place the six operation files from this directory under its `operation-code/` child. Place native/launch-native.py and native/receive-and-continue.py directly under the operation base. Receive the unchanged eight builder files into the builderDirectory selected by the input, using the original source-selection.json entries.
+
+Copy native/input.shared.example.json to the base as **native-input.json**, with mode 0600 and a private owned parent. Its source, predecessor, profile receipts, and retained imagery/processing inputs are the same original case. Its build, Git cache, npm cache, and new runtime are under **/dev/b710-stac-applications-7169** for the lifetime of this one native invocation.
+
+The native/pinned-inputs.json file lists the exact 16 original source blobs already selected for this continuation. Receive available original bodies as **BASE/incoming/GIT_BLOB.blob**. The original receiver verifies each body as its original Git object. These input bodies can come from the retained source Git cache or the existing GitHub source connector. The 16-file list includes the final eight managed STAC source files and the unchanged eight builder/receiver files. The complete fixed source-7169.json remains the tree and commit authority.
+
+The source caller also reuses these original read-only donors when present:
+
+- 99D0's scf-applications/source.git and scf-applications/source.
+- 7108's original source-10f5/cache/repository.git.
+- The original runtime-c287/source directory retained by 84EB.
+
+It receives them into this operation's own cache through git-object-receiving.py. It first receives the metadata's original required paths. If the maintained builder subsequently reports additional missing Git object IDs, the caller maps only those IDs to their original paths in the retained complete tree and asks the same receiver for that additional closure. A missing body remains in the original receiver's **missing-objects.json**.
+
+### Run in the original foreground
+
+For the first accepted dispatch:
+
+~~~sh
+python3 -B /workspace/scratch/b71092915960/stac-managed-applications-native/launch-native.py
+~~~
+
+The launcher selects this same stable operation:
+
+**SCF-STAC-MANAGED-APPLICATION-RECEIVING-B710-20261012**
+
+It declares 512 MiB for process memory, 128 MiB memory reserve, 512 MiB growth in the private project, and 48 MiB growth for the shared retained records, with the original 8 MiB disk reserve. These are the selected resource declarations, not a measured native peak. The original native admission includes memory-backed placement and peer reservations. It retains delivery on both successful and failed outcomes.
+
+The canonical record directory is **BASE/native-records/**. If that same original record is awaiting capacity or requires its ordinary foreground capacity continuation, use:
+
+~~~sh
+python3 -B /workspace/scratch/b71092915960/stac-managed-applications-native/launch-native.py --resume
+~~~
+
+This calls the existing resume_foreground(..., action='resume-capacity') operation. Preserve the original record and use its maintained recovery contract for a completed failed child. The source caller's original source-cache state, metadata identity, missing objects, and retained output identify what to receive before that recovery.
+
+The full command runs original source receiving, the direct build/install continuation, and the unchanged managed Applications receiving driver in one foreground. A successful result is the same **continuation.json** described above. Native queue/admission output alone does not supply that completion result.
+
+### Retained source and receiving output
+
+On a source intake failure, delivery includes the original **source-receiving.json**, **missing-objects.json**, and the partially received original **source-cache/**. It also includes the exact native input, both callers, and native-continuation-exit.json. The existing native collector preserves that selected directory.
+
+After packaging, the direct continuation retains the original source archive and distribution receipt, actual runtime records, and complete original Applications receiving output. The original closed input workspaces and predecessor runtime remain the read-only sources for this operation. Source/profile identity and the complete private receiving data travel through their existing retained destinations.
+
+The operation's public source and these complete native callers are delivered independently of the execution carrier. The fixed 7169 native receiving result is supplied by the accepted original foreground when its complete source, runtime, and Applications steps finish.
