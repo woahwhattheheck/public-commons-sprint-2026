@@ -4,7 +4,7 @@ import {open,lstat,mkdir,realpath,link,unlink,readdir} from 'node:fs/promises';
 import {dirname,join,isAbsolute,resolve} from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {need,execution} from './config.mjs';
-import {canonical,digest,object,inspectDatasetPage} from './dataset-page.mjs';
+import {canonical,digest,object,inspectDatasetPage,bindDatasetResponseMetadata} from './dataset-page.mjs';
 import {openWorkspace} from './workspace.mjs';
 import {runOriginalFinalityWorker} from './finalization.mjs';
 import {resolveBuyerProxy} from '../sf31-buyer-client/public-transport.mjs';
@@ -288,7 +288,9 @@ export async function recoveredDatasetPage({directory,index,cfg,previous,expecte
  need(stored,'DATASET_LOST_OUTPUT_FINISH_TRANSFER_EXPORT');
  const proof=stored.value;
  need(same(proof,await makeProof(view)),'DATASET_LOST_OUTPUT_TRANSFER_EXPORT_CHANGED');
- const page=inspectDatasetPage(ctx.body,{url:cfg.operation.url,previous,expectedSnapshot,maxRows});
+ const page=await bindDatasetResponseMetadata(
+  inspectDatasetPage(ctx.body,{url:cfg.operation.url,previous,expectedSnapshot,maxRows}),cfg,
+  {nativeBuyerStatus:'PAID_OUTPUT_RECOVERED'});
  need(page.sha256===view.responseState.sha256&&page.bytes===view.responseState.bytes,
   'DATASET_LOST_OUTPUT_RESPONSE_CHANGED');
  return {...page,intentId:view.intentId,requestUrl:cfg.operation.url,responsePath:cfg.responseFile.destination,

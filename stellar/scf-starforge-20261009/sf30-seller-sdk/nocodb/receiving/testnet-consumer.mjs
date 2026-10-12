@@ -134,6 +134,10 @@ async function checkedSource(template) {
     SCF + '/sf43-agent-commerce/verify.mjs', SCF + '/sf82-checkout-evidence/evidence.mjs',
     SDK + '/dataset-refresh/buyer-handoff.mjs', SDK + '/dataset-refresh/service.mjs',
     SDK + '/nocodb/receiving/native-consumer.mjs', SDK + '/nocodb/receiving/testnet-consumer.mjs',
+    SDK + '/nocodb/receiving/applications-consumer.mjs',
+    SCF + '/distribution/runtime-workspace/applications.mjs',
+    SCF + '/distribution/runtime-workspace/application-nocodb.mjs',
+    SCF + '/distribution/runtime-workspace/application-command.mjs',
   ];
   for (const path of required) requireValue(selected.has(path), 'ORIGINAL_NATIVE_SOURCE_MISSING', path);
   return { root, manifest, files: selected.size, manifestSha256: template.sourceManifest.sha256 };
@@ -169,6 +173,7 @@ async function loadInput(path) {
     template.merchant.payment.maxTimeoutSeconds >= 1 && template.merchant.payment.maxTimeoutSeconds <= 120,
     'EXPLICIT_PAYMENT_TIMEOUT_REQUIRED');
   abs(input.python, 'python'); abs(input.openssl, 'openssl');
+  abs(input.applications?.runtimeDirectory, 'applications.runtimeDirectory');
   requireValue(process.platform !== 'win32', 'POSIX_NATIVE_HOST_REQUIRED');
   requireValue(process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0', 'VERIFIED_TLS_REQUIRED');
   return { input, inputFile: path, inputSha256: hash(raw), template, templateBytes, output, origin };
@@ -479,6 +484,18 @@ async function lockedPhase(ctx) {
   }
   const { sdk: nativeSdk, identities: nativePackages } = await selectedNativeSdk(source.root);
   await retain(join(ctx.output, 'native-package-selection.json'), nativePackages);
+  const { inspectMerchantRuntime } = await import(pathToFileURL(join(source.root,
+    SCF + '/sf46-release/runtime-package.mjs')).href);
+  const installed = await inspectMerchantRuntime(ctx.input.applications.runtimeDirectory, {
+    expectedManifest: source.manifestSha256, load: false,
+  });
+  requireValue(installed.sourceRoot === source.root && installed.sourceManifestSha256 === source.manifestSha256,
+    'ORIGINAL_APPLICATIONS_READY_RUNTIME_REQUIRED');
+  await retain(join(ctx.output, 'applications-runtime-selection.json'), {
+    directory: installed.directory, sourceRoot: installed.sourceRoot, sourceCommit: installed.sourceCommit,
+    installationId: installed.installationId, profileId: installed.profileId,
+    sourceManifestSha256: installed.sourceManifestSha256, lockSha256: installed.lockSha256,
+  });
   const accounts = await prepareAccounts(ctx, nativeSdk, intent);
   const asset = nativeSdk.Asset.native().contractId(nativeSdk.Networks.TESTNET);
   requireValue(/^C[A-Z2-7]{55}$/.test(asset), 'ORIGINAL_NATIVE_XLM_CONTRACT_REQUIRED');
@@ -505,6 +522,16 @@ async function lockedPhase(ctx) {
   const paymentFile = join(ctx.output, 'payment-result.json'), payment = await readJson(paymentFile);
   requireValue(payment.state === 'PASS' && payment.inputSha256 === ctx.inputSha256,
     'ORIGINAL_TESTNET_PAYMENT_NOT_COMPLETE');
+  const { receiveNocoDBApplications } = await import(pathToFileURL(join(source.root,
+    SDK + '/nocodb/receiving/applications-consumer.mjs')).href);
+  const applications = await receiveNocoDBApplications({
+    operationId: ctx.input.operationId, inputSha256: ctx.inputSha256,
+    sourceRoot: source.root, sourceManifestSha256: source.manifestSha256,
+    runtimeDirectory: ctx.input.applications.runtimeDirectory,
+    coreDirectory: join(ctx.output, 'core'), outputDirectory: join(ctx.output, 'applications'),
+    browser: ctx.template.browser,
+  });
+  requireValue(applications.value.state === 'PASS', 'ORIGINAL_APPLICATIONS_RECEIVING_NOT_COMPLETE');
   await checkedSource(ctx.template);
   const result = { schema: 'stellar-forge.nocodb-testnet-receiving-result.v1',
     operationId: ctx.input.operationId, inputSha256: ctx.inputSha256,
@@ -517,8 +544,16 @@ async function lockedPhase(ctx) {
       snapshot: payment.snapshot, rows: payment.rows, valuesSha256: payment.valuesSha256,
       transactions: payment.pages.map(page => page.transaction),
       datasetDelivery: payment.datasetDelivery, resultSha256: hash(await privateBytes(paymentFile)) },
+    applications: { resultSha256: applications.sha256, applicationId: applications.value.applicationId,
+      originalRunIds: applications.value.originalRunIds, originalInstanceIds: applications.value.originalInstanceIds,
+      sameSourceVersion: applications.value.sameSourceVersion,
+      publishedSnapshot: applications.value.publishedSnapshot,
+      lostStartReplyRecovered: applications.value.lostStartReplyRecovered,
+      consoleReopenedWithoutNewRun: applications.value.consoleReopenedWithoutNewRun,
+      finalPhase: applications.value.finalPhase },
     completedFiles: [{ file: core.file, sha256: core.sha256 },
-      { file: paymentFile, sha256: hash(await privateBytes(paymentFile)) }],
+      { file: paymentFile, sha256: hash(await privateBytes(paymentFile)) },
+      { file: applications.file, sha256: applications.sha256 }],
     sourceScope: 'The original two complete provider captures are unchanged; no second NocoDB extraction.',
     paymentScope: 'Actual dedicated-account Stellar testnet payments; original approvals, ledger finalization, transfer observations and full delivered dataset.',
   };

@@ -6,6 +6,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 
 | Application | Maintained command | Original workflow |
 | --- | --- | --- |
+| CoinGecko market research | coingecko serve | Original market sources, request collections, comparisons, notes, provider plans, native buyer recovery and complete handover |
 | Catalog Atlas | atlas | Retained catalog intake, offer comparison, exact native buyer preparation and complete workspace receiving |
 | n8n automation merchant | n8n-merchant serve | Configuration review, original preparation, paid jobs, retained workflow executions, customer results and stop/reopen |
 | API-pass customer | api-pass-workspace serve | Original API access, saved requests, exact response recovery, private buyer history and customer statements |
@@ -27,6 +28,7 @@ Applications opens the original merchant and buyer tools from a selected READY r
 | Request collections | buyer-collections-workspace | Grouped request review, original approvals and runs, retained outcomes and verified customer file downloads |
 | Baserow source authoring | baserow-workspace serve | Original field discovery, retained rows and files, versioned projections, dataset publishing and customer handover |
 | Grant planning and delivery | grant-workspace serve | Retained grant plans and revisions, contributor delivery, invoices, allocations, cash records and original exports |
+| Grants.gov opportunities | grantsgov serve | Complete original federal opportunity capture, immutable editions, qualification, native dataset publication and complete source/customer receiving |
 | PostgreSQL publisher | postgres-publisher serve | Plans, extraction, candidate review, publication, schedules and buyer handoff |
 | Google Sheets publisher | sheets-publisher serve | Original authorization/source, range plans, extraction, review and recurring publication |
 | PostgreSQL authoring | postgres-workspace | Original database inspection, query contracts, merchant package and release |
@@ -90,6 +92,21 @@ reopens the retained state without repeating earlier calls.
 
 Follow [gRPC merchant authoring in Applications](GRPC_APPLICATIONS.md) for the
 complete setup, saved-source selection, native opening, Stop and recovery workflow.
+
+## Grants.gov opportunities
+
+Choose the initialized private research directory and optional original buyer
+bindings JSON. Review, save and start **Grants.gov opportunities** through the
+same managed application lifecycle. The selected installed command retains the
+original query, capture, edition, qualification and publisher records. The
+native browser and complete MCP workflow are documented in
+[Grants.gov research, publication and receiving](../../../../stellar-forge/mcp-merchant-operator/GRANTSGOV_WORKSPACE.md).
+
+Applications binds the original workspace identity, reviewed source files and
+optional buyer directory references. It checks the native startup announcement
+against the live authenticated instance before retaining its private browser
+URL. Source acquisition and qualification changes keep that workspace identity.
+Stop and reopen the same saved operation to retain all original work.
 
 ## Merchant pricing and scenario planning
 
@@ -562,3 +579,7 @@ Review and save the application, then review its start and select **Start → Op
 Inside the original workspace, discover the selected fields, retain the complete original rows and files, create a typed projection, preview it and save a reviewed version. Open the original publisher for that selected version; its merchant controls prepare and stage the original release and customer handoff. The source workspace also exports the complete retained packet for another operator. The [source workspace guide](../../sf30-seller-sdk/baserow/workspace/README.md) covers discovery, original file receiving, versions, packet import and merchant operation. The [provider guide](../../sf30-seller-sdk/baserow/README.md) covers the Baserow source and publication contract.
 
 **Stop** drains the owned source and publisher operations before releasing the workspace. **Reopen** returns to its retained captures, request history, versions and deployment state. A closed runtime browser can reopen the existing managed operation. If the selected source installation or connections file changes, review that current input before the next start. Normal source edits and publication versions stay within the retained workspace and preserve its managed identity.
+
+## CoinGecko market research
+
+Choose the original private CoinGecko workspace and optional saved project and buyer profile configuration. The same browser, model and native jobs run through Review/Save, managed connection, Start/Open, Stop and reopen. The startup observer binds the reviewed source to the actual installed release and original project; shutdown drains the original worker and database. Full operating instructions: [CoinGecko in Applications](COINGECKO_APPLICATIONS.md).

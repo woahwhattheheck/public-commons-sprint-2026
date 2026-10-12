@@ -1,0 +1,16 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "webhook-feed",
+  "description": "Webhook event feeds",
+  "commands": {
+    "webhook-feed": "stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/cli.mjs"
+  },
+  "commandDescriptions": {
+    "webhook-feed": "Receive signed webhooks and sell reviewed event feeds"
+  },
+  "exports": {
+    "./seller/webhook-feed": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/index.mjs",
+    "./seller/webhook-feed/store": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/store.mjs",
+    "./seller/webhook-feed/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/webhook-feed/merchant.mjs"
+  }
+}
