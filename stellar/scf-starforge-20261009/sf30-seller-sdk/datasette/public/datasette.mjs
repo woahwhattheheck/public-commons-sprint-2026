@@ -200,7 +200,11 @@ async function sendOriginal(record) {
       ...(error.uncertain ? {} : {completedAt: new Date().toISOString()})});
     throw error;
   }
-  await retainOutcome(record, value);
+  try {await retainOutcome(record, value);}
+  catch (cause) {
+    const error = new Error('The original operation returned its result, but this browser could not save it. Read its original outcome in Activity.', {cause});
+    error.code = 'DATASETTE_BROWSER_RESULT_UNSAVED'; error.uncertain = true; error.result = value; throw error;
+  }
   return value;
 }
 async function change(operation, input = {}) {
@@ -635,6 +639,8 @@ async function showExport(id, value) {
 async function inspectPending() {
   const record = state.pending;
   if (!record) return;
+  if (record.workspaceId !== state.health.workspaceId)
+    throw new Error('Reopen the original workspace selected by this saved operation.');
   await refresh();
   let value;
   if (record.operation === 'files.upload') {
@@ -652,9 +658,14 @@ async function inspectPending() {
     }
     result('operation-result', value); result('receive-result', value); return;
   }
-  if (record.input.requestId && state.catalog.some(item => item.operation === 'requests.inspect')) {
+  if (['source.select','publisher.plan','publisher.review','publisher.prepare-buyer'].includes(record.operation) &&
+      typeof record.input.requestId === 'string' && state.catalog.some(item => item.operation === 'requests.inspect')) {
     value = await readOperation('requests.inspect', {requestId: record.input.requestId});
-    if (value.requestId !== record.input.requestId) throw new Error('The native receipt returned a different original request.');
+    if (value.schema !== 'stellar-forge.datasette-request.v1' || value.workspaceId !== record.workspaceId ||
+        value.requestId !== record.input.requestId || value.operation !== record.operation ||
+        JSON.stringify(value.input) !== JSON.stringify(record.input) ||
+        !['PENDING','COMPLETE','REJECTED'].includes(value.state))
+      throw new Error('The retained request does not match this original operation and complete input.');
     if (value.state === 'COMPLETE') await retainOutcome(record, value.result);
     else if (value.state === 'REJECTED') await saveJournal({...record, state: 'FAILED', result: value,
       message: value.error?.message ?? 'The original request was rejected.', error: value.error?.code,
@@ -867,7 +878,8 @@ function receivingKind() {
 $('receive-kind').addEventListener('change', receivingKind);
 
 function uploadMatches(value, input) {
-  return value?.workspaceId === state.health.workspaceId &&
+  return value?.schema === 'stellar-forge.datasette-upload.v1' && value.workspaceId === state.health.workspaceId &&
+    ['RECEIVING','FINALIZABLE','COMPLETE','REJECTED'].includes(value.state) &&
     ['uploadId','name','bytes','sha256'].every(key => value[key] === input[key]);
 }
 async function selectedUploadFile() {
@@ -903,7 +915,10 @@ async function continueUpload(record, selected) {
         throw terminal(current.error?.message ?? 'The retained archive bytes differ from their declared SHA-256.',
           current.error?.code ?? 'DATASETTE_UPLOAD_REJECTED');
       const total = Number(record.input.bytes), offset = current ? Number(current.receivedBytes) : 0;
-      if (!Number.isSafeInteger(total) || total < 0 || !Number.isSafeInteger(offset) || offset < 0 || offset > total)
+      if (!/^(0|[1-9][0-9]*)$/.test(record.input.bytes ?? '') || !Number.isSafeInteger(total) ||
+          total < 0 || total > 2 * 1024 * 1024 * 1024 ||
+          current && !/^(0|[1-9][0-9]*)$/.test(current.receivedBytes ?? '') ||
+          !Number.isSafeInteger(offset) || offset < 0 || offset > total)
         throw terminal('The original upload prefix is invalid.', 'BROWSER_UPLOAD_PREFIX_INVALID');
       const maximum = Math.min(1024 * 1024, Number(current?.maximumChunkBytes ?? 8 * 1024 * 1024));
       if (!Number.isSafeInteger(maximum) || maximum < 1)
@@ -933,7 +948,8 @@ async function continueUpload(record, selected) {
     }
     if (!current.archiveFile || !current.retainedFile || !uploadMatches(current, record.input) ||
         current.receivedBytes !== record.input.bytes || current.retainedFile.sha256 !== record.input.sha256 ||
-        current.retainedFile.bytes !== record.input.bytes)
+        current.retainedFile.bytes !== record.input.bytes || current.retainedFile.workspaceId !== record.workspaceId ||
+        relativeFile(current.archiveFile) !== current.retainedFile.path)
       throw terminal('The original completed upload did not identify its complete retained archive.', 'BROWSER_UPLOAD_ARCHIVE_INVALID');
     const receiving = record.receiving;
     if (!receiving || !['source','workspace'].includes(receiving.kind))
@@ -952,8 +968,13 @@ async function continueUpload(record, selected) {
     await saveJournal(record);
     receivingStarted = true;
     const value = await state.client.dispatch(operation, record.receivingInput);
-    await saveJournal({...record, state: 'COMPLETE', result: value, message: null, error: null,
-      completedAt: new Date().toISOString()});
+    try {
+      await saveJournal({...record, state: 'COMPLETE', result: value, message: null, error: null,
+        completedAt: new Date().toISOString()});
+    } catch (cause) {
+      const error = new Error('The original receiving operation completed, but this browser could not save its result. Continue its saved original input in Activity.', {cause});
+      error.code = 'DATASETTE_BROWSER_RESULT_UNSAVED'; error.uncertain = true; error.result = value; throw error;
+    }
     completed = true;
     result('receive-result', value);
     message(receiving.kind === 'workspace' ? 'The source/publisher workspace is received at ' + value.directory +
@@ -965,10 +986,12 @@ async function continueUpload(record, selected) {
   } catch (error) {
     if (!completed) {
       const retryable = !error.terminal && (!receivingStarted || error.uncertain || error.code === 'DATASETTE_WORKSPACE_BUSY');
-      await saveJournal({...record, state: retryable ? 'UNCERTAIN' : 'FAILED',
-        stage: current?.state === 'COMPLETE' ? 'receiving' : 'upload', lastConfirmed: current,
-        message: error.message, error: error.code,
-        ...(retryable ? {} : {completedAt: new Date().toISOString()})});
+      try {
+        await saveJournal({...record, state: retryable ? 'UNCERTAIN' : 'FAILED',
+          stage: current?.state === 'COMPLETE' ? 'receiving' : 'upload', lastConfirmed: current,
+          message: error.message, error: error.code,
+          ...(retryable ? {} : {completedAt: new Date().toISOString()})});
+      } catch (journalError) { error.journalError = journalError; }
     }
     throw error;
   }
