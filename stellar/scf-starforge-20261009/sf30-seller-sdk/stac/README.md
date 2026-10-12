@@ -202,3 +202,9 @@ Original capture attempts and current decisions/operations are retained.
 Eight recent internal state snapshots are kept so repeat operations do not
 multiply complete catalog copies indefinitely. Financial state stays in the
 maintained native buyer and seller.
+
+## Processing history in the analyst workspace
+
+Add a retained processing workspace to the existing server with `--processing-workspace DIRECTORY`; supply `--processing-config FILE` for its configured source. The [processing guide](./processing/PROCESSING.md) covers the original deployment connection, workflow inventories, selected run histories, pagination and recovery, analyst-reviewed scene associations, and complete processing/STAC export and receiving. The processing view stays mounted during workspace polling so an analyst can configure sources and review retained history without losing form edits. Its server uses the same authenticated local session as the scene workspace.
+
+The library exposes `createProcessingController` through `@tokenjunkielabs/starforge-merchant/seller/stac/processing`, provider helpers through `seller/stac/processing/provider`, and complete portable processing receiving through `buyer/stac/processing`. Source credentials remain in the server's configured source-auth transport; raw captured records, explicit association choices and original handover members travel with the receiving case.

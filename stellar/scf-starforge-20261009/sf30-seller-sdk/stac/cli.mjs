@@ -17,6 +17,7 @@ Usage:
 Analyst workspace:
   init       --title TEXT --endpoint URL [--transport JSON_FILE]
   serve      [--port 0] [--max-request-bytes NUMBER]
+             [--processing-workspace DIR [--processing-config JSON_FILE]]
   state
   discover   [--operation-id ID] [--expected-revision NUMBER]
   query-save --input JSON_FILE
@@ -150,12 +151,20 @@ export async function runStacCLI(argv=process.argv.slice(2)){
   if(!flags.workspace&&!flags.directory)throw new Error('--workspace is required for analyst workspace commands.');
   const transport=flags.transport?await readJSON(required(flags,'transport')):undefined;
   const workspace=await openStacWorkspace({directory,...(flags.title?{title:String(flags.title)}:{}),...(flags.endpoint?{endpoint:String(flags.endpoint)}:{}),...(transport?{transport}:{}),create:command==='init'});
+  let processingController;
   try{
     const expectedRevision=number(flags,'expected-revision',undefined);
     const operationId=String(flags['operation-id']||randomUUID());
     if(command==='init'||command==='state'){stdout(await workspace.getState());return;}
     if(command==='serve'){
-      const running=await startStacServer({workspace,port:number(flags,'port',0),...(flags['max-request-bytes']?{maxRequestBytes:number(flags,'max-request-bytes')}:{} )});
+      if(flags['processing-workspace']||flags['processing-config']){
+        const processingDirectory=resolve(required(flags,'processing-workspace'));
+        const {createProcessingController}=await import('./processing/workspace.mjs');
+        if(typeof createProcessingController!=='function')throw new Error('The installed processing module needs createProcessingController.');
+        processingController=await createProcessingController({stacWorkspace:workspace,directory:processingDirectory,
+          ...(flags['processing-config']?{config:await readJSON(required(flags,'processing-config'))}:{})});
+      }
+      const running=await startStacServer({workspace,...(processingController?{processing:processingController}:{}),port:number(flags,'port',0),...(flags['max-request-bytes']?{maxRequestBytes:number(flags,'max-request-bytes')}:{} )});
       stdout({url:running.url,workspaceId:(await workspace.getState()).id});
       await keepOpen(running.close);return;
     }
@@ -198,7 +207,7 @@ export async function runStacCLI(argv=process.argv.slice(2)){
     }
     if(command==='import'){stdout(await workspace.importHandover(await readJSON(required(flags,'input'))));return;}
     throw new Error('Unknown STAC command: '+command+'. Use --help for the complete workflow.');
-  }finally{await workspace.close?.();}
+  }finally{try{await processingController?.close?.();}finally{await workspace.close?.();}}
 }
 const invoked=process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href;
 if(invoked)runStacCLI().catch(error=>{process.stderr.write(JSON.stringify({error:{code:error.code||'STAC_COMMAND_FAILED',message:error.message||String(error)}})+'\n');process.exitCode=1;});

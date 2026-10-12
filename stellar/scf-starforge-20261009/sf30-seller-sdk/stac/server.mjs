@@ -75,11 +75,23 @@ async function streamAsset(req,res,workspace,assetId,{preview=false}={}){
  * Getters are local views. Provider operations run only through explicit POST routes.
  * The returned URL carries a one-process session key in its fragment.
  */
-export async function startStacServer({workspace,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
+export async function startStacServer({workspace,processing=null,host='127.0.0.1',port=0,maxRequestBytes=128*1024*1024}={}){
   if(!workspace||typeof workspace.getState!=='function')throw new TypeError('An initialized STAC workspace is required.');
   if(!['127.0.0.1','::1','localhost'].includes(host))throw new Error('The analyst server binds to loopback only.');
   if(!Number.isInteger(Number(port))||Number(port)<0||Number(port)>65535)throw new Error('Port must be an integer from 0 through 65535.');
   if(!Number.isSafeInteger(maxRequestBytes)||maxRequestBytes<1024)throw new Error('maxRequestBytes must be a positive byte limit.');
+  const processingName=value=>typeof value==='string'&&/^[A-Za-z][A-Za-z0-9-]{0,63}$/.test(value);
+  let processingView=null,processingCapabilities=null;
+  const processingReads=processing?.reads||{},processingActions=processing?.actions||{};
+  if(processing){
+    if(typeof processing.getState!=='function')throw new TypeError('The configured processing controller needs getState.');
+    for(const [kind,entries]of [['read',processingReads],['action',processingActions]]){
+      if(!entries||typeof entries!=='object'||Array.isArray(entries))throw new TypeError('Processing '+kind+' handlers must be an explicit name-to-function map.');
+      for(const [name,handler]of Object.entries(entries))if(!processingName(name)||typeof handler!=='function')throw new TypeError('Invalid declared processing '+kind+': '+name);
+    }
+    processingView=await readFile(new URL('processing/view.mjs',import.meta.url));
+    processingCapabilities={enabled:true,reads:Object.keys(processingReads),actions:Object.keys(processingActions)};
+  }
   const bootstrap=randomToken(),session=randomToken(),csrf=randomToken();
   let origin='',authority='',cookieName='',closing=false;
   const jobs=new Map();
@@ -130,7 +142,23 @@ export async function startStacServer({workspace,host='127.0.0.1',port=0,maxRequ
         if(closing)throw fail(503,'The local operator is closing.','SERVER_CLOSING');
         if(req.headers.origin!==origin||!equal(req.headers['x-csrf-token'],csrf))throw fail(403,'This action must come from the active local operator session.','CSRF_REQUIRED');
       }
-      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob)});return;}
+      if(method==='GET'&&path==='/api/state'){json(res,200,{workspace:await workspace.getState(),jobs:[...jobs.values()].map(summarizeJob),capabilities:{processing:processingCapabilities||{enabled:false}}});return;}
+      if(method==='GET'&&path==='/processing/view.mjs'){
+        if(!processingView)throw fail(404,'Processing history is not configured for this workspace.','PROCESSING_NOT_CONFIGURED');
+        res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','content-length':processingView.length});res.end(processingView);return;
+      }
+      if(method==='GET'&&path==='/api/processing/state'){
+        if(!processing)throw fail(404,'Processing history is not configured for this workspace.','PROCESSING_NOT_CONFIGURED');
+        json(res,200,await processing.getState({stacWorkspace:workspace}));return;
+      }
+      const processingReadPath=path.match(/^\/api\/processing\/reads\/([^/]+)$/);
+      if(method==='GET'&&processingReadPath){
+        const name=decodeURIComponent(processingReadPath[1]);
+        if(!processing||!processingName(name)||!Object.hasOwn(processingReads,name))throw fail(404,'This processing read is not enabled by the configured controller.','PROCESSING_READ_NOT_FOUND');
+        const query=Object.create(null);
+        for(const [key,value]of url.searchParams){if(Object.hasOwn(query,key))query[key]=Array.isArray(query[key])?[...query[key],value]:[query[key],value];else query[key]=value;}
+        json(res,200,await processingReads[name]({query,stacWorkspace:workspace}));return;
+      }
       if(method==='GET'&&path==='/api/jobs'){json(res,200,{jobs:[...jobs.values()].map(summarizeJob)});return;}
       const jobPath=path.match(/^\/api\/jobs\/([^/]+)$/);
       if(method==='GET'&&jobPath){const job=jobs.get(tokenId(decodeURIComponent(jobPath[1])));if(!job)throw fail(404,'This local job is no longer in the recent job list. Refresh the saved workspace state.','JOB_NOT_FOUND');json(res,200,summarizeJob(job));return;}
@@ -149,6 +177,15 @@ export async function startStacServer({workspace,host='127.0.0.1',port=0,maxRequ
       }
       if(method==='POST'){
         const body=await bodyJSON(req,maxRequestBytes);
+        const processingActionPath=path.match(/^\/api\/processing\/actions\/([^/]+)$/);
+        if(processingActionPath){
+          const name=decodeURIComponent(processingActionPath[1]);
+          if(!processing||!processingName(name)||!Object.hasOwn(processingActions,name))throw fail(404,'This processing action is not enabled by the configured controller.','PROCESSING_ACTION_NOT_FOUND');
+          const input=body.input===undefined?{}:body.input;
+          if(input===null||typeof input!=='object'||Array.isArray(input))throw fail(400,'Processing action input must be a JSON object.','PROCESSING_INPUT_INVALID');
+          const job=beginJob('processing-'+name,body.operationId,{name,input},operationId=>processingActions[name]({input,operationId,stacWorkspace:workspace}));
+          json(res,202,summarizeJob(job));return;
+        }
         if(path==='/api/discover'){const job=beginJob('discover',body.operationId,{expectedRevision:body.expectedRevision},id=>workspace.discover({operationId:id,expectedRevision:body.expectedRevision}));json(res,202,summarizeJob(job));return;}
         if(path==='/api/queries'){json(res,200,await workspace.saveQuery(body));return;}
         if(path==='/api/search/review'){json(res,200,await workspace.reviewSearch({queryId:tokenId(body.queryId)}));return;}

@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "scc-standards-workbench"
+version = "0.1.0"
+description = "Source-bound bilingual standards drafting, review and delivery workbench"
+requires-python = ">=3.10"
+dependencies = ["python-docx==1.2.0", "reportlab==4.4.9"]
+license = {text = "MIT"}
+authors = [{name = "Token Junkie Labs"}]
+readme = "README.md"
+
+[project.scripts]
+standards-workbench = "scc_workbench.server:main"
+
+[tool.setuptools]
+packages = ["scc_workbench"]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+scc_workbench = "."
+
+[tool.setuptools.package-data]
+scc_workbench = ["web/*.html", "web/*.css", "web/*.js", "demo/*.json", "demo/sources/*", "templates/**/*", "README.md", "API.md", "SOURCE-NOTICES.md", "LICENSE"]

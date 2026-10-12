@@ -63,7 +63,7 @@ export async function openMerchantFileClient({ url, tokenEnv = 'MCP_ACCESS_TOKEN
 
 /** Owner adapters supply the original manifest parser, names and identity schema. */
 export function createRetainedDownload({ manifestName, parseManifest, maximumBytes, stateSchema,
-  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}) }) {
+  resultSchema, toolPrefix, errorPrefix, clientName, describe = () => ({}), connect = openMerchantFileClient }) {
   async function regular(path, flags = constants.O_RDONLY, maximum = maximumBytes) {
     const handle = await open(path, flags | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0), 0o600);
     try {
@@ -251,7 +251,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
     identifier(exportId, 'Export ID');
     if (!Number.isSafeInteger(chunkSize) || chunkSize < 1 || chunkSize > MAX_RETAINED_CHUNK_BYTES)
       throw failure(errorPrefix + '_DOWNLOAD_CONFIGURATION', 'Chunk size must be 1–196608 bytes.');
-    const client = await openMerchantFileClient({ url, tokenEnv, environment, signal, errorPrefix, clientName });
+    const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
     const manifestBytes = await retainedManifest(client, exportId);
     if (expectedManifestSha256 !== undefined && (!validSha(expectedManifestSha256) || sha(manifestBytes) !== expectedManifestSha256))
       throw failure(errorPrefix + '_DOWNLOAD_EXPORT_CHANGED', 'The retained completion manifest differs from the reviewed original export.');
@@ -269,7 +269,7 @@ export function createRetainedDownload({ manifestName, parseManifest, maximumByt
 
   async function inspect({ url, exportId, tokenEnv, environment, signal } = {}) {
     identifier(exportId, 'Export ID');
-    const client = await openMerchantFileClient({ url, tokenEnv, environment, signal, errorPrefix, clientName });
+    const client = await connect({ url, tokenEnv, environment, signal, errorPrefix, clientName });
     const bytes = await retainedManifest(client, exportId);
     return { manifest: parseManifest(bytes, exportId), manifestSha256: sha(bytes) };
   }

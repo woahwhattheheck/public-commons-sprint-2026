@@ -99,3 +99,8 @@ The receiving application does not infer that two different queries represent up
 | `public/` | Plain industrial browser for receiving, progress, rows, purchase history and analysis |
 
 Programmatic entry: `startDatasetWorkspace({stateDirectory, profilePath, operatorSettings, analysis: {python, checkout, directory}, port})` returns `{url, origin, close}`. Call `close()` to drain owned work. The server's private capability stays in its original launch link and browser session; it is not written into exported customer job records.
+
+## Open from Applications
+
+The existing Applications launcher can open this full receiving application with its selected installed runtime, private customer state, original operator/session profile, managed approval terminal and matching analysis source. See [Dataset buyer in Applications](../../distribution/runtime-workspace/DATASET_BUYER_APPLICATIONS.md) for the complete open, stop and restart workflow. The standalone command and original native acquisition controls remain available.
+
