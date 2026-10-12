@@ -7,6 +7,7 @@ import { openPostgresPublisher } from '../publisher/model.mjs';
 import { readPostgresSourceFile } from '../config.mjs';
 import { absolute, privateDirectory, acquireWorkspace, readPrivate, readJson, createFile, atomicJson, syncDirectory, bytes, digest, identity, fault, stamp } from '../publisher/files.mjs';
 import { uuid, hash, only, checkText, catalog, tableRows, selectedAggregate, compareEditions, refreshContract, projectionContract, jobDefinition, nativeTarget } from './contracts.mjs';
+import { createTimescaleRemediation } from './remediation.mjs';
 import { captureTimescale, prepareNativeRefresh, runNativeRefresh, verifyAggregate, prepareNativeJob, runNativeJobChange } from './native.mjs';
 const safeIssue=issue=>({code:typeof issue?.code==='string'&&/^[A-Z0-9_]{1,100}$/.test(issue.code)?issue.code:'TIMESCALE_OPERATION_FAILED',
   ...(typeof issue?.sqlState==='string'?{sqlState:issue.sqlState}:{})});
@@ -360,9 +361,11 @@ async function openTimescaleWorkspace({directory,create=false,sourceFile,mainten
     const publisherFacade=Object.freeze(Object.fromEntries(Object.entries(publisher).map(([name,value])=>
       [name,guardedMutations.has(name)?(...args)=>{available();return value(...args);}:value])));
     function exclusive(kind,input,work){return start(kind,input,work,{retryRead:true});}
-    return {directory,settings,sourceFile,maintenanceSourceFile,publisher:publisherFacade,status,operation,edition,comparison,
+    const workspace={directory,settings,sourceFile,maintenanceSourceFile,publisher:publisherFacade,status,operation,edition,comparison,
       saveReview,prepareRefresh,startRefresh,startVerification,prepareJob,applyJob,selectAggregate,startCapture,startPublicationExtraction,
       getPlan,readRecord,retainRecord,cancel,available,exclusive,close};
+    workspace.remediation=createTimescaleRemediation(workspace);
+    return workspace;
   }catch(issue){try{await publisher?.close();}finally{db?.close();await release();}throw issue;}
 }
 
