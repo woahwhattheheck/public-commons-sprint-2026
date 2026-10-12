@@ -111,7 +111,8 @@ function semanticHeaders(headers, semantics, snapshot) {
   try { values = new Headers(headers); }
   catch { throw new InputError('DATASET_RESPONSE_HEADERS_INVALID'); }
   const header = semantics.schema === 'stellar-forge.ckan-semantics.v1' ? 'x-ckan-semantics-sha256' :
-    semantics.schema === 'stellar-forge.odata-semantics.v1' ? 'x-dataset-semantics-sha256' : null;
+    ['stellar-forge.odata-semantics.v1', 'stellar-forge.superset-semantics.v1',
+      'stellar-forge.directus-semantics.v1'].includes(semantics.schema) ? 'x-dataset-semantics-sha256' : null;
   need(header !== null && values.get(header) === semantics.sha256 &&
     values.get('x-dataset-snapshot') === snapshot &&
     ['x-ckan-semantics-sha256','x-dataset-semantics-sha256'].every(name =>

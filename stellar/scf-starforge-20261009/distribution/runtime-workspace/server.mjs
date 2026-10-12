@@ -8,6 +8,7 @@ import { MAX_MANIFEST_BYTES } from '../runtime-transfer-lock.mjs';
 import { imageOperationFields } from './image-workspace.mjs';
 import { managedOperationFields } from './managed-workspace.mjs';
 import { pythonOperationFields } from '../python-runtime/workspace.mjs';
+import { sourceBuildOperationFields } from './source-build-workspace.mjs';
 import { openRuntimeWorkspace } from './model.mjs';
 import { OPENAPI_SETUP_ROUTES, openApiSetupBodyLimit } from './openapi-connection-setup.mjs';
 import { plain, need, fail } from './storage.mjs';
@@ -53,9 +54,10 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
     ['/transfer.mjs', 'transfer.mjs', 'text/javascript; charset=utf-8'],
     ['/image.mjs', 'image.mjs', 'text/javascript; charset=utf-8'],
     ['/python.mjs', 'python.mjs', 'text/javascript; charset=utf-8'],
+    ['/source-build.mjs', 'source-build.mjs', 'text/javascript; charset=utf-8'],
   ].map(async ([path, name, type]) => [path, { bytes: await readFile(new URL('./public/' + name, import.meta.url)), type }])));
   let origin, host, closing = false;
-  const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map(), pythonDownloads = new Map();
+  const sockets = new Set(), imageDownloads = new Map(), transferDownloads = new Map(), pythonDownloads = new Map(), sourceBuildDownloads = new Map();
   const server = createServer(async (req, res) => {
     const reply = (status, type, bytes, headers = {}) => {
       if (res.headersSent || res.destroyed) return;
@@ -109,9 +111,27 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         } finally { await file.handle.close(); }
         return;
       }
+      if (req.method === 'GET' && /^\/source-build-download\/[a-f0-9]{64}$/.test(url.pathname) && !url.search) {
+        const key = url.pathname.split('/').at(-1), selected = sourceBuildDownloads.get(key);
+        sourceBuildDownloads.delete(key);
+        need(selected && selected.expires > Date.now(), 'SOURCE_BUILD_DOWNLOAD_EXPIRED', 'Request this package again from the workspace.', 410);
+        const file = await model.sourceBuildsDownload(selected.reviewId);
+        try {
+          res.writeHead(200, { ...security, 'content-type': file.type, 'content-length': file.bytes,
+            'content-disposition': 'attachment; filename="' + file.file + '"', etag: '"' + file.sha256 + '"' });
+          await pipeline(file.handle.createReadStream({ autoClose: false, start: 0 }), res);
+        } finally { await file.handle.close(); }
+        return;
+      }
       const supplied = Buffer.from(typeof req.headers['x-runtime-workspace-token'] === 'string' ? req.headers['x-runtime-workspace-token'] : '');
       need(supplied.length === tokenBytes.length && timingSafeEqual(supplied, tokenBytes),
         'RUNTIME_WORKSPACE_CAPABILITY_REQUIRED', 'Open the current private URL printed by the workspace command', 401);
+      if (req.method === 'GET' && url.pathname === '/api/source-builds/state') {
+        params(url, []); return send(200, await model.sourceBuildsState());
+      }
+      if (req.method === 'GET' && url.pathname === '/api/source-builds/review') {
+        const value = params(url, ['reviewId']); return send(200, await model.sourceBuildsReadReview(value.reviewId));
+      }
       if (req.method === 'GET' && url.pathname === '/api/python/state')
         return send(200, await model.pythonState(params(url, ['runtimeId'])));
       if (req.method === 'GET' && url.pathname === '/api/transfers/state')
@@ -154,6 +174,22 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       if (req.method === 'GET' && url.pathname === '/api/managed/config')
         return send(200, await model.managedConfig(params(url, ['homeId', 'path'])));
       need(req.method === 'POST' && req.headers.origin === origin, 'RUNTIME_WORKSPACE_ORIGIN_REQUIRED', undefined, 403);
+      if (url.pathname === '/api/source-builds/catalog')
+        return send(200, await model.sourceBuildsCatalog(await body(req, ['repository', 'ref', 'offline'])));
+      if (url.pathname === '/api/source-builds/review')
+        return send(201, await model.sourceBuildsReview(await body(req, ['repository', 'ref', 'selection', 'offline', 'python'])));
+      if (url.pathname === '/api/source-builds/recover') {
+        const value = await body(req, ['operationId']); return send(202, await model.recoverSourceBuildOperation(value.operationId));
+      }
+      if (url.pathname === '/api/source-builds/download') {
+        const value = await body(req, ['reviewId']), file = await model.sourceBuildsDownload(value.reviewId);
+        await file.handle.close();
+        for (const [key, item] of sourceBuildDownloads) if (item.expires <= Date.now()) sourceBuildDownloads.delete(key);
+        need(sourceBuildDownloads.size < 256, 'SOURCE_BUILD_DOWNLOAD_LIMIT', 'Finish or reopen a recent download.', 429);
+        const key = randomBytes(32).toString('hex');
+        sourceBuildDownloads.set(key, { reviewId: value.reviewId, expires: Date.now() + 60000 });
+        return send(200, { url: origin + '/source-build-download/' + key, file: file.file, bytes: file.bytes, sha256: file.sha256 });
+      }
       if (url.pathname === '/api/python/upload') {
         need((req.headers['content-type'] ?? '').split(';')[0].trim() === 'application/octet-stream', 'PYTHON_ARCHIVE_TYPE_REQUIRED');
         return send(201, await model.pythonUpload({ ...params(url, ['sha256']), body: req }));
@@ -230,7 +266,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
       if (url.pathname === '/api/review') return send(200, await model.review(await body(req, ['archiveId', 'selection'])));
       if (url.pathname === '/api/operation') return send(202, await model.begin(await body(req,
         ['requestId', 'operation', 'runtimeId', 'archiveId', 'name', 'selection', 'profileId', 'offline', 'cache',
-          'load', 'source', 'install', 'archive', 'sha256', 'label', 'nodeHeaders', ...Object.values(managedOperationFields).flat(), ...new Set(Object.values(imageOperationFields).flat()), ...new Set(Object.values(transferOperationFields).flat()), ...new Set(Object.values(pythonOperationFields).flat())])));
+          'load', 'source', 'install', 'archive', 'sha256', 'label', 'nodeHeaders', ...Object.values(managedOperationFields).flat(), ...new Set(Object.values(imageOperationFields).flat()), ...new Set(Object.values(transferOperationFields).flat()), ...new Set(Object.values(pythonOperationFields).flat()), ...new Set(Object.values(sourceBuildOperationFields).flat())])));
       if (url.pathname === '/api/resume-queued') {
         const value = await body(req, ['operationId']); return send(202, await model.resumeQueued(value.operationId));
       }
@@ -284,7 +320,7 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
   return { origin, url: origin + '/#' + token, directory: model.directory,
     async close() {
       if (closing) return;
-      closing = true; imageDownloads.clear(); transferDownloads.clear(); pythonDownloads.clear();
+      closing = true; imageDownloads.clear(); transferDownloads.clear(); pythonDownloads.clear(); sourceBuildDownloads.clear();
       const stopped = new Promise(done => server.close(done));
       await model.close(); server.closeIdleConnections();
       for (const socket of sockets) socket.destroy();

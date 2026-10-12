@@ -1,0 +1,42 @@
+{
+  "schema": "stellar-forge.sensorthings-connector-source-receipt.v1",
+  "operationId": "SCF_SENSORTHINGS_HAMBURG_NATIVE_1B40_20261012",
+  "role": "window-2-locations",
+  "sourceUrl": "https://iot.hamburg.de/v1.1/Things(8490)/Locations",
+  "receivedAt": "2026-10-12T11:12:06Z",
+  "timestampBasis": "Clock read after complete connector download returned; provider HTTP request times are not exposed.",
+  "body": {
+    "filename": "hamburg-18571-window-2-locations-original.json",
+    "bytes": 602,
+    "sha256": "dfde8ec0f8f0660a9bb25c0985e033f9ff8a9e7dcb580801dc29a4bec6530cfd"
+  },
+  "representation": "COMPLETE_CONNECTOR_UTF8_TEXT",
+  "sourceHttpStatus": null,
+  "sourceHttpHeaders": null,
+  "method": "Notion create_attachment(source_url), then download_attachment(file_upload_id)",
+  "request": {
+    "source_url": "https://iot.hamburg.de/v1.1/Things(8490)/Locations",
+    "filename": "hamburg-18571-window-2-locations-original.json",
+    "content_type": "application/json"
+  },
+  "connector": {
+    "attachment": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8174-93a5-00b2af597e52\",\"filename\":\"hamburg-18571-window-2-locations-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":602,\"status\":\"uploaded\",\"markdown_source\":\"file-upload://3f7dd772-3100-8174-93a5-00b2af597e52\",\"suggested_markdown\":\"<file src=\\\"file-upload://3f7dd772-3100-8174-93a5-00b2af597e52\\\"></file>\"}"
+        }
+      ],
+      "isError": false
+    },
+    "download": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"file_upload_id\":\"3f7dd772-3100-8174-93a5-00b2af597e52\",\"filename\":\"hamburg-18571-window-2-locations-original.json\",\"content_type\":\"application/json; charset=utf-8\",\"content_length\":602,\"content\":\"{\\\"value\\\":[{\\\"@iot.selfLink\\\":\\\"https://iot.hamburg.de/v1.1/Locations(26520331)\\\",\\\"@iot.id\\\":26520331,\\\"name\\\":\\\"E-Ladestation Eduard-Rhein-Ufer 1\\\",\\\"description\\\":\\\"Eduard-Rhein-Ufer 1, 22078 Hamburg\\\",\\\"encodingType\\\":\\\"application/vnd.geo+json\\\",\\\"location\\\":{\\\"type\\\":\\\"Feature\\\",\\\"properties\\\":{},\\\"geometry\\\":{\\\"type\\\":\\\"Point\\\",\\\"coordinates\\\":[10.015795,53.568083]}},\\\"properties\\\":{\\\"infoLastUpdate\\\":\\\"2024-07-18T13:12:06.629915Z\\\"},\\\"HistoricalLocations@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Locations(26520331)/HistoricalLocations\\\",\\\"Things@iot.navigationLink\\\":\\\"https://iot.hamburg.de/v1.1/Locations(26520331)/Things\\\"}]}\"}"
+        }
+      ],
+      "isError": false
+    }
+  }
+}
