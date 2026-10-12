@@ -25,6 +25,8 @@ In Applications:
 5. Use the console to retain source editions, save named reviews, build candidates, query full native grant datasets, compare editions and download complete handoffs.
 6. Stop through Applications. Reopening the saved application retains the same publisher directory, datasets, reviews and accepted request IDs.
 
+To change which publisher a stopped application opens, edit its workspace setting, review the change and save the new application revision. The next start writes the current connection for that reviewed publisher. A command already running against the former publisher keeps its original workspace guard; a subsequent command follows the newly saved connection.
+
 The source review uses the existing 360Giving editor. Its source figures and proposed corrections remain attached to their original edition and named reviewer. The console uses neutral gray controls and tables.
 
 The private environment file, when selected, uses the existing Applications environment mechanism. `SF30_XML_NODE` can select an existing native Node executable. The same environment is used during preparation and launch.
