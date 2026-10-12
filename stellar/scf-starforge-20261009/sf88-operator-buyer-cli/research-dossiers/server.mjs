@@ -121,7 +121,22 @@ function researchOwners() {
     }
     return primary;
   };
-  return {add,close,preserve};
+  return {add,close,preserve,hasPending:()=>owners.some(owner=>!owner.closed)};
+}
+
+async function writeResearchOutput(stream,body){
+  return new Promise((accept,reject)=>{
+    let completed=false;
+    const done=error=>{
+      if(completed)return;completed=true;
+      // A failed Writable callback can be followed by its error event.
+      setImmediate(()=>stream.removeListener('error',failed));
+      error?reject(error):accept();
+    };
+    const failed=error=>done(error);
+    stream.once('error',failed);
+    try{stream.write(body,done);}catch(error){done(error);}
+  });
 }
 
 async function readJson(req, limit) {
@@ -743,12 +758,14 @@ async function main(args) {
   const providers = options.adapter ? await loadEditionAdapters(options.adapter) : {};
   const owners=researchOwners();
   let app,openalexWorkspace=null,crossrefSource=null,crossrefIdentity=null,documentSource=null,pipelineSource=null;
-  let stopped=false,closing,opened;
+  let stopped=false,closing,opened,cleanupLiveness;
+  const retainCleanup=()=>{cleanupLiveness??=setInterval(()=>{},1000);};
   const opening=new Promise(resolveOpening=>{opened=resolveOpening;});
   const reportClose=error=>{
     process.exitCode=1;
-    process.stderr.write(JSON.stringify({error:safeCode(error),
-      ...(error.researchCloseFailures?{closeFailures:error.researchCloseFailures}:{})})+'\n');
+    retainCleanup();
+    void writeResearchOutput(process.stderr,JSON.stringify({error:safeCode(error),
+      ...(error.researchCloseFailures?{closeFailures:error.researchCloseFailures}:{})})+'\n').catch(()=>{});
   };
   const stop=()=>{
     stopped=true;
@@ -756,6 +773,7 @@ async function main(args) {
     return closing=(async()=>{
       await opening;
       await owners.close();
+      if(cleanupLiveness){clearInterval(cleanupLiveness);cleanupLiveness=undefined;}
       process.removeListener('SIGINT',onSignal);process.removeListener('SIGTERM',onSignal);
       if(process.exitCode===undefined)process.exitCode=0;
     })().catch(error=>{closing=null;process.exitCode=1;throw error;});
@@ -812,7 +830,7 @@ async function main(args) {
     await writeJson(options.connectionFile,startup);
   }
   active();
-  process.stdout.write(JSON.stringify({...startup,mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
+  await writeResearchOutput(process.stdout,JSON.stringify({...startup,mode: 'RESEARCH_DOSSIER_WORKSPACE', directory: options.directory,
     url: app.url, providers: Object.keys(providers), openalexConfigured:openalexWorkspace !== null,
     crossrefConfigured:crossrefSource !== null, documentSourceConfigured:documentSource !== null,
     documentWorkspaceId:documentSource?.workspaceId ?? null,clinicalTrialsConfigured:true,
@@ -821,7 +839,9 @@ async function main(args) {
   } catch(error) {
     await owners.preserve(error);
     process.exitCode=1;
-    if(typeof error?.close!=='function'){
+    if(owners.hasPending())retainCleanup();
+    else{
+      if(cleanupLiveness){clearInterval(cleanupLiveness);cleanupLiveness=undefined;}
       process.removeListener('SIGINT',onSignal);process.removeListener('SIGTERM',onSignal);
     }
     throw error;
@@ -829,6 +849,7 @@ async function main(args) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main(process.argv.slice(2)).catch(error => {
-    process.stderr.write(JSON.stringify({error: safeCode(error)}) + '\n'); process.exitCode = 1;
+    process.exitCode = 1;
+    void writeResearchOutput(process.stderr,JSON.stringify({error: safeCode(error)}) + '\n').catch(()=>{});
   });
 }

@@ -342,7 +342,7 @@ Browser working forms are saved separately from immutable requests and native re
 
 **History** shows the retained exact requests, native results and interrupted actions. Resume keeps the original request. Explicit replay creates a separate local attempt and submits the original native input again. The source publication and native buyer intent remain identifiable across later work.
 
-Stop closes admission to the Commerce controller and drains accepted native work, including whole HTTP downloads and loopback dossier receiving. It then attempts every original host owner and listener. A failed close retains that owner for retry, preserves the first failure and reports a nonzero CLI status. Repeating Stop retries unfinished owners.
+Stop closes admission to the Commerce controller and drains accepted native work, including whole HTTP downloads and loopback dossier receiving. It then attempts every original host owner and listener. A failed close retains that owner for retry, preserves the first failure and reports a nonzero CLI status. The CLI remains alive while cleanup is incomplete, including when its listener has already closed. Repeating Stop retries unfinished owners. Startup output is awaited inside that same ownership boundary so a broken output pipe also closes the original application.
 
 Keep the complete original private Research workspace, merchant checkout/outbox and Buyer workspace with their existing backup and recovery workflows. Publication archives, source handovers, immutable request/result directories and received dossiers are complete product artifacts.
 
