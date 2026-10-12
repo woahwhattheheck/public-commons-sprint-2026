@@ -380,7 +380,8 @@
     "sdmx": "stellar/scf-starforge-20261009/sf30-seller-sdk/sdmx/cli.mjs",
     "dataset-feeds": "stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/cli.mjs",
     "atlas": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
-    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs"
+    "atlas-workspace": "stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-cli.mjs",
+    "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs"
   },
   "exports": {
     "./seller/openalex": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/openalex/merchant.mjs",
@@ -870,7 +871,10 @@
     "./buyer/feeds": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/merchant.mjs",
     "./catalog/atlas/workspace": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace.mjs",
     "./catalog/atlas/transfer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/workspace-transfer.mjs",
-    "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs"
+    "./catalog/explorer": "./source/stellar/scf-starforge-20261009/sf61-bazaar-explorer/server.mjs",
+    "./seller/frictionless": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/source.mjs",
+    "./seller/frictionless/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs",
+    "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs"
   },
   "nativePeers": {
     "@x402/core": {

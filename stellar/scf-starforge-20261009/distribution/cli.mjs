@@ -23,6 +23,7 @@ const help = `Starforge merchant toolkit
   starforge runtime-transfer --help
 
 Native commands (arguments pass unchanged to the maintained implementation):
+  frictionless                              Capture table packages, review fields and publish original merchant editions
   sdmx                                      Retain SDMX sources, publish exact editions and receive original buyer pages
   buyer-collections                         Review, retain and operate original paid request collections
   buyer-collections-workspace               Review collections, original queue states and result exports in a private browser
