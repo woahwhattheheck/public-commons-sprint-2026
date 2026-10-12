@@ -12,6 +12,14 @@ Run the existing console from the `oai-pmh` source directory:
 python3 cli.py --workspace /absolute/path/to/workspace serve
 ```
 
+An installed package opens the same console from **Applications → Repository metadata and migration**. For native migration commands, use:
+
+```bash
+starforge islandora --python /absolute/path/to/python --workspace /absolute/path/to/workspace state
+```
+
+`node islandora_cli.mjs` is the direct source entry point. Both launchers retain the selected Python environment and the original Node dataset engine; use `--help` for all native commands. The Workbench environment is selected separately when running a saved batch.
+
 Open the loopback URL printed by that command and select **Islandora**. Keep the console process running while a native operation is active. Browser and native commands operate on the same workspace, so finish or stop an active native operation before opening that workspace in another process.
 
 In **Projection**, select the reviewed source edition and create its complete dataset. The dataset must include the exact OAI `identifier`. Preserve repeated source values when projecting metadata; the migration crosswalk decides how each list belongs in the target.
