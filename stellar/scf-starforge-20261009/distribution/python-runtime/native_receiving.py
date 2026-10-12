@@ -1117,7 +1117,7 @@ def use_customer(journey, name, installed, selection, customer, *, build=False, 
 
 
 def allocated_tree(directory):
-    root = absolute(directory)
+    root = absolute(os.fspath(directory))
     need(root.is_dir() and not root.is_symlink(), "RECEIVING_ALLOCATION_ROOT_REQUIRED")
     pending, seen = [root], set()
     total, logical, regular, links, special, entries = 0, 0, 0, 0, 0, 0
@@ -1228,8 +1228,12 @@ def receiving_capacity(journey, name, candidate, selection, *, installed=None):
             "cohort": {"wheel_bytes": candidate["wheelBytes"],
                        "unpacked_bytes": candidate["unpackedBytes"],
                        "allocated_wheel_entry_bytes": wheel_blocks,
+                       "allocated_python_entry_bytes": python_blocks,
+                       "block_bytes": block, "directories": len(parents),
                        "files": wheel_files, "python_files": python_files},
             "installation_allocation_bound": install_bound,
+            "installation_inode_bound": install_inodes,
+            "source_allocation_bound": source_bound, "source_inode_bound": source_inodes,
             "observed_primary_installation": observed_installation,
             "remaining_allocation_bound": remaining,
             "projected_allocated_bytes": projected, "projected_inodes": projected_inodes,

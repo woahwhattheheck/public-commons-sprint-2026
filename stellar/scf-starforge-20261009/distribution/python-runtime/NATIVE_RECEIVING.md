@@ -283,12 +283,35 @@ and writeback accounting. The 384 MiB process allowance is part of the 1,024 MiB
 peak, alongside all memory-backed files. The original storage declaration also
 includes 30,000 inodes plus a 128-inode reserve.
 
-After the real resolver completes, the driver records exact wheel bytes,
-expanded bytes, archive member allocation, source allocation and current
-workspace allocation before installing. It forecasts the remaining two source
+After the original cohort is resolved or received, the driver records exact
+wheel bytes, expanded bytes, archive member allocation, source allocation and
+current workspace allocation before installing. It forecasts the remaining two source
 and environment copies, compilation/bootstrap space, offline wheel copies and
 workbook output. Before offline expansion, the first installed environment's
 actual allocation replaces its initial bound.
+
+
+The retained observation exposes the arithmetic used for admission. Let `W`
+be the wheel archive bytes, `B` the sum of all expanded wheel members rounded
+individually to the receiving filesystem block size, `P` the corresponding
+rounded bytes of Python source members, and `D` the distinct parent-directory
+count across all expanded wheel members. The initial installation bound is `I = B + 2P + D × block_bytes + 64 MiB`.
+The remaining source-runtime bound `S` is the actual selected source allocation
+plus its retained source archive and 8 MiB for installation metadata. If `C` is
+the allocation already present, the initial projected total is
+`C + 2I + S + 2W + 16 MiB`. The two wheel copies cover the portable archive and
+the offline received cohort. Before the offline leg, the driver measures the
+completed primary environment and replaces `2I` with that observed allocation
+plus 64 MiB. File and inode counts are computed from the same complete wheel
+inventory; they retain separate bounds.
+
+For the declared 1,024 MiB tmpfs run, subtracting the 384 MiB process allowance
+leaves 640 MiB for all owned allocation, matching its 640 MiB storage declaration.
+The driver also requires the remaining writes plus the separate 64 MiB storage
+reserve to fit actual `f_bavail`, and checks the 30,000-inode declaration and
+128-inode reserve. Logical expanded size alone cannot establish this fit: small
+files, Python compilation allowances, source copies and the second environment
+are included in the retained calculation.
 
 Both checks read the current limits from the same original request. A larger
 actual cohort raises RECEIVING_CAPACITY_ADJUSTMENT_REQUIRED and retains the
