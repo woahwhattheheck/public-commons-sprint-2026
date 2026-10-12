@@ -1,5 +1,32 @@
 # Aviary complete delivery and original receiving continuation
 
+## Current saved-package continuation — 12 October 2026
+
+The actual receiving session 86320 completed all five table previews (phase 08) and the original native package (phase 09). It then found an ambiguous browser download locator: the ZIP link and its manifest both matched the substring selector. The full current runner selects the exact accessible link inside the download section and continues the same saved package.
+
+Continue from **Aviary_Receiving_Checkpoint_e18460ba2e189fae.zip**, **9,512,028 bytes**, SHA-256 `fe69313a1ab1928e9bcc1d4ffcee20016cace084fe8935de75f0a6ea988748e1`. The canonical saved file is `file_00000000ebc881f799609ab08e5a4b6d`, Library item `libfile_5445b5be94a4819196ab8860614d35e1`, version 0. The original browser and server processes drained, and the producer exited with code 1 after this complete checkpoint was saved.
+
+The original twenty-file application packet, ten functional application modules, source captures, provider workspaces, native nineteen-check result and original browser identity remain selected. The first immutable `browser-receiving/source-adoption.json` still records the preview-response/process repair from 68,597 to 75,517 bytes. The current receiving runner is **77,494 bytes / SHA-256 `6f6fa4e54bef86b1df205219f6ece517d578ea4b5ddb0a69d0705941226c9b6a`**.
+
+Set optional `PAYLOAD.receivingFollowup` to the complete `commons.aviary.browser-receiving-source-followup.v1` object supplied with this source. Its fields are `schema`, `previous`, `selected`, `history` and `reason`. The previous descriptor pins the full 75,517-byte preview/process runner; selected includes the complete new 77,494-byte body; history includes the actual 37,416-byte session-86320 history. The reason is `original-download-artifact-link-repair`. Preserve the existing `receivingRepair` object unchanged.
+
+The producer retains both full runner editions under `browser-receiving/source-history/` and the actual receiving history at `producer-source/history-86320/receiving-history.json`. It writes a separate immutable `browser-receiving/source-adoption-followup.json` before changing the selected entrypoint. That record binds the original input and identity, unchanged first adoption, both runner identities, actual saved-failure history and every currently retained step file, including the completed preview/package work.
+
+Initial source materialization and the first adoption accept the selected followup idempotently; they leave its current bytes in place. The followup checks the full preserved chain, selects the exact current runner and records the current execution source. Repeated continuation validates the same saved step files and resumes the original command.
+
+Use the existing whole-delivery entry and actual restored root/checkpoint flow. Carry this complete producer, guide and receivingFollowup object into its full input. Continue through the original download and independent package receiving, actual four-image review, complete customer package and all six canonical artifact saves. The producer's current source digest is recorded by its input and selected-source journal.
+
+The complete input already includes this followup. With the exact checkpoint available through its existing authorized file account, use the current selection:
+
+    python3 -B complete_aviary_delivery.py \
+      --input aviary-delivery-input.json \
+      --restore-checkpoint 86320-checkpoint-selection.json
+
+The selection retains the complete original successful save receipt. Set only its local `path` to the actual authorized downloaded copy; keep its file identities, byte length, digest and receipt unchanged. The producer also accepts its reviewed 90,602-byte predecessor when that is the original producer retained by a checkpoint.
+
+The earlier workflow and source history below remain part of the complete operating guide.
+
+
 This companion continues the existing Aviary project from the successfully saved
 31388 browser checkpoint and the original accepted native archives. It reopens
 the same USGS public workspace and saved provider operation, finishes the real
