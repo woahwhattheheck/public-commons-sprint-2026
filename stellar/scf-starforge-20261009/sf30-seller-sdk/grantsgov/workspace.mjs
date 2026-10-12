@@ -6,6 +6,7 @@ import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile,
   atomicJson, bytes, digest, identity, fault, object, absolute } from '../postgres/publisher/files.mjs';
 import { normalizeQuery, DATASET_COLUMNS, ATTRIBUTION } from './source.mjs';
 import { captureGrants, readCapture, exportCapture, importCapture, readCaptureExport } from './capture.mjs';
+import { readStoredCapture, retainCapturePacket, captureMerchantMember } from './capture-storage.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.grantsgov-workspace.v1';
 export const REVIEW_FIELDS = Object.freeze(['status','owner','fit','eligibilityAssessment',
@@ -153,7 +154,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
     return value;
   }
   async function editionSource(value) {
-    const source=await readJson(join(roots['edition-sources'],value.sourcePacketSha256+'.json'),256*MiB);
+    const {packet:source}=await readStoredCapture(roots['edition-sources'],value.sourcePacketSha256);
     if(source.sha256!==value.sourcePacketSha256)throw fault('EDITION_SOURCE_CHANGED');
     const capture=readCaptureExport(source);
     if(capture.captureId!==value.nativeCaptureId||capture.sourceSignature!==value.sourceSignature)
@@ -180,8 +181,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
     return source;
   }
   async function retainSource(packet) {
-    readCaptureExport(packet);
-    await immutable(join(roots['edition-sources'],packet.sha256+'.json'),bytes(packet));
+    await retainCapturePacket(roots['edition-sources'],packet);
     return packet;
   }
   async function capturePacket(id) {
@@ -570,12 +570,13 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         sorts:['title','closing_date','posting_date','agency_name'].filter(field=>fields.includes(field)),
         defaultLimit:input.defaultLimit??25,maxLimit:input.maxLimit??100,maxRows:1000000,maxBytes:256*MiB,maxCellChars:65536};
       await immutable(join(staged,'dataset.csv'),csv);await immutable(join(staged,'dataset.json'),bytes(config));
-      const captureBytes=bytes(await editionSource(selected)),editionBytes=bytes(selected);
-      await immutable(join(staged,'source','capture.json'),captureBytes);
+      const captureMember=await captureMerchantMember(roots['edition-sources'],selected.sourcePacketSha256),editionBytes=bytes(selected);
+      await immutable(join(staged,captureMember.path),captureMember.body);
       await immutable(join(staged,'source','edition.json'),editionBytes);
       const provenance={schema:WORKSPACE_SCHEMA+'.dataset-source',editionId:selected.id,editionSha256:selected.sha256,
         sourceSignature:selected.sourceSignature,coverage:selected.coverage,columns:fields,attribution:ATTRIBUTION,
-        sourceFiles:[{path:'source/capture.json',bytes:captureBytes.length,sha256:digest(captureBytes)},
+        captureStorage:captureMember.descriptor,
+        sourceFiles:[{path:captureMember.path,bytes:captureMember.body.length,sha256:digest(captureMember.body)},
           {path:'source/edition.json',bytes:editionBytes.length,sha256:digest(editionBytes)}]};
       await immutable(join(staged,'source.json'),bytes(provenance));
       const {loadDatasetConfig}=await import('../dataset-handler.mjs');
@@ -588,7 +589,7 @@ export async function openGrantsWorkspace({directory,transport,buyerWorkspaces=[
         await immutable(join(staged,'seller.json'),bytes(seller));
       }
       const files=[];
-      for(const name of ['dataset.csv','dataset.json','source.json','source/capture.json','source/edition.json',
+      for(const name of ['dataset.csv','dataset.json','source.json',captureMember.path,'source/edition.json',
         ...(input.payment!==undefined?['seller.json']:[])]){
         const data=await readPrivate(join(staged,name),256*MiB);files.push({path:name,bytes:data.length,sha256:digest(data)});
       }

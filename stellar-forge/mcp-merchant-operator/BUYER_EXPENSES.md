@@ -239,3 +239,7 @@ Capture the declared alias, inspect its source, then accept/reject the packet wi
 The existing `period_report`, `review` and `issued` views now include `credit_allocations`, `credit_totals`, `net_totals`, `credit_by_cost_center`, `net_by_cost_center` and `merchant_credit_outcomes`. Their immutable reports retain the original packet and source context. Reopen before changing a closed period. Use `export` kind `refund-packet` with the original packet ID for the unchanged customer source, or the existing accountant/project forms for a complete handoff. The maintained resumable downloader and trusted included-source receiver handle those original exports.
 
 No merchant mutation, new payment, signer or on-chain observation is initiated by the buyer-credit surface.
+
+### Completed original refund operation
+
+The original 7737/B41A order-18 redelivery completed through this customer interface in a separate development workspace at revision 19: two accepted original packets, one bound purchase, two exact return allocations and three issued editions. Native net progressed from 2500000 to 1500000 to 0 while the separate USD 2.50 purchase and USD 1.00 / USD 1.50 store credits stayed unchanged. Capture/final-close request recovery, host restart, original source/accountant exports and included-source receiving completed without a new payment or merchant call. The earlier operational 60000-unit buyer case was not changed. All 39 tools continue to use the same maintained contract; the added refund controls are part of the existing provider and SDK.

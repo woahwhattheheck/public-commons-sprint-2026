@@ -180,3 +180,11 @@ The accountant ZIP includes original purchase captures, each used refund manifes
 - `POST /api/credits/ID/coding`: the existing exact allocation shape with the current return `basis`.
 
 Each mutation uses the existing `{expected_revision, payload, request_id?}` envelope and original transactional request recovery. A received successor packet is imported through Credits; immutable packet sources are not rebound as ledger files. The existing customer MCP and SDK expose these same controls through host-declared refund aliases.
+
+### Original operation exercised
+
+The original Woo order-18 customer packets completed this workflow on 2026-10-12 in a separate development workspace. The USD 2.50 purchase and USD 1.00 / USD 1.50 APPLIED store credits remained distinct from the 2500000 native purchase units and 1000000 / 1500000 returned units. Three immutable issued editions retained net native amounts of 2500000, 1500000 and 0, with the same original purchase and both source packets.
+
+The maintained MCP/customer SDK recovered the same capture and final-close request, reopened the host, exported the accountant and original source packets, and received the complete included-source project at revision 19. A brief desktop/mobile pass read the same received case without a mutation. The first final-close response occurred during shared storage exhaustion; the same retained request completed after capacity returned. This was the original controlled development operation, with no new payment, merchant mutation or independent-adopter count.
+
+The fixed refund-reader file list also includes the maintained Woo basket contract imported by the current original buyer module. It keeps the original SF104/SF88 implementation available in complete receiving; no alternate refund or payment engine is bundled.
