@@ -119,3 +119,11 @@ The receiving component does not need an alternate producer store, a new acquisi
 - Pages contain at most 1,000 records; the reading view shows at most 50. CSV and NDJSON exports stream all selected rows.
 - A warehouse needs space for the original row bytes, exact cell text/kinds, SQLite structures, and optional indexes. Backups and exports need additional destination space.
 - API errors leave received committed data and prior customer selections intact. Correct the reported condition and explicitly resume or retry the intended operation.
+
+## Shared explicit delivery profiles
+
+The row engine also serves the Finage customer receiving entrypoint at `../../finage/receiving/receiver.py`. Databento remains the default: its public constants, original file bindings, warehouse schema, backup format, CLI and Python interfaces keep their existing meaning.
+
+Finage is selected explicitly by its entrypoint, by `profile="finage"` in the shared Python API, or by placing `--profile finage` before the shared CLI subcommand. The fixed profile binds Finage's original market manifest, `columns`, `assessment.sourceCoverage` and complete-export count. Finage has a separate warehouse application identity and result schemas. Both profiles use the same exact row receiving, decisions, queries, exports and SQLite recovery machinery.
+
+A portable Finage backup contains this self-contained engine and commands with its explicit profile in the bundled README. Databento backups retain their original default commands. Existing Databento deliveries and warehouses require no conversion.
