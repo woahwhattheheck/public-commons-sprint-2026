@@ -1,3 +1,4 @@
+import {validatePlanSources, validatePlanningState, newPlanReview} from './grant-plan-core.mjs';
 // MIT. Portable model for the existing SCF application and its local submission draft.
 export const SCHEMA = 'stellar-forge.grant-submission-draft.v1';
 export const ENVELOPE = 'stellar-forge.grant-submission-export.v1';
@@ -92,7 +93,8 @@ function validateFields(fields){
     // Form-source metadata remains editable until the operator completes it.
   }
 }
-function validateState(state,sources){
+function validateState(state,sources,planSources=[]){
+  validatePlanningState(state.planningReview,planSources);
   need(sources.some(x=>x.sha256===state.currentSource),'Retain the selected source edition.');
   list(state.answers,'Answers');need(JSON.stringify(state.answers.map(x=>x.id))===JSON.stringify(ids),'Retain all nine answer identities.');
   for(const answer of state.answers){
@@ -112,16 +114,17 @@ export function validateDraft(input){
   for(const key of ['id','title','folder'])string(input[key],'Draft '+key);
   need(input.id.length>0,'Retain the draft identity.');iso(input.createdAt,'Creation date');iso(input.updatedAt,'Update date');
   list(input.sources,'Source editions');need(input.sources.length>0,'Retain source editions.');unique(input.sources.map(x=>x.sha256),'source identities');input.sources.forEach(validateSource);
-  validateState(input,input.sources);list(input.versions,'Saved versions');unique(input.versions.map(x=>x.id),'version identities');
+  validatePlanSources(input.planSources||[]);
+  validateState(input,input.sources,input.planSources||[]);list(input.versions,'Saved versions');unique(input.versions.map(x=>x.id),'version identities');
   for(const version of input.versions){
     string(version.id,'Version identity');string(version.label,'Version label');iso(version.savedAt,'Version date');string(version.title,'Version title');
-    validateState(version,input.sources);
+    validateState(version,input.sources,input.planSources||[]);
   }
   need(measureText(JSON.stringify(input)).utf8Bytes<=MAX_BYTES,'This draft exceeds 16 MiB. The current editor remains open. Copy any oversized unsaved answer text, then reduce the unsaved addition before saving.');
   return input;
 }
 function stateOf(draft){
-  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews});
+  return clone({title:draft.title,currentSource:draft.currentSource,answers:draft.answers,form:draft.form,fields:draft.fields,reviews:draft.reviews,planningReview:draft.planningReview??null});
 }
 export function retainVersion(draft,label='Saved version',now=new Date().toISOString()){
   const result=clone(validateDraft(draft));result.updatedAt=now;
@@ -133,7 +136,7 @@ export function retainVersion(draft,label='Saved version',now=new Date().toISOSt
 export function restoreVersion(draft,id,now=new Date().toISOString()){
   const version=draft.versions.find(x=>x.id===id);need(version,'Select an existing saved version.');
   const result=retainVersion(draft,'Before restoring '+version.label,now);
-  Object.assign(result,clone({title:version.title,currentSource:version.currentSource,answers:version.answers,form:version.form,fields:version.fields,reviews:version.reviews}));
+  Object.assign(result,clone({title:version.title,currentSource:version.currentSource,answers:version.answers,form:version.form,fields:version.fields,reviews:version.reviews,planningReview:version.planningReview??null}));
   result.folder='SCF submission — '+result.title;return validateDraft(result);
 }
 export function compareSource(draft,source){
@@ -213,3 +216,17 @@ export function importFormMap(draft,map){
   result.form=clone(map.form);result.fields=clone(map.fields);return validateDraft(result);
 }
 export function exportFormMap(draft){validateDraft(draft);return {schema:'stellar-forge.grant-form-map.v1',form:clone(draft.form),fields:clone(draft.fields)};}
+
+/** Keep native plan bytes once per draft; versions retain the selected review. */
+export function receivePlanningSource(draft,source,now=new Date().toISOString()){
+  validatePlanSources([source]);
+  const result=retainVersion(draft,'Before receiving native planning edition',now);
+  result.planSources??=[];
+  const retained=result.planSources.find(x=>x.sha256===source.sha256);
+  if(retained){
+    need(retained.base64===source.base64&&JSON.stringify(retained.document)===JSON.stringify(source.document),
+      'Retain the original complete planning edition.');
+  }else result.planSources.push(clone(source));
+  result.planningReview=newPlanReview(retained||source);
+  return validateDraft(result);
+}

@@ -8,7 +8,7 @@ Use the complete current developer-site checkout. Keep the accepted nine-answer 
 
 The original customer projection receives the complete “9A. Current demonstration and operator journey” chapter: its opening and every accepted customer installation, including prepaid use, source monitoring, environmental and groundwater work, recovery, portable maps, referral delivery, recurring subscriptions, customer billing and accountant receiving. The economic, coastal and Datasette installations retain their dedicated source selectors. Both original OpenFn commissioning paragraphs also travel with the companion. Each selected H2 carries all its more detailed headings; fenced examples remain intact. Repeated composition updates the accepted sections in place while retaining the companion’s other chapters and six-package allocation. A new customer section within the same canonical chapter is received by the existing command. Meaningful correspondence labels remain in the public reader. Its source-index projection retains the selected public source identities and measured file metadata. Use that same maintained projection when receiving the current manuscript.
 
-The economic and coastal selections each use one actual merged product commit. Datasette uses two: its original source/publisher commit and its customer Analysis commit. Those commits belong to separate maintained contributions. After the first selection, the source index retains them for subsequent composition.
+The economic, coastal and merchant-financial selections each use one actual merged product commit. Datasette uses two: its original source/publisher commit and its customer Analysis commit. Those commits belong to separate maintained contributions. After the first selection, the source index retains them for subsequent composition.
 
 ## Receive a manuscript edition
 
@@ -20,12 +20,13 @@ node stellar-forge/developer-site/grant-compose.mjs \
   --manuscript /absolute/path/to/current-scf-application.md \
   --fred-commit <economic-product-commit> \
   --coops-commit <coastal-product-commit> \
+  --finance-commit <merchant-financial-product-commit> \
   --datasette-commit <datasette-customer-commit> \
   --datasette-publisher-commit <datasette-publisher-commit> \
   --source-pins-output /absolute/path/to/current-grant-source-pins.json
 ~~~
 
-Omit `--manuscript` when rendering edits already saved in the application and companion downloads. Omit a product's commit flags to retain its selection from the source index. The two Datasette commits are required together for a new selection.
+Omit `--manuscript` when rendering edits already saved in the application and companion downloads. Omit a product's commit flags to retain its selection from the source index. The two Datasette commits are required together for a new selection. The [financial operating guide](GRANT_FINANCIAL_OPERATIONS.md) describes the original settlement, invoices, collection plans and accountant receiving selected by `--finance-commit`; subsequent composition retains that exact product selection.
 
 Composition preserves all nine original answer headings and every unrelated companion section. Selected installation subsections are replaced once, and the existing tenth section receives the product entry. Source identifiers and hashes are refreshed from the complete result. The command reads its installed composer and customer module to refresh their source identities; when a manuscript is supplied, it also records the selected nine-answer front’s current size and hash. The guided product opening and submission navigation are then composed into the same edition. Repeating the same composition produces identical files.
 
@@ -44,7 +45,7 @@ Pass that object as `sourcePins` to the original `inspectGrantApplication` callb
 
 The result also reports `reviewerEntry` and `submissionWorkspace`. These describe the selected opening anchors and submission route; the submission descriptor binds the same application SHA-256 and Git blob that the editor reads. They do not add routes to `sourcePins`.
 
-The declared browser manifest includes the original routes and six complete component assets:
+The declared browser manifest includes the original routes and these complete component assets:
 
 | Route | Use |
 |---|---|
@@ -54,6 +55,9 @@ The declared browser manifest includes the original routes and six complete comp
 | `/grant-submission.css` | Original workspace layout |
 | `/grant-submission-core.mjs` | Complete source, answer, form and version model |
 | `/grant-submission-workspace.mjs` | Original draft-store editing and receiving controls |
+| `/grant-plan-core.mjs` | Retained native plan and complete editorial review |
+| `/grant-plan-source.mjs` | Original plan JSON and planning-ZIP receiving |
+| `/grant-plan-workspace.mjs` | Plan selection, preview and explicit draft application |
 
 The workspace uses the existing `/drafts.mjs` and the same application/source-index files. Its complete source travels under the original developer-site component in the grant-reviewer product.
 
@@ -69,7 +73,7 @@ node stellar-forge/developer-site/grant.mjs --port 8787
 
 The installed product opens through `starforge grant-application --port 8787`. Use the actual origin returned by that listener; its result also supplies the submission-workspace URL. An already-running original source server can serve the same declared routes; no second listener is needed.
 
-Start with **Explore the working product**. The [reviewer-opening guide](GRANT_ENTRY.md) covers the original film/report, Applications, quoted host command and complete purchase handover. Then choose **Prepare submission** to edit the nine answers, map the actual issuer fields and limits, save complete versions and receive a later source edition. The [submission guide](GRANT_SUBMISSION.md) covers exact copy counts, complete draft export/reopen, source comparisons and preservation of manual edits.
+Start with **Explore the working product**. The [reviewer-opening guide](GRANT_ENTRY.md) covers the original film/report, Applications, quoted host command and complete purchase handover. Then choose **Prepare submission** to edit the nine answers, map the actual issuer fields and limits, save complete versions and receive a later source edition. The [submission guide](GRANT_SUBMISSION.md) covers exact copy counts, complete draft export/reopen, source comparisons and preservation of manual edits. Its **Planning edition** panel receives the complete original SF47 plan JSON or planning ZIP, retains its native revisions and calculation, prepares the selected budget/roadmap text and applies that reviewed text to the same saved submission draft. The original SF47 model remains the calculation source.
 
 The source publisher applies the complete selected files to the existing Site project and keeps its current audience. The manuscript owner supplies accepted content, the cumulative writer supplies the current public source projection, and the same-account publisher supplies the actual saved version and deployment result.
 
