@@ -48,6 +48,16 @@ SOURCE_FILES = [
     PREFIX + "examples/analysis_lineage_native.py",
     PREFIX + "examples/analysis_lineage_browser.mjs",
     PREFIX + "examples/analysis_lineage_collector.mjs",
+    PREFIX + "examples/analysis_lineage_mcp.mjs",
+    "stellar-forge/mcp-paid-agent/native-analysis.mjs",
+    "stellar-forge/mcp-paid-agent/native-analysis-schema.mjs",
+    "stellar-forge/mcp-paid-agent/native-analysis-lineage.mjs",
+    "stellar-forge/mcp-paid-agent/native-analysis-lineage-schema.mjs",
+    "stellar-forge/mcp-paid-agent/native-analysis-lineage-download.mjs",
+    "stellar-forge/mcp-paid-agent/native-file.mjs",
+    "stellar-forge/mcp-paid-agent/serve.mjs",
+    "stellar-forge/mcp-merchant-operator/retained-download.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs",
     *["stellar/scf-starforge-20261009/sf30-seller-sdk/openlineage-workspace/" + name
       for name in ("server.mjs", "producer.mjs", "client.mjs", "store.mjs", "model.mjs")],
 ]
