@@ -2,6 +2,8 @@
 import { createHash } from 'node:crypto';
 import { need, object, parseJson } from '../node/store.mjs';
 import {SOURCE_BUNDLE_SCHEMA,projectSourceBundle} from './source-bundles.mjs';
+import {RIS_EDITION_SCHEMA} from './ris-source/constants.mjs';
+import {projectRisEdition} from './ris-source/review.mjs';
 
 export const SCHEMA = 'sf88-research-results-v1';
 export const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -9,6 +11,10 @@ const string = value => typeof value === 'string' ? value : '';
 const display = value => typeof value === 'string' ? value : JSON.stringify(value, null, 2);
 
 export function canonicalSource(item, fallback) {
+  if(item.provider==='ris-document'){
+    const key=item.metadata?.ris?.identityKey;
+    need(typeof key==='string'&&(/^[a-z]+:/.test(key)),'RIS_SOURCE_IDENTITY_REQUIRED');return key;
+  }
   let doi = string(item.doi).trim().replace(/^https?:\/\/(?:dx\.)?doi\.org\//i, '').replace(/^doi:\s*/i, '').toLowerCase();
   if (doi) return 'doi:' + doi;
   if (string(item.url)) {
@@ -50,7 +56,12 @@ function item(row, index, provider) {
 export function normalizeResponse(raw, provider = 'research') {
   // The original fatal UTF-8 parser omits one leading BOM without changing the retained input.
   const originalResponse = parseJson(typeof raw === 'string' ? Buffer.from(raw, 'utf8') : raw);
-  const response = originalResponse?.schema===SOURCE_BUNDLE_SCHEMA ? projectSourceBundle(originalResponse) : originalResponse;
+  const response = originalResponse?.schema===SOURCE_BUNDLE_SCHEMA ? projectSourceBundle(originalResponse) :
+    originalResponse?.schema===RIS_EDITION_SCHEMA ? projectRisEdition(raw) : originalResponse;
+  need((String(provider).toLowerCase()!=='ris-document'&&originalResponse?.provider!=='ris-document')||
+    originalResponse?.schema===RIS_EDITION_SCHEMA,'RIS_REVIEWED_EDITION_REQUIRED');
+  need(originalResponse?.schema!==RIS_EDITION_SCHEMA||String(provider).toLowerCase()==='ris-document',
+    'RIS_ORIGINAL_PROVIDER_REQUIRED');
   need(object(response), 'RESEARCH_RESPONSE_OBJECT_REQUIRED');
   provider = String(provider).toLowerCase();
   // Valyu output is opened through its maintained entitlement-aware edition reader.
