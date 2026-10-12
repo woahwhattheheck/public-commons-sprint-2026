@@ -2,7 +2,8 @@
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import fs from 'node:fs';
-import {readFile,mkdir,realpath} from 'node:fs/promises';
+import {readFile,mkdir,realpath,open} from 'node:fs/promises';
+import {spawn} from 'node:child_process';
 import {fileURLToPath,pathToFileURL} from 'node:url';
 import {createHash,createHmac} from 'node:crypto';
 import {createRequire} from 'node:module';
@@ -11,7 +12,7 @@ import {CommissioningWorkspace} from '../workspace.mjs';
 import {createWorkspaceServer} from '../server.mjs';
 import {createHandover,inspectHandover} from '../packaging.mjs';
 import * as engine from '../native/index.mjs';
-import {receivingLease} from '../native/lease.mjs';
+import {receivingLease,inheritReceiving} from '../native/lease.mjs';
 import {check,readJson,saveJson,fileIdentity,verifyManifest,inventory,objectDigest,digest,scrub,safeRelative,durable} from '../native/files.mjs';
 import {normalizeConnection,UPSTREAM} from '../native/contract.mjs';
 import {verifyExample,RECEIVING_SCHEMA} from './prepare.mjs';
@@ -166,7 +167,7 @@ async function writeDraftFile(file,draftId,useBrowser){
    const manifest=await workspace.draftManifest(),old=manifest.files.find(x=>x.path===selected.path);
    let result;
    if(useBrowser){
-    await uiReady('draft');await page.waitForFunction(id=>document.querySelector('#draft-title')?.textContent.includes(id),draftId);
+    await uiReady('draft');await page.waitForFunction(id=>document.querySelector('#draft-title')?.textContent.includes(id.slice(0,12)),draftId);
     if(old)await page.locator('#draft-files').getByRole('button',{name:selected.path,exact:true}).click();
     else{await page.locator('#new-file').click();await page.locator('#editor-path').fill(selected.path);}
     await page.locator('#editor-content').fill(file.content);
@@ -200,12 +201,124 @@ async function queryResult(op,expected,candidate){
 async function screen(name,width=1440){
  await page.setViewportSize({width,height:960});const file=path.join(output,name+'.png');await page.screenshot({path:file,fullPage:true});return {path:file,...await fileIdentity(file)};
 }
+async function extractHandover(handover,destination){
+ const stdout=await open(path.join(output,'handover-extraction.stdout.log'),'a',0o600);
+ const stderr=await open(path.join(output,'handover-extraction.stderr.log'),'a',0o600);
+ const command=['-I','-B',path.join(HERE,'handover.py'),'--app',APP,
+  '--application-manifest-sha256',input.applicationSource.manifestSha256,
+  '--archive',handover.archive.path,'--archive-sha256',handover.archive.sha256,
+  '--archive-bytes',String(handover.archive.bytes),'--destination',destination,
+  '--operation-id',input.operationId,'--input-sha256',inputSha256];
+ let child=null,completed=null;
+ const interrupt=()=>{if(child&&child.exitCode===null&&child.signalCode===null)child.kill('SIGTERM');};
+ try{
+  child=spawn(input.connection.runtime.python,command,{...inheritReceiving(['ignore',stdout.fd,stderr.fd]),shell:false});
+  completed=new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',(code,signal)=>resolve({code,signal}));});
+  process.on('SIGTERM',interrupt);process.on('SIGINT',interrupt);
+  const exit=await completed;
+  await stdout.sync();await stderr.sync();
+  check(exit.code===0,'LIGHTDASH_HANDOVER_EXTRACTION','The original create-only handover extraction did not complete; resume this same receiving input.',{exit});
+  return await readJson(path.join(destination,'extraction.json'));
+ }finally{
+  process.off('SIGTERM',interrupt);process.off('SIGINT',interrupt);
+  if(child&&child.exitCode===null&&child.signalCode===null){interrupt();if(completed)await completed.catch(()=>{});}
+  await stdout.close();await stderr.close();
+ }
+}
+async function receiveDetachedHandover(handover,beforeClose,targetQueryId,chromium){
+ const destination=path.join(output,'received-handover'),receiptFile=path.join(destination,'extraction.json'),openedFile=path.join(destination,'open-intent.json');
+ const selection={operationId:input.operationId,inputSha256,handoverId:handover.id,archive:handover.archive,workspaceId:beforeClose.workspaceId,applicationSourceSha256:input.applicationSource.manifestSha256};
+ let opened=await readJson(openedFile,{optional:true}),extraction;
+ if(!opened){
+  extraction=await extractHandover(handover,destination);
+  opened={schema:'lightdash-commissioning.handover-open.v1',selection,extraction:{path:receiptFile,...await fileIdentity(receiptFile)}};
+  await saveJson(openedFile,opened,{createOnly:true});
+ }else{
+  check(same(opened.selection,selection)&&opened.extraction.path===receiptFile,'LIGHTDASH_HANDOVER_RECEIVING','The retained receiving copy belongs to another original archive.');
+  const actual=await fileIdentity(receiptFile);check(actual.bytes===opened.extraction.bytes&&actual.sha256===opened.extraction.sha256,'LIGHTDASH_HANDOVER_RECEIVING','Original complete extraction receipt changed.');
+  extraction=await readJson(receiptFile);
+ }
+ check(extraction.state==='COMPLETE'&&extraction.operationId===input.operationId&&extraction.inputSha256===inputSha256&&extraction.handoverId===handover.id&&extraction.workspaceId===beforeClose.workspaceId&&same(extraction.archive,handover.archive),'LIGHTDASH_HANDOVER_RECEIVING','The actual complete extracted archive does not match this original handover.');
+ const receivedRoot=path.join(destination,'package'),receivedApp=path.join(receivedRoot,'app'),receivedWorkspace=path.join(receivedRoot,'workspace');
+ check(extraction.packageDirectory===receivedRoot&&extraction.applicationDirectory===receivedApp&&extraction.workspaceDirectory===receivedWorkspace,'LIGHTDASH_HANDOVER_RECEIVING','The original receiving placement changed.');
+ const actualManifest=await fileIdentity(extraction.manifest.path);
+ check(extraction.manifest.path===path.join(receivedRoot,'manifest.json')&&same(actualManifest,{bytes:extraction.manifest.bytes,sha256:extraction.manifest.sha256}),'LIGHTDASH_HANDOVER_RECEIVING','The original archive manifest changed after extraction.');
+ const manifest=await readJson(extraction.manifest.path);
+ check(manifest.handoverId===handover.id&&manifest.workspaceId===beforeClose.workspaceId&&manifest.includeOperatorPrivate===false&&manifest.applicationSourceManifest.sha256===input.applicationSource.manifestSha256,'LIGHTDASH_HANDOVER_RECEIVING','The detached copy changed its original complete selection.');
+ // SQLite may acquire its original WAL and local inspection history after open-intent.
+ // Every included immutable member still has to match the original archive bytes.
+ for(const member of manifest.files){
+  const filename=path.join(receivedRoot,safeRelative(member.path));
+  if(member.path==='workspace/commissioning.sqlite')continue;
+  const actual=await fileIdentity(filename);
+  check(actual.bytes===member.bytes&&actual.sha256===member.sha256&&!!(fs.lstatSync(filename).mode&0o111)===!!member.executable,'LIGHTDASH_HANDOVER_RECEIVING','An included source/content member changed.',{path:member.path});
+ }
+ await verifyManifest({directory:receivedApp,manifestFile:path.join(receivedApp,'source-manifest.json'),manifestSha256:input.applicationSource.manifestSha256});
+ const snapshot=await readJson(path.join(receivedRoot,'workspace.json'));
+ check(snapshot.schema==='lightdash.commissioning-handover.v1'&&snapshot.metadata.id===beforeClose.workspaceId&&snapshot.metadata.revision===manifest.workspaceRevision,'LIGHTDASH_HANDOVER_RECEIVING','The complete source workspace selection differs.');
+ const receivedModule=await import(pathToFileURL(path.join(receivedApp,'workspace.mjs')).href);
+ const receivedServer=await import(pathToFileURL(path.join(receivedApp,'server.mjs')).href);
+ const receivedEngine=await import(pathToFileURL(path.join(receivedApp,'native/index.mjs')).href);
+ let received=null,localService=null,localBrowser=null,localPage=null;
+ try{
+  received=await receivedModule.CommissioningWorkspace.open(receivedWorkspace,{create:false,engine:receivedEngine});
+  let current=await received.state();
+  check(current.metadata.id===beforeClose.workspaceId&&same(current.metadata.connection,{})&&current.metadata.receiving?.connectionDetached===true&&current.metadata.receiving.originWorkspaceId===beforeClose.workspaceId&&current.metadata.receiving.originRevision===manifest.workspaceRevision&&current.metadata.revision>=manifest.workspaceRevision+1,'LIGHTDASH_HANDOVER_RECEIVING','The receiving SQLite did not reopen with its original identity and detached private connection.');
+  const originalMetadata={...snapshot.metadata},receivedMetadata={...current.metadata};for(const name of ['revision','connection','receiving']){delete originalMetadata[name];delete receivedMetadata[name];}
+  check(same(originalMetadata,receivedMetadata),'LIGHTDASH_HANDOVER_RECEIVING','The receiving source selection or original workspace metadata changed.');
+  const order=rows=>[...rows].sort((a,b)=>a.id.localeCompare(b.id));
+  check(same(current.operations.map(o=>o.id).sort(),beforeClose.operationIds)&&current.operations.every(o=>o.status==='SUCCEEDED')&&same(order(current.reviews),order(snapshot.reviews)),'LIGHTDASH_HANDOVER_RECEIVING','The receiving copy lost original reviews or terminal operation identities.');
+  const reopenedSnapshot=await received.exportSnapshot();
+  check(same(order(reopenedSnapshot.editions),order(snapshot.editions))&&same(order(reopenedSnapshot.drafts),order(snapshot.drafts)),'LIGHTDASH_HANDOVER_RECEIVING','Complete original editions or SQLite draft overlays did not survive the handover.');
+  for(const edition of current.editions)await verifyManifest(await received.nativeEdition(edition.id));
+  const nativeProof=[];
+  for(const original of snapshot.operations){
+   const retained=received.operation(original.id),clean=value=>{const copy={...value};delete copy.updatedAt;delete copy.inspection;return copy;};
+   check(same(clean(retained),clean(original)),'LIGHTDASH_HANDOVER_RECEIVING','An original native result, input or request identity changed.',{operationId:original.id});
+   const absent=path.join(receivedWorkspace,'operations',original.id,'native','plan.json');
+   check(!fs.existsSync(absent),'LIGHTDASH_HANDOVER_RECEIVING','The default receiving copy unexpectedly includes an operator-private native dispatch journal.');
+   nativeProof.push({id:original.id,requestSha256:original.requestSha256,state:retained.status,nativeResultSha256:objectDigest(retained.nativeResult)});
+   for(const content of await received.contentExports(original.id)){
+    check(!content.error,'LIGHTDASH_HANDOVER_RECEIVING','A complete included native content export did not reopen.',{operationId:original.id,error:content.error});
+    await verifyManifest(content);
+   }
+  }
+  const prior=received.operation(targetQueryId),replayed=await received.execute(targetQueryId);
+  check(replayed.replayed&&same(replayed.operation.nativeResult,prior.nativeResult)&&replayed.operation.status==='SUCCEEDED','LIGHTDASH_HANDOVER_RECEIVING','The detached recipient did not reopen its exact original completed query.');
+  let inspected=prior;
+  if(prior.inspection?.code!=='ORIGINAL_NATIVE_JOURNAL_UNAVAILABLE')inspected=(await received.execute(targetQueryId,{inspect:true})).operation;
+  check(inspected.status==='SUCCEEDED'&&same(inspected.nativeResult,prior.nativeResult)&&inspected.requestSha256===prior.requestSha256&&inspected.inspection?.available===false&&inspected.inspection?.code==='ORIGINAL_NATIVE_JOURNAL_UNAVAILABLE','LIGHTDASH_HANDOVER_RECEIVING','Historical Inspect did not retain its original terminal result without private native journals.');
+  current=await received.state();
+  check(same(current.metadata.connection,{})&&current.metadata.receiving.connectionDetached===true&&!fs.existsSync(path.join(receivedWorkspace,'native-state'))&&current.pendingOperationIds.length===0,'LIGHTDASH_HANDOVER_RECEIVING','The detached receiving leg acquired a native connection or dispatched a provider operation.');
+  localService=await receivedServer.createWorkspaceServer({workspace:received,port:0});
+  localBrowser=await chromium.launch({headless:true,executablePath:input.browser.executable,args:['--no-sandbox','--disable-dev-shm-usage']});
+  localPage=await localBrowser.newPage({viewport:{width:1440,height:960}});
+  await localPage.goto(localService.url,{waitUntil:'networkidle'});
+  await localPage.waitForFunction(()=>document.querySelector('#workspace-revision')?.textContent.startsWith('Revision '));
+  await localPage.locator('[data-view="operations"]').click();
+  const http=await localPage.evaluate(async()=>{const response=await fetch('/api/state');if(!response.ok)throw Error('Original receiving state read failed');return response.json();});
+  check(http.metadata.id===beforeClose.workspaceId&&http.metadata.receiving.connectionDetached&&same(http.operations.map(o=>o.id).sort(),beforeClose.operationIds),'LIGHTDASH_HANDOVER_RECEIVING','The included application did not display the original detached receiving workspace.');
+  const screenPath=path.join(output,'received-handover-desktop.png');await localPage.screenshot({path:screenPath,fullPage:true});
+  return {state:'COMPLETE',handoverId:handover.id,extraction:opened.extraction,archive:handover.archive,applicationDirectory:receivedApp,workspaceDirectory:receivedWorkspace,workspaceId:beforeClose.workspaceId,originRevision:manifest.workspaceRevision,receivingRevision:http.metadata.revision,connectionDetached:true,originalEditionIds:current.editions.map(e=>e.id),originalReviewIds:current.reviews.map(r=>r.id),nativeResults:nativeProof,queryUuid:prior.nativeResult.native.queryOutputs.at(-1).queryUuid,historicalInspection:inspected.inspection,providerDispatch:false,screenshot:{path:screenPath,...await fileIdentity(screenPath)}};
+ }finally{
+  const errors=[];
+  if(received?.inflight.size)await Promise.allSettled([...received.inflight.values()]);
+  if(localPage)try{await localPage.close();}catch(error){errors.push(error);}
+  if(localBrowser)try{await localBrowser.close();}catch(error){errors.push(error);}
+  if(localService)try{await localService.close();}catch(error){errors.push(error);}
+  if(received)try{await received.close();}catch(error){errors.push(error);}
+  if(errors.length)throw new AggregateError(errors,'The included application receiving resources did not all close cleanly.');
+ }
+}
+
 async function closeWorkspace(){
+ const errors=[];
  if(workspace?.inflight?.size)await Promise.allSettled([...workspace.inflight.values()]);
- if(page){await page.close();page=null;}
- if(browser){await browser.close();browser=null;}
- if(service){await service.close();service=null;}
- if(workspace){await workspace.close();workspace=null;}
+ if(page)try{await page.close();page=null;}catch(error){errors.push(error);}
+ if(browser)try{await browser.close();browser=null;}catch(error){errors.push(error);}
+ if(service)try{await service.close();service=null;}catch(error){errors.push(error);}
+ if(workspace)try{await workspace.close();workspace=null;}catch(error){errors.push(error);}
+ if(errors.length)throw new AggregateError(errors,'The original receiving resources did not all close cleanly.');
 }
 let final=null,failure=null;
 try{
@@ -321,7 +434,12 @@ try{
   const download=await fetch(service.url+'/api/handover?'+new URLSearchParams({id:handoverId,download:'true'}));check(download.ok,'LIGHTDASH_HANDOVER_HTTP','Original browser handover download is unavailable.');
   const deliveredBytes=Buffer.from(await download.arrayBuffer());check(deliveredBytes.length===handover.archive.bytes&&digest(deliveredBytes)===handover.archive.sha256,'LIGHTDASH_HANDOVER_HTTP','Browser did not deliver the exact whole handover.');
   const reopenedScreen=await screen('reopened-handover-desktop');
-  final={schema:'lightdash-commissioning.receiving-result.v1',operationId:input.operationId,inputSha256,state:'SUCCEEDED',startedAt:state.startedAt,completedAt:now(),upstream:UPSTREAM,applicationSource:input.applicationSource,workspaceDirectory,workspaceId:configured.workspaceId,source:{baseline,candidate,review,comparison,originalFixture:expected.source,sourceTransactions:expected.rows,sourceDateRange:[expected.minDate,expected.maxDate]},native:{operationIds,allStates:'SUCCEEDED',originalSourceProjectUuid:input.connection.projectUuid,candidatePreviewUuid:previewId,restorePreviewUuid:restoreId,previewsStopped:true,previewValues,targetValues,restoredValues,promotedChart,restoredChart},lostExecute:state.lostExecute,reopen:beforeClose,handover,screenshots:[desktop,mobile,reopenedScreen],claims:{usesOriginalDbtAndLightdash:true,replacementQueryEngine:false,warehouseRowsReadFromNativeQuery:true,fullDatabaseBackup:false,contentRestore:'Original native core-content upsert into a newly created, owned empty preview; source/target identities retained.',customerAcceptance:false}};
+  await closeWorkspace();
+  const detachedHandover=await stage('detached-handover-receiving',{
+   selection:async()=>({handoverId,archive:handover.archive,workspaceId:beforeClose.workspaceId,targetQueryId:targetQuery.id}),
+   run:async selected=>{check(same(selected,{handoverId,archive:handover.archive,workspaceId:beforeClose.workspaceId,targetQueryId:targetQuery.id}),'LIGHTDASH_HANDOVER_RECEIVING','The original recipient reopening input changed.');return receiveDetachedHandover(handover,beforeClose,targetQuery.id,chromium);}
+  });
+  final={schema:'lightdash-commissioning.receiving-result.v1',operationId:input.operationId,inputSha256,state:'SUCCEEDED',startedAt:state.startedAt,completedAt:now(),upstream:UPSTREAM,applicationSource:input.applicationSource,workspaceDirectory,workspaceId:configured.workspaceId,source:{baseline,candidate,review,comparison,originalFixture:expected.source,sourceTransactions:expected.rows,sourceDateRange:[expected.minDate,expected.maxDate]},native:{operationIds,allStates:'SUCCEEDED',originalSourceProjectUuid:input.connection.projectUuid,candidatePreviewUuid:previewId,restorePreviewUuid:restoreId,previewsStopped:true,previewValues,targetValues,restoredValues,promotedChart,restoredChart},lostExecute:state.lostExecute,reopen:beforeClose,handover,detachedHandover,screenshots:[desktop,mobile,reopenedScreen,detachedHandover.screenshot],claims:{usesOriginalDbtAndLightdash:true,replacementQueryEngine:false,warehouseRowsReadFromNativeQuery:true,fullDatabaseBackup:false,contentRestore:'Original native core-content upsert into a newly created, owned empty preview; source/target identities retained.',customerAcceptance:false}};
   await saveJson(resultFile,final);await event('RECEIVING_COMPLETE',{handoverSha256:handover.archive.sha256,nativeOperations:operationIds.length});
  }
 }catch(error){

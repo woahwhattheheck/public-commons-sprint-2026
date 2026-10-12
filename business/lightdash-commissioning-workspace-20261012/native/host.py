@@ -34,6 +34,17 @@ def opened_lock(p,create):
 def locked(fd):
     try:fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB);return False
     except BlockingIOError:return True
+def drain_owned_child(child,timeout):
+    """Keep inherited leases until this acquired process group has drained."""
+    if child is None:return None
+    if child.poll() is not None:return child.returncode
+    try:os.killpg(child.pid,signal.SIGTERM)
+    except ProcessLookupError:pass
+    try:return child.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        try:os.killpg(child.pid,signal.SIGKILL)
+        except ProcessLookupError:pass
+        return child.wait()
 def main():
     p=argparse.ArgumentParser()
     p.add_argument("mode",choices=["execute","inspect","status"])
@@ -73,25 +84,27 @@ def main():
         runner=pathlib.Path(__file__).with_name("runner.mjs")
         log=root/"host.log"
         with open(log,"ab",buffering=0) as output:
-            child=subprocess.Popen([node,str(runner),"--mode",a.mode,"--workspace",str(workspace),"--native",str(root)],stdin=subprocess.DEVNULL,stdout=output,stderr=output,env=env,pass_fds=inherited,start_new_session=True)
-            save(root/"host-process.json",{"schema":"lightdash-commissioning.process.v1","pid":child.pid,"hostPid":os.getpid(),"startedAt":time.time(),"operationId":op["operationId"],"digest":op["digest"],"leaseDevice":os.fstat(fd).st_dev,"leaseInode":os.fstat(fd).st_ino})
-            stopping=[False]
-            def stop(sig,_frame):
-                if stopping[0]:return
-                stopping[0]=True
-                try:os.killpg(child.pid,signal.SIGTERM)
-                except ProcessLookupError:pass
-            signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
-            while True:
-                try:code=child.wait(timeout=1);break
-                except subprocess.TimeoutExpired:
-                    if stopping[0]:
-                        try:code=child.wait(timeout=45);break
-                        except subprocess.TimeoutExpired:
-                            try:os.killpg(child.pid,signal.SIGKILL)
-                            except ProcessLookupError:pass
-                            code=child.wait();break
-            output.flush();os.fsync(output.fileno())
+            child=None
+            try:
+                child=subprocess.Popen([node,str(runner),"--mode",a.mode,"--workspace",str(workspace),"--native",str(root)],stdin=subprocess.DEVNULL,stdout=output,stderr=output,env=env,pass_fds=inherited,start_new_session=True)
+                stopping=[False]
+                def stop(sig,_frame):
+                    if stopping[0]:return
+                    stopping[0]=True
+                    try:os.killpg(child.pid,signal.SIGTERM)
+                    except ProcessLookupError:pass
+                signal.signal(signal.SIGTERM,stop);signal.signal(signal.SIGINT,stop)
+                save(root/"host-process.json",{"schema":"lightdash-commissioning.process.v1","pid":child.pid,"hostPid":os.getpid(),"startedAt":time.time(),"operationId":op["operationId"],"digest":op["digest"],"leaseDevice":os.fstat(fd).st_dev,"leaseInode":os.fstat(fd).st_ino})
+                while True:
+                    try:code=child.wait(timeout=1);break
+                    except subprocess.TimeoutExpired:
+                        if stopping[0]:
+                            code=drain_owned_child(child,45);break
+            finally:
+                # This includes a failed process receipt/fsync after Popen.
+                # The operation/config/receiving descriptors remain open here.
+                drain_owned_child(child,45)
+                output.flush();os.fsync(output.fileno())
         result=load(root/"result.json",True)
         if not result or result.get("state")=="RUNNING":
             result={**(result or {}),**base,"state":"INTERRUPTED","processExit":code,"kernelLeaseHeld":False,"recovery":{"sameOperation":True,"automaticWriteReplay":False,"message":"Inspect the retained native operation; no new command has been inferred."}}

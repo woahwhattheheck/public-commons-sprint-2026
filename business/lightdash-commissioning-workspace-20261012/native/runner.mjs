@@ -142,12 +142,24 @@ async function validateContinuation(){
  if(!op.input.resumeOf)return;
  const prior=await selectedOperation(workspace,op.input.resumeOf);validatePlan(prior.operation);
  const retained=await readJson(path.join(root,'continuation.json'),{optional:true});
- if(retained){check(retained.operationId===op.operationId&&retained.digest===op.digest&&retained.prior.operationId===prior.operation.operationId&&retained.prior.digest===prior.operation.digest,'LIGHTDASH_CONTINUATION','Original continuation binding changed.');return;}
+ if(retained)check(retained.operationId===op.operationId&&retained.digest===op.digest&&retained.prior.operationId===prior.operation.operationId&&retained.prior.digest===prior.operation.digest&&retained.prior.nativeDirectory===prior.nativeDirectory&&retained.prior.result?.path===path.join(prior.nativeDirectory,'result.json'),'LIGHTDASH_CONTINUATION','Original continuation binding changed.');
+ check(!nativeState?.dispatched||attempt,'LIGHTDASH_CONTINUATION','Retain the original dispatched attempt before continuing its native history.');
+ const dispatched=!!attempt?.phases.some(p=>p.key==='command'&&p.dispatchIntent);
+ if(dispatched){
+  check(retained,'LIGHTDASH_CONTINUATION','The dispatched continuation has lost its original reviewed predecessor receipt.');
+  return; // This operation now owns its own native recovery; never replay its predecessor.
+ }
  check(prior.operation.action===op.action&&prior.operation.connection.origin===op.connection.origin&&prior.operation.connection.projectUuid===op.connection.projectUuid&&prior.operation.connection.id===op.connection.id,'LIGHTDASH_CONTINUATION','The reviewed continuation selects a different original workflow.');
  check(prior.result&&['FAILED','INTERRUPTED','NEEDS_RECONCILIATION'].includes(prior.result.state),'LIGHTDASH_CONTINUATION','The prior native operation is not a retained incomplete operation.');
  const status=await hostStatus(prior.nativeDirectory);
- check(status.kernelLeaseHeld!==true&&status.state!=='RUNNING','LIGHTDASH_CONTINUATION_BUSY','The prior native command or its descendants still own their lease.');
- await saveJson(path.join(root,'continuation.json'),{schema:'lightdash-commissioning.continuation.v1',operationId:op.operationId,digest:op.digest,prior:{operationId:prior.operation.operationId,digest:prior.operation.digest,nativeDirectory:prior.nativeDirectory,result:{path:path.join(prior.nativeDirectory,'result.json'),...await fileIdentity(path.join(prior.nativeDirectory,'result.json'))}},basis:'Explicit newly reviewed operation; all prior command and result history retained.'},{createOnly:true});
+ check(status.operationId===prior.operation.operationId&&status.digest===prior.operation.digest&&status.kernelLeaseHeld!==true&&status.state!=='RUNNING','LIGHTDASH_CONTINUATION_BUSY','The prior native command or its descendants still own their lease, or its identity changed.');
+ check(['FAILED','INTERRUPTED','NEEDS_RECONCILIATION'].includes(status.state),'LIGHTDASH_CONTINUATION','The prior native operation has been reconciled since this continuation was reviewed.');
+ const currentResult={path:path.join(prior.nativeDirectory,'result.json'),...await fileIdentity(path.join(prior.nativeDirectory,'result.json'))};
+ if(retained){
+  check(retained.prior.result.bytes===currentResult.bytes&&retained.prior.result.sha256===currentResult.sha256,'LIGHTDASH_CONTINUATION_BASIS_CHANGED','The original prior result changed before this continuation dispatched. Inspect the retained prior operation and review its current result.');
+  return;
+ }
+ await saveJson(path.join(root,'continuation.json'),{schema:'lightdash-commissioning.continuation.v1',operationId:op.operationId,digest:op.digest,prior:{operationId:prior.operation.operationId,digest:prior.operation.digest,nativeDirectory:prior.nativeDirectory,result:currentResult},basis:'Explicit newly reviewed operation; all prior command and result history retained.'},{createOnly:true});
 }
 async function hostStatus(nativeDirectory){
  const child=spawn(op.connection.runtime.python.path,['-I','-B',path.join(HERE,'host.py'),'status','--workspace',workspace,'--native',nativeDirectory],{stdio:['ignore','pipe','pipe'],env});let text='';child.stdout.setEncoding('utf8');child.stdout.on('data',b=>{text+=b;});child.stderr.resume();
@@ -274,8 +286,10 @@ async function artifactInventory(contentExports){
  return {artifacts:rows,artifactManifest:{schema:'lightdash-commissioning.artifacts.v1',path:manifest,relativePath:'artifacts.json',...await fileIdentity(manifest)}};
 }
 async function execute(){
- await verifySources();await validateContinuation();
- if(active)await restoreAttempt();else await startAttempt();
+ await verifySources();
+ if(active)await restoreAttempt();
+ await validateContinuation();
+ if(!attempt)await startAttempt();
  if(mode==='inspect')return reconcile();
  const uncertain=attempt.phases.filter(p=>p.key==='command'&&p.dispatchIntent&&!p.exit&&!p.spawnError).at(-1);
  if(uncertain){const exit=await readJson(phasePath(uncertain.id,'.native-exit.json'),{optional:true});if(!exit)return reconcile();}

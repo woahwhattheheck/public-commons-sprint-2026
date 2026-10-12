@@ -124,6 +124,8 @@ Both execution and inspection require `operationDir` inside the owning `workspac
 
 Each action accepts an optional `resumeOf` naming a retained prior operation. This is an explicit reviewed continuation; it does not erase or rewrite the prior operation.
 
+Before the new operation's original command is dispatched, its saved continuation receipt must still match the prior result bytes and SHA256, the prior state must still be incomplete, and the prior kernel lease must be free. An intervening reconciliation of that prior operation requires review of the current result. Read-only preflight or local dependency preparation does not waive that check on reopen. Once the new operation has dispatched its own original command, recovery follows that command's own retained history.
+
 | Action | Selected input | Native behavior |
 | --- | --- | --- |
 | `inspect` | No action-specific fields | Original health, account and exact project observation. |
@@ -218,3 +220,8 @@ These are the actual paths reviewed at the pinned upstream commit:
 - [Run-chart](https://github.com/lightdash/lightdash/blob/91e610898395e6659841a321a0cee31cfcac8ae8/packages/cli/src/handlers/runChart.ts) and [accepted-query result polling](https://github.com/lightdash/lightdash/blob/91e610898395e6659841a321a0cee31cfcac8ae8/packages/cli/src/handlers/asyncQuery.ts)
 - [Project type detection](https://github.com/lightdash/lightdash/blob/91e610898395e6659841a321a0cee31cfcac8ae8/packages/cli/src/lightdash/projectType.ts)
 - [Deploy controller](https://github.com/lightdash/lightdash/blob/91e610898395e6659841a321a0cee31cfcac8ae8/packages/backend/src/controllers/v2/DeployController.ts) and [DeployService](https://github.com/lightdash/lightdash/blob/91e610898395e6659841a321a0cee31cfcac8ae8/packages/backend/src/services/DeployService.ts)
+
+
+### Receipt failures after process creation
+
+Both the original native host and whole receiving host keep their inherited leases while they drain an acquired child. Signal handling is installed immediately after process creation. If writing or syncing the process receipt fails, the host terminates and waits for that same owned process group before closing its descriptors. The retained original operation is then reconciled through its existing state; no second command is inferred from a missing process receipt.
