@@ -493,6 +493,41 @@
       ]
     ],
     [
+      "/source-table-guide.md",
+      [
+        "../SOURCE_TABLES.md",
+        "text/markdown; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-table-workspace.mjs",
+      [
+        "source-table-workspace.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-tables.css",
+      [
+        "source-tables.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-tables.html",
+      [
+        "source-tables.html",
+        "text/html; charset=utf-8"
+      ]
+    ],
+    [
+      "/source-tables.mjs",
+      [
+        "source-tables.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
       "/style.css",
       [
         "style.css",
