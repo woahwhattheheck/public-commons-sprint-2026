@@ -47,6 +47,7 @@ def main():
                     result = service.state()
                 elif args.command == "backup":
                     from bi_operator.archive import backup
+                    service.sql.prepare_backup()
                     result = backup(service.store, args.destination, getpass.getpass("Backup passphrase: "))
                 elif args.command == "example":
                     from bi_operator.example import load_example

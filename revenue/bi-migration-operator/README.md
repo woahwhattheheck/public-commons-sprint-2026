@@ -112,3 +112,10 @@ The original public-data source is attributed separately. The working example do
 ## Complete operating example
 
 See [DEMONSTRATION.md](DEMONSTRATION.md) for the supplied public native files, complete browser workflow, full-data correction and encrypted recovery. The Report Server runner and original job/result packages travel with the release. Use [examples/sandag/SOLICITATION_SCOPE.md](examples/sandag/SOLICITATION_SCOPE.md) for the source-grounded ARJIS delivery scope.
+
+
+## SQL Server operations
+
+The SQL Server workspace adds private connection/catalog inspection, typed and reviewed keyset queries, durable multi-page capture/cancellation/continuation, original native result receiving, model field mapping, full comparisons and portable workstream receiving. Original record histories and exact native job inputs remain together through conflict resolution and encrypted recovery.
+
+Start with [the complete SQL Server operating guide](tools/sql-server/GUIDE.md). The existing host additionally uses Node22.16+ and mssql12.7.4 for actual SQL Server reads. One existing driver installation is reused across immutable jobs; portable job/result packages support a separately equipped host. Password values remain in that selected host's environment.

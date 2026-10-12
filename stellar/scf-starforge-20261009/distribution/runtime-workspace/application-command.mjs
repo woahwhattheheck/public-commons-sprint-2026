@@ -16,10 +16,12 @@ import { n8nStartup } from './application-n8n.mjs';
 import { redisStartup } from './application-redis.mjs';
 import { openApiStartup } from './application-openapi.mjs';
 import { arcgisAgentStartup } from './application-arcgis.mjs';
+import { s3MerchantStartup } from './application-s3-merchant.mjs';
 import { jobCheckoutStartup } from './application-job-checkout.mjs';
 import { datasetBuyerStartup } from './application-dataset-buyer.mjs';
 import { pricingStartup } from './application-pricing.mjs';
 import { collectionsStartup } from './application-collections.mjs';
+import { baserowStartup } from './application-baserow.mjs';
 import { grantStartup } from './application-grant.mjs';
 import { fredStartup } from './application-fred.mjs';
 import { tenderlyStartup } from './application-tenderly.mjs';
@@ -445,6 +447,23 @@ export function observeApplicationOutput(request, directory, context = {}) {
       }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
+    if (request.command === 's3' && request.args?.[0] === 'workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.s3-workspace-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await s3MerchantStartup(request, directory, text, context);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url,
+          links: startup.links, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
+      return;
+    }
     if (['blockscout', 'tenderly-workspace', 'redis', 'arcgis-agent'].includes(request.command)) {
       const tenderly = request.command === 'tenderly-workspace', redis = request.command === 'redis',
         arcgis = request.command === 'arcgis-agent';
@@ -482,6 +501,22 @@ export function observeApplicationOutput(request, directory, context = {}) {
           });
         }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       }
+      return;
+    }
+    if (request.command === 'baserow-workspace') {
+      if (!text.startsWith('{"schema":"stellar-forge.baserow-authoring-startup.v1",')) return;
+      saving = saving.then(async () => {
+        if (seen) return;
+        const startup = await baserowStartup(request, text);
+        const url = startup && privateUrl(startup.url);
+        if (!url) return;
+        seen = true;
+        await saveJSON(join(directory, 'application-url.json'), {
+          schema: 'stellar-forge.application-url.v1', applicationId: request.applicationId,
+          operationId: directory.split('/').at(-1), command: request.command,
+          source: 'original-command-stdout', observedAt: now(), url, original: startup.original,
+        });
+      }).catch(error => { if (error.code !== 'EEXIST') saveError = error; });
       return;
     }
     if (request.command === 'buyer-collections-workspace') {
