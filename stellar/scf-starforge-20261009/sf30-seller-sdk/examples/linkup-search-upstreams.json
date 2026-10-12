@@ -1,0 +1,33 @@
+{
+  "schema": "stellar-forge.seller-upstreams.v1",
+  "bindings": {
+    "linkupSearch": {
+      "origin": "https://api.linkup.so",
+      "path": "/v1/search",
+      "method": "POST",
+      "query": [],
+      "requestHeaders": [],
+      "headerEnv": {"authorization": "LINKUP_AUTHORIZATION"},
+      "responseHeaders": [],
+      "responseMode": "json",
+      "timeoutMs": 60000,
+      "maxResponseBytes": 1048576,
+      "maxInFlight": 8,
+      "availability": {"failureThreshold": 3, "resetAfterMs": 30000, "maxResetAfterMs": 300000}
+    },
+    "linkupAnswer": {
+      "origin": "https://api.linkup.so",
+      "path": "/v1/search",
+      "method": "POST",
+      "query": [],
+      "requestHeaders": [],
+      "headerEnv": {"authorization": "LINKUP_AUTHORIZATION"},
+      "responseHeaders": [],
+      "responseMode": "json",
+      "timeoutMs": 60000,
+      "maxResponseBytes": 1048576,
+      "maxInFlight": 8,
+      "availability": {"failureThreshold": 3, "resetAfterMs": 30000, "maxResetAfterMs": 300000}
+    }
+  }
+}

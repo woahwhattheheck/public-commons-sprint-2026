@@ -33,6 +33,8 @@ const explain = {
   FLEET_RELEASE_OPERATIONS_INVALID: 'The original seller returned invalid operations links. Reopen its current managed instance.',
   WORKSPACE_STARTING: 'The workspace is starting its original merchant sessions. Refresh when startup completes.',
   FLEET_RELEASE_SOURCE_CHANGED: 'The original release source changed after staging. Restore the exact release or stage a new immutable release ID.',
+  FLEET_RELEASE_POSTGRES_REVIEW_INVALID: 'Import the original PostgreSQL fleet source again to retain its reviewed package manifest.',
+  POSTGRES_PACKAGE_CHANGED: 'The PostgreSQL package changed after review. Review it in the original workspace or Seller releases, download its current fleet source and register the new package selection.',
   FLEET_RELEASE_OUTCOME_UNKNOWN: 'The release operation response was lost. Inspect the current revision, candidate and process table before deciding whether another action is needed.',
   FLEET_RELEASE_REVISION_NOT_LINKED: 'Another control session selected a fleet outside this release plan. Use the original control history to restore a linked revision before managing these releases.',
   FLEET_RELEASE_ROLLBACK_NOT_LINKED: 'That original gateway revision has no retained release mapping. Choose a retained managed revision.',
@@ -245,7 +247,8 @@ const selectedTenant = () => releases?.tenants?.find(row => row.id === $('releas
 const selectedSlot = () => selectedTenant()?.slots.find(row => row.name === $('release-slot').value);
 const sourceName = kind => ({ OPENAPI_WORKSPACE: 'API workspace', OPENAPI_SELLER: 'API seller',
   PYTHON_APPLICATION: 'Python application', DUCKDB_PACKAGE: 'DuckDB data product', S3_OBJECT_PACKAGE: 'S3 objects',
-  JSONRPC_MERCHANT_PACKAGE: 'Stellar RPC', SQLITE_MERCHANT_PACKAGE: 'SQLite snapshot', MYSQL_MERCHANT_PACKAGE: 'MySQL / MariaDB' }[kind] ?? 'Seller source');
+  JSONRPC_MERCHANT_PACKAGE: 'Stellar RPC', SQLITE_MERCHANT_PACKAGE: 'SQLite snapshot', MYSQL_MERCHANT_PACKAGE: 'MySQL / MariaDB',
+  POSTGRES_MERCHANT_PACKAGE: 'PostgreSQL', CLICKHOUSE_MERCHANT_PACKAGE: 'ClickHouse' }[kind] ?? 'Seller source');
 function releaseReviewValid() {
   return Boolean(releaseReview && releaseReview.baseRevision === status?.revision && Date.parse(releaseReview.expiresAt) > Date.now());
 }

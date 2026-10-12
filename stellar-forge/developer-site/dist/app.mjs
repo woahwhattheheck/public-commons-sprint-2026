@@ -234,6 +234,14 @@ const components = [
     "kind": "seller",
     "description": "Import saved Woo product routes, prepare the original merchant and plugin, and complete buyer, settlement, review and download release.",
     "url": "/woo.html"
+  },
+  {
+    "id": "14",
+    "title": "OpenSearch workspace",
+    "code": "SEARCH / CAPTURE",
+    "kind": "seller",
+    "description": "Author named native searches, retain and compare result editions, and prepare the original merchant and customer client.",
+    "path": "sf30-seller-sdk/opensearch/workspace/README.md"
   }
 ];
 let filter='all';

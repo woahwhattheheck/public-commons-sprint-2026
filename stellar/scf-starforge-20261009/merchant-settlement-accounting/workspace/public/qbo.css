@@ -1,0 +1,85 @@
+/* MIT. QuickBooks uses the existing merchant workspace's restrained palette. */
+.qbo-layout main{max-width:1540px}
+.qbo-layout .sidebar>button{margin:16px 0 23px}
+.qbo-layout .sidebar .side-title{margin-top:0}
+.qbo-layout .sidebar input[type=search]{font-size:12px;margin-bottom:12px}
+.qbo-layout .sidebar #qbo-plan-more{font-size:11px;margin:12px 0}
+.qbo-layout .sidebar-foot{line-height:1.7}
+.qbo-prepare-panel>summary{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:19px 20px;cursor:pointer;font-size:15px;font-weight:650;list-style:none}
+.qbo-prepare-panel>summary:before{content:"+";font:20px/1 ui-monospace,monospace;font-weight:400}
+.qbo-prepare-panel[open]>summary:before{content:"−"}
+.qbo-prepare-panel>summary>span:first-of-type{margin-right:auto}
+.qbo-prepare-panel>summary .hint{font-weight:400;margin:0}
+.qbo-prepare-panel[open]>summary{border-bottom:1px solid var(--border)}
+.qbo-form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px 20px}
+.qbo-form-grid>.actions{align-self:end}
+.qbo-wide{grid-column:1/-1}
+.qbo-source-description{padding:12px 14px;background:var(--soft);border:1px solid var(--border);border-radius:3px;font-size:12px;overflow-wrap:anywhere}
+.qbo-source-description p+p{margin-top:5px}
+.qbo-section-heading{border-top:1px solid var(--border);background:var(--soft)}
+.qbo-mapping-table td:first-child{min-width:190px;max-width:300px}
+.qbo-mapping-table td{min-width:130px}
+.qbo-mapping-table input{font-size:12px;min-width:115px}
+.qbo-mapping-table td:first-child strong{display:block;font-size:12px}
+.qbo-mapping-table td .hint{font-size:10px;max-width:230px}
+.qbo-company-summary{border-top:1px solid var(--border);padding-top:13px;padding-bottom:13px;font-size:12px;overflow-wrap:anywhere}
+.qbo-company-summary p+p{margin-top:5px}
+.qbo-divider{border-top:1px solid var(--border)}
+.qbo-divider>summary{cursor:pointer;font-size:12px;font-weight:600}
+.qbo-divider>summary+.record-values{margin-top:17px}
+.qbo-spaced{margin-top:12px}
+.qbo-tabs{margin-bottom:18px;background:transparent;padding:0}
+.qbo-tabs button{font-size:12px}
+.qbo-record-layout{grid-template-columns:minmax(0,60%) minmax(0,1fr)}
+.qbo-numeric{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.qbo-record-layout td:first-child{min-width:145px;max-width:270px}
+.qbo-record-layout td:nth-child(2){min-width:125px}
+.qbo-record-layout td .inspect{font-size:11px}
+.qbo-record-layout .record-detail{background:#fafbfb}
+.qbo-json{font:11px/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;background:var(--soft);border:1px solid var(--border);padding:14px;margin:14px 0 0}
+.qbo-issues{background:var(--soft);font-size:12px;border-bottom:1px solid var(--border)}
+.qbo-issues h3{margin-bottom:8px}
+.qbo-issues ul{margin:0;padding-left:19px;display:grid;gap:6px}
+.qbo-issues pre{font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:300px;overflow:auto}
+.qbo-layout .metrics{grid-template-columns:repeat(auto-fit,minmax(125px,1fr))}
+.qbo-layout .metric strong{font-size:21px}
+.qbo-layout .metric .exact{font-size:19px}
+#qbo-line-detail{scroll-margin-top:18px}
+#qbo-line-detail h3+dl{margin-bottom:22px}
+#qbo-line-detail dd{white-space:pre-wrap}
+#qbo-response-downloads:empty,#qbo-request-downloads:empty{display:none}
+#qbo-comparison-rows td,#qbo-preview-rows td{max-width:340px;overflow-wrap:anywhere;font-size:11px}
+#qbo-response-history td{overflow-wrap:anywhere}
+#qbo-files .record-values{grid-template-columns:minmax(160px,35%) minmax(0,1fr);margin-top:0}
+.qbo-empty-row{text-align:center;padding:25px;color:var(--muted)}
+.qbo-check{display:flex;gap:8px;align-items:flex-start;font-weight:400}
+.qbo-check input{margin-top:3px}
+@media(max-width:1180px){.qbo-record-layout{grid-template-columns:1fr}.qbo-record-layout .records{border-right:0;border-bottom:1px solid var(--border)}.qbo-layout .heading .badge{max-width:130px}}
+@media(max-width:760px){.qbo-layout .sidebar>button{margin:0;grid-column:2;grid-row:2}.qbo-layout .sidebar #qbo-plan-search,.qbo-layout .sidebar #qbo-plan-more{grid-column:1/-1;grid-row:auto;margin:0}.qbo-layout .sidebar #qbo-plan-list{margin-top:5px}.qbo-form-grid{grid-template-columns:1fr;gap:16px}.qbo-wide{grid-column:auto}.qbo-prepare-panel>summary{padding:16px;gap:12px}.qbo-prepare-panel>summary .hint{display:none}.qbo-tabs{gap:20px}.qbo-tabs button{font-size:11px}.qbo-company-summary{padding:13px 15px}.qbo-layout .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}#qbo-files .record-values{grid-template-columns:1fr;gap:4px}#qbo-files dd{margin-bottom:13px}}
+
+.qbo-mapping-table td:first-child{min-width:48px;max-width:60px}.qbo-mapping-table td:nth-child(2){min-width:210px;max-width:310px}.qbo-mapping-table td input+input{margin-top:7px}.qbo-mapping-table td:last-child textarea{min-width:160px;font-size:12px}.qbo-mapping-table td input[type=checkbox]{min-width:16px}.qbo-mapping-table .qbo-row-amount{min-width:135px}.qbo-review-form{margin:14px 0 17px;max-width:700px}.qbo-review-form label{font-size:12px}.qbo-review-form textarea{font-size:12px}.qbo-inline-input-label{margin:7px 0 4px;font-size:10px;color:var(--muted);font-weight:500}.qbo-currency-label{text-transform:uppercase}#qbo-plan-preview-panel>details>summary{cursor:pointer;font-weight:600;font-size:12px}
+
+.qbo-company-loader>summary{cursor:pointer;font-size:12px;font-weight:600}.qbo-company-loader .hint{line-height:1.6}.qbo-company-loader input[type=file]{font-size:12px}.qbo-company-loader form{padding:0}.qbo-file-list{display:grid;gap:10px}.qbo-file-list p{margin:0;font-size:11px;overflow-wrap:anywhere}.qbo-file-list .actions{align-items:flex-start}.qbo-check input[type=checkbox]{width:auto;flex:0 0 auto}.qbo-cancelled{font-weight:600}.qbo-layout button:disabled{cursor:not-allowed;opacity:.5}#qbo-response-recovery-status{white-space:pre-wrap}#qbo-company-source-status{overflow-wrap:anywhere}#qbo-company-source-status details{margin-top:9px}#qbo-company-source-status summary{cursor:pointer}
+
+/* The connected-company and native operation views reuse the merchant shell. */
+.qbo-connection-panel .record-values{margin-top:0}
+.qbo-connection-panel summary,.qbo-native-attempts summary{cursor:pointer;font-size:11px}
+.qbo-connection-details{grid-template-columns:minmax(110px,22%) minmax(0,1fr)}
+.qbo-native-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:20px}
+.qbo-native-heading>div{min-width:0}
+.qbo-native-heading .badge{white-space:nowrap}
+.qbo-native-card{border:1px solid var(--border);background:var(--soft);padding:18px;border-radius:3px}
+.qbo-native-card .record-values{font-size:11px}
+.qbo-native-card .metrics{background:transparent;padding:0}
+.qbo-native-card .metric{background:var(--bg,#fff)}
+.qbo-native-error{border-left:3px solid currentColor;padding:10px 13px;background:var(--bg,#fff);font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.qbo-native-attempts td{font-size:11px;vertical-align:top;min-width:135px;max-width:300px;overflow-wrap:anywhere}
+.qbo-native-attempts td:last-child{min-width:175px}
+.qbo-native-attempts details p{margin-top:8px}
+.qbo-native-attempts .button,.qbo-native-card .qbo-file-list .button{font-size:11px}
+.qbo-native-attempts .qbo-file-list{gap:14px}
+.qbo-native-card .qbo-file-list{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+#qbo-native-preview-panel{scroll-margin-top:18px}
+#qbo-native-operation-description,#qbo-native-retry-status{line-height:1.7}
+#qbo-native-confirm-label,#qbo-connection-description{overflow-wrap:anywhere}
+@media(max-width:760px){.qbo-native-heading{display:block}.qbo-native-heading>.badge{display:inline-block;margin-top:12px}.qbo-native-card{padding:14px}.qbo-connection-details{grid-template-columns:1fr;gap:4px}.qbo-connection-details dd{margin-bottom:12px}.qbo-native-card .qbo-file-list{grid-template-columns:1fr}}

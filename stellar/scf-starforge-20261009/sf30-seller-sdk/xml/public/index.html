@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XML datasets · Stellar Forge</title><link rel="stylesheet" href="/style.css"><script src="/app.js" defer></script></head>
+<body>
+<header><div><p class="eyebrow">STELLAR FORGE / DATA OPERATIONS</p><h1>XML datasets</h1><p class="subhead">Source editions. Explicit mappings. Native queryable data.</p></div><span class="local-badge">LOCAL WORKSPACE</span></header>
+<div id="status" role="status" aria-live="polite">Opening workspace…</div>
+<button id="sidebar-toggle" class="sidebar-toggle" aria-controls="source-controls" aria-expanded="true">Hide source and saved-work controls</button>
+<div class="layout">
+<aside id="source-controls">
+ <section><h2>Source editions</h2><label>Edition label<input id="source-label" placeholder="Supplier inventory · October"></label>
+ <label class="file-label">Import XML<input id="source-file" type="file" accept=".xml,.rss,.atom,text/xml,application/xml"></label>
+ <button id="upload" class="operation primary">Retain and inspect source</button>
+ <label>Selected edition<select id="source-select"><option value="">No sources</option></select></label>
+ <p id="source-meta" class="fine"></p></section>
+ <section><h2>Saved mappings</h2><label>Mapping<select id="plan-select"><option value="">No saved mappings</option></select></label><button id="load-plan" class="operation">Load mapping</button><p class="fine">Mappings are immutable. Saving a change creates a new mapping; earlier builds remain available.</p></section>
+ <section><h2>Receive a project</h2><label class="file-label">Portable project ZIP<input id="packet-file" type="file" accept=".zip,application/zip"></label><button id="import-packet" class="operation">Verify and reconstruct</button><p class="fine">A project includes its original XML. A dataset export contains only the selected CSV, native config and lineage.</p></section>
+ <button id="refresh" class="operation">Refresh retained state</button>
+</aside>
+<main>
+<nav aria-label="Workspace views"><button class="tab active" data-panel="source">01 Source</button><button class="tab" data-panel="mapping">02 Mapping</button><button class="tab" data-panel="query">03 Native query</button><button class="tab" data-panel="comparison">04 Compare</button></nav>
+<section id="panel-source" class="panel">
+ <div class="section-head"><div><h2>Inspect the complete source</h2><p>Choose the exact repeating record path. Namespace URIs, not prefixes, identify elements.</p></div></div>
+ <div id="source-stats" class="metrics"></div><div id="namespace-list" class="fine"></div>
+ <div class="table-scroll"><table id="inventory"><thead><tr><th>Element path</th><th>Count</th><th>Shape</th><th>Parsed samples / attributes</th><th>Record</th></tr></thead><tbody><tr><td colspan="5">Import an XML edition to inspect its structure.</td></tr></tbody></table></div>
+</section>
+<section id="panel-mapping" class="panel" hidden>
+ <div class="section-head"><div><h2>Review the projection</h2><p>Only these columns enter the dataset. Types and extraction policies are explicit.</p></div></div>
+ <div class="form-grid"><label>Dataset name<input id="dataset-name" value="XML dataset" maxlength="128"></label><label>Default page size<input id="default-limit" type="number" min="1" max="1000" value="50"></label><label>Maximum page size<input id="max-limit" type="number" min="1" max="1000" value="250"></label></div>
+ <label>Absolute record path — JSON array of exact expanded names<textarea id="record-path" rows="2" spellcheck="false" placeholder='["inventory","item"]'></textarea></label>
+ <div class="toolbar"><button id="suggest" class="operation">Suggest string columns</button><button id="add-column">Add a column</button><span class="fine">Suggestions do not infer numeric types or discard repeated values.</span></div>
+ <div id="columns"></div>
+ <details class="advanced"><summary>Native dataset limits and exact mapping JSON</summary><div class="form-grid"><label>Maximum CSV bytes<input id="max-bytes" type="number" value="67108864"></label><label>Maximum rows<input id="max-rows" type="number" value="250000"></label><label>Maximum cell UTF-16 units<input id="max-cell" type="number" value="65536"></label></div><label class="check"><input id="allow-empty" type="checkbox">Allow an empty projected edition (intentional zero-record publication)</label><button id="show-json">Read current mapping JSON</button><textarea id="mapping-json" rows="12" spellcheck="false"></textarea><button id="apply-json">Apply edited mapping JSON</button></details>
+ <div class="toolbar sticky-actions"><button id="save-plan" class="operation">Save mapping</button><button id="build" class="operation primary">Build and review all records</button><span id="mapping-state" class="fine">No saved selection</span></div>
+</section>
+<section id="panel-query" class="panel" hidden>
+ <div class="section-head"><div><h2>Query the original dataset engine</h2><p>The existing SF30 loader, admission and handler process this complete retained build.</p></div></div>
+ <label>Completed build<select id="build-select"><option value="">No completed builds</option></select></label><div id="build-stats" class="metrics"></div>
+ <label>Native URL query parameters<textarea id="query-text" rows="2" spellcheck="false">limit=25</textarea></label><p id="query-help" class="fine">Use fields, limit, and the equality / range / sort capabilities enabled in the mapping.</p>
+ <div class="toolbar"><button id="run-query" class="operation primary">Run native query</button><button id="previous-page" class="operation" disabled>Previous page</button><button id="next-page" class="operation" disabled>Next page</button><span id="page-meta" class="fine"></span></div>
+ <div id="query-result" class="table-scroll empty">Build a source edition to review its typed rows.</div>
+ <div class="toolbar export-row"><button id="export-dataset" class="operation">Export native dataset ZIP</button><button id="export-project" class="operation">Export project with original XML</button></div>
+ <p class="fine">Extract the native dataset ZIP and use its dataset.json with the existing dataset CLI, query workspace, seller or version publisher. Payment terms stay with the original merchant workflow.</p>
+</section>
+<section id="panel-comparison" class="panel" hidden>
+ <div class="section-head"><div><h2>Compare complete editions</h2><p>Both builds must use the same mapping and declared unique keys. Reordering records is not a field change.</p></div></div>
+ <div class="form-grid two"><label>Before<select id="before-select"><option value="">No builds</option></select></label><label>After<select id="after-select"><option value="">No builds</option></select></label></div>
+ <div class="toolbar"><button id="compare" class="operation primary">Compare all records</button><button id="download-changes" class="operation" disabled>Download complete changes</button></div>
+ <div id="comparison-stats" class="metrics"></div><p class="fine">Changes compare exact projected CSV cells, including explicit normalization choices. The complete JSONL export retains every added, removed and changed row.</p>
+ <div id="changes-result" class="table-scroll empty">Choose two keyed builds.</div><div class="toolbar"><button id="changes-next" class="operation" disabled>Next changes</button><span id="changes-meta" class="fine"></span></div>
+</section>
+</main></div>
+<footer>Retained source and mappings are private local data. DTD and external entity declarations are rejected. No external services are contacted by this workspace.</footer>
+</body></html>

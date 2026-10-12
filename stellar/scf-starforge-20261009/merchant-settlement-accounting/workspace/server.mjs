@@ -14,6 +14,13 @@ import {openAccountingMaintenance} from './recovery-controller.mjs';
 import {BitwaveWorkspace,handleBitwaveRequest,BITWAVE_REQUEST_BYTES} from './bitwave-workspace.mjs';
 import {handleAdjustmentRequest} from './adjustments-workspace.mjs';
 import {ADJUSTMENTS_HELP,adjustmentsMain} from './adjustments-cli.mjs';
+import {CustomerStatementWorkspace,STATEMENT_REQUEST_BYTES} from '../customer-statements/store.mjs';
+import {handleCustomerStatementRequest,customerStatementAsset} from '../customer-statements/server.mjs';
+import {XeroWorkspace,handleXeroRequest,XERO_REQUEST_BYTES} from './xero-workspace.mjs';
+import {QboWorkspace,handleQboRequest,QBO_REQUEST_BYTES} from './qbo-workspace.mjs';
+import {XERO_HELP,xeroMain} from './xero-cli.mjs';
+import {AccountingDeliveryWorkspace,SIGNED_NOTICE_PATH} from '../delivery/workspace.mjs';
+import {readSignedNotice,handleDeliveryNoticeRequest,deliveryNoticeAsset} from '../delivery/server.mjs';
 
 const PUBLIC=fileURLToPath(new URL('./public/',import.meta.url));
 const TYPES={'.json':'application/json; charset=utf-8','.csv':'text/csv; charset=utf-8','.html':'text/html; charset=utf-8','.tar':'application/x-tar'};
@@ -25,20 +32,21 @@ async function body(request,limit=600_000){
   let value;try{value=JSON.parse(Buffer.concat(parts).toString('utf8'));}catch{throw new WorkspaceError('INVALID_JSON','The request is not valid JSON.');}
   check(value&&typeof value==='object'&&!Array.isArray(value),'INVALID_REQUEST','Send an object.');return value;
 }
-export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,
-  recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,...options}){
+export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcProxyEnv,bitwaveClient,xeroClient,qboClient,
+  recoveryStateRoot,recoveryBackupRoot,recoveryPassEnv,recoveryStartPaused=false,deliverySecretEnv,...options}){
   check(host==='127.0.0.1'||host==='localhost','LOOPBACK_REQUIRED','This operator workspace binds to loopback.');
   check(Number.isInteger(port)&&port>=0&&port<=65535,'INVALID_PORT','Choose a valid port.');
   const hosts=new Set();
-  const closeRuntime=async({workspace,bitwave,collection})=>{
-    const errors=[];for(const owned of [bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
+  const closeRuntime=async({workspace,bitwave,qbo,xero,collection})=>{
+    const errors=[];for(const owned of [qbo,xero,bitwave,collection,workspace]){try{await owned?.close();}catch(error){errors.push(error);}await Promise.allSettled([...(owned?.tasks??[])]);}
     if(errors.length)throw Object.assign(new AggregateError(errors,'The original accounting controllers did not all close cleanly.'),{code:'ACCOUNTING_RUNTIME_CLOSE_FAILED'});
   };
   const openRuntime=async()=>{
     const workspace=await openAccountingWorkspace(options),accountant=new AccountantWorkspace(workspace);
-    const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{});let collection;
-    try{workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();return {workspace,accountant,bitwave,collection};}
-    catch(error){await closeRuntime({workspace,bitwave,collection}).catch(()=>{});throw error;}
+    const bitwave=new BitwaveWorkspace(workspace,accountant,bitwaveClient?{client:bitwaveClient}:{}),xero=new XeroWorkspace(workspace,accountant,xeroClient?{client:xeroClient}:{});let collection;
+    const qbo=new QboWorkspace(workspace,accountant,qboClient?{client:qboClient}:{});
+    try{const statements=new CustomerStatementWorkspace(workspace);await statements.init();const delivery=new AccountingDeliveryWorkspace(workspace,{secretEnv:deliverySecretEnv});await delivery.init();workspace.adjustments.configureTransport({httpsProxyEnv:rpcProxyEnv});collection=await openCollectionWorkspace(workspace,{httpsProxyEnv:rpcProxyEnv});await bitwave.recover();await qbo.recover();await xero.init();return {workspace,accountant,bitwave,qbo,xero,collection,statements,delivery};}
+    catch(error){await closeRuntime({workspace,bitwave,qbo,xero,collection}).catch(()=>{});throw error;}
   };
   const maintenance=await openAccountingMaintenance({directory:options.directory,stateRoot:recoveryStateRoot,backupRoot:recoveryBackupRoot,
     passEnv:recoveryPassEnv,startPaused:recoveryStartPaused,openRuntime,closeRuntime});
@@ -59,25 +67,46 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
         '/pricing.mjs':['pricing.mjs','text/javascript; charset=utf-8'],'/pricing.html':['pricing.html','text/html; charset=utf-8'],'/pricing.css':['pricing.css','text/css; charset=utf-8'],
         '/periods.mjs':['periods.mjs','text/javascript; charset=utf-8'],'/periods.html':['periods.html','text/html; charset=utf-8'],'/periods.css':['periods.css','text/css; charset=utf-8'],
         '/accountant.mjs':['accountant.mjs','text/javascript; charset=utf-8'],'/accountant.html':['accountant.html','text/html; charset=utf-8'],'/accountant.css':['accountant.css','text/css; charset=utf-8'],
+        '/qbo.mjs':['qbo.mjs','text/javascript; charset=utf-8'],'/qbo.html':['qbo.html','text/html; charset=utf-8'],'/qbo.css':['qbo.css','text/css; charset=utf-8'],
+        '/xero.mjs':['xero.mjs','text/javascript; charset=utf-8'],'/xero.html':['xero.html','text/html; charset=utf-8'],'/xero.css':['xero.css','text/css; charset=utf-8'],
         '/bitwave.mjs':['bitwave.mjs','text/javascript; charset=utf-8'],'/bitwave.html':['bitwave.html','text/html; charset=utf-8'],'/bitwave.css':['bitwave.css','text/css; charset=utf-8'],
         '/recovery.mjs':['recovery.mjs','text/javascript; charset=utf-8'],'/recovery.html':['recovery.html','text/html; charset=utf-8'],'/recovery.css':['recovery.css','text/css; charset=utf-8'],
         '/adjustments.mjs':['adjustments.mjs','text/javascript; charset=utf-8'],'/adjustments.html':['adjustments.html','text/html; charset=utf-8'],'/adjustments.css':['adjustments.css','text/css; charset=utf-8']};
       if(request.method==='GET'&&assets[path]){const [name,type]=assets[path];send(response,200,await readFile(join(PUBLIC,name)),{type});return;}
+      if(request.method==='GET'&&(path==='/customer-statements'||path.startsWith('/customer-statements/'))){
+        const asset=await customerStatementAsset(path);if(asset){send(response,200,asset.bytes,{type:asset.type});return;}
+      }
+      if(request.method==='GET'&&(path==='/delivery-notices'||path.startsWith('/delivery-notices/'))){
+        const asset=await deliveryNoticeAsset(path);if(asset){send(response,200,asset.bytes,{type:asset.type});return;}
+      }
       const maintenancePath=path==='/api/maintenance'||path.startsWith('/api/maintenance/');
       if(!maintenancePath)operation=maintenance.enter();
+      if(path===SIGNED_NOTICE_PATH){
+        check(request.method==='POST'&&!url.search,'NOT_FOUND','This signed delivery endpoint accepts original POST notices only.',404);
+        const accepted=await operation.delivery.acceptSigned(await readSignedNotice(request));
+        send(response,accepted.duplicate?200:202,accepted);return;
+      }
       let value;
       if(request.method==='POST'){
         check(request.headers['x-workspace-request']==='1','WORKSPACE_REQUEST_REQUIRED','Use the operator workspace form.',403);
         check(!request.headers.origin||request.headers.origin==='http://'+request.headers.host,'INVALID_ORIGIN','Use this local workspace address.',403);
-        value=await body(request,path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
+        value=await body(request,path.startsWith('/api/customer-statements/')?STATEMENT_REQUEST_BYTES:path.startsWith('/api/qbo/')?QBO_REQUEST_BYTES:path.startsWith('/api/xero/')?XERO_REQUEST_BYTES:path.startsWith('/api/bitwave/')?BITWAVE_REQUEST_BYTES:path.startsWith('/api/accountant/')?ACCOUNTANT_REQUEST_BYTES:path==='/api/collection/sources'?8_200_000:path==='/api/pricing/reviews'?PRICING_REQUEST_BYTES:600_000);
       }
       const parts=path.split('/').filter(Boolean),query=Object.fromEntries(url.searchParams);
       if(maintenancePath){send(response,200,await maintenance.route({method:request.method,path,value}));return;}
-      const {workspace,accountant,bitwave,collection}=operation;
+      const {workspace,accountant,bitwave,qbo,xero,collection,statements,delivery}=operation;
+      const deliveryResult=await handleDeliveryNoticeRequest(delivery,{method:request.method,path,query,value});
+      if(deliveryResult){send(response,200,deliveryResult.value);return;}
+      const statement=await handleCustomerStatementRequest(statements,{method:request.method,path,query,value});
+      if(statement){if(statement.file)send(response,200,statement.file.bytes,{type:statement.file.type,name:statement.file.name});else send(response,200,statement.value);return;}
       const adjustment=await handleAdjustmentRequest(workspace.adjustments,{method:request.method,path,query,value});
       if(adjustment){if(adjustment.file)send(response,200,adjustment.file.bytes,{type:adjustment.file.type,name:adjustment.file.name});else send(response,200,adjustment.value);return;}
       const bitwaveResult=await handleBitwaveRequest(bitwave,{method:request.method,path,query,value});
       if(bitwaveResult){if(bitwaveResult.file)send(response,200,bitwaveResult.file.bytes,{type:bitwaveResult.file.type,name:bitwaveResult.file.name});else send(response,200,bitwaveResult.value);return;}
+      const qboResult=await handleQboRequest(qbo,{method:request.method,path,query,value});
+      if(qboResult){if(qboResult.file)send(response,200,qboResult.file.bytes,{type:qboResult.file.type,name:qboResult.file.name});else send(response,200,qboResult.value);return;}
+      const xeroResult=await handleXeroRequest(xero,{method:request.method,path,query,value});
+      if(xeroResult){if(xeroResult.file)send(response,200,xeroResult.file.bytes,{type:xeroResult.file.type,name:xeroResult.file.name});else send(response,200,xeroResult.value);return;}
       const accountingHandoff=await handleAccountantRequest(accountant,{method:request.method,path,query,value});
       if(accountingHandoff){if(accountingHandoff.file)send(response,200,accountingHandoff.file.bytes,{type:accountingHandoff.file.type,name:accountingHandoff.file.name});else send(response,200,accountingHandoff.value);return;}
       const pricing=await handlePricingRequest(workspace,{method:request.method,path,query,value});
@@ -129,7 +158,7 @@ export async function startAccountingWorkspace({port=8446,host='127.0.0.1',rpcPr
   const actual=server.address().port;hosts.add('127.0.0.1:'+actual);hosts.add('localhost:'+actual);
   let closing;
   return {get workspace(){return maintenance.runtime?.workspace;},get collection(){return maintenance.runtime?.collection;},
-    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},maintenance,server,url:'http://127.0.0.1:'+actual,
+    get accountant(){return maintenance.runtime?.accountant;},get bitwave(){return maintenance.runtime?.bitwave;},get qbo(){return maintenance.runtime?.qbo;},get xero(){return maintenance.runtime?.xero;},get statements(){return maintenance.runtime?.statements;},get delivery(){return maintenance.runtime?.delivery;},maintenance,server,url:'http://127.0.0.1:'+actual,
     close(){if(!closing)closing=(async()=>{
       const stopped=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));
       const results=await Promise.allSettled([stopped,maintenance.close()]);const failed=results.find(result=>result.status==='rejected');if(failed)throw failed.reason;
@@ -147,6 +176,9 @@ Reopen:
   node workspace/server.mjs --workspace /private/accounting-workspace
 
 Optional: --port 8446 and --recovered-dir /private/original-recovered-settlements.
+Signed SF98 accounting intake: --delivery-secret-env ACCOUNTING_SF98_SECRET.
+Expose only POST /sf98/accounting-events through the existing trusted HTTPS proxy.
+Open /delivery-notices/ for received notices and original capture/recovery.
 Browser backup and recovery: --recovery-state-root /private/state
   --recovery-backup-root /private/accounting-backups
   --recovery-pass-env STARFORGE_ACCOUNTING_BACKUP_PASSPHRASE
@@ -154,18 +186,24 @@ Add --recovery-start-paused to restore an absent or unfinished original workspac
 For an explicitly configured cloud HTTPS proxy, add --rpc-proxy-env HTTPS_PROXY.
 Requires Node22+, Linux flock, and tar for review downloads.
 Uses the original accounting engine and report writer; all serving is loopback.
+QuickBooks journals: open /qbo.html to fetch the configured company and post reviewed journals.
+Native QuickBooks calls use STARFORGE_QBO_ACCESS_TOKEN, STARFORGE_QBO_REALM_ID,
+and STARFORGE_QBO_ENVIRONMENT (sandbox by default) in this process environment.
+Xero journals: open /xero.html or use the xero subcommand.
+Native Xero calls use STARFORGE_XERO_ACCESS_TOKEN from this process environment.
 Operating backup and recovery: backup | inspect-backup | verify-backup | restore | recovery-status.
 Use a recovery subcommand with --help for the original encrypted workflow.
 `;
 export async function main(argv=process.argv.slice(2)){
-  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP);return;}
+  if(argv.length===1&&argv[0]==='--help'){process.stdout.write(HELP+'\n'+RECOVERY_HELP+'\n'+ADJUSTMENTS_HELP+'\n'+XERO_HELP);return;}
+  if(argv[0]==='xero')return xeroMain(argv.slice(1));
   if(argv[0]==='adjustments')return adjustmentsMain(argv.slice(1));
   if(RECOVERY_COMMANDS.has(argv[0])){
     const controller=new AbortController(),stop=()=>controller.abort();process.once('SIGINT',stop);process.once('SIGTERM',stop);
     try{return await recoveryMain(argv,{signal:controller.signal});}finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
   }
   const keys=new Set(['--workspace','--outbox','--proof-dir','--terms','--port','--recovered-dir','--rpc-proxy-env',
-    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env']),values={};
+    '--recovery-state-root','--recovery-backup-root','--recovery-pass-env','--delivery-secret-env']),values={};
   for(let i=0;i<argv.length;i++){
     const key=argv[i];check(!Object.hasOwn(values,key),'INVALID_ARGUMENTS',HELP);
     if(key==='--recovery-start-paused'){values[key]=true;continue;}
@@ -178,7 +216,7 @@ export async function main(argv=process.argv.slice(2)){
     recoveryStateRoot:values['--recovery-state-root']&&resolve(values['--recovery-state-root']),
     recoveryBackupRoot:values['--recovery-backup-root']&&resolve(values['--recovery-backup-root']),
     recoveryPassEnv:values['--recovery-pass-env'],recoveryStartPaused:values['--recovery-start-paused']??false,
-    rpcProxyEnv:values['--rpc-proxy-env'],
+    rpcProxyEnv:values['--rpc-proxy-env'],deliverySecretEnv:values['--delivery-secret-env'],
     port:values['--port']===undefined?8446:Number(values['--port'])});
   process.stdout.write('Merchant accounting workspace: '+app.url+'\n');
   const close=()=>app.close().then(()=>process.exit(0),error=>{console.error(error.message);process.exit(1);});

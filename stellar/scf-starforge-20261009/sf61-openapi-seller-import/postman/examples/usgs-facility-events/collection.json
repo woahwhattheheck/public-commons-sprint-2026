@@ -1,0 +1,222 @@
+{
+  "info": {
+    "name": "USGS facility event watch",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Commons-authored public source collection. Uses the USGS Earthquake Catalog and GeoJSON Summary contracts documented at https://earthquake.usgs.gov/fdsnws/event/1/ and https://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php. MIT applies to this collection; USGS source data retains its own public-domain/source credits. Dates and locations are public onboarding examples."
+  },
+  "item": [
+    {
+      "name": "Historical watch window",
+      "item": [
+        {
+          "name": "Search events in a facility region",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&starttime={{startTime}}&endtime={{endTime}}&minmagnitude={{minimumMagnitude}}&minlatitude={{minimumLatitude}}&maxlatitude={{maximumLatitude}}&minlongitude={{minimumLongitude}}&maxlongitude={{maximumLongitude}}&orderby=time-asc&limit={{resultLimit}}",
+              "protocol": "https",
+              "host": [
+                "earthquake",
+                "usgs",
+                "gov"
+              ],
+              "path": [
+                "fdsnws",
+                "event",
+                "1",
+                "query"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "geojson"
+                },
+                {
+                  "key": "starttime",
+                  "value": "{{startTime}}"
+                },
+                {
+                  "key": "endtime",
+                  "value": "{{endTime}}"
+                },
+                {
+                  "key": "minmagnitude",
+                  "value": "{{minimumMagnitude}}"
+                },
+                {
+                  "key": "minlatitude",
+                  "value": "{{minimumLatitude}}"
+                },
+                {
+                  "key": "maxlatitude",
+                  "value": "{{maximumLatitude}}"
+                },
+                {
+                  "key": "minlongitude",
+                  "value": "{{minimumLongitude}}"
+                },
+                {
+                  "key": "maxlongitude",
+                  "value": "{{maximumLongitude}}"
+                },
+                {
+                  "key": "orderby",
+                  "value": "time-asc"
+                },
+                {
+                  "key": "limit",
+                  "value": "{{resultLimit}}"
+                }
+              ]
+            },
+            "description": "Explicit UTC window, region and minimum magnitude. The date window is a historical Napa-area example. Compare the count request before using this result as a complete window; split windows when the count exceeds the selected limit. Both time boundaries are inclusive, so deduplicate adjacent windows by event ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Count matching events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "https://earthquake.usgs.gov/fdsnws/event/1/count?format=geojson&starttime={{startTime}}&endtime={{endTime}}&minmagnitude={{minimumMagnitude}}&minlatitude={{minimumLatitude}}&maxlatitude={{maximumLatitude}}&minlongitude={{minimumLongitude}}&maxlongitude={{maximumLongitude}}",
+              "protocol": "https",
+              "host": [
+                "earthquake",
+                "usgs",
+                "gov"
+              ],
+              "path": [
+                "fdsnws",
+                "event",
+                "1",
+                "count"
+              ],
+              "query": [
+                {
+                  "key": "format",
+                  "value": "geojson"
+                },
+                {
+                  "key": "starttime",
+                  "value": "{{startTime}}"
+                },
+                {
+                  "key": "endtime",
+                  "value": "{{endTime}}"
+                },
+                {
+                  "key": "minmagnitude",
+                  "value": "{{minimumMagnitude}}"
+                },
+                {
+                  "key": "minlatitude",
+                  "value": "{{minimumLatitude}}"
+                },
+                {
+                  "key": "maxlatitude",
+                  "value": "{{maximumLatitude}}"
+                },
+                {
+                  "key": "minlongitude",
+                  "value": "{{minimumLongitude}}"
+                },
+                {
+                  "key": "maxlongitude",
+                  "value": "{{maximumLongitude}}"
+                }
+              ]
+            },
+            "description": "Same time, magnitude and geographic filters as the search, without its result limit. GeoJSON count response is inventory metadata, not a FeatureCollection to pass to the facility report."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Current event watch",
+      "item": [
+        {
+          "name": "Past day magnitude 2.5 and higher",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "auth": {
+              "type": "noauth"
+            },
+            "url": {
+              "raw": "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson",
+              "protocol": "https",
+              "host": [
+                "earthquake",
+                "usgs",
+                "gov"
+              ],
+              "path": [
+                "earthquakes",
+                "feed",
+                "v1.0",
+                "summary",
+                "2.5_day.geojson"
+              ]
+            },
+            "description": "Live public feed for routine watch updates. USGS recommends its real-time GeoJSON feeds for automated display. The returned metadata.generated, event properties.time and properties.updated identify the data window and revisions."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "variable": [
+    {
+      "key": "startTime",
+      "value": "2014-08-24T00:00:00Z",
+      "type": "string"
+    },
+    {
+      "key": "endTime",
+      "value": "2014-08-25T00:00:00Z",
+      "type": "string"
+    },
+    {
+      "key": "minimumMagnitude",
+      "value": "4",
+      "type": "string"
+    },
+    {
+      "key": "minimumLatitude",
+      "value": "37",
+      "type": "string"
+    },
+    {
+      "key": "maximumLatitude",
+      "value": "39",
+      "type": "string"
+    },
+    {
+      "key": "minimumLongitude",
+      "value": "-123",
+      "type": "string"
+    },
+    {
+      "key": "maximumLongitude",
+      "value": "-121",
+      "type": "string"
+    },
+    {
+      "key": "resultLimit",
+      "value": "20000",
+      "type": "string"
+    }
+  ]
+}

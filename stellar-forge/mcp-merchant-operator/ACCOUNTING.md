@@ -14,6 +14,18 @@ workspace and accountant instance. Its thirteen additional tools operate declare
 customer organizations and native tables, retained delivery/capture and repair,
 concurrent-bookkeeping return review, exact file transfer and browser/MCP handover.
 
+The complete [cancellation and refund workflow](./ADJUSTMENTS.md) uses the same
+original adjustment controller, retained verification jobs and workspace lifetime.
+Its nine additional tools carry reviewed requests, native returned amounts and
+exact request/proof downloads through the original close and accountant history.
+
+The complete [QuickBooks and Xero workflow](./ACCOUNTING-PLATFORMS.md) uses those
+same original accountant and maintenance lifetimes. Its 34 tools carry native
+company/source review, retained journals, original provider operation and response
+reconciliation, accountant return recovery and exact files. The
+[shared customer SDK and durable CLI](./ACCOUNTING-PLATFORMS-CLIENT.md) preserve
+reviewed commands and original identities across an uncertain connection.
+
 The host selects files and directories. MCP arguments use declared aliases,
 retained object identities and current revisions. Payment signing and settlement
 remain in the original buyer, seller and facilitator.
@@ -421,8 +433,9 @@ rejected; keep the same selection on every continued chunk.
 | `export` | `exportId` | Original retained review TAR |
 | `collection` | `collectionId`, `sourceId` | Latest retained original verification result |
 | `pricing` | Exactly one `reviewId` or captured `runId`, `file` | `report` or `terms` |
-| `period` | `closeId`, `file` | `period-close.json`, `review-notes.json`, `archive` |
-| `accountant` | `handoffId`, optional `revisionId`, `file` | A filename from the original packet's file list |
+| `period` | `closeId`, `file` | `period-close.json`, `review-notes.json`, `adjustments.json`, `adjustments.csv`, `adjustments.html`, `archive` |
+| `accountant` | `handoffId`, optional `revisionId`, `file` | A filename from the original packet's file list, including retained adjustment companions |
+| `adjustment` | `adjustmentId`, optional original `jobId`, `file` | `request.json`, or `proof.json` with its completed verification job |
 
 Accountant filenames are `handoff.json`, `accountant.csv`, `review.html`,
 `original-report.json`, `original-manifest.json`, `input-manifest.json`,
