@@ -6,7 +6,7 @@ The product entry is described in [COINGECKO_APPLICATIONS.md](../../../distribut
 
 ## Choose the existing runtime first
 
-If the selected source already has a READY original runtime installation, use it directly with `applications.mjs`. Its `runtime-install.json`, original source archive, runtime profile, package lock and dependencies remain in that installation. The driver's initial inspection validates the runtime and checks that the selected source directory is the one the installer owns.
+If the selected source already has a READY original runtime installation, use it through `installed.mjs --retained-runtime` or directly with `applications.mjs`. Its `runtime-install.json`, original source archive, runtime profile, package lock and dependencies remain in that installation. The original runtime inspector validates the runtime and checks that the selected source directory is the one the installer owns.
 
 If the selected source has not been installed, use `installed.mjs`. It calls the original `buildDistribution`, `prepareRuntimeInstall` and `installRuntime` modules from one immutable source commit. It creates a separate bare Git repository for that operation and can read an existing Git object directory through Git alternates. That donor stays read-only and must remain available while the receiving operation uses it.
 
@@ -91,6 +91,44 @@ The bootstrap retains these original stages:
 
 The original runtime lives at `work/runtime`, the Applications console at `work/console`, and its managed release home at `work/runtime-store`. Receiving writes a separate restored market to `work/received-market`. The original market stays at the selected original path.
 
+## Receive with a retained original runtime
+
+Use this route when the runtime owner has already completed the selected installation. The same bootstrap consumes its native identity and delegates to the complete Applications journey. It skips Git fetching, package extraction, building, npm and dependency copying.
+
+Keep the original bootstrap selection unchanged. In particular, preserve its workspace, project, operation prefix and original source file IDs and hashes. Save the full JSON returned by the original `inspectMerchantRuntime` function as a separate file. This invokes the maintained inspector from that runtime's own source:
+
+```sh
+node --input-type=module -e '
+import { writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+const [source, runtime, output] = process.argv.slice(1);
+const original = await import(pathToFileURL(join(source,
+  "stellar/scf-starforge-20261009/sf46-release/runtime-package.mjs")).href);
+const identity = await original.inspectMerchantRuntime(runtime, { load: true });
+await writeFile(output, JSON.stringify(identity, null, 2) + "\n",
+  { flag: "wx", mode: 0o600 });
+' /absolute/runtime/package/source /absolute/runtime /absolute/receiving/ready-runtime.json
+```
+
+The parent of the output file must already exist. The command creates that descriptor once and preserves an existing file. An actual successful descriptor has schema `stellar-forge.managed-runtime.v1`, state `READY`, and the original installation, profile, source-manifest and lock identities. The inspector verifies the original absolute installation paths, complete source package and selected dependency loads.
+
+```sh
+node stellar/scf-starforge-20261009/partners/coingecko-stellar-market/receiving/installed.mjs \
+  --selection /absolute/receiving/selection.json \
+  --work /absolute/receiving/work \
+  --output /absolute/receiving/output \
+  --retained-runtime /absolute/receiving/ready-runtime.json
+```
+
+The bootstrap binds the exact descriptor bytes and path in its original checkpoint, then independently repeats the native inspection. It compares the installation ID, profile ID and hash, lock hash, source commit and manifest, dependency count and original runtime paths. Every continuation uses the same descriptor and original selection. It passes the actual selected source-manifest hash to the Applications driver and retains the requested source commit alongside the selected runtime's commit, so an explicitly selected following release remains visible.
+
+An existing build checkpoint can adopt this explicit retained runtime if no runtime or application manifest has yet been prepared. The bootstrap preserves its prior build selection and any completed Git/build prefixes. After a retained runtime is selected, its descriptor stays fixed and a switch back to build mode is rejected. An already prepared original runtime, saved application manifest or completed receiving remains attached to its original selection. Use the original installer's recovery/upgrade and the application's existing continuation for those states.
+
+A source archive, PREPARED profile or copied `node_modules` directory is not a completed runtime identity. If the original owner is still receiving dependencies, finish that same original installation before taking its READY descriptor. The maintained full-graph receiver uses the release's `adoptRuntimeDependencies` API to inspect and adopt the complete selected graph. It preserves PREPARED, interrupted and failed states and does not require fabricated state transitions. See the [maintained dependency receiving guide](https://github.com/woahwhattheheck/commons/blob/main/host/STELLAR_RUNTIME_DEPENDENCIES.md) and [original adoption API](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/1832).
+
+Runtime plans retain their original absolute directory, source and archive paths. Keep that completed installation in place. Relocated source/workspace archives use the original installer to prepare or recover the selected runtime at its new path; editing an old plan's paths does not establish a new installation.
+
 ## Complete operator journey
 
 The driver retains seven stages in `output/application-checkpoint.json`.
@@ -126,6 +164,6 @@ A completed receiving writes:
 - `coingecko-managed-desktop.png` and `coingecko-managed-mobile.png`: the actual selected-project views.
 - `application-checkpoint.json`: the retained mutable receiving checkpoint for continuation.
 
-The bootstrap also retains `installed-receiving-checkpoint.json`, the original package build, original runtime installation and generated direct manifest in its work directory. These files let another operator continue the same source and project without reconstructing the work from screenshots or a chat transcript.
+The bootstrap also retains `installed-receiving-checkpoint.json` and the generated direct manifest in its work directory. Build mode retains its original package build and runtime there. Retained mode records the exact external runtime descriptor and native inspection, while the original installation remains at its existing path. These files let another operator continue the same source and project without reconstructing the work from screenshots or a chat transcript.
 
 The managed application source was integrated in PR1640. The existing original MCP research and durable job recovery deliveries precede this installed Applications journey. Completion of this additional journey is recorded by its own final result after all seven stages return.
