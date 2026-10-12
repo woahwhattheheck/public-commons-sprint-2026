@@ -25,7 +25,10 @@
       "openapi",
       "releases",
       "dataset",
-      "assets"
+      "assets",
+      "buyer-runbook",
+      "buyer-inbox",
+      "inbox"
     ],
     "exports": [
       "./runtime-profile",
@@ -110,7 +113,11 @@
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/workspace-file.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/runtime-support.mjs",
     "stellar/scf-starforge-20261009/sf74-merchant-support-console/case-store.mjs",
-    "stellar-forge/quote-commitment/quote-commitment.mjs"
+    "stellar-forge/quote-commitment/quote-commitment.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/service.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstream-service.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/application.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/examples/upstreams.json"
   ],
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
