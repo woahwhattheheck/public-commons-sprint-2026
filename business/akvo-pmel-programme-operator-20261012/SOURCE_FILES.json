@@ -3,22 +3,22 @@
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "component": "business/akvo-pmel-programme-operator-20261012",
   "authoredFiles": 4,
-  "authoredBytes": 63039,
+  "authoredBytes": 84157,
   "files": [
     {
       "path": "programme.py",
-      "bytes": 36732,
-      "sha256": "08cd84ce66e451a13111f81fabf71c80908e54b156aa00bf5c486237115033bc"
+      "bytes": 51927,
+      "sha256": "8c48c3712e00cf72fe4c128693fc24cab61c4973d5718654785ca767d0f7fe21"
     },
     {
       "path": "START.py",
-      "bytes": 9933,
-      "sha256": "f98742e07df1713e264f3f7909eb102a4df9d9897f6e9a87b3c4ba07de254738"
+      "bytes": 11546,
+      "sha256": "a373b73fcce2edaf5658af3ca0bd5c912c44c7b600f1a1e34abd03a6811bf45e"
     },
     {
       "path": "GUIDE.md",
-      "bytes": 15214,
-      "sha256": "8a23e765024090097b660bf30476b545507d78aa20b30ed6b7536e842c1f42dc"
+      "bytes": 19524,
+      "sha256": "fff73fbf67ea4ba049dae246b12c9890183792cc94e9ebd89e3db29bcc5195d6"
     },
     {
       "path": "LICENSE",

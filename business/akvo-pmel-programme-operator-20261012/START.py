@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 
 from programme import (
-    HANDOVER, ProgrammeError, absolute, check, digest, encoded, fields, identity,
+    HANDOVER, ProgrammeError, absolute, alias, check, digest, encoded, fields, identity,
     immutable_json, load_runtime, operation_lock, private_directory, read_json, relative,
 )
 
@@ -20,9 +20,9 @@ def verify_bundle(bundle):
     manifest_identity = identity(manifest_path)
     manifest = read_json(manifest_path)
     fields(manifest, ("schema", "operationId", "programme", "originalWorkspaceId", "iatiPath",
-                      "runtimeSelection", "results", "publishing", "files"),
+                      "runtimeSelection", "results", "selectedHeads", "publishing", "files"),
            ("schema", "operationId", "programme", "originalWorkspaceId", "iatiPath",
-            "runtimeSelection", "results", "publishing", "files"), "complete handover")
+            "runtimeSelection", "results", "selectedHeads", "publishing", "files"), "complete handover")
     check(manifest["schema"] == HANDOVER, "Unsupported programme handover")
     check(isinstance(manifest["files"], dict) and manifest["files"], "The complete member inventory is missing")
     for name, selected in manifest["files"].items():
@@ -39,11 +39,29 @@ def verify_bundle(bundle):
     check(isinstance(manifest["results"], list) and manifest["results"],
           "Select at least one complete original Results packet")
     check(isinstance(manifest["publishing"], list), "Original publisher packet inventory must be a list")
+    packet_names = {"results": set(), "publishing": set()}
+    for kind in ("results", "publishing"):
+        for packet in manifest[kind]:
+            name = alias(packet["alias"], "native packet alias")
+            check(name not in packet_names[kind], "Duplicate native packet alias")
+            packet_names[kind].add(name)
     for packet in manifest["results"] + manifest["publishing"]:
         path = relative(packet["path"])
         check(path in manifest["files"] and
               manifest["files"][path] == {"bytes": packet["bytes"], "sha256": packet["sha256"]},
               "Native packet differs from the complete handover selection")
+    check(isinstance(manifest["selectedHeads"], list) and manifest["selectedHeads"],
+          "Select the intended receiving head for every programme project")
+    selected_projects = set()
+    for head in manifest["selectedHeads"]:
+        fields(head, ("project", "revision", "editionSha256", "alias"),
+               ("project", "revision", "editionSha256", "alias"), "selected receiving head")
+        check(head["project"] not in selected_projects, "Select one receiving head per original project")
+        selected_projects.add(head["project"])
+        check(any(all(row[key] == head[key] for key in ("project", "revision", "editionSha256", "alias"))
+                  for row in manifest["results"]), "The intended head is not a complete selected packet")
+    check(selected_projects == {row["project"] for row in manifest["results"]},
+          "Every original programme project needs its intended receiving head")
     result = read_json(bundle / "programme-result.json")
     check(result["operationId"] == manifest["operationId"] and
           result["workspaceId"] == manifest["originalWorkspaceId"] and
@@ -95,7 +113,11 @@ def receive(bundle, workspace, existing=False):
                 result["publishing"].append({"project": packet["project"], "revision": packet["revision"],
                                              "packet": {"bytes": packet["bytes"], "sha256": packet["sha256"]},
                                              "receipt": receipt})
-            for packet in manifest["results"]:
+            selected_heads = {(row["project"], row["revision"], row["editionSha256"])
+                              for row in manifest["selectedHeads"]}
+            receiving_order = sorted(manifest["results"], key=lambda row:
+                (row["project"], row["revision"], row["editionSha256"]) not in selected_heads)
+            for packet in receiving_order:
                 path = book / ("results-" + packet["alias"] + ".json")
                 if path.exists():
                     receipt = read_json(path)

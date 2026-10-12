@@ -104,22 +104,59 @@ def private_directory(path, *, create=False):
     return path
 
 
-def identity(path):
+def identity(path, *, links=1):
     path = Path(path)
     before = path.lstat()
-    check(stat.S_ISREG(before.st_mode) and before.st_nlink == 1,
+    check(stat.S_ISREG(before.st_mode) and before.st_nlink == links,
           "Select an original regular file: " + str(path))
+    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
     h = hashlib.sha256()
     size = 0
-    with path.open("rb") as stream:
+    with os.fdopen(descriptor, "rb") as stream:
+        opened = os.fstat(stream.fileno())
+        check((before.st_dev, before.st_ino) == (opened.st_dev, opened.st_ino),
+              "The selected file was replaced before reading: " + str(path))
         while block := stream.read(1024 * 1024):
             size += len(block)
             h.update(block)
+        finished = os.fstat(stream.fileno())
     after = path.lstat()
-    check((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) ==
-          (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns),
+    stamp = lambda value: (value.st_dev, value.st_ino, value.st_mode, value.st_nlink,
+                           value.st_size, value.st_mtime_ns, value.st_ctime_ns)
+    check(stamp(before) == stamp(opened) == stamp(finished) == stamp(after) and size == before.st_size,
           "The selected file changed while being read: " + str(path))
     return {"bytes": size, "sha256": h.hexdigest()}
+
+
+def completed_output(path, expected, prefix):
+    """Recover only this exact completed file's remaining owned temporary link."""
+    path = Path(path)
+    info = path.lstat()
+    if info.st_nlink == 1:
+        check(identity(path) == expected, "An existing completed output differs: " + str(path))
+        return
+    private_directory(path.parent)
+    check(stat.S_ISREG(info.st_mode) and info.st_nlink == 2 and
+          info.st_uid == os.getuid() and not info.st_mode & 0o077,
+          "An existing output has unrelated links or ownership: " + str(path))
+    aliases = []
+    for candidate in path.parent.iterdir():
+        if candidate.name == path.name or not candidate.name.startswith(prefix):
+            continue
+        observed = candidate.lstat()
+        if (observed.st_dev, observed.st_ino) == (info.st_dev, info.st_ino):
+            check(stat.S_ISREG(observed.st_mode) and observed.st_uid == os.getuid(),
+                  "The retained temporary output is not an original owned file")
+            aliases.append(candidate)
+    check(len(aliases) == 1 and identity(path, links=2) == expected,
+          "The completed output lacks its exact owned temporary link: " + str(path))
+    temporary = aliases[0]
+    current = temporary.lstat()
+    check((current.st_dev, current.st_ino, current.st_nlink) == (info.st_dev, info.st_ino, 2),
+          "The retained temporary output changed before completion")
+    temporary.unlink()
+    sync_dir(path.parent)
+    check(identity(path) == expected, "The recovered completed output differs: " + str(path))
 
 
 def sync_dir(path):
@@ -135,8 +172,7 @@ def immutable_bytes(path, data):
     path = Path(path)
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
-        check(identity(path) == {"bytes": len(data), "sha256": digest(data)},
-              "An existing output belongs to a different edition: " + str(path))
+        completed_output(path, {"bytes": len(data), "sha256": digest(data)}, ".programme-write-")
         return path
     descriptor, name = tempfile.mkstemp(prefix=".programme-write-", dir=path.parent)
     temporary = Path(name)
@@ -149,8 +185,7 @@ def immutable_bytes(path, data):
         try:
             os.link(temporary, path)
         except FileExistsError:
-            check(identity(path) == {"bytes": len(data), "sha256": digest(data)},
-                  "A concurrent output selected different content: " + str(path))
+            completed_output(path, {"bytes": len(data), "sha256": digest(data)}, ".programme-write-")
         sync_dir(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
@@ -166,7 +201,7 @@ def copy_original(source, destination, expected):
     destination = Path(destination)
     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     if destination.exists() or destination.is_symlink():
-        check(identity(destination) == expected, "Existing receiving member differs: " + str(destination))
+        completed_output(destination, expected, ".programme-copy-")
         return
     descriptor, name = tempfile.mkstemp(prefix=".programme-copy-", dir=destination.parent)
     temporary = Path(name)
@@ -180,7 +215,7 @@ def copy_original(source, destination, expected):
         try:
             os.link(temporary, destination)
         except FileExistsError:
-            check(identity(destination) == expected, "Concurrent receiving member differs")
+            completed_output(destination, expected, ".programme-copy-")
         sync_dir(destination.parent)
     finally:
         temporary.unlink(missing_ok=True)
@@ -220,6 +255,20 @@ def load_runtime(iati):
           "Python loaded a different original IATI source")
     return module.IatiWorkspace
 
+
+
+@contextmanager
+def programme_workspace(Workspace, workspace, opened_workspace=None):
+    """Share the caller's actual native host lifetime, or own one CLI lifetime."""
+    selected = absolute(workspace)
+    if opened_workspace is None:
+        with Workspace(str(selected)) as ws:
+            yield ws
+    else:
+        check(isinstance(opened_workspace, Workspace) and
+              opened_workspace.root.resolve(strict=True) == selected.resolve(strict=True),
+              "Use the host's existing original Workspace for this same programme")
+        yield opened_workspace
 
 def source_inputs(plan, parent):
     rows, names = [], set()
@@ -370,7 +419,7 @@ def native_input(root, kind, name, make):
     return value
 
 
-def run_programme(workspace, iati, plan_path):
+def run_programme(workspace, iati, plan_path, *, opened_workspace=None):
     plan_path = absolute(plan_path)
     plan = validate_plan(read_json(plan_path))
     original_sources = source_inputs(plan, plan_path.parent)
@@ -383,7 +432,7 @@ def run_programme(workspace, iati, plan_path):
         check(identity(path) == expected, "Programme attachment differs: " + row["alias"])
         attachments.append((row, path, expected))
     Workspace = load_runtime(iati)
-    with Workspace(str(absolute(workspace))) as ws:
+    with programme_workspace(Workspace, workspace, opened_workspace) as ws:
         root = ws.root / "programme-operations" / digest(plan["operationId"].encode())
         with operation_lock(root):
             inventory = ws.results.inventory()
@@ -459,12 +508,112 @@ def run_programme(workspace, iati, plan_path):
                     "publisherSteps": len(publishers), "comparisons": len(comparisons)}
 
 
-def inspect_source(workspace, iati, source, programme_id, programme_name, activity_ids, provenance, out):
+def select_programme(workspace, iati, selection_path, *, opened_workspace=None):
+    """Capture the staff UI's actual saved editions without another native save."""
+    selection_path = absolute(selection_path)
+    selection = read_json(selection_path)
+    fields(selection, ("schema", "operationId", "programme", "editions", "publisherProjects", "attachments", "notes"),
+           ("schema", "operationId", "programme", "editions"), "saved programme selection")
+    check(selection["schema"] == "tjlabs.pmel.programme-selection.v1",
+          "Unsupported saved programme selection")
+    check(isinstance(selection["operationId"], str) and REQUEST.fullmatch(selection["operationId"]),
+          "Use a stable original operationId of at most 90 ASCII characters")
+    programme = fields(selection["programme"], ("id", "name", "activityIds", "notes", "inventorySource"),
+                       ("id", "name", "activityIds"), "programme inventory")
+    check(all(isinstance(programme[key], str) and programme[key].strip() for key in ("id", "name")),
+          "Name the actual selected programme")
+    activities = programme["activityIds"]
+    check(isinstance(activities, list) and activities and
+          all(isinstance(value, str) and value.strip() for value in activities) and
+          len(activities) == len(set(activities)), "Select the complete actual activity inventory")
+    check(isinstance(selection["editions"], list) and selection["editions"],
+          "Select the actual saved reporting editions")
+    for key in ("editions", "publisherProjects"):
+        values = selection.get(key, [])
+        check(isinstance(values, list), key + " must be a list")
+        names = set()
+        for row in values:
+            fields(row, ("alias", "id", "revision", "sha256"), ("alias", "id", "revision"), "native edition")
+            name = alias(row["alias"], "native edition alias")
+            check(name not in names, "Duplicate native edition alias")
+            names.add(name)
+            check(isinstance(row["id"], str) and row["id"] and
+                  type(row["revision"]) is int and row["revision"] > 0,
+                  "Select a real native project and positive original revision")
+            if "sha256" in row:
+                check(isinstance(row["sha256"], str) and SHA.fullmatch(row["sha256"]),
+                      "Select the actual native edition SHA256")
+    attachments = []
+    check(isinstance(selection.get("attachments", []), list), "attachments must be a list")
+    attachment_names = set()
+    for row in selection.get("attachments", []):
+        fields(row, ("alias", "path", "bytes", "sha256", "label"),
+               ("alias", "path", "bytes", "sha256"), "programme attachment")
+        name = alias(row["alias"], "attachment alias")
+        check(name not in attachment_names, "Duplicate supporting file alias")
+        attachment_names.add(name)
+        check(isinstance(row["path"], str), "Select an actual original supporting file")
+        path = Path(row["path"]).expanduser()
+        if not path.is_absolute():
+            path = selection_path.parent / path
+        expected = {"bytes": row["bytes"], "sha256": row["sha256"]}
+        check(identity(path) == expected, "Supporting file differs from its original identity")
+        attachments.append((row, path, expected))
+    Workspace = load_runtime(iati)
+    with programme_workspace(Workspace, workspace, opened_workspace) as ws:
+        workspace_id = ws.results.inventory()["workspaceId"]
+        root = ws.root / "programme-operations" / digest(selection["operationId"].encode())
+        with operation_lock(root):
+            original = {"schema": "tjlabs.pmel.programme-selection.v1",
+                        "workspaceId": workspace_id, "plan": selection}
+            immutable_json(root / "original-plan.json", original)
+            sources, editions, publishers, comparisons = {}, {}, {}, {}
+            for row, path, expected in attachments:
+                extension = path.suffix if re.fullmatch(r"\.[A-Za-z0-9]{1,12}", path.suffix) else ".bin"
+                copy_original(path, root / "attachments" / (row["alias"] + extension), expected)
+            for row in selection["editions"]:
+                edition = ws.results.project(row["id"], row["revision"])
+                check("sha256" not in row or edition["sha256"] == row["sha256"],
+                      "The selected saved reporting edition differs")
+                rebuilt = ws.results.report(row["id"], row["revision"])
+                check(rebuilt["report"]["reportSha256"] == edition["report"]["reportSha256"],
+                      "The original saved report does not rebuild")
+                covered = {activity["activityId"] for activity in rebuilt["report"]["activities"]}
+                missing = sorted(set(activities) - covered)
+                check(not missing, "This saved edition lacks agreed activities: " + ", ".join(missing))
+                editions[row["alias"]] = edition
+                immutable_json(root / "editions" / (row["alias"] + ".json"), edition)
+                for source_id in edition["definition"]["sources"]:
+                    sources[source_id] = ws.source(source_id)
+                if row["id"] not in comparisons:
+                    comparisons[row["id"]] = native_input(root, "selected-comparisons", row["alias"],
+                                                         lambda: ws.results.comparisons(row["id"]))
+            for row in selection.get("publisherProjects", []):
+                edition = ws.publishing.project(row["id"], row["revision"])
+                check("sha256" not in row or edition.get("sha256") == row["sha256"],
+                      "The selected original publisher edition differs")
+                publishers[row["alias"]] = edition
+                immutable_json(root / "publishers" / (row["alias"] + ".json"), edition)
+            result = {"schema": RUN, "selectionMode": "existing-native-editions",
+                      "operationId": selection["operationId"], "workspaceId": workspace_id,
+                      "planSha256": digest(encoded(selection)), "programme": programme,
+                      "sources": sources, "publisherSteps": publishers,
+                      "editions": editions, "comparisons": comparisons}
+            immutable_json(root / "result.json", result)
+            return {"resultFile": str(root / "result.json"), "operationId": selection["operationId"],
+                    "workspaceId": workspace_id, "nativeSaves": 0,
+                    "editions": {name: {"id": row["id"], "revision": row["revision"],
+                                       "sha256": row["sha256"], "counts": row["report"]["counts"]}
+                                 for name, row in editions.items()}}
+
+
+def inspect_source(workspace, iati, source, programme_id, programme_name, activity_ids, provenance, out,
+                   *, opened_workspace=None):
     source = absolute(source)
     source_identity = identity(source)
     out = private_directory(out, create=not Path(out).exists())
     Workspace = load_runtime(iati)
-    with Workspace(str(absolute(workspace))) as ws:
+    with programme_workspace(Workspace, workspace, opened_workspace) as ws:
         with source.open("rb") as stream:
             retained = ws.add_source(stream, programme_name, source.name)
         projection = ws.results.project_source(retained["id"])
@@ -544,7 +693,75 @@ def overview(result, members):
             "The original application opens after all selected files and editions are received.</p></section></html>").encode()
 
 
-def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root, out):
+@contextmanager
+def original_packet(path):
+    """Use the native export lease and recover only its exact published link."""
+    path = Path(path)
+    native = importlib.import_module("iati_workspace")
+    with native.export_lease(path):
+        stage = path.parent / ("." + path.name + ".iati-export.partial")
+        if stage.exists() or stage.is_symlink():
+            info = stage.lstat()
+            if (stat.S_ISREG(info.st_mode) and not path.is_symlink() and
+                    path.exists() and os.path.samefile(stage, path)):
+                check(info.st_nlink == 2 and info.st_uid == os.getuid() and
+                      not info.st_mode & 0o077, "The original published packet has unrelated links or ownership")
+                stage.unlink()
+                sync_dir(path.parent)
+        before = identity(path)
+        yield before
+        check(identity(path) == before, "The original completed packet changed while receiving")
+
+
+def frozen_results_packet(ws, path, selected, workspace_id):
+    """Verify and reopen the native frozen archive without adopting or re-exporting it."""
+    transfer = importlib.import_module("results.transfer")
+    report_module = importlib.import_module("results.report")
+    with original_packet(path) as packet_identity, ws.scratch() as temp:
+        manifest, paths, receipt_input = transfer._read(Path(path), temp)
+        check({"bytes": receipt_input["bytes"], "sha256": receipt_input["sha256"]} == packet_identity,
+              "The native reader selected another completed packet")
+        snapshot = read_json(paths["snapshot.json"])
+        check(snapshot.get("id") == manifest["project"] == selected["id"] and
+              snapshot.get("sha256") == manifest["snapshotSha256"] and
+              snapshot.get("originalWorkspaceId") == workspace_id and
+              snapshot.get("selectedRevision") == manifest["selectedRevision"] == selected["revision"] and
+              snapshot.get("selectedSha256") == manifest["selectedEditionSha256"] == selected["sha256"],
+              "The completed packet selects another original programme edition")
+        sources, prior_blobs, snapshots, used = transfer._incoming_graph(snapshot, paths)
+        check(sorted(sources) == manifest["sources"], "The packet changes its complete original source closure")
+        for value in snapshots.values():
+            check(value["id"] == snapshot["id"], "A retained history belongs to another original project")
+            ws.results.validate_snapshot(value, sources)
+        edition = next(row for row in snapshot["editions"] if row["revision"] == selected["revision"])
+        check(edition["sha256"] == selected["sha256"] and
+              edition["report"]["reportSha256"] == manifest["reportSha256"] == selected["report"]["reportSha256"],
+              "The completed packet changes the selected original report")
+        reports = report_module.report_files(edition, edition["report"], snapshot["comparisons"])
+        for name, data in reports.items():
+            member = "reports/" + name
+            check(member in paths and paths[member].read_bytes() == data,
+                  "The packet's readable report differs from its native edition: " + name)
+            used.add(member)
+        check(used == set(paths), "The completed packet has bytes outside its exact original project closure")
+        return packet_identity, reports
+
+
+def frozen_publisher_packet(ws, Workspace, path, selected):
+    """Reopen an already released native publisher packet in a private disposable workspace."""
+    with original_packet(path) as packet_identity, ws.scratch() as temp:
+        with Workspace(str(temp / "publisher-receiving"), create=True) as receiving:
+            receiving.publishing.receive(Path(path))
+            reopened = receiving.publishing.project(selected["id"], selected["revision"])
+            check(reopened["state"] == "RELEASED" and reopened["release"] and
+                  reopened["id"] == selected["id"] and reopened["revision"] == selected["revision"] and
+                  reopened["release"]["id"] == selected["release"]["id"] and
+                  reopened["candidateSource"] == selected["candidateSource"],
+                  "The released publisher packet did not reopen its original selected edition")
+        return packet_identity
+
+
+def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root, out, *, opened_workspace=None):
     result_path = absolute(result_path)
     result = read_json(result_path)
     check(result.get("schema") == RUN, "Select a complete original programme result")
@@ -593,38 +810,55 @@ def build_handover(workspace, iati, result_path, runtime_manifest, runtime_root,
         for name, path, expected in runtime_rows:
             retain_file("runtime/" + name, path, expected)
         project_packets, publishing_packets = [], []
-        with Workspace(str(absolute(workspace))) as ws:
+        selected_heads = {}
+        for item in original_plan["plan"]["editions"]:
+            selected = result["editions"][item["alias"]]
+            selected_heads[selected["id"]] = {"project": selected["id"], "revision": selected["revision"],
+                                               "editionSha256": selected["sha256"], "alias": item["alias"]}
+        with programme_workspace(Workspace, workspace, opened_workspace) as ws:
             check(ws.results.inventory()["workspaceId"] == result["workspaceId"],
                   "This is another original workspace")
-            report_module = importlib.import_module("results.report")
-            for name, selected in result["editions"].items():
-                current = ws.results.project(selected["id"], selected["revision"])
-                check(current["sha256"] == selected["sha256"], "The selected original edition differs")
-                native = ws.results.report(selected["id"], selected["revision"])
-                reports = report_module.report_files(native["edition"], native["report"],
-                                                     ws.results.comparisons(selected["id"]))
-                for filename, data in reports.items():
-                    retain_bytes("reports/" + name + "/" + relative(filename), data)
-                filename = "data/results-" + name + ".zip"
-                (out / "data").mkdir(mode=0o700, exist_ok=True)
-                ws.results.export(selected["id"], out / filename, selected["revision"])
-                members[filename] = identity(out / filename)
-                project_packets.append({"alias": name, "project": selected["id"], "revision": selected["revision"],
-                                        "editionSha256": selected["sha256"], "path": filename, **members[filename]})
             final_publishers = {}
-            for name, selected in result["publisherSteps"].items():
+            publisher_order = original_plan["plan"].get("publisherSteps",
+                                                        original_plan["plan"].get("publisherProjects", []))
+            for item in publisher_order:
+                name = alias(item["alias"], "publisher packet alias")
+                selected = result["publisherSteps"][name]
                 final_publishers[selected["id"]] = (name, selected)
             for ident, (name, selected) in final_publishers.items():
+                current = ws.publishing.project(ident, selected["revision"])
+                check(current["state"] == "RELEASED" and current.get("release") and
+                      current.get("candidateSource") == selected.get("candidateSource") and
+                      current.get("release") == selected.get("release"),
+                      "Native publisher receiving requires an already released original revision; "
+                      "select that actual revision after completing its original publishing workflow")
+            (out / "data").mkdir(mode=0o700, exist_ok=True)
+            for name, selected in result["editions"].items():
+                alias(name, "Results packet alias")
+                current = ws.results.project(selected["id"], selected["revision"])
+                check(current["sha256"] == selected["sha256"], "The selected original edition differs")
+                filename = "data/results-" + name + ".zip"
+                if not (out / filename).exists() and not (out / filename).is_symlink():
+                    ws.results.export(selected["id"], out / filename, selected["revision"])
+                packet_identity, reports = frozen_results_packet(ws, out / filename, selected, result["workspaceId"])
+                members[filename] = packet_identity
+                for report_name, data in reports.items():
+                    retain_bytes("reports/" + name + "/" + relative(report_name), data)
+                project_packets.append({"alias": name, "project": selected["id"], "revision": selected["revision"],
+                                        "editionSha256": selected["sha256"], "path": filename, **packet_identity})
+            for ident, (name, selected) in final_publishers.items():
                 filename = "data/publisher-" + name + ".zip"
-                ws.publishing.export(ident, out / filename, selected["revision"])
-                members[filename] = identity(out / filename)
+                if not (out / filename).exists() and not (out / filename).is_symlink():
+                    ws.publishing.export(ident, out / filename, selected["revision"])
+                members[filename] = frozen_publisher_packet(ws, Workspace, out / filename, selected)
                 publishing_packets.append({"alias": name, "project": ident, "revision": selected["revision"],
                                            "path": filename, **members[filename]})
         retain_bytes("index.html", overview(result, members))
         manifest = {"schema": HANDOVER, "operationId": result["operationId"],
                     "programme": result["programme"], "originalWorkspaceId": result["workspaceId"],
                     "iatiPath": "runtime/" + runtime["iatiPath"], "runtimeSelection": runtime["selection"],
-                    "results": project_packets, "publishing": publishing_packets, "files": members}
+                    "results": project_packets, "selectedHeads": list(selected_heads.values()),
+                    "publishing": publishing_packets, "files": members}
         immutable_json(out / "HANDOVER.json", manifest)
         return {"directory": str(out), "manifest": identity(out / "HANDOVER.json"),
                 "files": len(members), "bytes": sum(row["bytes"] for row in members.values()),
@@ -647,6 +881,8 @@ def main(argv=None):
     inspect.add_argument("--out", required=True, type=Path)
     run = commands.add_parser("run")
     run.add_argument("--plan", required=True, type=Path)
+    selected = commands.add_parser("select")
+    selected.add_argument("--selection", required=True, type=Path)
     handover = commands.add_parser("handover")
     handover.add_argument("--result", required=True, type=Path)
     handover.add_argument("--runtime-manifest", required=True, type=Path)
@@ -662,6 +898,8 @@ def main(argv=None):
                                 args.name, args.activity, args.provenance, args.out)
     elif args.command == "run":
         result = run_programme(args.workspace, args.iati, args.plan)
+    elif args.command == "select":
+        result = select_programme(args.workspace, args.iati, args.selection)
     else:
         result = build_handover(args.workspace, args.iati, args.result, args.runtime_manifest,
                                 args.runtime_root, args.out)

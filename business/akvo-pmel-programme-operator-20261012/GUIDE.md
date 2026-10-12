@@ -105,6 +105,21 @@ The operation directory is `programme-operations/<operation-id-SHA256>` inside t
 
 If a command is interrupted, run the same command with the same plan and operation ID. The same native inputs are recovered first; original engine replay precedes its revision check. A correction whose native save completed is continued through its retained exact request rather than previewed against a later head. An active same-operation lock prevents overlapping writers. A changed programme plan is a new operation; it does not replace the earlier operation's input.
 
+## Hand over editions already saved by the staff interface
+
+Use `select` to capture the exact native Results project and revisions already saved through the staff desk. It creates a programme handover selection in the same workspace and performs zero native Results or publisher saves. The original reports are rebuilt and the agreed activity inventory is checked.
+
+The selection JSON has schema `tjlabs.pmel.programme-selection.v1`, a stable `operationId`, the same `programme` inventory, and an ordered `editions` list. Each edition is `{alias, id, revision, sha256?}` with the actual native project/revision and optional original edition SHA256. Optional `publisherProjects` uses the same shape for saved original publisher projects. Optional `attachments` carries the complete commissioning document, review and original provenance files by exact identity. The last selected edition for each project is the intended head for a new receiving workspace; the earlier selections remain accessible as history.
+
+```bash
+python3 programme.py \
+  --iati /srv/pmel-source/stellar/scf-starforge-20261009/sf30-seller-sdk/iati \
+  --workspace /srv/pmel-private/programme \
+  select --selection /srv/pmel-private/staff-selection.json
+```
+
+Use the returned `resultFile` with the same `handover` command. The staff desk may call `select_programme(workspace, iati, selection_path)` directly. A selection reads the existing original editions; it does not resave the definition or create a replacement project.
+
 ## Build the whole handover
 
 Use the result file returned by the successful original run, the complete selected source root, and its exact runtime manifest:
@@ -134,7 +149,7 @@ On the receiving Linux host, put the complete delivered directory at its final s
 python3 START.py --workspace /srv/received-pmel/programme
 ```
 
-The start script verifies every selected source/data/report member before loading the included original runtime. It receives the native publisher and Results packets into the selected workspace, reopens every selected historical edition and rebuilds its native report, closes SQLite, then independently reopens it again. The original IATI server starts and prints its private local console URL. Use the existing source, Results, publishing and commissioning views in that application.
+The start script verifies every selected source/data/report member before loading the included original runtime. It receives the native publisher and Results packets into the selected workspace, reopens every selected historical edition and rebuilds its native report, closes SQLite, then independently reopens it again. For a new workspace, the explicitly selected head packet is received first, followed by historical packets. This opens the intended reviewed edition while retaining older editions. Existing workspace heads are preserved by the original native receiver. The original IATI server starts and prints its private local console URL. Use the existing source, Results, publishing and commissioning views in that application.
 
 For an unattended receiving run, add `--receive-only`. Repeat the exact command after an interruption; the original receiving marker and native receipts identify the same operation. To deliberately receive into an existing native workspace, add `--existing-workspace`. Original native receiving preserves an existing local head, and the selected historical editions remain accessible by ID and revision. The start script does not silently adopt a different current head.
 
@@ -145,3 +160,17 @@ The final receiving result is saved under `programme-receiving/<handover-SHA256>
 This programme operation/receiving contribution belongs to the common Akvo delivery: 24EA owns the staff interface and the sole company/contact operation; 018A owns the commissioning-document preparation; 6966 owns the Results engine and its native receiving; A5F3 owns the organisation operator; CB2A owns adjoining financial reconciliation. Customer scope and correspondence remain in the original Sales parent. This source introduces no company case or sender.
 
 Original source documentation remains the authority for native APIs and formats: the selected runtime's `RESULTS.md`, `PUBLISHING.md`, README and organisation guide. Preserve all licences and notices included in that source selection.
+
+## Continue an interrupted handover
+
+Run the same `handover` command against its original output directory and selected source. Completed Results ZIPs are read through the original native archive, history, source and report validators. Their saved snapshot supplies the readable reports and comparison files. The builder does not re-export a completed ZIP against a project that has since acquired another edition or comparison. If the original ZIP was published immediately before an interruption, its exact native export lease and remaining same-file partial link are reconciled first. Other partial files remain in place.
+
+The operator similarly recovers a completed private output whose only second hard link is its exact owned temporary file with identical bytes. It does not replace an existing different output. Saved-edition selection retains its first complete comparison records so repeating that selection does not substitute subsequent UI work.
+
+The original publishing application exports **released** publisher revisions. A programme plan can prepare or correct a local publisher draft, but complete editable publisher receiving requires selecting its actual released revision. Use the original publishing application's review and release workflow when the project is ready, then `select` that saved revision. A Results-only programme may keep `publisherSteps` empty; its native Results packets still contain the complete original XML sources and reporting history. A completed publisher ZIP is independently received into a private disposable workspace before inclusion.
+
+## Use the existing staff application lifetime
+
+The native IATI workspace holds its original process lock for its entire lifetime. For separate CLI commands, stop that workspace's local console, run the programme command, and reopen the console afterwards. The programme operator keeps every original project and saved revision in that same workspace.
+
+An integration inside the existing authenticated application can call `inspect_source`, `run_programme`, `select_programme` or `build_handover` with `opened_workspace=ws`, where `ws` is that host's actual `IatiWorkspace` instance. The component verifies the same original workspace path and runtime class, uses the existing object, and leaves its close and lock ownership with the host. All other arguments remain the documented absolute paths and complete original inputs. The host remains responsible for its existing authentication and request lifecycle; this parameter creates no second server or public endpoint.
