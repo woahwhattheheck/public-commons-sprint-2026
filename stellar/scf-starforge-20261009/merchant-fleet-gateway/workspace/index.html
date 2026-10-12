@@ -14,6 +14,74 @@
   <section class="panel"><h2>Draining generations</h2><p>Requests already admitted before activation continue on their original configuration.</p><div id="draining"></div></section>
   <section id="managed-processes" class="panel" hidden><h2>Seller processes</h2><p>Retire a drained replacement slot after traffic has moved. The gateway checks it again while the original release session stops.</p><div id="release-processes" class="table-wrap"></div><p id="release-pending" class="small"></p></section>
   <section class="panel"><div class="section-head"><div><h2>Retained history</h2><p>Rollback selects a retained snapshot and creates a new revision after the original sellers pass their checks.</p></div></div><div id="history" class="table-wrap"></div></section>
+  <section id="fleet-clients" class="panel" hidden aria-labelledby="client-heading">
+    <div class="section-head"><div><h2 id="client-heading">Customer SDK handover</h2><p>Generate and deliver the original client for a chosen merchant and release slot.</p></div><span id="client-scope" class="pill"></span></div>
+    <div class="release-form"><label>Merchant<select id="client-tenant"></select></label><label>Release slot<select id="client-slot"></select></label></div>
+    <p id="client-owner" class="small"></p>
+    <div class="release-form"><label>Customer export ID<input id="client-export-id" pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" autocomplete="off" placeholder="customer-release-1"></label><button id="client-generate" type="button">Generate customer SDK</button><button id="client-inspect" type="button">Inspect retained client</button></div>
+    <p id="client-notice" role="status" aria-live="polite"></p>
+    <div class="table-wrap"><table><thead><tr><th>Customer export</th><th>Saved seller</th><th>Completion</th><th>Original files</th><th>Action</th></tr></thead><tbody id="client-list"></tbody></table></div>
+    <div class="button-row"><button id="client-refresh" type="button">Refresh exports</button><button id="client-first" type="button">First page</button><button id="client-next" type="button">Next page</button></div>
+    <section id="client-review" class="client-review" hidden><h3 id="client-review-title">Retained customer client</h3><p id="client-review-description"></p><dl id="client-identity"></dl><div id="client-offers"></div>
+      <div class="table-wrap"><table><thead><tr><th>Original file</th><th>Size</th><th>SHA-256</th><th>Download</th></tr></thead><tbody id="client-files"></tbody></table></div>
+      <div class="button-row"><button id="client-package" class="primary" type="button">Download customer package</button><button id="client-adopt" type="button" hidden>Retain reviewed completion</button><button id="client-download-stop" type="button" hidden>Stop download</button></div><p id="client-download-progress" role="status" aria-live="polite" class="small"></p>
+    </section>
+  </section>
+  <section id="fleet-discovery" class="panel" hidden aria-labelledby="discovery-heading">
+    <div class="section-head"><div><h2 id="discovery-heading">Merchant discovery</h2><p>Enroll a merchant once, then review its original offers and publish signed catalog changes from the current serving release.</p></div><span id="discovery-state" class="pill">Select a merchant</span></div>
+    <div class="release-form"><label>Merchant<select id="discovery-tenant"></select></label><button id="discovery-refresh" type="button">Refresh discovery</button></div>
+    <p id="discovery-notice" role="status" aria-live="polite" hidden></p>
+    <dl id="discovery-serving" class="discovery-identity"></dl>
+    <div id="discovery-recovery" class="discovery-recovery" hidden></div>
+    <form id="discovery-enrollment-form" class="discovery-subsection">
+      <h3>Create the tenant enrollment</h3><p>The original serving release supplies the resource identities, payment choices and seller permissions. Review these before creating the private signing identity.</p>
+      <div class="release-form"><label>Seller ID<input id="discovery-seller-id" required pattern="[A-Za-z0-9_.:-]{1,128}" maxlength="128" autocomplete="off" placeholder="merchant-seller"></label><label>Public offer export URL<input id="discovery-source-url" type="url" autocomplete="off" placeholder="Default: merchant origin /_seller/offers"></label><button id="discovery-review-enrollment" type="submit">Review enrollment</button></div>
+    </form>
+    <div id="discovery-enrollment" class="discovery-subsection" hidden></div>
+    <div class="button-row discovery-actions"><button id="discovery-start" type="button">Start discovery</button><button id="discovery-stop" type="button">Stop discovery</button><button id="discovery-download-enrollment" type="button">Download public enrollment</button><a id="discovery-buyer-link" class="release-tool-link" target="_blank" rel="noopener" referrerpolicy="origin" hidden>Open buyer explorer</a></div>
+
+    <section class="discovery-subsection" aria-labelledby="discovery-source-heading"><h3 id="discovery-source-heading">Original release offers</h3><p>Inspect the serving offers or an older retained source. An older source can identify a listing removed from the current release for an explicit withdrawal.</p>
+      <form id="discovery-source-form" class="release-form"><label>Source<select id="discovery-source-mode"><option value="current">Current serving release</option><option value="retained">Retained release</option></select></label><label id="discovery-source-slot-label" hidden>Retained slot<select id="discovery-source-slot"></select></label><label id="discovery-source-release-label" hidden>Retained release<select id="discovery-source-release"></select></label><button id="discovery-read-source" type="submit">Read source</button></form>
+      <p id="discovery-source-note" class="small"></p><div id="discovery-source-identity"></div><div id="discovery-permissions"></div><div id="discovery-offers" class="table-wrap"></div>
+      <div class="button-row"><button id="discovery-offers-prev" type="button">Previous offers</button><span id="discovery-offers-page" class="small"></span><button id="discovery-offers-next" type="button">Next offers</button><button id="discovery-download-source" type="button">Download source readback</button></div>
+      <div class="discovery-publication"><button id="discovery-review-publish" type="button">Review publication</button><p class="small">Publication reviews all changes in the current serving release, including each exact payment choice.</p></div>
+      <form id="discovery-withdraw-form" class="release-form"><label>Listed route to withdraw<select id="discovery-route" required></select></label><label>Withdrawal reason<input id="discovery-reason" required maxlength="256" autocomplete="off" placeholder="Why this listing is being withdrawn"></label><button id="discovery-review-withdraw" type="submit">Review withdrawal</button></form>
+    </section>
+
+    <section id="discovery-review" class="discovery-subsection discovery-review" hidden aria-labelledby="discovery-review-title"><div class="section-head"><div><h3 id="discovery-review-title">Reviewed discovery change</h3><p id="discovery-review-note" class="small"></p></div><button id="discovery-clear-review" type="button">Close review</button></div><div id="discovery-review-summary"></div><div id="discovery-review-changes" class="table-wrap"></div><div class="button-row"><button id="discovery-review-prev" type="button">Previous changes</button><span id="discovery-review-page" class="small"></span><button id="discovery-review-next" type="button">Next changes</button><button id="discovery-download-review" type="button">Download complete review</button><button id="discovery-apply" class="primary" type="button">Apply reviewed change</button></div></section>
+    <div id="discovery-result" class="discovery-subsection" hidden></div>
+
+    <section class="discovery-subsection" aria-labelledby="discovery-history-heading"><h3 id="discovery-history-heading">Original resource history</h3><form id="discovery-history-form" class="release-form"><label>Catalog resource key<input id="discovery-history-key" required maxlength="4096" autocomplete="off" placeholder="Choose History beside an offer"></label><button id="discovery-read-history" type="submit">Read history</button><button id="discovery-download-history" type="button">Download retained history</button></form><div id="discovery-history"></div></section>
+
+    <section class="discovery-subsection" aria-labelledby="discovery-consumer-heading"><h3 id="discovery-consumer-heading">Read the public discovery page</h3><p>The original buyer explorer reads this tenant’s running catalog. Browse a page or search with the provider’s original filters.</p>
+      <form id="discovery-consumer-form"><div class="discovery-filter-grid"><label>Search query<input id="discovery-query" maxlength="1024" placeholder="Empty query browses the catalog"></label><label>Network<select id="discovery-network"><option value="">All networks</option><option value="stellar:testnet">Stellar testnet</option><option value="stellar:pubnet">Stellar public network</option></select></label><label>Resource type<select id="discovery-type"><option value="">All resource types</option><option value="http">HTTP</option><option value="mcp">MCP</option></select></label><label>Payment scheme<input id="discovery-scheme" maxlength="256"></label><label>Recipient<input id="discovery-payto" maxlength="256"></label><label>Extension<input id="discovery-extensions" maxlength="256"></label><label>Page size<input id="discovery-limit" type="number" min="1" max="100" step="1" value="25" required></label></div><div class="button-row"><button id="discovery-read-page" type="submit">Read public page</button><button id="discovery-page-prev" type="button">Previous page</button><button id="discovery-page-next" type="button">Next page</button><button id="discovery-restore-filters" type="button">Restore displayed filters</button><button id="discovery-download-page" type="button">Download original page</button></div></form>
+      <p id="discovery-page-note" class="small"></p><div id="discovery-public-page" class="table-wrap"></div>
+    </section>
+  </section>
+  <section id="fleet-delivery" class="panel" hidden aria-labelledby="delivery-heading">
+    <div class="section-head"><div><h2 id="delivery-heading">Settlement delivery</h2><p>Deliver original merchant receipts to independent HTTPS destinations and retain a complete receiving package.</p></div><span id="delivery-scope" class="pill">Select a merchant</span></div>
+    <div class="release-form"><label>Merchant<select id="delivery-tenant"></select></label><label>Release slot<select id="delivery-slot"></select></label><button id="delivery-refresh" type="button">Refresh delivery</button></div>
+    <p id="delivery-notice" role="status" aria-live="polite" hidden></p>
+    <p id="delivery-observed" class="small">Refresh to read original delivery state.</p>
+    <dl id="delivery-producer" class="delivery-identity"></dl>
+    <div class="button-row delivery-actions"><a id="delivery-controls" class="release-tool-link" target="_blank" rel="noopener" hidden>Open destination controls</a><button id="delivery-drain" type="button">Deliver pending once</button><button id="delivery-start" type="button">Start delivery worker</button><button id="delivery-stop" type="button">Stop delivery worker</button></div>
+    <p class="small">Destination controls retain each receiver’s enrollment, route and network filters, pause state, retries, cursor and signing environment reference. Merchant upgrades preserve this store’s original source journal.</p>
+    <div class="table-wrap"><table><thead><tr><th>Destination</th><th>State</th><th>Source remaining</th><th>Pending</th><th>Delivered</th><th>Exhausted</th><th>Signing environment</th></tr></thead><tbody id="delivery-destinations"></tbody></table></div>
+    <section class="delivery-subsection" aria-labelledby="delivery-transfer-heading"><h3 id="delivery-transfer-heading">Retained delivery transfers</h3>
+      <p>Capture the displayed original source and all destination journals under one immutable ID. Use a new ID for later history; inspect the same ID after a lost response.</p>
+      <form id="delivery-transfer-form" class="release-form"><label>Transfer ID<input id="delivery-transfer-id" required pattern="[a-z0-9][a-z0-9_-]{0,63}" maxlength="64" autocomplete="off" placeholder="accounting-delivery-1"></label><button id="delivery-create-transfer" type="submit">Retain delivery transfer</button></form>
+      <div class="table-wrap"><table><thead><tr><th>Transfer</th><th>Captured</th><th>Original receipts</th><th>Destinations</th><th>Action</th></tr></thead><tbody id="delivery-transfer-list"></tbody></table></div>
+      <div class="button-row"><button id="delivery-first" type="button">First page</button><span id="delivery-page" class="small"></span><button id="delivery-next" type="button">Next page</button></div>
+    </section>
+    <section id="delivery-review" class="delivery-subsection" hidden aria-labelledby="delivery-review-title"><h3 id="delivery-review-title">Original delivery transfer</h3>
+      <dl id="delivery-transfer-identity" class="delivery-identity"></dl>
+      <p>The receiving package contains original source receipts, destination descriptors, cursors and delivery outcomes. The recipient supplies the named signing environment values when starting its delivery worker.</p>
+      <div class="button-row"><button id="delivery-download" class="primary" type="button">Download delivery package</button><button id="delivery-download-stop" type="button" hidden>Stop download</button></div>
+      <p id="delivery-download-progress" role="status" aria-live="polite" class="small"></p>
+      <details><summary>Original files and SHA-256 values</summary><div class="table-wrap"><table><thead><tr><th>Original member</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody id="delivery-files"></tbody></table></div></details>
+      <h4>Receive the complete original workspace</h4><p class="small">Run from the folder containing the downloaded archive. Use new private directories for extraction and receiving. The original receiver verifies the displayed fingerprint and preserves each destination’s history.</p><pre id="delivery-receive-commands"></pre>
+    </section>
+  </section>
   <footer><span id="storage">Snapshot storage: —</span><span>Private loopback workspace · Original SF30 sellers and gateway</span></footer>
 </main>
 <dialog id="confirm"><form method="dialog"><h2 id="confirm-title">Confirm change</h2><p id="confirm-description"></p><pre id="confirm-details"></pre><div class="button-row"><button value="cancel">Cancel</button><button id="confirm-apply" value="apply" class="primary">Apply change</button></div></form></dialog>
