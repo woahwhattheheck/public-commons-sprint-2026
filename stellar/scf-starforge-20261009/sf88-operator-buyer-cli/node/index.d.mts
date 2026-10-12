@@ -85,6 +85,8 @@ export interface BuyerStreamEvent {
 }
 export interface ImportOptions {
   body?: string | Uint8Array;
+  /** Stops preparation and its original offline review before an operation is returned. */
+  signal?: AbortSignal;
   operatorProfile?: OperatorProfile | string;
   /** The Node application owns the fixed private destination. */
   responseFile?: ResponseCaptureOptions;
@@ -96,7 +98,6 @@ export interface WorkspaceImportOptions extends Omit<ImportOptions, 'operatorPro
   configuration?: string | JsonObject;
   /** Explicit new intent for the selected request; never inferred during recovery. */
   intentId?: string;
-  signal?: AbortSignal;
 }
 export interface Review {
   readonly intentId: string;
@@ -197,7 +198,8 @@ export class Operation {
   readonly directory: string;
   readonly configPath: string;
   constructor(buyer: Buyer, intentId: string);
-  review(): Promise<Review>;
+  /** Stops the original offline review child; the prepared operation remains available. */
+  review(options?: { signal?: AbortSignal }): Promise<Review>;
   execute(options: { review: Review; signal?: AbortSignal }): Promise<BuyerResult>;
   /** Reads saved output only. This method never launches a native buyer. */
   recover(): Promise<BuyerResult | null>;
