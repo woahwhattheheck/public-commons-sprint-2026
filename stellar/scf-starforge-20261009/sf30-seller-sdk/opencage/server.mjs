@@ -131,8 +131,8 @@ export async function createGeocodeServer({workspace=null,delivery=null,port=0,m
   origin='http://127.0.0.1:'+server.address().port;
   const close=()=>closePromise??=(async()=>{
     closing=true;const stopped=new Promise(done=>server.close(done));
-    await Promise.allSettled([...pending]);await workspace?.close();
-    for(const socket of sockets)socket.destroy();await stopped;
+    try {await Promise.allSettled([...pending]);await workspace?.close();}
+    finally {for(const socket of sockets)socket.destroy();await stopped;}
   })();
   return {server,origin,url:origin+'/#'+token,token,close,managedStartup};
 }
