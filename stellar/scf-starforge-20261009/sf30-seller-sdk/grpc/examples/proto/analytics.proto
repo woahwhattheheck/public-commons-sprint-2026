@@ -1,0 +1,29 @@
+syntax = "proto3";
+package stellarforge.analytics.v1;
+
+// A small native unary service used by the documented local operator example.
+service Analytics {
+  rpc Summary (SummaryRequest) returns (SummaryResponse);
+  rpc Watch (SummaryRequest) returns (stream SummaryResponse);
+}
+message SummaryRequest {
+  uint64 account_id = 1;
+  string day = 2;
+  bool include_voided = 3;
+  repeated string labels = 4;
+  optional string cursor = 5;
+}
+message SummaryResponse {
+  uint64 record_id = 1;
+  string amount = 2;
+  bytes evidence = 3;
+  int64 observed_sequence = 4;
+  map<string, string> attributes = 5;
+  repeated Item items = 6;
+  optional string note = 7;
+}
+message Item {
+  uint64 id = 1;
+  string amount = 2;
+  string state = 3;
+}

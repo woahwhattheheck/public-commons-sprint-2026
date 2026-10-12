@@ -5,11 +5,11 @@ import { join, resolve, dirname, isAbsolute } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import {
   prepare, openWorkspace, readRevision, readRegular, copyWorkspace, saveReview,
-  writeReviewPage, digest,
+  writeReviewPage, inspectWorkspace, digest,
 } from './store.mjs';
 import {
   prepareRefresh, openRefresh, saveRefreshReview, writeRefreshPage, copyRefresh,
-  packageRefresh,
+  packageRefresh, describeRefresh,
 } from './refresh.mjs';
 import { buildDocument, canonical } from './model.mjs';
 import { renderReview } from './review.mjs';
@@ -114,17 +114,18 @@ export async function openHarConsole({parent}) {
     const directory = await mkdtemp(join(root, '.temporary', 'operation-'));
     try {return await work(directory);} finally {await rm(directory, {recursive:true, force:true});}
   }
-  async function ensureOriginal(selected, build) {
-    const {directory} = await location(selected);
+  async function ensureDirectory(directory, reopen, build) {
     if (!await exists(directory)) {await build(directory); return {reused:false,recovered:false};}
-    try {await opened(selected); return {reused:true,recovered:false};}
+    try {await reopen(); return {reused:true,recovered:false};}
     catch (originalError) {
-      // Native writers reserve an empty final directory before building privately.
-      // Finish only that empty reservation from the same exact original inputs.
+      // Finish only the original writer's still-empty reservation. Stage beside
+      // that destination so a receiving directory can live on another volume.
       const reservation = await lstat(directory);
       if (!reservation.isDirectory() || reservation.isSymbolicLink() || (reservation.mode & 0o077) ||
           (await readdir(directory)).length) throw originalError;
-      return temporary(async parent => {
+      await privateDirectory(dirname(directory));
+      const parent = await mkdtemp(join(dirname(directory),'.har-recovery-'));
+      try {
         const stage = join(parent,'retained-source');
         await build(stage);
         const current = await lstat(directory);
@@ -132,10 +133,14 @@ export async function openHarConsole({parent}) {
             (await readdir(directory)).length)
           throw conflict('This source completed in another operation. Refresh its retained entry.');
         await rename(stage,directory); await syncDirectory(dirname(directory));
-        await opened(selected);
+        await reopen();
         return {reused:true,recovered:true};
-      });
+      } finally {await rm(parent,{recursive:true,force:true});}
     }
+  }
+  async function ensureOriginal(selected, build) {
+    const {directory} = await location(selected);
+    return ensureDirectory(directory,() => opened(selected),build);
   }
   async function location(value) {
     const selected = selection(value);
@@ -373,9 +378,28 @@ export async function openHarConsole({parent}) {
   async function copy(value, destination) {
     const current = await opened(value); destination = absolute(destination);
     await privateDirectory(dirname(destination));
-    const result = current.packet ? await copyRefresh(current.directory,destination)
-      : await copyWorkspace(current.workspace.root,destination);
-    return {selection:current.selected,destination,result,
+    const reopen = async () => {
+      const target = current.packet ? await openRefresh(destination) : await openWorkspace(destination);
+      if (canonical(target.manifest) !== canonical(current.packet?.manifest ?? current.workspace.manifest))
+        throw conflict('The receiving directory contains another original source. Choose its original destination.');
+      return target;
+    };
+    const publication = await ensureDirectory(destination,reopen,target => current.packet
+      ? copyRefresh(current.directory,target) : copyWorkspace(current.workspace.root,target));
+    const target = await reopen();
+    // Equal original source remains reusable as its immutable reviews advance.
+    // Add validated absent revisions through the native writer; existing
+    // receiving-only reviews and both refresh members retain their ownership.
+    if (current.packet) {
+      await mergeReviews(current.packet.previous,target.previous);
+      await mergeReviews(current.packet.candidate,target.candidate);
+    } else await mergeReviews(current.workspace,target);
+    const inspected = current.packet ? null : await inspectWorkspace(destination);
+    const result = current.packet ? describeRefresh(target,publication.reused) : {
+      workspace:destination,sourceSha256:target.manifest.sourceSha256,
+      revisions:inspected.reviews.map(row => row.revision),
+    };
+    return {selection:current.selected,destination,result,...publication,
       receivingKind:current.packet?'refresh':'capture'};
   }
   async function locate(specText) {
