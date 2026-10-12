@@ -120,4 +120,4 @@ These are whole-file and complete-history limits. Export a complete prior projec
 node RECEIVING.mjs /absolute/haystack-turnover-operation
 ~~~
 
-The complete application is MIT-licensed under [LICENSE](LICENSE). Original upstream material retains its accompanying [HAYSTACK_LICENSE](HAYSTACK_LICENSE) and provenance.
+The complete application is MIT-licensed under [LICENSE](LICENSE). Original upstream material retains its accompanying [HAYSTACK_LICENSE.txt](HAYSTACK_LICENSE.txt) and provenance.

@@ -7,7 +7,7 @@ import { clone, digest, sha256, base64, json, fields, hash, integer, need, now, 
 import { exists, plainRead, createOnlyFile, syncDirectory } from "./files.mjs";
 
 export const APPLICATION_FILES = [
-  "LICENSE", "README.md", "OPERATING.md", "MERCHANT.md", "HAYSTACK_CONTRACT.md", "HAYSTACK_LICENSE",
+  "LICENSE", "README.md", "OPERATING.md", "MERCHANT.md", "HAYSTACK_CONTRACT.md", "HAYSTACK_LICENSE.txt",
   "RECEIVING.mjs", "app.js", "browser-assets-loader.mjs", "browser-assets.json", "catalog.mjs",
   "cli.mjs", "client.d.mts", "client.mjs", "files.mjs", "fixture-charlie.json", "fixtures.json",
   "haystack-index.d.mts", "haystack-index.mjs", "haystack-types.d.mts", "haystack-types.mjs",

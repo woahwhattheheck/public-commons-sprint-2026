@@ -84,7 +84,7 @@ Use `--name` to supply the retained source name. Use `--no-select` to retain the
 
 The browser also offers **Import Charlie example**. This reads the complete bundled original file and retains it through the same import request and recovery workflow; it is an explicit operator action.
 
-The bundled `fixture-charlie.json` is the complete native fixture distributed with the application. Its exact origin and license are recorded in `fixtures.json`, `HAYSTACK_CONTRACT.md` and `HAYSTACK_LICENSE`. Import it through the same source action used for a supplied project file.
+The bundled `fixture-charlie.json` is the complete native fixture distributed with the application. Its exact origin and license are recorded in `fixtures.json`, `HAYSTACK_CONTRACT.md` and `HAYSTACK_LICENSE.txt`. Import it through the same source action used for a supplied project file.
 
 To read every retained source through the CLI:
 

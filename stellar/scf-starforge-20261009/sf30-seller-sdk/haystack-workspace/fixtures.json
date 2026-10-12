@@ -27,7 +27,7 @@
     }
   ],
   "license": {
-    "path": "HAYSTACK_LICENSE",
+    "path": "HAYSTACK_LICENSE.txt",
     "repository": "Project-Haystack/haystack-defs",
     "commit": "d042781e7031c125332920c9800e3d04e8f16cf7",
     "upstreamPath": "LICENSE",
@@ -35,5 +35,24 @@
     "bytes": 10289,
     "sha256": "f75c46802a91d13e060f6ea50390353ba44640a4d0709d0a4ba38a9d1c820aa0"
   },
-  "files": []
+  "files": [
+    {
+      "name": "fixture-charlie.json",
+      "path": "fixture-charlie.json",
+      "url": "https://project-haystack.org/example/download/charlie.json",
+      "examplePage": "https://project-haystack.org/example/charlie",
+      "license": "AFL-3.0",
+      "licensePath": "HAYSTACK_LICENSE.txt",
+      "donatedBy": "Thomas Duke",
+      "anonymized": true,
+      "format": "json-v4",
+      "metaVersion": "3.0",
+      "bytes": 257776,
+      "sha256": "c44a410c183f9ef9add5757955637d1ce0bad0dabf418f80e6b9a7b4a2b9afe9",
+      "gitBlobSha1": "0da6ee716ea2596149bb7926ebdf4ce4cf82808a",
+      "rows": 624,
+      "columns": 87,
+      "retrievedDate": "2026-10-12"
+    }
+  ]
 }
