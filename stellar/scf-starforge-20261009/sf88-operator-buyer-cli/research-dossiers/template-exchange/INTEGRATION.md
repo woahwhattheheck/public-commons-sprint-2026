@@ -44,7 +44,7 @@ Mount it under the existing authenticated request/origin/body-size handling:
 
     /api/research/dossiers/:dossierId/template-exchange/:action
 
-GET actions: page, publication, record, operation and blobs/:sha256.
+GET the route prefix itself for the page (empty action). Other GET actions are publication, record, operation and blobs/:sha256.
 POST actions: stage-template, stage-mapping, stage-release, stage-return, stage-return-review, review, prepare-extraction-draft and accept-extraction-draft.
 
 Pass {dossierId, method, action, query, body}. JSON results are {kind:'json', body}; native downloads are {kind:'file', body, filename, contentType, sha256, revision}. Use the maintained JSON/error/file response functions. Return Buffer download bytes with the existing safe attachment filename helper. Retain the original host's auth, same-origin checks, CORS policy, capability model and operator lifecycle; the dispatcher intentionally does not duplicate them.
@@ -93,3 +93,10 @@ The existing host accepts an optional `extractionSignal` alongside `extractionPy
 Keep the same optional signal in both template factory `workbookOptions` and the original semantic transition validator. Both ordinary JSON and streaming/gzip receiving must call that validator with the original retained source reader and this same signal. Do not serialize the signal into a request, event, source envelope or connection file.
 
 The nested template API checks cancellation before and after its original operations. Workbook inspection/patching retains the existing owned Python child's abort, timeout and close handling. Retained blob reads, staged writes, cached inspection results and event reconstruction also check the signal, so a cached result cannot advance a cancelled programme. If a native extraction or dossier event committed before interruption, its original request ID and retained operation remain authoritative; the next caller reopens the same operation with a new live controller and uses the existing request recovery. Cancellation does not roll back an accepted event or create a replacement request.
+
+
+## Complete installed integration
+
+The maintained dossier now owns `templateExchange`, its source inventory and append-only semantic replay in both JSON and gzip receiving. `server.mjs` binds the original dispatcher after the existing Host, Origin, bearer, workspace and instance checks. It serves the four explicit workbook assets with the same security headers, accepts the original 32 MiB workbook limit through the base64 JSON envelope, and returns original revision and content-hash headers on downloads. Native template error statuses and the original Research error envelope reach the client unchanged.
+
+The original dossier header opens `/template-exchange.html?dossierId=<selectedId>#token=<currentToken>`. The complete browser imports `/template-exchange-client.mjs` at its actual served URL. All twenty template source files and their original Python/native helpers are included in the current source-owned Research contribution. The original receiving workflow combines the full independent appraisal and its typed/CLI/Merchant receiving, workbook exchange, final portable reopening and customer programme on the actual continued revision.

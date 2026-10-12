@@ -4,6 +4,12 @@ This module exchanges a client's XLSX, CSV or TSV template with an immutable Res
 
 The module uses the existing dossier history, content-addressed blobs, revisions, scientific values, reviewer assignments and portable export. It adds no database, service account, mail sender, replacement adjudicator or clinical source capture.
 
+## Open workbook exchange
+
+Start the existing Research workspace with its normal launch command and open the complete local workspace address. Select a saved dossier, then choose **Workbook exchange** in its header. The workbook page keeps that dossier and the current Research session selected. Use **Back to Research** to return to the original study extraction workspace.
+
+The installed `research-template-exchange` command and exported template client operate on this same dossier. The original NCT receiving programme exercises the full workbook journey alongside independent appraisal, portable reopening and recurring customer delivery.
+
 ## Operator workflow
 
 1. Open the existing dossier's **Template exchange** view. Retain the complete client file with a name and reason. Native sheet names, formulas, styles, merged cells, hidden sheets, package media and values appear in its inspection.
