@@ -1,7 +1,30 @@
 // MIT. research-dossiers Applications registration over the original native implementation.
 import { APPLICATION_PROVIDER_SCHEMA, applicationPreparation, observeApplicationStartup } from '../application-provider.mjs';
 import { join } from "node:path";
-import { regular, need } from "../storage.mjs";
+import { pathToFileURL } from 'node:url';
+import { inspectMerchantRuntime } from '../../../sf46-release/runtime-package.mjs';
+import { regular, need, plain, absolute, digest } from "../storage.mjs";
+
+const PIPELINE_ROOT = 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers';
+const PIPELINE_FILES = [
+  'unstructured-pipelines-workspace.mjs',
+  'unstructured-pipelines/contract.mjs',
+  'unstructured-pipelines/client.mjs',
+  'unstructured-pipelines/operations.mjs',
+  'unstructured-pipelines/edition.mjs',
+];
+async function pipelineSelection(filename) {
+  const bytes = await regular(absolute(filename), 1024 * 1024);
+  const value = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+  need(plain(value) && value.schema === 'stellar-forge.unstructured-pipelines-source.v1' &&
+    Object.keys(value).every(key => ['schema', 'workspaceId', 'directory', 'configurationFile'].includes(key)) &&
+    typeof value.workspaceId === 'string' && value.workspaceId.trim().length > 0 &&
+    Buffer.byteLength(value.workspaceId) <= 128 && !/[\u0000-\u001f\u007f]/.test(value.workspaceId),
+    'APPLICATION_PIPELINE_SOURCE_INVALID', 'Choose the original saved document-pipeline source selection.');
+  absolute(value.directory); absolute(value.configurationFile);
+  return { value, sha256: digest(bytes) };
+}
+
 
 export default {
   schema: APPLICATION_PROVIDER_SCHEMA, id: "research-dossiers", order: 480,
@@ -19,7 +42,9 @@ export default {
       field('crossrefState', 'Private Crossref source directory', 'path', false,
         'Optional retained source directory. Enables DOI metadata using public Crossref.'),
       field('crossrefConfig', 'Original Crossref merchant configuration', 'path', false,
-        'Optional existing configuration; requires the Crossref source directory.'), ...common] }]; },
+        'Optional existing configuration; requires the Crossref source directory.'),
+      field('pipelineSourceConfig', 'Original document-pipeline source selection', 'path', false,
+        'Optional private source JSON selecting the retained pipeline jobs directory and original account configuration. Reopening keeps the same saved jobs and source.'), ...common] }]; },
   validateSettings(type, settings) {
     need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
       'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
@@ -27,6 +52,12 @@ export default {
       'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
   },
   async checkRuntime(type, settings, runtime) {
+    if (settings.pipelineSourceConfig) {
+      for (const path of PIPELINE_FILES)
+        await regular(join(runtime.sourceRoot, PIPELINE_ROOT, path), 4 * 1024 * 1024).catch(() =>
+          need(false, 'APPLICATION_NOT_IN_RUNTIME',
+            'Choose a runtime containing the original document-pipeline research workspace and operations.'));
+    }
     if (type.id === 'research-dossiers' && settings.openalexWorkspaceDirectory && !settings.openalexModule)
       await regular(join(runtime.sourceRoot,
         'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
@@ -62,12 +93,33 @@ export default {
       for (const part of ['queries', 'editions'])
         inputs.push(await inputPath(join(settings.openalexWorkspaceDirectory, part), 'directory'));
     }
+    if (settings.pipelineSourceConfig) {
+      const selectedInput = await path('pipelineSourceConfig', 'file');
+      const selected = await pipelineSelection(selectedInput.path);
+      need(selectedInput.sha256 === selected.sha256, 'APPLICATION_INPUTS_CHANGED',
+        'Review the current original pipeline source selection again.');
+      const jobs = await inputPath(selected.value.directory, 'directory', true, true);
+      inputs.push(jobs);
+      if (!jobs.exists && !createDirectories.includes(jobs.path)) createDirectories.push(jobs.path);
+      const configuration = await inputPath(selected.value.configurationFile, 'file');
+      const bytes = await regular(configuration.path, 1024 * 1024);
+      need(configuration.sha256 === digest(bytes), 'APPLICATION_INPUTS_CHANGED',
+        'Review the current original pipeline account configuration again.');
+      inputs.push(configuration);
+      const runtime = await inspectMerchantRuntime(absolute(runtimeDirectory), { load: false, source: false });
+      const contractPath = join(runtime.sourceRoot, PIPELINE_ROOT, 'unstructured-pipelines/contract.mjs');
+      inputs.push(await inputPath(contractPath, 'file'));
+      const { normalizeConfiguration } = await import(pathToFileURL(contractPath).href);
+      need(typeof normalizeConfiguration === 'function', 'APPLICATION_PIPELINE_CONTRACT_REQUIRED');
+      normalizeConfiguration(JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)));
+    }
     option('--dir', settings.workspaceDirectory);
     option('--edition-adapter', settings.editionAdapter);
     option('--openalex-workspace', settings.openalexWorkspaceDirectory);
     option('--openalex-module', settings.openalexModule);
     option('--crossref-state', settings.crossrefState);
     option('--crossref-config', settings.crossrefConfig);
+    option('--pipeline-source', settings.pipelineSourceConfig);
     return { args, inputs, createDirectories };
   },
   matchRequest(request) { return !request.pythonCommand && request.command === "research-workspace"; },
@@ -76,9 +128,21 @@ export default {
       try {
         const ready = JSON.parse(text), directoryIndex = request.args.indexOf('--dir');
         const crossrefSelected = request.args.includes('--crossref-state');
-        if (ready.mode === 'RESEARCH_DOSSIER_WORKSPACE' && directoryIndex >= 0 &&
-            ready.directory === request.args[directoryIndex + 1] &&
-            (!crossrefSelected || ready.crossrefConfigured === true) && typeof ready.url === 'string') return ready.url;
+        const pipelineIndex = request.args.indexOf('--pipeline-source');
+        if (ready.mode !== 'RESEARCH_DOSSIER_WORKSPACE' || directoryIndex < 0 ||
+            ready.directory !== request.args[directoryIndex + 1] ||
+            crossrefSelected && ready.crossrefConfigured !== true || typeof ready.url !== 'string') return null;
+        if (pipelineIndex >= 0) {
+          if (ready.pipelineSourceConfigured !== true) return null;
+          return async () => {
+            const selected = await pipelineSelection(request.args[pipelineIndex + 1]);
+            need(ready.pipelineWorkspaceId === selected.value.workspaceId,
+              'APPLICATION_PIPELINE_STARTUP_CHANGED',
+              'The original research listener opened a different document-pipeline source.');
+            return { url: ready.url, original: ready };
+          };
+        }
+        return ready.url;
       } catch {}
       return null;
     });

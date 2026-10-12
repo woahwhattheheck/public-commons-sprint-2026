@@ -11,7 +11,10 @@
     "./seller/dspace/source": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/source.mjs",
     "./seller/dspace/workspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/workspace.mjs",
     "./seller/dspace/server": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/server.mjs",
-    "./buyer/dspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/customer.mjs"
+    "./buyer/dspace": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/customer.mjs",
+    "./seller/dspace/client": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/client.mjs",
+    "./seller/dspace/launch": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/launch.mjs",
+    "./merchant/dspace-operators": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/merchant-provider.mjs"
   },
   "browserAssets": [
     {
@@ -20,10 +23,16 @@
     }
   ],
   "supportFiles": [
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/browser-assets.json"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/browser-assets.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/client.d.mts",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/dspace/AGENT.md",
+    "stellar/scf-starforge-20261009/distribution/runtime-workspace/APPLICATION_DSPACE.md"
   ],
   "commandDescriptions": {
     "dspace": "Select repository data, publish reviewed editions and receive complete customer output",
     "dspace-workspace": "Review repository metadata, compare editions and transfer complete projects in the browser"
+  },
+  "applicationProviders": {
+    "dspace": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/dspace.mjs"
   }
 }
