@@ -40,11 +40,15 @@ function exactQuery(url,allowed){
 function exactFields(input,names){
   if(Object.keys(input).some(name=>!names.includes(name)))throw failure('INPUT_INVALID','Use the supported operation fields.');
 }
-export async function startRedisAuthoringServer({workspace,port=8438}={}){
-  if(!workspace||typeof workspace.state!=='function'||typeof workspace.close!=='function')throw new TypeError('An open Redis authoring workspace is required.');
+export async function startRedisWorkspaceHttpServer({workspace,port=8438,assets:assetEntries=ASSETS,route,operatorPath='/'}={}){
+  if(!workspace||typeof workspace.state!=='function'||typeof workspace.close!=='function')throw new TypeError('An open original workspace owner is required.');
+  if(typeof route!=='function'||typeof operatorPath!=='string'||!/^\/[A-Za-z0-9/_-]*$/.test(operatorPath))
+    throw new TypeError('Use an original workspace route handler and local operator path.');
   if(!Number.isInteger(port)||port<0||port>65535)throw new RangeError('Port must be 0–65535.');
-  const assets=new Map(await Promise.all([...ASSETS].map(async([path,[file,type]])=>
-    [path,{bytes:await readFile(new URL('./public/'+file,import.meta.url)),type}])));
+  let assets;
+  try{assets=new Map(await Promise.all([...assetEntries].map(async([path,[file,type]])=>
+    [path,{bytes:await readFile(new URL('./public/'+file,import.meta.url)),type}])));}
+  catch(error){await workspace.close().catch(cleanup=>{error.cleanupError=cleanup;});throw error;}
   const token=randomBytes(32).toString('hex'),tokenBytes=Buffer.from(token);
   let origin,authority,closing;
   const connections=new Set();
@@ -66,6 +70,34 @@ export async function startRedisAuthoringServer({workspace,port=8438}={}){
       const supplied=req.headers['x-workspace-token'];
       if(typeof supplied!=='string'||Buffer.byteLength(supplied)!==tokenBytes.length||!timingSafeEqual(Buffer.from(supplied),tokenBytes))
         return json(res,403,{error:'WORKSPACE_TOKEN_REQUIRED',message:'Reopen the original operator link printed by this workspace process.'});
+      await route({workspace,req,res,url,origin,json,body});
+    }).catch(error=>{
+      if(res.writableEnded||res.destroyed)return;
+      if(res.headersSent)return res.destroy();
+      json(res,error.status??422,{error:error.code??'WORKSPACE_OPERATION_FAILED',message:clean(error.message)});
+    });
+  });
+  server.on('connection',socket=>{connections.add(socket);socket.once('close',()=>connections.delete(socket));});
+  server.requestTimeout=150000;server.headersTimeout=10000;server.keepAliveTimeout=2000;
+  try{
+    await new Promise((done,fail)=>{server.once('error',fail);server.listen(port,'127.0.0.1',done);});
+  }catch(error){await workspace.close();throw error;}
+  const address=new URL('http://127.0.0.1:'+server.address().port);
+  authority=address.host;origin=address.origin;
+  function close(){
+    if(closing)return closing;
+    closing=(async()=>{
+      const listener=new Promise((done,fail)=>server.close(error=>error?fail(error):done()));
+      server.closeIdleConnections();
+      try{await workspace.close();}
+      finally{for(const socket of connections)socket.destroy();await listener;}
+    })();
+    return closing;
+  }
+  return {workspace,server,url:origin,operatorUrl:origin+operatorPath+'#'+token,token,close};
+}
+
+async function handleRedisAuthoringHttp({workspace,req,res,url,origin,json,body}){
       if(await handleRedisCommissioningHttp({workspace,req,res,url,origin,json,body}))return;
       if(req.method==='GET'&&url.pathname==='/api/state'){
         exactQuery(url,[]);return json(res,200,workspace.state());
@@ -105,28 +137,8 @@ export async function startRedisAuthoringServer({workspace,port=8438}={}){
         }
       }
       return json(res,404,{error:'WORKSPACE_ROUTE_NOT_FOUND',message:'That workspace action does not exist.'});
-    }).catch(error=>{
-      if(res.writableEnded||res.destroyed)return;
-      if(res.headersSent)return res.destroy();
-      json(res,error.status??422,{error:error.code??'WORKSPACE_OPERATION_FAILED',message:clean(error.message)});
-    });
-  });
-  server.on('connection',socket=>{connections.add(socket);socket.once('close',()=>connections.delete(socket));});
-  server.requestTimeout=150000;server.headersTimeout=10000;server.keepAliveTimeout=2000;
-  try{
-    await new Promise((done,fail)=>{server.once('error',fail);server.listen(port,'127.0.0.1',done);});
-  }catch(error){await workspace.close();throw error;}
-  const address=new URL('http://127.0.0.1:'+server.address().port);
-  authority=address.host;origin=address.origin;
-  function close(){
-    if(closing)return closing;
-    closing=(async()=>{
-      const listener=new Promise((done,fail)=>server.close(error=>error?fail(error):done()));
-      server.closeIdleConnections();
-      try{await workspace.close();}
-      finally{for(const socket of connections)socket.destroy();await listener;}
-    })();
-    return closing;
-  }
-  return {workspace,server,url:origin,operatorUrl:origin+'/#'+token,token,close};
+}
+
+export async function startRedisAuthoringServer({workspace,port=8438}={}){
+  return startRedisWorkspaceHttpServer({workspace,port,assets:ASSETS,route:handleRedisAuthoringHttp});
 }
