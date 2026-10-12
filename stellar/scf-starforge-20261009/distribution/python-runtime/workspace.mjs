@@ -237,20 +237,34 @@ function engineArgs(request,progressFile) {
   return args;
 }
 async function rememberResult(binding,request,result) {
-  const path=viewPath(binding.directory);
-  let value=await readJSON(path,true) ?? {schema:PYTHON_SCHEMA,binding,candidates:[],installations:[],active:null};
-  need(hashValue(value.binding)===hashValue(binding),'PYTHON_RUNTIME_BINDING_CHANGED');
-  const command=request.operation.slice('python-'.length);
-  const upsert=(name,item)=>{value[name]=[...value[name].filter(old=>old.id!==item.id),item].sort((a,b)=>a.id.localeCompare(b.id));};
-  if(command==='inspect' && !request.candidateId && !request.installationId)
-    value={...value,candidates:result.candidates??[],installations:result.installations??[],active:result.active??null};
-  else if(['resolve','receive'].includes(command))upsert('candidates',result);
-  else if(command==='install')upsert('installations',result);
-  else if(command==='inspect' && request.candidateId)upsert('candidates',result);
-  else if(command==='inspect' && request.installationId)upsert('installations',result);
-  else if(command==='activate')value.active=result;
-  value.observedAt=now();value.lastOperation=request.operation;value.python=request.python;
-  await saveJSON(path,value,true);
+  const path=viewPath(binding.directory),deadline=Date.now()+5000;
+  let lease;
+  while(!lease){
+    try{lease=await operationLease(path+'.lock');}
+    catch(error){
+      if(error.code!=='RUNTIME_WORKSPACE_OPERATION_RUNNING' || Date.now()>=deadline)throw error;
+      await new Promise(resolve=>setTimeout(resolve,50));
+    }
+  }
+  try{
+    const value=await readJSON(path,true) ?? {schema:PYTHON_SCHEMA,binding,candidates:[],installations:[],active:null};
+    need(hashValue(value.binding)===hashValue(binding),'PYTHON_RUNTIME_BINDING_CHANGED');
+    const command=request.operation.slice('python-'.length);
+    const upsert=(name,item)=>{value[name]=[...value[name].filter(old=>old.id!==item.id),item].sort((a,b)=>a.id.localeCompare(b.id));};
+    if(command==='inspect' && !request.candidateId && !request.installationId){
+      // Cohorts are append-only. An older completed inventory may be adopted
+      // after a newer engine result without discarding that retained addition.
+      for(const item of result.candidates??[])upsert('candidates',item);
+      for(const item of result.installations??[])upsert('installations',item);
+      value.active=result.active??null;
+    }else if(['resolve','receive'].includes(command))upsert('candidates',result);
+    else if(command==='install')upsert('installations',result);
+    else if(command==='inspect' && request.candidateId)upsert('candidates',result);
+    else if(command==='inspect' && request.installationId)upsert('installations',result);
+    else if(command==='activate')value.active=result;
+    value.observedAt=now();value.lastOperation=request.operation;value.python=request.python;
+    await saveJSON(path,value,true);
+  }finally{await lease.close();}
 }
 async function acceptResult(root,request,operationDirectory,result) {
   const command=request.operation.slice('python-'.length),binding=request.pythonBinding;
