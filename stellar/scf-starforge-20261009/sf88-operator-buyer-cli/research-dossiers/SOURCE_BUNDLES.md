@@ -31,6 +31,28 @@ be expanded in full; every file can be downloaded with its retained original
 bytes. HTML and SVG source are displayed as text in the reader. Downloaded files
 can be opened in their appropriate application.
 
+## Read and share complete reports
+
+The standalone HTML report includes each selected source's complete original
+files. Expand a file to download its unchanged original bytes or read its complete
+UTF-8 text. PNG, JPEG, GIF and WebP originals also appear as figures. The report
+contains its own file data, so the saved HTML works without a running workspace
+or an external image host.
+
+HTML and SVG source are shown as escaped text. Original downloads use an
+attachment data URL; they retain the filename, byte count and SHA-256 shown beside
+each file. A non-UTF-8 file remains available through its original download.
+
+The Markdown report contains a file inventory, complete text files and full
+base64 for binary originals. Its code fences adapt to the original content,
+including source files that contain Markdown fences. Source occurrence records
+retain their metadata and point to the matching original-file section instead of
+repeating that same body. Separate source variants keep their own original files.
+
+Both reports preserve the questions, linked findings, source assessments, edition
+references and source terms. Portable project export additionally retains the
+complete original bundle and project history for continued editing and receiving.
+
 ## Write a manifest
 
 The manifest is UTF-8 JSON. Paths are relative to the folder selected in the
