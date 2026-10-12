@@ -88,3 +88,23 @@ The contribution `distribution/contributions/merchant-console.json` registers `c
 The managed helper exposes `prepareMerchantConsoleSelection`, `startManagedMerchantConsole` and `verifyManagedMerchantConsoleStartup` for original callers that already own their selected runtime and private state. The original `startMerchantMcp` API keeps `consoleDirectory` optional and accepts a managed binding for the same console instance.
 
 The existing distribution component includes the complete merchant operator source, browser assets and receiving modules, including `console/workflow-records.mjs`, `console/workflows.mjs`, `console/public/workflows.mjs` and `receiving/workflow-journey.mjs`. Its recursive source selection carries these files with the original merchant component. The product contribution adds the managed receiving command and its public module exports. The shared Applications catalog, lifecycle, permission checks and managed runtime builder remain the integration surface.
+
+## Complete customer families and retained host review
+
+The saved source selection includes the full Console request, workflow, recipe,
+host-comparison and customer modules with their browser assets. A runtime
+upgrade therefore reviews the complete installed operating surface before
+Start. Earlier work remains in the same selected operator directory.
+
+A configured grant reviewer adds **Customers → Reviewer customer delivery**
+with original packet intake, complete Buyer results, closed export, full-file
+receiving and reusable delivery or receiving recipes. Its
+[complete operating guide](CUSTOMER_REVIEWER.md) follows that whole workflow.
+OpenAPI packages, merchant releases and OpenSearch deployments retain their
+own original export identities and file owners in the same Customers view.
+
+Use **Host → Review host** to inspect the current configuration, actual tool
+contracts and provider declarations against an earlier saved binding. Saving
+the displayed review retains a new binding revision with the original drafts,
+workflows, calls and customer records. The complete profile archive carries
+that history through receiving and return.

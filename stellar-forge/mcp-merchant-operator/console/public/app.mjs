@@ -1,5 +1,6 @@
 // MIT. Operator UI over the original authenticated host and retained native calls.
 import { createWorkflowPage } from './workflows.mjs';
+import {createReviewerCustomerPage,reviewerCustomerSelection} from './customer-reviewer.mjs';
 const $=id=>document.getElementById(id);
 const state={token:'',host:null,profiles:[],profile:null,details:null,page:'host',tools:[],tool:null,
   definition:null,draft:null,dirty:false,offset:0,next:null,total:0,call:null,recovery:new Map(),customer:null,
@@ -61,7 +62,7 @@ function setPage(name){
   document.querySelectorAll('[data-page]').forEach(value=>name===value.dataset.page?value.setAttribute('aria-current','page'):value.removeAttribute('aria-current'));
 }
 function syncControls(){
-  updateRun();workflowPage.sync();
+  updateRun();workflowPage.sync();reviewerPage.sync();
   for(const id of ['rename-profile','export-profile','native-status','review-host'])$(id).disabled=!state.profile;
   $('previous-tools').disabled=state.offset===0;$('next-tools').disabled=state.next===null;
   if(state.customer){$('resume-customer').disabled=Boolean(state.customer.active);$('pause-customer').disabled=!state.customer.active;$('download-customer').disabled=!state.customer.localFiles;}
@@ -137,6 +138,7 @@ async function loadProfiles(selectId=state.profile?.id){
   const chosen=packet.profiles.find(value=>value.id===selectId)??packet.profiles[0];
   if(state.profile?.id!==chosen?.id)state.profileEpoch++;
   state.profile=chosen??null;$('profiles').value=chosen?.id??'';
+  workflowPage.profileChanged();reviewerPage.profileChanged();
   renderHost();await loadProfile();
 }
 async function loadProfile(){
@@ -151,7 +153,7 @@ async function loadProfile(){
 function renderProfile(){
   const packet=state.details??{drafts:[],calls:[],deliveries:[]};
   text($('request-count'),packet.calls.length);text($('customer-count'),packet.deliveries.length);
-  renderBinding();renderDrafts();renderCalls();renderCustomers();renderReviewBindings();workflowPage.profileChanged();
+  renderBinding();renderDrafts();renderCalls();renderCustomers();renderReviewBindings();workflowPage.profileChanged();reviewerPage.profileChanged();
   if(state.customer){const current=packet.deliveries.find(value=>value.id===state.customer.id);if(current){state.customer=current;renderCustomer();}}
   schedulePoll();
 }
@@ -184,7 +186,7 @@ function disconnect(){
   $('connected').hidden=true;$('connect-panel').hidden=false;$('disconnect').hidden=true;text($('connection-state'),'Disconnected');
   $('connection-state').removeAttribute('data-state');notice('');$('access-token').value='';
   for(const id of ['call-result','call-arguments','customer-json'])$(id).textContent='';
-  $('native-arguments').value='';workflowPage.reset();
+  $('native-arguments').value='';workflowPage.reset();reviewerPage.reset();
 }
 function profileForm(mode){
   state.profileMode=mode;$('profile-form').hidden=false;$('profile-name').value=mode==='rename'?requireProfile().name:'';$('profile-name').focus();
@@ -206,6 +208,21 @@ async function bindProfile(){
   await loadHostReview();
   if(epoch!==state.sessionEpoch||state.profile?.id!==profile.id)return;
   notice('Saved host binding at profile revision '+packet.profile.revision+'. Earlier bindings, native requests and customer records remain in this profile.');
+}
+async function adoptReviewedHost(){
+  const profile=requireProfile(),review=state.review,epoch=state.sessionEpoch,selection=state.profileEpoch;
+  if(!review||review.profile.id!==profile.id||review.profile.revision!==profile.revision)
+    throw new Error('Refresh the selected profile and review its current host before adopting it.');
+  const packet=await api('bind',{method:'POST',epoch,body:{id:review.profile.id,expectedRevision:review.profile.revision,
+    expectedHostFingerprint:review.after.configurationFingerprint,
+    ...(review.after.compositionFingerprint?{expectedCompositionFingerprint:review.after.compositionFingerprint}:{})}});
+  if(epoch!==state.sessionEpoch||selection!==state.profileEpoch||state.profile?.id!==profile.id)return;
+  state.review=null;state.reviewBaseline='';
+  await loadProfiles(packet.profile.id);
+  if(epoch!==state.sessionEpoch||state.profile?.id!==profile.id)return;
+  await loadHostReview();
+  if(epoch!==state.sessionEpoch||state.profile?.id!==profile.id)return;
+  notice('Saved the reviewed host binding at profile revision '+packet.profile.revision+'. Earlier bindings, native requests and customer records remain in this profile.');
 }
 function reviewPath(download=false) {
   const profile=requireProfile(),query=new URLSearchParams();
@@ -263,7 +280,7 @@ function hostReviewRows(review) {
 function renderHostReview() {
   const review=state.review;
   $('host-review-empty').hidden=Boolean(review);$('host-review-content').hidden=!review;
-  $('export-host-review').disabled=!review;$('adopt-host-snapshot').disabled=!state.profile;
+  $('export-host-review').disabled=!review;$('adopt-host-snapshot').disabled=!review||!state.profile||review.profile.id!==state.profile.id||review.profile.revision!==state.profile.revision;
   if(!review)return;
   text($('host-review-state'),review.state.replaceAll('_',' '));
   $('host-review-state').dataset.state=review.state;
@@ -467,31 +484,98 @@ async function nativeStatus(){
   if(!current()||state.draft?.id!==saved.draft.id||state.tool!==saved.draft.tool)return;
   await runDraft();
 }
+function customerFamily(call){
+  if(call?.tool?.startsWith('merchant_grant_reviewer_'))return 'grant-reviewer';
+  if(['merchant_openapi_export','merchant_openapi_manifest'].includes(call?.tool))return 'openapi';
+  if(call?.tool?.startsWith('merchant_opensearch_deployment_'))return 'opensearch';
+  if(call?.tool?.startsWith('merchant_client_export'))return 'core';
+  return null;
+}
+const customerAuthority=family=>({core:'Merchant release store',opensearch:'OpenSearch workspace deployment',openapi:'API workspace package','grant-reviewer':'Grant reviewer packet and results'}[family]??family);
+const customerWorkspace=family=>['opensearch','openapi','grant-reviewer'].includes(family);
+const customerCallReady=call=>call?.state==='COMPLETE'&&Boolean(customerFamily(call));
+function customerResults(result){
+  const queue=[result],seen=new Set(),values=[];
+  while(queue.length){
+    const value=queue.shift();
+    if(!plain(value)||seen.has(value))continue;seen.add(value);values.push(value);
+    for(const key of ['result','structuredContent','export','client','manifest'])if(plain(value[key]))queue.push(value[key]);
+    for(const item of (Array.isArray(value.content)?value.content:[]))if(item?.type==='text'&&typeof item.text==='string'){
+      try{const decoded=JSON.parse(item.text);if(plain(decoded))queue.push(decoded);}catch{}
+    }
+  }
+  return values;
+}
 function customerSelection(call,result){
-  const args=JSON.parse(call.argumentsJson),family=call.tool.startsWith('merchant_opensearch_deployment_')?'opensearch':call.tool.startsWith('merchant_client_export')?'core':null;
-  if(!family||!result)return null;
-  const values=[result,result.result,result.export,result.client,result.manifest].filter(plain);
+  if(call?.state!=='COMPLETE'||!result||result.isError===true)return null;
+  const reviewer=reviewerCustomerSelection(call,result);if(reviewer)return reviewer;
+  const family=customerFamily(call);
+  if(!family||call.state!=='COMPLETE'||!result||result.isError===true)return null;
+  const args=JSON.parse(call.argumentsJson),values=customerResults(result);
+  if(values.some(value=>value.isError===true))return null;
+  if(family==='openapi'){
+    const packet=values.find(value=>['EXPORTED','MANIFEST_RETAINED'].includes(value.state)&&
+      value.manifest?.schema==='stellar-forge.api-merchant-package-export.v1'&&
+      value.manifest.exportId===value.exportId&&/^[a-f0-9]{64}$/.test(value.exportId??'')&&
+      value.manifestFile?.name==='package-export.json'&&/^[a-f0-9]{64}$/.test(value.manifestFile.sha256??''));
+    if(!packet||args.exportId!==undefined&&args.exportId!==packet.exportId)return null;
+    const workspace=args.workspace??packet.workspace;
+    if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(workspace??'')||
+      packet.workspace!==undefined&&packet.workspace!==workspace)return null;
+    return{family,workspace,exportId:packet.exportId,expectedManifestSha256:packet.manifestFile.sha256};
+  }
   const exportId=args.exportId??values.map(value=>value.exportId??value.id).find(value=>typeof value==='string'&&/^[a-z0-9][a-z0-9_-]{0,63}$/.test(value));
   const sha=values.map(value=>value.manifestSha256??value.manifestSha??value.manifestFile?.sha256??value.manifest?.sha256??(value.name==='client-manifest.json'?value.sha256:undefined)).find(value=>typeof value==='string'&&/^[a-f0-9]{64}$/.test(value));
   if(!exportId||!sha)return null;
   return {family,exportId,expectedManifestSha256:sha,...(family==='opensearch'?{workspace:args.workspace}:{})};
 }
+function customerFormRules(){
+  const family=$('customer-family').value,workspace=customerWorkspace(family),apiPackage=family==='openapi',reviewer=family==='grant-reviewer',exactSha=apiPackage||reviewer;
+  $('customer-workspace-field').hidden=!workspace;$('customer-workspace').required=workspace;
+  $('customer-workspace').pattern=reviewer?'[A-Za-z0-9][A-Za-z0-9._-]{0,127}':'[a-z0-9][a-z0-9_-]{0,63}';
+  $('customer-workspace').maxLength=reviewer?128:64;
+  $('customer-export').pattern=exactSha?'[a-f0-9]{64}':'[a-z0-9][a-z0-9_-]{0,63}';
+  $('customer-export').maxLength=64;
+  $('customer-export').title=exactSha?'Use the exact 64-character original export ID.':'Use the original export ID.';
+  text($('customer-form-hint'),apiPackage?
+    'Use the API workspace alias and the full package-export.json digest returned by Export or Manifest. The internal package manifest has its own separate digest.':
+    reviewer?'Use the configured reviewer workbench alias, exact export ID and complete manifest digest returned by the original export.':
+    'Use the export identity and manifest digest returned by the original merchant.');
+}
 function fillCustomer(value){
-  $('customer-family').value=value.family;$('customer-workspace').value=value.workspace??'';$('customer-export').value=value.exportId;$('customer-sha').value=value.expectedManifestSha256;
-  $('customer-workspace-field').hidden=value.family!=='opensearch';$('customer-workspace').required=value.family==='opensearch';setPage('customers');
+  if(!value)throw new Error('Open a completed export or manifest request first.');
+  requireProfile();
+  $('customer-family').value=value.family;$('customer-workspace').value=value.workspace??'';
+  $('customer-export').value=value.exportId;$('customer-sha').value=value.expectedManifestSha256;
+  customerFormRules();setPage('customers');$('customer-export').focus();
+}
+async function prepareCustomer(callId,{isCurrent=()=>true}={}){
+  const profile=requireProfile(),epoch=state.sessionEpoch,selection=state.profileEpoch;
+  const current=()=>epoch===state.sessionEpoch&&selection===state.profileEpoch&&state.profile?.id===profile.id&&isCurrent();
+  const call=await api('call/'+encodeURIComponent(callId),{epoch});
+  if(!current())return;
+  if(call.profileId!==profile.id||call.state!=='COMPLETE'||call.resultJson===null)
+    throw new Error('Open a completed export in this operator profile.');
+  let result;try{result=JSON.parse(call.resultJson);}catch{throw new Error('Open the original saved export result.');}
+  const customer=customerSelection(call,result);
+  if(!customer)throw new Error('This request does not retain a complete customer export identity. Open its original Export or Manifest result.');
+  fillCustomer(customer);
+  notice('Prepared '+customerAuthority(customer.family)+' from request '+call.id+'. Review the displayed original export and receive its complete files.');
 }
 async function receiveCustomer(selection){
   const profile=requireProfile(),epoch=state.sessionEpoch,profileSelection=state.profileEpoch,customerId=state.customer?.id??null;
   const current=()=>epoch===state.sessionEpoch&&profileSelection===state.profileEpoch&&state.profile?.id===profile.id;
-  const body={profileId:profile.id,...selection,expectedHostFingerprint:state.host.configurationFingerprint};
+  const body={profileId:profile.id,family:selection.family,exportId:selection.exportId,
+    expectedManifestSha256:selection.expectedManifestSha256,...(customerWorkspace(selection.family)?{workspace:selection.workspace}:{}),
+    expectedHostFingerprint:state.host.configurationFingerprint};
   const packet=await api('customers',{method:'POST',body,epoch});if(!current())return;
   if((state.customer?.id??null)===customerId)state.customer=packet.delivery;
   await loadProfile();if(!current())return;
-  renderCustomer();notice('Receiving the reviewed original customer export '+body.exportId+'.');
+  renderCustomer();notice('Receiving the reviewed original '+(body.family==='openapi'?'API package ':'customer export ')+body.exportId+'.');
 }
 function renderCustomers(){
   selectionList($('customer-list'),state.details?.deliveries??[],state.customer?.id,(button,value)=>{
-    button.append(node('strong',value.identity.exportId),node('p',(value.identity.workspace?value.identity.workspace+' / ':'')+value.identity.family));
+    button.append(node('strong',value.identity.exportId),node('p',customerAuthority(value.identity.family)+(value.identity.workspace?' / '+value.identity.workspace:'')));
     const meta=node('div',undefined,'meta');meta.append(tag(value.state),node('span',when(value.updatedAt)));button.append(meta);
   },value=>{state.customer=value;renderCustomer();},state.profile?'No customer receiving records yet.':'Select or create a profile.');
 }
@@ -499,11 +583,14 @@ function renderCustomer(){
   const value=state.customer;if(!value){$('customer-detail').hidden=true;return;}
   $('customer-detail').hidden=false;text($('customer-title'),value.identity.exportId);text($('customer-state'),value.state);$('customer-state').dataset.state=value.state;
   properties($('customer-details'),[
-    ['Original authority',value.identity.family+(value.identity.workspace?' / '+value.identity.workspace:'')],
+    ['Original authority',customerAuthority(value.identity.family)+(value.identity.workspace?' / '+value.identity.workspace:'')],
     ['Manifest SHA-256',value.identity.expectedManifestSha256,true],['Receiving ID',value.id,true],
     ['Started',when(value.startedAt)],['Updated',when(value.updatedAt)],['Files',value.files?.length??'Receiving'],
+    ['Total file bytes',value.files?value.files.reduce((total,file)=>total+file.bytes,0).toLocaleString():'Receiving'],
     ['Current custody',value.localFiles?'Complete verified local customer':value.active?'Active original transfer':'Retained receiving record']
   ]);
+  $('customer-openapi-guidance').hidden=value.identity.family!=='openapi';
+  text($('download-customer'),value.identity.family==='openapi'?'Download original API package archive':'Download original customer archive');
   const progress=value.progress;
   text($('customer-progress'),value.error?value.error.code+': '+value.error.message:progress?pretty(progress):value.state==='COMPLETE'?'Original manifest and customer files are ready.':'Resume the same reviewed export to continue its original files.');
   $('resume-customer').disabled=Boolean(value.active);$('pause-customer').disabled=!value.active;$('download-customer').disabled=!value.localFiles;
@@ -512,12 +599,15 @@ function renderCustomer(){
     button.disabled=!value.localFiles;action(button,()=>download('customer-file/'+encodeURIComponent(value.id)+'?'+new URLSearchParams({file:file.name}),file.name));actionCell.append(button);
     row.append(node('td',file.name),node('td',file.bytes),hash,actionCell);return row;
   }));
-  text($('customer-json'),pretty(value));renderCustomers();
+  text($('customer-json'),pretty(value));
+  if(value.identity.family==='grant-reviewer')text($('download-customer'),value.manifest?.kind==='reviewer-packet'?'Download original receiving packet':'Download complete original file');
+  else text($('download-customer'),value.identity.family==='openapi'?'Download original API package archive':'Download original customer archive');
+  renderCustomers();reviewerPage.sync();
 }
 $('connect-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,connect);});
 action($('disconnect'),disconnect);
 document.querySelectorAll('[data-page]').forEach(button=>action(button,()=>setPage(button.dataset.page)));
-$('profiles').addEventListener('change',async()=>{try{state.profileEpoch++;state.profile=state.profiles.find(value=>value.id===$('profiles').value)??null;workflowPage.profileChanged();state.draft=null;state.call=null;state.customer=null;await loadProfile();renderTools();$('call-detail').hidden=true;$('call-empty').hidden=false;renderCustomer();}catch(error){notice(error.message,true);}});
+$('profiles').addEventListener('change',async()=>{try{state.profileEpoch++;state.profile=state.profiles.find(value=>value.id===$('profiles').value)??null;workflowPage.profileChanged();reviewerPage.profileChanged();state.draft=null;state.call=null;state.customer=null;await loadProfile();renderTools();$('call-detail').hidden=true;$('call-empty').hidden=false;renderCustomer();}catch(error){notice(error.message,true);}});
 action($('new-profile'),()=>profileForm('new'));action($('rename-profile'),()=>profileForm('rename'));action($('cancel-profile'),()=>{$('profile-form').hidden=true;});
 $('profile-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,saveProfile);});
 action($('bind-profile'),bindProfile);action($('export-profile'),()=>download('export/'+encodeURIComponent(requireProfile().id),requireProfile().id+'-operator-profile.json'));
@@ -527,7 +617,7 @@ action($('refresh-host'),refreshHost);action($('native-status'),nativeStatus);
 action($('review-host'),async()=>{setPage('host');await loadHostReview();$('host-review-panel').scrollIntoView({block:'start'});});
 action($('compare-host'),loadHostReview);
 action($('export-host-review'),()=>download(reviewPath(true),requireProfile().id+'-host-review.json'));
-action($('adopt-host-snapshot'),bindProfile);
+action($('adopt-host-snapshot'),adoptReviewedHost);
 $('review-binding').addEventListener('change',()=>{state.reviewBaseline=$('review-binding').value;busy($('compare-host'),loadHostReview);});
 $('review-filter').addEventListener('submit',event=>{event.preventDefault();state.reviewOffset=0;renderHostReview();});
 action($('previous-review'),()=>{state.reviewOffset=Math.max(0,state.reviewOffset-50);renderHostReview();});
@@ -544,13 +634,18 @@ action($('reopen-draft'),async()=>{const packet=await api('draft/'+encodeURIComp
 action($('download-result'),()=>download('result/'+encodeURIComponent(state.call.id),state.call.id+'-result.json'));
 action($('use-customer'),()=>fillCustomer(state.customerSelection));
 action($('prepare-recovery'),async()=>{const selection=state.recovery.get($('recovery-tools').value);if(!selection)return;await chooseTool(selection.definition.name,{arguments:selection.arguments,recoveryOf:state.call.id});$('draft-name').value=selection.kind+' '+state.call.id.slice(0,8)+' · '+selection.definition.name.replace(/^merchant_/,'');notice('Prepared the original native '+selection.kind.toLowerCase()+'. Review its identifiers and save the linked draft.');});
-$('customer-family').addEventListener('change',()=>{$('customer-workspace-field').hidden=$('customer-family').value!=='opensearch';$('customer-workspace').required=$('customer-family').value==='opensearch';});
-$('customer-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>receiveCustomer({family:$('customer-family').value,...($('customer-family').value==='opensearch'?{workspace:$('customer-workspace').value}:{}),exportId:$('customer-export').value,expectedManifestSha256:$('customer-sha').value}));});
+$('customer-family').addEventListener('change',customerFormRules);
+$('customer-form').addEventListener('submit',event=>{event.preventDefault();busy(event.submitter,()=>receiveCustomer({family:$('customer-family').value,...(customerWorkspace($('customer-family').value)?{workspace:$('customer-workspace').value}:{}),exportId:$('customer-export').value,expectedManifestSha256:$('customer-sha').value}));});
+customerFormRules();
 action($('refresh-customers'),()=>loadProfile());
 action($('resume-customer'),()=>receiveCustomer(state.customer.identity));
 action($('pause-customer'),async()=>{await api('customer-pause',{method:'POST',body:{id:state.customer.id}});await loadProfile();notice('Pause requested at the original receiving checkpoint.');});
-action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),state.customer.identity.exportId+'.tar.gz'));
+action($('download-customer'),()=>download('customer-archive/'+encodeURIComponent(state.customer.id),
+  state.customer.identity.family==='grant-reviewer'?(state.customer.manifest?.kind==='reviewer-packet'?'grant-reviewer-packet.json':state.customer.manifest?.files?.[0]?.name??'original-file'):state.customer.identity.exportId+'.tar.gz'));
 const workflowPage=createWorkflowPage({state,$,node,text,pretty,when,tag,properties,selectionList,action,busy,api,notice,uid,
-  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll});
+  requireProfile,loadProfile,openCall,chooseTool,download,schedulePoll,customerCallReady,prepareCustomer});
+const reviewerPage=createReviewerCustomerPage({state,$,node,text,pretty,when,properties,action,busy,api,notice,uid,
+  requireProfile,loadProfile,openCall,fillCustomer,receiveCustomer,download,setPage,
+  useRecipe:(recipe,inputs)=>workflowPage.useRecipe(recipe,inputs)});
 const bootstrap=new URLSearchParams(location.hash.slice(1)).get('token');
 if(bootstrap){history.replaceState(null,'',location.pathname+location.search);$('access-token').value=bootstrap;busy($('connect-form').querySelector('button'),connect);}

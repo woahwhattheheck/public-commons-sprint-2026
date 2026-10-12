@@ -14,7 +14,7 @@ export declare function parsePage(options: {
   headers?: ODataHeaders; status?: number; receivedAt?: string;
 }): ODataPage;
 export declare function normalizeSourceUrl(input: string | URL, options?: { allowLoopback?: boolean }): string;
-export declare function parseMetadata(input: string | Uint8Array | Record<string, unknown>, options?: { contentType?: string }): ODataMetadata;
+export declare function parseMetadata(input: string | Uint8Array | Record<string, unknown>, options?: { contentType?: string; identifierDialect?: 'odata' | 'odk-central' }): ODataMetadata;
 export declare function getEntitySet(catalog: ODataCatalog, selected: string): ODataEntitySet;
 export declare function getEntitySet(catalog: ODataMetadata, selected: string): ODataEntitySetMetadata;
 export declare function sha256(bytes: string | Uint8Array): string;

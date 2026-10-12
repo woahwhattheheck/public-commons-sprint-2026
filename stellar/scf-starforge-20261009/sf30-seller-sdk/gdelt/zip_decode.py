@@ -18,8 +18,8 @@ def decode(value):
     if not isinstance(value, dict) or set(value) != {"member", "zip_base64"}:
         raise ValueError("Select one original GDELT ZIP and its expected member")
     member = value["member"]
-    if not isinstance(member, str) or not re.fullmatch(r"\d{14}\.(export|mentions)\.CSV", member):
-        raise ValueError("The selected GDELT member is not an Event or Mentions table")
+    if not isinstance(member, str) or not re.fullmatch(r"\d{14}\.(?:(?:export|mentions)\.CSV|gkg\.csv)", member):
+        raise ValueError("The selected GDELT member is not an Events, Mentions or GKG table")
     encoded = value["zip_base64"]
     if not isinstance(encoded, str) or len(encoded) > ((MAX_ZIP + 2) // 3) * 4:
         raise ValueError("GDELT ZIP exceeds 24 MiB")

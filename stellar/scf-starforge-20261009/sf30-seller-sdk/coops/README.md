@@ -168,3 +168,7 @@ retained-file reads. The installed `coops-analysis` command reproduces a complet
 directory from an original input or portable workbook.
 
 See [the full analyst workflow and source contracts](analysis/README.md).
+
+## Multi-station studies and returned model input
+
+The existing **Studies & receiving** page selects exact edition windows across up to five stations and five years, pins the receiving mapping and actual review, streams complete model-input/source deliveries, and retains bounded returned-file intake plus a complete comparison and receiving decision. See [STUDIES.md](STUDIES.md) for staff, CLI, original operation recovery and Merchant access. The public-reference mapping is [examples/study-input-columns.json](examples/study-input-columns.json); no private buyer model is supplied.

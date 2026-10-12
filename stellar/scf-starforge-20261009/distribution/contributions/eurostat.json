@@ -28,5 +28,8 @@
   ],
   "applicationProviders": {
     "eurostat": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/eurostat.mjs"
-  }
+  },
+  "supportFiles": [
+    "products/eurostat/OPERATING.md"
+  ]
 }

@@ -1,0 +1,51 @@
+/* Original Operations cohort review: neutral, compact operator controls. */
+.cohort-desk{--cohort-line:#d5dadd;--cohort-muted:#5b656b;--cohort-accent:#205a70;color:#222c31;font-size:14px;line-height:1.5}
+.cohort-desk *{box-sizing:border-box}.cohort-desk h2,.cohort-desk h3,.cohort-desk h4,.cohort-desk p{margin:0 0 .65rem}
+.cohort-desk h2{font-size:1.6rem;font-weight:640}.cohort-desk h3{font-size:1.12rem;font-weight:650}.cohort-desk h4{margin-top:1.3rem;font-size:1rem}
+.cohort-desk button,.cohort-desk input,.cohort-desk select,.cohort-desk textarea{font:inherit}
+.cohort-desk button{border:1px solid #aeb9bf;background:#fff;color:#24383f;border-radius:3px;padding:.5rem .75rem;cursor:pointer;text-align:center}
+.cohort-desk button:hover:not(:disabled){background:#eef4f6;border-color:#607e8d}.cohort-desk button:disabled{opacity:.5;cursor:default}
+.cohort-desk button:focus-visible,.cohort-desk input:focus-visible,.cohort-desk select:focus-visible,.cohort-desk textarea:focus-visible,.cohort-desk summary:focus-visible{outline:2px solid #28637a;outline-offset:2px}
+.cohort-header{display:flex;justify-content:space-between;gap:1.5rem;align-items:flex-end;padding:1rem 0}
+.cohort-eyebrow{text-transform:uppercase;letter-spacing:.09em;font-size:.7rem;color:var(--cohort-muted);font-weight:700}
+.cohort-actions{display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap}.cohort-actions label{min-width:175px}
+.cohort-tabs{display:flex;gap:0;border-bottom:1px solid #adb9c0;overflow-x:auto;padding:0;margin:1rem 0;align-items:stretch}
+.cohort-tabs button{border:0;border-radius:0;border-bottom:3px solid transparent;white-space:nowrap;padding:.75rem .8rem;color:#526169}
+.cohort-tabs button[aria-current=page]{border-bottom-color:var(--cohort-accent);background:#eef4f6;color:#193e4e;font-weight:700}
+.cohort-panel{border:1px solid var(--cohort-line);background:#fff;padding:1.1rem;margin-bottom:1rem;border-radius:3px;min-width:0}
+.cohort-section-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;margin-bottom:.8rem}
+.cohort-status{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap}.cohort-status p{flex-basis:100%}
+.cohort-pill{display:inline-block;border:1px solid #c6ced2;border-radius:3px;padding:.12rem .4rem;background:#f4f6f7;font-size:.72rem;line-height:1.4;font-weight:620}
+.cohort-pill.good{border-color:#a7c2b2;color:#28513c;background:#f0f6f1}.cohort-pill.attention{border-color:#d4c2a3;background:#fbf6ec;color:#76501d}
+.cohort-note,.cohort-empty{color:var(--cohort-muted);font-size:.87rem}.cohort-note{margin:.65rem 0!important}.cohort-empty{padding:1rem;background:#f7f8f9;border:1px dashed #cbd2d6}
+.cohort-success,.cohort-warning,.cohort-error{padding:.8rem 1rem;border-left:3px solid #8ea99a;background:#f3f7f4;margin:.7rem 0!important;overflow-wrap:anywhere}
+.cohort-warning{border-color:#c6a568;background:#fcf7eb}.cohort-error{border-color:#ab7067;background:#fcf1ee;color:#782d22}
+.cohort-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.cohort-wide{grid-column:1/-1}
+.cohort-desk label{display:flex;flex-direction:column;gap:.3rem;font-weight:600;font-size:.82rem;color:#34464f;min-width:0}
+.cohort-desk label small{font-weight:400;color:var(--cohort-muted);font-size:.76rem}
+.cohort-desk input,.cohort-desk select,.cohort-desk textarea{width:100%;border:1px solid #b9c4c9;border-radius:3px;padding:.55rem;background:#fff;color:#222d33;font-weight:400;min-height:36px;min-width:0}
+.cohort-desk textarea{resize:vertical}.cohort-desk select[multiple]{padding:.3rem}.cohort-desk select[multiple] option{padding:.35rem}
+.cohort-desk .cohort-check{display:flex;flex-direction:row;align-items:flex-start;gap:.6rem;padding:.4rem 0}
+.cohort-desk .cohort-check input{width:18px;min-height:18px;margin:1px 0 0}
+.cohort-desk fieldset{border:1px solid var(--cohort-line);border-radius:3px;padding:.85rem;margin:.4rem 0;min-width:0}
+.cohort-desk legend{font-weight:650;color:#40515a;padding:0 .3rem;font-size:.85rem}
+.cohort-table{overflow-x:auto;margin:.75rem 0;max-width:100%}.cohort-table table{width:100%;border-collapse:collapse;text-align:left;font-size:.82rem}
+.cohort-table th{font-weight:650;color:#4b5b65;background:#f4f6f7;border-top:1px solid var(--cohort-line);white-space:nowrap}
+.cohort-table th,.cohort-table td{padding:.65rem .55rem;border-bottom:1px solid var(--cohort-line);vertical-align:top}
+.cohort-table td{min-width:95px;max-width:340px;overflow-wrap:anywhere;white-space:pre-wrap}
+.cohort-table td small{display:block;color:var(--cohort-muted);font-size:.72rem;margin-top:.25rem;white-space:pre-wrap}
+.cohort-table td button{font-size:.75rem;white-space:nowrap;padding:.35rem .45rem;margin:0 .25rem .25rem 0}
+.cohort-desk a{color:#205b72;overflow-wrap:anywhere}.cohort-desk details{margin:.55rem 0;min-width:0}
+.cohort-desk summary{cursor:pointer;font-size:.8rem;color:#285a6d}.cohort-desk pre{background:#f4f6f7;border:1px solid #d9dfe2;padding:.8rem;font-size:.72rem;max-height:420px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.cohort-pager{display:flex;align-items:center;justify-content:flex-end;gap:.7rem;font-size:.78rem;color:var(--cohort-muted);margin:.8rem 0}
+.cohort-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid var(--cohort-line);margin:1rem 0}
+.cohort-metrics article{padding:.8rem;border-right:1px solid var(--cohort-line);min-width:0}.cohort-metrics article:last-child{border:0}
+.cohort-metrics span{display:block;font-size:.73rem;color:var(--cohort-muted)}.cohort-metrics strong{display:block;font-size:1rem;margin-top:.3rem;overflow-wrap:anywhere}
+.cohort-hash{display:block;color:var(--cohort-muted);font:11px ui-monospace,monospace;overflow-wrap:anywhere;margin-top:1rem}
+.cohort-dialog{width:min(900px,calc(100vw - 30px));max-height:calc(100vh - 40px);padding:0;border:1px solid #8d9ba3;border-radius:5px;color:#24333a;background:#fff}
+.cohort-dialog::backdrop{background:rgba(30,42,49,.36)}.cohort-dialog form{padding:1.3rem}.cohort-dialog header{display:flex;justify-content:space-between;gap:1rem;align-items:flex-start;border-bottom:1px solid var(--cohort-line);margin-bottom:1.1rem;padding-bottom:.7rem}
+.cohort-dialog footer{display:flex;justify-content:space-between;align-items:center;gap:1rem;border-top:1px solid var(--cohort-line);padding-top:1rem;margin-top:1.2rem}
+.cohort-dialog footer p{color:var(--cohort-muted);font-size:.8rem}.cohort-dialog footer button{background:#265c71;color:white;border-color:#265c71}
+@media(max-width:850px){.cohort-header{align-items:flex-start;flex-direction:column}.cohort-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.cohort-metrics article{border-bottom:1px solid var(--cohort-line)}}
+@media(max-width:560px){.cohort-fields{grid-template-columns:1fr}.cohort-section-heading{flex-direction:column}.cohort-panel{padding:.8rem}.cohort-metrics{grid-template-columns:1fr}.cohort-metrics article{border-right:0}.cohort-dialog form{padding:.9rem}.cohort-dialog footer{flex-direction:column;align-items:stretch}.cohort-pager{justify-content:space-between}.cohort-table td{min-width:130px}}
+@media print{.cohort-tabs,.cohort-actions,.cohort-pager,.cohort-panel button,.cohort-dialog{display:none!important}.cohort-panel{border:0;padding:0;break-inside:avoid}.cohort-table{overflow:visible}.cohort-table td{max-width:none}.cohort-desk{font-size:11px}}

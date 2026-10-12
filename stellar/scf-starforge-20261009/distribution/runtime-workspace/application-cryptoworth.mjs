@@ -27,7 +27,7 @@ export async function prepareCryptoworthApplication(settings,inputPath,runtimeDi
   for(const field of ['outboxDir','proofDir','recoveredDir'])if(binding.sources[field])inputs.push(await inputPath(binding.sources[field],'directory',false,true));
   inputs.push(await inputPath(binding.sources.termsFile,'file'));
   return {args:['--workspace',binding.directory,'--expected-workspace-id',binding.workspaceId,'--expected-sources-sha256',binding.sourcesSha256,'--desk',desk],
-    inputs,binding,resourceKey:hash({family:'merchant-accounting',directory:binding.directory})};
+    inputs,createDirectories:[],binding,resourceKey:hash({family:'merchant-accounting',directory:binding.directory})};
 }
 function selected(request,name){
   const positions=request.args.flatMap((value,index)=>value===name?[index]:[]);
