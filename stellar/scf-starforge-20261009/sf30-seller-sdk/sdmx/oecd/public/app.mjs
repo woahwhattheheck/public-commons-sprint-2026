@@ -92,11 +92,12 @@ async function openReport(id) {
     for(const r of series.observations){const tr=el('tr');for(const value of [series.country,r.time_period,r.value,r.attributes.OBS_STATUS,r.value_kind,r.dimensions.UNIT_MEASURE+' / '+r.attributes.UNIT_MULT])tr.append(el('td',val(value)));$('observations').append(tr);}
   }
   $('report-downloads').replaceChildren();
-  for(const[name,label]of[['briefing.html','HTML report'],['briefing.json','Complete JSON'],['observations.csv','Original-value CSV']]){
+  for(const[name,label]of Object.entries(current.report.files).map(([name])=>[name,({'briefing.html':'HTML report','briefing.json':'Complete JSON','observations.csv':'Original-value CSV','SOURCE_RIGHTS.json':'Source credits JSON','SOURCE_RIGHTS.md':'Customer acknowledgment'})[name]||name])){
     const b=el('button',label);b.onclick=()=>work(()=>download('/api/oecd/briefings/'+id+'/files/'+name,name));$('report-downloads').append(b);}
   for(const[action,label]of[['export-customer','Customer source packet'],['export-project','Complete project packet']]){
     const b=el('button',label);b.onclick=()=>work(()=>download('/api/oecd/'+action,id+'-'+action+'.zip',{briefing_id:id}));$('report-downloads').append(b);}
   const exportDataset=el('button','Prepare native merchant dataset');exportDataset.onclick=()=>work(async()=>{const result=await api('/api/oecd/export-dataset',{briefing_id:id});$('report-identity').textContent=JSON.stringify(result,null,2);});$('report-downloads').append(exportDataset);
+  if(doc.citation){const credit=el('p',doc.citation.text);credit.append(document.createTextNode(' '),el('a',doc.citation.terms.title,{href:doc.citation.terms.url,target:'_blank',rel:'noreferrer'}));$('report-downloads').append(credit,el('p',doc.citation.downstream_acknowledgment));}
   $('report-identity').textContent=JSON.stringify({source_capture:doc.source_capture_id,source_project:doc.source_project_id,source_revision:doc.source_project_revision,native_snapshot:doc.native_snapshot,catalog_edition:doc.catalog_edition_id,report_files:current.report.files},null,2);
   document.querySelectorAll('#briefing-list button').forEach(b=>b.classList.toggle('selected',b.dataset.id===id));
 }

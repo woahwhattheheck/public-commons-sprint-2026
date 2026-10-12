@@ -19,6 +19,7 @@ from bootstrap import (
     private_write, regular, file_digest, sync_dir, qualified,
 )
 from briefing import build_briefing, render_html, render_csv
+from rights import rights_document, render_rights
 
 SCHEMA = "stellar-forge.oecd-workspace.v1"
 CAPTURE = "stellar-forge.oecd-capture.v1"
@@ -252,9 +253,9 @@ class OecdWorkspace:
             self.source._source_path(source["id"])
         return result
 
-    def _preview(self, body, check_revision=True):
+    def _preview(self, body, check_revision=True, default_report_version=2):
         if not isinstance(body, dict) or set(body) - {"operation_id", "capture_id", "countries", "start_period",
-                "end_period", "title", "notes", "project_id", "expected_revision"}:
+                "end_period", "title", "notes", "project_id", "expected_revision", "report_version"}:
             raise InputError("Briefing selection must contain only supported fields")
         capture = self.captured(body.get("capture_id"))
         countries = selected_countries(body.get("countries", [s["country"] for s in capture["series"]]))
@@ -282,6 +283,11 @@ class OecdWorkspace:
         normalized = {"operation_id": operation, "capture_id": capture["id"], "countries": countries,
                       "start_period": start, "end_period": end, "title": title, "notes": notes,
                       "project_id": project_id, "expected_revision": expected}
+        version = body.get("report_version", default_report_version)
+        if isinstance(version, bool) or version not in (1, 2):
+            raise InputError("Report version must be 1 or 2")
+        if version == 2:
+            normalized["report_version"] = 2
         return {"request": normalized, "capture": capture,
                 "selection": {"series_keys": sorted(available[c]["series_key"] for c in countries)},
                 "source_observations": sum(available[c]["observations"] for c in countries)}
@@ -300,9 +306,9 @@ class OecdWorkspace:
                 "notes": request["notes"], "members": [{"project_id": project["project"]["id"],
                     "revision": project["project"]["revision"], "series_keys": selection["series_keys"]}]}
 
-    def _resume_imported_briefing(self, request, saved):
+    def _resume_imported_briefing(self, request, saved, document):
         """Restore the exact original operation after native history has been imported."""
-        preview = self._preview(request, check_revision=False)
+        preview = self._preview(request, check_revision=False, default_report_version=1)
         if preview["request"] != request:
             raise InputError("The packet briefing request is not its original normalized selection")
         if saved.get("schema") != BRIEFING or saved.get("operation_id") != request["operation_id"] or (
@@ -335,22 +341,17 @@ class OecdWorkspace:
         # project may already be at this or a later revision; its original CAS
         # was evaluated when that retained source operation was first saved.
         self._operation(request["operation_id"], request)
-        return self.save_briefing(request)
+        return self.save_briefing(request, retained_document=document)
 
-    def save_briefing(self, body):
+    def save_briefing(self, body, retained_document=None):
         with self.mutex:
             # Compare an existing operation before checking its now-advanced revision.
             operation = text(body.get("operation_id"), "Operation identity", 130)
             prior = self.db.execute("SELECT request,result FROM oecd_operations WHERE operation=?", (operation,)).fetchone()
             if prior:
                 request = load_json(prior["request"])
-                candidate = dict(body)
-                for name, default in (("project_id", None), ("expected_revision", None),
-                                      ("end_period", None), ("notes", ""), ("start_period", "2024-01"),
-                                      ("title", "OECD leading-indicator briefing")):
-                    candidate.setdefault(name, default)
-                candidate["countries"] = selected_countries(candidate.get("countries",
-                    [s["country"] for s in self.captured(candidate.get("capture_id"))["series"]]))
+                candidate = self._preview(body, check_revision=False,
+                    default_report_version=request.get("report_version", 1))["request"]
                 if json_bytes(request) != json_bytes(candidate):
                     raise InputError("This briefing operation already belongs to another selection")
                 if prior["result"]:
@@ -368,13 +369,20 @@ class OecdWorkspace:
             with self.catalog._native_environment():
                 project = self.source.save_project(project_request)
             edition = self.catalog.save_edition(self._edition_request(request, project, selection))
-            report = build_briefing(self.catalog, edition, capture, request)
             ident = digest(json_bytes({"request": request, "edition_id": edition["edition"]["id"]}))
+            existing_document = self.root / "reports" / ident / "briefing.json"
+            if retained_document is None and existing_document.exists():
+                regular(existing_document, MAX_BUNDLE)
+                retained_document = load_json(existing_document.read_bytes())
+            report = build_briefing(self.catalog, edition, capture, request, retained_document)
             report["id"] = ident
             directory = self.root / "reports" / ident
             directory.mkdir(mode=0o700, exist_ok=True)
             output = {"briefing.json": json_bytes(report), "briefing.html": render_html(report).encode("utf-8"),
                       "observations.csv": render_csv(report).encode("utf-8")}
+            if "citation" in report:
+                output["SOURCE_RIGHTS.json"] = json_bytes(rights_document(report))
+                output["SOURCE_RIGHTS.md"] = render_rights(report).encode("utf-8")
             manifest = {}
             for name, raw in output.items():
                 stable_write(directory / name, raw)
@@ -456,8 +464,21 @@ class OecdWorkspace:
         directory = self.root / "exports" / (ident + "-dataset")
         with self.catalog._native_environment():
             native = self.source.export_dataset(result["project_id"], directory, result["project_revision"])
-        return {"briefing_id": ident, "directory": str(directory), "native": native,
-                "project_id": result["project_id"], "revision": result["project_revision"]}
+        exported = {"briefing_id": ident, "directory": str(directory), "native": native,
+                    "project_id": result["project_id"], "revision": result["project_revision"]}
+        if "citation" in result["document"]:
+            # The maintained native dataset has an exact three-file contract.
+            # Keep source data untouched and retain accompanying rights beside it.
+            companion = self.root / "exports" / (ident + "-dataset-attribution")
+            companion.mkdir(mode=0o700, exist_ok=True)
+            files = {}
+            for name in ("SOURCE_RIGHTS.json", "SOURCE_RIGHTS.md"):
+                raw = self.report_file(ident, name).read_bytes()
+                stable_write(companion / name, raw)
+                files[name] = {"path": str(companion / name), **result["report"]["files"][name]}
+            exported["attribution"] = {"directory": str(companion), "files": files,
+                                       "citation": result["document"]["citation"]}
+        return exported
 
     def export_customer(self, ident):
         result = self.briefing(ident)
@@ -465,6 +486,16 @@ class OecdWorkspace:
         if not path.exists():
             temporary = self.root / "tmp" / (uuid.uuid4().hex + ".zip")
             self.catalog.export_packet(result["catalog_edition_id"], temporary)
+            if "citation" in result["document"]:
+                acknowledgment = render_rights(result["document"]).encode("utf-8")
+                if len(acknowledgment) > 65535:
+                    raise InputError("The complete customer source acknowledgment exceeds the ZIP comment limit")
+                # Standard ZIP comments are accepted by the unchanged catalog
+                # importer; every original member and native manifest stays exact.
+                with zipfile.ZipFile(temporary, "a") as archive:
+                    archive.comment = acknowledgment
+                with temporary.open("rb") as stream:
+                    os.fsync(stream.fileno())
             os.replace(temporary, path)
             sync_dir(path.parent)
         return {"briefing_id": ident, "path": str(path), "bytes": path.stat().st_size,
@@ -483,7 +514,9 @@ class OecdWorkspace:
             members = {"customer.zip": Path(customer["path"]).read_bytes()}
             for name in result["report"]["files"]:
                 members["reports/" + name] = self.report_file(ident, name).read_bytes()
-            wrapper = {"schema": "stellar-forge.oecd-project-packet.v1", "project": self.config,
+            wrapper = {"schema": ("stellar-forge.oecd-project-packet.v2" if
+                       result["selection"].get("report_version", 1) == 2 else
+                       "stellar-forge.oecd-project-packet.v1"), "project": self.config,
                        "capture": capture, "briefing": {k: v for k, v in result.items() if k != "document"},
                        "operation": load_json(self.db.execute("SELECT request FROM oecd_operations WHERE operation=?",
                                                             (result["operation_id"],)).fetchone()[0]),
@@ -505,15 +538,22 @@ class OecdWorkspace:
             raise InputError("Project packet exceeds 1 GiB")
         with self.mutex, zipfile.ZipFile(path) as archive, tempfile.TemporaryDirectory(dir=self.root / "tmp") as tmp:
             names = archive.namelist()
-            if len(names) != len(set(names)) or set(names) != {
-                    "oecd-packet.json", "customer.zip", "reports/briefing.json",
-                    "reports/briefing.html", "reports/observations.csv"}:
-                raise InputError("Project packet has missing, repeated or unrecognized members")
+            base_names = {"oecd-packet.json", "customer.zip", "reports/briefing.json",
+                          "reports/briefing.html", "reports/observations.csv"}
+            if len(names) != len(set(names)) or not base_names.issubset(names):
+                raise InputError("Project packet has missing or repeated members")
             if sum(i.file_size for i in archive.infolist()) > 2 * 1024 * 1024 * 1024:
                 raise InputError("Expanded project packet exceeds 2 GiB")
+            if archive.getinfo("oecd-packet.json").file_size > MAX_BUNDLE:
+                raise InputError("Project packet manifest exceeds 32 MiB")
             wrapper = load_json(archive.read("oecd-packet.json"))
-            if wrapper.get("schema") != "stellar-forge.oecd-project-packet.v1":
-                raise InputError("Unknown OECD project packet")
+            version = wrapper.get("operation", {}).get("report_version", 1)
+            expected_schema = "stellar-forge.oecd-project-packet.v2" if version == 2 else "stellar-forge.oecd-project-packet.v1"
+            expected_names = base_names | ({"reports/SOURCE_RIGHTS.json", "reports/SOURCE_RIGHTS.md"} if version == 2 else set())
+            if version not in (1, 2) or isinstance(version, bool) or wrapper.get("schema") != expected_schema:
+                raise InputError("Unknown OECD project packet version")
+            if set(names) != expected_names:
+                raise InputError("Project packet has unrecognized report members")
             verified = {}
             for name, expected in wrapper.get("files", {}).items():
                 if name not in names or name == "oecd-packet.json":
@@ -538,7 +578,7 @@ class OecdWorkspace:
                     raise InputError("Existing capture identity has different retained metadata")
                 self.db.execute("INSERT OR IGNORE INTO oecd_captures VALUES(?,?)",
                                 (capture["id"], json_bytes(capture).decode()))
-            generated = self._resume_imported_briefing(request, saved)
+            generated = self._resume_imported_briefing(request, saved, load_json(verified["reports/briefing.json"]))
             portable = lambda value: {**{k: v for k, v in value.items() if k not in {"document", "report"}},
                                       "report": {"files": value["report"]["files"]}}
             if portable(generated) != portable(saved):

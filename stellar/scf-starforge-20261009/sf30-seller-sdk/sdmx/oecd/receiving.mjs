@@ -100,7 +100,7 @@ export async function receiveOecd({ projectDirectory, config, pythonCommand = 'p
       await step('reportArtifacts', async () => {
         const target = join(folder, 'analyst-report'); await privateDirectory(target, true);
         const files = [];
-        for (const name of ['briefing.html', 'briefing.json', 'observations.csv']) {
+        for (const name of Object.keys(briefing.report.files)) {
           files.push(await exactFile(target, name, (await client.reportFile(briefing.id, name)).body));
         }
         return { briefingId: briefing.id, directory: target, files,
@@ -190,7 +190,7 @@ export async function receiveOecd({ projectDirectory, config, pythonCommand = 'p
           const comparison = compareSourceRows(rows, sourceRows.rows);
           const destination = join(folder, 'buyer-delivery');
           const files = [];
-          for (const name of ['briefing.html', 'briefing.json', 'observations.csv']) {
+          for (const name of Object.keys(briefing.report.files)) {
             files.push(await exactFile(destination, name, (await client.reportFile(briefing.id, name)).body));
           }
           files.push(await exactFile(destination, 'oecd-original-project.zip', (await client.exportProject(briefing.id)).body));
@@ -217,7 +217,7 @@ export async function receiveOecd({ projectDirectory, config, pythonCommand = 'p
       const revisedArtifacts = await step('revisedReportArtifacts', async () => {
         const target = join(folder, 'buyer-delivery', 'revised-briefing'); await privateDirectory(target, true);
         const files = [];
-        for (const name of ['briefing.html', 'briefing.json', 'observations.csv']) {
+        for (const name of Object.keys(revised.report.files)) {
           files.push(await exactFile(target, name, (await client.reportFile(revised.id, name)).body));
         }
         const rows = await client.sourceRows(revised.id);
@@ -252,7 +252,7 @@ export async function receiveOecd({ projectDirectory, config, pythonCommand = 'p
           const rows = await reopened.client.sourceRows(restored.id);
           need(identity(rows.rows) === identity(sourceRows.rows) && rows.snapshot === sourceRows.snapshot,
             'OECD_REOPENED_ORIGINAL_SOURCE_CHANGED');
-          for (const name of ['briefing.html', 'briefing.json', 'observations.csv']) {
+          for (const name of Object.keys(revised.report.files)) {
             const actual = (await reopened.client.reportFile(restored.id, name)).body;
             const expected = await readPrivate(join(revisedArtifacts.directory, name), 32 * 1024 * 1024);
             need(actual.equals(expected), 'OECD_REOPENED_ORIGINAL_REPORT_CHANGED');
