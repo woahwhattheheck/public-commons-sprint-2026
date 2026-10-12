@@ -120,7 +120,7 @@ function keysFrom(environment) {
   const keys = {};
   for (const name of KEYS) {
     const value = environment[name];
-    need(typeof value === 'string' && /^[A-Za-z0-9+/]+={0,2}$/.test(value) &&
+    need(typeof value === 'string' && value.length <= 4096 && /^[A-Za-z0-9+/]+={0,2}$/.test(value) &&
       Buffer.from(value,'base64').length >= 32 &&
       Buffer.from(value,'base64').toString('base64') === value,
       'NATIVE_RECOVERY_ORIGINAL_CONTROL_KEYS_REQUIRED');
@@ -195,13 +195,16 @@ async function captureLedger(plan, destination, keys, ctx) {
   const holder = await runChild(await pythonExecutable(plan.python),
     ['-I','-B',LEDGER,'snapshot',plan.ledger,plan.policy,destination],
     {input:{keys,identity},expected:'CAPTURE_LOCKED',hold:true,signal:ctx.signal,timeout:1800000});
-  need(holder.value.checkpoint?.outcome === 'JOURNAL_CONSISTENT','NATIVE_RECOVERY_LEDGER_AUDIT_FAILED');
+  if (holder.value.checkpoint?.outcome !== 'JOURNAL_CONSISTENT') {
+    await holder.stop(); fail('NATIVE_RECOVERY_LEDGER_AUDIT_FAILED');
+  }
   return {...holder,identity};
 }
-async function verifyNative(plan, staged, keys, ctx, python) {
+async function verifyNative(plan, staged, keys, ctx, python, expectedCheckpoint) {
   const result = await runChild(await pythonExecutable(python ?? plan.python),
     ['-I','-B',LOCK,'verify',join(staged,'state')],
-    {input:{owner:plan,keys,database:join(staged,'ledger.sqlite'),policy:join(staged,'policy.json')},
+    {input:{owner:plan,keys,database:join(staged,'ledger.sqlite'),policy:join(staged,'policy.json'),
+      ...(expectedCheckpoint === undefined ? {} : {expected_checkpoint:expectedCheckpoint})},
       expected:'NATIVE_STATE_VERIFIED',signal:ctx.signal});
   need(result.value.checkpoint?.outcome === 'JOURNAL_CONSISTENT','NATIVE_RECOVERY_LEDGER_AUDIT_FAILED');
   return result.value;
@@ -455,6 +458,58 @@ export async function restoreNativeMcpSpendingRecovery(options, supplied) {
     await rm(opened.temporary,{recursive:true,force:true});
   }
 }
+/** Verify a present, possibly advanced original owner. The archived checkpoint
+ * must be a prefix of the fully audited current journal; every archived native
+ * binding/finality file remains byte-identical. Later legitimate work is kept.
+ * The operation only locks/reads original state and creates private temp copies.
+ */
+export async function verifyCurrentNativeMcpSpendingOwner(options, supplied) {
+  need(HASH.test(options.expectedManifestSha256 ?? ''),'NATIVE_RECOVERY_SELECTED_MANIFEST_REQUIRED');
+  const ctx = context(options,supplied), opened = await openBackup(options,ctx);
+  let locked, ledger;
+  try {
+    const {record,keys} = opened, plan = {...record.owner,python:options.python ?? record.owner.python};
+    if (options.configFile !== undefined) need(options.configFile === plan.configFile,'NATIVE_RECOVERY_ORIGINAL_PATHS_REQUIRED');
+    for (const name of KEYS) if (ctx.environment[name] !== undefined) need(
+      ctx.environment[name] === keys[name],'NATIVE_RECOVERY_PRESENT_CONTROL_KEY_CONFLICT');
+    const inspected = await inspectNativeMcpSpendingRecovery({configFile:plan.configFile},ctx);
+    need(same(inspected.owner,record.owner) && inspected.configSha256 === record.configSha256 &&
+      inspected.policySha256 === record.policySha256,'NATIVE_RECOVERY_ORIGINAL_OWNER_CHANGED');
+    locked = await stateLock(plan,ctx);
+    const current = join(opened.temporary,'current'); await mkdir(current,{mode:0o700});
+    await mkdir(join(current,'state'),{mode:0o700});
+    ledger = await captureLedger(plan,join(current,'ledger.sqlite'),keys,ctx);
+    const before = await stateInventory(plan,ctx);
+    const archivedState = record.files.filter(file => file.path.startsWith('state/') &&
+      !file.path.startsWith('state/.mcp-spending-'));
+    need(archivedState.every(archived => before.some(present =>
+      archived.path === 'state/'+present.path && archived.sha256 === present.sha256 && archived.size === present.size)),
+      'NATIVE_RECOVERY_ORIGINAL_STATE_CHANGED');
+    await digest(plan.policy,join(current,'policy.json'),ctx.signal,false);
+    for (const entry of before) {
+      const copied = await digest(join(plan.stateDirectory,entry.path),join(current,'state',entry.path),ctx.signal);
+      need(same(copied,{size:entry.size,sha256:entry.sha256}),'NATIVE_RECOVERY_SOURCE_CHANGED');
+    }
+    need(same(before,await stateInventory(plan,ctx)) &&
+      same(inspected,await inspectNativeMcpSpendingRecovery({configFile:plan.configFile},ctx)),
+      'NATIVE_RECOVERY_SOURCE_CHANGED');
+    const verified = await verifyNative(plan,current,keys,ctx,options.python,record.checkpoint);
+    need(same(verified.checkpoint,ledger.value.checkpoint) && same(verified.archivePrefix,record.checkpoint),
+      'NATIVE_RECOVERY_CHECKPOINT_CHANGED');
+    const currentLedgerIdentity = ledger.identity;
+    await ledger.release(); ledger = undefined;
+    await locked.release(); locked = undefined;
+    return {status:'NATIVE_SPENDING_CURRENT_OWNER_VERIFIED',
+      ...summary(record,opened.recordSha256,opened.manifestSha256),
+      currentCheckpoint:verified.checkpoint,currentLedgerIdentity,
+      currentNativeState:{boundRequests:verified.boundRequests,reservedRequests:verified.reservedRequests,
+        finalityRecords:verified.finalityRecords},archivePrefix:verified.archivePrefix};
+  } finally {
+    if (ledger) await ledger.stop();
+    if (locked) await locked.stop();
+    await rm(opened.temporary,{recursive:true,force:true});
+  }
+}
 /** Keep recovered control-key custody scoped to a caller-owned application
  * lifespan. The callback receives a new environment; process.env is untouched.
  */
@@ -477,14 +532,16 @@ export async function nativeMcpSpendingRecoveryMain(argv = process.argv.slice(2)
     operation:'operationId',python:'python','temporary-directory':'temporaryDirectory'};
   for (let i=0;i<rest.length;i++) {
     if (rest[i] === '--quiesced') {need(options.quiesced === undefined,'NATIVE_RECOVERY_ARGUMENT_INVALID');options.quiesced=true;continue;}
-    const key = flags[rest[i]?.slice(2)];
+    const flag = rest[i]?.slice(2);
+    const key = Object.hasOwn(flags,flag) ? flags[flag] : undefined;
     need(rest[i]?.startsWith('--') && key && options[key] === undefined && rest[i+1] &&
       !rest[i+1].startsWith('--'),'NATIVE_RECOVERY_ARGUMENT_INVALID');
     options[key]=rest[++i];
   }
   const actions = {inspect:inspectNativeMcpSpendingRecovery,snapshot:snapshotNativeMcpSpendingRecovery,
-    verify:verifyNativeMcpSpendingRecovery,restore:restoreNativeMcpSpendingRecovery};
-  need(actions[action],'NATIVE_RECOVERY_ACTION_REQUIRED');
+    verify:verifyNativeMcpSpendingRecovery,restore:restoreNativeMcpSpendingRecovery,
+    'verify-current':verifyCurrentNativeMcpSpendingOwner};
+  need(Object.hasOwn(actions,action),'NATIVE_RECOVERY_ACTION_REQUIRED');
   return actions[action](options,supplied);
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
