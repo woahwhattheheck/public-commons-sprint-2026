@@ -3,7 +3,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   initializeOAuthConnection,
-  type OAuthEnvironment, type OAuthAuthorizationStart, type OAuthFlow,
+  type OAuthEnvironment, type OAuthLookup, type OAuthAgent, type OAuthAuthorizationStart, type OAuthFlow,
   type OAuthGrantReview, type OAuthCommandReceipt, type OAuthApproveRequest,
   type OAuthRefreshRequest, type OAuthDisconnectRequest, type OAuthRevokeRequest,
 } from '@tokenjunkielabs/starforge-merchant/seller/oauth-connections';
@@ -15,6 +15,10 @@ import {
   readOAuthHostConnections, openOAuthConnectionRegistry,
   type OAuthConnectionRegistry, type OAuthRegistrySnapshot,
 } from '@tokenjunkielabs/starforge-merchant/seller/oauth-connections/host';
+
+import {
+  createOAuthConnectionProvider, type OAuthConnectionProvider,
+} from '@tokenjunkielabs/starforge-merchant/seller/oauth-connections/provider';
 
 export type RetainedCommand =
   | { alias: string; action: 'approve'; args: OAuthApproveRequest }
@@ -96,8 +100,19 @@ export interface SourceHostOptions {
   /** Actual registered http://127.0.0.1:PORT origin; the source-specific path is added below. */
   callbackOrigin: string;
   allowLoopback?: boolean;
+  lookup?: OAuthLookup;
+  /** Borrowed host transport; its owner destroys it after this complete call drains. */
+  agent?: OAuthAgent;
   journal: HostCommandJournal;
   interaction: HostInteraction;
+}
+
+export interface SourceConnectionContext {
+  registry: OAuthConnectionRegistry;
+  alias: string;
+  binding: CompiledOAuthConnection;
+  sourceSha256: string;
+  run: (command: RetainedCommand) => Promise<CommandResult>;
 }
 
 export type SourceHostResult<T> =
@@ -115,13 +130,7 @@ export type SourceHostResult<T> =
  */
 export async function withReviewedSourceConnection<T>(
   options: SourceHostOptions,
-  use: (context: {
-    registry: OAuthConnectionRegistry;
-    alias: string;
-    binding: CompiledOAuthConnection;
-    sourceSha256: string;
-    run: (command: RetainedCommand) => Promise<CommandResult>;
-  }) => Promise<T>,
+  use: (context: SourceConnectionContext) => Promise<T>,
 ): Promise<SourceHostResult<T>> {
   const allowLoopback = options.allowLoopback ?? false;
   const env = { ...options.env };
@@ -141,7 +150,8 @@ export async function withReviewedSourceConnection<T>(
   // Any other trusted aliases in the host file must already have their own provisioned stores.
   // A changed source/profile requires its own explicit host alias and private store.
   await initializeOAuthConnection(directory, { profile, allowLoopback });
-  const registry = await openOAuthConnectionRegistry({ connections, env, allowLoopback });
+  const registry = await openOAuthConnectionRegistry({ connections, env, allowLoopback,
+    lookup: options.lookup, agent: options.agent });
   let primaryFailure = false, primaryError: unknown;
   try {
     let current = await registry.status(options.alias);
@@ -209,3 +219,39 @@ export async function withReviewedSourceConnection<T>(
   }
 }
 
+
+/**
+ * Run an existing protected-resource application with the original provider.
+ * The application's use callback must drain its requests before returning.
+ * This owner then drains the provider, followed by the original registry.
+ * The caller's Agent remains alive until the complete returned promise settles.
+ */
+export async function withReviewedResourceConnection<T>(
+  options: SourceHostOptions,
+  use: (context: SourceConnectionContext & { credentialProvider: OAuthConnectionProvider }) => Promise<T>,
+): Promise<SourceHostResult<T>> {
+  // Consent and resource renewal use the same initial host environment snapshot.
+  const ownedOptions = { ...options, env: { ...options.env } };
+  return withReviewedSourceConnection(ownedOptions, async context => {
+    const credentialProvider = createOAuthConnectionProvider(context.binding, {
+      resourceOrigin: ownedOptions.resourceOrigin,
+      env: ownedOptions.env,
+      allowLoopback: ownedOptions.allowLoopback,
+      lookup: ownedOptions.lookup,
+      agent: ownedOptions.agent,
+    });
+    let primaryFailure = false, primaryError: unknown;
+    try {
+      return await use({ ...context, credentialProvider });
+    } catch (error: unknown) {
+      primaryFailure = true; primaryError = error; throw error;
+    } finally {
+      try { await credentialProvider.close(); }
+      catch (closeError: unknown) {
+        if (primaryFailure)
+          throw new AggregateError([primaryError, closeError], 'The resource operation and its credential shutdown both failed.');
+        throw closeError;
+      }
+    }
+  });
+}

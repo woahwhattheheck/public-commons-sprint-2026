@@ -64,6 +64,18 @@ export async function serveSheetsAuthoring({ workspace, port = 8453 } = {}) {
           for (const key of ['limit', 'capturesOffset', 'versionsOffset']) if (url.searchParams.has(key)) options[key] = Number(url.searchParams.get(key));
           return send(200, await workspace.status(options));
         }
+        if (path === '/api/deployment/status') {
+          const options = {};
+          for (const key of ['limit', 'runsOffset', 'operationsOffset']) if (url.searchParams.has(key)) options[key] = Number(url.searchParams.get(key));
+          return send(200, await workspace.deploymentStatus(options));
+        }
+        if (path === '/api/deployment/package') return send(200, await workspace.inspectDeploymentPackage(url.searchParams.get('id')));
+        if (path === '/api/deployment/compare') return send(200, await workspace.compareDeployment({
+          from: url.searchParams.get('from'), to: url.searchParams.get('to') }));
+        if (path === '/api/deployment/file') {
+          const file = await workspace.deploymentFile(url.searchParams.get('packageId'), url.searchParams.get('file'));
+          return send(200, file.bytes, file.mime, file.filename);
+        }
         if (path === '/api/capture') return send(200, await workspace.inspectCapture(url.searchParams.get('id'), url.searchParams.get('range') ?? undefined));
         if (path === '/api/operation') return send(200, { operation: workspace.operation(url.searchParams.get('id')) });
         if (path === '/api/version') return send(200, workspace.version(Number(url.searchParams.get('id'))));
@@ -86,6 +98,12 @@ export async function serveSheetsAuthoring({ workspace, port = 8453 } = {}) {
       if (path === '/api/select') return send(200, await workspace.selectVersion(input));
       if (path === '/api/publisher/start') return send(200, await workspace.openPublisher(input));
       if (path === '/api/publisher/stop') return send(200, await workspace.closePublisher(input));
+      if (path === '/api/deployment/review') return send(200, await workspace.reviewDeployment(input));
+      if (path === '/api/deployment/prepare') return send(201, await workspace.prepareDeployment(input));
+      if (path === '/api/deployment/stage') return send(201, await workspace.stageDeployment(input));
+      if (path === '/api/deployment/console/open') return send(200, await workspace.openDeploymentConsole(input));
+      if (path === '/api/deployment/console/close') return send(200, await workspace.closeDeploymentConsole(input));
+      if (path === '/api/deployment/command') return send(200, await workspace.commandDeployment(input));
       if (path === '/api/resume') return send(200, await workspace.resume(input.requestId));
       throw fault('NOT_FOUND', 'Action not found.', 404);
     };

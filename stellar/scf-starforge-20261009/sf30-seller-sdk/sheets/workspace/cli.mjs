@@ -24,6 +24,21 @@ const HELP = `Google Sheets source workspace (Linux, Node 22.16+, util-linux flo
   export --directory DIR --version N --out NEW_PRIVATE_PACKET.json
   import-package --directory DIR --input PACKET.json --title TITLE --revision N --request UUID
   operation|resume --directory DIR --request UUID
+  deployment-status --directory DIR [--limit 25 --runs-offset N --operations-offset N]
+  deployment-review --directory DIR --input REVIEW.json --request UUID
+  deployment-prepare --directory DIR --review UUID --sha256 REVIEW_SHA --request UUID
+  deployment-package --directory DIR --package UUID
+  deployment-stage --directory DIR --package UUID --sha256 PACKAGE_SOURCE_SHA --input RELEASE.json --request UUID
+  deployment-export --directory DIR --package UUID --file FILENAME --out NEW_PRIVATE_FILE
+  deployment-console --directory DIR --request UUID
+
+REVIEW.json contains {versionId,runId,terms:{origin,path,payment}}. RELEASE.json
+contains {id,label,runtime:{port,facilitator?,allowLocalFacilitator?}}. Reviewed
+public data and merchant terms use the original SF82 dataset release lifecycle.
+Deployment-console keeps that original console and its owned merchant alive until
+SIGINT/SIGTERM. Its complete private URL exposes native compare, select, run,
+restart, drain, rollback and receiving. DEPLOYMENT.md describes the same-store
+binding, required public terms and recovery. Reopening never starts a merchant.
 
 The browser creates the draft; no hand-written projection is required. Original
 CellData stays private. Preview calls the original typed Sheets projector. Save
@@ -44,6 +59,13 @@ const OPTIONS = {
   select: ['--directory', '--version', '--selected', '--request'],
   compare: ['--directory', '--left', '--right'], export: ['--directory', '--version', '--out'],
   'import-package': ['--directory', '--input', '--title', '--revision', '--request'],
+  'deployment-status': ['--directory', '--connections', '--limit', '--runs-offset', '--operations-offset'],
+  'deployment-review': ['--directory', '--connections', '--input', '--request'],
+  'deployment-prepare': ['--directory', '--connections', '--review', '--sha256', '--request'],
+  'deployment-package': ['--directory', '--package'],
+  'deployment-stage': ['--directory', '--package', '--sha256', '--input', '--request'],
+  'deployment-export': ['--directory', '--package', '--file', '--out'],
+  'deployment-console': ['--directory', '--connections', '--request'],
   operation: ['--directory', '--request'], resume: ['--directory', '--connections', '--request'],
 };
 const required = (options, key) => { if (!options[key]) throw fault('OPTION_REQUIRED', key); return options[key]; };
@@ -78,6 +100,16 @@ export async function main(argv = process.argv.slice(2)) {
       return service;
     } catch (issue) { await workspace.close(); throw issue; }
   }
+  if (command === 'deployment-console') {
+    try {
+      const receipt = await workspace.openDeploymentConsole({ requestId: required(options, '--request') });
+      const current = (await workspace.status()).deployment;
+      print({ receipt, current });
+      if (!current.running) { await workspace.close(); return { receipt, current }; }
+      for (const signal of ['SIGINT', 'SIGTERM']) process.once(signal, () => workspace.close().catch(() => { process.exitCode = 1; }));
+      return { workspace, ...current, close: () => workspace.close() };
+    } catch (issue) { await workspace.close(); throw issue; }
+  }
   try {
     let result;
     const request = () => required(options, '--request');
@@ -106,6 +138,24 @@ export async function main(argv = process.argv.slice(2)) {
       const output = resolve(required(options, '--out')); await createFile(output, file.bytes); result = { file: output, bytes: file.bytes.length }; }
     if (command === 'import-package') result = await workspace.importPacket({ packet: await readJson(resolve(required(options, '--input')), MAX_CAPTURE_BYTES * 2),
       title: required(options, '--title'), expectedDraftRevision: number(required(options, '--revision')), requestId: request() });
+    if (command === 'deployment-status') result = await workspace.deploymentStatus({
+      ...(options['--limit'] ? { limit: number(options['--limit']) } : {}),
+      ...(options['--runs-offset'] ? { runsOffset: number(options['--runs-offset']) } : {}),
+      ...(options['--operations-offset'] ? { operationsOffset: number(options['--operations-offset']) } : {}),
+    });
+    if (command === 'deployment-review') result = await workspace.reviewDeployment({
+      ...await readJson(resolve(required(options, '--input'))), requestId: request() });
+    if (command === 'deployment-prepare') result = await workspace.prepareDeployment({
+      reviewRequestId: required(options, '--review'), expectedReviewSha256: required(options, '--sha256'), requestId: request() });
+    if (command === 'deployment-package') result = await workspace.inspectDeploymentPackage(required(options, '--package'));
+    if (command === 'deployment-stage') result = await workspace.stageDeployment({
+      ...await readJson(resolve(required(options, '--input'))), packageRequestId: required(options, '--package'),
+      expectedSourceSha256: required(options, '--sha256'), requestId: request() });
+    if (command === 'deployment-export') {
+      const file = await workspace.deploymentFile(required(options, '--package'), required(options, '--file'));
+      const output = resolve(required(options, '--out')); await createFile(output, file.bytes);
+      result = { file: output, bytes: file.bytes.length, sha256: file.sha256 };
+    }
     if (command === 'operation') result = workspace.operation(request());
     if (command === 'resume') result = await workspace.resume(request());
     print(result); return result;

@@ -1,0 +1,54 @@
+{
+  "schema": "stellar-forge.crossref-merchant.v1",
+  "title": "Crossref publication metadata",
+  "publicOrigin": "https://research.example.com",
+  "provider": {
+    "account": "crossref-public"
+  },
+  "timeoutMs": 45000,
+  "maxSourceBytes": 4194304,
+  "maxResponseBytes": 16777216,
+  "cacheSeconds": 86400,
+  "products": [
+    {
+      "id": "crossrefWork",
+      "kind": "work",
+      "path": "/research/crossref/work",
+      "description": "Retained original publication metadata for a DOI.",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "amount": "10000",
+          "asset": "REPLACE_WITH_ACTUAL_SEP41_ASSET",
+          "payTo": "REPLACE_WITH_ACTUAL_SELLER_ADDRESS",
+          "maxTimeoutSeconds": 300
+        }
+      ],
+      "example": {
+        "doi": "10.1002/cphy.cp010129"
+      }
+    },
+    {
+      "id": "crossrefUpdates",
+      "kind": "updates",
+      "path": "/research/crossref/updates",
+      "description": "Registered editorial updates for a DOI, with original pagination and response bytes.",
+      "paymentOptions": [
+        {
+          "scheme": "exact",
+          "network": "stellar:testnet",
+          "amount": "10000",
+          "asset": "REPLACE_WITH_ACTUAL_SEP41_ASSET",
+          "payTo": "REPLACE_WITH_ACTUAL_SELLER_ADDRESS",
+          "maxTimeoutSeconds": 300
+        }
+      ],
+      "example": {
+        "doi": "10.1002/cphy.cp010129",
+        "rows": 1000,
+        "cursor": "*"
+      }
+    }
+  ]
+}
