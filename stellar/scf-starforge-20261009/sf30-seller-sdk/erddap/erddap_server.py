@@ -265,9 +265,15 @@ class Handler(BaseHTTPRequestHandler):
                         folder = temporary / "dataset"
                         ws.export_dataset(build_id, folder)
                         archive = temporary / "erddap-dataset.zip"
-                        with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED) as output:
-                            for name in ["data.csv", "dataset.json", "erddap-lineage.json"]:
-                                output.write(folder / name, name)
+                        with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as output:
+                            for name in sorted(["data.csv", "dataset.json", "erddap-lineage.json"]):
+                                info = zipfile.ZipInfo(name, (2000, 1, 1, 0, 0, 0))
+                                info.create_system = 3
+                                info.external_attr = 0o100600 << 16
+                                info.compress_type = zipfile.ZIP_DEFLATED
+                                info._compresslevel = 6
+                                with (folder / name).open("rb") as source, output.open(info, "w") as member:
+                                    shutil.copyfileobj(source, member, 65536)
                         archive.chmod(0o600)
                     self._download(archive, archive.name, "application/zip")
             else:
