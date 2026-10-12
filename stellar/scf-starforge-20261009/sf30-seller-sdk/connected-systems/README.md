@@ -104,7 +104,7 @@ A saved acquisition query binds the connection ID and these fields:
 }
 ```
 
-Use the provider's actual supported time filter and format. Query parameters are an ordered array of string pairs so repeated provider parameters and their order remain explicit. The consumer adds `obsFormat=application/json` to the schema URL when absent, and a visible page `limit` when none was selected. Inspect the returned normalized query before acquiring it.
+Use the provider's actual supported time filter and format. Query parameters are an ordered array of string pairs so repeated provider parameters and their order remain explicit. The consumer adds `obsFormat=application/json` to the schema URL when absent, and, for a collection, a visible page `limit` when none was selected. Inspect the returned normalized query before acquiring it.
 
 ```sh
 node "$CSAPI/cli.mjs" --workspace "$CSAPI_WORKSPACE" query-save \
@@ -239,6 +239,43 @@ python3 -B "$CSAPI/delivery/browser-owner.py" \
 Use `--coverage-policy allow-partial` on both commands only for the already reviewed partial capture/mapping. The browser owner requires the actual completed native build; it performs no replacement acquisition. It retains the original selection and browser checkpoints, exercises source review, interrupted mapping-save recovery, native cursors, exact downloads and a separate customer workspace, then closes the services and reopens through the CLI.
 
 The native and browser result files record what actually completed. Source availability, receipt completeness and a prepared command do not imply that an operation executed successfully.
+
+## Collection and single-resource queries
+
+The query form offers **Collection** and **Single observation**. A collection remains the default and omits `observationResource` from the normalized query, preserving existing collection identities. It follows the provider's original next-page links and records whether the selected window was exhausted or stopped at an explicit page, row or byte bound.
+
+Use `"observationResource": "single"` only when the selected URL returns one original observation JSON object. This explicit mode keeps that object unchanged, fixes `maxPages` to 1, adds no automatic collection `limit`, and rejects a next-page link. Its coverage includes `"scope": "single-observation-resource"`. Exhausted coverage means that one resource was received; it does not mean that a provider's entire observation collection was read. The source badge, saved query, raw file viewer, project packet and receiving inventory retain that distinction.
+
+The operator does not convert an individual object into a fabricated collection response. Both modes retain the actual HTTP body, original observation values and schema.
+
+## Reproduce the committed OGC example
+
+The publisher's [pinned original examples](https://github.com/opengeospatial/ogcapi-connected-systems/tree/fb858be23aa03e2b824ec50b5a97ac2c2a1d3fec) include one room-temperature observation, its datastream, scalar observation schema and thermometer description. They are illustrative publisher examples, not a field measurement or proof that a live demonstration service is operational.
+
+The maintained recipe fetches those exact public resources through the same acquisition journal as any other selected source. It verifies every received body against the committed byte count and SHA256, retains the exact [publisher license](examples/ogc-connected-systems-LICENSE.txt), and uses explicit single-resource receiving. It then runs the original native edition, row cursor, export, independent customer receive, exact packet re-export and cold-reopen workflow.
+
+```bash
+export CSAPI="$PWD/stellar/scf-starforge-20261009/sf30-seller-sdk/connected-systems"
+python3 -B "$CSAPI/delivery/publisher-example.py" \
+  --source-root "$CSAPI" \
+  --operation-root ./ogc-room-temperature-reference \
+  --operation-id ogc-room-temperature-reference-v1 \
+  --node "$(command -v node)"
+```
+
+Continue that same closed workspace through the visible operator:
+
+```bash
+python3 -B "$CSAPI/delivery/browser-owner.py" \
+  --source-root "$CSAPI" \
+  --operation-root ./ogc-room-temperature-reference \
+  --workspace ./ogc-room-temperature-reference/workspace \
+  --coverage-policy require-exhausted
+```
+
+The recipe saves `publisher-reference/publisher-acquisition.json`, the original query/source and `native/native-result.json`; its completed `publisher-reference/publisher-result.json` binds those results to the publisher commit and exact native packet. Rerunning a completed stage verifies and returns its retained result. An incomplete stage keeps the same query, acquisition operation and receiving history.
+
+The original datastream uses an indoor-temperature label while the supplied thermometer description uses an outdoor label. The datastream also retains the publisher's original result-time interval. The recipe preserves these source inconsistencies and makes no correction or provenance claim beyond the committed example. Source/license identities and the separately observed public-service errors are documented in [SOURCES.md](SOURCES.md).
 
 ## Retention and errors
 

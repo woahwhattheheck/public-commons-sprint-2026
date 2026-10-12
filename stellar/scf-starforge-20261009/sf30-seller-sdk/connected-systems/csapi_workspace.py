@@ -140,7 +140,7 @@ class Workspace(_original.Workspace):
         return source.url(resource,connection["baseUrl"],connection["allowedOrigins"])
 
     def save_query(self,raw):
-        allowed={"schema","connectionId","name","datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","limits","rights","obsFormat"}
+        allowed={"schema","connectionId","name","datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","limits","rights","obsFormat","observationResource"}
         source.exact(raw,allowed,"acquisition query",{"schema","connectionId","name","datastreamUrl","schemaUrl","observationsUrl"})
         if raw["schema"]!=source.QUERY_SCHEMA:raise InputError("Expected "+source.QUERY_SCHEMA)
         connection=self.connection(raw["connectionId"])
@@ -149,6 +149,9 @@ class Workspace(_original.Workspace):
             systemUrl=self._resource(connection,raw["systemUrl"]) if raw.get("systemUrl") is not None else None,
             params=source.parameters(raw.get("params",[])),obsFormat=raw.get("obsFormat","application/json"))
         if body["obsFormat"]!="application/json":raise InputError("This consumer acquires application/json observations")
+        observation_resource=raw.get("observationResource","collection")
+        if observation_resource not in ("collection","single"):raise InputError("Choose a collection or single observation resource")
+        if observation_resource=="single":body["observationResource"]="single"
         if not any(k=="obsFormat" for k,_ in parse_qsl(urlsplit(body["schemaUrl"]).query,keep_blank_values=True)):
             body["schemaUrl"]=source.query_url(body["schemaUrl"],[{"name":"obsFormat","value":"application/json"}])
         elif any(k=="obsFormat" and v!="application/json" for k,v in parse_qsl(urlsplit(body["schemaUrl"]).query,keep_blank_values=True)):
@@ -160,7 +163,9 @@ class Workspace(_original.Workspace):
             "maxBytes":source.integer(limits.get("maxBytes",64*1024*1024),1024,MAX_SOURCE-2*1024*1024,"maxBytes")}
         merged=[*parse_qsl(urlsplit(body["observationsUrl"]).query,keep_blank_values=True),*[(p["name"],p["value"]) for p in body["params"]]]
         page_limits=[v for k,v in merged if k=="limit"]
-        if not page_limits:
+        if observation_resource=="single":
+            body["limits"]["maxPages"]=1
+        elif not page_limits:
             body["params"].append({"name":"limit","value":str(min(100,body["limits"]["maxRows"]))})
         elif len(page_limits)!=1 or not re.fullmatch(r"[1-9][0-9]{0,5}",page_limits[0]) or int(page_limits[0])>body["limits"]["maxRows"]:
             raise InputError("Choose one positive page limit no greater than selected maxRows")
@@ -398,20 +403,24 @@ class Workspace(_original.Workspace):
                     visited.add(current)
                     member="observations/"+str(number).zfill(6)+".json"
                     doc=add(None,"page-"+str(number).zfill(6),current,member);value=doc["document"]
-                    if not isinstance(value,dict) or not isinstance(value.get("items"),list):raise InputError("Provider did not return an observation items collection")
-                    for obs in value["items"]:source.observation(obs,datastream["id"])
-                    observations+=len(value["items"]);pages.append(member)
+                    rows=source.observation_items(value,query.get("observationResource","collection"))
+                    for obs in rows:source.observation(obs,datastream["id"])
+                    observations+=len(rows);pages.append(member)
                     if observations>query["limits"]["maxRows"]:raise InputError("A complete provider page exceeds selected maxRows; its original response is retained for review")
                     if sum(r["bytes"] for r in receipts.values())>query["limits"]["maxBytes"]:raise InputError("Original source exceeds the selected maxBytes")
                     current=source.next_link(value,doc["receipt"]["finalUrl"],conn["allowedOrigins"])
+                    if query.get("observationResource")=="single" and current is not None:
+                        raise InputError("A single observation resource cannot imply an unreceived next page")
                     self._state(ident,progress={"phase":"observations","completedPages":len(pages),"observations":observations,"nextUrl":current})
                     if current is None:break
                 after=add("schemaAfter","schema-after",query["schemaUrl"])
                 if source.schema_sha(before["document"])!=source.schema_sha(after["document"]):
                     raise InputError("The original observation schema changed during acquisition; all returned pages are retained")
                 selection={key:query[key] for key in ("datastreamUrl","schemaUrl","observationsUrl","systemUrl","params","obsFormat","limits")}
+                if query.get("observationResource")=="single":selection["observationResource"]="single"
                 coverage={"status":"exhausted" if current is None else "page-limit","pages":len(pages),"observations":observations,
                     "nextUrl":current,"consistency":"sequential-pages-not-transactional-snapshot"}
+                if query.get("observationResource")=="single":coverage["scope"]="single-observation-resource"
                 manifest={"schema":source.SOURCE_SCHEMA,"endpoint":conn["baseUrl"],"allowedOrigins":conn["allowedOrigins"],
                     "selection":selection,"resources":resources,"pages":pages,"coverage":coverage,"files":receipts,"rights":query["rights"]}
                 destination=self._op_path(ident)/"source.zip"

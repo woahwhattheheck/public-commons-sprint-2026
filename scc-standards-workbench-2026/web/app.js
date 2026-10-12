@@ -244,7 +244,7 @@ function renderCollection(collection,rows){
  if(section==="finance")html+=stats([[money(project.analysis.collected_cad),project.mode==="authored_example"?"Authored example receipts":"Collected payments"],
  [humanValue(project.analysis.funding_status),"Funding status"],[project.invoices.length,"Prepared invoices"],[project.report_responses.filter(r=>r.decision==="accepted").length,"Accepted report records"]]);
  html+=subtabs(COLLECTIONS_BY_SECTION[section],collection);
- html+='<div class="toolbar"><input id="record-filter" placeholder="Filter these records" aria-label="Filter records"><span class="muted compact">'+esc(project.collection_counts[collection])+' retained records</span></div>';
+ html+='<div class="toolbar"><input id="record-filter" placeholder="Filter these records" aria-label="Filter records"><span class="muted compact">'+esc(project.collection_counts[collection])+' '+(project.collection_counts[collection]===1?'retained record':'retained records')+'</span></div>';
  const cols=COLS[collection]||["title","id"];
  const tableRows=rows.map(r=>{
   const cells=cols.map((key,i)=>'<div class="'+(!i?"cell-title":"")+'">'+fieldCell(key,r[key],collection)+'</div>');

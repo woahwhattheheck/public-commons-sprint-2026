@@ -31,6 +31,12 @@ All identifiers named source/plan/build/connection/query/document are full SHA25
 - acquire(query_id, operation_id, label=None) -> {schema,operationId,queryId,source,coverage}. source is the original Workspace.add_source result. It retains complete metadata/schema/observation response pages and their HTTP receipts in one exact source ZIP. Completed pages, the original request and any failures survive retry. Same operation + different inputs conflicts. Coverage reports returned observations/pages, exhausted vs an explicit bound, and the actual next URL. Schema changes during acquisition reject final publication with the original raw pages retained.
 - operation(id) -> {schema,id,kind,status,request,progress,result,error,updated}. request is the exact saved validated request, not a reconstruction from current UI fields. status is prepared/running/complete/failed. result is null until complete. error is a safe structured provider/domain failure with code/status/retryAt when known; no credentials. GET /api/operations/<id> supports lost-response recovery.
 
+### Observation resource selection
+
+`save_query` and `POST /api/queries` accept optional `observationResource: "collection" | "single"`. Default/explicit collection is omitted from the normalized query so existing collection identities remain unchanged. A single-resource query retains `observationResource: "single"`, sets `limits.maxPages` to 1, and does not insert a collection `limit` parameter. Its actual response must be one valid observation object with no next-page link. Capture `selection.observationResource` and `coverage.scope: "single-observation-resource"` preserve the selected scope. Exhausted means that one resource was received, not that the provider collection was traversed.
+
+The original `items` collection parser remains unchanged for ordinary queries. The single-resource parser reads the exact object without constructing a replacement collection body. Existing request ID, body hash, source identity and receiving rules apply to both modes.
+
 ### Retained source and mapping
 
 - state() -> the original complete {schema,sources,plans,builds,comparisons} plus connections,queries,documents,operations. Source rows retain id,label,name,bytes,created. Documents and operations are the latest 200, with documentCount, operationCount and explicit listCoverage. Use records() for full inventories.

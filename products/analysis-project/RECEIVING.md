@@ -42,7 +42,7 @@ The program binds the installed release and exact original ZIP before using the 
 
 Application save and release connection have separate receipts. If the application was saved while connection was interrupted, the program reads its current original state and uses the existing **Connect** operation for that same application ID. Each actual connection request and result is retained. Once the original release is available, its source commit is checked and the same application continues, including after a historical save receipt recorded a connection error.
 
-Keep the same `--out` directory when continuing this operation. The original application save/start requests, archive ID, customer revision, command outputs and completed stages are retained there. Use the existing Applications recovery control for an interrupted managed process; a completed stage is reused by this program. The complete following ZIP and credential-free `complete.json` are the delivery outputs.
+Keep the same `--out` directory when continuing this operation. The original application save/start requests, archive ID, customer revision, command outputs and completed stages are retained there. New immutable receipts publish from complete synced temporary files, and an existing receipt is checked and synced again. Extraction saves all source directories before publishing its verified cache. Use the existing Applications recovery control for an interrupted managed process; a completed stage is reused by this program. The complete following ZIP and credential-free `complete.json` are the delivery outputs.
 
 ## Whole installed journey
 
