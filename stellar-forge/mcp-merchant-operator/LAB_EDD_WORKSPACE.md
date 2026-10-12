@@ -164,7 +164,7 @@ try {
     catalogRef: catalogue.catalogRef,
     expectedCatalogSha256: catalogue.catalogSha256,
     reference: 'laboratory-project-2026-10',
-    parameters: { profile: 'equis-lab-4', reviewName: 'October receiving' },
+    parameters: { profile: 'equis-lab-4', reviewName: 'october-receiving' },
   });
   // Continue with actual returned source descriptors and native IDs.
   const selected = await client.request({ requestId: prepared.request.id });
@@ -201,14 +201,29 @@ The command starts the original authenticated merchant MCP host on a retained lo
 
 The supplied McCampbell configuration binds its actual public EQuIS3/EQuIS4 source pair: 500 result rows in each file family, 571 baseline and 614 current physical rows, and 599 correspondence groups. The retained example records 29 explicit ambiguous deferrals, one reviewed pair and one explicit cross-group link. Its field decisions keep the original `mg/l` and `mg/L` tokens with reasons. The complete source and scientific derivation are in [the McCampbell cross-profile guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/CROSS_PROFILE.md).
 
-The existing SF88 [native checkout continuation](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/checkout/README.md) supplies the full original disposable signer/facilitator, explicit CONNECT/TLS, operator policy, SF36 SQLite reservation and exact approval fixture. Its `native-continuation.py` and `native-continuation.mjs` remain the maintained protocol reference. The receiving API accepts trusted startup options and an explicit approval callback for that native host; configuration files and tool calls cannot replace the buyer or submit a generated payment result.
+The existing SF88 [native checkout continuation](../../stellar/scf-starforge-20261009/sf88-operator-buyer-cli/job-workspace/checkout/README.md) supplies the full original disposable signer/facilitator, explicit CONNECT/TLS, operator policy, SF36 SQLite reservation and exact approval fixture. Its `native-continuation.py` and `native-continuation.mjs` remain the maintained protocol reference. The receiving API accepts trusted startup options and the original explicit approval callback for that native host.
 
 Keep the same output directory and configuration after interruption. `checkpoint.json` retains the original request, review, apply, checkout, buyer and result identities. Completed payment attempts reopen or recover. `result.json` is written only after the full native result and independent reopen complete.
 
 For capacity planning, the complete cross-profile result expands to more than 120 MiB and retains both full comparisons and native source graphs. Use the existing equipped-worker route for the full native/MCP/browser operation; select adequate memory and disk for the complete files and two retained customer desks. The source/profile examples, original worker/browser receiving and this operator receiving remain one reusable application distribution.
 
-## Source verification and receiving state
+## Complete original-source example
 
-The two original public archives and both complete 500-result profile computations are retained with the Lab product. The complete cross-profile application/result and CSV/TSV computations also have their original source-bound results in that product.
+The operator's original source models reopened both complete public McCampbell archives on 12 October 2026. The current and baseline families retain 500 results each, 614 and 571 physical records, 599 correspondence groups and all 29 ambiguous groups. All ten scientific source, field-review, correspondence and resulting-comparison hashes matched the previously received complete result.
 
-This operator's native receiving writes its own actual `result.json` and task/transfer records when run. Use those retained records for its current execution outcome. Source construction, a selected merchant configuration, an operator approval and a completed original worker are separate recorded stages of the same operation.
+Every full editable catalogue was exported and parsed back into the exact saved decision document:
+
+| Family | Format | Catalogue rows | Bytes |
+| --- | --- | ---: | ---: |
+| current | CSV | 20,983 | 3,590,916 |
+| current | TSV | 20,983 | 3,590,714 |
+| baseline | CSV | 35,168 | 6,237,293 |
+| baseline | TSV | 35,168 | 6,237,091 |
+| correspondence | CSV | 600 | 407,348 |
+| correspondence | TSV | 600 | 407,344 |
+
+The complete [source execution result](../../stellar/scf-starforge-20261009/sf30-seller-sdk/lab-edd/examples/mccampbell/operator-source-result.json) retains original archive identities, exact table hashes, source module pins and execution context. This execution used the original source functions in connected V8 with the retained archive bytes and exact UTF-8, SHA256 and DEFLATE bindings.
+
+The full baseline table exceeds the original 4 MiB native field-decision slot. The operator receives that complete table through its file transport, parses it into the source-bound decision document and stages the resulting compact JSON through the original slot. Every table row and original field remains in the exported review; native file policy continues to govern the actual job input.
+
+The complete native receiving command retains its original request, checkout, worker and transfer checkpoints and writes its actual `result.json` after full result receiving and independent reopening. Keep those records with the selected source and runtime tuple.
