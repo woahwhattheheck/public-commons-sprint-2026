@@ -2,18 +2,20 @@
 """MIT. Native Kafka capture, original dataset edition and whole customer receiving."""
 from __future__ import annotations
 import argparse
+from http.client import HTTPConnection, HTTPException
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import sys
 import threading
 
 from shared import InputError, load_json
-from contract import api_bytes
+from contract import api_bytes, ident
 from model import Workspace
 from httpd import OperatorServer
-from managed import inspect_binding, require_binding, startup, published_connection
+from managed import inspect_binding, require_binding, startup, published_connection, regular
 
 
 def emit(value):
@@ -26,6 +28,65 @@ def input_json(path):
     if value.stat().st_size > 1024 * 1024:
         raise InputError("The original Kafka request exceeds 1 MiB")
     return load_json(value.read_bytes())
+
+
+
+def cancel_from_console(workspace, connection_file, capture):
+    """Cancel the sole original console's worker without taking its writer lease."""
+    ident(capture)
+    binding = inspect_binding(workspace)
+    path = Path(connection_file).expanduser().absolute()
+    info = regular(path, private=True, limit=1024)
+    with path.open("rb") as stream:
+        opened = os.fstat(stream.fileno())
+        if (opened.st_dev, opened.st_ino) != (info.st_dev, info.st_ino):
+            raise InputError("The original private console connection changed while opening")
+        data = stream.read(1025)
+        after = os.fstat(stream.fileno())
+    if len(data) != info.st_size or (after.st_size, after.st_mtime_ns, after.st_ctime_ns) != (info.st_size, info.st_mtime_ns, info.st_ctime_ns):
+        raise InputError("The original private console connection changed while reading")
+    try:
+        url = data.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise InputError("Choose the original private Kafka console connection file") from error
+    if url.endswith("\n"):
+        url = url[:-1]
+    target = re.fullmatch(r"http://127\.0\.0\.1(?::([1-9][0-9]{0,4}))?/#([A-Za-z0-9_-]{40,64})", url)
+    if target is None or not 1 <= int(target[1] or "80") <= 65535:
+        raise InputError("Choose the original private loopback Kafka console connection")
+    port, token = int(target[1] or "80"), target[2]
+
+    def request(route, payload=None, limit=65536):
+        # HTTPConnection connects directly to this exact loopback authority;
+        # it neither follows redirects nor reads environment proxy settings.
+        client = HTTPConnection("127.0.0.1", port, timeout=60)
+        try:
+            headers = {"Authorization": "Bearer " + token, "Accept": "application/json"}
+            body = None
+            if payload is not None:
+                body = api_bytes(payload)
+                headers["Content-Type"] = "application/json"
+            client.request("GET" if payload is None else "POST", route, body=body, headers=headers)
+            response = client.getresponse()
+            retained = response.read(limit + 1)
+            if response.status not in {200, 202}:
+                raise InputError("The original Kafka console rejected the operation (HTTP " + str(response.status) + ")")
+            if len(retained) > limit:
+                raise InputError("The original Kafka console response exceeds the receiving limit")
+            return load_json(retained)
+        except HTTPException as error:
+            raise InputError("The original Kafka console connection ended before receiving its response") from error
+        finally:
+            client.close()
+
+    launch = request("/api/launch")
+    expected = {"schema": "stellar-forge.kafka-workspace-launch.v1",
+        "status": "KAFKA_WORKSPACE_READY", "workspace": binding["workspace"],
+        "workspaceId": binding["workspaceId"], "bindingSha256": binding["sha256"],
+        "console": url}
+    if not isinstance(launch, dict) or any(launch.get(key) != value for key, value in expected.items()):
+        raise InputError("The running console differs from this original Kafka workspace, Python or source")
+    return request("/api/kafka/cancel", {"capture": capture}, 16 * 1024 * 1024)
 
 
 def main(argv=None):
@@ -44,6 +105,7 @@ def main(argv=None):
     run.add_argument("--expected-revision", required=True, type=int)
     cancel = sub.add_parser("cancel")
     cancel.add_argument("--capture", required=True)
+    cancel.add_argument("--connection-file", required=True, help="Private connection file from this running original console")
     messages = sub.add_parser("messages")
     messages.add_argument("--capture", required=True)
     messages.add_argument("--offset", type=int, default=0)
@@ -92,6 +154,9 @@ def main(argv=None):
     if args.command == "binding":
         emit(inspect_binding(args.workspace))
         return 0
+    if args.command == "cancel":
+        emit(cancel_from_console(args.workspace, args.connection_file, args.capture))
+        return 0
     binding = require_binding(args.workspace, args.expected_binding) if args.command == "serve" else None
     with Workspace(args.workspace, create=args.command == "init") as ws:
         if binding is not None:
@@ -121,8 +186,6 @@ def main(argv=None):
             if interruption:
                 return 130 if interruption[0] == signal.SIGINT else 143
             return 0 if result["status"] == "COMPLETE" else 2
-        elif command == "cancel":
-            result = ws.cancel_capture(args.capture)
         elif command == "messages":
             result = ws.messages(args.capture, args.offset, args.limit)
         elif command == "message":

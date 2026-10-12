@@ -217,7 +217,8 @@ def api_message(raw):
     envelope = value["envelope"]
     return {"id": value["id"], "sha256": value["sha256"],
         **{k: v for k, v in raw.items() if k != "schema"},
-        **{k: envelope[k] for k in ("keyUtf8", "value", "valueState", "parseError", "goldskyOperation", "deleted")}}
+        **{k: envelope[k] for k in ("keyUtf8", "value", "valueState", "parseError", "goldskyOperation", "deleted")},
+        "valueJson": ndjson_source.exact_json(envelope["value"]) if envelope["valueState"] == "json" else None}
 
 
 def exact_document(value):

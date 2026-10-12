@@ -280,6 +280,7 @@ export async function openStellarExpertWorkspace({directory,inboxDirectory,relea
     if(!e||e.pageCount!==c.pages.length||e.complete!==(c.state==='COMPLETE'&&c.nextUrl===null))await sealCapture(c.id);
   }
   return {schema,view,action,store,editions:listEditions,
+    async edition(id){const value=await store.edition(id);if(!store.read().editionIds.includes(value.id))throw fault('STELLAR_EDITION_ID','Choose an edition retained in this workspace.',404);return value;},
     rows:async(id,options)=>editionRows(store,await store.edition(id),options),
     async raw(id,page){const e=await store.edition(id);if(!Number.isInteger(page)||page<0||page>=e.pages.length)throw fault('STELLAR_SOURCE_PAGE','Choose an original source page.');
       const p=e.pages[page];return {bytes:await store.object(p.sha256),receipt:p,type:e.query.kind==='supply'?'text/plain; charset=utf-8':'application/json; charset=utf-8'};},

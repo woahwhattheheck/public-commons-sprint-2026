@@ -1,3 +1,5 @@
+import { DATASET_SOURCE_SCHEMA } from './release-source-contracts.mjs';
+export { DATASET_SOURCE_SCHEMA } from './release-source-contracts.mjs';
 // MIT. Original versioned CSV datasets in the existing SF82 release lifecycle.
 import { constants } from 'node:fs';
 import { open, mkdir, realpath, lstat, rename, unlink, rm, rmdir, copyFile } from 'node:fs/promises';
@@ -13,7 +15,7 @@ import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { openDatasetVersions, DATASET_SNAPSHOT_PARAMETER } from '../sf30-seller-sdk/dataset-refresh/versions.mjs';
 import { startVersionedDatasetSeller } from '../sf30-seller-sdk/dataset-refresh/service.mjs';
 
-export const DATASET_SOURCE_SCHEMA = 'stellar-forge.dataset-seller-release-manifest.v1';
+
 export const DATASET_BINDING_SCHEMA = 'stellar-forge.dataset-release-binding.v1';
 const SOURCE_FILES = ['dataset.csv', 'dataset.json', 'seller.json', 'source.json', 'binding.json'];
 const MiB = 1024 * 1024;

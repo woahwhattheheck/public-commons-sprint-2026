@@ -476,6 +476,7 @@
     "./buyer/object": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-session.mjs",
     "./buyer/object-description": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-description.mjs",
     "./merchant/mcp": "./source/stellar-forge/mcp-merchant-operator/operator.mjs",
+    "./merchant/mcp/catalog": "./source/stellar-forge/mcp-merchant-operator/catalog.mjs",
     "./merchant/mcp/openapi": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace.mjs",
     "./merchant/mcp/openapi/client": "./source/stellar-forge/mcp-merchant-operator/openapi-workspace-client.mjs",
     "./merchant/mcp/sf61-connection": "./source/stellar-forge/mcp-merchant-operator/sf61-connection.mjs",
