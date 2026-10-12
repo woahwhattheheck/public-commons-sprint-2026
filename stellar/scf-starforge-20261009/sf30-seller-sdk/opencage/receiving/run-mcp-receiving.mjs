@@ -53,7 +53,8 @@ try {
   const currentRequestBytes=await readFile(join(currentRecord,'request.json')),currentRequest=JSON.parse(currentRequestBytes);
   const nativeArgv=currentRequest.intent?.command;
   requireValue(Array.isArray(nativeArgv)&&nativeArgv.length===process.argv.length&&
-    nativeArgv.every((value,index)=>index===0?resolve(value)===resolve(process.execPath):value===process.argv[index])&&
+    await realpath(nativeArgv[0])===await realpath(process.execPath)&&
+    nativeArgv.slice(1).every((value,index)=>value===process.argv[index+1])&&
     resolve(currentRequest.intent.project)===dirname(output),'Use this original admitted native command and output');
   requireValue(digest(await readFile(fileURLToPath(import.meta.url)))===args['driver-sha256']&&
     digest(await readFile(resolve(args['buyer-script'])))===args['buyer-sha256']&&
