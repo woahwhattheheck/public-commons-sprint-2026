@@ -376,3 +376,53 @@ The driver checks that an earlier original archive can be reconstructed byte-for
 NATIVE_CONTRACT.md and native-contract-sources.json are the source map for future endpoint changes. Native helper changes remain in native.mjs. Operator record/history changes belong to workspace/model.mjs, store.mjs, review.mjs and delivery.mjs. Runtime declarations and credentials use the existing installed product and Applications paths. Source publication preserves the current whole product and source-owned contributions.
 
 If an installed vendor release differs from the pinned contract, retain its actual release/schema and original responses with that receiving operation before adopting changed endpoint behavior. The original response and saved request remain the authority for recovery.
+
+## Receive complete source, selected release and the original native operation
+
+The maintained `receive-source-release.py` entrypoint accepts the complete
+`commons.tyk-build-source.v1` packet for one committed merchant edition. Its
+original source, complete Git tree and commit capture feed the existing Git
+object receiver. The same maintained distribution builder produces the
+`tyk-merchant` release, and the original runtime unpacker verifies every
+archive member. This path works with captured source bodies when the receiving
+host cannot clone the repository.
+
+~~~sh
+python3 receive-source-release.py \
+  --packet /private/tyk/complete-source.json \
+  --directory /private/tyk/source-and-release \
+  --native-directory /private/tyk/original-native-operation \
+  --native-cpus 2
+~~~
+
+Use an existing browser runtime through `--playwright-module` and
+`--chromium`, or let the original native host provision its documented
+runtime. The receiving entrypoint passes those options to
+`gateway-native-host.py`. An original licensed Dashboard configuration can be
+supplied through `--dashboard-config` for the same documented Gateway-to-full
+continuation. Retain both private directory names when repeating this command.
+
+The source result carries three useful receiving artifacts: the complete
+editable `tyk-complete-source.zip`, its separate
+`tyk-source-release.json` member manifest, and the actual selected release
+archive. The source ZIP preserves original repository-relative filenames.
+The manifest declares each original file's byte length and SHA-256 and the
+complete ZIP identity; its repository and commit match the selected release.
+
+With `--native-directory`, the same call continues the complete native
+Gateway/browser/workspace journey and returns its existing delivery result.
+The original source and release are recovered on repetition before the saved
+native operation resumes. Source and native logs remain in the source
+receiving directory. The company receiver attaches the editable source,
+selected release and full native workspace to its existing workshare edition.
+
+Use `selectedRelease.receipt.path` for the original builder's
+`distribution.json`; the result preserves its byte length and SHA-256.
+After native receiving, `nativeWorkspace.path` identifies the original
+second complete NDJSON export used by the company receiver's
+`--workspace-export`. Its byte length, SHA-256, original export and adoption
+references, scope and completed journey step are returned together.
+The receiver verifies that file against the saved original journey before
+publishing the combined result. `nativeReceiving.completeReceiving`
+continues to identify the enclosing native result archive with its complete
+source, native responses, original history and browser views.
