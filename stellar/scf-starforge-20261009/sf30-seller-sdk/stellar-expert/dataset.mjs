@@ -90,7 +90,9 @@ export async function prepareNativeRelease(store,{dataset,origin,path,payment,id
     await store.immutable(join(sourcePackage,name),await readOwned(join(originalPackage,name),256*1024*1024));
   for(const entry of source.sourceFiles){
     await privateDirectory(join(sourcePackage,'provenance'),{create:true});
-    const bytes=await readOwned(join(originalPackage,entry.path));if(hashBytes(bytes)!==entry.sha256||bytes.length!==entry.bytes)
+    if(!Number.isSafeInteger(entry.bytes)||entry.bytes<0||entry.bytes>256*1024*1024)
+      throw fault('STELLAR_SOURCE_CHANGED','The original source file exceeds its retained source capacity.',409);
+    const bytes=await readOwned(join(originalPackage,entry.path),256*1024*1024);if(hashBytes(bytes)!==entry.sha256||bytes.length!==entry.bytes)
       throw fault('STELLAR_SOURCE_CHANGED','The original source package changed.',409);
     await store.immutable(join(sourcePackage,entry.path),bytes);
   }

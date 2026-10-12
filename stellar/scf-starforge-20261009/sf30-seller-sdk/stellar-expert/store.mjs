@@ -47,17 +47,21 @@ export async function readOwned(path,max=16*1024*1024) {
   }finally{await f.close();}
 }
 
-export async function inspectStellarExpertIdentity(directory,{allowMissing=false}={}) {
+export async function inspectWorkspaceIdentity(directory,{allowMissing=false,schema='stellar-forge.stellar-expert-workspace.v1'}={}) {
   const root=resolve(directory);
   try {
     await privateDirectory(root);
     const state=JSON.parse((await readOwned(join(root,'workspace.json'),64*1024*1024)).toString('utf8'));
-    if(state.schema!=='stellar-forge.stellar-expert-workspace.v1'||
+    if(state.schema!==schema||
       !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(state.workspaceId??'')||
       !Number.isSafeInteger(state.revision)||state.revision<0)
       throw fault('STELLAR_WORKSPACE_SCHEMA','This directory contains another workspace format.',409);
     return {directory:root,workspaceId:state.workspaceId};
   }catch(error){if(allowMissing&&error.code==='ENOENT')return null;throw error;}
+}
+
+export async function inspectStellarExpertIdentity(directory,options={}) {
+  return inspectWorkspaceIdentity(directory,{...options,schema:'stellar-forge.stellar-expert-workspace.v1'});
 }
 
 async function acquireLease(path) {
@@ -78,17 +82,21 @@ async function acquireLease(path) {
   return {assert(){if(closed)throw fault('STELLAR_WORKSPACE_LEASE_LOST','The private workspace writer has stopped.',503);},
     async close(){if(!closed)helper.stdin.end();await ended;}};
 }
-export async function openWorkspaceStore(directory) {
+export async function openWorkspaceStore(directory,{schema='stellar-forge.stellar-expert-workspace.v1',initialState={}}={}) {
+  if(typeof schema!=='string'||!/^stellar-forge\.[a-z0-9.-]{1,120}$/.test(schema)||
+     !initialState||typeof initialState!=='object'||Array.isArray(initialState)||
+     ['schema','workspaceId','revision','createdAt'].some(k=>Object.hasOwn(initialState,k)))
+    throw fault('STELLAR_WORKSPACE_SCHEMA','Use a named workspace schema and initial application fields.');
   const root=await privateDirectory(directory,{create:true});
   for(const name of ['objects','editions','datasets','releases','exports','receipts','responses'])
     await privateDirectory(join(root,name),{create:true});
   const lease=await acquireLease(join(root,'workspace.lock'));let state,tail=Promise.resolve(),closing=false;
   try{
     try{state=JSON.parse((await readOwned(join(root,'workspace.json'),64*1024*1024)).toString('utf8'));}
-    catch(e){if(e.code!=='ENOENT')throw e;state={schema:'stellar-forge.stellar-expert-workspace.v1',workspaceId:randomUUID(),revision:0,
+    catch(e){if(e.code!=='ENOENT')throw e;state={schema,workspaceId:randomUUID(),revision:0,
       createdAt:new Date().toISOString(),watchlist:[],captures:[],editionIds:[],selectedEditionId:null,datasets:[],releases:[],
-      receipts:[],exports:[],annotations:[],operations:{}};await atomicJSON(join(root,'workspace.json'),state);}
-    if(state.schema!=='stellar-forge.stellar-expert-workspace.v1'||!Number.isSafeInteger(state.revision)||!state.workspaceId)
+      receipts:[],exports:[],annotations:[],operations:{},...structuredClone(initialState)};await atomicJSON(join(root,'workspace.json'),state);}
+    if(state.schema!==schema||!Number.isSafeInteger(state.revision)||!state.workspaceId)
       throw fault('STELLAR_WORKSPACE_SCHEMA','This directory contains another workspace format.',409);
   }catch(e){await lease.close();throw e;}
   const mutate=fn=>{
