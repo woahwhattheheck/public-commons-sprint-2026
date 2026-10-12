@@ -32,7 +32,8 @@
     "./applications/coops": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/application.mjs",
     "./seller/coops/analysis/core": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/core.mjs",
     "./seller/coops/analysis/bundle": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
-    "./seller/coops/analysis/retained": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/retained.mjs"
+    "./seller/coops/analysis/retained": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/retained.mjs",
+    "./seller/coops/receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/coops/receiving.mjs"
   },
   "browserAssets": [
     {
@@ -57,6 +58,8 @@
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/style.css",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/core.mjs",
     "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/app.mjs",
-    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs"
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/analysis/bundle.mjs",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/RECEIVING.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/coops/DELIVERY.md"
   ]
 }

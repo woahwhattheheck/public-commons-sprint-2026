@@ -597,6 +597,30 @@ const actions = [
       "note": {
         "type": "string",
         "maxLength": 12000
+      },
+      "mappingSource": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string",
+            "maxLength": 255
+          },
+          "base64": {
+            "type": "string",
+            "maxLength": 87384
+          },
+          "decision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 12000
+          }
+        },
+        "required": [
+          "filename",
+          "base64",
+          "decision"
+        ],
+        "additionalProperties": false
       }
     },
     [
@@ -1002,7 +1026,7 @@ const actionNames = new Map(actions.map(value => ['merchant_coops_' + value[0].r
 const scope = {workspace:matching(ALIAS)};
 const readOnly = {readOnly:true,idempotent:true};
 const selectFile = {
-  kind:choice(['source','capture-source','export','receipt']), id:string(100), page:number(0), file:choice(RECEIPT_FILES)
+  kind:choice(['source','capture-source','mapping-source','export','receipt']), id:string(100), page:number(0), file:choice(RECEIPT_FILES)
 };
 const chunks = {
   readId:matching(UUID), expectedSha256:matching(SHA), offset:number(0),
@@ -1012,13 +1036,14 @@ export function coopsWorkspaceTools(tool) {
   return [
     tool('merchant_coops_workspaces','List host-declared COOPS aliases and their original workspace UUIDs; report only this adapter’s retained download sessions.',{},[],readOnly),
     tool('merchant_coops_schema','Read the running original workspace schema, actual source contract, station/product/table declarations, payment fields and capabilities.',scope,['workspace'],readOnly),
+    tool('merchant_coops_mapping_file','Inspect one original UTF-8 JSON mapping convention without saving. Uploaded IDs are source declarations; explicitly choose a new mapping or a reviewed saved target for mapping.save.',{...scope,filename:string(255),base64:string(87384)},['workspace','filename','base64'],readOnly),
     tool('merchant_coops_view','Read the same browser workspace and its current revision, captures, latest editions, all releases/receipts/exports and recent operation outcomes.',scope,['workspace'],readOnly),
     tool('merchant_coops_operation','Read one original operation by its retained operationId, including its recorded state and complete saved result. This does not redispatch it.',{...scope,operationId:matching(OPERATION)},['workspace','operationId'],readOnly),
     tool('merchant_coops_editions','Page the complete original edition archive. Retain the returned revision for every following page; a concurrent change returns REVISION_CHANGED.',{...scope,offset:number(0),limit:number(1,500),profileId:matching(PROFILE_ID),expectedRevision:number(0)},['workspace'],readOnly),
     tool('merchant_coops_edition','Read one complete immutable original edition, including every response receipt and exact source SHA256.',{...scope,editionId:edition},['workspace','editionId'],readOnly),
     tool('merchant_coops_rows','Page normalized original rows from one immutable edition. Original nulls, datum, units, quality flags and source times are retained; nextOffset continues the same edition and table.',{...scope,editionId:edition,table,offset:number(0),limit:number(1,500),beginDate:string(10),endDate:string(10),products},['workspace','editionId','table'],readOnly),
-    tool('merchant_coops_files','Read exact file metadata and selectors for an original edition’s source responses, one retained export, or one complete five-file customer receipt.',{...scope,kind:selectFile.kind,id:selectFile.id},['workspace','kind','id'],readOnly),
-    tool('merchant_coops_file_read','Read an original source/export/customer file as verified base64 byte chunks. Continue the same selector, readId, expectedSha256 and nextOffset. A retained read can finish after the console closes.',{...scope,...selectFile,...chunks},['workspace','kind','id'],readOnly),
+    tool('merchant_coops_files','Read exact file metadata and selectors for an original edition’s source responses, every retained input-file revision for one mapping, one retained export, or one complete five-file customer receipt.',{...scope,kind:selectFile.kind,id:selectFile.id},['workspace','kind','id'],readOnly),
+    tool('merchant_coops_file_read','Read an original source/mapping-input/export/customer file as verified base64 byte chunks. Mapping-source page selects its exact positive revision. Continue the same selector, readId, expectedSha256 and nextOffset. A retained read can finish after the console closes.',{...scope,...selectFile,...chunks},['workspace','kind','id'],readOnly),
     tool('merchant_coops_file_release','Release only the named temporary download snapshot; preserve original workspace source and customer files.',{...scope,readId:matching(UUID)},['workspace','readId'],{idempotent:true}),
     ...actions.map(([action, description, properties, required, annotations = {}]) =>
       tool('merchant_coops_' + action.replaceAll('.','_'),
