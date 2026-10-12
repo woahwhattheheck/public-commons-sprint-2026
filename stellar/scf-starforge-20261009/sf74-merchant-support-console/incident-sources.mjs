@@ -11,6 +11,7 @@ import {activeIncident,idPattern,kinds} from '../sf93-seller-support-bundle/inci
 import {parseWorkspace,MAX_WORKSPACE_BYTES} from './workspace-file.mjs';
 import {inspectRuntimeFiles,exportRuntimeHandoff,RUNTIME_SCHEMA} from './runtime-support.mjs';
 import {caseMetadata} from './case-store.mjs';
+import {readServiceIncidentSnapshot} from './service-source.mjs';
 
 export const INCIDENT_SOURCES_SCHEMA='stellar-forge.support-incident-sources.v1';
 const MAX_CONFIG_BYTES=65_536;
@@ -206,8 +207,13 @@ export async function openIncidentSources({configPath,environment=process.env}={
       else if(event.status==='PAUSED')counters.pausedNotifications++;
       else if(event.status==='EXHAUSTED')counters.exhaustedNotifications++;
     }
+    const serviceMerchants=new Map();
+    for(const incident of [...state.incidents].sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt)||a.openedAt.localeCompare(b.openedAt)))
+      serviceMerchants.set(incident.merchantId,{id:incident.merchantId,label:incident.merchantLabel??incident.merchantId,registered:false});
+    for(const merchant of state.config.merchants)serviceMerchants.set(merchant.id,{id:merchant.id,label:merchant.label,registered:true});
     return {source:publicSource(source),revision:state.revision,configRevision:state.configRevision,
       configHash:state.configHash,config:structuredClone(state.config),worker:workerView(source,state),counters,
+      serviceMerchants:[...serviceMerchants.values()].sort((a,b)=>a.label.localeCompare(b.label)||a.id.localeCompare(b.id)),
       merchants:state.config.merchants.map(({id,label})=>({id,label})),filters:{q,status,merchant,kind},
       page:{offset,limit,total:selected.length,hasMore:offset+limit<selected.length},
       incidents:selected.slice(offset,offset+limit)};
@@ -244,6 +250,10 @@ export async function openIncidentSources({configPath,environment=process.env}={
         latestNotificationId:latestNotificationId(state,incidentId),notifications,
         routes:[...routes.values()],captureProblems};
     },{readonly:true});
+  }
+  async function serviceSnapshot(sourceId,input) {
+    const source=sourceFor(sourceId);fields(input,['merchantId'],'service incident snapshot');
+    return readServiceIncidentSnapshot({store:source.store,source:publicSource(source),merchantId:input.merchantId});
   }
   async function configure(sourceId,input) {
     const source=sourceFor(sourceId);fields(input,['config','expectedConfigRevision'],'configuration change');
@@ -363,6 +373,6 @@ export async function openIncidentSources({configPath,environment=process.env}={
     return {source:publicSource(source),incidentId,revision,
       handoff:result.handoff,html:result.html,report:result.report};
   }
-  return {profiles,configuration,list,view,configure,acknowledge,notify,notification,inspectDestination,start,stop,close,prepareCase};
+  return {profiles,configuration,list,view,serviceSnapshot,configure,acknowledge,notify,notification,inspectDestination,start,stop,close,prepareCase};
 }
 

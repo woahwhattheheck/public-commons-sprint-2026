@@ -170,7 +170,7 @@ Preparation invokes the original Python binding command without taking the publi
 - The selected Python executable, interpreter version and environment location.
 - The original Node executable identity.
 - The installed JSON Schema dependency version and module bytes.
-- The entire portable 360Giving profile and its seven original shared SDK support files.
+- The entire portable 360Giving profile and each shared SDK support file selected by its original runtime, including the exact JSON parser used by the typed publisher client.
 
 Applications retains these original source and file identities in its existing reviewed command. Source adoption can relocate the complete source tree while preserving those relative bytes. At launch, the original console checks the expected binding again after acquiring its writer.
 

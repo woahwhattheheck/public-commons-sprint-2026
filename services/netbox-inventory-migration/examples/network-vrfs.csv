@@ -1,0 +1,3 @@
+source_key,match_id,name,rd,enforce_unique,description,import_targets_keys,export_targets_keys
+prod,,Customer production,65000:1,true,Production routing domain,prod-rt,prod-rt
+guest,,Customer guest,65000:2,true,Guest routing domain,guest-rt,guest-rt

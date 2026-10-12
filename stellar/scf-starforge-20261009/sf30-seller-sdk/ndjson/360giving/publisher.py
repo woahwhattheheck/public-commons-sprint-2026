@@ -145,7 +145,11 @@ def schema_errors(package, schema_root):
         need(blob_id(data) == row["gitBlob"], "Official schema bytes changed: " + row["file"])
         document = json.loads(data)
         resource = Resource(contents=document, specification=DRAFT202012)
-        resources.append((document["$id"], resource))
+        # The official 1.4.2 document has no $id; its captured URL is still its URI.
+        resources.append((row["url"], resource))
+        identifier = resource.id()
+        if identifier is not None:
+            resources.append((identifier, resource))
         for alias in row.get("aliases", []):
             resources.append((alias, resource))
         if row["role"] == "package":
