@@ -163,3 +163,31 @@ receiving workspace. Alternatively, import a configured `packet` file handle.
 Closing the MCP drains its active calls and temporary file reads. The original
 source consoles continue to own their workspaces and browser sessions; complete
 retained export files are available to the next MCP process.
+
+## IATI aid-finance portfolios
+
+An IATI console uses the same source-workspace connection and private bearer capability. Add `format: "iati"` to a declared alias and point `consoleUrlFile` or `consoleUrlEnv` at the original `dataset-iati ... serve` process. Source handles refer to complete publisher XML; packet handles can refer to a complete native project or a full portfolio archive. This adapter borrows that existing process and closes only its own requests and file reads.
+
+The eight `merchant_source_iati_*` tools expose original presets, profile, portfolio listing/get/history/save, reports and portfolio comparison. The existing inventory accepts `portfolios` for IATI; existing plan/build/query/change tools operate on the same original dataset engine. Financial strings, source associations and field reviews are returned without conversion or additional aggregation.
+
+For a save, `definition` is the original object:
+
+```json
+{
+  "requestId": "iati-portfolio-review-001",
+  "name": "Reviewed publisher selection",
+  "sources": ["<full retained publisher source SHA-256>"],
+  "selection": { "transactionTypes": ["3"], "dateFrom": "2025-01-01", "dateTo": "2025-12-31" },
+  "review": { "status": "reviewed", "reviewer": "<actual reviewing operator>", "note": "<review observations>" }
+}
+```
+
+Use an actual retained source ID and named reviewer. Omit selection arrays/dates to retain their full source coverage. Editing adds the exact saved `id` and `expectedRevision` together and uses a new requestId. Retrying an interrupted save repeats the exact original object/requestId; it returns the original revision even if a later edit now exists. Read portfolio history to select a historical revision explicitly.
+
+`merchant_source_iati_compare` takes `definition: {id, beforeRevision, afterRevision, pairs?}`; each explicit pair is `{before: sourceId, after: sourceId}`. The native response includes coverage additions/removals, selection changes and the original keyed comparison summaries. It does not silently treat two different publisher cohorts as one unchanged set.
+
+For full receiving, call `merchant_source_export` with `kind: "portfolio"`, the original `portfolio` ID and optional `revision`. For the complete readable report, all CSV rows, review JSONL and changes, select `kind: "report"`. Each IATI archive retains up to the core's 4 GiB package capacity; other export kinds keep their existing bounds. `merchant_source_file_read` uses the maintained read-only FileHandle path and verified bounded chunks, so it does not load a complete archive into a JavaScript Buffer. Retained export metadata and original data bytes remain available across service restart.
+
+A receiving IATI alias can use `merchant_source_import` with that retained portfolio `exportId` and its original `fromWorkspace`. The native importer verifies every member and reconstructs all referenced datasets, full report bytes, request identities and revisions before publishing the portfolio history. Report-only archives are delivered for reading and are not importable portfolio packets.
+
+Full native CLI/client and Applications operations: [IATI operator guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/iati/OPERATIONS.md). The original source interpretation and limits are documented in [IATI DOMAIN](../../stellar/scf-starforge-20261009/sf30-seller-sdk/iati/DOMAIN.md).
