@@ -153,7 +153,7 @@ All HTTP routes use the existing local console's host/origin checks and configur
 | Read implementation or a complete selected page | `GET /api/cases/ID/implementation?section=tasks&offset=0&limit=100` | `merchant_case_implementation` |
 | Prepare from the exact saved case | `POST /api/cases/ID/implementation/prepare` | `merchant_case_implementation_prepare` |
 | Apply the original implementation command | `POST /api/cases/ID/implementation` | `merchant_case_implementation_apply` |
-| Complete case export | Existing saved Support export | `merchant_case_export` |
+| Selected case Support export | Existing saved Support export | `merchant_case_export` |
 | Recover and download that export | Existing Handoffs desk | `merchant_support_export_status`, `merchant_support_export_manifest` and `merchant_support_export_file` |
 
 A prepare body contains `expectedRevision`, `expectedImplementationRevision`, `requestId` and `actor`. An apply body contains `expectedRevision` and `command`. MCP adds the original `id` field to select the case. The request ID and original payload must remain stable when recovering a response.
@@ -167,13 +167,13 @@ A prepare body contains `expectedRevision`, `expectedImplementationRevision`, `r
 | `accept_source_changes` | `changes`: selected `taskId` / `field` pairs currently proposed by the workorder source. |
 | `select_workorder` | The retained `editionId` to use for the current workplan. |
 | `record_workorder` | The original `result` (`packet`, `html`, `checklist`), exact `inputs` and optional original `sourceCase`. Use saved-case preparation for the ordinary MCP workflow. |
-| `add_material` | Stable material `id`, original basename, mediaType, canonical Base64 `data`, kind, description, taskIds, optional editionId and reference. |
+| `add_material` | Stable material `id`, kind, description, taskIds, optional editionId and reference. Inline files use original basename, mediaType and canonical Base64 `data`; native files use the retained `sourceFile` bundle/manifest/path reference. |
 | `record_receiving` | Stable `id`, editionId, taskIds, materialIds, kind, outcome, observedAt, reference, notes and optional supersedesId. The shared module captures the exact receiving subject. |
 | `record_measurement` | Stable `id`, editionId, phase, taskDefinition, comparisonKey, inputDescription, outputDescription, unit, nullable units/activeMinutes/elapsedMinutes/manualCorrections, observedAt, materialIds, reference, notes and optional supersedesId. |
 
 Task statuses are `planned`, `in_progress`, `ready`, `done` and `retired`. Receiving kinds are `technical` and `customer`. Outcomes are `accepted`, `changes_required`, `not_run` and `not_applicable`.
 
-The existing MCP Support export adds three files when the selected case has an implementation: `merchant-commissioning.json`, `merchant-implementation.html` and `merchant-implementation-tasks.csv`. Its original named export, complete manifest and retained chunk reader deliver those bytes. The workspace and support handoff also contain the full implementation, including exact original file bytes.
+The existing MCP Support export adds three files when the selected case has an implementation: `merchant-commissioning.json`, `merchant-implementation.html` and `merchant-implementation-tasks.csv`. Its original named export, complete manifest and retained chunk reader deliver those bytes. The workspace and support handoff contain the implementation, inline original files and compact native source references. [Complete case source packages](CASE_SOURCE_PACKAGE.md) carry the selected case, its full captured immutable history and every referenced native source archive, including unassigned attachments.
 
 ## Programmatic use
 
@@ -193,9 +193,17 @@ import {
 
 The first interface is the same browser/Node pure workspace logic. The second takes an original SF74 case store and uses its saved revisions. Source documents remain original SF77 output; historical import validates their retained files and bindings without recompiling old documents against a later engine.
 
+## Native source delivery
+
+The **Source delivery and receiving** section prepares the native SF49 edition from the exact saved case, accepts original attachments, receives complete native archives and attaches their workorders through the original case writer. Select the actual saved case and record the operator before beginning. Save outstanding case edits before preparing or attaching a source edition.
+
+The implementation retains each original manifest and uses its exact digest as the edition identity. Two editions with the same workorder outputs but different original attachments remain distinct. Earlier editions and every original member remain available when another edition is selected. The original-file selector links these source members to implementation work without copying large files into the workspace.
+
+[Source bundle operations](SOURCE_BUNDLES.md) covers the complete browser/server path and original native stream interface. [Complete case source packages](CASE_SOURCE_PACKAGE.md) covers installed export, inspection, interrupted receiving and independent reopening of all case history and source files.
+
 ## Source and file capacity
 
-Original workorder and material files are SHA-256 addressed and deduplicated within the implementation. One file can be up to 48 MiB; the complete implementation JSON can be up to 64 MiB. The surrounding workspace and support handoff have their matching expanded transport budgets. File selection, decoding and full import validate before changing the saved case.
+Original workorder and material files are SHA-256 addressed and deduplicated within the implementation. An inline file can be up to 48 MiB; the complete implementation JSON can be up to 64 MiB. Larger originals remain in the native SF49 source store and are referenced by their complete manifest/member identity. Its original carrier accepts attachments up to 8 GiB within the native source population allowance; runtime handoff and archive bounds derive from the current original source modules. The surrounding workspace and support handoff have their matching expanded transport budgets. File selection, decoding and full import validate before changing the saved case.
 
 The CLI uses the existing private file reader. Source documents, customer deliverables, observation references and complete handoffs remain in the original private case and export directories. The implementation source and operating guide are distributable application code.
 
