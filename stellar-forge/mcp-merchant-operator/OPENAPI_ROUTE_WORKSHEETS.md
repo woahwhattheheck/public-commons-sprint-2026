@@ -242,3 +242,5 @@ Use `merchant_openapi_stage` for the original SF82 release store, then its
 ordinary compare, activate, start and stop commands. The running seller's
 unpaid request returns its native HTTP 402 offer with the reviewed exact terms.
 The original runtime owner and release history remain the operational controls.
+
+Each merchant operation reads its declared managed console URL once and retains that original console through dependent source reads, inspection, review and publication. A reconnect between operations uses the updated URL. Declared source, plan and worksheet file handles and receiving directories stay attached to the same configured workspace.

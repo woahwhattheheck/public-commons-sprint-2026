@@ -211,7 +211,14 @@ export class MerchantOpenApiWorkspaces {
   }
   async #execute(name, args) {
     if (name === 'merchant_openapi_workspaces') return this.summary;
-    const { workspace, ...input } = args, client = this.#client(workspace);
+    const { workspace, ...input } = args, declared = this.#client(workspace);
+    // Keep one selected console through each operation's dependent reads and
+    // writes. A managed URL refresh takes effect at the next operation.
+    const selected = await declared.connection(), definition = { ...declared.definition };
+    delete definition.consoleUrlFile;
+    definition.consoleUrlEnv = 'OPENAPI_SELECTED_CONSOLE_URL';
+    const client = new Sf61WorkspaceClient(definition, { environment: {
+      OPENAPI_SELECTED_CONSOLE_URL: selected.origin + '/#' + selected.token } });
     for (const field of ['name', 'baseName']) if (input[field] !== undefined) checked(input[field], PACKAGE, 'package name');
     for (const field of ['expectedSourceSha256','expectedReviewSha256','expectedRefreshReviewId','expectedPackageManifestSha256','expectedManifestSha256','expectedSha256','exportId'])
       if (input[field] !== undefined) checked(input[field], SF61_SHA, field);
