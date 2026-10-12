@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Receive the complete original Research programme and optionally operate it."""
-import argparse,hashlib,json,os,stat,subprocess,sys,urllib.request,uuid
+import argparse,fcntl,hashlib,json,os,stat,subprocess,sys,urllib.request,uuid
 from pathlib import Path
 REPOSITORY="https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/"
 ASSET_BASE="42c9d8bba273a117a53d3baf3a7d2e11341f41d8/.swarm-delivery/396c-research-runtime-assets/"
@@ -11,9 +11,12 @@ SOURCES=[
 ("materialize-python-source.py","edb9e042733034c1ee0e6afb79740c9a46e30aa3/.swarm-delivery/396c-citation-python-native/materialize-python-source.py",8026,"cdc5c12bc8da875a22b4a98b9450909b6c39b653bf1d690804f88ad929502269"),
 ("epmc-source-envelope.json","ed3b5da70df807258cceefa75ce577d0bbe8cd9d/.swarm-delivery/396c-europe-pmc-native/source-envelope.json",7138459,"400aebafd847d21bad61cfce6afd40b29c5d005b65213abba0fe9390f61ffa31"),
 ("materialize-europe-pmc-source.py","ed3b5da70df807258cceefa75ce577d0bbe8cd9d/.swarm-delivery/396c-europe-pmc-native/materialize-europe-pmc-source.py",8419,"90d60e55d1838215c7252cc2a79db5ad8509bf01b44bbbbe79af1dc98fa3635f"),
-("compose-developer-assets.py",ASSET_BASE+"compose-developer-assets.py",16710,"b6a9f93e8e9556ab6deacfac8100a526d4e04738f6827e4004ce1a17d022edd9"),
+("compose-developer-assets.py","18c0961841c36c63129c938804817b941096e235/.swarm-delivery/396c-research-runtime-assets/compose-developer-assets.py",16697,"891275f172f5497fdbc2cffb1165b7a6f2dc14bae58dfb77e8023d024442693a"),
 ("developer-assets.json",ASSET_BASE+"Developer_Portal_Source_Additions.json",46410,"f1890ee59c679d9322dc5e2edaf97eda606c34c7c1921a797215395b5d02e45e"),
 ]
+SOURCE_PREDECESSORS={
+"compose-developer-assets.py":(16710,"b6a9f93e8e9556ab6deacfac8100a526d4e04738f6827e4004ce1a17d022edd9"),
+}
 LOCAL=[
 ("run-complete-research.py",12824,"0b4d2354e91590e6dee90ebe4536ac9d4a569bfdcfbfe03090fa741f4f174284"),
 ("RESEARCH_PROGRAMME_README.md",4820,"e55ba2a2c9429c219dd81656af6597fceeb4827d266b2d36bfd80b0c5169aab4"),
@@ -40,14 +43,44 @@ def retain(path,body):
     finally:temporary.unlink(missing_ok=True)
     need(ordinary(path)==body,"Source readback differs: "+str(path))
     return "written"
+def advance_source(path,body,previous):
+    """Advance the exact published helper and retain its original source."""
+    lock=os.open(path.with_name(path.name+".source-update.lock"),os.O_RDWR|os.O_CREAT|os.O_NOFOLLOW|os.O_NONBLOCK,0o600)
+    temporary=None
+    try:
+        need(stat.S_ISREG(os.fstat(lock).st_mode),"Ordinary source-update lock required")
+        fcntl.flock(lock,fcntl.LOCK_EX)
+        current=ordinary(path)
+        if current==body:return "reused"
+        need(current==previous,"Source changed before its selected update: "+str(path))
+        retain(path.with_name(path.name+".predecessor-"+digest(previous)),previous)
+        temporary=path.with_name(".receiving-"+uuid.uuid4().hex)
+        fd=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
+        with os.fdopen(fd,"wb") as stream:stream.write(body);stream.flush();os.fsync(stream.fileno())
+        need(ordinary(path)==previous,"Source changed before publication: "+str(path))
+        os.replace(temporary,path);temporary=None
+        dfd=os.open(path.parent,os.O_RDONLY|os.O_DIRECTORY|os.O_NOFOLLOW)
+        try:os.fsync(dfd)
+        finally:os.close(dfd)
+        need(ordinary(path)==body,"Source update readback differs: "+str(path))
+        return "advanced"
+    finally:
+        if temporary is not None:temporary.unlink(missing_ok=True)
+        os.close(lock)
 def receive(path,url,size,sha):
+    previous=None
     if os.path.lexists(path):
-        body=ordinary(path);check(body,size,sha,str(path));return "reused"
+        body=ordinary(path)
+        if len(body)==size and digest(body)==sha:return "reused"
+        selected=SOURCE_PREDECESSORS.get(path.name)
+        need(selected is not None,"Existing source differs: "+str(path))
+        check(body,selected[0],selected[1],"selected predecessor "+str(path));previous=body
     request=urllib.request.Request(url,headers={"User-Agent":"Commons-Research-Programme/1","Accept":"application/octet-stream"})
     with urllib.request.urlopen(request,timeout=60) as response:
         need(response.status==200,"Original source retrieval failed: "+str(response.status))
         body=response.read(size+1)
-    check(body,size,sha,url);return retain(path,body)
+    check(body,size,sha,url)
+    return advance_source(path,body,previous) if previous is not None else retain(path,body)
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--directory",required=True,type=Path)
