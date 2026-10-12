@@ -1,0 +1,324 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Stellar Forge QuickBooks accounting operations",
+    "version": "1.0.0",
+    "description": "Maintained operation descriptor for the native QuickBooks accounting client. The source identity binds the approved Intuit grant to these native company, account and journal operations.",
+    "x-primary-references": [
+      "https://github.com/intuit/oauth-jsclient/blob/master/src/OAuthClient.js",
+      "https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/journalentry",
+      "https://developer.intuit.com/app/developer/qbo/docs/learn/learn-basic-field-definitions#request-id"
+    ]
+  },
+  "servers": [
+    {
+      "url": "https://sandbox-quickbooks.api.intuit.com",
+      "description": "Sandbox"
+    },
+    {
+      "url": "https://quickbooks.api.intuit.com",
+      "description": "Production"
+    }
+  ],
+  "security": [
+    {
+      "quickbooksAccounting": [
+        "com.intuit.quickbooks.accounting"
+      ]
+    }
+  ],
+  "paths": {
+    "/v3/company/{realmId}/companyinfo/{realmId}": {
+      "get": {
+        "operationId": "readQuickbooksCompany",
+        "summary": "Read the authorized company",
+        "parameters": [
+          {
+            "name": "realmId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,64}$"
+            }
+          },
+          {
+            "name": "minorversion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v3/company/{realmId}/preferences": {
+      "get": {
+        "operationId": "readQuickbooksPreferences",
+        "summary": "Read actual home-currency preferences",
+        "parameters": [
+          {
+            "name": "realmId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,64}$"
+            }
+          },
+          {
+            "name": "minorversion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v3/company/{realmId}/query": {
+      "get": {
+        "operationId": "queryQuickbooksAccounting",
+        "summary": "Read all native Account pages or find the original journal by exact DocNumber",
+        "parameters": [
+          {
+            "name": "realmId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,64}$"
+            }
+          },
+          {
+            "name": "minorversion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            }
+          },
+          {
+            "name": "query",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v3/company/{realmId}/journalentry/{journalId}": {
+      "get": {
+        "operationId": "readQuickbooksJournal",
+        "summary": "Read the observed native journal",
+        "parameters": [
+          {
+            "name": "realmId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,64}$"
+            }
+          },
+          {
+            "name": "minorversion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            }
+          },
+          {
+            "name": "journalId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,64}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v3/company/{realmId}/journalentry": {
+      "post": {
+        "operationId": "createQuickbooksJournal",
+        "summary": "Create the original reviewed JournalEntry with its retained request identity",
+        "parameters": [
+          {
+            "name": "realmId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]{1,64}$"
+            }
+          },
+          {
+            "name": "minorversion",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 9999
+            }
+          },
+          {
+            "name": "requestid",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "TxnDate",
+                  "DocNumber",
+                  "Line"
+                ],
+                "additionalProperties": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Original native QuickBooks JSON response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "quickbooksAccounting": {
+        "type": "oauth2",
+        "flows": {
+          "authorizationCode": {
+            "authorizationUrl": "https://appcenter.intuit.com/connect/oauth2",
+            "tokenUrl": "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+            "refreshUrl": "https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer",
+            "scopes": {
+              "com.intuit.quickbooks.accounting": "Read company preferences, chart of accounts and journals; create reviewed settlement journal entries."
+            }
+          }
+        }
+      }
+    }
+  }
+}
