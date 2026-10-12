@@ -21,6 +21,7 @@ import tempfile
 import threading
 
 from .datasets import DatasetDelivery
+from .duckdb_agent import initialize_identity, read_identity, copy_sparse
 from .errors import StateError
 from .storage import digest, dump, lock, parse, private_directory, read, sync_directory, unique_object, write
 
@@ -233,6 +234,55 @@ def _new_destination(value, root):
     return path
 
 
+
+def _parquet_result(db):
+    """Choose explicit lossless representations before native Parquet writes."""
+    description = list(db.execute("SELECT * FROM sf_export_result LIMIT 0").description)
+    query_columns = [{"name": item[0], "type": str(item[1])} for item in description]
+    if len({column["name"].casefold() for column in query_columns}) != len(query_columns):
+        raise StateError("DUCKDB_EXPORT_UNIQUE_COLUMN_NAMES_REQUIRED")
+    wide = [column for column in query_columns if column["type"] in {"HUGEINT", "UHUGEINT"}]
+    overflow = {}
+    if wide:
+        checks = [
+            "bool_or(" + _qid(column["name"]) + " IS NOT NULL AND try_cast("
+            + _qid(column["name"]) + " AS DECIMAL(38,0)) IS NULL)"
+            for column in wide
+        ]
+        values = db.execute("SELECT " + ",".join(checks) + " FROM sf_export_result").fetchone()
+        overflow = {column["name"]: bool(value) for column, value in zip(wide, values)}
+    projection, encodings = [], []
+    for column in query_columns:
+        name, native_type = column["name"], column["type"]
+        quoted = _qid(name)
+        expression, encoding = quoted, "native"
+        if native_type in {"HUGEINT", "UHUGEINT"}:
+            target_type = "VARCHAR" if overflow[name] else "DECIMAL(38,0)"
+            expression = "CAST(" + quoted + " AS " + target_type + ")"
+            encoding = "duckdb_text" if target_type == "VARCHAR" else "decimal128"
+        else:
+            # Quoted member names are labels, not type tokens. Nested wide
+            # integers also pass through DuckDB's DOUBLE Parquet writer.
+            type_tokens = re.sub(r'"(?:[^"]|"")*"', '""', native_type)
+            if re.search(r"\b(?:U?HUGEINT|BIGNUM|VARINT|INTERVAL)\b|\bTIME WITH TIME ZONE\b", type_tokens):
+                expression = "CAST(" + quoted + " AS VARCHAR)"
+                # Only accept a text representation that the same native type
+                # can read back exactly, including nulls and nested values.
+                restored = "CAST(" + expression + " AS " + native_type + ")"
+                if db.execute("SELECT 1 FROM sf_export_result WHERE " + quoted
+                              + " IS DISTINCT FROM " + restored + " LIMIT 1").fetchone():
+                    raise StateError("DUCKDB_EXPORT_LOSSLESS_REPRESENTATION_REQUIRED")
+                encoding = "duckdb_text"
+        projection.append(expression + " AS " + quoted)
+        encodings.append({"name": name, "query_type": native_type, "encoding": encoding})
+    selected = ",".join(projection)
+    result = db.execute("SELECT " + selected + " FROM sf_export_result LIMIT 0")
+    columns = [{"name": item[0], "type": str(item[1])} for item in result.description]
+    for encoding, column in zip(encodings, columns):
+        encoding["parquet_type"] = column["type"]
+    return selected, columns, query_columns, encodings
+
+
 class DuckDBWorkspace:
     """One private native database, reopened per operation under the existing lock."""
 
@@ -257,6 +307,7 @@ class DuckDBWorkspace:
                 if existing and existing[0] != SCHEMA:
                     raise StateError("DUCKDB_WORKSPACE_SCHEMA_MISMATCH")
                 db.execute("INSERT INTO sf_workspace VALUES('schema',?) ON CONFLICT DO NOTHING", [SCHEMA])
+                initialize_identity(db)
                 db.execute("CREATE TABLE IF NOT EXISTS sf_reviews(id VARCHAR PRIMARY KEY,created_at VARCHAR NOT NULL,record VARCHAR NOT NULL)")
                 db.execute("CREATE TABLE IF NOT EXISTS sf_editions(id VARCHAR PRIMARY KEY,sequence BIGINT UNIQUE NOT NULL,record VARCHAR NOT NULL)")
                 db.execute("CREATE TABLE IF NOT EXISTS sf_files(edition_id VARCHAR,name VARCHAR,bytes BIGINT,sha256 VARCHAR,PRIMARY KEY(edition_id,name))")
@@ -280,6 +331,11 @@ class DuckDBWorkspace:
 
     def close(self):
         """Every method has already closed its own native connection."""
+
+    def identity(self):
+        """Stable original warehouse identity, retained by portable backups."""
+        with self._guard(), self._connection() as db:
+            return {"schema": SCHEMA, "workspace_id": read_identity(db)}
 
     @contextmanager
     def _guard(self):
@@ -723,15 +779,15 @@ class DuckDBWorkspace:
                             # valid WITH/ORDER/LIMIT clauses retain their meaning.
                             db.execute("CREATE TEMP TABLE sf_export_result AS " + sql, query["parameters"])
                             rows = db.execute("SELECT count(*) FROM sf_export_result").fetchone()[0]
-                            cursor = db.execute("SELECT * FROM sf_export_result LIMIT 0")
-                            columns = [{"name": c[0], "type": str(c[1])} for c in cursor.description]
-                            if len({c["name"].casefold() for c in columns}) != len(columns):
-                                raise StateError("DUCKDB_EXPORT_UNIQUE_COLUMN_NAMES_REQUIRED")
-                            db.execute("COPY sf_export_result TO ? (FORMAT PARQUET, COMPRESSION ZSTD)", [str(partial)])
+                            projection, columns, query_columns, encodings = _parquet_result(db)
+                            db.execute("COPY (SELECT " + projection
+                                       + " FROM sf_export_result) TO ? (FORMAT PARQUET, COMPRESSION ZSTD)",
+                                       [str(partial)])
                             with open(partial, "rb") as stream:
                                 os.fsync(stream.fileno())
                             os.chmod(partial, 0o600)
                             execution = {"export_id": request["export_id"], "rows": rows, "columns": columns,
+                                         "query_columns": query_columns, "column_encodings": encodings,
                                          "views": views, "parquet": _descriptor(partial, "result.parquet")}
                             execution["parquet"]["path"] = str(parquet)
                             # Identity is durable before publication, so a
@@ -772,7 +828,9 @@ class DuckDBWorkspace:
             verify(csv, execution.get("csv"), "DUCKDB_RETAINED_QUERY_RESULT_CHANGED")
             files = [_descriptor(path) for path in (parquet, csv, request_file, execution_file)]
             record = {**request, "state": "COMPLETE", "completed_at": _now(), "rows": rows,
-                      "columns": columns, "files": files, "csv_null_marker": "\\N",
+                      "columns": columns, "query_columns": execution.get("query_columns", columns),
+                      "column_encodings": execution.get("column_encodings", []),
+                      "files": files, "csv_null_marker": "\\N",
                       "source_editions": sorted({view["edition_id"] for view in views})}
             dump(complete, record, exclusive=True)
             # The manifest describes members; its download record also includes
@@ -916,7 +974,7 @@ class DuckDBWorkspace:
                 source_fd = os.open(self.path, os.O_RDONLY | os.O_NOFOLLOW)
                 target_fd = os.open(partial, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
                 with os.fdopen(source_fd, "rb") as source, os.fdopen(target_fd, "wb") as dest:
-                    shutil.copyfileobj(source, dest, _CHUNK)
+                    copy_sparse(source, dest, _CHUNK)
                     dest.flush()
                     os.fsync(dest.fileno())
                 descriptor = _descriptor(partial, "warehouse.duckdb")
@@ -933,3 +991,4 @@ class DuckDBWorkspace:
             dump(manifest, record, exclusive=True)
             record["files"].append(_descriptor(manifest))
             return record
+

@@ -237,7 +237,7 @@ export async function receiveOpportunityOperation(options={}){
     const desktopLayout=await page.evaluate(()=>({viewportWidth:innerWidth,viewportHeight:innerHeight,documentWidth:document.documentElement.scrollWidth,documentHeight:document.documentElement.scrollHeight}));
     const desktopPath=join(directory,'desktop.png');await page.screenshot({path:desktopPath,fullPage:false,animations:'disabled',scale:'css'});
     await page.setViewportSize({width:390,height:844});
-    await page.locator('[data-tab="requirements"]').click();
+    await page.getByRole('button',{name:'Requirements',exact:true}).click();
     await page.waitForFunction(()=>document.querySelector('#busy-indicator')?.hidden!==false);
     const mobileWidth=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,viewportHeight:innerHeight,documentHeight:document.documentElement.scrollHeight}));
     requireThat(mobileWidth.document<=mobileWidth.viewport+1,'The mobile operator overflows the viewport','BROWSER_LAYOUT_OVERFLOW');

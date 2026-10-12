@@ -6,6 +6,7 @@ import { datasetExtractionOptions } from '../../postgres/publisher/stream.mjs';
 import { object, bytes, digest, identity, createFile, privateDirectory, syncDirectory, fault } from '../../postgres/publisher/files.mjs';
 import { readCkanSourceFile } from '../declaration.mjs';
 import { readCkanCapture } from '../capture.mjs';
+import { checkCkanSemanticReview } from '../semantics.mjs';
 import { inspectCkanSource, openCkanSourceFile, checkCkanColumnTypes, encodeCkanRow } from '../source.mjs';
 
 const HASH = /^[a-f0-9]{64}$/;
@@ -78,6 +79,7 @@ export async function captureCkanPublicationPlan(sourceFile, directory, input) {
   await loadCsvDataset({ ...dataset, file: join(directory, 'schema.csv') });
   const capture = await readCkanCapture(selected.captureFile, selected.config.connection.sha256);
   bindCapture(capture, selected.config);
+  checkCkanSemanticReview(capture, query);
   await retainCkanCapture(capture, join(directory, 'capture'));
   const runtime = structuredClone(selected.config);
   runtime.connection.file = 'capture/capture.json';
@@ -88,6 +90,7 @@ export async function captureCkanPublicationPlan(sourceFile, directory, input) {
     query: input.query, input: {}, dataset, extraction,
     sourceHash: selected.hash, sourceBytes: selected.original.length,
     runtimeSourceHash: digest(runtimeBytes), queryHash: identity(query),
+    ...(query.semanticReview ? { semanticReview: { ...query.semanticReview } } : {}),
     retainedCapture: { manifestSha256: capture.manifestSha256, catalogOrigin: selected.config.catalogOrigin,
       packageId: selected.config.packageId, resourceId: selected.config.resourceId,
       rowCount: capture.manifest.rowCount, pageCount: capture.manifest.pages.length },

@@ -11,6 +11,8 @@ import sqlite3
 import stat
 import zipfile
 from store import DDL
+from credit_store import CREDIT_TABLES
+from portable import CREDIT_READER_FILES
 from domain import SCHEMA
 
 FORMAT = "stellar-forge.buyer-expense-private-project.v1"
@@ -22,6 +24,16 @@ REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in REQUIRED_APP}
 REQUIRED.update(APP_PREFIX + n for n in ("statement.py", "governor.py", "STATEMENTS.md"))
 REQUIRED.update({"project/workspace.sqlite", "README.md", "prepare_private.py"})
 ALLOWED = REQUIRED | {APP_PREFIX + "expense-workspace/receive.py"}
+MCP_REQUIRED = {APP_PREFIX + "expense-workspace/native_mcp.py",
+    "app/stellar-forge/mcp-paid-agent/expense-statement.mjs",
+    "app/stellar-forge/mcp-paid-agent/quote-store.mjs",
+    "app/stellar-forge/mcp-paid-agent/remote-mcp.mjs",
+    "app/stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/terms.mjs",
+    "app/stellar/scf-starforge-20261009/sf86-rpc-transfer-reconcile/networks.json"}
+
+CREDIT_REQUIRED = {APP_PREFIX + "expense-workspace/" + n for n in
+    ("native_woo.py", "credits.py", "credit_store.py", "credit-reader-files.json")}
+CREDIT_REQUIRED.update("app/" + n for n in CREDIT_READER_FILES)
 
 
 def digest_file(path):
@@ -72,8 +84,12 @@ def inspect_database(path, manifest):
         tables = {row[0] for row in database.execute("SELECT name FROM sqlite_master WHERE type='table'")}
         expected = trusted_schema()
         legacy = manifest.get("request_recovery") is None
-        required = set(expected) - ({"api_requests"} if legacy else set())
-        if not required <= tables <= set(expected):
+        credit_feature = manifest.get("buyer_credit_capture")
+        if credit_feature not in (None, "original-woo-refund-v1"):
+            raise ValueError("The project advertises an unsupported buyer refund source version.")
+        required = set(expected) - ({"api_requests"} if legacy else set()) - (CREDIT_TABLES if credit_feature is None else set())
+        allowed_tables = set(expected) - (CREDIT_TABLES if credit_feature is None else set())
+        if not required <= tables <= allowed_tables:
             raise ValueError("The archive does not retain the complete supported expense schema.")
         for name in tables:
             actual = [(x[1], x[2], x[3], x[5]) for x in database.execute('PRAGMA table_info("' + name + '")')]
@@ -88,7 +104,25 @@ def inspect_database(path, manifest):
             raise ValueError("The retained request-recovery history is incomplete.")
         if "workspace" in manifest and manifest["workspace"] != meta["id"] or "revision" in manifest and manifest["revision"] != revision:
             raise ValueError("The project manifest does not match its original native workspace revision.")
+        source_kinds = sorted({json.loads(row[0]).get("kind", "sf36_ledger") for row in
+                               database.execute("SELECT body FROM sources")})
+        if any(kind not in ("sf36_ledger", "mcp_quote", "woo_refund") for kind in source_kinds):
+            raise ValueError("The retained source kind is not supported by this original receiver.")
+        if "mcp_quote" in source_kinds and manifest.get("mcp_quote_capture") != "native-readonly-v1":
+            raise ValueError("The complete MCP expense source requires its original included reader.")
+        if manifest.get("mcp_quote_capture") is not None and manifest.get("source_kinds") != source_kinds:
+            raise ValueError("The original source kinds do not match the complete project manifest.")
+        if "woo_refund" in source_kinds and credit_feature != "original-woo-refund-v1":
+            raise ValueError("The original buyer credit source requires its complete included receiver.")
+        credit_count = database.execute("SELECT COUNT(*) FROM credits").fetchone()[0] if "credits" in tables else 0
+        packet_count = database.execute("SELECT COUNT(*) FROM refund_packets").fetchone()[0] if "refund_packets" in tables else 0
+        context = meta.get("data_context", "operational" if source_kinds else "")
+        if credit_feature and (manifest.get("credit_count") != credit_count or manifest.get("refund_packet_count") != packet_count or
+                               manifest.get("data_context") != context or context not in ("", "operational", "development")):
+            raise ValueError("The complete buyer credits, original packets or operation context do not match their native state.")
         return {"workspace": meta["id"], "revision": revision, "successful_requests": count,
+                "credit_count": credit_count, "refund_packet_count": packet_count, "data_context": context,
+                "source_kinds": source_kinds,
                 "legacy_request_history": legacy, "tables": len(tables)}
     finally:
         database.close()
@@ -136,7 +170,15 @@ def receive(archive, directory, expected_sha256):
                 raise ValueError("Choose the original buyer-expense complete project format.")
             descriptions = manifest["files"]
             entries = {row["path"]: row for row in descriptions}
-            if len(entries) != len(descriptions) or not REQUIRED <= set(entries) <= ALLOWED or set(names) != set(entries) | {"manifest.json"}:
+            feature = manifest.get("mcp_quote_capture")
+            if feature not in (None, "native-readonly-v1"):
+                raise ValueError("The archive advertises an unsupported original MCP reader version.")
+            credit_feature = manifest.get("buyer_credit_capture")
+            if credit_feature not in (None, "original-woo-refund-v1") or credit_feature and not feature:
+                raise ValueError("The original refund feature requires its complete native reader closure.")
+            required = REQUIRED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set())
+            allowed = ALLOWED | (MCP_REQUIRED if feature else set()) | (CREDIT_REQUIRED if credit_feature else set())
+            if len(entries) != len(descriptions) or not required <= set(entries) <= allowed or set(names) != set(entries) | {"manifest.json"}:
                 raise ValueError("The complete project must retain the exact original application and workspace members.")
             if sum(i.file_size for i in infos) > MAX_BYTES:
                 raise ValueError("The expanded project exceeds the native receiving limit.")
@@ -180,6 +222,8 @@ def receive(archive, directory, expected_sha256):
         result = inspect_database(root / "project/workspace.sqlite", manifest)
         result.update(state="RECEIVED", directory=str(root), archive_sha256=expected_sha256,
                       files=len(entries), source_captures_replayed=0, original_ledger_copied=False,
+                      original_quote_store_copied=False, purchased_result_bodies_copied=False,
+                      retained_original_refund_packets=result["refund_packet_count"],
                       application=str(root / (APP_PREFIX + "expense-workspace/server.py")))
         atomic_bytes(root / "RECEIVED.json", (json.dumps(result, indent=2) + "\n").encode())
         return result

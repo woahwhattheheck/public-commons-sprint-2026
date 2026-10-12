@@ -111,7 +111,7 @@ starforge merchant-accounting-maintenance prepare \
 starforge merchant-accounting-maintenance execute --dir "$ACCOUNTING_OPS/review"
 ```
 
-Inspect the returned review and page `status --view sources` when its inventory exceeds the summary. Set `REVIEW_ID` to the exact returned review SHA. Stop original outbox, proof, terms and recovered-source writers outside the MCP service before asserting the external-writer flag. The MCP pause drains its own admitted calls and temporary file readers; that flag records the operator's separate action for external sources.
+Inspect the returned review and page `status --view sources` when its inventory exceeds the summary. Set `REVIEW_ID` to the exact returned review SHA. Stop original outbox, proof, terms and recovered-source writers, plus configured OAuth connection and company-selection writers, outside the MCP service before asserting the external-writer flag. The MCP pause drains its own admitted calls and temporary file readers; that flag records the operator's separate action for external sources.
 
 ```sh
 starforge merchant-accounting-maintenance prepare \
@@ -160,6 +160,42 @@ starforge merchant-accounting-maintenance execute --dir "$ACCOUNTING_OPS/resume"
 ```
 
 Read the returned original revision and retrieve the same retained response, period close and accountant packet selections. Recovery does not make another purchase or send another payment.
+
+## Recover the configured QuickBooks OAuth host sources
+
+When the same accounting alias is configured with `platforms.qbo.oauth`, operating recovery automatically includes its original reviewed QuickBooks connection sources. There is no additional client command, OAuth backup endpoint or second recovery owner. Retain the existing host configuration described in [the platform host guide](ACCOUNTING-PLATFORMS.md) and [the platform customer guide](ACCOUNTING-PLATFORMS-CLIENT.md).
+
+The trusted source profile includes the declared `connectionsFile`, the complete `selectionDirectory`, and every native connection directory referenced by the configured registry's `directoryEnv` aliases. It includes all configured aliases because the original registry opens that whole selection. These exact paths must remain under the configured private `recovery.stateRoot`; the backup catalog stays outside the captured sources. Files already contained in an accounting/source root are retained once. Other host files and empty directories travel through the original encrypted recovery engine under a single mapped host root.
+
+Inspect the original returned status and source review:
+
+| Returned field | Operator meaning |
+| --- | --- |
+| `config.hostSourcesConfigured` | The host has supplied its trusted OAuth source resolver. This does not claim that every live source currently exists. |
+| `review.hostSources.kind` | The current profile is `quickbooks-oauth`. |
+| `review.hostSources.profileSha256` | The reviewed host-profile identity, including its source configuration, company selection and original directory references. |
+| `review.hostSources.roots`, `files`, `bytes` | Exact reviewed source counts and size, in addition to the original operating inventory. |
+| `review.hostSources.requiredEnvironment` | Names of required directory and external secret environment references. Their values are not returned or serialized in the profile. |
+| Source paths in `status --view sources` | Host-declared logical references such as `accounting://<alias>/recovery/host/<name>`, with the existing accounting/source aliases preserved. |
+
+The source-review ID binds this complete profile as well as the operating inventory. After pause, stop the original OAuth connection and company-selection writers along with the other external source writers. Then use the unchanged prepared `review` and `backup` sequence above, retaining the exact review ID and `externalWritersStopped:true` assertion. A source, configured path or pinned selection change after review requires reviewing the actual current source closure before a new capture.
+
+### Cold recovery with missing connection files
+
+Keep the original host configuration, state root, backup catalog, passphrase and prepared request directories available. Provision the original external secret environment values through the host's existing secret configuration. OAuth tokens and exchange/consent records remain opaque original bytes inside the encrypted snapshot; the backup does not invent, renew or rotate a grant, and it does not contain external environment secret values.
+
+1. Start the same merchant host with the same accounting alias and `recovery.startPaused:true`. Preserve its declared OAuth configuration, all directory environment references and any `expectedSelectionSha256` pin. Cold paused startup does not open the OAuth runtime or require the missing live selection and connection files.
+2. Open that declared alias through the existing maintenance client. Select the original backup ID and manifest SHA from the retained catalog and verify that exact backup. Retain each action's existing prepared request and native job identity.
+3. Prepare and execute the same `restore` action shown above. The host reads its profile from authenticated staged sources, including files captured under other original roots. It compares the original selection and source mapping against the current host configuration, directory references and selection pin **before creating operating destinations or a restore marker**.
+4. If current host paths or the pin differ, correct the actual configuration to the intended original recovery profile and reload the whole merchant host. A prepared client request cannot change a host profile. Preserve the earlier request/result and selected backup, then deliberately continue with the original maintenance workflow; do not redirect a saved operation to another company.
+5. Read the completed native restore result. `hostSourcesRestored:true` identifies a backup that carried and restored the configured host profile. The original source paths, empty directories, records and opaque bytes have been recovered; this field does not assert that a revoked or expired grant is usable.
+6. Execute the deliberate `resume` action when recovery has completed. Read the original workspace revision, retrieve its retained accounting files, and use the existing platform `qbo connection` read to inspect the restored selection and current authorization state. Historical results remain available even when the original grant needs reconnection. Any later provider operation continues through the same original native authorization checks.
+
+The resolver is bound to the host's configured definition and environment references. Changing those values requires the normal whole-host configuration reload. A simple client reconnect, another request UUID or a pause/resume of the same already-configured owner does not replace that definition.
+
+### Existing backups without a host profile
+
+Earlier operating backups remain usable. Their successful restore explicitly returns `hostSourcesRestored:false`: they restored the original accounting/source closure but did not carry the later OAuth host profile. Preserve that distinction even when the accounting workspace restores successfully. Provision the required original company selection and native connection stores through the existing host setup before resuming provider-backed work. A subsequent reviewed backup from the current configured host can include that complete source closure.
 
 ## Use the same connection from an SDK or agent
 

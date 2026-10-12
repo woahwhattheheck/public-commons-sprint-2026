@@ -14,6 +14,7 @@ import { createNativeSellerServer, NATIVE_SDK_VERSION } from '../../../sf30-sell
 import { openJobMerchant } from '../../../sf30-seller-sdk/jobs/model.mjs';
 import { startJobSeller } from '../../../sf30-seller-sdk/jobs/merchant.mjs';
 import { startCustomerServer } from '../../../sf30-seller-sdk/jobs/customer.mjs';
+import { CATALOG_PATH, REQUEST_PATH, WITHDRAW_PATH } from '../../../sf30-seller-sdk/jobs/intake/protocol.mjs';
 import { createPublicHttpsFetch } from '../../../sf31-buyer-client/public-transport.mjs';
 import { readBytes, readJson, writeBytes, writeJson, jsonBytes, digest, exists,
   privateDirectory } from '../../node/store.mjs';
@@ -22,16 +23,26 @@ import { openJobWorkspace } from '../model.mjs';
 import { startJobCustomerWorkspace } from '../server.mjs';
 import { readJobWorkspaceLaunch } from '../launch.mjs';
 import { readJobCheckoutTicket } from './contract.mjs';
+import { prepareInputFileFixture, openInputFileJourney } from '../../../sf30-seller-sdk/jobs/inputs/native-journey.mjs';
+import { isInputRoute } from '../../../sf30-seller-sdk/jobs/inputs/http.mjs';
 
-const operation = 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
-const jobId = 'checkout:2026.10', origin = 'https://jobs-merchant.example';
+const origin = 'https://jobs-merchant.example';
 const fixture = resolve(process.env.SF_JOBS_CHECKOUT_FIXTURE_DIR ?? '/');
 assert.notEqual(fixture, '/', 'Use the original native-continuation.py launcher.');
 const marker = await readJson(join(fixture, 'fixture.json'));
+const browserApproval = marker.approvalMode === 'BROWSER';
+const inputFilesMode = marker.inputMode === 'ORIGINAL_MERCHANT_INPUT_FILES';
+assert.ok(!inputFilesMode || browserApproval, 'File-input journey uses the original browser approval.');
+const operation = inputFilesMode ? 'SCF-JOB-INPUT-FILES-0B8D-20261012' : browserApproval
+  ? 'SCF-JOB-BROWSER-APPROVAL-0B8D-20261012' : 'SCF-JOB-CHECKOUT-CONTINUATION-0B8D-20261012';
+const jobId = inputFilesMode ? 'input-files:2026.10' : browserApproval ? 'browser-checkout:2026.10' : 'checkout:2026.10';
+const functionId = inputFilesMode ? 'reconcile' : 'analyze';
+const purchasePath = inputFilesMode ? '/invoice-reconciliation' : '/analysis';
 assert.equal(marker.schema, 'stellar-forge.sf88.job-checkout-journey.v1');
 assert.equal(marker.operation, operation);
 assert.equal(marker.fixtureDirectory, fixture);
-assert.equal(fixture, join(marker.retainedDirectory, 'checkout-continuation'));
+assert.equal(fixture, join(marker.retainedDirectory, inputFilesMode ? 'checkout-input-files-continuation' :
+  browserApproval ? 'checkout-browser-continuation' : 'checkout-continuation'));
 const retained = marker.retainedDirectory, runtimeDirectory = resolve(fileURLToPath(new URL('../../', import.meta.url)));
 assert.equal(marker.runtimeDirectory, runtimeDirectory);
 assert.equal(process.env.NODE_EXTRA_CA_CERTS, join(fixture, 'tls', 'tls.pem'));
@@ -42,9 +53,9 @@ const checkoutId = digest(JSON.stringify(['paid-job-checkout', origin + '/jobs/'
 const intentId = 'job-checkout:' + checkoutId;
 const fixtureAsset = 'C' + 'A'.repeat(55);
 let merchant, seller, customer, model, host, received, complete = false, interrupted = false;
-let frontend, proxy, facilitator, transport;
+let frontend, proxy, facilitator, transport, selfService = null, inputFixture = null, inputJourney = null, fileReceiving = null;
 const sockets = new Set(), servers = new Set();
-const traffic = { connects: 0, status: 0, result: 0 };
+const traffic = { connects: 0, status: 0, result: 0, intakeCatalog: 0, intakePrepare: 0, intakeWithdraw: 0 };
 const progress = phase => process.stdout.write(JSON.stringify({ operation, phase }) + '\n');
 
 async function nativeSdkVersion() {
@@ -103,21 +114,81 @@ async function api(path, body, method) {
     { code: 'CHECKOUT_API_FAILED', status: response.status });
   return value;
 }
+// This launcher can approve only its existing disposable native fixture.
+// Read the SF62 review through the same authenticated route used by the browser.
+async function approveBrowserFixture(taskId) {
+  const path = '/api/job-checkout/checkouts/' + checkoutId + '/approval';
+  const handoff = await readJson(handoffPath);
+  assert.equal(handoff.job.id, jobId); assert.equal(handoff.purchase.orderReference, jobId);
+  const body = Buffer.from(JSON.stringify({ jobId }));
+  let snapshot;
+  const deadline = Date.now() + 80000;
+  while (Date.now() < deadline) {
+    assert.equal(interrupted, false, 'Browser fixture was interrupted.');
+    const current = await api(path);
+    assert.equal(current.mode, 'BROWSER');
+    assert.equal(current.checkoutId, checkoutId); assert.equal(current.intentId, intentId);
+    if (current.snapshot?.state === 'AWAITING_OPERATOR') {
+      assert.equal(current.taskId, taskId); assert.equal(current.executing, true);
+      snapshot = current.snapshot; break;
+    }
+    const task = model.checkout.get(checkoutId).task;
+    assert.equal(task?.id, taskId, 'Original checkout task changed while loading its live review.');
+    assert.equal(task.state, 'RUNNING', JSON.stringify(task));
+    await new Promise(done => setTimeout(done, 100));
+  }
+  assert.ok(snapshot, 'Original SF62 browser review was not received.');
+  assert.equal(snapshot.intentId, intentId);
+  const expected = {
+    schema: 'stellar-forge.sf62.operator-review.v1',
+    request_id: intentId, actor: 'fixture-job-checkout', service: 'fixture-application-jobs',
+    resource: origin + purchasePath + '?sf98_order=' + encodeURIComponent(jobId), method: 'POST',
+    scheme: 'exact', network: 'stellar:testnet', asset: fixtureAsset, pay_to: 'UNVERIFIED_DEMO_RECIPIENT',
+    max_atomic_units_to_reserve: '10000', max_timeout_seconds: 60,
+    body_present: true, body_bytes: body.length, body_sha256: digest(body),
+  };
+  for (const [key, value] of Object.entries(expected))
+    assert.equal(snapshot.review[key], value, 'Disposable native review changed: ' + key);
+  assert.deepEqual(snapshot.review.complete_original_accepted_terms, handoff.purchase.payment);
+  assert.match(snapshot.review.request_sha256, /^[a-f0-9]{64}$/);
+  assert.match(snapshot.review.accepted_terms_sha256, /^[a-f0-9]{64}$/);
+  assert.equal(snapshot.current_native_budget_estimate.approved, true);
+  assert.equal(snapshot.current_native_budget_estimate.reserved_max_base_units, '10000');
+  for (const key of ['max_single', 'max_total', 'max_per_utc_day',
+    'max_per_actor_utc_day', 'max_per_service_utc_day'])
+    assert.match(snapshot.current_native_budget_estimate.limit_remaining[key], /^(0|[1-9][0-9]*)$/);
+  await immutable(join(fixture, 'browser-review.json'), jsonBytes(snapshot));
+  const decision = { intent: intentId, approvalId: snapshot.id,
+    requestSha256: snapshot.review.request_sha256, decision: 'approve', taskId };
+  // A delayed decision from an earlier task must leave this live review unchanged.
+  await assert.rejects(api(path, { ...decision, taskId: 'previous-checkout-task' }),
+    error => error.status === 409 && error.message.includes('JOB_CHECKOUT_APPROVAL_TASK_CHANGED'));
+  const unchanged = await api(path);
+  assert.equal(unchanged.snapshot.id, snapshot.id);
+  assert.equal(unchanged.snapshot.state, 'AWAITING_OPERATOR');
+  const decided = await api(path, decision);
+  assert.equal(decided.approval.snapshot.id, snapshot.id);
+  assert.ok(['APPROVING', 'APPROVED'].includes(decided.approval.snapshot.state));
+  progress('original browser decision accepted');
+}
+
 async function runCheckout(kind) {
   const before = await api('/api/job-checkout/checkouts/' + checkoutId);
-  await api('/api/job-checkout/checkouts/' + checkoutId + '/start', { kind, expectedRevision: before.revision });
+  const started = await api('/api/job-checkout/checkouts/' + checkoutId + '/start', { kind, expectedRevision: before.revision });
+  if (browserApproval && kind === 'execute') await approveBrowserFixture(started.task.id);
   const after = await model.checkout.wait(checkoutId);
   assert.equal(after.task.state, 'COMPLETE', JSON.stringify({ kind, phase: after.phase, error: after.lastError,
     nativeDirectory: after.nativeDirectory }));
   return after;
 }
 async function startWorkspace() {
-  model = await openJobWorkspace({ directory, buyerRoots: [], fileRoots: [], fetchImpl: transport,
+  model = await openJobWorkspace({ directory, buyerRoots: [], fileRoots: inputFilesMode ? [inputFixture.root] : [], fetchImpl: transport,
     checkout: { operatorProfile: profilePath, runtimeDirectory, timeoutMs: 90000 } });
-  host = await startJobCustomerWorkspace({ model, port: 0 });
+  host = await startJobCustomerWorkspace({ model, port: 0, browserApproval });
   const ready = await readJobWorkspaceLaunch({ directory, runtimeDirectory,
     operatorProfile: profilePath, pid: process.pid });
   assert.equal(ready.checkoutUrl, host.checkoutUrl);
+  if (browserApproval) assert.equal(ready.intakeUrl, host.intakeUrl);
 }
 async function closeWorkspace() {
   try { await host?.close(); }
@@ -132,6 +203,24 @@ async function closeWorkspace() {
       } finally { model = null; }
     }
   }
+}
+async function startMerchant() {
+  merchant = await openJobMerchant({ configPath, directory: merchantState,
+    env: { SF_JOBS_JOURNEY_GATE: join(retained, 'release-application') } });
+  seller = await startJobSeller(merchant, { port: 0, operationsPort: 0,
+    nativeFactory: compiled => createNativeSellerServer(compiled, {
+      facilitatorClient: new HTTPFacilitatorClient({ url: 'http://127.0.0.1:' + facilitator.address().port }),
+    }) });
+  customer = await startCustomerServer({ model: merchant, port: 0,
+    ...(browserApproval ? { intakeConfig: { enabled: true, functions: [functionId] } } : {}) });
+}
+async function closeMerchant() {
+  const results = await Promise.allSettled([seller?.close(), customer?.close()]);
+  seller = customer = null;
+  try { await merchant?.close(); } catch (error) { results.push({ status: 'rejected', reason: error }); }
+  merchant = null;
+  const errors = results.filter(value => value.status === 'rejected').map(value => value.reason);
+  if (errors.length) throw new AggregateError(errors, 'CHECKOUT_MERCHANT_CLOSE_FAILED');
 }
 async function transfer(path, body) {
   const ticket = await api(path, body), response = await fetch(host.origin + ticket.url);
@@ -161,19 +250,23 @@ try {
   assert.deepEqual(raw.environment ?? [], ['SF_JOBS_JOURNEY_GATE']);
   const report = await readJson(join(retained, 'merchant-state', 'records', 'report:2026.10.json'));
   assert.deepEqual(report.input, { values: [2, 4, 6, 8], window: 2 });
-  const configured = { ...raw, application: marker.application, workerCount: 1, memoryLimitMb: 64,
-    maxPending: 4, maxJobs: 32, functions: { analyze: { ...raw.functions.analyze,
-      payment: { ...raw.functions.analyze.payment, asset: fixtureAsset } } } };
+  if (inputFilesMode) inputFixture = await prepareInputFileFixture({ fixture, immutable });
+  const configured = inputFilesMode ? { ...inputFixture.configuration,
+    maxPending: 4, maxJobs: 32, functions: { reconcile: { ...inputFixture.configuration.functions.reconcile,
+      payment: { ...inputFixture.configuration.functions.reconcile.payment, asset: fixtureAsset } } } }
+    : { ...raw, application: marker.application, workerCount: 1, memoryLimitMb: 64,
+      maxPending: 4, maxJobs: 32, functions: { analyze: { ...raw.functions.analyze,
+        payment: { ...raw.functions.analyze.payment, asset: fixtureAsset } } } };
   await immutable(configPath, jsonBytes(configured));
   await immutable(join(fixture, 'signer.mjs'), Buffer.from([
     '// Disposable signer envelope for this one local original-protocol journey.',
     'export async function sign({ challenge, accepted }) {',
-    "  if (challenge.resource?.url !== 'https://jobs-merchant.example/analysis?sf98_order=checkout%3A2026.10' ||",
+    "  if (challenge.resource?.url !== " + JSON.stringify(origin + purchasePath + '?sf98_order=' + encodeURIComponent(jobId)) + " ||",
     "      accepted.scheme !== 'exact' || accepted.network !== 'stellar:testnet' ||",
     "      accepted.asset !== 'C' + 'A'.repeat(55) || accepted.payTo !== 'UNVERIFIED_DEMO_RECIPIENT' ||",
     "      accepted.amount !== '10000') throw new Error('CHECKOUT_FIXTURE_TERMS_CHANGED');",
     "  return { x402Version: 2, resource: challenge.resource, accepted, extensions: challenge.extensions,",
-    "    payload: { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId: 'checkout:2026.10' } };",
+    "    payload: { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId: " + JSON.stringify(jobId) + " } };",
     '}', '',
   ].join('\n')));
   const profile = {
@@ -201,7 +294,7 @@ try {
       };
       else if (['/verify', '/settle'].includes(request.url)) {
         for (const field of ['scheme', 'network', 'asset', 'payTo', 'amount', 'maxTimeoutSeconds'])
-          assert.equal(value.paymentRequirements[field], configured.functions.analyze.payment[field]);
+          assert.equal(value.paymentRequirements[field], configured.functions[functionId].payment[field]);
         assert.deepEqual(value.paymentPayload.payload, { fixture: 'LOCAL_PAID_JOB_PROTOCOL', jobId });
         const paymentSha256 = digest(JSON.stringify(value.paymentPayload));
         if (counters.paymentSha256) assert.equal(paymentSha256, counters.paymentSha256);
@@ -222,27 +315,26 @@ try {
     counterTail = action.catch(() => {});
     action.catch(() => { if (!response.headersSent) response.writeHead(500); response.end('{}'); });
   }));
-  merchant = await openJobMerchant({ configPath, directory: merchantState,
-    env: { SF_JOBS_JOURNEY_GATE: join(retained, 'release-application') } });
-  seller = await startJobSeller(merchant, { port: 0, operationsPort: 0,
-    nativeFactory: compiled => createNativeSellerServer(compiled, {
-      facilitatorClient: new HTTPFacilitatorClient({ url: 'http://127.0.0.1:' + facilitator.address().port }),
-    }) });
-  customer = await startCustomerServer({ model: merchant, port: 0 });
+  await startMerchant();
 
   frontend = await serve(httpsServer({
     key: await readFile(join(fixture, 'tls', 'tls.key')), cert: await readFile(join(fixture, 'tls', 'tls.pem')),
     minVersion: 'TLSv1.2',
   }, (request, response) => {
     const allowedPurchase = request.method === 'POST' &&
-      request.url === '/analysis?sf98_order=checkout%3A2026.10';
+      request.url === purchasePath + '?sf98_order=' + encodeURIComponent(jobId);
     const allowedGet = request.method === 'GET' &&
-      ['/jobs/checkout%3A2026.10', '/jobs/checkout%3A2026.10/result'].includes(request.url);
-    if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet)) {
+      ['/jobs/' + encodeURIComponent(jobId), '/jobs/' + encodeURIComponent(jobId) + '/result'].includes(request.url);
+    const allowedIntake = browserApproval && (request.method === 'GET' && request.url === CATALOG_PATH ||
+      request.method === 'POST' && [REQUEST_PATH, WITHDRAW_PATH].includes(request.url));
+    const allowedInput = inputFilesMode && isInputRoute(request.url) && ['POST', 'PUT', 'GET', 'HEAD', 'DELETE'].includes(request.method);
+    if (request.headers.host !== 'jobs-merchant.example' || !(allowedPurchase || allowedGet || allowedIntake || allowedInput)) {
       response.writeHead(404); response.end(); return;
     }
     if (allowedGet) traffic[request.url.endsWith('/result') ? 'result' : 'status']++;
-    const target = new URL(allowedGet ? customer.url : seller.url);
+    if (allowedIntake) traffic[request.url === CATALOG_PATH ? 'intakeCatalog' :
+      request.url === REQUEST_PATH ? 'intakePrepare' : 'intakeWithdraw']++;
+    const target = new URL(allowedGet || allowedIntake || allowedInput ? customer.url : seller.url);
     const forwarded = httpRequest({ hostname: '127.0.0.1', port: target.port, method: request.method,
       path: request.url, headers: { ...request.headers, connection: 'close' }, agent: false }, incoming => {
       response.writeHead(incoming.statusCode, incoming.headers); incoming.pipe(response);
@@ -267,34 +359,92 @@ try {
   });
   process.env.SF_JOBS_CHECKOUT_PROXY = 'http://127.0.0.1:' + proxy.address().port;
   transport = createPublicHttpsFetch({ trustedProxy: profile.buyerTransport, timeoutMs: 30000 });
-
-  // Save the capability before creating the merchant record or native operation.
-  const claimPath = join(fixture, 'claim-token.txt');
-  if (!await exists(claimPath)) await immutable(claimPath, Buffer.from(randomBytes(32).toString('base64url') + '\n'));
-  const claimToken = (await readBytes(claimPath, 256)).toString('utf8').trim();
-  assert.match(claimToken, /^[A-Za-z0-9_-]{43}$/);
-  if (!await exists(handoffPath)) {
-    const recordPath = join(directory, 'checkout', 'records', checkoutId, 'record.json');
-    if (await exists(recordPath)) {
-      const record = await readJson(recordPath);
-      await immutable(handoffPath, await readBytes(join(directory, 'checkout', 'records', checkoutId,
-        'tickets', record.handoffSha256 + '.json')));
-    } else {
-      const handoff = await merchant.createJob({ functionId: 'analyze', input: report.input,
-        label: 'October checkout application', reference: jobId, claimToken });
-      assert.equal(handoff.job.state, 'PREPARED', 'Recover the retained original ticket for an already submitted job.');
-      await immutable(handoffPath, jsonBytes(handoff));
-    }
+  if (inputFilesMode) {
+    inputJourney = openInputFileJourney({ fixture, operation, origin, jobId, immutable, inputs: inputFixture,
+      api, getModel: () => model, getHost: () => host, getMerchant: () => merchant,
+      restartWorkspace: async mode => {
+        if (mode !== true) await closeWorkspace();
+        if (mode !== false) await startWorkspace();
+      },
+      restartMerchant: async () => { await closeMerchant(); await startMerchant(); } });
+    transport = inputJourney.wrapTransport(transport);
   }
-  const ticketBytes = await readBytes(handoffPath), ticket = readJobCheckoutTicket(ticketBytes);
+
+  const claimPath = join(fixture, 'claim-token.txt');
+  let imported, ticketBytes, ticket, claimToken;
+  if (browserApproval) {
+    // The same public HTTPS path and private customer routes used by Request.
+    // Its controller saves the input and claim before the merchant sees them.
+    await startWorkspace();
+    progress('merchant catalog and retained customer request');
+    const catalog = await api('/api/job-intake/catalog', { origin });
+    assert.equal(catalog.publicOrigin, origin);
+    assert.equal(catalog.functions.length, 1);
+    const selectedFunction = catalog.functions[0];
+    assert.equal(selectedFunction.id, functionId);
+    assert.equal(selectedFunction.payment.asset, fixtureAsset);
+    assert.equal(selectedFunction.payment.amount, '10000');
+    const checkoutExisted = await exists(join(directory, 'checkout', 'records', checkoutId, 'record.json'));
+    const draft = inputFilesMode ? await inputJourney.prepare({ catalog, definition: selectedFunction }) :
+      await api('/api/job-intake/draft', { catalog, functionId: 'analyze', input: report.input,
+        reference: jobId, label: 'October checkout application' });
+    const requestPath = '/api/job-intake/requests/' + draft.request.id;
+    if (draft.request.phase !== 'IMPORTED') {
+      await api(requestPath + '/start', { kind: 'prepare', expectedRevision: draft.request.revision });
+      const prepared = await model.intake.wait(draft.request.id);
+      assert.equal(prepared.task.state, 'COMPLETE', JSON.stringify({ requestId: prepared.id, error: prepared.lastError }));
+      assert.equal(prepared.phase, 'IMPORTED');
+    }
+    const prepared = await api(requestPath);
+    assert.equal(prepared.checkoutId, checkoutId);
+    assert.equal(prepared.reference, jobId);
+    if (inputFilesMode) inputJourney.assertRequest(prepared);
+    else assert.deepEqual(prepared.input, report.input);
+    ticketBytes = await model.intake.ticket(prepared.id);
+    ticket = readJobCheckoutTicket(ticketBytes);
+    claimToken = ticket.handoff.claimToken;
+    await immutable(handoffPath, ticketBytes);
+    await immutable(claimPath, Buffer.from(claimToken + '\n'));
+    assert.equal(JSON.stringify(prepared).includes(claimToken), false);
+    imported = { checkout: await api('/api/job-checkout/checkouts/' + checkoutId), reused: checkoutExisted };
+    selfService = {
+      requestId: prepared.id, reference: prepared.reference, phase: prepared.phase,
+      requestSha256: prepared.requestSha256, inputSha256: prepared.inputSha256,
+      catalogSha256: prepared.merchant.catalogSha256, functionSha256: prepared.merchant.functionSha256,
+      responseSha256: prepared.responseSha256, handoffSha256: prepared.handoffSha256,
+      checkoutId: prepared.checkoutId, resumed: draft.reused,
+      requestAttempts: prepared.requestAttempts,
+    };
+  } else {
+    // Preserve the existing terminal fixture's private ticket and operation.
+    if (!await exists(claimPath)) await immutable(claimPath, Buffer.from(randomBytes(32).toString('base64url') + '\n'));
+    claimToken = (await readBytes(claimPath, 256)).toString('utf8').trim();
+    assert.match(claimToken, /^[A-Za-z0-9_-]{43}$/);
+    if (!await exists(handoffPath)) {
+      const recordPath = join(directory, 'checkout', 'records', checkoutId, 'record.json');
+      if (await exists(recordPath)) {
+        const record = await readJson(recordPath);
+        await immutable(handoffPath, await readBytes(join(directory, 'checkout', 'records', checkoutId,
+          'tickets', record.handoffSha256 + '.json')));
+      } else {
+        const handoff = await merchant.createJob({ functionId: 'analyze', input: report.input,
+          label: 'October checkout application', reference: jobId, claimToken });
+        assert.equal(handoff.job.state, 'PREPARED', 'Recover the retained original ticket for an already submitted job.');
+        await immutable(handoffPath, jsonBytes(handoff));
+      }
+    }
+    ticketBytes = await readBytes(handoffPath); ticket = readJobCheckoutTicket(ticketBytes);
+    await startWorkspace();
+    imported = await api('/api/job-checkout/import', {
+      handoffBase64: ticketBytes.toString('base64'), label: 'October checkout application',
+    });
+  }
   assert.equal(ticket.id, checkoutId); assert.equal(ticket.handoff.claimToken, claimToken);
   assert.equal(ticket.summary.inputSha256, (await merchant.get(jobId)).inputSha256);
-  await startWorkspace();
-  for (const path of ['/jobs/', '/jobs/checkout/', '/jobs/checkout/app.mjs', '/jobs/checkout/style.css', '/', '/collections'])
+  for (const path of ['/jobs/', '/jobs/checkout/', '/jobs/checkout/app.mjs', '/jobs/checkout/style.css', '/', '/collections',
+    ...(browserApproval ? ['/jobs/request/', '/jobs/request/app.mjs', '/jobs/request/style.css'] : []),
+    ...(inputFilesMode ? ['/jobs/request/files.mjs', '/jobs/request/sha256.mjs', '/jobs/request/hash-worker.mjs'] : [])])
     assert.equal((await fetch(host.origin + path)).status, 200, path);
-  const imported = await api('/api/job-checkout/import', {
-    handoffBase64: ticketBytes.toString('base64'), label: 'October checkout application',
-  });
   assert.equal(imported.checkout.id, checkoutId);
   assert.equal(JSON.stringify(imported).includes(claimToken), false);
   const resumed = imported.reused;
@@ -336,10 +486,15 @@ try {
   assert.equal(delivered.task.state, 'COMPLETE', delivered.lastError ?? '');
   assert.equal(delivered.resource.status, 'VERIFIED');
   const resource = delivered.resource;
-  assert.equal(JSON.parse((await api('/api/resources/' + resource.id + '/preview')).text).mean, 5);
+  const previewedResult = JSON.parse((await api('/api/resources/' + resource.id + '/preview')).text);
+  if (inputFilesMode) inputJourney.verifyReport(previewedResult);
+  else assert.equal(previewedResult.mean, 5);
   const downloaded = await transfer('/api/resources/' + resource.id + '/download', {});
-  assert.equal(JSON.parse(downloaded.bytes).sum, 20); assert.equal(downloaded.sha256, resource.sha256);
-  const note = 'October application purchased through the original checkout; mean 5 and sum 20.';
+  if (inputFilesMode) inputJourney.verifyReport(JSON.parse(downloaded.bytes));
+  else assert.equal(JSON.parse(downloaded.bytes).sum, 20);
+  assert.equal(downloaded.sha256, resource.sha256);
+  const note = inputFilesMode ? 'Original ledger and supplier prices; 6000 rows reconciled with exact integer amounts.'
+    : 'October application purchased through the original checkout; mean 5 and sum 20.';
   let annotation = resource.annotation;
   if (annotation.note !== note) annotation = await api('/api/resources/' + resource.id + '/note', {
     expectedRevision: annotation.revision, operationId: operation + ':note',
@@ -368,7 +523,11 @@ try {
   const receivedRows = received.search({ limit: 50 }).items;
   assert.equal(receivedRows.length, 1);
   assert.equal(receivedRows[0].origin.resource.job.jobId, jobId);
-  assert.equal(JSON.parse((await received.preview(receivedRows[0].id)).text).mean, 5);
+  const receivedResult = JSON.parse((await received.preview(receivedRows[0].id)).text);
+  if (inputFilesMode) {
+    inputJourney.verifyReport(receivedResult);
+    fileReceiving = await inputJourney.finish({ resourceId: resource.id, claimToken });
+  } else assert.equal(receivedResult.mean, 5);
 
   progress('reopen-original-checkout-and-customer');
   const priorToken = host.token;
@@ -381,6 +540,15 @@ try {
   assert.equal(reopenedJob.receipt.delivery.sha256, resource.sha256);
   assert.equal(reopenedJob.resource.annotation.note, note);
   assert.equal((await api('/api/collections/' + collectionId)).members.length, 1);
+  if (browserApproval) {
+    const reopenedRequest = await api('/api/job-intake/requests/' + selfService.requestId);
+    assert.equal(reopenedRequest.phase, 'IMPORTED');
+    assert.equal(reopenedRequest.checkoutId, checkoutId);
+    assert.equal(reopenedRequest.checkout.jobEntryId, entryId);
+    assert.equal(reopenedRequest.requestSha256, selfService.requestSha256);
+    assert.equal(reopenedRequest.handoffSha256, selfService.handoffSha256);
+    selfService.reopened = true;
+  }
   assert.equal(digest(await readBytes(join(checked.nativeDirectory, 'attempt.json'))), attemptsBeforeRestart);
   assert.deepEqual((await merchant.deliveryOutbox.rows()).map(row => row.event.id), settlementBeforeRestart);
   assert.equal(counters.verifies, 1); assert.equal(counters.settles, 1);
@@ -390,9 +558,10 @@ try {
     result: 'PASS', operation, node: process.version, nativeSdk,
     retainedWorkDirectory: retained, fixtureDirectory: fixture, customerWorkspace: directory,
     fixture: { protocol: 'LOCAL_PAID_JOB_PROTOCOL', transport: 'ORIGINAL_EXPLICIT_CONNECT_AND_VERIFIED_TLS',
-      approval: 'ORIGINAL_SF62_PTY_WITH_DISPOSABLE_FIXTURE_POLICY',
+      approval: browserApproval ? 'ORIGINAL_SF62_BROWSER_BROKER_WITH_DISPOSABLE_FIXTURE_POLICY'
+        : 'ORIGINAL_SF62_PTY_WITH_DISPOSABLE_FIXTURE_POLICY',
       source: { originalConfigSha256: original.configSha256, originalApplicationSha256: original.applicationSha256,
-        checkoutConfigSha256: digest(await readBytes(configPath)), application: marker.application,
+        checkoutConfigSha256: digest(await readBytes(configPath)), application: configured.application,
         asset: fixtureAsset, network: 'stellar:testnet' } },
     sources: { runtimeDirectory, buyerClientSha256: digest(await readFile(join(runtimeDirectory, 'node', 'client.mjs'))),
       checkoutControllerSha256: digest(await readFile(new URL('./controller.mjs', import.meta.url))),
@@ -402,11 +571,25 @@ try {
     artifact: { sha256: resource.sha256, bytes: resource.bytes },
     collection: { id: collectionId, archiveSha256: exported.sha256, receivedResources: receivedRows.length },
     nativeVerifies: counters.verifies, nativeSettlements: counters.settles, traffic,
-    lifecycle: ['retained merchant application', 'prepared private ticket', 'original SDK offline review',
-      'original native CLI and SF62/SF36 reservation', 'native paid 202 and SF98 activation',
+    ...(inputFilesMode ? { inputFiles: fileReceiving } : {}),
+    lifecycle: ['retained merchant application', browserApproval ? 'original merchant catalog and customer input request' :
+      'prepared private ticket', 'original SDK offline review',
+      browserApproval ? 'original browser decision and SF62/SF36 reservation'
+        : 'original native CLI and SF62/SF36 reservation', 'native paid 202 and SF98 activation',
       'actual BuyerResult adoption', 'verified application result', 'library preview and download',
       'collection export and receiving', 'same-checkout recovery and customer restart'],
   };
+  if (browserApproval) {
+    summary.selfService = { ...selfService, source: {
+      merchantIntakeSha256: digest(await readFile(new URL('../../../sf30-seller-sdk/jobs/intake/service.mjs', import.meta.url))),
+      customerIntakeSha256: digest(await readFile(new URL('../intake/controller.mjs', import.meta.url))),
+    } };
+    const review = await readJson(join(fixture, 'browser-review.json'));
+    assert.equal(review.intentId, intentId);
+    summary.browserApproval = { approvalId: review.id, intentId,
+      requestSha256: review.review.request_sha256, acceptedTermsSha256: review.review.accepted_terms_sha256,
+      staleTaskDecision: 'REJECTED_BEFORE_RESERVATION', retainedReview: join(fixture, 'browser-review.json') };
+  }
   await received.close(); received = null;
   await closeWorkspace();
   await writeJson(output, summary); complete = true;
@@ -415,8 +598,7 @@ try {
   process.off('SIGINT', stop); process.off('SIGTERM', stop);
   const closed = await Promise.allSettled([received?.close(), closeWorkspace()]);
   try { await shutdownServers(); } catch (error) { closed.push({ status: 'rejected', reason: error }); }
-  closed.push(...await Promise.allSettled([seller?.close(), customer?.close()]));
-  try { await merchant?.close(); } catch (error) { closed.push({ status: 'rejected', reason: error }); }
+  try { await closeMerchant(); } catch (error) { closed.push({ status: 'rejected', reason: error }); }
   const failures = closed.filter(value => value.status === 'rejected');
   if (!complete || failures.length) process.stderr.write(JSON.stringify({
     operation, fixtureDirectory: fixture, customerWorkspace: directory, retainedWorkDirectory: retained,
