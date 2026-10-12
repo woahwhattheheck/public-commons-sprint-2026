@@ -8,6 +8,7 @@ import { openFiscalWorkspace } from './workspace-model.mjs';
 export const HELP = `Fiscal Data workspace — Node 22+ / Linux
 
 node fiscaldata/cli.mjs workspace --dir /private/fiscal-data [--port 0] [--buyers /private/buyer-bindings.json]
+node fiscaldata/cli.mjs managed --connection /private/fiscal-operator.json --workspace treasury --exports /private/source-packages --expected-connection-sha256 SHA256 --expected-workspace-identity SHA256 --managed-source /installed/source --expected-source-sha256 SHA256 --startup-format json [--port 0]
 node fiscaldata/cli.mjs state --dir /private/fiscal-data
 node fiscaldata/cli.mjs action --dir /private/fiscal-data --action sources.save --input source.json
 node fiscaldata/cli.mjs action --dir /private/fiscal-data --action captures.start --input capture.json --wait
@@ -30,6 +31,10 @@ the actual operator. Checkpoints retain the complete source/review workspace and
 received acquisitions; configure original merchant/runtime/buyer bindings on
 the receiving host. Unfinished captures are paused after receiving. Package
 operation IDs bind original input and make interrupted copying resumable.
+Managed launch is prepared by the original installed Applications workflow. It
+requires the complete reviewed source/configuration/workspace identity and emits
+one compact original startup record. Stop drains its named MCP model and browser.
+Source capture stays idle on retained reopen until the operator resumes it.
 `;
 async function jsonFile(path,maximum=16*1024**2){
   const data=await readFile(resolve(path));if(data.length>maximum)throw new Error('Input JSON exceeds its byte limit.');
@@ -39,11 +44,37 @@ const emit=value=>process.stdout.write(JSON.stringify(value,null,2)+'\n');
 export async function main(argv=process.argv.slice(2)){
   if(!argv.length||argv.includes('--help')){process.stdout.write(HELP);return;}
   const command=argv.shift(),values={},flags=new Set(['--wait','--once']);
-  const allowed=new Set(['--dir','--port','--buyers','--limits','--action','--input','--kind','--id','--name','--out','--operation','--operator','--package','--sha256',...flags]);
+  const allowed=new Set(['--dir','--port','--buyers','--limits','--action','--input','--kind','--id','--name','--out','--operation','--operator','--package','--sha256','--connection','--workspace','--exports','--expected-connection-sha256','--expected-workspace-identity','--managed-source','--expected-source-sha256','--startup-format',...flags]);
   for(let i=0;i<argv.length;i++){
     const name=argv[i];if(!allowed.has(name)||Object.hasOwn(values,name))throw new Error('Unknown or repeated option: '+name);
     if(flags.has(name)){values[name]=true;continue;}
     if(!argv[i+1]||argv[i+1].startsWith('--'))throw new Error('Missing value for '+name);values[name]=argv[++i];
+  }
+  if(command==='managed'){
+    const names=['--connection','--workspace','--exports','--expected-connection-sha256',
+      '--expected-workspace-identity','--managed-source','--expected-source-sha256','--startup-format','--port'];
+    if(Object.keys(values).some(name=>!names.includes(name))||
+        names.filter(name=>name!=='--port').some(name=>!values[name])||values['--startup-format']!=='json')
+      throw new Error('Managed launch requires the original complete Applications review and JSON startup format.');
+    const port=Number(values['--port']??0);
+    if(!Number.isSafeInteger(port)||port<0||port>65535)throw new Error('Port must be an integer from 0 to 65535.');
+    const controller=new AbortController(),stop=()=>controller.abort();
+    process.once('SIGINT',stop);process.once('SIGTERM',stop);
+    let service;
+    try{
+      const {startFiscalManagedApplication}=await import('./managed.mjs');
+      service=await startFiscalManagedApplication({
+        connectionFile:resolve(values['--connection']),workspaceAlias:values['--workspace'],
+        exportsDirectory:resolve(values['--exports']),sourceRoot:resolve(values['--managed-source']),
+        expectedConnectionSha256:values['--expected-connection-sha256'],
+        expectedWorkspaceIdentity:values['--expected-workspace-identity'],
+        expectedSourceSha256:values['--expected-source-sha256'],port,signal:controller.signal});
+      if(controller.signal.aborted)return;
+      process.stdout.write(JSON.stringify(service.identity)+'\n');
+      await service.closed;
+    }catch(error){if(!controller.signal.aborted)throw error;}
+    finally{process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);await service?.close();}
+    return;
   }
   if(['checkpoint','receive','package-inspect'].includes(command)){
     const {createFiscalSourcePackage,receiveFiscalSourcePackage,inspectFiscalSourcePackage}=await import('./portable.mjs');
@@ -114,3 +145,4 @@ export async function main(argv=process.argv.slice(2)){
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)
   main().catch(error=>{process.stderr.write(JSON.stringify({code:error.code??'FISCALDATA_CLI',message:error.message,status:error.status??null})+'\n');process.exitCode=1;});
+

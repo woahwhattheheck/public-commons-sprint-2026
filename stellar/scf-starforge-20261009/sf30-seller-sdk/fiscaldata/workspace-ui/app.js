@@ -113,6 +113,10 @@ function bind(id,event,handler){$(id).addEventListener(event,e=>{if(event==='sub
 function render(){
   if(!state)return;
   $('workspace-revision').textContent='Revision '+state.revision+' · '+stamp(state.observedAt);
+  if(Object.hasOwn(state,'managedApplication'))ui.managedApplication=state.managedApplication;
+  const operator=ui.managedApplication?.operator,operatorLabel=$('workspace-operator');
+  operatorLabel.hidden=!operator;
+  if(operator){operatorLabel.textContent='Operator: '+operator.label;operatorLabel.title=operator.id+' · '+ui.managedApplication.workspaceAlias;}
   $('nav-captures').textContent=count(state.captures.length);
   $('nav-editions').textContent=count(state.editions.length);
   $('nav-comparisons').textContent=count(state.comparisons.length);
@@ -783,3 +787,4 @@ async function start(){
   await route();pollTimer=setTimeout(poll,5000);
 }
 start().catch(error=>{fail(error);$('connection').textContent='Unable to open';pollTimer=setTimeout(poll,5000);});
+

@@ -1,0 +1,16 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "frictionless",
+  "description": "Frictionless table packages",
+  "commands": {
+    "frictionless": "stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/cli.mjs"
+  },
+  "commandDescriptions": {
+    "frictionless": "Capture table packages, review fields and publish original merchant editions"
+  },
+  "exports": {
+    "./seller/frictionless": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/source.mjs",
+    "./seller/frictionless/publisher": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/model.mjs",
+    "./seller/frictionless/release": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/frictionless/release.mjs"
+  }
+}

@@ -1,0 +1,86 @@
+[
+  {
+    "id": "billing-example-agency-01",
+    "label": "Example agency 01",
+    "code": "DEMO-01",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-02",
+    "label": "Example agency 02",
+    "code": "DEMO-02",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-03",
+    "label": "Example agency 03",
+    "code": "DEMO-03",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-04",
+    "label": "Example agency 04",
+    "code": "DEMO-04",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-05",
+    "label": "Example agency 05",
+    "code": "DEMO-05",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-06",
+    "label": "Example agency 06",
+    "code": "DEMO-06",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-07",
+    "label": "Example agency 07",
+    "code": "DEMO-07",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-08",
+    "label": "Example agency 08",
+    "code": "DEMO-08",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-09",
+    "label": "Example agency 09",
+    "code": "DEMO-09",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-10",
+    "label": "Example agency 10",
+    "code": "DEMO-10",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-11",
+    "label": "Example agency 11",
+    "code": "DEMO-11",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  },
+  {
+    "id": "billing-example-agency-12",
+    "label": "Example agency 12",
+    "code": "DEMO-12",
+    "active": true,
+    "notes": "Commons-authored software operating example."
+  }
+]

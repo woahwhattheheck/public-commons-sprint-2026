@@ -1,4 +1,6 @@
 // MIT. Durable self-service requests join the existing original job checkout.
+import { openJobInputFiles } from '../inputs/controller.mjs';
+import { INPUT_FILES_FIELD, inputManifest } from '../../../sf30-seller-sdk/jobs/inputs/protocol.mjs';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { readdir, lstat } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -32,6 +34,8 @@ function validateRow(row) {
     Number.isSafeInteger(row.requestAttempts) && row.requestAttempts >= 0 &&
     Number.isSafeInteger(row.withdrawalAttempts) && row.withdrawalAttempts >= 0 &&
     Array.isArray(row.history) && row.history.length <= 128, 'JOB_INTAKE_STATE_INVALID');
+  if (row.merchant.function.inputFiles) inputManifest(row.merchant.function.inputFiles, row.input,
+    { complete: row.requestAttempts > 0 });
   const origin = originOf(row.merchant.origin);
   validateFunction(row.merchant.function, origin); validateRequest(requestFor(row));
   need(row.id === requestId(origin, row.reference) &&
@@ -59,17 +63,20 @@ function validateRow(row) {
 
 /** Same original workspace lease; no independent payer, queue, wallet or worker. */
 export async function openJobIntake({ directory, lease, checkout, transport, fetchImpl,
-  requestTimeoutMs = 60000, maxConcurrent = 4 } = {}) {
+  requestTimeoutMs = 60000, maxConcurrent = 4, fileRoots = [], library, inputFileStorage,
+  transferTimeoutMs = 3600000 } = {}) {
   directory = await canonicalDirectory(directory, { privateState: true, create: true });
   need(lease && typeof lease.assertHeld === 'function' && checkout && typeof checkout.import === 'function',
     'JOB_INTAKE_WORKSPACE_REQUIRED');
   need(Number.isSafeInteger(requestTimeoutMs) && requestTimeoutMs >= 100 && requestTimeoutMs <= 300000 &&
     Number.isSafeInteger(maxConcurrent) && maxConcurrent >= 1 && maxConcurrent <= 4,
     'JOB_INTAKE_TRANSPORT_CONFIG_INVALID');
+  need(Number.isSafeInteger(transferTimeoutMs) && transferTimeoutMs >= 1000 && transferTimeoutMs <= 86400000,
+    'JOB_INPUT_TRANSFER_TIMEOUT_INVALID');
   const fetcher = fetchImpl ?? createPublicHttpsFetch({ timeoutMs: requestTimeoutMs, trustedProxy: transport ?? null });
   need(typeof fetcher === 'function', 'JOB_INTAKE_TRANSPORT_REQUIRED');
   const rows = new Map(), tasks = new Map(), discoveries = new Set();
-  let tail = Promise.resolve(), closing = false, closePromise;
+  let tail = Promise.resolve(), closing = false, closePromise, inputFiles = null;
   const active = () => { lease.assertHeld(); need(!closing, 'JOB_INTAKE_CLOSING', 503); };
   const rowPath = id => {
     need(typeof id === 'string' && HASH.test(id), 'JOB_INTAKE_ID_INVALID');
@@ -97,6 +104,9 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       handoffSha256: value.handoffSha256, responseSha256: value.responseSha256,
       checkoutId: value.checkoutId, checkout: linked, lastError: value.lastError,
       task: structuredClone(ownTask?.public ?? value.lastTask),
+      inputFiles: inputFiles?.summary(value) ?? (value.merchant.function.inputFiles ? {
+        policy: structuredClone(value.merchant.function.inputFiles),
+        descriptors: inputManifest(value.merchant.function.inputFiles, value.input, { complete: false }) } : null),
       actions: { prepare: !ownTask && !['IMPORTED', 'WITHDRAWN'].includes(value.phase),
         import: !ownTask && value.handoffBase64 !== null && !['IMPORTED', 'WITHDRAWN'].includes(value.phase),
         withdraw: !ownTask && value.phase !== 'WITHDRAWN', stop: Boolean(ownTask) } };
@@ -137,7 +147,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
   async function fetchJson(url, { method = 'GET', body, headers = {}, signal, maximum } = {}) {
     signal?.throwIfAborted();
     const response = await fetcher(url, { method, headers: { accept: 'application/json', ...headers,
-      ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+      ...(body === undefined ? {} : { 'content-type': body instanceof Uint8Array ? 'application/octet-stream' : 'application/json' }) },
       ...(body === undefined ? {} : { body }), redirect: 'manual', signal });
     need(response && typeof response.status === 'number' && response.headers && response.body,
       'JOB_INTAKE_HTTP_RESPONSE_INVALID', 502);
@@ -166,7 +176,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       const value = parseJson(raw);
       if (response.status >= 400) {
         const code = /^JOB_[A-Z0-9_]{1,100}$/.test(value?.error ?? '') ? value.error : 'JOB_INTAKE_HTTP_ERROR';
-        throw problem(code, [400, 401, 403, 404, 409, 413, 415, 422, 429].includes(response.status) ? response.status : 502);
+        throw problem(code, [400, 401, 403, 404, 408, 409, 413, 415, 422, 429, 507].includes(response.status) ? response.status : 502);
       }
       need([200, 201].includes(response.status), 'JOB_INTAKE_HTTP_STATUS_INVALID', 502);
       return { raw, value, status: response.status };
@@ -189,6 +199,10 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
   async function draft({ catalog, functionId, input, label, reference, accessToken = null } = {}) {
     active(); catalog = validateCatalog(catalog);
     const definition = catalog.functions.find(value => value.id === functionId);
+    if (definition?.inputFiles && object(input)) {
+      input = { ...input, [INPUT_FILES_FIELD]: input[INPUT_FILES_FIELD] ?? {} };
+      inputManifest(definition.inputFiles, input, { complete: false });
+    }
     need(definition && object(input) && Buffer.byteLength(canonical(input)) <= definition.maxInputBytes,
       'JOB_INTAKE_INPUT_REQUIRED');
     reference ??= 'request_' + randomUUID(); label ??= reference;
@@ -219,11 +233,13 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       return { request: summary(value), reused: false };
     });
   }
-  async function obtainTicket(id, signal) {
+  async function obtainTicket(id, signal, onProgress = () => {}) {
     let value = await readRow(id);
     if (value.handoffBase64 !== null) return value;
     need(value.merchant.authentication !== 'access-token' || value.accessToken !== null || value.requestAttempts > 0,
       'JOB_INTAKE_ACCESS_TOKEN_REQUIRED', 401);
+    signal.throwIfAborted();
+    if (value.requestAttempts === 0) await inputFiles.upload(value, { signal, onProgress });
     signal.throwIfAborted();
     value = await change(id, before => ({ requestAttempts: before.requestAttempts + 1,
       phase: 'RECOVERABLE', lastError: null }), 'request-dispatch-retained');
@@ -287,7 +303,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       signal.throwIfAborted();
       if (task.public.kind === 'withdraw') await withdraw(value, signal, task.reason);
       else if (value.phase !== 'IMPORTED') {
-        if (task.public.kind === 'prepare') value = await obtainTicket(task.id, signal);
+        if (task.public.kind === 'prepare') value = await obtainTicket(task.id, signal, progress => { task.public.progress = progress; });
         need(value.handoffBase64 !== null, 'JOB_INTAKE_TICKET_REQUIRED', 409);
         signal.throwIfAborted(); await importTicket(value);
       }
@@ -305,7 +321,8 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
     return serial(async () => {
       active(); const value = await readRow(id);
       need(['prepare', 'import', 'withdraw'].includes(kind), 'JOB_INTAKE_OPERATION_INVALID');
-      need(!tasks.has(id), 'JOB_INTAKE_OPERATION_ACTIVE', 409);
+      need(!tasks.has(id) && !inputFiles.busy(id), 'JOB_INTAKE_OPERATION_ACTIVE', 409);
+      if (kind === 'prepare') inputFiles.checkReady(value);
       need(tasks.size + discoveries.size < maxConcurrent, 'JOB_INTAKE_CAPACITY_REACHED', 429);
       need(expectedRevision === value.revision, 'JOB_INTAKE_REVISION_CONFLICT', 409);
       need(value.phase !== 'WITHDRAWN', 'JOB_INTAKE_REQUEST_WITHDRAWN', 409);
@@ -315,7 +332,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
       const updated = { ...value, revision: value.revision + 1, updatedAt: now(),
         lastTask: task.public, lastError: null };
       await writeRow(updated); tasks.set(id, task);
-      task.timer = setTimeout(() => task.controller.abort(problem('JOB_INTAKE_DEADLINE', 408)), requestTimeoutMs);
+      task.timer = setTimeout(() => task.controller.abort(problem('JOB_INTAKE_DEADLINE', 408)), value.merchant.function.inputFiles && kind === 'prepare' ? transferTimeoutMs : requestTimeoutMs);
       task.promise = Promise.resolve().then(() => execute(task));
       task.promise.catch(() => {});
       return summary(updated);
@@ -324,6 +341,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
   async function cancel(id) {
     return serial(async () => {
       active(); const value = await readRow(id), task = tasks.get(id);
+      inputFiles.cancel(id);
       if (task) {
         task.public = { ...task.public, state: 'CANCELLING' };
         task.controller.abort(problem('JOB_INTAKE_OPERATION_CANCELLED'));
@@ -339,6 +357,44 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
     }, 'intake-access-updated');
     return summary(value);
   }
+  function editableFileRow(value) {
+    active();
+    need(!tasks.has(value.id) && value.requestAttempts === 0 && value.handoffBase64 === null &&
+      !['IMPORTED', 'WITHDRAWN'].includes(value.phase), 'JOB_INPUT_REQUEST_ALREADY_DISPATCHED', 409);
+  }
+  async function editFile(id, { slot, file, source, expectedRevision }) {
+    return serial(async () => {
+      const before = await readRow(id); editableFileRow(before);
+      need(before.merchant.function.inputFiles && Object.hasOwn(before.merchant.function.inputFiles.slots, slot),
+        'JOB_INPUT_SLOT_NOT_ALLOWED', 422);
+      const current = before.input[INPUT_FILES_FIELD][slot] ?? null;
+      const sources = { ...(before.inputSources ?? {}) };
+      if (canonical(current) === canonical(file) && canonical(sources[slot] ?? null) === canonical(source ?? null))
+        return before;
+      need(expectedRevision === before.revision, 'JOB_INTAKE_REVISION_CONFLICT', 409);
+      const descriptors = { ...before.input[INPUT_FILES_FIELD] };
+      if (file === null) { delete descriptors[slot]; delete sources[slot]; }
+      else { descriptors[slot] = file; sources[slot] = source ?? null; }
+      const input = { ...before.input, [INPUT_FILES_FIELD]: descriptors };
+      inputManifest(before.merchant.function.inputFiles, input, { complete: false });
+      need(Buffer.byteLength(canonical(input)) <= before.merchant.function.maxInputBytes, 'JOB_INTAKE_INPUT_REQUIRED');
+      const value = { ...before, input, inputSources: sources, inputSha256: sha256(canonical(input)),
+        revision: before.revision + 1, updatedAt: now(), lastError: null };
+      value.requestSha256 = sha256(canonical(requestFor(value)));
+      value.history = [...before.history, { at: value.updatedAt, action: file ? 'file-selected' : 'file-removed',
+        slot, fileSha256: file?.sha256 ?? null, previousRevision: before.revision, revision: value.revision }].slice(-128);
+      return writeRow(value);
+    });
+  }
+  inputFiles = await openJobInputFiles({ directory: join(directory, 'input-files'), lease, readRequest: readRow,
+    editFile, assertEditable: editableFileRow,
+    assertCleanup: (row, expectedRevision) => {
+      active(); need(!tasks.has(row.id), 'JOB_INTAKE_OPERATION_ACTIVE', 409);
+      need(row.revision === expectedRevision, 'JOB_INTAKE_REVISION_CONFLICT', 409);
+    },
+    refresh: async id => { rows.set(id, summary(await readRow(id))); },
+    fetchJson, fileRoots, library, limits: inputFileStorage, maxConcurrent, deadlineMs: transferTimeoutMs });
+
   for (const name of await readdir(directory)) {
     if (!/^[a-f0-9]{64}\.json$/.test(name)) continue;
     need(rows.size < 10000, 'JOB_INTAKE_CAPACITY_REACHED');
@@ -350,7 +406,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
     } else rows.set(value.id, summary(value));
   }
   return Object.freeze({
-    directory, discover, draft, start, cancel, setAccess,
+    directory, discover, draft, start, cancel, setAccess, inputFiles,
     status() { return { schema: JOB_INTAKE_SCHEMA, directory, requests: rows.size, closing,
       capacity: maxConcurrent, active: [...tasks].map(([id, task]) => ({ requestId: id, ...task.public })) }; },
     list({ q = '', phase = '', offset = 0, limit = 50 } = {}) {
@@ -362,7 +418,8 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
         [value.label, value.reference, value.merchant.origin, value.merchant.functionId].join(' ').toLocaleLowerCase().includes(wanted))
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
       return { total: found.length, offset, limit, items: found.slice(offset, offset + limit).map(value => {
-        const task = tasks.get(value.id); return { ...structuredClone(value), ...(task ? { task: task.public } : {}),
+        const task = tasks.get(value.id); return { ...structuredClone(value),
+          inputFiles: inputFiles.summary(value), ...(task ? { task: task.public } : {}),
           actions: { prepare: !task && !['IMPORTED', 'WITHDRAWN'].includes(value.phase),
             import: !task && value.hasTicket && !['IMPORTED', 'WITHDRAWN'].includes(value.phase),
             withdraw: !task && value.phase !== 'WITHDRAWN', stop: Boolean(task) } };
@@ -371,7 +428,7 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
     async get(id) {
       const value = await readRow(id);
       return { ...summary(value), input: structuredClone(value.input), function: structuredClone(value.merchant.function),
-        history: structuredClone(value.history) };
+        history: structuredClone(value.history), inputSources: structuredClone(value.inputSources ?? {}) };
     },
     async ticket(id) {
       const value = await readRow(id); need(value.handoffBase64 !== null, 'JOB_INTAKE_TICKET_REQUIRED', 409);
@@ -390,9 +447,11 @@ export async function openJobIntake({ directory, lease, checkout, transport, fet
         await tail;
         for (const task of tasks.values()) task.controller.abort(problem('JOB_INTAKE_CLOSED'));
         for (const task of discoveries) task.controller.abort(problem('JOB_INTAKE_CLOSED'));
+        for (const id of rows.keys()) inputFiles.cancel(id);
         const outcomes = await Promise.allSettled([...tasks.values()].map(task => task.promise)
           .concat([...discoveries].map(task => task.complete)));
         await tail;
+        outcomes.push(...await Promise.allSettled([inputFiles.close()]));
         const failed = outcomes.filter(value => value.status === 'rejected');
         if (failed.length) throw new AggregateError(failed.map(value => value.reason), 'JOB_INTAKE_CLOSE_FAILED');
       })();

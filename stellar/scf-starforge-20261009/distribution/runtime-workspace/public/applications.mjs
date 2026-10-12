@@ -1,5 +1,6 @@
 // MIT. Applications presentation over the original runtime and managed-command APIs.
 import { renderOpenApiApplicationReview } from './openapi-application.mjs';
+import { createOpenApiConnectionSetupView } from './openapi-connection-setup.mjs';
 const element = (tag, text, className) => {
   const node = document.createElement(tag);
   if (text !== undefined) node.textContent = text;
@@ -72,6 +73,25 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
   const reviewResult = element('div', undefined, 'result'); reviewResult.hidden = true;
   form.append(grid, field('Original application', kind), description, settings, reviewButton, reviewResult);
   configuration.append(form);
+  const openapiSetupRoot = element('div'); configuration.append(openapiSetupRoot);
+  const openapiSetup = createOpenApiConnectionSetupView({
+    root: openapiSetupRoot, api, message, error,
+    getContext() {
+      const value = configurationValue();
+      return { workspaceId: getState()?.workspaceId, runtimeId: value.runtimeId,
+        applicationId: value.applicationId, kind: value.kind,
+        environmentFile: value.settings.environmentFile ?? null,
+        connectionsFile: value.settings.oauthConnectionsFile ?? null,
+        port: value.settings.port ?? 0, allowLoopbackOAuth: value.settings.allowLoopbackOAuth === true };
+    },
+    onPrepared(prepared) {
+      const value = configurationValue();
+      if (value.kind !== 'openapi') return;
+      renderSettings({ ...value.settings, ...prepared });
+      configuration.open = true; reviewButton.focus();
+    },
+  });
+  const openapiContextField = target => ['environmentFile', 'oauthConnectionsFile', 'port', 'allowLoopbackOAuth'].includes(target?.name);
   const selectedPanel = element('section', undefined, 'panel'); selectedPanel.hidden = true;
   const selectedTitle = element('div', undefined, 'section-title'), title = element('h3'), phase = element('span', '', 'status');
   selectedTitle.append(title, phase);
@@ -243,6 +263,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       }
     }
     configurationReview = null; reviewResult.hidden = true;
+    openapiSetup.setContext().catch(error);
   }
   function configurationValue() {
     const values = {};
@@ -263,11 +284,20 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     label.focus(); renderSelected();
   }
   kind.addEventListener('change', () => renderSettings());
-  form.addEventListener('input', () => { configurationReview = null; reviewResult.hidden = true; });
+  form.addEventListener('input', event => {
+    configurationReview = null; reviewResult.hidden = true;
+    // Hide the previous registration review immediately while a bound field changes.
+    // The change event reads the new context once, after the field edit.
+    if (openapiContextField(event.target)) openapiSetup.reset();
+  });
+  form.addEventListener('change', event => {
+    if (openapiContextField(event.target)) openapiSetup.setContext().catch(error);
+  });
   runtime.addEventListener('change', () => {
     const values = configurationValue().settings;
     configurationReview = null; reviewResult.hidden = true;
     if (currentType()?.python) renderSettings({ ...values, installationId: undefined });
+    else openapiSetup.setContext().catch(error);
   });
   form.addEventListener('submit', event => {
     event.preventDefault(); act(async () => {
@@ -499,6 +529,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       if (data.applications.length && editingId === null && !configurationReview && !label.value) configuration.open = false;
       if (!historyLoading) await refreshHistory();
       renderSelected(); await refreshOutput();
+      await openapiSetup.refresh().catch(error);
       saveSelection();
     } finally { loading = false; }
   }
@@ -546,6 +577,7 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
       scope++; data = null; selectedId = selectedRun = editingId = null; configurationReview = startReview = null;
       resetHistory(null); initial = true; label.value = ''; kind.replaceChildren(); runtime.replaceChildren(); list.replaceChildren();
       selectedPanel.hidden = history.hidden = outputPanel.hidden = reviewResult.hidden = true; configuration.open = true;
+      openapiSetup.reset();
     },
   };
 }
