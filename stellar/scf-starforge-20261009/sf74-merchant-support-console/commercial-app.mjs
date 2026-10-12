@@ -20,7 +20,7 @@ async function call(action,args={}) {
   const id=current(),token=selectionEpoch;
   const body=checked(args,id);
   const result=await request('/api/cases/'+id+'/commercial/'+action,{
-    ...body,...(['save-draft','publish','receive','receive-pricing'].includes(action)?{actor:'Local commercial operator'}:{})});
+    ...body,...(['save-draft','publish','receive','receive-pricing','receiving-attach'].includes(action)?{actor:'Local commercial operator'}:{})});
   if(token!==selectionEpoch)throw new Error('The selected original case changed while the request returned.');
   return result;
 }
@@ -28,6 +28,9 @@ const desk=mountCommercialDesk({root:$('quotation-root'),services:{
   async read(){const id=current(),token=selectionEpoch;const value=await request('/api/cases/'+id+'/commercial');if(token!==selectionEpoch)throw new Error('The selected original case changed.');return value;},
   preview:args=>call('preview',args),saveDraft:args=>call('save-draft',args),publish:args=>call('publish',args),
   receive:args=>call('receive',args),receivePricing:args=>call('receive-pricing',args),compare:args=>call('compare',args),
+  receivingStatus:args=>call('receiving-status',args),receivingCapture:args=>call('receiving-capture',args),
+  receivingInspect:args=>call('receiving-inspect',args),receivingAttach:args=>call('receiving-attach',args),
+  receivingCase:args=>call('receiving-case',args),receivingRestore:args=>call('receiving-restore',args),
   async download(args) {
     const id=current(),token=selectionEpoch;
     const result=await response('/api/cases/'+id+'/commercial/download',checked(args,id));
