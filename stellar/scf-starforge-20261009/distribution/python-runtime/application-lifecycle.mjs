@@ -61,6 +61,7 @@ export const PYTHON_APPLICATION_CATALOG=Object.freeze([
     requiredSource:original+'analysis_workspace.py',title:'Analysis and workbook workspace',
     description:'Open the original analysis database, workbook sources, refresh review, reports and deliveries with its installed Python environment.',
     fields:[installation,field('databaseDirectory','Analysis database directory','path',true),
+      field('lineageConnectionsFile','Lineage collector connections','path',false,'Private named collector configuration; selects original startup files and producer-token references.'),
       field('nodeExecutable','Original Node executable','path',false,'Defaults to this managed runtime worker’s Node executable.'),
       field('port','Local port','port',false,'Use 0 to select an available loopback port.'),environment]},
   {id:'python-workbooks',python:true,command:'workbooks',terminal:false,
@@ -180,7 +181,10 @@ export async function pythonApplicationCommand(root,type,settings,{
     inputs.push(await inputPath(settings.databaseDirectory,'directory',true,true));
     const node=await selectedExecutable(settings.nodeExecutable??process.execPath);
     inputs.push(...node.inputs);
+    const lineageConnections=settings.lineageConnectionsFile?absolute(settings.lineageConnectionsFile):null;
+    if(lineageConnections)inputs.push(await inputPath(lineageConnections,'file',false,true));
     args=['--database',settings.databaseDirectory,'--checkout',binding.sourceRoot,'--node',node.executable,
+      ...(lineageConnections?['--lineage-connections',lineageConnections]:[]),
       'serve','--port',String(settings.port??0)];
   }else if(type.command==='stellar-forge-analysis-project'){
     const project=absolute(settings.projectPath),info=await lstat(project);
