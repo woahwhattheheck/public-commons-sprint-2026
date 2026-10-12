@@ -485,6 +485,131 @@ configuration filenames when composing the restored host. Start the original
 components against that selected state, reconcile the original catalog and
 event identities, and complete the deployment's existing transition procedure.
 
+## Prepare a restored dataset publisher
+
+A completed remote restore can continue into the original dataset publisher's
+receiving-host preparation from this same workspace. The preparation uses the
+restored publisher's own configuration, recovery bindings and application
+leases.
+
+Start from the original remote restore journal. Its completed result identifies
+the authenticated snapshot, encrypted bundle and plaintext destination. The
+workspace derives the publisher selection from that retained operation and the
+profile's declared host roots.
+
+### Capture the original publisher
+
+Declare the publisher's original typed recovery plan in the profile's existing
+`capturePlans` list. The typed selector is
+`datasetPublisher.schema: stellar-forge.dataset-publisher-recovery-profile.v1`
+inside that original plan. Use the plan produced by the maintained
+dataset-publisher recovery integration and retain its exact private plan file.
+The host declaration continues to choose the plan file and encrypted-bundle
+parent.
+
+For a fresh capture, stop the declared source writers through their existing
+operating procedure, choose the typed plan, and explicitly acknowledge source
+quiescence in **Review capture**. Inspect the actual named roots and plan digest
+before starting.
+
+The typed integration holds the publisher's original application leases around
+the capture and full authentication of its new bundle. The workspace retains
+the reviewed typed plan privately with the request. When an original completed
+capture is adopted, the authenticated manifest is compared with that retained
+plan; the original live source can already have been moved or released.
+
+Continue through the existing verified-bundle upload, remote inventory and cold
+restore workflow. Preserve each operation ID and the complete snapshot ID so the
+publisher preparation remains attached to the intended recovery point.
+
+### Select the completed restore
+
+In the original remote operations view, open the completed restore and choose
+**Review publisher recovery**. The operation selector also offers
+**Prepare restored dataset publisher**.
+
+Select the profile and the original completed restore ID. Choose a new workspace
+operation ID for this preparation. The source restore ID continues to identify
+the completed restore; the new operation ID identifies its following publisher
+preparation.
+
+The workspace uses the original journal's snapshot, encrypted bundle and actual
+plaintext restore destination. The browser selection identifies the retained
+restore; the host configuration supplies its permitted paths. Select
+**Review restored publisher** to read the exact proposed preparation.
+
+The review reads the restored publisher through its original inspection
+function. Check the complete receiving selection:
+
+| Review detail | Operating decision |
+| --- | --- |
+| Completed restore ID and snapshot | Confirm the recovery point and original operation being continued. |
+| Encrypted bundle and plaintext destination | Identify the authenticated backup and the actual restored named roots. |
+| Original publisher binding | Read the source dataset, publisher and seller configuration relationships. |
+| Receiving publisher binding | Review how those original roots will be bound on this host. |
+| Dataset generations and expiry | Identify the restored dataset generations and their retained validity information. |
+| Workbooks, mappings and candidates | Review the original preparation state that will become available after receiving. |
+| Buyers and pending publications | Inspect the restored publisher's retained delivery and publication work. |
+| Native review SHA and native operation ID | Retain the exact original inspection selected for this preparation. |
+
+Keep the displayed review with the same profile, source restore ID and workspace
+operation ID. If the selected restored inputs or bindings change, refresh their
+original state and review the resulting selection again.
+
+### Prepare the original restored application
+
+Choose **Prepare restored publisher** for the reviewed selection.
+
+The workspace calls the original `prepareRestoredPublisher` operation. That
+operation owns the publisher leases, its required native version upgrade,
+restored-root renames and binding adoption. The recovery workspace retains its
+native result with the selected request.
+
+Follow **Workspace operations** and **Refresh progress** until the original
+preparation result has been read back. Use **Continue operation** to follow the
+same retained request after an interruption.
+
+**Stop transfer** requests a stop before preparation starts. If the original
+native preparation is already running, follow its current phase to the native
+readback. Inspect the saved request before deciding how to continue it.
+
+If a response is lost, reopen the same workspace directory and operation ID,
+refresh its saved progress, and inspect the original result. A completed native
+preparation remains the selected operation's completed outcome.
+
+The workspace completion has `status: COMPLETE` and
+`command: publisher-prepare`. It retains `sourceRestoreId`, `snapshotId`,
+`bundle`, `destination`, `publisherOperationId`, and the original
+`prepared` result. Keep both the workspace operation ID and the native
+publisher operation ID with the original restore.
+
+### Open the prepared publisher
+
+The original `prepared` result has status
+`RESTORED_PUBLISHER_PREPARED`. It supplies the actual locations and limits for
+the original application:
+
+| Result field | Use when reopening |
+| --- | --- |
+| `prepared.datasetDirectory` | Open the restored dataset state, shown as **Dataset state**. |
+| `prepared.publisherDirectory` | Open the restored publisher state and retained work, shown as **Publisher workspace**. |
+| `prepared.sellerConfigFile` | Use the selected receiving seller configuration, shown as **Seller configuration**. |
+| `prepared.limits` | Apply the original publisher's returned operating limits. |
+| `prepared.reviewSha256`, `manifestSha256` and `planSha256` | Identify the selected native review, original manifest and recovery plan. |
+| `prepared.relocation`, `nativeValidation` and `nativeSchema` | Read the native receiving preparation and application schema results. |
+
+Use these returned paths and the original `prepared.instructions` with the
+maintained launch procedure in
+[Dataset publisher recovery](../DATASET_PUBLISHER.md). Preserve the prepared
+binding, original restore ID, snapshot ID and native preparation result with the
+receiving-host handoff.
+
+Reopen the original publisher against that selected state. Inspect the retained
+dataset generations, workbooks, mappings, candidates, buyers and pending
+publications through its existing operator before continuing the corresponding
+publication work. The original publisher remains responsible for its normal
+job, delivery and publication transitions.
+
 ## Follow progress, cancel, and continue
 
 For remote transfers, the original journal's `status` is the last saved transfer phase.
@@ -556,6 +681,7 @@ Retain these items for the receiving operator:
 | Snapshot ID and completion key | Select the same completed recovery point. |
 | Original encrypted bundle and download location | Authenticate and reuse the retained snapshot. |
 | Completed restore destination and result | Continue the original merchant's receiving-host procedure. |
+| Dataset-publisher preparation review and completed native result | Reopen the exact prepared dataset, publisher and seller configuration with the source restore and native operation identities. |
 
 The original credential and passphrase facilities remain with the host's
 existing secret-management process. The operator handoff identifies their
