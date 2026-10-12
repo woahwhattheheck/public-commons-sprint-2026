@@ -8,7 +8,7 @@ import { startVersionedDatasetSeller } from '../dataset-refresh/service.mjs';
 import { compileHttpSellerOffer } from '../seller.mjs';
 import { readSellerConfig } from '../serve.mjs';
 import { compileAssetRouteOffer, MAX_ASSET_BYTES, MAX_ASSET_BUDGET } from '../response-asset.mjs';
-import { createWaterNativeFactory } from '../usgs-water/merchant.mjs';
+import { createNativeHttpFactory } from '../native-http-factory.mjs';
 import { prepareReview } from '../../sf88-operator-buyer-cli/prepare.mjs';
 import { validateDatasetQuery, inspectDatasetPage } from '../../sf88-operator-buyer-cli/dataset-page.mjs';
 import { readBytes, writeBytes } from '../../sf88-operator-buyer-cli/node/store.mjs';
@@ -155,7 +155,7 @@ export async function startFredMerchant({ directory, port = 0, nativeFactory, fa
       maxRetainedBytes: 256 * 1024 * 1024, retentionMs: 3600000 }) });
   try {
     need(versions.describe().snapshot === edition.snapshot, 'This immutable economic edition contains a changed dataset store.');
-    const factory = nativeFactory ?? (facilitator ? await createWaterNativeFactory({ facilitator, allowLocalFacilitator }) : null);
+    const factory = nativeFactory ?? (facilitator ? await createNativeHttpFactory({ facilitator, allowLocalFacilitator }) : null);
     const session = await startVersionedDatasetSeller({ versions, config, port, nativeFactory: factory,
       controlTransport: 'loopback', maxInFlight, drainGraceMs });
     return { ...session, editionId: edition.editionId, snapshot: edition.snapshot, resource: plan.resource,

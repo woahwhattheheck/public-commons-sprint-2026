@@ -4,6 +4,7 @@ import { openStore } from './store.mjs';
 import { DEFAULT_CONFIG, normalizeConfig, sourceProperties, recordBasis, validateRecord, importDeals, normalizeSchema, selectedRecords, validateCapturedDefinitions, mappedContext, makeProvider } from './source.mjs';
 import { canonical, decode64, digest, id, iso, jsonBytes, now, page, parse, portableError, requireThat, sha, summary, text, WorkspaceError } from './common.mjs';
 import { installActions } from './actions.mjs';
+import { installAutomation, receiveAutomationObject, validateAutomationArchive } from './automation.mjs';
 
 const emptyReview = () => ({ version: 0, status: 'open', actor: '', note: '', assignee: '', dueAt: null, updatedAt: null });
 export async function openWorkspace(options) {
@@ -134,6 +135,12 @@ export async function openWorkspace(options) {
     } catch (error) { store.put('run', { ...run, status: 'failed', error: portableError(error) }); }
   }
   function runReport(runId) { const run = store.get(runId, 'run'); requireThat(run.status === 'completed', 'RUN_NOT_COMPLETE', 'This original analysis is not complete', 409); return { run, report: parse(store.readFile(run.reportFileId).data), alerts: parse(store.readFile(run.alertsFileId).data) }; }
+  function selectedAutomationConfig(projectId, input, capturedConfig) {
+    if (capturedConfig === null) return normalizeConfig(store.project(projectId).config);
+    const cycle = store.get(input.automationCycleId, 'automation_cycle'), config = normalizeConfig(capturedConfig);
+    requireThat(cycle.projectId === projectId && cycle.configSha256 === input.configSha256 && digest(config) === cycle.configSha256 && canonical(config) === canonical(cycle.capturedConfig), 'AUTOMATION_DEFINITIONS', 'Use this scheduled cycle’s exact original definitions');
+    return config;
+  }
   function review(projectId, fingerprint) { const value = store.db.prepare('SELECT value FROM reviews WHERE project_id=? AND fingerprint=?').get(projectId, fingerprint); return value ? JSON.parse(value.value) : emptyReview(); }
   const workspace = {
     store, provider, background, launch, traceProvider, record, runReport,
@@ -141,7 +148,7 @@ export async function openWorkspace(options) {
     createProject(input) { return store.mutation('create_project', input, () => { const project = { id: id(), name: text(input.name, 'project name'), revision: 1, config: structuredClone(DEFAULT_CONFIG), schemaIds: {}, createdAt: now(), updatedAt: now() }; store.put('project', project); store.event(project.id, project.id, 'project_created', { actor: input.actor }); return { project }; }); },
     project(projectId) {
       const totals = {}; for (const [key, kind] of Object.entries({ snapshots: 'snapshot', runs: 'run', jobs: 'job', actions: 'action', exports: 'export', schemas: 'schema' })) totals[key] = store.db.prepare('SELECT count(*) AS n FROM objects WHERE project_id=? AND kind=?').get(projectId, kind).n;
-      return { project: store.project(projectId), snapshots: store.list(projectId, 'snapshot').map(summary), runs: store.list(projectId, 'run').map(summary), jobs: store.list(projectId, 'job').map(summary), actions: store.list(projectId, 'action').map(summary), exports: store.list(projectId, 'export').map(summary), history: store.events(projectId), totals };
+      return { project: store.project(projectId), snapshots: store.list(projectId, 'snapshot').map(summary), runs: store.list(projectId, 'run').map(summary), jobs: store.list(projectId, 'job').map(summary), actions: store.list(projectId, 'action').map(summary), exports: store.list(projectId, 'export').map(summary), history: store.events(projectId), totals, automation: workspace.automationState(projectId) };
     },
     saveConfig(projectId, input) { return store.mutation('config:' + projectId, input, () => { const p = store.project(projectId, input.revision); p.config = normalizeConfig(input.config); return { project: store.bump(p, input.actor, 'configuration_saved', { configSha256: digest(p.config) }) }; }); },
     importSource(projectId, input) {
@@ -171,14 +178,15 @@ export async function openWorkspace(options) {
       const where = clauses.join(' AND '), total = store.db.prepare(`SELECT count(*) AS n FROM records WHERE ${where}`).get(...values).n;
       const deals = store.db.prepare(`SELECT value FROM records WHERE ${where} ORDER BY deal_id LIMIT ? OFFSET ?`).all(...values, limit, offset).map(x => JSON.parse(x.value)); return { deals, total, offset, limit };
     },
-    startSync(projectId, input) {
+    startSync(projectId, input, capturedConfig = null) {
       const result = store.mutation('sync:' + projectId, input, () => {
         const p = store.project(projectId, input.revision); requireThat(provider.info().configured, 'PROVIDER_NOT_CONFIGURED', 'Configure the local HubSpot environment before starting a live capture');
-        const job = { id: id(), projectId, name: text(input.name, 'capture name'), kind: 'source_sync', status: 'queued', actor: input.actor, capturedConfig: p.config, configSha256: digest(p.config), credentialBinding: provider.binding(), pages: 0, records: 0, nextAfter: null, cursors: [], pageFiles: [], duplicateCount: 0, sourceBytes: 0, schemaIds: null, snapshotId: null, error: null, retryAt: null, createdAt: now(), startedAt: now(), updatedAt: now() };
+        const config = selectedAutomationConfig(projectId, input, capturedConfig);
+        const job = { id: id(), projectId, name: text(input.name, 'capture name'), kind: 'source_sync', status: 'queued', actor: input.actor, capturedConfig: config, configSha256: digest(config), credentialBinding: provider.binding(), pages: 0, records: 0, nextAfter: null, cursors: [], pageFiles: [], duplicateCount: 0, sourceBytes: 0, schemaIds: null, snapshotId: null, error: null, retryAt: null, createdAt: now(), startedAt: now(), updatedAt: now(), ...(input.automationCycleId ? { automationCycleId: input.automationCycleId } : {}) };
         store.put('job', job); store.bump(p, input.actor, 'source_capture_requested', { jobId: job.id }); return { job: summary(job) };
       }); if (store.get(result.job.id, 'job').status === 'queued' && !background.has(result.job.id)) launch(result.job.id, signal => performSync(result.job.id, signal)); return result;
     },
-    job(jobId) { const job = store.get(jobId, 'job'); return { job: { ...summary(job), resumable: ['failed', 'cancelled', 'interrupted'].includes(job.status), terminal: ['completed', 'failed', 'cancelled', 'interrupted'].includes(job.status) } }; },
+    job(jobId) { const job = store.get(jobId, 'job'); return { job: { ...summary(job), resumable: ['failed', 'cancelled', 'interrupted'].includes(job.status), terminal: ['completed', 'failed', 'cancelled', 'interrupted', 'historical'].includes(job.status) } }; },
     cancelJob(jobId, input) {
       let requested = false;
       const result = store.mutation('cancel_job:' + jobId, input, () => { const job = store.get(jobId, 'job'); requireThat(background.has(jobId), 'JOB_IDLE', 'This capture is not running', 409); store.event(job.projectId, job.id, 'capture_cancel_requested', { actor: input.actor }); requested = true; return { job: summary(job) }; });
@@ -187,8 +195,18 @@ export async function openWorkspace(options) {
     resumeJob(jobId, input) {
       const result = store.mutation('resume_job:' + jobId, input, () => { const job = store.get(jobId, 'job'); requireThat(['failed', 'cancelled', 'interrupted'].includes(job.status) && !background.has(jobId), 'JOB_STATE', 'Only a stopped incomplete capture can resume', 409); requireThat(job.credentialBinding === provider.binding(), 'PROVIDER_CHANGED', 'Provider environment changed; start a separate capture'); requireThat(!job.retryAt || Date.parse(job.retryAt) <= Date.now(), 'PROVIDER_RETRY_TIME', `Wait until ${job.retryAt} before resuming`, 429); job.status = 'queued'; job.updatedAt = now(); store.put('job', job); store.event(job.projectId, job.id, 'capture_resume_requested', { actor: input.actor }); return { job: summary(job) }; }); if (!background.has(jobId) && store.get(jobId, 'job').status === 'queued') launch(jobId, signal => performSync(jobId, signal)); return result;
     },
-    startRun(projectId, input) {
-      const result = store.mutation('run:' + projectId, input, () => { const p = store.project(projectId, input.revision), snapshot = store.get(input.snapshotId, 'snapshot'); requireThat(snapshot.projectId === projectId, 'SOURCE_PROJECT', 'Choose a source in this project'); const config = normalizeConfig(p.config); const run = { id: id(), projectId, name: text(input.name, 'run name'), snapshotId: snapshot.id, sourceSha256: snapshot.sourceSha256, config, configSha256: digest(config), asOf: iso(input.asOf, 'asOf'), actor: input.actor, status: 'queued', summary: null, createdAt: now(), error: null }; store.put('run', run); store.bump(p, input.actor, 'analysis_requested', { runId: run.id }); return { run: summary(run) }; }); if (store.get(result.run.id, 'run').status === 'queued' && !background.has(result.run.id)) launch(result.run.id, () => performRun(result.run.id)); return result;
+    startRun(projectId, input, capturedConfig = null) {
+      const result = store.mutation('run:' + projectId, input, () => { const p = store.project(projectId, input.revision), snapshot = store.get(input.snapshotId, 'snapshot'); requireThat(snapshot.projectId === projectId, 'SOURCE_PROJECT', 'Choose a source in this project'); const config = selectedAutomationConfig(projectId, input, capturedConfig); const run = { id: id(), projectId, name: text(input.name, 'run name'), snapshotId: snapshot.id, sourceSha256: snapshot.sourceSha256, config, configSha256: digest(config), asOf: iso(input.asOf, 'asOf'), actor: input.actor, status: 'queued', summary: null, createdAt: now(), error: null, ...(input.automationCycleId ? { automationCycleId: input.automationCycleId } : {}) }; store.put('run', run); store.bump(p, input.actor, 'analysis_requested', { runId: run.id }); return { run: summary(run) }; }); if (store.get(result.run.id, 'run').status === 'queued' && !background.has(result.run.id)) launch(result.run.id, () => performRun(result.run.id)); return result;
+    },
+    resumeOriginalRun(runId, input) {
+      const result = store.mutation('resume_original_run:' + runId, input, () => {
+        const run = store.get(runId, 'run'); requireThat(['failed', 'interrupted'].includes(run.status) && !background.has(runId), 'RUN_STATE', 'Resume a retained stopped analysis');
+        const note = text(input.note, 'analysis continuation note', 5000);
+        const attempt = { status: run.status, error: run.error, actor: input.actor, note, at: now() };
+        store.put('run', { ...run, status: 'queued', error: null, continuations: [...(run.continuations ?? []), attempt] });
+        store.event(run.projectId, run.id, 'original_analysis_resumed', attempt); return { run: summary(store.get(runId, 'run')) };
+      });
+      if (store.get(runId, 'run').status === 'queued' && !background.has(runId)) launch(runId, () => performRun(runId)); return result;
     },
     retryRun(runId, input) { const result = store.mutation('retry_run:' + runId, input, () => { const old = store.get(runId, 'run'); requireThat(['failed', 'interrupted'].includes(old.status), 'RUN_STATE', 'This run does not need retry', 409); const run = { ...old, id: id(), retryOf: old.id, status: 'queued', createdAt: now(), error: null }; store.put('run', run); store.event(run.projectId, run.id, 'analysis_retry_requested', { actor: input.actor }); return { run: summary(run) }; }); if (store.get(result.run.id, 'run').status === 'queued' && !background.has(result.run.id)) launch(result.run.id, () => performRun(result.run.id)); return result; },
     run(runId) {
@@ -227,11 +245,11 @@ export async function openWorkspace(options) {
     exportProject(projectId, input) {
       return store.mutation('export:' + projectId, input, () => {
         const p = store.project(projectId, input.revision); if (input.runId) requireThat(store.get(input.runId, 'run').projectId === projectId, 'EXPORT_RUN', 'Select a run from this project');
-        const objects = store.db.prepare("SELECT * FROM objects WHERE project_id=? AND kind NOT IN ('export','job')").all(projectId).map(x => ({ ...x, value: JSON.parse(x.value) }));
+        const objects = store.db.prepare("SELECT * FROM objects WHERE project_id=? AND kind <> 'export'").all(projectId).map(x => ({ ...x, value: JSON.parse(x.value) }));
         const files = store.db.prepare("SELECT * FROM files WHERE project_id=? AND id NOT IN (SELECT json_extract(value,'$.fileId') FROM objects WHERE project_id=? AND kind='export')").all(projectId, projectId).map(x => { const file = store.readFile(x.id); return { id: x.id, name: x.name, sha256: x.sha256, bytes: x.size, createdAt: x.created_at, contentBase64: file.data.toString('base64') }; });
         const records = store.db.prepare('SELECT * FROM records WHERE snapshot_id IN (SELECT id FROM objects WHERE project_id=? AND kind=?)').all(projectId, 'snapshot');
         const reviews = store.db.prepare('SELECT * FROM reviews WHERE project_id=?').all(projectId), history = store.events(projectId, null, 1000000);
-        const data = { schema: 'commons.hubspot.pipeline-project.v1', exportedAt: now(), selectedRunId: input.runId ?? null, project: p, objects, files, records, reviews, history, custody: 'Contains the selected project\'s original permitted CRM source, manager reviews and task/note receipts. Incomplete source-sync jobs are historical events only and are not resumed by restore.' };
+        const data = { schema: 'commons.hubspot.pipeline-project.v1', exportedAt: now(), selectedRunId: input.runId ?? null, project: p, objects, files, records, reviews, history, custody: 'Contains the selected project\'s original permitted CRM source, manager reviews, task/note receipts and monitoring/digest histories. Received schedules are paused for explicit binding. Original incomplete captures and digest reservations remain historical on the receiving host.' };
         const bytes = gzipSync(jsonBytes({ ...data, contentSha256: digest(data) }));
         requireThat(bytes.length <= 128 * 1024 * 1024, 'EXPORT_CAPACITY', 'Project exceeds the 128 MiB portable export limit');
         const file = store.file(projectId, 'pipeline-project.json.gz', bytes), output = { id: id(), projectId, name: text(input.name, 'export name'), runId: input.runId ?? null, fileId: file.id, sha256: file.sha256, bytes: bytes.length, createdAt: now() }; store.put('export', output); store.bump(p, input.actor, 'project_exported', { exportId: output.id }); return { export: output };
@@ -243,6 +261,7 @@ export async function openWorkspace(options) {
       requireThat(data.schema === 'commons.hubspot.pipeline-project.v1' && digest(data) === contentSha256 && Array.isArray(data.objects) && Array.isArray(data.files) && Array.isArray(data.records) && Array.isArray(data.reviews), 'RESTORE_SOURCE', 'Portable project identity or contents do not match');
       normalizeConfig(data.project.config); requireThat(data.records.length <= 1000000 && data.objects.length <= 100000 && data.files.length <= 100000, 'RESTORE_CAPACITY', 'Portable project exceeds workspace capacity');
       for (const file of data.files) { const content = decode64(file.contentBase64, 128 * 1024 * 1024); requireThat(content.length === file.bytes && sha(content) === file.sha256, 'RESTORE_SOURCE', 'An original file does not match its saved hash'); }
+      validateAutomationArchive(data);
       return store.mutation('restore_project', input, () => {
         const projectId = id(), mapping = new Map(data.objects.map(x => [x.id, id()])); mapping.set(data.project.id, projectId); for (const file of data.files) mapping.set(file.id, id());
         const replace = value => Array.isArray(value) ? value.map(replace) : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replace(item)])) : typeof value === 'string' && mapping.has(value) ? mapping.get(value) : value;
@@ -250,10 +269,11 @@ export async function openWorkspace(options) {
         const fileInsert = store.db.prepare('INSERT INTO files VALUES(?,?,?,?,?,?)');
         for (const file of data.files) { const content = Buffer.from(file.contentBase64, 'base64'); store.db.prepare('INSERT OR IGNORE INTO blobs VALUES(?,?)').run(file.sha256, content); fileInsert.run(mapping.get(file.id), projectId, file.name, file.sha256, file.bytes, file.createdAt); }
         for (const object of data.objects) {
-          requireThat(['project', 'schema', 'snapshot', 'run', 'action'].includes(object.kind) && object.project_id === data.project.id, 'RESTORE_SOURCE', 'Portable object is outside the selected project');
+          requireThat(['project', 'schema', 'snapshot', 'run', 'action', 'job', 'automation', 'automation_cycle', 'automation_digest', 'automation_digest_review'].includes(object.kind) && object.project_id === data.project.id, 'RESTORE_SOURCE', 'Portable object is outside the selected project');
           requireThat(object.value?.id === object.id && (object.kind === 'project' ? object.id === data.project.id : object.value.projectId === data.project.id), 'RESTORE_SOURCE', 'Portable object identity differs from its original project');
           if (object.kind === 'project') continue;
           const value = replace(object.value); value.id = mapping.get(object.id); value.projectId = projectId; value.originalId = object.id;
+          receiveAutomationObject(object.kind, value, object.value);
           if (object.kind === 'action' && (value.writeStartedAt || ['uncertain', 'executing'].includes(value.status)) && value.status !== 'completed') { value.status = 'uncertain'; value.reconciling = false; value.version++; value.error = { code: 'RESTORED_ATTEMPT', message: 'Reconcile the retained native attempt; restoration never resends it', at: now() }; }
           else if (object.kind === 'action' && !['completed', 'revoked'].includes(value.status)) { value.status = 'draft'; value.prepared = null; value.approval = null; value.version++; value.error = { code: 'RESTORED_PROPOSAL', message: 'Prepare this restored proposal against the current host before approval', at: now() }; }
           store.put(object.kind, value);
@@ -268,5 +288,6 @@ export async function openWorkspace(options) {
     async close() { for (const { controller } of background.values()) controller.abort(new Error('Operator workspace stopping')); await Promise.allSettled([...background.values()].map(x => x.completion)); store.close(); }
   };
   installActions(workspace, options);
+  installAutomation(workspace, options);
   return workspace;
 }

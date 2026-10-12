@@ -11,5 +11,8 @@
   "exports": {
     "./seller/feeds/merchant": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/merchant.mjs",
     "./buyer/feeds": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/feeds/merchant.mjs"
+  },
+  "applicationProviders": {
+    "feeds": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/feeds.mjs"
   }
 }

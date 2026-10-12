@@ -1,0 +1,9 @@
+{
+  "schema": "stellar-forge.sec-edgar-managed-input.v1",
+  "runtimeDirectory": "/absolute/customer-installed-runtime",
+  "workspaceDirectory": "/absolute/original-sec-workspace",
+  "storeDirectory": "/absolute/original-sec-capture-store",
+  "referenceExportDirectory": "/absolute/original-sec-merchant-export",
+  "manifestSha256": "27ef7f9f05a99530cf72f64ce722dba8e90561444f1581350df8cbdc84374eee",
+  "outputDirectory": "/absolute/new-sec-commissioning-operation"
+}
