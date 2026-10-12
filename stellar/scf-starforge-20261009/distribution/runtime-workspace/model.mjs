@@ -41,6 +41,7 @@ import { sourceBuildOperationFields, initializeSourceBuildWorkspace, sourceBuild
 import { sourceProductPlansState, readSourceProductPlan, saveSourceProductPlan, refreshSourceProductPlan,
   exportSourceProductPlan, receiveSourceProductPlan, readProductPlanReceiving,
   continueProductPlanReceiving } from './source-product-plans.mjs';
+import { exportProductPlanBriefing } from './product-plan-briefing.mjs';
 
 export const WORKSPACE_SCHEMA = 'stellar-forge.runtime-workspace.v1';
 const WORKER = fileURLToPath(new URL('./worker.mjs', import.meta.url));
@@ -196,6 +197,12 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
     directory: root,
     async sourcePlansState(input) { return sourceProductPlansState(root, input); },
     async sourcePlanRead(input) { return readSourceProductPlan(root, input); },
+    async sourcePlanBriefing(input) {
+      need(plain(input) && Object.keys(input).every(key => ['planId', 'bindingId', 'format'].includes(key)), 'PRODUCT_PLAN_BRIEFING_FIELDS_INVALID');
+      const { format = 'markdown', ...selected } = input;
+      need(['json', 'markdown', 'html'].includes(format), 'PRODUCT_PLAN_BRIEFING_FORMAT_INVALID');
+      return exportProductPlanBriefing(await readSourceProductPlan(root, selected), { format });
+    },
     async sourcePlanSave(input) { return saveSourceProductPlan(root, input); },
     async sourcePlanRefresh(input) { return refreshSourceProductPlan(root, input); },
     async sourcePlanExport(input) { return exportSourceProductPlan(root, input); },
