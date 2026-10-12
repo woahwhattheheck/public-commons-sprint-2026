@@ -37,7 +37,7 @@ export function renderOriginalRecordControl({root,citation,dossierId,revision,ap
 }
 /** Returns true when the source uses the explicit compact inspection contract. */
 export function renderInspectedSource({filesRoot,excerpt,source,variant,dossierId,revision,api,task,notify}){
-  const inspection=variant?.inspection??source.inspection;
+  const inspection=variant?variant.inspection:source.inspection;
   if(inspection?.schema!=='sf88-research-source-inspection-v1')return false;
   filesRoot.replaceChildren();filesRoot.hidden=false;
   const content=variant?variant.content:source.content,selection=inspection.selection;
