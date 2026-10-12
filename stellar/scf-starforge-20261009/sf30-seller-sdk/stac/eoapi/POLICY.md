@@ -59,8 +59,8 @@ The schema is `scf-eoapi-deployment-policy/v1`. The controller supplies the cust
 | --- | --- |
 | `title` | Human-readable configuration title |
 | `deployment` | `id`, `eoapiVersion`, `authProxyVersion`, `sourceRef`, `publicUrl`; optional `rootPath` and `rootPathSkipPrefixes` |
-| `upstream` | `url`, `conformsTo` from the selected upstream, `networkBoundary` describing how the upstream is restricted to its proxy |
-| `identity` | `discoveryUrl`, `audiences`, `policyOwner`; optional `internalDiscoveryUrl` |
+| `upstream` | `url`, `conformsTo` from the selected upstream, `networkBoundary` describing the selected public or private source boundary |
+| `identity` | OIDC: `discoveryUrl`, `audiences`, `policyOwner`, optional `internalDiscoveryUrl` and `mode: "oidc"`. Public source: `mode: "public"`, `policyOwner` |
 | `routing` | Explicit `defaultPublic`, ordered `publicEndpoints` and ordered `privateEndpoints` dictionaries |
 | `filtering` | Optional `items` and `collections`, each a factory definition or `null` |
 | `cors` | Optional `origins`, `methods`, `headers`, `credentials`, `exposeHeaders`, `maxAge` |
@@ -70,6 +70,31 @@ The schema is `scf-eoapi-deployment-policy/v1`. The controller supplies the cust
 `assetAccess` is one of `public-https`, `authenticated-source`, `requester-pays` or `retained-files`. These declarations travel with the policy; the existing acquisition and delivery operations apply the selected source access and exact-file behavior.
 
 The portable policy accepts public connection settings and policy expressions. Supply credentials through the existing private source-connection mechanism in the receiving environment. Credential-shaped fields, bearer values, private keys and JWT values are rejected before saving.
+
+
+### Public source and OIDC modes
+
+The selected STAC Auth Proxy v1.3.0 application initializes an identity provider at startup and during request handling, including routes that are public by default. A public catalog such as Earth Search therefore uses an explicit public runtime supplied with its policy package.
+
+Use this identity group for public source intake:
+
+```json
+{"mode":"public","policyOwner":"Operating team"}
+```
+
+Public mode requires `routing.defaultPublic: true`, no private route rules, both record filters absent or `null`, and `cors.credentials: false`. OIDC discovery fields and audiences must be absent. The included factory is selected against `stac-auth-proxy==1.3.0` source `dd0c10f27999b0cb0874f5330a938e2ed5349dcd`; record that exact version and source reference in the deployment fields. The review shows its filename, factory, native dependency and file SHA-256.
+
+The compiler exports `EOAPI_IDENTITY_MODE=public` and disables authentication annotation. Its replacement list removes discovery/audience settings, ambient OpenAPI and Swagger identity configuration, stale record filters and the unreviewed proxy options. The included factory uses the original native request/path/link/CORS/reverse-proxy components, performs upstream-only startup checks, and strips incoming Authorization, Cookie and Proxy-Authorization before forwarding. Its typed settings reject private routes, record filters, identity settings and credentialed CORS.
+
+Load the reviewed environment after applying its unset list, then launch the included file with the selected existing Python runtime:
+
+```sh
+python -m uvicorn eoapi_public_proxy:create_app --factory --app-dir PACKAGE_DIRECTORY
+```
+
+The public package contains the complete Python source, so receiving verifies and carries the runnable factory with the approved configuration. The selected native dependency remains the receiving runtime's normal installed package. Its constructor source is checked against the recorded revision before startup.
+
+An absent identity mode preserves the existing OIDC policy and package bytes. New authenticated intake may use `mode: "oidc"`; this explicit form removes a previous `EOAPI_IDENTITY_MODE` when applying a replacement and launches the original `stac_auth_proxy.app:create_app` factory. The editor preserves absent mode on an existing untouched OIDC policy and records explicit OIDC when switching from a public edition. Complete compilations set native default access, private routes, authentication annotation and CORS credentials, so those values follow the newly approved edition.
 
 ### Routes and precedence
 
@@ -104,7 +129,7 @@ Either record filter requires the native common CQL2 classes `basic-cql2`, `cql2
 
 ## Export and receiving
 
-The package schema is `scf-eoapi-policy-package/v1`. It contains seven named files with exact UTF-8 text, byte count and SHA-256, plus a digest of the complete package contents. Directory export writes these seven files and `package.json`:
+The package schema is `scf-eoapi-policy-package/v1`. It contains seven base files with exact UTF-8 text, byte count and SHA-256, plus a digest of the complete package contents. Public-source policies add the complete `eoapi_public_proxy.py` runtime as an eighth exact file. Directory export writes the selected files and `package.json`:
 
 | File | Contents |
 | --- | --- |
@@ -115,6 +140,7 @@ The package schema is `scf-eoapi-policy-package/v1`. It contains seven named fil
 | `unset-environment.json` | Variables to remove from a previous configuration |
 | `auth-proxy.docker.env` | The same literal values for Docker `--env-file` |
 | `OPERATOR.md` | Reviewed settings, route precedence, rights and receiving instructions |
+| `eoapi_public_proxy.py` | Public-source policies only: complete selected native factory, verified during receiving |
 
 Use `applyDeploymentEnvironment(existingEnvironment, compilation)` to apply a replacement: it removes `unset` keys and overlays the compiled values. Omitted internal discovery removes a prior internal discovery URL so the native fallback follows the current public discovery URL. Unmanaged custom filter paths and `PROXY_OPTIONS` are removed so the native default filter coverage and reviewed CORS behavior apply. Existing parent `ITEMS_FILTER` and `COLLECTIONS_FILTER` JSON variables are also removed; disabled factories remove the corresponding class and argument settings.
 
@@ -152,3 +178,80 @@ node policy-cli.mjs status --workspace /absolute/receiving-policy
 - [OPA constructor](https://developmentseed.org/stac-auth-proxy/reference/stac_auth_proxy/filters/opa/)
 
 The compiler's contract was checked against the maintained sources above on 2026-10-12. Record the selected deployment's own version and source reference in every intake so a later operator can compare a native upgrade with the approved configuration.
+
+## Operator editor and host controller
+
+The industrial editor uses the same compiler, revision store and approval IDs as the CLI. It provides deployment and identity intake, ordered route editing, record filters and collection rights; review with differences and native conformance findings; approval; complete package export; receiving; and paginated saved history.
+
+Serve `policy-view.mjs` and `policy.css` from the existing operator application. Create one controller around that application's existing policy workspace:
+
+```js
+import { createDeploymentPolicyController } from './policy-controller.mjs';
+
+const controller = createDeploymentPolicyController({
+  workspace: policies,
+  reviewerFor: ({ context }) => context.operator.displayName
+});
+
+// The authenticated host strips its /api/eoapi/policy prefix.
+// Context comes from that host's verified operator session.
+const response = await controller.dispatch({
+  method: request.method,
+  path: policyPath,
+  body: parsedBody,
+  signal: request.signal,
+  context: { operator: authenticatedOperator }
+});
+```
+
+The host applies its existing authentication, authorization, same-origin and CSRF controls before dispatch, and supplies a request-size limit. The controller accepts JSON bodies up to 20 MiB. Browser inputs cannot create the trusted context. When `reviewerFor` is configured, its result supplies the approval reviewer; a body reviewer does not override it. Without that callback, a local operator application supplies the reviewer explicitly.
+
+```js
+import { mountDeploymentPolicy } from './policy-view.mjs';
+
+const panel = mountDeploymentPolicy(policyElement, {
+  dispatch: request => authenticatedPolicyRequest(request),
+  onApproval: async ({ approval, policy, compilation }) => {
+    await onboardingPanel.selectPolicy({
+      approvalId: approval.id,
+      policyDigest: compilation.digest
+    });
+  },
+  onReceived: async ({ receipt, approval }) => {
+    await onboardingPanel.refresh();
+  }
+});
+await panel.ready;
+```
+
+`authenticatedPolicyRequest` adapts the host's existing request mechanism and returns `{status, body}`. `selectPolicy` and `refresh` above are host-owned integration points, not new policy APIs. The selected approval can always be reopened with the original `policies.getApproval({approvalId})`. The callbacks run after the corresponding original workspace action has completed; a failed host refresh leaves that saved action available for reconciliation. `panel.refresh()` updates the view, and `panel.destroy()` removes listeners and releases download URLs.
+
+The dispatcher uses these paths relative to the host's mount:
+
+| Method and path | Input | Result |
+| --- | --- | --- |
+| GET `/state` | — | Workspace identity/revision, saved draft, current approval, history counts and operator identity |
+| GET `/history?kind=reviews&limit=30&before=N` | Kind is `reviews`, `approvals` or `imports`; optional earlier-page cursor | Newest-first summaries and `nextBefore` |
+| GET `/reviews/REVIEW_ID` | — | Original saved review, associated approval and current-draft status |
+| GET `/approvals/APPROVAL_ID` | — | Original detached approval, review, policy and compilation |
+| POST `/preview` | `{policy, againstApprovalId?}` | Compilation and differences against the selected/current approval |
+| POST `/draft` | `{policy, expectedRevision}` | Saved normalized draft and resulting revision |
+| POST `/review` | `{expectedRevision}` | Saved review of the current draft |
+| POST `/approve` | `{reviewId, reviewer?, expectedRevision}` | Original approval identity |
+| POST `/export` | `{approvalId?}` | Complete original package |
+| POST `/inspect` | `{package}` | Validated receiving identity, policy, compilation and file metadata |
+| POST `/receive` | `{package, expectedRevision}` | Original receiving receipt |
+
+The history cursor records an exclusive array index. New appended records do not move the earlier page already selected. The view can inspect an older review, copy it into a new draft, or export an older approval while newer work remains saved.
+
+### Editing, approval and receiving
+
+The editor retains the revision on which its unsaved fields are based. Refreshing after another writer's update preserves those fields and their original revision; it does not silently make the stale edit current. A stale save or approval returns HTTP 409. Reopen the current saved edition, inspect its differences, and choose the intended new draft before saving again.
+
+Route rows have explicit move controls because their order affects native matching. Public rules and private rules are displayed in separate ordered groups with their native precedence. The editor sends the authored Python patterns unchanged to the original compiler.
+
+Preview compiles without changing the workspace. Save and review create the original immutable records. Approval is available only for the reviewed current draft with no outstanding conformance findings; unsaved local edits require a new save and review.
+
+Package export downloads one JSON file containing the complete policy package, including each original file's text, bytes and SHA-256. The approved-edition view also offers the individual files. The complete JSON can be passed directly to the existing CLI `receive --input` or imported into another editor. Its package digest and original approval ID remain visible throughout inspection and receiving.
+
+The receive panel validates the complete package before importing it. Receiving selects the original approval and replaces the receiving workspace's saved draft with that approved policy. Unsaved editor fields remain visible with their original base revision; use the existing Reload saved draft action to replace those local fields with the received policy. The resulting receipt can be reopened in history; it retains the source workspace, package and policy identities used by onboarding and commissioning.
