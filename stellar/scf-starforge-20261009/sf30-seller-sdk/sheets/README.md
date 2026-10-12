@@ -275,3 +275,8 @@ close the original publisher in a `finally` block to release its workspace lock.
 ## Operate a published merchant
 
 The existing source workspace now prepares a reviewed published run for the original SF82 merchant release lifecycle. Use **Merchant deployment** to bind the exact saved source version and original publication to explicit public payment terms, inspect the five-file package, stage an immutable release and open the original deployment console. Browser, CLI and MCP share that original owner for selection, start, restart, drain, rollback and reopen. The original dataset version store remains authoritative; merchant rollback does not rewind its published versions. See [the complete deployment guide](DEPLOYMENT.md) for the operator workflow, exact commands, native receiving and retained-request recovery.
+
+## Reopen source authoring from Applications
+
+The maintained **Google Sheets source authoring** application reviews and starts this same private workspace from a READY runtime. It preserves the original workbook observations, drafts, source versions, publication state and managed merchant releases. Start checks the selected and adopted original source, the immutable workspace binding and the reviewed connection-file bytes; ordinary saved edits remain reopenable. Stop drains the original source, publisher and owned merchant. Follow [the complete Applications guide](APPLICATIONS.md) for initialization, Review/Save/Start, original browser work, lost-reply recovery, Stop, receiving and same-workspace reopening.
+

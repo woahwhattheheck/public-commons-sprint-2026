@@ -6,7 +6,7 @@ import { isAbsolute } from 'node:path';
 import { checkStellarTransaction, createOfficialEventDecoder } from '../sf43-agent-commerce/verify.mjs';
 import { captureBuyerResult, captureBuyerError, aggregateOutcomes } from '../sf52-buyer-outcomes/outcomes.mjs';
 import { sf81ReconciliationRecord } from '../sf82-chain-transfer-reconcile/record.mjs';
-import {checkoutPaths,readCheckoutRecord,createCheckoutRecord} from './checkpoint.mjs';
+import {checkoutPaths,readCheckoutRecord,createCheckoutRecord,finishCheckoutRecordPublication} from './checkpoint.mjs';
 
 const tag = /^[A-Za-z0-9._:-]{1,128}$/; // Original SF52 observation identity limit.
 const payer = /^[GC][A-Z2-7]{55}$/;
@@ -202,6 +202,7 @@ export async function recoverCheckoutEvidence({outputDir,intentId,trustedPayer,
   if (decodeContractEvent!==undefined&&typeof decodeContractEvent!=='function')
     throw new TypeError('DECODER_MUST_BE_TRUSTED_FUNCTION');
   if (rpcFetch!==undefined&&typeof rpcFetch!=='function')throw new TypeError('RPC_FETCH_INVALID');
+  for(const path of [checkpointPath,bodyPath,evidencePath])await finishCheckoutRecordPublication(path);
   const terminal=await readCheckoutRecord(evidencePath,{optional:true});
   if (terminal)return terminalRecord(terminal,intentId);
   const checkpoint=await readCheckoutRecord(checkpointPath),saved=checkpoint.value;

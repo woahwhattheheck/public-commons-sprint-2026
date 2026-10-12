@@ -7,6 +7,7 @@ import { resolve } from 'node:path';
 import { startLocalDevelopmentCatalog } from '../sf44-developer-onramp/onboard.mjs';
 import { prepareReview } from '../sf88-operator-buyer-cli/prepare.mjs';
 import { createAtlasWorkspaceHttp } from './workspace-http.mjs';
+import { publishAtlasLaunch } from './managed-launch.mjs';
 
 const HOST = '127.0.0.1';
 const MAX_PAGE_BYTES = 16 * 1024 * 1024;
@@ -45,7 +46,7 @@ async function reviewRequest(req) {
   return prepareReview(Buffer.from(body.discovery,'utf8'),body.selection);
 }
 
-function normalizeUpstream(address) {
+export function normalizeUpstream(address) {
   const url = new URL(address);
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
       !['/', '/discovery/resources'].includes(url.pathname) || url.port ||
@@ -56,7 +57,7 @@ function normalizeUpstream(address) {
   return url.origin;
 }
 
-function normalizeLocalUpstream(address) {
+export function normalizeLocalUpstream(address) {
   const url = new URL(address);
   // The ORIGINAL SF60 service binds only to IPv4 127.0.0.1 and rejects any
   // nonliteral Host. No hostnames, DNS, credentials or custom remote targets.
@@ -260,9 +261,9 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
       server.once('error', reject);
       server.listen(port, HOST, resolve);
     });
-    expectedHost = HOST + ':' + server.address().port;
+    expectedHost = new URL('http://' + HOST + ':' + server.address().port).host;
     return {
-      source, url: 'http://' + expectedHost + (workspace ? '/#' + workspace.token : ''),
+      source, sourceOrigin: upstreamOrigin ?? null, url: 'http://' + expectedHost + (workspace ? '/#' + workspace.token : ''),
       async close() {
         await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
         await workspace?.close();
@@ -280,14 +281,14 @@ export async function startExplorer({ fixture = false, upstream = null, localUps
 function cli() {
   const args = process.argv.slice(2);
   if (args.includes('--help')) {
-    console.log('Use: node server.mjs [--fixture OR --local-upstream http://127.0.0.1:8787 OR --upstream https://public-facilitator.example] [--workspace ABSOLUTE_PRIVATE_DIRECTORY] [--port 0]\nWith --workspace and no live source, reopen retained catalog pages and buyer requests.');
+    console.log('Use: node server.mjs [--fixture OR --local-upstream http://127.0.0.1:8787 OR --upstream https://public-facilitator.example] [--workspace ABSOLUTE_PRIVATE_DIRECTORY] [--port 0] [--managed-source ABS_SELECTED_ATLAS_SOURCE]\nWith --workspace and no live source, reopen retained catalog pages and buyer requests.');
     return;
   }
   const count = name => args.filter(value => value === name).length;
-  if (args.some((arg, i) => !['--fixture', '--upstream', '--local-upstream', '--workspace', '--port'].includes(arg) &&
-      !(i > 0 && ['--upstream', '--local-upstream', '--workspace', '--port'].includes(args[i - 1]))) ||
+  if (args.some((arg, i) => !['--fixture', '--upstream', '--local-upstream', '--workspace', '--port', '--managed-source'].includes(arg) &&
+      !(i > 0 && ['--upstream', '--local-upstream', '--workspace', '--port', '--managed-source'].includes(args[i - 1]))) ||
       count('--fixture') > 1 || count('--upstream') > 1 ||
-      count('--local-upstream') > 1 || count('--workspace') > 1 || count('--port') > 1 ||
+      count('--local-upstream') > 1 || count('--workspace') > 1 || count('--port') > 1 || count('--managed-source') > 1 ||
       [args.includes('--fixture'), args.includes('--upstream'),
         args.includes('--local-upstream')].filter(Boolean).length > 1) {
     throw new TypeError('Unknown, duplicate or conflicting CLI options');
@@ -297,19 +298,38 @@ function cli() {
   const port = portArg === null ? 0 : Number(portArg);
   const fixture = args.includes('--fixture') ||
     (!args.includes('--upstream') && !args.includes('--local-upstream') && !args.includes('--workspace'));
+  const managedSource = value('--managed-source');
+  if (managedSource && !value('--workspace'))
+    throw new TypeError('Managed Atlas requires its original private workspace');
   return startExplorer({ fixture, upstream: value('--upstream'),
-    localUpstream: value('--local-upstream'), workspaceDirectory: value('--workspace'), port }).then(session => {
-    console.log(JSON.stringify({ status: 'RUNNING', url: session.url, source: session.source,
-      paidRequestsEnabled: false }, null, 2));
-    let stopping = false;
+    localUpstream: value('--local-upstream'), workspaceDirectory: value('--workspace'), port }).then(async session => {
+    let managedLaunch = null, stopping = false, closing = null;
+    const startup = managedSource ? publishAtlasLaunch({ directory: value('--workspace'),
+      sourceDirectory: managedSource, source: session.source, sourceOrigin: session.sourceOrigin,
+      url: session.url }).then(value => { managedLaunch = value; }) : Promise.resolve();
+    const close = () => closing ??= (async () => {
+      await startup.catch(() => {});
+      try { await managedLaunch?.retire(); } finally { await session.close(); }
+    })();
     const stop = async () => {
       if (stopping) return;
       stopping = true;
-      try { await session.close(); }
+      try { await close(); }
       catch (error) { console.error(error); process.exitCode = 1; }
     };
     process.once('SIGINT', stop);
     process.once('SIGTERM', stop);
+    try {
+      await startup;
+      if (stopping) { await close(); return; }
+      console.log(managedLaunch ? JSON.stringify(managedLaunch.value)
+        : JSON.stringify({ status: 'RUNNING', url: session.url, source: session.source,
+          paidRequestsEnabled: false }, null, 2));
+    } catch (error) {
+      await close().catch(() => {});
+      process.removeListener('SIGINT', stop); process.removeListener('SIGTERM', stop);
+      throw error;
+    }
   });
 }
 
