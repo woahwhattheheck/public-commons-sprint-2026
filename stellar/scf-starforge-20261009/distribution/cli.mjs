@@ -50,6 +50,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   huwise                                    Alias for the same Opendatasoft data workspace
   arcgis                                    Capture ArcGIS layers and receive native Esri FeatureSets
   arcgis-publisher                          Publish reviewed ArcGIS data with original merchant and buyer handoff
+  arcgis-agent                              Open the original ArcGIS browser and MCP service over one saved publisher
   sftp                                      Inspect, capture and resume pinned private report files
   sftp-publisher                            Publish retained file datasets with original refresh and buyer handoff
   sftp-workspace                            Author SFTP reports, exact merchant terms and native publications
@@ -123,6 +124,7 @@ Native commands (arguments pass unchanged to the maintained implementation):
   paid-file-purchase Prepare and retrieve an approved customer order
   api-pass                                  Sell and operate purchased API allowances on original orders
   api-pass-client                           Use an allowance, inspect usage and recover an original response
+  api-pass-workspace                        Open the API customer workspace, saved requests, recovery and statements
   api-purchase                              Buy an API allowance, call approved routes and recover saved responses
   api-application                           Run source-pinned application functions over purchased API allowances
   postgres-init / postgres-inspect            Prepare or inspect a PostgreSQL source

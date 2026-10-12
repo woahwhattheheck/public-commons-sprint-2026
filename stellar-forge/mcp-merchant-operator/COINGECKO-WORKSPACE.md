@@ -329,4 +329,6 @@ The manifest schema is stellar-forge.coingecko-mcp-receiving.v1. Paths resolve r
 
 The command keeps its original manifest hash, write arguments, operation IDs and completed stages in receiving-checkpoint.json. Continue with that same manifest and output directory after an interruption. It recovers unchanged native writes and reads the original source bytes; it does not create a probe or purchase job. The original native buyer receiving operation remains responsible for paid execution.
 
+The receiving client sends both application/json and text/event-stream in the HTTP Accept header, as required by the original merchant transport. Collection and row readers use the original model's default page size and continue with the returned offset and total until every record is received. File delivery uses its separate byte-chunk contract.
+
 The final directory contains the full collection, snapshot, comparison, provider deployment, portable project archive and NATIVE_MCP_RECEIVING_RESULT.json. Its archive and source-file checks compare complete delivered bytes and restored native ID mappings. The separate native jobs recovery exercise remains responsible for actual worker interruption and already-saved buyer response recovery.

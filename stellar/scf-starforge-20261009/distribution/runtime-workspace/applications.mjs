@@ -1,24 +1,30 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
 import { readDistributionSpecification } from '../specification.mjs';
+import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
 import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
+import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
 import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
 import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
 import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
 import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
 import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
 import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
+import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
 import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
 import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
+import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
 import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
 import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
 import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
 import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
 import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
+import { fredApplication, prepareFredApplication } from './application-fred.mjs';
+import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
 import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
 import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
 import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
@@ -49,22 +55,28 @@ const common = [
   field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
 ];
 export const APPLICATION_CATALOG = Object.freeze([
+  grpcApplication(common),
   atlasApplication(common),
+  n8nApplication(common),
   ...PYTHON_APPLICATION_CATALOG,
   ...eventFeedApplications(common),
+  apiPassWorkspaceApplication(common),
   blockscoutApplication(common),
   mppApplication(common),
+  ndjsonApplication(common),
   cheesecakeApplication(common),
   odataApplication(common),
   secEdgarApplication(common),
   jobResultReceiverApplication(common),
   sheetsApplication(common),
   redisApplication(common),
+  arcgisAgentApplication(common),
   jobCheckoutApplication(common),
   datasetBuyerApplication(common),
   pricingApplication(common),
   collectionsApplication(common),
   grantApplication(common),
+  fredApplication(common),
   tenderlyApplication(common),
   browserWalletApplication(common),
   rssAtomApplication(common),
@@ -214,13 +226,20 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
   const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
+  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi;
   const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
     if (!settings[name]) return;
     const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
   };
   const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'mpp') {
+  if (type.id === 'grpc-workspace') {
+    const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+    createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'fred') {
+    const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'mpp') {
     const original = await prepareMppApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); mppBinding = original.binding;
   } else if (type.id === 'stellar-application') {
@@ -241,6 +260,10 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'sheets-authoring') {
     const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'api-pass-customer') {
+    const original = await prepareApiPassWorkspaceApplication(settings, { runtimeDirectory, inputPath, selectedExecutable });
+    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+    apiPassWorkspace = original.identity;
   } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
     const selected = await prepareEventFeedApplication(type.id, settings, {
       ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
@@ -251,6 +274,9 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'redis') {
     const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'arcgis-agent') {
+    const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'job-checkout') {
     const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
@@ -278,11 +304,19 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   } else if (type.id === 'catalog-atlas') {
     const original = await prepareAtlasApplication(settings, inputPath, runtimeDirectory);
     args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
+  } else if (type.id === 'n8n-merchant') {
+    const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
+    args.push(...original.args); inputs.push(...original.inputs);
   } else if (type.id === 'rss-atom') {
     const original = await prepareRssAtomApplication(settings, {
       inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
     });
     args.push(...original.args); inputs.push(...original.inputs);
+  } else if (type.id === 'ndjson') {
+    const prepared = await prepareNdjsonApplication(settings, {
+      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
+    });
+    args.push(...prepared.args); inputs.push(...prepared.inputs);
   } else if (type.id === 'xml') {
     await path('workspaceDirectory', 'directory', false, true);
     args.push('xml', '--workspace', settings.workspaceDirectory, 'serve');
@@ -414,6 +448,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
   const environment = await applicationEnvironment(settings.environmentFile);
   return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
     ...(eventFeed ? { eventFeed } : {}),
+    ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
     ...(mppBinding ? { mppBinding } : {}),
     ...(openapi ? { openapi } : {}),
     ...(stellarApplication ? { stellarApplication } : {}),
@@ -424,6 +459,7 @@ async function applicationCommand(type, settings, runtimeDirectory, context = {}
 }
 function resourceKey(type, settings) {
   if (type.python) return pythonApplicationResource(type, settings);
+  if (type.id === 'arcgis-agent') return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
   // Feeds and XML retain the same original SQLite workspace and writer.

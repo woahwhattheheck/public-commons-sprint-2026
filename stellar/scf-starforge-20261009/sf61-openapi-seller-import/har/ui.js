@@ -1,30 +1,51 @@
-// Included by review.mjs in a CSP-pinned, offline review. model.mjs is shared with the CLI.
-const initial = JSON.parse(document.getElementById('source-data').textContent);
+// MIT. One native operation editor shared by the offline review and private console.
+import { buildDocument, HAR_SCHEMA } from './model.mjs';
+
+export function mountHarReview({root=document,initial,onSave,readDraft,writeDraft,onChange}={}) {
+const doc=root.ownerDocument??document;
+if(!initial?.inventory||!initial?.review)throw new TypeError('Open the original capture review.');
+const originalReview=structuredClone(initial.review);
 const inventory = initial.inventory, byId = new Map(inventory.groups.map(g => [g.id, g]));
-let review = initial.review, selected = 0, page = 0;
-const $ = id => document.getElementById(id);
+let review = structuredClone(initial.review), selected = 0, page = 0;
+const $ = id => root.querySelector('#'+id);
 const storageKey = 'stellar.har.draft.' + inventory.sourceSha256;
 const jsonText = value => JSON.stringify(value, null, 2);
 function notify(message, error = false) { $('status').textContent = message; $('status').setAttribute('role', error ? 'alert' : 'status'); }
-function saveDraft() { try { localStorage.setItem(storageKey, JSON.stringify(review)); } catch {} }
+function saveDraft() {
+  try { if(writeDraft)writeDraft(structuredClone(review));else localStorage.setItem(storageKey,JSON.stringify(review)); } catch {}
+  onChange?.(structuredClone(review));
+}
+function matchingReview(value) {
+  if(value?.schema!==HAR_SCHEMA||value.sourceSha256!==inventory.sourceSha256||!Array.isArray(value.operations))
+    throw new Error('Review belongs to another source.');
+  const expected=originalReview['x-har-refresh'],actual=value['x-har-refresh'];
+  if(expected&&['schema','previousSourceSha256','previousReviewSha256','candidateSourceSha256'].some(key=>actual?.[key]!==expected[key]))
+    throw new Error('Review belongs to another capture-edition comparison. Open its original refresh packet.');
+  return structuredClone(value);
+}
+function replaceReview(value) {
+  const before=review,beforeSelected=selected;
+  review=matchingReview(value);selected=0;
+  try {render();}catch(error){review=before;selected=beforeSelected;render();throw error;}
+}
 function field(label, control, help = '') {
-  const wrap = document.createElement('label'); wrap.className = 'field';
-  const title = document.createElement('span'); title.textContent = label; wrap.append(title, control);
-  if (help) { const small = document.createElement('small'); small.textContent = help; wrap.append(small); } return wrap;
+  const wrap = doc.createElement('label'); wrap.className = 'field';
+  const title = doc.createElement('span'); title.textContent = label; wrap.append(title, control);
+  if (help) { const small = doc.createElement('small'); small.textContent = help; wrap.append(small); } return wrap;
 }
 function input(value, change, type = 'text') {
-  const e = document.createElement('input'); e.type = type;
+  const e = doc.createElement('input'); e.type = type;
   if (type === 'checkbox') e.checked = Boolean(value); else e.value = value ?? '';
   e.addEventListener('change', () => { change(type === 'checkbox' ? e.checked : e.value); saveDraft(); refreshSummary(); }); return e;
 }
 function select(value, values, change) {
-  const e = document.createElement('select');
-  for (const v of values) { const o = document.createElement('option'); o.value = v; o.textContent = v; e.append(o); }
+  const e = doc.createElement('select');
+  for (const v of values) { const o = doc.createElement('option'); o.value = v; o.textContent = v; e.append(o); }
   e.value = value;
   e.addEventListener('change', () => { change(e.value); saveDraft(); renderDetail(); refreshSummary(); }); return e;
 }
 function jsonEditor(value, change, label) {
-  const e = document.createElement('textarea'); e.value = jsonText(value); e.rows = Math.max(2, Math.min(12, e.value.split('\n').length)); e.spellcheck = false;
+  const e = doc.createElement('textarea'); e.value = jsonText(value); e.rows = Math.max(2, Math.min(12, e.value.split('\n').length)); e.spellcheck = false;
   e.setAttribute('aria-label', label);
   e.addEventListener('change', () => {
     try { const parsed = JSON.parse(e.value); change(parsed); e.setCustomValidity(''); saveDraft(); refreshSummary(); }
@@ -32,8 +53,8 @@ function jsonEditor(value, change, label) {
   }); return e;
 }
 function detailGroup(title, help) {
-  const s = document.createElement('section'), h = document.createElement('h3'); h.textContent = title; s.append(h);
-  if (help) { const p = document.createElement('p'); p.className = 'muted'; p.textContent = help; s.append(p); }
+  const s = doc.createElement('section'), h = doc.createElement('h3'); h.textContent = title; s.append(h);
+  if (help) { const p = doc.createElement('p'); p.className = 'muted'; p.textContent = help; s.append(p); }
   $('detail').append(s); return s;
 }
 function unionGroups(op) {
@@ -48,10 +69,10 @@ function renderList() {
   page = Math.min(page, Math.max(0, Math.ceil(rows.length / 25) - 1));
   $('operations').replaceChildren();
   for (const { op, i, group } of rows.slice(page * 25, (page + 1) * 25)) {
-    const b = document.createElement('button'); b.className = 'operation' + (i === selected ? ' current' : '');
+    const b = doc.createElement('button'); b.className = 'operation' + (i === selected ? ' current' : '');
     b.type = 'button'; b.setAttribute('aria-pressed', String(i === selected));
-    const head = document.createElement('strong'); head.textContent = `${op.enabled ? 'Selected · ' : ''}${group?.method || '?'} ${group?.path || op.id}`;
-    const meta = document.createElement('small'); meta.textContent = `${op.id} · ${op.groups.join(', ')} · ${group?.entryIds.length || 0} captures`;
+    const head = doc.createElement('strong'); head.textContent = `${op.enabled ? 'Selected · ' : ''}${group?.method || '?'} ${group?.path || op.id}`;
+    const meta = doc.createElement('small'); meta.textContent = `${op.id} · ${op.groups.join(', ')} · ${group?.entryIds.length || 0} captures`;
     b.append(head, meta); b.addEventListener('click', () => { selected = i; renderList(); renderDetail(); }); $('operations').append(b);
   }
   $('page').textContent = `${rows.length} operations · page ${rows.length ? page + 1 : 0} / ${Math.ceil(rows.length / 25)}`;
@@ -62,7 +83,7 @@ function renderDetail() {
   const u = unionGroups(op), group = u.groups[0];
   let s = detailGroup('Operation selection', 'Choose only operations you intend to expose. A capture is an observation, not a complete provider contract.');
   s.append(field('Include in the reviewed API', input(op.enabled, v => { op.enabled = v; renderList(); }, 'checkbox')));
-  const source = document.createElement('pre'); source.textContent = u.groups.map(g => `${g.id} · ${g.method} ${g.origin}${g.path}\n${g.entryIds.length} captured requests`).join('\n'); s.append(source);
+  const source = doc.createElement('pre'); source.textContent = u.groups.map(g => `${g.id} · ${g.method} ${g.origin}${g.path}\n${g.entryIds.length} captured requests`).join('\n'); s.append(source);
   s.append(field('Operation ID', input(op.id, v => { op.id = v; op.reviewed = false; renderList(); })));
   s.append(field('Source groups (comma-separated IDs)', input(op.groups.join(', '), v => {
     op.groups = v.split(',').map(x => x.trim()).filter(Boolean); op.reviewed = false;
@@ -78,8 +99,8 @@ function renderDetail() {
   const cq = new Set(u.credentials.filter(c => c.in === 'query').map(c => c.name));
   s = detailGroup('Query parameters', 'All query values start as strings. No captured values are copied. Repeated keys need explicit omission or another native integration; this intake never collapses them.');
   for (const q of u.query.filter(q => !cq.has(q.name))) {
-    const d = op.query[q.name]; const row = document.createElement('div'); row.className = 'decision';
-    const h = document.createElement('strong'); h.textContent = q.name + (q.repeated ? ' · repeated in capture' : ''); row.append(h);
+    const d = op.query[q.name]; const row = doc.createElement('div'); row.className = 'decision';
+    const h = doc.createElement('strong'); h.textContent = q.name + (q.repeated ? ' · repeated in capture' : ''); row.append(h);
     row.append(field('Resolution', select(d.mode, ['unresolved', 'parameter', 'omit'], v => { d.mode = v; op.reviewed = false; })));
     if (d.mode === 'parameter') {
       row.append(field('Required', input(d.required, v => { d.required = v; op.reviewed = false; }, 'checkbox')));
@@ -89,11 +110,11 @@ function renderDetail() {
     else if (d.mode === 'omit') row.append(field('Omission rationale', input(d.reason, v => { d.reason = v; op.reviewed = false; })));
     s.append(row);
   }
-  if (!u.query.filter(q => !cq.has(q.name)).length) s.append(document.createTextNode('No noncredential query parameters were observed.'));
+  if (!u.query.filter(q => !cq.has(q.name)).length) s.append(doc.createTextNode('No noncredential query parameters were observed.'));
   s = detailGroup('Credential and header decisions', 'References name server-held configuration only. Never paste keys or tokens here. “Preserve” retains API authentication and the original merchant compiler will require a manual integration. Backend choices still require configuration in the existing merchant workspace.');
   for (const c of u.credentials) {
-    const key = `${c.in}:${c.name}`, d = op.credentials[key], row = document.createElement('div'); row.className = 'decision';
-    const h = document.createElement('strong'); h.textContent = key; row.append(h);
+    const key = `${c.in}:${c.name}`, d = op.credentials[key], row = doc.createElement('div'); row.className = 'decision';
+    const h = doc.createElement('strong'); h.textContent = key; row.append(h);
     row.append(field('Resolution', select(d.mode, c.in === 'header' ? ['unresolved', 'preserve', 'backend', 'omit'] : (c.in === 'query' ? ['unresolved', 'preserve', 'parameter', 'omit'] : ['unresolved', 'preserve', 'omit']), v => { d.mode = v; op.reviewed = false; })));
     if (d.mode === 'backend') row.append(field('Credential reference', input(d.reference, v => { d.reference = v; op.reviewed = false; })));
     if (d.mode === 'parameter') {
@@ -106,8 +127,8 @@ function renderDetail() {
     s.append(row);
   }
   for (const h of u.headers) {
-    const d = op.headers[h], row = document.createElement('div'); row.className = 'decision';
-    const title = document.createElement('strong'); title.textContent = `header:${h}`; row.append(title);
+    const d = op.headers[h], row = doc.createElement('div'); row.className = 'decision';
+    const title = doc.createElement('strong'); title.textContent = `header:${h}`; row.append(title);
     row.append(field('Resolution', select(d.mode, ['unresolved', 'backend', 'omit'], v => { d.mode = v; op.reviewed = false; })));
     if (d.mode === 'backend') row.append(field('Configuration reference', input(d.reference, v => { d.reference = v; op.reviewed = false; })));
     if (d.mode === 'omit') row.append(field('Omission rationale', input(d.reason, v => { d.reason = v; op.reviewed = false; })));
@@ -115,14 +136,14 @@ function renderDetail() {
   }
   if (['POST', 'PUT', 'PATCH'].includes(group?.method)) {
     s = detailGroup('Request body', 'Observed schemas retain types without inventing required fields. The source body is never embedded as an example.');
-    const observed = document.createElement('pre'); observed.textContent = jsonText(u.groups.map(g => ({ group: g.id, ...g.requestBody }))); s.append(observed);
+    const observed = doc.createElement('pre'); observed.textContent = jsonText(u.groups.map(g => ({ group: g.id, ...g.requestBody }))); s.append(observed);
     s.append(field('Schema source', select(op.body.mode, ['unresolved', 'observed', 'author'], v => { op.body.mode = v; op.reviewed = false; })));
     s.append(field('Body is required', input(op.body.required, v => { op.body.required = v; op.reviewed = false; }, 'checkbox')));
     if (op.body.mode === 'author') s.append(field('Authored JSON schema', jsonEditor(op.body.schema || { type: 'object', properties: {} }, v => { op.body.schema = v; op.reviewed = false; }, 'Body schema')));
     s.append(field('Safe example (optional)', jsonEditor(op.body.example ?? {}, v => { op.body.example = v; op.reviewed = false; }, 'Body example')));
   }
   s = detailGroup('Response observations', 'Only recorded JSON bodies contribute shapes. Counts expose missing content; observed fields do not become required.');
-  const response = document.createElement('pre'); response.textContent = jsonText(u.groups.map(g => ({ group: g.id, responses: g.responses }))); s.append(response);
+  const response = doc.createElement('pre'); response.textContent = jsonText(u.groups.map(g => ({ group: g.id, responses: g.responses }))); s.append(response);
   s.append(field('Contract source', select(op.responses.mode, ['observed', 'author'], v => { op.responses.mode = v; op.reviewed = false; })));
   if (op.responses.mode === 'author') s.append(field('Authored OpenAPI Responses Object', jsonEditor(op.responses.value || { '200': { description: 'Reviewed response' } }, v => { op.responses.value = v; op.reviewed = false; }, 'Responses')));
   s = detailGroup('Review acknowledgment');
@@ -138,18 +159,18 @@ function refreshSummary() {
 }
 function download(name, value) {
   const bytes = new Blob([typeof value === 'string' ? value : jsonText(value) + '\n'], { type: 'application/json' });
-  const a = document.createElement('a'), url = URL.createObjectURL(bytes); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const a = doc.createElement('a'), url = URL.createObjectURL(bytes); a.href = url; a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function validate() {
-  if (![...document.querySelectorAll('textarea')].every(e => e.reportValidity())) throw new Error('Correct invalid JSON fields first');
+  if (![...root.querySelectorAll('textarea')].every(e => e.reportValidity())) throw new Error('Correct invalid JSON fields first');
   readHeader(); const spec = buildDocument(inventory, review); $('preview').textContent = jsonText(spec);
-  notify(`Valid review: ${review.operations.filter(o => o.enabled).length} operations. Download decisions, then save/export through the native HAR command.`); return spec;
+  notify(`Valid review: ${review.operations.filter(o => o.enabled).length} operations. ${onSave?'Save this immutable revision or use it in the merchant.':'Download decisions, then save/export through the native HAR command.'}`); return spec;
 }
 function render() {
   $('merchant').value = review.sourceUrl; $('title').value = review.title; $('version').value = review.version;
   renderList(); renderDetail(); refreshSummary();
 }
-for (const origin of [...new Set(inventory.groups.map(g => g.origin + '/'))]) { const o = document.createElement('option'); o.value = origin; $('source-origins').append(o); }
+for (const origin of [...new Set(inventory.groups.map(g => g.origin + '/'))]) { const o = doc.createElement('option'); o.value = origin; $('source-origins').append(o); }
 $('source-hash').textContent = inventory.sourceSha256;
 $('capture-summary').textContent = `${inventory.totalEntries} captured entries · ${inventory.groups.length} operation groups · ${inventory.rejected.length} rejected entries`;
 $('rejected').textContent = inventory.rejected.length ? jsonText(inventory.rejected) : 'No rejected entries.';
@@ -160,14 +181,35 @@ $('validate').onclick = () => { try { validate(); } catch (e) { notify(e.message
 $('download').onclick = () => { try { validate(); download('har-decisions.json', review); } catch (e) { notify(e.message, true); } };
 $('export-draft').onclick = () => { readHeader(); download('har-review-draft.json', review); notify('Draft downloaded. Unresolved decisions must be completed before native publication.'); };
 $('restore-draft').onclick = () => {
-  try { const saved = JSON.parse(localStorage.getItem(storageKey)); if (saved?.sourceSha256 !== inventory.sourceSha256 || saved.schema !== HAR_SCHEMA || !Array.isArray(saved.operations)) throw new Error('No matching browser draft'); review = saved; selected = 0; render(); notify('Restored this source’s local browser draft.'); }
-  catch (e) { notify(e.message, true); }
+  try {
+    const saved=readDraft?readDraft():JSON.parse(localStorage.getItem(storageKey));
+    if(!saved)throw new Error('No draft is retained for this source review.');
+    replaceReview(saved);notify('Restored the draft for this original source and capture edition.');
+  }catch(e){notify(e.message,true);}
 };
 $('import-review').addEventListener('change', async e => {
   try { const file = e.target.files[0]; if (!file || file.size > 4 * 1024 * 1024) throw new Error('Choose a review JSON file up to 4 MiB');
     const loaded = JSON.parse(await file.text());
-    if (loaded.schema !== HAR_SCHEMA || loaded.sourceSha256 !== inventory.sourceSha256 || !Array.isArray(loaded.operations)) throw new Error('Review belongs to another source');
-    review = loaded; selected = 0; saveDraft(); render(); notify('Imported the saved source-bound review.');
+    replaceReview(loaded);saveDraft();notify('Imported the saved source-bound review.');
   } catch (err) { notify(err.message, true); }
 });
+if(onSave) {
+  const toolbar=$('validate').parentElement;
+  for(const [label,useSource] of [['Save reviewed revision',false],['Save and use in merchant',true]]) {
+    const control=doc.createElement('button');control.type='button';control.textContent=label;
+    control.dataset.harAction=useSource?'save-use':'save';
+    control.addEventListener('click',async()=>{
+      try {validate();await onSave(structuredClone(review),{useSource});}
+      catch(error){notify(error.message,true);}
+    });
+    toolbar.append(control);
+  }
+}
 render();
+return Object.freeze({
+  review:()=>{readHeader();return structuredClone(review);},
+  validate:()=>validate(),
+  restore:value=>{replaceReview(value);saveDraft();},
+  message:notify,
+});
+}

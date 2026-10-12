@@ -1,3 +1,5 @@
+import {mountForecast} from './forecast.mjs';
+
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const title = value => String(value ?? '').toLowerCase().replaceAll('_',' ').replace(/^./, c => c.toUpperCase());
 const money = value => value === null || value === undefined ? 'Unvalued' : new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(Number(value));
@@ -29,10 +31,11 @@ function downloadFile(raw,filename,type='application/json') {const url=URL.creat
 export function mountOperations({container,api:transport,plan,inform:notify,mutationId}) {
   const root=document.createElement('section');root.className='operations';root.setAttribute('aria-label','Delivery and cash operations');container.replaceChildren(root);
   const view={cases:[],current:null,tab:'overview',busy:false,events:[],nextAfter:null,form:null};
-  let active=true;
+  let active=true,forecastView=null;
+  view.forecastId=null;
   const available=()=>active&&root.isConnected;
   function requireActive() {if(!available()){const error=new Error('This operations view is closed. Reopen the retained case to continue.');error.code='OPERATIONS_VIEW_CLOSED';throw error;}}
-  function dispose() {active=false;const dialog=root.querySelector('dialog');if(dialog?.open)dialog.close();}
+  function dispose() {active=false;forecastView?.dispose();const dialog=root.querySelector('dialog');if(dialog?.open)dialog.close();}
   const inform=(...args)=>{if(available())notify(...args);};
   const download=(...args)=>{if(available())downloadFile(...args);};
   async function api(...args) {
@@ -74,6 +77,7 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
     view.cases=(await api('/api/operations')).cases;
     let retained;try{retained=sessionStorage.getItem('sf47.operations.case.'+plan.id);}catch{}
     const target=prefer||view.cases.find(row=>row.id===retained)?.id||view.cases[0]?.id;
+    if(view.current?.program.id!==target)view.forecastId=null;
     view.current=target?await api('/api/operations/'+target):null;
     if(target)try{sessionStorage.setItem('sf47.operations.case.'+plan.id,target);}catch{}
     view.events=[];view.nextAfter=null;render();
@@ -126,6 +130,7 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
     +(view.events.length?table(['Version / time','Operator','Action / note'],view.events.map(row=>[esc(row.version)+'<small>'+esc(row.at)+'</small>',esc(row.actor),esc(row.action)+'<p>'+esc(row.note)+'</p><details><summary>Record values</summary><pre>'+esc(JSON.stringify({before:row.before,after:row.after},null,2))+'</pre></details>'])):empty('Open the retained event history.'));}
   function render() {
     if(!available())return;
+    forecastView?.dispose();forecastView=null;
     const c=view.current;
     root.innerHTML='<div class="ops-heading"><div><h2>Delivery and cash operations</h2><p>New cases use saved plan '+esc(plan.name)+' · revision '+plan.revision+'</p></div><div class="ops-actions">'+button('Open case from saved plan','new-case')+button('Import complete case','import')+button('Import original source packet','intake')+'</div></div>'
       +'<div class="ops-toolbar">'+field('Recording operator','recordingActor',actor,{help:'Retained with every saved operation.'})+(view.cases.length?field('Retained case','caseSelect',c?.program.id,{options:view.cases.map(row=>[row.id,row.name+' · '+row.mode+' · v'+row.version])}):'')+'</div>'
@@ -133,10 +138,17 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
       +(c?'<div class="ops-case-heading"><div><strong>'+esc(c.program.name)+'</strong> '+flag(c.program.state)+' <span>Version '+c.program.version+' · '+esc(c.plan.name)+' · pinned revision '+c.program.planRevision+'</span></div><div class="ops-actions">'+button('Refresh case','refresh')+button('Export complete case','export')+(c.program.state==='CLOSED'?button('Reopen review','reopen'):'')+'</div></div>'
        +(c.program.mode==='WALKTHROUGH'?'<p class="ops-note"><strong>Internal walkthrough.</strong> These fictional workflow records are separate from operating cash, awards and customer outcomes.</p>':'')
        +(c.program.currentPlanRevision!==c.program.planRevision?'<p class="ops-note">The planner has a newer saved revision. This case retains its originally selected revision '+c.program.planRevision+'.</p>':'')
-       +'<nav class="ops-tabs" aria-label="Delivery operations sections">'+[['overview','Plan / actual'],['contributors','Contributors'],['work','Work'],['invoices','Invoices'],['cash','Cash / issuer'],['delivery','Deployment / buyers'],['sources','Sources'],['reviews','Reviews / history']].map(([id,label])=>'<button type="button" data-ops-tab="'+id+'"'+(view.tab===id?' aria-current="page"':'')+'>'+esc(label)+'</button>').join('')+'</nav><div class="ops-panel">'+({overview,contributors,work,invoices,cash,delivery,sources,reviews}[view.tab])()+'</div>'
+       +'<nav class="ops-tabs" aria-label="Delivery operations sections">'+[['overview','Plan / actual'],['contributors','Contributors'],['work','Work'],['invoices','Invoices'],['cash','Cash / issuer'],['forecast','Operating forecast'],['delivery','Deployment / buyers'],['sources','Sources'],['reviews','Reviews / history']].map(([id,label])=>'<button type="button" data-ops-tab="'+id+'"'+(view.tab===id?' aria-current="page"':'')+'>'+esc(label)+'</button>').join('')+'</nav><div class="ops-panel">'+({overview,contributors,work,invoices,cash,delivery,sources,reviews,forecast:()=>'<div data-ops-forecast></div>'}[view.tab])()+'</div>'
        :empty('Open a case from the selected saved plan or import an original case. Forecast staffing and payouts do not populate actual records.'))
       +'<dialog class="ops-dialog" aria-labelledby="ops-dialog-title"><form method="dialog" data-ops-form><h3 id="ops-dialog-title"></h3><div data-ops-fields class="ops-fields"></div><p data-ops-form-error role="alert"></p><div class="ops-actions"><button type="button" data-ops-action="cancel">Cancel</button><button type="submit" class="primary">Save</button></div></form></dialog>'
       +'<input type="file" data-ops-import hidden accept=".zip,application/zip"><input type="file" data-ops-intake hidden accept=".json,application/json">';
+    if(c&&view.tab==='forecast'){
+      const retained=c.forecasts.some(row=>row.id===view.forecastId)?view.forecastId:null;
+      forecastView=mountForecast({container:$('[data-ops-forecast]'),current:c,api,mutationId,recordingActor,
+        initialForecastId:retained,onSelection:id=>{view.forecastId=id;},
+        onSaved:async result=>{view.forecastId=result.recordId;await refresh();inform('Saved the original operating forecast with its source, dated cash and remaining work.');}});
+      forecastView.ready.catch(alertError);
+    }
   }
   function showForm(kind, row={}, meta={}) {
     requireActive();
@@ -176,7 +188,7 @@ export function mountOperations({container,api:transport,plan,inform:notify,muta
   }
   root.addEventListener('change',event=>{
     if(event.target.name==='recordingActor'){actor=event.target.value;try{sessionStorage.setItem('sf47.operations.actor',actor);}catch{}}
-    if(event.target.name==='caseSelect')run(async()=>{view.current=await api('/api/operations/'+event.target.value);view.events=[];view.nextAfter=null;try{sessionStorage.setItem('sf47.operations.case.'+plan.id,view.current.program.id);}catch{}render();});
+    if(event.target.name==='caseSelect')run(async()=>{const selectedCase=await api('/api/operations/'+event.target.value);if(selectedCase.program.id!==view.current?.program.id)view.forecastId=null;view.current=selectedCase;view.events=[];view.nextAfter=null;try{sessionStorage.setItem('sf47.operations.case.'+plan.id,view.current.program.id);}catch{}render();});
     if(event.target.matches('[data-ops-import],[data-ops-intake]')){const file=event.target.files[0];if(file)run(async()=>showForm(event.target.matches('[data-ops-intake]')?'intake':'import',{}, {file,filename:file.name,title:'Receive operations source'}));}
   });
   root.addEventListener('click',event=>{
