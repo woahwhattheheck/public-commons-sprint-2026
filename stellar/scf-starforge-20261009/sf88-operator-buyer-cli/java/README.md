@@ -3,11 +3,16 @@
 Use the maintained Stellar Forge buyer from Java 17 or newer. The SDK provides
 durable request creation, native review and execution, original-attempt recovery,
 inbox operation, whole-object and paged-dataset acquisition, verified file
-delivery and streaming record consumption.
+delivery and streaming record consumption. It also exposes the complete 31-command
+acquisition workspace and four-operation whole-workspace recovery API.
 
 The selected Node buyer remains the payment, approval, accounting and recovery
 implementation. Java calls its existing bridge and reopens the same private
 application state as the Node and Go customers.
+
+For request intake, paid-file orders, acquisition delivery and complete workspace
+backup and restore, use the [workflow guide](WORKFLOWS.md) and executable
+[customer journey](examples/CompleteRequest.java).
 
 ## Build and select the installed runtime
 
@@ -51,8 +56,11 @@ under:
 
 `stateDirectory` is the customer's private original Node application directory.
 Choose absolute paths. Reuse that directory when reopening an existing
-application. A distinct `.java-calls` directory holds Java invocation records;
-the original intent and acquisition directories retain their existing format.
+application. A distinct `.java-calls` directory holds ordinary Java invocation records.
+Acquisition and workspace recovery calls use an existing external temporary
+parent, selectable with `callsDirectory` or `--calls-dir`, so backup source and
+absent restore state retain their native meanings. The original intent and
+acquisition directories retain their existing format.
 
 The private state and invocation directories use POSIX permissions. Run on the
 same Linux/macOS/POSIX operator host as the native buyer, including an existing

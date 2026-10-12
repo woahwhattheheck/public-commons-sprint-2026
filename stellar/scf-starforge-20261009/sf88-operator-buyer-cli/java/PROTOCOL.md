@@ -4,8 +4,12 @@ The Java SDK invokes the existing `sf88-operator-buyer-cli/go/bridge.mjs` and
 uses its original `stellar-forge.go-buyer-call.v1` schema unchanged. The bridge's
 original name and native error codes remain stable across callers.
 
-Each Java call creates a private `.java-calls/java-*` directory in the original
-Node application state. `request.json` contains the original schema, generated
+Ordinary Java calls create a private `.java-calls/java-*` directory in the original
+Node application state, or use a configured existing calls parent. Acquisition
+and workspace recovery calls create a private child under the configured existing
+calls parent, the selected state root's parent, or the canonical OS temporary
+parent. That parent must be outside the selected source. Workflow calls never
+create an absent application state directory. `request.json` contains the original schema, generated
 call ID, action, optional intent/acquisition ID, selected runtime/state/profile,
 native limits and action arguments. Binary bodies use `bodyBase64`. Process
 arguments contain only the Node executable, bridge and private request path.
@@ -26,6 +30,20 @@ compares bridge byte/record counts with the actually consumed stream.
 | Object | `create`, `attach`, `list`, `initialize`, `inspect`, `recover`, `run`, `download`, `assemble`, `delivery`, `report`, `accounting`, `finalize`, `recover-accounting` |
 | Dataset | `create`, `attach`, `list`, `initialize`, `inspect`, `recover`, `run`, `deliver`, `manifest`, `accounting`, `finalize`, `recover-accounting` |
 | File | `verify`, `copy`, `bytes`, `stream`, `records` |
+| Acquisitions | `state`, `attach`, `request`, `receive`, `review-request`, `prepare-request`, `paid-file`, `receive-paid-file`, `review-paid-file`, `prepare-paid-file`, `retrieve-paid-file`, `reset-paid-file`, `download-paid-file`, `export-paid-file`, `draft`, `save`, `initialize`, `inspect`, `execute`, `recover`, `unlock`, `finalize`, `bind-accounting`, `preview`, `download`, `export`, `export-request`, `backup-review`, `backup`, `verify`, `restore` |
+| Workspace recovery | `inspect`, `snapshot`, `verify`, `restore` |
+
+The original 55 actions retain their existing dispatch unchanged. The 35 workflow
+actions use `acquisitions.COMMAND` and `workspace-recovery.OPERATION`.
+Acquisition arguments contain `workspace` constructor options and `options`
+method options; recovery arguments contain `options`. The optional call ID is
+the native request, order, draft or acquisition identity, as selected by the
+command. The maintained Node API owns all review, execution and archive rules.
+
+Workflow failures carry the full original result in both `error.result` and
+`result`. Java checks the same envelope identity on normal, timeout and
+interrupted completion. It temporarily clears interruption for the private
+sidecar read and restores the caller's interrupted status before raising.
 
 Wire actions retain the group prefix, such as `operation.execute`. Java invokes
 the action once. Failures retain the same original request and state identities.
@@ -59,3 +77,9 @@ Native option maps at acquisition and accounting seams retain additive fields.
 Typed results keep the complete original map. Runtime and state are explicit
 on each call so an existing application's Java adoption preserves its original
 intents and acquisitions.
+
+The acquisition and recovery extension is composed against source
+`79586025b5b8916b8ea254ce43093623931b8544`. It requires that edition's
+`node/acquisitions.mjs`, `node/workspace-recovery.mjs`, their maintained native
+commands, and the additive shared bridge. Its full command and option mapping
+is in [WORKFLOWS.md](WORKFLOWS.md).
