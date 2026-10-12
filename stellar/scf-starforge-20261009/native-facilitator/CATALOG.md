@@ -143,6 +143,40 @@ settlement and returns `{result, headers, extensionResponses}`. The standard
 Use `facilitator.catalog.list(params)`, `.search(params)` and `.status()` for
 the same committed view without another HTTP listener.
 
+## Group pending catalog updates
+
+The native owner groups pending successful-payment metadata into the existing
+SF60 guarded `commitBatch` operation. A group contains at most 32 requests,
+matching the native signer's existing maximum concurrency. Work starts on the
+next queue turn without a timer; requests arriving during a journal write are
+combined for the following group. A lone pending request proceeds directly.
+
+Every candidate still passes the original SF25 metadata and settlement checks
+and SF60 catalog, trust and lifecycle validation. One accepted group publishes
+the same ordered original receipt operations with one projection rebuild and
+one durable journal replacement. Each request receives its own SF54 result
+after that publication. The catalog operation count continues to count accepted
+transactions, independently of the number of filesystem commits.
+
+The queue captures each caller's request and original result before waiting.
+It assigns sequences in admission order for each seller and preserves those
+assignments when isolating an invalid candidate. Rejected metadata can leave
+gaps in a group's assigned sequences; later accepted revisions remain
+increasing. A repeated receipt already waiting in the same group shares its
+original operation's result. Identical metadata gets `EXACT_REPLAY` after that
+operation commits, while a changed fingerprint or seller authority is rejected.
+
+SF60 validates an entire proposed group before publication. When that original
+validator identifies one invalid operation, the queue rejects that candidate
+and stages the remaining candidates against the same journal head. A failed
+write with an uncertain outcome stops the attempted group and retains SF60's
+existing reopen requirement. The original SDK settlement is performed once.
+
+Native signer slots, settlement capacity and shutdown retain their existing
+ownership: the admitted call includes its catalog result. Grouping reduces
+repeated catalog work when metadata requests overlap; the configured signer
+count, RPC and journal size still determine actual service capacity.
+
 ## Original operation identity and restart
 
 Each accepted catalog operation retains a
@@ -170,16 +204,23 @@ before opening the native service on the directory.
 
 Native `/healthz` includes `catalog` with state, pending work, committed
 operation count, resource count, catalog version, journal head, process counters
-and the latest sanitized catalog error. Stored counts and the journal head
-survive restart; process counters start at zero. Payment health and RPC readiness
-keep their existing meanings.
+and the latest sanitized catalog error. Its `batch` object adds queued requests,
+current group size, the 32-request group limit, groups processed, guarded commit
+attempts, durable commits, committed operations, isolated candidate rejections
+and the largest committed group. Use `committedOperations / commits` when
+`commits > 0` to observe the achieved grouping for this process. These are
+catalog work counts; the original payment counters retain their own meanings.
+Stored counts and the journal head survive restart; process counters start at
+zero. Payment health and RPC readiness keep their existing meanings.
 
 The original SF60 journal limits remain 10,000 committed operations, a 32 MiB
 journal and 128 KiB per operation. Each newly accepted transaction's metadata
 creates an original catalog operation; the retained receipt counts toward that
-size limit. This backend uses the existing whole-journal durable write and
-projection rebuild. Observe operation count and commit latency when sizing a
-merchant deployment.
+size limit. The 32-request group cap keeps valid operations below SF60's
+existing 1,000-operation and 8 MiB batch limits. The existing whole-journal
+durable write and projection rebuild run once for each accepted group. Observe
+operation count, actual grouping and commit latency when sizing a merchant
+deployment.
 
 If a rename or fsync leaves commit status uncertain, SF60 refuses further
 catalog writes until it is closed and reopened. The original payment result
