@@ -45,7 +45,13 @@ function setBodySchema(offer, schema, example) {
   offer.extensions.bazaar.info.input.body = structuredClone(example);
   offer.extensions.bazaar.schema.properties.input.properties.body = structuredClone(schema);
   const checked = validateBazaarExtension(offer.extensions.bazaar);
-  if (!checked.ok) fail('JOB_INPUT_SCHEMA_INVALID');
+  if (!checked.ok) {
+    const reason = typeof checked.reason === 'string' && /^[A-Z][A-Z0-9_]{0,95}$/.test(checked.reason) ?
+      checked.reason : 'SCHEMA_VALIDATION_FAILED';
+    throw Object.assign(jobError('JOB_INPUT_SCHEMA_INVALID'), {
+      message: 'Job input schema validation failed: ' + reason, details: { reason },
+    });
+  }
   paymentRequiredResponse(offer);
   return offer;
 }
