@@ -105,9 +105,11 @@ class DatasetDelivery:
                 or not isinstance(manifest.get("outputs"), dict)
                 or set(manifest["outputs"]) != {"dataset.jsonl", "dataset.csv", "review.html"}):
             raise DeliveryError("DATASET_NATIVE_SCAN_MANIFEST_CHANGED")
-        if parse(read(directory / "session.json", 4096)) != scan["session"]:
+        session_raw = read(directory / "session.json", 4096)
+        if parse(session_raw) != scan["session"]:
             raise DeliveryError("DATASET_NATIVE_SCAN_SESSION_CHANGED")
         previous, rows = None, 0
+        archive_expected = {}
         for index, page in enumerate(scan["pages"]):
             if (not isinstance(page, dict) or page.get("index") != index
                     or page.get("previous") != previous
@@ -122,7 +124,9 @@ class DatasetDelivery:
                         "requestedCursor": page.get("requestCursor")}
             if manifest["sourcePages"][index] != expected:
                 raise DeliveryError("DATASET_NATIVE_SCAN_PAGE_CHANGED")
-            archive = parse(read(directory / "pages" / (str(index).zfill(5) + ".json"), 2 * 1024 * 1024 + 4096))
+            archive_name = f"pages/{index:05d}.json"
+            archive_raw = read(directory / archive_name, 2 * 1024 * 1024 + 4096)
+            archive = parse(archive_raw)
             if (not isinstance(archive, dict)
                     or any(archive.get(key) != page.get(key) for key in
                            ("schema", "index", "previous", "intent", "requestCursor",
@@ -130,6 +134,14 @@ class DatasetDelivery:
                     or not isinstance(archive.get("payload"), dict)
                     or archive["payload"].get("page", {}).get("returned") != page["returned"]):
                 raise DeliveryError("DATASET_NATIVE_SCAN_ARCHIVE_CHANGED")
+            # Original appendMany emits this exact compact record with chain
+            # last. Hash its retained record bytes, preserving native numeric
+            # lexemes and property order without a second serializer.
+            suffix = b',"chain":"' + page["chain"].encode("ascii") + b'"}\n'
+            if (not archive_raw.endswith(suffix)
+                    or digest(archive_raw[:-len(suffix)] + b"}") != page["chain"]):
+                raise DeliveryError("DATASET_NATIVE_ARCHIVE_RECORD_CHANGED")
+            archive_expected[archive_name] = {"bytes": len(archive_raw), "sha256": digest(archive_raw)}
             previous, rows = page["chain"], rows + page["returned"]
         if (previous != scan["chain"] or rows != scan["count"]
                 or dataset.get("originalQuerySignature") != scan["pages"][0]["signature"]):
@@ -168,8 +180,12 @@ class DatasetDelivery:
                 raise DeliveryError("DATASET_NATIVE_OUTPUT_CHANGED")
             outputs[name] = metadata
         archives = {"session.json": capture("session.json", 4096)}
+        archive_expected["session.json"] = {"bytes": len(session_raw), "sha256": digest(session_raw)}
         archives.update({f"pages/{index:05d}.json": capture(f"pages/{index:05d}.json", 2 * 1024 * 1024 + 4096)
                          for index in range(len(scan["pages"]))})
+        if any({key: metadata[key] for key in ("bytes", "sha256")} != archive_expected[name]
+               for name, metadata in archives.items()):
+            raise DeliveryError("DATASET_NATIVE_ARCHIVE_CHANGED_DURING_RECEIVING")
         binding = {"schema": "stellar-forge.sf100.python-delivery-source.v1", "scan": scan,
                    "manifestSha256": digest(manifest_raw), "archives": archives}
         native = {"schema": "stellar-forge.sf100.dataset-delivery.v1", "sourceFormat": "SF100_SCAN",

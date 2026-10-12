@@ -98,7 +98,7 @@ def parser():
     compared.add_argument("--keys", help="Comma-separated compatible reviewed SQL key columns")
     compared.add_argument("--max-rows", type=int, default=200)
 
-    source_files = commands.add_parser("source-files", help="Recover the five retained original files for an edition")
+    source_files = commands.add_parser("source-files", help="Recover the retained original delivery files for an edition")
     source_files.add_argument("edition_id")
     source_files.add_argument("--destination", required=True, help="Private directory outside the workspace")
 
