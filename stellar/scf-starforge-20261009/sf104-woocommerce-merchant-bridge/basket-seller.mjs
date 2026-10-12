@@ -22,19 +22,25 @@ function reply(req,res,status,body) {
     'x-content-type-options':'nosniff','content-length':String(bytes.length)});
   res.end(req.method === 'HEAD' ? undefined : bytes);
 }
-async function responseJson(response) {
+async function responseJson(response, limit = 131072, unavailableStatuses = null) {
   need(response instanceof Response,'WOO_ADMISSION_SERVICE_UNAVAILABLE');
-  if(response.status >= 400 && response.status < 500) need(false,'WOO_ORDER_UNAVAILABLE');
+  if(unavailableStatuses === null ? response.status >= 400 && response.status < 500 : unavailableStatuses.includes(response.status))
+    need(false,'WOO_ORDER_UNAVAILABLE');
   need(response.status === 200 && response.body,'WOO_ADMISSION_SERVICE_UNAVAILABLE');
   const reader=response.body.getReader(),chunks=[];let length=0;
   try {
     for(;;) { const part=await reader.read();if(part.done)break;
-      length+=part.value.byteLength;need(length<=131072,'WOO_BASKET_RESPONSE_TOO_LARGE');chunks.push(part.value); }
+      length+=part.value.byteLength;need(length<=limit,'WOO_BASKET_RESPONSE_TOO_LARGE');chunks.push(part.value); }
     return JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(Buffer.concat(chunks)));
   } catch(error) { await reader.cancel().catch(()=>{});throw error; }
   finally { reader.releaseLock(); }
 }
-function wordpress(compiled,{env,fetchImpl}) {
+export function createWooAdmissionCall(compiled,{env,fetchImpl,responseBytes=131072,unavailableStatuses=null}) {
+  need(Number.isSafeInteger(responseBytes) && responseBytes>=8192 && responseBytes<=2097152,
+    'WOO_ADMISSION_RESPONSE_LIMIT_INVALID');
+  need(unavailableStatuses===null || Array.isArray(unavailableStatuses) &&
+    unavailableStatuses.every(status=>Number.isInteger(status) && status>=400 && status<500),
+    'WOO_ADMISSION_STATUS_CONFIG_INVALID');
   const secret=env[compiled.secretEnv];
   need(typeof secret==='string' && Buffer.byteLength(secret)>=32 && Buffer.byteLength(secret)<=1024,
     'WOO_PRIVATE_SHARED_SECRET_REQUIRED');
@@ -49,7 +55,7 @@ function wordpress(compiled,{env,fetchImpl}) {
       response=await fetchOrder(compiled.admissionUrl,{method:'POST',redirect:'manual',body,
         signal:signal?AbortSignal.any([signal,deadline]):deadline,
         headers:{'content-type':'application/json','x-sf98-timestamp':stamp,'x-sf98-signature':'sha256='+digest}});
-      return await responseJson(response);
+      return await responseJson(response,responseBytes,unavailableStatuses);
     } finally {
       if(response?.body && !response.body.locked && !response.bodyUsed) await response.body.cancel().catch(()=>{});
     }
@@ -81,7 +87,7 @@ function admissionPayload(h,context,phase) {
   }
   return p;
 }
-async function compileQuote(h,{call,nativeFactory,outbox,timeoutMs}) {
+export async function compileWooBasketQuote(h,{call,nativeFactory,outbox,timeoutMs}) {
   const admit=async context => {
     try {
       const result=await call(admissionPayload(h,context,'inspect'),context.signal);
@@ -126,7 +132,7 @@ export async function startWooBasketMerchant(compiled,{nativeFactory=null,env=pr
   port=8423,operationsPort=8424,operationsNavigationOrigin=null,maxInFlight=64,drainGraceMs=60000}={}) {
   need(Array.isArray(compiled.baskets) && compiled.baskets.length>=1,'WOO_BASKET_CONFIG_REQUIRED');
   need(Number.isInteger(port) && port>=0 && port<=65535,'WOO_PORT_INVALID');
-  const outbox=await openOutbox(compiled.outbox),call=wordpress(compiled,{env,fetchImpl});
+  const outbox=await openOutbox(compiled.outbox),call=createWooAdmissionCall(compiled,{env,fetchImpl});
   const catalogByDigest=new Map(compiled.baskets.map(c=>[c.catalogDigest,c])),base=compiled.baskets[0];
   const cache=new Map(),counts={initialized:0,hits:0,misses:0,retired:0,quoteFailures:0};
   let fixed=null,operations,closing;
@@ -177,7 +183,7 @@ export async function startWooBasketMerchant(compiled,{nativeFactory=null,env=pr
         need(catalog,'WOO_BASKET_CATALOG_UNAVAILABLE');matchBasketCatalog(h,catalog);
         need(h.operation.url===identity.resourceUrl && h.basketDigest===identity.basketDigest &&
           h.attemptGeneration===identity.attemptGeneration,'WOO_BASKET_QUOTE_MISMATCH');
-        const value=await compileQuote(h,{call,nativeFactory,outbox,timeoutMs:compiled.timeoutMs});
+        const value=await compileWooBasketQuote(h,{call,nativeFactory,outbox,timeoutMs:compiled.timeoutMs});
         entry.ready=true;counts.initialized++;return value;
       })().catch(error=>{entry.failed=true;counts.quoteFailures++;throw error;});
     }
