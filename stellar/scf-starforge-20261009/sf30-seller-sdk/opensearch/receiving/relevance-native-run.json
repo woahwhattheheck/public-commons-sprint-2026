@@ -1,0 +1,1030 @@
+{
+  "schema": "stellar-forge.opensearch-native-relevance-journey.v1",
+  "operation": "ASTRA-EE290-OPENSEARCH-RELEVANCE-20261011",
+  "startedAt": "2026-10-11T23:55:51.652Z",
+  "runtime": "v24.19.0",
+  "metadata": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/native/20261011T235533Z-5613c7a2",
+  "cohortPath": "/dev/shm/astra-ee290-opensearch/relevance-staging/source/stellar/scf-starforge-20261009/sf30-seller-sdk/opensearch/receiving/flight-cohort.json",
+  "stages": [
+    {
+      "stage": "retained-cohort-and-criterion",
+      "source": {
+        "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+        "serverVersion": "3.9.0"
+      },
+      "cohortDocuments": 7,
+      "nativeResultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+      "priceThreshold": 253.21006490337038,
+      "k": 3,
+      "variants": [
+        "lowest-price",
+        "highest-price"
+      ]
+    },
+    {
+      "stage": "saved-native-evaluation",
+      "workspaceId": "0d89063f-9e9f-441b-bf94-eb611c7789e4",
+      "setId": "16c77c35-8487-4b69-80d8-bc30591a4c41",
+      "expectedRevision": 1,
+      "counts": {
+        "variants": 2,
+        "cases": 1,
+        "judgments": 7,
+        "unrated": 0
+      }
+    },
+    {
+      "stage": "native-evaluation-retained",
+      "editionId": "ac35c6b6cbca5f0c98af3fe4edac1de6",
+      "resultSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+      "complete": true,
+      "source": {
+        "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+        "serverVersion": "3.9.0"
+      },
+      "coverage": {
+        "requestedCases": 2,
+        "completeCases": 2,
+        "failedCases": 0,
+        "incompleteCases": 0
+      },
+      "snapshotReleased": true
+    },
+    {
+      "stage": "customer-exports-and-import",
+      "exportCount": 6,
+      "importedSetId": "93f95248-e1d8-480f-953d-95f401de67c1",
+      "sourceRevision": 1
+    },
+    {
+      "stage": "evaluated-merchant-handoff",
+      "variantId": "lowest-price",
+      "caseId": "budget-cohort",
+      "draftId": "2904f5f1-1ef9-467a-b5b4-35d847df3535",
+      "packageId": "368b20e1b3410bef2fee494da8831787",
+      "fileCount": 11,
+      "clientUrl": "https://search.example.com/search/flights",
+      "method": "POST"
+    },
+    {
+      "stage": "workspace-reopened",
+      "workspaceId": "0d89063f-9e9f-441b-bf94-eb611c7789e4",
+      "editionId": "ac35c6b6cbca5f0c98af3fe4edac1de6",
+      "packageId": "368b20e1b3410bef2fee494da8831787",
+      "identicalNativeResult": true,
+      "originalRequestRetained": true
+    },
+    {
+      "stage": "native-budget-ranking-comparison",
+      "variants": [
+        {
+          "id": "lowest-price",
+          "metricScore": 1,
+          "relevantReturned": 3,
+          "returned": 3
+        },
+        {
+          "id": "highest-price",
+          "metricScore": 0,
+          "relevantReturned": 0,
+          "returned": 3
+        }
+      ],
+      "scoreDifference": 1,
+      "sameNativeSnapshot": true
+    }
+  ],
+  "engine": {
+    "name": "opensearch-cluster-leader-3",
+    "cluster_name": "opensearch-cluster",
+    "cluster_uuid": "l7JU9tA0RmO3hbTc1ayTOw",
+    "version": {
+      "distribution": "opensearch",
+      "number": "3.9.0",
+      "build_type": "tar",
+      "build_hash": "4ee42a94e87f66fbf1e62a9871b1b87f91e02472",
+      "build_date": "2026-09-23T01:01:31.883915140Z",
+      "build_snapshot": false,
+      "lucene_version": "10.5.1",
+      "minimum_wire_compatibility_version": "2.19.0",
+      "minimum_index_compatibility_version": "2.0.0"
+    },
+    "tagline": "The OpenSearch Project: https://opensearch.org/"
+  },
+  "cohort": {
+    "fileSha256": "3882231bed82154334ea678d8c8c089732a9d167c1790d0c7e1ca8356d9e7046",
+    "nativeResultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+    "documents": 7,
+    "source": {
+      "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+      "serverVersion": "3.9.0"
+    },
+    "criterion": {
+      "schema": "stellar-forge.opensearch-engineering-judgment-rule.v1",
+      "label": "Budget suitability within the retained public flight cohort",
+      "judgmentOrigin": "Deterministic engineering sample judgments derived from the original native records",
+      "field": "AvgTicketPrice",
+      "relevantWhen": "value <= lower median of retained cohort prices",
+      "threshold": 253.21006490337038,
+      "relevantGrade": 1,
+      "otherGrade": 0,
+      "cohortDocuments": 7,
+      "sortedNativePrices": [
+        159.9909618375961,
+        167.59992219374266,
+        231.96273728774017,
+        253.21006490337038,
+        337.660374662825,
+        569.6132552035547,
+        772.1008456460212
+      ],
+      "originalResultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+      "originalCaptureRequestId": "ee290-native-flights-capture-20261011T234116Z-bd81fdd1",
+      "originalCaptureTime": "2026-10-11T23:41:37.599Z",
+      "source": {
+        "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+        "serverVersion": "3.9.0"
+      },
+      "interpretation": "Precision describes the retained flight cohort and this declared budget criterion."
+    },
+    "k": 3
+  },
+  "operator": {
+    "schema": "stellar-forge.opensearch-relevance-operator-journey.v1",
+    "operationId": "ee290-flight-relevance-v1",
+    "startedAt": "2026-10-11T23:55:51.658Z",
+    "runtime": "v24.19.0",
+    "directory": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-workspace",
+    "stages": [
+      {
+        "name": "saved-native-evaluation",
+        "workspaceId": "0d89063f-9e9f-441b-bf94-eb611c7789e4",
+        "setId": "16c77c35-8487-4b69-80d8-bc30591a4c41",
+        "expectedRevision": 1,
+        "counts": {
+          "variants": 2,
+          "cases": 1,
+          "judgments": 7,
+          "unrated": 0
+        }
+      },
+      {
+        "name": "native-evaluation-retained",
+        "editionId": "ac35c6b6cbca5f0c98af3fe4edac1de6",
+        "resultSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+        "complete": true,
+        "source": {
+          "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+          "serverVersion": "3.9.0"
+        },
+        "coverage": {
+          "requestedCases": 2,
+          "completeCases": 2,
+          "failedCases": 0,
+          "incompleteCases": 0
+        },
+        "snapshotReleased": true
+      },
+      {
+        "name": "customer-exports-and-import",
+        "exportCount": 6,
+        "importedSetId": "93f95248-e1d8-480f-953d-95f401de67c1",
+        "sourceRevision": 1
+      },
+      {
+        "name": "evaluated-merchant-handoff",
+        "variantId": "lowest-price",
+        "caseId": "budget-cohort",
+        "draftId": "2904f5f1-1ef9-467a-b5b4-35d847df3535",
+        "packageId": "368b20e1b3410bef2fee494da8831787",
+        "fileCount": 11,
+        "clientUrl": "https://search.example.com/search/flights",
+        "method": "POST"
+      },
+      {
+        "name": "workspace-reopened",
+        "workspaceId": "0d89063f-9e9f-441b-bf94-eb611c7789e4",
+        "editionId": "ac35c6b6cbca5f0c98af3fe4edac1de6",
+        "packageId": "368b20e1b3410bef2fee494da8831787",
+        "identicalNativeResult": true,
+        "originalRequestRetained": true
+      }
+    ],
+    "exports": [
+      {
+        "name": "native-relevance-result.json",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/native-relevance-result.json",
+        "bytes": 16345,
+        "sha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db"
+      },
+      {
+        "name": "relevance-edition.json",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/relevance-edition.json",
+        "bytes": 37779,
+        "sha256": "0dbc996ed8a3a71779756bc856921a716679fa1afef7cc25821b774e55c39c3a"
+      },
+      {
+        "name": "relevance-customer-report.json",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/relevance-customer-report.json",
+        "bytes": 14541,
+        "sha256": "7a06590e29a0fea09b8187e8aa4b991462350dbfc09a2a747f684c99b3af03f0"
+      },
+      {
+        "name": "relevance-customer-report.html",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/relevance-customer-report.html",
+        "bytes": 26018,
+        "sha256": "8d49d64105415e56b53773a3342aa55e1cb389c0d6e405b07093d990f05aca61"
+      },
+      {
+        "name": "relevance-cases.csv",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/relevance-cases.csv",
+        "bytes": 969,
+        "sha256": "35fff18bf835ec8df96bfb6212008ab8dc5a8ae3cfee7dc4754fd81c67080fcc"
+      },
+      {
+        "name": "relevance-evaluation-set.json",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/relevance-evaluation-set.json",
+        "bytes": 17308,
+        "sha256": "2a14720356da3b0727bda5a529d29843508ac220f29d4310a4d80e07a09e24b7"
+      },
+      {
+        "name": "merchant-client-request.json",
+        "path": "/dev/shm/astra-ee290-opensearch/receiving-relevance-1/relevance-exports/merchant-client-request.json",
+        "bytes": 588,
+        "sha256": "688e533a262ae3acbd9cfa8c82462bb5e84589153ef757ac6c4e560033d5c751"
+      }
+    ],
+    "state": "PASS",
+    "completedAt": "2026-10-11T23:55:54.380Z",
+    "evaluationId": "ac35c6b6cbca5f0c98af3fe4edac1de6",
+    "resultSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+    "nativeComplete": true,
+    "nativeCoverage": {
+      "requestedCases": 2,
+      "completeCases": 2,
+      "failedCases": 0,
+      "incompleteCases": 0
+    },
+    "selectedVariant": "lowest-price",
+    "packageId": "368b20e1b3410bef2fee494da8831787"
+  },
+  "native": {
+    "source": {
+      "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+      "serverVersion": "3.9.0"
+    },
+    "complete": true,
+    "coverage": {
+      "requestedCases": 2,
+      "completeCases": 2,
+      "failedCases": 0,
+      "incompleteCases": 0
+    },
+    "snapshotReleased": true,
+    "resultSha256": "a51c719a4dd6ccc8dd21e110659b3ecf8ba5ee88f567d55e4f1ee5050b0657db",
+    "evaluationId": "ac35c6b6cbca5f0c98af3fe4edac1de6"
+  },
+  "comparison": {
+    "metric": {
+      "precision": {
+        "k": 3,
+        "relevant_rating_threshold": 1,
+        "ignore_unlabeled": false
+      }
+    },
+    "caseId": "budget-cohort",
+    "source": {
+      "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+      "serverVersion": "3.9.0"
+    },
+    "sameNativeSnapshot": true,
+    "sameFrozenJudgments": true,
+    "variants": [
+      {
+        "id": "lowest-price",
+        "label": "Lowest price first",
+        "metricScore": 1,
+        "relevantReturned": 3,
+        "returned": 3,
+        "judgedReturned": 3,
+        "unjudgedReturned": 0,
+        "concreteIndices": [
+          "opensearch_dashboards_sample_data_flights"
+        ],
+        "effectiveSort": [
+          {
+            "AvgTicketPrice": "asc"
+          },
+          {
+            "FlightNum": "asc"
+          },
+          {
+            "_index": "asc"
+          },
+          {
+            "_shard_doc": "asc"
+          }
+        ],
+        "snapshot": {
+          "scopeId": "67b9d0ba-66a8-48ab-bf72-0bbe95c06fa5",
+          "createdAt": "2026-10-11T23:55:52.951Z",
+          "released": true
+        },
+        "currentDocumentsMatchRetainedCriterion": true
+      },
+      {
+        "id": "highest-price",
+        "label": "Highest price first",
+        "metricScore": 0,
+        "relevantReturned": 0,
+        "returned": 3,
+        "judgedReturned": 3,
+        "unjudgedReturned": 0,
+        "concreteIndices": [
+          "opensearch_dashboards_sample_data_flights"
+        ],
+        "effectiveSort": [
+          {
+            "AvgTicketPrice": "desc"
+          },
+          {
+            "FlightNum": "asc"
+          },
+          {
+            "_index": "asc"
+          },
+          {
+            "_shard_doc": "asc"
+          }
+        ],
+        "snapshot": {
+          "scopeId": "67b9d0ba-66a8-48ab-bf72-0bbe95c06fa5",
+          "createdAt": "2026-10-11T23:55:52.951Z",
+          "released": true
+        },
+        "currentDocumentsMatchRetainedCriterion": true
+      }
+    ],
+    "scoreDifference": 1
+  },
+  "state": "PASS",
+  "completedAt": "2026-10-11T23:55:54.381Z",
+  "sourceCommit": "8fb742aa2e2048cff73da0c737169a49970dd0a5",
+  "sourceFiles": {
+    "README.md": {
+      "bytes": 12437,
+      "sha256": "40999bcf40109ece00a7ca478b526720e176ae0265a9eb849f45234835299984"
+    },
+    "declaration.mjs": {
+      "bytes": 7839,
+      "sha256": "c1c9498225a599baffb6b17f6a5ca93889901d78edce45bebcad4e04777c0406"
+    },
+    "examples/input.json": {
+      "bytes": 42,
+      "sha256": "931ff59d4cfbce1ecc6a02b5e9d5d9e3cc4bc7ec5ce4eb49fcd9e01253aa2423"
+    },
+    "examples/merchant-plan.json": {
+      "bytes": 913,
+      "sha256": "3bc4c76190fb7f5a9a3c78af6392f816243d0c7bdedb54b50f0a2777043884c6"
+    },
+    "examples/source.json": {
+      "bytes": 1378,
+      "sha256": "af6fde93181b985ad9d071953450b0d382538d12c59394f9ef1bb187187f1b9a"
+    },
+    "prepare.mjs": {
+      "bytes": 5737,
+      "sha256": "be9337795eddc849c1a2b23d6351c2e8f3f67257219f7ecf0e3621f31330e349"
+    },
+    "projection.mjs": {
+      "bytes": 6320,
+      "sha256": "ef6ff17122805a928438024920cd8a2e90da3e746bd050073f9a4bf34a6ba534"
+    },
+    "receiving/README.md": {
+      "bytes": 5958,
+      "sha256": "88aa1694baf22cbb31b7c6305cf240f74f28ef747f0b52c6dc5a4a482f1a9868"
+    },
+    "receiving/flight-cohort.json": {
+      "bytes": 10028,
+      "sha256": "3882231bed82154334ea678d8c8c089732a9d167c1790d0c7e1ca8356d9e7046"
+    },
+    "receiving/merchant-journey.mjs": {
+      "bytes": 8850,
+      "sha256": "a51e770f6a6ad4b57122b48c22b79abac3eba160108a46e8b13a6f11f4f06d6a"
+    },
+    "receiving/merchant-native-run.json": {
+      "bytes": 5731,
+      "sha256": "fe25409aa8e352879d9a47c2f06f4c167e5d797231339d42d88c86af0dc36c11"
+    },
+    "receiving/playground-bridge.py": {
+      "bytes": 12537,
+      "sha256": "47f9b57eebacf5e7ebe93982a5eb186a6c99f311f68c3305305fa03235264282"
+    },
+    "receiving/playground-source.json": {
+      "bytes": 1513,
+      "sha256": "42c7b3542d83a89ac5a14b1f4a40f1fddc64a16a5d73e425f48e8c110df60368"
+    },
+    "receiving/relevance-journey.mjs": {
+      "bytes": 11373,
+      "sha256": "7cd6c322c1a03c1c16f0954e2e256b6ef06417dcdc79cf41a34576f8d78da6ab"
+    },
+    "receiving/run-playground.py": {
+      "bytes": 6314,
+      "sha256": "186d0cfa4553eb0a123bcab276f5ee08f3f0841ecd84b3ba4877fb1a0d5e5905"
+    },
+    "relevance/NATIVE_PROTOCOL.md": {
+      "bytes": 16460,
+      "sha256": "3f2b30df5511747adad2f9172928b26a59f300598d00fdf3f89fb810092df675"
+    },
+    "relevance/README.md": {
+      "bytes": 11900,
+      "sha256": "2ca725685e34eafb288fed5ad664b0e9d7e08ee478c94c75a3641c5d2a5d2256"
+    },
+    "relevance/native.mjs": {
+      "bytes": 14747,
+      "sha256": "d7e73a4ffe62301fccb791bfa1cd62388067337e36ed9bfac13e0e5fe5b3ad52"
+    },
+    "relevance/operator-journey.mjs": {
+      "bytes": 12938,
+      "sha256": "b29d70cd2a4d0d33bad1528849d409b0257daf4d72f44cda4b7ef5b1e0088ee5"
+    },
+    "relevance/public.mjs": {
+      "bytes": 35489,
+      "sha256": "585721050b637773b7818efdffb12c54df3cfc5becdd931013757d2ce4d3a2a7"
+    },
+    "relevance/validation.mjs": {
+      "bytes": 7885,
+      "sha256": "a1de5c57c02d86cc1c7029b873e7765e27cc136464bbb7705c11752c48ae60b4"
+    },
+    "relevance/workspace.mjs": {
+      "bytes": 35812,
+      "sha256": "fb35c77820bf397fa8eebc69d0c7531f53de3408f3b452d8243056262136ad24"
+    },
+    "source.mjs": {
+      "bytes": 18596,
+      "sha256": "51b13b5c33de32b36bd64da8fac5522a034ef85e53bed63400a9f208ea1c4854"
+    },
+    "start.mjs": {
+      "bytes": 4830,
+      "sha256": "12a01b1152e579f35a93e509e6fdb196b4c18570e6a36dba188f7e2607fbaf80"
+    },
+    "wire.mjs": {
+      "bytes": 8965,
+      "sha256": "a092aec753a394ab07a240a715dfb062b132b467ff4b1d9292fa821d3776467a"
+    },
+    "workspace/README.md": {
+      "bytes": 11651,
+      "sha256": "42c83038c50fc78a180a7feee486b89014af0f5d1515b9bcf17bb149baebca75"
+    },
+    "workspace/public/app.mjs": {
+      "bytes": 23223,
+      "sha256": "df2db002f112235e42d63dbfe9e1f6ba061deaf7e51a35b97c51832fc094c836"
+    },
+    "workspace/public/index.html": {
+      "bytes": 5897,
+      "sha256": "7348fa649a6097a2828648738e7c8060a373750c18139a3401dfd205ffec55e0"
+    },
+    "workspace/public/style.css": {
+      "bytes": 5708,
+      "sha256": "7f1daa7f58c41c18f8855596c1379a51739e3334030fabea713a17c9a39671de"
+    },
+    "workspace/server.mjs": {
+      "bytes": 12622,
+      "sha256": "f5abefd143b5a37a9e842da9ffeb4fc44b1e78a6ab1c315795b867df7374987a"
+    },
+    "workspace/service.mjs": {
+      "bytes": 11780,
+      "sha256": "f571f20094329e7f8d5c7e5f5be1b9a551629e372f7076260371f3383303019a"
+    },
+    "workspace/store.mjs": {
+      "bytes": 21164,
+      "sha256": "89b46fb678319c3d87466e7cbe15b4a3adeb2ed043fbb542c3ecc17dbc95cd4e"
+    }
+  },
+  "set": {
+    "schema": "stellar-forge.opensearch-relevance-set.v1",
+    "title": "Native flight budget relevance",
+    "description": "Two native price-order variants evaluated against a frozen cohort of real OpenSearch public sample flights. Judgments follow the retained budget criterion and original record values.",
+    "metric": {
+      "precision": {
+        "k": 3,
+        "relevant_rating_threshold": 1,
+        "ignore_unlabeled": false
+      }
+    },
+    "variants": [
+      {
+        "id": "lowest-price",
+        "title": "Lowest price first",
+        "queryName": "flights",
+        "query": {
+          "indices": [
+            "opensearch_dashboards_sample_data_flights"
+          ],
+          "query": {
+            "bool": {
+              "filter": [
+                {
+                  "bool": {
+                    "filter": [
+                      {
+                        "term": {
+                          "OriginCountry": {
+                            "$param": "country"
+                          }
+                        }
+                      },
+                      {
+                        "range": {
+                          "AvgTicketPrice": {
+                            "gte": {
+                              "$param": "minimum_price"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "ids": {
+                    "values": [
+                      "FH8-76AB8EVjkSdEB73a",
+                      "YH8-76AB8EVjkSdEB73a",
+                      "Fn8-76AB8EVjkSdEB73a",
+                      "FX8-76AB8EVjkSdEB73a",
+                      "En8-76AB8EVjkSdEB73a",
+                      "KH8-76AB8EVjkSdEB73a",
+                      "TX8-76AB8EVjkSdEB77b"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "parameters": {
+            "country": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "minimum_price": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "fields": [
+            "FlightNum",
+            "Origin",
+            "Dest",
+            "OriginCountry",
+            "DestCountry",
+            "AvgTicketPrice",
+            "timestamp",
+            "FlightDelay",
+            "Cancelled"
+          ],
+          "sort": [
+            {
+              "AvgTicketPrice": "asc"
+            },
+            {
+              "FlightNum": "asc"
+            }
+          ],
+          "pageSize": 3,
+          "maxHits": 7,
+          "maxBytes": 917504,
+          "timeoutMs": 30000,
+          "probe": {
+            "country": "US",
+            "minimum_price": 0
+          }
+        },
+        "plan": {
+          "schema": "stellar-forge.opensearch-merchant-plan.v1",
+          "publicOrigin": "https://search.example.com",
+          "payment": {
+            "scheme": "exact",
+            "network": "stellar:testnet",
+            "amount": "10000",
+            "asset": "CABAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAFNSZ",
+            "payTo": "GAAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQDZ7H",
+            "maxTimeoutSeconds": 60
+          },
+          "routes": [
+            {
+              "id": "flight_search",
+              "path": "/search/flights",
+              "method": "POST",
+              "query": "flights",
+              "serviceName": "Budget Flight Cohort",
+              "description": "Search the retained public flight cohort used for the engineering relevance review.",
+              "parameterDescriptions": {
+                "country": "Two-letter departure country.",
+                "minimum_price": "Minimum average ticket price."
+              },
+              "example": {
+                "country": "US",
+                "minimum_price": 0
+              }
+            }
+          ]
+        },
+        "input": {
+          "country": "US",
+          "minimum_price": 0
+        }
+      },
+      {
+        "id": "highest-price",
+        "title": "Highest price first",
+        "queryName": "flights",
+        "query": {
+          "indices": [
+            "opensearch_dashboards_sample_data_flights"
+          ],
+          "query": {
+            "bool": {
+              "filter": [
+                {
+                  "bool": {
+                    "filter": [
+                      {
+                        "term": {
+                          "OriginCountry": {
+                            "$param": "country"
+                          }
+                        }
+                      },
+                      {
+                        "range": {
+                          "AvgTicketPrice": {
+                            "gte": {
+                              "$param": "minimum_price"
+                            }
+                          }
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "ids": {
+                    "values": [
+                      "FH8-76AB8EVjkSdEB73a",
+                      "YH8-76AB8EVjkSdEB73a",
+                      "Fn8-76AB8EVjkSdEB73a",
+                      "FX8-76AB8EVjkSdEB73a",
+                      "En8-76AB8EVjkSdEB73a",
+                      "KH8-76AB8EVjkSdEB73a",
+                      "TX8-76AB8EVjkSdEB77b"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "parameters": {
+            "country": {
+              "type": "string",
+              "minLength": 2,
+              "maxLength": 2
+            },
+            "minimum_price": {
+              "type": "number",
+              "minimum": 0
+            }
+          },
+          "fields": [
+            "FlightNum",
+            "Origin",
+            "Dest",
+            "OriginCountry",
+            "DestCountry",
+            "AvgTicketPrice",
+            "timestamp",
+            "FlightDelay",
+            "Cancelled"
+          ],
+          "sort": [
+            {
+              "AvgTicketPrice": "desc"
+            },
+            {
+              "FlightNum": "asc"
+            }
+          ],
+          "pageSize": 3,
+          "maxHits": 7,
+          "maxBytes": 917504,
+          "timeoutMs": 30000,
+          "probe": {
+            "country": "US",
+            "minimum_price": 0
+          }
+        },
+        "plan": {
+          "schema": "stellar-forge.opensearch-merchant-plan.v1",
+          "publicOrigin": "https://search.example.com",
+          "payment": {
+            "scheme": "exact",
+            "network": "stellar:testnet",
+            "amount": "10000",
+            "asset": "CABAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAFNSZ",
+            "payTo": "GAAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQCAIBAEAQDZ7H",
+            "maxTimeoutSeconds": 60
+          },
+          "routes": [
+            {
+              "id": "flight_search",
+              "path": "/search/flights",
+              "method": "POST",
+              "query": "flights",
+              "serviceName": "Budget Flight Cohort",
+              "description": "Search the retained public flight cohort used for the engineering relevance review.",
+              "parameterDescriptions": {
+                "country": "Two-letter departure country.",
+                "minimum_price": "Minimum average ticket price."
+              },
+              "example": {
+                "country": "US",
+                "minimum_price": 0
+              }
+            }
+          ]
+        },
+        "input": {
+          "country": "US",
+          "minimum_price": 0
+        }
+      }
+    ],
+    "cases": [
+      {
+        "id": "budget-cohort",
+        "title": "Budget flights in the retained cohort",
+        "input": {
+          "country": "US",
+          "minimum_price": 0
+        },
+        "documents": [
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "FH8-76AB8EVjkSdEB73a",
+            "rating": 0,
+            "note": "Engineering budget criterion: AvgTicketPrice 772.1008456460212 > 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "FH8-76AB8EVjkSdEB73a",
+              "_source": {
+                "FlightNum": "RBFKZBX",
+                "Origin": "Casper-Natrona County International Airport",
+                "Dest": "Indira Gandhi International Airport",
+                "FlightDelay": true,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 772.1008456460212,
+                "Cancelled": false,
+                "DestCountry": "IN",
+                "timestamp": "2026-09-21T00:02:06"
+              },
+              "_score": null,
+              "sort": [
+                1789948926000,
+                "RBFKZBX",
+                "opensearch_dashboards_sample_data_flights",
+                19
+              ],
+              "exactIntegerPaths": []
+            }
+          },
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "YH8-76AB8EVjkSdEB73a",
+            "rating": 1,
+            "note": "Engineering budget criterion: AvgTicketPrice 159.9909618375961 <= 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "YH8-76AB8EVjkSdEB73a",
+              "_source": {
+                "FlightNum": "9E0P1AU",
+                "Origin": "Erie International Tom Ridge Field",
+                "Dest": "San Francisco International Airport",
+                "FlightDelay": false,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 159.9909618375961,
+                "Cancelled": false,
+                "DestCountry": "US",
+                "timestamp": "2026-09-21T00:06:27"
+              },
+              "_score": null,
+              "sort": [
+                1789949187000,
+                "9E0P1AU",
+                "opensearch_dashboards_sample_data_flights",
+                95
+              ],
+              "exactIntegerPaths": []
+            }
+          },
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "Fn8-76AB8EVjkSdEB73a",
+            "rating": 1,
+            "note": "Engineering budget criterion: AvgTicketPrice 253.21006490337038 <= 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "Fn8-76AB8EVjkSdEB73a",
+              "_source": {
+                "FlightNum": "1TJWK8F",
+                "Origin": "Newark Liberty International Airport",
+                "Dest": "Ottawa Macdonald-Cartier International Airport",
+                "FlightDelay": true,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 253.21006490337038,
+                "Cancelled": false,
+                "DestCountry": "CA",
+                "timestamp": "2026-09-21T01:08:20"
+              },
+              "_score": null,
+              "sort": [
+                1789952900000,
+                "1TJWK8F",
+                "opensearch_dashboards_sample_data_flights",
+                21
+              ],
+              "exactIntegerPaths": []
+            }
+          },
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "FX8-76AB8EVjkSdEB73a",
+            "rating": 1,
+            "note": "Engineering budget criterion: AvgTicketPrice 167.59992219374266 <= 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "FX8-76AB8EVjkSdEB73a",
+              "_source": {
+                "FlightNum": "R43CELD",
+                "Origin": "Erie International Tom Ridge Field",
+                "Dest": "Wichita Mid Continent Airport",
+                "FlightDelay": true,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 167.59992219374266,
+                "Cancelled": false,
+                "DestCountry": "US",
+                "timestamp": "2026-09-21T01:08:20"
+              },
+              "_score": null,
+              "sort": [
+                1789952900000,
+                "R43CELD",
+                "opensearch_dashboards_sample_data_flights",
+                20
+              ],
+              "exactIntegerPaths": []
+            }
+          },
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "En8-76AB8EVjkSdEB73a",
+            "rating": 0,
+            "note": "Engineering budget criterion: AvgTicketPrice 569.6132552035547 > 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "En8-76AB8EVjkSdEB73a",
+              "_source": {
+                "FlightNum": "7TTZM4I",
+                "Origin": "Cleveland Hopkins International Airport",
+                "Dest": "Ministro Pistarini International Airport",
+                "FlightDelay": true,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 569.6132552035547,
+                "Cancelled": false,
+                "DestCountry": "AR",
+                "timestamp": "2026-09-21T01:30:47"
+              },
+              "_score": null,
+              "sort": [
+                1789954247000,
+                "7TTZM4I",
+                "opensearch_dashboards_sample_data_flights",
+                17
+              ],
+              "exactIntegerPaths": []
+            }
+          },
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "KH8-76AB8EVjkSdEB73a",
+            "rating": 1,
+            "note": "Engineering budget criterion: AvgTicketPrice 231.96273728774017 <= 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "KH8-76AB8EVjkSdEB73a",
+              "_source": {
+                "FlightNum": "HF9AP10",
+                "Origin": "John F Kennedy International Airport",
+                "Dest": "San Diego International Airport",
+                "FlightDelay": false,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 231.96273728774017,
+                "Cancelled": false,
+                "DestCountry": "US",
+                "timestamp": "2026-09-21T01:50:27"
+              },
+              "_score": null,
+              "sort": [
+                1789955427000,
+                "HF9AP10",
+                "opensearch_dashboards_sample_data_flights",
+                39
+              ],
+              "exactIntegerPaths": []
+            }
+          },
+          {
+            "_index": "opensearch_dashboards_sample_data_flights",
+            "_id": "TX8-76AB8EVjkSdEB77b",
+            "rating": 0,
+            "note": "Engineering budget criterion: AvgTicketPrice 337.660374662825 > 253.21006490337038.",
+            "hit": {
+              "_index": "opensearch_dashboards_sample_data_flights",
+              "_id": "TX8-76AB8EVjkSdEB77b",
+              "_source": {
+                "FlightNum": "0VWO82H",
+                "Origin": "Savannah Hilton Head International Airport",
+                "Dest": "Zurich Airport",
+                "FlightDelay": false,
+                "OriginCountry": "US",
+                "AvgTicketPrice": 337.660374662825,
+                "Cancelled": false,
+                "DestCountry": "CH",
+                "timestamp": "2026-09-21T03:01:52"
+              },
+              "_score": null,
+              "sort": [
+                1789959712000,
+                "0VWO82H",
+                "opensearch_dashboards_sample_data_flights",
+                332
+              ],
+              "exactIntegerPaths": []
+            }
+          }
+        ],
+        "provenance": {
+          "kind": "engineering-sample-judgments",
+          "criterion": {
+            "schema": "stellar-forge.opensearch-engineering-judgment-rule.v1",
+            "label": "Budget suitability within the retained public flight cohort",
+            "judgmentOrigin": "Deterministic engineering sample judgments derived from the original native records",
+            "field": "AvgTicketPrice",
+            "relevantWhen": "value <= lower median of retained cohort prices",
+            "threshold": 253.21006490337038,
+            "relevantGrade": 1,
+            "otherGrade": 0,
+            "cohortDocuments": 7,
+            "sortedNativePrices": [
+              159.9909618375961,
+              167.59992219374266,
+              231.96273728774017,
+              253.21006490337038,
+              337.660374662825,
+              569.6132552035547,
+              772.1008456460212
+            ],
+            "originalResultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+            "originalCaptureRequestId": "ee290-native-flights-capture-20261011T234116Z-bd81fdd1",
+            "originalCaptureTime": "2026-10-11T23:41:37.599Z",
+            "source": {
+              "clusterFingerprint": "b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab",
+              "serverVersion": "3.9.0"
+            },
+            "interpretation": "Precision describes the retained flight cohort and this declared budget criterion."
+          },
+          "publicSource": "https://playground.opensearch.org",
+          "originalEditionId": "49042fc669d38005ea9363a73c5fc9c9",
+          "originalResultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+          "originalTotal": {
+            "value": 8,
+            "relation": "gte"
+          },
+          "originalTruncated": true,
+          "selectedDocuments": 7
+        }
+      }
+    ],
+    "importedFrom": {
+      "kind": "native-source-cohort",
+      "resultSha256": "5cd0d983106d5691dc4680277590568beb3ec28de67004e8ba0ece0e53546825",
+      "captureRequestId": "ee290-native-flights-capture-20261011T234116Z-bd81fdd1",
+      "editionId": "49042fc669d38005ea9363a73c5fc9c9"
+    },
+    "id": "16c77c35-8487-4b69-80d8-bc30591a4c41",
+    "revision": 1,
+    "sourceProfileSha256": "3e99308f5f60146f1381883b4e9c46e31670a05c5bff3c8c959d2b195e46a33e",
+    "createdAt": "2026-10-11T23:55:51.753Z",
+    "updatedAt": "2026-10-11T23:55:51.753Z"
+  },
+  "nativeResultJson": "{\n  \"schema\": \"stellar-forge.opensearch-relevance-result.v1\",\n  \"startedAt\": \"2026-10-11T23:55:51.777Z\",\n  \"capturedAt\": \"2026-10-11T23:55:54.228Z\",\n  \"source\": {\n    \"clusterFingerprint\": \"b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab\",\n    \"serverVersion\": \"3.9.0\"\n  },\n  \"metric\": {\n    \"precision\": {\n      \"k\": 3,\n      \"relevant_rating_threshold\": 1,\n      \"ignore_unlabeled\": false\n    }\n  },\n  \"caseIds\": [\n    \"budget-cohort\"\n  ],\n  \"variants\": [\n    {\n      \"id\": \"lowest-price\",\n      \"label\": \"Lowest price first\",\n      \"queryName\": \"flights\",\n      \"source\": {\n        \"clusterFingerprint\": \"b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab\",\n        \"serverVersion\": \"3.9.0\"\n      },\n      \"indices\": [\n        \"opensearch_dashboards_sample_data_flights\"\n      ],\n      \"concreteIndices\": [\n        \"opensearch_dashboards_sample_data_flights\"\n      ],\n      \"effectiveSort\": [\n        {\n          \"AvgTicketPrice\": \"asc\"\n        },\n        {\n          \"FlightNum\": \"asc\"\n        },\n        {\n          \"_index\": \"asc\"\n        },\n        {\n          \"_shard_doc\": \"asc\"\n        }\n      ],\n      \"fields\": [\n        \"FlightNum\",\n        \"Origin\",\n        \"Dest\",\n        \"OriginCountry\",\n        \"DestCountry\",\n        \"AvgTicketPrice\",\n        \"timestamp\",\n        \"FlightDelay\",\n        \"Cancelled\"\n      ],\n      \"k\": 3,\n      \"snapshot\": {\n        \"scopeId\": \"67b9d0ba-66a8-48ab-bf72-0bbe95c06fa5\",\n        \"createdAt\": \"2026-10-11T23:55:52.951Z\",\n        \"released\": true\n      },\n      \"metricScore\": 1,\n      \"complete\": true,\n      \"cases\": [\n        {\n          \"id\": \"budget-cohort\",\n          \"status\": \"COMPLETE\",\n          \"score\": 1,\n          \"hitCount\": 3,\n          \"judgedHitCount\": 3,\n          \"unjudgedHitCount\": 0,\n          \"judgmentCount\": 7,\n          \"strictWindowState\": \"COMPLETE\",\n          \"total\": {\n            \"value\": 3,\n            \"relation\": \"gte\"\n          },\n          \"orderedWindowMatches\": true\n        }\n      ],\n      \"strictWindows\": {\n        \"budget-cohort\": {\n          \"state\": \"COMPLETE\",\n          \"capturedAt\": \"2026-10-11T23:55:53.206Z\",\n          \"total\": {\n            \"value\": 3,\n            \"relation\": \"gte\"\n          },\n          \"shards\": {\n            \"total\": 1,\n            \"successful\": 1,\n            \"skipped\": 0,\n            \"failed\": 0\n          },\n          \"timedOut\": false,\n          \"hitCount\": 3,\n          \"hits\": [\n            {\n              \"_index\": \"opensearch_dashboards_sample_data_flights\",\n              \"_id\": \"YH8-76AB8EVjkSdEB73a\",\n              \"_source\": {\n                \"FlightNum\": \"9E0P1AU\",\n                \"Origin\": \"Erie International Tom Ridge Field\",\n                \"Dest\": \"San Francisco International Airport\",\n                \"FlightDelay\": false,\n                \"OriginCountry\": \"US\",\n                \"AvgTicketPrice\": 159.9909618375961,\n                \"Cancelled\": false,\n                \"DestCountry\": \"US\",\n                \"timestamp\": \"2026-09-21T00:06:27\"\n              },\n              \"_score\": null,\n              \"sort\": [\n                159.99097,\n                \"9E0P1AU\",\n                \"opensearch_dashboards_sample_data_flights\",\n                95\n              ]\n            },\n            {\n              \"_index\": \"opensearch_dashboards_sample_data_flights\",\n              \"_id\": \"FX8-76AB8EVjkSdEB73a\",\n              \"_source\": {\n                \"FlightNum\": \"R43CELD\",\n                \"Origin\": \"Erie International Tom Ridge Field\",\n                \"Dest\": \"Wichita Mid Continent Airport\",\n                \"FlightDelay\": true,\n                \"OriginCountry\": \"US\",\n                \"AvgTicketPrice\": 167.59992219374266,\n                \"Cancelled\": false,\n                \"DestCountry\": \"US\",\n                \"timestamp\": \"2026-09-21T01:08:20\"\n              },\n              \"_score\": null,\n              \"sort\": [\n                167.59993,\n                \"R43CELD\",\n                \"opensearch_dashboards_sample_data_flights\",\n                20\n              ]\n            },\n            {\n              \"_index\": \"opensearch_dashboards_sample_data_flights\",\n              \"_id\": \"KH8-76AB8EVjkSdEB73a\",\n              \"_source\": {\n                \"FlightNum\": \"HF9AP10\",\n                \"Origin\": \"John F Kennedy International Airport\",\n                \"Dest\": \"San Diego International Airport\",\n                \"FlightDelay\": false,\n                \"OriginCountry\": \"US\",\n                \"AvgTicketPrice\": 231.96273728774017,\n                \"Cancelled\": false,\n                \"DestCountry\": \"US\",\n                \"timestamp\": \"2026-09-21T01:50:27\"\n              },\n              \"_score\": null,\n              \"sort\": [\n                231.96274,\n                \"HF9AP10\",\n                \"opensearch_dashboards_sample_data_flights\",\n                39\n              ]\n            }\n          ],\n          \"exactIntegerPaths\": []\n        }\n      },\n      \"native\": {\n        \"metric_score\": 1,\n        \"details\": {\n          \"budget-cohort\": {\n            \"metric_score\": 1,\n            \"unrated_docs\": [],\n            \"hits\": [\n              {\n                \"hit\": {\n                  \"_index\": \"opensearch_dashboards_sample_data_flights\",\n                  \"_id\": \"YH8-76AB8EVjkSdEB73a\",\n                  \"_score\": null,\n                  \"_source\": {\n                    \"FlightNum\": \"9E0P1AU\",\n                    \"Origin\": \"Erie International Tom Ridge Field\",\n                    \"Dest\": \"San Francisco International Airport\",\n                    \"FlightDelay\": false,\n                    \"OriginCountry\": \"US\",\n                    \"AvgTicketPrice\": 159.9909618375961,\n                    \"Cancelled\": false,\n                    \"DestCountry\": \"US\",\n                    \"timestamp\": \"2026-09-21T00:06:27\"\n                  },\n                  \"sort\": [\n                    159.99097,\n                    \"9E0P1AU\",\n                    \"opensearch_dashboards_sample_data_flights\",\n                    95\n                  ]\n                },\n                \"rating\": 1\n              },\n              {\n                \"hit\": {\n                  \"_index\": \"opensearch_dashboards_sample_data_flights\",\n                  \"_id\": \"FX8-76AB8EVjkSdEB73a\",\n                  \"_score\": null,\n                  \"_source\": {\n                    \"FlightNum\": \"R43CELD\",\n                    \"Origin\": \"Erie International Tom Ridge Field\",\n                    \"Dest\": \"Wichita Mid Continent Airport\",\n                    \"FlightDelay\": true,\n                    \"OriginCountry\": \"US\",\n                    \"AvgTicketPrice\": 167.59992219374266,\n                    \"Cancelled\": false,\n                    \"DestCountry\": \"US\",\n                    \"timestamp\": \"2026-09-21T01:08:20\"\n                  },\n                  \"sort\": [\n                    167.59993,\n                    \"R43CELD\",\n                    \"opensearch_dashboards_sample_data_flights\",\n                    20\n                  ]\n                },\n                \"rating\": 1\n              },\n              {\n                \"hit\": {\n                  \"_index\": \"opensearch_dashboards_sample_data_flights\",\n                  \"_id\": \"KH8-76AB8EVjkSdEB73a\",\n                  \"_score\": null,\n                  \"_source\": {\n                    \"FlightNum\": \"HF9AP10\",\n                    \"Origin\": \"John F Kennedy International Airport\",\n                    \"Dest\": \"San Diego International Airport\",\n                    \"FlightDelay\": false,\n                    \"OriginCountry\": \"US\",\n                    \"AvgTicketPrice\": 231.96273728774017,\n                    \"Cancelled\": false,\n                    \"DestCountry\": \"US\",\n                    \"timestamp\": \"2026-09-21T01:50:27\"\n                  },\n                  \"sort\": [\n                    231.96274,\n                    \"HF9AP10\",\n                    \"opensearch_dashboards_sample_data_flights\",\n                    39\n                  ]\n                },\n                \"rating\": 1\n              }\n            ],\n            \"metric_details\": {\n              \"precision\": {\n                \"relevant_docs_retrieved\": 3,\n                \"docs_retrieved\": 3\n              }\n            }\n          }\n        },\n        \"failures\": {}\n      },\n      \"exactIntegerPaths\": []\n    },\n    {\n      \"id\": \"highest-price\",\n      \"label\": \"Highest price first\",\n      \"queryName\": \"flights\",\n      \"source\": {\n        \"clusterFingerprint\": \"b99826a9a6b8e05bb082e7fc2522ab215ac3c12657c7580ad1d66c35519c35ab\",\n        \"serverVersion\": \"3.9.0\"\n      },\n      \"indices\": [\n        \"opensearch_dashboards_sample_data_flights\"\n      ],\n      \"concreteIndices\": [\n        \"opensearch_dashboards_sample_data_flights\"\n      ],\n      \"effectiveSort\": [\n        {\n          \"AvgTicketPrice\": \"desc\"\n        },\n        {\n          \"FlightNum\": \"asc\"\n        },\n        {\n          \"_index\": \"asc\"\n        },\n        {\n          \"_shard_doc\": \"asc\"\n        }\n      ],\n      \"fields\": [\n        \"FlightNum\",\n        \"Origin\",\n        \"Dest\",\n        \"OriginCountry\",\n        \"DestCountry\",\n        \"AvgTicketPrice\",\n        \"timestamp\",\n        \"FlightDelay\",\n        \"Cancelled\"\n      ],\n      \"k\": 3,\n      \"snapshot\": {\n        \"scopeId\": \"67b9d0ba-66a8-48ab-bf72-0bbe95c06fa5\",\n        \"createdAt\": \"2026-10-11T23:55:52.951Z\",\n        \"released\": true\n      },\n      \"metricScore\": 0,\n      \"complete\": true,\n      \"cases\": [\n        {\n          \"id\": \"budget-cohort\",\n          \"status\": \"COMPLETE\",\n          \"score\": 0,\n          \"hitCount\": 3,\n          \"judgedHitCount\": 3,\n          \"unjudgedHitCount\": 0,\n          \"judgmentCount\": 7,\n          \"strictWindowState\": \"COMPLETE\",\n          \"total\": {\n            \"value\": 3,\n            \"relation\": \"gte\"\n          },\n          \"orderedWindowMatches\": true\n        }\n      ],\n      \"strictWindows\": {\n        \"budget-cohort\": {\n          \"state\": \"COMPLETE\",\n          \"capturedAt\": \"2026-10-11T23:55:53.607Z\",\n          \"total\": {\n            \"value\": 3,\n            \"relation\": \"gte\"\n          },\n          \"shards\": {\n            \"total\": 1,\n            \"successful\": 1,\n            \"skipped\": 0,\n            \"failed\": 0\n          },\n          \"timedOut\": false,\n          \"hitCount\": 3,\n          \"hits\": [\n            {\n              \"_index\": \"opensearch_dashboards_sample_data_flights\",\n              \"_id\": \"FH8-76AB8EVjkSdEB73a\",\n              \"_source\": {\n                \"FlightNum\": \"RBFKZBX\",\n                \"Origin\": \"Casper-Natrona County International Airport\",\n                \"Dest\": \"Indira Gandhi International Airport\",\n                \"FlightDelay\": true,\n                \"OriginCountry\": \"US\",\n                \"AvgTicketPrice\": 772.1008456460212,\n                \"Cancelled\": false,\n                \"DestCountry\": \"IN\",\n                \"timestamp\": \"2026-09-21T00:02:06\"\n              },\n              \"_score\": null,\n              \"sort\": [\n                772.1008,\n                \"RBFKZBX\",\n                \"opensearch_dashboards_sample_data_flights\",\n                19\n              ]\n            },\n            {\n              \"_index\": \"opensearch_dashboards_sample_data_flights\",\n              \"_id\": \"En8-76AB8EVjkSdEB73a\",\n              \"_source\": {\n                \"FlightNum\": \"7TTZM4I\",\n                \"Origin\": \"Cleveland Hopkins International Airport\",\n                \"Dest\": \"Ministro Pistarini International Airport\",\n                \"FlightDelay\": true,\n                \"OriginCountry\": \"US\",\n                \"AvgTicketPrice\": 569.6132552035547,\n                \"Cancelled\": false,\n                \"DestCountry\": \"AR\",\n                \"timestamp\": \"2026-09-21T01:30:47\"\n              },\n              \"_score\": null,\n              \"sort\": [\n                569.6133,\n                \"7TTZM4I\",\n                \"opensearch_dashboards_sample_data_flights\",\n                17\n              ]\n            },\n            {\n              \"_index\": \"opensearch_dashboards_sample_data_flights\",\n              \"_id\": \"TX8-76AB8EVjkSdEB77b\",\n              \"_source\": {\n                \"FlightNum\": \"0VWO82H\",\n                \"Origin\": \"Savannah Hilton Head International Airport\",\n                \"Dest\": \"Zurich Airport\",\n                \"FlightDelay\": false,\n                \"OriginCountry\": \"US\",\n                \"AvgTicketPrice\": 337.660374662825,\n                \"Cancelled\": false,\n                \"DestCountry\": \"CH\",\n                \"timestamp\": \"2026-09-21T03:01:52\"\n              },\n              \"_score\": null,\n              \"sort\": [\n                337.66037,\n                \"0VWO82H\",\n                \"opensearch_dashboards_sample_data_flights\",\n                332\n              ]\n            }\n          ],\n          \"exactIntegerPaths\": []\n        }\n      },\n      \"native\": {\n        \"metric_score\": 0,\n        \"details\": {\n          \"budget-cohort\": {\n            \"metric_score\": 0,\n            \"unrated_docs\": [],\n            \"hits\": [\n              {\n                \"hit\": {\n                  \"_index\": \"opensearch_dashboards_sample_data_flights\",\n                  \"_id\": \"FH8-76AB8EVjkSdEB73a\",\n                  \"_score\": null,\n                  \"_source\": {\n                    \"FlightNum\": \"RBFKZBX\",\n                    \"Origin\": \"Casper-Natrona County International Airport\",\n                    \"Dest\": \"Indira Gandhi International Airport\",\n                    \"FlightDelay\": true,\n                    \"OriginCountry\": \"US\",\n                    \"AvgTicketPrice\": 772.1008456460212,\n                    \"Cancelled\": false,\n                    \"DestCountry\": \"IN\",\n                    \"timestamp\": \"2026-09-21T00:02:06\"\n                  },\n                  \"sort\": [\n                    772.1008,\n                    \"RBFKZBX\",\n                    \"opensearch_dashboards_sample_data_flights\",\n                    19\n                  ]\n                },\n                \"rating\": 0\n              },\n              {\n                \"hit\": {\n                  \"_index\": \"opensearch_dashboards_sample_data_flights\",\n                  \"_id\": \"En8-76AB8EVjkSdEB73a\",\n                  \"_score\": null,\n                  \"_source\": {\n                    \"FlightNum\": \"7TTZM4I\",\n                    \"Origin\": \"Cleveland Hopkins International Airport\",\n                    \"Dest\": \"Ministro Pistarini International Airport\",\n                    \"FlightDelay\": true,\n                    \"OriginCountry\": \"US\",\n                    \"AvgTicketPrice\": 569.6132552035547,\n                    \"Cancelled\": false,\n                    \"DestCountry\": \"AR\",\n                    \"timestamp\": \"2026-09-21T01:30:47\"\n                  },\n                  \"sort\": [\n                    569.6133,\n                    \"7TTZM4I\",\n                    \"opensearch_dashboards_sample_data_flights\",\n                    17\n                  ]\n                },\n                \"rating\": 0\n              },\n              {\n                \"hit\": {\n                  \"_index\": \"opensearch_dashboards_sample_data_flights\",\n                  \"_id\": \"TX8-76AB8EVjkSdEB77b\",\n                  \"_score\": null,\n                  \"_source\": {\n                    \"FlightNum\": \"0VWO82H\",\n                    \"Origin\": \"Savannah Hilton Head International Airport\",\n                    \"Dest\": \"Zurich Airport\",\n                    \"FlightDelay\": false,\n                    \"OriginCountry\": \"US\",\n                    \"AvgTicketPrice\": 337.660374662825,\n                    \"Cancelled\": false,\n                    \"DestCountry\": \"CH\",\n                    \"timestamp\": \"2026-09-21T03:01:52\"\n                  },\n                  \"sort\": [\n                    337.66037,\n                    \"0VWO82H\",\n                    \"opensearch_dashboards_sample_data_flights\",\n                    332\n                  ]\n                },\n                \"rating\": 0\n              }\n            ],\n            \"metric_details\": {\n              \"precision\": {\n                \"relevant_docs_retrieved\": 0,\n                \"docs_retrieved\": 3\n              }\n            }\n          }\n        },\n        \"failures\": {}\n      },\n      \"exactIntegerPaths\": []\n    }\n  ],\n  \"complete\": true,\n  \"snapshotReleased\": true,\n  \"numberEncoding\": \"unsafe-integer-decimal-text\",\n  \"coverage\": {\n    \"requestedCases\": 2,\n    \"completeCases\": 2,\n    \"failedCases\": 0,\n    \"incompleteCases\": 0\n  }\n}\n"
+}
