@@ -1,5 +1,7 @@
 # Starforge merchant operations through MCP
 
+The host advertises its configured tools and loads each original provider when it is needed. Release-state reads use the small native release layer; workspace, seller and customer operations retain their existing ownership and recovery paths. See [Configured providers and startup](CONFIGURED_PROVIDERS.md) for setup, capability status, request limits, lifecycle and provider integration.
+
 Operate a complete Baserow source and merchant through the same browser workspace. Capture native rows and files, review source versions, run the original publisher and refresh schedule, stage the merchant, and deliver the complete original source to a customer. Manifest-pinned downloads resume after MCP restart, and the recipient reopens the same native import offline. See [Baserow source, merchant and customer operations](BASEROW_WORKSPACE.md) for all 20 tools, host setup and the original-source continuation.
 
 Federal grant opportunity research uses this same host's 36 original-workspace

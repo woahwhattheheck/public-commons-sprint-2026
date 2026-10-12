@@ -55,6 +55,9 @@ export async function startDspaceOperator({directory,workspaceDirectory,sourceDi
       throw fault('OPERATOR_PROJECTS','The original operator project registry is invalid.');
     if(registry.id===undefined){registry={...registry,id:'dspace-operator-'+randomUUID()};await saveJson(registryFile,registry);}
     if(!ID.test(registry.id))throw fault('OPERATOR_ID','The original operator identity is invalid.');
+    // Loopback browser cookies are shared across ports. Keep each original
+    // operator's private cookie separate when several managed apps are open.
+    const cookieName='dspace_operator_'+createHash('sha256').update(JSON.stringify([registry.id,root])).digest('hex').slice(0,24);
     workspace=await openDspaceWorkspace({directory:registry.projects.find(p=>p.key===registry.selected).directory});
     let origin;
     const state=()=>({...workspace.state(),operator:{id:registry.id,instanceId,selected:registry.selected,projects:registry.projects.map(({key,name})=>({key,name}))}});
@@ -89,10 +92,10 @@ export async function startDspaceOperator({directory,workspaceDirectory,sourceDi
         if(req.method==='GET'&&['/','/app.js','/style.css'].includes(u.pathname)){
           const filename=u.pathname==='/'?'index.html':u.pathname.slice(1);
           const bytes=await fsp.readFile(path.join(HERE,'public',filename));
-          if(u.pathname==='/')res.setHeader('set-cookie','dspace_operator='+token+'; HttpOnly; SameSite=Strict; Path=/');
+          if(u.pathname==='/')res.setHeader('set-cookie',cookieName+'='+token+'; HttpOnly; SameSite=Strict; Path=/');
           res.writeHead(200,{'content-type':filename.endsWith('.html')?'text/html; charset=utf-8':filename.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8','content-length':bytes.length});res.end(bytes);return;
         }
-        const cookie=(req.headers.cookie??'').split(';').map(s=>s.trim()).find(s=>s.startsWith('dspace_operator='))?.slice(16);
+        const cookie=(req.headers.cookie??'').split(';').map(s=>s.trim()).find(s=>s.startsWith(cookieName+'='))?.slice(cookieName.length+1);
         if(!sameToken(req.headers.authorization?.replace(/^Bearer /,''))&&!sameToken(cookie))
           throw fault('OPERATOR_AUTH','Open the local operator or supply its bearer credential.',401);
         if(req.method==='GET'&&u.pathname==='/api/launch'){send(res,200,await scoped(req,publicLaunch));return;}
