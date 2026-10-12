@@ -206,6 +206,19 @@ The native value editor accepts JSON directly. For example, a string value is:
 
 Copy an existing marker, reference, number with unit, date, time or other native value from the record detail panel when editing that type. The complete native representation appears in the editor. The application preserves type fields, units, timezone information and signed zero through its shared JSON codec. The included `HAYSTACK_CONTRACT.md` describes the supported native encodings.
 
+
+Native JSON-v4 examples:
+
+| Value | Complete native JSON |
+| --- | --- |
+| Marker | `{"_kind":"marker"}` |
+| Reference | `{"_kind":"ref","val":"opaque-id","dis":"Display"}` |
+| Number with unit | `{"_kind":"number","val":23.5,"unit":"°C"}` |
+| Zoned date-time | `{"_kind":"dateTime","val":"2026-10-12T10:30:00-04:00","tz":"New_York"}` |
+| Primitive values | `null`, `true`, `"Supply air temperature"`, `23.5`, `-0` |
+
+A native grid uses `"_kind":"grid"`, `"meta":{"ver":"3.0"}`, complete `cols` declarations and original `rows` dictionaries. Missing tags and tags whose value is `null` retain different meanings.
+
 The complete edits array is also editable. A proposal might contain:
 
 ~~~json

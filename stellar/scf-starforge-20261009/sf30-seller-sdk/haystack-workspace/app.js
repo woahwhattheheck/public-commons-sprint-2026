@@ -8,7 +8,7 @@ const S = {
   sources:[], editions:[], proposals:[], sourceDraft:new Set(), sourceDirty:false,
   edits:[], preview:null, activeProposal:null, activeRecord:null, delivery:null,
   pages:{}, disabled:new Map(), localOperations:[], draftTimer:null,
-  pendingDraft:null, draftWrites:Promise.resolve(), draftReady:false
+  pendingDraft:null, draftWrites:Promise.resolve(), draftReady:false, draftSerial:0, draftSavedSerial:0
 };
 const tabKey = "commons.haystack.operator.tab";
 let tabId;
@@ -46,7 +46,8 @@ function notice(message,kind="info"){replace("notice",message);$("notice").datas
 function failure(error){
   const code=error?.code?String(error.code):"";
   let message=error?.message||String(error);
-  if(error?.status===409||/revision|stale/.test(code))message+=" Refresh the workspace before preparing a new action; the original request and your draft remain retained.";
+  if(code==="HAYSTACK_INSTANCE"||code==="HAYSTACK_IDENTITY")message+=" Open the correct workspace again to establish its current server connection; original requests keep their identities.";
+  else if(error?.status===409||/REVISION|STALE|revision|stale/.test(code))message+=" Refresh the workspace before preparing a new action; the original request and your draft remain retained.";
   if(error?.outcomeUnknown)message+=" Open Operations and read the original receipt before resending.";
   notice(message,"error");
 }
@@ -208,7 +209,7 @@ async function mutate(actionName,fields){
 function draftKey(){return S.identity?S.identity.workspaceId+":"+tabId:null;}
 function draftSnapshot(){
   const key=draftKey();if(!key||!S.draftReady)return null;
-  return {key,workspaceId:S.identity.workspaceId,tabId,updatedAt:new Date().toISOString(),
+  return {key,workspaceId:S.identity.workspaceId,tabId,serial:S.draftSerial,updatedAt:new Date().toISOString(),
     title:$("proposal-title").value,note:$("proposal-note").value,
     edits:structuredClone(S.edits),jsonText:$("proposal-json").value,
     editRecord:$("edit-record").value,editTag:$("edit-tag").value,editAction:$("edit-action").value,editValue:$("edit-value").value,
@@ -217,11 +218,15 @@ function draftSnapshot(){
 function queueDraft(snapshot){
   if(!snapshot)return S.draftWrites;
   S.draftWrites=S.draftWrites.catch(()=>{}).then(()=>dbWrite("drafts",snapshot));
-  S.draftWrites.then(()=>{if(snapshot.key===draftKey())$("proposal-draft-status").textContent="Draft retained for this workspace and browser tab.";}
+  S.draftWrites.then(()=>{if(snapshot.key===draftKey()){
+    S.draftSavedSerial=Math.max(S.draftSavedSerial,snapshot.serial||0);
+    $("proposal-draft-status").textContent=S.draftSavedSerial===S.draftSerial?"Draft retained for this workspace and browser tab.":"Retaining the latest draft changes.";
+  }}
     ,error=>{if(snapshot.key===draftKey()){$("proposal-draft-status").textContent="Draft could not be retained: "+error.message;notice("Keep this tab open until its draft can be retained. "+error.message,"error");}});
   return S.draftWrites;
 }
 function rememberDraft(){
+  S.draftSerial++;
   S.pendingDraft=draftSnapshot();
   if(S.draftTimer)clearTimeout(S.draftTimer);
   S.draftTimer=setTimeout(()=>{S.draftTimer=null;const snapshot=S.pendingDraft;S.pendingDraft=null;queueDraft(snapshot);},250);
@@ -242,7 +247,7 @@ async function restoreDraft(retained){
   S.sourceDirty=!!draft?.sourceDirty;
   S.sourceDraft=new Set(S.sourceDirty&&Array.isArray(draft.sourceIds)?draft.sourceIds:S.status.selectedSourceIds);
   $("source-url").value=draft?.sourceUrl||"";$("source-import-select").checked=draft?.sourceImportSelect!==false;
-  S.preview=null;S.draftReady=true;
+  S.preview=null;S.draftSerial=0;S.draftSavedSerial=0;S.draftReady=true;
   $("proposal-draft-status").textContent=draft?"Restored this tab's retained draft. Preview it against the current working selection.":"Drafts are retained separately for this workspace and browser tab.";
   renderEdits();renderSources();
 }
@@ -663,7 +668,9 @@ async function prepareWorkspace(){
 }
 async function loadLocalOperations(){
   if(!S.identity)return;
-  const rows=(await dbRead("operations")).filter(item=>item.workspaceId===S.identity.workspaceId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  const workspaceId=S.identity.workspaceId;
+  const rows=(await dbRead("operations")).filter(item=>item.workspaceId===workspaceId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+  if(S.identity?.workspaceId!==workspaceId)return;
   S.localOperations=rows;
   const pending=rows.filter(item=>item.state!=="completed").length;
   $("operation-count").textContent=pending?number(pending):"";
@@ -862,6 +869,6 @@ bindButton("prepare-workspace-delivery",prepareWorkspace);
 bindButton("reload-operations",loadOperations);
 window.addEventListener("pagehide",()=>{const snapshot=S.pendingDraft||draftSnapshot();if(S.draftTimer)clearTimeout(S.draftTimer);S.draftTimer=null;S.pendingDraft=null;queueDraft(snapshot);});
 window.addEventListener("beforeunload",event=>{
-  if(S.busy||S.pendingDraft){event.preventDefault();event.returnValue="";}
+  if(S.busy||S.pendingDraft||(S.draftReady&&S.draftSavedSerial<S.draftSerial)){event.preventDefault();event.returnValue="";}
 });
 renderIdentity();reportRules();controls();showConnect();

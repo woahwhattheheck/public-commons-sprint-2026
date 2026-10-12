@@ -16,6 +16,7 @@ import {canonical} from "./util.mjs";
 const REQUEST_FORMAT="commons.haystack.operator.request.v1";
 const SOURCE_LIMIT=32*1024*1024;
 const REQUEST_LIMIT=48*1024*1024;
+const RECEIPT_LIMIT=192*1024*1024;
 const own=(object,key)=>Object.prototype.hasOwnProperty.call(object,key);
 const sha256=bytes=>createHash("sha256").update(bytes).digest("hex");
 const stringify=value=>stringifyJson(value,2)+"\n";
@@ -125,7 +126,7 @@ async function retainReceipt(path,receipt){
   const receiptPath=path+".receipt.json";
   try{return await exactFile(receiptPath,Buffer.from(stringify(receipt)));}
   catch(error){
-    let prior;try{prior=await readJson(receiptPath,REQUEST_LIMIT);}catch{throw error;}
+    let prior;try{prior=await readJson(receiptPath,RECEIPT_LIMIT);}catch{throw error;}
     const comparable=value=>{const copy=structuredClone(value);delete copy.replayed;return canonical(copy);};
     if(comparable(prior)!==comparable(receipt))throw new Error("A different receipt already occupies "+receiptPath+".");
     return {path:receiptPath,retained:true};
@@ -294,8 +295,9 @@ export async function main(argv=process.argv.slice(2)){
     options(flags,["directory","title","host","port","token-file","workspace-id"]);
     const server=await startServer({directory:required(flags,"directory"),title:one(flags,"title","Building turnover"),host:one(flags,"host","127.0.0.1"),
       port:integer(one(flags,"port","8768"),"Port",0,65535),token:await tokenFor(flags),expectedWorkspaceId:one(flags,"workspace-id",null)});
-    process.stdout.write(stringify({...server.identity,tokenConfigured:!!flags["token-file"],...(flags["token-file"]?{tokenFile:resolve(one(flags,"token-file"))}:{}),
-      browser:server.url,connectionFile:join(server.workspace.directory,"connection.json")}));
+    const startup={...server.identity,tokenConfigured:!!flags["token-file"],...(flags["token-file"]?{tokenFile:resolve(one(flags,"token-file"))}:{}),
+      browser:server.url,connectionFile:join(server.workspace.directory,"connection.json")};
+    process.stdout.write(stringifyJson(startup)+"\n");
     process.stderr.write("Workspace server ready. Open "+server.url+" in your browser."+(flags["token-file"]?" Use the token from the configured private file.":" Leave the access token blank for this local connection.")+"\n");
     await new Promise((resolveDone,reject)=>{
       let stopping=false;

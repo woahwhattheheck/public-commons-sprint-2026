@@ -21,7 +21,7 @@ export function registerRows(data) {
   const sources = new Map(data.sources.map(source => [source.id, source]));
   const relations = new Map(), diagnostics = new Map();
   for (const item of data.relations) { const list = relations.get(item.fromKey) || []; list.push(item); relations.set(item.fromKey, list); }
-  for (const item of data.diagnostics) if (item.recordKey) diagnostics.set(item.recordKey, (diagnostics.get(item.recordKey) || 0) + 1);
+  for (const item of data.diagnostics) if (item.recordKey) { const ids = diagnostics.get(item.recordKey) || new Set(); ids.add(item.id || digest(item)); diagnostics.set(item.recordKey, ids); }
   return data.records.map(record => {
     const source = sources.get(record.sourceId), links = relations.get(record.key) || [];
     const rowsFor = tag => links.filter(item => item.tag === tag).flatMap(item => item.targetKeys || []);
@@ -31,7 +31,7 @@ export function registerRows(data) {
       ref_id: record.id || "", display: record.display, roles: record.roles.join("; "),
       site_ref: record.siteRef || "", site_record_keys: rowsFor("siteRef").join("; "),
       equip_ref: record.equipRef || "", equip_record_keys: rowsFor("equipRef").join("; "),
-      kind: record.kind || "", unit: record.unit || "", diagnostic_count: diagnostics.get(record.key) || 0,
+      kind: record.kind || "", unit: record.unit || "", diagnostic_count: new Set([...(diagnostics.get(record.key) || []), ...(record.diagnosticIds || [])]).size,
       tags_json: canonical(record.tags), relations_json: canonical(links)
     };
   });

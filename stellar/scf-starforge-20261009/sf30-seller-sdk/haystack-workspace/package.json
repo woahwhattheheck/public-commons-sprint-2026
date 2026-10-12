@@ -9,11 +9,20 @@
     "node": ">=22"
   },
   "exports": {
-    ".": "./client.mjs",
+    ".": {
+      "types": "./client.d.mts",
+      "import": "./client.mjs"
+    },
     "./store": "./store.mjs",
     "./server": "./server.mjs",
-    "./types": "./haystack-types.mjs",
-    "./index": "./haystack-index.mjs",
+    "./types": {
+      "types": "./haystack-types.d.mts",
+      "import": "./haystack-types.mjs"
+    },
+    "./index": {
+      "types": "./haystack-index.d.mts",
+      "import": "./haystack-index.mjs"
+    },
     "./portable": "./portable.mjs",
     "./catalog": "./catalog.mjs",
     "./protocol": "./protocol.mjs"

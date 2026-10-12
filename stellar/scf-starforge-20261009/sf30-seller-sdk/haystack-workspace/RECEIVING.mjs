@@ -110,8 +110,8 @@ export async function main(directory) {
       original={format:"commons.haystack.operator.request.v1",workspaceId:journal.workspaceId,action,
         args:{...structuredClone(fields),expectedRevision:expectedRevision??(await status()).revision,operationId:randomUUID()},createdAt:timestamp()};
       journal.requests[name]=original;await saveJson(journalPath,journal);
-      await completeJson(join(root,"requests",name+".request.json"),original);
     }
+    await completeJson(join(root,"requests",name+".request.json"),original);
     let result;
     try{result=await client.request("operation.read",{operationId:original.args.operationId});}
     catch(error){if(error.status!==404)throw error;result=send?await send(original.args):await client.request(action,original.args);}

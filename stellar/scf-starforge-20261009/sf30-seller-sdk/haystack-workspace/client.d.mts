@@ -1,5 +1,7 @@
+import type { HaystackAnalysis, HaystackRole } from "./haystack-index.mjs";
 export type Json = null | boolean | number | string | Json[] | { [name: string]: Json };
 export type Role = "site" | "equip" | "point" | "all";
+export type Counts = HaystackAnalysis["counts"];
 export type Severity = "error" | "warning" | "info";
 export type ProposalState = "proposed" | "accepted" | "rejected";
 export interface Identity {
@@ -16,8 +18,9 @@ export interface Source {
 }
 export interface NativeRecord {
   key: string; sourceId: string; rowIndex: number; tags: Record<string, Json>; id: string | null; display: string;
-  roles: Array<Exclude<Role, "all"> | string>; siteRef: string | null; equipRef: string | null;
-  kind: string | null; unit: string | null;
+  roles: HaystackRole[]; siteRef: string | null; equipRef: string | null;
+  kind: string | null; unit: string | null; markers: string[];
+  outgoingRelationIds: string[]; diagnosticIds: string[]; refCount: number;
 }
 export interface Relation {
   id: string; sourceId: string; fromKey: string; tag: string; targetId: string; targetKeys: string[];
@@ -27,7 +30,7 @@ export interface Status {
   format: "commons.haystack.workspace.v1"; workspaceId: string; title: string; revision: number;
   createdAt: string; sha256: string; materialSha256: string; selectedSourceIds: string[];
   sourceCount: number; editionCount: number; proposalCount: number; pendingProposals: number;
-  recordCount: number; counts: Record<string, number>; diagnosticCount: number; sourceDiagnostics: number;
+  recordCount: number; counts: Counts; diagnosticCount: number; sourceDiagnostics: number;
 }
 export interface Revision { expectedRevision: number }
 export interface Mutation extends Revision { operationId: string }
@@ -47,10 +50,10 @@ export interface Proposal {
   reviewedRevision?: number; sha256: string; stale: boolean;
 }
 export type ProposalSummary = Omit<Proposal, "changes"> & { changeCount: number };
-export interface Preview { counts: Record<string, number>; diagnostics: Diagnostic[] }
+export interface Preview { counts: Counts; diagnostics: Diagnostic[] }
 export interface Edition {
   id: string; title: string; note: string; savedAt: string; savedRevision: number; sourceIds: string[];
-  approvedProposalIds: string[]; materialSha256: string; counts: Record<string, number>; diagnosticCount: number; diagnosticSha256: string;
+  approvedProposalIds: string[]; materialSha256: string; counts: Counts; diagnosticCount: number; diagnosticSha256: string;
 }
 export interface SourcePair { beforeSourceId: string; afterSourceId: string }
 export type ChangeState = "added" | "removed" | "changed" | "same";
@@ -90,7 +93,7 @@ export interface ActionMap {
   "proposal.prepare": { args: Mutation & { title: string; note?: string; edits: Edit[]; proposalId?: string }; result: Outcome & { proposal: Proposal; preview: Preview } };
   "proposal.review": { args: Mutation & { proposalId: string; decision: "accept" | "reject"; note?: string }; result: Outcome & { proposal: Proposal } };
   "editions.list": { args: Revision & Paging; result: Page<Edition> };
-  "edition.read": { args: Revision & { editionId: string }; result: Envelope & { edition: Edition; sources: Source[]; counts: Record<string, number>; diagnosticCount: number } };
+  "edition.read": { args: Revision & { editionId: string }; result: Envelope & { edition: Edition; sources: Source[]; counts: Counts; diagnosticCount: number } };
   "edition.save": { args: Mutation & { title: string; note?: string }; result: Outcome & { edition: Edition } };
   "edition.compare": { args: Revision & Paging & { beforeEditionId: string; afterEditionId: string; sourcePairs?: SourcePair[]; state?: ChangeState }; result: Comparison };
   "operations.list": { args: Revision & Paging; result: Page<Operation> };
