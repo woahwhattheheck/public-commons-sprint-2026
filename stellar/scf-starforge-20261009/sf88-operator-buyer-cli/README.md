@@ -450,3 +450,8 @@ If evidence processing fails after a native buyer error, the summary now retains
 This increment retains the original SF88 launcher (PR #767), response-output integration (PR #795), and unchanged SF31 writer (PR #774), SF81 approval bridge and SF82 evidence adapter.
 
 Focused local composition check (Node 22.3+ with module mocks): `node --experimental-test-module-mocks --test stellar/scf-starforge-20261009/sf88-operator-buyer-cli/test/response-delivery.test.mjs`. It uses original SF31 transport/writer and SF82 evidence with a substituted privileged SF81 constructor and local Response streams; it does not execute terminal approval, a signer, network or payment.
+
+
+## Interrupted native transport
+
+Normal execution now saves the original signing and HTTP boundaries in the private evidence directory. The Node operation's `inspect()` result includes a read-only `transportCheckpoint` with kernel-writer state, original file hashes and retained response-header status. See [Recovering an interrupted native buyer transport](ATTEMPT_RECOVERY.md) for the exact phases and the original lost-output consumer interface.
