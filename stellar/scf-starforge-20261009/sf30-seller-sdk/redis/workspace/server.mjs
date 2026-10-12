@@ -111,7 +111,8 @@ export async function startRedisAuthoringServer({workspace,port=8438}={}){
   try{
     await new Promise((done,fail)=>{server.once('error',fail);server.listen(port,'127.0.0.1',done);});
   }catch(error){await workspace.close();throw error;}
-  authority='127.0.0.1:'+server.address().port;origin='http://'+authority;
+  const address=new URL('http://127.0.0.1:'+server.address().port);
+  authority=address.host;origin=address.origin;
   function close(){
     if(closing)return closing;
     closing=(async()=>{

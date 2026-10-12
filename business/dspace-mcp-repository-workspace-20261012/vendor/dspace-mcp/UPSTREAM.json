@@ -1,0 +1,132 @@
+{
+  "schema": "4science-upstream-source/v1",
+  "repository": "https://github.com/4Science/dspace-mcp",
+  "commit": "ee503ba97910f592867c897c1fa938f9e029d03c",
+  "tree": "6386328dd49282b98840b4dd41340b9c8a110b78",
+  "retrieved_at": "2026-10-12T00:43:00Z",
+  "files": [
+    {
+      "path": "CLA-ENTITY.md",
+      "git_blob": "5ae651c2105ec70977eb92d06cdad0f54872ec90",
+      "bytes": 5834
+    },
+    {
+      "path": "CLA.md",
+      "git_blob": "84157e658010251b0f5a42808d5e0926d79c9589",
+      "bytes": 6542
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "git_blob": "44eaa5400506172c86ec007d7cb1003e2d1167c5",
+      "bytes": 5476
+    },
+    {
+      "path": "Dockerfile",
+      "git_blob": "2a9f7603605247ab005447cbe4b66d9e37325f72",
+      "bytes": 479
+    },
+    {
+      "path": "LICENSE",
+      "git_blob": "b60c6628f029ec72ea437e9599f5d0f7ab634e46",
+      "bytes": 35312
+    },
+    {
+      "path": "README.md",
+      "git_blob": "131afdc643c6036da617599def14f6e480a3ba0f",
+      "bytes": 13822
+    },
+    {
+      "path": "package-lock.json",
+      "git_blob": "21f715ac70f33c8119555a6ae67d6b511f23d87c",
+      "bytes": 73532
+    },
+    {
+      "path": "package.json",
+      "git_blob": "ebbd0917ae10c0afd348913fc99591cff9ebc40f",
+      "bytes": 895
+    },
+    {
+      "path": "src/auth/dspace-oauth-provider.ts",
+      "git_blob": "cbef7f006cf7d19e8d6b002b86558dbca639ba2e",
+      "bytes": 16463
+    },
+    {
+      "path": "src/auth/login-page.ts",
+      "git_blob": "d800ad174aaf22fb25ded9e20cf3c23c2efcb074",
+      "bytes": 3127
+    },
+    {
+      "path": "src/auth/token-store.ts",
+      "git_blob": "fba1589f1d2b9c544887d1124cc9f573c9ddfb25",
+      "bytes": 7274
+    },
+    {
+      "path": "src/config.ts",
+      "git_blob": "a27be2e2995504a4cc0c6cf7cce0bf9ff86524f3",
+      "bytes": 4390
+    },
+    {
+      "path": "src/server.ts",
+      "git_blob": "6a9bc4d828cebb867983183e03a54fc0ef0b0702",
+      "bytes": 1386
+    },
+    {
+      "path": "src/services/dspace-client.ts",
+      "git_blob": "24868f19a931f7295132dcec7ebf41e4415bf9e9",
+      "bytes": 25549
+    },
+    {
+      "path": "src/tools/auth.ts",
+      "git_blob": "805420cd7beac81f6b84d66d505e02c5f6eb4639",
+      "bytes": 2594
+    },
+    {
+      "path": "src/tools/content.ts",
+      "git_blob": "a419d4cbb4ba6504c0d7ffc16267692232e91ec0",
+      "bytes": 11002
+    },
+    {
+      "path": "src/tools/index.ts",
+      "git_blob": "a6f84f0a82efb4d69d82a8afbcb5ec6cf216054e",
+      "bytes": 821
+    },
+    {
+      "path": "src/tools/items.ts",
+      "git_blob": "645a327d07ce3ec93ef93ad042d14c514992e429",
+      "bytes": 9271
+    },
+    {
+      "path": "src/tools/search.ts",
+      "git_blob": "df1d6b83dda1b08598320abf76fe5eee8ed10b4f",
+      "bytes": 7474
+    },
+    {
+      "path": "src/tools/submission.ts",
+      "git_blob": "8a2bf5557aedcd549ae10eb0a7fd110729f099b4",
+      "bytes": 5882
+    },
+    {
+      "path": "src/transports/http.ts",
+      "git_blob": "b8cf4fa3d52099a91c8b4ec164a62d4e98b42fdf",
+      "bytes": 6331
+    },
+    {
+      "path": "src/transports/stdio.ts",
+      "git_blob": "137d6155e6e092db8ba5361455b2d0c3186370db",
+      "bytes": 1265
+    },
+    {
+      "path": "src/types/dspace.ts",
+      "git_blob": "0642197e6fd8c4532aa2ee31c800572899dce5d9",
+      "bytes": 4444
+    },
+    {
+      "path": "tsconfig.json",
+      "git_blob": "fa43fd46bc5c80e78d1999d953bc177b8214b079",
+      "bytes": 454
+    }
+  ],
+  "license_file": "LICENSE",
+  "note": "Original upstream source files and notices are preserved byte-for-byte. Compiled dist is generated locally from this pinned source."
+}
+

@@ -411,6 +411,13 @@ the original relative names remain in the checkpoint and completion manifest.
 Only the opted-in GraphQL downloader uses nested mode; existing flat transport
 callers keep their original partial-file format.
 
+Installed applications can use the same maintained module exports:
+`@tokenjunkielabs/starforge-merchant/merchant/mcp/graphql-workspaces`,
+`@tokenjunkielabs/starforge-merchant/merchant/mcp/graphql-download`, and
+`@tokenjunkielabs/starforge-merchant/seller/graphql/workspace-files`.
+The ordinary distribution includes these original modules and the same CLI;
+receiving applications do not need a separate GraphQL wrapper package.
+
 For direct clients, the native tools are
 `merchant_graphql_export_manifest`, `merchant_graphql_export_file` and
 `merchant_graphql_export_file_release`. A chunk includes the full original
