@@ -66,6 +66,8 @@ export async function main(argv = process.argv.slice(2), { output = process.stdo
   const service = await serveRecoveryWorkspace(options);
   output.write('Merchant recovery workspace\n' + service.url + '\n');
   output.write('Host configuration: ' + options.configFile + '\nWorkspace: ' + options.directory + '\n');
+  output.write(JSON.stringify({ status: 'MERCHANT_RECOVERY_WORKSPACE_READY', configFile: options.configFile,
+    directory: options.directory, url: service.url }) + '\n');
   let shutdown;
   const stop = () => {
     if (!shutdown) shutdown = service.close({ cancelActive: true }).catch(error => {

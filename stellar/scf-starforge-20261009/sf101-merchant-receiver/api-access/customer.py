@@ -71,12 +71,23 @@ def main(argv=None):
     parser.add_argument("--request-id")
     parser.add_argument("--method",default="GET",choices=("GET","HEAD","POST","PUT","PATCH","DELETE"))
     parser.add_argument("--query",nargs=2,action="append",default=[])
+    parser.add_argument("--query-json")
     parser.add_argument("--body")
     parser.add_argument("--content-type",default="application/octet-stream")
     parser.add_argument("--out")
     parser.add_argument("--after")
     parser.add_argument("--limit",type=int,default=100)
     args = parser.parse_args(argv)
+    if args.query_json is not None:
+        need(not args.query,"QUERY_INPUT_MUST_USE_ONE_FORMAT")
+        try:
+            pairs = json.loads(args.query_json)
+        except (ValueError,TypeError):
+            raise ClientError("INVALID_QUERY_PAIRS") from None
+        need(isinstance(pairs,list) and all(
+            isinstance(pair,list) and len(pair)==2 and all(isinstance(value,str) for value in pair)
+            for pair in pairs),"INVALID_QUERY_PAIRS")
+        args.query = [(key,value) for key,value in pairs]
     need(re.fullmatch(r"[A-Z][A-Z0-9_]{1,64}",args.claim_env),"INVALID_CLAIM_ENV")
     token = os.environ.get(args.claim_env,"")
     need(re.fullmatch(r"[A-Za-z0-9._:-]{1,80}",args.order),"INVALID_ORDER_REFERENCE")

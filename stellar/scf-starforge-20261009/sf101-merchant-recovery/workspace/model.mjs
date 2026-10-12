@@ -132,11 +132,17 @@ function cursorPage(names, cursor, limit) {
   return { names: selected.slice(0, limit), nextCursor: selected.length > limit ? selected[limit - 1] : null };
 }
 
+// Read the exact host selection without opening a workspace, provider or lease.
+// Launchers retain only these path bindings and the original file digests.
+export async function readRecoveryConfiguration(configFile) {
+  absolute(configFile, 'Host configuration');
+  const bytes = await privateBytes(configFile);
+  return { configFile, sha256: hash(bytes), host: compileHost(JSON.parse(bytes.toString('utf8'))) };
+}
+
 export async function openRecoveryWorkspace({ configFile, directory, readOnly = false } = {}) {
-  absolute(configFile, 'Host configuration'); absolute(directory, 'Workspace');
-  const configBytes = await privateBytes(configFile);
-  const configHash = hash(configBytes);
-  const host = compileHost(JSON.parse(configBytes.toString('utf8')));
+  absolute(directory, 'Workspace');
+  const { sha256: configHash, host } = await readRecoveryConfiguration(configFile);
   await privateDirectory(directory, !readOnly);
   const requestRoot = join(directory, 'requests');
   if (!readOnly) await privateDirectory(requestRoot, true);

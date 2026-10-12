@@ -16,7 +16,7 @@ const FIELDS = {
   cancel: ['jobId'],
 };
 const FILE_FIELDS = ['kind', 'recoveryId', 'runId', 'exportId', 'collectionId', 'sourceId',
-  'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'file'];
+  'reviewId', 'closeId', 'handoffId', 'revisionId', 'adjustmentId', 'jobId', 'planId', 'responseId', 'nativePost', 'attemptId', 'file'];
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const fail = (code, message) => Object.assign(new Error(message), { code: 'ACCOUNTING_MAINTENANCE_CLIENT_' + code });
 function exact(value, fields) {
@@ -143,7 +143,7 @@ export function createAccountingMaintenanceClient({ workspace, call } = {}) {
     /** Consume one original file, retaining its selectors and SHA on every chunk. */
     async *fileChunks(selection, { expectedSha256, chunkBytes = 65536, signal } = {}) {
       exact(selection, FILE_FIELDS);
-      if (!['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment'].includes(selection.kind))
+      if (!['response', 'report', 'export', 'collection', 'pricing', 'period', 'accountant', 'adjustment', 'qbo', 'xero'].includes(selection.kind))
         throw fail('ARGUMENTS', 'Choose an original accounting file kind.');
       if (expectedSha256 !== undefined) identifier(expectedSha256, SHA, 'original file SHA256');
       number(chunkBytes, 1, 196608, 'chunkBytes');

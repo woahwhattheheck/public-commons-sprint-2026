@@ -7,7 +7,7 @@
   const MAX_PORTABLE_FILE_BYTES = 256 * 1024 * 1024;
   const tokenKey = 'research-dossiers-session:' + location.origin;
   const state = {token: '', dossiers: [], dossier: null, activeTab: 'sources', sourceId: null, variantDigest: null,
-    page: 0, busy: false, editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map()};
+    page: 0, busy: false, openalexConfigured: false, openalexEditions: [], editingDossier: false, editingQuestion: null, editingFinding: null, editingSelection: null, importCompleted: new Set(), noteDrafts: new Map()};
   const safeStorage = {
     get() { try { return sessionStorage.getItem(tokenKey) || ''; } catch { return ''; } },
     set(value) { try { sessionStorage.setItem(tokenKey, value); } catch {} }
@@ -52,6 +52,8 @@
   }
   function errorMessage(error) {
     const code = error.code || error.message || 'REQUEST_FAILED';
+    if (error.openAlexImport) return 'Saved ' + error.openAlexImport.pages.length + ' of ' +
+      error.openAlexImport.expectedPages + ' cohort pages. The current dossier is loaded; retry this cohort to continue. ' + String(code).replaceAll('_', ' ');
     const messages = {
       REVISION_CONFLICT: 'This dossier changed in another window. Its current revision is loaded; review your edit and save it again.',
       AUTH_REQUIRED: 'The local session needs to be reopened with its complete workspace address.',
@@ -85,7 +87,7 @@
       let value = {};
       try { value = await response.json(); } catch {}
       const error = Object.assign(new Error(value.error || 'HTTP_' + response.status), {
-        code: value.error || 'HTTP_' + response.status, detail: value.message, status: response.status});
+        code: value.error || 'HTTP_' + response.status, detail: value.message, status: response.status, openAlexImport: value.openAlexImport});
       if (response.status === 401 && !$('session-dialog').open) $('session-dialog').showModal();
       throw error;
     }
@@ -98,7 +100,7 @@
     setBusy(true);
     try { await action(); }
     catch (error) {
-      if (error.code === 'REVISION_CONFLICT' && state.dossier) {
+      if ((error.code === 'REVISION_CONFLICT' || error.openAlexImport) && state.dossier) {
         try { state.dossier = await api('/api/dossiers/' + encodeURIComponent(state.dossier.id)); render(); } catch {}
       }
       const message = errorMessage(error);
@@ -124,6 +126,8 @@
   async function refreshList() {
     const result = await api('/api/state');
     state.dossiers = asArray(result.dossiers);
+    state.openalexConfigured = result.openalex?.configured === true;
+    $('import-openalex-mode').hidden = !state.openalexConfigured;
     renderList();
   }
   async function openDossier(id) {
@@ -370,6 +374,9 @@
   function providerOutcome(item) {
     const raw = item.usage || item.outcome || item;
     const values = [];
+    if (raw.sourceCoverage) values.push('Original cohort coverage: ' + text(raw.sourceCoverage) +
+      ' · ' + text(raw.sourceRecordsReceived) + ' records · ' + text(raw.sourcePages) + ' pages');
+    if (raw.sourceDecisionsRevision !== undefined) values.push('Original review revision: ' + text(raw.sourceDecisionsRevision));
     const deduction = raw.total_deduction_dollars ?? item.total_deduction_dollars;
     if (deduction !== undefined && deduction !== null) values.push('Reported usage USD ' + text(deduction));
     if (raw.success !== undefined) values.push('Provider success: ' + text(raw.success));
@@ -548,8 +555,32 @@
   function updateImportMode() {
     const mode = $('import-form').elements.importMode.value;
     $('import-files-fields').hidden = mode !== 'files'; $('import-reference-fields').hidden = mode !== 'reference';
+    $('import-openalex-fields').hidden = mode !== 'openalex';
     $('import-files').required = mode === 'files'; $('import-reference').required = mode === 'reference';
-    $('import-submit').textContent = mode === 'files' ? 'Import files' : 'Add provider edition';
+    $('import-openalex-edition').required = mode === 'openalex';
+    $('import-label').maxLength = mode === 'openalex' ? 200 : 240;
+    $('import-label').placeholder = mode === 'openalex' ? 'Optional; original cohort label is used when blank' : 'Optional; file name is used when blank';
+    $('import-submit').textContent = mode === 'files' ? 'Import files' : mode === 'openalex' ? 'Import saved cohort' : 'Add provider edition';
+  }
+  function renderSavedCohort() {
+    const edition = state.openalexEditions.find(item => item.record.id === $('import-openalex-edition').value);
+    const target = $('import-openalex-summary'); target.replaceChildren();
+    if (!edition) {target.append(node('p', 'No saved works cohorts are available in the connected research workspace.', 'muted small')); return;}
+    target.append(node('p', edition.coverage.state + ' · ' + edition.coverage.recordsReceived + ' records across ' +
+      edition.coverage.pages + ' pages · review revision ' + edition.decisionsRevision, 'record-meta'));
+    target.append(node('p', edition.query.label, 'small'));
+    target.append(node('pre', JSON.stringify(edition.query.parameters, null, 2), 'source-excerpt'));
+    if (edition.coverage.warnings?.length) target.append(node('p', edition.coverage.warnings.map(text).join('; '), 'muted small'));
+    if (edition.pending) target.append(node('p', 'The original workspace has a pending acquisition. This import uses its currently saved pages.', 'muted small'));
+  }
+  async function loadSavedCohorts() {
+    const prior = $('import-openalex-edition').value;
+    const result = await api('/api/openalex/editions');
+    state.openalexEditions = asArray(result.editions);
+    $('import-openalex-edition').replaceChildren(...state.openalexEditions.map(item =>
+      option(item.record.id, item.record.label + ' · ' + item.coverage.state + ' · ' + item.coverage.recordsReceived + ' records')));
+    if (state.openalexEditions.some(item => item.record.id === prior)) $('import-openalex-edition').value = prior;
+    renderSavedCohort();
   }
   function showImport(questionId = null) {
     if (state.busy || !state.dossier) return;
@@ -665,7 +696,12 @@
       $('question-dialog').close(); notify(state.editingQuestion ? 'Question and research notes saved.' : 'Research question added.');
     }, form);
   });
-  $('import-form').querySelectorAll('[name=importMode]').forEach(input => input.addEventListener('change', updateImportMode));
+  $('import-form').querySelectorAll('[name=importMode]').forEach(input => input.addEventListener('change', () => {
+    updateImportMode();
+    if (input.value === 'openalex') task(loadSavedCohorts, $('import-form'));
+  }));
+  $('import-openalex-edition').addEventListener('change', renderSavedCohort);
+  $('import-openalex-refresh').addEventListener('click', () => task(loadSavedCohorts, $('import-form')));
   $('import-retained-provider').addEventListener('change', () => {
     $('import-format-help').textContent = $('import-retained-provider').value === 'openalex' ?
       'Import the original OpenAlex response containing meta and results.' :
@@ -681,7 +717,17 @@
     event.preventDefault(); const form = event.currentTarget;
     task(async () => {
       const questionId = $('import-question').value, label = $('import-label').value.trim();
-      if (form.elements.importMode.value === 'reference') {
+      if (form.elements.importMode.value === 'openalex') {
+        const editionId = $('import-openalex-edition').value;
+        if (!editionId) throw new Error('OPENALEX_SAVED_EDITION_REQUIRED');
+        const imported = await api(endpoint('/openalex'), {method:'POST', body:{questionId,editionId,
+          ...(label ? {label} : {}),expectedRevision:state.dossier.revision}});
+        state.dossier = imported.dossier;
+        await refreshList(); render();
+        $('import-dialog').close();
+        notify('Saved cohort imported: ' + imported.importedPages + ' new pages, ' + imported.reusedPages +
+          ' retained pages · source coverage ' + imported.coverage.state + '.');
+      } else if (form.elements.importMode.value === 'reference') {
         const reference = parseJson($('import-reference').value);
         await mutate('/reference', {questionId, label, provider: $('import-provider').value.trim(), reference});
         $('import-dialog').close(); notify('Provider edition attached to the research question.');

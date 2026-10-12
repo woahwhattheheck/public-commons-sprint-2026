@@ -3,13 +3,10 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { openRecoveryWorkspace } from './model.mjs';
+import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 
 const MAX_BODY = 65536;
-const TYPES = new Map([
-  ['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
-  ['/style.css', ['style.css', 'text/css; charset=utf-8']],
-]);
+const TYPES = await readBrowserAssets(new URL('./browser-assets.json', import.meta.url));
 
 function fail(code, message, status = 400) {
   const error = new Error(message); error.code = code; error.status = status; throw error;
@@ -112,9 +109,9 @@ export function createRecoveryHandler({ workspace, token, origin }) {
       if (TYPES.has(url.pathname)) {
         if (!['GET', 'HEAD'].includes(req.method)) fail('WORKSPACE_METHOD_INVALID', 'Use GET for workspace assets', 405);
         if (url.search) fail('WORKSPACE_QUERY_INVALID', 'Workspace assets do not accept query parameters');
-        const [filename, type] = TYPES.get(url.pathname);
-        if (!assets.has(filename)) assets.set(filename, await readFile(new URL(filename, import.meta.url)));
-        const data = assets.get(filename);
+        const { url: assetUrl, type } = TYPES.get(url.pathname);
+        if (!assets.has(assetUrl.href)) assets.set(assetUrl.href, await readFile(assetUrl));
+        const data = assets.get(assetUrl.href);
         headers(res); res.writeHead(200, { 'Content-Type': type, 'Content-Length': data.length });
         res.end(req.method === 'HEAD' ? undefined : data); return;
       }

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Job customer workspace</title>
+  <link rel="stylesheet" href="/jobs/style.css">
+  <script type="module" src="/jobs/app.mjs"></script>
+</head>
+<body>
+  <header class="topbar">
+    <div><span class="eyebrow">STELLAR FORGE</span><h1>Job customer workspace</h1></div>
+    <nav aria-label="Workspace"><a href="/jobs/" aria-current="page" id="jobsLink">Jobs</a><a href="/" id="libraryLink">Resource library</a><a href="/collections" id="collectionsLink">Collections</a></nav>
+  </header>
+  <main>
+    <div id="message" role="status" aria-live="polite"></div>
+    <section class="overview" aria-label="Workspace status">
+      <div><strong id="totalJobs">0</strong><span>Retained jobs</span></div>
+      <div><strong id="activeJobs">0</strong><span>Customer operations</span></div>
+      <div><strong id="readyJobs">0</strong><span>Completed jobs</span></div>
+      <div class="wide"><span id="scanStatus">Library ready</span><button id="scanButton" type="button">Update library</button></div>
+    </section>
+    <details class="intake" id="intake">
+      <summary>Add an accepted job or reopen an existing buyer</summary>
+      <form id="intakeForm" autocomplete="off">
+        <label>Source<select id="intakeMode"><option value="file">Accepted job file</option><option value="directory">Existing buyer directory</option></select></label>
+        <label>Label <span class="optional">(optional)</span><input id="intakeLabel" maxlength="512" placeholder="Monthly usage analysis"></label>
+        <div id="fileFields" class="span2 grid">
+          <label>Original accepted JSON<input id="acceptanceFile" type="file" accept=".json,application/json"></label>
+          <label>Private handoff JSON <span class="optional">(or enter a claim token)</span><input id="handoffFile" type="file" accept=".json,application/json"></label>
+          <label class="span2">Claim token<input id="claimToken" type="password" autocomplete="off" spellcheck="false"></label>
+          <p class="hint span2">Choose the exact accepted response saved by your buyer and the matching private handoff or claim token.</p>
+        </div>
+        <div id="directoryFields" class="span2" hidden>
+          <label>Original buyer directory<input id="buyerDirectory" spellcheck="false" placeholder="/absolute/path/to/retained-buyer"></label>
+          <p class="hint">This directory must be inside one of the configured buyer roots.</p><pre id="buyerRoots" class="roots"></pre>
+        </div>
+        <div class="span2"><button type="submit" class="primary">Add job</button></div>
+      </form>
+    </details>
+    <div class="workbench">
+      <section class="job-list" aria-labelledby="jobsHeading">
+        <div class="section-heading"><h2 id="jobsHeading">Jobs</h2><span id="jobCount"></span></div>
+        <form id="filterForm" class="filters">
+          <label class="search">Search<input id="query" type="search" placeholder="Label, job, function or merchant"></label>
+          <label>State<select id="stateFilter"><option value="">All states</option><option>AWAITING_SETTLEMENT</option><option>QUEUED</option><option>RUNNING</option><option>COMPLETED</option><option>FAILED</option><option>INTERRUPTED</option><option>CANCELLED</option><option>CANCELLING</option></select></label>
+          <label>Show<select id="viewFilter"><option value="active">Active</option><option value="archived">Archived</option><option value="all">All</option></select></label>
+          <button type="submit">Search</button>
+        </form>
+        <div class="table-scroll"><table><thead><tr><th>Job</th><th>State</th><th>Result</th></tr></thead><tbody id="jobs"></tbody></table></div>
+        <p id="empty" class="empty">Add an accepted job to begin.</p>
+        <div class="pager"><button id="previous" type="button">Previous</button><span id="page"></span><button id="next" type="button">Next</button></div>
+      </section>
+      <section class="job-detail" aria-labelledby="detailHeading">
+        <div id="unselected" class="empty">Select a job to inspect its status and result.</div>
+        <div id="detail" hidden>
+          <div class="section-heading"><div><h2 id="detailHeading"></h2><p id="jobIdentity" class="mono"></p></div><span id="jobState" class="state"></span></div>
+          <p id="jobActivity" class="hint"></p>
+          <div class="actions">
+            <button id="refreshButton" type="button">Refresh status</button>
+            <button id="watchButton" type="button">Monitor job</button>
+            <button id="fetchButton" type="button" class="primary">Retrieve result</button>
+            <button id="stopButton" type="button" hidden>Stop local operation</button>
+            <button id="reopenButton" type="button">Reopen receipt</button>
+          </div>
+          <dl class="facts"><dt>Merchant</dt><dd id="merchant"></dd><dt>Function</dt><dd id="function"></dd><dt>Updated</dt><dd id="updated"></dd><dt>Acceptance</dt><dd id="purchaseKind"></dd></dl>
+          <details class="metadata"><summary>Job identity and settlement</summary><pre id="provenance"></pre></details>
+          <form id="labelForm" class="label-form"><label>Label<input id="jobLabel" maxlength="512"></label><label class="check"><input id="archived" type="checkbox">Archived</label><button type="submit">Save</button></form>
+          <section class="result" aria-labelledby="resultHeading">
+            <div class="section-heading"><h3 id="resultHeading">Result</h3><span id="resultState"></span></div>
+            <p id="resultMeta" class="hint"></p>
+            <div class="actions"><button id="previewButton" type="button">Preview</button><button id="downloadButton" type="button">Download</button><a id="resultLibraryLink" href="/">Open in library</a></div>
+            <pre id="preview" class="preview" tabindex="0">The verified result will appear here.</pre>
+          </section>
+          <form id="noteForm" class="notes">
+            <h3>Research notes</h3>
+            <label>Notes<textarea id="note" rows="5" maxlength="32768"></textarea></label>
+            <label>Tags <span class="optional">(comma separated)</span><input id="tags" maxlength="1300"></label>
+            <div class="actions"><label class="check"><input id="starred" type="checkbox">Star result</label><button id="saveNote" type="submit">Save notes</button><span id="noteRevision" class="hint"></span></div>
+          </form>
+          <form id="collectionForm" class="collection-form">
+            <h3>Save to a collection</h3>
+            <label>Collection<select id="collection"><option value="">Create a collection</option></select></label>
+            <label id="collectionNameLabel">New collection name<input id="collectionName" maxlength="200" placeholder="Operations research"></label>
+            <button id="saveCollection" type="submit">Add verified result</button>
+          </form>
+        </div>
+      </section>
+    </div>
+  </main>
+  <footer><span id="connection">Connecting</span><span>Private customer workspace</span></footer>
+</body>
+</html>
