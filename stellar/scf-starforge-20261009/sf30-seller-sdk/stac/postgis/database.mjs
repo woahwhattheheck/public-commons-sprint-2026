@@ -196,8 +196,8 @@ export async function createDatabase(connection, profile) {
   const userColumns = layer => ['sf_id', 'sf_key', ...layer.fields.map(field => field.name), 'geom'];
   const allColumns = layer => ['sf_id', 'sf_key', '_sf_source', ...layer.fields.map(field => field.name), 'geom'];
   function rowHashSQL(alias = 't') {
-    return "md5((to_jsonb(" + alias + ")-ARRAY['sf_id','sf_key','_sf_source','geom'])::text || '|' || " +
-      "COALESCE(encode(ST_AsEWKB(" + alias + ".geom),'hex'),'null'))";
+    return "encode(sha256(convert_to((to_jsonb(" + alias + ")-ARRAY['sf_id','sf_key','_sf_source','geom'])::text || '|' || " +
+      "COALESCE(encode(ST_AsEWKB(" + alias + ".geom),'hex'),'null'),'UTF8')),'hex')";
   }
   async function copyFeatureRows(client, source, destination, layer, keys = null) {
     const columns = allColumns(layer).map(qi).join(',');
@@ -355,7 +355,8 @@ export async function createDatabase(connection, profile) {
         keyColumn: 'sf_id', sourceKeyColumn: 'sf_key', geometryColumn: 'geom',
         geometryType: layer.geometry.type, dimension: layer.geometry.dimension, srid: layer.geometry.targetSrid,
         fields: layer.fields, ...table, roles: await observeRoles(client, selected, layer),
-        observedColumns: columns});
+        observedColumns: columns, viewDefinitionSha256: createHash('sha256').update((await client.query(
+          'SELECT pg_get_viewdef($1::regclass,true) AS definition', [q(layer.relation)])).rows[0].definition).digest('hex')});
     }
     return result;
   }
