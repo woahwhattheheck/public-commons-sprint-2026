@@ -67,6 +67,14 @@ function objectDelivery(value) {
 function operationSummary(value) {
   return {intentId: value.intentId, directory: value.directory};
 }
+// A completed native mutation can coexist with interrupted transport or cleanup.
+function workflowResult(error) {
+  if (!['AcquisitionError', 'WorkspaceRecoveryError'].includes(error?.name)) return undefined;
+  const value = error.result;
+  if (!record(value) || !record(value.process) ||
+      typeof value.completionReported !== 'boolean' || typeof value.ok !== 'boolean') return undefined;
+  return value;
+}
 function decodeBody(options) {
   const value = {...(options ?? {})};
   if (Object.hasOwn(value, 'bodyBase64')) {
@@ -127,6 +135,62 @@ async function dispatch(call) {
       return {file, metadata:file.metadata, dataset:value};
     }
     throw Object.assign(new Error('GO_FILE_KIND_INVALID'), {code:'GO_FILE_KIND_INVALID'});
+  }
+
+  // The maintained Node workflows own acquisition and recovery semantics.
+  // Construction deliberately does not call ready() or create buyer state.
+  if (call.action.startsWith('acquisitions.')) {
+    need(typeof buyer.acquisitions === 'function', 'ORIGINAL_ACQUISITIONS_REQUIRED');
+    const workspace = buyer.acquisitions(args.workspace ?? {});
+    const actions = {
+      state: () => workspace.state(options),
+      attach: () => workspace.attachRun(options.run, options),
+      request: () => workspace.request(call.id, options),
+      receive: () => workspace.receiveRequest(options.file, options),
+      'review-request': () => workspace.reviewRequest(call.id, options),
+      'prepare-request': () => workspace.prepareRequest(call.id, options),
+      'paid-file': () => workspace.paidFile(call.id, options),
+      'receive-paid-file': () => workspace.receivePaidFile(options.file, options),
+      'review-paid-file': () => workspace.reviewPaidFile(call.id, options),
+      'prepare-paid-file': () => workspace.preparePaidFile(call.id, options),
+      'retrieve-paid-file': () => workspace.retrievePaidFile(call.id, options),
+      'reset-paid-file': () => workspace.resetPaidFile(call.id, options),
+      'download-paid-file': () => workspace.downloadPaidFile(call.id, options.operationId, options.destination, options),
+      'export-paid-file': () => workspace.exportPaidFile(call.id, options),
+      draft: () => workspace.draft(call.id, options),
+      save: () => workspace.save({...options, ...(call.id == null ? {} : {id:call.id})}),
+      initialize: () => workspace.initialize(call.id, options),
+      inspect: () => workspace.inspect(call.id, options),
+      execute: () => workspace.execute(call.id, options),
+      recover: () => workspace.recover(call.id, options),
+      unlock: () => workspace.unlock(call.id, options),
+      finalize: () => workspace.finalize(call.id, options),
+      'bind-accounting': () => workspace.bindAccounting(call.id, options),
+      preview: () => workspace.preview(call.id, options.operationId, options),
+      download: () => workspace.download(call.id, options.operationId, options.destination, options),
+      export: () => workspace.export(call.id, options),
+      'export-request': () => workspace.exportRequest(call.id, options),
+      'backup-review': () => workspace.backupReview(options),
+      backup: () => workspace.backup(options),
+      verify: () => workspace.verify(options),
+      restore: () => workspace.restore(options),
+    };
+    const command = call.action.slice('acquisitions.'.length);
+    need(Object.hasOwn(actions, command), 'GO_ACTION_UNKNOWN');
+    return actions[command]();
+  }
+  if (call.action.startsWith('workspace-recovery.')) {
+    need(typeof buyer.workspaceRecovery === 'function', 'ORIGINAL_WORKSPACE_RECOVERY_REQUIRED');
+    const recovery = buyer.workspaceRecovery();
+    const actions = {
+      inspect: () => recovery.inspect(options),
+      snapshot: () => recovery.snapshot(options),
+      verify: () => recovery.verify(options),
+      restore: () => recovery.restore(options),
+    };
+    const command = call.action.slice('workspace-recovery.'.length);
+    need(Object.hasOwn(actions, command), 'GO_ACTION_UNKNOWN');
+    return actions[command]();
   }
 
   switch (call.action) {
@@ -281,9 +345,12 @@ try {
     const details = {code:safeCode(error)};
     if (Number.isInteger(error.exitCode)) details.exitCode = error.exitCode;
     if (error.progress?.record) details.progress = objectSummary(error.progress);
+    const completed = workflowResult(error);
+    if (completed !== undefined) details.result = completed;
     try {
       await save({schema:SCHEMA, callId:request.callId, action:request.action,
-        id:request.id ?? null, ok:false, error:details});
+        id:request.id ?? null, ok:false, error:details,
+        ...(completed === undefined ? {} : {result:completed})});
     } catch { process.exitCode = 2; }
   }
   process.exitCode ??= 1;

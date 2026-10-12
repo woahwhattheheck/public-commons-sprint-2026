@@ -31,6 +31,7 @@ public final class StarforgeBuyer {
         String node = a.take("node"); if (node != null) builder.node(node);
         Path profile = a.optionalPath("profile"); if (profile != null) builder.operatorProfile(profile);
         Path bridge = a.optionalPath("bridge"); if (bridge != null) builder.bridge(bridge);
+        Path calls = a.optionalPath("calls-dir"); if (calls != null) builder.callsDirectory(calls);
         String timeout = a.take("timeout-ms"); if (timeout != null) builder.nativeTimeout(Duration.ofMillis(Long.parseLong(timeout)));
         String callTimeout = a.take("call-timeout-ms");
         if (callTimeout != null) builder.callTimeout(Duration.ofMillis(Long.parseLong(callTimeout)));
@@ -39,6 +40,34 @@ public final class StarforgeBuyer {
         String command = a.command;
         String action, id = null;
         Map<String, Object> args = new LinkedHashMap<>();
+        if (command.startsWith("acquisitions-")) {
+            String selected = command.substring("acquisitions-".length());
+            if (!ACQUISITION_COMMANDS.contains(selected)) throw new IllegalArgumentException("Unknown acquisitions command");
+            Map<String, Object> workspace = a.optionalObject("acquisitions");
+            Map<String, Object> options = a.optionalObject("options");
+            id = a.take("id");
+            if (options.containsKey("id")) {
+                if (id != null) throw new IllegalArgumentException("Acquisition id supplied twice");
+                id = Json.string(options, "id"); options.remove("id");
+            }
+            if (!Set.of("state", "attach", "receive", "receive-paid-file", "save",
+                    "backup-review", "backup", "verify", "restore").contains(selected) &&
+                    (id == null || id.isBlank())) throw new IllegalArgumentException("--id is required");
+            a.finished();
+            emit(builder.build().invoke("acquisitions." + selected, id,
+                Json.map("workspace", workspace, "options", options)), savedResult);
+            return;
+        }
+        if (command.startsWith("workspace-")) {
+            String selected = command.substring("workspace-".length());
+            if (!Set.of("inspect", "snapshot", "verify", "restore").contains(selected))
+                throw new IllegalArgumentException("Unknown workspace recovery command");
+            Map<String, Object> options = a.object("options");
+            a.finished();
+            emit(builder.build().invoke("workspace-recovery." + selected, null,
+                Json.map("options", options)), savedResult);
+            return;
+        }
         switch (command) {
             case "ready" -> action = "buyer.ready";
             case "list" -> action = "buyer.list";
@@ -234,6 +263,8 @@ public final class StarforgeBuyer {
             if (!values.isEmpty()) throw new IllegalArgumentException("Unused options: " + String.join(", ", values.keySet()));
         }
     }
+    private static final Set<String> ACQUISITION_COMMANDS = Set.of(
+        "state", "attach", "request", "receive", "review-request", "prepare-request", "paid-file", "receive-paid-file", "review-paid-file", "prepare-paid-file", "retrieve-paid-file", "reset-paid-file", "download-paid-file", "export-paid-file", "draft", "save", "initialize", "inspect", "execute", "recover", "unlock", "finalize", "bind-accounting", "preview", "download", "export", "export-request", "backup-review", "backup", "verify", "restore");
     private static final String HELP = """
         Starforge Java buyer — original native SF88 workflows
 
@@ -243,6 +274,7 @@ public final class StarforgeBuyer {
           --node EXECUTABLE        Selected Node binary (default: node)
           --bridge ABS_FILE        Original go/bridge.mjs (default: runtime/go/bridge.mjs)
           --profile ABS_FILE       Original operator profile
+          --calls-dir ABS_DIR      Existing IPC parent outside all selected backup/source roots
           --approval-input         Inherit real stdin for the original native terminal
           --timeout-ms N           Original native command deadline (default: 360000)
           --call-timeout-ms N      Whole Java invocation deadline; 0 means no Java deadline
@@ -278,6 +310,29 @@ public final class StarforgeBuyer {
           dataset-deliver | dataset-manifest --id ID [--out ABS]
           object-accounting | object-finalize | object-recover-accounting --id ID --options ABS
           dataset-accounting | dataset-finalize | dataset-recover-accounting --id ID --options ABS
+
+        Customer acquisitions:
+          acquisitions-COMMAND [--acquisitions ABS_SELECTION_JSON] [--id ID] [--options ABS_JSON]
+          COMMAND:
+            state, attach, request, receive, review-request, prepare-request
+            paid-file, receive-paid-file, review-paid-file, prepare-paid-file
+            retrieve-paid-file, reset-paid-file, download-paid-file, export-paid-file
+            draft, save, initialize, inspect, execute, recover, unlock, finalize
+            bind-accounting, preview, download, export, export-request
+            backup-review, backup, verify, restore
+          Selection JSON names: directory, configsDirectory, operatorSettings,
+            paidFileClaimEnvs, temporaryDirectory, resultLimit.
+          Method JSON uses the original Node method option names and decimal-string budgets.
+          Pass the passphrase/claim environment NAME, retaining its value in the child environment.
+          Save the returned review and plan hashes for their matching later commands.
+
+        Complete workspace recovery:
+          workspace-inspect | workspace-snapshot | workspace-verify | workspace-restore --options ABS_JSON
+          Inspect/snapshot: directory, stateRoot, inboxes, include; buyer --state is included.
+          Snapshot also: output, quiesced:true, passphraseEnv (optional variable name).
+          Verify/restore: bundle, expectedRecordSha256, passphraseEnv, python.
+          The original state may be absent. IPC remains outside the selected source.
+          Recovery restores the archive's original canonical root.
 
         Verified files:
           file-verify | file-read | file-json [--limit N]
