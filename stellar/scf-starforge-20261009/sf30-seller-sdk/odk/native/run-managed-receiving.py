@@ -11,6 +11,7 @@ import stat
 import subprocess
 import sys
 import time
+import uuid
 
 OPERATION = "CB57-ODK-MANAGED-RECEIVING"
 
@@ -28,7 +29,7 @@ def private_directory(raw):
 
 def write_json(path, value):
     data = (json.dumps(value, indent=2, ensure_ascii=False) + "\n").encode()
-    temporary = path.with_name(path.name + ".tmp-" + str(os.getpid()))
+    temporary = path.with_name(path.name + ".tmp-" + uuid.uuid4().hex)
     fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
         with os.fdopen(fd, "wb") as stream:
@@ -44,24 +45,53 @@ def write_json(path, value):
     finally:
         temporary.unlink(missing_ok=True)
 
-def stop_original(child):
-    if child.poll() is not None:
-        return child.returncode
-    # Node performs its exact Playwright/managed-owner cleanup on this signal.
+def observe_original(child, timeout):
+    # WNOWAIT keeps this exact session leader's PID reserved until cleanup.
+    deadline = time.monotonic() + timeout
+    while True:
+        result = os.waitid(os.P_PID, child.pid, os.WEXITED | os.WNOHANG | os.WNOWAIT)
+        if result is not None:
+            return result
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise subprocess.TimeoutExpired(child.args, timeout)
+        time.sleep(min(0.05, remaining))
+
+def original_exit_code(result):
+    return result.si_status if result.si_code == os.CLD_EXITED else -result.si_status
+
+def signal_original(child, signum, *, group=False):
+    # This Popen has not been reaped; its PID cannot belong to another process.
     try:
-        child.send_signal(signal.SIGTERM)
+        if group:
+            os.killpg(child.pid, signum)
+        else:
+            os.kill(child.pid, signum)
     except ProcessLookupError:
-        return child.wait()
+        pass
+
+def stop_original(child):
+    if child.returncode is not None:
+        return child.returncode
     try:
-        return child.wait(timeout=55)
+        result = observe_original(child, 0)
     except subprocess.TimeoutExpired:
-        # This group was created by this retained Popen, never selected by a PID scan.
-        os.killpg(child.pid, signal.SIGTERM)
+        # Let Node close its exact Playwright and managed owners first.
+        signal_original(child, signal.SIGTERM)
         try:
-            return child.wait(timeout=5)
+            result = observe_original(child, 55)
         except subprocess.TimeoutExpired:
-            os.killpg(child.pid, signal.SIGKILL)
-            return child.wait(timeout=10)
+            signal_original(child, signal.SIGTERM, group=True)
+            try:
+                result = observe_original(child, 5)
+            except subprocess.TimeoutExpired:
+                signal_original(child, signal.SIGKILL, group=True)
+                result = observe_original(child, 10)
+    if original_exit_code(result) != 0:
+        # An interrupted Node cannot finish its descendant cleanup. Retain the
+        # unreaped session leader while terminating only its original group.
+        signal_original(child, signal.SIGKILL, group=True)
+    return child.wait(timeout=10)
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -131,7 +161,7 @@ def main():
                                      env=environment, start_new_session=True)
             owner["childPid"] = child.pid
             write_json(private / "launch-owner.json", owner)
-            code = child.wait(timeout=args.timeout_seconds)
+            code = original_exit_code(observe_original(child, args.timeout_seconds))
         disposition = {"operationId": OPERATION, "childPid": child.pid, "exitCode": code, "closed": True}
         if code:
             raise RuntimeError("Original managed receiving exited " + str(code) + ". Read its retained stderr and operation.json.")
