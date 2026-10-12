@@ -32,8 +32,8 @@
     },
     {
       "path": "batch-portfolio-d76c/README.md",
-      "bytes": 8026,
-      "sha256": "bcc73425a93afd3e33d57d357239d80c81631433f40ac651ac9c6c148f7d1dad"
+      "bytes": 12088,
+      "sha256": "1484f6ba82a981ed96f6b8e13f6ef0a12350d895a3e3fa78dc80d2caec885a80"
     },
     {
       "path": "batch-portfolio-d76c/requirements.txt",
@@ -142,13 +142,13 @@
     },
     {
       "path": "README.md",
-      "bytes": 14363,
-      "sha256": "5972157878dfb3d702513c4a6844b3710c5643fc8e86eb25a9fed58662c4d54f"
+      "bytes": 14755,
+      "sha256": "83422c60c38e18d32f096a1223d0e6e602b14a51fc049d053592345b764e001e"
     },
     {
       "path": "run_phase.py",
-      "bytes": 20693,
-      "sha256": "f4a8100c0e566b40b8152303dfe51fb792ad4784c0bdc2cd4a933d07b40b4325"
+      "bytes": 22176,
+      "sha256": "bdf7658fc4883271ee5cf5abdde0b84d70b3d2715e039c61b1fb56a4ec8edd56"
     },
     {
       "path": "RUN_PLAN.json",
@@ -211,7 +211,7 @@
       "sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
     }
   ],
-  "revision": 6,
+  "revision": 7,
   "coordinate_map_entrypoint": "coordinate-map-110/submission.py",
   "invocation_adapter": "runner/invocation.py",
   "batch_entrypoint": "batch-portfolio-d76c/submission.py",

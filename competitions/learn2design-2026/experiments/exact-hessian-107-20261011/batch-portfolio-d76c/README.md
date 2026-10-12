@@ -124,6 +124,81 @@ The final candidate choice also uses the four-hour native histories, including
 late feasible improvement. Keep the selected source IDs and runtime fixed when
 resuming a phase.
 
+## Use several existing GPU allocations
+
+The complete final phase contains 20 four-hour Objective cells: 80 GPU-hours
+before warmup and process overhead. Divide whole topology groups between the
+available GPU allocations so the full comparison can finish before the final
+deadline. Each allocation still runs one original native cell at a time.
+
+Use the same source revision, phase, candidate IDs, partition count and original
+physics everywhere. Assign a different zero-based partition index to each
+allocation. For two existing workers, worker 0 receives topologies
+7, 9, 11, 13 and 15; worker 1 receives 8, 10, 12, 14 and 16.
+Every candidate and algorithm seed for a topology stays on that worker.
+The whole broad panel remains 40 cells; the final panel remains 20 cells.
+
+Set `L2D_PARTITION_INDEX` to `0` on the first worker and `1` on the second.
+Run the complete broad comparison on each:
+
+    python run_phase.py plan --phase batch-corpus-broad-public \
+      --partition-count 2 --partition-index "$L2D_PARTITION_INDEX"
+    python run_phase.py run --phase batch-corpus-broad-public \
+      --partition-count 2 --partition-index "$L2D_PARTITION_INDEX" \
+      --mode gpu --python /actual/venv/bin/python \
+      --run-dir "/actual/output/l2d-broad-part-$L2D_PARTITION_INDEX"
+
+After comparing the broad results, use the same two explicitly selected source
+IDs on both workers. This example retains the original 099 control and the
+corpus candidate; substitute the selected frozen IDs together if the broad
+results favor another pair:
+
+    python run_phase.py run --phase full-objective-budget \
+      --candidate 099 --candidate batch-corpus-d76c --baseline 099 \
+      --partition-count 2 --partition-index "$L2D_PARTITION_INDEX" \
+      --mode gpu --python /actual/venv/bin/python \
+      --run-dir "/actual/output/l2d-full-part-$L2D_PARTITION_INDEX"
+
+With two workers, each final partition has ten cells and 40 hours of Objective
+time, with a maximum of 45 hours under the original per-cell container cap.
+Additional existing workers can reduce elapsed time further: set a common
+partition count from 1 through 10 and assign every index from 0 through N-1
+once. A topology is assigned by its position modulo N. The source, physical
+problem, seed, candidate options and per-cell budgets stay fixed.
+
+Each phase intent and result records its partition index, the complete public
+topology list, its assigned topology list and the full panel's cell count.
+Resume a partition with its original command, index, count, directory and
+runtime. Existing phases started without partition options retain the original
+complete selection and resume without those options.
+
+Export each worker's original phase and collect the complete directories,
+including every adjacent `native.json.runtime.json`, under a common returns
+directory. For example, on each broad worker:
+
+    python run_phase.py export \
+      --run-dir "/actual/output/l2d-broad-part-$L2D_PARTITION_INDEX" \
+      --archive "/actual/output/l2d-broad-part-$L2D_PARTITION_INDEX.zip"
+
+After unpacking both broad archives into separate `broad-part-0` and
+`broad-part-1` directories, combine the returned native reports with the
+existing comparator:
+
+    python compare_native.py \
+      /actual/returns/broad-part-0/cells/*/native.json \
+      /actual/returns/broad-part-1/cells/*/native.json \
+      --sources SOURCES.json --baseline 099 \
+      --out /actual/returns/complete-broad-comparison.json
+
+Use the same export and comparison pattern for all final partitions.
+The complete broad panel has 40 planned cells and up to 30 baseline comparisons;
+the final panel has 20 planned cells and up to ten baseline comparisons.
+Read every partition's original result alongside the combined comparison to
+account for retained errors, interrupted cells and missing native reports.
+The comparator preserves the actual runtime cohorts and pairs only matching
+conditions. Keeping all methods for each topology on its assigned worker makes
+those comparisons available even when the fleet has different GPU models.
+
 ## Submission package
 
 The maintained donor packager has been extended for the complete portfolio:
