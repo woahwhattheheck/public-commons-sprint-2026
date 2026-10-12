@@ -32,6 +32,7 @@
       <input id="filter" type="search" placeholder="Find a collection">
       <div id="collection-list" class="collection-list" aria-label="Saved collections"></div>
       <button id="new-collection" class="wide primary" type="button">New collection</button>
+      <button id="open-recovery" class="wide" type="button">Backup and receiving</button>
       <details class="workspace-paths"><summary>Workspace locations</summary><dl id="locations"></dl></details>
     </aside>
     <div class="content">
@@ -69,6 +70,7 @@
           <div class="form-actions"><button id="save-collection" class="primary" type="button">Save reviewed collection</button><p class="muted">Request inputs are retained with the collection.</p></div>
         </section>
       </section>
+      <section id="recovery-panel" hidden aria-label="Backup and receiving"></section>
       <section id="detail-panel" hidden>
         <div class="panel">
           <div class="section-heading"><div><span class="eyebrow">SAVED COLLECTION</span><h2 id="detail-name"></h2><p id="detail-meta" class="muted"></p></div><span id="detail-state" class="state"></span></div>
