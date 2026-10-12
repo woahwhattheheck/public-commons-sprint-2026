@@ -107,16 +107,18 @@ const workspace = createWherobotsWorkspace({
   directory: "/absolute/private-workspace",
   python: "/absolute/source/.venv/bin/python"
 });
+const runtime = await workspace.runtime();
 const original = await workspace.get({kind: "operation", id: "reviewed-operation-id"});
+const logs = await workspace.logs({operation_id: original.id, offset: 0, limit: 100});
 const rows = await workspace.rows({edition_id: "edition-id", dataset_id: "dataset-id", offset: 0, limit: 100});
 ~~~
 
-workspace.tools() exposes the complete wherobots_ tool definitions. workspace.callTool(name, arguments) calls those operations and returns standard text plus structured content. Registration can use the existing host's selected workspace and Python runtime. The native Wherobots source and run remain the canonical execution objects.
+workspace.tools() exposes all 20 wherobots_ tool definitions. Runtime inspection and captured-log paging use the same operations in the CLI, browser and Node host. The browser can select any retained log capture and page through every entry; receiving progress continues by its original event cursor. workspace.callTool(name, arguments) calls those operations and returns standard text plus structured content. Registration can use the existing host's selected workspace and Python runtime. The native Wherobots source and run remain the canonical execution objects.
 
 ## Source and dependencies
 
 - Official Wherobots Python SDK 0.5.0: https://pypi.org/project/wherobots-python-sdk/0.5.0/
-- Wherobots run API: https://docs.wherobots.com/api/wherobots-runs
+- Wherobots run API: https://docs.wherobots.com/api-reference/runs/create-a-job-run
 - Wherobots vector writers: https://docs.wherobots.com/tutorials/wherobotsdb/vector-data/vector-save
 - Original Labs orchestration example: https://github.com/wherobots/labs-reference-implementations/tree/c3b0a89daf5c0d6a6dea4a29a8a5201d33be48c6/aws-step-functions-python-sdk
 - Boto3 S3 API: https://docs.aws.amazon.com/boto3/latest/reference/services/s3.html

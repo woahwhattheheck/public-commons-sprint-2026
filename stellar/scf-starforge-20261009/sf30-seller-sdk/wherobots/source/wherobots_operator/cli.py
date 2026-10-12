@@ -16,6 +16,11 @@ def read_json(path):
 
 def dispatch(workspace, operation, arguments):
     args = dict(arguments)
+    if operation == "runtime":
+        from .native import runtime_info
+        return runtime_info()
+    if operation == "logs":
+        return workflow.captured_logs(workspace, args["operation_id"], args.get("capture"), args.get("offset", 0), args.get("limit", 100))
     if operation == "state":
         return {"workspace_id": workspace.workspace_id, "title": workspace.title,
                 "workflows": workspace.records("workflow"), "operations": workspace.records("operation"),
@@ -77,6 +82,8 @@ def main(argv=None):
     show = sub.add_parser("show"); show.add_argument("kind"); show.add_argument("id")
     listing = sub.add_parser("list"); listing.add_argument("kind")
     sub.add_parser("state")
+    sub.add_parser("runtime")
+    logs = sub.add_parser("logs"); logs.add_argument("operation_id"); logs.add_argument("--capture", type=int); logs.add_argument("--offset", type=int, default=0); logs.add_argument("--limit", type=int, default=100)
     source = sub.add_parser("import-source"); source.add_argument("path"); source.add_argument("--script", action="store_true"); source.add_argument("--filename")
     save = sub.add_parser("save-workflow"); save.add_argument("file"); save.add_argument("--expected-revision"); save.add_argument("--actor", default="operator")
     adopt = sub.add_parser("adopt"); adopt.add_argument("input"); adopt.add_argument("--files", required=True); adopt.add_argument("--account", required=True); adopt.add_argument("--expected-revision"); adopt.add_argument("--actor", default="operator")

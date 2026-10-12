@@ -41,6 +41,31 @@ def response_headers(headers):
     return {key.lower(): value for key, value in headers.items() if key.lower() in allowed}
 
 
+
+def runtime_info():
+    """Report the selected native runtime without returning connection secrets."""
+    original_profile = os.environ.get("WHEROBOTS_OPERATOR_PROFILE")
+    profile = json.loads(Path(original_profile).read_text()) if original_profile else {}
+    if not isinstance(profile, dict):
+        raise OperationError("RUNTIME_PROFILE", "Select an original private runtime profile object.")
+    packages = {}
+    for package in ("wherobots-python-sdk", "boto3", "requests", "pyarrow"):
+        try:
+            packages[package] = importlib.metadata.version(package)
+        except importlib.metadata.PackageNotFoundError:
+            packages[package] = None
+    return {
+        "sdk_version": packages["wherobots-python-sdk"],
+        "required_sdk_version": SDK_VERSION,
+        "packages": packages,
+        "organization_id": profile.get("organization_id") or os.environ.get("WHEROBOTS_ORGANIZATION_ID"),
+        "region": profile.get("region"),
+        "runtimes": profile.get("runtimes", []),
+        "api_base_url": profile.get("api_base_url") or os.environ.get("WHEROBOTS_API_BASE_URL") or "https://api.cloud.wherobots.com",
+        "connection_configured": bool(os.environ.get("WHEROBOTS_API_KEY")),
+    }
+
+
 class NativeProvider:
     def __init__(self, profile=None, *, s3_factory=None):
         try:
@@ -354,6 +379,7 @@ class NativeProvider:
                                 "lastModified": plain(entry.last_modified)}
                             entries.append({"path": path, "relative_path": path[len(root) + 1:],
                                 "bytes": entry.size, "etag": original.get("etag") or original.get("ETag"),
+                                "last_modified": plain(entry.last_modified),
                                 "provider": {"store": "my_files", "uri": path, "listing": original,
                                              "drive": "MY_FILES", "region": self.account["region"],
                                              "storage_id": drive.storage_id}})
@@ -410,6 +436,10 @@ class NativeProvider:
                 # selection and API authentication still belong to FilesDrive.
                 # Preserve storage metadata while enforcing the reviewed cap.
                 headers = {"If-Match": entry["etag"]} if entry.get("etag") else {}
+                if not headers and entry.get("last_modified"):
+                    from email.utils import format_datetime
+                    stamp = datetime.fromisoformat(entry["last_modified"].replace("Z", "+00:00"))
+                    headers["If-Unmodified-Since"] = format_datetime(stamp, usegmt=True)
                 with requests.get(url, headers=headers, stream=True, timeout=self._timeout,
                                   allow_redirects=False) as response:
                     self._check_download(response, path)
@@ -419,7 +449,7 @@ class NativeProvider:
                         raise OperationError("OUTPUT_CHANGED", "The native output changed after its retained listing.", status=409)
                     size = 0
                     with Path(target).open("xb") as out:
-                        for chunk in response.iter_content(chunk_size=1024 * 1024):
+                        for chunk in response.raw.stream(amt=1024 * 1024, decode_content=False):
                             size += len(chunk)
                             if size > maximum or size > entry["bytes"]:
                                 raise OperationError("OUTPUT_SIZE", "The original output exceeds its reviewed byte limit.")
@@ -457,10 +487,10 @@ class NativeProvider:
                 if total_bytes > limits["max_bytes"]:
                     raise OperationError("OUTPUT_BYTE_LIMIT", "The original output exceeds the reviewed receiving byte limit.",
                                          details={"objects": total_objects, "bytes": total_bytes})
-                listing = workspace.put_object(canonical({"definition": definition, "entries": entries,
+                listing = workspace.put_object(canonical({"schema": "starforge.wherobots.output-listing.v1", "definition": definition, "entries": entries,
                     "pages": pages, "complete": True, "captured_at": now()}))
                 datasets.append({"dataset_id": definition["id"], "definition": definition,
-                                 "entries": entries, "listing_object": listing, "files": [], "complete": False})
+                                 "entries": entries, "listing_object": listing, "source_objects": pages, "files": [], "complete": False})
             capture = workspace.save_record("capture", capture_id, {"id": capture_id,
                 "workflow_id": operation["workflow_id"], "operation_id": operation["id"],
                 "native_run_id": operation["native_run_id"], "datasets": datasets,
