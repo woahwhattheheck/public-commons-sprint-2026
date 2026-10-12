@@ -2,6 +2,8 @@
   "schema": "stellar-forge.buyer-refund-source-files.v1",
   "files": [
     "stellar/scf-starforge-20261009/merchant-settlement-accounting/adjustments.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/buyer-expense-source.mjs",
+    "stellar/scf-starforge-20261009/merchant-settlement-accounting/reconcile.mjs",
     "stellar/scf-starforge-20261009/sf101-merchant-recovery/recover.mjs",
     "stellar/scf-starforge-20261009/sf103-native-buyer-signer/adapter.mjs",
     "stellar/scf-starforge-20261009/sf104-woocommerce-merchant-bridge/basket.mjs",

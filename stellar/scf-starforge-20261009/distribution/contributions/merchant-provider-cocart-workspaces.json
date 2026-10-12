@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-cocart-workspaces",
+  "description": "Original cocart workspaces MCP provider",
+  "merchantProviders": {
+    "cocart-workspaces": "stellar-forge/mcp-merchant-operator/providers/cocart-workspaces.mjs"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.odata-managed-receiving-input.v1",
+  "runtimeDirectory": "/absolute/customer-installed-runtime",
+  "workspaceDirectory": "/absolute/original-odata-workspace",
+  "liveServiceId": "orders",
+  "responseFiles": [
+    "/absolute/original-native-live-responses/page-1.json",
+    "/absolute/original-native-live-responses/page-2.json",
+    "/absolute/original-native-live-responses/page-3.json",
+    "/absolute/original-native-live-responses/page-4.json",
+    "/absolute/original-native-live-responses/page-5.json"
+  ],
+  "outputDirectory": "/absolute/new-odata-commissioning-operation"
+}

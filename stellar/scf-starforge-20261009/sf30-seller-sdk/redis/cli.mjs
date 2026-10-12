@@ -9,6 +9,7 @@ import { startRedisSeller, createRedisNativeFactory } from './merchant.mjs';
 
 const HELP = `Redis / Valkey merchant (Node 22.16+)
   init       --directory NEW_DIRECTORY [--transport redis|upstash-rest]
+             [--topology standalone|cluster|sentinel]
   describe   --source source.json
   inspect    --source source.json
   preflight  --source source.json
@@ -20,8 +21,8 @@ const HELP = `Redis / Valkey merchant (Node 22.16+)
              [--max-in-flight 64] [--drain-grace-ms 60000] [--availability-dir DIRECTORY]
   run        Alias for start.
   serve      --source source.json --config service.json [same launch options]
-  workspace  create|open|inspect|save|preview|prepare|stage|resume [workspace options]
-Credentials come from the source's passwordEnv or tokenEnv. init/describe/inspect/prepare/verify are offline.
+  workspace  setup|create|open|inspect|save|preview|prepare|stage|resume [workspace options]
+Credentials come from passwordEnv, sentinelPasswordEnv or tokenEnv. init/describe/inspect/prepare/verify are offline.
 Seller documentation and operations use the original developer portal and local operator interface.`;
 
 async function readInput(filename) {
@@ -48,9 +49,12 @@ async function writeNew(filename, bytes) {
 const encode = value => JSON.stringify(value, null, 2) + '\n';
 const print = value => process.stdout.write(JSON.stringify(value) + '\n');
 
-export async function initRedisWorkspace(directory, { transport = 'redis' } = {}) {
+export async function initRedisWorkspace(directory, { transport = 'redis', topology = 'standalone' } = {}) {
   if (!['redis', 'upstash-rest'].includes(transport)) throw new TypeError('REDIS_TRANSPORT_INVALID');
-  const template = transport === 'upstash-rest' ? 'example-upstash-source.json' : 'example-source.json';
+  if (!['standalone', 'cluster', 'sentinel'].includes(topology)) throw new TypeError('REDIS_TOPOLOGY_INVALID');
+  if (transport === 'upstash-rest' && topology !== 'standalone') throw new TypeError('REDIS_TRANSPORT_TOPOLOGY_CONFLICT');
+  const template = transport === 'upstash-rest' ? 'example-upstash-source.json' :
+    topology === 'standalone' ? 'example-source.json' : 'example-' + topology + '-source.json';
   const target = resolve(directory); await mkdir(target, { mode: 0o700 });
   try {
     for (const [input, output] of [[template, 'source.json'], ['example-merchant-plan.json', 'merchant-plan.json']])
@@ -75,11 +79,11 @@ export async function main(args = process.argv.slice(2)) {
     const flag = args[index];
     if (options.has(flag)) throw new TypeError('REDIS_DUPLICATE_OPTION');
     if (switches.includes(flag)) { options.set(flag, true); continue; }
-    if (!['--directory', '--transport', '--source', '--config', '--plan', '--query', '--input', '--output', ...launch].includes(flag) ||
+    if (!['--directory', '--transport', '--topology', '--source', '--config', '--plan', '--query', '--input', '--output', ...launch].includes(flag) ||
         !args[index + 1] || args[index + 1].startsWith('--')) throw new TypeError(HELP);
     options.set(flag, args[++index]);
   }
-  const allowed = { init: ['--directory', '--transport'], describe: ['--source'], inspect: ['--source'], preflight: ['--source'],
+  const allowed = { init: ['--directory', '--transport', '--topology'], describe: ['--source'], inspect: ['--source'], preflight: ['--source'],
     query: ['--source', '--query', '--input', '--output'], prepare: ['--source', '--plan', '--directory'], verify: ['--directory'],
     start: ['--directory', ...launch], run: ['--directory', ...launch], serve: ['--source', '--config', ...launch] };
   if (!Object.hasOwn(allowed, command)) throw new TypeError(HELP);
@@ -95,7 +99,7 @@ export async function main(args = process.argv.slice(2)) {
   const sourceFile = options.has('--source') ? resolve(options.get('--source')) : undefined;
   let result;
   if (command === 'init') {
-    required('--directory'); result = await initRedisWorkspace(options.get('--directory'), { transport: options.get('--transport') });
+    required('--directory'); result = await initRedisWorkspace(options.get('--directory'), { transport: options.get('--transport'), topology: options.get('--topology') });
   } else if (command === 'describe' || command === 'inspect') {
     required('--source'); result = await describeRedisFile(sourceFile);
   } else if (command === 'prepare') {

@@ -1,0 +1,8 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-grpc-workspaces",
+  "description": "Original grpc workspaces MCP provider",
+  "merchantProviders": {
+    "grpc-workspaces": "stellar-forge/mcp-merchant-operator/providers/grpc-workspaces.mjs"
+  }
+}

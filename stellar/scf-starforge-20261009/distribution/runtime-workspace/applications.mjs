@@ -1,58 +1,18 @@
 // MIT. Application lifecycle over the original READY runtime and managed-command worker.
 import { readDistributionSpecification } from '../specification.mjs';
-import { wqxWaterQualityApplication, prepareWqxWaterQualityApplication } from './application-wqx-water-quality.mjs';
-import { grpcApplication, prepareGrpcApplication } from './application-grpc.mjs';
-import { coingeckoApplication, prepareCoingeckoApplication } from './application-coingecko.mjs';
-import { oaiApplication, prepareOaiApplication } from './application-oai.mjs';
-import { fiscalDataApplication, prepareFiscalDataApplication } from './application-fiscaldata.mjs';
-import { databentoApplication, prepareDatabentoApplication } from './application-databento.mjs';
-import { opencageApplication, prepareOpenCageApplication } from './application-opencage.mjs';
-import { webdavApplication, prepareWebDavApplication } from './application-webdav.mjs';
-import { merchantSupportApplication, prepareMerchantSupportApplication } from './application-merchant-support.mjs';
 import { readdir, lstat, realpath, access } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { join, dirname, basename } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { blockscoutApplication, prepareBlockscoutApplication } from './application-blockscout.mjs';
-import { mppApplication, prepareMppApplication } from './application-mpp.mjs';
-import { ndjsonApplication, prepareNdjsonApplication } from './application-ndjson.mjs';
-import { cheesecakeApplication, prepareCheesecakeApplication } from './application-cheesecake.mjs';
-import { odataApplication, prepareODataApplication } from '../../sf30-seller-sdk/odata/live/applications.mjs';
-import { secEdgarApplication, prepareSecEdgarApplication } from './application-sec-edgar.mjs';
-import { jobResultReceiverApplication, prepareJobResultReceiverApplication } from './application-job-result-receiver.mjs';
-import { sheetsApplication, prepareSheetsApplication } from './application-sheets.mjs';
-import { nocodbApplication, prepareNocoDBApplication } from './application-nocodb.mjs';
-import { cocartApplication, prepareCocartApplication } from './application-cocart.mjs';
-import { stellarExpertApplication, prepareStellarExpertApplication } from './application-stellar-expert.mjs';
-import { atlasApplication, prepareAtlasApplication } from './application-atlas.mjs';
-import { n8nApplication, prepareN8nApplication } from './application-n8n.mjs';
-import { redisApplication, prepareRedisApplication } from './application-redis.mjs';
-import { openApiApplication, prepareOpenApiApplication } from './application-openapi.mjs';
-import { arcgisAgentApplication, prepareArcgisAgentApplication } from './application-arcgis.mjs';
-import { duckdbAgentApplication, prepareDuckDBAgentApplication } from './application-duckdb-agent.mjs';
-import { s3MerchantApplication, prepareS3MerchantApplication } from './application-s3-merchant.mjs';
-import { jobCheckoutApplication, validateJobCheckoutSelection, prepareJobCheckoutApplication } from './application-job-checkout.mjs';
-import { datasetBuyerApplication, prepareDatasetBuyerApplication } from './application-dataset-buyer.mjs';
-import { pricingApplication, validatePricingSelection, preparePricingApplication } from './application-pricing.mjs';
-import { collectionsApplication, prepareCollectionsApplication } from './application-collections.mjs';
-import { baserowApplication, prepareBaserowApplication } from './application-baserow.mjs';
-import { grantApplication, prepareGrantApplication } from './application-grant.mjs';
-import { buyerRunbookApplication, prepareBuyerRunbookApplication } from './application-buyer-runbook.mjs';
-import { grantsgovApplication, prepareGrantsgovApplication } from './application-grantsgov.mjs';
-import { fredApplication, prepareFredApplication } from './application-fred.mjs';
-import { worldbankAgentApplication, prepareWorldBankAgentApplication } from './application-worldbank.mjs';
-import { apiPassWorkspaceApplication, prepareApiPassWorkspaceApplication } from '../../sf101-merchant-receiver/api-access/workspace/application.mjs';
-import { eventFeedApplications, prepareEventFeedApplication } from './application-event-feed.mjs';
-import { tenderlyApplication, prepareTenderlyApplication } from './application-tenderly.mjs';
-import { browserWalletApplication, prepareBrowserWalletApplication } from './application-browser-wallet.mjs';
-import { rssAtomApplication, prepareRssAtomApplication } from './application-rss-atom.mjs';
 import { inspectMerchantRuntime } from '../../sf46-release/runtime-package.mjs';
 import { managedState, managedHome, openManagedHome, reviewManagedAdoption } from './managed-workspace.mjs';
 import { applicationRunPage, applicationHistoryLimit } from './application-history.mjs';
 import { applicationEnvironment, readApplicationTerminal, sendApplicationTerminal } from './application-command.mjs';
-import { PYTHON_APPLICATION_CATALOG, pythonApplicationCommand, pythonApplicationResource } from '../python-runtime/application-lifecycle.mjs';
+import { defaultApplicationProviders } from './application-providers.mjs';
+import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
   operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
+
+const providers = await defaultApplicationProviders();
 
 const SCHEMA = 'stellar-forge.runtime-application.v1';
 const TYPES = ['applications', 'application-reviews', 'application-homes', 'application-resource-locks'];
@@ -67,125 +27,7 @@ const uuidFrom = value => {
   const id = digest(value);
   return id.slice(0, 8) + '-' + id.slice(8, 12) + '-4' + id.slice(13, 16) + '-a' + id.slice(17, 20) + '-' + id.slice(20, 32);
 };
-const field = (name, label, type = 'path', required = false, description = '') => ({ name, label, type, required, description });
-const common = [
-  field('port', 'Local port', 'port', false, 'Use 0 to let the original application choose an available port.'),
-  field('environmentFile', 'Private environment JSON', 'path', false, 'Optional private file containing environment names and string values. Values stay on this host.'),
-];
-export const APPLICATION_CATALOG = Object.freeze([
-  wqxWaterQualityApplication(common),
-  coingeckoApplication(common),
-  oaiApplication(common),
-  fiscalDataApplication(common),
-  databentoApplication(common),
-  opencageApplication(common),
-  webdavApplication(common),
-  merchantSupportApplication(common),
-  grpcApplication(common),
-  atlasApplication(common),
-  n8nApplication(common),
-  ...PYTHON_APPLICATION_CATALOG,
-  ...eventFeedApplications(common),
-  apiPassWorkspaceApplication(common),
-  blockscoutApplication(common),
-  mppApplication(common),
-  ndjsonApplication(common),
-  cheesecakeApplication(common),
-  odataApplication(common),
-  secEdgarApplication(common),
-  jobResultReceiverApplication(common),
-  sheetsApplication(common),
-  nocodbApplication(common),
-  cocartApplication(common),
-  stellarExpertApplication(common),
-  redisApplication(common),
-  arcgisAgentApplication(common),
-  duckdbAgentApplication(common),
-  s3MerchantApplication(common),
-  jobCheckoutApplication(common),
-  datasetBuyerApplication(common),
-  pricingApplication(common),
-  collectionsApplication(common),
-  baserowApplication(common),
-  grantApplication(common),
-  buyerRunbookApplication(common),
-  grantsgovApplication(common),
-  fredApplication(common),
-  worldbankAgentApplication(common),
-  tenderlyApplication(common),
-  browserWalletApplication(common),
-  rssAtomApplication(common),
-  { id: 'xml', command: 'dataset', requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/xml/cli.mjs',
-    title: 'XML dataset onboarding', terminal: false,
-    description: 'Reopen an initialized XML workspace with its original sources, mappings, native datasets, comparison and portable editions.',
-    fields: [field('workspaceDirectory', 'Initialized XML workspace', 'path', true), ...common] },
-  openApiApplication(common),
-  { id: 'dataset', command: 'dataset-workspace', title: 'Dataset preview', terminal: false,
-    description: 'Open an original dataset file or retained dataset state with its native query and preview controls.',
-    fields: [field('datasetFile', 'Dataset file'), field('stateDirectory', 'Retained dataset state'), field('catalogDirectory', 'Catalog directory'),
-      field('resource', 'Resource URL', 'text'), ...common] },
-  { id: 'postgres-publisher', command: 'postgres-publisher', title: 'PostgreSQL dataset publisher', terminal: false,
-    description: 'Use the original plans, extraction, review, publication, schedules and buyer handoff.',
-    fields: [field('workspaceDirectory', 'Publisher workspace', 'path', true), field('create', 'Initialize a new publisher', 'boolean'),
-      field('sourceFile', 'Original source configuration'), field('stateDirectory', 'Target dataset state'),
-      field('seller', 'Seller origin', 'text'), field('resource', 'Resource URL', 'text'), ...common] },
-  { id: 'sheets-publisher', command: 'sheets-publisher', title: 'Google Sheets dataset publisher', terminal: false,
-    description: 'Open the original Sheets source, authorization, range plans, extraction, review and recurring publication.',
-    fields: [field('workspaceDirectory', 'Publisher workspace', 'path', true), field('create', 'Initialize a new publisher', 'boolean'),
-      field('sourceFile', 'Original Sheets source configuration'), field('stateDirectory', 'Target dataset state'),
-      field('seller', 'Seller origin', 'text'), field('resource', 'Resource URL', 'text'), ...common] },
-  { id: 'postgres', command: 'postgres-workspace', title: 'PostgreSQL merchant authoring', terminal: false,
-    description: 'Inspect the original database source, review its paid query contract and prepare the original merchant release.',
-    fields: [field('sourceFile', 'Original PostgreSQL source', 'path', true), field('outputDirectory', 'Private merchant output directory', 'path', true),
-      field('releaseStore', 'Existing release store'), ...common] },
-  { id: 'object-buyer', command: 'buyer-object-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/object-workspace/server.mjs',
-    title: 'Object buyer workspace', terminal: true,
-    description: 'Reopen original object sessions, received products, verified downloads and analysis. Every new acquisition retains its original explicit terminal approval.',
-    fields: [field('stateDirectory', 'Original private object buyer state', 'path', true), field('profileFile', 'Original product profile'),
-      field('operatorSettings', 'Original operator settings file'), field('analysisPython', 'Analysis Python executable'),
-      field('terminalPython', 'Terminal Python executable', 'path', false, 'Defaults to /usr/bin/python3; the original managed worker supplies the terminal.'), ...common] },
-  { id: 'goldrush', command: 'goldrush',
-    requiredSource: 'stellar/scf-starforge-20261009/sf30-seller-sdk/examples/goldrush-stellar-pilot/workbench.mjs',
-    title: 'GoldRush wallet research', terminal: true,
-    description: 'Reopen the original wallet, saved requests, source comparisons and notes. Execution uses its original buyer and connected terminal.',
-    fields: [field('stateDirectory', 'Initialized GoldRush workspace', 'path', true),
-      field('referenceFile', 'Original observation manifest'),
-      field('terminalPython', 'Terminal Python executable', 'path', false,
-        'Defaults to /usr/bin/python3; uses the existing managed PTY.'), ...common] },
-  { id: 'research-dossiers', command: 'research-workspace', requiredSource: 'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/server.mjs',
-    title: 'Research dossiers', terminal: false,
-    description: 'Reopen research questions, original source editions, selections, findings, revision comparison and portable reports.',
-    fields: [field('workspaceDirectory', 'Private research dossiers directory', 'path', true,
-      'An existing directory or one new directory in an existing private parent.'),
-      field('openalexWorkspaceDirectory', 'Existing OpenAlex research workspace', 'path', false,
-        'Optional saved collection with its original queries, editions, pages and review decisions.'),
-      field('openalexModule', 'Original OpenAlex workspace module', 'path', false,
-        'Optional explicit workspace.mjs from the original provider source; otherwise use this selected runtime.'),
-      field('editionAdapter', 'Original provider edition adapter', 'path', false,
-        'Optional local adapter module for retained provider references such as Valyu.'),
-      field('crossrefState', 'Private Crossref source directory', 'path', false,
-        'Optional retained source directory. Enables DOI metadata using public Crossref.'),
-      field('crossrefConfig', 'Original Crossref merchant configuration', 'path', false,
-        'Optional existing configuration; requires the Crossref source directory.'), ...common] },
-  { id: 'buyer-expenses', command: 'buyer-expenses',
-    requiredSource: 'stellar/scf-starforge-20261009/sf36-spend-governor/expense-workspace/server.py',
-    title: 'Buyer expenses', terminal: false,
-    description: 'Reopen statement captures, cost centers, allocations, period reviews and accountant editions.',
-    fields: [field('stateDirectory', 'Private buyer expense workspace', 'path', true,
-      'Reopen the original or received workspace, or create one directory in an existing private parent.'), ...common] },
-  { id: 'merchant-recovery', command: 'merchant-recovery-remote',
-    requiredSource: 'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/cli.mjs',
-    title: 'Merchant recovery', terminal: false,
-    description: 'Review retained snapshots, off-host inventory, original transfers and cold restore in the original recovery workspace. Select a runtime with its S3 feature.',
-    fields: [field('hostConfig', 'Original private recovery host configuration', 'path', true),
-      field('workspaceDirectory', 'Private recovery workspace directory', 'path', true,
-        'An existing directory or one new directory in an existing private parent. Original transfer journals remain at the host-selected paths.'), ...common] },
-  { id: 'commerce', command: 'commerce-console', title: 'Commerce session', terminal: true,
-    description: 'Reopen an initialized original commerce session. Its buyer approval remains in the connected original terminal.',
-    fields: [field('directory', 'Initialized commerce session', 'path', true), field('finalityNode', 'Finality Node executable'),
-      field('recoveryConfig', 'Private recovery configuration'), field('terminalPython', 'Terminal Python executable', 'path', false,
-        'Defaults to /usr/bin/python3; the same managed worker uses the Python standard library PTY.'), ...common] },
-]);
+export const APPLICATION_CATALOG = providers.catalog;
 
 export async function initializeApplications(root) {
   for (const name of TYPES) {
@@ -248,340 +90,20 @@ function normalizeSettings(type, input) {
     if (item.type === 'path') absolute(value);
     settings[item.name] = value;
   }
-  if (type.id === 'dataset') need(Boolean(settings.datasetFile) !== Boolean(settings.stateDirectory),
-    'APPLICATION_DATASET_SELECTION_REQUIRED', 'Choose exactly one original dataset file or retained state');
-  if (type.id === 'job-checkout') validateJobCheckoutSelection(settings);
-  if (type.id === 'merchant-pricing') validatePricingSelection(settings);
-  if (type.id.endsWith('-publisher')) {
-    need(!settings.create || settings.sourceFile && settings.stateDirectory, 'APPLICATION_PUBLISHER_SOURCE_REQUIRED');
-    need(Boolean(settings.seller) === Boolean(settings.resource), 'APPLICATION_BUYER_ENDPOINT_PAIR_REQUIRED');
-  }
-  if (type.id === 'research-dossiers') {
-    need(!settings.openalexModule || settings.openalexWorkspaceDirectory,
-      'APPLICATION_OPENALEX_WORKSPACE_REQUIRED', 'Choose the original saved OpenAlex workspace with its module');
-    need(!settings.crossrefConfig || settings.crossrefState,
-      'APPLICATION_CROSSREF_STATE_REQUIRED', 'Choose the original Crossref source directory with its configuration');
-  }
+  providers.forKind(type.id).validateSettings?.(type, settings);
   return settings;
 }
 async function applicationCommand(type, settings, runtimeDirectory, context = {}) {
-  if (type.python) return pythonApplicationCommand(context.root, type, settings, {
+  return prepareProviderApplication(providers.forKind(type.id), type, settings, {
     ...context, runtimeDirectory, inputPath, selectedExecutable, applicationEnvironment,
   });
-  const inputs = [], createDirectories = [], args = [];
-  let terminalPython, eventFeed, apiPassWorkspace, mppBinding, selectedResourceKey, jobResultReceiver, stellarApplication, openapi, buyerRunbook;
-  const path = async (name, kind = 'directory', missing = false, privateOnly = false) => {
-    if (!settings[name]) return;
-    const value = await inputPath(settings[name], kind, missing, privateOnly); inputs.push(value); return value;
-  };
-  const option = (name, value) => { if (value !== undefined && value !== '') args.push(name, String(value)); };
-  if (type.id === 'wqx-water-quality') {
-    const original = await prepareWqxWaterQualityApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
-  } else if (type.id === 'webdav') {
-    const original = await prepareWebDavApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'merchant-support') {
-    const original = await prepareMerchantSupportApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'opencage-workspace') {
-    const original = await prepareOpenCageApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'coingecko') {
-    const original = await prepareCoingeckoApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'grpc-workspace') {
-    const original = await prepareGrpcApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'databento-migration') {
-    const original = await prepareDatabentoApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
-  } else if (type.id === 'fiscaldata') {
-    const original = await prepareFiscalDataApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories); selectedResourceKey = original.resourceKey;
-  } else if (type.id === 'worldbank-agent') {
-    const original = await prepareWorldBankAgentApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'fred') {
-    const original = await prepareFredApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'mpp') {
-    const original = await prepareMppApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs); mppBinding = original.binding;
-  } else if (type.id === 'stellar-application') {
-    const original = await prepareCheesecakeApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs); selectedResourceKey = original.resourceKey;
-    stellarApplication = original.identity;
-  } else if (type.id === 'odata') {
-    const original = await prepareODataApplication(settings, { ...context, inputPath, selectedExecutable, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'sec-edgar') {
-    const original = await prepareSecEdgarApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'job-result-receiver') {
-    const original = await prepareJobResultReceiverApplication(settings, {
-      inputPath, runtimeDirectory, applicationEnvironment,
-    });
-    args.push(...original.args); inputs.push(...original.inputs); jobResultReceiver = original.identity;
-  } else if (type.id === 'cocart-workspace') {
-    const original = await prepareCocartApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-    selectedResourceKey = original.resourceKey;
-  } else if (type.id === 'nocodb-authoring') {
-    const original = await prepareNocoDBApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'stellar-expert') {
-    const original = await prepareStellarExpertApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'sheets-authoring') {
-    const original = await prepareSheetsApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'api-pass-customer') {
-    const original = await prepareApiPassWorkspaceApplication(settings, { runtimeDirectory, inputPath, selectedExecutable });
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-    apiPassWorkspace = original.identity;
-  } else if (['mercury-feed', 'buyer-event-feed'].includes(type.id)) {
-    const selected = await prepareEventFeedApplication(type.id, settings, {
-      ...context, runtime: { directory: runtimeDirectory }, inputPath, selectedExecutable,
-    });
-    args.push(...selected.args); inputs.push(...selected.inputs); eventFeed = selected.identity;
-  } else if (type.id === 'blockscout') {
-    const original = await prepareBlockscoutApplication(settings, inputPath);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'redis') {
-    const original = await prepareRedisApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 's3-merchant') {
-    const original = await prepareS3MerchantApplication(settings, { ...context, inputPath, runtimeDirectory });
-    args.push(...original.args); inputs.push(...original.inputs);
-    createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'arcgis-agent') {
-    const original = await prepareArcgisAgentApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'duckdb-agent') {
-    const original = await prepareDuckDBAgentApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'job-checkout') {
-    const original = await prepareJobCheckoutApplication(settings, runtimeDirectory, inputPath);
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'baserow-authoring') {
-    const prepared = await prepareBaserowApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-    createDirectories.push(...prepared.createDirectories);
-  } else if (type.id === 'buyer-collections') {
-    const prepared = await prepareCollectionsApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-    createDirectories.push(...prepared.createDirectories);
-  } else if (type.id === 'grantsgov') {
-    const prepared = await prepareGrantsgovApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-    createDirectories.push(...prepared.createDirectories);
-  } else if (type.id === 'buyer-runbook') {
-    const prepared = await prepareBuyerRunbookApplication(settings, { inputPath, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-    createDirectories.push(...prepared.createDirectories); buyerRunbook = prepared.identity;
-  } else if (type.id === 'grant-workspace') {
-    const prepared = await prepareGrantApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-    createDirectories.push(...prepared.createDirectories);
-  } else if (type.id === 'dataset-buyer') {
-    const prepared = await prepareDatasetBuyerApplication(settings, { inputPath, selectedExecutable, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
-  } else if (type.id === 'merchant-pricing') {
-    const prepared = await preparePricingApplication(settings, { ...context, inputPath, runtimeDirectory });
-    args.push(...prepared.args); inputs.push(...prepared.inputs); createDirectories.push(...prepared.createDirectories);
-  } else if (type.id === 'browser-wallet') {
-    const original = await prepareBrowserWalletApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'tenderly') {
-    const original = await prepareTenderlyApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'catalog-atlas') {
-    const original = await prepareAtlasApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs); createDirectories.push(...original.createDirectories);
-  } else if (type.id === 'n8n-merchant') {
-    const original = await prepareN8nApplication(settings, inputPath, runtimeDirectory);
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'oai-repository') {
-    const original = await prepareOaiApplication(settings, {
-      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
-    });
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'rss-atom') {
-    const original = await prepareRssAtomApplication(settings, {
-      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
-    });
-    args.push(...original.args); inputs.push(...original.inputs);
-  } else if (type.id === 'ndjson') {
-    const prepared = await prepareNdjsonApplication(settings, {
-      inputPath, selectedExecutable, runtimeDirectory, applicationEnvironment,
-    });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-  } else if (type.id === 'xml') {
-    await path('workspaceDirectory', 'directory', false, true);
-    args.push('xml', '--workspace', settings.workspaceDirectory, 'serve');
-  } else if (type.id === 'openapi') {
-    const prepared = await prepareOpenApiApplication(settings, {
-      ...context, inputPath, applicationEnvironment, runtimeDirectory,
-    });
-    args.push(...prepared.args); inputs.push(...prepared.inputs);
-    createDirectories.push(...prepared.createDirectories); openapi = prepared.openapi;
-  } else if (type.id === 'dataset') {
-    await path('datasetFile', 'file'); await path('stateDirectory', 'directory', false, true);
-    await path('catalogDirectory', 'directory', false, true);
-    option('--dataset', settings.datasetFile); option('--state', settings.stateDirectory);
-    option('--catalog', settings.catalogDirectory); option('--resource', settings.resource);
-  } else if (type.id.endsWith('-publisher')) {
-    const workspace = await path('workspaceDirectory', 'directory', Boolean(settings.create), true);
-    args.push('serve'); option('--workspace', settings.workspaceDirectory);
-    if (settings.create && !workspace.exists) {
-      args.push('--create'); await path('sourceFile', 'file'); await path('stateDirectory', 'directory', true, true);
-      option('--source', settings.sourceFile); option('--state', settings.stateDirectory);
-    } else {
-      const original = await readJSON(join(settings.workspaceDirectory, 'workspace.json'));
-      need(typeof original.sourceFile === 'string' && typeof original.targetDirectory === 'string' &&
-        (!settings.sourceFile || settings.sourceFile === original.sourceFile) &&
-        (!settings.stateDirectory || settings.stateDirectory === original.targetDirectory),
-      'APPLICATION_PUBLISHER_BINDING_CHANGED', 'Open this publisher with its original source and target state');
-      inputs.push(await inputPath(original.sourceFile, 'file'));
-      inputs.push(await inputPath(join(settings.workspaceDirectory, 'workspace.json'), 'file'));
-    }
-    option('--seller', settings.seller); option('--resource', settings.resource);
-  } else if (type.id === 'postgres') {
-    await path('sourceFile', 'file'); await path('outputDirectory', 'directory', true, true);
-    await path('releaseStore', 'directory', false, true);
-    option('--source', settings.sourceFile); option('--output', settings.outputDirectory); option('--release-store', settings.releaseStore);
-  } else if (type.id === 'object-buyer') {
-    await path('stateDirectory', 'directory', false, true);
-    await path('profileFile', 'file'); await path('operatorSettings', 'file');
-    const savedSettings = join(settings.stateDirectory, 'received', 'operator-settings.json');
-    const original = await readJSON(savedSettings, true);
-    if (original) {
-      need(typeof original.path === 'string' && (!settings.operatorSettings || settings.operatorSettings === original.path),
-        'APPLICATION_OBJECT_OPERATOR_CHANGED', 'Reopen this object workspace with its original operator settings path');
-      absolute(original.path); inputs.push(await inputPath(savedSettings, 'file'));
-    }
-    let analysisPython;
-    if (settings.analysisPython) {
-      const selected = await selectedExecutable(settings.analysisPython);
-      analysisPython = selected.executable; inputs.push(...selected.inputs);
-    }
-    option('--state', settings.stateDirectory); option('--profile', settings.profileFile);
-    option('--operator-settings', settings.operatorSettings); option('--analysis-python', analysisPython);
-  } else if (type.id === 'goldrush') {
-    await path('stateDirectory', 'directory', false, true);
-    const configFile = join(settings.stateDirectory, 'workbench.json');
-    inputs.push(await inputPath(configFile, 'file'));
-    const original = await readJSON(configFile);
-    need(original.schema === 'stellar-forge.goldrush-workbench.v1' &&
-      typeof original.id === 'string' && typeof original.release === 'string' &&
-      typeof original.buyerState === 'string' && typeof original.inbox === 'string' &&
-      !(original.workspace && original.profile), 'APPLICATION_GOLDRUSH_BINDING_CHANGED');
-    inputs.push(await inputPath(original.release, 'directory'));
-    for (const key of ['buyerState', 'inbox'])
-      inputs.push(await inputPath(original[key], 'directory', false, true));
-    if (original.workspace) inputs.push(await inputPath(original.workspace, 'directory', false, true));
-    if (original.profile) inputs.push(await inputPath(original.profile, 'file'));
-    const reference = settings.referenceFile ?? original.referenceFile;
-    if (reference) inputs.push(await inputPath(reference, 'file'));
-    args.push('workbench', '--state', settings.stateDirectory);
-    option('--reference-file', settings.referenceFile);
-  } else if (type.id === 'research-dossiers') {
-    const workspace = await path('workspaceDirectory', 'directory', true, true);
-    if (!workspace.exists) createDirectories.push(workspace.path);
-    await path('editionAdapter', 'file');
-    await path('openalexModule', 'file');
-    if (settings.crossrefState) {
-      const source = await path('crossrefState', 'directory', true, true);
-      if (!source.exists && !createDirectories.includes(source.path)) createDirectories.push(source.path);
-      await path('crossrefConfig', 'file');
-    }
-    if (settings.openalexWorkspaceDirectory) {
-      await path('openalexWorkspaceDirectory', 'directory', false, true);
-      for (const part of ['queries', 'editions'])
-        inputs.push(await inputPath(join(settings.openalexWorkspaceDirectory, part), 'directory'));
-    }
-    option('--dir', settings.workspaceDirectory);
-    option('--edition-adapter', settings.editionAdapter);
-    option('--openalex-workspace', settings.openalexWorkspaceDirectory);
-    option('--openalex-module', settings.openalexModule);
-    option('--crossref-state', settings.crossrefState);
-    option('--crossref-config', settings.crossrefConfig);
-  } else if (type.id === 'buyer-expenses') {
-    const state = await path('stateDirectory', 'directory', true, true);
-    if (!state.exists) createDirectories.push(state.path);
-    option('--state', settings.stateDirectory);
-  } else if (type.id === 'merchant-recovery') {
-    const config = await path('hostConfig', 'file');
-    await path('workspaceDirectory', 'directory', true, true);
-    const selected = await inspectMerchantRuntime(runtimeDirectory, { load: false });
-    const originalModule = join(selected.sourceRoot,
-      'stellar/scf-starforge-20261009/sf101-merchant-recovery/workspace/model.mjs');
-    inputs.push(await inputPath(originalModule, 'file'));
-    const { readRecoveryConfiguration } = await import(pathToFileURL(originalModule).href);
-    const original = await readRecoveryConfiguration(settings.hostConfig);
-    need(original.sha256 === config.sha256, 'APPLICATION_RECOVERY_CONFIG_CHANGED',
-      'Review the original current recovery host configuration');
-    const retained = new Set(inputs.map(item => item.path));
-    const retain = async (value, kind = 'directory', missing = false) => {
-      if (!retained.has(value)) {
-        inputs.push(await inputPath(value, kind, missing, true));
-        retained.add(value);
-      }
-    };
-    for (const profile of original.host.profiles) {
-      await retain(profile.storeConfig, 'file');
-      await retain(profile.operations, 'directory', true);
-      for (const root of profile.bundleRoots) await retain(root.directory);
-      for (const plan of profile.capturePlans ?? []) await retain(plan.planFile, 'file', true);
-      await retain(profile.downloadRoot);
-      await retain(profile.restoreRoot);
-    }
-    args.push('workspace', 'serve');
-    option('--config', settings.hostConfig); option('--directory', settings.workspaceDirectory);
-  } else if (type.id === 'commerce') {
-    await path('directory', 'directory', false, true); await path('recoveryConfig', 'file');
-    const finalityNode = settings.finalityNode ? await realpath(settings.finalityNode) : null;
-    if (finalityNode) { inputs.push(await inputPath(finalityNode, 'file')); await access(finalityNode, constants.X_OK); }
-    args.push('start'); option('--directory', settings.directory);
-    option('--finality-node', finalityNode ?? undefined); option('--recovery-config', settings.recoveryConfig);
-  }
-  if (type.terminal) {
-    terminalPython = await realpath(settings.terminalPython ?? '/usr/bin/python3');
-    inputs.push(await inputPath(terminalPython, 'file')); await access(terminalPython, constants.X_OK);
-  }
-  if (type.id !== 'mpp') option('--port', settings.port);
-  if (settings.environmentFile) inputs.push(await inputPath(settings.environmentFile, 'file'));
-  const environment = await applicationEnvironment(settings.environmentFile);
-  return { command: type.command, args, inputs, createDirectories, terminal: type.terminal,
-    ...(eventFeed ? { eventFeed } : {}),
-    ...(apiPassWorkspace ? { apiPassWorkspace } : {}),
-    ...(mppBinding ? { mppBinding } : {}),
-    ...(openapi ? { openapi } : {}),
-    ...(stellarApplication ? { stellarApplication } : {}),
-    ...(jobResultReceiver ? { jobResultReceiver } : {}),
-    ...(buyerRunbook ? { buyerRunbook } : {}),
-    ...(selectedResourceKey ? { resourceKey: selectedResourceKey } : {}),
-    ...(type.terminal ? { terminalPython } : {}),
-    ...(settings.environmentFile ? { environmentFile: settings.environmentFile, environmentSha256: environment.sha256 } : {}) };
 }
 function resourceKey(type, settings) {
-  if (type.python) return pythonApplicationResource(type, settings);
-  if (['arcgis-agent', 'worldbank-agent'].includes(type.id)) return hash({ family: 'merchant-mcp', directory: settings.configurationFile });
-  if (type.id === 'duckdb-agent') return hash({ family: 'native-mcp', directory: settings.nativeDirectory });
+  const selected = providers.forKind(type.id).resourceKey?.(type, settings, { hash });
+  if (selected !== undefined) return selected;
   const value = settings.outputParent ?? settings.workspaceDirectory ?? settings.directory ??
     settings.outputDirectory ?? settings.stateDirectory ?? settings.datasetFile;
-  // Feeds, repository metadata and XML retain the same original SQLite workspace and writer.
-  const family = ['rss-atom', 'oai-repository'].includes(type.id) ? 'xml' : type.id.endsWith('-publisher') ? 'publisher' : type.id;
-  return hash({ family, directory: value });
+  return hash({ family: type.id, directory: value });
 }
 async function application(root, id) {
   const value = await readJSON(join(directoryFor(root, id), 'application.json'));
@@ -665,7 +187,8 @@ export async function applicationsState(root, { historyLimit = 30 } = {}) {
     catch (error) { return { id, label: id, phase: 'UNAVAILABLE', error: errorView(error) }; }
   }));
   items.sort((a, b) => String(a.label).localeCompare(String(b.label)) || a.id.localeCompare(b.id));
-  return { schema: 'stellar-forge.runtime-applications.v1', catalog: APPLICATION_CATALOG, applications: items };
+  return { schema: 'stellar-forge.runtime-applications.v1', catalog: APPLICATION_CATALOG,
+    providers: providers.sources, applications: items };
 }
 export async function applicationsHistory(root, input = {}) {
   await application(root, recordId(input.applicationId));
@@ -690,23 +213,7 @@ export async function reviewApplication(root, { runtimeId, runtimeDirectory, kin
     'This selected runtime does not include ' + type.command + '. Choose a runtime containing that original command.');
   if (type.requiredSource) await regular(join(runtime.sourceRoot, type.requiredSource), 4 * 1024 * 1024).catch(() =>
     need(false, 'APPLICATION_NOT_IN_RUNTIME', 'Choose a runtime containing the original ' + type.title + ' source'));
-  if (type.id === 'research-dossiers' && settings.openalexWorkspaceDirectory && !settings.openalexModule)
-    await regular(join(runtime.sourceRoot,
-      'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research/workspace.mjs'), 4 * 1024 * 1024).catch(() =>
-      need(false, 'APPLICATION_NOT_IN_RUNTIME',
-        'Choose a runtime containing the original OpenAlex workspace or select its explicit original module'));
-  if (type.id === 'research-dossiers' && settings.crossrefState) {
-    const required = [
-      'stellar/scf-starforge-20261009/sf88-operator-buyer-cli/research-dossiers/crossref-workspace.mjs',
-      'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/source.mjs',
-      ...(settings.crossrefConfig ? [
-        'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/config.mjs',
-        'stellar/scf-starforge-20261009/sf30-seller-sdk/crossref/merchant.mjs',
-      ] : []),
-    ];
-    for (const path of required) await regular(join(runtime.sourceRoot, path), 4 * 1024 * 1024).catch(() =>
-      need(false, 'APPLICATION_NOT_IN_RUNTIME', 'Choose a runtime containing the original Crossref research workspace and source'));
-  }
+  await providers.forKind(type.id).checkRuntime?.(type, settings, runtime, { root, runtimeId });
   const command = await applicationCommand(type, settings, runtime.directory, { root, runtimeId });
   const homes = (await managedState(root)).homes;
   let home = homeId ? homes.find(item => item.id === recordId(homeId)) : homes.find(item => item.releases.some(release =>
@@ -768,7 +275,7 @@ export async function applicationBindingOperation(root, id) {
   const saved = await application(root, id), { release } = await selectedRelease(root, saved);
   return release ? null : saved.adoption;
 }
-export async function reviewApplicationStart(root, id) {
+export async function reviewApplicationStart(root, id, { navigationOrigin = null } = {}) {
   const saved = await application(root, id);
   need(!await busyApplication(root, id), 'APPLICATION_RUNNING', 'Reopen the retained application operation', 409);
   const runtime = await inspectMerchantRuntime(saved.runtime.directory, { expectedManifest: saved.runtime.sourceManifestSha256, load: false });
@@ -776,13 +283,14 @@ export async function reviewApplicationStart(root, id) {
   const { home, release } = await selectedRelease(root, saved);
   need(release && (applicationType(saved.kind).python || Object.hasOwn(release.commands, applicationType(saved.kind).command)), 'APPLICATION_CONNECTION_REQUIRED');
   const command = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
-    root, runtimeId: saved.runtimeId,
+    root, runtimeId: saved.runtimeId, navigationOrigin,
   });
   need(command.resourceKey === undefined || command.resourceKey === saved.resourceKey,
     'APPLICATION_STATE_CHANGED', 'Review and save this application with its current private state directory before starting', 409);
   const value = { schema: 'stellar-forge.application-start-review.v1', applicationId: id,
     applicationRevision: saved.revision, runtime: saved.runtime, homeId: home.id, homeRevision: home.revision,
-    releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command };
+    releaseId: release.id, releaseDigest: release.digest, resourceKey: saved.resourceKey, command,
+    ...(navigationOrigin !== null ? { navigationOrigin } : {}) };
   const reviewId = hash(value).slice(0, 24);
   try { await saveJSON(reviewPath(root, reviewId), { ...value, id: reviewId, reviewedAt: now() }); }
   catch (error) { if (error.code !== 'EEXIST') throw error; }
@@ -809,14 +317,15 @@ export async function prepareApplicationStart(root, { applicationId, requestId, 
           'The original application for this data directory already has a retained operation. Reopen or stop that operation.', 409);
     }
     const current = await applicationCommand(applicationType(saved.kind), saved.settings, saved.runtime.directory, {
-      root, runtimeId: saved.runtimeId,
+      root, runtimeId: saved.runtimeId, navigationOrigin: reviewed.navigationOrigin ?? null,
     });
     need(hash(current) === hash(reviewed.command), 'APPLICATION_INPUTS_CHANGED', 'Review the original current inputs again', 409);
     const { home, release } = await selectedRelease(root, saved);
     need(home?.revision === reviewed.homeRevision && release?.id === reviewed.releaseId &&
       release?.digest === reviewed.releaseDigest, 'APPLICATION_RELEASE_CHANGED');
     const request = { requestId, operation: 'managed-run', homeId: home.id, releaseId: release.id,
-      expectedRevision: home.revision, applicationId: id, command: current.command, args: current.args,
+      expectedRevision: home.revision, applicationId: id, command: current.command,
+      args: retainedApplicationArguments(providers.forKind(saved.kind), current, requestId),
       terminal: current.terminal, ...(current.terminalPython ? { terminalPython: current.terminalPython } : {}),
       ...(current.pythonCommand ? { pythonCommand: current.pythonCommand } : {}),
       ...(current.jobResultReceiver ? { jobResultReceiver: current.jobResultReceiver } : {}),

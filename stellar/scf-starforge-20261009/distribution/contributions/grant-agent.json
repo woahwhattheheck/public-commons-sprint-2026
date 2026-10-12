@@ -1,0 +1,9 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "grant-agent",
+  "description": "Original SF47 grant planning, delivery and cash forecast agent interfaces",
+  "exports": {
+    "./grant/agent": "./source/stellar/scf_2026/sf47_budget_model/workspace/agent-client.mjs",
+    "./merchant/grant-workspaces": "./source/stellar-forge/mcp-merchant-operator/grant-workspace.mjs"
+  }
+}

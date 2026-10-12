@@ -1,0 +1,18 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "merchant-provider-tools",
+  "description": "Inspect and initialize original source-owned merchant providers",
+  "commands": {
+    "merchant-providers": "stellar-forge/mcp-merchant-operator/provider-cli.mjs"
+  },
+  "commandDescriptions": {
+    "merchant-providers": "List, inspect or initialize a source-owned merchant provider"
+  },
+  "exports": {
+    "./merchant-provider": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/provider-contract.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/provider-contract.mjs"
+    },
+    "./merchant-providers": "./source/stellar-forge/mcp-merchant-operator/provider-registry.mjs"
+  }
+}

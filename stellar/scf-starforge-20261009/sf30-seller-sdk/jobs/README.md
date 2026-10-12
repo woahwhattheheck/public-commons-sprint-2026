@@ -106,3 +106,41 @@ Complete output bytes are synced before their immutable digest filename is publi
 - [Native Node Worker lifecycle](https://nodejs.org/api/worker_threads.html)
 
 `execution.mjs` exports `executeJob(source,row,attempt,{env,signal}) -> Promise<Buffer>` for other trusted application workflows. The source supplies compiled function output limits, timeout, environment references and memory limit, together with the application path and SHA-256. The row supplies id, functionId and input; the attempt supplies id. A caller using its own quota or subscription admission keeps that admission and durable execution record in its own domain.
+
+## Native application processes
+
+Trusted application functions that need an external binary can use
+context.processes. The merchant owns its supervisor and private temporary
+directory independently of the function's Node Worker.
+
+~~~js
+export async function transform(input, { signal, processes }) {
+  const directory = await processes.directory();
+  const result = await processes.run({
+    command: [process.env.CONFIGURED_PYTHON, '-B', '/installed/transform.py'],
+    cwd: directory,
+    input: new TextEncoder().encode(JSON.stringify(input)),
+    maxStdoutBytes: 131072,
+    maxStderrBytes: 65536,
+  });
+  signal.throwIfAborted();
+  if (result.exitCode !== 0) throw new Error('Native transformation failed');
+  return result.stdout;
+}
+~~~
+
+Declare CONFIGURED_PYTHON in the merchant environment list. Executable paths
+must be absolute. The API accepts an argument array with no shell, a working
+directory inside its private directory, up to 1 MiB of standard input, and
+explicit output limits. It supports one active process group at a time and up
+to 32 native invocations per attempt.
+
+Native output and completion share an ordered IPC channel. A process result
+returns after its leader and remaining process-group helpers have closed.
+The supervisor retains directory ownership between invocations and while the
+Worker reads its output files. Worker success, cancellation and timeout close
+that owner before completing execution. An interrupted merchant disconnects
+the same supervisor, which retires its native group and removes its directory.
+
+The complete [dataset preparation application](../ndjson/jobs/README.md) uses
+this API with the original sealed file inputs and native NDJSON workspace.

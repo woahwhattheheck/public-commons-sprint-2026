@@ -12,6 +12,8 @@ import {
   PIPELINE_EDITION_MODE, PIPELINE_SOURCE_REFERENCE,
 } from './unstructured-pipelines/edition.mjs';
 
+import {RESEARCH_OBJECT_REFERENCE,validateResearchObjectReference} from './object-reference.mjs';
+
 export const PIPELINE_UPLOAD_BYTES = 32 * 1024 * 1024;
 export const PIPELINE_UPLOAD_BODY_BYTES = Math.ceil(PIPELINE_UPLOAD_BYTES / 3) * 4 + 1048576;
 const copy = value => structuredClone(value);
@@ -49,8 +51,11 @@ function summary(view) {
   return {
     plan:{id:p.id,sha256:p.sha256,preparedAt:p.preparedAt,payload:{
       request:copy(p.payload.request),source:copy(p.payload.source),profile:copy(p.payload.profile),
-      inputs:p.payload.inputs.map(input=>Object.fromEntries(
-        ['id','index','filename','contentType','bytes','sha256'].map(key=>[key,input[key]]))),
+      inputs:p.payload.inputs.map(input=>({
+        ...Object.fromEntries(['id','index','filename','contentType','bytes','sha256'].map(key=>[key,input[key]])),
+        ...(input.sourceRef?.schema===RESEARCH_OBJECT_REFERENCE?
+          {sourceRef:validateResearchObjectReference(input.sourceRef,input)}:{}),
+      })),
       limits:copy(p.payload.limits),
     }},
     operation:{id:v.id,revision:v.revision,phase:v.phase,providerJobId:v.providerJobId,
@@ -85,11 +90,13 @@ export async function openSavedPipelineSource(configPath,{env=process.env}={}) {
   return {operations,workspaceId:value.workspaceId,directory:value.directory};
 }
 
-export async function openUnstructuredPipelineWorkspace({dossiers,source=null}={}) {
+export async function openUnstructuredPipelineWorkspace({dossiers,source=null,objectSource=null}={}) {
   need(dossiers&&['get','receive','readRetainedEdition'].every(key=>typeof dossiers[key]==='function'),
     'PIPELINE_ORIGINAL_DOSSIER_STORE_REQUIRED');
   need(source===null||object(source)&&object(source.operations)&&clean(source.workspaceId,128),
     'PIPELINE_SOURCE_INVALID');
+  if(objectSource!==null)for(const method of ['source','list','capture','readReview','listReviews','withFile'])
+    need(typeof objectSource[method]==='function','RESEARCH_ORIGINAL_OBJECT_SOURCE_REQUIRED');
   const operations=source?.operations??null;
   if(operations)for(const method of ['source','prepare','list','inspect','readInput','submit','refresh','cancel',
     'listProviderJobs','reconcile','retainOutput','readOutput','close'])
@@ -103,7 +110,7 @@ export async function openUnstructuredPipelineWorkspace({dossiers,source=null}={
   async function configured() {
     const current=operations?await operations.source():null;
     return {configured:operations!==null,workspaceId:source?.workspaceId??null,source:current,
-      uploadLimitBytes:PIPELINE_UPLOAD_BYTES};
+      uploadLimitBytes:PIPELINE_UPLOAD_BYTES,objects:objectSource?.source()??{configured:false}};
   }
   async function owned(dossierId,id) {
     need(operations&&!closed,'PIPELINE_SOURCE_NOT_CONFIGURED');
@@ -198,6 +205,70 @@ export async function openUnstructuredPipelineWorkspace({dossiers,source=null}={
       clear();return summary(result);
     });
   }
+
+  async function objects(dossierId,options={}) {
+    need(objectSource&&!closed,'RESEARCH_OBJECT_SOURCE_NOT_CONFIGURED');
+    await metadata(dossierId);
+    return objectSource.list(options);
+  }
+  async function objectReviews(dossierId,options={}) {
+    need(objectSource&&!closed,'RESEARCH_OBJECT_SOURCE_NOT_CONFIGURED');
+    await metadata(dossierId);
+    return objectSource.listReviews(dossierId,options);
+  }
+  async function reviewObject(dossierId,input,options={}) {
+    need(objectSource&&!closed,'RESEARCH_OBJECT_SOURCE_NOT_CONFIGURED');
+    await metadata(dossierId);
+    return objectSource.capture(dossierId,input,options);
+  }
+  /** Bind a reviewed native file into the original immutable provider preparation. */
+  async function prepareObject(dossierId,input,options={}) {
+    need(operations&&!closed,'PIPELINE_SOURCE_NOT_CONFIGURED');
+    fields(input,['requestId','profileId','questionId','label','expectedRevision',
+      'reviewId','expectedReviewSha256'],'RESEARCH_OBJECT_PREPARATION_FIELDS_INVALID');
+    requestId(input.requestId);revision(input.expectedRevision);
+    need(clean(input.profileId,128)&&clean(input.questionId,160)&&clean(input.label,240)&&
+      /^or_[a-f0-9]{64}$/.test(input.reviewId??'')&&HEX.test(input.expectedReviewSha256??''),
+    'RESEARCH_OBJECT_PREPARATION_SELECTION_REQUIRED');
+    // Reconcile the original prepared operation before touching today's source.
+    const matching=(await operations.list()).find(view=>view.plan.payload.request.requestId===input.requestId);
+    if(matching) {
+      const request=matching.plan.payload.request, selected=request.context?.objectInput;
+      need(request.profileId===input.profileId&&request.label===input.label&&
+        request.context?.dossierId===dossierId&&request.context.questionId===input.questionId&&
+        request.context.preparationRevision===input.expectedRevision&&
+        selected?.reviewId===input.reviewId&&selected.reviewSha256===input.expectedReviewSha256&&
+        matching.plan.payload.inputs.length===1,'PIPELINE_PREPARATION_REQUEST_CHANGED');
+      validateResearchObjectReference(matching.plan.payload.inputs[0].sourceRef,matching.plan.payload.inputs[0]);
+      return {...summary(matching),replayed:true};
+    }
+    need(objectSource,'RESEARCH_OBJECT_SOURCE_NOT_CONFIGURED');
+    return objectSource.withFile(dossierId,input,async(file,review)=>{
+      const before=await metadata(dossierId);
+      need(before.revision===input.expectedRevision,'REVISION_CONFLICT');
+      const question=before.questions.find(row=>row.id===input.questionId);
+      need(question,'QUESTION_NOT_FOUND');
+      const sourceView=await operations.source(),limits=sourceView.limits;
+      need(sourceView.profiles.some(profile=>profile.id===input.profileId),'PIPELINE_PROFILE_NOT_FOUND');
+      need(review.reference.bytes>0&&review.reference.bytes<=limits.maxInputBytes&&
+        review.reference.bytes<=limits.maxTotalInputBytes&&limits.maxInputs>=1,'PIPELINE_INPUT_SIZE_INVALID');
+      const objectInput={reviewId:review.reviewId,reviewSha256:review.reviewSha256,
+        workspaceId:review.source.workspaceId,sourceSha256:review.source.sourceSha256};
+      const result=await operations.prepare({
+        requestId:input.requestId,profileId:input.profileId,label:input.label,
+        context:{dossierId,questionId:question.id,questionText:question.text,
+          preparationRevision:input.expectedRevision,objectInput},
+        inputs:[file],
+      });
+      need(result.plan.payload.request.context?.dossierId===dossierId&&
+        same(result.plan.payload.request.context?.objectInput,objectInput)&&
+        result.plan.payload.inputs.length===1&&
+        same(result.plan.payload.inputs[0].sourceRef,review.reference),'PIPELINE_RETAINED_INPUT_CHANGED');
+      validateResearchObjectReference(result.plan.payload.inputs[0].sourceRef,result.plan.payload.inputs[0]);
+      clear();return summary(result);
+    },options);
+  }
+
   async function inspect(dossierId,id) {return summary(await owned(dossierId,id));}
   const actionFields={
     submit:['requestId','expectedRevision','expectedPlanSha256'],
@@ -361,7 +432,7 @@ export async function openUnstructuredPipelineWorkspace({dossiers,source=null}={
     });
   }
   return Object.freeze({
-    configured,list,prepare,inspect,act,providerJobs,inputFile,outputFile,review,elements,download,receive,clear,
+    configured,list,prepare,objects,objectReviews,reviewObject,prepareObject,inspect,act,providerJobs,inputFile,outputFile,review,elements,download,receive,clear,
     async close(){if(closed)return;closed=true;clear();if(operations)await operations.close();},
   });
 }
