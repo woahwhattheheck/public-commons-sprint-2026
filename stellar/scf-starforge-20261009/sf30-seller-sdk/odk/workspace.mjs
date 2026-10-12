@@ -1,6 +1,7 @@
 // MIT. Complete original Central cohorts, form generations and submission history.
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
+import { mkdir } from 'node:fs/promises';
 import { parsePage } from '../odata/source.mjs';
 import { createCentralSource, decodeCentralCatalog, compileCentralQuery, normalizeScope, repeatRelations,
   formPath, formVersionPath, submissionPath, originalSpreadsheet, segment, CENTRAL_SOURCE } from './source.mjs';
@@ -9,6 +10,9 @@ import { digest, fault, formatted, identifier, now, stable } from '../odata/stat
 import { analyzeCapture, compareCaptures, exportCentralDataset, createCentralReport } from './analysis.mjs';
 import { createCentralArchive } from './archive.mjs';
 import { openODataPublisher } from '../odata/publisher.mjs';
+import { initReleaseStore, inspectRelease, normalizeReleaseRuntime } from '../../sf82-seller-pilot/releases.mjs';
+import { prepareDatasetRelease } from '../../sf82-seller-pilot/release-dataset.mjs';
+import { capturePublisherSnapshot, receivePublisherSnapshot, publisherTransferState } from './publisher-transfer.mjs';
 
 const copy = value => structuredClone(value);
 const keyFor = value => digest(stable(value));
@@ -32,19 +36,25 @@ function summary(capture) {
 export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch,extend}={}) {
   if(extend!==undefined&&typeof extend!=='function')throw fault('CENTRAL_EXTENSION','Use a trusted workspace extension function.');
   const store=await openCentralStore(directory),root=store.directory,running=new Map(),operations=new Set();
-  let closed=false,closing=null,publisher=null;
+  let closed=false,closing=null,publisher=null,publisherQueue=Promise.resolve();
   for(const capture of store.list('capture'))if(capture.status==='CAPTURING')
     store.update('capture',capture.id,value=>({...value,status:'PAUSED',error:null,resumeReason:'The previous owner ended; continue the retained capture.'}));
   function ensureOpen(){if(closed)throw fault('CENTRAL_CLOSED','Reopen the Central workspace.');}
   const sourceFor=connection=>createCentralSource({...connection,fetchImpl});
   function state() {
-    const identity=store.identity();
+    const identity=store.identity(),transfers=publisherTransferState(store);
     return {schema:identity.schema,id:identity.workspaceId,revision:Number(identity.revision),createdAt:identity.createdAt,
       receivedArchive:identity.receivedArchive?JSON.parse(identity.receivedArchive):null,
       connections:store.list('connection'),plans:store.list('plan'),captures:store.list('capture').map(summary),
       reviews:store.list('review').map(({quality,findings,indicators,...record})=>record),
       exports:store.list('export').map(({receipts,mapping,...record})=>record),
-      reports:store.list('report').map(({receipts,indicators,...record})=>record),archives:store.list('archive'),running:[...running.keys()]};
+      reports:store.list('report').map(({receipts,indicators,...record})=>record),archives:store.list('archive'),running:[...running.keys()],
+      publisherSnapshots:transfers.snapshots.map(({selection,files,sourceFiles,request,...value})=>({...value,
+        selection:selection?{generation:selection.releaseState?.generation??null,active:selection.releaseState?.active??null,
+          previous:selection.releaseState?.previous??null,datasetCount:selection.datasets.length,releaseCount:selection.releases.length}:null})),
+      publisherReceiving:transfers.receiving.map(({request,datasets,packages,releases,originalSelection,...value})=>({...value,
+        snapshotId:request.snapshotId,datasetCount:datasets.length,packageCount:packages.length,releaseCount:releases.length,
+        releases:releases.map(({originalId,originalDigest,localId,localDigest})=>({originalId,originalDigest,localId,localDigest}))}))};
   }
   async function connect(input={}) {
     ensureOpen();const id=identifier(input.id||randomUUID(),'connection ID');
@@ -311,22 +321,57 @@ export async function openCentralWorkspace({directory,fetchImpl=globalThis.fetch
     const directory=record.kind==='report'?'reports':record.kind==='archive'?'transfers':'exports';
     return {path:join(root,directory,record.id,path),name:path.split('/').at(-1),...(record.receipts?.[path]??{})};
   }
-  const getPublisher=()=>publisher??=(openODataPublisher({workspace}).catch(error=>{publisher=null;throw error;}));
+  function serialPublisher(operation){
+    const pending=publisherQueue.then(operation);publisherQueue=pending.catch(()=>{});return pending;
+  }
+  const getPublisher=()=>publisher??=((async()=>{
+    await mkdir(join(root,'publisher'),{recursive:true,mode:0o700});
+    await initReleaseStore(join(root,'publisher','releases'),{resume:true});
+    return openODataPublisher({workspace});
+  })().catch(error=>{publisher=null;throw error;}));
+  async function preparePublisherRelease(input){
+    const releaseId=identifier(input?.releaseId,'release ID'),exportId=identifier(input?.exportId,'export ID');
+    const request={exportId,releaseId,label:input.label??null,runtime:input.runtime??{port:0}},
+      preparationId='prepare-'+digest(stable([root,releaseId])).slice(0,48),
+      old=store.get('publisher-preparation',preparationId,false);
+    if(old&&stable(old.request)!==stable(request))
+      throw fault('CENTRAL_RELEASE_REQUEST','Keep the original export, release ID, label and runtime for this preparation.',409);
+    if(old?.status==='COMPLETE')return old.result;
+    const operation=old??store.put('publisher-preparation',preparationId,{status:'PREPARING',request,directory:root,createdAt:now()},0);
+    const publisher=await getPublisher();let result;
+    try{result=await publisher.prepare(input);}
+    catch(error){
+      if(error.code!=='EEXIST')throw error;
+      const packageDirectory=join(root,'publisher','packages',exportId),datasetDirectory=join(root,'publisher','datasets',exportId);
+      const prepared=await prepareDatasetRelease(packageDirectory),staged=await inspectRelease(publisher.releases,releaseId);
+      if(staged.label!==(input.label||prepared.description.name)||stable(staged.dataset)!==stable(prepared.dataset)||
+        stable(staged.runtime)!==stable(normalizeReleaseRuntime(input.runtime??{port:0})))
+        throw fault('CENTRAL_RELEASE_CHANGED','The existing native release differs from this original dataset preparation.',409);
+      result={exportId,releaseId,packageDirectory,datasetDirectory,dataset:prepared.description,staged};
+    }
+    store.put('publisher-preparation',preparationId,{...operation,status:'COMPLETE',completedAt:now(),result},operation.revision);
+    return result;
+  }
   const workspace={directory:root,state,connect,projects,forms,createPlan,capture,resume,pause,wait,edition,quality,review,
     rows:({id,tableId,...options})=>{store.get('capture',id);return store.rows(id,tableId,options);},
     row:({id,tableId,rowId})=>{const value=store.row(id,tableId,rowId),capture=store.get('capture',id),table=capture.tables.find(item=>item.id===tableId);
       return {row:value,history:table.name==='Submissions'?store.submission(id,table.formKey,rowId):null};},
     resources:({id,...options})=>{store.get('capture',id);return store.resourceList(id,options);},
     compare:options=>compareCaptures(store,options),exportDataset:options=>exportCentralDataset(store,options),
-    report:options=>createCentralReport(store,options),backup:options=>createCentralArchive(store,options),
+    report:options=>createCentralReport(store,options),backup:options=>serialPublisher(()=>createCentralArchive(store,options)),
     sourceFile:({hash})=>store.sourceFile(hash),exportFile,
-    prepareRelease:async input=>(await getPublisher()).prepare(input),releaseStatus:async()=>(await getPublisher()).status(),
-    activateRelease:async input=>(await getPublisher()).activate(input),rollbackRelease:async input=>(await getPublisher()).rollback(input),
+    capturePublisher:input=>serialPublisher(()=>capturePublisherSnapshot(store,input)),
+    receivePublisher:input=>serialPublisher(()=>receivePublisherSnapshot(store,input)),
+    publisherTransfers:()=>publisherTransferState(store),
+    prepareRelease:input=>serialPublisher(()=>preparePublisherRelease(input)),
+    releaseStatus:()=>serialPublisher(async()=>(await getPublisher()).status()),
+    activateRelease:input=>serialPublisher(async()=>(await getPublisher()).activate(input)),
+    rollbackRelease:input=>serialPublisher(async()=>(await getPublisher()).rollback(input)),
     async close(){if(closing)return closing;closed=true;closing=(async()=>{
       const entries=[...running.values()];for(const entry of entries)entry.controller.abort();
       await Promise.allSettled([...entries.map(entry=>entry.promise),...operations]);await store.close();
     })();return closing;}};
-  for(const name of ['connect','projects','forms','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease']){
+  for(const name of ['connect','projects','forms','exportDataset','report','backup','prepareRelease','releaseStatus','activateRelease','rollbackRelease','capturePublisher','receivePublisher']){
     const method=workspace[name];
     workspace[name]=(...args)=>{ensureOpen();const operation=Promise.resolve().then(()=>method(...args));operations.add(operation);
       return operation.finally(()=>operations.delete(operation));};

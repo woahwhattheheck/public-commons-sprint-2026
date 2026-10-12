@@ -15,6 +15,7 @@
 <button data-pane="editions">Reporting editions</button>
 <button data-pane="outputs">Reports and datasets</button>
 <button data-pane="workspace">Portable workspace</button>
+<button id="open-commissioning" type="button">Customer commissioning</button>
 <div class="nav-note">Original source data, complete history and a reviewed reporting edition.</div>
 </nav>
 <main>
@@ -107,8 +108,19 @@
 <h2>Prepared datasets</h2><div id="dataset-list"></div>
 </section>
 <section class="pane" id="workspace" hidden>
-<h1>Portable workspace</h1><p>The original database, captured root and repeat rows, form definitions, submission versions, available media, reports and datasets travel together.</p>
+<h1>Portable workspace</h1><p>The original database, root and repeat rows, forms, submission history, media, reports, datasets and publisher history travel together.</p>
 <div id="workspace-information"></div><button id="create-archive">Create complete portable archive</button><div id="archive-list"></div>
+<h2>Publisher source and release history</h2>
+<p>Each new archive retains the publisher's native source. You can also save its selected generation before a transfer. Receiving reconstructs the original datasets and stages their local releases for selection on this host.</p>
+<div class="toolbar"><label>Expected source generation · optional<input id="publisher-expected-generation" type="number" min="0"></label><button id="publisher-capture">Retain current publisher source</button><button id="publisher-history">Open complete publisher records</button></div>
+<div id="publisher-snapshot-list"></div>
+<form id="publisher-receive-form" class="toolbar"><label>Original publisher snapshot<select id="publisher-snapshot" required></select></label><button>Receive this publisher on the current host</button></form>
+<div id="publisher-receiving-list"></div>
+<h3>Select a received release</h3>
+<form id="publisher-activation-form">
+<div class="toolbar"><label>Received release<select id="publisher-local-release" required></select></label><button id="publisher-generation-read" type="button">Read current release generation</button><label>Expected generation<input id="publisher-current-generation" type="number" min="0" required></label></div>
+<label>Reason for this selection<input name="reason" required></label><button type="submit">Activate the received release</button>
+</form><pre id="publisher-result"></pre>
 <h2>Reopen on another host</h2><p>In Applications, choose ODK Central, select the original archive with its SHA-256, and choose a new or empty workspace directory. Set the existing Central Authorization environment variable when the restored workspace should capture another period.</p>
 <p>An exact repeat of the same archive receive reopens the original workspace and its later work. Previous archive receipts remain available without nesting older archive files inside every new archive.</p>
 </section>

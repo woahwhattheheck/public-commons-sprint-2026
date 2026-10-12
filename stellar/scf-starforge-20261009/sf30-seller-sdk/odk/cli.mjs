@@ -15,6 +15,7 @@ const commands=new Map([
   ['review','review'],['compare','compare'],['report','report'],['export','exportDataset'],['backup','backup'],
   ['source-file','sourceFile'],['export-file','exportFile'],['release-prepare','prepareRelease'],
   ['release-status','releaseStatus'],['release-activate','activateRelease'],['release-rollback','rollbackRelease'],
+  ['publisher-capture','capturePublisher'],['publisher-receive','receivePublisher'],['publisher-transfers','publisherTransfers'],
 ]);
 const keys=new Map([
   ['id','id'],['name','name'],['url','url'],['auth-env','authEnv'],['connection-id','connectionId'],
@@ -26,7 +27,7 @@ const keys=new Map([
   ['default-limit','defaultLimit'],['max-limit','maxLimit'],['release-id','releaseId'],['reason','reason'],
   ['expected-generation','expectedGeneration'],['to','to'],['hash','hash'],['archive','archive'],
   ['expected-sha256','expectedSha256'],['page-size','pageSize'],['submitted-from','submittedFrom'],
-  ['submitted-before','submittedBefore'],['updated-since','updatedSince'],
+  ['submitted-before','submittedBefore'],['updated-since','updatedSince'],['snapshot-id','snapshotId'],
 ]);
 const numbers=new Set(['limit','expectedRevision','defaultLimit','maxLimit','expectedGeneration','pageSize']);
 const collections=new Set(['forms','scope','findings','indicators','payment','runtime','fields']);
@@ -61,6 +62,10 @@ Data commands:
   release-status
   release-activate --id ID --expected-generation N --reason TEXT
   release-rollback --to ID --expected-generation N --reason TEXT
+  publisher-capture --id ID [--expected-generation N]
+  publisher-receive --id ID --snapshot-id ORIGINAL_SNAPSHOT_ID
+  publisher-transfers                 Read complete original publisher source and receiving records.
+  commissioning <command>             Original source agreement, two periods and full customer handover.
 
 Inputs:
   --input FILE                       A UTF-8 JSON object, up to 16 MiB.
@@ -156,13 +161,14 @@ async function waitForCapture(client,id,signal){
   }
 }
 function retainIdentity(method,input){
-  const key=method==='report'?'reportId':method==='exportDataset'?'exportId':['connect','createPlan','capture','backup'].includes(method)?'id':null;
+  const key=method==='report'?'reportId':method==='exportDataset'?'exportId':['connect','createPlan','capture','backup','capturePublisher','receivePublisher'].includes(method)?'id':null;
   if(key&&!input[key])input[key]=randomUUID();
   return key?input[key]:input.id??null;
 }
 function receipt(value){process.stdout.write(JSON.stringify(value,null,2)+'\n');}
 /** argv excludes node and script. Managed.mjs owns all hosting options and delegates here. */
 export async function runCentralCli(argv=process.argv.slice(2)){
+  if(argv[0]==='commissioning')return (await import('./commissioning/cli.mjs')).runCommissioningCli(argv.slice(1));
   const options=parse(argv);if(options.help){process.stdout.write(CENTRAL_CLI_HELP);return null;}
   const input=await loadInput(options);
   if(options.command==='restore'){

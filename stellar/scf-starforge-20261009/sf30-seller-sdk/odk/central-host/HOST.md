@@ -2,13 +2,13 @@
 
 This is the host contribution to the existing ODK Central field-data workspace. It starts the released Central product, receives the original connection into the existing operator, retains the native database backup and persistent service volumes, and reopens the same service. The form, submission, media, cohort and report workflow remains in the original product's receiving driver.
 
-The selection is Central **v2026.3.1**, upstream commit **7d6de621955c5bb6a68e098ca10c9cbb92285cdf**, with backend **de0d2a07fd7c9ff698cbc312e550dd40ff058340**. UPSTREAM.json lists the exact source objects used for the Compose, account and backup interfaces. The program checks both actual checkouts and the running /version.txt before returning a service handover.
+The selection is Central **v2026.3.1**, upstream commit **7d6de621955c5bb6a68e098ca10c9cbb92285cdf**, with backend **de0d2a07fd7c9ff698cbc312e550dd40ff058340**. UPSTREAM.json lists the exact source objects used for the Compose, account and backup interfaces. The program checks both actual checkouts, the running /version.txt, the original database-backed public configuration endpoint, and authenticated native API access before returning a service handover.
 
 ## What is installed
 
-The original Compose stack supplies Central's frontend and backend, PostgreSQL14, form conversion, Enketo, Redis and mail service. The original one-time PostgreSQL upgrade component is preserved. The helper adds a private runtime configuration and a port/TLS override beside the checkout; it leaves the original application source intact.
+The original Compose stack supplies Central's frontend and backend, PostgreSQL 14, form conversion, Enketo, Redis and mail service. The original one-time PostgreSQL upgrade component is preserved. The helper adds a private runtime configuration and a port/TLS override beside the checkout; it leaves the original application source intact.
 
-Use the already accepted Linux host for the existing receiving operation. The helper uses that host's installed Docker Engine and Docker Compose, git, OpenSSL and Python3.10 or later. Compose must be at least2.24.4 because the override explicitly replaces the native port and environment-file lists. It creates no cloud account, VM, subscription or hosted build workflow. Image builds use the original Dockerfiles, one at a time through COMPOSE_PARALLEL_LIMIT=1.
+Use the already accepted Linux host for the existing receiving operation. The helper uses that host's installed Docker Engine and Docker Compose, git, OpenSSL and Python 3.10 or later. Compose must be at least 2.24.4 because the override explicitly replaces the native port and environment-file lists. It creates no cloud account, VM, subscription or hosted build workflow. Image builds use the original Dockerfiles, one at a time through COMPOSE_PARALLEL_LIMIT=1.
 
 The original installation guide recommends a small persistent server and describes additional capacity for media-heavy workloads. The host must have enough actual disk for the original images, data and the selected backup. An image-inclusive backup can be much larger than the data. Use the returned Docker/runtime details and the actual snapshot byte counts to place it.
 
@@ -22,9 +22,9 @@ The four network modes are:
 
 | Mode | Connection and listener | Certificate source |
 | --- | --- | --- |
-| local | HTTPS localhost on the selected port, bound only to127.0.0.1 | OpenSSL creates one private CA and a localhost certificate; later starts reuse the original identity. |
+| local | HTTPS localhost on the selected port, bound only to 127.0.0.1 | OpenSSL creates one private CA and a localhost certificate; later starts reuse the original identity. |
 | customssl | The selected HTTPS DNS hostname | The operator's existing fullchain and private key. |
-| letsencrypt | The selected DNS hostname on ports80 and443 | Central's original certificate lifecycle. |
+| letsencrypt | The selected DNS hostname on ports 80 and 443 | Central's original certificate lifecycle. |
 | upstream | The selected external HTTPS DNS hostname; Central's HTTP listener is loopback-only behind the existing proxy | The existing HTTPS proxy; an explicit private CA can be supplied. |
 
 The local mode is for the original native receiving workspace on that host. A published customer service uses its actual selected DNS hostname and a validated HTTPS route. Upstream mode waits for that route to return the exact Central version; a listening private port alone does not produce a running-service handover.
@@ -46,7 +46,7 @@ For customssl, configure:
 }
 ~~~
 
-For upstream, use mode upstream, bind_address127.0.0.1 and the selected internal http_port. Keep https_port equal to the public HTTPS port, usually443. Configure the existing reverse proxy for the exact domain. Preserve WebSocket, original request bodies and the original Central upload limit. The helper does not edit another service's proxy configuration.
+For upstream, use mode upstream, bind_address 127.0.0.1 and the selected internal http_port. Keep https_port equal to the public HTTPS port, usually 443. Configure the existing reverse proxy for the exact domain. Preserve WebSocket, original request bodies and the original Central upload limit. The helper does not edit another service's proxy configuration.
 
 Source: [Central advanced configuration](https://docs.getodk.org/central-install-advanced/).
 
@@ -60,13 +60,13 @@ python3 central_host.py --config /private/central-host.json build
 python3 central_host.py --config /private/central-host.json bootstrap
 ~~~
 
-prepare verifies the installed runtime, acquires the selected original source if its directory is absent, prepares TLS where selected, and reads the original expanded Compose definition. It retains complete native command output privately. build acquires the original images and builds the released source. An already completed image selection is read back and reused.
+prepare verifies the installed runtime, acquires the selected original source if its directory is absent, prepares TLS where selected, and reads the original expanded Compose definition. It retains complete native command output privately. build acquires the original images and builds the released source. An already completed image selection is read back and reused. All subsequent ordinary starts and restores pin every service to its captured image ID. The actual containers are checked against that selection.
 
-bootstrap starts the original stack, waits for the exact released version and checks authenticated native API access. On a fresh instance it uses the original backend createUser task with the password supplied on standard input, then the original user-promote command. If the same account already exists, its actual access is checked before a further account action. It does not reset an existing user's password.
+bootstrap starts the original stack and waits for both the exact released version and GET /v1/config/public. The latter executes the original backend's PostgreSQL configuration query. It then checks authenticated native API access. On a fresh instance it uses the original backend createUser task with the password supplied on standard input, then the original user-promote command. The native current-user response is requested with X-Extended-Metadata: true. Its actual system verbs determine whether the configured administrator needs the original promotion task. If the same account already exists, its actual access is checked before a further account action. It does not reset an existing user's password.
 
 The helper's defaults retain the original bundled database and local attachment storage. This is the complete profile operated by its snapshot/restore commands. An existing external database or S3 attachment service requires its own original backup/restore integration; do not insert those settings into this profile and treat a local snapshot as complete.
 
-The runtime directory has mode0700 and its files mode0600. It contains the original operation journal, configuration, native output and connection secret. The CA signing key remains outside the nginx certificate mount. Keep this directory on the accepted host's private persistent storage.
+The runtime directory has mode 0700 and its files mode 0600. It contains the original operation journal, configuration, native output and connection secret. The CA signing key remains outside the nginx certificate mount. Keep this directory on the accepted host's private persistent storage.
 
 Source: [original administrative tasks](https://github.com/getodk/central-backend/blob/de0d2a07fd7c9ff698cbc312e550dd40ff058340/lib/task/account.js).
 
@@ -125,7 +125,7 @@ The sequence is:
 
 The four named data volumes are always included. Image-declared anonymous volumes, including any original certificate or upgrade storage attached to the selected containers, are also retained. Bind-mounted application source is identified by its exact original commits; private TLS bind files are copied into the snapshot. The full image export supplies the exact runtime images for a different existing receiver.
 
-snapshot.json records all file byte counts/hashes, native images, service-to-volume bindings, original source, direct-backup response and source reopening. If a complete snapshot already exists, the same command verifies it and reopens the source rather than creating another snapshot. An incomplete snapshot directory is retained for diagnosis; a new capture uses a separately selected output directory after the original source is reconciled.
+snapshot.json records the captured file byte counts/hashes, native images, service-to-volume bindings, original source and direct-backup response. A separate source-reopened.json records the source service's later restart. If a complete snapshot already exists, the same command verifies it and reopens the source rather than creating another snapshot. An incomplete snapshot directory is retained for diagnosis; a new capture uses a separately selected output directory after the original source is reconciled.
 
 This package contains private credentials and service data. Keep the full snapshot on the authorized private backup destination. Public source publication and the ordinary host handover use only the source/config examples and returned operational metadata.
 
@@ -133,7 +133,7 @@ Source: [Central backup and restore contract](https://docs.getodk.org/central-ba
 
 ## Restore into a selected new instance
 
-Create a second private configuration with a different compose_project and runtime directory. For a same-host rehearsal, choose unused local ports, such as8081/8444, and retain the existing original checkout if it is clean and exact. Use a distinct stable receiving operation for that restore. The same source database and project IDs are retained.
+Create a second private configuration with a different compose_project and runtime directory. For a same-host rehearsal, choose unused local ports, such as 8081/8444, and retain the existing original checkout if it is clean and exact. Use a distinct stable receiving operation for that restore. Copy the snapshot's host-selection.json as the starting selection, then change only the target operation, directories, project name and deliberately selected origin/ports. The same source database and project IDs are retained.
 
 ~~~sh
 python3 central_host.py --config /private/central-restore.json restore \
@@ -142,9 +142,13 @@ python3 central_host.py --config /private/central-restore.json restore \
 
 The command admits only a previously unused target project and records that selection before creating containers. It verifies every original snapshot file, loads saved native images when included, and pins every target service to the retained image ID. It compares the original persistent mount roster with the newly created target's bindings, then restores each exact volume into that target.
 
-A partial restore resumes the same original snapshot and unused target. The target is not started until every retained volume is complete. The source project is never a restore destination. The helper preserves the original authentication data, starts the target, verifies its exact running version and compares its original project population before publishing restore-result.json and the target connection.
+A partial restore resumes the same original snapshot and unused target. The target is not started until every retained volume is complete. The source project is never a restore destination. The helper preserves the original authentication data, starts the target, verifies its exact running backend and compares its original project population before publishing restore-result.json and the target connection. If the invocation ends after volume restoration or midway through final publication, the same command runs this complete finalization again and recreates the missing connection or result. A saved data-restoration marker alone is not treated as completed verification.
 
 The original field-data receiving driver then reopens its retained product archive and compares the original selected form/submission/media output against this restored endpoint. This supplies the complete source-to-product receiving closure; the host layer supplies the actual service and storage restoration.
+
+By default, restore_settings is preserve. The restore reads the snapshot's complete private runtime.env, retains the native application settings and resolved mail credential, and overlays the deliberately selected origin, ports and administrator-contact settings. It does not require those original secret environment values to be supplied again. Keep environment and secret_environment selections equal to the source configuration when using this mode.
+
+For the same TLS mode and hostname, local/custom certificates, keys, the local CA and any selected private upstream-proxy CA are restored from the snapshot. Original customssl input paths may therefore be unavailable during a disaster restore. A changed hostname or TLS mode uses the target's explicitly selected certificate configuration. The returned node_extra_ca_certs points to the actual target trust anchor. To deliberately replace runtime application settings or credentials, choose restore_settings: reconfigure and supply the complete target settings and secret/certificate inputs; that choice is retained in the target operation.
 
 Keep the source's network origin for a real replacement service when existing public links must continue working. A rehearsal on another origin preserves their underlying native state while using that receiver's own route and TLS identity.
 
@@ -159,7 +163,9 @@ python3 central_host.py --config /private/central-host.json handover
 
 stop uses the original Compose stop and checks that the selected containers have ended. start uses the retained configuration, original volumes and image selection. No command removes a volume or invokes docker compose down -v. The private file lock serializes this host operation; the original Docker container/project identities identify the persistent service across operator invocations.
 
-If an invocation is interrupted, inspect its existing operation.json, private command output and actual Compose state. Reuse the original configuration and operation. A completed build is reused; a completed snapshot is verified; a selected incomplete restore keeps its same snapshot and target. Never start a second instance merely because the previous caller stopped returning output.
+If an invocation is interrupted, inspect its existing operation.json, private command output and actual Compose state. Reuse the original configuration and operation. A completed build is reused; a completed snapshot is verified; a selected incomplete restore keeps its same snapshot and target. Interrupted transitions between an unpinned and image-pinned Compose override reconcile only the exact known source preimage and postimage. Snapshot restarts and restore finalization use the same actual backend readiness check. Native Retry-After responses preserve the requested delay; if that delay exceeds this invocation's readiness window, the command returns the actual required later continuation. Never start a second instance merely because the previous caller stopped returning output.
+
+The snapshot file manifest is frozen with the captured backup files. source-reopened.json is a separate later observation of the restarted source service and is retained beside that manifest.
 
 ## Returned handover
 
@@ -176,4 +182,4 @@ The customer engineering owner joins that handover to the original field-data re
 | UPSTREAM.json | Released upstream source and original interface pins. |
 | HOST.md | Installation, connection, recovery and operating handover. |
 
-The original Central and backend repositories retain their Apache2.0 license and notices. This additive host wrapper is MIT-licensed. The full product source publication does not include a runtime directory, customer data or private backups.
+The original Central and backend repositories retain their Apache 2.0 license and notices. This additive host wrapper is MIT-licensed. The full product source publication does not include a runtime directory, customer data or private backups.
