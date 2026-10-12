@@ -4,10 +4,10 @@ import { mkdtemp, mkdir, readdir, rm, link, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import { inspectHandoff } from './application.mjs';
-import { inspectRemoteMcp } from './remote-mcp.mjs';
+import { inspectRemoteMcp,verifyRemoteMcpQuoteBinding } from './remote-mcp.mjs';
 import { PROJECT,RECEIVED,need,object,absolute,member,inside,sha,json,checkSignal,exists,privateDirectory,
   readBytes,readJSON,digest,copyFile,publishBytes,ensureParents,syncDirectory,originalModule,
-  encrypted,validateCapturedFiles } from './project-files.mjs';
+  encrypted,validateCapturedFiles,quoteStoreTemporaryFile } from './project-files.mjs';
 
 const SF88='stellar/scf-starforge-20261009/sf88-operator-buyer-cli/';
 const NATIVE='stellar-forge/mcp-paid-agent/';
@@ -51,9 +51,10 @@ async function verifyRecord(payload,record,{sourceRoot,environment,passphraseEnv
   need(record.application.identity.handoffId===handoff.manifest.handoffId&&
     record.application.identity.manifestSha256===handoff.manifestSha256,'APPLICATION_PROJECT_HANDOFF_CHANGED');
   const selected=new Map([...handoff.requests].map(([id,row])=>[id,row.view]));
+  let remote;
   if(record.config.remoteMcp){
     const file=byPath.get(record.config.remoteMcp);need(file,'APPLICATION_PROJECT_REMOTE_SELECTION_MISSING');
-    const remote=await inspectRemoteMcp(join(payload,file.member),{sourceRoot});
+    remote=await inspectRemoteMcp(join(payload,file.member),{sourceRoot});
     need(remote.sourceSha256===record.application.identity.remoteMcp?.sourceSha256,
       'APPLICATION_PROJECT_REMOTE_SELECTION_CHANGED');
     for(const [id,row]of remote.requests){need(!selected.has(id),'APPLICATION_PROJECT_IDENTITY_CHANGED');selected.set(id,row.view);}
@@ -61,15 +62,40 @@ async function verifyRecord(payload,record,{sourceRoot,environment,passphraseEnv
   need(Array.isArray(record.application.requests)&&record.application.requests.length===selected.size&&
     new Set(record.application.requests.map(row=>row.intentId)).size===selected.size,
     'APPLICATION_PROJECT_REQUESTS_CHANGED');
-  for(const request of record.application.requests){
-    const original=selected.get(request.intentId);need(original,'APPLICATION_PROJECT_REQUESTS_CHANGED');
-    for(const [key,value]of Object.entries(original))need(isDeepStrictEqual(request[key],value),
-      'APPLICATION_PROJECT_REQUESTS_CHANGED');
-  }
   for(const key of ['reviews','outcomes','spending','results']){
     need(Array.isArray(record.application[key])&&record.application[key].length<=selected.size&&
       new Set(record.application[key].map(row=>row.intentId)).size===record.application[key].length&&
       record.application[key].every(row=>selected.has(row.intentId)),'APPLICATION_PROJECT_VIEW_INVALID');
+  }
+  const reviews=new Map(record.application.reviews.map(row=>[row.intentId,row.value]));
+  for(const request of record.application.requests){
+    let original=selected.get(request.intentId);need(original,'APPLICATION_PROJECT_REQUESTS_CHANGED');
+    const entry=remote?.requests.get(request.intentId);
+    if(entry){
+      const retained=byPath.get(join(record.config.stateDirectory,'remote-mcp',
+        sha(Buffer.from(request.intentId))+'.json')),review=reviews.get(request.intentId);
+      if(review){
+        need(retained&&review.review?.native?.mode==='remote-mcp'&&object(review.review.native.quote),
+          'APPLICATION_PROJECT_REMOTE_QUOTE_REQUIRED');
+        const nativeRecord=await readJSON(join(payload,retained.member),256*1024,true);
+        need(nativeRecord.subject===record.application.subject,'APPLICATION_PROJECT_REMOTE_SUBJECT_CHANGED');
+        const quote=verifyRemoteMcpQuoteBinding({applicationId:record.config.applicationId,
+          sourceSha256:remote.sourceSha256,entry,record:nativeRecord,quote:review.review.native.quote,mcpJson:remote.mcpJson});
+        need(hashPattern.test(quote.invocation.inputSchemaSha256)&&
+          review.binding?.intentId===request.intentId&&review.binding.quoteId===nativeRecord.quoteId&&
+          review.binding.configSha256===entry.view.configSha256&&
+          review.binding.bodySha256===entry.view.bodySha256&&
+          review.binding.ticketSha256===nativeRecord.ticketSha256,
+          'APPLICATION_PROJECT_REMOTE_QUOTE_CHANGED');
+        // A selected schema may be learned from discovery. The retained original
+        // quote binds that hash to this UUID, invocation and complete payment terms.
+        original={...original,inputSchemaSha256:quote.invocation.inputSchemaSha256};
+        for(const [key,value]of Object.entries(original))
+          need(isDeepStrictEqual(review.request?.[key],value),'APPLICATION_PROJECT_REMOTE_REVIEW_CHANGED');
+      }else need(!retained&&request.state?.state==='AVAILABLE','APPLICATION_PROJECT_REMOTE_QUOTE_REQUIRED');
+    }
+    for(const [key,value]of Object.entries(original))need(isDeepStrictEqual(request[key],value),
+      'APPLICATION_PROJECT_REQUESTS_CHANGED');
   }
   for(const result of record.application.results){
     need(/^results\/[a-f0-9]{64}\.response$/.test(result.member)&&
@@ -190,9 +216,16 @@ async function referenceState(record,{allowMissingNative=false}={}) {
   }
   return results;
 }
+function capturedTemporaryFile(record,file) {
+  return Boolean(record.config.remoteMcp&&file.role==='application'&&quoteStoreTemporaryFile(file.path,
+    join(record.config.stateDirectory,'remote-mcp/quotes/quotes.sqlite')));
+}
 async function pathsState(record,mode) {
   const paths=[];
   for(const file of record.files){
+    if(capturedTemporaryFile(record,file)){
+      paths.push({path:file.path,role:file.role,status:'NATIVE_TEMPORARY'});continue;
+    }
     if(!await exists(file.path)){paths.push({path:file.path,role:file.role,status:'MISSING'});continue;}
     if(mode==='reattach'&&file.role==='application'){
       paths.push({path:file.path,role:file.role,status:'CURRENT_NATIVE_STATE'});continue;
@@ -321,7 +354,8 @@ export async function restoreApplicationProject(options) {
       if(mode==='restore'){
         for(const path of record.directories)await ensureParents(path);
         // The configuration is published last; the original source selection then sees a complete project.
-        const files=[...record.files].sort((a,b)=>Number(a.path===record.configFile)-Number(b.path===record.configFile));
+        const files=record.files.filter(file=>!capturedTemporaryFile(record,file))
+          .sort((a,b)=>Number(a.path===record.configFile)-Number(b.path===record.configFile));
         for(const file of files){checkSignal(options.signal);
           if(await publishCaptured(file,verified.payload)==='CREATED')created.push(file.path);}
       }

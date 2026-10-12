@@ -4,6 +4,11 @@
  * numeric tokens are carried in ValueCell.value or the original JSON text;
  * a string result must not be coerced to a JavaScript number.
  */
+import type {AnalysisActionPayloads,AnalysisActionResults,AnalysisReadArguments,AnalysisReadResults,
+  AnalysisReadMode,AnalysisOverview} from './analysis/types.mjs';
+export type {AnalysisActionPayloads,AnalysisActionResults,AnalysisReadArguments,AnalysisReadResults,
+  AnalysisReadMode,AnalysisOverview} from './analysis/types.mjs';
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
@@ -62,6 +67,7 @@ export interface WorkspaceSchema {
   workspaceSchema: 'stellar-forge.sensorthings-workspace.v1';
   workspaceId: WorkspaceId;
   sourceContract: SourceContract;
+  analysis?: {reads:Record<string,string>;meaning:Record<string,string>;limits:Record<string,number>};
   actions: { [K in SensorThingsActionName]: readonly string[] };
   tables: SourceTable[];
   captureReads: {
@@ -460,6 +466,8 @@ export interface WorkspaceView {
   exports: NativeObject[];
   operations: OperationView[];
   running: CaptureId[];
+  /** Additive analysis uses this same original workspace and revision. */
+  analysis?: AnalysisOverview;
 }
 export type ActionResult<R = JsonValue> =
   | { operationId: OperationId; reused: boolean; result: R; view: WorkspaceView; state?: never }
@@ -523,7 +531,7 @@ export type SensorThingsActionPayloads = {
   'publisher.buyer.recover': { datasetId: DatasetId; id: string };
   'publisher.buyer.account': { datasetId: DatasetId; id: string };
   'publisher.buyer.export': { datasetId: DatasetId; id: string };
-};
+} & AnalysisActionPayloads;
 export type SensorThingsActionName = keyof SensorThingsActionPayloads;
 export type ActionArguments<A extends SensorThingsActionName = SensorThingsActionName> =
   A extends SensorThingsActionName ? {
@@ -546,7 +554,8 @@ export type FileSelection =
   | { kind: 'comparison'; id: string; file?: 'comparison.json' | 'changes.jsonl' }
   | { kind: 'transfer'; id: string; file?: TransferFile }
   | { kind: 'buyer'; id: string; file?: BuyerFile }
-  | { kind: 'publisher'; datasetId: DatasetId; id: string; file?: PublisherFile };
+  | { kind: 'publisher'; datasetId: DatasetId; id: string; file?: PublisherFile }
+  | { kind: 'analysis'; id: string; file?: string };
 export type ConcreteFileSelection =
   | { kind: 'source'; id: Sha256; sha256: Sha256 }
   | { kind: 'edition'; id: Sha256; file: 'edition.json' }
@@ -554,7 +563,8 @@ export type ConcreteFileSelection =
   | { kind: 'comparison'; id: string; file: 'comparison.json' | 'changes.jsonl' }
   | { kind: 'transfer'; id: string; file: TransferFile }
   | { kind: 'buyer'; id: string; file: BuyerFile }
-  | { kind: 'publisher'; datasetId: DatasetId; id: string; file: PublisherFile };
+  | { kind: 'publisher'; datasetId: DatasetId; id: string; file: PublisherFile }
+  | { kind: 'analysis'; id: string; file: string };
 export interface FixedFileMetadata extends NativeObject {
   selection: ConcreteFileSelection;
   name: string;
@@ -660,6 +670,7 @@ export interface SensorThingsToolArguments {
   merchant_sensorthings_publisher: WorkspaceScope & { datasetId: DatasetId };
   merchant_sensorthings_operation: WorkspaceScope & { operationId: OperationId };
   merchant_sensorthings_action: ActionArguments;
+  merchant_sensorthings_analysis: AnalysisReadArguments;
   merchant_sensorthings_files: FileListArguments;
   merchant_sensorthings_file_read: FileReadArguments;
   merchant_sensorthings_file_release: FileReleaseArguments;
@@ -676,6 +687,7 @@ export interface SensorThingsToolResults {
   merchant_sensorthings_publisher: NativeReply<NativeObject>;
   merchant_sensorthings_operation: NativeReply<RetainedOperation>;
   merchant_sensorthings_action: NativeReply<ActionResult>;
+  merchant_sensorthings_analysis: NativeReply<AnalysisReadResults[AnalysisReadMode]>;
   merchant_sensorthings_files: NativeReply<FilesPage>;
   merchant_sensorthings_file_read: NativeReply<FileRead>;
   merchant_sensorthings_file_release: NativeReply<FileReleased>;
@@ -727,6 +739,10 @@ export class MerchantSensorThingsWorkspaces {
     args: WorkspaceScope & { editionId: Sha256; mode: 'summary' }): Promise<NativeReply<EditionSummary>>;
   call(name: 'merchant_sensorthings_edition',
     args: WorkspaceScope & { editionId: Sha256; mode?: 'metadata' }): Promise<NativeReply<SourceEdition>>;
+  call<M extends AnalysisReadMode>(name: 'merchant_sensorthings_analysis',
+    args: AnalysisReadArguments<M>): Promise<NativeReply<AnalysisReadResults[M]>>;
+  call<A extends keyof AnalysisActionPayloads>(name: 'merchant_sensorthings_action',
+    args: ActionArguments<A>): Promise<NativeReply<ActionResult<AnalysisActionResults[A]>>>;
   call<K extends SensorThingsToolName>(name: K,
     ...args: K extends 'merchant_sensorthings_workspaces'
       ? [args?: SensorThingsToolArguments[K]] : [args: SensorThingsToolArguments[K]]

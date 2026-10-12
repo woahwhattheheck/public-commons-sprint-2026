@@ -6,3 +6,6 @@
 @media print{.topbar nav,.workspace-bar,.sidebar,.notice,.recovery,.busy-status,.actions,button{display:none!important}.shell,.cycle-layout{display:block}body{background:#fff}main{padding:0}.panel{break-inside:avoid;border:1px solid #ccc}.view-heading{margin-top:0}a{text-decoration:none}}
 
 .portfolio-return{padding:12px 20px;border-bottom:1px solid #aaa}.portfolio-return a{color:inherit}
+
+/* Named recurring procedure sets use the existing neutral operator layout. */
+.procedure-sets{display:grid;gap:1rem}.procedure-set{border-top:1px solid var(--border,#d1d1d1);padding-top:1rem}.procedure-set:first-child{border-top:0;padding-top:0}.profile-procedures{border:1px solid var(--border,#d1d1d1);padding:1rem;min-width:0}.profile-procedures legend{font-weight:600;padding:0 .35rem}.profile-procedures .check-list{max-height:26rem;overflow:auto;padding:.25rem}#schedule-selection details{margin-top:1rem}

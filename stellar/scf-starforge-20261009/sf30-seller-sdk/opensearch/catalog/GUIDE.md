@@ -20,6 +20,8 @@ The optional merchant plan supplies the intended payment and receiving terms whe
 
 Keep the same source selection and workspace directory when reopening. The browser and batch command share the same stored catalogs and request outcomes.
 
+Completed imports automatically release their closed receiving stages while retaining the original bundle, canonical source files and customer history. Use **Search and handover → Receiving-stage storage** to inspect older imports or finish an interrupted retirement. The [receiving-stage storage guide](./IMPORT_STORAGE.md) gives the original import selection, CLI commands, receipt meanings and recovery steps.
+
 ## 1. Retain the source and map the material
 
 Choose **New catalog**, enter its title and original tenant identifier, then declare the material fields. A saved catalog retains its tenant identity. Later mapping changes create a numbered catalog revision.
