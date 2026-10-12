@@ -46,6 +46,8 @@ original folders with resumable partition uploads.
 Review selects an exact edition for the original SQLite merchant workbench.
 Prepare stages its native SF82 release. Console opens the existing activation,
 rollback, seller, receiving and customer export interface.
+publication --directory DIR --publication-id UUID reopens the saved merchant request.
+resume-publication --directory DIR --publication-id UUID continues that request.
 Keep foreground commands open; Ctrl-C closes their owned operation lifetimes.
 `;
 const COMMANDS = {
@@ -56,11 +58,12 @@ const COMMANDS = {
   page: ['directory', 'edition', 'offset', 'limit'], compare: ['directory', 'before', 'after', 'limit'],
   review: ['directory', 'edition', 'decision', 'actor', 'note', 'compare'],
   export: ['directory', 'edition', 'out', 'cloud-scope'],
-  prepare: ['directory', 'edition', 'draft', 'publication-id', 'runtime', 'label'], console: ['directory', 'port'],
+  prepare: ['directory', 'edition', 'draft', 'publication-id', 'runtime', 'label'],
+  publication: ['directory', 'publication-id'], 'resume-publication': ['directory', 'publication-id'], console: ['directory', 'port'],
 };
 const REQUIRED = { 'source-save': ['source'], capture: ['query'], resume: ['request-id'], cancel: ['request-id'],
   receive: ['manifest'], list: ['kind'], page: ['edition'], compare: ['before', 'after'],
-  review: ['edition', 'decision', 'actor', 'note'], export: ['edition', 'out'], prepare: ['edition', 'draft'] };
+  review: ['edition', 'decision', 'actor', 'note'], export: ['edition', 'out'], prepare: ['edition', 'draft'], publication: ['publication-id'], 'resume-publication': ['publication-id'] };
 function options(args) {
   if (!args.length || args.some(value => ['--help', '-h', 'help'].includes(value))) return null;
   const [command, ...rest] = args, allowed = COMMANDS[command];
@@ -129,6 +132,11 @@ export async function main(args = process.argv.slice(2)) {
       case 'prepare': result = await workspace.prepareMerchant({ editionId: o.edition, draft: await jsonFile(o.draft),
         ...(o['publication-id'] ? { publicationId: o['publication-id'] } : {}),
         ...(o.runtime ? { runtime: await jsonFile(o.runtime) } : {}), ...(o.label ? { label: o.label } : {}) }); break;
+      case 'publication':
+        result = workspace.store.getPublication(o['publication-id']);
+        if (!result) throw fault('SNOWFLAKE_PUBLICATION_UNKNOWN', undefined, 404);
+        break;
+      case 'resume-publication': result = await workspace.resumeMerchant(o['publication-id']); break;
       case 'console': result = await workspace.openReleaseConsole({ port: port() }); retained = true; break;
       default: throw fault('SNOWFLAKE_COMMAND_INVALID', HELP);
     }

@@ -175,6 +175,10 @@ export async function startSnowflakeWorkspace({ directory, port = 0, env = proce
           if (!input.publicationId) throw fault('SNOWFLAKE_PUBLICATION_ID_REQUIRED');
           return reply(res, 201, await workspace.prepareMerchant(input));
         }
+        if ((match = /^\/api\/publications\/([0-9a-f-]+)\/resume$/.exec(path))) {
+          fields(input, [], 'Saved merchant continuation');
+          return reply(res, 200, await workspace.resumeMerchant(match[1]));
+        }
         if (path === '/api/release-console') {
           fields(input, ['port'], 'Release console');
           return reply(res, 200, await workspace.openReleaseConsole(input));

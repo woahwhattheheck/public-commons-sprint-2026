@@ -63,6 +63,22 @@ export async function openSnowflakeWorkspace({ directory, env = process.env, tra
     const task = receiveOriginalsTask(manifest, partitions).finally(() => receiving.delete(task));
     receiving.add(task); return task;
   }
+  function prepareMerchant(input) {
+    check(); const id = input.publicationId ?? randomUUID();
+    const request = { ...input, publicationId: id }, requestSha256 = sha256(canonical(request));
+    const pending = publications.get(id);
+    if (pending) {
+      if (pending.requestSha256 !== requestSha256)
+        throw fault('SNOWFLAKE_PUBLICATION_CHANGED', 'This publication is already preparing its saved merchant terms.', 409);
+      return pending.promise;
+    }
+    const promise = (async () => {
+      const { prepareSnowflakeMerchant } = await import('./publisher.mjs');
+      return prepareSnowflakeMerchant(store, request);
+    })().finally(() => publications.delete(id));
+    publications.set(id, { promise, requestSha256 });
+    return promise;
+  }
   return {
     directory: store.directory, store, operations, state,
     saveSource(config, expectedRevision) {
@@ -97,14 +113,13 @@ export async function openSnowflakeWorkspace({ directory, env = process.env, tra
     async exportOriginals(editionId, destination, options) {
       check(); return exportSnowflakeOriginals(store, editionId, destination, options);
     },
-    async prepareMerchant(input) {
-      check(); const id = input.publicationId ?? randomUUID();
-      if (publications.has(id)) return publications.get(id);
-      const task = (async () => {
-        const { prepareSnowflakeMerchant } = await import('./publisher.mjs');
-        return prepareSnowflakeMerchant(store, { ...input, publicationId: id });
-      })().finally(() => publications.delete(id));
-      publications.set(id, task); return task;
+    prepareMerchant,
+    async resumeMerchant(publicationId) {
+      check(); const original = store.getPublication(publicationId);
+      if (!original) throw fault('SNOWFLAKE_PUBLICATION_UNKNOWN', 'The saved merchant publication was not found.', 404);
+      const pending = publications.get(original.id);
+      if (pending) return pending.promise;
+      return prepareMerchant({ ...original.request, publicationId: original.id });
     },
     async openReleaseConsole(options = {}) {
       check();
@@ -120,7 +135,7 @@ export async function openSnowflakeWorkspace({ directory, env = process.env, tra
       if (closed) return; closed = true;
       for (const job of jobs.values()) job.controller.abort();
       await Promise.allSettled([...jobs.values()].map(job => job.promise));
-      await Promise.allSettled([...publications.values()]);
+      await Promise.allSettled([...publications.values()].map(job => job.promise));
       await Promise.allSettled([...receiving]);
       await consoleOpening?.catch(() => {});
       try { await consoleSession?.close(); }
