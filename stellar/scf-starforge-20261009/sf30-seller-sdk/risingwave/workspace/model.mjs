@@ -44,7 +44,7 @@ function merchantTerms(value) {
   if (origin.protocol !== 'https:' || origin.origin !== value.publicOrigin || origin.username || origin.password)
     throw fault('MERCHANT_ORIGIN_INVALID', 'Use a public HTTPS origin without a path or credentials.');
   const definition = { method: 'GET', url: value.publicOrigin + '/datasets/source-report',
-    description: value.description ?? 'Retained dataset from a private RisingWave time-series report',
+    description: value.description ?? 'Retained dataset from a private RisingWave streaming report',
     serviceName: value.serviceName ?? 'RisingWave datasets', tags: value.tags ?? ['risingwave', 'dataset'],
     ...(value.paymentOptions ? { paymentOptions: structuredClone(value.paymentOptions) } : { payment: structuredClone(value.payment) }),
     queryParameters: [], outputExample: { rows: [], page: { total: 0, returned: 0 } } };

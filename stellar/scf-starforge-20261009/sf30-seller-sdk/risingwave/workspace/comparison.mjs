@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createInterface } from 'node:readline';
 import { DatabaseSync } from 'node:sqlite';
-import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile, atomicJson,
+import { acquireWorkspace, privateDirectory, readPrivate, readJson, atomicJson,
   bytes, digest, fault, syncDirectory } from '../../postgres/publisher/files.mjs';
 
 const SCHEMA='stellar-forge.risingwave-capture-comparison.v1';
@@ -56,7 +56,7 @@ export async function createCaptureComparison({directory,id,before,after,keys,sa
   if(!Array.isArray(keys)||!keys.length||keys.some(name=>typeof name!=='string'||!name)||new Set(keys).size!==keys.length||
       !Number.isSafeInteger(sampleLimit)||sampleLimit<1||sampleLimit>1000)throw fault('CAPTURE_COMPARISON_INVALID');
   await privateDirectory(directory,true);const release=await acquireWorkspace(directory);
-  let db=null;
+  let db=null,indexOwned=false;
   const selected=record=>({id:record.id,sourceHash:record.sourceHash,query:record.query,input:record.input,sha256:record.files.ndjson.sha256});
   const request={id,before:selected(before),after:selected(after),identity:{kind:'keyed',fields:keys},sampleLimit};
   const requestHash=digest(bytes(request)),dbPath=join(directory,'index.sqlite');
@@ -66,7 +66,7 @@ export async function createCaptureComparison({directory,id,before,after,keys,sa
     if(await exists(path)){
       const original=await readJson(path,8388608);
       if(original.requestHash!==requestHash||digest(bytes(original.request))!==requestHash)throw fault('COMPARISON_REQUEST_CHANGED');
-    }else{await createFile(path,bytes({schema:'stellar-forge.risingwave-comparison-request.v1',requestHash,request,createdAt:stamp()}));await syncDirectory(directory);}
+    }else{await atomicJson(directory,'request.json',{schema:'stellar-forge.risingwave-comparison-request.v1',requestHash,request,createdAt:stamp()});}
     if(await exists(join(directory,'comparison.json'))){
       const retained=await readCaptureComparison(directory);
       if(retained.requestHash!==requestHash)throw fault('COMPARISON_REQUEST_CHANGED');
@@ -75,6 +75,7 @@ export async function createCaptureComparison({directory,id,before,after,keys,sa
     status=await exists(join(directory,'status.json'))?await readJson(join(directory,'status.json'),65536):{startedAt:stamp(),attempts:0};
     status={...status,id,requestHash,state:'INDEXING',attempts:status.attempts+1,updatedAt:stamp()};delete status.error;
     await atomicJson(directory,'status.json',status);
+    indexOwned=true;
     for(const suffix of ['','-journal','-wal','-shm'])await remove(dbPath+suffix);
     db=new DatabaseSync(dbPath);db.exec('PRAGMA journal_mode=DELETE; PRAGMA temp_store=FILE; CREATE TABLE rows(side INTEGER,key TEXT,payload TEXT,hash TEXT,PRIMARY KEY(side,key));');
     const put=db.prepare('INSERT INTO rows VALUES(?,?,?,?)'),counts={before:0,after:0,added:0,removed:0,changed:0,unchanged:0};
@@ -120,14 +121,14 @@ export async function createCaptureComparison({directory,id,before,after,keys,sa
     const result={schema:SCHEMA,complete:true,...request,requestHash,comparedAt:stamp(),counts,files,
       sameSelection:before.sourceHash===after.sourceHash&&before.query===after.query&&digest(bytes(before.input))===digest(bytes(after.input)),
       sampleByteLimit:1048576,sampledBytes,...samples};
-    await syncDirectory(directory);await createFile(join(directory,'comparison.json'),bytes(result));await syncDirectory(directory);
+    await syncDirectory(directory);await atomicJson(directory,'comparison.json',result);
     await atomicJson(directory,'status.json',{...status,state:'COMPLETE',updatedAt:stamp(),completedAt:result.comparedAt,counts});
     return await readCaptureComparison(directory);
   }catch(error){
     if(status)await atomicJson(directory,'status.json',{...status,state:'FAILED',updatedAt:stamp(),error:{code:error.code??'COMPARISON_FAILED',message:error.code?error.message:'The complete comparison could not finish.'}}).catch(()=>{});
     throw error;
   }finally{
-    try{db?.close();for(const suffix of ['','-journal','-wal','-shm'])await remove(dbPath+suffix);}
+    try{db?.close();if(indexOwned)for(const suffix of ['','-journal','-wal','-shm'])await remove(dbPath+suffix);}
     finally{await release();}
   }
 }

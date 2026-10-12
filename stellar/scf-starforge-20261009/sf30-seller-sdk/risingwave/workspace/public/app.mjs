@@ -68,6 +68,7 @@ function renderParameters(){$('report-parameters').replaceChildren(...state.para
   row.append(inputCell(parameter.name,'Parameter name '+index,v=>parameter.name=v),
     selectCell(parameter.type,'Parameter type '+index,types,v=>parameter.type=v),
     inputCell(null,'Required '+index,v=>parameter.required=v,{type:'checkbox',checked:parameter.required!==false}),
+    inputCell(null,'Nullable '+index,v=>parameter.nullable=v,{type:'checkbox',checked:parameter.nullable===true}),
     inputCell(null,'Array '+index,v=>parameter.array=v,{type:'checkbox',checked:parameter.array===true}),
     inputCell(null,'Include probe '+index,v=>parameter.probeIncluded=v,{type:'checkbox',checked:parameter.probeIncluded===true||parameter.required!==false}),
     inputCell(parameter.probe,'Probe value '+index,v=>parameter.probe=v),
@@ -84,7 +85,7 @@ function typedValue(parameter,text,isNull=false){if(isNull)return null;if(parame
     return values.map(value=>atom(parameter.type,value));}return atom(parameter.type,text);}
 function reportSpec(){const columns={},parameters={},probe={};
   for(const column of state.columns){const alias=column.alias.trim();if(!alias||Object.hasOwn(columns,alias))throw new Error('Use distinct nonempty output aliases.');columns[alias]={column:column.column.trim(),type:column.type,nullable:column.nullable===true};}
-  for(const parameter of state.parameters){const name=parameter.name.trim();if(!name||Object.hasOwn(parameters,name))throw new Error('Use distinct nonempty parameter names.');const declaration={...(parameter.original??{}),type:parameter.type,required:parameter.required!==false};
+  for(const parameter of state.parameters){const name=parameter.name.trim();if(!name||Object.hasOwn(parameters,name))throw new Error('Use distinct nonempty parameter names.');const declaration={...(parameter.original??{}),type:parameter.type,required:parameter.required!==false,nullable:parameter.nullable===true};
     if(parameter.array)declaration.array=true;else delete declaration.array;parameters[name]=declaration;
     if(parameter.required!==false||parameter.probeIncluded===true)probe[name]=typedValue(parameter,parameter.probe,parameter.probeNull);}
   const result={relation:{schema:$('relation-schema').value.trim(),name:$('relation-name').value.trim()},subscription:{schema:$('subscription-schema').value.trim(),name:$('subscription-name').value.trim()},key:split($('report-key').value),columns,parameters,
@@ -94,12 +95,12 @@ function loadReport(name){state.selectedReport=name;const report=state.source?.q
   $('report-name').value=name;$('report-description').value=report.description??'';$('relation-schema').value=report.relation?.schema??'public';$('relation-name').value=report.relation?.name??'';$('subscription-schema').value=report.subscription?.schema??'public';$('subscription-name').value=report.subscription?.name??'';$('report-key').value=(report.key??[]).join(', ');$('report-max-rows').value=report.maxRows??100;$('report-max-bytes').value=report.maxBytes??1048576;
   state.columns=Object.entries(report.columns??{}).map(([alias,column])=>({alias,...structuredClone(column)}));state.parameters=Object.entries(report.parameters??{}).map(([name,value])=>{
     const hasProbe=Object.hasOwn(report.probe??{},name),initial=hasProbe?report.probe[name]:value.default;
-    return{name,type:value.type,required:value.required!==false,array:value.array===true,original:structuredClone(value),
+    return{name,type:value.type,required:value.required!==false,nullable:value.nullable===true,array:value.array===true,original:structuredClone(value),
       probeIncluded:hasProbe||value.required!==false,probeNull:initial===null,
       probe:initial===undefined||initial===null?'':typeof initial==='string'?initial:JSON.stringify(initial)};});state.filters=structuredClone(report.filters??[]);renderColumns();renderParameters();renderFilters();state.reportDirty=false;renderParameterInputs('preview-parameters',name);status();}
 function renderParameterInputs(targetId,name){const report=state.saved?.source?.queries?.[name],target=$(targetId);target.replaceChildren();
   for(const[name,parameter]of Object.entries(report?.parameters??{})){const wrap=el('div'),label=el('label',name+' · '+parameter.type+(parameter.array?' array':'')),input=el('input');input.className='parameter-input';input.dataset.parameter=name;const hasProbe=Object.hasOwn(report.probe??{},name),initial=hasProbe?report.probe[name]:parameter.default;input.value=initial===undefined||initial===null?'':typeof initial==='string'?initial:JSON.stringify(initial);label.append(input);const controls=el('div',undefined,'editor-controls');
-    const includeLabel=el('label',undefined,'check'),include=el('input');include.type='checkbox';include.dataset.include=name;include.checked=parameter.required!==false||hasProbe||Object.hasOwn(parameter,'default');include.disabled=parameter.required!==false;includeLabel.append(include,document.createTextNode('Include'));const nullLabel=el('label',undefined,'check'),nil=el('input');nil.type='checkbox';nil.dataset.null=name;nil.checked=initial===null;nullLabel.append(nil,document.createTextNode('NULL'));controls.append(includeLabel,nullLabel);wrap.append(label,controls);target.append(wrap);}
+    const includeLabel=el('label',undefined,'check'),include=el('input');include.type='checkbox';include.dataset.include=name;include.checked=parameter.required!==false||hasProbe||Object.hasOwn(parameter,'default');include.disabled=parameter.required!==false;includeLabel.append(include,document.createTextNode('Include'));const nullLabel=el('label',undefined,'check'),nil=el('input');nil.type='checkbox';nil.dataset.null=name;nil.checked=initial===null;nil.disabled=parameter.nullable!==true;nullLabel.append(nil,document.createTextNode('NULL'));controls.append(includeLabel,nullLabel);wrap.append(label,controls);target.append(wrap);}
   if(!target.children.length)target.append(el('p','This report has no parameters.','muted'));}
 function parameterInput(targetId,reportName){const result={},report=state.saved?.source?.queries?.[reportName];if(!report)throw new Error('Select a saved report.');
   const fields=[...$(targetId).querySelectorAll('[data-parameter]')];for(const input of fields){const name=input.dataset.parameter,include=[...$(targetId).querySelectorAll('[data-include]')].find(node=>node.dataset.include===name),nil=[...$(targetId).querySelectorAll('[data-null]')].find(node=>node.dataset.null===name);if(include?.checked)result[name]=typedValue(report.parameters[name],input.value,nil?.checked);}return result;}
@@ -167,7 +168,7 @@ on('new-report',()=>{if(state.reportDirty)throw new Error('Save or discard this 
 on('discard-report',()=>{loadReport(state.selectedReport);notice('Reloaded this report from the current source draft.');});
 on('remove-report',()=>{const name=$('report-select').value;if(!name)throw new Error('Select a report to remove from the draft.');delete state.source.queries[name];state.selectedReport='';state.reportDirty=false;refreshReportOptions('');loadReport('');markDirty();});
 on('add-column',()=>{state.columns.push({alias:'',column:'',type:'string',nullable:true});renderColumns();markReportDirty();});
-on('add-parameter',()=>{state.parameters.push({name:'',type:'string',required:true,array:false,probeIncluded:true,probe:'',probeNull:false,original:{}});renderParameters();markReportDirty();});
+on('add-parameter',()=>{state.parameters.push({name:'',type:'string',required:true,nullable:false,array:false,probeIncluded:true,probe:'',probeNull:false,original:{}});renderParameters();markReportDirty();});
 on('add-filter',()=>{state.filters.push({column:'',op:'eq',parameter:''});renderFilters();markReportDirty();});
 on('compile-report',async()=>{const result=await api('report/compile',{report:reportSpec()});$('compiled-report').replaceChildren(details(result,'Complete report declaration'));$('compiled-report').firstChild.open=true;notice('Compiled the report declaration.');});
 on('save-report',async()=>{state.reportDirty=true;await saveSource();});

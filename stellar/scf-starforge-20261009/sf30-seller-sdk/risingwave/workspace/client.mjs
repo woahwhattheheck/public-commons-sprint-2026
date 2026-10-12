@@ -1,24 +1,40 @@
 // MIT. Browser and agents use one original running RisingWave workbench.
-import { resolve, join } from 'node:path';
+import { resolve, join, dirname } from 'node:path';
 import { open, lstat, link, unlink } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { acquireWorkspace, privateDirectory, readPrivate, readJson, createFile, atomicJson, bytes, fault } from '../../postgres/publisher/files.mjs';
+import { acquireWorkspace, privateDirectory, readPrivate, readJson, atomicJson, syncDirectory, fault } from '../../postgres/publisher/files.mjs';
 import { readRisingWaveCapture } from '../source.mjs';
 import { COMPARISON_FILES, readCaptureComparison } from './comparison.mjs';
 const ITEM=/^[a-z][a-z0-9-]{0,100}$/;
 function item(value){if(typeof value!=='string'||!ITEM.test(value))throw fault('WORKSPACE_ITEM_INVALID');return value;}
 const object=value=>value&&typeof value==='object'&&!Array.isArray(value);
 const names={json:'data.json',ndjson:'data.ndjson',csv:'data.csv',events:'events.ndjson',checkpoint:'checkpoint.json',state:'state.sqlite',manifest:'capture.json'};
+const fileIdentity=value=>[value.dev,value.ino,value.size,value.mtimeMs,value.ctimeMs].join(':');
 async function hashFile(path){
   const handle=await open(path,constants.O_RDONLY|constants.O_NOFOLLOW);
   try{
     const info=await handle.stat();if(!info.isFile()||info.mode&0o077)throw fault('RECEIVING_FILE_INVALID');
-    const hash=createHash('sha256');for await(const chunk of handle.createReadStream({start:0,autoClose:false}))hash.update(chunk);
-    return{bytes:info.size,sha256:hash.digest('hex')};
+    const original=fileIdentity(info),hash=createHash('sha256');let length=0;
+    for await(const chunk of handle.createReadStream({start:0,autoClose:false})){length+=chunk.length;hash.update(chunk);}
+    if(length!==info.size||fileIdentity(await handle.stat())!==original)throw fault('RECEIVING_FILE_CHANGED');
+    return{bytes:length,sha256:hash.digest('hex')};
   }finally{await handle.close();}
 }
 async function exists(path){try{await lstat(path);return true;}catch(error){if(error.code==='ENOENT')return false;throw error;}}
+async function reconcileLinkedPartial(path,partial){
+  let retained;
+  try{retained=await lstat(partial);}catch(error){if(error.code!=='ENOENT')throw error;}
+  const final=await lstat(path);
+  if(retained){
+    if(!retained.isFile()||retained.isSymbolicLink()||retained.dev!==final.dev||retained.ino!==final.ino)
+      throw fault('RECEIVING_PARTIAL_CONFLICT','The completed file and retained partial have different identities. Keep the original receiving directory together.');
+    await unlink(partial);await syncDirectory(dirname(path));
+  }
+  const current=await lstat(path);
+  if(!current.isFile()||current.isSymbolicLink()||current.nlink!==1||current.mode&0o077||
+      current.dev!==final.dev||current.ino!==final.ino)throw fault('RECEIVING_FILE_CHANGED');
+}
 export async function createRisingWaveWorkbenchClient({url,connectionFile,environment=process.env}={}){
   let address=url??environment.RISINGWAVE_WORKSPACE_URL;
   if(connectionFile){const value=JSON.parse(await readPrivate(resolve(connectionFile),16384));address=typeof value==='string'?value:value.risingwaveWorkspace??value.url;}
@@ -50,8 +66,8 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
     resumeCapture:id=>request('/api/capture/resume',{id:item(id)}),
     comparisons:(input={})=>request('/api/comparisons?'+new URLSearchParams({limit:input.limit??20,offset:input.offset??0})),
     comparisonRecord:id=>request('/api/comparisons/'+item(id)),
-    comparisonChunk:(id,file,input={})=>request('/api/comparison/read',{id:item(id),file,...input}),
-    recoverCapture:id=>request('/api/capture/recover',{id:item(id)}),captureChunk:(id,file,input={})=>request('/api/capture/read',{id:item(id),file,...input}),
+    comparisonChunk:(id,file,input={},options={})=>request('/api/comparison/read',{id:item(id),file,...input},options),
+    recoverCapture:id=>request('/api/capture/recover',{id:item(id)}),captureChunk:(id,file,input={},options={})=>request('/api/capture/read',{id:item(id),file,...input},options),
     compareCaptures:input=>request('/api/captures/compare',input),createPublication:input=>request('/api/publications',input),
     publication:id=>request(publicationPath(id)),
     publicationCommand:(id,action,input={})=>{if(!/^[a-z]+(?:\/[a-z]+)?$/.test(action))throw fault('PUBLICATION_ACTION_INVALID');return request(publicationPath(id)+'/command/'+action,input);},
@@ -64,7 +80,8 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
     item(selectionId);if(typeof directory!=='string'||!directory)throw fault('RECEIVING_DIRECTORY_REQUIRED');
     const destination=resolve(directory);await privateDirectory(destination,true);const release=await acquireWorkspace(destination);
     try{
-      if(!object(record.files))throw fault('RECEIVING_FILES_REQUIRED');
+      if(!object(record.files)||Object.keys(record.files).length!==Object.keys(fileNames).length||
+          Object.keys(fileNames).some(name=>!Object.hasOwn(record.files,name)))throw fault('RECEIVING_FILES_REQUIRED');
       const schema=kind==='capture'?'stellar-forge.risingwave-receiving.v1':'stellar-forge.risingwave-comparison-receiving.v1';
       const statePath=join(destination,'receiving.json');let retained;
       if(await exists(statePath)){
@@ -72,7 +89,7 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
         if(retained.schema!==schema||JSON.stringify(retained.identity)!==JSON.stringify(identity))throw fault('RECEIVING_SELECTION_CHANGED','Reopen this directory with its original capture and file identities.');
       }else{
         retained={schema,identity,createdAt:new Date().toISOString(),state:'RECEIVING',files:{}};
-        await createFile(statePath,bytes(retained));
+        await atomicJson(destination,'receiving.json',retained);
       }
       for(const[name,descriptor]of Object.entries(record.files)){
         signal?.throwIfAborted();
@@ -81,15 +98,16 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
         if(await exists(path)){
           const observed=await hashFile(path);
           if(observed.bytes!==descriptor.bytes||observed.sha256!==descriptor.sha256)throw fault('RECEIVING_FILE_CHANGED');
+          await reconcileLinkedPartial(path,partial);
           retained.files[name]={...observed,state:'COMPLETE'};await atomicJson(destination,'receiving.json',retained);continue;
         }
         const handle=await open(partial,constants.O_CREAT|constants.O_RDWR|constants.O_NOFOLLOW,0o600);
         try{
-          const info=await handle.stat();if(!info.isFile()||info.mode&0o077||info.size>descriptor.bytes)throw fault('RECEIVING_PARTIAL_INVALID');
+          const info=await handle.stat();if(!info.isFile()||info.nlink!==1||info.mode&0o077||info.size>descriptor.bytes)throw fault('RECEIVING_PARTIAL_INVALID');
           let offset=info.size;
           while(offset<descriptor.bytes){
             signal?.throwIfAborted();const part=await readChunk(name,{offset,limit:196608});
-            if(part.sha256!==descriptor.sha256||part.totalBytes!==descriptor.bytes||part.offset!==offset||!Number.isSafeInteger(part.bytes)||part.bytes<1||part.bytes>196608)throw fault('RECEIVING_SOURCE_CHANGED');
+            if(part.sha256!==descriptor.sha256||part.totalBytes!==descriptor.bytes||part.offset!==offset||!Number.isSafeInteger(part.bytes)||part.bytes<1||part.bytes>196608||offset+part.bytes>descriptor.bytes)throw fault('RECEIVING_SOURCE_CHANGED');
             const raw=Buffer.from(part.base64,'base64');if(raw.length!==part.bytes||raw.toString('base64')!==part.base64)throw fault('RECEIVING_CHUNK_INVALID');
             let written=0;
             while(written<raw.length){const result=await handle.write(raw,written,raw.length-written,offset+written);if(!result.bytesWritten)throw fault('RECEIVING_WRITE_FAILED');written+=result.bytesWritten;}
@@ -99,7 +117,7 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
         const observed=await hashFile(partial);if(observed.bytes!==descriptor.bytes||observed.sha256!==descriptor.sha256)throw fault('RECEIVING_HASH_MISMATCH');
         await link(partial,path);await unlink(partial);retained.files[name]={...observed,state:'COMPLETE'};await atomicJson(destination,'receiving.json',retained);
       }
-      const completed=await finish(destination);retained.state='COMPLETE';retained.completedAt=new Date().toISOString();
+      const completed=await finish(destination);retained.state='COMPLETE';retained.completedAt??=new Date().toISOString();
       if(kind==='capture')retained.rowCount=completed.manifest.rowCount;else retained.counts=completed.counts;
       await atomicJson(destination,'receiving.json',retained);return{directory:destination,receiving:retained,[kind]:kind==='capture'?completed.manifest:completed};
     }finally{await release();}
@@ -109,14 +127,14 @@ export async function createRisingWaveWorkbenchClient({url,connectionFile,enviro
     if(record.state!=='COMPLETE')throw fault('COMPLETE_CAPTURE_REQUIRED');
     return receiveFiles({selectionId:captureId,directory,signal,kind:'capture',record,fileNames:names,
       identity:{captureId,sourceHash:record.sourceHash,files:record.files},
-      readChunk:(name,input)=>client.captureChunk(captureId,name,input),finish:readRisingWaveCapture});
+      readChunk:(name,input)=>client.captureChunk(captureId,name,input,{signal}),finish:readRisingWaveCapture});
   };
   client.receiveComparison=async({comparisonId,directory,signal}={})=>{
     item(comparisonId);const record=await client.comparisonRecord(comparisonId);
     if(record.complete!==true)throw fault('COMPLETE_COMPARISON_REQUIRED');
     return receiveFiles({selectionId:comparisonId,directory,signal,kind:'comparison',record,fileNames:COMPARISON_FILES,
       identity:{comparisonId,requestHash:record.requestHash,files:record.files},
-      readChunk:(name,input)=>client.comparisonChunk(comparisonId,name,input),finish:readCaptureComparison});
+      readChunk:(name,input)=>client.comparisonChunk(comparisonId,name,input,{signal}),finish:readCaptureComparison});
   };
   return Object.freeze(client);
 }
