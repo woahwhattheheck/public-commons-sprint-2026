@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { basename, dirname, resolve, join } from 'node:path';
 import { timingSafeEqual } from 'node:crypto';
 import { merchantToolFamily } from '../catalog.mjs';
+import { compareHostProfiles } from '../host-profile.mjs';
 import { createConsoleCustomers } from './customers.mjs';
 import { MerchantConsoleStore, CONSOLE_SCHEMA, canonical, digest, fail } from './store.mjs';
 
@@ -100,6 +101,11 @@ export async function createMerchantConsole({operator,configPath,directory,autho
     return {name:(selection.family==='core'?'merchant_client_export':'merchant_opensearch_deployment')+'_manifest',
       args:{exportId:selection.exportId,...(selection.workspace?{workspace:selection.workspace}:{})}};
   };
+  const bindingView = value => {
+    const {host,...rest}=value;
+    return {...rest,merchant:host.merchant,toolCount:host.capabilities?.tools??null,
+      compositionFingerprint:host.composition?.fingerprint??null,sourceCommit:host.composition?.sourceCommit??null};
+  };
   async function visibleProfile(profileId,context) {
     const profile=store.profile(profileId), drafts=[],calls=[];
     for(const value of store.drafts(profileId))
@@ -111,7 +117,8 @@ export async function createMerchantConsole({operator,configPath,directory,autho
       const access=deliveryAccess(value);
       if(await allowed(context,access.name,access.args)) deliveries.push(customers.view(value));
     }
-    return {profile,drafts,calls,deliveries,hostBound:profile.hostFingerprint===snapshot().configurationFingerprint};
+    return {profile,drafts,calls,deliveries,bindings:store.hostBindings(profileId).map(bindingView),
+      hostBound:profile.hostFingerprint===snapshot().configurationFingerprint};
   }
   async function startCall(input,context) {
     if (closing) throw fail('CONSOLE_CLOSING','The operator interface is closing.',503);
@@ -203,6 +210,22 @@ export async function createMerchantConsole({operator,configPath,directory,autho
         send(res,200,{definition:value,family:merchantToolFamily(value.name)??'core',schemaSha256:digest(canonical(value))});return true;
       }
       if(req.method==='GET'&&route==='profiles'){send(res,200,{profiles:store.profiles(),host:snapshot()});return true;}
+      if(req.method==='GET'&&route.startsWith('host-review/')){
+        const profile=store.profile(decodeURIComponent(route.slice(12))),selected=url.searchParams.get('revision');
+        const binding=selected===null?null:store.hostBinding(profile.id,Number(selected));
+        const comparison=compareHostProfiles(binding?.host??profile.host,snapshot());
+        const review={...comparison,recordedAt:new Date().toISOString(),
+          profile:{id:profile.id,name:profile.name,revision:profile.revision,bindingRevision:profile.bindingRevision??null},
+          baselineBinding:binding?bindingView(binding):null};
+        const packet={...review,contentSha256:digest(canonical(review))};
+        if(url.searchParams.get('download')==='1')attachment(res,profile.id+'-host-review.json',json(packet));
+        else send(res,200,packet);
+        return true;
+      }
+      if(req.method==='GET'&&route.startsWith('host-binding/')){
+        const profileId=decodeURIComponent(route.slice(13));
+        send(res,200,{binding:store.hostBinding(profileId,Number(url.searchParams.get('revision')))});return true;
+      }
       if(req.method==='GET'&&route.startsWith('profile/')){
         send(res,200,await visibleProfile(decodeURIComponent(route.slice(8)),context));return true;
       }
