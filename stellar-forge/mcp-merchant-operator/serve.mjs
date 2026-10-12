@@ -11,6 +11,10 @@ import { initializeFredWorkspaceMerchant, initializeStacWorkspaceMerchant, initi
 
 const HELP = `Starforge merchant MCP
 
+  providers list|inspect PROVIDER_ID
+  init-provider PROVIDER_ID --options HOST_SETUP_JSON
+       (see providers --help)
+
   init-api-pass-workspaces --dir PRIVATE_DIRECTORY --connection API_PASS_CONNECTION_JSON
        [--release-store EXISTING_STORE] [--name NAME]
   api-pass tools|read|prepare|run|recover|inspect-export|download|reopen-download ...
@@ -238,7 +242,7 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
   if (!configPath || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(tokenEnv)) throw failure('CONFIGURATION_ERROR', 'Supply a merchant configuration and token environment-variable name.');
   port = portNumber(port, 3211);
   const operator = await openMerchantOperator(configPath,
-    { stellarExpert: { environment, fetchImpl: stellarExpertFetchImpl }, woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, opencage: { env: environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, opendatasoft: { environment }, accounting: { ...accounting, environment } });
+    { environment, stellarExpert: { environment, fetchImpl: stellarExpertFetchImpl }, woocommerce: { environment, fetchImpl: woocommerceFetchImpl }, mpp: { environment, fetchImpl: mppFetchImpl }, opensearch: { environment }, opencage: { env: environment }, grpc: { environment }, openapi: { environment }, arcgis: { environment }, opendatasoft: { environment }, accounting: { ...accounting, environment } });
   let server, access, operatorConsole, draining=false;
   try {
     access = await loadOAuthResourceHost({configPath:oauthConfigPath ?? environment.MCP_OAUTH_CONFIG,
@@ -307,6 +311,8 @@ export async function startMerchantMcp({ configPath, port = 3211, tokenEnv = 'MC
 export async function main(args = process.argv.slice(2)) {
   if (!args.length || args.length === 1 && ['--help', 'help'].includes(args[0])) { process.stdout.write(HELP); return; }
   const [command, ...rest] = args;
+  if (command === 'providers') return (await import('./provider-cli.mjs')).main(rest);
+  if (command === 'init-provider') return (await import('./provider-cli.mjs')).main(['init', ...rest]);
   if (command === 'api-pass') return (await import('./api-pass-cli.mjs')).main(rest);
   if (command === 'init-api-pass-workspaces') {
     const options = pairs(rest, ['--dir', '--connection', '--name', '--release-store']);
