@@ -21,7 +21,7 @@ The source plan remains immutable within a workspace. Edited payment terms creat
 
 Use the maintained Starforge merchant distribution, or the public repository with its existing dependencies installed. The operator uses the original Linux `flock` workspace lease and original Node private-file primitives. Use Node 22 or newer for direct connections. An explicitly selected environment proxy requires Node 22.21+ in the 22.x series, Node 24.5+, or Node 25+.
 
-The installed distribution exposes `starforge opencage-workbench` for the same CLI and `@tokenjunkielabs/starforge-merchant/seller/opencage` for the application API. The provider, configuration, merchant, customer, workspace and server modules also have corresponding `/seller/opencage/MODULE` exports.
+A distribution built with the OpenCage command map exposes `starforge opencage-workbench` for the same CLI and `@tokenjunkielabs/starforge-merchant/seller/opencage` for the application API. The provider, configuration, merchant, customer, workspace and server modules also have corresponding `/seller/opencage/MODULE` exports.
 
 From `stellar/scf-starforge-20261009/`:
 
@@ -277,6 +277,22 @@ await workspace.close();
 ```
 
 Application callers should use a `finally` block to close a workspace or server they own. A server closes its workspace after accepted actions drain. Source files and all original results remain available for the next session.
+
+## Merchant MCP and complete receiving
+
+The [merchant MCP guide](../../../../stellar-forge/mcp-merchant-operator/OPENCAGE_WORKSPACES.md) connects the same saved workspace to fifteen tools for source review, captures, imports, candidate decisions, original Buyer recovery, merchant packages and releases, shared browser state, and complete file receiving. A host connection selects named workspace and input aliases; each tool uses those original records and files.
+
+From the repository root, initialize the existing merchant operator with the private connection file:
+
+```sh
+node stellar-forge/mcp-merchant-operator/serve.mjs init-opencage-workspaces \
+  --dir /private/location-mcp \
+  --connection /private/location-workshare/opencage-connection.json
+```
+
+Use the original merchant operator's normal stdio registration or HTTP lifecycle to serve that configuration. Human and agent actions share the same workspace owner and retained candidate revision.
+
+The [retained receiving entry points](receiving/README.md) complete the original merchant/Buyer workflow and then reopen it through MCP. They bind the provider's native request, response and artifact manifest separately from the successful retained-workspace and Buyer continuation. The exact provider fixture is available with its [source semantics](fixtures/README.md).
 
 ## Original dependencies
 
